@@ -1,0 +1,300 @@
+{
+  "body": [
+    {
+      "assign": [
+        "blackSquares",
+        {
+          "args": [
+            {
+              "args": [
+                {
+                  "var": "n"
+                },
+                {
+                  "var": "n"
+                }
+              ],
+              "op": "*"
+            },
+            {
+              "var": "a"
+            }
+          ],
+          "op": "-"
+        }
+      ]
+    }
+  ],
+  "ensures": [
+    {
+      "call": {
+        "args": [
+          {
+            "var": "n"
+          },
+          {
+            "var": "a"
+          },
+          {
+            "var": "blackSquares"
+          }
+        ],
+        "fun": "validOutput"
+      }
+    }
+  ],
+  "gate": "recursion",
+  "name": "vericoding_da0615__calculateBlackSquares",
+  "params": [
+    {
+      "name": "n",
+      "type": "int"
+    },
+    {
+      "name": "a",
+      "type": "int"
+    }
+  ],
+  "requires": [
+    {
+      "call": {
+        "args": [
+          {
+            "var": "n"
+          },
+          {
+            "var": "a"
+          }
+        ],
+        "fun": "validInput"
+      }
+    }
+  ],
+  "returns": [
+    {
+      "name": "blackSquares",
+      "type": "int"
+    }
+  ],
+  "spec_funs": [
+    {
+      "body": {
+        "args": [
+          {
+            "args": [
+              {
+                "args": [
+                  {
+                    "int": 1
+                  },
+                  {
+                    "var": "n_v"
+                  }
+                ],
+                "op": "<="
+              },
+              {
+                "args": [
+                  {
+                    "var": "n_v"
+                  },
+                  {
+                    "int": 100
+                  }
+                ],
+                "op": "<="
+              }
+            ],
+            "op": "and"
+          },
+          {
+            "args": [
+              {
+                "args": [
+                  {
+                    "int": 0
+                  },
+                  {
+                    "var": "a_v"
+                  }
+                ],
+                "op": "<="
+              },
+              {
+                "args": [
+                  {
+                    "var": "a_v"
+                  },
+                  {
+                    "args": [
+                      {
+                        "var": "n_v"
+                      },
+                      {
+                        "var": "n_v"
+                      }
+                    ],
+                    "op": "*"
+                  }
+                ],
+                "op": "<="
+              }
+            ],
+            "op": "and"
+          }
+        ],
+        "op": "and"
+      },
+      "decreases": {
+        "int": 0
+      },
+      "name": "validInput",
+      "params": [
+        {
+          "name": "n_v",
+          "type": "int"
+        },
+        {
+          "name": "a_v",
+          "type": "int"
+        }
+      ],
+      "result": "bool"
+    },
+    {
+      "body": {
+        "ite": {
+          "cond": {
+            "call": {
+              "args": [
+                {
+                  "var": "n_v2"
+                },
+                {
+                  "var": "a_v2"
+                }
+              ],
+              "fun": "validInput"
+            }
+          },
+          "else": {
+            "int": 0
+          },
+          "then": {
+            "args": [
+              {
+                "args": [
+                  {
+                    "var": "n_v2"
+                  },
+                  {
+                    "var": "n_v2"
+                  }
+                ],
+                "op": "*"
+              },
+              {
+                "var": "a_v2"
+              }
+            ],
+            "op": "-"
+          }
+        }
+      },
+      "decreases": {
+        "int": 0
+      },
+      "name": "blackSquares_v",
+      "params": [
+        {
+          "name": "n_v2",
+          "type": "int"
+        },
+        {
+          "name": "a_v2",
+          "type": "int"
+        }
+      ],
+      "result": "int"
+    },
+    {
+      "body": {
+        "ite": {
+          "cond": {
+            "call": {
+              "args": [
+                {
+                  "var": "n_v3"
+                },
+                {
+                  "var": "a_v3"
+                }
+              ],
+              "fun": "validInput"
+            }
+          },
+          "else": {
+            "bool": false
+          },
+          "then": {
+            "args": [
+              {
+                "args": [
+                  {
+                    "var": "result"
+                  },
+                  {
+                    "call": {
+                      "args": [
+                        {
+                          "var": "n_v3"
+                        },
+                        {
+                          "var": "a_v3"
+                        }
+                      ],
+                      "fun": "blackSquares_v"
+                    }
+                  }
+                ],
+                "op": "=="
+              },
+              {
+                "args": [
+                  {
+                    "var": "result"
+                  },
+                  {
+                    "int": 0
+                  }
+                ],
+                "op": ">="
+              }
+            ],
+            "op": "and"
+          }
+        }
+      },
+      "decreases": {
+        "int": 0
+      },
+      "name": "validOutput",
+      "params": [
+        {
+          "name": "n_v3",
+          "type": "int"
+        },
+        {
+          "name": "a_v3",
+          "type": "int"
+        },
+        {
+          "name": "result",
+          "type": "int"
+        }
+      ],
+      "result": "bool"
+    }
+  ],
+  "t": 1
+}

@@ -1,0 +1,720 @@
+{
+  "body": [
+    {
+      "if": {
+        "cond": {
+          "args": [
+            {
+              "args": [
+                {
+                  "var": "a"
+                },
+                {
+                  "var": "b"
+                }
+              ],
+              "op": "=="
+            },
+            {
+              "args": [
+                {
+                  "var": "b"
+                },
+                {
+                  "var": "c"
+                }
+              ],
+              "op": "=="
+            }
+          ],
+          "op": "and"
+        },
+        "else": [
+          {
+            "if": {
+              "cond": {
+                "args": [
+                  {
+                    "args": [
+                      {
+                        "var": "a"
+                      },
+                      {
+                        "var": "b"
+                      }
+                    ],
+                    "op": "=="
+                  },
+                  {
+                    "args": [
+                      {
+                        "var": "b"
+                      },
+                      {
+                        "var": "c"
+                      }
+                    ],
+                    "op": "=="
+                  },
+                  {
+                    "args": [
+                      {
+                        "var": "a"
+                      },
+                      {
+                        "var": "c"
+                      }
+                    ],
+                    "op": "=="
+                  }
+                ],
+                "op": "or"
+              },
+              "else": [
+                {
+                  "assign": [
+                    "result",
+                    {
+                      "int": 3
+                    }
+                  ]
+                }
+              ],
+              "then": [
+                {
+                  "assign": [
+                    "result",
+                    {
+                      "int": 2
+                    }
+                  ]
+                }
+              ]
+            }
+          }
+        ],
+        "then": [
+          {
+            "assign": [
+              "result",
+              {
+                "int": 1
+              }
+            ]
+          }
+        ]
+      }
+    }
+  ],
+  "ensures": [
+    {
+      "args": [
+        {
+          "int": 1
+        },
+        {
+          "var": "result"
+        }
+      ],
+      "op": "<="
+    },
+    {
+      "args": [
+        {
+          "var": "result"
+        },
+        {
+          "int": 3
+        }
+      ],
+      "op": "<="
+    },
+    {
+      "args": [
+        {
+          "var": "result"
+        },
+        {
+          "call": {
+            "args": [
+              {
+                "var": "a"
+              },
+              {
+                "var": "b"
+              },
+              {
+                "var": "c"
+              }
+            ],
+            "fun": "countDistinctColors"
+          }
+        }
+      ],
+      "op": "=="
+    },
+    {
+      "args": [
+        {
+          "args": [
+            {
+              "var": "result"
+            },
+            {
+              "int": 1
+            }
+          ],
+          "op": "=="
+        },
+        {
+          "call": {
+            "args": [
+              {
+                "var": "a"
+              },
+              {
+                "var": "b"
+              },
+              {
+                "var": "c"
+              }
+            ],
+            "fun": "allSame"
+          }
+        }
+      ],
+      "op": "=="
+    },
+    {
+      "args": [
+        {
+          "args": [
+            {
+              "var": "result"
+            },
+            {
+              "int": 2
+            }
+          ],
+          "op": "=="
+        },
+        {
+          "call": {
+            "args": [
+              {
+                "var": "a"
+              },
+              {
+                "var": "b"
+              },
+              {
+                "var": "c"
+              }
+            ],
+            "fun": "exactlyTwoSame"
+          }
+        }
+      ],
+      "op": "=="
+    },
+    {
+      "args": [
+        {
+          "args": [
+            {
+              "var": "result"
+            },
+            {
+              "int": 3
+            }
+          ],
+          "op": "=="
+        },
+        {
+          "call": {
+            "args": [
+              {
+                "var": "a"
+              },
+              {
+                "var": "b"
+              },
+              {
+                "var": "c"
+              }
+            ],
+            "fun": "allDifferent"
+          }
+        }
+      ],
+      "op": "=="
+    }
+  ],
+  "gate": "recursion",
+  "name": "vericoding_da0671__solve",
+  "params": [
+    {
+      "name": "a",
+      "type": "int"
+    },
+    {
+      "name": "b",
+      "type": "int"
+    },
+    {
+      "name": "c",
+      "type": "int"
+    }
+  ],
+  "requires": [
+    {
+      "call": {
+        "args": [
+          {
+            "var": "a"
+          },
+          {
+            "var": "b"
+          },
+          {
+            "var": "c"
+          }
+        ],
+        "fun": "validInput"
+      }
+    }
+  ],
+  "returns": [
+    {
+      "name": "result",
+      "type": "int"
+    }
+  ],
+  "spec_funs": [
+    {
+      "body": {
+        "ite": {
+          "cond": {
+            "args": [
+              {
+                "args": [
+                  {
+                    "var": "a_v"
+                  },
+                  {
+                    "var": "b_v"
+                  }
+                ],
+                "op": "=="
+              },
+              {
+                "args": [
+                  {
+                    "var": "b_v"
+                  },
+                  {
+                    "var": "c_v"
+                  }
+                ],
+                "op": "=="
+              }
+            ],
+            "op": "and"
+          },
+          "else": {
+            "ite": {
+              "cond": {
+                "args": [
+                  {
+                    "args": [
+                      {
+                        "var": "a_v"
+                      },
+                      {
+                        "var": "b_v"
+                      }
+                    ],
+                    "op": "=="
+                  },
+                  {
+                    "args": [
+                      {
+                        "var": "b_v"
+                      },
+                      {
+                        "var": "c_v"
+                      }
+                    ],
+                    "op": "=="
+                  },
+                  {
+                    "args": [
+                      {
+                        "var": "a_v"
+                      },
+                      {
+                        "var": "c_v"
+                      }
+                    ],
+                    "op": "=="
+                  }
+                ],
+                "op": "or"
+              },
+              "else": {
+                "int": 3
+              },
+              "then": {
+                "int": 2
+              }
+            }
+          },
+          "then": {
+            "int": 1
+          }
+        }
+      },
+      "decreases": {
+        "int": 0
+      },
+      "name": "countDistinctColors",
+      "params": [
+        {
+          "name": "a_v",
+          "type": "int"
+        },
+        {
+          "name": "b_v",
+          "type": "int"
+        },
+        {
+          "name": "c_v",
+          "type": "int"
+        }
+      ],
+      "result": "int"
+    },
+    {
+      "body": {
+        "args": [
+          {
+            "args": [
+              {
+                "var": "a_v2"
+              },
+              {
+                "var": "b_v2"
+              }
+            ],
+            "op": "=="
+          },
+          {
+            "args": [
+              {
+                "var": "b_v2"
+              },
+              {
+                "var": "c_v2"
+              }
+            ],
+            "op": "=="
+          }
+        ],
+        "op": "and"
+      },
+      "decreases": {
+        "int": 0
+      },
+      "name": "allSame",
+      "params": [
+        {
+          "name": "a_v2",
+          "type": "int"
+        },
+        {
+          "name": "b_v2",
+          "type": "int"
+        },
+        {
+          "name": "c_v2",
+          "type": "int"
+        }
+      ],
+      "result": "bool"
+    },
+    {
+      "body": {
+        "args": [
+          {
+            "args": [
+              {
+                "var": "a_v3"
+              },
+              {
+                "var": "b_v3"
+              }
+            ],
+            "op": "!="
+          },
+          {
+            "args": [
+              {
+                "var": "b_v3"
+              },
+              {
+                "var": "c_v3"
+              }
+            ],
+            "op": "!="
+          },
+          {
+            "args": [
+              {
+                "var": "a_v3"
+              },
+              {
+                "var": "c_v3"
+              }
+            ],
+            "op": "!="
+          }
+        ],
+        "op": "and"
+      },
+      "decreases": {
+        "int": 0
+      },
+      "name": "allDifferent",
+      "params": [
+        {
+          "name": "a_v3",
+          "type": "int"
+        },
+        {
+          "name": "b_v3",
+          "type": "int"
+        },
+        {
+          "name": "c_v3",
+          "type": "int"
+        }
+      ],
+      "result": "bool"
+    },
+    {
+      "body": {
+        "args": [
+          {
+            "args": [
+              {
+                "args": [
+                  {
+                    "int": 1
+                  },
+                  {
+                    "var": "a_v4"
+                  }
+                ],
+                "op": "<="
+              },
+              {
+                "args": [
+                  {
+                    "var": "a_v4"
+                  },
+                  {
+                    "int": 100
+                  }
+                ],
+                "op": "<="
+              }
+            ],
+            "op": "and"
+          },
+          {
+            "args": [
+              {
+                "args": [
+                  {
+                    "int": 1
+                  },
+                  {
+                    "var": "b_v4"
+                  }
+                ],
+                "op": "<="
+              },
+              {
+                "args": [
+                  {
+                    "var": "b_v4"
+                  },
+                  {
+                    "int": 100
+                  }
+                ],
+                "op": "<="
+              }
+            ],
+            "op": "and"
+          },
+          {
+            "args": [
+              {
+                "args": [
+                  {
+                    "int": 1
+                  },
+                  {
+                    "var": "c_v4"
+                  }
+                ],
+                "op": "<="
+              },
+              {
+                "args": [
+                  {
+                    "var": "c_v4"
+                  },
+                  {
+                    "int": 100
+                  }
+                ],
+                "op": "<="
+              }
+            ],
+            "op": "and"
+          }
+        ],
+        "op": "and"
+      },
+      "decreases": {
+        "int": 0
+      },
+      "name": "validInput",
+      "params": [
+        {
+          "name": "a_v4",
+          "type": "int"
+        },
+        {
+          "name": "b_v4",
+          "type": "int"
+        },
+        {
+          "name": "c_v4",
+          "type": "int"
+        }
+      ],
+      "result": "bool"
+    },
+    {
+      "body": {
+        "args": [
+          {
+            "args": [
+              {
+                "args": [
+                  {
+                    "var": "a_v5"
+                  },
+                  {
+                    "var": "b_v5"
+                  }
+                ],
+                "op": "=="
+              },
+              {
+                "args": [
+                  {
+                    "var": "b_v5"
+                  },
+                  {
+                    "var": "c_v5"
+                  }
+                ],
+                "op": "!="
+              }
+            ],
+            "op": "and"
+          },
+          {
+            "args": [
+              {
+                "args": [
+                  {
+                    "var": "b_v5"
+                  },
+                  {
+                    "var": "c_v5"
+                  }
+                ],
+                "op": "=="
+              },
+              {
+                "args": [
+                  {
+                    "var": "a_v5"
+                  },
+                  {
+                    "var": "b_v5"
+                  }
+                ],
+                "op": "!="
+              }
+            ],
+            "op": "and"
+          },
+          {
+            "args": [
+              {
+                "args": [
+                  {
+                    "var": "a_v5"
+                  },
+                  {
+                    "var": "c_v5"
+                  }
+                ],
+                "op": "=="
+              },
+              {
+                "args": [
+                  {
+                    "var": "a_v5"
+                  },
+                  {
+                    "var": "b_v5"
+                  }
+                ],
+                "op": "!="
+              }
+            ],
+            "op": "and"
+          }
+        ],
+        "op": "or"
+      },
+      "decreases": {
+        "int": 0
+      },
+      "name": "exactlyTwoSame",
+      "params": [
+        {
+          "name": "a_v5",
+          "type": "int"
+        },
+        {
+          "name": "b_v5",
+          "type": "int"
+        },
+        {
+          "name": "c_v5",
+          "type": "int"
+        }
+      ],
+      "result": "bool"
+    }
+  ],
+  "t": 1
+}

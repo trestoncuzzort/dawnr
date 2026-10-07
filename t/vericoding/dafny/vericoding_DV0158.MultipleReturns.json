@@ -1,0 +1,110 @@
+{
+  "body": [
+    {
+      "assign": [
+        "result",
+        {
+          "args": [
+            {
+              "args": [
+                {
+                  "var": "x"
+                },
+                {
+                  "var": "y"
+                }
+              ],
+              "op": "+"
+            },
+            {
+              "args": [
+                {
+                  "var": "x"
+                },
+                {
+                  "var": "y"
+                }
+              ],
+              "op": "-"
+            }
+          ],
+          "op": "pair"
+        }
+      ]
+    }
+  ],
+  "ensures": [
+    {
+      "args": [
+        {
+          "args": [
+            {
+              "var": "result"
+            }
+          ],
+          "op": "fst"
+        },
+        {
+          "args": [
+            {
+              "var": "x"
+            },
+            {
+              "var": "y"
+            }
+          ],
+          "op": "+"
+        }
+      ],
+      "op": "=="
+    },
+    {
+      "args": [
+        {
+          "args": [
+            {
+              "args": [
+                {
+                  "var": "result"
+                }
+              ],
+              "op": "snd"
+            },
+            {
+              "var": "y"
+            }
+          ],
+          "op": "+"
+        },
+        {
+          "var": "x"
+        }
+      ],
+      "op": "=="
+    }
+  ],
+  "name": "vericoding_dv0158__multipleReturns",
+  "params": [
+    {
+      "name": "x",
+      "type": "int"
+    },
+    {
+      "name": "y",
+      "type": "int"
+    }
+  ],
+  "requires": [],
+  "returns": [
+    {
+      "name": "result",
+      "type": {
+        "pair": [
+          "int",
+          "int"
+        ]
+      }
+    }
+  ],
+  "t": 1
+}

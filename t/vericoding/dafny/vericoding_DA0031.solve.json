@@ -1,0 +1,856 @@
+{
+  "body": [
+    {
+      "var": {
+        "init": {
+          "int": 1
+        },
+        "name": "i_v4",
+        "type": "int"
+      }
+    },
+    {
+      "while": {
+        "body": [
+          {
+            "if": {
+              "cond": {
+                "args": [
+                  {
+                    "args": [
+                      {
+                        "var": "n"
+                      },
+                      {
+                        "var": "i_v4"
+                      }
+                    ],
+                    "op": "mod"
+                  },
+                  {
+                    "args": [
+                      {
+                        "var": "i_v4"
+                      },
+                      {
+                        "int": 1
+                      }
+                    ],
+                    "op": "-"
+                  }
+                ],
+                "op": "!="
+              },
+              "else": [],
+              "then": [
+                {
+                  "lemma": {
+                    "args": [
+                      {
+                        "var": "n"
+                      },
+                      {
+                        "var": "k"
+                      },
+                      {
+                        "var": "i_v4"
+                      }
+                    ],
+                    "name": "partialCheckImpliesRest"
+                  }
+                },
+                {
+                  "return": [
+                    "result",
+                    {
+                      "args": [
+                        {
+                          "int": 78
+                        },
+                        {
+                          "int": 111
+                        },
+                        {
+                          "int": 10
+                        }
+                      ],
+                      "op": "seq"
+                    }
+                  ]
+                }
+              ]
+            }
+          },
+          {
+            "assign": [
+              "i_v4",
+              {
+                "args": [
+                  {
+                    "var": "i_v4"
+                  },
+                  {
+                    "int": 1
+                  }
+                ],
+                "op": "+"
+              }
+            ]
+          }
+        ],
+        "cond": {
+          "args": [
+            {
+              "var": "i_v4"
+            },
+            {
+              "var": "k"
+            }
+          ],
+          "op": "<="
+        },
+        "decreases": {
+          "args": [
+            {
+              "var": "k"
+            },
+            {
+              "var": "i_v4"
+            }
+          ],
+          "op": "-"
+        },
+        "invariants": [
+          {
+            "args": [
+              {
+                "args": [
+                  {
+                    "int": 1
+                  },
+                  {
+                    "var": "i_v4"
+                  }
+                ],
+                "op": "<="
+              },
+              {
+                "args": [
+                  {
+                    "var": "i_v4"
+                  },
+                  {
+                    "args": [
+                      {
+                        "var": "k"
+                      },
+                      {
+                        "int": 1
+                      }
+                    ],
+                    "op": "+"
+                  }
+                ],
+                "op": "<="
+              }
+            ],
+            "op": "and"
+          },
+          {
+            "forall": {
+              "body": {
+                "args": [
+                  {
+                    "args": [
+                      {
+                        "var": "n"
+                      },
+                      {
+                        "var": "j_v"
+                      }
+                    ],
+                    "op": "mod"
+                  },
+                  {
+                    "args": [
+                      {
+                        "var": "j_v"
+                      },
+                      {
+                        "int": 1
+                      }
+                    ],
+                    "op": "-"
+                  }
+                ],
+                "op": "=="
+              },
+              "hi": {
+                "var": "i_v4"
+              },
+              "lo": {
+                "int": 1
+              },
+              "var": "j_v"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "lemma": {
+        "args": [
+          {
+            "var": "n"
+          },
+          {
+            "var": "k"
+          }
+        ],
+        "name": "allCheckedImpliesAllDistinct"
+      }
+    },
+    {
+      "assign": [
+        "result",
+        {
+          "args": [
+            {
+              "int": 89
+            },
+            {
+              "int": 101
+            },
+            {
+              "int": 115
+            },
+            {
+              "int": 10
+            }
+          ],
+          "op": "seq"
+        }
+      ]
+    }
+  ],
+  "ensures": [
+    {
+      "args": [
+        {
+          "args": [
+            {
+              "var": "result"
+            },
+            {
+              "args": [
+                {
+                  "int": 89
+                },
+                {
+                  "int": 101
+                },
+                {
+                  "int": 115
+                },
+                {
+                  "int": 10
+                }
+              ],
+              "op": "seq"
+            }
+          ],
+          "op": "=="
+        },
+        {
+          "call": {
+            "args": [
+              {
+                "var": "n"
+              },
+              {
+                "var": "k"
+              }
+            ],
+            "fun": "allRemaindersDistinct"
+          }
+        }
+      ],
+      "op": "=="
+    },
+    {
+      "args": [
+        {
+          "args": [
+            {
+              "var": "result"
+            },
+            {
+              "args": [
+                {
+                  "int": 78
+                },
+                {
+                  "int": 111
+                },
+                {
+                  "int": 10
+                }
+              ],
+              "op": "seq"
+            }
+          ],
+          "op": "=="
+        },
+        {
+          "call": {
+            "args": [
+              {
+                "var": "n"
+              },
+              {
+                "var": "k"
+              }
+            ],
+            "fun": "hasNonDistinctRemainder"
+          }
+        }
+      ],
+      "op": "=="
+    }
+  ],
+  "gate": "recursion",
+  "lemmas": [
+    {
+      "body": [
+        {
+          "assert": {
+            "args": [
+              {
+                "args": [
+                  {
+                    "args": [
+                      {
+                        "var": "n_v4"
+                      },
+                      {
+                        "var": "j"
+                      }
+                    ],
+                    "op": "mod"
+                  },
+                  {
+                    "args": [
+                      {
+                        "var": "j"
+                      },
+                      {
+                        "int": 1
+                      }
+                    ],
+                    "op": "-"
+                  }
+                ],
+                "op": "!="
+              },
+              {
+                "args": [
+                  {
+                    "args": [
+                      {
+                        "int": 1
+                      },
+                      {
+                        "var": "j"
+                      }
+                    ],
+                    "op": "<="
+                  },
+                  {
+                    "args": [
+                      {
+                        "var": "j"
+                      },
+                      {
+                        "var": "k_v4"
+                      }
+                    ],
+                    "op": "<="
+                  }
+                ],
+                "op": "and"
+              }
+            ],
+            "op": "and"
+          }
+        }
+      ],
+      "ensures": [
+        {
+          "call": {
+            "args": [
+              {
+                "var": "n_v4"
+              },
+              {
+                "var": "k_v4"
+              }
+            ],
+            "fun": "hasNonDistinctRemainder"
+          }
+        }
+      ],
+      "name": "partialCheckImpliesRest",
+      "params": [
+        {
+          "name": "n_v4",
+          "type": "int"
+        },
+        {
+          "name": "k_v4",
+          "type": "int"
+        },
+        {
+          "name": "j",
+          "type": "int"
+        }
+      ],
+      "requires": [
+        {
+          "call": {
+            "args": [
+              {
+                "var": "n_v4"
+              },
+              {
+                "var": "k_v4"
+              }
+            ],
+            "fun": "validInput"
+          }
+        },
+        {
+          "args": [
+            {
+              "int": 1
+            },
+            {
+              "var": "j"
+            }
+          ],
+          "op": "<="
+        },
+        {
+          "args": [
+            {
+              "var": "j"
+            },
+            {
+              "var": "k_v4"
+            }
+          ],
+          "op": "<="
+        },
+        {
+          "forall": {
+            "body": {
+              "args": [
+                {
+                  "args": [
+                    {
+                      "var": "n_v4"
+                    },
+                    {
+                      "var": "i_v2"
+                    }
+                  ],
+                  "op": "mod"
+                },
+                {
+                  "args": [
+                    {
+                      "var": "i_v2"
+                    },
+                    {
+                      "int": 1
+                    }
+                  ],
+                  "op": "-"
+                }
+              ],
+              "op": "=="
+            },
+            "hi": {
+              "var": "j"
+            },
+            "lo": {
+              "int": 1
+            },
+            "var": "i_v2"
+          }
+        },
+        {
+          "args": [
+            {
+              "args": [
+                {
+                  "var": "n_v4"
+                },
+                {
+                  "var": "j"
+                }
+              ],
+              "op": "mod"
+            },
+            {
+              "args": [
+                {
+                  "var": "j"
+                },
+                {
+                  "int": 1
+                }
+              ],
+              "op": "-"
+            }
+          ],
+          "op": "!="
+        }
+      ]
+    },
+    {
+      "body": [],
+      "ensures": [
+        {
+          "call": {
+            "args": [
+              {
+                "var": "n_v5"
+              },
+              {
+                "var": "k_v5"
+              }
+            ],
+            "fun": "allRemaindersDistinct"
+          }
+        }
+      ],
+      "name": "allCheckedImpliesAllDistinct",
+      "params": [
+        {
+          "name": "n_v5",
+          "type": "int"
+        },
+        {
+          "name": "k_v5",
+          "type": "int"
+        }
+      ],
+      "requires": [
+        {
+          "call": {
+            "args": [
+              {
+                "var": "n_v5"
+              },
+              {
+                "var": "k_v5"
+              }
+            ],
+            "fun": "validInput"
+          }
+        },
+        {
+          "forall": {
+            "body": {
+              "args": [
+                {
+                  "args": [
+                    {
+                      "var": "n_v5"
+                    },
+                    {
+                      "var": "i_v3"
+                    }
+                  ],
+                  "op": "mod"
+                },
+                {
+                  "args": [
+                    {
+                      "var": "i_v3"
+                    },
+                    {
+                      "int": 1
+                    }
+                  ],
+                  "op": "-"
+                }
+              ],
+              "op": "=="
+            },
+            "hi": {
+              "args": [
+                {
+                  "var": "k_v5"
+                },
+                {
+                  "int": 1
+                }
+              ],
+              "op": "+"
+            },
+            "lo": {
+              "int": 1
+            },
+            "var": "i_v3"
+          }
+        }
+      ]
+    }
+  ],
+  "name": "vericoding_da0031__solve",
+  "params": [
+    {
+      "name": "n",
+      "type": "int"
+    },
+    {
+      "name": "k",
+      "type": "int"
+    }
+  ],
+  "requires": [
+    {
+      "call": {
+        "args": [
+          {
+            "var": "n"
+          },
+          {
+            "var": "k"
+          }
+        ],
+        "fun": "validInput"
+      }
+    }
+  ],
+  "returns": [
+    {
+      "name": "result",
+      "type": "seq"
+    }
+  ],
+  "spec_funs": [
+    {
+      "body": {
+        "args": [
+          {
+            "args": [
+              {
+                "var": "n_v"
+              },
+              {
+                "int": 1
+              }
+            ],
+            "op": ">="
+          },
+          {
+            "args": [
+              {
+                "var": "k_v"
+              },
+              {
+                "int": 1
+              }
+            ],
+            "op": ">="
+          }
+        ],
+        "op": "and"
+      },
+      "decreases": {
+        "int": 0
+      },
+      "name": "validInput",
+      "params": [
+        {
+          "name": "n_v",
+          "type": "int"
+        },
+        {
+          "name": "k_v",
+          "type": "int"
+        }
+      ],
+      "result": "bool"
+    },
+    {
+      "body": {
+        "ite": {
+          "cond": {
+            "call": {
+              "args": [
+                {
+                  "var": "n_v2"
+                },
+                {
+                  "var": "k_v2"
+                }
+              ],
+              "fun": "validInput"
+            }
+          },
+          "else": {
+            "bool": false
+          },
+          "then": {
+            "forall": {
+              "body": {
+                "args": [
+                  {
+                    "args": [
+                      {
+                        "var": "n_v2"
+                      },
+                      {
+                        "var": "i"
+                      }
+                    ],
+                    "op": "mod"
+                  },
+                  {
+                    "args": [
+                      {
+                        "var": "i"
+                      },
+                      {
+                        "int": 1
+                      }
+                    ],
+                    "op": "-"
+                  }
+                ],
+                "op": "=="
+              },
+              "hi": {
+                "args": [
+                  {
+                    "var": "k_v2"
+                  },
+                  {
+                    "int": 1
+                  }
+                ],
+                "op": "+"
+              },
+              "lo": {
+                "int": 1
+              },
+              "var": "i"
+            }
+          }
+        }
+      },
+      "decreases": {
+        "int": 0
+      },
+      "name": "allRemaindersDistinct",
+      "params": [
+        {
+          "name": "n_v2",
+          "type": "int"
+        },
+        {
+          "name": "k_v2",
+          "type": "int"
+        }
+      ],
+      "result": "bool"
+    },
+    {
+      "body": {
+        "ite": {
+          "cond": {
+            "call": {
+              "args": [
+                {
+                  "var": "n_v3"
+                },
+                {
+                  "var": "k_v3"
+                }
+              ],
+              "fun": "validInput"
+            }
+          },
+          "else": {
+            "bool": false
+          },
+          "then": {
+            "exists": {
+              "body": {
+                "args": [
+                  {
+                    "args": [
+                      {
+                        "var": "n_v3"
+                      },
+                      {
+                        "var": "i_v"
+                      }
+                    ],
+                    "op": "mod"
+                  },
+                  {
+                    "args": [
+                      {
+                        "var": "i_v"
+                      },
+                      {
+                        "int": 1
+                      }
+                    ],
+                    "op": "-"
+                  }
+                ],
+                "op": "!="
+              },
+              "hi": {
+                "args": [
+                  {
+                    "var": "k_v3"
+                  },
+                  {
+                    "int": 1
+                  }
+                ],
+                "op": "+"
+              },
+              "lo": {
+                "int": 1
+              },
+              "var": "i_v"
+            }
+          }
+        }
+      },
+      "decreases": {
+        "int": 0
+      },
+      "name": "hasNonDistinctRemainder",
+      "params": [
+        {
+          "name": "n_v3",
+          "type": "int"
+        },
+        {
+          "name": "k_v3",
+          "type": "int"
+        }
+      ],
+      "result": "bool"
+    }
+  ],
+  "t": 1
+}

@@ -1,0 +1,1270 @@
+{
+  "body": [
+    {
+      "var": {
+        "init": {
+          "args": [],
+          "op": "seq"
+        },
+        "name": "result",
+        "type": "seq"
+      }
+    },
+    {
+      "var": {
+        "init": {
+          "args": [
+            {
+              "var": "s"
+            }
+          ],
+          "op": "len"
+        },
+        "name": "h",
+        "type": "int"
+      }
+    },
+    {
+      "var": {
+        "init": {
+          "int": 0
+        },
+        "name": "i_v",
+        "type": "int"
+      }
+    },
+    {
+      "while": {
+        "body": [
+          {
+            "if": {
+              "cond": {
+                "call": {
+                  "args": [
+                    {
+                      "args": [
+                        {
+                          "var": "s"
+                        },
+                        {
+                          "var": "i_v"
+                        }
+                      ],
+                      "op": "at"
+                    }
+                  ],
+                  "fun": "isLowerCase"
+                }
+              },
+              "else": [
+                {
+                  "if": {
+                    "cond": {
+                      "call": {
+                        "args": [
+                          {
+                            "args": [
+                              {
+                                "var": "s"
+                              },
+                              {
+                                "var": "i_v"
+                              }
+                            ],
+                            "op": "at"
+                          }
+                        ],
+                        "fun": "isUpperCase"
+                      }
+                    },
+                    "else": [
+                      {
+                        "assign": [
+                          "result",
+                          {
+                            "args": [
+                              {
+                                "var": "result"
+                              },
+                              {
+                                "args": [
+                                  {
+                                    "args": [
+                                      {
+                                        "var": "s"
+                                      },
+                                      {
+                                        "var": "i_v"
+                                      }
+                                    ],
+                                    "op": "at"
+                                  }
+                                ],
+                                "op": "seq"
+                              }
+                            ],
+                            "op": "+"
+                          }
+                        ]
+                      }
+                    ],
+                    "then": [
+                      {
+                        "lemma": {
+                          "args": [
+                            {
+                              "args": [
+                                {
+                                  "var": "s"
+                                },
+                                {
+                                  "var": "i_v"
+                                }
+                              ],
+                              "op": "at"
+                            }
+                          ],
+                          "name": "shift32Correct"
+                        }
+                      },
+                      {
+                        "assign": [
+                          "result",
+                          {
+                            "args": [
+                              {
+                                "var": "result"
+                              },
+                              {
+                                "args": [
+                                  {
+                                    "call": {
+                                      "args": [
+                                        {
+                                          "args": [
+                                            {
+                                              "var": "s"
+                                            },
+                                            {
+                                              "var": "i_v"
+                                            }
+                                          ],
+                                          "op": "at"
+                                        }
+                                      ],
+                                      "fun": "shift32"
+                                    }
+                                  }
+                                ],
+                                "op": "seq"
+                              }
+                            ],
+                            "op": "+"
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                }
+              ],
+              "then": [
+                {
+                  "lemma": {
+                    "args": [
+                      {
+                        "args": [
+                          {
+                            "var": "s"
+                          },
+                          {
+                            "var": "i_v"
+                          }
+                        ],
+                        "op": "at"
+                      }
+                    ],
+                    "name": "shiftMinus32Correct"
+                  }
+                },
+                {
+                  "assign": [
+                    "result",
+                    {
+                      "args": [
+                        {
+                          "var": "result"
+                        },
+                        {
+                          "args": [
+                            {
+                              "call": {
+                                "args": [
+                                  {
+                                    "args": [
+                                      {
+                                        "var": "s"
+                                      },
+                                      {
+                                        "var": "i_v"
+                                      }
+                                    ],
+                                    "op": "at"
+                                  }
+                                ],
+                                "fun": "shiftMinus32"
+                              }
+                            }
+                          ],
+                          "op": "seq"
+                        }
+                      ],
+                      "op": "+"
+                    }
+                  ]
+                }
+              ]
+            }
+          },
+          {
+            "assign": [
+              "i_v",
+              {
+                "args": [
+                  {
+                    "var": "i_v"
+                  },
+                  {
+                    "int": 1
+                  }
+                ],
+                "op": "+"
+              }
+            ]
+          }
+        ],
+        "cond": {
+          "args": [
+            {
+              "var": "i_v"
+            },
+            {
+              "var": "h"
+            }
+          ],
+          "op": "<"
+        },
+        "decreases": {
+          "args": [
+            {
+              "var": "h"
+            },
+            {
+              "var": "i_v"
+            }
+          ],
+          "op": "-"
+        },
+        "invariants": [
+          {
+            "args": [
+              {
+                "int": 0
+              },
+              {
+                "var": "i_v"
+              }
+            ],
+            "op": "<="
+          },
+          {
+            "args": [
+              {
+                "var": "i_v"
+              },
+              {
+                "var": "h"
+              }
+            ],
+            "op": "<="
+          },
+          {
+            "args": [
+              {
+                "args": [
+                  {
+                    "var": "result"
+                  }
+                ],
+                "op": "len"
+              },
+              {
+                "var": "i_v"
+              }
+            ],
+            "op": "=="
+          },
+          {
+            "forall": {
+              "body": {
+                "ite": {
+                  "cond": {
+                    "call": {
+                      "args": [
+                        {
+                          "args": [
+                            {
+                              "var": "s"
+                            },
+                            {
+                              "var": "j"
+                            }
+                          ],
+                          "op": "at"
+                        }
+                      ],
+                      "fun": "isLowerCase"
+                    }
+                  },
+                  "else": {
+                    "ite": {
+                      "cond": {
+                        "call": {
+                          "args": [
+                            {
+                              "args": [
+                                {
+                                  "var": "s"
+                                },
+                                {
+                                  "var": "j"
+                                }
+                              ],
+                              "op": "at"
+                            }
+                          ],
+                          "fun": "isUpperCase"
+                        }
+                      },
+                      "else": {
+                        "args": [
+                          {
+                            "args": [
+                              {
+                                "var": "result"
+                              },
+                              {
+                                "var": "j"
+                              }
+                            ],
+                            "op": "at"
+                          },
+                          {
+                            "args": [
+                              {
+                                "var": "s"
+                              },
+                              {
+                                "var": "j"
+                              }
+                            ],
+                            "op": "at"
+                          }
+                        ],
+                        "op": "=="
+                      },
+                      "then": {
+                        "call": {
+                          "args": [
+                            {
+                              "args": [
+                                {
+                                  "var": "s"
+                                },
+                                {
+                                  "var": "j"
+                                }
+                              ],
+                              "op": "at"
+                            },
+                            {
+                              "args": [
+                                {
+                                  "var": "result"
+                                },
+                                {
+                                  "var": "j"
+                                }
+                              ],
+                              "op": "at"
+                            }
+                          ],
+                          "fun": "isUpperLowerPair"
+                        }
+                      }
+                    }
+                  },
+                  "then": {
+                    "call": {
+                      "args": [
+                        {
+                          "args": [
+                            {
+                              "var": "s"
+                            },
+                            {
+                              "var": "j"
+                            }
+                          ],
+                          "op": "at"
+                        },
+                        {
+                          "args": [
+                            {
+                              "var": "result"
+                            },
+                            {
+                              "var": "j"
+                            }
+                          ],
+                          "op": "at"
+                        }
+                      ],
+                      "fun": "isLowerUpperPair"
+                    }
+                  }
+                }
+              },
+              "hi": {
+                "var": "i_v"
+              },
+              "lo": {
+                "int": 0
+              },
+              "var": "j"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "assign": [
+        "v",
+        {
+          "var": "result"
+        }
+      ]
+    }
+  ],
+  "ensures": [
+    {
+      "args": [
+        {
+          "args": [
+            {
+              "var": "v"
+            }
+          ],
+          "op": "len"
+        },
+        {
+          "args": [
+            {
+              "var": "s"
+            }
+          ],
+          "op": "len"
+        }
+      ],
+      "op": "=="
+    },
+    {
+      "forall": {
+        "body": {
+          "ite": {
+            "cond": {
+              "call": {
+                "args": [
+                  {
+                    "args": [
+                      {
+                        "var": "s"
+                      },
+                      {
+                        "var": "i"
+                      }
+                    ],
+                    "op": "at"
+                  }
+                ],
+                "fun": "isLowerCase"
+              }
+            },
+            "else": {
+              "ite": {
+                "cond": {
+                  "call": {
+                    "args": [
+                      {
+                        "args": [
+                          {
+                            "var": "s"
+                          },
+                          {
+                            "var": "i"
+                          }
+                        ],
+                        "op": "at"
+                      }
+                    ],
+                    "fun": "isUpperCase"
+                  }
+                },
+                "else": {
+                  "args": [
+                    {
+                      "args": [
+                        {
+                          "var": "v"
+                        },
+                        {
+                          "var": "i"
+                        }
+                      ],
+                      "op": "at"
+                    },
+                    {
+                      "args": [
+                        {
+                          "var": "s"
+                        },
+                        {
+                          "var": "i"
+                        }
+                      ],
+                      "op": "at"
+                    }
+                  ],
+                  "op": "=="
+                },
+                "then": {
+                  "call": {
+                    "args": [
+                      {
+                        "args": [
+                          {
+                            "var": "s"
+                          },
+                          {
+                            "var": "i"
+                          }
+                        ],
+                        "op": "at"
+                      },
+                      {
+                        "args": [
+                          {
+                            "var": "v"
+                          },
+                          {
+                            "var": "i"
+                          }
+                        ],
+                        "op": "at"
+                      }
+                    ],
+                    "fun": "isUpperLowerPair"
+                  }
+                }
+              }
+            },
+            "then": {
+              "call": {
+                "args": [
+                  {
+                    "args": [
+                      {
+                        "var": "s"
+                      },
+                      {
+                        "var": "i"
+                      }
+                    ],
+                    "op": "at"
+                  },
+                  {
+                    "args": [
+                      {
+                        "var": "v"
+                      },
+                      {
+                        "var": "i"
+                      }
+                    ],
+                    "op": "at"
+                  }
+                ],
+                "fun": "isLowerUpperPair"
+              }
+            }
+          }
+        },
+        "hi": {
+          "args": [
+            {
+              "var": "s"
+            }
+          ],
+          "op": "len"
+        },
+        "lo": {
+          "int": 0
+        },
+        "var": "i"
+      }
+    }
+  ],
+  "gate": "recursion",
+  "lemmas": [
+    {
+      "body": [
+        {
+          "assert": {
+            "args": [
+              {
+                "args": [
+                  {
+                    "var": "c_v8"
+                  },
+                  {
+                    "int": 32
+                  }
+                ],
+                "op": "-"
+              },
+              {
+                "int": 65
+              }
+            ],
+            "op": ">="
+          }
+        },
+        {
+          "assert": {
+            "args": [
+              {
+                "args": [
+                  {
+                    "var": "c_v8"
+                  },
+                  {
+                    "int": 32
+                  }
+                ],
+                "op": "-"
+              },
+              {
+                "int": 90
+              }
+            ],
+            "op": "<="
+          }
+        },
+        {
+          "assert": {
+            "args": [
+              {
+                "args": [
+                  {
+                    "args": [
+                      {
+                        "var": "c_v8"
+                      },
+                      {
+                        "int": 32
+                      }
+                    ],
+                    "op": "-"
+                  },
+                  {
+                    "int": 128
+                  }
+                ],
+                "op": "mod"
+              },
+              {
+                "args": [
+                  {
+                    "var": "c_v8"
+                  },
+                  {
+                    "int": 32
+                  }
+                ],
+                "op": "-"
+              }
+            ],
+            "op": "=="
+          }
+        },
+        {
+          "assert": {
+            "args": [
+              {
+                "call": {
+                  "args": [
+                    {
+                      "var": "c_v8"
+                    }
+                  ],
+                  "fun": "shiftMinus32"
+                }
+              },
+              {
+                "args": [
+                  {
+                    "var": "c_v8"
+                  },
+                  {
+                    "int": 32
+                  }
+                ],
+                "op": "-"
+              }
+            ],
+            "op": "=="
+          }
+        },
+        {
+          "assert": {
+            "call": {
+              "args": [
+                {
+                  "var": "c_v8"
+                },
+                {
+                  "call": {
+                    "args": [
+                      {
+                        "var": "c_v8"
+                      }
+                    ],
+                    "fun": "shiftMinus32"
+                  }
+                }
+              ],
+              "fun": "isLowerUpperPair"
+            }
+          }
+        }
+      ],
+      "ensures": [
+        {
+          "call": {
+            "args": [
+              {
+                "var": "c_v8"
+              },
+              {
+                "call": {
+                  "args": [
+                    {
+                      "var": "c_v8"
+                    }
+                  ],
+                  "fun": "shiftMinus32"
+                }
+              }
+            ],
+            "fun": "isLowerUpperPair"
+          }
+        }
+      ],
+      "name": "shiftMinus32Correct",
+      "params": [
+        {
+          "name": "c_v8",
+          "type": "int"
+        }
+      ],
+      "requires": [
+        {
+          "call": {
+            "args": [
+              {
+                "var": "c_v8"
+              }
+            ],
+            "fun": "isLowerCase"
+          }
+        }
+      ]
+    },
+    {
+      "body": [
+        {
+          "assert": {
+            "args": [
+              {
+                "args": [
+                  {
+                    "var": "c_v9"
+                  },
+                  {
+                    "int": 32
+                  }
+                ],
+                "op": "+"
+              },
+              {
+                "int": 97
+              }
+            ],
+            "op": ">="
+          }
+        },
+        {
+          "assert": {
+            "args": [
+              {
+                "args": [
+                  {
+                    "var": "c_v9"
+                  },
+                  {
+                    "int": 32
+                  }
+                ],
+                "op": "+"
+              },
+              {
+                "int": 122
+              }
+            ],
+            "op": "<="
+          }
+        },
+        {
+          "assert": {
+            "args": [
+              {
+                "args": [
+                  {
+                    "args": [
+                      {
+                        "var": "c_v9"
+                      },
+                      {
+                        "int": 32
+                      }
+                    ],
+                    "op": "+"
+                  },
+                  {
+                    "int": 128
+                  }
+                ],
+                "op": "mod"
+              },
+              {
+                "args": [
+                  {
+                    "var": "c_v9"
+                  },
+                  {
+                    "int": 32
+                  }
+                ],
+                "op": "+"
+              }
+            ],
+            "op": "=="
+          }
+        },
+        {
+          "assert": {
+            "args": [
+              {
+                "call": {
+                  "args": [
+                    {
+                      "var": "c_v9"
+                    }
+                  ],
+                  "fun": "shift32"
+                }
+              },
+              {
+                "args": [
+                  {
+                    "var": "c_v9"
+                  },
+                  {
+                    "int": 32
+                  }
+                ],
+                "op": "+"
+              }
+            ],
+            "op": "=="
+          }
+        },
+        {
+          "assert": {
+            "call": {
+              "args": [
+                {
+                  "var": "c_v9"
+                },
+                {
+                  "call": {
+                    "args": [
+                      {
+                        "var": "c_v9"
+                      }
+                    ],
+                    "fun": "shift32"
+                  }
+                }
+              ],
+              "fun": "isUpperLowerPair"
+            }
+          }
+        }
+      ],
+      "ensures": [
+        {
+          "call": {
+            "args": [
+              {
+                "var": "c_v9"
+              },
+              {
+                "call": {
+                  "args": [
+                    {
+                      "var": "c_v9"
+                    }
+                  ],
+                  "fun": "shift32"
+                }
+              }
+            ],
+            "fun": "isUpperLowerPair"
+          }
+        }
+      ],
+      "name": "shift32Correct",
+      "params": [
+        {
+          "name": "c_v9",
+          "type": "int"
+        }
+      ],
+      "requires": [
+        {
+          "call": {
+            "args": [
+              {
+                "var": "c_v9"
+              }
+            ],
+            "fun": "isUpperCase"
+          }
+        }
+      ]
+    }
+  ],
+  "name": "vericoding_dd0741__toggleCase",
+  "params": [
+    {
+      "name": "s",
+      "type": "seq"
+    }
+  ],
+  "requires": [
+    {
+      "forall": {
+        "body": {
+          "args": [
+            {
+              "args": [
+                {
+                  "args": [
+                    {
+                      "var": "s"
+                    },
+                    {
+                      "var": "k"
+                    }
+                  ],
+                  "op": "at"
+                },
+                {
+                  "int": 0
+                }
+              ],
+              "op": ">="
+            },
+            {
+              "args": [
+                {
+                  "args": [
+                    {
+                      "var": "s"
+                    },
+                    {
+                      "var": "k"
+                    }
+                  ],
+                  "op": "at"
+                },
+                {
+                  "int": 1114111
+                }
+              ],
+              "op": "<="
+            }
+          ],
+          "op": "and"
+        },
+        "hi": {
+          "args": [
+            {
+              "var": "s"
+            }
+          ],
+          "op": "len"
+        },
+        "lo": {
+          "int": 0
+        },
+        "var": "k"
+      }
+    }
+  ],
+  "returns": [
+    {
+      "name": "v",
+      "type": "seq"
+    }
+  ],
+  "spec_funs": [
+    {
+      "body": {
+        "args": [
+          {
+            "args": [
+              {
+                "int": 97
+              },
+              {
+                "var": "c"
+              }
+            ],
+            "op": "<="
+          },
+          {
+            "args": [
+              {
+                "var": "c"
+              },
+              {
+                "int": 122
+              }
+            ],
+            "op": "<="
+          }
+        ],
+        "op": "and"
+      },
+      "decreases": {
+        "int": 0
+      },
+      "name": "isLowerCase",
+      "params": [
+        {
+          "name": "c",
+          "type": "int"
+        }
+      ],
+      "result": "bool"
+    },
+    {
+      "body": {
+        "args": [
+          {
+            "var": "c_v"
+          },
+          {
+            "args": [
+              {
+                "var": "c_v2"
+              },
+              {
+                "int": 32
+              }
+            ],
+            "op": "+"
+          }
+        ],
+        "op": "=="
+      },
+      "decreases": {
+        "int": 0
+      },
+      "name": "isLowerUpperPair",
+      "params": [
+        {
+          "name": "c_v",
+          "type": "int"
+        },
+        {
+          "name": "c_v2",
+          "type": "int"
+        }
+      ],
+      "result": "bool"
+    },
+    {
+      "body": {
+        "args": [
+          {
+            "args": [
+              {
+                "int": 65
+              },
+              {
+                "var": "c_v3"
+              }
+            ],
+            "op": "<="
+          },
+          {
+            "args": [
+              {
+                "var": "c_v3"
+              },
+              {
+                "int": 90
+              }
+            ],
+            "op": "<="
+          }
+        ],
+        "op": "and"
+      },
+      "decreases": {
+        "int": 0
+      },
+      "name": "isUpperCase",
+      "params": [
+        {
+          "name": "c_v3",
+          "type": "int"
+        }
+      ],
+      "result": "bool"
+    },
+    {
+      "body": {
+        "args": [
+          {
+            "var": "c_v4"
+          },
+          {
+            "args": [
+              {
+                "var": "c_v5"
+              },
+              {
+                "int": 32
+              }
+            ],
+            "op": "-"
+          }
+        ],
+        "op": "=="
+      },
+      "decreases": {
+        "int": 0
+      },
+      "name": "isUpperLowerPair",
+      "params": [
+        {
+          "name": "c_v4",
+          "type": "int"
+        },
+        {
+          "name": "c_v5",
+          "type": "int"
+        }
+      ],
+      "result": "bool"
+    },
+    {
+      "body": {
+        "args": [
+          {
+            "args": [
+              {
+                "var": "c_v6"
+              },
+              {
+                "int": 32
+              }
+            ],
+            "op": "-"
+          },
+          {
+            "int": 128
+          }
+        ],
+        "op": "mod"
+      },
+      "decreases": {
+        "int": 0
+      },
+      "name": "shiftMinus32",
+      "params": [
+        {
+          "name": "c_v6",
+          "type": "int"
+        }
+      ],
+      "result": "int"
+    },
+    {
+      "body": {
+        "args": [
+          {
+            "args": [
+              {
+                "var": "c_v7"
+              },
+              {
+                "int": 32
+              }
+            ],
+            "op": "+"
+          },
+          {
+            "int": 128
+          }
+        ],
+        "op": "mod"
+      },
+      "decreases": {
+        "int": 0
+      },
+      "name": "shift32",
+      "params": [
+        {
+          "name": "c_v7",
+          "type": "int"
+        }
+      ],
+      "result": "int"
+    }
+  ],
+  "t": 1
+}

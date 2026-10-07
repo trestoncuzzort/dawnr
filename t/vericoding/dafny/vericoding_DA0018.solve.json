@@ -1,0 +1,936 @@
+{
+  "body": [
+    {
+      "lemma": {
+        "args": [
+          {
+            "var": "m"
+          },
+          {
+            "var": "d"
+          }
+        ],
+        "name": "columnsNeededBounds"
+      }
+    },
+    {
+      "assign": [
+        "result",
+        {
+          "args": [
+            {
+              "int": 1
+            },
+            {
+              "args": [
+                {
+                  "args": [
+                    {
+                      "args": [
+                        {
+                          "args": [
+                            {
+                              "var": "d"
+                            },
+                            {
+                              "int": 1
+                            }
+                          ],
+                          "op": "-"
+                        },
+                        {
+                          "call": {
+                            "args": [
+                              {
+                                "var": "m"
+                              }
+                            ],
+                            "fun": "daysInMonth"
+                          }
+                        }
+                      ],
+                      "op": "+"
+                    },
+                    {
+                      "int": 1
+                    }
+                  ],
+                  "op": "-"
+                },
+                {
+                  "int": 7
+                }
+              ],
+              "op": "div"
+            }
+          ],
+          "op": "+"
+        }
+      ]
+    }
+  ],
+  "ensures": [
+    {
+      "args": [
+        {
+          "var": "result"
+        },
+        {
+          "call": {
+            "args": [
+              {
+                "var": "m"
+              },
+              {
+                "var": "d"
+              }
+            ],
+            "fun": "columnsNeeded"
+          }
+        }
+      ],
+      "op": "=="
+    },
+    {
+      "args": [
+        {
+          "int": 4
+        },
+        {
+          "var": "result"
+        }
+      ],
+      "op": "<="
+    },
+    {
+      "args": [
+        {
+          "var": "result"
+        },
+        {
+          "int": 6
+        }
+      ],
+      "op": "<="
+    }
+  ],
+  "gate": "recursion",
+  "lemmas": [
+    {
+      "body": [
+        {
+          "assert": {
+            "args": [
+              {
+                "call": {
+                  "args": [
+                    {
+                      "var": "m_v4"
+                    }
+                  ],
+                  "fun": "daysInMonth"
+                }
+              },
+              {
+                "args": [
+                  {
+                    "args": [
+                      {
+                        "int": 31
+                      },
+                      {
+                        "int": 28
+                      },
+                      {
+                        "int": 31
+                      },
+                      {
+                        "int": 30
+                      },
+                      {
+                        "int": 31
+                      },
+                      {
+                        "int": 30
+                      },
+                      {
+                        "int": 31
+                      },
+                      {
+                        "int": 31
+                      },
+                      {
+                        "int": 30
+                      },
+                      {
+                        "int": 31
+                      },
+                      {
+                        "int": 30
+                      },
+                      {
+                        "int": 31
+                      }
+                    ],
+                    "op": "seq"
+                  },
+                  {
+                    "args": [
+                      {
+                        "var": "m_v4"
+                      },
+                      {
+                        "int": 1
+                      }
+                    ],
+                    "op": "-"
+                  }
+                ],
+                "op": "at"
+              }
+            ],
+            "op": "=="
+          }
+        },
+        {
+          "assert": {
+            "args": [
+              {
+                "args": [
+                  {
+                    "int": 28
+                  },
+                  {
+                    "call": {
+                      "args": [
+                        {
+                          "var": "m_v4"
+                        }
+                      ],
+                      "fun": "daysInMonth"
+                    }
+                  }
+                ],
+                "op": "<="
+              },
+              {
+                "args": [
+                  {
+                    "call": {
+                      "args": [
+                        {
+                          "var": "m_v4"
+                        }
+                      ],
+                      "fun": "daysInMonth"
+                    }
+                  },
+                  {
+                    "int": 31
+                  }
+                ],
+                "op": "<="
+              }
+            ],
+            "op": "and"
+          }
+        },
+        {
+          "assert": {
+            "args": [
+              {
+                "args": [
+                  {
+                    "args": [
+                      {
+                        "args": [
+                          {
+                            "var": "d_v3"
+                          },
+                          {
+                            "int": 1
+                          }
+                        ],
+                        "op": "-"
+                      },
+                      {
+                        "call": {
+                          "args": [
+                            {
+                              "var": "m_v4"
+                            }
+                          ],
+                          "fun": "daysInMonth"
+                        }
+                      }
+                    ],
+                    "op": "+"
+                  },
+                  {
+                    "int": 1
+                  }
+                ],
+                "op": "-"
+              },
+              {
+                "args": [
+                  {
+                    "args": [
+                      {
+                        "var": "d_v3"
+                      },
+                      {
+                        "call": {
+                          "args": [
+                            {
+                              "var": "m_v4"
+                            }
+                          ],
+                          "fun": "daysInMonth"
+                        }
+                      }
+                    ],
+                    "op": "+"
+                  },
+                  {
+                    "int": 2
+                  }
+                ],
+                "op": "-"
+              }
+            ],
+            "op": "=="
+          }
+        },
+        {
+          "assert": {
+            "args": [
+              {
+                "args": [
+                  {
+                    "int": 27
+                  },
+                  {
+                    "args": [
+                      {
+                        "args": [
+                          {
+                            "args": [
+                              {
+                                "var": "d_v3"
+                              },
+                              {
+                                "int": 1
+                              }
+                            ],
+                            "op": "-"
+                          },
+                          {
+                            "call": {
+                              "args": [
+                                {
+                                  "var": "m_v4"
+                                }
+                              ],
+                              "fun": "daysInMonth"
+                            }
+                          }
+                        ],
+                        "op": "+"
+                      },
+                      {
+                        "int": 1
+                      }
+                    ],
+                    "op": "-"
+                  }
+                ],
+                "op": "<="
+              },
+              {
+                "args": [
+                  {
+                    "args": [
+                      {
+                        "args": [
+                          {
+                            "args": [
+                              {
+                                "var": "d_v3"
+                              },
+                              {
+                                "int": 1
+                              }
+                            ],
+                            "op": "-"
+                          },
+                          {
+                            "call": {
+                              "args": [
+                                {
+                                  "var": "m_v4"
+                                }
+                              ],
+                              "fun": "daysInMonth"
+                            }
+                          }
+                        ],
+                        "op": "+"
+                      },
+                      {
+                        "int": 1
+                      }
+                    ],
+                    "op": "-"
+                  },
+                  {
+                    "int": 36
+                  }
+                ],
+                "op": "<="
+              }
+            ],
+            "op": "and"
+          }
+        },
+        {
+          "assert": {
+            "args": [
+              {
+                "args": [
+                  {
+                    "int": 27
+                  },
+                  {
+                    "int": 7
+                  }
+                ],
+                "op": "div"
+              },
+              {
+                "int": 3
+              }
+            ],
+            "op": "=="
+          }
+        },
+        {
+          "assert": {
+            "args": [
+              {
+                "args": [
+                  {
+                    "int": 36
+                  },
+                  {
+                    "int": 7
+                  }
+                ],
+                "op": "div"
+              },
+              {
+                "int": 5
+              }
+            ],
+            "op": "=="
+          }
+        },
+        {
+          "assert": {
+            "args": [
+              {
+                "args": [
+                  {
+                    "int": 4
+                  },
+                  {
+                    "args": [
+                      {
+                        "int": 1
+                      },
+                      {
+                        "args": [
+                          {
+                            "args": [
+                              {
+                                "args": [
+                                  {
+                                    "args": [
+                                      {
+                                        "var": "d_v3"
+                                      },
+                                      {
+                                        "int": 1
+                                      }
+                                    ],
+                                    "op": "-"
+                                  },
+                                  {
+                                    "call": {
+                                      "args": [
+                                        {
+                                          "var": "m_v4"
+                                        }
+                                      ],
+                                      "fun": "daysInMonth"
+                                    }
+                                  }
+                                ],
+                                "op": "+"
+                              },
+                              {
+                                "int": 1
+                              }
+                            ],
+                            "op": "-"
+                          },
+                          {
+                            "int": 7
+                          }
+                        ],
+                        "op": "div"
+                      }
+                    ],
+                    "op": "+"
+                  }
+                ],
+                "op": "<="
+              },
+              {
+                "args": [
+                  {
+                    "args": [
+                      {
+                        "int": 1
+                      },
+                      {
+                        "args": [
+                          {
+                            "args": [
+                              {
+                                "args": [
+                                  {
+                                    "args": [
+                                      {
+                                        "var": "d_v3"
+                                      },
+                                      {
+                                        "int": 1
+                                      }
+                                    ],
+                                    "op": "-"
+                                  },
+                                  {
+                                    "call": {
+                                      "args": [
+                                        {
+                                          "var": "m_v4"
+                                        }
+                                      ],
+                                      "fun": "daysInMonth"
+                                    }
+                                  }
+                                ],
+                                "op": "+"
+                              },
+                              {
+                                "int": 1
+                              }
+                            ],
+                            "op": "-"
+                          },
+                          {
+                            "int": 7
+                          }
+                        ],
+                        "op": "div"
+                      }
+                    ],
+                    "op": "+"
+                  },
+                  {
+                    "int": 6
+                  }
+                ],
+                "op": "<="
+              }
+            ],
+            "op": "and"
+          }
+        }
+      ],
+      "ensures": [
+        {
+          "args": [
+            {
+              "int": 4
+            },
+            {
+              "call": {
+                "args": [
+                  {
+                    "var": "m_v4"
+                  },
+                  {
+                    "var": "d_v3"
+                  }
+                ],
+                "fun": "columnsNeeded"
+              }
+            }
+          ],
+          "op": "<="
+        },
+        {
+          "args": [
+            {
+              "call": {
+                "args": [
+                  {
+                    "var": "m_v4"
+                  },
+                  {
+                    "var": "d_v3"
+                  }
+                ],
+                "fun": "columnsNeeded"
+              }
+            },
+            {
+              "int": 6
+            }
+          ],
+          "op": "<="
+        }
+      ],
+      "name": "columnsNeededBounds",
+      "params": [
+        {
+          "name": "m_v4",
+          "type": "int"
+        },
+        {
+          "name": "d_v3",
+          "type": "int"
+        }
+      ],
+      "requires": [
+        {
+          "call": {
+            "args": [
+              {
+                "var": "m_v4"
+              },
+              {
+                "var": "d_v3"
+              }
+            ],
+            "fun": "validInput"
+          }
+        }
+      ]
+    }
+  ],
+  "name": "vericoding_da0018__solve",
+  "params": [
+    {
+      "name": "m",
+      "type": "int"
+    },
+    {
+      "name": "d",
+      "type": "int"
+    }
+  ],
+  "requires": [
+    {
+      "call": {
+        "args": [
+          {
+            "var": "m"
+          },
+          {
+            "var": "d"
+          }
+        ],
+        "fun": "validInput"
+      }
+    }
+  ],
+  "returns": [
+    {
+      "name": "result",
+      "type": "int"
+    }
+  ],
+  "spec_funs": [
+    {
+      "body": {
+        "ite": {
+          "cond": {
+            "args": [
+              {
+                "args": [
+                  {
+                    "int": 1
+                  },
+                  {
+                    "var": "m_v"
+                  }
+                ],
+                "op": "<="
+              },
+              {
+                "args": [
+                  {
+                    "var": "m_v"
+                  },
+                  {
+                    "int": 12
+                  }
+                ],
+                "op": "<="
+              }
+            ],
+            "op": "and"
+          },
+          "else": {
+            "int": 0
+          },
+          "then": {
+            "args": [
+              {
+                "args": [
+                  {
+                    "int": 31
+                  },
+                  {
+                    "int": 28
+                  },
+                  {
+                    "int": 31
+                  },
+                  {
+                    "int": 30
+                  },
+                  {
+                    "int": 31
+                  },
+                  {
+                    "int": 30
+                  },
+                  {
+                    "int": 31
+                  },
+                  {
+                    "int": 31
+                  },
+                  {
+                    "int": 30
+                  },
+                  {
+                    "int": 31
+                  },
+                  {
+                    "int": 30
+                  },
+                  {
+                    "int": 31
+                  }
+                ],
+                "op": "seq"
+              },
+              {
+                "args": [
+                  {
+                    "var": "m_v"
+                  },
+                  {
+                    "int": 1
+                  }
+                ],
+                "op": "-"
+              }
+            ],
+            "op": "at"
+          }
+        }
+      },
+      "decreases": {
+        "int": 0
+      },
+      "name": "daysInMonth",
+      "params": [
+        {
+          "name": "m_v",
+          "type": "int"
+        }
+      ],
+      "result": "int"
+    },
+    {
+      "body": {
+        "args": [
+          {
+            "args": [
+              {
+                "args": [
+                  {
+                    "int": 1
+                  },
+                  {
+                    "var": "m_v2"
+                  }
+                ],
+                "op": "<="
+              },
+              {
+                "args": [
+                  {
+                    "var": "m_v2"
+                  },
+                  {
+                    "int": 12
+                  }
+                ],
+                "op": "<="
+              }
+            ],
+            "op": "and"
+          },
+          {
+            "args": [
+              {
+                "args": [
+                  {
+                    "int": 1
+                  },
+                  {
+                    "var": "d_v"
+                  }
+                ],
+                "op": "<="
+              },
+              {
+                "args": [
+                  {
+                    "var": "d_v"
+                  },
+                  {
+                    "int": 7
+                  }
+                ],
+                "op": "<="
+              }
+            ],
+            "op": "and"
+          }
+        ],
+        "op": "and"
+      },
+      "decreases": {
+        "int": 0
+      },
+      "name": "validInput",
+      "params": [
+        {
+          "name": "m_v2",
+          "type": "int"
+        },
+        {
+          "name": "d_v",
+          "type": "int"
+        }
+      ],
+      "result": "bool"
+    },
+    {
+      "body": {
+        "ite": {
+          "cond": {
+            "call": {
+              "args": [
+                {
+                  "var": "m_v3"
+                },
+                {
+                  "var": "d_v2"
+                }
+              ],
+              "fun": "validInput"
+            }
+          },
+          "else": {
+            "int": 0
+          },
+          "then": {
+            "args": [
+              {
+                "int": 1
+              },
+              {
+                "args": [
+                  {
+                    "args": [
+                      {
+                        "args": [
+                          {
+                            "args": [
+                              {
+                                "var": "d_v2"
+                              },
+                              {
+                                "int": 1
+                              }
+                            ],
+                            "op": "-"
+                          },
+                          {
+                            "call": {
+                              "args": [
+                                {
+                                  "var": "m_v3"
+                                }
+                              ],
+                              "fun": "daysInMonth"
+                            }
+                          }
+                        ],
+                        "op": "+"
+                      },
+                      {
+                        "int": 1
+                      }
+                    ],
+                    "op": "-"
+                  },
+                  {
+                    "int": 7
+                  }
+                ],
+                "op": "div"
+              }
+            ],
+            "op": "+"
+          }
+        }
+      },
+      "decreases": {
+        "int": 0
+      },
+      "name": "columnsNeeded",
+      "params": [
+        {
+          "name": "m_v3",
+          "type": "int"
+        },
+        {
+          "name": "d_v2",
+          "type": "int"
+        }
+      ],
+      "result": "int"
+    }
+  ],
+  "t": 1
+}

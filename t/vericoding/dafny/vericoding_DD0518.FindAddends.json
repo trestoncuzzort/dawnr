@@ -1,0 +1,813 @@
+{
+  "body": [
+    {
+      "var": {
+        "init": {
+          "int": 0
+        },
+        "name": "i",
+        "type": "int"
+      }
+    },
+    {
+      "var": {
+        "init": {
+          "int": 0
+        },
+        "name": "j",
+        "type": "int"
+      }
+    },
+    {
+      "var": {
+        "init": {
+          "int": 0
+        },
+        "name": "i_p",
+        "type": "int"
+      }
+    },
+    {
+      "var": {
+        "init": {
+          "args": [
+            {
+              "args": [
+                {
+                  "var": "q"
+                }
+              ],
+              "op": "len"
+            },
+            {
+              "int": 1
+            }
+          ],
+          "op": "-"
+        },
+        "name": "j_p",
+        "type": "int"
+      }
+    },
+    {
+      "lemma": {
+        "args": [
+          {
+            "var": "q"
+          },
+          {
+            "var": "x"
+          }
+        ],
+        "name": "initialRangeHasAddends"
+      }
+    },
+    {
+      "var": {
+        "init": {
+          "args": [
+            {
+              "args": [
+                {
+                  "var": "q"
+                },
+                {
+                  "var": "i_p"
+                }
+              ],
+              "op": "at"
+            },
+            {
+              "args": [
+                {
+                  "var": "q"
+                },
+                {
+                  "var": "j_p"
+                }
+              ],
+              "op": "at"
+            }
+          ],
+          "op": "+"
+        },
+        "name": "sum_v",
+        "type": "int"
+      }
+    },
+    {
+      "while": {
+        "body": [
+          {
+            "if": {
+              "cond": {
+                "args": [
+                  {
+                    "var": "sum_v"
+                  },
+                  {
+                    "var": "x"
+                  }
+                ],
+                "op": "<"
+              },
+              "else": [
+                {
+                  "assign": [
+                    "j_p",
+                    {
+                      "args": [
+                        {
+                          "var": "j_p"
+                        },
+                        {
+                          "int": 1
+                        }
+                      ],
+                      "op": "-"
+                    }
+                  ]
+                }
+              ],
+              "then": [
+                {
+                  "assign": [
+                    "i_p",
+                    {
+                      "args": [
+                        {
+                          "var": "i_p"
+                        },
+                        {
+                          "int": 1
+                        }
+                      ],
+                      "op": "+"
+                    }
+                  ]
+                }
+              ]
+            }
+          },
+          {
+            "assign": [
+              "sum_v",
+              {
+                "args": [
+                  {
+                    "args": [
+                      {
+                        "var": "q"
+                      },
+                      {
+                        "var": "i_p"
+                      }
+                    ],
+                    "op": "at"
+                  },
+                  {
+                    "args": [
+                      {
+                        "var": "q"
+                      },
+                      {
+                        "var": "j_p"
+                      }
+                    ],
+                    "op": "at"
+                  }
+                ],
+                "op": "+"
+              }
+            ]
+          }
+        ],
+        "cond": {
+          "args": [
+            {
+              "var": "sum_v"
+            },
+            {
+              "var": "x"
+            }
+          ],
+          "op": "!="
+        },
+        "decreases": {
+          "args": [
+            {
+              "var": "j_p"
+            },
+            {
+              "var": "i_p"
+            }
+          ],
+          "op": "-"
+        },
+        "invariants": [
+          {
+            "args": [
+              {
+                "args": [
+                  {
+                    "int": 0
+                  },
+                  {
+                    "var": "i_p"
+                  }
+                ],
+                "op": "<="
+              },
+              {
+                "args": [
+                  {
+                    "var": "i_p"
+                  },
+                  {
+                    "var": "j_p"
+                  }
+                ],
+                "op": "<"
+              },
+              {
+                "args": [
+                  {
+                    "var": "j_p"
+                  },
+                  {
+                    "args": [
+                      {
+                        "var": "q"
+                      }
+                    ],
+                    "op": "len"
+                  }
+                ],
+                "op": "<"
+              }
+            ],
+            "op": "and"
+          },
+          {
+            "call": {
+              "args": [
+                {
+                  "args": [
+                    {
+                      "var": "q"
+                    },
+                    {
+                      "var": "i_p"
+                    },
+                    {
+                      "args": [
+                        {
+                          "var": "j_p"
+                        },
+                        {
+                          "int": 1
+                        }
+                      ],
+                      "op": "+"
+                    }
+                  ],
+                  "op": "slice"
+                },
+                {
+                  "var": "x"
+                }
+              ],
+              "fun": "hasAddends"
+            }
+          },
+          {
+            "args": [
+              {
+                "var": "sum_v"
+              },
+              {
+                "args": [
+                  {
+                    "args": [
+                      {
+                        "var": "q"
+                      },
+                      {
+                        "var": "i_p"
+                      }
+                    ],
+                    "op": "at"
+                  },
+                  {
+                    "args": [
+                      {
+                        "var": "q"
+                      },
+                      {
+                        "var": "j_p"
+                      }
+                    ],
+                    "op": "at"
+                  }
+                ],
+                "op": "+"
+              }
+            ],
+            "op": "=="
+          }
+        ]
+      }
+    },
+    {
+      "assign": [
+        "i",
+        {
+          "var": "i_p"
+        }
+      ]
+    },
+    {
+      "assign": [
+        "j",
+        {
+          "var": "j_p"
+        }
+      ]
+    },
+    {
+      "assign": [
+        "r",
+        {
+          "args": [
+            {
+              "var": "i"
+            },
+            {
+              "var": "j"
+            }
+          ],
+          "op": "pair"
+        }
+      ]
+    }
+  ],
+  "ensures": [
+    {
+      "args": [
+        {
+          "args": [
+            {
+              "var": "r"
+            }
+          ],
+          "op": "fst"
+        },
+        {
+          "int": 0
+        }
+      ],
+      "op": ">="
+    },
+    {
+      "args": [
+        {
+          "args": [
+            {
+              "var": "r"
+            }
+          ],
+          "op": "snd"
+        },
+        {
+          "int": 0
+        }
+      ],
+      "op": ">="
+    },
+    {
+      "args": [
+        {
+          "args": [
+            {
+              "args": [
+                {
+                  "var": "r"
+                }
+              ],
+              "op": "fst"
+            },
+            {
+              "args": [
+                {
+                  "var": "r"
+                }
+              ],
+              "op": "snd"
+            }
+          ],
+          "op": "<"
+        },
+        {
+          "args": [
+            {
+              "args": [
+                {
+                  "var": "r"
+                }
+              ],
+              "op": "snd"
+            },
+            {
+              "args": [
+                {
+                  "var": "q"
+                }
+              ],
+              "op": "len"
+            }
+          ],
+          "op": "<"
+        }
+      ],
+      "op": "and"
+    },
+    {
+      "args": [
+        {
+          "args": [
+            {
+              "args": [
+                {
+                  "var": "q"
+                },
+                {
+                  "args": [
+                    {
+                      "var": "r"
+                    }
+                  ],
+                  "op": "fst"
+                }
+              ],
+              "op": "at"
+            },
+            {
+              "args": [
+                {
+                  "var": "q"
+                },
+                {
+                  "args": [
+                    {
+                      "var": "r"
+                    }
+                  ],
+                  "op": "snd"
+                }
+              ],
+              "op": "at"
+            }
+          ],
+          "op": "+"
+        },
+        {
+          "var": "x"
+        }
+      ],
+      "op": "=="
+    }
+  ],
+  "gate": "recursion",
+  "lemmas": [
+    {
+      "body": [
+        {
+          "assert": {
+            "args": [
+              {
+                "args": [
+                  {
+                    "var": "q_v3"
+                  },
+                  {
+                    "int": 0
+                  },
+                  {
+                    "args": [
+                      {
+                        "var": "q_v3"
+                      }
+                    ],
+                    "op": "len"
+                  }
+                ],
+                "op": "slice"
+              },
+              {
+                "var": "q_v3"
+              }
+            ],
+            "op": "=="
+          }
+        }
+      ],
+      "ensures": [
+        {
+          "call": {
+            "args": [
+              {
+                "args": [
+                  {
+                    "var": "q_v3"
+                  },
+                  {
+                    "int": 0
+                  },
+                  {
+                    "args": [
+                      {
+                        "var": "q_v3"
+                      }
+                    ],
+                    "op": "len"
+                  }
+                ],
+                "op": "slice"
+              },
+              {
+                "var": "x_v2"
+              }
+            ],
+            "fun": "hasAddends"
+          }
+        }
+      ],
+      "name": "initialRangeHasAddends",
+      "params": [
+        {
+          "name": "q_v3",
+          "type": "seq"
+        },
+        {
+          "name": "x_v2",
+          "type": "int"
+        }
+      ],
+      "requires": [
+        {
+          "call": {
+            "args": [
+              {
+                "var": "q_v3"
+              }
+            ],
+            "fun": "sorted"
+          }
+        },
+        {
+          "call": {
+            "args": [
+              {
+                "var": "q_v3"
+              },
+              {
+                "var": "x_v2"
+              }
+            ],
+            "fun": "hasAddends"
+          }
+        },
+        {
+          "args": [
+            {
+              "args": [
+                {
+                  "var": "q_v3"
+                }
+              ],
+              "op": "len"
+            },
+            {
+              "int": 2
+            }
+          ],
+          "op": ">="
+        }
+      ]
+    }
+  ],
+  "name": "vericoding_dd0518__findAddends",
+  "params": [
+    {
+      "name": "q",
+      "type": "seq"
+    },
+    {
+      "name": "x",
+      "type": "int"
+    }
+  ],
+  "requires": [
+    {
+      "call": {
+        "args": [
+          {
+            "var": "q"
+          }
+        ],
+        "fun": "sorted"
+      }
+    },
+    {
+      "call": {
+        "args": [
+          {
+            "var": "q"
+          },
+          {
+            "var": "x"
+          }
+        ],
+        "fun": "hasAddends"
+      }
+    }
+  ],
+  "returns": [
+    {
+      "name": "r",
+      "type": {
+        "pair": [
+          "int",
+          "int"
+        ]
+      }
+    }
+  ],
+  "spec_funs": [
+    {
+      "body": {
+        "exists": {
+          "body": {
+            "exists": {
+              "body": {
+                "args": [
+                  {
+                    "args": [
+                      {
+                        "args": [
+                          {
+                            "var": "q_v"
+                          },
+                          {
+                            "var": "i_v"
+                          }
+                        ],
+                        "op": "at"
+                      },
+                      {
+                        "args": [
+                          {
+                            "var": "q_v"
+                          },
+                          {
+                            "var": "j_v"
+                          }
+                        ],
+                        "op": "at"
+                      }
+                    ],
+                    "op": "+"
+                  },
+                  {
+                    "var": "x_v"
+                  }
+                ],
+                "op": "=="
+              },
+              "hi": {
+                "args": [
+                  {
+                    "var": "q_v"
+                  }
+                ],
+                "op": "len"
+              },
+              "lo": {
+                "args": [
+                  {
+                    "var": "i_v"
+                  },
+                  {
+                    "int": 1
+                  }
+                ],
+                "op": "+"
+              },
+              "var": "j_v"
+            }
+          },
+          "hi": {
+            "args": [
+              {
+                "var": "q_v"
+              }
+            ],
+            "op": "len"
+          },
+          "lo": {
+            "int": 0
+          },
+          "var": "i_v"
+        }
+      },
+      "decreases": {
+        "int": 0
+      },
+      "name": "hasAddends",
+      "params": [
+        {
+          "name": "q_v",
+          "type": "seq"
+        },
+        {
+          "name": "x_v",
+          "type": "int"
+        }
+      ],
+      "result": "bool"
+    },
+    {
+      "body": {
+        "forall": {
+          "body": {
+            "forall": {
+              "body": {
+                "args": [
+                  {
+                    "args": [
+                      {
+                        "var": "q_v2"
+                      },
+                      {
+                        "var": "i_v2"
+                      }
+                    ],
+                    "op": "at"
+                  },
+                  {
+                    "args": [
+                      {
+                        "var": "q_v2"
+                      },
+                      {
+                        "var": "j_v2"
+                      }
+                    ],
+                    "op": "at"
+                  }
+                ],
+                "op": "<="
+              },
+              "hi": {
+                "args": [
+                  {
+                    "var": "q_v2"
+                  }
+                ],
+                "op": "len"
+              },
+              "lo": {
+                "var": "i_v2"
+              },
+              "var": "j_v2"
+            }
+          },
+          "hi": {
+            "args": [
+              {
+                "var": "q_v2"
+              }
+            ],
+            "op": "len"
+          },
+          "lo": {
+            "int": 0
+          },
+          "var": "i_v2"
+        }
+      },
+      "decreases": {
+        "int": 0
+      },
+      "name": "sorted",
+      "params": [
+        {
+          "name": "q_v2",
+          "type": "seq"
+        }
+      ],
+      "result": "bool"
+    }
+  ],
+  "t": 1
+}

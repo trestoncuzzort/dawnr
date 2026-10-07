@@ -1,0 +1,546 @@
+{
+  "body": [
+    {
+      "var": {
+        "init": {
+          "args": [
+            {
+              "int": 25
+            },
+            {
+              "var": "d"
+            }
+          ],
+          "op": "-"
+        },
+        "name": "eveCount",
+        "type": "int"
+      }
+    },
+    {
+      "assign": [
+        "result",
+        {
+          "args": [
+            {
+              "int": 67
+            },
+            {
+              "int": 104
+            },
+            {
+              "int": 114
+            },
+            {
+              "int": 105
+            },
+            {
+              "int": 115
+            },
+            {
+              "int": 116
+            },
+            {
+              "int": 109
+            },
+            {
+              "int": 97
+            },
+            {
+              "int": 115
+            }
+          ],
+          "op": "seq"
+        }
+      ]
+    },
+    {
+      "var": {
+        "init": {
+          "int": 0
+        },
+        "name": "i_v",
+        "type": "int"
+      }
+    },
+    {
+      "while": {
+        "body": [
+          {
+            "assign": [
+              "result",
+              {
+                "args": [
+                  {
+                    "var": "result"
+                  },
+                  {
+                    "args": [
+                      {
+                        "int": 32
+                      },
+                      {
+                        "int": 69
+                      },
+                      {
+                        "int": 118
+                      },
+                      {
+                        "int": 101
+                      }
+                    ],
+                    "op": "seq"
+                  }
+                ],
+                "op": "+"
+              }
+            ]
+          },
+          {
+            "assign": [
+              "i_v",
+              {
+                "args": [
+                  {
+                    "var": "i_v"
+                  },
+                  {
+                    "int": 1
+                  }
+                ],
+                "op": "+"
+              }
+            ]
+          }
+        ],
+        "cond": {
+          "args": [
+            {
+              "var": "i_v"
+            },
+            {
+              "var": "eveCount"
+            }
+          ],
+          "op": "<"
+        },
+        "decreases": {
+          "args": [
+            {
+              "var": "eveCount"
+            },
+            {
+              "var": "i_v"
+            }
+          ],
+          "op": "-"
+        },
+        "invariants": [
+          {
+            "args": [
+              {
+                "args": [
+                  {
+                    "int": 0
+                  },
+                  {
+                    "var": "i_v"
+                  }
+                ],
+                "op": "<="
+              },
+              {
+                "args": [
+                  {
+                    "var": "i_v"
+                  },
+                  {
+                    "var": "eveCount"
+                  }
+                ],
+                "op": "<="
+              }
+            ],
+            "op": "and"
+          },
+          {
+            "args": [
+              {
+                "var": "result"
+              },
+              {
+                "args": [
+                  {
+                    "args": [
+                      {
+                        "int": 67
+                      },
+                      {
+                        "int": 104
+                      },
+                      {
+                        "int": 114
+                      },
+                      {
+                        "int": 105
+                      },
+                      {
+                        "int": 115
+                      },
+                      {
+                        "int": 116
+                      },
+                      {
+                        "int": 109
+                      },
+                      {
+                        "int": 97
+                      },
+                      {
+                        "int": 115
+                      }
+                    ],
+                    "op": "seq"
+                  },
+                  {
+                    "call": {
+                      "args": [
+                        {
+                          "var": "i_v"
+                        }
+                      ],
+                      "fun": "repeatEve"
+                    }
+                  }
+                ],
+                "op": "+"
+              }
+            ],
+            "op": "=="
+          }
+        ]
+      }
+    }
+  ],
+  "ensures": [
+    {
+      "args": [
+        {
+          "var": "result"
+        },
+        {
+          "call": {
+            "args": [
+              {
+                "var": "d"
+              }
+            ],
+            "fun": "expectedOutput"
+          }
+        }
+      ],
+      "op": "=="
+    }
+  ],
+  "gate": "recursion",
+  "name": "vericoding_da0601__solve",
+  "params": [
+    {
+      "name": "d",
+      "type": "int"
+    }
+  ],
+  "requires": [
+    {
+      "call": {
+        "args": [
+          {
+            "var": "d"
+          }
+        ],
+        "fun": "validInput"
+      }
+    }
+  ],
+  "returns": [
+    {
+      "name": "result",
+      "type": "seq"
+    }
+  ],
+  "spec_funs": [
+    {
+      "body": {
+        "ite": {
+          "cond": {
+            "args": [
+              {
+                "var": "count"
+              },
+              {
+                "int": 0
+              }
+            ],
+            "op": ">="
+          },
+          "else": {
+            "args": [],
+            "op": "seq"
+          },
+          "then": {
+            "ite": {
+              "cond": {
+                "args": [
+                  {
+                    "var": "count"
+                  },
+                  {
+                    "int": 0
+                  }
+                ],
+                "op": "=="
+              },
+              "else": {
+                "args": [
+                  {
+                    "args": [
+                      {
+                        "int": 32
+                      },
+                      {
+                        "int": 69
+                      },
+                      {
+                        "int": 118
+                      },
+                      {
+                        "int": 101
+                      }
+                    ],
+                    "op": "seq"
+                  },
+                  {
+                    "call": {
+                      "args": [
+                        {
+                          "args": [
+                            {
+                              "var": "count"
+                            },
+                            {
+                              "int": 1
+                            }
+                          ],
+                          "op": "-"
+                        }
+                      ],
+                      "fun": "repeatEve"
+                    }
+                  }
+                ],
+                "op": "+"
+              },
+              "then": {
+                "args": [],
+                "op": "seq"
+              }
+            }
+          }
+        }
+      },
+      "decreases": {
+        "var": "count"
+      },
+      "name": "repeatEve",
+      "params": [
+        {
+          "name": "count",
+          "type": "int"
+        }
+      ],
+      "result": "seq"
+    },
+    {
+      "body": {
+        "args": [
+          {
+            "args": [
+              {
+                "int": 22
+              },
+              {
+                "var": "d_v"
+              }
+            ],
+            "op": "<="
+          },
+          {
+            "args": [
+              {
+                "var": "d_v"
+              },
+              {
+                "int": 25
+              }
+            ],
+            "op": "<="
+          }
+        ],
+        "op": "and"
+      },
+      "decreases": {
+        "int": 0
+      },
+      "name": "validInput",
+      "params": [
+        {
+          "name": "d_v",
+          "type": "int"
+        }
+      ],
+      "result": "bool"
+    },
+    {
+      "body": {
+        "ite": {
+          "cond": {
+            "call": {
+              "args": [
+                {
+                  "var": "d_v2"
+                }
+              ],
+              "fun": "validInput"
+            }
+          },
+          "else": {
+            "args": [],
+            "op": "seq"
+          },
+          "then": {
+            "ite": {
+              "cond": {
+                "args": [
+                  {
+                    "args": [
+                      {
+                        "int": 25
+                      },
+                      {
+                        "var": "d_v2"
+                      }
+                    ],
+                    "op": "-"
+                  },
+                  {
+                    "int": 0
+                  }
+                ],
+                "op": "=="
+              },
+              "else": {
+                "args": [
+                  {
+                    "args": [
+                      {
+                        "int": 67
+                      },
+                      {
+                        "int": 104
+                      },
+                      {
+                        "int": 114
+                      },
+                      {
+                        "int": 105
+                      },
+                      {
+                        "int": 115
+                      },
+                      {
+                        "int": 116
+                      },
+                      {
+                        "int": 109
+                      },
+                      {
+                        "int": 97
+                      },
+                      {
+                        "int": 115
+                      }
+                    ],
+                    "op": "seq"
+                  },
+                  {
+                    "call": {
+                      "args": [
+                        {
+                          "args": [
+                            {
+                              "int": 25
+                            },
+                            {
+                              "var": "d_v2"
+                            }
+                          ],
+                          "op": "-"
+                        }
+                      ],
+                      "fun": "repeatEve"
+                    }
+                  }
+                ],
+                "op": "+"
+              },
+              "then": {
+                "args": [
+                  {
+                    "int": 67
+                  },
+                  {
+                    "int": 104
+                  },
+                  {
+                    "int": 114
+                  },
+                  {
+                    "int": 105
+                  },
+                  {
+                    "int": 115
+                  },
+                  {
+                    "int": 116
+                  },
+                  {
+                    "int": 109
+                  },
+                  {
+                    "int": 97
+                  },
+                  {
+                    "int": 115
+                  }
+                ],
+                "op": "seq"
+              }
+            }
+          }
+        }
+      },
+      "decreases": {
+        "int": 0
+      },
+      "name": "expectedOutput",
+      "params": [
+        {
+          "name": "d_v2",
+          "type": "int"
+        }
+      ],
+      "result": "seq"
+    }
+  ],
+  "t": 1
+}

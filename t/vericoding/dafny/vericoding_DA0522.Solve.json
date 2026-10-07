@@ -1,0 +1,219 @@
+{
+  "body": [
+    {
+      "if": {
+        "cond": {
+          "args": [
+            {
+              "var": "x"
+            },
+            {
+              "var": "a"
+            }
+          ],
+          "op": "<"
+        },
+        "else": [
+          {
+            "assign": [
+              "result",
+              {
+                "int": 10
+              }
+            ]
+          }
+        ],
+        "then": [
+          {
+            "assign": [
+              "result",
+              {
+                "int": 0
+              }
+            ]
+          }
+        ]
+      }
+    }
+  ],
+  "ensures": [
+    {
+      "call": {
+        "args": [
+          {
+            "var": "x"
+          },
+          {
+            "var": "a"
+          },
+          {
+            "var": "result"
+          }
+        ],
+        "fun": "correctOutput"
+      }
+    }
+  ],
+  "gate": "recursion",
+  "name": "vericoding_da0522__solve",
+  "params": [
+    {
+      "name": "x",
+      "type": "int"
+    },
+    {
+      "name": "a",
+      "type": "int"
+    }
+  ],
+  "requires": [
+    {
+      "call": {
+        "args": [
+          {
+            "var": "x"
+          },
+          {
+            "var": "a"
+          }
+        ],
+        "fun": "validInput"
+      }
+    }
+  ],
+  "returns": [
+    {
+      "name": "result",
+      "type": "int"
+    }
+  ],
+  "spec_funs": [
+    {
+      "body": {
+        "args": [
+          {
+            "args": [
+              {
+                "args": [
+                  {
+                    "int": 0
+                  },
+                  {
+                    "var": "x_v"
+                  }
+                ],
+                "op": "<="
+              },
+              {
+                "args": [
+                  {
+                    "var": "x_v"
+                  },
+                  {
+                    "int": 9
+                  }
+                ],
+                "op": "<="
+              }
+            ],
+            "op": "and"
+          },
+          {
+            "args": [
+              {
+                "args": [
+                  {
+                    "int": 0
+                  },
+                  {
+                    "var": "a_v"
+                  }
+                ],
+                "op": "<="
+              },
+              {
+                "args": [
+                  {
+                    "var": "a_v"
+                  },
+                  {
+                    "int": 9
+                  }
+                ],
+                "op": "<="
+              }
+            ],
+            "op": "and"
+          }
+        ],
+        "op": "and"
+      },
+      "decreases": {
+        "int": 0
+      },
+      "name": "validInput",
+      "params": [
+        {
+          "name": "x_v",
+          "type": "int"
+        },
+        {
+          "name": "a_v",
+          "type": "int"
+        }
+      ],
+      "result": "bool"
+    },
+    {
+      "body": {
+        "args": [
+          {
+            "var": "result_v"
+          },
+          {
+            "ite": {
+              "cond": {
+                "args": [
+                  {
+                    "var": "x_v2"
+                  },
+                  {
+                    "var": "a_v2"
+                  }
+                ],
+                "op": "<"
+              },
+              "else": {
+                "int": 10
+              },
+              "then": {
+                "int": 0
+              }
+            }
+          }
+        ],
+        "op": "=="
+      },
+      "decreases": {
+        "int": 0
+      },
+      "name": "correctOutput",
+      "params": [
+        {
+          "name": "x_v2",
+          "type": "int"
+        },
+        {
+          "name": "a_v2",
+          "type": "int"
+        },
+        {
+          "name": "result_v",
+          "type": "int"
+        }
+      ],
+      "result": "bool"
+    }
+  ],
+  "t": 1
+}

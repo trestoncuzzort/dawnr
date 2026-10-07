@@ -1,0 +1,883 @@
+{
+  "body": [
+    {
+      "var": {
+        "init": {
+          "bool": false
+        },
+        "name": "has_any_prime",
+        "type": "bool"
+      }
+    },
+    {
+      "var": {
+        "init": {
+          "int": 0
+        },
+        "name": "largest_prime",
+        "type": "int"
+      }
+    },
+    {
+      "var": {
+        "init": {
+          "int": 0
+        },
+        "name": "i",
+        "type": "int"
+      }
+    },
+    {
+      "while": {
+        "body": [
+          {
+            "if": {
+              "cond": {
+                "call": {
+                  "args": [
+                    {
+                      "args": [
+                        {
+                          "var": "lst"
+                        },
+                        {
+                          "var": "i"
+                        }
+                      ],
+                      "op": "at"
+                    }
+                  ],
+                  "fun": "is_prime_pure"
+                }
+              },
+              "else": [],
+              "then": [
+                {
+                  "if": {
+                    "cond": {
+                      "args": [
+                        {
+                          "args": [
+                            {
+                              "var": "has_any_prime"
+                            }
+                          ],
+                          "op": "not"
+                        },
+                        {
+                          "args": [
+                            {
+                              "args": [
+                                {
+                                  "var": "lst"
+                                },
+                                {
+                                  "var": "i"
+                                }
+                              ],
+                              "op": "at"
+                            },
+                            {
+                              "var": "largest_prime"
+                            }
+                          ],
+                          "op": ">"
+                        }
+                      ],
+                      "op": "or"
+                    },
+                    "else": [],
+                    "then": [
+                      {
+                        "assign": [
+                          "largest_prime",
+                          {
+                            "args": [
+                              {
+                                "var": "lst"
+                              },
+                              {
+                                "var": "i"
+                              }
+                            ],
+                            "op": "at"
+                          }
+                        ]
+                      },
+                      {
+                        "assign": [
+                          "has_any_prime",
+                          {
+                            "bool": true
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                }
+              ]
+            }
+          },
+          {
+            "assign": [
+              "i",
+              {
+                "args": [
+                  {
+                    "var": "i"
+                  },
+                  {
+                    "int": 1
+                  }
+                ],
+                "op": "+"
+              }
+            ]
+          }
+        ],
+        "cond": {
+          "args": [
+            {
+              "var": "i"
+            },
+            {
+              "args": [
+                {
+                  "var": "lst"
+                }
+              ],
+              "op": "len"
+            }
+          ],
+          "op": "<"
+        },
+        "decreases": {
+          "args": [
+            {
+              "args": [
+                {
+                  "var": "lst"
+                }
+              ],
+              "op": "len"
+            },
+            {
+              "var": "i"
+            }
+          ],
+          "op": "-"
+        },
+        "invariants": [
+          {
+            "args": [
+              {
+                "args": [
+                  {
+                    "int": 0
+                  },
+                  {
+                    "var": "i"
+                  }
+                ],
+                "op": "<="
+              },
+              {
+                "args": [
+                  {
+                    "var": "i"
+                  },
+                  {
+                    "args": [
+                      {
+                        "var": "lst"
+                      }
+                    ],
+                    "op": "len"
+                  }
+                ],
+                "op": "<="
+              }
+            ],
+            "op": "and"
+          },
+          {
+            "args": [
+              {
+                "args": [
+                  {
+                    "var": "has_any_prime"
+                  }
+                ],
+                "op": "not"
+              },
+              {
+                "forall": {
+                  "body": {
+                    "args": [
+                      {
+                        "call": {
+                          "args": [
+                            {
+                              "args": [
+                                {
+                                  "var": "lst"
+                                },
+                                {
+                                  "var": "j"
+                                }
+                              ],
+                              "op": "at"
+                            }
+                          ],
+                          "fun": "is_prime_pure"
+                        }
+                      }
+                    ],
+                    "op": "not"
+                  },
+                  "hi": {
+                    "var": "i"
+                  },
+                  "lo": {
+                    "int": 0
+                  },
+                  "var": "j"
+                }
+              }
+            ],
+            "op": "implies"
+          },
+          {
+            "args": [
+              {
+                "var": "has_any_prime"
+              },
+              {
+                "exists": {
+                  "body": {
+                    "args": [
+                      {
+                        "args": [
+                          {
+                            "args": [
+                              {
+                                "var": "lst"
+                              },
+                              {
+                                "var": "j_v"
+                              }
+                            ],
+                            "op": "at"
+                          },
+                          {
+                            "var": "largest_prime"
+                          }
+                        ],
+                        "op": "=="
+                      },
+                      {
+                        "call": {
+                          "args": [
+                            {
+                              "var": "largest_prime"
+                            }
+                          ],
+                          "fun": "is_prime_pure"
+                        }
+                      }
+                    ],
+                    "op": "and"
+                  },
+                  "hi": {
+                    "var": "i"
+                  },
+                  "lo": {
+                    "int": 0
+                  },
+                  "var": "j_v"
+                }
+              }
+            ],
+            "op": "implies"
+          },
+          {
+            "args": [
+              {
+                "var": "has_any_prime"
+              },
+              {
+                "forall": {
+                  "body": {
+                    "args": [
+                      {
+                        "call": {
+                          "args": [
+                            {
+                              "args": [
+                                {
+                                  "var": "lst"
+                                },
+                                {
+                                  "var": "j_v2"
+                                }
+                              ],
+                              "op": "at"
+                            }
+                          ],
+                          "fun": "is_prime_pure"
+                        }
+                      },
+                      {
+                        "args": [
+                          {
+                            "args": [
+                              {
+                                "var": "lst"
+                              },
+                              {
+                                "var": "j_v2"
+                              }
+                            ],
+                            "op": "at"
+                          },
+                          {
+                            "var": "largest_prime"
+                          }
+                        ],
+                        "op": "<="
+                      }
+                    ],
+                    "op": "implies"
+                  },
+                  "hi": {
+                    "var": "i"
+                  },
+                  "lo": {
+                    "int": 0
+                  },
+                  "var": "j_v2"
+                }
+              }
+            ],
+            "op": "implies"
+          }
+        ]
+      }
+    },
+    {
+      "if": {
+        "cond": {
+          "var": "has_any_prime"
+        },
+        "else": [
+          {
+            "assign": [
+              "result",
+              {
+                "int": 0
+              }
+            ]
+          }
+        ],
+        "then": [
+          {
+            "assign": [
+              "result",
+              {
+                "call": {
+                  "args": [
+                    {
+                      "var": "largest_prime"
+                    }
+                  ],
+                  "fun": "sum_of_digits"
+                }
+              }
+            ]
+          }
+        ]
+      }
+    }
+  ],
+  "ensures": [
+    {
+      "args": [
+        {
+          "var": "result"
+        },
+        {
+          "int": 0
+        }
+      ],
+      "op": ">="
+    },
+    {
+      "args": [
+        {
+          "forall": {
+            "body": {
+              "args": [
+                {
+                  "call": {
+                    "args": [
+                      {
+                        "args": [
+                          {
+                            "var": "lst"
+                          },
+                          {
+                            "var": "x"
+                          }
+                        ],
+                        "op": "at"
+                      }
+                    ],
+                    "fun": "is_prime_pure"
+                  }
+                }
+              ],
+              "op": "not"
+            },
+            "hi": {
+              "args": [
+                {
+                  "var": "lst"
+                }
+              ],
+              "op": "len"
+            },
+            "lo": {
+              "int": 0
+            },
+            "var": "x"
+          }
+        },
+        {
+          "args": [
+            {
+              "var": "result"
+            },
+            {
+              "int": 0
+            }
+          ],
+          "op": "=="
+        }
+      ],
+      "op": "implies"
+    },
+    {
+      "args": [
+        {
+          "exists": {
+            "body": {
+              "call": {
+                "args": [
+                  {
+                    "args": [
+                      {
+                        "var": "lst"
+                      },
+                      {
+                        "var": "x_v"
+                      }
+                    ],
+                    "op": "at"
+                  }
+                ],
+                "fun": "is_prime_pure"
+              }
+            },
+            "hi": {
+              "args": [
+                {
+                  "var": "lst"
+                }
+              ],
+              "op": "len"
+            },
+            "lo": {
+              "int": 0
+            },
+            "var": "x_v"
+          }
+        },
+        {
+          "exists": {
+            "body": {
+              "args": [
+                {
+                  "call": {
+                    "args": [
+                      {
+                        "args": [
+                          {
+                            "var": "lst"
+                          },
+                          {
+                            "var": "largest"
+                          }
+                        ],
+                        "op": "at"
+                      }
+                    ],
+                    "fun": "is_prime_pure"
+                  }
+                },
+                {
+                  "forall": {
+                    "body": {
+                      "args": [
+                        {
+                          "call": {
+                            "args": [
+                              {
+                                "args": [
+                                  {
+                                    "var": "lst"
+                                  },
+                                  {
+                                    "var": "y"
+                                  }
+                                ],
+                                "op": "at"
+                              }
+                            ],
+                            "fun": "is_prime_pure"
+                          }
+                        },
+                        {
+                          "args": [
+                            {
+                              "args": [
+                                {
+                                  "var": "lst"
+                                },
+                                {
+                                  "var": "y"
+                                }
+                              ],
+                              "op": "at"
+                            },
+                            {
+                              "args": [
+                                {
+                                  "var": "lst"
+                                },
+                                {
+                                  "var": "largest"
+                                }
+                              ],
+                              "op": "at"
+                            }
+                          ],
+                          "op": "<="
+                        }
+                      ],
+                      "op": "implies"
+                    },
+                    "hi": {
+                      "args": [
+                        {
+                          "var": "lst"
+                        }
+                      ],
+                      "op": "len"
+                    },
+                    "lo": {
+                      "int": 0
+                    },
+                    "var": "y"
+                  }
+                },
+                {
+                  "args": [
+                    {
+                      "var": "result"
+                    },
+                    {
+                      "call": {
+                        "args": [
+                          {
+                            "args": [
+                              {
+                                "var": "lst"
+                              },
+                              {
+                                "var": "largest"
+                              }
+                            ],
+                            "op": "at"
+                          }
+                        ],
+                        "fun": "sum_of_digits_pure"
+                      }
+                    }
+                  ],
+                  "op": "=="
+                }
+              ],
+              "op": "and"
+            },
+            "hi": {
+              "args": [
+                {
+                  "var": "lst"
+                }
+              ],
+              "op": "len"
+            },
+            "lo": {
+              "int": 0
+            },
+            "var": "largest"
+          }
+        }
+      ],
+      "op": "implies"
+    }
+  ],
+  "gate": "recursion",
+  "name": "vericoding_dh0096__skjkasdkd",
+  "params": [
+    {
+      "name": "lst",
+      "type": "seq"
+    }
+  ],
+  "requires": [],
+  "returns": [
+    {
+      "name": "result",
+      "type": "int"
+    }
+  ],
+  "spec_funs": [
+    {
+      "body": {
+        "ite": {
+          "cond": {
+            "args": [
+              {
+                "var": "n"
+              },
+              {
+                "int": 0
+              }
+            ],
+            "op": ">="
+          },
+          "else": {
+            "int": 0
+          },
+          "then": {
+            "ite": {
+              "cond": {
+                "args": [
+                  {
+                    "var": "n"
+                  },
+                  {
+                    "int": 10
+                  }
+                ],
+                "op": "<"
+              },
+              "else": {
+                "args": [
+                  {
+                    "args": [
+                      {
+                        "var": "n"
+                      },
+                      {
+                        "int": 10
+                      }
+                    ],
+                    "op": "mod"
+                  },
+                  {
+                    "call": {
+                      "args": [
+                        {
+                          "args": [
+                            {
+                              "var": "n"
+                            },
+                            {
+                              "int": 10
+                            }
+                          ],
+                          "op": "div"
+                        }
+                      ],
+                      "fun": "sum_of_digits_pure"
+                    }
+                  }
+                ],
+                "op": "+"
+              },
+              "then": {
+                "var": "n"
+              }
+            }
+          }
+        }
+      },
+      "decreases": {
+        "var": "n"
+      },
+      "name": "sum_of_digits_pure",
+      "params": [
+        {
+          "name": "n",
+          "type": "int"
+        }
+      ],
+      "result": "int"
+    },
+    {
+      "body": {
+        "ite": {
+          "cond": {
+            "args": [
+              {
+                "var": "n_v"
+              },
+              {
+                "int": 0
+              }
+            ],
+            "op": ">="
+          },
+          "else": {
+            "int": 0
+          },
+          "then": {
+            "ite": {
+              "cond": {
+                "args": [
+                  {
+                    "var": "n_v"
+                  },
+                  {
+                    "int": 10
+                  }
+                ],
+                "op": "<"
+              },
+              "else": {
+                "args": [
+                  {
+                    "args": [
+                      {
+                        "var": "n_v"
+                      },
+                      {
+                        "int": 10
+                      }
+                    ],
+                    "op": "mod"
+                  },
+                  {
+                    "call": {
+                      "args": [
+                        {
+                          "args": [
+                            {
+                              "var": "n_v"
+                            },
+                            {
+                              "int": 10
+                            }
+                          ],
+                          "op": "div"
+                        }
+                      ],
+                      "fun": "sum_of_digits"
+                    }
+                  }
+                ],
+                "op": "+"
+              },
+              "then": {
+                "var": "n_v"
+              }
+            }
+          }
+        }
+      },
+      "decreases": {
+        "var": "n_v"
+      },
+      "name": "sum_of_digits",
+      "params": [
+        {
+          "name": "n_v",
+          "type": "int"
+        }
+      ],
+      "result": "int"
+    },
+    {
+      "body": {
+        "args": [
+          {
+            "args": [
+              {
+                "var": "n_v2"
+              },
+              {
+                "int": 2
+              }
+            ],
+            "op": ">="
+          },
+          {
+            "forall": {
+              "body": {
+                "args": [
+                  {
+                    "args": [
+                      {
+                        "var": "n_v2"
+                      },
+                      {
+                        "var": "k"
+                      }
+                    ],
+                    "op": "mod"
+                  },
+                  {
+                    "int": 0
+                  }
+                ],
+                "op": "!="
+              },
+              "hi": {
+                "var": "n_v2"
+              },
+              "lo": {
+                "int": 2
+              },
+              "var": "k"
+            }
+          }
+        ],
+        "op": "and"
+      },
+      "decreases": {
+        "int": 0
+      },
+      "name": "is_prime_pure",
+      "params": [
+        {
+          "name": "n_v2",
+          "type": "int"
+        }
+      ],
+      "result": "bool"
+    }
+  ],
+  "t": 1
+}

@@ -1,0 +1,1698 @@
+{
+  "body": [
+    {
+      "lemma": {
+        "args": [
+          {
+            "var": "x"
+          },
+          {
+            "var": "y"
+          }
+        ],
+        "name": "computeTurnsNonNegative"
+      }
+    },
+    {
+      "if": {
+        "cond": {
+          "call": {
+            "args": [
+              {
+                "var": "x"
+              },
+              {
+                "var": "y"
+              }
+            ],
+            "fun": "isOriginOrFirstPoint"
+          }
+        },
+        "else": [
+          {
+            "if": {
+              "cond": {
+                "call": {
+                  "args": [
+                    {
+                      "var": "x"
+                    },
+                    {
+                      "var": "y"
+                    }
+                  ],
+                  "fun": "isRightEdge"
+                }
+              },
+              "else": [
+                {
+                  "if": {
+                    "cond": {
+                      "call": {
+                        "args": [
+                          {
+                            "var": "x"
+                          },
+                          {
+                            "var": "y"
+                          }
+                        ],
+                        "fun": "isLeftEdge"
+                      }
+                    },
+                    "else": [
+                      {
+                        "if": {
+                          "cond": {
+                            "call": {
+                              "args": [
+                                {
+                                  "var": "x"
+                                },
+                                {
+                                  "var": "y"
+                                }
+                              ],
+                              "fun": "isTopEdge"
+                            }
+                          },
+                          "else": [
+                            {
+                              "assign": [
+                                "result",
+                                {
+                                  "args": [
+                                    {
+                                      "args": [
+                                        {
+                                          "int": 4
+                                        }
+                                      ],
+                                      "op": "neg"
+                                    },
+                                    {
+                                      "var": "y"
+                                    }
+                                  ],
+                                  "op": "*"
+                                }
+                              ]
+                            }
+                          ],
+                          "then": [
+                            {
+                              "assign": [
+                                "result",
+                                {
+                                  "args": [
+                                    {
+                                      "int": 2
+                                    },
+                                    {
+                                      "args": [
+                                        {
+                                          "int": 4
+                                        },
+                                        {
+                                          "args": [
+                                            {
+                                              "var": "y"
+                                            },
+                                            {
+                                              "int": 1
+                                            }
+                                          ],
+                                          "op": "-"
+                                        }
+                                      ],
+                                      "op": "*"
+                                    }
+                                  ],
+                                  "op": "+"
+                                }
+                              ]
+                            }
+                          ]
+                        }
+                      }
+                    ],
+                    "then": [
+                      {
+                        "assign": [
+                          "result",
+                          {
+                            "args": [
+                              {
+                                "int": 3
+                              },
+                              {
+                                "args": [
+                                  {
+                                    "int": 4
+                                  },
+                                  {
+                                    "args": [
+                                      {
+                                        "args": [
+                                          {
+                                            "var": "x"
+                                          }
+                                        ],
+                                        "op": "neg"
+                                      },
+                                      {
+                                        "int": 1
+                                      }
+                                    ],
+                                    "op": "-"
+                                  }
+                                ],
+                                "op": "*"
+                              }
+                            ],
+                            "op": "+"
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                }
+              ],
+              "then": [
+                {
+                  "assign": [
+                    "result",
+                    {
+                      "args": [
+                        {
+                          "int": 1
+                        },
+                        {
+                          "args": [
+                            {
+                              "int": 4
+                            },
+                            {
+                              "args": [
+                                {
+                                  "var": "x"
+                                },
+                                {
+                                  "int": 1
+                                }
+                              ],
+                              "op": "-"
+                            }
+                          ],
+                          "op": "*"
+                        }
+                      ],
+                      "op": "+"
+                    }
+                  ]
+                }
+              ]
+            }
+          }
+        ],
+        "then": [
+          {
+            "assign": [
+              "result",
+              {
+                "int": 0
+              }
+            ]
+          }
+        ]
+      }
+    }
+  ],
+  "ensures": [
+    {
+      "args": [
+        {
+          "var": "result"
+        },
+        {
+          "int": 0
+        }
+      ],
+      "op": ">="
+    },
+    {
+      "args": [
+        {
+          "var": "result"
+        },
+        {
+          "call": {
+            "args": [
+              {
+                "var": "x"
+              },
+              {
+                "var": "y"
+              }
+            ],
+            "fun": "computeTurns"
+          }
+        }
+      ],
+      "op": "=="
+    },
+    {
+      "args": [
+        {
+          "call": {
+            "args": [
+              {
+                "var": "x"
+              },
+              {
+                "var": "y"
+              }
+            ],
+            "fun": "isOriginOrFirstPoint"
+          }
+        },
+        {
+          "args": [
+            {
+              "var": "result"
+            },
+            {
+              "int": 0
+            }
+          ],
+          "op": "=="
+        }
+      ],
+      "op": "implies"
+    },
+    {
+      "args": [
+        {
+          "call": {
+            "args": [
+              {
+                "var": "x"
+              },
+              {
+                "var": "y"
+              }
+            ],
+            "fun": "isRightEdge"
+          }
+        },
+        {
+          "args": [
+            {
+              "var": "result"
+            },
+            {
+              "args": [
+                {
+                  "int": 1
+                },
+                {
+                  "args": [
+                    {
+                      "int": 4
+                    },
+                    {
+                      "args": [
+                        {
+                          "var": "x"
+                        },
+                        {
+                          "int": 1
+                        }
+                      ],
+                      "op": "-"
+                    }
+                  ],
+                  "op": "*"
+                }
+              ],
+              "op": "+"
+            }
+          ],
+          "op": "=="
+        }
+      ],
+      "op": "implies"
+    },
+    {
+      "args": [
+        {
+          "call": {
+            "args": [
+              {
+                "var": "x"
+              },
+              {
+                "var": "y"
+              }
+            ],
+            "fun": "isLeftEdge"
+          }
+        },
+        {
+          "args": [
+            {
+              "var": "result"
+            },
+            {
+              "args": [
+                {
+                  "int": 3
+                },
+                {
+                  "args": [
+                    {
+                      "int": 4
+                    },
+                    {
+                      "args": [
+                        {
+                          "args": [
+                            {
+                              "var": "x"
+                            }
+                          ],
+                          "op": "neg"
+                        },
+                        {
+                          "int": 1
+                        }
+                      ],
+                      "op": "-"
+                    }
+                  ],
+                  "op": "*"
+                }
+              ],
+              "op": "+"
+            }
+          ],
+          "op": "=="
+        }
+      ],
+      "op": "implies"
+    },
+    {
+      "args": [
+        {
+          "call": {
+            "args": [
+              {
+                "var": "x"
+              },
+              {
+                "var": "y"
+              }
+            ],
+            "fun": "isTopEdge"
+          }
+        },
+        {
+          "args": [
+            {
+              "var": "result"
+            },
+            {
+              "args": [
+                {
+                  "int": 2
+                },
+                {
+                  "args": [
+                    {
+                      "int": 4
+                    },
+                    {
+                      "args": [
+                        {
+                          "var": "y"
+                        },
+                        {
+                          "int": 1
+                        }
+                      ],
+                      "op": "-"
+                    }
+                  ],
+                  "op": "*"
+                }
+              ],
+              "op": "+"
+            }
+          ],
+          "op": "=="
+        }
+      ],
+      "op": "implies"
+    },
+    {
+      "args": [
+        {
+          "args": [
+            {
+              "args": [
+                {
+                  "call": {
+                    "args": [
+                      {
+                        "var": "x"
+                      },
+                      {
+                        "var": "y"
+                      }
+                    ],
+                    "fun": "isOriginOrFirstPoint"
+                  }
+                },
+                {
+                  "call": {
+                    "args": [
+                      {
+                        "var": "x"
+                      },
+                      {
+                        "var": "y"
+                      }
+                    ],
+                    "fun": "isRightEdge"
+                  }
+                },
+                {
+                  "call": {
+                    "args": [
+                      {
+                        "var": "x"
+                      },
+                      {
+                        "var": "y"
+                      }
+                    ],
+                    "fun": "isLeftEdge"
+                  }
+                },
+                {
+                  "call": {
+                    "args": [
+                      {
+                        "var": "x"
+                      },
+                      {
+                        "var": "y"
+                      }
+                    ],
+                    "fun": "isTopEdge"
+                  }
+                }
+              ],
+              "op": "or"
+            }
+          ],
+          "op": "not"
+        },
+        {
+          "args": [
+            {
+              "var": "result"
+            },
+            {
+              "args": [
+                {
+                  "args": [
+                    {
+                      "int": 4
+                    }
+                  ],
+                  "op": "neg"
+                },
+                {
+                  "var": "y"
+                }
+              ],
+              "op": "*"
+            }
+          ],
+          "op": "=="
+        }
+      ],
+      "op": "implies"
+    }
+  ],
+  "gate": "recursion",
+  "lemmas": [
+    {
+      "body": [
+        {
+          "if": {
+            "cond": {
+              "call": {
+                "args": [
+                  {
+                    "var": "x_v7"
+                  },
+                  {
+                    "var": "y_v7"
+                  }
+                ],
+                "fun": "isOriginOrFirstPoint"
+              }
+            },
+            "else": [
+              {
+                "if": {
+                  "cond": {
+                    "call": {
+                      "args": [
+                        {
+                          "var": "x_v7"
+                        },
+                        {
+                          "var": "y_v7"
+                        }
+                      ],
+                      "fun": "isRightEdge"
+                    }
+                  },
+                  "else": [
+                    {
+                      "if": {
+                        "cond": {
+                          "call": {
+                            "args": [
+                              {
+                                "var": "x_v7"
+                              },
+                              {
+                                "var": "y_v7"
+                              }
+                            ],
+                            "fun": "isLeftEdge"
+                          }
+                        },
+                        "else": [
+                          {
+                            "if": {
+                              "cond": {
+                                "call": {
+                                  "args": [
+                                    {
+                                      "var": "x_v7"
+                                    },
+                                    {
+                                      "var": "y_v7"
+                                    }
+                                  ],
+                                  "fun": "isTopEdge"
+                                }
+                              },
+                              "else": [
+                                {
+                                  "assert": {
+                                    "args": [
+                                      {
+                                        "call": {
+                                          "args": [
+                                            {
+                                              "var": "x_v7"
+                                            },
+                                            {
+                                              "var": "y_v7"
+                                            }
+                                          ],
+                                          "fun": "computeTurns"
+                                        }
+                                      },
+                                      {
+                                        "args": [
+                                          {
+                                            "args": [
+                                              {
+                                                "int": 4
+                                              }
+                                            ],
+                                            "op": "neg"
+                                          },
+                                          {
+                                            "var": "y_v7"
+                                          }
+                                        ],
+                                        "op": "*"
+                                      }
+                                    ],
+                                    "op": "=="
+                                  }
+                                },
+                                {
+                                  "assert": {
+                                    "args": [
+                                      {
+                                        "var": "y_v7"
+                                      },
+                                      {
+                                        "int": 0
+                                      }
+                                    ],
+                                    "op": "<="
+                                  }
+                                },
+                                {
+                                  "assert": {
+                                    "args": [
+                                      {
+                                        "args": [
+                                          {
+                                            "args": [
+                                              {
+                                                "int": 4
+                                              }
+                                            ],
+                                            "op": "neg"
+                                          },
+                                          {
+                                            "var": "y_v7"
+                                          }
+                                        ],
+                                        "op": "*"
+                                      },
+                                      {
+                                        "int": 0
+                                      }
+                                    ],
+                                    "op": ">="
+                                  }
+                                }
+                              ],
+                              "then": [
+                                {
+                                  "assert": {
+                                    "args": [
+                                      {
+                                        "var": "y_v7"
+                                      },
+                                      {
+                                        "int": 0
+                                      }
+                                    ],
+                                    "op": ">"
+                                  }
+                                },
+                                {
+                                  "assert": {
+                                    "args": [
+                                      {
+                                        "args": [
+                                          {
+                                            "var": "y_v7"
+                                          },
+                                          {
+                                            "int": 1
+                                          }
+                                        ],
+                                        "op": "-"
+                                      },
+                                      {
+                                        "int": 0
+                                      }
+                                    ],
+                                    "op": ">="
+                                  }
+                                },
+                                {
+                                  "assert": {
+                                    "args": [
+                                      {
+                                        "call": {
+                                          "args": [
+                                            {
+                                              "var": "x_v7"
+                                            },
+                                            {
+                                              "var": "y_v7"
+                                            }
+                                          ],
+                                          "fun": "computeTurns"
+                                        }
+                                      },
+                                      {
+                                        "args": [
+                                          {
+                                            "int": 2
+                                          },
+                                          {
+                                            "args": [
+                                              {
+                                                "int": 4
+                                              },
+                                              {
+                                                "args": [
+                                                  {
+                                                    "var": "y_v7"
+                                                  },
+                                                  {
+                                                    "int": 1
+                                                  }
+                                                ],
+                                                "op": "-"
+                                              }
+                                            ],
+                                            "op": "*"
+                                          }
+                                        ],
+                                        "op": "+"
+                                      }
+                                    ],
+                                    "op": "=="
+                                  }
+                                },
+                                {
+                                  "assert": {
+                                    "args": [
+                                      {
+                                        "call": {
+                                          "args": [
+                                            {
+                                              "var": "x_v7"
+                                            },
+                                            {
+                                              "var": "y_v7"
+                                            }
+                                          ],
+                                          "fun": "computeTurns"
+                                        }
+                                      },
+                                      {
+                                        "int": 2
+                                      }
+                                    ],
+                                    "op": ">="
+                                  }
+                                }
+                              ]
+                            }
+                          }
+                        ],
+                        "then": [
+                          {
+                            "assert": {
+                              "args": [
+                                {
+                                  "var": "x_v7"
+                                },
+                                {
+                                  "int": 0
+                                }
+                              ],
+                              "op": "<"
+                            }
+                          },
+                          {
+                            "assert": {
+                              "args": [
+                                {
+                                  "args": [
+                                    {
+                                      "args": [
+                                        {
+                                          "var": "x_v7"
+                                        }
+                                      ],
+                                      "op": "neg"
+                                    },
+                                    {
+                                      "int": 1
+                                    }
+                                  ],
+                                  "op": "-"
+                                },
+                                {
+                                  "int": 0
+                                }
+                              ],
+                              "op": ">="
+                            }
+                          },
+                          {
+                            "assert": {
+                              "args": [
+                                {
+                                  "call": {
+                                    "args": [
+                                      {
+                                        "var": "x_v7"
+                                      },
+                                      {
+                                        "var": "y_v7"
+                                      }
+                                    ],
+                                    "fun": "computeTurns"
+                                  }
+                                },
+                                {
+                                  "args": [
+                                    {
+                                      "int": 3
+                                    },
+                                    {
+                                      "args": [
+                                        {
+                                          "int": 4
+                                        },
+                                        {
+                                          "args": [
+                                            {
+                                              "args": [
+                                                {
+                                                  "var": "x_v7"
+                                                }
+                                              ],
+                                              "op": "neg"
+                                            },
+                                            {
+                                              "int": 1
+                                            }
+                                          ],
+                                          "op": "-"
+                                        }
+                                      ],
+                                      "op": "*"
+                                    }
+                                  ],
+                                  "op": "+"
+                                }
+                              ],
+                              "op": "=="
+                            }
+                          },
+                          {
+                            "assert": {
+                              "args": [
+                                {
+                                  "call": {
+                                    "args": [
+                                      {
+                                        "var": "x_v7"
+                                      },
+                                      {
+                                        "var": "y_v7"
+                                      }
+                                    ],
+                                    "fun": "computeTurns"
+                                  }
+                                },
+                                {
+                                  "int": 3
+                                }
+                              ],
+                              "op": ">="
+                            }
+                          }
+                        ]
+                      }
+                    }
+                  ],
+                  "then": [
+                    {
+                      "assert": {
+                        "args": [
+                          {
+                            "var": "x_v7"
+                          },
+                          {
+                            "int": 1
+                          }
+                        ],
+                        "op": ">="
+                      }
+                    },
+                    {
+                      "assert": {
+                        "args": [
+                          {
+                            "call": {
+                              "args": [
+                                {
+                                  "var": "x_v7"
+                                },
+                                {
+                                  "var": "y_v7"
+                                }
+                              ],
+                              "fun": "computeTurns"
+                            }
+                          },
+                          {
+                            "args": [
+                              {
+                                "int": 1
+                              },
+                              {
+                                "args": [
+                                  {
+                                    "int": 4
+                                  },
+                                  {
+                                    "args": [
+                                      {
+                                        "var": "x_v7"
+                                      },
+                                      {
+                                        "int": 1
+                                      }
+                                    ],
+                                    "op": "-"
+                                  }
+                                ],
+                                "op": "*"
+                              }
+                            ],
+                            "op": "+"
+                          }
+                        ],
+                        "op": "=="
+                      }
+                    },
+                    {
+                      "assert": {
+                        "args": [
+                          {
+                            "call": {
+                              "args": [
+                                {
+                                  "var": "x_v7"
+                                },
+                                {
+                                  "var": "y_v7"
+                                }
+                              ],
+                              "fun": "computeTurns"
+                            }
+                          },
+                          {
+                            "int": 1
+                          }
+                        ],
+                        "op": ">="
+                      }
+                    }
+                  ]
+                }
+              }
+            ],
+            "then": [
+              {
+                "assert": {
+                  "args": [
+                    {
+                      "call": {
+                        "args": [
+                          {
+                            "var": "x_v7"
+                          },
+                          {
+                            "var": "y_v7"
+                          }
+                        ],
+                        "fun": "computeTurns"
+                      }
+                    },
+                    {
+                      "int": 0
+                    }
+                  ],
+                  "op": "=="
+                }
+              }
+            ]
+          }
+        }
+      ],
+      "ensures": [
+        {
+          "args": [
+            {
+              "call": {
+                "args": [
+                  {
+                    "var": "x_v7"
+                  },
+                  {
+                    "var": "y_v7"
+                  }
+                ],
+                "fun": "computeTurns"
+              }
+            },
+            {
+              "int": 0
+            }
+          ],
+          "op": ">="
+        }
+      ],
+      "name": "computeTurnsNonNegative",
+      "params": [
+        {
+          "name": "x_v7",
+          "type": "int"
+        },
+        {
+          "name": "y_v7",
+          "type": "int"
+        }
+      ],
+      "requires": [
+        {
+          "call": {
+            "args": [
+              {
+                "var": "x_v7"
+              },
+              {
+                "var": "y_v7"
+              }
+            ],
+            "fun": "validInput"
+          }
+        }
+      ]
+    }
+  ],
+  "name": "vericoding_da0168__solve",
+  "params": [
+    {
+      "name": "x",
+      "type": "int"
+    },
+    {
+      "name": "y",
+      "type": "int"
+    }
+  ],
+  "requires": [
+    {
+      "call": {
+        "args": [
+          {
+            "var": "x"
+          },
+          {
+            "var": "y"
+          }
+        ],
+        "fun": "validInput"
+      }
+    }
+  ],
+  "returns": [
+    {
+      "name": "result",
+      "type": "int"
+    }
+  ],
+  "spec_funs": [
+    {
+      "body": {
+        "args": [
+          {
+            "args": [
+              {
+                "var": "y_v"
+              },
+              {
+                "int": 0
+              }
+            ],
+            "op": ">"
+          },
+          {
+            "args": [
+              {
+                "args": [
+                  {
+                    "args": [
+                      {
+                        "var": "y_v"
+                      }
+                    ],
+                    "op": "neg"
+                  },
+                  {
+                    "var": "x_v"
+                  }
+                ],
+                "op": "<="
+              },
+              {
+                "args": [
+                  {
+                    "var": "x_v"
+                  },
+                  {
+                    "var": "y_v"
+                  }
+                ],
+                "op": "<"
+              }
+            ],
+            "op": "and"
+          }
+        ],
+        "op": "and"
+      },
+      "decreases": {
+        "int": 0
+      },
+      "name": "isTopEdge",
+      "params": [
+        {
+          "name": "x_v",
+          "type": "int"
+        },
+        {
+          "name": "y_v",
+          "type": "int"
+        }
+      ],
+      "result": "bool"
+    },
+    {
+      "body": {
+        "args": [
+          {
+            "args": [
+              {
+                "var": "x_v2"
+              },
+              {
+                "int": 1
+              }
+            ],
+            "op": ">="
+          },
+          {
+            "args": [
+              {
+                "args": [
+                  {
+                    "args": [
+                      {
+                        "args": [
+                          {
+                            "var": "x_v2"
+                          }
+                        ],
+                        "op": "neg"
+                      },
+                      {
+                        "int": 1
+                      }
+                    ],
+                    "op": "+"
+                  },
+                  {
+                    "var": "y_v2"
+                  }
+                ],
+                "op": "<"
+              },
+              {
+                "args": [
+                  {
+                    "var": "y_v2"
+                  },
+                  {
+                    "var": "x_v2"
+                  }
+                ],
+                "op": "<="
+              }
+            ],
+            "op": "and"
+          }
+        ],
+        "op": "and"
+      },
+      "decreases": {
+        "int": 0
+      },
+      "name": "isRightEdge",
+      "params": [
+        {
+          "name": "x_v2",
+          "type": "int"
+        },
+        {
+          "name": "y_v2",
+          "type": "int"
+        }
+      ],
+      "result": "bool"
+    },
+    {
+      "body": {
+        "args": [
+          {
+            "args": [
+              {
+                "args": [
+                  {
+                    "args": [
+                      {
+                        "int": 100
+                      }
+                    ],
+                    "op": "neg"
+                  },
+                  {
+                    "var": "x_v3"
+                  }
+                ],
+                "op": "<="
+              },
+              {
+                "args": [
+                  {
+                    "var": "x_v3"
+                  },
+                  {
+                    "int": 100
+                  }
+                ],
+                "op": "<="
+              }
+            ],
+            "op": "and"
+          },
+          {
+            "args": [
+              {
+                "args": [
+                  {
+                    "args": [
+                      {
+                        "int": 100
+                      }
+                    ],
+                    "op": "neg"
+                  },
+                  {
+                    "var": "y_v3"
+                  }
+                ],
+                "op": "<="
+              },
+              {
+                "args": [
+                  {
+                    "var": "y_v3"
+                  },
+                  {
+                    "int": 100
+                  }
+                ],
+                "op": "<="
+              }
+            ],
+            "op": "and"
+          }
+        ],
+        "op": "and"
+      },
+      "decreases": {
+        "int": 0
+      },
+      "name": "validInput",
+      "params": [
+        {
+          "name": "x_v3",
+          "type": "int"
+        },
+        {
+          "name": "y_v3",
+          "type": "int"
+        }
+      ],
+      "result": "bool"
+    },
+    {
+      "body": {
+        "args": [
+          {
+            "args": [
+              {
+                "var": "x_v4"
+              },
+              {
+                "int": 0
+              }
+            ],
+            "op": "<"
+          },
+          {
+            "args": [
+              {
+                "args": [
+                  {
+                    "var": "x_v4"
+                  },
+                  {
+                    "var": "y_v4"
+                  }
+                ],
+                "op": "<="
+              },
+              {
+                "args": [
+                  {
+                    "var": "y_v4"
+                  },
+                  {
+                    "args": [
+                      {
+                        "var": "x_v4"
+                      }
+                    ],
+                    "op": "neg"
+                  }
+                ],
+                "op": "<"
+              }
+            ],
+            "op": "and"
+          }
+        ],
+        "op": "and"
+      },
+      "decreases": {
+        "int": 0
+      },
+      "name": "isLeftEdge",
+      "params": [
+        {
+          "name": "x_v4",
+          "type": "int"
+        },
+        {
+          "name": "y_v4",
+          "type": "int"
+        }
+      ],
+      "result": "bool"
+    },
+    {
+      "body": {
+        "args": [
+          {
+            "args": [
+              {
+                "args": [
+                  {
+                    "var": "x_v5"
+                  },
+                  {
+                    "int": 0
+                  }
+                ],
+                "op": "=="
+              },
+              {
+                "args": [
+                  {
+                    "var": "y_v5"
+                  },
+                  {
+                    "int": 0
+                  }
+                ],
+                "op": "=="
+              }
+            ],
+            "op": "and"
+          },
+          {
+            "args": [
+              {
+                "args": [
+                  {
+                    "var": "x_v5"
+                  },
+                  {
+                    "int": 1
+                  }
+                ],
+                "op": "=="
+              },
+              {
+                "args": [
+                  {
+                    "var": "y_v5"
+                  },
+                  {
+                    "int": 0
+                  }
+                ],
+                "op": "=="
+              }
+            ],
+            "op": "and"
+          }
+        ],
+        "op": "or"
+      },
+      "decreases": {
+        "int": 0
+      },
+      "name": "isOriginOrFirstPoint",
+      "params": [
+        {
+          "name": "x_v5",
+          "type": "int"
+        },
+        {
+          "name": "y_v5",
+          "type": "int"
+        }
+      ],
+      "result": "bool"
+    },
+    {
+      "body": {
+        "ite": {
+          "cond": {
+            "call": {
+              "args": [
+                {
+                  "var": "x_v6"
+                },
+                {
+                  "var": "y_v6"
+                }
+              ],
+              "fun": "validInput"
+            }
+          },
+          "else": {
+            "int": 0
+          },
+          "then": {
+            "ite": {
+              "cond": {
+                "call": {
+                  "args": [
+                    {
+                      "var": "x_v6"
+                    },
+                    {
+                      "var": "y_v6"
+                    }
+                  ],
+                  "fun": "isOriginOrFirstPoint"
+                }
+              },
+              "else": {
+                "ite": {
+                  "cond": {
+                    "call": {
+                      "args": [
+                        {
+                          "var": "x_v6"
+                        },
+                        {
+                          "var": "y_v6"
+                        }
+                      ],
+                      "fun": "isRightEdge"
+                    }
+                  },
+                  "else": {
+                    "ite": {
+                      "cond": {
+                        "call": {
+                          "args": [
+                            {
+                              "var": "x_v6"
+                            },
+                            {
+                              "var": "y_v6"
+                            }
+                          ],
+                          "fun": "isLeftEdge"
+                        }
+                      },
+                      "else": {
+                        "ite": {
+                          "cond": {
+                            "call": {
+                              "args": [
+                                {
+                                  "var": "x_v6"
+                                },
+                                {
+                                  "var": "y_v6"
+                                }
+                              ],
+                              "fun": "isTopEdge"
+                            }
+                          },
+                          "else": {
+                            "args": [
+                              {
+                                "args": [
+                                  {
+                                    "int": 4
+                                  }
+                                ],
+                                "op": "neg"
+                              },
+                              {
+                                "var": "y_v6"
+                              }
+                            ],
+                            "op": "*"
+                          },
+                          "then": {
+                            "args": [
+                              {
+                                "int": 2
+                              },
+                              {
+                                "args": [
+                                  {
+                                    "int": 4
+                                  },
+                                  {
+                                    "args": [
+                                      {
+                                        "var": "y_v6"
+                                      },
+                                      {
+                                        "int": 1
+                                      }
+                                    ],
+                                    "op": "-"
+                                  }
+                                ],
+                                "op": "*"
+                              }
+                            ],
+                            "op": "+"
+                          }
+                        }
+                      },
+                      "then": {
+                        "args": [
+                          {
+                            "int": 3
+                          },
+                          {
+                            "args": [
+                              {
+                                "int": 4
+                              },
+                              {
+                                "args": [
+                                  {
+                                    "args": [
+                                      {
+                                        "var": "x_v6"
+                                      }
+                                    ],
+                                    "op": "neg"
+                                  },
+                                  {
+                                    "int": 1
+                                  }
+                                ],
+                                "op": "-"
+                              }
+                            ],
+                            "op": "*"
+                          }
+                        ],
+                        "op": "+"
+                      }
+                    }
+                  },
+                  "then": {
+                    "args": [
+                      {
+                        "int": 1
+                      },
+                      {
+                        "args": [
+                          {
+                            "int": 4
+                          },
+                          {
+                            "args": [
+                              {
+                                "var": "x_v6"
+                              },
+                              {
+                                "int": 1
+                              }
+                            ],
+                            "op": "-"
+                          }
+                        ],
+                        "op": "*"
+                      }
+                    ],
+                    "op": "+"
+                  }
+                }
+              },
+              "then": {
+                "int": 0
+              }
+            }
+          }
+        }
+      },
+      "decreases": {
+        "int": 0
+      },
+      "name": "computeTurns",
+      "params": [
+        {
+          "name": "x_v6",
+          "type": "int"
+        },
+        {
+          "name": "y_v6",
+          "type": "int"
+        }
+      ],
+      "result": "int"
+    }
+  ],
+  "t": 1
+}

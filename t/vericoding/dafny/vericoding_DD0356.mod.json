@@ -1,0 +1,601 @@
+{
+  "body": [
+    {
+      "var": {
+        "init": {
+          "var": "n"
+        },
+        "name": "m",
+        "type": "int"
+      }
+    },
+    {
+      "var": {
+        "init": {
+          "int": 0
+        },
+        "name": "acc",
+        "type": "int"
+      }
+    },
+    {
+      "var": {
+        "init": {
+          "int": 1
+        },
+        "name": "power",
+        "type": "int"
+      }
+    },
+    {
+      "while": {
+        "body": [
+          {
+            "if": {
+              "cond": {
+                "args": [
+                  {
+                    "args": [
+                      {
+                        "var": "m"
+                      },
+                      {
+                        "int": 2
+                      }
+                    ],
+                    "op": "mod"
+                  },
+                  {
+                    "int": 0
+                  }
+                ],
+                "op": "=="
+              },
+              "else": [
+                {
+                  "lemma": {
+                    "args": [
+                      {
+                        "var": "m"
+                      }
+                    ],
+                    "name": "f_step"
+                  }
+                }
+              ],
+              "then": [
+                {
+                  "lemma": {
+                    "args": [
+                      {
+                        "var": "m"
+                      }
+                    ],
+                    "name": "f_step"
+                  }
+                },
+                {
+                  "assign": [
+                    "acc",
+                    {
+                      "args": [
+                        {
+                          "var": "acc"
+                        },
+                        {
+                          "var": "power"
+                        }
+                      ],
+                      "op": "+"
+                    }
+                  ]
+                }
+              ]
+            }
+          },
+          {
+            "assign": [
+              "power",
+              {
+                "args": [
+                  {
+                    "var": "power"
+                  },
+                  {
+                    "int": 2
+                  }
+                ],
+                "op": "*"
+              }
+            ]
+          },
+          {
+            "assign": [
+              "m",
+              {
+                "args": [
+                  {
+                    "var": "m"
+                  },
+                  {
+                    "int": 2
+                  }
+                ],
+                "op": "div"
+              }
+            ]
+          }
+        ],
+        "cond": {
+          "args": [
+            {
+              "var": "m"
+            },
+            {
+              "int": 0
+            }
+          ],
+          "op": ">"
+        },
+        "decreases": {
+          "var": "m"
+        },
+        "invariants": [
+          {
+            "args": [
+              {
+                "args": [
+                  {
+                    "int": 0
+                  },
+                  {
+                    "var": "m"
+                  }
+                ],
+                "op": "<="
+              },
+              {
+                "args": [
+                  {
+                    "var": "m"
+                  },
+                  {
+                    "var": "n"
+                  }
+                ],
+                "op": "<="
+              }
+            ],
+            "op": "and"
+          },
+          {
+            "args": [
+              {
+                "call": {
+                  "args": [
+                    {
+                      "var": "n"
+                    }
+                  ],
+                  "fun": "f"
+                }
+              },
+              {
+                "args": [
+                  {
+                    "var": "acc"
+                  },
+                  {
+                    "args": [
+                      {
+                        "var": "power"
+                      },
+                      {
+                        "call": {
+                          "args": [
+                            {
+                              "var": "m"
+                            }
+                          ],
+                          "fun": "f"
+                        }
+                      }
+                    ],
+                    "op": "*"
+                  }
+                ],
+                "op": "+"
+              }
+            ],
+            "op": "=="
+          }
+        ]
+      }
+    },
+    {
+      "assign": [
+        "a",
+        {
+          "args": [
+            {
+              "var": "acc"
+            },
+            {
+              "var": "power"
+            }
+          ],
+          "op": "+"
+        }
+      ]
+    }
+  ],
+  "ensures": [
+    {
+      "args": [
+        {
+          "var": "a"
+        },
+        {
+          "int": 0
+        }
+      ],
+      "op": ">="
+    },
+    {
+      "args": [
+        {
+          "var": "a"
+        },
+        {
+          "call": {
+            "args": [
+              {
+                "var": "n"
+              }
+            ],
+            "fun": "f"
+          }
+        }
+      ],
+      "op": "=="
+    }
+  ],
+  "gate": "recursion",
+  "lemmas": [
+    {
+      "body": [],
+      "ensures": [
+        {
+          "args": [
+            {
+              "args": [
+                {
+                  "args": [
+                    {
+                      "var": "n_v2"
+                    },
+                    {
+                      "int": 2
+                    }
+                  ],
+                  "op": "mod"
+                },
+                {
+                  "int": 0
+                }
+              ],
+              "op": "=="
+            },
+            {
+              "args": [
+                {
+                  "call": {
+                    "args": [
+                      {
+                        "var": "n_v2"
+                      }
+                    ],
+                    "fun": "f"
+                  }
+                },
+                {
+                  "args": [
+                    {
+                      "int": 1
+                    },
+                    {
+                      "args": [
+                        {
+                          "int": 2
+                        },
+                        {
+                          "call": {
+                            "args": [
+                              {
+                                "args": [
+                                  {
+                                    "var": "n_v2"
+                                  },
+                                  {
+                                    "int": 2
+                                  }
+                                ],
+                                "op": "div"
+                              }
+                            ],
+                            "fun": "f"
+                          }
+                        }
+                      ],
+                      "op": "*"
+                    }
+                  ],
+                  "op": "+"
+                }
+              ],
+              "op": "=="
+            }
+          ],
+          "op": "implies"
+        },
+        {
+          "args": [
+            {
+              "args": [
+                {
+                  "args": [
+                    {
+                      "var": "n_v2"
+                    },
+                    {
+                      "int": 2
+                    }
+                  ],
+                  "op": "mod"
+                },
+                {
+                  "int": 1
+                }
+              ],
+              "op": "=="
+            },
+            {
+              "args": [
+                {
+                  "call": {
+                    "args": [
+                      {
+                        "var": "n_v2"
+                      }
+                    ],
+                    "fun": "f"
+                  }
+                },
+                {
+                  "args": [
+                    {
+                      "int": 2
+                    },
+                    {
+                      "call": {
+                        "args": [
+                          {
+                            "args": [
+                              {
+                                "var": "n_v2"
+                              },
+                              {
+                                "int": 2
+                              }
+                            ],
+                            "op": "div"
+                          }
+                        ],
+                        "fun": "f"
+                      }
+                    }
+                  ],
+                  "op": "*"
+                }
+              ],
+              "op": "=="
+            }
+          ],
+          "op": "implies"
+        }
+      ],
+      "name": "f_step",
+      "params": [
+        {
+          "name": "n_v2",
+          "type": "int"
+        }
+      ],
+      "requires": [
+        {
+          "args": [
+            {
+              "var": "n_v2"
+            },
+            {
+              "int": 0
+            }
+          ],
+          "op": ">="
+        },
+        {
+          "args": [
+            {
+              "var": "n_v2"
+            },
+            {
+              "int": 0
+            }
+          ],
+          "op": ">"
+        }
+      ]
+    }
+  ],
+  "name": "vericoding_dd0356__mod",
+  "params": [
+    {
+      "name": "n",
+      "type": "int"
+    }
+  ],
+  "requires": [
+    {
+      "args": [
+        {
+          "var": "n"
+        },
+        {
+          "int": 0
+        }
+      ],
+      "op": ">="
+    }
+  ],
+  "returns": [
+    {
+      "name": "a",
+      "type": "int"
+    }
+  ],
+  "spec_funs": [
+    {
+      "body": {
+        "ite": {
+          "cond": {
+            "args": [
+              {
+                "var": "n_v"
+              },
+              {
+                "int": 0
+              }
+            ],
+            "op": ">="
+          },
+          "else": {
+            "int": 0
+          },
+          "then": {
+            "ite": {
+              "cond": {
+                "args": [
+                  {
+                    "var": "n_v"
+                  },
+                  {
+                    "int": 0
+                  }
+                ],
+                "op": "=="
+              },
+              "else": {
+                "ite": {
+                  "cond": {
+                    "args": [
+                      {
+                        "args": [
+                          {
+                            "var": "n_v"
+                          },
+                          {
+                            "int": 2
+                          }
+                        ],
+                        "op": "mod"
+                      },
+                      {
+                        "int": 0
+                      }
+                    ],
+                    "op": "=="
+                  },
+                  "else": {
+                    "args": [
+                      {
+                        "int": 2
+                      },
+                      {
+                        "call": {
+                          "args": [
+                            {
+                              "args": [
+                                {
+                                  "var": "n_v"
+                                },
+                                {
+                                  "int": 2
+                                }
+                              ],
+                              "op": "div"
+                            }
+                          ],
+                          "fun": "f"
+                        }
+                      }
+                    ],
+                    "op": "*"
+                  },
+                  "then": {
+                    "args": [
+                      {
+                        "int": 1
+                      },
+                      {
+                        "args": [
+                          {
+                            "int": 2
+                          },
+                          {
+                            "call": {
+                              "args": [
+                                {
+                                  "args": [
+                                    {
+                                      "var": "n_v"
+                                    },
+                                    {
+                                      "int": 2
+                                    }
+                                  ],
+                                  "op": "div"
+                                }
+                              ],
+                              "fun": "f"
+                            }
+                          }
+                        ],
+                        "op": "*"
+                      }
+                    ],
+                    "op": "+"
+                  }
+                }
+              },
+              "then": {
+                "int": 1
+              }
+            }
+          }
+        }
+      },
+      "decreases": {
+        "var": "n_v"
+      },
+      "name": "f",
+      "params": [
+        {
+          "name": "n_v",
+          "type": "int"
+        }
+      ],
+      "result": "int"
+    }
+  ],
+  "t": 1
+}

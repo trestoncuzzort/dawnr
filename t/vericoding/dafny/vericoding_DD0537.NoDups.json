@@ -1,0 +1,382 @@
+{
+  "body": [
+    {
+      "if": {
+        "cond": {
+          "args": [
+            {
+              "args": [
+                {
+                  "var": "a"
+                }
+              ],
+              "op": "len"
+            },
+            {
+              "int": 1
+            }
+          ],
+          "op": "<="
+        },
+        "else": [
+          {
+            "var": {
+              "init": {
+                "int": 1
+              },
+              "name": "i",
+              "type": "int"
+            }
+          },
+          {
+            "assign": [
+              "noDups_v",
+              {
+                "bool": true
+              }
+            ]
+          },
+          {
+            "while": {
+              "body": [
+                {
+                  "if": {
+                    "cond": {
+                      "args": [
+                        {
+                          "args": [
+                            {
+                              "var": "a"
+                            },
+                            {
+                              "args": [
+                                {
+                                  "var": "i"
+                                },
+                                {
+                                  "int": 1
+                                }
+                              ],
+                              "op": "-"
+                            }
+                          ],
+                          "op": "at"
+                        },
+                        {
+                          "args": [
+                            {
+                              "var": "a"
+                            },
+                            {
+                              "var": "i"
+                            }
+                          ],
+                          "op": "at"
+                        }
+                      ],
+                      "op": "=="
+                    },
+                    "else": [],
+                    "then": [
+                      {
+                        "assign": [
+                          "noDups_v",
+                          {
+                            "bool": false
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                },
+                {
+                  "assign": [
+                    "i",
+                    {
+                      "args": [
+                        {
+                          "var": "i"
+                        },
+                        {
+                          "int": 1
+                        }
+                      ],
+                      "op": "+"
+                    }
+                  ]
+                }
+              ],
+              "cond": {
+                "args": [
+                  {
+                    "var": "i"
+                  },
+                  {
+                    "args": [
+                      {
+                        "var": "a"
+                      }
+                    ],
+                    "op": "len"
+                  }
+                ],
+                "op": "<"
+              },
+              "decreases": {
+                "args": [
+                  {
+                    "args": [
+                      {
+                        "var": "a"
+                      }
+                    ],
+                    "op": "len"
+                  },
+                  {
+                    "var": "i"
+                  }
+                ],
+                "op": "-"
+              },
+              "invariants": [
+                {
+                  "args": [
+                    {
+                      "args": [
+                        {
+                          "int": 1
+                        },
+                        {
+                          "var": "i"
+                        }
+                      ],
+                      "op": "<="
+                    },
+                    {
+                      "args": [
+                        {
+                          "var": "i"
+                        },
+                        {
+                          "args": [
+                            {
+                              "var": "a"
+                            }
+                          ],
+                          "op": "len"
+                        }
+                      ],
+                      "op": "<="
+                    }
+                  ],
+                  "op": "and"
+                },
+                {
+                  "args": [
+                    {
+                      "var": "noDups_v"
+                    },
+                    {
+                      "forall": {
+                        "body": {
+                          "args": [
+                            {
+                              "args": [
+                                {
+                                  "var": "a"
+                                },
+                                {
+                                  "args": [
+                                    {
+                                      "var": "j_v2"
+                                    },
+                                    {
+                                      "int": 1
+                                    }
+                                  ],
+                                  "op": "-"
+                                }
+                              ],
+                              "op": "at"
+                            },
+                            {
+                              "args": [
+                                {
+                                  "var": "a"
+                                },
+                                {
+                                  "var": "j_v2"
+                                }
+                              ],
+                              "op": "at"
+                            }
+                          ],
+                          "op": "!="
+                        },
+                        "hi": {
+                          "var": "i"
+                        },
+                        "lo": {
+                          "int": 1
+                        },
+                        "var": "j_v2"
+                      }
+                    }
+                  ],
+                  "op": "=="
+                }
+              ]
+            }
+          }
+        ],
+        "then": [
+          {
+            "assign": [
+              "noDups_v",
+              {
+                "bool": true
+              }
+            ]
+          }
+        ]
+      }
+    }
+  ],
+  "ensures": [
+    {
+      "args": [
+        {
+          "var": "noDups_v"
+        },
+        {
+          "forall": {
+            "body": {
+              "args": [
+                {
+                  "args": [
+                    {
+                      "var": "a"
+                    },
+                    {
+                      "args": [
+                        {
+                          "var": "j_v"
+                        },
+                        {
+                          "int": 1
+                        }
+                      ],
+                      "op": "-"
+                    }
+                  ],
+                  "op": "at"
+                },
+                {
+                  "args": [
+                    {
+                      "var": "a"
+                    },
+                    {
+                      "var": "j_v"
+                    }
+                  ],
+                  "op": "at"
+                }
+              ],
+              "op": "!="
+            },
+            "hi": {
+              "args": [
+                {
+                  "var": "a"
+                }
+              ],
+              "op": "len"
+            },
+            "lo": {
+              "int": 1
+            },
+            "var": "j_v"
+          }
+        }
+      ],
+      "op": "=="
+    }
+  ],
+  "gate": "loops",
+  "name": "vericoding_dd0537__noDups",
+  "params": [
+    {
+      "name": "a",
+      "type": "seq"
+    }
+  ],
+  "requires": [
+    {
+      "forall": {
+        "body": {
+          "args": [
+            {
+              "args": [
+                {
+                  "var": "a"
+                },
+                {
+                  "args": [
+                    {
+                      "var": "j"
+                    },
+                    {
+                      "int": 1
+                    }
+                  ],
+                  "op": "-"
+                }
+              ],
+              "op": "at"
+            },
+            {
+              "args": [
+                {
+                  "var": "a"
+                },
+                {
+                  "var": "j"
+                }
+              ],
+              "op": "at"
+            }
+          ],
+          "op": "<="
+        },
+        "hi": {
+          "args": [
+            {
+              "var": "a"
+            }
+          ],
+          "op": "len"
+        },
+        "lo": {
+          "args": [
+            {
+              "int": 0
+            },
+            {
+              "int": 1
+            }
+          ],
+          "op": "+"
+        },
+        "var": "j"
+      }
+    }
+  ],
+  "returns": [
+    {
+      "name": "noDups_v",
+      "type": "bool"
+    }
+  ],
+  "t": 1
+}

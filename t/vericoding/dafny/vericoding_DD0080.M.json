@@ -1,0 +1,40 @@
+{
+  "body": [
+    {
+      "assign": [
+        "seven",
+        {
+          "int": 7
+        }
+      ]
+    }
+  ],
+  "ensures": [
+    {
+      "args": [
+        {
+          "var": "seven"
+        },
+        {
+          "int": 7
+        }
+      ],
+      "op": "=="
+    }
+  ],
+  "name": "vericoding_dd0080__m",
+  "params": [
+    {
+      "name": "x",
+      "type": "int"
+    }
+  ],
+  "requires": [],
+  "returns": [
+    {
+      "name": "seven",
+      "type": "int"
+    }
+  ],
+  "t": 1
+}

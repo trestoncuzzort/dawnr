@@ -1,0 +1,718 @@
+{
+  "body": [
+    {
+      "assign": [
+        "res",
+        {
+          "call": {
+            "args": [
+              {
+                "var": "a"
+              },
+              {
+                "args": [
+                  {
+                    "var": "mod"
+                  },
+                  {
+                    "int": 2
+                  }
+                ],
+                "op": "-"
+              },
+              {
+                "var": "mod"
+              }
+            ],
+            "fun": "vericoding_da0334__computePower"
+          }
+        }
+      ]
+    }
+  ],
+  "ensures": [
+    {
+      "args": [
+        {
+          "var": "res"
+        },
+        {
+          "call": {
+            "args": [
+              {
+                "var": "a"
+              },
+              {
+                "var": "mod"
+              }
+            ],
+            "fun": "modInverse"
+          }
+        }
+      ],
+      "op": "=="
+    },
+    {
+      "args": [
+        {
+          "int": 0
+        },
+        {
+          "var": "res"
+        }
+      ],
+      "op": "<="
+    },
+    {
+      "args": [
+        {
+          "var": "res"
+        },
+        {
+          "var": "mod"
+        }
+      ],
+      "op": "<"
+    }
+  ],
+  "gate": "recursion",
+  "methods": [
+    {
+      "body": [
+        {
+          "if": {
+            "cond": {
+              "args": [
+                {
+                  "var": "exp"
+                },
+                {
+                  "int": 0
+                }
+              ],
+              "op": "=="
+            },
+            "else": [
+              {
+                "if": {
+                  "cond": {
+                    "args": [
+                      {
+                        "args": [
+                          {
+                            "var": "exp"
+                          },
+                          {
+                            "int": 2
+                          }
+                        ],
+                        "op": "mod"
+                      },
+                      {
+                        "int": 0
+                      }
+                    ],
+                    "op": "=="
+                  },
+                  "else": [
+                    {
+                      "var": {
+                        "init": {
+                          "call": {
+                            "args": [
+                              {
+                                "var": "base"
+                              },
+                              {
+                                "args": [
+                                  {
+                                    "var": "exp"
+                                  },
+                                  {
+                                    "int": 1
+                                  }
+                                ],
+                                "op": "-"
+                              },
+                              {
+                                "var": "mod"
+                              }
+                            ],
+                            "fun": "vericoding_da0334__computePower"
+                          }
+                        },
+                        "name": "prev",
+                        "type": "int"
+                      }
+                    },
+                    {
+                      "assign": [
+                        "res",
+                        {
+                          "args": [
+                            {
+                              "args": [
+                                {
+                                  "args": [
+                                    {
+                                      "var": "base"
+                                    },
+                                    {
+                                      "var": "mod"
+                                    }
+                                  ],
+                                  "op": "mod"
+                                },
+                                {
+                                  "var": "prev"
+                                }
+                              ],
+                              "op": "*"
+                            },
+                            {
+                              "var": "mod"
+                            }
+                          ],
+                          "op": "mod"
+                        }
+                      ]
+                    }
+                  ],
+                  "then": [
+                    {
+                      "var": {
+                        "init": {
+                          "call": {
+                            "args": [
+                              {
+                                "var": "base"
+                              },
+                              {
+                                "args": [
+                                  {
+                                    "var": "exp"
+                                  },
+                                  {
+                                    "int": 2
+                                  }
+                                ],
+                                "op": "div"
+                              },
+                              {
+                                "var": "mod"
+                              }
+                            ],
+                            "fun": "vericoding_da0334__computePower"
+                          }
+                        },
+                        "name": "half",
+                        "type": "int"
+                      }
+                    },
+                    {
+                      "assign": [
+                        "res",
+                        {
+                          "args": [
+                            {
+                              "args": [
+                                {
+                                  "var": "half"
+                                },
+                                {
+                                  "var": "half"
+                                }
+                              ],
+                              "op": "*"
+                            },
+                            {
+                              "var": "mod"
+                            }
+                          ],
+                          "op": "mod"
+                        }
+                      ]
+                    }
+                  ]
+                }
+              }
+            ],
+            "then": [
+              {
+                "assign": [
+                  "res",
+                  {
+                    "args": [
+                      {
+                        "int": 1
+                      },
+                      {
+                        "var": "mod"
+                      }
+                    ],
+                    "op": "mod"
+                  }
+                ]
+              }
+            ]
+          }
+        }
+      ],
+      "decreases": {
+        "var": "exp"
+      },
+      "ensures": [
+        {
+          "args": [
+            {
+              "var": "res"
+            },
+            {
+              "call": {
+                "args": [
+                  {
+                    "var": "base"
+                  },
+                  {
+                    "var": "exp"
+                  },
+                  {
+                    "var": "mod"
+                  }
+                ],
+                "fun": "power"
+              }
+            }
+          ],
+          "op": "=="
+        },
+        {
+          "args": [
+            {
+              "int": 0
+            },
+            {
+              "var": "res"
+            }
+          ],
+          "op": "<="
+        },
+        {
+          "args": [
+            {
+              "var": "res"
+            },
+            {
+              "var": "mod"
+            }
+          ],
+          "op": "<"
+        }
+      ],
+      "name": "vericoding_da0334__computePower",
+      "params": [
+        {
+          "name": "base",
+          "type": "int"
+        },
+        {
+          "name": "exp",
+          "type": "int"
+        },
+        {
+          "name": "mod",
+          "type": "int"
+        }
+      ],
+      "requires": [
+        {
+          "args": [
+            {
+              "var": "exp"
+            },
+            {
+              "int": 0
+            }
+          ],
+          "op": ">="
+        },
+        {
+          "args": [
+            {
+              "var": "mod"
+            },
+            {
+              "int": 0
+            }
+          ],
+          "op": ">"
+        }
+      ],
+      "returns": [
+        {
+          "name": "res",
+          "type": "int"
+        }
+      ]
+    }
+  ],
+  "name": "vericoding_da0334__computeModInverse",
+  "params": [
+    {
+      "name": "a",
+      "type": "int"
+    },
+    {
+      "name": "mod",
+      "type": "int"
+    }
+  ],
+  "requires": [
+    {
+      "args": [
+        {
+          "var": "mod"
+        },
+        {
+          "int": 0
+        }
+      ],
+      "op": ">"
+    },
+    {
+      "args": [
+        {
+          "int": 0
+        },
+        {
+          "var": "a"
+        }
+      ],
+      "op": "<"
+    },
+    {
+      "args": [
+        {
+          "var": "a"
+        },
+        {
+          "var": "mod"
+        }
+      ],
+      "op": "<"
+    }
+  ],
+  "returns": [
+    {
+      "name": "res",
+      "type": "int"
+    }
+  ],
+  "spec_funs": [
+    {
+      "body": {
+        "ite": {
+          "cond": {
+            "args": [
+              {
+                "args": [
+                  {
+                    "var": "exp"
+                  },
+                  {
+                    "int": 0
+                  }
+                ],
+                "op": ">="
+              },
+              {
+                "args": [
+                  {
+                    "var": "mod_v"
+                  },
+                  {
+                    "int": 0
+                  }
+                ],
+                "op": ">"
+              }
+            ],
+            "op": "and"
+          },
+          "else": {
+            "int": 0
+          },
+          "then": {
+            "ite": {
+              "cond": {
+                "args": [
+                  {
+                    "var": "exp"
+                  },
+                  {
+                    "int": 0
+                  }
+                ],
+                "op": "=="
+              },
+              "else": {
+                "ite": {
+                  "cond": {
+                    "args": [
+                      {
+                        "args": [
+                          {
+                            "var": "exp"
+                          },
+                          {
+                            "int": 2
+                          }
+                        ],
+                        "op": "mod"
+                      },
+                      {
+                        "int": 0
+                      }
+                    ],
+                    "op": "=="
+                  },
+                  "else": {
+                    "args": [
+                      {
+                        "args": [
+                          {
+                            "args": [
+                              {
+                                "var": "base"
+                              },
+                              {
+                                "var": "mod_v"
+                              }
+                            ],
+                            "op": "mod"
+                          },
+                          {
+                            "call": {
+                              "args": [
+                                {
+                                  "var": "base"
+                                },
+                                {
+                                  "args": [
+                                    {
+                                      "var": "exp"
+                                    },
+                                    {
+                                      "int": 1
+                                    }
+                                  ],
+                                  "op": "-"
+                                },
+                                {
+                                  "var": "mod_v"
+                                }
+                              ],
+                              "fun": "power"
+                            }
+                          }
+                        ],
+                        "op": "*"
+                      },
+                      {
+                        "var": "mod_v"
+                      }
+                    ],
+                    "op": "mod"
+                  },
+                  "then": {
+                    "args": [
+                      {
+                        "args": [
+                          {
+                            "call": {
+                              "args": [
+                                {
+                                  "var": "base"
+                                },
+                                {
+                                  "args": [
+                                    {
+                                      "var": "exp"
+                                    },
+                                    {
+                                      "int": 2
+                                    }
+                                  ],
+                                  "op": "div"
+                                },
+                                {
+                                  "var": "mod_v"
+                                }
+                              ],
+                              "fun": "power"
+                            }
+                          },
+                          {
+                            "call": {
+                              "args": [
+                                {
+                                  "var": "base"
+                                },
+                                {
+                                  "args": [
+                                    {
+                                      "var": "exp"
+                                    },
+                                    {
+                                      "int": 2
+                                    }
+                                  ],
+                                  "op": "div"
+                                },
+                                {
+                                  "var": "mod_v"
+                                }
+                              ],
+                              "fun": "power"
+                            }
+                          }
+                        ],
+                        "op": "*"
+                      },
+                      {
+                        "var": "mod_v"
+                      }
+                    ],
+                    "op": "mod"
+                  }
+                }
+              },
+              "then": {
+                "args": [
+                  {
+                    "int": 1
+                  },
+                  {
+                    "var": "mod_v"
+                  }
+                ],
+                "op": "mod"
+              }
+            }
+          }
+        }
+      },
+      "decreases": {
+        "var": "exp"
+      },
+      "name": "power",
+      "params": [
+        {
+          "name": "base",
+          "type": "int"
+        },
+        {
+          "name": "exp",
+          "type": "int"
+        },
+        {
+          "name": "mod_v",
+          "type": "int"
+        }
+      ],
+      "result": "int"
+    },
+    {
+      "body": {
+        "ite": {
+          "cond": {
+            "args": [
+              {
+                "args": [
+                  {
+                    "var": "mod_v2"
+                  },
+                  {
+                    "int": 0
+                  }
+                ],
+                "op": ">"
+              },
+              {
+                "args": [
+                  {
+                    "args": [
+                      {
+                        "int": 0
+                      },
+                      {
+                        "var": "a_v"
+                      }
+                    ],
+                    "op": "<"
+                  },
+                  {
+                    "args": [
+                      {
+                        "var": "a_v"
+                      },
+                      {
+                        "var": "mod_v2"
+                      }
+                    ],
+                    "op": "<"
+                  }
+                ],
+                "op": "and"
+              }
+            ],
+            "op": "and"
+          },
+          "else": {
+            "int": 0
+          },
+          "then": {
+            "call": {
+              "args": [
+                {
+                  "var": "a_v"
+                },
+                {
+                  "args": [
+                    {
+                      "var": "mod_v2"
+                    },
+                    {
+                      "int": 2
+                    }
+                  ],
+                  "op": "-"
+                },
+                {
+                  "var": "mod_v2"
+                }
+              ],
+              "fun": "power"
+            }
+          }
+        }
+      },
+      "decreases": {
+        "int": 0
+      },
+      "name": "modInverse",
+      "params": [
+        {
+          "name": "a_v",
+          "type": "int"
+        },
+        {
+          "name": "mod_v2",
+          "type": "int"
+        }
+      ],
+      "result": "int"
+    }
+  ],
+  "t": 1
+}

@@ -1,0 +1,1510 @@
+{
+  "body": [
+    {
+      "assign": [
+        "count",
+        {
+          "int": 0
+        }
+      ]
+    },
+    {
+      "var": {
+        "init": {
+          "int": 0
+        },
+        "name": "i",
+        "type": "int"
+      }
+    },
+    {
+      "while": {
+        "body": [
+          {
+            "lemma": {
+              "args": [
+                {
+                  "args": [
+                    {
+                      "var": "arr1"
+                    },
+                    {
+                      "int": 0
+                    },
+                    {
+                      "var": "i"
+                    }
+                  ],
+                  "op": "slice"
+                },
+                {
+                  "args": [
+                    {
+                      "var": "arr2"
+                    },
+                    {
+                      "int": 0
+                    },
+                    {
+                      "var": "i"
+                    }
+                  ],
+                  "op": "slice"
+                },
+                {
+                  "args": [
+                    {
+                      "var": "arr3"
+                    },
+                    {
+                      "int": 0
+                    },
+                    {
+                      "var": "i"
+                    }
+                  ],
+                  "op": "slice"
+                },
+                {
+                  "args": [
+                    {
+                      "var": "arr1"
+                    },
+                    {
+                      "var": "i"
+                    }
+                  ],
+                  "op": "at"
+                },
+                {
+                  "args": [
+                    {
+                      "var": "arr2"
+                    },
+                    {
+                      "var": "i"
+                    }
+                  ],
+                  "op": "at"
+                },
+                {
+                  "args": [
+                    {
+                      "var": "arr3"
+                    },
+                    {
+                      "var": "i"
+                    }
+                  ],
+                  "op": "at"
+                }
+              ],
+              "name": "countIdenticalAppend"
+            }
+          },
+          {
+            "if": {
+              "cond": {
+                "args": [
+                  {
+                    "args": [
+                      {
+                        "args": [
+                          {
+                            "var": "arr1"
+                          },
+                          {
+                            "var": "i"
+                          }
+                        ],
+                        "op": "at"
+                      },
+                      {
+                        "args": [
+                          {
+                            "var": "arr2"
+                          },
+                          {
+                            "var": "i"
+                          }
+                        ],
+                        "op": "at"
+                      }
+                    ],
+                    "op": "=="
+                  },
+                  {
+                    "args": [
+                      {
+                        "args": [
+                          {
+                            "var": "arr2"
+                          },
+                          {
+                            "var": "i"
+                          }
+                        ],
+                        "op": "at"
+                      },
+                      {
+                        "args": [
+                          {
+                            "var": "arr3"
+                          },
+                          {
+                            "var": "i"
+                          }
+                        ],
+                        "op": "at"
+                      }
+                    ],
+                    "op": "=="
+                  }
+                ],
+                "op": "and"
+              },
+              "else": [],
+              "then": [
+                {
+                  "assign": [
+                    "count",
+                    {
+                      "args": [
+                        {
+                          "var": "count"
+                        },
+                        {
+                          "int": 1
+                        }
+                      ],
+                      "op": "+"
+                    }
+                  ]
+                }
+              ]
+            }
+          },
+          {
+            "assign": [
+              "i",
+              {
+                "args": [
+                  {
+                    "var": "i"
+                  },
+                  {
+                    "int": 1
+                  }
+                ],
+                "op": "+"
+              }
+            ]
+          }
+        ],
+        "cond": {
+          "args": [
+            {
+              "var": "i"
+            },
+            {
+              "args": [
+                {
+                  "var": "arr1"
+                }
+              ],
+              "op": "len"
+            }
+          ],
+          "op": "<"
+        },
+        "decreases": {
+          "args": [
+            {
+              "args": [
+                {
+                  "var": "arr1"
+                }
+              ],
+              "op": "len"
+            },
+            {
+              "var": "i"
+            }
+          ],
+          "op": "-"
+        },
+        "invariants": [
+          {
+            "args": [
+              {
+                "args": [
+                  {
+                    "int": 0
+                  },
+                  {
+                    "var": "i"
+                  }
+                ],
+                "op": "<="
+              },
+              {
+                "args": [
+                  {
+                    "var": "i"
+                  },
+                  {
+                    "args": [
+                      {
+                        "var": "arr1"
+                      }
+                    ],
+                    "op": "len"
+                  }
+                ],
+                "op": "<="
+              }
+            ],
+            "op": "and"
+          },
+          {
+            "args": [
+              {
+                "args": [
+                  {
+                    "int": 0
+                  },
+                  {
+                    "var": "count"
+                  }
+                ],
+                "op": "<="
+              },
+              {
+                "args": [
+                  {
+                    "var": "count"
+                  },
+                  {
+                    "var": "i"
+                  }
+                ],
+                "op": "<="
+              }
+            ],
+            "op": "and"
+          },
+          {
+            "args": [
+              {
+                "var": "count"
+              },
+              {
+                "call": {
+                  "args": [
+                    {
+                      "args": [
+                        {
+                          "var": "arr1"
+                        },
+                        {
+                          "int": 0
+                        },
+                        {
+                          "var": "i"
+                        }
+                      ],
+                      "op": "slice"
+                    },
+                    {
+                      "args": [
+                        {
+                          "var": "arr2"
+                        },
+                        {
+                          "int": 0
+                        },
+                        {
+                          "var": "i"
+                        }
+                      ],
+                      "op": "slice"
+                    },
+                    {
+                      "args": [
+                        {
+                          "var": "arr3"
+                        },
+                        {
+                          "int": 0
+                        },
+                        {
+                          "var": "i"
+                        }
+                      ],
+                      "op": "slice"
+                    }
+                  ],
+                  "fun": "countIdentical"
+                }
+              }
+            ],
+            "op": "=="
+          },
+          {
+            "args": [
+              {
+                "var": "count"
+              },
+              {
+                "int": 0
+              }
+            ],
+            "op": ">="
+          }
+        ]
+      }
+    }
+  ],
+  "ensures": [
+    {
+      "args": [
+        {
+          "var": "count"
+        },
+        {
+          "int": 0
+        }
+      ],
+      "op": ">="
+    },
+    {
+      "args": [
+        {
+          "int": 0
+        },
+        {
+          "var": "count"
+        }
+      ],
+      "op": "<="
+    },
+    {
+      "args": [
+        {
+          "var": "count"
+        },
+        {
+          "args": [
+            {
+              "var": "arr1"
+            }
+          ],
+          "op": "len"
+        }
+      ],
+      "op": "<="
+    },
+    {
+      "args": [
+        {
+          "call": {
+            "args": [
+              {
+                "var": "arr1"
+              },
+              {
+                "var": "arr2"
+              },
+              {
+                "var": "arr3"
+              }
+            ],
+            "fun": "countIdentical"
+          }
+        },
+        {
+          "var": "count"
+        }
+      ],
+      "op": "=="
+    }
+  ],
+  "gate": "recursion",
+  "lemmas": [
+    {
+      "body": [
+        {
+          "if": {
+            "cond": {
+              "args": [
+                {
+                  "args": [
+                    {
+                      "var": "s1_v"
+                    }
+                  ],
+                  "op": "len"
+                },
+                {
+                  "int": 0
+                }
+              ],
+              "op": "=="
+            },
+            "else": [
+              {
+                "assert": {
+                  "args": [
+                    {
+                      "args": [
+                        {
+                          "args": [
+                            {
+                              "var": "s1_v"
+                            },
+                            {
+                              "args": [
+                                {
+                                  "var": "v1"
+                                }
+                              ],
+                              "op": "seq"
+                            }
+                          ],
+                          "op": "+"
+                        },
+                        {
+                          "int": 0
+                        },
+                        {
+                          "args": [
+                            {
+                              "args": [
+                                {
+                                  "args": [
+                                    {
+                                      "var": "s1_v"
+                                    },
+                                    {
+                                      "args": [
+                                        {
+                                          "var": "v1"
+                                        }
+                                      ],
+                                      "op": "seq"
+                                    }
+                                  ],
+                                  "op": "+"
+                                }
+                              ],
+                              "op": "len"
+                            },
+                            {
+                              "int": 1
+                            }
+                          ],
+                          "op": "-"
+                        }
+                      ],
+                      "op": "slice"
+                    },
+                    {
+                      "var": "s1_v"
+                    }
+                  ],
+                  "op": "=="
+                }
+              },
+              {
+                "assert": {
+                  "args": [
+                    {
+                      "args": [
+                        {
+                          "args": [
+                            {
+                              "var": "s2_v"
+                            },
+                            {
+                              "args": [
+                                {
+                                  "var": "v2"
+                                }
+                              ],
+                              "op": "seq"
+                            }
+                          ],
+                          "op": "+"
+                        },
+                        {
+                          "int": 0
+                        },
+                        {
+                          "args": [
+                            {
+                              "args": [
+                                {
+                                  "args": [
+                                    {
+                                      "var": "s2_v"
+                                    },
+                                    {
+                                      "args": [
+                                        {
+                                          "var": "v2"
+                                        }
+                                      ],
+                                      "op": "seq"
+                                    }
+                                  ],
+                                  "op": "+"
+                                }
+                              ],
+                              "op": "len"
+                            },
+                            {
+                              "int": 1
+                            }
+                          ],
+                          "op": "-"
+                        }
+                      ],
+                      "op": "slice"
+                    },
+                    {
+                      "var": "s2_v"
+                    }
+                  ],
+                  "op": "=="
+                }
+              },
+              {
+                "assert": {
+                  "args": [
+                    {
+                      "args": [
+                        {
+                          "args": [
+                            {
+                              "var": "s3_v"
+                            },
+                            {
+                              "args": [
+                                {
+                                  "var": "v3"
+                                }
+                              ],
+                              "op": "seq"
+                            }
+                          ],
+                          "op": "+"
+                        },
+                        {
+                          "int": 0
+                        },
+                        {
+                          "args": [
+                            {
+                              "args": [
+                                {
+                                  "args": [
+                                    {
+                                      "var": "s3_v"
+                                    },
+                                    {
+                                      "args": [
+                                        {
+                                          "var": "v3"
+                                        }
+                                      ],
+                                      "op": "seq"
+                                    }
+                                  ],
+                                  "op": "+"
+                                }
+                              ],
+                              "op": "len"
+                            },
+                            {
+                              "int": 1
+                            }
+                          ],
+                          "op": "-"
+                        }
+                      ],
+                      "op": "slice"
+                    },
+                    {
+                      "var": "s3_v"
+                    }
+                  ],
+                  "op": "=="
+                }
+              },
+              {
+                "assert": {
+                  "args": [
+                    {
+                      "args": [
+                        {
+                          "args": [
+                            {
+                              "var": "s1_v"
+                            },
+                            {
+                              "args": [
+                                {
+                                  "var": "v1"
+                                }
+                              ],
+                              "op": "seq"
+                            }
+                          ],
+                          "op": "+"
+                        },
+                        {
+                          "args": [
+                            {
+                              "args": [
+                                {
+                                  "args": [
+                                    {
+                                      "var": "s1_v"
+                                    },
+                                    {
+                                      "args": [
+                                        {
+                                          "var": "v1"
+                                        }
+                                      ],
+                                      "op": "seq"
+                                    }
+                                  ],
+                                  "op": "+"
+                                }
+                              ],
+                              "op": "len"
+                            },
+                            {
+                              "int": 1
+                            }
+                          ],
+                          "op": "-"
+                        }
+                      ],
+                      "op": "at"
+                    },
+                    {
+                      "var": "v1"
+                    }
+                  ],
+                  "op": "=="
+                }
+              },
+              {
+                "assert": {
+                  "args": [
+                    {
+                      "args": [
+                        {
+                          "args": [
+                            {
+                              "var": "s2_v"
+                            },
+                            {
+                              "args": [
+                                {
+                                  "var": "v2"
+                                }
+                              ],
+                              "op": "seq"
+                            }
+                          ],
+                          "op": "+"
+                        },
+                        {
+                          "args": [
+                            {
+                              "args": [
+                                {
+                                  "args": [
+                                    {
+                                      "var": "s2_v"
+                                    },
+                                    {
+                                      "args": [
+                                        {
+                                          "var": "v2"
+                                        }
+                                      ],
+                                      "op": "seq"
+                                    }
+                                  ],
+                                  "op": "+"
+                                }
+                              ],
+                              "op": "len"
+                            },
+                            {
+                              "int": 1
+                            }
+                          ],
+                          "op": "-"
+                        }
+                      ],
+                      "op": "at"
+                    },
+                    {
+                      "var": "v2"
+                    }
+                  ],
+                  "op": "=="
+                }
+              },
+              {
+                "assert": {
+                  "args": [
+                    {
+                      "args": [
+                        {
+                          "args": [
+                            {
+                              "var": "s3_v"
+                            },
+                            {
+                              "args": [
+                                {
+                                  "var": "v3"
+                                }
+                              ],
+                              "op": "seq"
+                            }
+                          ],
+                          "op": "+"
+                        },
+                        {
+                          "args": [
+                            {
+                              "args": [
+                                {
+                                  "args": [
+                                    {
+                                      "var": "s3_v"
+                                    },
+                                    {
+                                      "args": [
+                                        {
+                                          "var": "v3"
+                                        }
+                                      ],
+                                      "op": "seq"
+                                    }
+                                  ],
+                                  "op": "+"
+                                }
+                              ],
+                              "op": "len"
+                            },
+                            {
+                              "int": 1
+                            }
+                          ],
+                          "op": "-"
+                        }
+                      ],
+                      "op": "at"
+                    },
+                    {
+                      "var": "v3"
+                    }
+                  ],
+                  "op": "=="
+                }
+              }
+            ],
+            "then": [
+              {
+                "assert": {
+                  "args": [
+                    {
+                      "args": [
+                        {
+                          "var": "s1_v"
+                        },
+                        {
+                          "args": [
+                            {
+                              "var": "v1"
+                            }
+                          ],
+                          "op": "seq"
+                        }
+                      ],
+                      "op": "+"
+                    },
+                    {
+                      "args": [
+                        {
+                          "var": "v1"
+                        }
+                      ],
+                      "op": "seq"
+                    }
+                  ],
+                  "op": "=="
+                }
+              },
+              {
+                "assert": {
+                  "args": [
+                    {
+                      "args": [
+                        {
+                          "var": "s2_v"
+                        },
+                        {
+                          "args": [
+                            {
+                              "var": "v2"
+                            }
+                          ],
+                          "op": "seq"
+                        }
+                      ],
+                      "op": "+"
+                    },
+                    {
+                      "args": [
+                        {
+                          "var": "v2"
+                        }
+                      ],
+                      "op": "seq"
+                    }
+                  ],
+                  "op": "=="
+                }
+              },
+              {
+                "assert": {
+                  "args": [
+                    {
+                      "args": [
+                        {
+                          "var": "s3_v"
+                        },
+                        {
+                          "args": [
+                            {
+                              "var": "v3"
+                            }
+                          ],
+                          "op": "seq"
+                        }
+                      ],
+                      "op": "+"
+                    },
+                    {
+                      "args": [
+                        {
+                          "var": "v3"
+                        }
+                      ],
+                      "op": "seq"
+                    }
+                  ],
+                  "op": "=="
+                }
+              }
+            ]
+          }
+        }
+      ],
+      "ensures": [
+        {
+          "args": [
+            {
+              "call": {
+                "args": [
+                  {
+                    "args": [
+                      {
+                        "var": "s1_v"
+                      },
+                      {
+                        "args": [
+                          {
+                            "var": "v1"
+                          }
+                        ],
+                        "op": "seq"
+                      }
+                    ],
+                    "op": "+"
+                  },
+                  {
+                    "args": [
+                      {
+                        "var": "s2_v"
+                      },
+                      {
+                        "args": [
+                          {
+                            "var": "v2"
+                          }
+                        ],
+                        "op": "seq"
+                      }
+                    ],
+                    "op": "+"
+                  },
+                  {
+                    "args": [
+                      {
+                        "var": "s3_v"
+                      },
+                      {
+                        "args": [
+                          {
+                            "var": "v3"
+                          }
+                        ],
+                        "op": "seq"
+                      }
+                    ],
+                    "op": "+"
+                  }
+                ],
+                "fun": "countIdentical"
+              }
+            },
+            {
+              "args": [
+                {
+                  "call": {
+                    "args": [
+                      {
+                        "var": "s1_v"
+                      },
+                      {
+                        "var": "s2_v"
+                      },
+                      {
+                        "var": "s3_v"
+                      }
+                    ],
+                    "fun": "countIdentical"
+                  }
+                },
+                {
+                  "ite": {
+                    "cond": {
+                      "args": [
+                        {
+                          "args": [
+                            {
+                              "var": "v1"
+                            },
+                            {
+                              "var": "v2"
+                            }
+                          ],
+                          "op": "=="
+                        },
+                        {
+                          "args": [
+                            {
+                              "var": "v2"
+                            },
+                            {
+                              "var": "v3"
+                            }
+                          ],
+                          "op": "=="
+                        }
+                      ],
+                      "op": "and"
+                    },
+                    "else": {
+                      "int": 0
+                    },
+                    "then": {
+                      "int": 1
+                    }
+                  }
+                }
+              ],
+              "op": "+"
+            }
+          ],
+          "op": "=="
+        }
+      ],
+      "name": "countIdenticalAppend",
+      "params": [
+        {
+          "name": "s1_v",
+          "type": "seq"
+        },
+        {
+          "name": "s2_v",
+          "type": "seq"
+        },
+        {
+          "name": "s3_v",
+          "type": "seq"
+        },
+        {
+          "name": "v1",
+          "type": "int"
+        },
+        {
+          "name": "v2",
+          "type": "int"
+        },
+        {
+          "name": "v3",
+          "type": "int"
+        }
+      ],
+      "requires": [
+        {
+          "args": [
+            {
+              "args": [
+                {
+                  "var": "s1_v"
+                }
+              ],
+              "op": "len"
+            },
+            {
+              "args": [
+                {
+                  "var": "s2_v"
+                }
+              ],
+              "op": "len"
+            }
+          ],
+          "op": "=="
+        },
+        {
+          "args": [
+            {
+              "args": [
+                {
+                  "var": "s2_v"
+                }
+              ],
+              "op": "len"
+            },
+            {
+              "args": [
+                {
+                  "var": "s3_v"
+                }
+              ],
+              "op": "len"
+            }
+          ],
+          "op": "=="
+        }
+      ]
+    }
+  ],
+  "name": "vericoding_dj0068__countIdenticalPosition",
+  "params": [
+    {
+      "name": "arr1",
+      "type": "seq"
+    },
+    {
+      "name": "arr2",
+      "type": "seq"
+    },
+    {
+      "name": "arr3",
+      "type": "seq"
+    }
+  ],
+  "requires": [
+    {
+      "args": [
+        {
+          "args": [
+            {
+              "var": "arr1"
+            }
+          ],
+          "op": "len"
+        },
+        {
+          "args": [
+            {
+              "var": "arr2"
+            }
+          ],
+          "op": "len"
+        }
+      ],
+      "op": "=="
+    },
+    {
+      "args": [
+        {
+          "args": [
+            {
+              "var": "arr2"
+            }
+          ],
+          "op": "len"
+        },
+        {
+          "args": [
+            {
+              "var": "arr3"
+            }
+          ],
+          "op": "len"
+        }
+      ],
+      "op": "=="
+    }
+  ],
+  "returns": [
+    {
+      "name": "count",
+      "type": "int"
+    }
+  ],
+  "spec_funs": [
+    {
+      "body": {
+        "ite": {
+          "cond": {
+            "args": [
+              {
+                "args": [
+                  {
+                    "args": [
+                      {
+                        "var": "s1"
+                      }
+                    ],
+                    "op": "len"
+                  },
+                  {
+                    "int": 0
+                  }
+                ],
+                "op": "=="
+              },
+              {
+                "args": [
+                  {
+                    "args": [
+                      {
+                        "var": "s2"
+                      }
+                    ],
+                    "op": "len"
+                  },
+                  {
+                    "int": 0
+                  }
+                ],
+                "op": "=="
+              },
+              {
+                "args": [
+                  {
+                    "args": [
+                      {
+                        "var": "s3"
+                      }
+                    ],
+                    "op": "len"
+                  },
+                  {
+                    "int": 0
+                  }
+                ],
+                "op": "=="
+              }
+            ],
+            "op": "or"
+          },
+          "else": {
+            "args": [
+              {
+                "call": {
+                  "args": [
+                    {
+                      "args": [
+                        {
+                          "var": "s1"
+                        },
+                        {
+                          "int": 0
+                        },
+                        {
+                          "args": [
+                            {
+                              "args": [
+                                {
+                                  "var": "s1"
+                                }
+                              ],
+                              "op": "len"
+                            },
+                            {
+                              "int": 1
+                            }
+                          ],
+                          "op": "-"
+                        }
+                      ],
+                      "op": "slice"
+                    },
+                    {
+                      "args": [
+                        {
+                          "var": "s2"
+                        },
+                        {
+                          "int": 0
+                        },
+                        {
+                          "args": [
+                            {
+                              "args": [
+                                {
+                                  "var": "s2"
+                                }
+                              ],
+                              "op": "len"
+                            },
+                            {
+                              "int": 1
+                            }
+                          ],
+                          "op": "-"
+                        }
+                      ],
+                      "op": "slice"
+                    },
+                    {
+                      "args": [
+                        {
+                          "var": "s3"
+                        },
+                        {
+                          "int": 0
+                        },
+                        {
+                          "args": [
+                            {
+                              "args": [
+                                {
+                                  "var": "s3"
+                                }
+                              ],
+                              "op": "len"
+                            },
+                            {
+                              "int": 1
+                            }
+                          ],
+                          "op": "-"
+                        }
+                      ],
+                      "op": "slice"
+                    }
+                  ],
+                  "fun": "countIdentical"
+                }
+              },
+              {
+                "ite": {
+                  "cond": {
+                    "args": [
+                      {
+                        "args": [
+                          {
+                            "args": [
+                              {
+                                "var": "s1"
+                              },
+                              {
+                                "args": [
+                                  {
+                                    "args": [
+                                      {
+                                        "var": "s1"
+                                      }
+                                    ],
+                                    "op": "len"
+                                  },
+                                  {
+                                    "int": 1
+                                  }
+                                ],
+                                "op": "-"
+                              }
+                            ],
+                            "op": "at"
+                          },
+                          {
+                            "args": [
+                              {
+                                "var": "s2"
+                              },
+                              {
+                                "args": [
+                                  {
+                                    "args": [
+                                      {
+                                        "var": "s2"
+                                      }
+                                    ],
+                                    "op": "len"
+                                  },
+                                  {
+                                    "int": 1
+                                  }
+                                ],
+                                "op": "-"
+                              }
+                            ],
+                            "op": "at"
+                          }
+                        ],
+                        "op": "=="
+                      },
+                      {
+                        "args": [
+                          {
+                            "args": [
+                              {
+                                "var": "s2"
+                              },
+                              {
+                                "args": [
+                                  {
+                                    "args": [
+                                      {
+                                        "var": "s2"
+                                      }
+                                    ],
+                                    "op": "len"
+                                  },
+                                  {
+                                    "int": 1
+                                  }
+                                ],
+                                "op": "-"
+                              }
+                            ],
+                            "op": "at"
+                          },
+                          {
+                            "args": [
+                              {
+                                "var": "s3"
+                              },
+                              {
+                                "args": [
+                                  {
+                                    "args": [
+                                      {
+                                        "var": "s3"
+                                      }
+                                    ],
+                                    "op": "len"
+                                  },
+                                  {
+                                    "int": 1
+                                  }
+                                ],
+                                "op": "-"
+                              }
+                            ],
+                            "op": "at"
+                          }
+                        ],
+                        "op": "=="
+                      }
+                    ],
+                    "op": "and"
+                  },
+                  "else": {
+                    "int": 0
+                  },
+                  "then": {
+                    "int": 1
+                  }
+                }
+              }
+            ],
+            "op": "+"
+          },
+          "then": {
+            "int": 0
+          }
+        }
+      },
+      "decreases": {
+        "args": [
+          {
+            "args": [
+              {
+                "args": [
+                  {
+                    "var": "s1"
+                  }
+                ],
+                "op": "len"
+              },
+              {
+                "args": [
+                  {
+                    "var": "s2"
+                  }
+                ],
+                "op": "len"
+              }
+            ],
+            "op": "+"
+          },
+          {
+            "args": [
+              {
+                "var": "s3"
+              }
+            ],
+            "op": "len"
+          }
+        ],
+        "op": "+"
+      },
+      "name": "countIdentical",
+      "params": [
+        {
+          "name": "s1",
+          "type": "seq"
+        },
+        {
+          "name": "s2",
+          "type": "seq"
+        },
+        {
+          "name": "s3",
+          "type": "seq"
+        }
+      ],
+      "result": "int"
+    }
+  ],
+  "t": 1
+}

@@ -1,0 +1,451 @@
+{
+  "body": [
+    {
+      "assign": [
+        "result",
+        {
+          "int": 0
+        }
+      ]
+    },
+    {
+      "var": {
+        "init": {
+          "int": 0
+        },
+        "name": "pos_v",
+        "type": "int"
+      }
+    },
+    {
+      "while": {
+        "body": [
+          {
+            "if": {
+              "cond": {
+                "args": [
+                  {
+                    "args": [
+                      {
+                        "args": [
+                          {
+                            "var": "lst"
+                          },
+                          {
+                            "var": "pos_v"
+                          }
+                        ],
+                        "op": "at"
+                      },
+                      {
+                        "int": 2
+                      }
+                    ],
+                    "op": "mod"
+                  },
+                  {
+                    "int": 1
+                  }
+                ],
+                "op": "=="
+              },
+              "else": [],
+              "then": [
+                {
+                  "assign": [
+                    "result",
+                    {
+                      "args": [
+                        {
+                          "var": "result"
+                        },
+                        {
+                          "args": [
+                            {
+                              "var": "lst"
+                            },
+                            {
+                              "var": "pos_v"
+                            }
+                          ],
+                          "op": "at"
+                        }
+                      ],
+                      "op": "+"
+                    }
+                  ]
+                }
+              ]
+            }
+          },
+          {
+            "assign": [
+              "pos_v",
+              {
+                "args": [
+                  {
+                    "var": "pos_v"
+                  },
+                  {
+                    "int": 2
+                  }
+                ],
+                "op": "+"
+              }
+            ]
+          }
+        ],
+        "cond": {
+          "args": [
+            {
+              "var": "pos_v"
+            },
+            {
+              "args": [
+                {
+                  "var": "lst"
+                }
+              ],
+              "op": "len"
+            }
+          ],
+          "op": "<"
+        },
+        "decreases": {
+          "args": [
+            {
+              "args": [
+                {
+                  "var": "lst"
+                }
+              ],
+              "op": "len"
+            },
+            {
+              "var": "pos_v"
+            }
+          ],
+          "op": "-"
+        },
+        "invariants": [
+          {
+            "args": [
+              {
+                "args": [
+                  {
+                    "int": 0
+                  },
+                  {
+                    "var": "pos_v"
+                  }
+                ],
+                "op": "<="
+              },
+              {
+                "args": [
+                  {
+                    "var": "pos_v"
+                  },
+                  {
+                    "args": [
+                      {
+                        "args": [
+                          {
+                            "var": "lst"
+                          }
+                        ],
+                        "op": "len"
+                      },
+                      {
+                        "int": 1
+                      }
+                    ],
+                    "op": "+"
+                  }
+                ],
+                "op": "<="
+              }
+            ],
+            "op": "and"
+          },
+          {
+            "args": [
+              {
+                "args": [
+                  {
+                    "var": "pos_v"
+                  },
+                  {
+                    "int": 2
+                  }
+                ],
+                "op": "mod"
+              },
+              {
+                "int": 0
+              }
+            ],
+            "op": "=="
+          },
+          {
+            "args": [
+              {
+                "var": "result"
+              },
+              {
+                "args": [
+                  {
+                    "call": {
+                      "args": [
+                        {
+                          "var": "lst"
+                        },
+                        {
+                          "int": 0
+                        }
+                      ],
+                      "fun": "sumOddAtEvenPositions"
+                    }
+                  },
+                  {
+                    "call": {
+                      "args": [
+                        {
+                          "var": "lst"
+                        },
+                        {
+                          "var": "pos_v"
+                        }
+                      ],
+                      "fun": "sumOddAtEvenPositions"
+                    }
+                  }
+                ],
+                "op": "-"
+              }
+            ],
+            "op": "=="
+          }
+        ]
+      }
+    }
+  ],
+  "ensures": [
+    {
+      "args": [
+        {
+          "var": "result"
+        },
+        {
+          "call": {
+            "args": [
+              {
+                "var": "lst"
+              },
+              {
+                "int": 0
+              }
+            ],
+            "fun": "sumOddAtEvenPositions"
+          }
+        }
+      ],
+      "op": "=="
+    }
+  ],
+  "gate": "recursion",
+  "name": "vericoding_dh0123__solution",
+  "params": [
+    {
+      "name": "lst",
+      "type": "seq"
+    }
+  ],
+  "requires": [
+    {
+      "args": [
+        {
+          "args": [
+            {
+              "var": "lst"
+            }
+          ],
+          "op": "len"
+        },
+        {
+          "int": 0
+        }
+      ],
+      "op": ">"
+    }
+  ],
+  "returns": [
+    {
+      "name": "result",
+      "type": "int"
+    }
+  ],
+  "spec_funs": [
+    {
+      "body": {
+        "ite": {
+          "cond": {
+            "args": [
+              {
+                "int": 0
+              },
+              {
+                "var": "pos"
+              }
+            ],
+            "op": "<="
+          },
+          "else": {
+            "int": 0
+          },
+          "then": {
+            "ite": {
+              "cond": {
+                "args": [
+                  {
+                    "var": "pos"
+                  },
+                  {
+                    "args": [
+                      {
+                        "var": "lst_v"
+                      }
+                    ],
+                    "op": "len"
+                  }
+                ],
+                "op": ">="
+              },
+              "else": {
+                "ite": {
+                  "cond": {
+                    "args": [
+                      {
+                        "args": [
+                          {
+                            "args": [
+                              {
+                                "var": "lst_v"
+                              },
+                              {
+                                "var": "pos"
+                              }
+                            ],
+                            "op": "at"
+                          },
+                          {
+                            "int": 2
+                          }
+                        ],
+                        "op": "mod"
+                      },
+                      {
+                        "int": 1
+                      }
+                    ],
+                    "op": "=="
+                  },
+                  "else": {
+                    "call": {
+                      "args": [
+                        {
+                          "var": "lst_v"
+                        },
+                        {
+                          "args": [
+                            {
+                              "var": "pos"
+                            },
+                            {
+                              "int": 2
+                            }
+                          ],
+                          "op": "+"
+                        }
+                      ],
+                      "fun": "sumOddAtEvenPositions"
+                    }
+                  },
+                  "then": {
+                    "args": [
+                      {
+                        "args": [
+                          {
+                            "var": "lst_v"
+                          },
+                          {
+                            "var": "pos"
+                          }
+                        ],
+                        "op": "at"
+                      },
+                      {
+                        "call": {
+                          "args": [
+                            {
+                              "var": "lst_v"
+                            },
+                            {
+                              "args": [
+                                {
+                                  "var": "pos"
+                                },
+                                {
+                                  "int": 2
+                                }
+                              ],
+                              "op": "+"
+                            }
+                          ],
+                          "fun": "sumOddAtEvenPositions"
+                        }
+                      }
+                    ],
+                    "op": "+"
+                  }
+                }
+              },
+              "then": {
+                "int": 0
+              }
+            }
+          }
+        }
+      },
+      "decreases": {
+        "args": [
+          {
+            "args": [
+              {
+                "var": "lst_v"
+              }
+            ],
+            "op": "len"
+          },
+          {
+            "var": "pos"
+          }
+        ],
+        "op": "-"
+      },
+      "name": "sumOddAtEvenPositions",
+      "params": [
+        {
+          "name": "lst_v",
+          "type": "seq"
+        },
+        {
+          "name": "pos",
+          "type": "int"
+        }
+      ],
+      "result": "int"
+    }
+  ],
+  "t": 1
+}

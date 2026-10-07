@@ -1,0 +1,221 @@
+{
+  "body": [
+    {
+      "var": {
+        "init": {
+          "args": [],
+          "op": "seq"
+        },
+        "name": "firstPart",
+        "type": "seq"
+      }
+    },
+    {
+      "var": {
+        "init": {
+          "args": [],
+          "op": "seq"
+        },
+        "name": "secondPart",
+        "type": "seq"
+      }
+    },
+    {
+      "assign": [
+        "firstPart",
+        {
+          "args": [
+            {
+              "var": "arr"
+            },
+            {
+              "int": 0
+            },
+            {
+              "var": "l"
+            }
+          ],
+          "op": "slice"
+        }
+      ]
+    },
+    {
+      "assign": [
+        "secondPart",
+        {
+          "args": [
+            {
+              "var": "arr"
+            },
+            {
+              "var": "l"
+            },
+            {
+              "args": [
+                {
+                  "var": "arr"
+                }
+              ],
+              "op": "len"
+            }
+          ],
+          "op": "slice"
+        }
+      ]
+    },
+    {
+      "assign": [
+        "r",
+        {
+          "args": [
+            {
+              "var": "firstPart"
+            },
+            {
+              "var": "secondPart"
+            }
+          ],
+          "op": "pair"
+        }
+      ]
+    }
+  ],
+  "ensures": [
+    {
+      "args": [
+        {
+          "args": [
+            {
+              "args": [
+                {
+                  "var": "r"
+                }
+              ],
+              "op": "fst"
+            }
+          ],
+          "op": "len"
+        },
+        {
+          "var": "l"
+        }
+      ],
+      "op": "=="
+    },
+    {
+      "args": [
+        {
+          "args": [
+            {
+              "args": [
+                {
+                  "var": "r"
+                }
+              ],
+              "op": "snd"
+            }
+          ],
+          "op": "len"
+        },
+        {
+          "args": [
+            {
+              "args": [
+                {
+                  "var": "arr"
+                }
+              ],
+              "op": "len"
+            },
+            {
+              "var": "l"
+            }
+          ],
+          "op": "-"
+        }
+      ],
+      "op": "=="
+    },
+    {
+      "args": [
+        {
+          "args": [
+            {
+              "args": [
+                {
+                  "var": "r"
+                }
+              ],
+              "op": "fst"
+            },
+            {
+              "args": [
+                {
+                  "var": "r"
+                }
+              ],
+              "op": "snd"
+            }
+          ],
+          "op": "+"
+        },
+        {
+          "var": "arr"
+        }
+      ],
+      "op": "=="
+    }
+  ],
+  "name": "vericoding_dd0690__splitArray",
+  "params": [
+    {
+      "name": "arr",
+      "type": "seq"
+    },
+    {
+      "name": "l",
+      "type": "int"
+    }
+  ],
+  "requires": [
+    {
+      "args": [
+        {
+          "int": 0
+        },
+        {
+          "var": "l"
+        }
+      ],
+      "op": "<="
+    },
+    {
+      "args": [
+        {
+          "var": "l"
+        },
+        {
+          "args": [
+            {
+              "var": "arr"
+            }
+          ],
+          "op": "len"
+        }
+      ],
+      "op": "<="
+    }
+  ],
+  "returns": [
+    {
+      "name": "r",
+      "type": {
+        "pair": [
+          "seq",
+          "seq"
+        ]
+      }
+    }
+  ],
+  "t": 1
+}

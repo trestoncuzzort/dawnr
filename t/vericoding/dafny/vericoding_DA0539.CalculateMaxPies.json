@@ -1,0 +1,331 @@
+{
+  "body": [
+    {
+      "assign": [
+        "pies",
+        {
+          "args": [
+            {
+              "args": [
+                {
+                  "args": [
+                    {
+                      "var": "a"
+                    },
+                    {
+                      "int": 3
+                    }
+                  ],
+                  "op": "*"
+                },
+                {
+                  "var": "p"
+                }
+              ],
+              "op": "+"
+            },
+            {
+              "int": 2
+            }
+          ],
+          "op": "div"
+        }
+      ]
+    }
+  ],
+  "ensures": [
+    {
+      "args": [
+        {
+          "var": "pies"
+        },
+        {
+          "call": {
+            "args": [
+              {
+                "var": "a"
+              },
+              {
+                "var": "p"
+              }
+            ],
+            "fun": "maxPies"
+          }
+        }
+      ],
+      "op": "=="
+    },
+    {
+      "args": [
+        {
+          "var": "pies"
+        },
+        {
+          "int": 0
+        }
+      ],
+      "op": ">="
+    },
+    {
+      "args": [
+        {
+          "var": "pies"
+        },
+        {
+          "args": [
+            {
+              "args": [
+                {
+                  "args": [
+                    {
+                      "var": "a"
+                    },
+                    {
+                      "int": 3
+                    }
+                  ],
+                  "op": "*"
+                },
+                {
+                  "var": "p"
+                }
+              ],
+              "op": "+"
+            },
+            {
+              "int": 2
+            }
+          ],
+          "op": "div"
+        }
+      ],
+      "op": "=="
+    }
+  ],
+  "gate": "recursion",
+  "name": "vericoding_da0539__calculateMaxPies",
+  "params": [
+    {
+      "name": "a",
+      "type": "int"
+    },
+    {
+      "name": "p",
+      "type": "int"
+    }
+  ],
+  "requires": [
+    {
+      "call": {
+        "args": [
+          {
+            "var": "a"
+          },
+          {
+            "var": "p"
+          }
+        ],
+        "fun": "validInput"
+      }
+    }
+  ],
+  "returns": [
+    {
+      "name": "pies",
+      "type": "int"
+    }
+  ],
+  "spec_funs": [
+    {
+      "body": {
+        "args": [
+          {
+            "args": [
+              {
+                "args": [
+                  {
+                    "int": 0
+                  },
+                  {
+                    "var": "a_v"
+                  }
+                ],
+                "op": "<="
+              },
+              {
+                "args": [
+                  {
+                    "var": "a_v"
+                  },
+                  {
+                    "int": 100
+                  }
+                ],
+                "op": "<="
+              }
+            ],
+            "op": "and"
+          },
+          {
+            "args": [
+              {
+                "args": [
+                  {
+                    "int": 0
+                  },
+                  {
+                    "var": "p_v"
+                  }
+                ],
+                "op": "<="
+              },
+              {
+                "args": [
+                  {
+                    "var": "p_v"
+                  },
+                  {
+                    "int": 100
+                  }
+                ],
+                "op": "<="
+              }
+            ],
+            "op": "and"
+          }
+        ],
+        "op": "and"
+      },
+      "decreases": {
+        "int": 0
+      },
+      "name": "validInput",
+      "params": [
+        {
+          "name": "a_v",
+          "type": "int"
+        },
+        {
+          "name": "p_v",
+          "type": "int"
+        }
+      ],
+      "result": "bool"
+    },
+    {
+      "body": {
+        "ite": {
+          "cond": {
+            "call": {
+              "args": [
+                {
+                  "var": "a_v2"
+                },
+                {
+                  "var": "p_v2"
+                }
+              ],
+              "fun": "validInput"
+            }
+          },
+          "else": {
+            "int": 0
+          },
+          "then": {
+            "args": [
+              {
+                "args": [
+                  {
+                    "var": "a_v2"
+                  },
+                  {
+                    "int": 3
+                  }
+                ],
+                "op": "*"
+              },
+              {
+                "var": "p_v2"
+              }
+            ],
+            "op": "+"
+          }
+        }
+      },
+      "decreases": {
+        "int": 0
+      },
+      "name": "totalPieces",
+      "params": [
+        {
+          "name": "a_v2",
+          "type": "int"
+        },
+        {
+          "name": "p_v2",
+          "type": "int"
+        }
+      ],
+      "result": "int"
+    },
+    {
+      "body": {
+        "ite": {
+          "cond": {
+            "call": {
+              "args": [
+                {
+                  "var": "a_v3"
+                },
+                {
+                  "var": "p_v3"
+                }
+              ],
+              "fun": "validInput"
+            }
+          },
+          "else": {
+            "int": 0
+          },
+          "then": {
+            "args": [
+              {
+                "call": {
+                  "args": [
+                    {
+                      "var": "a_v3"
+                    },
+                    {
+                      "var": "p_v3"
+                    }
+                  ],
+                  "fun": "totalPieces"
+                }
+              },
+              {
+                "int": 2
+              }
+            ],
+            "op": "div"
+          }
+        }
+      },
+      "decreases": {
+        "int": 0
+      },
+      "name": "maxPies",
+      "params": [
+        {
+          "name": "a_v3",
+          "type": "int"
+        },
+        {
+          "name": "p_v3",
+          "type": "int"
+        }
+      ],
+      "result": "int"
+    }
+  ],
+  "t": 1
+}

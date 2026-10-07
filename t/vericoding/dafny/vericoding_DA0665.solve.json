@@ -1,0 +1,543 @@
+{
+  "body": [
+    {
+      "assign": [
+        "result",
+        {
+          "args": [
+            {
+              "args": [
+                {
+                  "args": [
+                    {
+                      "var": "lines"
+                    },
+                    {
+                      "int": 0
+                    }
+                  ],
+                  "op": "at"
+                },
+                {
+                  "int": 0
+                }
+              ],
+              "op": "at"
+            },
+            {
+              "args": [
+                {
+                  "args": [
+                    {
+                      "var": "lines"
+                    },
+                    {
+                      "int": 1
+                    }
+                  ],
+                  "op": "at"
+                },
+                {
+                  "int": 1
+                }
+              ],
+              "op": "at"
+            },
+            {
+              "args": [
+                {
+                  "args": [
+                    {
+                      "var": "lines"
+                    },
+                    {
+                      "int": 2
+                    }
+                  ],
+                  "op": "at"
+                },
+                {
+                  "int": 2
+                }
+              ],
+              "op": "at"
+            },
+            {
+              "int": 10
+            }
+          ],
+          "op": "seq"
+        }
+      ]
+    }
+  ],
+  "ensures": [
+    {
+      "args": [
+        {
+          "args": [
+            {
+              "var": "result"
+            }
+          ],
+          "op": "len"
+        },
+        {
+          "int": 4
+        }
+      ],
+      "op": "=="
+    },
+    {
+      "args": [
+        {
+          "args": [
+            {
+              "var": "result"
+            },
+            {
+              "int": 0
+            }
+          ],
+          "op": "at"
+        },
+        {
+          "args": [
+            {
+              "args": [
+                {
+                  "var": "lines"
+                },
+                {
+                  "int": 0
+                }
+              ],
+              "op": "at"
+            },
+            {
+              "int": 0
+            }
+          ],
+          "op": "at"
+        }
+      ],
+      "op": "=="
+    },
+    {
+      "args": [
+        {
+          "args": [
+            {
+              "var": "result"
+            },
+            {
+              "int": 1
+            }
+          ],
+          "op": "at"
+        },
+        {
+          "args": [
+            {
+              "args": [
+                {
+                  "var": "lines"
+                },
+                {
+                  "int": 1
+                }
+              ],
+              "op": "at"
+            },
+            {
+              "int": 1
+            }
+          ],
+          "op": "at"
+        }
+      ],
+      "op": "=="
+    },
+    {
+      "args": [
+        {
+          "args": [
+            {
+              "var": "result"
+            },
+            {
+              "int": 2
+            }
+          ],
+          "op": "at"
+        },
+        {
+          "args": [
+            {
+              "args": [
+                {
+                  "var": "lines"
+                },
+                {
+                  "int": 2
+                }
+              ],
+              "op": "at"
+            },
+            {
+              "int": 2
+            }
+          ],
+          "op": "at"
+        }
+      ],
+      "op": "=="
+    },
+    {
+      "args": [
+        {
+          "args": [
+            {
+              "var": "result"
+            },
+            {
+              "int": 3
+            }
+          ],
+          "op": "at"
+        },
+        {
+          "int": 10
+        }
+      ],
+      "op": "=="
+    },
+    {
+      "args": [
+        {
+          "var": "result"
+        },
+        {
+          "args": [
+            {
+              "call": {
+                "args": [
+                  {
+                    "var": "lines"
+                  }
+                ],
+                "fun": "extractDiagonal"
+              }
+            },
+            {
+              "args": [
+                {
+                  "int": 10
+                }
+              ],
+              "op": "seq"
+            }
+          ],
+          "op": "+"
+        }
+      ],
+      "op": "=="
+    }
+  ],
+  "gate": "recursion",
+  "name": "vericoding_da0665__solve",
+  "params": [
+    {
+      "name": "lines",
+      "type": {
+        "seq": "seq"
+      }
+    }
+  ],
+  "requires": [
+    {
+      "forall": {
+        "body": {
+          "forall": {
+            "body": {
+              "args": [
+                {
+                  "args": [
+                    {
+                      "args": [
+                        {
+                          "args": [
+                            {
+                              "var": "lines"
+                            },
+                            {
+                              "var": "i_v"
+                            }
+                          ],
+                          "op": "at"
+                        },
+                        {
+                          "var": "k"
+                        }
+                      ],
+                      "op": "at"
+                    },
+                    {
+                      "int": 0
+                    }
+                  ],
+                  "op": ">="
+                },
+                {
+                  "args": [
+                    {
+                      "args": [
+                        {
+                          "args": [
+                            {
+                              "var": "lines"
+                            },
+                            {
+                              "var": "i_v"
+                            }
+                          ],
+                          "op": "at"
+                        },
+                        {
+                          "var": "k"
+                        }
+                      ],
+                      "op": "at"
+                    },
+                    {
+                      "int": 1114111
+                    }
+                  ],
+                  "op": "<="
+                }
+              ],
+              "op": "and"
+            },
+            "hi": {
+              "args": [
+                {
+                  "args": [
+                    {
+                      "var": "lines"
+                    },
+                    {
+                      "var": "i_v"
+                    }
+                  ],
+                  "op": "at"
+                }
+              ],
+              "op": "len"
+            },
+            "lo": {
+              "int": 0
+            },
+            "var": "k"
+          }
+        },
+        "hi": {
+          "args": [
+            {
+              "var": "lines"
+            }
+          ],
+          "op": "len"
+        },
+        "lo": {
+          "int": 0
+        },
+        "var": "i_v"
+      }
+    },
+    {
+      "call": {
+        "args": [
+          {
+            "var": "lines"
+          }
+        ],
+        "fun": "validInput"
+      }
+    }
+  ],
+  "returns": [
+    {
+      "name": "result",
+      "type": "seq"
+    }
+  ],
+  "spec_funs": [
+    {
+      "body": {
+        "args": [
+          {
+            "args": [
+              {
+                "args": [
+                  {
+                    "var": "lines_v"
+                  }
+                ],
+                "op": "len"
+              },
+              {
+                "int": 3
+              }
+            ],
+            "op": "=="
+          },
+          {
+            "forall": {
+              "body": {
+                "args": [
+                  {
+                    "args": [
+                      {
+                        "args": [
+                          {
+                            "var": "lines_v"
+                          },
+                          {
+                            "var": "i"
+                          }
+                        ],
+                        "op": "at"
+                      }
+                    ],
+                    "op": "len"
+                  },
+                  {
+                    "int": 3
+                  }
+                ],
+                "op": "=="
+              },
+              "hi": {
+                "int": 3
+              },
+              "lo": {
+                "int": 0
+              },
+              "var": "i"
+            }
+          }
+        ],
+        "op": "and"
+      },
+      "decreases": {
+        "int": 0
+      },
+      "name": "validInput",
+      "params": [
+        {
+          "name": "lines_v",
+          "type": {
+            "seq": "seq"
+          }
+        }
+      ],
+      "result": "bool"
+    },
+    {
+      "body": {
+        "ite": {
+          "cond": {
+            "call": {
+              "args": [
+                {
+                  "var": "lines_v2"
+                }
+              ],
+              "fun": "validInput"
+            }
+          },
+          "else": {
+            "args": [],
+            "op": "seq"
+          },
+          "then": {
+            "args": [
+              {
+                "args": [
+                  {
+                    "args": [
+                      {
+                        "var": "lines_v2"
+                      },
+                      {
+                        "int": 0
+                      }
+                    ],
+                    "op": "at"
+                  },
+                  {
+                    "int": 0
+                  }
+                ],
+                "op": "at"
+              },
+              {
+                "args": [
+                  {
+                    "args": [
+                      {
+                        "var": "lines_v2"
+                      },
+                      {
+                        "int": 1
+                      }
+                    ],
+                    "op": "at"
+                  },
+                  {
+                    "int": 1
+                  }
+                ],
+                "op": "at"
+              },
+              {
+                "args": [
+                  {
+                    "args": [
+                      {
+                        "var": "lines_v2"
+                      },
+                      {
+                        "int": 2
+                      }
+                    ],
+                    "op": "at"
+                  },
+                  {
+                    "int": 2
+                  }
+                ],
+                "op": "at"
+              }
+            ],
+            "op": "seq"
+          }
+        }
+      },
+      "decreases": {
+        "int": 0
+      },
+      "name": "extractDiagonal",
+      "params": [
+        {
+          "name": "lines_v2",
+          "type": {
+            "seq": "seq"
+          }
+        }
+      ],
+      "result": "seq"
+    }
+  ],
+  "t": 1
+}

@@ -1,0 +1,1029 @@
+{
+  "body": [
+    {
+      "var": {
+        "init": {
+          "args": [
+            {
+              "var": "n"
+            },
+            {
+              "var": "a"
+            }
+          ],
+          "op": "*"
+        },
+        "name": "allSingle_v",
+        "type": "int"
+      }
+    },
+    {
+      "var": {
+        "init": {
+          "args": [
+            {
+              "args": [
+                {
+                  "args": [
+                    {
+                      "args": [
+                        {
+                          "var": "n"
+                        },
+                        {
+                          "var": "m"
+                        }
+                      ],
+                      "op": "+"
+                    },
+                    {
+                      "int": 1
+                    }
+                  ],
+                  "op": "-"
+                },
+                {
+                  "var": "m"
+                }
+              ],
+              "op": "div"
+            },
+            {
+              "var": "b"
+            }
+          ],
+          "op": "*"
+        },
+        "name": "allMulti_v",
+        "type": "int"
+      }
+    },
+    {
+      "var": {
+        "init": {
+          "args": [
+            {
+              "args": [
+                {
+                  "args": [
+                    {
+                      "var": "n"
+                    },
+                    {
+                      "var": "m"
+                    }
+                  ],
+                  "op": "div"
+                },
+                {
+                  "var": "b"
+                }
+              ],
+              "op": "*"
+            },
+            {
+              "args": [
+                {
+                  "args": [
+                    {
+                      "var": "n"
+                    },
+                    {
+                      "var": "m"
+                    }
+                  ],
+                  "op": "mod"
+                },
+                {
+                  "var": "a"
+                }
+              ],
+              "op": "*"
+            }
+          ],
+          "op": "+"
+        },
+        "name": "mixed_v",
+        "type": "int"
+      }
+    },
+    {
+      "lemma": {
+        "args": [
+          {
+            "var": "n"
+          },
+          {
+            "var": "m"
+          },
+          {
+            "var": "a"
+          },
+          {
+            "var": "b"
+          },
+          {
+            "var": "allSingle_v"
+          },
+          {
+            "var": "allMulti_v"
+          },
+          {
+            "var": "mixed_v"
+          }
+        ],
+        "name": "optimalCostCorrect"
+      }
+    },
+    {
+      "if": {
+        "cond": {
+          "args": [
+            {
+              "args": [
+                {
+                  "var": "allMulti_v"
+                },
+                {
+                  "var": "allSingle_v"
+                }
+              ],
+              "op": "<"
+            },
+            {
+              "args": [
+                {
+                  "var": "allMulti_v"
+                },
+                {
+                  "var": "mixed_v"
+                }
+              ],
+              "op": "<="
+            }
+          ],
+          "op": "and"
+        },
+        "else": [
+          {
+            "if": {
+              "cond": {
+                "args": [
+                  {
+                    "args": [
+                      {
+                        "var": "mixed_v"
+                      },
+                      {
+                        "var": "allSingle_v"
+                      }
+                    ],
+                    "op": "<"
+                  },
+                  {
+                    "args": [
+                      {
+                        "var": "mixed_v"
+                      },
+                      {
+                        "var": "allMulti_v"
+                      }
+                    ],
+                    "op": "<="
+                  }
+                ],
+                "op": "and"
+              },
+              "else": [
+                {
+                  "assign": [
+                    "result",
+                    {
+                      "var": "allSingle_v"
+                    }
+                  ]
+                }
+              ],
+              "then": [
+                {
+                  "assign": [
+                    "result",
+                    {
+                      "var": "mixed_v"
+                    }
+                  ]
+                }
+              ]
+            }
+          }
+        ],
+        "then": [
+          {
+            "assign": [
+              "result",
+              {
+                "var": "allMulti_v"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "lemma": {
+        "args": [
+          {
+            "var": "allSingle_v"
+          },
+          {
+            "var": "allMulti_v"
+          },
+          {
+            "var": "mixed_v"
+          }
+        ],
+        "name": "minProperties"
+      }
+    }
+  ],
+  "ensures": [
+    {
+      "args": [
+        {
+          "var": "result"
+        },
+        {
+          "int": 0
+        }
+      ],
+      "op": ">="
+    },
+    {
+      "args": [
+        {
+          "var": "result"
+        },
+        {
+          "call": {
+            "args": [
+              {
+                "var": "n"
+              },
+              {
+                "var": "m"
+              },
+              {
+                "var": "a"
+              },
+              {
+                "var": "b"
+              }
+            ],
+            "fun": "optimalCost"
+          }
+        }
+      ],
+      "op": "=="
+    }
+  ],
+  "gate": "recursion",
+  "lemmas": [
+    {
+      "body": [],
+      "ensures": [
+        {
+          "args": [
+            {
+              "call": {
+                "args": [
+                  {
+                    "var": "allSingle"
+                  },
+                  {
+                    "call": {
+                      "args": [
+                        {
+                          "var": "allMulti"
+                        },
+                        {
+                          "var": "mixed"
+                        }
+                      ],
+                      "fun": "min"
+                    }
+                  }
+                ],
+                "fun": "min"
+              }
+            },
+            {
+              "call": {
+                "args": [
+                  {
+                    "var": "n_v3"
+                  },
+                  {
+                    "var": "m_v3"
+                  },
+                  {
+                    "var": "a_v3"
+                  },
+                  {
+                    "var": "b_v3"
+                  }
+                ],
+                "fun": "optimalCost"
+              }
+            }
+          ],
+          "op": "=="
+        }
+      ],
+      "name": "optimalCostCorrect",
+      "params": [
+        {
+          "name": "n_v3",
+          "type": "int"
+        },
+        {
+          "name": "m_v3",
+          "type": "int"
+        },
+        {
+          "name": "a_v3",
+          "type": "int"
+        },
+        {
+          "name": "b_v3",
+          "type": "int"
+        },
+        {
+          "name": "allSingle",
+          "type": "int"
+        },
+        {
+          "name": "allMulti",
+          "type": "int"
+        },
+        {
+          "name": "mixed",
+          "type": "int"
+        }
+      ],
+      "requires": [
+        {
+          "call": {
+            "args": [
+              {
+                "var": "n_v3"
+              },
+              {
+                "var": "m_v3"
+              },
+              {
+                "var": "a_v3"
+              },
+              {
+                "var": "b_v3"
+              }
+            ],
+            "fun": "validInput"
+          }
+        },
+        {
+          "args": [
+            {
+              "var": "allSingle"
+            },
+            {
+              "args": [
+                {
+                  "var": "n_v3"
+                },
+                {
+                  "var": "a_v3"
+                }
+              ],
+              "op": "*"
+            }
+          ],
+          "op": "=="
+        },
+        {
+          "args": [
+            {
+              "var": "allMulti"
+            },
+            {
+              "args": [
+                {
+                  "args": [
+                    {
+                      "args": [
+                        {
+                          "args": [
+                            {
+                              "var": "n_v3"
+                            },
+                            {
+                              "var": "m_v3"
+                            }
+                          ],
+                          "op": "+"
+                        },
+                        {
+                          "int": 1
+                        }
+                      ],
+                      "op": "-"
+                    },
+                    {
+                      "var": "m_v3"
+                    }
+                  ],
+                  "op": "div"
+                },
+                {
+                  "var": "b_v3"
+                }
+              ],
+              "op": "*"
+            }
+          ],
+          "op": "=="
+        },
+        {
+          "args": [
+            {
+              "var": "mixed"
+            },
+            {
+              "args": [
+                {
+                  "args": [
+                    {
+                      "args": [
+                        {
+                          "var": "n_v3"
+                        },
+                        {
+                          "var": "m_v3"
+                        }
+                      ],
+                      "op": "div"
+                    },
+                    {
+                      "var": "b_v3"
+                    }
+                  ],
+                  "op": "*"
+                },
+                {
+                  "args": [
+                    {
+                      "args": [
+                        {
+                          "var": "n_v3"
+                        },
+                        {
+                          "var": "m_v3"
+                        }
+                      ],
+                      "op": "mod"
+                    },
+                    {
+                      "var": "a_v3"
+                    }
+                  ],
+                  "op": "*"
+                }
+              ],
+              "op": "+"
+            }
+          ],
+          "op": "=="
+        }
+      ]
+    },
+    {
+      "body": [],
+      "ensures": [
+        {
+          "args": [
+            {
+              "call": {
+                "args": [
+                  {
+                    "var": "x_v"
+                  },
+                  {
+                    "call": {
+                      "args": [
+                        {
+                          "var": "y_v"
+                        },
+                        {
+                          "var": "z"
+                        }
+                      ],
+                      "fun": "min"
+                    }
+                  }
+                ],
+                "fun": "min"
+              }
+            },
+            {
+              "call": {
+                "args": [
+                  {
+                    "call": {
+                      "args": [
+                        {
+                          "var": "x_v"
+                        },
+                        {
+                          "var": "y_v"
+                        }
+                      ],
+                      "fun": "min"
+                    }
+                  },
+                  {
+                    "var": "z"
+                  }
+                ],
+                "fun": "min"
+              }
+            }
+          ],
+          "op": "=="
+        },
+        {
+          "args": [
+            {
+              "call": {
+                "args": [
+                  {
+                    "var": "x_v"
+                  },
+                  {
+                    "var": "y_v"
+                  }
+                ],
+                "fun": "min"
+              }
+            },
+            {
+              "var": "x_v"
+            }
+          ],
+          "op": "<="
+        },
+        {
+          "args": [
+            {
+              "call": {
+                "args": [
+                  {
+                    "var": "x_v"
+                  },
+                  {
+                    "var": "y_v"
+                  }
+                ],
+                "fun": "min"
+              }
+            },
+            {
+              "var": "y_v"
+            }
+          ],
+          "op": "<="
+        },
+        {
+          "args": [
+            {
+              "args": [
+                {
+                  "call": {
+                    "args": [
+                      {
+                        "var": "x_v"
+                      },
+                      {
+                        "var": "y_v"
+                      }
+                    ],
+                    "fun": "min"
+                  }
+                },
+                {
+                  "var": "x_v"
+                }
+              ],
+              "op": "=="
+            },
+            {
+              "args": [
+                {
+                  "call": {
+                    "args": [
+                      {
+                        "var": "x_v"
+                      },
+                      {
+                        "var": "y_v"
+                      }
+                    ],
+                    "fun": "min"
+                  }
+                },
+                {
+                  "var": "y_v"
+                }
+              ],
+              "op": "=="
+            }
+          ],
+          "op": "or"
+        }
+      ],
+      "name": "minProperties",
+      "params": [
+        {
+          "name": "x_v",
+          "type": "int"
+        },
+        {
+          "name": "y_v",
+          "type": "int"
+        },
+        {
+          "name": "z",
+          "type": "int"
+        }
+      ],
+      "requires": []
+    }
+  ],
+  "name": "vericoding_da0282__solve",
+  "params": [
+    {
+      "name": "n",
+      "type": "int"
+    },
+    {
+      "name": "m",
+      "type": "int"
+    },
+    {
+      "name": "a",
+      "type": "int"
+    },
+    {
+      "name": "b",
+      "type": "int"
+    }
+  ],
+  "requires": [
+    {
+      "call": {
+        "args": [
+          {
+            "var": "n"
+          },
+          {
+            "var": "m"
+          },
+          {
+            "var": "a"
+          },
+          {
+            "var": "b"
+          }
+        ],
+        "fun": "validInput"
+      }
+    }
+  ],
+  "returns": [
+    {
+      "name": "result",
+      "type": "int"
+    }
+  ],
+  "spec_funs": [
+    {
+      "body": {
+        "ite": {
+          "cond": {
+            "args": [
+              {
+                "var": "x"
+              },
+              {
+                "var": "y"
+              }
+            ],
+            "op": "<="
+          },
+          "else": {
+            "var": "y"
+          },
+          "then": {
+            "var": "x"
+          }
+        }
+      },
+      "decreases": {
+        "int": 0
+      },
+      "name": "min",
+      "params": [
+        {
+          "name": "x",
+          "type": "int"
+        },
+        {
+          "name": "y",
+          "type": "int"
+        }
+      ],
+      "result": "int"
+    },
+    {
+      "body": {
+        "args": [
+          {
+            "args": [
+              {
+                "var": "n_v"
+              },
+              {
+                "int": 1
+              }
+            ],
+            "op": ">="
+          },
+          {
+            "args": [
+              {
+                "var": "n_v"
+              },
+              {
+                "int": 1000
+              }
+            ],
+            "op": "<="
+          },
+          {
+            "args": [
+              {
+                "var": "m_v"
+              },
+              {
+                "int": 1
+              }
+            ],
+            "op": ">="
+          },
+          {
+            "args": [
+              {
+                "var": "m_v"
+              },
+              {
+                "int": 1000
+              }
+            ],
+            "op": "<="
+          },
+          {
+            "args": [
+              {
+                "var": "a_v"
+              },
+              {
+                "int": 1
+              }
+            ],
+            "op": ">="
+          },
+          {
+            "args": [
+              {
+                "var": "a_v"
+              },
+              {
+                "int": 1000
+              }
+            ],
+            "op": "<="
+          },
+          {
+            "args": [
+              {
+                "var": "b_v"
+              },
+              {
+                "int": 1
+              }
+            ],
+            "op": ">="
+          },
+          {
+            "args": [
+              {
+                "var": "b_v"
+              },
+              {
+                "int": 1000
+              }
+            ],
+            "op": "<="
+          }
+        ],
+        "op": "and"
+      },
+      "decreases": {
+        "int": 0
+      },
+      "name": "validInput",
+      "params": [
+        {
+          "name": "n_v",
+          "type": "int"
+        },
+        {
+          "name": "m_v",
+          "type": "int"
+        },
+        {
+          "name": "a_v",
+          "type": "int"
+        },
+        {
+          "name": "b_v",
+          "type": "int"
+        }
+      ],
+      "result": "bool"
+    },
+    {
+      "body": {
+        "ite": {
+          "cond": {
+            "call": {
+              "args": [
+                {
+                  "var": "n_v2"
+                },
+                {
+                  "var": "m_v2"
+                },
+                {
+                  "var": "a_v2"
+                },
+                {
+                  "var": "b_v2"
+                }
+              ],
+              "fun": "validInput"
+            }
+          },
+          "else": {
+            "int": 0
+          },
+          "then": {
+            "call": {
+              "args": [
+                {
+                  "args": [
+                    {
+                      "var": "n_v2"
+                    },
+                    {
+                      "var": "a_v2"
+                    }
+                  ],
+                  "op": "*"
+                },
+                {
+                  "call": {
+                    "args": [
+                      {
+                        "args": [
+                          {
+                            "args": [
+                              {
+                                "args": [
+                                  {
+                                    "args": [
+                                      {
+                                        "var": "n_v2"
+                                      },
+                                      {
+                                        "var": "m_v2"
+                                      }
+                                    ],
+                                    "op": "+"
+                                  },
+                                  {
+                                    "int": 1
+                                  }
+                                ],
+                                "op": "-"
+                              },
+                              {
+                                "var": "m_v2"
+                              }
+                            ],
+                            "op": "div"
+                          },
+                          {
+                            "var": "b_v2"
+                          }
+                        ],
+                        "op": "*"
+                      },
+                      {
+                        "args": [
+                          {
+                            "args": [
+                              {
+                                "args": [
+                                  {
+                                    "var": "n_v2"
+                                  },
+                                  {
+                                    "var": "m_v2"
+                                  }
+                                ],
+                                "op": "div"
+                              },
+                              {
+                                "var": "b_v2"
+                              }
+                            ],
+                            "op": "*"
+                          },
+                          {
+                            "args": [
+                              {
+                                "args": [
+                                  {
+                                    "var": "n_v2"
+                                  },
+                                  {
+                                    "var": "m_v2"
+                                  }
+                                ],
+                                "op": "mod"
+                              },
+                              {
+                                "var": "a_v2"
+                              }
+                            ],
+                            "op": "*"
+                          }
+                        ],
+                        "op": "+"
+                      }
+                    ],
+                    "fun": "min"
+                  }
+                }
+              ],
+              "fun": "min"
+            }
+          }
+        }
+      },
+      "decreases": {
+        "int": 0
+      },
+      "name": "optimalCost",
+      "params": [
+        {
+          "name": "n_v2",
+          "type": "int"
+        },
+        {
+          "name": "m_v2",
+          "type": "int"
+        },
+        {
+          "name": "a_v2",
+          "type": "int"
+        },
+        {
+          "name": "b_v2",
+          "type": "int"
+        }
+      ],
+      "result": "int"
+    }
+  ],
+  "t": 1
+}

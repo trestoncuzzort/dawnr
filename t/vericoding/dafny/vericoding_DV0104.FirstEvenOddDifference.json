@@ -1,0 +1,988 @@
+{
+  "body": [
+    {
+      "var": {
+        "init": {
+          "args": [
+            {
+              "int": 1
+            }
+          ],
+          "op": "neg"
+        },
+        "name": "firstEven",
+        "type": "int"
+      }
+    },
+    {
+      "var": {
+        "init": {
+          "args": [
+            {
+              "int": 1
+            }
+          ],
+          "op": "neg"
+        },
+        "name": "firstOdd",
+        "type": "int"
+      }
+    },
+    {
+      "var": {
+        "init": {
+          "int": 0
+        },
+        "name": "i_v",
+        "type": "int"
+      }
+    },
+    {
+      "while": {
+        "body": [
+          {
+            "if": {
+              "cond": {
+                "args": [
+                  {
+                    "args": [
+                      {
+                        "var": "firstEven"
+                      },
+                      {
+                        "args": [
+                          {
+                            "int": 1
+                          }
+                        ],
+                        "op": "neg"
+                      }
+                    ],
+                    "op": "=="
+                  },
+                  {
+                    "call": {
+                      "args": [
+                        {
+                          "args": [
+                            {
+                              "var": "a"
+                            },
+                            {
+                              "var": "i_v"
+                            }
+                          ],
+                          "op": "at"
+                        }
+                      ],
+                      "fun": "isEven"
+                    }
+                  }
+                ],
+                "op": "and"
+              },
+              "else": [],
+              "then": [
+                {
+                  "assign": [
+                    "firstEven",
+                    {
+                      "var": "i_v"
+                    }
+                  ]
+                }
+              ]
+            }
+          },
+          {
+            "if": {
+              "cond": {
+                "args": [
+                  {
+                    "args": [
+                      {
+                        "var": "firstOdd"
+                      },
+                      {
+                        "args": [
+                          {
+                            "int": 1
+                          }
+                        ],
+                        "op": "neg"
+                      }
+                    ],
+                    "op": "=="
+                  },
+                  {
+                    "call": {
+                      "args": [
+                        {
+                          "args": [
+                            {
+                              "var": "a"
+                            },
+                            {
+                              "var": "i_v"
+                            }
+                          ],
+                          "op": "at"
+                        }
+                      ],
+                      "fun": "isOdd"
+                    }
+                  }
+                ],
+                "op": "and"
+              },
+              "else": [],
+              "then": [
+                {
+                  "assign": [
+                    "firstOdd",
+                    {
+                      "var": "i_v"
+                    }
+                  ]
+                }
+              ]
+            }
+          },
+          {
+            "assign": [
+              "i_v",
+              {
+                "args": [
+                  {
+                    "var": "i_v"
+                  },
+                  {
+                    "int": 1
+                  }
+                ],
+                "op": "+"
+              }
+            ]
+          }
+        ],
+        "cond": {
+          "args": [
+            {
+              "args": [
+                {
+                  "var": "i_v"
+                },
+                {
+                  "args": [
+                    {
+                      "var": "a"
+                    }
+                  ],
+                  "op": "len"
+                }
+              ],
+              "op": "<"
+            },
+            {
+              "args": [
+                {
+                  "args": [
+                    {
+                      "var": "firstEven"
+                    },
+                    {
+                      "args": [
+                        {
+                          "int": 1
+                        }
+                      ],
+                      "op": "neg"
+                    }
+                  ],
+                  "op": "=="
+                },
+                {
+                  "args": [
+                    {
+                      "var": "firstOdd"
+                    },
+                    {
+                      "args": [
+                        {
+                          "int": 1
+                        }
+                      ],
+                      "op": "neg"
+                    }
+                  ],
+                  "op": "=="
+                }
+              ],
+              "op": "or"
+            }
+          ],
+          "op": "and"
+        },
+        "decreases": {
+          "args": [
+            {
+              "args": [
+                {
+                  "var": "a"
+                }
+              ],
+              "op": "len"
+            },
+            {
+              "var": "i_v"
+            }
+          ],
+          "op": "-"
+        },
+        "invariants": [
+          {
+            "args": [
+              {
+                "args": [
+                  {
+                    "int": 0
+                  },
+                  {
+                    "var": "i_v"
+                  }
+                ],
+                "op": "<="
+              },
+              {
+                "args": [
+                  {
+                    "var": "i_v"
+                  },
+                  {
+                    "args": [
+                      {
+                        "var": "a"
+                      }
+                    ],
+                    "op": "len"
+                  }
+                ],
+                "op": "<="
+              }
+            ],
+            "op": "and"
+          },
+          {
+            "args": [
+              {
+                "args": [
+                  {
+                    "var": "firstEven"
+                  },
+                  {
+                    "args": [
+                      {
+                        "int": 1
+                      }
+                    ],
+                    "op": "neg"
+                  }
+                ],
+                "op": "=="
+              },
+              {
+                "args": [
+                  {
+                    "args": [
+                      {
+                        "args": [
+                          {
+                            "int": 0
+                          },
+                          {
+                            "var": "firstEven"
+                          }
+                        ],
+                        "op": "<="
+                      },
+                      {
+                        "args": [
+                          {
+                            "var": "firstEven"
+                          },
+                          {
+                            "var": "i_v"
+                          }
+                        ],
+                        "op": "<"
+                      }
+                    ],
+                    "op": "and"
+                  },
+                  {
+                    "call": {
+                      "args": [
+                        {
+                          "args": [
+                            {
+                              "var": "a"
+                            },
+                            {
+                              "var": "firstEven"
+                            }
+                          ],
+                          "op": "at"
+                        }
+                      ],
+                      "fun": "isEven"
+                    }
+                  }
+                ],
+                "op": "and"
+              }
+            ],
+            "op": "or"
+          },
+          {
+            "args": [
+              {
+                "args": [
+                  {
+                    "var": "firstOdd"
+                  },
+                  {
+                    "args": [
+                      {
+                        "int": 1
+                      }
+                    ],
+                    "op": "neg"
+                  }
+                ],
+                "op": "=="
+              },
+              {
+                "args": [
+                  {
+                    "args": [
+                      {
+                        "args": [
+                          {
+                            "int": 0
+                          },
+                          {
+                            "var": "firstOdd"
+                          }
+                        ],
+                        "op": "<="
+                      },
+                      {
+                        "args": [
+                          {
+                            "var": "firstOdd"
+                          },
+                          {
+                            "var": "i_v"
+                          }
+                        ],
+                        "op": "<"
+                      }
+                    ],
+                    "op": "and"
+                  },
+                  {
+                    "call": {
+                      "args": [
+                        {
+                          "args": [
+                            {
+                              "var": "a"
+                            },
+                            {
+                              "var": "firstOdd"
+                            }
+                          ],
+                          "op": "at"
+                        }
+                      ],
+                      "fun": "isOdd"
+                    }
+                  }
+                ],
+                "op": "and"
+              }
+            ],
+            "op": "or"
+          },
+          {
+            "args": [
+              {
+                "args": [
+                  {
+                    "var": "firstEven"
+                  },
+                  {
+                    "args": [
+                      {
+                        "int": 1
+                      }
+                    ],
+                    "op": "neg"
+                  }
+                ],
+                "op": "=="
+              },
+              {
+                "forall": {
+                  "body": {
+                    "call": {
+                      "args": [
+                        {
+                          "args": [
+                            {
+                              "var": "a"
+                            },
+                            {
+                              "var": "k_v2"
+                            }
+                          ],
+                          "op": "at"
+                        }
+                      ],
+                      "fun": "isOdd"
+                    }
+                  },
+                  "hi": {
+                    "var": "i_v"
+                  },
+                  "lo": {
+                    "int": 0
+                  },
+                  "var": "k_v2"
+                }
+              }
+            ],
+            "op": "implies"
+          },
+          {
+            "args": [
+              {
+                "args": [
+                  {
+                    "var": "firstOdd"
+                  },
+                  {
+                    "args": [
+                      {
+                        "int": 1
+                      }
+                    ],
+                    "op": "neg"
+                  }
+                ],
+                "op": "=="
+              },
+              {
+                "forall": {
+                  "body": {
+                    "call": {
+                      "args": [
+                        {
+                          "args": [
+                            {
+                              "var": "a"
+                            },
+                            {
+                              "var": "k_v3"
+                            }
+                          ],
+                          "op": "at"
+                        }
+                      ],
+                      "fun": "isEven"
+                    }
+                  },
+                  "hi": {
+                    "var": "i_v"
+                  },
+                  "lo": {
+                    "int": 0
+                  },
+                  "var": "k_v3"
+                }
+              }
+            ],
+            "op": "implies"
+          },
+          {
+            "args": [
+              {
+                "args": [
+                  {
+                    "var": "firstEven"
+                  },
+                  {
+                    "args": [
+                      {
+                        "int": 1
+                      }
+                    ],
+                    "op": "neg"
+                  }
+                ],
+                "op": "!="
+              },
+              {
+                "forall": {
+                  "body": {
+                    "call": {
+                      "args": [
+                        {
+                          "args": [
+                            {
+                              "var": "a"
+                            },
+                            {
+                              "var": "k_v4"
+                            }
+                          ],
+                          "op": "at"
+                        }
+                      ],
+                      "fun": "isOdd"
+                    }
+                  },
+                  "hi": {
+                    "var": "firstEven"
+                  },
+                  "lo": {
+                    "int": 0
+                  },
+                  "var": "k_v4"
+                }
+              }
+            ],
+            "op": "implies"
+          },
+          {
+            "args": [
+              {
+                "args": [
+                  {
+                    "var": "firstOdd"
+                  },
+                  {
+                    "args": [
+                      {
+                        "int": 1
+                      }
+                    ],
+                    "op": "neg"
+                  }
+                ],
+                "op": "!="
+              },
+              {
+                "forall": {
+                  "body": {
+                    "call": {
+                      "args": [
+                        {
+                          "args": [
+                            {
+                              "var": "a"
+                            },
+                            {
+                              "var": "k_v5"
+                            }
+                          ],
+                          "op": "at"
+                        }
+                      ],
+                      "fun": "isEven"
+                    }
+                  },
+                  "hi": {
+                    "var": "firstOdd"
+                  },
+                  "lo": {
+                    "int": 0
+                  },
+                  "var": "k_v5"
+                }
+              }
+            ],
+            "op": "implies"
+          }
+        ]
+      }
+    },
+    {
+      "assign": [
+        "result",
+        {
+          "args": [
+            {
+              "args": [
+                {
+                  "var": "a"
+                },
+                {
+                  "var": "firstEven"
+                }
+              ],
+              "op": "at"
+            },
+            {
+              "args": [
+                {
+                  "var": "a"
+                },
+                {
+                  "var": "firstOdd"
+                }
+              ],
+              "op": "at"
+            }
+          ],
+          "op": "-"
+        }
+      ]
+    }
+  ],
+  "ensures": [
+    {
+      "exists": {
+        "body": {
+          "exists": {
+            "body": {
+              "args": [
+                {
+                  "call": {
+                    "args": [
+                      {
+                        "args": [
+                          {
+                            "var": "a"
+                          },
+                          {
+                            "var": "i"
+                          }
+                        ],
+                        "op": "at"
+                      }
+                    ],
+                    "fun": "isEven"
+                  }
+                },
+                {
+                  "call": {
+                    "args": [
+                      {
+                        "args": [
+                          {
+                            "var": "a"
+                          },
+                          {
+                            "var": "j"
+                          }
+                        ],
+                        "op": "at"
+                      }
+                    ],
+                    "fun": "isOdd"
+                  }
+                },
+                {
+                  "args": [
+                    {
+                      "var": "result"
+                    },
+                    {
+                      "args": [
+                        {
+                          "args": [
+                            {
+                              "var": "a"
+                            },
+                            {
+                              "var": "i"
+                            }
+                          ],
+                          "op": "at"
+                        },
+                        {
+                          "args": [
+                            {
+                              "var": "a"
+                            },
+                            {
+                              "var": "j"
+                            }
+                          ],
+                          "op": "at"
+                        }
+                      ],
+                      "op": "-"
+                    }
+                  ],
+                  "op": "=="
+                },
+                {
+                  "forall": {
+                    "body": {
+                      "call": {
+                        "args": [
+                          {
+                            "args": [
+                              {
+                                "var": "a"
+                              },
+                              {
+                                "var": "k"
+                              }
+                            ],
+                            "op": "at"
+                          }
+                        ],
+                        "fun": "isOdd"
+                      }
+                    },
+                    "hi": {
+                      "var": "i"
+                    },
+                    "lo": {
+                      "int": 0
+                    },
+                    "var": "k"
+                  }
+                },
+                {
+                  "forall": {
+                    "body": {
+                      "call": {
+                        "args": [
+                          {
+                            "args": [
+                              {
+                                "var": "a"
+                              },
+                              {
+                                "var": "k_v"
+                              }
+                            ],
+                            "op": "at"
+                          }
+                        ],
+                        "fun": "isEven"
+                      }
+                    },
+                    "hi": {
+                      "var": "j"
+                    },
+                    "lo": {
+                      "int": 0
+                    },
+                    "var": "k_v"
+                  }
+                }
+              ],
+              "op": "and"
+            },
+            "hi": {
+              "args": [
+                {
+                  "var": "a"
+                }
+              ],
+              "op": "len"
+            },
+            "lo": {
+              "int": 0
+            },
+            "var": "j"
+          }
+        },
+        "hi": {
+          "args": [
+            {
+              "var": "a"
+            }
+          ],
+          "op": "len"
+        },
+        "lo": {
+          "int": 0
+        },
+        "var": "i"
+      }
+    }
+  ],
+  "gate": "recursion",
+  "name": "vericoding_dv0104__firstEvenOddDifference",
+  "params": [
+    {
+      "name": "a",
+      "type": "seq"
+    }
+  ],
+  "requires": [
+    {
+      "args": [
+        {
+          "args": [
+            {
+              "var": "a"
+            }
+          ],
+          "op": "len"
+        },
+        {
+          "int": 1
+        }
+      ],
+      "op": ">"
+    },
+    {
+      "exists": {
+        "body": {
+          "call": {
+            "args": [
+              {
+                "args": [
+                  {
+                    "var": "a"
+                  },
+                  {
+                    "var": "x"
+                  }
+                ],
+                "op": "at"
+              }
+            ],
+            "fun": "isEven"
+          }
+        },
+        "hi": {
+          "args": [
+            {
+              "var": "a"
+            }
+          ],
+          "op": "len"
+        },
+        "lo": {
+          "int": 0
+        },
+        "var": "x"
+      }
+    },
+    {
+      "exists": {
+        "body": {
+          "call": {
+            "args": [
+              {
+                "args": [
+                  {
+                    "var": "a"
+                  },
+                  {
+                    "var": "x_v"
+                  }
+                ],
+                "op": "at"
+              }
+            ],
+            "fun": "isOdd"
+          }
+        },
+        "hi": {
+          "args": [
+            {
+              "var": "a"
+            }
+          ],
+          "op": "len"
+        },
+        "lo": {
+          "int": 0
+        },
+        "var": "x_v"
+      }
+    }
+  ],
+  "returns": [
+    {
+      "name": "result",
+      "type": "int"
+    }
+  ],
+  "spec_funs": [
+    {
+      "body": {
+        "args": [
+          {
+            "args": [
+              {
+                "var": "n"
+              },
+              {
+                "int": 2
+              }
+            ],
+            "op": "mod"
+          },
+          {
+            "int": 0
+          }
+        ],
+        "op": "=="
+      },
+      "decreases": {
+        "int": 0
+      },
+      "name": "isEven",
+      "params": [
+        {
+          "name": "n",
+          "type": "int"
+        }
+      ],
+      "result": "bool"
+    },
+    {
+      "body": {
+        "args": [
+          {
+            "args": [
+              {
+                "var": "n_v"
+              },
+              {
+                "int": 2
+              }
+            ],
+            "op": "mod"
+          },
+          {
+            "int": 0
+          }
+        ],
+        "op": "!="
+      },
+      "decreases": {
+        "int": 0
+      },
+      "name": "isOdd",
+      "params": [
+        {
+          "name": "n_v",
+          "type": "int"
+        }
+      ],
+      "result": "bool"
+    }
+  ],
+  "t": 1
+}

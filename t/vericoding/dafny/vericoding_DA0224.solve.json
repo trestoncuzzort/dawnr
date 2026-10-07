@@ -1,0 +1,583 @@
+{
+  "body": [
+    {
+      "var": {
+        "init": {
+          "args": [
+            {
+              "var": "a"
+            }
+          ],
+          "op": "len"
+        },
+        "name": "len_v",
+        "type": "int"
+      }
+    },
+    {
+      "if": {
+        "cond": {
+          "call": {
+            "args": [
+              {
+                "var": "a"
+              }
+            ],
+            "fun": "isSorted"
+          }
+        },
+        "else": [
+          {
+            "var": {
+              "init": {
+                "args": [
+                  {
+                    "var": "a"
+                  },
+                  {
+                    "int": 0
+                  },
+                  {
+                    "args": [
+                      {
+                        "var": "len_v"
+                      },
+                      {
+                        "int": 2
+                      }
+                    ],
+                    "op": "div"
+                  }
+                ],
+                "op": "slice"
+              },
+              "name": "firstHalf",
+              "type": "seq"
+            }
+          },
+          {
+            "var": {
+              "init": {
+                "args": [
+                  {
+                    "var": "a"
+                  },
+                  {
+                    "args": [
+                      {
+                        "var": "len_v"
+                      },
+                      {
+                        "int": 2
+                      }
+                    ],
+                    "op": "div"
+                  },
+                  {
+                    "args": [
+                      {
+                        "var": "a"
+                      }
+                    ],
+                    "op": "len"
+                  }
+                ],
+                "op": "slice"
+              },
+              "name": "secondHalf",
+              "type": "seq"
+            }
+          },
+          {
+            "var": {
+              "init": {
+                "call": {
+                  "args": [
+                    {
+                      "var": "firstHalf"
+                    }
+                  ],
+                  "fun": "vericoding_da0224__solve"
+                }
+              },
+              "name": "leftResult",
+              "type": "int"
+            }
+          },
+          {
+            "var": {
+              "init": {
+                "call": {
+                  "args": [
+                    {
+                      "var": "secondHalf"
+                    }
+                  ],
+                  "fun": "vericoding_da0224__solve"
+                }
+              },
+              "name": "rightResult",
+              "type": "int"
+            }
+          },
+          {
+            "if": {
+              "cond": {
+                "args": [
+                  {
+                    "var": "leftResult"
+                  },
+                  {
+                    "var": "rightResult"
+                  }
+                ],
+                "op": ">"
+              },
+              "else": [
+                {
+                  "assign": [
+                    "result",
+                    {
+                      "var": "rightResult"
+                    }
+                  ]
+                }
+              ],
+              "then": [
+                {
+                  "assign": [
+                    "result",
+                    {
+                      "var": "leftResult"
+                    }
+                  ]
+                }
+              ]
+            }
+          }
+        ],
+        "then": [
+          {
+            "assign": [
+              "result",
+              {
+                "var": "len_v"
+              }
+            ]
+          }
+        ]
+      }
+    }
+  ],
+  "decreases": {
+    "args": [
+      {
+        "var": "a"
+      }
+    ],
+    "op": "len"
+  },
+  "ensures": [
+    {
+      "args": [
+        {
+          "var": "result"
+        },
+        {
+          "call": {
+            "args": [
+              {
+                "var": "a"
+              }
+            ],
+            "fun": "thanosSort"
+          }
+        }
+      ],
+      "op": "=="
+    },
+    {
+      "args": [
+        {
+          "int": 1
+        },
+        {
+          "var": "result"
+        }
+      ],
+      "op": "<="
+    },
+    {
+      "args": [
+        {
+          "var": "result"
+        },
+        {
+          "args": [
+            {
+              "var": "a"
+            }
+          ],
+          "op": "len"
+        }
+      ],
+      "op": "<="
+    }
+  ],
+  "gate": "recursion",
+  "name": "vericoding_da0224__solve",
+  "params": [
+    {
+      "name": "a",
+      "type": "seq"
+    }
+  ],
+  "requires": [
+    {
+      "call": {
+        "args": [
+          {
+            "var": "a"
+          }
+        ],
+        "fun": "validInput"
+      }
+    }
+  ],
+  "returns": [
+    {
+      "name": "result",
+      "type": "int"
+    }
+  ],
+  "spec_funs": [
+    {
+      "body": {
+        "args": [
+          {
+            "args": [
+              {
+                "var": "a_v"
+              }
+            ],
+            "op": "len"
+          },
+          {
+            "int": 0
+          }
+        ],
+        "op": ">"
+      },
+      "decreases": {
+        "int": 0
+      },
+      "name": "validInput",
+      "params": [
+        {
+          "name": "a_v",
+          "type": "seq"
+        }
+      ],
+      "result": "bool"
+    },
+    {
+      "body": {
+        "forall": {
+          "body": {
+            "forall": {
+              "body": {
+                "args": [
+                  {
+                    "args": [
+                      {
+                        "var": "x"
+                      },
+                      {
+                        "var": "i"
+                      }
+                    ],
+                    "op": "at"
+                  },
+                  {
+                    "args": [
+                      {
+                        "var": "x"
+                      },
+                      {
+                        "var": "j"
+                      }
+                    ],
+                    "op": "at"
+                  }
+                ],
+                "op": "<="
+              },
+              "hi": {
+                "args": [
+                  {
+                    "var": "x"
+                  }
+                ],
+                "op": "len"
+              },
+              "lo": {
+                "args": [
+                  {
+                    "var": "i"
+                  },
+                  {
+                    "int": 1
+                  }
+                ],
+                "op": "+"
+              },
+              "var": "j"
+            }
+          },
+          "hi": {
+            "args": [
+              {
+                "var": "x"
+              }
+            ],
+            "op": "len"
+          },
+          "lo": {
+            "int": 0
+          },
+          "var": "i"
+        }
+      },
+      "decreases": {
+        "int": 0
+      },
+      "name": "isSorted",
+      "params": [
+        {
+          "name": "x",
+          "type": "seq"
+        }
+      ],
+      "result": "bool"
+    },
+    {
+      "body": {
+        "ite": {
+          "cond": {
+            "args": [
+              {
+                "args": [
+                  {
+                    "var": "x_v"
+                  }
+                ],
+                "op": "len"
+              },
+              {
+                "int": 0
+              }
+            ],
+            "op": ">"
+          },
+          "else": {
+            "int": 0
+          },
+          "then": {
+            "ite": {
+              "cond": {
+                "call": {
+                  "args": [
+                    {
+                      "var": "x_v"
+                    }
+                  ],
+                  "fun": "isSorted"
+                }
+              },
+              "else": {
+                "ite": {
+                  "cond": {
+                    "args": [
+                      {
+                        "call": {
+                          "args": [
+                            {
+                              "args": [
+                                {
+                                  "var": "x_v"
+                                },
+                                {
+                                  "int": 0
+                                },
+                                {
+                                  "args": [
+                                    {
+                                      "args": [
+                                        {
+                                          "var": "x_v"
+                                        }
+                                      ],
+                                      "op": "len"
+                                    },
+                                    {
+                                      "int": 2
+                                    }
+                                  ],
+                                  "op": "div"
+                                }
+                              ],
+                              "op": "slice"
+                            }
+                          ],
+                          "fun": "thanosSort"
+                        }
+                      },
+                      {
+                        "call": {
+                          "args": [
+                            {
+                              "args": [
+                                {
+                                  "var": "x_v"
+                                },
+                                {
+                                  "args": [
+                                    {
+                                      "args": [
+                                        {
+                                          "var": "x_v"
+                                        }
+                                      ],
+                                      "op": "len"
+                                    },
+                                    {
+                                      "int": 2
+                                    }
+                                  ],
+                                  "op": "div"
+                                },
+                                {
+                                  "args": [
+                                    {
+                                      "var": "x_v"
+                                    }
+                                  ],
+                                  "op": "len"
+                                }
+                              ],
+                              "op": "slice"
+                            }
+                          ],
+                          "fun": "thanosSort"
+                        }
+                      }
+                    ],
+                    "op": ">"
+                  },
+                  "else": {
+                    "call": {
+                      "args": [
+                        {
+                          "args": [
+                            {
+                              "var": "x_v"
+                            },
+                            {
+                              "args": [
+                                {
+                                  "args": [
+                                    {
+                                      "var": "x_v"
+                                    }
+                                  ],
+                                  "op": "len"
+                                },
+                                {
+                                  "int": 2
+                                }
+                              ],
+                              "op": "div"
+                            },
+                            {
+                              "args": [
+                                {
+                                  "var": "x_v"
+                                }
+                              ],
+                              "op": "len"
+                            }
+                          ],
+                          "op": "slice"
+                        }
+                      ],
+                      "fun": "thanosSort"
+                    }
+                  },
+                  "then": {
+                    "call": {
+                      "args": [
+                        {
+                          "args": [
+                            {
+                              "var": "x_v"
+                            },
+                            {
+                              "int": 0
+                            },
+                            {
+                              "args": [
+                                {
+                                  "args": [
+                                    {
+                                      "var": "x_v"
+                                    }
+                                  ],
+                                  "op": "len"
+                                },
+                                {
+                                  "int": 2
+                                }
+                              ],
+                              "op": "div"
+                            }
+                          ],
+                          "op": "slice"
+                        }
+                      ],
+                      "fun": "thanosSort"
+                    }
+                  }
+                }
+              },
+              "then": {
+                "args": [
+                  {
+                    "var": "x_v"
+                  }
+                ],
+                "op": "len"
+              }
+            }
+          }
+        }
+      },
+      "decreases": {
+        "args": [
+          {
+            "var": "x_v"
+          }
+        ],
+        "op": "len"
+      },
+      "name": "thanosSort",
+      "params": [
+        {
+          "name": "x_v",
+          "type": "seq"
+        }
+      ],
+      "result": "int"
+    }
+  ],
+  "t": 1
+}

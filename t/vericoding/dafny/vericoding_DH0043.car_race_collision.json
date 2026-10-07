@@ -1,0 +1,197 @@
+{
+  "body": [
+    {
+      "assign": [
+        "result",
+        {
+          "args": [
+            {
+              "var": "n"
+            },
+            {
+              "var": "n"
+            }
+          ],
+          "op": "*"
+        }
+      ]
+    }
+  ],
+  "ensures": [
+    {
+      "call": {
+        "args": [
+          {
+            "var": "n"
+          },
+          {
+            "var": "result"
+          }
+        ],
+        "fun": "validResult"
+      }
+    }
+  ],
+  "gate": "recursion",
+  "name": "vericoding_dh0043__car_race_collision",
+  "params": [
+    {
+      "name": "n",
+      "type": "int"
+    }
+  ],
+  "requires": [
+    {
+      "call": {
+        "args": [
+          {
+            "var": "n"
+          }
+        ],
+        "fun": "validInput"
+      }
+    }
+  ],
+  "returns": [
+    {
+      "name": "result",
+      "type": "int"
+    }
+  ],
+  "spec_funs": [
+    {
+      "body": {
+        "args": [
+          {
+            "var": "n_v"
+          },
+          {
+            "int": 0
+          }
+        ],
+        "op": ">="
+      },
+      "decreases": {
+        "int": 0
+      },
+      "name": "validInput",
+      "params": [
+        {
+          "name": "n_v",
+          "type": "int"
+        }
+      ],
+      "result": "bool"
+    },
+    {
+      "body": {
+        "ite": {
+          "cond": {
+            "call": {
+              "args": [
+                {
+                  "var": "n_v2"
+                }
+              ],
+              "fun": "validInput"
+            }
+          },
+          "else": {
+            "int": 0
+          },
+          "then": {
+            "args": [
+              {
+                "var": "n_v2"
+              },
+              {
+                "var": "n_v2"
+              }
+            ],
+            "op": "*"
+          }
+        }
+      },
+      "decreases": {
+        "int": 0
+      },
+      "name": "collisionCount",
+      "params": [
+        {
+          "name": "n_v2",
+          "type": "int"
+        }
+      ],
+      "result": "int"
+    },
+    {
+      "body": {
+        "ite": {
+          "cond": {
+            "call": {
+              "args": [
+                {
+                  "var": "n_v3"
+                }
+              ],
+              "fun": "validInput"
+            }
+          },
+          "else": {
+            "bool": false
+          },
+          "then": {
+            "args": [
+              {
+                "args": [
+                  {
+                    "var": "result_v"
+                  },
+                  {
+                    "call": {
+                      "args": [
+                        {
+                          "var": "n_v3"
+                        }
+                      ],
+                      "fun": "collisionCount"
+                    }
+                  }
+                ],
+                "op": "=="
+              },
+              {
+                "args": [
+                  {
+                    "var": "result_v"
+                  },
+                  {
+                    "int": 0
+                  }
+                ],
+                "op": ">="
+              }
+            ],
+            "op": "and"
+          }
+        }
+      },
+      "decreases": {
+        "int": 0
+      },
+      "name": "validResult",
+      "params": [
+        {
+          "name": "n_v3",
+          "type": "int"
+        },
+        {
+          "name": "result_v",
+          "type": "int"
+        }
+      ],
+      "result": "bool"
+    }
+  ],
+  "t": 1
+}

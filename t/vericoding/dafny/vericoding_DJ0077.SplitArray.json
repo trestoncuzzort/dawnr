@@ -1,0 +1,199 @@
+{
+  "body": [
+    {
+      "var": {
+        "init": {
+          "args": [
+            {
+              "var": "list"
+            },
+            {
+              "int": 0
+            },
+            {
+              "var": "l"
+            }
+          ],
+          "op": "slice"
+        },
+        "name": "left",
+        "type": "seq"
+      }
+    },
+    {
+      "var": {
+        "init": {
+          "args": [
+            {
+              "var": "list"
+            },
+            {
+              "var": "l"
+            },
+            {
+              "args": [
+                {
+                  "var": "list"
+                }
+              ],
+              "op": "len"
+            }
+          ],
+          "op": "slice"
+        },
+        "name": "right",
+        "type": "seq"
+      }
+    },
+    {
+      "assign": [
+        "new_list",
+        {
+          "args": [
+            {
+              "var": "left"
+            },
+            {
+              "var": "right"
+            }
+          ],
+          "op": "pair"
+        }
+      ]
+    }
+  ],
+  "ensures": [
+    {
+      "args": [
+        {
+          "args": [
+            {
+              "var": "new_list"
+            }
+          ],
+          "op": "fst"
+        },
+        {
+          "args": [
+            {
+              "var": "list"
+            },
+            {
+              "int": 0
+            },
+            {
+              "var": "l"
+            }
+          ],
+          "op": "slice"
+        }
+      ],
+      "op": "=="
+    },
+    {
+      "args": [
+        {
+          "args": [
+            {
+              "var": "new_list"
+            }
+          ],
+          "op": "snd"
+        },
+        {
+          "args": [
+            {
+              "var": "list"
+            },
+            {
+              "var": "l"
+            },
+            {
+              "args": [
+                {
+                  "var": "list"
+                }
+              ],
+              "op": "len"
+            }
+          ],
+          "op": "slice"
+        }
+      ],
+      "op": "=="
+    }
+  ],
+  "name": "vericoding_dj0077__splitArray",
+  "params": [
+    {
+      "name": "list",
+      "type": "seq"
+    },
+    {
+      "name": "l",
+      "type": "int"
+    }
+  ],
+  "requires": [
+    {
+      "args": [
+        {
+          "args": [
+            {
+              "var": "list"
+            }
+          ],
+          "op": "len"
+        },
+        {
+          "int": 0
+        }
+      ],
+      "op": ">"
+    },
+    {
+      "args": [
+        {
+          "args": [
+            {
+              "int": 0
+            },
+            {
+              "var": "l"
+            }
+          ],
+          "op": "<"
+        },
+        {
+          "args": [
+            {
+              "var": "l"
+            },
+            {
+              "args": [
+                {
+                  "var": "list"
+                }
+              ],
+              "op": "len"
+            }
+          ],
+          "op": "<"
+        }
+      ],
+      "op": "and"
+    }
+  ],
+  "returns": [
+    {
+      "name": "new_list",
+      "type": {
+        "pair": [
+          "seq",
+          "seq"
+        ]
+      }
+    }
+  ],
+  "t": 1
+}

@@ -1,0 +1,139 @@
+{
+  "body": [
+    {
+      "assign": [
+        "reversed_list",
+        {
+          "var": "list"
+        }
+      ]
+    }
+  ],
+  "ensures": [
+    {
+      "args": [
+        {
+          "var": "reversed_list"
+        },
+        {
+          "args": [
+            {
+              "args": [
+                {
+                  "args": [
+                    {
+                      "var": "list"
+                    },
+                    {
+                      "int": 0
+                    },
+                    {
+                      "var": "n"
+                    }
+                  ],
+                  "op": "slice"
+                },
+                {
+                  "int": 0
+                },
+                {
+                  "var": "n"
+                }
+              ],
+              "op": "slice"
+            },
+            {
+              "args": [
+                {
+                  "var": "list"
+                },
+                {
+                  "var": "n"
+                },
+                {
+                  "args": [
+                    {
+                      "var": "list"
+                    }
+                  ],
+                  "op": "len"
+                }
+              ],
+              "op": "slice"
+            }
+          ],
+          "op": "+"
+        }
+      ],
+      "op": "=="
+    }
+  ],
+  "name": "vericoding_dj0116__reverseToK",
+  "params": [
+    {
+      "name": "list",
+      "type": "seq"
+    },
+    {
+      "name": "n",
+      "type": "int"
+    }
+  ],
+  "requires": [
+    {
+      "args": [
+        {
+          "args": [
+            {
+              "var": "list"
+            }
+          ],
+          "op": "len"
+        },
+        {
+          "int": 0
+        }
+      ],
+      "op": ">"
+    },
+    {
+      "args": [
+        {
+          "args": [
+            {
+              "int": 0
+            },
+            {
+              "var": "n"
+            }
+          ],
+          "op": "<"
+        },
+        {
+          "args": [
+            {
+              "var": "n"
+            },
+            {
+              "args": [
+                {
+                  "var": "list"
+                }
+              ],
+              "op": "len"
+            }
+          ],
+          "op": "<"
+        }
+      ],
+      "op": "and"
+    }
+  ],
+  "returns": [
+    {
+      "name": "reversed_list",
+      "type": "seq"
+    }
+  ],
+  "t": 1
+}

@@ -1,0 +1,860 @@
+{
+  "body": [
+    {
+      "assign": [
+        "result",
+        {
+          "int": 1
+        }
+      ]
+    },
+    {
+      "var": {
+        "init": {
+          "call": {
+            "args": [
+              {
+                "call": {
+                  "args": [
+                    {
+                      "int": 1
+                    }
+                  ],
+                  "fun": "intToDigits"
+                }
+              }
+            ],
+            "fun": "digitSum"
+          }
+        },
+        "name": "maxSum",
+        "type": "int"
+      }
+    },
+    {
+      "var": {
+        "init": {
+          "int": 2
+        },
+        "name": "i",
+        "type": "int"
+      }
+    },
+    {
+      "while": {
+        "body": [
+          {
+            "var": {
+              "init": {
+                "call": {
+                  "args": [
+                    {
+                      "call": {
+                        "args": [
+                          {
+                            "var": "i"
+                          }
+                        ],
+                        "fun": "intToDigits"
+                      }
+                    }
+                  ],
+                  "fun": "digitSum"
+                }
+              },
+              "name": "currentSum",
+              "type": "int"
+            }
+          },
+          {
+            "if": {
+              "cond": {
+                "args": [
+                  {
+                    "args": [
+                      {
+                        "var": "currentSum"
+                      },
+                      {
+                        "var": "maxSum"
+                      }
+                    ],
+                    "op": ">"
+                  },
+                  {
+                    "args": [
+                      {
+                        "args": [
+                          {
+                            "var": "currentSum"
+                          },
+                          {
+                            "var": "maxSum"
+                          }
+                        ],
+                        "op": "=="
+                      },
+                      {
+                        "args": [
+                          {
+                            "var": "i"
+                          },
+                          {
+                            "var": "result"
+                          }
+                        ],
+                        "op": ">"
+                      }
+                    ],
+                    "op": "and"
+                  }
+                ],
+                "op": "or"
+              },
+              "else": [],
+              "then": [
+                {
+                  "assign": [
+                    "result",
+                    {
+                      "var": "i"
+                    }
+                  ]
+                },
+                {
+                  "assign": [
+                    "maxSum",
+                    {
+                      "var": "currentSum"
+                    }
+                  ]
+                }
+              ]
+            }
+          },
+          {
+            "assign": [
+              "i",
+              {
+                "args": [
+                  {
+                    "var": "i"
+                  },
+                  {
+                    "int": 1
+                  }
+                ],
+                "op": "+"
+              }
+            ]
+          }
+        ],
+        "cond": {
+          "args": [
+            {
+              "var": "i"
+            },
+            {
+              "var": "x"
+            }
+          ],
+          "op": "<="
+        },
+        "decreases": {
+          "args": [
+            {
+              "var": "x"
+            },
+            {
+              "var": "i"
+            }
+          ],
+          "op": "-"
+        },
+        "invariants": [
+          {
+            "args": [
+              {
+                "args": [
+                  {
+                    "int": 1
+                  },
+                  {
+                    "var": "result"
+                  }
+                ],
+                "op": "<="
+              },
+              {
+                "args": [
+                  {
+                    "var": "result"
+                  },
+                  {
+                    "args": [
+                      {
+                        "var": "i"
+                      },
+                      {
+                        "int": 1
+                      }
+                    ],
+                    "op": "-"
+                  }
+                ],
+                "op": "<="
+              }
+            ],
+            "op": "and"
+          },
+          {
+            "args": [
+              {
+                "var": "i"
+              },
+              {
+                "int": 2
+              }
+            ],
+            "op": ">="
+          },
+          {
+            "args": [
+              {
+                "var": "i"
+              },
+              {
+                "args": [
+                  {
+                    "var": "x"
+                  },
+                  {
+                    "int": 1
+                  }
+                ],
+                "op": "+"
+              }
+            ],
+            "op": "<="
+          },
+          {
+            "args": [
+              {
+                "var": "maxSum"
+              },
+              {
+                "call": {
+                  "args": [
+                    {
+                      "call": {
+                        "args": [
+                          {
+                            "var": "result"
+                          }
+                        ],
+                        "fun": "intToDigits"
+                      }
+                    }
+                  ],
+                  "fun": "digitSum"
+                }
+              }
+            ],
+            "op": "=="
+          },
+          {
+            "forall": {
+              "body": {
+                "args": [
+                  {
+                    "call": {
+                      "args": [
+                        {
+                          "call": {
+                            "args": [
+                              {
+                                "var": "y_v2"
+                              }
+                            ],
+                            "fun": "intToDigits"
+                          }
+                        }
+                      ],
+                      "fun": "digitSum"
+                    }
+                  },
+                  {
+                    "var": "maxSum"
+                  }
+                ],
+                "op": "<="
+              },
+              "hi": {
+                "var": "i"
+              },
+              "lo": {
+                "int": 1
+              },
+              "var": "y_v2"
+            }
+          },
+          {
+            "forall": {
+              "body": {
+                "args": [
+                  {
+                    "args": [
+                      {
+                        "call": {
+                          "args": [
+                            {
+                              "call": {
+                                "args": [
+                                  {
+                                    "var": "y_v3"
+                                  }
+                                ],
+                                "fun": "intToDigits"
+                              }
+                            }
+                          ],
+                          "fun": "digitSum"
+                        }
+                      },
+                      {
+                        "var": "maxSum"
+                      }
+                    ],
+                    "op": "=="
+                  },
+                  {
+                    "args": [
+                      {
+                        "var": "y_v3"
+                      },
+                      {
+                        "var": "result"
+                      }
+                    ],
+                    "op": "<="
+                  }
+                ],
+                "op": "implies"
+              },
+              "hi": {
+                "var": "i"
+              },
+              "lo": {
+                "int": 1
+              },
+              "var": "y_v3"
+            }
+          }
+        ]
+      }
+    }
+  ],
+  "ensures": [
+    {
+      "call": {
+        "args": [
+          {
+            "var": "x"
+          },
+          {
+            "var": "result"
+          }
+        ],
+        "fun": "validResult"
+      }
+    }
+  ],
+  "gate": "recursion",
+  "name": "vericoding_da0000__solve",
+  "params": [
+    {
+      "name": "x",
+      "type": "int"
+    }
+  ],
+  "requires": [
+    {
+      "call": {
+        "args": [
+          {
+            "var": "x"
+          }
+        ],
+        "fun": "validInput"
+      }
+    }
+  ],
+  "returns": [
+    {
+      "name": "result",
+      "type": "int"
+    }
+  ],
+  "spec_funs": [
+    {
+      "body": {
+        "ite": {
+          "cond": {
+            "args": [
+              {
+                "args": [
+                  {
+                    "var": "digits"
+                  }
+                ],
+                "op": "len"
+              },
+              {
+                "int": 0
+              }
+            ],
+            "op": "=="
+          },
+          "else": {
+            "args": [
+              {
+                "args": [
+                  {
+                    "var": "digits"
+                  },
+                  {
+                    "int": 0
+                  }
+                ],
+                "op": "at"
+              },
+              {
+                "call": {
+                  "args": [
+                    {
+                      "args": [
+                        {
+                          "var": "digits"
+                        },
+                        {
+                          "int": 1
+                        },
+                        {
+                          "args": [
+                            {
+                              "var": "digits"
+                            }
+                          ],
+                          "op": "len"
+                        }
+                      ],
+                      "op": "slice"
+                    }
+                  ],
+                  "fun": "digitSum"
+                }
+              }
+            ],
+            "op": "+"
+          },
+          "then": {
+            "int": 0
+          }
+        }
+      },
+      "decreases": {
+        "args": [
+          {
+            "var": "digits"
+          }
+        ],
+        "op": "len"
+      },
+      "name": "digitSum",
+      "params": [
+        {
+          "name": "digits",
+          "type": "seq"
+        }
+      ],
+      "result": "int"
+    },
+    {
+      "body": {
+        "ite": {
+          "cond": {
+            "args": [
+              {
+                "var": "x_v"
+              },
+              {
+                "int": 0
+              }
+            ],
+            "op": ">"
+          },
+          "else": {
+            "args": [],
+            "op": "seq"
+          },
+          "then": {
+            "ite": {
+              "cond": {
+                "args": [
+                  {
+                    "var": "x_v"
+                  },
+                  {
+                    "int": 10
+                  }
+                ],
+                "op": "<"
+              },
+              "else": {
+                "args": [
+                  {
+                    "call": {
+                      "args": [
+                        {
+                          "args": [
+                            {
+                              "var": "x_v"
+                            },
+                            {
+                              "int": 10
+                            }
+                          ],
+                          "op": "div"
+                        }
+                      ],
+                      "fun": "intToDigitsHelper"
+                    }
+                  },
+                  {
+                    "args": [
+                      {
+                        "args": [
+                          {
+                            "var": "x_v"
+                          },
+                          {
+                            "int": 10
+                          }
+                        ],
+                        "op": "mod"
+                      }
+                    ],
+                    "op": "seq"
+                  }
+                ],
+                "op": "+"
+              },
+              "then": {
+                "args": [
+                  {
+                    "var": "x_v"
+                  }
+                ],
+                "op": "seq"
+              }
+            }
+          }
+        }
+      },
+      "decreases": {
+        "var": "x_v"
+      },
+      "name": "intToDigitsHelper",
+      "params": [
+        {
+          "name": "x_v",
+          "type": "int"
+        }
+      ],
+      "result": "seq"
+    },
+    {
+      "body": {
+        "ite": {
+          "cond": {
+            "args": [
+              {
+                "var": "x_v2"
+              },
+              {
+                "int": 0
+              }
+            ],
+            "op": ">="
+          },
+          "else": {
+            "args": [],
+            "op": "seq"
+          },
+          "then": {
+            "ite": {
+              "cond": {
+                "args": [
+                  {
+                    "var": "x_v2"
+                  },
+                  {
+                    "int": 0
+                  }
+                ],
+                "op": "=="
+              },
+              "else": {
+                "call": {
+                  "args": [
+                    {
+                      "var": "x_v2"
+                    }
+                  ],
+                  "fun": "intToDigitsHelper"
+                }
+              },
+              "then": {
+                "args": [
+                  {
+                    "int": 0
+                  }
+                ],
+                "op": "seq"
+              }
+            }
+          }
+        }
+      },
+      "decreases": {
+        "int": 0
+      },
+      "name": "intToDigits",
+      "params": [
+        {
+          "name": "x_v2",
+          "type": "int"
+        }
+      ],
+      "result": "seq"
+    },
+    {
+      "body": {
+        "args": [
+          {
+            "var": "x_v3"
+          },
+          {
+            "int": 1
+          }
+        ],
+        "op": ">="
+      },
+      "decreases": {
+        "int": 0
+      },
+      "name": "validInput",
+      "params": [
+        {
+          "name": "x_v3",
+          "type": "int"
+        }
+      ],
+      "result": "bool"
+    },
+    {
+      "body": {
+        "ite": {
+          "cond": {
+            "call": {
+              "args": [
+                {
+                  "var": "x_v4"
+                }
+              ],
+              "fun": "validInput"
+            }
+          },
+          "else": {
+            "bool": false
+          },
+          "then": {
+            "args": [
+              {
+                "args": [
+                  {
+                    "var": "result_v"
+                  },
+                  {
+                    "int": 0
+                  }
+                ],
+                "op": ">"
+              },
+              {
+                "args": [
+                  {
+                    "var": "result_v"
+                  },
+                  {
+                    "var": "x_v4"
+                  }
+                ],
+                "op": "<="
+              },
+              {
+                "forall": {
+                  "body": {
+                    "args": [
+                      {
+                        "call": {
+                          "args": [
+                            {
+                              "call": {
+                                "args": [
+                                  {
+                                    "var": "y"
+                                  }
+                                ],
+                                "fun": "intToDigits"
+                              }
+                            }
+                          ],
+                          "fun": "digitSum"
+                        }
+                      },
+                      {
+                        "call": {
+                          "args": [
+                            {
+                              "call": {
+                                "args": [
+                                  {
+                                    "var": "result_v"
+                                  }
+                                ],
+                                "fun": "intToDigits"
+                              }
+                            }
+                          ],
+                          "fun": "digitSum"
+                        }
+                      }
+                    ],
+                    "op": "<="
+                  },
+                  "hi": {
+                    "args": [
+                      {
+                        "var": "x_v4"
+                      },
+                      {
+                        "int": 1
+                      }
+                    ],
+                    "op": "+"
+                  },
+                  "lo": {
+                    "int": 1
+                  },
+                  "var": "y"
+                }
+              },
+              {
+                "forall": {
+                  "body": {
+                    "args": [
+                      {
+                        "args": [
+                          {
+                            "call": {
+                              "args": [
+                                {
+                                  "call": {
+                                    "args": [
+                                      {
+                                        "var": "y_v"
+                                      }
+                                    ],
+                                    "fun": "intToDigits"
+                                  }
+                                }
+                              ],
+                              "fun": "digitSum"
+                            }
+                          },
+                          {
+                            "call": {
+                              "args": [
+                                {
+                                  "call": {
+                                    "args": [
+                                      {
+                                        "var": "result_v"
+                                      }
+                                    ],
+                                    "fun": "intToDigits"
+                                  }
+                                }
+                              ],
+                              "fun": "digitSum"
+                            }
+                          }
+                        ],
+                        "op": "=="
+                      },
+                      {
+                        "args": [
+                          {
+                            "var": "y_v"
+                          },
+                          {
+                            "var": "result_v"
+                          }
+                        ],
+                        "op": "<="
+                      }
+                    ],
+                    "op": "implies"
+                  },
+                  "hi": {
+                    "args": [
+                      {
+                        "var": "x_v4"
+                      },
+                      {
+                        "int": 1
+                      }
+                    ],
+                    "op": "+"
+                  },
+                  "lo": {
+                    "int": 1
+                  },
+                  "var": "y_v"
+                }
+              }
+            ],
+            "op": "and"
+          }
+        }
+      },
+      "decreases": {
+        "int": 0
+      },
+      "name": "validResult",
+      "params": [
+        {
+          "name": "x_v4",
+          "type": "int"
+        },
+        {
+          "name": "result_v",
+          "type": "int"
+        }
+      ],
+      "result": "bool"
+    }
+  ],
+  "t": 1
+}

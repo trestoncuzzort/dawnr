@@ -1,0 +1,713 @@
+{
+  "body": [
+    {
+      "var": {
+        "init": {
+          "bool": true
+        },
+        "name": "canMake",
+        "type": "bool"
+      }
+    },
+    {
+      "var": {
+        "init": {
+          "int": 0
+        },
+        "name": "i_v2",
+        "type": "int"
+      }
+    },
+    {
+      "while": {
+        "body": [
+          {
+            "var": {
+              "init": {
+                "call": {
+                  "args": [
+                    {
+                      "var": "heights"
+                    },
+                    {
+                      "var": "i_v2"
+                    }
+                  ],
+                  "fun": "maxHeightUpTo"
+                }
+              },
+              "name": "maxSoFar",
+              "type": "int"
+            }
+          },
+          {
+            "if": {
+              "cond": {
+                "args": [
+                  {
+                    "args": [
+                      {
+                        "var": "heights"
+                      },
+                      {
+                        "var": "i_v2"
+                      }
+                    ],
+                    "op": "at"
+                  },
+                  {
+                    "args": [
+                      {
+                        "var": "maxSoFar"
+                      },
+                      {
+                        "int": 1
+                      }
+                    ],
+                    "op": "-"
+                  }
+                ],
+                "op": "<"
+              },
+              "else": [],
+              "then": [
+                {
+                  "assign": [
+                    "canMake",
+                    {
+                      "bool": false
+                    }
+                  ]
+                }
+              ]
+            }
+          },
+          {
+            "assign": [
+              "i_v2",
+              {
+                "args": [
+                  {
+                    "var": "i_v2"
+                  },
+                  {
+                    "int": 1
+                  }
+                ],
+                "op": "+"
+              }
+            ]
+          }
+        ],
+        "cond": {
+          "args": [
+            {
+              "args": [
+                {
+                  "var": "i_v2"
+                },
+                {
+                  "var": "n"
+                }
+              ],
+              "op": "<"
+            },
+            {
+              "var": "canMake"
+            }
+          ],
+          "op": "and"
+        },
+        "decreases": {
+          "args": [
+            {
+              "var": "n"
+            },
+            {
+              "var": "i_v2"
+            }
+          ],
+          "op": "-"
+        },
+        "invariants": [
+          {
+            "args": [
+              {
+                "args": [
+                  {
+                    "int": 0
+                  },
+                  {
+                    "var": "i_v2"
+                  }
+                ],
+                "op": "<="
+              },
+              {
+                "args": [
+                  {
+                    "var": "i_v2"
+                  },
+                  {
+                    "var": "n"
+                  }
+                ],
+                "op": "<="
+              }
+            ],
+            "op": "and"
+          },
+          {
+            "args": [
+              {
+                "var": "canMake"
+              },
+              {
+                "forall": {
+                  "body": {
+                    "args": [
+                      {
+                        "args": [
+                          {
+                            "var": "heights"
+                          },
+                          {
+                            "var": "j"
+                          }
+                        ],
+                        "op": "at"
+                      },
+                      {
+                        "args": [
+                          {
+                            "call": {
+                              "args": [
+                                {
+                                  "var": "heights"
+                                },
+                                {
+                                  "var": "j"
+                                }
+                              ],
+                              "fun": "maxHeightUpTo"
+                            }
+                          },
+                          {
+                            "int": 1
+                          }
+                        ],
+                        "op": "-"
+                      }
+                    ],
+                    "op": ">="
+                  },
+                  "hi": {
+                    "var": "i_v2"
+                  },
+                  "lo": {
+                    "int": 0
+                  },
+                  "var": "j"
+                }
+              }
+            ],
+            "op": "=="
+          }
+        ]
+      }
+    },
+    {
+      "if": {
+        "cond": {
+          "var": "canMake"
+        },
+        "else": [
+          {
+            "assign": [
+              "result",
+              {
+                "args": [
+                  {
+                    "int": 78
+                  },
+                  {
+                    "int": 111
+                  }
+                ],
+                "op": "seq"
+              }
+            ]
+          }
+        ],
+        "then": [
+          {
+            "assign": [
+              "result",
+              {
+                "args": [
+                  {
+                    "int": 89
+                  },
+                  {
+                    "int": 101
+                  },
+                  {
+                    "int": 115
+                  }
+                ],
+                "op": "seq"
+              }
+            ]
+          }
+        ]
+      }
+    }
+  ],
+  "ensures": [
+    {
+      "args": [
+        {
+          "args": [
+            {
+              "var": "result"
+            },
+            {
+              "args": [
+                {
+                  "int": 89
+                },
+                {
+                  "int": 101
+                },
+                {
+                  "int": 115
+                }
+              ],
+              "op": "seq"
+            }
+          ],
+          "op": "=="
+        },
+        {
+          "call": {
+            "args": [
+              {
+                "var": "heights"
+              }
+            ],
+            "fun": "canMakeNonDecreasing"
+          }
+        }
+      ],
+      "op": "=="
+    }
+  ],
+  "gate": "recursion",
+  "name": "vericoding_da0483__solve",
+  "params": [
+    {
+      "name": "n",
+      "type": "int"
+    },
+    {
+      "name": "heights",
+      "type": "seq"
+    }
+  ],
+  "requires": [
+    {
+      "call": {
+        "args": [
+          {
+            "var": "n"
+          },
+          {
+            "var": "heights"
+          }
+        ],
+        "fun": "validInput"
+      }
+    }
+  ],
+  "returns": [
+    {
+      "name": "result",
+      "type": "seq"
+    }
+  ],
+  "spec_funs": [
+    {
+      "body": {
+        "args": [
+          {
+            "args": [
+              {
+                "var": "n_v"
+              },
+              {
+                "int": 1
+              }
+            ],
+            "op": ">="
+          },
+          {
+            "args": [
+              {
+                "args": [
+                  {
+                    "var": "heights_v"
+                  }
+                ],
+                "op": "len"
+              },
+              {
+                "var": "n_v"
+              }
+            ],
+            "op": "=="
+          },
+          {
+            "forall": {
+              "body": {
+                "args": [
+                  {
+                    "args": [
+                      {
+                        "var": "heights_v"
+                      },
+                      {
+                        "var": "i"
+                      }
+                    ],
+                    "op": "at"
+                  },
+                  {
+                    "int": 1
+                  }
+                ],
+                "op": ">="
+              },
+              "hi": {
+                "args": [
+                  {
+                    "var": "heights_v"
+                  }
+                ],
+                "op": "len"
+              },
+              "lo": {
+                "int": 0
+              },
+              "var": "i"
+            }
+          }
+        ],
+        "op": "and"
+      },
+      "decreases": {
+        "int": 0
+      },
+      "name": "validInput",
+      "params": [
+        {
+          "name": "n_v",
+          "type": "int"
+        },
+        {
+          "name": "heights_v",
+          "type": "seq"
+        }
+      ],
+      "result": "bool"
+    },
+    {
+      "body": {
+        "ite": {
+          "cond": {
+            "args": [
+              {
+                "args": [
+                  {
+                    "args": [
+                      {
+                        "var": "heights_v2"
+                      }
+                    ],
+                    "op": "len"
+                  },
+                  {
+                    "int": 0
+                  }
+                ],
+                "op": ">"
+              },
+              {
+                "args": [
+                  {
+                    "args": [
+                      {
+                        "args": [
+                          {
+                            "int": 1
+                          }
+                        ],
+                        "op": "neg"
+                      },
+                      {
+                        "var": "index"
+                      }
+                    ],
+                    "op": "<="
+                  },
+                  {
+                    "args": [
+                      {
+                        "var": "index"
+                      },
+                      {
+                        "args": [
+                          {
+                            "var": "heights_v2"
+                          }
+                        ],
+                        "op": "len"
+                      }
+                    ],
+                    "op": "<"
+                  }
+                ],
+                "op": "and"
+              }
+            ],
+            "op": "and"
+          },
+          "else": {
+            "int": 0
+          },
+          "then": {
+            "ite": {
+              "cond": {
+                "args": [
+                  {
+                    "var": "index"
+                  },
+                  {
+                    "int": 0
+                  }
+                ],
+                "op": "<"
+              },
+              "else": {
+                "ite": {
+                  "cond": {
+                    "args": [
+                      {
+                        "var": "index"
+                      },
+                      {
+                        "int": 0
+                      }
+                    ],
+                    "op": "=="
+                  },
+                  "else": {
+                    "ite": {
+                      "cond": {
+                        "args": [
+                          {
+                            "args": [
+                              {
+                                "var": "heights_v2"
+                              },
+                              {
+                                "var": "index"
+                              }
+                            ],
+                            "op": "at"
+                          },
+                          {
+                            "call": {
+                              "args": [
+                                {
+                                  "var": "heights_v2"
+                                },
+                                {
+                                  "args": [
+                                    {
+                                      "var": "index"
+                                    },
+                                    {
+                                      "int": 1
+                                    }
+                                  ],
+                                  "op": "-"
+                                }
+                              ],
+                              "fun": "maxHeightUpTo"
+                            }
+                          }
+                        ],
+                        "op": ">"
+                      },
+                      "else": {
+                        "call": {
+                          "args": [
+                            {
+                              "var": "heights_v2"
+                            },
+                            {
+                              "args": [
+                                {
+                                  "var": "index"
+                                },
+                                {
+                                  "int": 1
+                                }
+                              ],
+                              "op": "-"
+                            }
+                          ],
+                          "fun": "maxHeightUpTo"
+                        }
+                      },
+                      "then": {
+                        "args": [
+                          {
+                            "var": "heights_v2"
+                          },
+                          {
+                            "var": "index"
+                          }
+                        ],
+                        "op": "at"
+                      }
+                    }
+                  },
+                  "then": {
+                    "args": [
+                      {
+                        "var": "heights_v2"
+                      },
+                      {
+                        "int": 0
+                      }
+                    ],
+                    "op": "at"
+                  }
+                }
+              },
+              "then": {
+                "int": 0
+              }
+            }
+          }
+        }
+      },
+      "decreases": {
+        "var": "index"
+      },
+      "name": "maxHeightUpTo",
+      "params": [
+        {
+          "name": "heights_v2",
+          "type": "seq"
+        },
+        {
+          "name": "index",
+          "type": "int"
+        }
+      ],
+      "result": "int"
+    },
+    {
+      "body": {
+        "ite": {
+          "cond": {
+            "args": [
+              {
+                "args": [
+                  {
+                    "var": "heights_v3"
+                  }
+                ],
+                "op": "len"
+              },
+              {
+                "int": 0
+              }
+            ],
+            "op": ">"
+          },
+          "else": {
+            "bool": false
+          },
+          "then": {
+            "forall": {
+              "body": {
+                "args": [
+                  {
+                    "args": [
+                      {
+                        "var": "heights_v3"
+                      },
+                      {
+                        "var": "i_v"
+                      }
+                    ],
+                    "op": "at"
+                  },
+                  {
+                    "args": [
+                      {
+                        "call": {
+                          "args": [
+                            {
+                              "var": "heights_v3"
+                            },
+                            {
+                              "var": "i_v"
+                            }
+                          ],
+                          "fun": "maxHeightUpTo"
+                        }
+                      },
+                      {
+                        "int": 1
+                      }
+                    ],
+                    "op": "-"
+                  }
+                ],
+                "op": ">="
+              },
+              "hi": {
+                "args": [
+                  {
+                    "var": "heights_v3"
+                  }
+                ],
+                "op": "len"
+              },
+              "lo": {
+                "int": 0
+              },
+              "var": "i_v"
+            }
+          }
+        }
+      },
+      "decreases": {
+        "int": 0
+      },
+      "name": "canMakeNonDecreasing",
+      "params": [
+        {
+          "name": "heights_v3",
+          "type": "seq"
+        }
+      ],
+      "result": "bool"
+    }
+  ],
+  "t": 1
+}

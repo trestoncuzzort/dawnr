@@ -1,0 +1,1024 @@
+{
+  "body": [
+    {
+      "if": {
+        "cond": {
+          "args": [
+            {
+              "args": [
+                {
+                  "var": "s"
+                }
+              ],
+              "op": "len"
+            },
+            {
+              "int": 0
+            }
+          ],
+          "op": "=="
+        },
+        "else": [],
+        "then": [
+          {
+            "return": [
+              "result",
+              {
+                "args": [],
+                "op": "seq"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "var": {
+        "init": {
+          "int": 0
+        },
+        "name": "beginning_of_suffix",
+        "type": "int"
+      }
+    },
+    {
+      "var": {
+        "init": {
+          "args": [],
+          "op": "seq"
+        },
+        "name": "longest_palindrome",
+        "type": "seq"
+      }
+    },
+    {
+      "var": {
+        "init": {
+          "call": {
+            "args": [
+              {
+                "args": [
+                  {
+                    "var": "s"
+                  },
+                  {
+                    "var": "beginning_of_suffix"
+                  },
+                  {
+                    "args": [
+                      {
+                        "var": "s"
+                      }
+                    ],
+                    "op": "len"
+                  }
+                ],
+                "op": "slice"
+              }
+            ],
+            "fun": "is_palindrome"
+          }
+        },
+        "name": "flag",
+        "type": "bool"
+      }
+    },
+    {
+      "while": {
+        "body": [
+          {
+            "assign": [
+              "beginning_of_suffix",
+              {
+                "args": [
+                  {
+                    "var": "beginning_of_suffix"
+                  },
+                  {
+                    "int": 1
+                  }
+                ],
+                "op": "+"
+              }
+            ]
+          },
+          {
+            "assign": [
+              "flag",
+              {
+                "call": {
+                  "args": [
+                    {
+                      "args": [
+                        {
+                          "var": "s"
+                        },
+                        {
+                          "var": "beginning_of_suffix"
+                        },
+                        {
+                          "args": [
+                            {
+                              "var": "s"
+                            }
+                          ],
+                          "op": "len"
+                        }
+                      ],
+                      "op": "slice"
+                    }
+                  ],
+                  "fun": "is_palindrome"
+                }
+              }
+            ]
+          }
+        ],
+        "cond": {
+          "args": [
+            {
+              "var": "flag"
+            }
+          ],
+          "op": "not"
+        },
+        "decreases": {
+          "args": [
+            {
+              "args": [
+                {
+                  "var": "s"
+                }
+              ],
+              "op": "len"
+            },
+            {
+              "var": "beginning_of_suffix"
+            }
+          ],
+          "op": "-"
+        },
+        "invariants": [
+          {
+            "args": [
+              {
+                "args": [
+                  {
+                    "args": [
+                      {
+                        "var": "beginning_of_suffix"
+                      },
+                      {
+                        "int": 0
+                      }
+                    ],
+                    "op": ">="
+                  },
+                  {
+                    "args": [
+                      {
+                        "args": [
+                          {
+                            "var": "beginning_of_suffix"
+                          },
+                          {
+                            "int": 1
+                          }
+                        ],
+                        "op": "+"
+                      },
+                      {
+                        "args": [
+                          {
+                            "var": "s"
+                          }
+                        ],
+                        "op": "len"
+                      }
+                    ],
+                    "op": "<"
+                  }
+                ],
+                "op": "and"
+              },
+              {
+                "args": [
+                  {
+                    "var": "flag"
+                  },
+                  {
+                    "args": [
+                      {
+                        "args": [
+                          {
+                            "var": "beginning_of_suffix"
+                          },
+                          {
+                            "int": 0
+                          }
+                        ],
+                        "op": ">="
+                      },
+                      {
+                        "args": [
+                          {
+                            "var": "beginning_of_suffix"
+                          },
+                          {
+                            "args": [
+                              {
+                                "var": "s"
+                              }
+                            ],
+                            "op": "len"
+                          }
+                        ],
+                        "op": "<"
+                      }
+                    ],
+                    "op": "and"
+                  }
+                ],
+                "op": "and"
+              }
+            ],
+            "op": "or"
+          },
+          {
+            "args": [
+              {
+                "var": "flag"
+              },
+              {
+                "call": {
+                  "args": [
+                    {
+                      "args": [
+                        {
+                          "var": "s"
+                        },
+                        {
+                          "var": "beginning_of_suffix"
+                        },
+                        {
+                          "args": [
+                            {
+                              "var": "s"
+                            }
+                          ],
+                          "op": "len"
+                        }
+                      ],
+                      "op": "slice"
+                    }
+                  ],
+                  "fun": "is_palindrome"
+                }
+              }
+            ],
+            "op": "implies"
+          }
+        ]
+      }
+    },
+    {
+      "var": {
+        "init": {
+          "args": [
+            {
+              "var": "s"
+            },
+            {
+              "int": 0
+            },
+            {
+              "var": "beginning_of_suffix"
+            }
+          ],
+          "op": "slice"
+        },
+        "name": "prefix_to_reverse",
+        "type": "seq"
+      }
+    },
+    {
+      "var": {
+        "init": {
+          "call": {
+            "args": [
+              {
+                "var": "prefix_to_reverse"
+              }
+            ],
+            "fun": "humaneval_dafny_010_is_palindrome__reverse"
+          }
+        },
+        "name": "reversed",
+        "type": "seq"
+      }
+    },
+    {
+      "assign": [
+        "result",
+        {
+          "args": [
+            {
+              "var": "s"
+            },
+            {
+              "var": "reversed"
+            }
+          ],
+          "op": "+"
+        }
+      ]
+    }
+  ],
+  "ensures": [
+    {
+      "args": [
+        {
+          "args": [
+            {
+              "var": "result"
+            }
+          ],
+          "op": "len"
+        },
+        {
+          "args": [
+            {
+              "int": 2
+            },
+            {
+              "args": [
+                {
+                  "var": "s"
+                }
+              ],
+              "op": "len"
+            }
+          ],
+          "op": "*"
+        }
+      ],
+      "op": "<="
+    },
+    {
+      "call": {
+        "args": [
+          {
+            "var": "result"
+          }
+        ],
+        "fun": "is_palindrome"
+      }
+    },
+    {
+      "call": {
+        "args": [
+          {
+            "var": "result"
+          },
+          {
+            "var": "s"
+          }
+        ],
+        "fun": "starts_with"
+      }
+    }
+  ],
+  "gate": "recursion",
+  "methods": [
+    {
+      "body": [
+        {
+          "assign": [
+            "rev",
+            {
+              "args": [],
+              "op": "seq"
+            }
+          ]
+        },
+        {
+          "var": {
+            "init": {
+              "args": [
+                {
+                  "var": "str"
+                }
+              ],
+              "op": "len"
+            },
+            "name": "h",
+            "type": "int"
+          }
+        },
+        {
+          "var": {
+            "init": {
+              "int": 0
+            },
+            "name": "i",
+            "type": "int"
+          }
+        },
+        {
+          "while": {
+            "body": [
+              {
+                "assign": [
+                  "rev",
+                  {
+                    "args": [
+                      {
+                        "var": "rev"
+                      },
+                      {
+                        "args": [
+                          {
+                            "args": [
+                              {
+                                "var": "str"
+                              },
+                              {
+                                "args": [
+                                  {
+                                    "args": [
+                                      {
+                                        "args": [
+                                          {
+                                            "var": "str"
+                                          }
+                                        ],
+                                        "op": "len"
+                                      },
+                                      {
+                                        "var": "i"
+                                      }
+                                    ],
+                                    "op": "-"
+                                  },
+                                  {
+                                    "int": 1
+                                  }
+                                ],
+                                "op": "-"
+                              }
+                            ],
+                            "op": "at"
+                          }
+                        ],
+                        "op": "seq"
+                      }
+                    ],
+                    "op": "+"
+                  }
+                ]
+              },
+              {
+                "assign": [
+                  "i",
+                  {
+                    "args": [
+                      {
+                        "var": "i"
+                      },
+                      {
+                        "int": 1
+                      }
+                    ],
+                    "op": "+"
+                  }
+                ]
+              }
+            ],
+            "cond": {
+              "args": [
+                {
+                  "var": "i"
+                },
+                {
+                  "var": "h"
+                }
+              ],
+              "op": "<"
+            },
+            "decreases": {
+              "args": [
+                {
+                  "var": "h"
+                },
+                {
+                  "var": "i"
+                }
+              ],
+              "op": "-"
+            },
+            "invariants": [
+              {
+                "args": [
+                  {
+                    "int": 0
+                  },
+                  {
+                    "var": "i"
+                  }
+                ],
+                "op": "<="
+              },
+              {
+                "args": [
+                  {
+                    "var": "i"
+                  },
+                  {
+                    "var": "h"
+                  }
+                ],
+                "op": "<="
+              },
+              {
+                "args": [
+                  {
+                    "args": [
+                      {
+                        "var": "rev"
+                      }
+                    ],
+                    "op": "len"
+                  },
+                  {
+                    "var": "i"
+                  }
+                ],
+                "op": "=="
+              },
+              {
+                "forall": {
+                  "body": {
+                    "args": [
+                      {
+                        "args": [
+                          {
+                            "var": "rev"
+                          },
+                          {
+                            "var": "k_v2"
+                          }
+                        ],
+                        "op": "at"
+                      },
+                      {
+                        "args": [
+                          {
+                            "var": "str"
+                          },
+                          {
+                            "args": [
+                              {
+                                "args": [
+                                  {
+                                    "args": [
+                                      {
+                                        "var": "str"
+                                      }
+                                    ],
+                                    "op": "len"
+                                  },
+                                  {
+                                    "int": 1
+                                  }
+                                ],
+                                "op": "-"
+                              },
+                              {
+                                "var": "k_v2"
+                              }
+                            ],
+                            "op": "-"
+                          }
+                        ],
+                        "op": "at"
+                      }
+                    ],
+                    "op": "=="
+                  },
+                  "hi": {
+                    "var": "i"
+                  },
+                  "lo": {
+                    "int": 0
+                  },
+                  "var": "k_v2"
+                }
+              }
+            ]
+          }
+        }
+      ],
+      "ensures": [
+        {
+          "args": [
+            {
+              "args": [
+                {
+                  "var": "rev"
+                }
+              ],
+              "op": "len"
+            },
+            {
+              "args": [
+                {
+                  "var": "str"
+                }
+              ],
+              "op": "len"
+            }
+          ],
+          "op": "=="
+        },
+        {
+          "forall": {
+            "body": {
+              "args": [
+                {
+                  "args": [
+                    {
+                      "var": "rev"
+                    },
+                    {
+                      "var": "k_v"
+                    }
+                  ],
+                  "op": "at"
+                },
+                {
+                  "args": [
+                    {
+                      "var": "str"
+                    },
+                    {
+                      "args": [
+                        {
+                          "args": [
+                            {
+                              "args": [
+                                {
+                                  "var": "str"
+                                }
+                              ],
+                              "op": "len"
+                            },
+                            {
+                              "int": 1
+                            }
+                          ],
+                          "op": "-"
+                        },
+                        {
+                          "var": "k_v"
+                        }
+                      ],
+                      "op": "-"
+                    }
+                  ],
+                  "op": "at"
+                }
+              ],
+              "op": "=="
+            },
+            "hi": {
+              "args": [
+                {
+                  "var": "str"
+                }
+              ],
+              "op": "len"
+            },
+            "lo": {
+              "int": 0
+            },
+            "var": "k_v"
+          }
+        }
+      ],
+      "name": "humaneval_dafny_010_is_palindrome__reverse",
+      "params": [
+        {
+          "name": "str",
+          "type": "seq"
+        }
+      ],
+      "requires": [
+        {
+          "forall": {
+            "body": {
+              "args": [
+                {
+                  "args": [
+                    {
+                      "args": [
+                        {
+                          "var": "str"
+                        },
+                        {
+                          "var": "k"
+                        }
+                      ],
+                      "op": "at"
+                    },
+                    {
+                      "int": 0
+                    }
+                  ],
+                  "op": ">="
+                },
+                {
+                  "args": [
+                    {
+                      "args": [
+                        {
+                          "var": "str"
+                        },
+                        {
+                          "var": "k"
+                        }
+                      ],
+                      "op": "at"
+                    },
+                    {
+                      "int": 1114111
+                    }
+                  ],
+                  "op": "<="
+                }
+              ],
+              "op": "and"
+            },
+            "hi": {
+              "args": [
+                {
+                  "var": "str"
+                }
+              ],
+              "op": "len"
+            },
+            "lo": {
+              "int": 0
+            },
+            "var": "k"
+          }
+        }
+      ],
+      "returns": [
+        {
+          "name": "rev",
+          "type": "seq"
+        }
+      ]
+    }
+  ],
+  "name": "humaneval_dafny_010_is_palindrome__make_palindrome",
+  "params": [
+    {
+      "name": "s",
+      "type": "seq"
+    }
+  ],
+  "requires": [
+    {
+      "forall": {
+        "body": {
+          "args": [
+            {
+              "args": [
+                {
+                  "args": [
+                    {
+                      "var": "s"
+                    },
+                    {
+                      "var": "k_v2"
+                    }
+                  ],
+                  "op": "at"
+                },
+                {
+                  "int": 0
+                }
+              ],
+              "op": ">="
+            },
+            {
+              "args": [
+                {
+                  "args": [
+                    {
+                      "var": "s"
+                    },
+                    {
+                      "var": "k_v2"
+                    }
+                  ],
+                  "op": "at"
+                },
+                {
+                  "int": 1114111
+                }
+              ],
+              "op": "<="
+            }
+          ],
+          "op": "and"
+        },
+        "hi": {
+          "args": [
+            {
+              "var": "s"
+            }
+          ],
+          "op": "len"
+        },
+        "lo": {
+          "int": 0
+        },
+        "var": "k_v2"
+      }
+    }
+  ],
+  "returns": [
+    {
+      "name": "result",
+      "type": "seq"
+    }
+  ],
+  "spec_funs": [
+    {
+      "body": {
+        "args": [
+          {
+            "args": [
+              {
+                "args": [
+                  {
+                    "var": "result_v"
+                  }
+                ],
+                "op": "len"
+              },
+              {
+                "args": [
+                  {
+                    "var": "s_v"
+                  }
+                ],
+                "op": "len"
+              }
+            ],
+            "op": ">="
+          },
+          {
+            "forall": {
+              "body": {
+                "args": [
+                  {
+                    "args": [
+                      {
+                        "var": "result_v"
+                      },
+                      {
+                        "var": "k"
+                      }
+                    ],
+                    "op": "at"
+                  },
+                  {
+                    "args": [
+                      {
+                        "var": "s_v"
+                      },
+                      {
+                        "var": "k"
+                      }
+                    ],
+                    "op": "at"
+                  }
+                ],
+                "op": "=="
+              },
+              "hi": {
+                "args": [
+                  {
+                    "var": "s_v"
+                  }
+                ],
+                "op": "len"
+              },
+              "lo": {
+                "int": 0
+              },
+              "var": "k"
+            }
+          }
+        ],
+        "op": "and"
+      },
+      "decreases": {
+        "int": 0
+      },
+      "name": "starts_with",
+      "params": [
+        {
+          "name": "result_v",
+          "type": "seq"
+        },
+        {
+          "name": "s_v",
+          "type": "seq"
+        }
+      ],
+      "result": "bool"
+    },
+    {
+      "body": {
+        "forall": {
+          "body": {
+            "args": [
+              {
+                "args": [
+                  {
+                    "var": "s_v2"
+                  },
+                  {
+                    "var": "k_v"
+                  }
+                ],
+                "op": "at"
+              },
+              {
+                "args": [
+                  {
+                    "var": "s_v2"
+                  },
+                  {
+                    "args": [
+                      {
+                        "args": [
+                          {
+                            "args": [
+                              {
+                                "var": "s_v2"
+                              }
+                            ],
+                            "op": "len"
+                          },
+                          {
+                            "int": 1
+                          }
+                        ],
+                        "op": "-"
+                      },
+                      {
+                        "var": "k_v"
+                      }
+                    ],
+                    "op": "-"
+                  }
+                ],
+                "op": "at"
+              }
+            ],
+            "op": "=="
+          },
+          "hi": {
+            "args": [
+              {
+                "var": "s_v2"
+              }
+            ],
+            "op": "len"
+          },
+          "lo": {
+            "int": 0
+          },
+          "var": "k_v"
+        }
+      },
+      "decreases": {
+        "int": 0
+      },
+      "name": "is_palindrome",
+      "params": [
+        {
+          "name": "s_v2",
+          "type": "seq"
+        }
+      ],
+      "result": "bool"
+    }
+  ],
+  "t": 1
+}

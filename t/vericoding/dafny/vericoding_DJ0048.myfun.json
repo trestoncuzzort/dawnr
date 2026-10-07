@@ -1,0 +1,167 @@
+{
+  "body": [
+    {
+      "assign": [
+        "sum_out",
+        {
+          "var": "sum"
+        }
+      ]
+    },
+    {
+      "assign": [
+        "sum_out",
+        {
+          "args": [
+            {
+              "var": "sum_out"
+            },
+            {
+              "int": 0
+            },
+            {
+              "args": [
+                {
+                  "int": 6
+                },
+                {
+                  "var": "n"
+                }
+              ],
+              "op": "*"
+            }
+          ],
+          "op": "update"
+        }
+      ]
+    }
+  ],
+  "ensures": [
+    {
+      "args": [
+        {
+          "args": [
+            {
+              "var": "sum_out"
+            }
+          ],
+          "op": "len"
+        },
+        {
+          "args": [
+            {
+              "var": "sum"
+            }
+          ],
+          "op": "len"
+        }
+      ],
+      "op": "=="
+    },
+    {
+      "args": [
+        {
+          "args": [
+            {
+              "var": "sum_out"
+            },
+            {
+              "int": 0
+            }
+          ],
+          "op": "at"
+        },
+        {
+          "args": [
+            {
+              "int": 6
+            },
+            {
+              "var": "n"
+            }
+          ],
+          "op": "*"
+        }
+      ],
+      "op": "=="
+    }
+  ],
+  "name": "vericoding_dj0048__myfun",
+  "params": [
+    {
+      "name": "a",
+      "type": "seq"
+    },
+    {
+      "name": "sum",
+      "type": "seq"
+    },
+    {
+      "name": "n",
+      "type": "int"
+    }
+  ],
+  "requires": [
+    {
+      "args": [
+        {
+          "var": "n"
+        },
+        {
+          "int": 0
+        }
+      ],
+      "op": ">"
+    },
+    {
+      "args": [
+        {
+          "args": [
+            {
+              "var": "a"
+            }
+          ],
+          "op": "len"
+        },
+        {
+          "var": "n"
+        }
+      ],
+      "op": "=="
+    },
+    {
+      "args": [
+        {
+          "args": [
+            {
+              "var": "sum"
+            }
+          ],
+          "op": "len"
+        },
+        {
+          "int": 1
+        }
+      ],
+      "op": "=="
+    },
+    {
+      "args": [
+        {
+          "var": "n"
+        },
+        {
+          "int": 1000
+        }
+      ],
+      "op": "<"
+    }
+  ],
+  "returns": [
+    {
+      "name": "sum_out",
+      "type": "seq"
+    }
+  ],
+  "t": 1
+}

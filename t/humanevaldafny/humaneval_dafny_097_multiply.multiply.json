@@ -1,0 +1,169 @@
+{
+  "body": [
+    {
+      "assign": [
+        "c",
+        {
+          "args": [
+            {
+              "call": {
+                "args": [
+                  {
+                    "var": "a"
+                  }
+                ],
+                "fun": "last_digit"
+              }
+            },
+            {
+              "call": {
+                "args": [
+                  {
+                    "var": "b"
+                  }
+                ],
+                "fun": "last_digit"
+              }
+            }
+          ],
+          "op": "*"
+        }
+      ]
+    }
+  ],
+  "ensures": [
+    {
+      "args": [
+        {
+          "var": "c"
+        },
+        {
+          "args": [
+            {
+              "call": {
+                "args": [
+                  {
+                    "var": "a"
+                  }
+                ],
+                "fun": "last_digit"
+              }
+            },
+            {
+              "call": {
+                "args": [
+                  {
+                    "var": "b"
+                  }
+                ],
+                "fun": "last_digit"
+              }
+            }
+          ],
+          "op": "*"
+        }
+      ],
+      "op": "=="
+    }
+  ],
+  "gate": "recursion",
+  "name": "humaneval_dafny_097_multiply__multiply",
+  "params": [
+    {
+      "name": "a",
+      "type": "int"
+    },
+    {
+      "name": "b",
+      "type": "int"
+    }
+  ],
+  "requires": [
+    {
+      "args": [
+        {
+          "var": "a"
+        },
+        {
+          "int": 0
+        }
+      ],
+      "op": ">="
+    },
+    {
+      "args": [
+        {
+          "var": "b"
+        },
+        {
+          "int": 0
+        }
+      ],
+      "op": ">="
+    }
+  ],
+  "returns": [
+    {
+      "name": "c",
+      "type": "int"
+    }
+  ],
+  "spec_funs": [
+    {
+      "body": {
+        "ite": {
+          "cond": {
+            "args": [
+              {
+                "var": "n"
+              },
+              {
+                "int": 0
+              }
+            ],
+            "op": "<"
+          },
+          "else": {
+            "args": [
+              {
+                "var": "n"
+              },
+              {
+                "int": 10
+              }
+            ],
+            "op": "mod"
+          },
+          "then": {
+            "args": [
+              {
+                "args": [
+                  {
+                    "var": "n"
+                  }
+                ],
+                "op": "neg"
+              },
+              {
+                "int": 10
+              }
+            ],
+            "op": "mod"
+          }
+        }
+      },
+      "decreases": {
+        "int": 0
+      },
+      "name": "last_digit",
+      "params": [
+        {
+          "name": "n",
+          "type": "int"
+        }
+      ],
+      "result": "int"
+    }
+  ],
+  "t": 1
+}

@@ -1,0 +1,553 @@
+{
+  "body": [
+    {
+      "if": {
+        "cond": {
+          "args": [
+            {
+              "var": "c"
+            },
+            {
+              "var": "f"
+            }
+          ],
+          "op": ">"
+        },
+        "else": [
+          {
+            "var": {
+              "init": {
+                "args": [
+                  {
+                    "var": "c"
+                  },
+                  {
+                    "args": [
+                      {
+                        "args": [
+                          {
+                            "var": "f"
+                          },
+                          {
+                            "var": "c"
+                          }
+                        ],
+                        "op": "-"
+                      },
+                      {
+                        "int": 2
+                      }
+                    ],
+                    "op": "div"
+                  }
+                ],
+                "op": "+"
+              },
+              "name": "mid",
+              "type": "int"
+            }
+          },
+          {
+            "if": {
+              "cond": {
+                "args": [
+                  {
+                    "args": [
+                      {
+                        "var": "v"
+                      },
+                      {
+                        "var": "mid"
+                      }
+                    ],
+                    "op": "at"
+                  },
+                  {
+                    "var": "elem"
+                  }
+                ],
+                "op": "<="
+              },
+              "else": [
+                {
+                  "assign": [
+                    "p",
+                    {
+                      "call": {
+                        "args": [
+                          {
+                            "var": "v"
+                          },
+                          {
+                            "var": "elem"
+                          },
+                          {
+                            "var": "c"
+                          },
+                          {
+                            "args": [
+                              {
+                                "var": "mid"
+                              },
+                              {
+                                "int": 1
+                              }
+                            ],
+                            "op": "-"
+                          }
+                        ],
+                        "fun": "vericoding_dd0133__binarySearchRec"
+                      }
+                    }
+                  ]
+                }
+              ],
+              "then": [
+                {
+                  "assign": [
+                    "p",
+                    {
+                      "call": {
+                        "args": [
+                          {
+                            "var": "v"
+                          },
+                          {
+                            "var": "elem"
+                          },
+                          {
+                            "args": [
+                              {
+                                "var": "mid"
+                              },
+                              {
+                                "int": 1
+                              }
+                            ],
+                            "op": "+"
+                          },
+                          {
+                            "var": "f"
+                          }
+                        ],
+                        "fun": "vericoding_dd0133__binarySearchRec"
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          }
+        ],
+        "then": [
+          {
+            "assign": [
+              "p",
+              {
+                "args": [
+                  {
+                    "var": "c"
+                  },
+                  {
+                    "int": 1
+                  }
+                ],
+                "op": "-"
+              }
+            ]
+          }
+        ]
+      }
+    }
+  ],
+  "decreases": {
+    "args": [
+      {
+        "var": "f"
+      },
+      {
+        "var": "c"
+      }
+    ],
+    "op": "-"
+  },
+  "ensures": [
+    {
+      "args": [
+        {
+          "args": [
+            {
+              "int": 1
+            }
+          ],
+          "op": "neg"
+        },
+        {
+          "var": "p"
+        }
+      ],
+      "op": "<="
+    },
+    {
+      "args": [
+        {
+          "var": "p"
+        },
+        {
+          "args": [
+            {
+              "var": "v"
+            }
+          ],
+          "op": "len"
+        }
+      ],
+      "op": "<"
+    },
+    {
+      "forall": {
+        "body": {
+          "args": [
+            {
+              "args": [
+                {
+                  "var": "v"
+                },
+                {
+                  "var": "u_v"
+                }
+              ],
+              "op": "at"
+            },
+            {
+              "var": "elem"
+            }
+          ],
+          "op": "<="
+        },
+        "hi": {
+          "args": [
+            {
+              "var": "p"
+            },
+            {
+              "int": 1
+            }
+          ],
+          "op": "+"
+        },
+        "lo": {
+          "int": 0
+        },
+        "var": "u_v"
+      }
+    },
+    {
+      "forall": {
+        "body": {
+          "args": [
+            {
+              "args": [
+                {
+                  "var": "v"
+                },
+                {
+                  "var": "w_v"
+                }
+              ],
+              "op": "at"
+            },
+            {
+              "var": "elem"
+            }
+          ],
+          "op": ">"
+        },
+        "hi": {
+          "args": [
+            {
+              "var": "v"
+            }
+          ],
+          "op": "len"
+        },
+        "lo": {
+          "args": [
+            {
+              "var": "p"
+            },
+            {
+              "int": 1
+            }
+          ],
+          "op": "+"
+        },
+        "var": "w_v"
+      }
+    }
+  ],
+  "gate": "recursion",
+  "name": "vericoding_dd0133__binarySearchRec",
+  "params": [
+    {
+      "name": "v",
+      "type": "seq"
+    },
+    {
+      "name": "elem",
+      "type": "int"
+    },
+    {
+      "name": "c",
+      "type": "int"
+    },
+    {
+      "name": "f",
+      "type": "int"
+    }
+  ],
+  "requires": [
+    {
+      "call": {
+        "args": [
+          {
+            "args": [
+              {
+                "var": "v"
+              },
+              {
+                "int": 0
+              },
+              {
+                "args": [
+                  {
+                    "var": "v"
+                  }
+                ],
+                "op": "len"
+              }
+            ],
+            "op": "slice"
+          }
+        ],
+        "fun": "sorted"
+      }
+    },
+    {
+      "args": [
+        {
+          "int": 0
+        },
+        {
+          "var": "c"
+        }
+      ],
+      "op": "<="
+    },
+    {
+      "args": [
+        {
+          "var": "c"
+        },
+        {
+          "args": [
+            {
+              "var": "f"
+            },
+            {
+              "int": 1
+            }
+          ],
+          "op": "+"
+        }
+      ],
+      "op": "<="
+    },
+    {
+      "args": [
+        {
+          "args": [
+            {
+              "var": "f"
+            },
+            {
+              "int": 1
+            }
+          ],
+          "op": "+"
+        },
+        {
+          "args": [
+            {
+              "var": "v"
+            }
+          ],
+          "op": "len"
+        }
+      ],
+      "op": "<="
+    },
+    {
+      "forall": {
+        "body": {
+          "args": [
+            {
+              "args": [
+                {
+                  "var": "v"
+                },
+                {
+                  "var": "k"
+                }
+              ],
+              "op": "at"
+            },
+            {
+              "var": "elem"
+            }
+          ],
+          "op": "<="
+        },
+        "hi": {
+          "var": "c"
+        },
+        "lo": {
+          "int": 0
+        },
+        "var": "k"
+      }
+    },
+    {
+      "forall": {
+        "body": {
+          "args": [
+            {
+              "args": [
+                {
+                  "var": "v"
+                },
+                {
+                  "var": "k_v"
+                }
+              ],
+              "op": "at"
+            },
+            {
+              "var": "elem"
+            }
+          ],
+          "op": ">"
+        },
+        "hi": {
+          "args": [
+            {
+              "var": "v"
+            }
+          ],
+          "op": "len"
+        },
+        "lo": {
+          "args": [
+            {
+              "var": "f"
+            },
+            {
+              "int": 1
+            }
+          ],
+          "op": "+"
+        },
+        "var": "k_v"
+      }
+    }
+  ],
+  "returns": [
+    {
+      "name": "p",
+      "type": "int"
+    }
+  ],
+  "spec_funs": [
+    {
+      "body": {
+        "forall": {
+          "body": {
+            "forall": {
+              "body": {
+                "args": [
+                  {
+                    "args": [
+                      {
+                        "var": "s"
+                      },
+                      {
+                        "var": "u"
+                      }
+                    ],
+                    "op": "at"
+                  },
+                  {
+                    "args": [
+                      {
+                        "var": "s"
+                      },
+                      {
+                        "var": "w"
+                      }
+                    ],
+                    "op": "at"
+                  }
+                ],
+                "op": "<="
+              },
+              "hi": {
+                "args": [
+                  {
+                    "var": "s"
+                  }
+                ],
+                "op": "len"
+              },
+              "lo": {
+                "args": [
+                  {
+                    "var": "u"
+                  },
+                  {
+                    "int": 1
+                  }
+                ],
+                "op": "+"
+              },
+              "var": "w"
+            }
+          },
+          "hi": {
+            "args": [
+              {
+                "var": "s"
+              }
+            ],
+            "op": "len"
+          },
+          "lo": {
+            "int": 0
+          },
+          "var": "u"
+        }
+      },
+      "decreases": {
+        "int": 0
+      },
+      "name": "sorted",
+      "params": [
+        {
+          "name": "s",
+          "type": "seq"
+        }
+      ],
+      "result": "bool"
+    }
+  ],
+  "t": 1
+}

@@ -1,0 +1,263 @@
+{
+  "body": [
+    {
+      "assign": [
+        "result",
+        {
+          "args": [
+            {
+              "args": [
+                {
+                  "int": 2
+                },
+                {
+                  "var": "g"
+                }
+              ],
+              "op": "*"
+            },
+            {
+              "var": "r"
+            }
+          ],
+          "op": "-"
+        }
+      ]
+    }
+  ],
+  "ensures": [
+    {
+      "args": [
+        {
+          "var": "result"
+        },
+        {
+          "call": {
+            "args": [
+              {
+                "var": "r"
+              },
+              {
+                "var": "g"
+              }
+            ],
+            "fun": "requiredPerformance"
+          }
+        }
+      ],
+      "op": "=="
+    },
+    {
+      "call": {
+        "args": [
+          {
+            "var": "r"
+          },
+          {
+            "var": "g"
+          },
+          {
+            "var": "result"
+          }
+        ],
+        "fun": "correctResult"
+      }
+    }
+  ],
+  "gate": "recursion",
+  "name": "vericoding_da0676__solve",
+  "params": [
+    {
+      "name": "r",
+      "type": "int"
+    },
+    {
+      "name": "g",
+      "type": "int"
+    }
+  ],
+  "requires": [
+    {
+      "call": {
+        "args": [
+          {
+            "var": "r"
+          },
+          {
+            "var": "g"
+          }
+        ],
+        "fun": "validInput"
+      }
+    }
+  ],
+  "returns": [
+    {
+      "name": "result",
+      "type": "int"
+    }
+  ],
+  "spec_funs": [
+    {
+      "body": {
+        "args": [
+          {
+            "args": [
+              {
+                "args": [
+                  {
+                    "int": 0
+                  },
+                  {
+                    "var": "r_v"
+                  }
+                ],
+                "op": "<="
+              },
+              {
+                "args": [
+                  {
+                    "var": "r_v"
+                  },
+                  {
+                    "int": 4500
+                  }
+                ],
+                "op": "<="
+              }
+            ],
+            "op": "and"
+          },
+          {
+            "args": [
+              {
+                "args": [
+                  {
+                    "int": 0
+                  },
+                  {
+                    "var": "g_v"
+                  }
+                ],
+                "op": "<="
+              },
+              {
+                "args": [
+                  {
+                    "var": "g_v"
+                  },
+                  {
+                    "int": 4500
+                  }
+                ],
+                "op": "<="
+              }
+            ],
+            "op": "and"
+          }
+        ],
+        "op": "and"
+      },
+      "decreases": {
+        "int": 0
+      },
+      "name": "validInput",
+      "params": [
+        {
+          "name": "r_v",
+          "type": "int"
+        },
+        {
+          "name": "g_v",
+          "type": "int"
+        }
+      ],
+      "result": "bool"
+    },
+    {
+      "body": {
+        "args": [
+          {
+            "args": [
+              {
+                "int": 2
+              },
+              {
+                "var": "g_v2"
+              }
+            ],
+            "op": "*"
+          },
+          {
+            "var": "r_v2"
+          }
+        ],
+        "op": "-"
+      },
+      "decreases": {
+        "int": 0
+      },
+      "name": "requiredPerformance",
+      "params": [
+        {
+          "name": "r_v2",
+          "type": "int"
+        },
+        {
+          "name": "g_v2",
+          "type": "int"
+        }
+      ],
+      "result": "int"
+    },
+    {
+      "body": {
+        "args": [
+          {
+            "args": [
+              {
+                "var": "r_v3"
+              },
+              {
+                "var": "p"
+              }
+            ],
+            "op": "+"
+          },
+          {
+            "args": [
+              {
+                "int": 2
+              },
+              {
+                "var": "g_v3"
+              }
+            ],
+            "op": "*"
+          }
+        ],
+        "op": "=="
+      },
+      "decreases": {
+        "int": 0
+      },
+      "name": "correctResult",
+      "params": [
+        {
+          "name": "r_v3",
+          "type": "int"
+        },
+        {
+          "name": "g_v3",
+          "type": "int"
+        },
+        {
+          "name": "p",
+          "type": "int"
+        }
+      ],
+      "result": "bool"
+    }
+  ],
+  "t": 1
+}

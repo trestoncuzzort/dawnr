@@ -1,0 +1,1185 @@
+{
+  "body": [
+    {
+      "var": {
+        "init": {
+          "int": 0
+        },
+        "name": "evenIndex",
+        "type": "int"
+      }
+    },
+    {
+      "var": {
+        "init": {
+          "int": 0
+        },
+        "name": "oddIndex",
+        "type": "int"
+      }
+    },
+    {
+      "assign": [
+        "evenIndex",
+        {
+          "args": [
+            {
+              "int": 1
+            }
+          ],
+          "op": "neg"
+        }
+      ]
+    },
+    {
+      "assign": [
+        "oddIndex",
+        {
+          "args": [
+            {
+              "int": 1
+            }
+          ],
+          "op": "neg"
+        }
+      ]
+    },
+    {
+      "var": {
+        "init": {
+          "int": 0
+        },
+        "name": "i_v4",
+        "type": "int"
+      }
+    },
+    {
+      "while": {
+        "body": [
+          {
+            "if": {
+              "cond": {
+                "args": [
+                  {
+                    "args": [
+                      {
+                        "var": "evenIndex"
+                      },
+                      {
+                        "args": [
+                          {
+                            "int": 1
+                          }
+                        ],
+                        "op": "neg"
+                      }
+                    ],
+                    "op": "=="
+                  },
+                  {
+                    "call": {
+                      "args": [
+                        {
+                          "args": [
+                            {
+                              "var": "lst"
+                            },
+                            {
+                              "var": "i_v4"
+                            }
+                          ],
+                          "op": "at"
+                        }
+                      ],
+                      "fun": "isEven"
+                    }
+                  }
+                ],
+                "op": "and"
+              },
+              "else": [],
+              "then": [
+                {
+                  "assign": [
+                    "evenIndex",
+                    {
+                      "var": "i_v4"
+                    }
+                  ]
+                }
+              ]
+            }
+          },
+          {
+            "if": {
+              "cond": {
+                "args": [
+                  {
+                    "args": [
+                      {
+                        "var": "oddIndex"
+                      },
+                      {
+                        "args": [
+                          {
+                            "int": 1
+                          }
+                        ],
+                        "op": "neg"
+                      }
+                    ],
+                    "op": "=="
+                  },
+                  {
+                    "call": {
+                      "args": [
+                        {
+                          "args": [
+                            {
+                              "var": "lst"
+                            },
+                            {
+                              "var": "i_v4"
+                            }
+                          ],
+                          "op": "at"
+                        }
+                      ],
+                      "fun": "isOdd"
+                    }
+                  }
+                ],
+                "op": "and"
+              },
+              "else": [],
+              "then": [
+                {
+                  "assign": [
+                    "oddIndex",
+                    {
+                      "var": "i_v4"
+                    }
+                  ]
+                }
+              ]
+            }
+          },
+          {
+            "if": {
+              "cond": {
+                "args": [
+                  {
+                    "args": [
+                      {
+                        "var": "evenIndex"
+                      },
+                      {
+                        "args": [
+                          {
+                            "int": 1
+                          }
+                        ],
+                        "op": "neg"
+                      }
+                    ],
+                    "op": "!="
+                  },
+                  {
+                    "args": [
+                      {
+                        "var": "oddIndex"
+                      },
+                      {
+                        "args": [
+                          {
+                            "int": 1
+                          }
+                        ],
+                        "op": "neg"
+                      }
+                    ],
+                    "op": "!="
+                  }
+                ],
+                "op": "and"
+              },
+              "else": [],
+              "then": [
+                {
+                  "return": [
+                    "r",
+                    {
+                      "args": [
+                        {
+                          "var": "evenIndex"
+                        },
+                        {
+                          "var": "oddIndex"
+                        }
+                      ],
+                      "op": "pair"
+                    }
+                  ]
+                }
+              ]
+            }
+          },
+          {
+            "assign": [
+              "i_v4",
+              {
+                "args": [
+                  {
+                    "var": "i_v4"
+                  },
+                  {
+                    "int": 1
+                  }
+                ],
+                "op": "+"
+              }
+            ]
+          }
+        ],
+        "cond": {
+          "args": [
+            {
+              "var": "i_v4"
+            },
+            {
+              "args": [
+                {
+                  "var": "lst"
+                }
+              ],
+              "op": "len"
+            }
+          ],
+          "op": "<"
+        },
+        "decreases": {
+          "args": [
+            {
+              "args": [
+                {
+                  "var": "lst"
+                }
+              ],
+              "op": "len"
+            },
+            {
+              "var": "i_v4"
+            }
+          ],
+          "op": "-"
+        },
+        "invariants": [
+          {
+            "args": [
+              {
+                "args": [
+                  {
+                    "int": 0
+                  },
+                  {
+                    "var": "i_v4"
+                  }
+                ],
+                "op": "<="
+              },
+              {
+                "args": [
+                  {
+                    "var": "i_v4"
+                  },
+                  {
+                    "args": [
+                      {
+                        "var": "lst"
+                      }
+                    ],
+                    "op": "len"
+                  }
+                ],
+                "op": "<="
+              }
+            ],
+            "op": "and"
+          },
+          {
+            "args": [
+              {
+                "args": [
+                  {
+                    "var": "evenIndex"
+                  },
+                  {
+                    "args": [
+                      {
+                        "int": 1
+                      }
+                    ],
+                    "op": "neg"
+                  }
+                ],
+                "op": "=="
+              },
+              {
+                "args": [
+                  {
+                    "args": [
+                      {
+                        "args": [
+                          {
+                            "int": 0
+                          },
+                          {
+                            "var": "evenIndex"
+                          }
+                        ],
+                        "op": "<="
+                      },
+                      {
+                        "args": [
+                          {
+                            "var": "evenIndex"
+                          },
+                          {
+                            "var": "i_v4"
+                          }
+                        ],
+                        "op": "<"
+                      }
+                    ],
+                    "op": "and"
+                  },
+                  {
+                    "call": {
+                      "args": [
+                        {
+                          "args": [
+                            {
+                              "var": "lst"
+                            },
+                            {
+                              "var": "evenIndex"
+                            }
+                          ],
+                          "op": "at"
+                        }
+                      ],
+                      "fun": "isEven"
+                    }
+                  }
+                ],
+                "op": "and"
+              }
+            ],
+            "op": "or"
+          },
+          {
+            "args": [
+              {
+                "args": [
+                  {
+                    "var": "oddIndex"
+                  },
+                  {
+                    "args": [
+                      {
+                        "int": 1
+                      }
+                    ],
+                    "op": "neg"
+                  }
+                ],
+                "op": "=="
+              },
+              {
+                "args": [
+                  {
+                    "args": [
+                      {
+                        "args": [
+                          {
+                            "int": 0
+                          },
+                          {
+                            "var": "oddIndex"
+                          }
+                        ],
+                        "op": "<="
+                      },
+                      {
+                        "args": [
+                          {
+                            "var": "oddIndex"
+                          },
+                          {
+                            "var": "i_v4"
+                          }
+                        ],
+                        "op": "<"
+                      }
+                    ],
+                    "op": "and"
+                  },
+                  {
+                    "call": {
+                      "args": [
+                        {
+                          "args": [
+                            {
+                              "var": "lst"
+                            },
+                            {
+                              "var": "oddIndex"
+                            }
+                          ],
+                          "op": "at"
+                        }
+                      ],
+                      "fun": "isOdd"
+                    }
+                  }
+                ],
+                "op": "and"
+              }
+            ],
+            "op": "or"
+          },
+          {
+            "args": [
+              {
+                "args": [
+                  {
+                    "var": "evenIndex"
+                  },
+                  {
+                    "args": [
+                      {
+                        "int": 1
+                      }
+                    ],
+                    "op": "neg"
+                  }
+                ],
+                "op": "=="
+              },
+              {
+                "forall": {
+                  "body": {
+                    "call": {
+                      "args": [
+                        {
+                          "args": [
+                            {
+                              "var": "lst"
+                            },
+                            {
+                              "var": "j"
+                            }
+                          ],
+                          "op": "at"
+                        }
+                      ],
+                      "fun": "isOdd"
+                    }
+                  },
+                  "hi": {
+                    "var": "i_v4"
+                  },
+                  "lo": {
+                    "int": 0
+                  },
+                  "var": "j"
+                }
+              }
+            ],
+            "op": "implies"
+          },
+          {
+            "args": [
+              {
+                "args": [
+                  {
+                    "var": "oddIndex"
+                  },
+                  {
+                    "args": [
+                      {
+                        "int": 1
+                      }
+                    ],
+                    "op": "neg"
+                  }
+                ],
+                "op": "=="
+              },
+              {
+                "forall": {
+                  "body": {
+                    "call": {
+                      "args": [
+                        {
+                          "args": [
+                            {
+                              "var": "lst"
+                            },
+                            {
+                              "var": "j_v"
+                            }
+                          ],
+                          "op": "at"
+                        }
+                      ],
+                      "fun": "isEven"
+                    }
+                  },
+                  "hi": {
+                    "var": "i_v4"
+                  },
+                  "lo": {
+                    "int": 0
+                  },
+                  "var": "j_v"
+                }
+              }
+            ],
+            "op": "implies"
+          },
+          {
+            "args": [
+              {
+                "args": [
+                  {
+                    "var": "evenIndex"
+                  },
+                  {
+                    "args": [
+                      {
+                        "int": 1
+                      }
+                    ],
+                    "op": "neg"
+                  }
+                ],
+                "op": "!="
+              },
+              {
+                "call": {
+                  "args": [
+                    {
+                      "var": "evenIndex"
+                    },
+                    {
+                      "var": "lst"
+                    }
+                  ],
+                  "fun": "isFirstEven"
+                }
+              }
+            ],
+            "op": "implies"
+          },
+          {
+            "args": [
+              {
+                "args": [
+                  {
+                    "var": "oddIndex"
+                  },
+                  {
+                    "args": [
+                      {
+                        "int": 1
+                      }
+                    ],
+                    "op": "neg"
+                  }
+                ],
+                "op": "!="
+              },
+              {
+                "call": {
+                  "args": [
+                    {
+                      "var": "oddIndex"
+                    },
+                    {
+                      "var": "lst"
+                    }
+                  ],
+                  "fun": "isFirstOdd"
+                }
+              }
+            ],
+            "op": "implies"
+          }
+        ]
+      }
+    },
+    {
+      "assign": [
+        "r",
+        {
+          "args": [
+            {
+              "var": "evenIndex"
+            },
+            {
+              "var": "oddIndex"
+            }
+          ],
+          "op": "pair"
+        }
+      ]
+    }
+  ],
+  "ensures": [
+    {
+      "args": [
+        {
+          "int": 0
+        },
+        {
+          "args": [
+            {
+              "var": "r"
+            }
+          ],
+          "op": "fst"
+        }
+      ],
+      "op": "<="
+    },
+    {
+      "args": [
+        {
+          "args": [
+            {
+              "var": "r"
+            }
+          ],
+          "op": "fst"
+        },
+        {
+          "args": [
+            {
+              "var": "lst"
+            }
+          ],
+          "op": "len"
+        }
+      ],
+      "op": "<"
+    },
+    {
+      "args": [
+        {
+          "int": 0
+        },
+        {
+          "args": [
+            {
+              "var": "r"
+            }
+          ],
+          "op": "snd"
+        }
+      ],
+      "op": "<="
+    },
+    {
+      "args": [
+        {
+          "args": [
+            {
+              "var": "r"
+            }
+          ],
+          "op": "snd"
+        },
+        {
+          "args": [
+            {
+              "var": "lst"
+            }
+          ],
+          "op": "len"
+        }
+      ],
+      "op": "<"
+    },
+    {
+      "call": {
+        "args": [
+          {
+            "args": [
+              {
+                "var": "lst"
+              },
+              {
+                "args": [
+                  {
+                    "var": "r"
+                  }
+                ],
+                "op": "fst"
+              }
+            ],
+            "op": "at"
+          }
+        ],
+        "fun": "isEven"
+      }
+    },
+    {
+      "call": {
+        "args": [
+          {
+            "args": [
+              {
+                "var": "r"
+              }
+            ],
+            "op": "fst"
+          },
+          {
+            "var": "lst"
+          }
+        ],
+        "fun": "isFirstEven"
+      }
+    },
+    {
+      "call": {
+        "args": [
+          {
+            "args": [
+              {
+                "var": "lst"
+              },
+              {
+                "args": [
+                  {
+                    "var": "r"
+                  }
+                ],
+                "op": "snd"
+              }
+            ],
+            "op": "at"
+          }
+        ],
+        "fun": "isOdd"
+      }
+    },
+    {
+      "call": {
+        "args": [
+          {
+            "args": [
+              {
+                "var": "r"
+              }
+            ],
+            "op": "snd"
+          },
+          {
+            "var": "lst"
+          }
+        ],
+        "fun": "isFirstOdd"
+      }
+    }
+  ],
+  "gate": "recursion",
+  "name": "vericoding_dd0797__firstEvenOddIndices",
+  "params": [
+    {
+      "name": "lst",
+      "type": "seq"
+    }
+  ],
+  "requires": [
+    {
+      "args": [
+        {
+          "args": [
+            {
+              "var": "lst"
+            }
+          ],
+          "op": "len"
+        },
+        {
+          "int": 2
+        }
+      ],
+      "op": ">="
+    },
+    {
+      "exists": {
+        "body": {
+          "call": {
+            "args": [
+              {
+                "args": [
+                  {
+                    "var": "lst"
+                  },
+                  {
+                    "var": "i_v2"
+                  }
+                ],
+                "op": "at"
+              }
+            ],
+            "fun": "isEven"
+          }
+        },
+        "hi": {
+          "args": [
+            {
+              "var": "lst"
+            }
+          ],
+          "op": "len"
+        },
+        "lo": {
+          "int": 0
+        },
+        "var": "i_v2"
+      }
+    },
+    {
+      "exists": {
+        "body": {
+          "call": {
+            "args": [
+              {
+                "args": [
+                  {
+                    "var": "lst"
+                  },
+                  {
+                    "var": "i_v3"
+                  }
+                ],
+                "op": "at"
+              }
+            ],
+            "fun": "isOdd"
+          }
+        },
+        "hi": {
+          "args": [
+            {
+              "var": "lst"
+            }
+          ],
+          "op": "len"
+        },
+        "lo": {
+          "int": 0
+        },
+        "var": "i_v3"
+      }
+    }
+  ],
+  "returns": [
+    {
+      "name": "r",
+      "type": {
+        "pair": [
+          "int",
+          "int"
+        ]
+      }
+    }
+  ],
+  "spec_funs": [
+    {
+      "body": {
+        "args": [
+          {
+            "args": [
+              {
+                "var": "n"
+              },
+              {
+                "int": 2
+              }
+            ],
+            "op": "mod"
+          },
+          {
+            "int": 0
+          }
+        ],
+        "op": "=="
+      },
+      "decreases": {
+        "int": 0
+      },
+      "name": "isEven",
+      "params": [
+        {
+          "name": "n",
+          "type": "int"
+        }
+      ],
+      "result": "bool"
+    },
+    {
+      "body": {
+        "args": [
+          {
+            "args": [
+              {
+                "var": "n_v"
+              },
+              {
+                "int": 2
+              }
+            ],
+            "op": "mod"
+          },
+          {
+            "int": 0
+          }
+        ],
+        "op": "!="
+      },
+      "decreases": {
+        "int": 0
+      },
+      "name": "isOdd",
+      "params": [
+        {
+          "name": "n_v",
+          "type": "int"
+        }
+      ],
+      "result": "bool"
+    },
+    {
+      "body": {
+        "ite": {
+          "cond": {
+            "args": [
+              {
+                "args": [
+                  {
+                    "args": [
+                      {
+                        "int": 0
+                      },
+                      {
+                        "var": "evenIndex_v"
+                      }
+                    ],
+                    "op": "<="
+                  },
+                  {
+                    "args": [
+                      {
+                        "var": "evenIndex_v"
+                      },
+                      {
+                        "args": [
+                          {
+                            "var": "lst_v"
+                          }
+                        ],
+                        "op": "len"
+                      }
+                    ],
+                    "op": "<"
+                  }
+                ],
+                "op": "and"
+              },
+              {
+                "call": {
+                  "args": [
+                    {
+                      "args": [
+                        {
+                          "var": "lst_v"
+                        },
+                        {
+                          "var": "evenIndex_v"
+                        }
+                      ],
+                      "op": "at"
+                    }
+                  ],
+                  "fun": "isEven"
+                }
+              }
+            ],
+            "op": "and"
+          },
+          "else": {
+            "bool": false
+          },
+          "then": {
+            "forall": {
+              "body": {
+                "call": {
+                  "args": [
+                    {
+                      "args": [
+                        {
+                          "var": "lst_v"
+                        },
+                        {
+                          "var": "i"
+                        }
+                      ],
+                      "op": "at"
+                    }
+                  ],
+                  "fun": "isOdd"
+                }
+              },
+              "hi": {
+                "var": "evenIndex_v"
+              },
+              "lo": {
+                "int": 0
+              },
+              "var": "i"
+            }
+          }
+        }
+      },
+      "decreases": {
+        "int": 0
+      },
+      "name": "isFirstEven",
+      "params": [
+        {
+          "name": "evenIndex_v",
+          "type": "int"
+        },
+        {
+          "name": "lst_v",
+          "type": "seq"
+        }
+      ],
+      "result": "bool"
+    },
+    {
+      "body": {
+        "ite": {
+          "cond": {
+            "args": [
+              {
+                "args": [
+                  {
+                    "args": [
+                      {
+                        "int": 0
+                      },
+                      {
+                        "var": "oddIndex_v"
+                      }
+                    ],
+                    "op": "<="
+                  },
+                  {
+                    "args": [
+                      {
+                        "var": "oddIndex_v"
+                      },
+                      {
+                        "args": [
+                          {
+                            "var": "lst_v2"
+                          }
+                        ],
+                        "op": "len"
+                      }
+                    ],
+                    "op": "<"
+                  }
+                ],
+                "op": "and"
+              },
+              {
+                "call": {
+                  "args": [
+                    {
+                      "args": [
+                        {
+                          "var": "lst_v2"
+                        },
+                        {
+                          "var": "oddIndex_v"
+                        }
+                      ],
+                      "op": "at"
+                    }
+                  ],
+                  "fun": "isOdd"
+                }
+              }
+            ],
+            "op": "and"
+          },
+          "else": {
+            "bool": false
+          },
+          "then": {
+            "forall": {
+              "body": {
+                "call": {
+                  "args": [
+                    {
+                      "args": [
+                        {
+                          "var": "lst_v2"
+                        },
+                        {
+                          "var": "i_v"
+                        }
+                      ],
+                      "op": "at"
+                    }
+                  ],
+                  "fun": "isEven"
+                }
+              },
+              "hi": {
+                "var": "oddIndex_v"
+              },
+              "lo": {
+                "int": 0
+              },
+              "var": "i_v"
+            }
+          }
+        }
+      },
+      "decreases": {
+        "int": 0
+      },
+      "name": "isFirstOdd",
+      "params": [
+        {
+          "name": "oddIndex_v",
+          "type": "int"
+        },
+        {
+          "name": "lst_v2",
+          "type": "seq"
+        }
+      ],
+      "result": "bool"
+    }
+  ],
+  "t": 1
+}

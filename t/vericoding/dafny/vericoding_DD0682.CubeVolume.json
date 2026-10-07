@@ -1,0 +1,84 @@
+{
+  "body": [
+    {
+      "assign": [
+        "volume",
+        {
+          "args": [
+            {
+              "args": [
+                {
+                  "var": "size"
+                },
+                {
+                  "var": "size"
+                }
+              ],
+              "op": "*"
+            },
+            {
+              "var": "size"
+            }
+          ],
+          "op": "*"
+        }
+      ]
+    }
+  ],
+  "ensures": [
+    {
+      "args": [
+        {
+          "var": "volume"
+        },
+        {
+          "args": [
+            {
+              "args": [
+                {
+                  "var": "size"
+                },
+                {
+                  "var": "size"
+                }
+              ],
+              "op": "*"
+            },
+            {
+              "var": "size"
+            }
+          ],
+          "op": "*"
+        }
+      ],
+      "op": "=="
+    }
+  ],
+  "name": "vericoding_dd0682__cubeVolume",
+  "params": [
+    {
+      "name": "size",
+      "type": "int"
+    }
+  ],
+  "requires": [
+    {
+      "args": [
+        {
+          "var": "size"
+        },
+        {
+          "int": 0
+        }
+      ],
+      "op": ">"
+    }
+  ],
+  "returns": [
+    {
+      "name": "volume",
+      "type": "int"
+    }
+  ],
+  "t": 1
+}

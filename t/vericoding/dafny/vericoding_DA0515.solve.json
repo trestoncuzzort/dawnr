@@ -1,0 +1,247 @@
+{
+  "body": [
+    {
+      "if": {
+        "cond": {
+          "args": [
+            {
+              "var": "x"
+            },
+            {
+              "int": 30
+            }
+          ],
+          "op": ">="
+        },
+        "else": [
+          {
+            "assign": [
+              "result",
+              {
+                "args": [
+                  {
+                    "int": 78
+                  },
+                  {
+                    "int": 111
+                  },
+                  {
+                    "int": 10
+                  }
+                ],
+                "op": "seq"
+              }
+            ]
+          }
+        ],
+        "then": [
+          {
+            "assign": [
+              "result",
+              {
+                "args": [
+                  {
+                    "int": 89
+                  },
+                  {
+                    "int": 101
+                  },
+                  {
+                    "int": 115
+                  },
+                  {
+                    "int": 10
+                  }
+                ],
+                "op": "seq"
+              }
+            ]
+          }
+        ]
+      }
+    }
+  ],
+  "ensures": [
+    {
+      "call": {
+        "args": [
+          {
+            "var": "x"
+          },
+          {
+            "var": "result"
+          }
+        ],
+        "fun": "correctOutput"
+      }
+    }
+  ],
+  "gate": "recursion",
+  "name": "vericoding_da0515__solve",
+  "params": [
+    {
+      "name": "x",
+      "type": "int"
+    }
+  ],
+  "requires": [
+    {
+      "call": {
+        "args": [
+          {
+            "var": "x"
+          }
+        ],
+        "fun": "validTemperature"
+      }
+    }
+  ],
+  "returns": [
+    {
+      "name": "result",
+      "type": "seq"
+    }
+  ],
+  "spec_funs": [
+    {
+      "body": {
+        "args": [
+          {
+            "args": [
+              {
+                "args": [
+                  {
+                    "int": 40
+                  }
+                ],
+                "op": "neg"
+              },
+              {
+                "var": "temp"
+              }
+            ],
+            "op": "<="
+          },
+          {
+            "args": [
+              {
+                "var": "temp"
+              },
+              {
+                "int": 40
+              }
+            ],
+            "op": "<="
+          }
+        ],
+        "op": "and"
+      },
+      "decreases": {
+        "int": 0
+      },
+      "name": "validTemperature",
+      "params": [
+        {
+          "name": "temp",
+          "type": "int"
+        }
+      ],
+      "result": "bool"
+    },
+    {
+      "body": {
+        "ite": {
+          "cond": {
+            "args": [
+              {
+                "var": "temp_v"
+              },
+              {
+                "int": 30
+              }
+            ],
+            "op": ">="
+          },
+          "else": {
+            "args": [
+              {
+                "int": 78
+              },
+              {
+                "int": 111
+              },
+              {
+                "int": 10
+              }
+            ],
+            "op": "seq"
+          },
+          "then": {
+            "args": [
+              {
+                "int": 89
+              },
+              {
+                "int": 101
+              },
+              {
+                "int": 115
+              },
+              {
+                "int": 10
+              }
+            ],
+            "op": "seq"
+          }
+        }
+      },
+      "decreases": {
+        "int": 0
+      },
+      "name": "expectedOutput",
+      "params": [
+        {
+          "name": "temp_v",
+          "type": "int"
+        }
+      ],
+      "result": "seq"
+    },
+    {
+      "body": {
+        "args": [
+          {
+            "var": "output"
+          },
+          {
+            "call": {
+              "args": [
+                {
+                  "var": "temp_v2"
+                }
+              ],
+              "fun": "expectedOutput"
+            }
+          }
+        ],
+        "op": "=="
+      },
+      "decreases": {
+        "int": 0
+      },
+      "name": "correctOutput",
+      "params": [
+        {
+          "name": "temp_v2",
+          "type": "int"
+        },
+        {
+          "name": "output",
+          "type": "seq"
+        }
+      ],
+      "result": "bool"
+    }
+  ],
+  "t": 1
+}

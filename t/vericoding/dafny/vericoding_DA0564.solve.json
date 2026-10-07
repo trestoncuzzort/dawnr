@@ -1,0 +1,430 @@
+{
+  "body": [
+    {
+      "if": {
+        "cond": {
+          "args": [
+            {
+              "var": "r"
+            },
+            {
+              "int": 1200
+            }
+          ],
+          "op": "<"
+        },
+        "else": [
+          {
+            "if": {
+              "cond": {
+                "args": [
+                  {
+                    "var": "r"
+                  },
+                  {
+                    "int": 2800
+                  }
+                ],
+                "op": "<"
+              },
+              "else": [
+                {
+                  "assign": [
+                    "result",
+                    {
+                      "args": [
+                        {
+                          "int": 65
+                        },
+                        {
+                          "int": 71
+                        },
+                        {
+                          "int": 67
+                        },
+                        {
+                          "int": 10
+                        }
+                      ],
+                      "op": "seq"
+                    }
+                  ]
+                }
+              ],
+              "then": [
+                {
+                  "assign": [
+                    "result",
+                    {
+                      "args": [
+                        {
+                          "int": 65
+                        },
+                        {
+                          "int": 82
+                        },
+                        {
+                          "int": 67
+                        },
+                        {
+                          "int": 10
+                        }
+                      ],
+                      "op": "seq"
+                    }
+                  ]
+                }
+              ]
+            }
+          }
+        ],
+        "then": [
+          {
+            "assign": [
+              "result",
+              {
+                "args": [
+                  {
+                    "int": 65
+                  },
+                  {
+                    "int": 66
+                  },
+                  {
+                    "int": 67
+                  },
+                  {
+                    "int": 10
+                  }
+                ],
+                "op": "seq"
+              }
+            ]
+          }
+        ]
+      }
+    }
+  ],
+  "ensures": [
+    {
+      "args": [
+        {
+          "var": "result"
+        },
+        {
+          "call": {
+            "args": [
+              {
+                "var": "r"
+              }
+            ],
+            "fun": "contestForRating"
+          }
+        }
+      ],
+      "op": "=="
+    },
+    {
+      "args": [
+        {
+          "args": [
+            {
+              "var": "r"
+            },
+            {
+              "int": 1200
+            }
+          ],
+          "op": "<"
+        },
+        {
+          "args": [
+            {
+              "var": "result"
+            },
+            {
+              "args": [
+                {
+                  "int": 65
+                },
+                {
+                  "int": 66
+                },
+                {
+                  "int": 67
+                },
+                {
+                  "int": 10
+                }
+              ],
+              "op": "seq"
+            }
+          ],
+          "op": "=="
+        }
+      ],
+      "op": "implies"
+    },
+    {
+      "args": [
+        {
+          "args": [
+            {
+              "args": [
+                {
+                  "int": 1200
+                },
+                {
+                  "var": "r"
+                }
+              ],
+              "op": "<="
+            },
+            {
+              "args": [
+                {
+                  "var": "r"
+                },
+                {
+                  "int": 2800
+                }
+              ],
+              "op": "<"
+            }
+          ],
+          "op": "and"
+        },
+        {
+          "args": [
+            {
+              "var": "result"
+            },
+            {
+              "args": [
+                {
+                  "int": 65
+                },
+                {
+                  "int": 82
+                },
+                {
+                  "int": 67
+                },
+                {
+                  "int": 10
+                }
+              ],
+              "op": "seq"
+            }
+          ],
+          "op": "=="
+        }
+      ],
+      "op": "implies"
+    },
+    {
+      "args": [
+        {
+          "args": [
+            {
+              "var": "r"
+            },
+            {
+              "int": 2800
+            }
+          ],
+          "op": ">="
+        },
+        {
+          "args": [
+            {
+              "var": "result"
+            },
+            {
+              "args": [
+                {
+                  "int": 65
+                },
+                {
+                  "int": 71
+                },
+                {
+                  "int": 67
+                },
+                {
+                  "int": 10
+                }
+              ],
+              "op": "seq"
+            }
+          ],
+          "op": "=="
+        }
+      ],
+      "op": "implies"
+    }
+  ],
+  "gate": "recursion",
+  "name": "vericoding_da0564__solve",
+  "params": [
+    {
+      "name": "r",
+      "type": "int"
+    }
+  ],
+  "requires": [
+    {
+      "call": {
+        "args": [
+          {
+            "var": "r"
+          }
+        ],
+        "fun": "validRating"
+      }
+    }
+  ],
+  "returns": [
+    {
+      "name": "result",
+      "type": "seq"
+    }
+  ],
+  "spec_funs": [
+    {
+      "body": {
+        "ite": {
+          "cond": {
+            "args": [
+              {
+                "var": "r_v"
+              },
+              {
+                "int": 1200
+              }
+            ],
+            "op": "<"
+          },
+          "else": {
+            "ite": {
+              "cond": {
+                "args": [
+                  {
+                    "var": "r_v"
+                  },
+                  {
+                    "int": 2800
+                  }
+                ],
+                "op": "<"
+              },
+              "else": {
+                "args": [
+                  {
+                    "int": 65
+                  },
+                  {
+                    "int": 71
+                  },
+                  {
+                    "int": 67
+                  },
+                  {
+                    "int": 10
+                  }
+                ],
+                "op": "seq"
+              },
+              "then": {
+                "args": [
+                  {
+                    "int": 65
+                  },
+                  {
+                    "int": 82
+                  },
+                  {
+                    "int": 67
+                  },
+                  {
+                    "int": 10
+                  }
+                ],
+                "op": "seq"
+              }
+            }
+          },
+          "then": {
+            "args": [
+              {
+                "int": 65
+              },
+              {
+                "int": 66
+              },
+              {
+                "int": 67
+              },
+              {
+                "int": 10
+              }
+            ],
+            "op": "seq"
+          }
+        }
+      },
+      "decreases": {
+        "int": 0
+      },
+      "name": "contestForRating",
+      "params": [
+        {
+          "name": "r_v",
+          "type": "int"
+        }
+      ],
+      "result": "seq"
+    },
+    {
+      "body": {
+        "args": [
+          {
+            "args": [
+              {
+                "int": 0
+              },
+              {
+                "var": "r_v2"
+              }
+            ],
+            "op": "<="
+          },
+          {
+            "args": [
+              {
+                "var": "r_v2"
+              },
+              {
+                "int": 4208
+              }
+            ],
+            "op": "<="
+          }
+        ],
+        "op": "and"
+      },
+      "decreases": {
+        "int": 0
+      },
+      "name": "validRating",
+      "params": [
+        {
+          "name": "r_v2",
+          "type": "int"
+        }
+      ],
+      "result": "bool"
+    }
+  ],
+  "t": 1
+}

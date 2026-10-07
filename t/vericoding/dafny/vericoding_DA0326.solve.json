@@ -1,0 +1,3387 @@
+{
+  "body": [
+    {
+      "var": {
+        "init": {
+          "var": "n"
+        },
+        "name": "left_v5",
+        "type": "int"
+      }
+    },
+    {
+      "var": {
+        "init": {
+          "int": 0
+        },
+        "name": "count",
+        "type": "int"
+      }
+    },
+    {
+      "var": {
+        "init": {
+          "var": "n"
+        },
+        "name": "k_v3",
+        "type": "int"
+      }
+    },
+    {
+      "while": {
+        "body": [
+          {
+            "var": {
+              "init": {
+                "args": [
+                  {
+                    "var": "k_v3"
+                  },
+                  {
+                    "int": 1
+                  }
+                ],
+                "op": "-"
+              },
+              "name": "i_v",
+              "type": "int"
+            }
+          },
+          {
+            "if": {
+              "cond": {
+                "args": [
+                  {
+                    "var": "i_v"
+                  },
+                  {
+                    "var": "left_v5"
+                  }
+                ],
+                "op": "<"
+              },
+              "else": [],
+              "then": [
+                {
+                  "assign": [
+                    "count",
+                    {
+                      "args": [
+                        {
+                          "var": "count"
+                        },
+                        {
+                          "int": 1
+                        }
+                      ],
+                      "op": "+"
+                    }
+                  ]
+                }
+              ]
+            }
+          },
+          {
+            "if": {
+              "cond": {
+                "args": [
+                  {
+                    "args": [
+                      {
+                        "var": "i_v"
+                      },
+                      {
+                        "args": [
+                          {
+                            "var": "a"
+                          },
+                          {
+                            "var": "i_v"
+                          }
+                        ],
+                        "op": "at"
+                      }
+                    ],
+                    "op": "-"
+                  },
+                  {
+                    "var": "left_v5"
+                  }
+                ],
+                "op": "<"
+              },
+              "else": [],
+              "then": [
+                {
+                  "assign": [
+                    "left_v5",
+                    {
+                      "args": [
+                        {
+                          "var": "i_v"
+                        },
+                        {
+                          "args": [
+                            {
+                              "var": "a"
+                            },
+                            {
+                              "var": "i_v"
+                            }
+                          ],
+                          "op": "at"
+                        }
+                      ],
+                      "op": "-"
+                    }
+                  ]
+                }
+              ]
+            }
+          },
+          {
+            "assign": [
+              "k_v3",
+              {
+                "args": [
+                  {
+                    "var": "k_v3"
+                  },
+                  {
+                    "int": 1
+                  }
+                ],
+                "op": "-"
+              }
+            ]
+          }
+        ],
+        "cond": {
+          "args": [
+            {
+              "var": "k_v3"
+            },
+            {
+              "int": 0
+            }
+          ],
+          "op": ">"
+        },
+        "decreases": {
+          "args": [
+            {
+              "var": "k_v3"
+            },
+            {
+              "int": 0
+            }
+          ],
+          "op": "-"
+        },
+        "invariants": [
+          {
+            "args": [
+              {
+                "args": [
+                  {
+                    "int": 0
+                  },
+                  {
+                    "var": "k_v3"
+                  }
+                ],
+                "op": "<="
+              },
+              {
+                "args": [
+                  {
+                    "var": "k_v3"
+                  },
+                  {
+                    "var": "n"
+                  }
+                ],
+                "op": "<="
+              }
+            ],
+            "op": "and"
+          },
+          {
+            "args": [
+              {
+                "var": "left_v5"
+              },
+              {
+                "var": "n"
+              }
+            ],
+            "op": "<="
+          },
+          {
+            "args": [
+              {
+                "var": "count"
+              },
+              {
+                "int": 0
+              }
+            ],
+            "op": ">="
+          },
+          {
+            "args": [
+              {
+                "var": "count"
+              },
+              {
+                "args": [
+                  {
+                    "var": "n"
+                  },
+                  {
+                    "var": "k_v3"
+                  }
+                ],
+                "op": "-"
+              }
+            ],
+            "op": "<="
+          },
+          {
+            "args": [
+              {
+                "args": [
+                  {
+                    "var": "count"
+                  },
+                  {
+                    "call": {
+                      "args": [
+                        {
+                          "var": "n"
+                        },
+                        {
+                          "var": "a"
+                        },
+                        {
+                          "var": "k_v3"
+                        },
+                        {
+                          "var": "left_v5"
+                        }
+                      ],
+                      "fun": "iterativeCount"
+                    }
+                  }
+                ],
+                "op": "+"
+              },
+              {
+                "call": {
+                  "args": [
+                    {
+                      "var": "n"
+                    },
+                    {
+                      "var": "a"
+                    },
+                    {
+                      "var": "n"
+                    },
+                    {
+                      "var": "n"
+                    }
+                  ],
+                  "fun": "iterativeCount"
+                }
+              }
+            ],
+            "op": "=="
+          }
+        ]
+      }
+    },
+    {
+      "lemma": {
+        "args": [
+          {
+            "var": "n"
+          },
+          {
+            "var": "a"
+          },
+          {
+            "var": "n"
+          },
+          {
+            "var": "n"
+          }
+        ],
+        "name": "iterativeCountBound"
+      }
+    },
+    {
+      "lemma": {
+        "args": [
+          {
+            "var": "n"
+          },
+          {
+            "var": "a"
+          },
+          {
+            "var": "n"
+          },
+          {
+            "var": "n"
+          }
+        ],
+        "name": "countSurvivorsCorrespondence"
+      }
+    },
+    {
+      "assign": [
+        "result",
+        {
+          "var": "count"
+        }
+      ]
+    }
+  ],
+  "ensures": [
+    {
+      "args": [
+        {
+          "var": "result"
+        },
+        {
+          "int": 0
+        }
+      ],
+      "op": ">="
+    },
+    {
+      "args": [
+        {
+          "var": "result"
+        },
+        {
+          "var": "n"
+        }
+      ],
+      "op": "<="
+    },
+    {
+      "args": [
+        {
+          "var": "result"
+        },
+        {
+          "call": {
+            "args": [
+              {
+                "var": "n"
+              },
+              {
+                "var": "a"
+              }
+            ],
+            "fun": "countSurvivors"
+          }
+        }
+      ],
+      "op": "=="
+    }
+  ],
+  "gate": "recursion",
+  "lemmas": [
+    {
+      "body": [],
+      "ensures": [
+        {
+          "args": [
+            {
+              "call": {
+                "args": [
+                  {
+                    "var": "n_v5"
+                  },
+                  {
+                    "var": "a_v5"
+                  },
+                  {
+                    "var": "start_v"
+                  },
+                  {
+                    "var": "left_v2"
+                  }
+                ],
+                "fun": "countSurvivorsFrom"
+              }
+            },
+            {
+              "args": [
+                {
+                  "ite": {
+                    "cond": {
+                      "args": [
+                        {
+                          "args": [
+                            {
+                              "args": [
+                                {
+                                  "var": "n_v5"
+                                },
+                                {
+                                  "int": 1
+                                }
+                              ],
+                              "op": "-"
+                            },
+                            {
+                              "var": "start_v"
+                            }
+                          ],
+                          "op": "-"
+                        },
+                        {
+                          "var": "left_v2"
+                        }
+                      ],
+                      "op": "<"
+                    },
+                    "else": {
+                      "int": 0
+                    },
+                    "then": {
+                      "int": 1
+                    }
+                  }
+                },
+                {
+                  "call": {
+                    "args": [
+                      {
+                        "var": "n_v5"
+                      },
+                      {
+                        "var": "a_v5"
+                      },
+                      {
+                        "args": [
+                          {
+                            "var": "start_v"
+                          },
+                          {
+                            "int": 1
+                          }
+                        ],
+                        "op": "+"
+                      },
+                      {
+                        "ite": {
+                          "cond": {
+                            "args": [
+                              {
+                                "args": [
+                                  {
+                                    "args": [
+                                      {
+                                        "args": [
+                                          {
+                                            "var": "n_v5"
+                                          },
+                                          {
+                                            "int": 1
+                                          }
+                                        ],
+                                        "op": "-"
+                                      },
+                                      {
+                                        "var": "start_v"
+                                      }
+                                    ],
+                                    "op": "-"
+                                  },
+                                  {
+                                    "args": [
+                                      {
+                                        "var": "a_v5"
+                                      },
+                                      {
+                                        "args": [
+                                          {
+                                            "args": [
+                                              {
+                                                "var": "n_v5"
+                                              },
+                                              {
+                                                "int": 1
+                                              }
+                                            ],
+                                            "op": "-"
+                                          },
+                                          {
+                                            "var": "start_v"
+                                          }
+                                        ],
+                                        "op": "-"
+                                      }
+                                    ],
+                                    "op": "at"
+                                  }
+                                ],
+                                "op": "-"
+                              },
+                              {
+                                "var": "left_v2"
+                              }
+                            ],
+                            "op": "<"
+                          },
+                          "else": {
+                            "var": "left_v2"
+                          },
+                          "then": {
+                            "args": [
+                              {
+                                "args": [
+                                  {
+                                    "args": [
+                                      {
+                                        "var": "n_v5"
+                                      },
+                                      {
+                                        "int": 1
+                                      }
+                                    ],
+                                    "op": "-"
+                                  },
+                                  {
+                                    "var": "start_v"
+                                  }
+                                ],
+                                "op": "-"
+                              },
+                              {
+                                "args": [
+                                  {
+                                    "var": "a_v5"
+                                  },
+                                  {
+                                    "args": [
+                                      {
+                                        "args": [
+                                          {
+                                            "var": "n_v5"
+                                          },
+                                          {
+                                            "int": 1
+                                          }
+                                        ],
+                                        "op": "-"
+                                      },
+                                      {
+                                        "var": "start_v"
+                                      }
+                                    ],
+                                    "op": "-"
+                                  }
+                                ],
+                                "op": "at"
+                              }
+                            ],
+                            "op": "-"
+                          }
+                        }
+                      }
+                    ],
+                    "fun": "countSurvivorsFrom"
+                  }
+                }
+              ],
+              "op": "+"
+            }
+          ],
+          "op": "=="
+        }
+      ],
+      "name": "countSurvivorsFromUnroll",
+      "params": [
+        {
+          "name": "n_v5",
+          "type": "int"
+        },
+        {
+          "name": "a_v5",
+          "type": "seq"
+        },
+        {
+          "name": "start_v",
+          "type": "int"
+        },
+        {
+          "name": "left_v2",
+          "type": "int"
+        }
+      ],
+      "requires": [
+        {
+          "call": {
+            "args": [
+              {
+                "var": "n_v5"
+              },
+              {
+                "var": "a_v5"
+              }
+            ],
+            "fun": "validInput"
+          }
+        },
+        {
+          "args": [
+            {
+              "int": 0
+            },
+            {
+              "var": "start_v"
+            }
+          ],
+          "op": "<="
+        },
+        {
+          "args": [
+            {
+              "var": "start_v"
+            },
+            {
+              "var": "n_v5"
+            }
+          ],
+          "op": "<"
+        },
+        {
+          "args": [
+            {
+              "var": "left_v2"
+            },
+            {
+              "var": "n_v5"
+            }
+          ],
+          "op": "<="
+        }
+      ]
+    },
+    {
+      "body": [
+        {
+          "if": {
+            "cond": {
+              "args": [
+                {
+                  "var": "k_v"
+                },
+                {
+                  "int": 0
+                }
+              ],
+              "op": "=="
+            },
+            "else": [
+              {
+                "assert": {
+                  "args": [
+                    {
+                      "args": [
+                        {
+                          "args": [
+                            {
+                              "var": "n_v6"
+                            },
+                            {
+                              "int": 1
+                            }
+                          ],
+                          "op": "-"
+                        },
+                        {
+                          "args": [
+                            {
+                              "var": "n_v6"
+                            },
+                            {
+                              "var": "k_v"
+                            }
+                          ],
+                          "op": "-"
+                        }
+                      ],
+                      "op": "-"
+                    },
+                    {
+                      "args": [
+                        {
+                          "var": "k_v"
+                        },
+                        {
+                          "int": 1
+                        }
+                      ],
+                      "op": "-"
+                    }
+                  ],
+                  "op": "=="
+                }
+              },
+              {
+                "lemma": {
+                  "args": [
+                    {
+                      "var": "n_v6"
+                    },
+                    {
+                      "var": "a_v6"
+                    },
+                    {
+                      "args": [
+                        {
+                          "var": "n_v6"
+                        },
+                        {
+                          "var": "k_v"
+                        }
+                      ],
+                      "op": "-"
+                    },
+                    {
+                      "var": "left_v3"
+                    }
+                  ],
+                  "name": "countSurvivorsFromUnroll"
+                }
+              },
+              {
+                "assert": {
+                  "args": [
+                    {
+                      "call": {
+                        "args": [
+                          {
+                            "var": "n_v6"
+                          },
+                          {
+                            "var": "a_v6"
+                          },
+                          {
+                            "args": [
+                              {
+                                "var": "n_v6"
+                              },
+                              {
+                                "var": "k_v"
+                              }
+                            ],
+                            "op": "-"
+                          },
+                          {
+                            "var": "left_v3"
+                          }
+                        ],
+                        "fun": "countSurvivorsFrom"
+                      }
+                    },
+                    {
+                      "args": [
+                        {
+                          "ite": {
+                            "cond": {
+                              "args": [
+                                {
+                                  "args": [
+                                    {
+                                      "args": [
+                                        {
+                                          "var": "n_v6"
+                                        },
+                                        {
+                                          "int": 1
+                                        }
+                                      ],
+                                      "op": "-"
+                                    },
+                                    {
+                                      "args": [
+                                        {
+                                          "var": "n_v6"
+                                        },
+                                        {
+                                          "var": "k_v"
+                                        }
+                                      ],
+                                      "op": "-"
+                                    }
+                                  ],
+                                  "op": "-"
+                                },
+                                {
+                                  "var": "left_v3"
+                                }
+                              ],
+                              "op": "<"
+                            },
+                            "else": {
+                              "int": 0
+                            },
+                            "then": {
+                              "int": 1
+                            }
+                          }
+                        },
+                        {
+                          "call": {
+                            "args": [
+                              {
+                                "var": "n_v6"
+                              },
+                              {
+                                "var": "a_v6"
+                              },
+                              {
+                                "args": [
+                                  {
+                                    "args": [
+                                      {
+                                        "var": "n_v6"
+                                      },
+                                      {
+                                        "var": "k_v"
+                                      }
+                                    ],
+                                    "op": "-"
+                                  },
+                                  {
+                                    "int": 1
+                                  }
+                                ],
+                                "op": "+"
+                              },
+                              {
+                                "ite": {
+                                  "cond": {
+                                    "args": [
+                                      {
+                                        "args": [
+                                          {
+                                            "args": [
+                                              {
+                                                "args": [
+                                                  {
+                                                    "var": "n_v6"
+                                                  },
+                                                  {
+                                                    "int": 1
+                                                  }
+                                                ],
+                                                "op": "-"
+                                              },
+                                              {
+                                                "args": [
+                                                  {
+                                                    "var": "n_v6"
+                                                  },
+                                                  {
+                                                    "var": "k_v"
+                                                  }
+                                                ],
+                                                "op": "-"
+                                              }
+                                            ],
+                                            "op": "-"
+                                          },
+                                          {
+                                            "args": [
+                                              {
+                                                "var": "a_v6"
+                                              },
+                                              {
+                                                "args": [
+                                                  {
+                                                    "args": [
+                                                      {
+                                                        "var": "n_v6"
+                                                      },
+                                                      {
+                                                        "int": 1
+                                                      }
+                                                    ],
+                                                    "op": "-"
+                                                  },
+                                                  {
+                                                    "args": [
+                                                      {
+                                                        "var": "n_v6"
+                                                      },
+                                                      {
+                                                        "var": "k_v"
+                                                      }
+                                                    ],
+                                                    "op": "-"
+                                                  }
+                                                ],
+                                                "op": "-"
+                                              }
+                                            ],
+                                            "op": "at"
+                                          }
+                                        ],
+                                        "op": "-"
+                                      },
+                                      {
+                                        "var": "left_v3"
+                                      }
+                                    ],
+                                    "op": "<"
+                                  },
+                                  "else": {
+                                    "var": "left_v3"
+                                  },
+                                  "then": {
+                                    "args": [
+                                      {
+                                        "args": [
+                                          {
+                                            "args": [
+                                              {
+                                                "var": "n_v6"
+                                              },
+                                              {
+                                                "int": 1
+                                              }
+                                            ],
+                                            "op": "-"
+                                          },
+                                          {
+                                            "args": [
+                                              {
+                                                "var": "n_v6"
+                                              },
+                                              {
+                                                "var": "k_v"
+                                              }
+                                            ],
+                                            "op": "-"
+                                          }
+                                        ],
+                                        "op": "-"
+                                      },
+                                      {
+                                        "args": [
+                                          {
+                                            "var": "a_v6"
+                                          },
+                                          {
+                                            "args": [
+                                              {
+                                                "args": [
+                                                  {
+                                                    "var": "n_v6"
+                                                  },
+                                                  {
+                                                    "int": 1
+                                                  }
+                                                ],
+                                                "op": "-"
+                                              },
+                                              {
+                                                "args": [
+                                                  {
+                                                    "var": "n_v6"
+                                                  },
+                                                  {
+                                                    "var": "k_v"
+                                                  }
+                                                ],
+                                                "op": "-"
+                                              }
+                                            ],
+                                            "op": "-"
+                                          }
+                                        ],
+                                        "op": "at"
+                                      }
+                                    ],
+                                    "op": "-"
+                                  }
+                                }
+                              }
+                            ],
+                            "fun": "countSurvivorsFrom"
+                          }
+                        }
+                      ],
+                      "op": "+"
+                    }
+                  ],
+                  "op": "=="
+                }
+              },
+              {
+                "lemma": {
+                  "args": [
+                    {
+                      "var": "n_v6"
+                    },
+                    {
+                      "var": "a_v6"
+                    },
+                    {
+                      "args": [
+                        {
+                          "var": "k_v"
+                        },
+                        {
+                          "int": 1
+                        }
+                      ],
+                      "op": "-"
+                    },
+                    {
+                      "ite": {
+                        "cond": {
+                          "args": [
+                            {
+                              "args": [
+                                {
+                                  "args": [
+                                    {
+                                      "args": [
+                                        {
+                                          "var": "n_v6"
+                                        },
+                                        {
+                                          "int": 1
+                                        }
+                                      ],
+                                      "op": "-"
+                                    },
+                                    {
+                                      "args": [
+                                        {
+                                          "var": "n_v6"
+                                        },
+                                        {
+                                          "var": "k_v"
+                                        }
+                                      ],
+                                      "op": "-"
+                                    }
+                                  ],
+                                  "op": "-"
+                                },
+                                {
+                                  "args": [
+                                    {
+                                      "var": "a_v6"
+                                    },
+                                    {
+                                      "args": [
+                                        {
+                                          "args": [
+                                            {
+                                              "var": "n_v6"
+                                            },
+                                            {
+                                              "int": 1
+                                            }
+                                          ],
+                                          "op": "-"
+                                        },
+                                        {
+                                          "args": [
+                                            {
+                                              "var": "n_v6"
+                                            },
+                                            {
+                                              "var": "k_v"
+                                            }
+                                          ],
+                                          "op": "-"
+                                        }
+                                      ],
+                                      "op": "-"
+                                    }
+                                  ],
+                                  "op": "at"
+                                }
+                              ],
+                              "op": "-"
+                            },
+                            {
+                              "var": "left_v3"
+                            }
+                          ],
+                          "op": "<"
+                        },
+                        "else": {
+                          "var": "left_v3"
+                        },
+                        "then": {
+                          "args": [
+                            {
+                              "args": [
+                                {
+                                  "args": [
+                                    {
+                                      "var": "n_v6"
+                                    },
+                                    {
+                                      "int": 1
+                                    }
+                                  ],
+                                  "op": "-"
+                                },
+                                {
+                                  "args": [
+                                    {
+                                      "var": "n_v6"
+                                    },
+                                    {
+                                      "var": "k_v"
+                                    }
+                                  ],
+                                  "op": "-"
+                                }
+                              ],
+                              "op": "-"
+                            },
+                            {
+                              "args": [
+                                {
+                                  "var": "a_v6"
+                                },
+                                {
+                                  "args": [
+                                    {
+                                      "args": [
+                                        {
+                                          "var": "n_v6"
+                                        },
+                                        {
+                                          "int": 1
+                                        }
+                                      ],
+                                      "op": "-"
+                                    },
+                                    {
+                                      "args": [
+                                        {
+                                          "var": "n_v6"
+                                        },
+                                        {
+                                          "var": "k_v"
+                                        }
+                                      ],
+                                      "op": "-"
+                                    }
+                                  ],
+                                  "op": "-"
+                                }
+                              ],
+                              "op": "at"
+                            }
+                          ],
+                          "op": "-"
+                        }
+                      }
+                    }
+                  ],
+                  "name": "countSurvivorsCorrespondence"
+                }
+              },
+              {
+                "assert": {
+                  "args": [
+                    {
+                      "call": {
+                        "args": [
+                          {
+                            "var": "n_v6"
+                          },
+                          {
+                            "var": "a_v6"
+                          },
+                          {
+                            "args": [
+                              {
+                                "args": [
+                                  {
+                                    "var": "n_v6"
+                                  },
+                                  {
+                                    "var": "k_v"
+                                  }
+                                ],
+                                "op": "-"
+                              },
+                              {
+                                "int": 1
+                              }
+                            ],
+                            "op": "+"
+                          },
+                          {
+                            "ite": {
+                              "cond": {
+                                "args": [
+                                  {
+                                    "args": [
+                                      {
+                                        "args": [
+                                          {
+                                            "args": [
+                                              {
+                                                "var": "n_v6"
+                                              },
+                                              {
+                                                "int": 1
+                                              }
+                                            ],
+                                            "op": "-"
+                                          },
+                                          {
+                                            "args": [
+                                              {
+                                                "var": "n_v6"
+                                              },
+                                              {
+                                                "var": "k_v"
+                                              }
+                                            ],
+                                            "op": "-"
+                                          }
+                                        ],
+                                        "op": "-"
+                                      },
+                                      {
+                                        "args": [
+                                          {
+                                            "var": "a_v6"
+                                          },
+                                          {
+                                            "args": [
+                                              {
+                                                "args": [
+                                                  {
+                                                    "var": "n_v6"
+                                                  },
+                                                  {
+                                                    "int": 1
+                                                  }
+                                                ],
+                                                "op": "-"
+                                              },
+                                              {
+                                                "args": [
+                                                  {
+                                                    "var": "n_v6"
+                                                  },
+                                                  {
+                                                    "var": "k_v"
+                                                  }
+                                                ],
+                                                "op": "-"
+                                              }
+                                            ],
+                                            "op": "-"
+                                          }
+                                        ],
+                                        "op": "at"
+                                      }
+                                    ],
+                                    "op": "-"
+                                  },
+                                  {
+                                    "var": "left_v3"
+                                  }
+                                ],
+                                "op": "<"
+                              },
+                              "else": {
+                                "var": "left_v3"
+                              },
+                              "then": {
+                                "args": [
+                                  {
+                                    "args": [
+                                      {
+                                        "args": [
+                                          {
+                                            "var": "n_v6"
+                                          },
+                                          {
+                                            "int": 1
+                                          }
+                                        ],
+                                        "op": "-"
+                                      },
+                                      {
+                                        "args": [
+                                          {
+                                            "var": "n_v6"
+                                          },
+                                          {
+                                            "var": "k_v"
+                                          }
+                                        ],
+                                        "op": "-"
+                                      }
+                                    ],
+                                    "op": "-"
+                                  },
+                                  {
+                                    "args": [
+                                      {
+                                        "var": "a_v6"
+                                      },
+                                      {
+                                        "args": [
+                                          {
+                                            "args": [
+                                              {
+                                                "var": "n_v6"
+                                              },
+                                              {
+                                                "int": 1
+                                              }
+                                            ],
+                                            "op": "-"
+                                          },
+                                          {
+                                            "args": [
+                                              {
+                                                "var": "n_v6"
+                                              },
+                                              {
+                                                "var": "k_v"
+                                              }
+                                            ],
+                                            "op": "-"
+                                          }
+                                        ],
+                                        "op": "-"
+                                      }
+                                    ],
+                                    "op": "at"
+                                  }
+                                ],
+                                "op": "-"
+                              }
+                            }
+                          }
+                        ],
+                        "fun": "countSurvivorsFrom"
+                      }
+                    },
+                    {
+                      "call": {
+                        "args": [
+                          {
+                            "var": "n_v6"
+                          },
+                          {
+                            "var": "a_v6"
+                          },
+                          {
+                            "args": [
+                              {
+                                "var": "k_v"
+                              },
+                              {
+                                "int": 1
+                              }
+                            ],
+                            "op": "-"
+                          },
+                          {
+                            "ite": {
+                              "cond": {
+                                "args": [
+                                  {
+                                    "args": [
+                                      {
+                                        "args": [
+                                          {
+                                            "args": [
+                                              {
+                                                "var": "n_v6"
+                                              },
+                                              {
+                                                "int": 1
+                                              }
+                                            ],
+                                            "op": "-"
+                                          },
+                                          {
+                                            "args": [
+                                              {
+                                                "var": "n_v6"
+                                              },
+                                              {
+                                                "var": "k_v"
+                                              }
+                                            ],
+                                            "op": "-"
+                                          }
+                                        ],
+                                        "op": "-"
+                                      },
+                                      {
+                                        "args": [
+                                          {
+                                            "var": "a_v6"
+                                          },
+                                          {
+                                            "args": [
+                                              {
+                                                "args": [
+                                                  {
+                                                    "var": "n_v6"
+                                                  },
+                                                  {
+                                                    "int": 1
+                                                  }
+                                                ],
+                                                "op": "-"
+                                              },
+                                              {
+                                                "args": [
+                                                  {
+                                                    "var": "n_v6"
+                                                  },
+                                                  {
+                                                    "var": "k_v"
+                                                  }
+                                                ],
+                                                "op": "-"
+                                              }
+                                            ],
+                                            "op": "-"
+                                          }
+                                        ],
+                                        "op": "at"
+                                      }
+                                    ],
+                                    "op": "-"
+                                  },
+                                  {
+                                    "var": "left_v3"
+                                  }
+                                ],
+                                "op": "<"
+                              },
+                              "else": {
+                                "var": "left_v3"
+                              },
+                              "then": {
+                                "args": [
+                                  {
+                                    "args": [
+                                      {
+                                        "args": [
+                                          {
+                                            "var": "n_v6"
+                                          },
+                                          {
+                                            "int": 1
+                                          }
+                                        ],
+                                        "op": "-"
+                                      },
+                                      {
+                                        "args": [
+                                          {
+                                            "var": "n_v6"
+                                          },
+                                          {
+                                            "var": "k_v"
+                                          }
+                                        ],
+                                        "op": "-"
+                                      }
+                                    ],
+                                    "op": "-"
+                                  },
+                                  {
+                                    "args": [
+                                      {
+                                        "var": "a_v6"
+                                      },
+                                      {
+                                        "args": [
+                                          {
+                                            "args": [
+                                              {
+                                                "var": "n_v6"
+                                              },
+                                              {
+                                                "int": 1
+                                              }
+                                            ],
+                                            "op": "-"
+                                          },
+                                          {
+                                            "args": [
+                                              {
+                                                "var": "n_v6"
+                                              },
+                                              {
+                                                "var": "k_v"
+                                              }
+                                            ],
+                                            "op": "-"
+                                          }
+                                        ],
+                                        "op": "-"
+                                      }
+                                    ],
+                                    "op": "at"
+                                  }
+                                ],
+                                "op": "-"
+                              }
+                            }
+                          }
+                        ],
+                        "fun": "iterativeCount"
+                      }
+                    }
+                  ],
+                  "op": "=="
+                }
+              },
+              {
+                "assert": {
+                  "args": [
+                    {
+                      "call": {
+                        "args": [
+                          {
+                            "var": "n_v6"
+                          },
+                          {
+                            "var": "a_v6"
+                          },
+                          {
+                            "var": "k_v"
+                          },
+                          {
+                            "var": "left_v3"
+                          }
+                        ],
+                        "fun": "iterativeCount"
+                      }
+                    },
+                    {
+                      "args": [
+                        {
+                          "ite": {
+                            "cond": {
+                              "args": [
+                                {
+                                  "args": [
+                                    {
+                                      "args": [
+                                        {
+                                          "var": "n_v6"
+                                        },
+                                        {
+                                          "int": 1
+                                        }
+                                      ],
+                                      "op": "-"
+                                    },
+                                    {
+                                      "args": [
+                                        {
+                                          "var": "n_v6"
+                                        },
+                                        {
+                                          "var": "k_v"
+                                        }
+                                      ],
+                                      "op": "-"
+                                    }
+                                  ],
+                                  "op": "-"
+                                },
+                                {
+                                  "var": "left_v3"
+                                }
+                              ],
+                              "op": "<"
+                            },
+                            "else": {
+                              "int": 0
+                            },
+                            "then": {
+                              "int": 1
+                            }
+                          }
+                        },
+                        {
+                          "call": {
+                            "args": [
+                              {
+                                "var": "n_v6"
+                              },
+                              {
+                                "var": "a_v6"
+                              },
+                              {
+                                "args": [
+                                  {
+                                    "var": "k_v"
+                                  },
+                                  {
+                                    "int": 1
+                                  }
+                                ],
+                                "op": "-"
+                              },
+                              {
+                                "ite": {
+                                  "cond": {
+                                    "args": [
+                                      {
+                                        "args": [
+                                          {
+                                            "args": [
+                                              {
+                                                "args": [
+                                                  {
+                                                    "var": "n_v6"
+                                                  },
+                                                  {
+                                                    "int": 1
+                                                  }
+                                                ],
+                                                "op": "-"
+                                              },
+                                              {
+                                                "args": [
+                                                  {
+                                                    "var": "n_v6"
+                                                  },
+                                                  {
+                                                    "var": "k_v"
+                                                  }
+                                                ],
+                                                "op": "-"
+                                              }
+                                            ],
+                                            "op": "-"
+                                          },
+                                          {
+                                            "args": [
+                                              {
+                                                "var": "a_v6"
+                                              },
+                                              {
+                                                "args": [
+                                                  {
+                                                    "args": [
+                                                      {
+                                                        "var": "n_v6"
+                                                      },
+                                                      {
+                                                        "int": 1
+                                                      }
+                                                    ],
+                                                    "op": "-"
+                                                  },
+                                                  {
+                                                    "args": [
+                                                      {
+                                                        "var": "n_v6"
+                                                      },
+                                                      {
+                                                        "var": "k_v"
+                                                      }
+                                                    ],
+                                                    "op": "-"
+                                                  }
+                                                ],
+                                                "op": "-"
+                                              }
+                                            ],
+                                            "op": "at"
+                                          }
+                                        ],
+                                        "op": "-"
+                                      },
+                                      {
+                                        "var": "left_v3"
+                                      }
+                                    ],
+                                    "op": "<"
+                                  },
+                                  "else": {
+                                    "var": "left_v3"
+                                  },
+                                  "then": {
+                                    "args": [
+                                      {
+                                        "args": [
+                                          {
+                                            "args": [
+                                              {
+                                                "var": "n_v6"
+                                              },
+                                              {
+                                                "int": 1
+                                              }
+                                            ],
+                                            "op": "-"
+                                          },
+                                          {
+                                            "args": [
+                                              {
+                                                "var": "n_v6"
+                                              },
+                                              {
+                                                "var": "k_v"
+                                              }
+                                            ],
+                                            "op": "-"
+                                          }
+                                        ],
+                                        "op": "-"
+                                      },
+                                      {
+                                        "args": [
+                                          {
+                                            "var": "a_v6"
+                                          },
+                                          {
+                                            "args": [
+                                              {
+                                                "args": [
+                                                  {
+                                                    "var": "n_v6"
+                                                  },
+                                                  {
+                                                    "int": 1
+                                                  }
+                                                ],
+                                                "op": "-"
+                                              },
+                                              {
+                                                "args": [
+                                                  {
+                                                    "var": "n_v6"
+                                                  },
+                                                  {
+                                                    "var": "k_v"
+                                                  }
+                                                ],
+                                                "op": "-"
+                                              }
+                                            ],
+                                            "op": "-"
+                                          }
+                                        ],
+                                        "op": "at"
+                                      }
+                                    ],
+                                    "op": "-"
+                                  }
+                                }
+                              }
+                            ],
+                            "fun": "iterativeCount"
+                          }
+                        }
+                      ],
+                      "op": "+"
+                    }
+                  ],
+                  "op": "=="
+                }
+              }
+            ],
+            "then": [
+              {
+                "assert": {
+                  "args": [
+                    {
+                      "call": {
+                        "args": [
+                          {
+                            "var": "n_v6"
+                          },
+                          {
+                            "var": "a_v6"
+                          },
+                          {
+                            "var": "n_v6"
+                          },
+                          {
+                            "var": "left_v3"
+                          }
+                        ],
+                        "fun": "countSurvivorsFrom"
+                      }
+                    },
+                    {
+                      "int": 0
+                    }
+                  ],
+                  "op": "=="
+                }
+              },
+              {
+                "assert": {
+                  "args": [
+                    {
+                      "call": {
+                        "args": [
+                          {
+                            "var": "n_v6"
+                          },
+                          {
+                            "var": "a_v6"
+                          },
+                          {
+                            "int": 0
+                          },
+                          {
+                            "var": "left_v3"
+                          }
+                        ],
+                        "fun": "iterativeCount"
+                      }
+                    },
+                    {
+                      "int": 0
+                    }
+                  ],
+                  "op": "=="
+                }
+              }
+            ]
+          }
+        }
+      ],
+      "decreases": {
+        "var": "k_v"
+      },
+      "ensures": [
+        {
+          "args": [
+            {
+              "call": {
+                "args": [
+                  {
+                    "var": "n_v6"
+                  },
+                  {
+                    "var": "a_v6"
+                  },
+                  {
+                    "args": [
+                      {
+                        "var": "n_v6"
+                      },
+                      {
+                        "var": "k_v"
+                      }
+                    ],
+                    "op": "-"
+                  },
+                  {
+                    "var": "left_v3"
+                  }
+                ],
+                "fun": "countSurvivorsFrom"
+              }
+            },
+            {
+              "call": {
+                "args": [
+                  {
+                    "var": "n_v6"
+                  },
+                  {
+                    "var": "a_v6"
+                  },
+                  {
+                    "var": "k_v"
+                  },
+                  {
+                    "var": "left_v3"
+                  }
+                ],
+                "fun": "iterativeCount"
+              }
+            }
+          ],
+          "op": "=="
+        }
+      ],
+      "name": "countSurvivorsCorrespondence",
+      "params": [
+        {
+          "name": "n_v6",
+          "type": "int"
+        },
+        {
+          "name": "a_v6",
+          "type": "seq"
+        },
+        {
+          "name": "k_v",
+          "type": "int"
+        },
+        {
+          "name": "left_v3",
+          "type": "int"
+        }
+      ],
+      "requires": [
+        {
+          "call": {
+            "args": [
+              {
+                "var": "n_v6"
+              },
+              {
+                "var": "a_v6"
+              }
+            ],
+            "fun": "validInput"
+          }
+        },
+        {
+          "args": [
+            {
+              "int": 0
+            },
+            {
+              "var": "k_v"
+            }
+          ],
+          "op": "<="
+        },
+        {
+          "args": [
+            {
+              "var": "k_v"
+            },
+            {
+              "var": "n_v6"
+            }
+          ],
+          "op": "<="
+        },
+        {
+          "args": [
+            {
+              "var": "left_v3"
+            },
+            {
+              "var": "n_v6"
+            }
+          ],
+          "op": "<="
+        }
+      ]
+    },
+    {
+      "body": [
+        {
+          "if": {
+            "cond": {
+              "args": [
+                {
+                  "var": "k_v2"
+                },
+                {
+                  "int": 0
+                }
+              ],
+              "op": "=="
+            },
+            "else": [
+              {
+                "lemma": {
+                  "args": [
+                    {
+                      "var": "n_v7"
+                    },
+                    {
+                      "var": "a_v7"
+                    },
+                    {
+                      "args": [
+                        {
+                          "var": "k_v2"
+                        },
+                        {
+                          "int": 1
+                        }
+                      ],
+                      "op": "-"
+                    },
+                    {
+                      "ite": {
+                        "cond": {
+                          "args": [
+                            {
+                              "args": [
+                                {
+                                  "args": [
+                                    {
+                                      "var": "k_v2"
+                                    },
+                                    {
+                                      "int": 1
+                                    }
+                                  ],
+                                  "op": "-"
+                                },
+                                {
+                                  "args": [
+                                    {
+                                      "var": "a_v7"
+                                    },
+                                    {
+                                      "args": [
+                                        {
+                                          "var": "k_v2"
+                                        },
+                                        {
+                                          "int": 1
+                                        }
+                                      ],
+                                      "op": "-"
+                                    }
+                                  ],
+                                  "op": "at"
+                                }
+                              ],
+                              "op": "-"
+                            },
+                            {
+                              "var": "left_v4"
+                            }
+                          ],
+                          "op": "<"
+                        },
+                        "else": {
+                          "var": "left_v4"
+                        },
+                        "then": {
+                          "args": [
+                            {
+                              "args": [
+                                {
+                                  "var": "k_v2"
+                                },
+                                {
+                                  "int": 1
+                                }
+                              ],
+                              "op": "-"
+                            },
+                            {
+                              "args": [
+                                {
+                                  "var": "a_v7"
+                                },
+                                {
+                                  "args": [
+                                    {
+                                      "var": "k_v2"
+                                    },
+                                    {
+                                      "int": 1
+                                    }
+                                  ],
+                                  "op": "-"
+                                }
+                              ],
+                              "op": "at"
+                            }
+                          ],
+                          "op": "-"
+                        }
+                      }
+                    }
+                  ],
+                  "name": "iterativeCountBound"
+                }
+              },
+              {
+                "assert": {
+                  "args": [
+                    {
+                      "call": {
+                        "args": [
+                          {
+                            "var": "n_v7"
+                          },
+                          {
+                            "var": "a_v7"
+                          },
+                          {
+                            "args": [
+                              {
+                                "var": "k_v2"
+                              },
+                              {
+                                "int": 1
+                              }
+                            ],
+                            "op": "-"
+                          },
+                          {
+                            "ite": {
+                              "cond": {
+                                "args": [
+                                  {
+                                    "args": [
+                                      {
+                                        "args": [
+                                          {
+                                            "var": "k_v2"
+                                          },
+                                          {
+                                            "int": 1
+                                          }
+                                        ],
+                                        "op": "-"
+                                      },
+                                      {
+                                        "args": [
+                                          {
+                                            "var": "a_v7"
+                                          },
+                                          {
+                                            "args": [
+                                              {
+                                                "var": "k_v2"
+                                              },
+                                              {
+                                                "int": 1
+                                              }
+                                            ],
+                                            "op": "-"
+                                          }
+                                        ],
+                                        "op": "at"
+                                      }
+                                    ],
+                                    "op": "-"
+                                  },
+                                  {
+                                    "var": "left_v4"
+                                  }
+                                ],
+                                "op": "<"
+                              },
+                              "else": {
+                                "var": "left_v4"
+                              },
+                              "then": {
+                                "args": [
+                                  {
+                                    "args": [
+                                      {
+                                        "var": "k_v2"
+                                      },
+                                      {
+                                        "int": 1
+                                      }
+                                    ],
+                                    "op": "-"
+                                  },
+                                  {
+                                    "args": [
+                                      {
+                                        "var": "a_v7"
+                                      },
+                                      {
+                                        "args": [
+                                          {
+                                            "var": "k_v2"
+                                          },
+                                          {
+                                            "int": 1
+                                          }
+                                        ],
+                                        "op": "-"
+                                      }
+                                    ],
+                                    "op": "at"
+                                  }
+                                ],
+                                "op": "-"
+                              }
+                            }
+                          }
+                        ],
+                        "fun": "iterativeCount"
+                      }
+                    },
+                    {
+                      "args": [
+                        {
+                          "var": "k_v2"
+                        },
+                        {
+                          "int": 1
+                        }
+                      ],
+                      "op": "-"
+                    }
+                  ],
+                  "op": "<="
+                }
+              },
+              {
+                "assert": {
+                  "args": [
+                    {
+                      "ite": {
+                        "cond": {
+                          "args": [
+                            {
+                              "args": [
+                                {
+                                  "var": "k_v2"
+                                },
+                                {
+                                  "int": 1
+                                }
+                              ],
+                              "op": "-"
+                            },
+                            {
+                              "var": "left_v4"
+                            }
+                          ],
+                          "op": "<"
+                        },
+                        "else": {
+                          "int": 0
+                        },
+                        "then": {
+                          "int": 1
+                        }
+                      }
+                    },
+                    {
+                      "int": 1
+                    }
+                  ],
+                  "op": "<="
+                }
+              },
+              {
+                "assert": {
+                  "args": [
+                    {
+                      "call": {
+                        "args": [
+                          {
+                            "var": "n_v7"
+                          },
+                          {
+                            "var": "a_v7"
+                          },
+                          {
+                            "var": "k_v2"
+                          },
+                          {
+                            "var": "left_v4"
+                          }
+                        ],
+                        "fun": "iterativeCount"
+                      }
+                    },
+                    {
+                      "args": [
+                        {
+                          "ite": {
+                            "cond": {
+                              "args": [
+                                {
+                                  "args": [
+                                    {
+                                      "var": "k_v2"
+                                    },
+                                    {
+                                      "int": 1
+                                    }
+                                  ],
+                                  "op": "-"
+                                },
+                                {
+                                  "var": "left_v4"
+                                }
+                              ],
+                              "op": "<"
+                            },
+                            "else": {
+                              "int": 0
+                            },
+                            "then": {
+                              "int": 1
+                            }
+                          }
+                        },
+                        {
+                          "call": {
+                            "args": [
+                              {
+                                "var": "n_v7"
+                              },
+                              {
+                                "var": "a_v7"
+                              },
+                              {
+                                "args": [
+                                  {
+                                    "var": "k_v2"
+                                  },
+                                  {
+                                    "int": 1
+                                  }
+                                ],
+                                "op": "-"
+                              },
+                              {
+                                "ite": {
+                                  "cond": {
+                                    "args": [
+                                      {
+                                        "args": [
+                                          {
+                                            "args": [
+                                              {
+                                                "var": "k_v2"
+                                              },
+                                              {
+                                                "int": 1
+                                              }
+                                            ],
+                                            "op": "-"
+                                          },
+                                          {
+                                            "args": [
+                                              {
+                                                "var": "a_v7"
+                                              },
+                                              {
+                                                "args": [
+                                                  {
+                                                    "var": "k_v2"
+                                                  },
+                                                  {
+                                                    "int": 1
+                                                  }
+                                                ],
+                                                "op": "-"
+                                              }
+                                            ],
+                                            "op": "at"
+                                          }
+                                        ],
+                                        "op": "-"
+                                      },
+                                      {
+                                        "var": "left_v4"
+                                      }
+                                    ],
+                                    "op": "<"
+                                  },
+                                  "else": {
+                                    "var": "left_v4"
+                                  },
+                                  "then": {
+                                    "args": [
+                                      {
+                                        "args": [
+                                          {
+                                            "var": "k_v2"
+                                          },
+                                          {
+                                            "int": 1
+                                          }
+                                        ],
+                                        "op": "-"
+                                      },
+                                      {
+                                        "args": [
+                                          {
+                                            "var": "a_v7"
+                                          },
+                                          {
+                                            "args": [
+                                              {
+                                                "var": "k_v2"
+                                              },
+                                              {
+                                                "int": 1
+                                              }
+                                            ],
+                                            "op": "-"
+                                          }
+                                        ],
+                                        "op": "at"
+                                      }
+                                    ],
+                                    "op": "-"
+                                  }
+                                }
+                              }
+                            ],
+                            "fun": "iterativeCount"
+                          }
+                        }
+                      ],
+                      "op": "+"
+                    }
+                  ],
+                  "op": "=="
+                }
+              },
+              {
+                "assert": {
+                  "args": [
+                    {
+                      "call": {
+                        "args": [
+                          {
+                            "var": "n_v7"
+                          },
+                          {
+                            "var": "a_v7"
+                          },
+                          {
+                            "var": "k_v2"
+                          },
+                          {
+                            "var": "left_v4"
+                          }
+                        ],
+                        "fun": "iterativeCount"
+                      }
+                    },
+                    {
+                      "args": [
+                        {
+                          "args": [
+                            {
+                              "int": 1
+                            },
+                            {
+                              "var": "k_v2"
+                            }
+                          ],
+                          "op": "+"
+                        },
+                        {
+                          "int": 1
+                        }
+                      ],
+                      "op": "-"
+                    }
+                  ],
+                  "op": "<="
+                }
+              },
+              {
+                "assert": {
+                  "args": [
+                    {
+                      "call": {
+                        "args": [
+                          {
+                            "var": "n_v7"
+                          },
+                          {
+                            "var": "a_v7"
+                          },
+                          {
+                            "var": "k_v2"
+                          },
+                          {
+                            "var": "left_v4"
+                          }
+                        ],
+                        "fun": "iterativeCount"
+                      }
+                    },
+                    {
+                      "var": "k_v2"
+                    }
+                  ],
+                  "op": "<="
+                }
+              }
+            ],
+            "then": [
+              {
+                "assert": {
+                  "args": [
+                    {
+                      "call": {
+                        "args": [
+                          {
+                            "var": "n_v7"
+                          },
+                          {
+                            "var": "a_v7"
+                          },
+                          {
+                            "var": "k_v2"
+                          },
+                          {
+                            "var": "left_v4"
+                          }
+                        ],
+                        "fun": "iterativeCount"
+                      }
+                    },
+                    {
+                      "int": 0
+                    }
+                  ],
+                  "op": "=="
+                }
+              }
+            ]
+          }
+        }
+      ],
+      "decreases": {
+        "var": "k_v2"
+      },
+      "ensures": [
+        {
+          "args": [
+            {
+              "call": {
+                "args": [
+                  {
+                    "var": "n_v7"
+                  },
+                  {
+                    "var": "a_v7"
+                  },
+                  {
+                    "var": "k_v2"
+                  },
+                  {
+                    "var": "left_v4"
+                  }
+                ],
+                "fun": "iterativeCount"
+              }
+            },
+            {
+              "var": "k_v2"
+            }
+          ],
+          "op": "<="
+        }
+      ],
+      "name": "iterativeCountBound",
+      "params": [
+        {
+          "name": "n_v7",
+          "type": "int"
+        },
+        {
+          "name": "a_v7",
+          "type": "seq"
+        },
+        {
+          "name": "k_v2",
+          "type": "int"
+        },
+        {
+          "name": "left_v4",
+          "type": "int"
+        }
+      ],
+      "requires": [
+        {
+          "call": {
+            "args": [
+              {
+                "var": "n_v7"
+              },
+              {
+                "var": "a_v7"
+              }
+            ],
+            "fun": "validInput"
+          }
+        },
+        {
+          "args": [
+            {
+              "int": 0
+            },
+            {
+              "var": "k_v2"
+            }
+          ],
+          "op": "<="
+        },
+        {
+          "args": [
+            {
+              "var": "k_v2"
+            },
+            {
+              "var": "n_v7"
+            }
+          ],
+          "op": "<="
+        },
+        {
+          "args": [
+            {
+              "var": "left_v4"
+            },
+            {
+              "var": "n_v7"
+            }
+          ],
+          "op": "<="
+        }
+      ]
+    }
+  ],
+  "name": "vericoding_da0326__solve",
+  "params": [
+    {
+      "name": "n",
+      "type": "int"
+    },
+    {
+      "name": "a",
+      "type": "seq"
+    }
+  ],
+  "requires": [
+    {
+      "call": {
+        "args": [
+          {
+            "var": "n"
+          },
+          {
+            "var": "a"
+          }
+        ],
+        "fun": "validInput"
+      }
+    }
+  ],
+  "returns": [
+    {
+      "name": "result",
+      "type": "int"
+    }
+  ],
+  "spec_funs": [
+    {
+      "body": {
+        "args": [
+          {
+            "args": [
+              {
+                "var": "n_v"
+              },
+              {
+                "int": 1
+              }
+            ],
+            "op": ">="
+          },
+          {
+            "args": [
+              {
+                "args": [
+                  {
+                    "var": "a_v"
+                  }
+                ],
+                "op": "len"
+              },
+              {
+                "var": "n_v"
+              }
+            ],
+            "op": "=="
+          },
+          {
+            "forall": {
+              "body": {
+                "args": [
+                  {
+                    "args": [
+                      {
+                        "var": "a_v"
+                      },
+                      {
+                        "var": "i"
+                      }
+                    ],
+                    "op": "at"
+                  },
+                  {
+                    "int": 0
+                  }
+                ],
+                "op": ">="
+              },
+              "hi": {
+                "var": "n_v"
+              },
+              "lo": {
+                "int": 0
+              },
+              "var": "i"
+            }
+          }
+        ],
+        "op": "and"
+      },
+      "decreases": {
+        "int": 0
+      },
+      "name": "validInput",
+      "params": [
+        {
+          "name": "n_v",
+          "type": "int"
+        },
+        {
+          "name": "a_v",
+          "type": "seq"
+        }
+      ],
+      "result": "bool"
+    },
+    {
+      "body": {
+        "ite": {
+          "cond": {
+            "args": [
+              {
+                "call": {
+                  "args": [
+                    {
+                      "var": "n_v2"
+                    },
+                    {
+                      "var": "a_v2"
+                    }
+                  ],
+                  "fun": "validInput"
+                }
+              },
+              {
+                "args": [
+                  {
+                    "args": [
+                      {
+                        "int": 0
+                      },
+                      {
+                        "var": "k"
+                      }
+                    ],
+                    "op": "<="
+                  },
+                  {
+                    "args": [
+                      {
+                        "var": "k"
+                      },
+                      {
+                        "var": "n_v2"
+                      }
+                    ],
+                    "op": "<="
+                  }
+                ],
+                "op": "and"
+              },
+              {
+                "args": [
+                  {
+                    "var": "left"
+                  },
+                  {
+                    "var": "n_v2"
+                  }
+                ],
+                "op": "<="
+              }
+            ],
+            "op": "and"
+          },
+          "else": {
+            "int": 0
+          },
+          "then": {
+            "ite": {
+              "cond": {
+                "args": [
+                  {
+                    "var": "k"
+                  },
+                  {
+                    "int": 0
+                  }
+                ],
+                "op": "=="
+              },
+              "else": {
+                "args": [
+                  {
+                    "ite": {
+                      "cond": {
+                        "args": [
+                          {
+                            "args": [
+                              {
+                                "var": "k"
+                              },
+                              {
+                                "int": 1
+                              }
+                            ],
+                            "op": "-"
+                          },
+                          {
+                            "var": "left"
+                          }
+                        ],
+                        "op": "<"
+                      },
+                      "else": {
+                        "int": 0
+                      },
+                      "then": {
+                        "int": 1
+                      }
+                    }
+                  },
+                  {
+                    "call": {
+                      "args": [
+                        {
+                          "var": "n_v2"
+                        },
+                        {
+                          "var": "a_v2"
+                        },
+                        {
+                          "args": [
+                            {
+                              "var": "k"
+                            },
+                            {
+                              "int": 1
+                            }
+                          ],
+                          "op": "-"
+                        },
+                        {
+                          "ite": {
+                            "cond": {
+                              "args": [
+                                {
+                                  "args": [
+                                    {
+                                      "args": [
+                                        {
+                                          "var": "k"
+                                        },
+                                        {
+                                          "int": 1
+                                        }
+                                      ],
+                                      "op": "-"
+                                    },
+                                    {
+                                      "args": [
+                                        {
+                                          "var": "a_v2"
+                                        },
+                                        {
+                                          "args": [
+                                            {
+                                              "var": "k"
+                                            },
+                                            {
+                                              "int": 1
+                                            }
+                                          ],
+                                          "op": "-"
+                                        }
+                                      ],
+                                      "op": "at"
+                                    }
+                                  ],
+                                  "op": "-"
+                                },
+                                {
+                                  "var": "left"
+                                }
+                              ],
+                              "op": "<"
+                            },
+                            "else": {
+                              "var": "left"
+                            },
+                            "then": {
+                              "args": [
+                                {
+                                  "args": [
+                                    {
+                                      "var": "k"
+                                    },
+                                    {
+                                      "int": 1
+                                    }
+                                  ],
+                                  "op": "-"
+                                },
+                                {
+                                  "args": [
+                                    {
+                                      "var": "a_v2"
+                                    },
+                                    {
+                                      "args": [
+                                        {
+                                          "var": "k"
+                                        },
+                                        {
+                                          "int": 1
+                                        }
+                                      ],
+                                      "op": "-"
+                                    }
+                                  ],
+                                  "op": "at"
+                                }
+                              ],
+                              "op": "-"
+                            }
+                          }
+                        }
+                      ],
+                      "fun": "iterativeCount"
+                    }
+                  }
+                ],
+                "op": "+"
+              },
+              "then": {
+                "int": 0
+              }
+            }
+          }
+        }
+      },
+      "decreases": {
+        "var": "k"
+      },
+      "name": "iterativeCount",
+      "params": [
+        {
+          "name": "n_v2",
+          "type": "int"
+        },
+        {
+          "name": "a_v2",
+          "type": "seq"
+        },
+        {
+          "name": "k",
+          "type": "int"
+        },
+        {
+          "name": "left",
+          "type": "int"
+        }
+      ],
+      "result": "int"
+    },
+    {
+      "body": {
+        "ite": {
+          "cond": {
+            "args": [
+              {
+                "call": {
+                  "args": [
+                    {
+                      "var": "n_v3"
+                    },
+                    {
+                      "var": "a_v3"
+                    }
+                  ],
+                  "fun": "validInput"
+                }
+              },
+              {
+                "args": [
+                  {
+                    "args": [
+                      {
+                        "int": 0
+                      },
+                      {
+                        "var": "start"
+                      }
+                    ],
+                    "op": "<="
+                  },
+                  {
+                    "args": [
+                      {
+                        "var": "start"
+                      },
+                      {
+                        "var": "n_v3"
+                      }
+                    ],
+                    "op": "<="
+                  }
+                ],
+                "op": "and"
+              },
+              {
+                "args": [
+                  {
+                    "var": "left_v"
+                  },
+                  {
+                    "var": "n_v3"
+                  }
+                ],
+                "op": "<="
+              }
+            ],
+            "op": "and"
+          },
+          "else": {
+            "int": 0
+          },
+          "then": {
+            "ite": {
+              "cond": {
+                "args": [
+                  {
+                    "var": "start"
+                  },
+                  {
+                    "var": "n_v3"
+                  }
+                ],
+                "op": ">="
+              },
+              "else": {
+                "args": [
+                  {
+                    "ite": {
+                      "cond": {
+                        "args": [
+                          {
+                            "args": [
+                              {
+                                "args": [
+                                  {
+                                    "var": "n_v3"
+                                  },
+                                  {
+                                    "int": 1
+                                  }
+                                ],
+                                "op": "-"
+                              },
+                              {
+                                "var": "start"
+                              }
+                            ],
+                            "op": "-"
+                          },
+                          {
+                            "var": "left_v"
+                          }
+                        ],
+                        "op": "<"
+                      },
+                      "else": {
+                        "int": 0
+                      },
+                      "then": {
+                        "int": 1
+                      }
+                    }
+                  },
+                  {
+                    "call": {
+                      "args": [
+                        {
+                          "var": "n_v3"
+                        },
+                        {
+                          "var": "a_v3"
+                        },
+                        {
+                          "args": [
+                            {
+                              "var": "start"
+                            },
+                            {
+                              "int": 1
+                            }
+                          ],
+                          "op": "+"
+                        },
+                        {
+                          "ite": {
+                            "cond": {
+                              "args": [
+                                {
+                                  "args": [
+                                    {
+                                      "args": [
+                                        {
+                                          "args": [
+                                            {
+                                              "var": "n_v3"
+                                            },
+                                            {
+                                              "int": 1
+                                            }
+                                          ],
+                                          "op": "-"
+                                        },
+                                        {
+                                          "var": "start"
+                                        }
+                                      ],
+                                      "op": "-"
+                                    },
+                                    {
+                                      "args": [
+                                        {
+                                          "var": "a_v3"
+                                        },
+                                        {
+                                          "args": [
+                                            {
+                                              "args": [
+                                                {
+                                                  "var": "n_v3"
+                                                },
+                                                {
+                                                  "int": 1
+                                                }
+                                              ],
+                                              "op": "-"
+                                            },
+                                            {
+                                              "var": "start"
+                                            }
+                                          ],
+                                          "op": "-"
+                                        }
+                                      ],
+                                      "op": "at"
+                                    }
+                                  ],
+                                  "op": "-"
+                                },
+                                {
+                                  "var": "left_v"
+                                }
+                              ],
+                              "op": "<"
+                            },
+                            "else": {
+                              "var": "left_v"
+                            },
+                            "then": {
+                              "args": [
+                                {
+                                  "args": [
+                                    {
+                                      "args": [
+                                        {
+                                          "var": "n_v3"
+                                        },
+                                        {
+                                          "int": 1
+                                        }
+                                      ],
+                                      "op": "-"
+                                    },
+                                    {
+                                      "var": "start"
+                                    }
+                                  ],
+                                  "op": "-"
+                                },
+                                {
+                                  "args": [
+                                    {
+                                      "var": "a_v3"
+                                    },
+                                    {
+                                      "args": [
+                                        {
+                                          "args": [
+                                            {
+                                              "var": "n_v3"
+                                            },
+                                            {
+                                              "int": 1
+                                            }
+                                          ],
+                                          "op": "-"
+                                        },
+                                        {
+                                          "var": "start"
+                                        }
+                                      ],
+                                      "op": "-"
+                                    }
+                                  ],
+                                  "op": "at"
+                                }
+                              ],
+                              "op": "-"
+                            }
+                          }
+                        }
+                      ],
+                      "fun": "countSurvivorsFrom"
+                    }
+                  }
+                ],
+                "op": "+"
+              },
+              "then": {
+                "int": 0
+              }
+            }
+          }
+        }
+      },
+      "decreases": {
+        "args": [
+          {
+            "var": "n_v3"
+          },
+          {
+            "var": "start"
+          }
+        ],
+        "op": "-"
+      },
+      "name": "countSurvivorsFrom",
+      "params": [
+        {
+          "name": "n_v3",
+          "type": "int"
+        },
+        {
+          "name": "a_v3",
+          "type": "seq"
+        },
+        {
+          "name": "start",
+          "type": "int"
+        },
+        {
+          "name": "left_v",
+          "type": "int"
+        }
+      ],
+      "result": "int"
+    },
+    {
+      "body": {
+        "ite": {
+          "cond": {
+            "call": {
+              "args": [
+                {
+                  "var": "n_v4"
+                },
+                {
+                  "var": "a_v4"
+                }
+              ],
+              "fun": "validInput"
+            }
+          },
+          "else": {
+            "int": 0
+          },
+          "then": {
+            "call": {
+              "args": [
+                {
+                  "var": "n_v4"
+                },
+                {
+                  "var": "a_v4"
+                },
+                {
+                  "int": 0
+                },
+                {
+                  "var": "n_v4"
+                }
+              ],
+              "fun": "countSurvivorsFrom"
+            }
+          }
+        }
+      },
+      "decreases": {
+        "int": 0
+      },
+      "name": "countSurvivors",
+      "params": [
+        {
+          "name": "n_v4",
+          "type": "int"
+        },
+        {
+          "name": "a_v4",
+          "type": "seq"
+        }
+      ],
+      "result": "int"
+    }
+  ],
+  "t": 1
+}

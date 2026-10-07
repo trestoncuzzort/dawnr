@@ -1,0 +1,439 @@
+{
+  "body": [
+    {
+      "var": {
+        "init": {
+          "ite": {
+            "cond": {
+              "args": [
+                {
+                  "var": "a"
+                },
+                {
+                  "var": "b"
+                }
+              ],
+              "op": "<="
+            },
+            "else": {
+              "var": "b"
+            },
+            "then": {
+              "var": "a"
+            }
+          }
+        },
+        "name": "minVal",
+        "type": "int"
+      }
+    },
+    {
+      "assign": [
+        "sum",
+        {
+          "call": {
+            "args": [
+              {
+                "var": "a"
+              },
+              {
+                "var": "b"
+              },
+              {
+                "var": "minVal"
+              }
+            ],
+            "fun": "sumOfCommonDivisorsUpTo"
+          }
+        }
+      ]
+    }
+  ],
+  "ensures": [
+    {
+      "args": [
+        {
+          "var": "sum"
+        },
+        {
+          "int": 0
+        }
+      ],
+      "op": ">="
+    },
+    {
+      "forall": {
+        "body": {
+          "args": [
+            {
+              "args": [
+                {
+                  "args": [
+                    {
+                      "args": [
+                        {
+                          "int": 1
+                        },
+                        {
+                          "var": "d_v"
+                        }
+                      ],
+                      "op": "<="
+                    },
+                    {
+                      "args": [
+                        {
+                          "var": "d_v"
+                        },
+                        {
+                          "var": "b"
+                        }
+                      ],
+                      "op": "<="
+                    }
+                  ],
+                  "op": "and"
+                },
+                {
+                  "args": [
+                    {
+                      "args": [
+                        {
+                          "var": "a"
+                        },
+                        {
+                          "var": "d_v"
+                        }
+                      ],
+                      "op": "mod"
+                    },
+                    {
+                      "int": 0
+                    }
+                  ],
+                  "op": "=="
+                },
+                {
+                  "args": [
+                    {
+                      "args": [
+                        {
+                          "var": "b"
+                        },
+                        {
+                          "var": "d_v"
+                        }
+                      ],
+                      "op": "mod"
+                    },
+                    {
+                      "int": 0
+                    }
+                  ],
+                  "op": "=="
+                }
+              ],
+              "op": "and"
+            },
+            {
+              "args": [
+                {
+                  "var": "sum"
+                },
+                {
+                  "var": "d_v"
+                }
+              ],
+              "op": ">="
+            }
+          ],
+          "op": "implies"
+        },
+        "hi": {
+          "args": [
+            {
+              "var": "a"
+            },
+            {
+              "int": 1
+            }
+          ],
+          "op": "+"
+        },
+        "lo": {
+          "int": 1
+        },
+        "var": "d_v"
+      }
+    }
+  ],
+  "gate": "recursion",
+  "name": "vericoding_dd0668__sumOfCommonDivisors",
+  "params": [
+    {
+      "name": "a",
+      "type": "int"
+    },
+    {
+      "name": "b",
+      "type": "int"
+    }
+  ],
+  "requires": [
+    {
+      "args": [
+        {
+          "var": "a"
+        },
+        {
+          "int": 0
+        }
+      ],
+      "op": ">"
+    },
+    {
+      "args": [
+        {
+          "var": "b"
+        },
+        {
+          "int": 0
+        }
+      ],
+      "op": ">"
+    }
+  ],
+  "returns": [
+    {
+      "name": "sum",
+      "type": "int"
+    }
+  ],
+  "spec_funs": [
+    {
+      "body": {
+        "ite": {
+          "cond": {
+            "args": [
+              {
+                "args": [
+                  {
+                    "args": [
+                      {
+                        "var": "a_v"
+                      },
+                      {
+                        "int": 0
+                      }
+                    ],
+                    "op": ">"
+                  },
+                  {
+                    "args": [
+                      {
+                        "var": "b_v"
+                      },
+                      {
+                        "int": 0
+                      }
+                    ],
+                    "op": ">"
+                  }
+                ],
+                "op": "and"
+              },
+              {
+                "args": [
+                  {
+                    "args": [
+                      {
+                        "args": [
+                          {
+                            "int": 0
+                          },
+                          {
+                            "var": "k"
+                          }
+                        ],
+                        "op": "<="
+                      },
+                      {
+                        "args": [
+                          {
+                            "var": "k"
+                          },
+                          {
+                            "var": "a_v"
+                          }
+                        ],
+                        "op": "<="
+                      }
+                    ],
+                    "op": "and"
+                  },
+                  {
+                    "args": [
+                      {
+                        "var": "k"
+                      },
+                      {
+                        "var": "b_v"
+                      }
+                    ],
+                    "op": "<="
+                  }
+                ],
+                "op": "and"
+              }
+            ],
+            "op": "and"
+          },
+          "else": {
+            "int": 0
+          },
+          "then": {
+            "ite": {
+              "cond": {
+                "args": [
+                  {
+                    "var": "k"
+                  },
+                  {
+                    "int": 0
+                  }
+                ],
+                "op": "=="
+              },
+              "else": {
+                "ite": {
+                  "cond": {
+                    "args": [
+                      {
+                        "args": [
+                          {
+                            "args": [
+                              {
+                                "var": "a_v"
+                              },
+                              {
+                                "var": "k"
+                              }
+                            ],
+                            "op": "mod"
+                          },
+                          {
+                            "int": 0
+                          }
+                        ],
+                        "op": "=="
+                      },
+                      {
+                        "args": [
+                          {
+                            "args": [
+                              {
+                                "var": "b_v"
+                              },
+                              {
+                                "var": "k"
+                              }
+                            ],
+                            "op": "mod"
+                          },
+                          {
+                            "int": 0
+                          }
+                        ],
+                        "op": "=="
+                      }
+                    ],
+                    "op": "and"
+                  },
+                  "else": {
+                    "call": {
+                      "args": [
+                        {
+                          "var": "a_v"
+                        },
+                        {
+                          "var": "b_v"
+                        },
+                        {
+                          "args": [
+                            {
+                              "var": "k"
+                            },
+                            {
+                              "int": 1
+                            }
+                          ],
+                          "op": "-"
+                        }
+                      ],
+                      "fun": "sumOfCommonDivisorsUpTo"
+                    }
+                  },
+                  "then": {
+                    "args": [
+                      {
+                        "var": "k"
+                      },
+                      {
+                        "call": {
+                          "args": [
+                            {
+                              "var": "a_v"
+                            },
+                            {
+                              "var": "b_v"
+                            },
+                            {
+                              "args": [
+                                {
+                                  "var": "k"
+                                },
+                                {
+                                  "int": 1
+                                }
+                              ],
+                              "op": "-"
+                            }
+                          ],
+                          "fun": "sumOfCommonDivisorsUpTo"
+                        }
+                      }
+                    ],
+                    "op": "+"
+                  }
+                }
+              },
+              "then": {
+                "int": 0
+              }
+            }
+          }
+        }
+      },
+      "decreases": {
+        "var": "k"
+      },
+      "name": "sumOfCommonDivisorsUpTo",
+      "params": [
+        {
+          "name": "a_v",
+          "type": "int"
+        },
+        {
+          "name": "b_v",
+          "type": "int"
+        },
+        {
+          "name": "k",
+          "type": "int"
+        }
+      ],
+      "result": "int"
+    }
+  ],
+  "t": 1
+}

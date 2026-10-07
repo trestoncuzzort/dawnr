@@ -1,0 +1,1388 @@
+{
+  "body": [
+    {
+      "var": {
+        "init": {
+          "call": {
+            "args": [
+              {
+                "var": "n"
+              }
+            ],
+            "fun": "minMoves"
+          }
+        },
+        "name": "minMoves_v3",
+        "type": "int"
+      }
+    },
+    {
+      "lemma": {
+        "args": [
+          {
+            "var": "n"
+          }
+        ],
+        "name": "minMovesProperties"
+      }
+    },
+    {
+      "var": {
+        "init": {
+          "var": "minMoves_v3"
+        },
+        "name": "k_v5",
+        "type": "int"
+      }
+    },
+    {
+      "while": {
+        "body": [
+          {
+            "if": {
+              "cond": {
+                "args": [
+                  {
+                    "args": [
+                      {
+                        "var": "k_v5"
+                      },
+                      {
+                        "var": "m"
+                      }
+                    ],
+                    "op": "mod"
+                  },
+                  {
+                    "int": 0
+                  }
+                ],
+                "op": "=="
+              },
+              "else": [],
+              "then": [
+                {
+                  "lemma": {
+                    "args": [
+                      {
+                        "var": "n"
+                      },
+                      {
+                        "var": "m"
+                      },
+                      {
+                        "var": "k_v5"
+                      },
+                      {
+                        "var": "minMoves_v3"
+                      }
+                    ],
+                    "name": "solutionMinimality"
+                  }
+                },
+                {
+                  "return": [
+                    "result",
+                    {
+                      "var": "k_v5"
+                    }
+                  ]
+                }
+              ]
+            }
+          },
+          {
+            "assign": [
+              "k_v5",
+              {
+                "args": [
+                  {
+                    "var": "k_v5"
+                  },
+                  {
+                    "int": 1
+                  }
+                ],
+                "op": "+"
+              }
+            ]
+          }
+        ],
+        "cond": {
+          "args": [
+            {
+              "var": "k_v5"
+            },
+            {
+              "var": "n"
+            }
+          ],
+          "op": "<="
+        },
+        "decreases": {
+          "args": [
+            {
+              "var": "n"
+            },
+            {
+              "var": "k_v5"
+            }
+          ],
+          "op": "-"
+        },
+        "invariants": [
+          {
+            "args": [
+              {
+                "args": [
+                  {
+                    "var": "minMoves_v3"
+                  },
+                  {
+                    "var": "k_v5"
+                  }
+                ],
+                "op": "<="
+              },
+              {
+                "args": [
+                  {
+                    "var": "k_v5"
+                  },
+                  {
+                    "args": [
+                      {
+                        "var": "n"
+                      },
+                      {
+                        "int": 1
+                      }
+                    ],
+                    "op": "+"
+                  }
+                ],
+                "op": "<="
+              }
+            ],
+            "op": "and"
+          },
+          {
+            "forall": {
+              "body": {
+                "args": [
+                  {
+                    "args": [
+                      {
+                        "var": "j_v"
+                      },
+                      {
+                        "var": "m"
+                      }
+                    ],
+                    "op": "mod"
+                  },
+                  {
+                    "int": 0
+                  }
+                ],
+                "op": "!="
+              },
+              "hi": {
+                "var": "k_v5"
+              },
+              "lo": {
+                "var": "minMoves_v3"
+              },
+              "var": "j_v"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "lemma": {
+        "args": [
+          {
+            "var": "n"
+          },
+          {
+            "var": "m"
+          },
+          {
+            "var": "minMoves_v3"
+          }
+        ],
+        "name": "noSolutionCorrectness"
+      }
+    },
+    {
+      "assign": [
+        "result",
+        {
+          "args": [
+            {
+              "int": 1
+            }
+          ],
+          "op": "neg"
+        }
+      ]
+    }
+  ],
+  "ensures": [
+    {
+      "call": {
+        "args": [
+          {
+            "var": "n"
+          },
+          {
+            "var": "m"
+          },
+          {
+            "var": "result"
+          }
+        ],
+        "fun": "isValidSolution"
+      }
+    },
+    {
+      "call": {
+        "args": [
+          {
+            "var": "n"
+          },
+          {
+            "var": "m"
+          },
+          {
+            "var": "result"
+          }
+        ],
+        "fun": "noSmallerSolution"
+      }
+    },
+    {
+      "call": {
+        "args": [
+          {
+            "var": "n"
+          },
+          {
+            "var": "m"
+          },
+          {
+            "var": "result"
+          }
+        ],
+        "fun": "isMinimalSolution"
+      }
+    }
+  ],
+  "gate": "recursion",
+  "lemmas": [
+    {
+      "body": [],
+      "ensures": [
+        {
+          "call": {
+            "args": [
+              {
+                "var": "n_v7"
+              },
+              {
+                "var": "m_v5"
+              },
+              {
+                "args": [
+                  {
+                    "int": 1
+                  }
+                ],
+                "op": "neg"
+              }
+            ],
+            "fun": "noSmallerSolution"
+          }
+        }
+      ],
+      "name": "noSolutionCorrectness",
+      "params": [
+        {
+          "name": "n_v7",
+          "type": "int"
+        },
+        {
+          "name": "m_v5",
+          "type": "int"
+        },
+        {
+          "name": "minMoves_v",
+          "type": "int"
+        }
+      ],
+      "requires": [
+        {
+          "call": {
+            "args": [
+              {
+                "var": "n_v7"
+              },
+              {
+                "var": "m_v5"
+              }
+            ],
+            "fun": "validInput"
+          }
+        },
+        {
+          "args": [
+            {
+              "var": "minMoves_v"
+            },
+            {
+              "call": {
+                "args": [
+                  {
+                    "var": "n_v7"
+                  }
+                ],
+                "fun": "minMoves"
+              }
+            }
+          ],
+          "op": "=="
+        },
+        {
+          "forall": {
+            "body": {
+              "args": [
+                {
+                  "args": [
+                    {
+                      "var": "k_v3"
+                    },
+                    {
+                      "var": "m_v5"
+                    }
+                  ],
+                  "op": "mod"
+                },
+                {
+                  "int": 0
+                }
+              ],
+              "op": "!="
+            },
+            "hi": {
+              "args": [
+                {
+                  "var": "n_v7"
+                },
+                {
+                  "int": 1
+                }
+              ],
+              "op": "+"
+            },
+            "lo": {
+              "var": "minMoves_v"
+            },
+            "var": "k_v3"
+          }
+        }
+      ]
+    },
+    {
+      "body": [
+        {
+          "if": {
+            "cond": {
+              "args": [
+                {
+                  "args": [
+                    {
+                      "var": "n_v8"
+                    },
+                    {
+                      "int": 2
+                    }
+                  ],
+                  "op": "mod"
+                },
+                {
+                  "int": 0
+                }
+              ],
+              "op": "=="
+            },
+            "else": [
+              {
+                "assert": {
+                  "args": [
+                    {
+                      "call": {
+                        "args": [
+                          {
+                            "var": "n_v8"
+                          }
+                        ],
+                        "fun": "minMoves"
+                      }
+                    },
+                    {
+                      "args": [
+                        {
+                          "args": [
+                            {
+                              "var": "n_v8"
+                            },
+                            {
+                              "int": 2
+                            }
+                          ],
+                          "op": "div"
+                        },
+                        {
+                          "int": 1
+                        }
+                      ],
+                      "op": "+"
+                    }
+                  ],
+                  "op": "=="
+                }
+              },
+              {
+                "assert": {
+                  "args": [
+                    {
+                      "args": [
+                        {
+                          "args": [
+                            {
+                              "var": "n_v8"
+                            },
+                            {
+                              "int": 2
+                            }
+                          ],
+                          "op": "div"
+                        },
+                        {
+                          "int": 1
+                        }
+                      ],
+                      "op": "+"
+                    },
+                    {
+                      "int": 0
+                    }
+                  ],
+                  "op": ">"
+                }
+              },
+              {
+                "assert": {
+                  "args": [
+                    {
+                      "args": [
+                        {
+                          "args": [
+                            {
+                              "var": "n_v8"
+                            },
+                            {
+                              "int": 2
+                            }
+                          ],
+                          "op": "div"
+                        },
+                        {
+                          "int": 1
+                        }
+                      ],
+                      "op": "+"
+                    },
+                    {
+                      "var": "n_v8"
+                    }
+                  ],
+                  "op": "<="
+                }
+              }
+            ],
+            "then": [
+              {
+                "assert": {
+                  "args": [
+                    {
+                      "call": {
+                        "args": [
+                          {
+                            "var": "n_v8"
+                          }
+                        ],
+                        "fun": "minMoves"
+                      }
+                    },
+                    {
+                      "args": [
+                        {
+                          "var": "n_v8"
+                        },
+                        {
+                          "int": 2
+                        }
+                      ],
+                      "op": "div"
+                    }
+                  ],
+                  "op": "=="
+                }
+              },
+              {
+                "assert": {
+                  "args": [
+                    {
+                      "args": [
+                        {
+                          "var": "n_v8"
+                        },
+                        {
+                          "int": 2
+                        }
+                      ],
+                      "op": "div"
+                    },
+                    {
+                      "int": 0
+                    }
+                  ],
+                  "op": ">"
+                }
+              },
+              {
+                "assert": {
+                  "args": [
+                    {
+                      "args": [
+                        {
+                          "var": "n_v8"
+                        },
+                        {
+                          "int": 2
+                        }
+                      ],
+                      "op": "div"
+                    },
+                    {
+                      "var": "n_v8"
+                    }
+                  ],
+                  "op": "<="
+                }
+              }
+            ]
+          }
+        }
+      ],
+      "ensures": [
+        {
+          "args": [
+            {
+              "call": {
+                "args": [
+                  {
+                    "var": "n_v8"
+                  }
+                ],
+                "fun": "minMoves"
+              }
+            },
+            {
+              "int": 0
+            }
+          ],
+          "op": ">"
+        },
+        {
+          "args": [
+            {
+              "call": {
+                "args": [
+                  {
+                    "var": "n_v8"
+                  }
+                ],
+                "fun": "minMoves"
+              }
+            },
+            {
+              "var": "n_v8"
+            }
+          ],
+          "op": "<="
+        }
+      ],
+      "name": "minMovesProperties",
+      "params": [
+        {
+          "name": "n_v8",
+          "type": "int"
+        }
+      ],
+      "requires": [
+        {
+          "args": [
+            {
+              "var": "n_v8"
+            },
+            {
+              "int": 0
+            }
+          ],
+          "op": ">"
+        }
+      ]
+    },
+    {
+      "body": [],
+      "ensures": [
+        {
+          "call": {
+            "args": [
+              {
+                "var": "n_v9"
+              },
+              {
+                "var": "m_v6"
+              },
+              {
+                "var": "k_v4"
+              }
+            ],
+            "fun": "isMinimalSolution"
+          }
+        }
+      ],
+      "name": "solutionMinimality",
+      "params": [
+        {
+          "name": "n_v9",
+          "type": "int"
+        },
+        {
+          "name": "m_v6",
+          "type": "int"
+        },
+        {
+          "name": "k_v4",
+          "type": "int"
+        },
+        {
+          "name": "minMoves_v2",
+          "type": "int"
+        }
+      ],
+      "requires": [
+        {
+          "call": {
+            "args": [
+              {
+                "var": "n_v9"
+              },
+              {
+                "var": "m_v6"
+              }
+            ],
+            "fun": "validInput"
+          }
+        },
+        {
+          "args": [
+            {
+              "var": "minMoves_v2"
+            },
+            {
+              "call": {
+                "args": [
+                  {
+                    "var": "n_v9"
+                  }
+                ],
+                "fun": "minMoves"
+              }
+            }
+          ],
+          "op": "=="
+        },
+        {
+          "args": [
+            {
+              "var": "minMoves_v2"
+            },
+            {
+              "var": "k_v4"
+            }
+          ],
+          "op": "<="
+        },
+        {
+          "args": [
+            {
+              "var": "k_v4"
+            },
+            {
+              "var": "n_v9"
+            }
+          ],
+          "op": "<="
+        },
+        {
+          "args": [
+            {
+              "args": [
+                {
+                  "var": "k_v4"
+                },
+                {
+                  "var": "m_v6"
+                }
+              ],
+              "op": "mod"
+            },
+            {
+              "int": 0
+            }
+          ],
+          "op": "=="
+        },
+        {
+          "forall": {
+            "body": {
+              "args": [
+                {
+                  "args": [
+                    {
+                      "var": "j"
+                    },
+                    {
+                      "var": "m_v6"
+                    }
+                  ],
+                  "op": "mod"
+                },
+                {
+                  "int": 0
+                }
+              ],
+              "op": "!="
+            },
+            "hi": {
+              "var": "k_v4"
+            },
+            "lo": {
+              "var": "minMoves_v2"
+            },
+            "var": "j"
+          }
+        }
+      ]
+    }
+  ],
+  "name": "vericoding_da0144__solve",
+  "params": [
+    {
+      "name": "n",
+      "type": "int"
+    },
+    {
+      "name": "m",
+      "type": "int"
+    }
+  ],
+  "requires": [
+    {
+      "call": {
+        "args": [
+          {
+            "var": "n"
+          },
+          {
+            "var": "m"
+          }
+        ],
+        "fun": "validInput"
+      }
+    }
+  ],
+  "returns": [
+    {
+      "name": "result",
+      "type": "int"
+    }
+  ],
+  "spec_funs": [
+    {
+      "body": {
+        "args": [
+          {
+            "args": [
+              {
+                "var": "n_v"
+              },
+              {
+                "int": 0
+              }
+            ],
+            "op": ">"
+          },
+          {
+            "args": [
+              {
+                "var": "n_v"
+              },
+              {
+                "int": 10000
+              }
+            ],
+            "op": "<="
+          },
+          {
+            "args": [
+              {
+                "var": "m_v"
+              },
+              {
+                "int": 1
+              }
+            ],
+            "op": ">"
+          },
+          {
+            "args": [
+              {
+                "var": "m_v"
+              },
+              {
+                "int": 10
+              }
+            ],
+            "op": "<="
+          }
+        ],
+        "op": "and"
+      },
+      "decreases": {
+        "int": 0
+      },
+      "name": "validInput",
+      "params": [
+        {
+          "name": "n_v",
+          "type": "int"
+        },
+        {
+          "name": "m_v",
+          "type": "int"
+        }
+      ],
+      "result": "bool"
+    },
+    {
+      "body": {
+        "ite": {
+          "cond": {
+            "args": [
+              {
+                "var": "n_v2"
+              },
+              {
+                "int": 0
+              }
+            ],
+            "op": ">"
+          },
+          "else": {
+            "int": 0
+          },
+          "then": {
+            "ite": {
+              "cond": {
+                "args": [
+                  {
+                    "args": [
+                      {
+                        "var": "n_v2"
+                      },
+                      {
+                        "int": 2
+                      }
+                    ],
+                    "op": "mod"
+                  },
+                  {
+                    "int": 0
+                  }
+                ],
+                "op": "=="
+              },
+              "else": {
+                "args": [
+                  {
+                    "args": [
+                      {
+                        "var": "n_v2"
+                      },
+                      {
+                        "int": 2
+                      }
+                    ],
+                    "op": "div"
+                  },
+                  {
+                    "int": 1
+                  }
+                ],
+                "op": "+"
+              },
+              "then": {
+                "args": [
+                  {
+                    "var": "n_v2"
+                  },
+                  {
+                    "int": 2
+                  }
+                ],
+                "op": "div"
+              }
+            }
+          }
+        }
+      },
+      "decreases": {
+        "int": 0
+      },
+      "name": "minMoves",
+      "params": [
+        {
+          "name": "n_v2",
+          "type": "int"
+        }
+      ],
+      "result": "int"
+    },
+    {
+      "body": {
+        "ite": {
+          "cond": {
+            "call": {
+              "args": [
+                {
+                  "var": "n_v3"
+                },
+                {
+                  "var": "m_v2"
+                }
+              ],
+              "fun": "validInput"
+            }
+          },
+          "else": {
+            "bool": false
+          },
+          "then": {
+            "args": [
+              {
+                "args": [
+                  {
+                    "var": "result_v"
+                  },
+                  {
+                    "args": [
+                      {
+                        "int": 1
+                      }
+                    ],
+                    "op": "neg"
+                  }
+                ],
+                "op": "=="
+              },
+              {
+                "forall": {
+                  "body": {
+                    "args": [
+                      {
+                        "args": [
+                          {
+                            "var": "k"
+                          },
+                          {
+                            "var": "m_v2"
+                          }
+                        ],
+                        "op": "mod"
+                      },
+                      {
+                        "int": 0
+                      }
+                    ],
+                    "op": "!="
+                  },
+                  "hi": {
+                    "args": [
+                      {
+                        "var": "n_v3"
+                      },
+                      {
+                        "int": 1
+                      }
+                    ],
+                    "op": "+"
+                  },
+                  "lo": {
+                    "call": {
+                      "args": [
+                        {
+                          "var": "n_v3"
+                        }
+                      ],
+                      "fun": "minMoves"
+                    }
+                  },
+                  "var": "k"
+                }
+              }
+            ],
+            "op": "implies"
+          }
+        }
+      },
+      "decreases": {
+        "int": 0
+      },
+      "name": "noSmallerSolution",
+      "params": [
+        {
+          "name": "n_v3",
+          "type": "int"
+        },
+        {
+          "name": "m_v2",
+          "type": "int"
+        },
+        {
+          "name": "result_v",
+          "type": "int"
+        }
+      ],
+      "result": "bool"
+    },
+    {
+      "body": {
+        "ite": {
+          "cond": {
+            "args": [
+              {
+                "var": "n_v4"
+              },
+              {
+                "int": 0
+              }
+            ],
+            "op": ">"
+          },
+          "else": {
+            "bool": false
+          },
+          "then": {
+            "args": [
+              {
+                "args": [
+                  {
+                    "call": {
+                      "args": [
+                        {
+                          "var": "n_v4"
+                        }
+                      ],
+                      "fun": "minMoves"
+                    }
+                  },
+                  {
+                    "var": "k_v"
+                  }
+                ],
+                "op": "<="
+              },
+              {
+                "args": [
+                  {
+                    "var": "k_v"
+                  },
+                  {
+                    "var": "n_v4"
+                  }
+                ],
+                "op": "<="
+              }
+            ],
+            "op": "and"
+          }
+        }
+      },
+      "decreases": {
+        "int": 0
+      },
+      "name": "validMoveCount",
+      "params": [
+        {
+          "name": "n_v4",
+          "type": "int"
+        },
+        {
+          "name": "k_v",
+          "type": "int"
+        }
+      ],
+      "result": "bool"
+    },
+    {
+      "body": {
+        "ite": {
+          "cond": {
+            "call": {
+              "args": [
+                {
+                  "var": "n_v5"
+                },
+                {
+                  "var": "m_v3"
+                }
+              ],
+              "fun": "validInput"
+            }
+          },
+          "else": {
+            "bool": false
+          },
+          "then": {
+            "args": [
+              {
+                "args": [
+                  {
+                    "var": "result_v2"
+                  },
+                  {
+                    "args": [
+                      {
+                        "int": 1
+                      }
+                    ],
+                    "op": "neg"
+                  }
+                ],
+                "op": "=="
+              },
+              {
+                "args": [
+                  {
+                    "args": [
+                      {
+                        "var": "result_v2"
+                      },
+                      {
+                        "int": 0
+                      }
+                    ],
+                    "op": ">"
+                  },
+                  {
+                    "args": [
+                      {
+                        "args": [
+                          {
+                            "var": "result_v2"
+                          },
+                          {
+                            "var": "m_v3"
+                          }
+                        ],
+                        "op": "mod"
+                      },
+                      {
+                        "int": 0
+                      }
+                    ],
+                    "op": "=="
+                  },
+                  {
+                    "call": {
+                      "args": [
+                        {
+                          "var": "n_v5"
+                        },
+                        {
+                          "var": "result_v2"
+                        }
+                      ],
+                      "fun": "validMoveCount"
+                    }
+                  }
+                ],
+                "op": "and"
+              }
+            ],
+            "op": "or"
+          }
+        }
+      },
+      "decreases": {
+        "int": 0
+      },
+      "name": "isValidSolution",
+      "params": [
+        {
+          "name": "n_v5",
+          "type": "int"
+        },
+        {
+          "name": "m_v3",
+          "type": "int"
+        },
+        {
+          "name": "result_v2",
+          "type": "int"
+        }
+      ],
+      "result": "bool"
+    },
+    {
+      "body": {
+        "ite": {
+          "cond": {
+            "call": {
+              "args": [
+                {
+                  "var": "n_v6"
+                },
+                {
+                  "var": "m_v4"
+                }
+              ],
+              "fun": "validInput"
+            }
+          },
+          "else": {
+            "bool": false
+          },
+          "then": {
+            "args": [
+              {
+                "args": [
+                  {
+                    "var": "result_v3"
+                  },
+                  {
+                    "args": [
+                      {
+                        "int": 1
+                      }
+                    ],
+                    "op": "neg"
+                  }
+                ],
+                "op": "!="
+              },
+              {
+                "forall": {
+                  "body": {
+                    "args": [
+                      {
+                        "args": [
+                          {
+                            "var": "k_v2"
+                          },
+                          {
+                            "var": "result_v3"
+                          }
+                        ],
+                        "op": "<"
+                      },
+                      {
+                        "args": [
+                          {
+                            "args": [
+                              {
+                                "var": "k_v2"
+                              },
+                              {
+                                "var": "m_v4"
+                              }
+                            ],
+                            "op": "mod"
+                          },
+                          {
+                            "int": 0
+                          }
+                        ],
+                        "op": "!="
+                      }
+                    ],
+                    "op": "implies"
+                  },
+                  "hi": {
+                    "args": [
+                      {
+                        "var": "n_v6"
+                      },
+                      {
+                        "int": 1
+                      }
+                    ],
+                    "op": "+"
+                  },
+                  "lo": {
+                    "call": {
+                      "args": [
+                        {
+                          "var": "n_v6"
+                        }
+                      ],
+                      "fun": "minMoves"
+                    }
+                  },
+                  "var": "k_v2"
+                }
+              }
+            ],
+            "op": "implies"
+          }
+        }
+      },
+      "decreases": {
+        "int": 0
+      },
+      "name": "isMinimalSolution",
+      "params": [
+        {
+          "name": "n_v6",
+          "type": "int"
+        },
+        {
+          "name": "m_v4",
+          "type": "int"
+        },
+        {
+          "name": "result_v3",
+          "type": "int"
+        }
+      ],
+      "result": "bool"
+    }
+  ],
+  "t": 1
+}

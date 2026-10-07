@@ -1,0 +1,446 @@
+{
+  "body": [
+    {
+      "lemma": {
+        "args": [
+          {
+            "var": "a"
+          },
+          {
+            "var": "b"
+          }
+        ],
+        "name": "remainingFarmAreaNonNegative"
+      }
+    },
+    {
+      "assign": [
+        "result",
+        {
+          "args": [
+            {
+              "args": [
+                {
+                  "args": [
+                    {
+                      "args": [
+                        {
+                          "var": "a"
+                        },
+                        {
+                          "var": "b"
+                        }
+                      ],
+                      "op": "*"
+                    },
+                    {
+                      "var": "a"
+                    }
+                  ],
+                  "op": "-"
+                },
+                {
+                  "var": "b"
+                }
+              ],
+              "op": "-"
+            },
+            {
+              "int": 1
+            }
+          ],
+          "op": "+"
+        }
+      ]
+    }
+  ],
+  "ensures": [
+    {
+      "args": [
+        {
+          "var": "result"
+        },
+        {
+          "call": {
+            "args": [
+              {
+                "var": "a"
+              },
+              {
+                "var": "b"
+              }
+            ],
+            "fun": "remainingFarmArea"
+          }
+        }
+      ],
+      "op": "=="
+    },
+    {
+      "args": [
+        {
+          "var": "result"
+        },
+        {
+          "int": 0
+        }
+      ],
+      "op": ">="
+    }
+  ],
+  "gate": "recursion",
+  "lemmas": [
+    {
+      "body": [
+        {
+          "assert": {
+            "args": [
+              {
+                "call": {
+                  "args": [
+                    {
+                      "var": "a_v3"
+                    },
+                    {
+                      "var": "b_v3"
+                    }
+                  ],
+                  "fun": "remainingFarmArea"
+                }
+              },
+              {
+                "args": [
+                  {
+                    "args": [
+                      {
+                        "var": "a_v3"
+                      },
+                      {
+                        "int": 1
+                      }
+                    ],
+                    "op": "-"
+                  },
+                  {
+                    "args": [
+                      {
+                        "var": "b_v3"
+                      },
+                      {
+                        "int": 1
+                      }
+                    ],
+                    "op": "-"
+                  }
+                ],
+                "op": "*"
+              }
+            ],
+            "op": "=="
+          }
+        },
+        {
+          "assert": {
+            "args": [
+              {
+                "args": [
+                  {
+                    "var": "a_v3"
+                  },
+                  {
+                    "int": 1
+                  }
+                ],
+                "op": "-"
+              },
+              {
+                "int": 1
+              }
+            ],
+            "op": ">="
+          }
+        },
+        {
+          "assert": {
+            "args": [
+              {
+                "args": [
+                  {
+                    "var": "b_v3"
+                  },
+                  {
+                    "int": 1
+                  }
+                ],
+                "op": "-"
+              },
+              {
+                "int": 1
+              }
+            ],
+            "op": ">="
+          }
+        },
+        {
+          "assert": {
+            "args": [
+              {
+                "args": [
+                  {
+                    "args": [
+                      {
+                        "var": "a_v3"
+                      },
+                      {
+                        "int": 1
+                      }
+                    ],
+                    "op": "-"
+                  },
+                  {
+                    "args": [
+                      {
+                        "var": "b_v3"
+                      },
+                      {
+                        "int": 1
+                      }
+                    ],
+                    "op": "-"
+                  }
+                ],
+                "op": "*"
+              },
+              {
+                "int": 1
+              }
+            ],
+            "op": ">="
+          }
+        }
+      ],
+      "ensures": [
+        {
+          "args": [
+            {
+              "call": {
+                "args": [
+                  {
+                    "var": "a_v3"
+                  },
+                  {
+                    "var": "b_v3"
+                  }
+                ],
+                "fun": "remainingFarmArea"
+              }
+            },
+            {
+              "int": 0
+            }
+          ],
+          "op": ">="
+        }
+      ],
+      "name": "remainingFarmAreaNonNegative",
+      "params": [
+        {
+          "name": "a_v3",
+          "type": "int"
+        },
+        {
+          "name": "b_v3",
+          "type": "int"
+        }
+      ],
+      "requires": [
+        {
+          "call": {
+            "args": [
+              {
+                "var": "a_v3"
+              },
+              {
+                "var": "b_v3"
+              }
+            ],
+            "fun": "validFarmDimensions"
+          }
+        }
+      ]
+    }
+  ],
+  "name": "vericoding_da0585__solve",
+  "params": [
+    {
+      "name": "a",
+      "type": "int"
+    },
+    {
+      "name": "b",
+      "type": "int"
+    }
+  ],
+  "requires": [
+    {
+      "call": {
+        "args": [
+          {
+            "var": "a"
+          },
+          {
+            "var": "b"
+          }
+        ],
+        "fun": "validFarmDimensions"
+      }
+    }
+  ],
+  "returns": [
+    {
+      "name": "result",
+      "type": "int"
+    }
+  ],
+  "spec_funs": [
+    {
+      "body": {
+        "args": [
+          {
+            "args": [
+              {
+                "var": "a_v"
+              },
+              {
+                "int": 2
+              }
+            ],
+            "op": ">="
+          },
+          {
+            "args": [
+              {
+                "var": "b_v"
+              },
+              {
+                "int": 2
+              }
+            ],
+            "op": ">="
+          },
+          {
+            "args": [
+              {
+                "var": "a_v"
+              },
+              {
+                "int": 100
+              }
+            ],
+            "op": "<="
+          },
+          {
+            "args": [
+              {
+                "var": "b_v"
+              },
+              {
+                "int": 100
+              }
+            ],
+            "op": "<="
+          }
+        ],
+        "op": "and"
+      },
+      "decreases": {
+        "int": 0
+      },
+      "name": "validFarmDimensions",
+      "params": [
+        {
+          "name": "a_v",
+          "type": "int"
+        },
+        {
+          "name": "b_v",
+          "type": "int"
+        }
+      ],
+      "result": "bool"
+    },
+    {
+      "body": {
+        "ite": {
+          "cond": {
+            "call": {
+              "args": [
+                {
+                  "var": "a_v2"
+                },
+                {
+                  "var": "b_v2"
+                }
+              ],
+              "fun": "validFarmDimensions"
+            }
+          },
+          "else": {
+            "int": 0
+          },
+          "then": {
+            "args": [
+              {
+                "args": [
+                  {
+                    "args": [
+                      {
+                        "args": [
+                          {
+                            "var": "a_v2"
+                          },
+                          {
+                            "var": "b_v2"
+                          }
+                        ],
+                        "op": "*"
+                      },
+                      {
+                        "var": "a_v2"
+                      }
+                    ],
+                    "op": "-"
+                  },
+                  {
+                    "var": "b_v2"
+                  }
+                ],
+                "op": "-"
+              },
+              {
+                "int": 1
+              }
+            ],
+            "op": "+"
+          }
+        }
+      },
+      "decreases": {
+        "int": 0
+      },
+      "name": "remainingFarmArea",
+      "params": [
+        {
+          "name": "a_v2",
+          "type": "int"
+        },
+        {
+          "name": "b_v2",
+          "type": "int"
+        }
+      ],
+      "result": "int"
+    }
+  ],
+  "t": 1
+}

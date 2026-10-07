@@ -1,4 +1,4 @@
-# t cross-kernel agreement, 2026-10-07 14:25Z
+# t cross-kernel agreement, 2026-10-07 16:56Z
 
 Cell = real outcome / twin outcome. Agreement means `verified / refuted` in every present column. A real-VERIFIED, twin-VERIFIED cell reads `verified / decorative` (the spec cannot tell real and twin apart) or `verified / unsound` (the twin's own measured witness says a sound kernel must refute it, and this one did not); neither counts as agreement.
 
@@ -21,14 +21,14 @@ Cell = real outcome / twin outcome. Agreement means `verified / refuted` in ever
 | peak_reading | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted |
 | pid_step | abstain / abstain | abstain / abstain | timeout / refuted | timeout / refuted | abstain / abstain | abstain / abstain | abstain / abstain |
 | readings_in_band | verified / refuted | verified / unproved | verified / refuted | abstain / abstain | verified / refuted | abstain / abstain | verified / refuted |
-| sample_push | verified / refuted | unproved / unproved | timeout / refuted | verified / refuted | unproved / refuted | unproved / unproved | unproved / unproved |
-| saturate_all | verified / refuted | unproved / unproved | timeout / refuted | verified / refuted | unproved / refuted | unproved / unproved | unproved / unproved |
+| sample_push | verified / refuted | unproved / refuted | timeout / refuted | verified / refuted | unproved / refuted | unproved / refuted | unproved / refuted |
+| saturate_all | verified / refuted | unproved / refuted | timeout / refuted | verified / refuted | unproved / refuted | unproved / refuted | unproved / refuted |
 | stop_distance_ok | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted |
 | throttle_limit | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted |
 | ttc_alert | abstain / abstain | abstain / abstain | abstain / abstain | verified / refuted | abstain / abstain | abstain / abstain | abstain / abstain |
 | vote3 | abstain / abstain | abstain / abstain | verified / refuted | verified / refuted | abstain / abstain | abstain / abstain | abstain / abstain |
 | waypoint_advance | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted |
-| zero_fill | verified / refuted | verified / unproved | verified / refuted | verified / refuted | verified / refuted | verified / unproved | verified / unproved |
+| zero_fill | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted |
 
 Kernels present: 7 of 7 (dafny, verus, spark, framac, lean, rocq, fstar)
 
@@ -49,11 +49,11 @@ Verdict basis: every source file hashed; e.g. `aabb_overlap.dfy` 05bec2f762c3002
 |---|---|---|---|
 | lean | 1 | 8 | crosstrack_side |
 | dafny | 0 | 6 | (none) |
-| verus | 0 | 10 | (none) |
+| verus | 0 | 9 | (none) |
 | spark | 0 | 4 | (none) |
 | framac | 0 | 3 | (none) |
-| rocq | 0 | 10 | (none) |
-| fstar | 0 | 7 | (none) |
+| rocq | 0 | 9 | (none) |
+| fstar | 0 | 6 | (none) |
 
 Of the 1 tasks in six, 1 is lean alone.
 
@@ -62,11 +62,11 @@ Of the 1 tasks in six, 1 is lean alone.
 | kernel | carried | real verified | twin refuted where the real is verified | abstains by name |
 |---|---|---|---|---|
 | dafny | 20 | 18 | 18 of 18 (100%) | 5 |
-| verus | 20 | 16 | 14 of 16 (87%) | 5 |
+| verus | 20 | 16 | 15 of 16 (93%) | 5 |
 | spark | 24 | 20 | 20 of 20 (100%) | 1 |
 | framac | 24 | 21 | 21 of 21 (100%) | 1 |
 | lean | 20 | 15 | 15 of 15 (100%) | 5 |
-| rocq | 19 | 15 | 14 of 15 (93%) | 6 |
-| fstar | 20 | 18 | 17 of 18 (94%) | 5 |
+| rocq | 19 | 15 | 15 of 15 (100%) | 6 |
+| fstar | 20 | 18 | 18 of 18 (100%) | 5 |
 
-Verified with the twin refuted in all seven columns: 13 of 25 tasks.
+Verified with the twin refuted in all seven columns: 14 of 25 tasks.

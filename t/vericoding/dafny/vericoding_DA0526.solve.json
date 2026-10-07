@@ -1,0 +1,473 @@
+{
+  "body": [
+    {
+      "var": {
+        "init": {
+          "args": [
+            {
+              "var": "n"
+            },
+            {
+              "int": 10
+            }
+          ],
+          "op": "mod"
+        },
+        "name": "ones_digit",
+        "type": "int"
+      }
+    },
+    {
+      "if": {
+        "cond": {
+          "call": {
+            "args": [
+              {
+                "var": "ones_digit"
+              }
+            ],
+            "fun": "isHonDigit"
+          }
+        },
+        "else": [
+          {
+            "if": {
+              "cond": {
+                "call": {
+                  "args": [
+                    {
+                      "var": "ones_digit"
+                    }
+                  ],
+                  "fun": "isPonDigit"
+                }
+              },
+              "else": [
+                {
+                  "assign": [
+                    "result",
+                    {
+                      "args": [
+                        {
+                          "int": 98
+                        },
+                        {
+                          "int": 111
+                        },
+                        {
+                          "int": 110
+                        },
+                        {
+                          "int": 10
+                        }
+                      ],
+                      "op": "seq"
+                    }
+                  ]
+                }
+              ],
+              "then": [
+                {
+                  "assign": [
+                    "result",
+                    {
+                      "args": [
+                        {
+                          "int": 112
+                        },
+                        {
+                          "int": 111
+                        },
+                        {
+                          "int": 110
+                        },
+                        {
+                          "int": 10
+                        }
+                      ],
+                      "op": "seq"
+                    }
+                  ]
+                }
+              ]
+            }
+          }
+        ],
+        "then": [
+          {
+            "assign": [
+              "result",
+              {
+                "args": [
+                  {
+                    "int": 104
+                  },
+                  {
+                    "int": 111
+                  },
+                  {
+                    "int": 110
+                  },
+                  {
+                    "int": 10
+                  }
+                ],
+                "op": "seq"
+              }
+            ]
+          }
+        ]
+      }
+    }
+  ],
+  "ensures": [
+    {
+      "args": [
+        {
+          "var": "result"
+        },
+        {
+          "call": {
+            "args": [
+              {
+                "var": "n"
+              }
+            ],
+            "fun": "correctPronunciation"
+          }
+        }
+      ],
+      "op": "=="
+    }
+  ],
+  "gate": "recursion",
+  "name": "vericoding_da0526__solve",
+  "params": [
+    {
+      "name": "n",
+      "type": "int"
+    }
+  ],
+  "requires": [
+    {
+      "call": {
+        "args": [
+          {
+            "var": "n"
+          }
+        ],
+        "fun": "validInput"
+      }
+    }
+  ],
+  "returns": [
+    {
+      "name": "result",
+      "type": "seq"
+    }
+  ],
+  "spec_funs": [
+    {
+      "body": {
+        "args": [
+          {
+            "args": [
+              {
+                "int": 1
+              },
+              {
+                "var": "n_v"
+              }
+            ],
+            "op": "<="
+          },
+          {
+            "args": [
+              {
+                "var": "n_v"
+              },
+              {
+                "int": 999
+              }
+            ],
+            "op": "<="
+          }
+        ],
+        "op": "and"
+      },
+      "decreases": {
+        "int": 0
+      },
+      "name": "validInput",
+      "params": [
+        {
+          "name": "n_v",
+          "type": "int"
+        }
+      ],
+      "result": "bool"
+    },
+    {
+      "body": {
+        "args": [
+          {
+            "args": [
+              {
+                "var": "digit"
+              },
+              {
+                "int": 2
+              }
+            ],
+            "op": "=="
+          },
+          {
+            "args": [
+              {
+                "var": "digit"
+              },
+              {
+                "int": 4
+              }
+            ],
+            "op": "=="
+          },
+          {
+            "args": [
+              {
+                "var": "digit"
+              },
+              {
+                "int": 5
+              }
+            ],
+            "op": "=="
+          },
+          {
+            "args": [
+              {
+                "var": "digit"
+              },
+              {
+                "int": 7
+              }
+            ],
+            "op": "=="
+          },
+          {
+            "args": [
+              {
+                "var": "digit"
+              },
+              {
+                "int": 9
+              }
+            ],
+            "op": "=="
+          }
+        ],
+        "op": "or"
+      },
+      "decreases": {
+        "int": 0
+      },
+      "name": "isHonDigit",
+      "params": [
+        {
+          "name": "digit",
+          "type": "int"
+        }
+      ],
+      "result": "bool"
+    },
+    {
+      "body": {
+        "args": [
+          {
+            "args": [
+              {
+                "var": "digit_v"
+              },
+              {
+                "int": 0
+              }
+            ],
+            "op": "=="
+          },
+          {
+            "args": [
+              {
+                "var": "digit_v"
+              },
+              {
+                "int": 1
+              }
+            ],
+            "op": "=="
+          },
+          {
+            "args": [
+              {
+                "var": "digit_v"
+              },
+              {
+                "int": 6
+              }
+            ],
+            "op": "=="
+          },
+          {
+            "args": [
+              {
+                "var": "digit_v"
+              },
+              {
+                "int": 8
+              }
+            ],
+            "op": "=="
+          }
+        ],
+        "op": "or"
+      },
+      "decreases": {
+        "int": 0
+      },
+      "name": "isPonDigit",
+      "params": [
+        {
+          "name": "digit_v",
+          "type": "int"
+        }
+      ],
+      "result": "bool"
+    },
+    {
+      "body": {
+        "ite": {
+          "cond": {
+            "call": {
+              "args": [
+                {
+                  "var": "n_v2"
+                }
+              ],
+              "fun": "validInput"
+            }
+          },
+          "else": {
+            "args": [],
+            "op": "seq"
+          },
+          "then": {
+            "ite": {
+              "cond": {
+                "call": {
+                  "args": [
+                    {
+                      "args": [
+                        {
+                          "var": "n_v2"
+                        },
+                        {
+                          "int": 10
+                        }
+                      ],
+                      "op": "mod"
+                    }
+                  ],
+                  "fun": "isHonDigit"
+                }
+              },
+              "else": {
+                "ite": {
+                  "cond": {
+                    "call": {
+                      "args": [
+                        {
+                          "args": [
+                            {
+                              "var": "n_v2"
+                            },
+                            {
+                              "int": 10
+                            }
+                          ],
+                          "op": "mod"
+                        }
+                      ],
+                      "fun": "isPonDigit"
+                    }
+                  },
+                  "else": {
+                    "args": [
+                      {
+                        "int": 98
+                      },
+                      {
+                        "int": 111
+                      },
+                      {
+                        "int": 110
+                      },
+                      {
+                        "int": 10
+                      }
+                    ],
+                    "op": "seq"
+                  },
+                  "then": {
+                    "args": [
+                      {
+                        "int": 112
+                      },
+                      {
+                        "int": 111
+                      },
+                      {
+                        "int": 110
+                      },
+                      {
+                        "int": 10
+                      }
+                    ],
+                    "op": "seq"
+                  }
+                }
+              },
+              "then": {
+                "args": [
+                  {
+                    "int": 104
+                  },
+                  {
+                    "int": 111
+                  },
+                  {
+                    "int": 110
+                  },
+                  {
+                    "int": 10
+                  }
+                ],
+                "op": "seq"
+              }
+            }
+          }
+        }
+      },
+      "decreases": {
+        "int": 0
+      },
+      "name": "correctPronunciation",
+      "params": [
+        {
+          "name": "n_v2",
+          "type": "int"
+        }
+      ],
+      "result": "seq"
+    }
+  ],
+  "t": 1
+}

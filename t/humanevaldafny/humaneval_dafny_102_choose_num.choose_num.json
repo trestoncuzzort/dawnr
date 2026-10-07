@@ -1,0 +1,714 @@
+{
+  "body": [
+    {
+      "assign": [
+        "num",
+        {
+          "args": [
+            {
+              "int": 1
+            }
+          ],
+          "op": "neg"
+        }
+      ]
+    },
+    {
+      "if": {
+        "cond": {
+          "args": [
+            {
+              "args": [
+                {
+                  "var": "x"
+                },
+                {
+                  "var": "y"
+                }
+              ],
+              "op": ">"
+            },
+            {
+              "args": [
+                {
+                  "args": [
+                    {
+                      "var": "x"
+                    },
+                    {
+                      "var": "y"
+                    }
+                  ],
+                  "op": "=="
+                },
+                {
+                  "args": [
+                    {
+                      "args": [
+                        {
+                          "var": "x"
+                        },
+                        {
+                          "int": 2
+                        }
+                      ],
+                      "op": "mod"
+                    },
+                    {
+                      "int": 1
+                    }
+                  ],
+                  "op": "=="
+                }
+              ],
+              "op": "and"
+            }
+          ],
+          "op": "or"
+        },
+        "else": [],
+        "then": [
+          {
+            "return": [
+              "num",
+              {
+                "var": "num"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "if": {
+        "cond": {
+          "args": [
+            {
+              "var": "x"
+            },
+            {
+              "var": "y"
+            }
+          ],
+          "op": "=="
+        },
+        "else": [],
+        "then": [
+          {
+            "assign": [
+              "num",
+              {
+                "var": "x"
+              }
+            ]
+          },
+          {
+            "return": [
+              "num",
+              {
+                "var": "num"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "if": {
+        "cond": {
+          "args": [
+            {
+              "args": [
+                {
+                  "var": "x"
+                },
+                {
+                  "int": 2
+                }
+              ],
+              "op": "mod"
+            },
+            {
+              "int": 0
+            }
+          ],
+          "op": "=="
+        },
+        "else": [
+          {
+            "assign": [
+              "num",
+              {
+                "args": [
+                  {
+                    "var": "x"
+                  },
+                  {
+                    "int": 1
+                  }
+                ],
+                "op": "+"
+              }
+            ]
+          }
+        ],
+        "then": [
+          {
+            "assign": [
+              "num",
+              {
+                "var": "x"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "var": {
+        "init": {
+          "args": [
+            {
+              "var": "x"
+            },
+            {
+              "int": 2
+            }
+          ],
+          "op": "+"
+        },
+        "name": "i_v",
+        "type": "int"
+      }
+    },
+    {
+      "while": {
+        "body": [
+          {
+            "if": {
+              "cond": {
+                "args": [
+                  {
+                    "args": [
+                      {
+                        "var": "i_v"
+                      },
+                      {
+                        "int": 2
+                      }
+                    ],
+                    "op": "mod"
+                  },
+                  {
+                    "int": 0
+                  }
+                ],
+                "op": "=="
+              },
+              "else": [],
+              "then": [
+                {
+                  "assign": [
+                    "num",
+                    {
+                      "var": "i_v"
+                    }
+                  ]
+                }
+              ]
+            }
+          },
+          {
+            "assign": [
+              "i_v",
+              {
+                "args": [
+                  {
+                    "var": "i_v"
+                  },
+                  {
+                    "int": 1
+                  }
+                ],
+                "op": "+"
+              }
+            ]
+          }
+        ],
+        "cond": {
+          "args": [
+            {
+              "var": "i_v"
+            },
+            {
+              "var": "y"
+            }
+          ],
+          "op": "<="
+        },
+        "decreases": {
+          "args": [
+            {
+              "var": "y"
+            },
+            {
+              "var": "i_v"
+            }
+          ],
+          "op": "-"
+        },
+        "invariants": [
+          {
+            "args": [
+              {
+                "args": [
+                  {
+                    "var": "i_v"
+                  },
+                  {
+                    "var": "x"
+                  }
+                ],
+                "op": ">="
+              },
+              {
+                "args": [
+                  {
+                    "var": "i_v"
+                  },
+                  {
+                    "args": [
+                      {
+                        "var": "y"
+                      },
+                      {
+                        "int": 1
+                      }
+                    ],
+                    "op": "+"
+                  }
+                ],
+                "op": "<="
+              }
+            ],
+            "op": "and"
+          },
+          {
+            "args": [
+              {
+                "args": [
+                  {
+                    "var": "num"
+                  },
+                  {
+                    "args": [
+                      {
+                        "int": 1
+                      }
+                    ],
+                    "op": "neg"
+                  }
+                ],
+                "op": "=="
+              },
+              {
+                "args": [
+                  {
+                    "args": [
+                      {
+                        "var": "num"
+                      },
+                      {
+                        "int": 2
+                      }
+                    ],
+                    "op": "mod"
+                  },
+                  {
+                    "int": 0
+                  }
+                ],
+                "op": "=="
+              }
+            ],
+            "op": "or"
+          },
+          {
+            "forall": {
+              "body": {
+                "args": [
+                  {
+                    "args": [
+                      {
+                        "args": [
+                          {
+                            "var": "j"
+                          },
+                          {
+                            "int": 2
+                          }
+                        ],
+                        "op": "mod"
+                      },
+                      {
+                        "int": 0
+                      }
+                    ],
+                    "op": "=="
+                  },
+                  {
+                    "args": [
+                      {
+                        "var": "num"
+                      },
+                      {
+                        "var": "j"
+                      }
+                    ],
+                    "op": ">="
+                  }
+                ],
+                "op": "implies"
+              },
+              "hi": {
+                "var": "i_v"
+              },
+              "lo": {
+                "var": "x"
+              },
+              "var": "j"
+            }
+          },
+          {
+            "args": [
+              {
+                "args": [
+                  {
+                    "var": "num"
+                  },
+                  {
+                    "args": [
+                      {
+                        "int": 1
+                      }
+                    ],
+                    "op": "neg"
+                  }
+                ],
+                "op": "=="
+              },
+              {
+                "args": [
+                  {
+                    "args": [
+                      {
+                        "var": "num"
+                      },
+                      {
+                        "var": "x"
+                      }
+                    ],
+                    "op": ">="
+                  },
+                  {
+                    "args": [
+                      {
+                        "var": "num"
+                      },
+                      {
+                        "var": "i_v"
+                      }
+                    ],
+                    "op": "<"
+                  }
+                ],
+                "op": "and"
+              }
+            ],
+            "op": "or"
+          }
+        ]
+      }
+    }
+  ],
+  "ensures": [
+    {
+      "args": [
+        {
+          "args": [
+            {
+              "var": "num"
+            },
+            {
+              "args": [
+                {
+                  "int": 1
+                }
+              ],
+              "op": "neg"
+            }
+          ],
+          "op": "=="
+        },
+        {
+          "args": [
+            {
+              "args": [
+                {
+                  "var": "num"
+                },
+                {
+                  "var": "x"
+                }
+              ],
+              "op": ">="
+            },
+            {
+              "args": [
+                {
+                  "var": "num"
+                },
+                {
+                  "var": "y"
+                }
+              ],
+              "op": "<="
+            }
+          ],
+          "op": "and"
+        }
+      ],
+      "op": "or"
+    },
+    {
+      "args": [
+        {
+          "args": [
+            {
+              "var": "num"
+            },
+            {
+              "args": [
+                {
+                  "int": 1
+                }
+              ],
+              "op": "neg"
+            }
+          ],
+          "op": "=="
+        },
+        {
+          "args": [
+            {
+              "args": [
+                {
+                  "var": "num"
+                },
+                {
+                  "int": 2
+                }
+              ],
+              "op": "mod"
+            },
+            {
+              "int": 0
+            }
+          ],
+          "op": "=="
+        }
+      ],
+      "op": "or"
+    },
+    {
+      "args": [
+        {
+          "args": [
+            {
+              "var": "num"
+            },
+            {
+              "args": [
+                {
+                  "int": 1
+                }
+              ],
+              "op": "neg"
+            }
+          ],
+          "op": "=="
+        },
+        {
+          "forall": {
+            "body": {
+              "args": [
+                {
+                  "args": [
+                    {
+                      "args": [
+                        {
+                          "var": "i"
+                        },
+                        {
+                          "int": 2
+                        }
+                      ],
+                      "op": "mod"
+                    },
+                    {
+                      "int": 0
+                    }
+                  ],
+                  "op": "=="
+                },
+                {
+                  "args": [
+                    {
+                      "var": "num"
+                    },
+                    {
+                      "var": "i"
+                    }
+                  ],
+                  "op": ">="
+                }
+              ],
+              "op": "implies"
+            },
+            "hi": {
+              "args": [
+                {
+                  "var": "y"
+                },
+                {
+                  "int": 1
+                }
+              ],
+              "op": "+"
+            },
+            "lo": {
+              "var": "x"
+            },
+            "var": "i"
+          }
+        }
+      ],
+      "op": "or"
+    },
+    {
+      "args": [
+        {
+          "args": [
+            {
+              "var": "num"
+            },
+            {
+              "args": [
+                {
+                  "int": 1
+                }
+              ],
+              "op": "neg"
+            }
+          ],
+          "op": "=="
+        },
+        {
+          "args": [
+            {
+              "args": [
+                {
+                  "var": "x"
+                },
+                {
+                  "var": "y"
+                }
+              ],
+              "op": ">"
+            },
+            {
+              "args": [
+                {
+                  "args": [
+                    {
+                      "var": "x"
+                    },
+                    {
+                      "var": "y"
+                    }
+                  ],
+                  "op": "=="
+                },
+                {
+                  "args": [
+                    {
+                      "args": [
+                        {
+                          "var": "x"
+                        },
+                        {
+                          "int": 2
+                        }
+                      ],
+                      "op": "mod"
+                    },
+                    {
+                      "int": 1
+                    }
+                  ],
+                  "op": "=="
+                }
+              ],
+              "op": "and"
+            }
+          ],
+          "op": "or"
+        }
+      ],
+      "op": "=="
+    }
+  ],
+  "gate": "loops",
+  "name": "humaneval_dafny_102_choose_num__choose_num",
+  "params": [
+    {
+      "name": "x",
+      "type": "int"
+    },
+    {
+      "name": "y",
+      "type": "int"
+    }
+  ],
+  "requires": [
+    {
+      "args": [
+        {
+          "int": 0
+        },
+        {
+          "var": "x"
+        }
+      ],
+      "op": "<="
+    },
+    {
+      "args": [
+        {
+          "int": 0
+        },
+        {
+          "var": "y"
+        }
+      ],
+      "op": "<="
+    }
+  ],
+  "returns": [
+    {
+      "name": "num",
+      "type": "int"
+    }
+  ],
+  "t": 1
+}

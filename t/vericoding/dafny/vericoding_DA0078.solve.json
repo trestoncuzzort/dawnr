@@ -1,0 +1,725 @@
+{
+  "body": [
+    {
+      "lemma": {
+        "args": [
+          {
+            "var": "n"
+          },
+          {
+            "var": "a"
+          },
+          {
+            "var": "b"
+          }
+        ],
+        "name": "finalEntranceCorrectness"
+      }
+    },
+    {
+      "var": {
+        "init": {
+          "args": [
+            {
+              "args": [
+                {
+                  "args": [
+                    {
+                      "var": "a"
+                    },
+                    {
+                      "int": 1
+                    }
+                  ],
+                  "op": "-"
+                },
+                {
+                  "var": "b"
+                }
+              ],
+              "op": "+"
+            },
+            {
+              "var": "n"
+            }
+          ],
+          "op": "mod"
+        },
+        "name": "temp",
+        "type": "int"
+      }
+    },
+    {
+      "assign": [
+        "result",
+        {
+          "args": [
+            {
+              "args": [
+                {
+                  "args": [
+                    {
+                      "var": "temp"
+                    },
+                    {
+                      "var": "n"
+                    }
+                  ],
+                  "op": "+"
+                },
+                {
+                  "var": "n"
+                }
+              ],
+              "op": "mod"
+            },
+            {
+              "int": 1
+            }
+          ],
+          "op": "+"
+        }
+      ]
+    }
+  ],
+  "ensures": [
+    {
+      "call": {
+        "args": [
+          {
+            "var": "result"
+          },
+          {
+            "var": "n"
+          }
+        ],
+        "fun": "validOutput"
+      }
+    },
+    {
+      "args": [
+        {
+          "var": "result"
+        },
+        {
+          "call": {
+            "args": [
+              {
+                "var": "n"
+              },
+              {
+                "var": "a"
+              },
+              {
+                "var": "b"
+              }
+            ],
+            "fun": "finalEntrance"
+          }
+        }
+      ],
+      "op": "=="
+    }
+  ],
+  "gate": "recursion",
+  "lemmas": [
+    {
+      "body": [
+        {
+          "assert": {
+            "args": [
+              {
+                "args": [
+                  {
+                    "int": 0
+                  },
+                  {
+                    "args": [
+                      {
+                        "args": [
+                          {
+                            "args": [
+                              {
+                                "args": [
+                                  {
+                                    "args": [
+                                      {
+                                        "var": "a_v3"
+                                      },
+                                      {
+                                        "int": 1
+                                      }
+                                    ],
+                                    "op": "-"
+                                  },
+                                  {
+                                    "var": "b_v3"
+                                  }
+                                ],
+                                "op": "+"
+                              },
+                              {
+                                "var": "n_v4"
+                              }
+                            ],
+                            "op": "mod"
+                          },
+                          {
+                            "var": "n_v4"
+                          }
+                        ],
+                        "op": "+"
+                      },
+                      {
+                        "var": "n_v4"
+                      }
+                    ],
+                    "op": "mod"
+                  }
+                ],
+                "op": "<="
+              },
+              {
+                "args": [
+                  {
+                    "args": [
+                      {
+                        "args": [
+                          {
+                            "args": [
+                              {
+                                "args": [
+                                  {
+                                    "args": [
+                                      {
+                                        "var": "a_v3"
+                                      },
+                                      {
+                                        "int": 1
+                                      }
+                                    ],
+                                    "op": "-"
+                                  },
+                                  {
+                                    "var": "b_v3"
+                                  }
+                                ],
+                                "op": "+"
+                              },
+                              {
+                                "var": "n_v4"
+                              }
+                            ],
+                            "op": "mod"
+                          },
+                          {
+                            "var": "n_v4"
+                          }
+                        ],
+                        "op": "+"
+                      },
+                      {
+                        "var": "n_v4"
+                      }
+                    ],
+                    "op": "mod"
+                  },
+                  {
+                    "var": "n_v4"
+                  }
+                ],
+                "op": "<"
+              }
+            ],
+            "op": "and"
+          }
+        },
+        {
+          "assert": {
+            "args": [
+              {
+                "args": [
+                  {
+                    "int": 1
+                  },
+                  {
+                    "args": [
+                      {
+                        "args": [
+                          {
+                            "args": [
+                              {
+                                "args": [
+                                  {
+                                    "args": [
+                                      {
+                                        "args": [
+                                          {
+                                            "var": "a_v3"
+                                          },
+                                          {
+                                            "int": 1
+                                          }
+                                        ],
+                                        "op": "-"
+                                      },
+                                      {
+                                        "var": "b_v3"
+                                      }
+                                    ],
+                                    "op": "+"
+                                  },
+                                  {
+                                    "var": "n_v4"
+                                  }
+                                ],
+                                "op": "mod"
+                              },
+                              {
+                                "var": "n_v4"
+                              }
+                            ],
+                            "op": "+"
+                          },
+                          {
+                            "var": "n_v4"
+                          }
+                        ],
+                        "op": "mod"
+                      },
+                      {
+                        "int": 1
+                      }
+                    ],
+                    "op": "+"
+                  }
+                ],
+                "op": "<="
+              },
+              {
+                "args": [
+                  {
+                    "args": [
+                      {
+                        "args": [
+                          {
+                            "args": [
+                              {
+                                "args": [
+                                  {
+                                    "args": [
+                                      {
+                                        "args": [
+                                          {
+                                            "var": "a_v3"
+                                          },
+                                          {
+                                            "int": 1
+                                          }
+                                        ],
+                                        "op": "-"
+                                      },
+                                      {
+                                        "var": "b_v3"
+                                      }
+                                    ],
+                                    "op": "+"
+                                  },
+                                  {
+                                    "var": "n_v4"
+                                  }
+                                ],
+                                "op": "mod"
+                              },
+                              {
+                                "var": "n_v4"
+                              }
+                            ],
+                            "op": "+"
+                          },
+                          {
+                            "var": "n_v4"
+                          }
+                        ],
+                        "op": "mod"
+                      },
+                      {
+                        "int": 1
+                      }
+                    ],
+                    "op": "+"
+                  },
+                  {
+                    "var": "n_v4"
+                  }
+                ],
+                "op": "<="
+              }
+            ],
+            "op": "and"
+          }
+        }
+      ],
+      "ensures": [
+        {
+          "args": [
+            {
+              "int": 1
+            },
+            {
+              "call": {
+                "args": [
+                  {
+                    "var": "n_v4"
+                  },
+                  {
+                    "var": "a_v3"
+                  },
+                  {
+                    "var": "b_v3"
+                  }
+                ],
+                "fun": "finalEntrance"
+              }
+            }
+          ],
+          "op": "<="
+        },
+        {
+          "args": [
+            {
+              "call": {
+                "args": [
+                  {
+                    "var": "n_v4"
+                  },
+                  {
+                    "var": "a_v3"
+                  },
+                  {
+                    "var": "b_v3"
+                  }
+                ],
+                "fun": "finalEntrance"
+              }
+            },
+            {
+              "var": "n_v4"
+            }
+          ],
+          "op": "<="
+        }
+      ],
+      "name": "finalEntranceCorrectness",
+      "params": [
+        {
+          "name": "n_v4",
+          "type": "int"
+        },
+        {
+          "name": "a_v3",
+          "type": "int"
+        },
+        {
+          "name": "b_v3",
+          "type": "int"
+        }
+      ],
+      "requires": [
+        {
+          "call": {
+            "args": [
+              {
+                "var": "n_v4"
+              },
+              {
+                "var": "a_v3"
+              },
+              {
+                "var": "b_v3"
+              }
+            ],
+            "fun": "validInput"
+          }
+        }
+      ]
+    }
+  ],
+  "name": "vericoding_da0078__solve",
+  "params": [
+    {
+      "name": "n",
+      "type": "int"
+    },
+    {
+      "name": "a",
+      "type": "int"
+    },
+    {
+      "name": "b",
+      "type": "int"
+    }
+  ],
+  "requires": [
+    {
+      "call": {
+        "args": [
+          {
+            "var": "n"
+          },
+          {
+            "var": "a"
+          },
+          {
+            "var": "b"
+          }
+        ],
+        "fun": "validInput"
+      }
+    }
+  ],
+  "returns": [
+    {
+      "name": "result",
+      "type": "int"
+    }
+  ],
+  "spec_funs": [
+    {
+      "body": {
+        "args": [
+          {
+            "args": [
+              {
+                "int": 1
+              },
+              {
+                "var": "result_v"
+              }
+            ],
+            "op": "<="
+          },
+          {
+            "args": [
+              {
+                "var": "result_v"
+              },
+              {
+                "var": "n_v"
+              }
+            ],
+            "op": "<="
+          }
+        ],
+        "op": "and"
+      },
+      "decreases": {
+        "int": 0
+      },
+      "name": "validOutput",
+      "params": [
+        {
+          "name": "result_v",
+          "type": "int"
+        },
+        {
+          "name": "n_v",
+          "type": "int"
+        }
+      ],
+      "result": "bool"
+    },
+    {
+      "body": {
+        "args": [
+          {
+            "args": [
+              {
+                "var": "n_v2"
+              },
+              {
+                "int": 1
+              }
+            ],
+            "op": ">="
+          },
+          {
+            "args": [
+              {
+                "args": [
+                  {
+                    "int": 1
+                  },
+                  {
+                    "var": "a_v"
+                  }
+                ],
+                "op": "<="
+              },
+              {
+                "args": [
+                  {
+                    "var": "a_v"
+                  },
+                  {
+                    "var": "n_v2"
+                  }
+                ],
+                "op": "<="
+              }
+            ],
+            "op": "and"
+          },
+          {
+            "args": [
+              {
+                "args": [
+                  {
+                    "args": [
+                      {
+                        "int": 100
+                      }
+                    ],
+                    "op": "neg"
+                  },
+                  {
+                    "var": "b_v"
+                  }
+                ],
+                "op": "<="
+              },
+              {
+                "args": [
+                  {
+                    "var": "b_v"
+                  },
+                  {
+                    "int": 100
+                  }
+                ],
+                "op": "<="
+              }
+            ],
+            "op": "and"
+          }
+        ],
+        "op": "and"
+      },
+      "decreases": {
+        "int": 0
+      },
+      "name": "validInput",
+      "params": [
+        {
+          "name": "n_v2",
+          "type": "int"
+        },
+        {
+          "name": "a_v",
+          "type": "int"
+        },
+        {
+          "name": "b_v",
+          "type": "int"
+        }
+      ],
+      "result": "bool"
+    },
+    {
+      "body": {
+        "ite": {
+          "cond": {
+            "call": {
+              "args": [
+                {
+                  "var": "n_v3"
+                },
+                {
+                  "var": "a_v2"
+                },
+                {
+                  "var": "b_v2"
+                }
+              ],
+              "fun": "validInput"
+            }
+          },
+          "else": {
+            "int": 0
+          },
+          "then": {
+            "args": [
+              {
+                "args": [
+                  {
+                    "args": [
+                      {
+                        "args": [
+                          {
+                            "args": [
+                              {
+                                "args": [
+                                  {
+                                    "var": "a_v2"
+                                  },
+                                  {
+                                    "int": 1
+                                  }
+                                ],
+                                "op": "-"
+                              },
+                              {
+                                "var": "b_v2"
+                              }
+                            ],
+                            "op": "+"
+                          },
+                          {
+                            "var": "n_v3"
+                          }
+                        ],
+                        "op": "mod"
+                      },
+                      {
+                        "var": "n_v3"
+                      }
+                    ],
+                    "op": "+"
+                  },
+                  {
+                    "var": "n_v3"
+                  }
+                ],
+                "op": "mod"
+              },
+              {
+                "int": 1
+              }
+            ],
+            "op": "+"
+          }
+        }
+      },
+      "decreases": {
+        "int": 0
+      },
+      "name": "finalEntrance",
+      "params": [
+        {
+          "name": "n_v3",
+          "type": "int"
+        },
+        {
+          "name": "a_v2",
+          "type": "int"
+        },
+        {
+          "name": "b_v2",
+          "type": "int"
+        }
+      ],
+      "result": "int"
+    }
+  ],
+  "t": 1
+}

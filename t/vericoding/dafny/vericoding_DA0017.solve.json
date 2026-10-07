@@ -1,0 +1,619 @@
+{
+  "body": [
+    {
+      "var": {
+        "init": {
+          "args": [
+            {
+              "var": "n"
+            },
+            {
+              "var": "m"
+            }
+          ],
+          "op": "mod"
+        },
+        "name": "k",
+        "type": "int"
+      }
+    },
+    {
+      "var": {
+        "init": {
+          "args": [
+            {
+              "var": "k"
+            },
+            {
+              "var": "b"
+            }
+          ],
+          "op": "*"
+        },
+        "name": "cost_decrease",
+        "type": "int"
+      }
+    },
+    {
+      "var": {
+        "init": {
+          "args": [
+            {
+              "args": [
+                {
+                  "var": "m"
+                },
+                {
+                  "var": "k"
+                }
+              ],
+              "op": "-"
+            },
+            {
+              "var": "a"
+            }
+          ],
+          "op": "*"
+        },
+        "name": "cost_increase",
+        "type": "int"
+      }
+    },
+    {
+      "if": {
+        "cond": {
+          "args": [
+            {
+              "var": "cost_decrease"
+            },
+            {
+              "var": "cost_increase"
+            }
+          ],
+          "op": "<"
+        },
+        "else": [
+          {
+            "assign": [
+              "result",
+              {
+                "var": "cost_increase"
+              }
+            ]
+          }
+        ],
+        "then": [
+          {
+            "assign": [
+              "result",
+              {
+                "var": "cost_decrease"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "lemma": {
+        "args": [
+          {
+            "var": "n"
+          },
+          {
+            "var": "m"
+          },
+          {
+            "var": "a"
+          },
+          {
+            "var": "b"
+          }
+        ],
+        "name": "minCostNonNegative"
+      }
+    }
+  ],
+  "ensures": [
+    {
+      "args": [
+        {
+          "var": "result"
+        },
+        {
+          "call": {
+            "args": [
+              {
+                "var": "n"
+              },
+              {
+                "var": "m"
+              },
+              {
+                "var": "a"
+              },
+              {
+                "var": "b"
+              }
+            ],
+            "fun": "minCostToDivisible"
+          }
+        }
+      ],
+      "op": "=="
+    },
+    {
+      "args": [
+        {
+          "var": "result"
+        },
+        {
+          "int": 0
+        }
+      ],
+      "op": ">="
+    }
+  ],
+  "gate": "recursion",
+  "lemmas": [
+    {
+      "body": [
+        {
+          "assert": {
+            "args": [
+              {
+                "args": [
+                  {
+                    "args": [
+                      {
+                        "var": "n_v3"
+                      },
+                      {
+                        "var": "m_v3"
+                      }
+                    ],
+                    "op": "mod"
+                  },
+                  {
+                    "int": 0
+                  }
+                ],
+                "op": ">="
+              },
+              {
+                "args": [
+                  {
+                    "args": [
+                      {
+                        "var": "n_v3"
+                      },
+                      {
+                        "var": "m_v3"
+                      }
+                    ],
+                    "op": "mod"
+                  },
+                  {
+                    "var": "m_v3"
+                  }
+                ],
+                "op": "<"
+              }
+            ],
+            "op": "and"
+          }
+        },
+        {
+          "assert": {
+            "args": [
+              {
+                "args": [
+                  {
+                    "args": [
+                      {
+                        "var": "n_v3"
+                      },
+                      {
+                        "var": "m_v3"
+                      }
+                    ],
+                    "op": "mod"
+                  },
+                  {
+                    "var": "b_v3"
+                  }
+                ],
+                "op": "*"
+              },
+              {
+                "int": 0
+              }
+            ],
+            "op": ">="
+          }
+        },
+        {
+          "assert": {
+            "args": [
+              {
+                "args": [
+                  {
+                    "args": [
+                      {
+                        "var": "m_v3"
+                      },
+                      {
+                        "args": [
+                          {
+                            "var": "n_v3"
+                          },
+                          {
+                            "var": "m_v3"
+                          }
+                        ],
+                        "op": "mod"
+                      }
+                    ],
+                    "op": "-"
+                  },
+                  {
+                    "var": "a_v3"
+                  }
+                ],
+                "op": "*"
+              },
+              {
+                "int": 0
+              }
+            ],
+            "op": ">="
+          }
+        }
+      ],
+      "ensures": [
+        {
+          "args": [
+            {
+              "call": {
+                "args": [
+                  {
+                    "var": "n_v3"
+                  },
+                  {
+                    "var": "m_v3"
+                  },
+                  {
+                    "var": "a_v3"
+                  },
+                  {
+                    "var": "b_v3"
+                  }
+                ],
+                "fun": "minCostToDivisible"
+              }
+            },
+            {
+              "int": 0
+            }
+          ],
+          "op": ">="
+        }
+      ],
+      "name": "minCostNonNegative",
+      "params": [
+        {
+          "name": "n_v3",
+          "type": "int"
+        },
+        {
+          "name": "m_v3",
+          "type": "int"
+        },
+        {
+          "name": "a_v3",
+          "type": "int"
+        },
+        {
+          "name": "b_v3",
+          "type": "int"
+        }
+      ],
+      "requires": [
+        {
+          "call": {
+            "args": [
+              {
+                "var": "n_v3"
+              },
+              {
+                "var": "m_v3"
+              },
+              {
+                "var": "a_v3"
+              },
+              {
+                "var": "b_v3"
+              }
+            ],
+            "fun": "validInput"
+          }
+        }
+      ]
+    }
+  ],
+  "name": "vericoding_da0017__solve",
+  "params": [
+    {
+      "name": "n",
+      "type": "int"
+    },
+    {
+      "name": "m",
+      "type": "int"
+    },
+    {
+      "name": "a",
+      "type": "int"
+    },
+    {
+      "name": "b",
+      "type": "int"
+    }
+  ],
+  "requires": [
+    {
+      "call": {
+        "args": [
+          {
+            "var": "n"
+          },
+          {
+            "var": "m"
+          },
+          {
+            "var": "a"
+          },
+          {
+            "var": "b"
+          }
+        ],
+        "fun": "validInput"
+      }
+    }
+  ],
+  "returns": [
+    {
+      "name": "result",
+      "type": "int"
+    }
+  ],
+  "spec_funs": [
+    {
+      "body": {
+        "args": [
+          {
+            "args": [
+              {
+                "var": "n_v"
+              },
+              {
+                "int": 1
+              }
+            ],
+            "op": ">="
+          },
+          {
+            "args": [
+              {
+                "var": "m_v"
+              },
+              {
+                "int": 1
+              }
+            ],
+            "op": ">="
+          },
+          {
+            "args": [
+              {
+                "var": "a_v"
+              },
+              {
+                "int": 1
+              }
+            ],
+            "op": ">="
+          },
+          {
+            "args": [
+              {
+                "var": "b_v"
+              },
+              {
+                "int": 1
+              }
+            ],
+            "op": ">="
+          }
+        ],
+        "op": "and"
+      },
+      "decreases": {
+        "int": 0
+      },
+      "name": "validInput",
+      "params": [
+        {
+          "name": "n_v",
+          "type": "int"
+        },
+        {
+          "name": "m_v",
+          "type": "int"
+        },
+        {
+          "name": "a_v",
+          "type": "int"
+        },
+        {
+          "name": "b_v",
+          "type": "int"
+        }
+      ],
+      "result": "bool"
+    },
+    {
+      "body": {
+        "ite": {
+          "cond": {
+            "call": {
+              "args": [
+                {
+                  "var": "n_v2"
+                },
+                {
+                  "var": "m_v2"
+                },
+                {
+                  "var": "a_v2"
+                },
+                {
+                  "var": "b_v2"
+                }
+              ],
+              "fun": "validInput"
+            }
+          },
+          "else": {
+            "int": 0
+          },
+          "then": {
+            "ite": {
+              "cond": {
+                "args": [
+                  {
+                    "args": [
+                      {
+                        "args": [
+                          {
+                            "var": "n_v2"
+                          },
+                          {
+                            "var": "m_v2"
+                          }
+                        ],
+                        "op": "mod"
+                      },
+                      {
+                        "var": "b_v2"
+                      }
+                    ],
+                    "op": "*"
+                  },
+                  {
+                    "args": [
+                      {
+                        "args": [
+                          {
+                            "var": "m_v2"
+                          },
+                          {
+                            "args": [
+                              {
+                                "var": "n_v2"
+                              },
+                              {
+                                "var": "m_v2"
+                              }
+                            ],
+                            "op": "mod"
+                          }
+                        ],
+                        "op": "-"
+                      },
+                      {
+                        "var": "a_v2"
+                      }
+                    ],
+                    "op": "*"
+                  }
+                ],
+                "op": "<"
+              },
+              "else": {
+                "args": [
+                  {
+                    "args": [
+                      {
+                        "var": "m_v2"
+                      },
+                      {
+                        "args": [
+                          {
+                            "var": "n_v2"
+                          },
+                          {
+                            "var": "m_v2"
+                          }
+                        ],
+                        "op": "mod"
+                      }
+                    ],
+                    "op": "-"
+                  },
+                  {
+                    "var": "a_v2"
+                  }
+                ],
+                "op": "*"
+              },
+              "then": {
+                "args": [
+                  {
+                    "args": [
+                      {
+                        "var": "n_v2"
+                      },
+                      {
+                        "var": "m_v2"
+                      }
+                    ],
+                    "op": "mod"
+                  },
+                  {
+                    "var": "b_v2"
+                  }
+                ],
+                "op": "*"
+              }
+            }
+          }
+        }
+      },
+      "decreases": {
+        "int": 0
+      },
+      "name": "minCostToDivisible",
+      "params": [
+        {
+          "name": "n_v2",
+          "type": "int"
+        },
+        {
+          "name": "m_v2",
+          "type": "int"
+        },
+        {
+          "name": "a_v2",
+          "type": "int"
+        },
+        {
+          "name": "b_v2",
+          "type": "int"
+        }
+      ],
+      "result": "int"
+    }
+  ],
+  "t": 1
+}

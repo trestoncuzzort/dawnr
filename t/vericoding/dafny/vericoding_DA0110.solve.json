@@ -1,0 +1,526 @@
+{
+  "body": [
+    {
+      "var": {
+        "init": {
+          "args": [
+            {
+              "args": [
+                {
+                  "args": [
+                    {
+                      "var": "r"
+                    },
+                    {
+                      "var": "g"
+                    }
+                  ],
+                  "op": "+"
+                },
+                {
+                  "var": "b"
+                }
+              ],
+              "op": "+"
+            },
+            {
+              "int": 3
+            }
+          ],
+          "op": "div"
+        },
+        "name": "sum_all",
+        "type": "int"
+      }
+    },
+    {
+      "var": {
+        "init": {
+          "args": [
+            {
+              "var": "r"
+            },
+            {
+              "var": "g"
+            }
+          ],
+          "op": "+"
+        },
+        "name": "sum_rg",
+        "type": "int"
+      }
+    },
+    {
+      "var": {
+        "init": {
+          "args": [
+            {
+              "var": "r"
+            },
+            {
+              "var": "b"
+            }
+          ],
+          "op": "+"
+        },
+        "name": "sum_rb",
+        "type": "int"
+      }
+    },
+    {
+      "var": {
+        "init": {
+          "args": [
+            {
+              "var": "g"
+            },
+            {
+              "var": "b"
+            }
+          ],
+          "op": "+"
+        },
+        "name": "sum_gb",
+        "type": "int"
+      }
+    },
+    {
+      "var": {
+        "init": {
+          "call": {
+            "args": [
+              {
+                "var": "sum_all"
+              },
+              {
+                "var": "sum_rg"
+              }
+            ],
+            "fun": "min"
+          }
+        },
+        "name": "min1",
+        "type": "int"
+      }
+    },
+    {
+      "var": {
+        "init": {
+          "call": {
+            "args": [
+              {
+                "var": "min1"
+              },
+              {
+                "var": "sum_rb"
+              }
+            ],
+            "fun": "min"
+          }
+        },
+        "name": "min2",
+        "type": "int"
+      }
+    },
+    {
+      "assign": [
+        "result",
+        {
+          "call": {
+            "args": [
+              {
+                "var": "min2"
+              },
+              {
+                "var": "sum_gb"
+              }
+            ],
+            "fun": "min"
+          }
+        }
+      ]
+    },
+    {
+      "lemma": {
+        "args": [
+          {
+            "var": "r"
+          },
+          {
+            "var": "g"
+          },
+          {
+            "var": "b"
+          }
+        ],
+        "name": "maxTablesNonNegative"
+      }
+    }
+  ],
+  "ensures": [
+    {
+      "args": [
+        {
+          "var": "result"
+        },
+        {
+          "call": {
+            "args": [
+              {
+                "var": "r"
+              },
+              {
+                "var": "g"
+              },
+              {
+                "var": "b"
+              }
+            ],
+            "fun": "maxTables"
+          }
+        }
+      ],
+      "op": "=="
+    },
+    {
+      "args": [
+        {
+          "var": "result"
+        },
+        {
+          "int": 0
+        }
+      ],
+      "op": ">="
+    }
+  ],
+  "gate": "recursion",
+  "lemmas": [
+    {
+      "body": [],
+      "ensures": [
+        {
+          "args": [
+            {
+              "call": {
+                "args": [
+                  {
+                    "var": "r_v3"
+                  },
+                  {
+                    "var": "g_v3"
+                  },
+                  {
+                    "var": "b_v4"
+                  }
+                ],
+                "fun": "maxTables"
+              }
+            },
+            {
+              "int": 0
+            }
+          ],
+          "op": ">="
+        }
+      ],
+      "name": "maxTablesNonNegative",
+      "params": [
+        {
+          "name": "r_v3",
+          "type": "int"
+        },
+        {
+          "name": "g_v3",
+          "type": "int"
+        },
+        {
+          "name": "b_v4",
+          "type": "int"
+        }
+      ],
+      "requires": [
+        {
+          "call": {
+            "args": [
+              {
+                "var": "r_v3"
+              },
+              {
+                "var": "g_v3"
+              },
+              {
+                "var": "b_v4"
+              }
+            ],
+            "fun": "validInput"
+          }
+        }
+      ]
+    }
+  ],
+  "name": "vericoding_da0110__solve",
+  "params": [
+    {
+      "name": "r",
+      "type": "int"
+    },
+    {
+      "name": "g",
+      "type": "int"
+    },
+    {
+      "name": "b",
+      "type": "int"
+    }
+  ],
+  "requires": [
+    {
+      "call": {
+        "args": [
+          {
+            "var": "r"
+          },
+          {
+            "var": "g"
+          },
+          {
+            "var": "b"
+          }
+        ],
+        "fun": "validInput"
+      }
+    }
+  ],
+  "returns": [
+    {
+      "name": "result",
+      "type": "int"
+    }
+  ],
+  "spec_funs": [
+    {
+      "body": {
+        "ite": {
+          "cond": {
+            "args": [
+              {
+                "var": "a"
+              },
+              {
+                "var": "b_v"
+              }
+            ],
+            "op": "<="
+          },
+          "else": {
+            "var": "b_v"
+          },
+          "then": {
+            "var": "a"
+          }
+        }
+      },
+      "decreases": {
+        "int": 0
+      },
+      "name": "min",
+      "params": [
+        {
+          "name": "a",
+          "type": "int"
+        },
+        {
+          "name": "b_v",
+          "type": "int"
+        }
+      ],
+      "result": "int"
+    },
+    {
+      "body": {
+        "args": [
+          {
+            "args": [
+              {
+                "var": "r_v"
+              },
+              {
+                "int": 0
+              }
+            ],
+            "op": ">="
+          },
+          {
+            "args": [
+              {
+                "var": "g_v"
+              },
+              {
+                "int": 0
+              }
+            ],
+            "op": ">="
+          },
+          {
+            "args": [
+              {
+                "var": "b_v2"
+              },
+              {
+                "int": 0
+              }
+            ],
+            "op": ">="
+          }
+        ],
+        "op": "and"
+      },
+      "decreases": {
+        "int": 0
+      },
+      "name": "validInput",
+      "params": [
+        {
+          "name": "r_v",
+          "type": "int"
+        },
+        {
+          "name": "g_v",
+          "type": "int"
+        },
+        {
+          "name": "b_v2",
+          "type": "int"
+        }
+      ],
+      "result": "bool"
+    },
+    {
+      "body": {
+        "ite": {
+          "cond": {
+            "call": {
+              "args": [
+                {
+                  "var": "r_v2"
+                },
+                {
+                  "var": "g_v2"
+                },
+                {
+                  "var": "b_v3"
+                }
+              ],
+              "fun": "validInput"
+            }
+          },
+          "else": {
+            "int": 0
+          },
+          "then": {
+            "call": {
+              "args": [
+                {
+                  "call": {
+                    "args": [
+                      {
+                        "call": {
+                          "args": [
+                            {
+                              "args": [
+                                {
+                                  "args": [
+                                    {
+                                      "args": [
+                                        {
+                                          "var": "r_v2"
+                                        },
+                                        {
+                                          "var": "g_v2"
+                                        }
+                                      ],
+                                      "op": "+"
+                                    },
+                                    {
+                                      "var": "b_v3"
+                                    }
+                                  ],
+                                  "op": "+"
+                                },
+                                {
+                                  "int": 3
+                                }
+                              ],
+                              "op": "div"
+                            },
+                            {
+                              "args": [
+                                {
+                                  "var": "r_v2"
+                                },
+                                {
+                                  "var": "g_v2"
+                                }
+                              ],
+                              "op": "+"
+                            }
+                          ],
+                          "fun": "min"
+                        }
+                      },
+                      {
+                        "args": [
+                          {
+                            "var": "r_v2"
+                          },
+                          {
+                            "var": "b_v3"
+                          }
+                        ],
+                        "op": "+"
+                      }
+                    ],
+                    "fun": "min"
+                  }
+                },
+                {
+                  "args": [
+                    {
+                      "var": "g_v2"
+                    },
+                    {
+                      "var": "b_v3"
+                    }
+                  ],
+                  "op": "+"
+                }
+              ],
+              "fun": "min"
+            }
+          }
+        }
+      },
+      "decreases": {
+        "int": 0
+      },
+      "name": "maxTables",
+      "params": [
+        {
+          "name": "r_v2",
+          "type": "int"
+        },
+        {
+          "name": "g_v2",
+          "type": "int"
+        },
+        {
+          "name": "b_v3",
+          "type": "int"
+        }
+      ],
+      "result": "int"
+    }
+  ],
+  "t": 1
+}

@@ -1,0 +1,331 @@
+{
+  "body": [
+    {
+      "assign": [
+        "result",
+        {
+          "call": {
+            "args": [
+              {
+                "var": "strings"
+              },
+              {
+                "int": 0
+              }
+            ],
+            "fun": "concat_strings"
+          }
+        }
+      ]
+    }
+  ],
+  "ensures": [
+    {
+      "args": [
+        {
+          "var": "result"
+        },
+        {
+          "call": {
+            "args": [
+              {
+                "var": "strings"
+              },
+              {
+                "int": 0
+              }
+            ],
+            "fun": "concat_strings"
+          }
+        }
+      ],
+      "op": "=="
+    },
+    {
+      "args": [
+        {
+          "args": [
+            {
+              "args": [
+                {
+                  "var": "strings"
+                }
+              ],
+              "op": "len"
+            },
+            {
+              "int": 0
+            }
+          ],
+          "op": "=="
+        },
+        {
+          "args": [
+            {
+              "var": "result"
+            },
+            {
+              "args": [],
+              "op": "seq"
+            }
+          ],
+          "op": "=="
+        }
+      ],
+      "op": "implies"
+    }
+  ],
+  "gate": "recursion",
+  "name": "vericoding_dh0026__concatenate",
+  "params": [
+    {
+      "name": "strings",
+      "type": {
+        "seq": "seq"
+      }
+    }
+  ],
+  "requires": [
+    {
+      "forall": {
+        "body": {
+          "forall": {
+            "body": {
+              "args": [
+                {
+                  "args": [
+                    {
+                      "args": [
+                        {
+                          "args": [
+                            {
+                              "var": "strings"
+                            },
+                            {
+                              "var": "i"
+                            }
+                          ],
+                          "op": "at"
+                        },
+                        {
+                          "var": "k"
+                        }
+                      ],
+                      "op": "at"
+                    },
+                    {
+                      "int": 0
+                    }
+                  ],
+                  "op": ">="
+                },
+                {
+                  "args": [
+                    {
+                      "args": [
+                        {
+                          "args": [
+                            {
+                              "var": "strings"
+                            },
+                            {
+                              "var": "i"
+                            }
+                          ],
+                          "op": "at"
+                        },
+                        {
+                          "var": "k"
+                        }
+                      ],
+                      "op": "at"
+                    },
+                    {
+                      "int": 1114111
+                    }
+                  ],
+                  "op": "<="
+                }
+              ],
+              "op": "and"
+            },
+            "hi": {
+              "args": [
+                {
+                  "args": [
+                    {
+                      "var": "strings"
+                    },
+                    {
+                      "var": "i"
+                    }
+                  ],
+                  "op": "at"
+                }
+              ],
+              "op": "len"
+            },
+            "lo": {
+              "int": 0
+            },
+            "var": "k"
+          }
+        },
+        "hi": {
+          "args": [
+            {
+              "var": "strings"
+            }
+          ],
+          "op": "len"
+        },
+        "lo": {
+          "int": 0
+        },
+        "var": "i"
+      }
+    }
+  ],
+  "returns": [
+    {
+      "name": "result",
+      "type": "seq"
+    }
+  ],
+  "spec_funs": [
+    {
+      "body": {
+        "ite": {
+          "cond": {
+            "args": [
+              {
+                "args": [
+                  {
+                    "var": "index"
+                  },
+                  {
+                    "int": 0
+                  }
+                ],
+                "op": ">="
+              },
+              {
+                "args": [
+                  {
+                    "var": "index"
+                  },
+                  {
+                    "args": [
+                      {
+                        "var": "strings_v"
+                      }
+                    ],
+                    "op": "len"
+                  }
+                ],
+                "op": "<="
+              }
+            ],
+            "op": "and"
+          },
+          "else": {
+            "args": [],
+            "op": "seq"
+          },
+          "then": {
+            "ite": {
+              "cond": {
+                "args": [
+                  {
+                    "var": "index"
+                  },
+                  {
+                    "args": [
+                      {
+                        "var": "strings_v"
+                      }
+                    ],
+                    "op": "len"
+                  }
+                ],
+                "op": "=="
+              },
+              "else": {
+                "args": [
+                  {
+                    "args": [
+                      {
+                        "var": "strings_v"
+                      },
+                      {
+                        "var": "index"
+                      }
+                    ],
+                    "op": "at"
+                  },
+                  {
+                    "call": {
+                      "args": [
+                        {
+                          "var": "strings_v"
+                        },
+                        {
+                          "args": [
+                            {
+                              "var": "index"
+                            },
+                            {
+                              "int": 1
+                            }
+                          ],
+                          "op": "+"
+                        }
+                      ],
+                      "fun": "concat_strings"
+                    }
+                  }
+                ],
+                "op": "+"
+              },
+              "then": {
+                "args": [],
+                "op": "seq"
+              }
+            }
+          }
+        }
+      },
+      "decreases": {
+        "args": [
+          {
+            "args": [
+              {
+                "var": "strings_v"
+              }
+            ],
+            "op": "len"
+          },
+          {
+            "var": "index"
+          }
+        ],
+        "op": "-"
+      },
+      "name": "concat_strings",
+      "params": [
+        {
+          "name": "strings_v",
+          "type": {
+            "seq": "seq"
+          }
+        },
+        {
+          "name": "index",
+          "type": "int"
+        }
+      ],
+      "result": "seq"
+    }
+  ],
+  "t": 1
+}

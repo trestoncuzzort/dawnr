@@ -1,0 +1,296 @@
+{
+  "body": [
+    {
+      "var": {
+        "init": {
+          "args": [
+            {
+              "int": 800
+            },
+            {
+              "var": "n"
+            }
+          ],
+          "op": "*"
+        },
+        "name": "totalCost_v",
+        "type": "int"
+      }
+    },
+    {
+      "var": {
+        "init": {
+          "args": [
+            {
+              "args": [
+                {
+                  "var": "n"
+                },
+                {
+                  "int": 15
+                }
+              ],
+              "op": "div"
+            },
+            {
+              "int": 200
+            }
+          ],
+          "op": "*"
+        },
+        "name": "cashback_v",
+        "type": "int"
+      }
+    },
+    {
+      "assign": [
+        "result",
+        {
+          "args": [
+            {
+              "var": "totalCost_v"
+            },
+            {
+              "var": "cashback_v"
+            }
+          ],
+          "op": "-"
+        }
+      ]
+    }
+  ],
+  "ensures": [
+    {
+      "args": [
+        {
+          "var": "result"
+        },
+        {
+          "call": {
+            "args": [
+              {
+                "var": "n"
+              }
+            ],
+            "fun": "netAmount"
+          }
+        }
+      ],
+      "op": "=="
+    }
+  ],
+  "gate": "recursion",
+  "name": "vericoding_da0664__solve",
+  "params": [
+    {
+      "name": "n",
+      "type": "int"
+    }
+  ],
+  "requires": [
+    {
+      "call": {
+        "args": [
+          {
+            "var": "n"
+          }
+        ],
+        "fun": "validInput"
+      }
+    }
+  ],
+  "returns": [
+    {
+      "name": "result",
+      "type": "int"
+    }
+  ],
+  "spec_funs": [
+    {
+      "body": {
+        "args": [
+          {
+            "args": [
+              {
+                "int": 1
+              },
+              {
+                "var": "n_v"
+              }
+            ],
+            "op": "<="
+          },
+          {
+            "args": [
+              {
+                "var": "n_v"
+              },
+              {
+                "int": 100
+              }
+            ],
+            "op": "<="
+          }
+        ],
+        "op": "and"
+      },
+      "decreases": {
+        "int": 0
+      },
+      "name": "validInput",
+      "params": [
+        {
+          "name": "n_v",
+          "type": "int"
+        }
+      ],
+      "result": "bool"
+    },
+    {
+      "body": {
+        "ite": {
+          "cond": {
+            "call": {
+              "args": [
+                {
+                  "var": "n_v2"
+                }
+              ],
+              "fun": "validInput"
+            }
+          },
+          "else": {
+            "int": 0
+          },
+          "then": {
+            "args": [
+              {
+                "int": 800
+              },
+              {
+                "var": "n_v2"
+              }
+            ],
+            "op": "*"
+          }
+        }
+      },
+      "decreases": {
+        "int": 0
+      },
+      "name": "totalCost",
+      "params": [
+        {
+          "name": "n_v2",
+          "type": "int"
+        }
+      ],
+      "result": "int"
+    },
+    {
+      "body": {
+        "ite": {
+          "cond": {
+            "call": {
+              "args": [
+                {
+                  "var": "n_v3"
+                }
+              ],
+              "fun": "validInput"
+            }
+          },
+          "else": {
+            "int": 0
+          },
+          "then": {
+            "args": [
+              {
+                "args": [
+                  {
+                    "var": "n_v3"
+                  },
+                  {
+                    "int": 15
+                  }
+                ],
+                "op": "div"
+              },
+              {
+                "int": 200
+              }
+            ],
+            "op": "*"
+          }
+        }
+      },
+      "decreases": {
+        "int": 0
+      },
+      "name": "cashback",
+      "params": [
+        {
+          "name": "n_v3",
+          "type": "int"
+        }
+      ],
+      "result": "int"
+    },
+    {
+      "body": {
+        "ite": {
+          "cond": {
+            "call": {
+              "args": [
+                {
+                  "var": "n_v4"
+                }
+              ],
+              "fun": "validInput"
+            }
+          },
+          "else": {
+            "int": 0
+          },
+          "then": {
+            "args": [
+              {
+                "call": {
+                  "args": [
+                    {
+                      "var": "n_v4"
+                    }
+                  ],
+                  "fun": "totalCost"
+                }
+              },
+              {
+                "call": {
+                  "args": [
+                    {
+                      "var": "n_v4"
+                    }
+                  ],
+                  "fun": "cashback"
+                }
+              }
+            ],
+            "op": "-"
+          }
+        }
+      },
+      "decreases": {
+        "int": 0
+      },
+      "name": "netAmount",
+      "params": [
+        {
+          "name": "n_v4",
+          "type": "int"
+        }
+      ],
+      "result": "int"
+    }
+  ],
+  "t": 1
+}

@@ -1,0 +1,1193 @@
+{
+  "body": [
+    {
+      "var": {
+        "init": {
+          "call": {
+            "args": [
+              {
+                "var": "cards"
+              },
+              {
+                "int": 0
+              },
+              {
+                "args": [
+                  {
+                    "args": [
+                      {
+                        "var": "cards"
+                      }
+                    ],
+                    "op": "len"
+                  },
+                  {
+                    "int": 1
+                  }
+                ],
+                "op": "-"
+              },
+              {
+                "bool": true
+              }
+            ],
+            "fun": "sereja_optimal_score"
+          }
+        },
+        "name": "sereja_score",
+        "type": "int"
+      }
+    },
+    {
+      "var": {
+        "init": {
+          "call": {
+            "args": [
+              {
+                "var": "cards"
+              }
+            ],
+            "fun": "sum"
+          }
+        },
+        "name": "total",
+        "type": "int"
+      }
+    },
+    {
+      "lemma": {
+        "args": [
+          {
+            "var": "cards"
+          }
+        ],
+        "name": "sum_bounds"
+      }
+    },
+    {
+      "var": {
+        "init": {
+          "args": [
+            {
+              "var": "total"
+            },
+            {
+              "var": "sereja_score"
+            }
+          ],
+          "op": "-"
+        },
+        "name": "dima_score",
+        "type": "int"
+      }
+    },
+    {
+      "assign": [
+        "scores",
+        {
+          "args": [
+            {
+              "var": "sereja_score"
+            },
+            {
+              "var": "dima_score"
+            }
+          ],
+          "op": "seq"
+        }
+      ]
+    }
+  ],
+  "ensures": [
+    {
+      "call": {
+        "args": [
+          {
+            "var": "scores"
+          },
+          {
+            "var": "cards"
+          }
+        ],
+        "fun": "validOutput"
+      }
+    }
+  ],
+  "gate": "recursion",
+  "lemmas": [
+    {
+      "body": [
+        {
+          "if": {
+            "cond": {
+              "args": [
+                {
+                  "args": [
+                    {
+                      "var": "cards_v8"
+                    }
+                  ],
+                  "op": "len"
+                },
+                {
+                  "int": 1
+                }
+              ],
+              "op": "=="
+            },
+            "else": [
+              {
+                "assert": {
+                  "args": [
+                    {
+                      "args": [
+                        {
+                          "var": "cards_v8"
+                        },
+                        {
+                          "int": 0
+                        }
+                      ],
+                      "op": "at"
+                    },
+                    {
+                      "int": 0
+                    }
+                  ],
+                  "op": ">"
+                }
+              },
+              {
+                "lemma": {
+                  "args": [
+                    {
+                      "args": [
+                        {
+                          "var": "cards_v8"
+                        },
+                        {
+                          "int": 1
+                        },
+                        {
+                          "args": [
+                            {
+                              "var": "cards_v8"
+                            }
+                          ],
+                          "op": "len"
+                        }
+                      ],
+                      "op": "slice"
+                    }
+                  ],
+                  "name": "sum_bounds"
+                }
+              },
+              {
+                "assert": {
+                  "args": [
+                    {
+                      "call": {
+                        "args": [
+                          {
+                            "args": [
+                              {
+                                "var": "cards_v8"
+                              },
+                              {
+                                "int": 1
+                              },
+                              {
+                                "args": [
+                                  {
+                                    "var": "cards_v8"
+                                  }
+                                ],
+                                "op": "len"
+                              }
+                            ],
+                            "op": "slice"
+                          }
+                        ],
+                        "fun": "sum"
+                      }
+                    },
+                    {
+                      "int": 0
+                    }
+                  ],
+                  "op": ">"
+                }
+              },
+              {
+                "assert": {
+                  "args": [
+                    {
+                      "call": {
+                        "args": [
+                          {
+                            "var": "cards_v8"
+                          }
+                        ],
+                        "fun": "sum"
+                      }
+                    },
+                    {
+                      "args": [
+                        {
+                          "args": [
+                            {
+                              "var": "cards_v8"
+                            },
+                            {
+                              "int": 0
+                            }
+                          ],
+                          "op": "at"
+                        },
+                        {
+                          "call": {
+                            "args": [
+                              {
+                                "args": [
+                                  {
+                                    "var": "cards_v8"
+                                  },
+                                  {
+                                    "int": 1
+                                  },
+                                  {
+                                    "args": [
+                                      {
+                                        "var": "cards_v8"
+                                      }
+                                    ],
+                                    "op": "len"
+                                  }
+                                ],
+                                "op": "slice"
+                              }
+                            ],
+                            "fun": "sum"
+                          }
+                        }
+                      ],
+                      "op": "+"
+                    }
+                  ],
+                  "op": "=="
+                }
+              }
+            ],
+            "then": [
+              {
+                "assert": {
+                  "args": [
+                    {
+                      "call": {
+                        "args": [
+                          {
+                            "var": "cards_v8"
+                          }
+                        ],
+                        "fun": "sum"
+                      }
+                    },
+                    {
+                      "args": [
+                        {
+                          "var": "cards_v8"
+                        },
+                        {
+                          "int": 0
+                        }
+                      ],
+                      "op": "at"
+                    }
+                  ],
+                  "op": "=="
+                }
+              },
+              {
+                "assert": {
+                  "args": [
+                    {
+                      "args": [
+                        {
+                          "var": "cards_v8"
+                        },
+                        {
+                          "int": 0
+                        }
+                      ],
+                      "op": "at"
+                    },
+                    {
+                      "int": 0
+                    }
+                  ],
+                  "op": ">"
+                }
+              }
+            ]
+          }
+        }
+      ],
+      "decreases": {
+        "args": [
+          {
+            "var": "cards_v8"
+          }
+        ],
+        "op": "len"
+      },
+      "ensures": [
+        {
+          "args": [
+            {
+              "call": {
+                "args": [
+                  {
+                    "var": "cards_v8"
+                  }
+                ],
+                "fun": "sum"
+              }
+            },
+            {
+              "int": 0
+            }
+          ],
+          "op": ">"
+        }
+      ],
+      "name": "sum_bounds",
+      "params": [
+        {
+          "name": "cards_v8",
+          "type": "seq"
+        }
+      ],
+      "requires": [
+        {
+          "args": [
+            {
+              "args": [
+                {
+                  "var": "cards_v8"
+                }
+              ],
+              "op": "len"
+            },
+            {
+              "int": 1
+            }
+          ],
+          "op": ">="
+        },
+        {
+          "forall": {
+            "body": {
+              "args": [
+                {
+                  "args": [
+                    {
+                      "var": "cards_v8"
+                    },
+                    {
+                      "var": "i_v3"
+                    }
+                  ],
+                  "op": "at"
+                },
+                {
+                  "int": 0
+                }
+              ],
+              "op": ">"
+            },
+            "hi": {
+              "args": [
+                {
+                  "var": "cards_v8"
+                }
+              ],
+              "op": "len"
+            },
+            "lo": {
+              "int": 0
+            },
+            "var": "i_v3"
+          }
+        }
+      ]
+    }
+  ],
+  "name": "vericoding_da0345__solve",
+  "params": [
+    {
+      "name": "cards",
+      "type": "seq"
+    }
+  ],
+  "requires": [
+    {
+      "call": {
+        "args": [
+          {
+            "var": "cards"
+          }
+        ],
+        "fun": "validInput"
+      }
+    }
+  ],
+  "returns": [
+    {
+      "name": "scores",
+      "type": "seq"
+    }
+  ],
+  "spec_funs": [
+    {
+      "body": {
+        "ite": {
+          "cond": {
+            "args": [
+              {
+                "args": [
+                  {
+                    "var": "cards_v"
+                  }
+                ],
+                "op": "len"
+              },
+              {
+                "int": 0
+              }
+            ],
+            "op": "=="
+          },
+          "else": {
+            "args": [
+              {
+                "args": [
+                  {
+                    "var": "cards_v"
+                  },
+                  {
+                    "int": 0
+                  }
+                ],
+                "op": "at"
+              },
+              {
+                "call": {
+                  "args": [
+                    {
+                      "args": [
+                        {
+                          "var": "cards_v"
+                        },
+                        {
+                          "int": 1
+                        },
+                        {
+                          "args": [
+                            {
+                              "var": "cards_v"
+                            }
+                          ],
+                          "op": "len"
+                        }
+                      ],
+                      "op": "slice"
+                    }
+                  ],
+                  "fun": "sum"
+                }
+              }
+            ],
+            "op": "+"
+          },
+          "then": {
+            "int": 0
+          }
+        }
+      },
+      "decreases": {
+        "args": [
+          {
+            "var": "cards_v"
+          }
+        ],
+        "op": "len"
+      },
+      "name": "sum",
+      "params": [
+        {
+          "name": "cards_v",
+          "type": "seq"
+        }
+      ],
+      "result": "int"
+    },
+    {
+      "body": {
+        "args": [
+          {
+            "args": [
+              {
+                "args": [
+                  {
+                    "var": "cards_v2"
+                  }
+                ],
+                "op": "len"
+              },
+              {
+                "int": 1
+              }
+            ],
+            "op": ">="
+          },
+          {
+            "forall": {
+              "body": {
+                "args": [
+                  {
+                    "args": [
+                      {
+                        "var": "cards_v2"
+                      },
+                      {
+                        "var": "i"
+                      }
+                    ],
+                    "op": "at"
+                  },
+                  {
+                    "int": 0
+                  }
+                ],
+                "op": ">"
+              },
+              "hi": {
+                "args": [
+                  {
+                    "var": "cards_v2"
+                  }
+                ],
+                "op": "len"
+              },
+              "lo": {
+                "int": 0
+              },
+              "var": "i"
+            }
+          },
+          {
+            "forall": {
+              "body": {
+                "forall": {
+                  "body": {
+                    "args": [
+                      {
+                        "args": [
+                          {
+                            "var": "cards_v2"
+                          },
+                          {
+                            "var": "i_v"
+                          }
+                        ],
+                        "op": "at"
+                      },
+                      {
+                        "args": [
+                          {
+                            "var": "cards_v2"
+                          },
+                          {
+                            "var": "j"
+                          }
+                        ],
+                        "op": "at"
+                      }
+                    ],
+                    "op": "!="
+                  },
+                  "hi": {
+                    "args": [
+                      {
+                        "var": "cards_v2"
+                      }
+                    ],
+                    "op": "len"
+                  },
+                  "lo": {
+                    "args": [
+                      {
+                        "var": "i_v"
+                      },
+                      {
+                        "int": 1
+                      }
+                    ],
+                    "op": "+"
+                  },
+                  "var": "j"
+                }
+              },
+              "hi": {
+                "args": [
+                  {
+                    "var": "cards_v2"
+                  }
+                ],
+                "op": "len"
+              },
+              "lo": {
+                "int": 0
+              },
+              "var": "i_v"
+            }
+          }
+        ],
+        "op": "and"
+      },
+      "decreases": {
+        "int": 0
+      },
+      "name": "validInput",
+      "params": [
+        {
+          "name": "cards_v2",
+          "type": "seq"
+        }
+      ],
+      "result": "bool"
+    },
+    {
+      "body": {
+        "ite": {
+          "cond": {
+            "args": [
+              {
+                "args": [
+                  {
+                    "int": 0
+                  },
+                  {
+                    "var": "left"
+                  }
+                ],
+                "op": "<="
+              },
+              {
+                "args": [
+                  {
+                    "var": "left"
+                  },
+                  {
+                    "var": "right"
+                  }
+                ],
+                "op": "<="
+              },
+              {
+                "args": [
+                  {
+                    "var": "right"
+                  },
+                  {
+                    "args": [
+                      {
+                        "var": "cards_v3"
+                      }
+                    ],
+                    "op": "len"
+                  }
+                ],
+                "op": "<"
+              }
+            ],
+            "op": "and"
+          },
+          "else": {
+            "int": 0
+          },
+          "then": {
+            "ite": {
+              "cond": {
+                "args": [
+                  {
+                    "var": "left"
+                  },
+                  {
+                    "var": "right"
+                  }
+                ],
+                "op": "=="
+              },
+              "else": {
+                "ite": {
+                  "cond": {
+                    "args": [
+                      {
+                        "args": [
+                          {
+                            "var": "cards_v3"
+                          },
+                          {
+                            "var": "left"
+                          }
+                        ],
+                        "op": "at"
+                      },
+                      {
+                        "args": [
+                          {
+                            "var": "cards_v3"
+                          },
+                          {
+                            "var": "right"
+                          }
+                        ],
+                        "op": "at"
+                      }
+                    ],
+                    "op": ">"
+                  },
+                  "else": {
+                    "args": [
+                      {
+                        "ite": {
+                          "cond": {
+                            "var": "sereja_turn"
+                          },
+                          "else": {
+                            "int": 0
+                          },
+                          "then": {
+                            "args": [
+                              {
+                                "var": "cards_v3"
+                              },
+                              {
+                                "var": "right"
+                              }
+                            ],
+                            "op": "at"
+                          }
+                        }
+                      },
+                      {
+                        "call": {
+                          "args": [
+                            {
+                              "var": "cards_v3"
+                            },
+                            {
+                              "var": "left"
+                            },
+                            {
+                              "args": [
+                                {
+                                  "var": "right"
+                                },
+                                {
+                                  "int": 1
+                                }
+                              ],
+                              "op": "-"
+                            },
+                            {
+                              "args": [
+                                {
+                                  "var": "sereja_turn"
+                                }
+                              ],
+                              "op": "not"
+                            }
+                          ],
+                          "fun": "sereja_optimal_score"
+                        }
+                      }
+                    ],
+                    "op": "+"
+                  },
+                  "then": {
+                    "args": [
+                      {
+                        "ite": {
+                          "cond": {
+                            "var": "sereja_turn"
+                          },
+                          "else": {
+                            "int": 0
+                          },
+                          "then": {
+                            "args": [
+                              {
+                                "var": "cards_v3"
+                              },
+                              {
+                                "var": "left"
+                              }
+                            ],
+                            "op": "at"
+                          }
+                        }
+                      },
+                      {
+                        "call": {
+                          "args": [
+                            {
+                              "var": "cards_v3"
+                            },
+                            {
+                              "args": [
+                                {
+                                  "var": "left"
+                                },
+                                {
+                                  "int": 1
+                                }
+                              ],
+                              "op": "+"
+                            },
+                            {
+                              "var": "right"
+                            },
+                            {
+                              "args": [
+                                {
+                                  "var": "sereja_turn"
+                                }
+                              ],
+                              "op": "not"
+                            }
+                          ],
+                          "fun": "sereja_optimal_score"
+                        }
+                      }
+                    ],
+                    "op": "+"
+                  }
+                }
+              },
+              "then": {
+                "ite": {
+                  "cond": {
+                    "var": "sereja_turn"
+                  },
+                  "else": {
+                    "int": 0
+                  },
+                  "then": {
+                    "args": [
+                      {
+                        "var": "cards_v3"
+                      },
+                      {
+                        "var": "left"
+                      }
+                    ],
+                    "op": "at"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "decreases": {
+        "args": [
+          {
+            "args": [
+              {
+                "var": "right"
+              },
+              {
+                "var": "left"
+              }
+            ],
+            "op": "-"
+          },
+          {
+            "int": 1
+          }
+        ],
+        "op": "+"
+      },
+      "name": "sereja_optimal_score",
+      "params": [
+        {
+          "name": "cards_v3",
+          "type": "seq"
+        },
+        {
+          "name": "left",
+          "type": "int"
+        },
+        {
+          "name": "right",
+          "type": "int"
+        },
+        {
+          "name": "sereja_turn",
+          "type": "bool"
+        }
+      ],
+      "result": "int"
+    },
+    {
+      "body": {
+        "ite": {
+          "cond": {
+            "call": {
+              "args": [
+                {
+                  "var": "cards_v4"
+                }
+              ],
+              "fun": "validInput"
+            }
+          },
+          "else": {
+            "bool": false
+          },
+          "then": {
+            "args": [
+              {
+                "args": [
+                  {
+                    "args": [
+                      {
+                        "var": "scores_v"
+                      }
+                    ],
+                    "op": "len"
+                  },
+                  {
+                    "int": 2
+                  }
+                ],
+                "op": "=="
+              },
+              {
+                "args": [
+                  {
+                    "args": [
+                      {
+                        "var": "scores_v"
+                      },
+                      {
+                        "int": 0
+                      }
+                    ],
+                    "op": "at"
+                  },
+                  {
+                    "int": 0
+                  }
+                ],
+                "op": ">="
+              },
+              {
+                "args": [
+                  {
+                    "args": [
+                      {
+                        "var": "scores_v"
+                      },
+                      {
+                        "int": 1
+                      }
+                    ],
+                    "op": "at"
+                  },
+                  {
+                    "int": 0
+                  }
+                ],
+                "op": ">="
+              },
+              {
+                "args": [
+                  {
+                    "args": [
+                      {
+                        "args": [
+                          {
+                            "var": "scores_v"
+                          },
+                          {
+                            "int": 0
+                          }
+                        ],
+                        "op": "at"
+                      },
+                      {
+                        "args": [
+                          {
+                            "var": "scores_v"
+                          },
+                          {
+                            "int": 1
+                          }
+                        ],
+                        "op": "at"
+                      }
+                    ],
+                    "op": "+"
+                  },
+                  {
+                    "call": {
+                      "args": [
+                        {
+                          "var": "cards_v4"
+                        }
+                      ],
+                      "fun": "sum"
+                    }
+                  }
+                ],
+                "op": "=="
+              },
+              {
+                "args": [
+                  {
+                    "args": [
+                      {
+                        "var": "scores_v"
+                      },
+                      {
+                        "int": 0
+                      }
+                    ],
+                    "op": "at"
+                  },
+                  {
+                    "call": {
+                      "args": [
+                        {
+                          "var": "cards_v4"
+                        },
+                        {
+                          "int": 0
+                        },
+                        {
+                          "args": [
+                            {
+                              "args": [
+                                {
+                                  "var": "cards_v4"
+                                }
+                              ],
+                              "op": "len"
+                            },
+                            {
+                              "int": 1
+                            }
+                          ],
+                          "op": "-"
+                        },
+                        {
+                          "bool": true
+                        }
+                      ],
+                      "fun": "sereja_optimal_score"
+                    }
+                  }
+                ],
+                "op": "=="
+              },
+              {
+                "args": [
+                  {
+                    "args": [
+                      {
+                        "var": "scores_v"
+                      },
+                      {
+                        "int": 1
+                      }
+                    ],
+                    "op": "at"
+                  },
+                  {
+                    "args": [
+                      {
+                        "call": {
+                          "args": [
+                            {
+                              "var": "cards_v4"
+                            }
+                          ],
+                          "fun": "sum"
+                        }
+                      },
+                      {
+                        "call": {
+                          "args": [
+                            {
+                              "var": "cards_v4"
+                            },
+                            {
+                              "int": 0
+                            },
+                            {
+                              "args": [
+                                {
+                                  "args": [
+                                    {
+                                      "var": "cards_v4"
+                                    }
+                                  ],
+                                  "op": "len"
+                                },
+                                {
+                                  "int": 1
+                                }
+                              ],
+                              "op": "-"
+                            },
+                            {
+                              "bool": true
+                            }
+                          ],
+                          "fun": "sereja_optimal_score"
+                        }
+                      }
+                    ],
+                    "op": "-"
+                  }
+                ],
+                "op": "=="
+              }
+            ],
+            "op": "and"
+          }
+        }
+      },
+      "decreases": {
+        "int": 0
+      },
+      "name": "validOutput",
+      "params": [
+        {
+          "name": "scores_v",
+          "type": "seq"
+        },
+        {
+          "name": "cards_v4",
+          "type": "seq"
+        }
+      ],
+      "result": "bool"
+    }
+  ],
+  "t": 1
+}

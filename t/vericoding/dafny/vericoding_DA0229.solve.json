@@ -1,0 +1,334 @@
+{
+  "body": [
+    {
+      "assign": [
+        "count",
+        {
+          "int": 0
+        }
+      ]
+    },
+    {
+      "var": {
+        "init": {
+          "var": "a"
+        },
+        "name": "n",
+        "type": "int"
+      }
+    },
+    {
+      "while": {
+        "body": [
+          {
+            "if": {
+              "cond": {
+                "args": [
+                  {
+                    "args": [
+                      {
+                        "var": "n"
+                      },
+                      {
+                        "int": 8
+                      }
+                    ],
+                    "op": "mod"
+                  },
+                  {
+                    "int": 1
+                  }
+                ],
+                "op": "=="
+              },
+              "else": [],
+              "then": [
+                {
+                  "assign": [
+                    "count",
+                    {
+                      "args": [
+                        {
+                          "var": "count"
+                        },
+                        {
+                          "int": 1
+                        }
+                      ],
+                      "op": "+"
+                    }
+                  ]
+                }
+              ]
+            }
+          },
+          {
+            "assign": [
+              "n",
+              {
+                "args": [
+                  {
+                    "var": "n"
+                  },
+                  {
+                    "int": 8
+                  }
+                ],
+                "op": "div"
+              }
+            ]
+          }
+        ],
+        "cond": {
+          "args": [
+            {
+              "var": "n"
+            },
+            {
+              "int": 0
+            }
+          ],
+          "op": ">"
+        },
+        "decreases": {
+          "var": "n"
+        },
+        "invariants": [
+          {
+            "args": [
+              {
+                "args": [
+                  {
+                    "int": 0
+                  },
+                  {
+                    "var": "n"
+                  }
+                ],
+                "op": "<="
+              },
+              {
+                "args": [
+                  {
+                    "var": "n"
+                  },
+                  {
+                    "var": "a"
+                  }
+                ],
+                "op": "<="
+              }
+            ],
+            "op": "and"
+          },
+          {
+            "args": [
+              {
+                "var": "count"
+              },
+              {
+                "int": 0
+              }
+            ],
+            "op": ">="
+          },
+          {
+            "args": [
+              {
+                "args": [
+                  {
+                    "var": "count"
+                  },
+                  {
+                    "call": {
+                      "args": [
+                        {
+                          "var": "n"
+                        }
+                      ],
+                      "fun": "countOnesInOctal"
+                    }
+                  }
+                ],
+                "op": "+"
+              },
+              {
+                "call": {
+                  "args": [
+                    {
+                      "var": "a"
+                    }
+                  ],
+                  "fun": "countOnesInOctal"
+                }
+              }
+            ],
+            "op": "=="
+          }
+        ]
+      }
+    }
+  ],
+  "ensures": [
+    {
+      "args": [
+        {
+          "var": "count"
+        },
+        {
+          "int": 0
+        }
+      ],
+      "op": ">="
+    },
+    {
+      "args": [
+        {
+          "var": "count"
+        },
+        {
+          "call": {
+            "args": [
+              {
+                "var": "a"
+              }
+            ],
+            "fun": "countOnesInOctal"
+          }
+        }
+      ],
+      "op": "=="
+    }
+  ],
+  "gate": "recursion",
+  "name": "vericoding_da0229__solve",
+  "params": [
+    {
+      "name": "a",
+      "type": "int"
+    }
+  ],
+  "requires": [
+    {
+      "args": [
+        {
+          "var": "a"
+        },
+        {
+          "int": 0
+        }
+      ],
+      "op": ">="
+    }
+  ],
+  "returns": [
+    {
+      "name": "count",
+      "type": "int"
+    }
+  ],
+  "spec_funs": [
+    {
+      "body": {
+        "ite": {
+          "cond": {
+            "args": [
+              {
+                "var": "a_v"
+              },
+              {
+                "int": 0
+              }
+            ],
+            "op": ">="
+          },
+          "else": {
+            "int": 0
+          },
+          "then": {
+            "ite": {
+              "cond": {
+                "args": [
+                  {
+                    "var": "a_v"
+                  },
+                  {
+                    "int": 0
+                  }
+                ],
+                "op": "=="
+              },
+              "else": {
+                "args": [
+                  {
+                    "ite": {
+                      "cond": {
+                        "args": [
+                          {
+                            "args": [
+                              {
+                                "var": "a_v"
+                              },
+                              {
+                                "int": 8
+                              }
+                            ],
+                            "op": "mod"
+                          },
+                          {
+                            "int": 1
+                          }
+                        ],
+                        "op": "=="
+                      },
+                      "else": {
+                        "int": 0
+                      },
+                      "then": {
+                        "int": 1
+                      }
+                    }
+                  },
+                  {
+                    "call": {
+                      "args": [
+                        {
+                          "args": [
+                            {
+                              "var": "a_v"
+                            },
+                            {
+                              "int": 8
+                            }
+                          ],
+                          "op": "div"
+                        }
+                      ],
+                      "fun": "countOnesInOctal"
+                    }
+                  }
+                ],
+                "op": "+"
+              },
+              "then": {
+                "int": 0
+              }
+            }
+          }
+        }
+      },
+      "decreases": {
+        "var": "a_v"
+      },
+      "name": "countOnesInOctal",
+      "params": [
+        {
+          "name": "a_v",
+          "type": "int"
+        }
+      ],
+      "result": "int"
+    }
+  ],
+  "t": 1
+}

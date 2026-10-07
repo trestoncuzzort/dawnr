@@ -1,0 +1,487 @@
+{
+  "body": [
+    {
+      "var": {
+        "init": {
+          "int": 0
+        },
+        "name": "count",
+        "type": "int"
+      }
+    },
+    {
+      "var": {
+        "init": {
+          "int": 1
+        },
+        "name": "current",
+        "type": "int"
+      }
+    },
+    {
+      "assign": [
+        "result",
+        {
+          "int": 1
+        }
+      ]
+    },
+    {
+      "var": {
+        "init": {
+          "args": [
+            {
+              "var": "n"
+            },
+            {
+              "int": 100
+            }
+          ],
+          "op": "*"
+        },
+        "name": "bound",
+        "type": "int"
+      }
+    },
+    {
+      "while": {
+        "body": [
+          {
+            "var": {
+              "init": {
+                "var": "current"
+              },
+              "name": "candidate",
+              "type": "int"
+            }
+          },
+          {
+            "while": {
+              "body": [
+                {
+                  "assign": [
+                    "candidate",
+                    {
+                      "args": [
+                        {
+                          "var": "candidate"
+                        },
+                        {
+                          "int": 2
+                        }
+                      ],
+                      "op": "div"
+                    }
+                  ]
+                }
+              ],
+              "cond": {
+                "args": [
+                  {
+                    "args": [
+                      {
+                        "args": [
+                          {
+                            "var": "candidate"
+                          },
+                          {
+                            "int": 2
+                          }
+                        ],
+                        "op": "mod"
+                      },
+                      {
+                        "int": 0
+                      }
+                    ],
+                    "op": "=="
+                  },
+                  {
+                    "args": [
+                      {
+                        "var": "candidate"
+                      },
+                      {
+                        "int": 1
+                      }
+                    ],
+                    "op": ">"
+                  }
+                ],
+                "op": "and"
+              },
+              "decreases": {
+                "var": "candidate"
+              },
+              "invariants": [
+                {
+                  "args": [
+                    {
+                      "var": "candidate"
+                    },
+                    {
+                      "int": 1
+                    }
+                  ],
+                  "op": ">="
+                }
+              ]
+            }
+          },
+          {
+            "while": {
+              "body": [
+                {
+                  "assign": [
+                    "candidate",
+                    {
+                      "args": [
+                        {
+                          "var": "candidate"
+                        },
+                        {
+                          "int": 3
+                        }
+                      ],
+                      "op": "div"
+                    }
+                  ]
+                }
+              ],
+              "cond": {
+                "args": [
+                  {
+                    "args": [
+                      {
+                        "args": [
+                          {
+                            "var": "candidate"
+                          },
+                          {
+                            "int": 3
+                          }
+                        ],
+                        "op": "mod"
+                      },
+                      {
+                        "int": 0
+                      }
+                    ],
+                    "op": "=="
+                  },
+                  {
+                    "args": [
+                      {
+                        "var": "candidate"
+                      },
+                      {
+                        "int": 1
+                      }
+                    ],
+                    "op": ">"
+                  }
+                ],
+                "op": "and"
+              },
+              "decreases": {
+                "var": "candidate"
+              },
+              "invariants": [
+                {
+                  "args": [
+                    {
+                      "var": "candidate"
+                    },
+                    {
+                      "int": 1
+                    }
+                  ],
+                  "op": ">="
+                }
+              ]
+            }
+          },
+          {
+            "while": {
+              "body": [
+                {
+                  "assign": [
+                    "candidate",
+                    {
+                      "args": [
+                        {
+                          "var": "candidate"
+                        },
+                        {
+                          "int": 5
+                        }
+                      ],
+                      "op": "div"
+                    }
+                  ]
+                }
+              ],
+              "cond": {
+                "args": [
+                  {
+                    "args": [
+                      {
+                        "args": [
+                          {
+                            "var": "candidate"
+                          },
+                          {
+                            "int": 5
+                          }
+                        ],
+                        "op": "mod"
+                      },
+                      {
+                        "int": 0
+                      }
+                    ],
+                    "op": "=="
+                  },
+                  {
+                    "args": [
+                      {
+                        "var": "candidate"
+                      },
+                      {
+                        "int": 1
+                      }
+                    ],
+                    "op": ">"
+                  }
+                ],
+                "op": "and"
+              },
+              "decreases": {
+                "var": "candidate"
+              },
+              "invariants": [
+                {
+                  "args": [
+                    {
+                      "var": "candidate"
+                    },
+                    {
+                      "int": 1
+                    }
+                  ],
+                  "op": ">="
+                }
+              ]
+            }
+          },
+          {
+            "if": {
+              "cond": {
+                "args": [
+                  {
+                    "var": "candidate"
+                  },
+                  {
+                    "int": 1
+                  }
+                ],
+                "op": "=="
+              },
+              "else": [],
+              "then": [
+                {
+                  "assign": [
+                    "count",
+                    {
+                      "args": [
+                        {
+                          "var": "count"
+                        },
+                        {
+                          "int": 1
+                        }
+                      ],
+                      "op": "+"
+                    }
+                  ]
+                },
+                {
+                  "if": {
+                    "cond": {
+                      "args": [
+                        {
+                          "var": "count"
+                        },
+                        {
+                          "var": "n"
+                        }
+                      ],
+                      "op": "=="
+                    },
+                    "else": [],
+                    "then": [
+                      {
+                        "assign": [
+                          "result",
+                          {
+                            "var": "current"
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                }
+              ]
+            }
+          },
+          {
+            "assign": [
+              "current",
+              {
+                "args": [
+                  {
+                    "var": "current"
+                  },
+                  {
+                    "int": 1
+                  }
+                ],
+                "op": "+"
+              }
+            ]
+          }
+        ],
+        "cond": {
+          "args": [
+            {
+              "args": [
+                {
+                  "var": "count"
+                },
+                {
+                  "var": "n"
+                }
+              ],
+              "op": "<"
+            },
+            {
+              "args": [
+                {
+                  "var": "current"
+                },
+                {
+                  "var": "bound"
+                }
+              ],
+              "op": "<"
+            }
+          ],
+          "op": "and"
+        },
+        "decreases": {
+          "args": [
+            {
+              "var": "bound"
+            },
+            {
+              "var": "current"
+            }
+          ],
+          "op": "-"
+        },
+        "invariants": [
+          {
+            "args": [
+              {
+                "args": [
+                  {
+                    "int": 0
+                  },
+                  {
+                    "var": "count"
+                  }
+                ],
+                "op": "<="
+              },
+              {
+                "args": [
+                  {
+                    "var": "count"
+                  },
+                  {
+                    "var": "n"
+                  }
+                ],
+                "op": "<="
+              }
+            ],
+            "op": "and"
+          },
+          {
+            "args": [
+              {
+                "var": "current"
+              },
+              {
+                "int": 1
+              }
+            ],
+            "op": ">="
+          },
+          {
+            "args": [
+              {
+                "var": "result"
+              },
+              {
+                "int": 1
+              }
+            ],
+            "op": ">="
+          }
+        ]
+      }
+    }
+  ],
+  "ensures": [
+    {
+      "args": [
+        {
+          "var": "result"
+        },
+        {
+          "int": 0
+        }
+      ],
+      "op": ">"
+    }
+  ],
+  "gate": "loops",
+  "name": "vericoding_dv0057__nthUglyNumber",
+  "params": [
+    {
+      "name": "n",
+      "type": "int"
+    }
+  ],
+  "requires": [
+    {
+      "args": [
+        {
+          "var": "n"
+        },
+        {
+          "int": 0
+        }
+      ],
+      "op": ">"
+    }
+  ],
+  "returns": [
+    {
+      "name": "result",
+      "type": "int"
+    }
+  ],
+  "t": 1
+}

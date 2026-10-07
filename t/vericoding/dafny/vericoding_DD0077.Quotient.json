@@ -1,0 +1,308 @@
+{
+  "body": [
+    {
+      "var": {
+        "init": {
+          "int": 0
+        },
+        "name": "r_v",
+        "type": "int"
+      }
+    },
+    {
+      "var": {
+        "init": {
+          "int": 0
+        },
+        "name": "q",
+        "type": "int"
+      }
+    },
+    {
+      "assign": [
+        "r_v",
+        {
+          "var": "x"
+        }
+      ]
+    },
+    {
+      "assign": [
+        "q",
+        {
+          "int": 0
+        }
+      ]
+    },
+    {
+      "while": {
+        "body": [
+          {
+            "assign": [
+              "r_v",
+              {
+                "args": [
+                  {
+                    "var": "r_v"
+                  },
+                  {
+                    "var": "y"
+                  }
+                ],
+                "op": "-"
+              }
+            ]
+          },
+          {
+            "assign": [
+              "q",
+              {
+                "args": [
+                  {
+                    "var": "q"
+                  },
+                  {
+                    "int": 1
+                  }
+                ],
+                "op": "+"
+              }
+            ]
+          }
+        ],
+        "cond": {
+          "args": [
+            {
+              "var": "r_v"
+            },
+            {
+              "var": "y"
+            }
+          ],
+          "op": ">="
+        },
+        "decreases": {
+          "var": "r_v"
+        },
+        "invariants": [
+          {
+            "args": [
+              {
+                "args": [
+                  {
+                    "args": [
+                      {
+                        "var": "q"
+                      },
+                      {
+                        "var": "y"
+                      }
+                    ],
+                    "op": "*"
+                  },
+                  {
+                    "var": "r_v"
+                  }
+                ],
+                "op": "+"
+              },
+              {
+                "var": "x"
+              }
+            ],
+            "op": "=="
+          },
+          {
+            "args": [
+              {
+                "int": 0
+              },
+              {
+                "var": "r_v"
+              }
+            ],
+            "op": "<="
+          },
+          {
+            "args": [
+              {
+                "int": 0
+              },
+              {
+                "var": "q"
+              }
+            ],
+            "op": "<="
+          }
+        ]
+      }
+    },
+    {
+      "assign": [
+        "r",
+        {
+          "args": [
+            {
+              "var": "r_v"
+            },
+            {
+              "var": "q"
+            }
+          ],
+          "op": "pair"
+        }
+      ]
+    }
+  ],
+  "ensures": [
+    {
+      "args": [
+        {
+          "args": [
+            {
+              "args": [
+                {
+                  "args": [
+                    {
+                      "var": "r"
+                    }
+                  ],
+                  "op": "snd"
+                },
+                {
+                  "var": "y"
+                }
+              ],
+              "op": "*"
+            },
+            {
+              "args": [
+                {
+                  "var": "r"
+                }
+              ],
+              "op": "fst"
+            }
+          ],
+          "op": "+"
+        },
+        {
+          "var": "x"
+        }
+      ],
+      "op": "=="
+    },
+    {
+      "args": [
+        {
+          "args": [
+            {
+              "int": 0
+            },
+            {
+              "args": [
+                {
+                  "var": "r"
+                }
+              ],
+              "op": "fst"
+            }
+          ],
+          "op": "<="
+        },
+        {
+          "args": [
+            {
+              "args": [
+                {
+                  "var": "r"
+                }
+              ],
+              "op": "fst"
+            },
+            {
+              "var": "y"
+            }
+          ],
+          "op": "<"
+        }
+      ],
+      "op": "and"
+    },
+    {
+      "args": [
+        {
+          "int": 0
+        },
+        {
+          "args": [
+            {
+              "var": "r"
+            }
+          ],
+          "op": "snd"
+        }
+      ],
+      "op": "<="
+    }
+  ],
+  "gate": "loops",
+  "name": "vericoding_dd0077__quotient",
+  "params": [
+    {
+      "name": "x",
+      "type": "int"
+    },
+    {
+      "name": "y",
+      "type": "int"
+    }
+  ],
+  "requires": [
+    {
+      "args": [
+        {
+          "var": "x"
+        },
+        {
+          "int": 0
+        }
+      ],
+      "op": ">="
+    },
+    {
+      "args": [
+        {
+          "var": "y"
+        },
+        {
+          "int": 0
+        }
+      ],
+      "op": ">="
+    },
+    {
+      "args": [
+        {
+          "var": "y"
+        },
+        {
+          "int": 0
+        }
+      ],
+      "op": "!="
+    }
+  ],
+  "returns": [
+    {
+      "name": "r",
+      "type": {
+        "pair": [
+          "int",
+          "int"
+        ]
+      }
+    }
+  ],
+  "t": 1
+}

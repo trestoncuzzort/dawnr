@@ -1,0 +1,539 @@
+{
+  "body": [
+    {
+      "assign": [
+        "evenList",
+        {
+          "args": [],
+          "op": "seq"
+        }
+      ]
+    },
+    {
+      "var": {
+        "init": {
+          "int": 0
+        },
+        "name": "i_v2",
+        "type": "int"
+      }
+    },
+    {
+      "while": {
+        "body": [
+          {
+            "if": {
+              "cond": {
+                "call": {
+                  "args": [
+                    {
+                      "args": [
+                        {
+                          "var": "arr"
+                        },
+                        {
+                          "var": "i_v2"
+                        }
+                      ],
+                      "op": "at"
+                    }
+                  ],
+                  "fun": "isEven"
+                }
+              },
+              "else": [],
+              "then": [
+                {
+                  "assign": [
+                    "evenList",
+                    {
+                      "args": [
+                        {
+                          "var": "evenList"
+                        },
+                        {
+                          "args": [
+                            {
+                              "args": [
+                                {
+                                  "var": "arr"
+                                },
+                                {
+                                  "var": "i_v2"
+                                }
+                              ],
+                              "op": "at"
+                            }
+                          ],
+                          "op": "seq"
+                        }
+                      ],
+                      "op": "+"
+                    }
+                  ]
+                }
+              ]
+            }
+          },
+          {
+            "assign": [
+              "i_v2",
+              {
+                "args": [
+                  {
+                    "var": "i_v2"
+                  },
+                  {
+                    "int": 1
+                  }
+                ],
+                "op": "+"
+              }
+            ]
+          }
+        ],
+        "cond": {
+          "args": [
+            {
+              "var": "i_v2"
+            },
+            {
+              "args": [
+                {
+                  "var": "arr"
+                }
+              ],
+              "op": "len"
+            }
+          ],
+          "op": "<"
+        },
+        "decreases": {
+          "args": [
+            {
+              "args": [
+                {
+                  "var": "arr"
+                }
+              ],
+              "op": "len"
+            },
+            {
+              "var": "i_v2"
+            }
+          ],
+          "op": "-"
+        },
+        "invariants": [
+          {
+            "args": [
+              {
+                "args": [
+                  {
+                    "int": 0
+                  },
+                  {
+                    "var": "i_v2"
+                  }
+                ],
+                "op": "<="
+              },
+              {
+                "args": [
+                  {
+                    "var": "i_v2"
+                  },
+                  {
+                    "args": [
+                      {
+                        "var": "arr"
+                      }
+                    ],
+                    "op": "len"
+                  }
+                ],
+                "op": "<="
+              }
+            ],
+            "op": "and"
+          },
+          {
+            "forall": {
+              "body": {
+                "args": [
+                  {
+                    "call": {
+                      "args": [
+                        {
+                          "args": [
+                            {
+                              "var": "evenList"
+                            },
+                            {
+                              "var": "j"
+                            }
+                          ],
+                          "op": "at"
+                        }
+                      ],
+                      "fun": "isEven"
+                    }
+                  },
+                  {
+                    "exists": {
+                      "body": {
+                        "args": [
+                          {
+                            "args": [
+                              {
+                                "var": "arr"
+                              },
+                              {
+                                "var": "k_v2"
+                              }
+                            ],
+                            "op": "at"
+                          },
+                          {
+                            "args": [
+                              {
+                                "var": "evenList"
+                              },
+                              {
+                                "var": "j"
+                              }
+                            ],
+                            "op": "at"
+                          }
+                        ],
+                        "op": "=="
+                      },
+                      "hi": {
+                        "args": [
+                          {
+                            "var": "arr"
+                          }
+                        ],
+                        "op": "len"
+                      },
+                      "lo": {
+                        "int": 0
+                      },
+                      "var": "k_v2"
+                    }
+                  }
+                ],
+                "op": "and"
+              },
+              "hi": {
+                "args": [
+                  {
+                    "var": "evenList"
+                  }
+                ],
+                "op": "len"
+              },
+              "lo": {
+                "int": 0
+              },
+              "var": "j"
+            }
+          },
+          {
+            "forall": {
+              "body": {
+                "args": [
+                  {
+                    "call": {
+                      "args": [
+                        {
+                          "args": [
+                            {
+                              "var": "arr"
+                            },
+                            {
+                              "var": "j_v"
+                            }
+                          ],
+                          "op": "at"
+                        }
+                      ],
+                      "fun": "isEven"
+                    }
+                  },
+                  {
+                    "exists": {
+                      "body": {
+                        "args": [
+                          {
+                            "args": [
+                              {
+                                "var": "evenList"
+                              },
+                              {
+                                "var": "k_v3"
+                              }
+                            ],
+                            "op": "at"
+                          },
+                          {
+                            "args": [
+                              {
+                                "var": "arr"
+                              },
+                              {
+                                "var": "j_v"
+                              }
+                            ],
+                            "op": "at"
+                          }
+                        ],
+                        "op": "=="
+                      },
+                      "hi": {
+                        "args": [
+                          {
+                            "var": "evenList"
+                          }
+                        ],
+                        "op": "len"
+                      },
+                      "lo": {
+                        "int": 0
+                      },
+                      "var": "k_v3"
+                    }
+                  }
+                ],
+                "op": "implies"
+              },
+              "hi": {
+                "var": "i_v2"
+              },
+              "lo": {
+                "int": 0
+              },
+              "var": "j_v"
+            }
+          }
+        ]
+      }
+    }
+  ],
+  "ensures": [
+    {
+      "forall": {
+        "body": {
+          "args": [
+            {
+              "call": {
+                "args": [
+                  {
+                    "args": [
+                      {
+                        "var": "evenList"
+                      },
+                      {
+                        "var": "i"
+                      }
+                    ],
+                    "op": "at"
+                  }
+                ],
+                "fun": "isEven"
+              }
+            },
+            {
+              "exists": {
+                "body": {
+                  "args": [
+                    {
+                      "args": [
+                        {
+                          "var": "arr"
+                        },
+                        {
+                          "var": "k"
+                        }
+                      ],
+                      "op": "at"
+                    },
+                    {
+                      "args": [
+                        {
+                          "var": "evenList"
+                        },
+                        {
+                          "var": "i"
+                        }
+                      ],
+                      "op": "at"
+                    }
+                  ],
+                  "op": "=="
+                },
+                "hi": {
+                  "args": [
+                    {
+                      "var": "arr"
+                    }
+                  ],
+                  "op": "len"
+                },
+                "lo": {
+                  "int": 0
+                },
+                "var": "k"
+              }
+            }
+          ],
+          "op": "and"
+        },
+        "hi": {
+          "args": [
+            {
+              "var": "evenList"
+            }
+          ],
+          "op": "len"
+        },
+        "lo": {
+          "int": 0
+        },
+        "var": "i"
+      }
+    },
+    {
+      "forall": {
+        "body": {
+          "args": [
+            {
+              "call": {
+                "args": [
+                  {
+                    "args": [
+                      {
+                        "var": "arr"
+                      },
+                      {
+                        "var": "i_v"
+                      }
+                    ],
+                    "op": "at"
+                  }
+                ],
+                "fun": "isEven"
+              }
+            },
+            {
+              "exists": {
+                "body": {
+                  "args": [
+                    {
+                      "args": [
+                        {
+                          "var": "evenList"
+                        },
+                        {
+                          "var": "k_v"
+                        }
+                      ],
+                      "op": "at"
+                    },
+                    {
+                      "args": [
+                        {
+                          "var": "arr"
+                        },
+                        {
+                          "var": "i_v"
+                        }
+                      ],
+                      "op": "at"
+                    }
+                  ],
+                  "op": "=="
+                },
+                "hi": {
+                  "args": [
+                    {
+                      "var": "evenList"
+                    }
+                  ],
+                  "op": "len"
+                },
+                "lo": {
+                  "int": 0
+                },
+                "var": "k_v"
+              }
+            }
+          ],
+          "op": "implies"
+        },
+        "hi": {
+          "args": [
+            {
+              "var": "arr"
+            }
+          ],
+          "op": "len"
+        },
+        "lo": {
+          "int": 0
+        },
+        "var": "i_v"
+      }
+    }
+  ],
+  "gate": "recursion",
+  "name": "vericoding_dd0714__removeOddNumbers",
+  "params": [
+    {
+      "name": "arr",
+      "type": "seq"
+    }
+  ],
+  "requires": [],
+  "returns": [
+    {
+      "name": "evenList",
+      "type": "seq"
+    }
+  ],
+  "spec_funs": [
+    {
+      "body": {
+        "args": [
+          {
+            "args": [
+              {
+                "var": "n"
+              },
+              {
+                "int": 2
+              }
+            ],
+            "op": "mod"
+          },
+          {
+            "int": 0
+          }
+        ],
+        "op": "=="
+      },
+      "decreases": {
+        "int": 0
+      },
+      "name": "isEven",
+      "params": [
+        {
+          "name": "n",
+          "type": "int"
+        }
+      ],
+      "result": "bool"
+    }
+  ],
+  "t": 1
+}

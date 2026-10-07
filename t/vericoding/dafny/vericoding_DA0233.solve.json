@@ -1,0 +1,792 @@
+{
+  "body": [
+    {
+      "if": {
+        "cond": {
+          "call": {
+            "args": [
+              {
+                "var": "position"
+              }
+            ],
+            "fun": "isCorner"
+          }
+        },
+        "else": [
+          {
+            "if": {
+              "cond": {
+                "call": {
+                  "args": [
+                    {
+                      "var": "position"
+                    }
+                  ],
+                  "fun": "isEdge"
+                }
+              },
+              "else": [
+                {
+                  "assign": [
+                    "moves",
+                    {
+                      "int": 8
+                    }
+                  ]
+                }
+              ],
+              "then": [
+                {
+                  "assign": [
+                    "moves",
+                    {
+                      "int": 5
+                    }
+                  ]
+                }
+              ]
+            }
+          }
+        ],
+        "then": [
+          {
+            "assign": [
+              "moves",
+              {
+                "int": 3
+              }
+            ]
+          }
+        ]
+      }
+    }
+  ],
+  "ensures": [
+    {
+      "args": [
+        {
+          "var": "moves"
+        },
+        {
+          "call": {
+            "args": [
+              {
+                "var": "position"
+              }
+            ],
+            "fun": "validMoves"
+          }
+        }
+      ],
+      "op": "=="
+    },
+    {
+      "args": [
+        {
+          "call": {
+            "args": [
+              {
+                "var": "position"
+              }
+            ],
+            "fun": "isCorner"
+          }
+        },
+        {
+          "args": [
+            {
+              "var": "moves"
+            },
+            {
+              "int": 3
+            }
+          ],
+          "op": "=="
+        }
+      ],
+      "op": "implies"
+    },
+    {
+      "args": [
+        {
+          "call": {
+            "args": [
+              {
+                "var": "position"
+              }
+            ],
+            "fun": "isEdge"
+          }
+        },
+        {
+          "args": [
+            {
+              "var": "moves"
+            },
+            {
+              "int": 5
+            }
+          ],
+          "op": "=="
+        }
+      ],
+      "op": "implies"
+    },
+    {
+      "args": [
+        {
+          "call": {
+            "args": [
+              {
+                "var": "position"
+              }
+            ],
+            "fun": "isInterior"
+          }
+        },
+        {
+          "args": [
+            {
+              "var": "moves"
+            },
+            {
+              "int": 8
+            }
+          ],
+          "op": "=="
+        }
+      ],
+      "op": "implies"
+    },
+    {
+      "args": [
+        {
+          "args": [
+            {
+              "var": "moves"
+            },
+            {
+              "int": 3
+            }
+          ],
+          "op": "=="
+        },
+        {
+          "args": [
+            {
+              "var": "moves"
+            },
+            {
+              "int": 5
+            }
+          ],
+          "op": "=="
+        },
+        {
+          "args": [
+            {
+              "var": "moves"
+            },
+            {
+              "int": 8
+            }
+          ],
+          "op": "=="
+        }
+      ],
+      "op": "or"
+    }
+  ],
+  "gate": "recursion",
+  "name": "vericoding_da0233__solve",
+  "params": [
+    {
+      "name": "position",
+      "type": "seq"
+    }
+  ],
+  "requires": [
+    {
+      "forall": {
+        "body": {
+          "args": [
+            {
+              "args": [
+                {
+                  "args": [
+                    {
+                      "var": "position"
+                    },
+                    {
+                      "var": "k"
+                    }
+                  ],
+                  "op": "at"
+                },
+                {
+                  "int": 0
+                }
+              ],
+              "op": ">="
+            },
+            {
+              "args": [
+                {
+                  "args": [
+                    {
+                      "var": "position"
+                    },
+                    {
+                      "var": "k"
+                    }
+                  ],
+                  "op": "at"
+                },
+                {
+                  "int": 1114111
+                }
+              ],
+              "op": "<="
+            }
+          ],
+          "op": "and"
+        },
+        "hi": {
+          "args": [
+            {
+              "var": "position"
+            }
+          ],
+          "op": "len"
+        },
+        "lo": {
+          "int": 0
+        },
+        "var": "k"
+      }
+    },
+    {
+      "call": {
+        "args": [
+          {
+            "var": "position"
+          }
+        ],
+        "fun": "validInput"
+      }
+    }
+  ],
+  "returns": [
+    {
+      "name": "moves",
+      "type": "int"
+    }
+  ],
+  "spec_funs": [
+    {
+      "body": {
+        "args": [
+          {
+            "args": [
+              {
+                "args": [
+                  {
+                    "var": "position_v"
+                  }
+                ],
+                "op": "len"
+              },
+              {
+                "int": 2
+              }
+            ],
+            "op": "=="
+          },
+          {
+            "args": [
+              {
+                "args": [
+                  {
+                    "int": 97
+                  },
+                  {
+                    "args": [
+                      {
+                        "var": "position_v"
+                      },
+                      {
+                        "int": 0
+                      }
+                    ],
+                    "op": "at"
+                  }
+                ],
+                "op": "<="
+              },
+              {
+                "args": [
+                  {
+                    "args": [
+                      {
+                        "var": "position_v"
+                      },
+                      {
+                        "int": 0
+                      }
+                    ],
+                    "op": "at"
+                  },
+                  {
+                    "int": 104
+                  }
+                ],
+                "op": "<="
+              }
+            ],
+            "op": "and"
+          },
+          {
+            "args": [
+              {
+                "args": [
+                  {
+                    "int": 49
+                  },
+                  {
+                    "args": [
+                      {
+                        "var": "position_v"
+                      },
+                      {
+                        "int": 1
+                      }
+                    ],
+                    "op": "at"
+                  }
+                ],
+                "op": "<="
+              },
+              {
+                "args": [
+                  {
+                    "args": [
+                      {
+                        "var": "position_v"
+                      },
+                      {
+                        "int": 1
+                      }
+                    ],
+                    "op": "at"
+                  },
+                  {
+                    "int": 56
+                  }
+                ],
+                "op": "<="
+              }
+            ],
+            "op": "and"
+          }
+        ],
+        "op": "and"
+      },
+      "decreases": {
+        "int": 0
+      },
+      "name": "validInput",
+      "params": [
+        {
+          "name": "position_v",
+          "type": "seq"
+        }
+      ],
+      "result": "bool"
+    },
+    {
+      "body": {
+        "ite": {
+          "cond": {
+            "call": {
+              "args": [
+                {
+                  "var": "position_v2"
+                }
+              ],
+              "fun": "validInput"
+            }
+          },
+          "else": {
+            "bool": false
+          },
+          "then": {
+            "args": [
+              {
+                "args": [
+                  {
+                    "args": [
+                      {
+                        "args": [
+                          {
+                            "var": "position_v2"
+                          },
+                          {
+                            "int": 0
+                          }
+                        ],
+                        "op": "at"
+                      },
+                      {
+                        "int": 97
+                      }
+                    ],
+                    "op": "=="
+                  },
+                  {
+                    "args": [
+                      {
+                        "args": [
+                          {
+                            "var": "position_v2"
+                          },
+                          {
+                            "int": 0
+                          }
+                        ],
+                        "op": "at"
+                      },
+                      {
+                        "int": 104
+                      }
+                    ],
+                    "op": "=="
+                  }
+                ],
+                "op": "or"
+              },
+              {
+                "args": [
+                  {
+                    "args": [
+                      {
+                        "args": [
+                          {
+                            "var": "position_v2"
+                          },
+                          {
+                            "int": 1
+                          }
+                        ],
+                        "op": "at"
+                      },
+                      {
+                        "int": 49
+                      }
+                    ],
+                    "op": "=="
+                  },
+                  {
+                    "args": [
+                      {
+                        "args": [
+                          {
+                            "var": "position_v2"
+                          },
+                          {
+                            "int": 1
+                          }
+                        ],
+                        "op": "at"
+                      },
+                      {
+                        "int": 56
+                      }
+                    ],
+                    "op": "=="
+                  }
+                ],
+                "op": "or"
+              }
+            ],
+            "op": "and"
+          }
+        }
+      },
+      "decreases": {
+        "int": 0
+      },
+      "name": "isCorner",
+      "params": [
+        {
+          "name": "position_v2",
+          "type": "seq"
+        }
+      ],
+      "result": "bool"
+    },
+    {
+      "body": {
+        "ite": {
+          "cond": {
+            "call": {
+              "args": [
+                {
+                  "var": "position_v3"
+                }
+              ],
+              "fun": "validInput"
+            }
+          },
+          "else": {
+            "bool": false
+          },
+          "then": {
+            "args": [
+              {
+                "args": [
+                  {
+                    "args": [
+                      {
+                        "args": [
+                          {
+                            "var": "position_v3"
+                          },
+                          {
+                            "int": 0
+                          }
+                        ],
+                        "op": "at"
+                      },
+                      {
+                        "int": 97
+                      }
+                    ],
+                    "op": "=="
+                  },
+                  {
+                    "args": [
+                      {
+                        "args": [
+                          {
+                            "var": "position_v3"
+                          },
+                          {
+                            "int": 0
+                          }
+                        ],
+                        "op": "at"
+                      },
+                      {
+                        "int": 104
+                      }
+                    ],
+                    "op": "=="
+                  },
+                  {
+                    "args": [
+                      {
+                        "args": [
+                          {
+                            "var": "position_v3"
+                          },
+                          {
+                            "int": 1
+                          }
+                        ],
+                        "op": "at"
+                      },
+                      {
+                        "int": 49
+                      }
+                    ],
+                    "op": "=="
+                  },
+                  {
+                    "args": [
+                      {
+                        "args": [
+                          {
+                            "var": "position_v3"
+                          },
+                          {
+                            "int": 1
+                          }
+                        ],
+                        "op": "at"
+                      },
+                      {
+                        "int": 56
+                      }
+                    ],
+                    "op": "=="
+                  }
+                ],
+                "op": "or"
+              },
+              {
+                "args": [
+                  {
+                    "call": {
+                      "args": [
+                        {
+                          "var": "position_v3"
+                        }
+                      ],
+                      "fun": "isCorner"
+                    }
+                  }
+                ],
+                "op": "not"
+              }
+            ],
+            "op": "and"
+          }
+        }
+      },
+      "decreases": {
+        "int": 0
+      },
+      "name": "isEdge",
+      "params": [
+        {
+          "name": "position_v3",
+          "type": "seq"
+        }
+      ],
+      "result": "bool"
+    },
+    {
+      "body": {
+        "ite": {
+          "cond": {
+            "call": {
+              "args": [
+                {
+                  "var": "position_v4"
+                }
+              ],
+              "fun": "validInput"
+            }
+          },
+          "else": {
+            "bool": false
+          },
+          "then": {
+            "args": [
+              {
+                "args": [
+                  {
+                    "call": {
+                      "args": [
+                        {
+                          "var": "position_v4"
+                        }
+                      ],
+                      "fun": "isCorner"
+                    }
+                  }
+                ],
+                "op": "not"
+              },
+              {
+                "args": [
+                  {
+                    "call": {
+                      "args": [
+                        {
+                          "var": "position_v4"
+                        }
+                      ],
+                      "fun": "isEdge"
+                    }
+                  }
+                ],
+                "op": "not"
+              }
+            ],
+            "op": "and"
+          }
+        }
+      },
+      "decreases": {
+        "int": 0
+      },
+      "name": "isInterior",
+      "params": [
+        {
+          "name": "position_v4",
+          "type": "seq"
+        }
+      ],
+      "result": "bool"
+    },
+    {
+      "body": {
+        "ite": {
+          "cond": {
+            "call": {
+              "args": [
+                {
+                  "var": "position_v5"
+                }
+              ],
+              "fun": "validInput"
+            }
+          },
+          "else": {
+            "int": 0
+          },
+          "then": {
+            "ite": {
+              "cond": {
+                "call": {
+                  "args": [
+                    {
+                      "var": "position_v5"
+                    }
+                  ],
+                  "fun": "isCorner"
+                }
+              },
+              "else": {
+                "ite": {
+                  "cond": {
+                    "call": {
+                      "args": [
+                        {
+                          "var": "position_v5"
+                        }
+                      ],
+                      "fun": "isEdge"
+                    }
+                  },
+                  "else": {
+                    "int": 8
+                  },
+                  "then": {
+                    "int": 5
+                  }
+                }
+              },
+              "then": {
+                "int": 3
+              }
+            }
+          }
+        }
+      },
+      "decreases": {
+        "int": 0
+      },
+      "name": "validMoves",
+      "params": [
+        {
+          "name": "position_v5",
+          "type": "seq"
+        }
+      ],
+      "result": "int"
+    }
+  ],
+  "t": 1
+}

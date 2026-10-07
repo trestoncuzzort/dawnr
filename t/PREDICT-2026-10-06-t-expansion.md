@@ -2536,3 +2536,149 @@ The D8 picture across four corpora and three kernels:
 | vericoding, Verus track | Verus | 63 | 96.8% | 20 | 55 | 14 | 13 |
 | vericoding, Lean track | Lean | 16 | 100% | 0 | 12 | 0 | 0 |
 | ACSL by Example | Frama-C | 16 | 100% | 0 | 13 | 0 | 0 |
+
+## T57 registered (2026-10-07 14:52Z, after hand probes and before the clean-clone run): certificates for heap twins
+
+**The change.** A heap twin that differs from the real program only in the array had no value certificate in Verus,
+F* or Rocq. The copy-in/copy-out rewrite (T53) grounds its result as `pair(value, array)`. Two pieces were missing:
+- **Verus and F\*** (F* reuses Verus's grounding): `_gint` could not read a bound like `len(snd(t_out))`. It now
+  reduces `fst`/`snd` of a literal pair first; anything else still refuses.
+- **Rocq:** had no literal for a sequence inside a pair. The value is the same two slots the rewrite's default uses.
+  Its certificate also asserted the computed value equal to that literal by `reflexivity`, which fails: the twin's
+  array is an update over the input, equal to the literal only extensionally. For this shape Rocq now normalizes the
+  computed value itself (`remember`, `cbv`, `subst`).
+
+**Measured before this registration, stated plainly** (hand probes, `cli.py verify --kernels verus,fstar,rocq`):
+- scale_all and relu_all: verified/refuted in all three, where they read verified/unproved.
+- zero_fill (autonomy): verified/refuted in all three.
+- sample_push and saturate_all (autonomy): their twins are now refuted in all three. The real bodies are still
+  unproved there, so neither counts.
+- Rocq's certificate prints "Closed under the global context".
+- **Byte identity:** only scale_all's and relu_all's twin lowerings change, in Verus, F* and Rocq. AlgoVeri does not
+  move. Suite passes; Python 3.10 compiles.
+
+**Bars**, for the clean-clone tables at this registration's commit:
+(1) The matrix: Verus 104, F* 84, Rocq 84 (+2 each); every other kernel unchanged; all seven 65 (scale_all enters;
+relu_all's SPARK twin is still a timeout).
+(2) `t/AUTONOMY.md`: Verus 15, F* 18, Rocq 15 (+1 each, zero_fill); all seven 14 of 25.
+
+### T57 read (2026-10-07 15:21Z): both bars held, exactly.
+
+Regenerated from a clean clone at 156d798 on an idle machine, and installed.
+(1) **Held:** Verus 104, F* 84, Rocq 84; every other kernel unchanged; all seven 65 of 114 (scale_all). In Verus,
+Rocq and F*, every proved program's twin is now refuted (104 of 104, 84 of 84, 84 of 84). SPARK's relu_all twin
+(timeout) is the matrix's one proved program without a refuted twin.
+(2) **Held:** `t/AUTONOMY.md` reads Verus 15, F* 18, Rocq 15; all seven 14 of 25 (zero_fill). sample_push's and
+saturate_all's twins are refuted in the three kernels too; their real bodies stay unproved there.
+
+## T58 registered (2026-10-07 15:40Z, after hand probes and before the clean-clone run): a step budget for programs over floats
+
+**The change.** In SPARK and Frama-C, a lowered program over doubles (`Long_Float`, `double`) gets 2,000,000 prover
+steps by default, 100 times the 20,000 every other program keeps. The SPARK User's Guide (7.8, read under receipt
+eeffe70f487e) says a larger limit helps only where the prover reports reaching it, and that provers handle
+floating-point arithmetic imprecisely, worst with non-linear operations. Both match the measurements below. A
+larger budget lets the same sound search run longer; it cannot weaken a proof. Lowerings do not change.
+
+**Measured before this registration, stated plainly.**
+- Frama-C at 20,000, 200,000 and 2,000,000 steps:
+  - rate_limit verifies from 200,000;
+  - sat_scale verifies at 2,000,000;
+  - pid_step steps out at every budget (its goals reach the 10 s per-goal wall);
+  - every twin stays refuted.
+- SPARK: rate_limit verifies at 200,000 and 2,000,000. pid_step's postcondition reports the limit at both (155 s at
+  2,000,000).
+- **Hand probe** of all eight float tasks at the new default (`cli.py verify --kernels spark,framac`):
+  - rate_limit is verified/refuted in both;
+  - sat_scale is verified/refuted in both;
+  - pid_step is a timeout in both;
+  - clamp_cmd, deadband, geofence_box, ttc_alert and vote3 are unchanged (ttc_alert stays a SPARK refusal).
+- The upstream draft that called rate_limit's SPARK timeout a monotonicity the prover cannot find was wrong: it was
+  the budget. The draft is corrected.
+- **Suite:** passes.
+
+**Bars**, for the clean-clone tables at this registration's commit:
+(1) The matrix: SPARK 79 (rate_limit) and Frama-C 70 (rate_limit, sat_scale); every other cell unchanged; all seven
+65.
+(2) `t/AUTONOMY.md` unchanged (pid_step stays a timeout in both kernels).
+
+### T58 read (2026-10-07 16:13Z): SPARK's bar held; Frama-C's missed, and the cause is the per-goal wall, not the budget.
+
+Regenerated from a clean clone at 46877a4, and installed.
+(1) **Half held:**
+  - SPARK 79: rate_limit is now verified/refuted.
+  - **Frama-C stays 68:** rate_limit and sat_scale still read timeout. Re-run alone on the same clean clone
+    afterwards, both verify at the new budget (14.6 s and 20.4 s). Under the run's load (three cells in flight, each
+    WP running four provers), their slowest goals reach Frama-C's 10 s per-goal wall before the 2,000,000-step
+    budget. That wall is documented in the adapter as a backstop, sized for goals that finish in milliseconds; at
+    the float budget it became the binding limit.
+  - Every other cell unchanged; all seven 65.
+(2) **Held:** `t/AUTONOMY.md` unchanged.
+
+## T58b registered (2026-10-07 16:21Z, after a probe under load and before the clean-clone run): the per-goal wall as a backstop for floats
+
+**The change.** In Frama-C, a program over doubles (the T58 budget) gets a 120 s per-goal wall instead of 10 s, so
+the 2,000,000-step budget is what ends a goal. Integer programs keep 10 s. The witness string names the wall used.
+
+**Measured before this registration, stated plainly.** The eight float tasks in all seven kernels, at the clean
+run's concurrency (3 jobs, flake 3; 7 min 37 s):
+- rate_limit and sat_scale are verified/refuted in Frama-C;
+- pid_step stays a timeout in SPARK and Frama-C;
+- every other float cell is unchanged.
+
+Suite passes.
+
+**Bars**, for the clean-clone tables at this registration's commit:
+(1) The matrix: Frama-C 70 (rate_limit, sat_scale); SPARK 79; every other cell unchanged; all seven 65.
+(2) `t/AUTONOMY.md` unchanged.
+
+### T58b read (2026-10-07 16:57Z): both bars held.
+
+Regenerated from a clean clone at f4d5570, and installed.
+(1) **Held:** Frama-C 70 (rate_limit and sat_scale verified/refuted); SPARK 79; every other cell unchanged; all
+seven 65.
+(2) **Held:** `t/AUTONOMY.md` unchanged. pid_step is the one float routine still a timeout in both kernels, and it is
+named so: two rounded products and a sum, the case the SPARK User's Guide calls a prover limitation, not a budget.
+
+## T59 registered (2026-10-07 17:03Z, after hand probes and before the clean-clone run): D8 v3, vericoding's Dafny track and HumanEval-Dafny
+
+**The change.** Two more lifted corpora are committed with their licenses and provenance, both audited in Dafny:
+- `t/vericoding/dafny/`: 511 solutions from vericoding's Dafny track, the union of dawnr's six lift passes (no task
+  in two, no task differing between passes);
+- `t/humanevaldafny/`: 45 from HumanEval-Dafny (JetBrains Research, Apache-2.0).
+
+Both were screened against dawnr's held-out problems before lifting.
+
+**Measured before this registration, stated plainly** (hand runs, `t/audit.py --kernel dafny --jobs 4`, 2 min 46 s):
+- **vericoding, Dafny track:**
+  - 488 of 511 audited (21 have no input in the domain; 2 real bodies break their own spec in it);
+  - 14,357 of 15,148 behaviour-changing mutants killed (94.8%); 54 tasks admit a survivor;
+  - Dafny verifies 425 real bodies and **proves a survivor in 39**;
+  - by hand (`t/vericoding/CLASSIFIED-DAFNY.md`): 31 gaps, 1 tautology (`len(result) >= 0`), 7 latitude (ties, a
+    "not found" sentinel or index).
+- **HumanEval-Dafny:**
+  - 45 audited; 1,287 of 1,377 killed (93.5%); 6 admit a survivor;
+  - Dafny verifies 39 real bodies and **proves a survivor in 5**, all gaps by hand (`t/humanevaldafny/CLASSIFIED.md`);
+  - can_arrange states nothing for a result below -1, so a constant -2 meets its spec on every input.
+- With T56, vericoding's three tracks read: Dafny 31 gaps in 425 verified, Verus 13 in 55, Lean 0 in 12.
+
+**Bars**, for the clean-clone tables at this registration's commit:
+(1) The interpreter's columns reproduce exactly in both corpora.
+(2) The kernel columns reproduce within two tasks in the larger corpus (Dafny 425 and 39) and within one in the
+smaller (39 and 5).
+
+### T59 read (2026-10-07 17:07Z): both bars held, exactly.
+
+Both tables were regenerated from a clean clone at 9c7b147, and are installed (`t/AUDIT-VERICODING-DAFNY.md`,
+`t/AUDIT-HUMANEVAL-DAFNY.md`); every row matches the hand runs. The D8 picture, six corpora in four kernels:
+
+| corpus | kernel | audited | killed | with a survivor | real verified | survivor proved too | gaps by hand |
+|---|---|---|---|---|---|---|---|
+| DafnyBench (what t states) | Dafny | 320 | 94.2% | 53 | 316 | 44 | 23 (+3 `ensures true`) |
+| vericoding, Dafny track | Dafny | 488 | 94.8% | 54 | 425 | 39 | 31 (+1 tautology) |
+| vericoding, Verus track | Verus | 63 | 96.8% | 20 | 55 | 14 | 13 |
+| vericoding, Lean track | Lean | 16 | 100% | 0 | 12 | 0 | 0 |
+| HumanEval-Dafny | Dafny | 45 | 93.5% | 6 | 39 | 5 | 5 |
+| ACSL by Example | Frama-C | 16 | 100% | 0 | 13 | 0 | 0 |
+
+Across the five benchmark corpora (all but ACSL by Example), 102 tasks have a kernel-proved one-edit wrong program,
+and 72 of them are specification gaps by hand reading.

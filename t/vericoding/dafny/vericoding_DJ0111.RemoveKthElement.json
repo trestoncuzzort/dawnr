@@ -1,0 +1,174 @@
+{
+  "body": [
+    {
+      "assign": [
+        "new_list",
+        {
+          "args": [
+            {
+              "args": [
+                {
+                  "var": "list"
+                },
+                {
+                  "int": 0
+                },
+                {
+                  "args": [
+                    {
+                      "var": "k"
+                    },
+                    {
+                      "int": 1
+                    }
+                  ],
+                  "op": "-"
+                }
+              ],
+              "op": "slice"
+            },
+            {
+              "args": [
+                {
+                  "var": "list"
+                },
+                {
+                  "var": "k"
+                },
+                {
+                  "args": [
+                    {
+                      "var": "list"
+                    }
+                  ],
+                  "op": "len"
+                }
+              ],
+              "op": "slice"
+            }
+          ],
+          "op": "+"
+        }
+      ]
+    }
+  ],
+  "ensures": [
+    {
+      "args": [
+        {
+          "var": "new_list"
+        },
+        {
+          "args": [
+            {
+              "args": [
+                {
+                  "var": "list"
+                },
+                {
+                  "int": 0
+                },
+                {
+                  "args": [
+                    {
+                      "var": "k"
+                    },
+                    {
+                      "int": 1
+                    }
+                  ],
+                  "op": "-"
+                }
+              ],
+              "op": "slice"
+            },
+            {
+              "args": [
+                {
+                  "var": "list"
+                },
+                {
+                  "var": "k"
+                },
+                {
+                  "args": [
+                    {
+                      "var": "list"
+                    }
+                  ],
+                  "op": "len"
+                }
+              ],
+              "op": "slice"
+            }
+          ],
+          "op": "+"
+        }
+      ],
+      "op": "=="
+    }
+  ],
+  "name": "vericoding_dj0111__removeKthElement",
+  "params": [
+    {
+      "name": "list",
+      "type": "seq"
+    },
+    {
+      "name": "k",
+      "type": "int"
+    }
+  ],
+  "requires": [
+    {
+      "args": [
+        {
+          "args": [
+            {
+              "var": "list"
+            }
+          ],
+          "op": "len"
+        },
+        {
+          "int": 0
+        }
+      ],
+      "op": ">"
+    },
+    {
+      "args": [
+        {
+          "int": 0
+        },
+        {
+          "var": "k"
+        }
+      ],
+      "op": "<"
+    },
+    {
+      "args": [
+        {
+          "var": "k"
+        },
+        {
+          "args": [
+            {
+              "var": "list"
+            }
+          ],
+          "op": "len"
+        }
+      ],
+      "op": "<"
+    }
+  ],
+  "returns": [
+    {
+      "name": "new_list",
+      "type": "seq"
+    }
+  ],
+  "t": 1
+}

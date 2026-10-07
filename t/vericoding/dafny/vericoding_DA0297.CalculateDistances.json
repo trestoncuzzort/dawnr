@@ -1,0 +1,2319 @@
+{
+  "body": [
+    {
+      "var": {
+        "init": {
+          "args": [],
+          "op": "seq"
+        },
+        "name": "min_distances",
+        "type": "seq"
+      }
+    },
+    {
+      "var": {
+        "init": {
+          "args": [],
+          "op": "seq"
+        },
+        "name": "max_distances",
+        "type": "seq"
+      }
+    },
+    {
+      "assign": [
+        "min_distances",
+        {
+          "args": [],
+          "op": "seq"
+        }
+      ]
+    },
+    {
+      "assign": [
+        "max_distances",
+        {
+          "args": [],
+          "op": "seq"
+        }
+      ]
+    },
+    {
+      "var": {
+        "init": {
+          "int": 0
+        },
+        "name": "i_v6",
+        "type": "int"
+      }
+    },
+    {
+      "while": {
+        "body": [
+          {
+            "var": {
+              "init": {
+                "int": 0
+              },
+              "name": "min_dist",
+              "type": "int"
+            }
+          },
+          {
+            "var": {
+              "init": {
+                "int": 0
+              },
+              "name": "max_dist",
+              "type": "int"
+            }
+          },
+          {
+            "if": {
+              "cond": {
+                "args": [
+                  {
+                    "var": "i_v6"
+                  },
+                  {
+                    "int": 0
+                  }
+                ],
+                "op": "=="
+              },
+              "else": [
+                {
+                  "if": {
+                    "cond": {
+                      "args": [
+                        {
+                          "var": "i_v6"
+                        },
+                        {
+                          "args": [
+                            {
+                              "args": [
+                                {
+                                  "var": "cities"
+                                }
+                              ],
+                              "op": "len"
+                            },
+                            {
+                              "int": 1
+                            }
+                          ],
+                          "op": "-"
+                        }
+                      ],
+                      "op": "=="
+                    },
+                    "else": [
+                      {
+                        "var": {
+                          "init": {
+                            "args": [
+                              {
+                                "args": [
+                                  {
+                                    "var": "cities"
+                                  },
+                                  {
+                                    "var": "i_v6"
+                                  }
+                                ],
+                                "op": "at"
+                              },
+                              {
+                                "args": [
+                                  {
+                                    "var": "cities"
+                                  },
+                                  {
+                                    "args": [
+                                      {
+                                        "var": "i_v6"
+                                      },
+                                      {
+                                        "int": 1
+                                      }
+                                    ],
+                                    "op": "-"
+                                  }
+                                ],
+                                "op": "at"
+                              }
+                            ],
+                            "op": "-"
+                          },
+                          "name": "left_dist",
+                          "type": "int"
+                        }
+                      },
+                      {
+                        "var": {
+                          "init": {
+                            "args": [
+                              {
+                                "args": [
+                                  {
+                                    "var": "cities"
+                                  },
+                                  {
+                                    "args": [
+                                      {
+                                        "var": "i_v6"
+                                      },
+                                      {
+                                        "int": 1
+                                      }
+                                    ],
+                                    "op": "+"
+                                  }
+                                ],
+                                "op": "at"
+                              },
+                              {
+                                "args": [
+                                  {
+                                    "var": "cities"
+                                  },
+                                  {
+                                    "var": "i_v6"
+                                  }
+                                ],
+                                "op": "at"
+                              }
+                            ],
+                            "op": "-"
+                          },
+                          "name": "right_dist",
+                          "type": "int"
+                        }
+                      },
+                      {
+                        "assign": [
+                          "min_dist",
+                          {
+                            "ite": {
+                              "cond": {
+                                "args": [
+                                  {
+                                    "var": "left_dist"
+                                  },
+                                  {
+                                    "var": "right_dist"
+                                  }
+                                ],
+                                "op": "<="
+                              },
+                              "else": {
+                                "var": "right_dist"
+                              },
+                              "then": {
+                                "var": "left_dist"
+                              }
+                            }
+                          }
+                        ]
+                      },
+                      {
+                        "var": {
+                          "init": {
+                            "args": [
+                              {
+                                "args": [
+                                  {
+                                    "var": "cities"
+                                  },
+                                  {
+                                    "var": "i_v6"
+                                  }
+                                ],
+                                "op": "at"
+                              },
+                              {
+                                "args": [
+                                  {
+                                    "var": "cities"
+                                  },
+                                  {
+                                    "int": 0
+                                  }
+                                ],
+                                "op": "at"
+                              }
+                            ],
+                            "op": "-"
+                          },
+                          "name": "dist_to_first",
+                          "type": "int"
+                        }
+                      },
+                      {
+                        "var": {
+                          "init": {
+                            "args": [
+                              {
+                                "args": [
+                                  {
+                                    "var": "cities"
+                                  },
+                                  {
+                                    "args": [
+                                      {
+                                        "args": [
+                                          {
+                                            "var": "cities"
+                                          }
+                                        ],
+                                        "op": "len"
+                                      },
+                                      {
+                                        "int": 1
+                                      }
+                                    ],
+                                    "op": "-"
+                                  }
+                                ],
+                                "op": "at"
+                              },
+                              {
+                                "args": [
+                                  {
+                                    "var": "cities"
+                                  },
+                                  {
+                                    "var": "i_v6"
+                                  }
+                                ],
+                                "op": "at"
+                              }
+                            ],
+                            "op": "-"
+                          },
+                          "name": "dist_to_last",
+                          "type": "int"
+                        }
+                      },
+                      {
+                        "assign": [
+                          "max_dist",
+                          {
+                            "ite": {
+                              "cond": {
+                                "args": [
+                                  {
+                                    "var": "dist_to_first"
+                                  },
+                                  {
+                                    "var": "dist_to_last"
+                                  }
+                                ],
+                                "op": ">="
+                              },
+                              "else": {
+                                "var": "dist_to_last"
+                              },
+                              "then": {
+                                "var": "dist_to_first"
+                              }
+                            }
+                          }
+                        ]
+                      }
+                    ],
+                    "then": [
+                      {
+                        "assign": [
+                          "min_dist",
+                          {
+                            "args": [
+                              {
+                                "args": [
+                                  {
+                                    "var": "cities"
+                                  },
+                                  {
+                                    "var": "i_v6"
+                                  }
+                                ],
+                                "op": "at"
+                              },
+                              {
+                                "args": [
+                                  {
+                                    "var": "cities"
+                                  },
+                                  {
+                                    "args": [
+                                      {
+                                        "var": "i_v6"
+                                      },
+                                      {
+                                        "int": 1
+                                      }
+                                    ],
+                                    "op": "-"
+                                  }
+                                ],
+                                "op": "at"
+                              }
+                            ],
+                            "op": "-"
+                          }
+                        ]
+                      },
+                      {
+                        "assign": [
+                          "max_dist",
+                          {
+                            "args": [
+                              {
+                                "args": [
+                                  {
+                                    "var": "cities"
+                                  },
+                                  {
+                                    "var": "i_v6"
+                                  }
+                                ],
+                                "op": "at"
+                              },
+                              {
+                                "args": [
+                                  {
+                                    "var": "cities"
+                                  },
+                                  {
+                                    "int": 0
+                                  }
+                                ],
+                                "op": "at"
+                              }
+                            ],
+                            "op": "-"
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                }
+              ],
+              "then": [
+                {
+                  "assign": [
+                    "min_dist",
+                    {
+                      "args": [
+                        {
+                          "args": [
+                            {
+                              "var": "cities"
+                            },
+                            {
+                              "int": 1
+                            }
+                          ],
+                          "op": "at"
+                        },
+                        {
+                          "args": [
+                            {
+                              "var": "cities"
+                            },
+                            {
+                              "int": 0
+                            }
+                          ],
+                          "op": "at"
+                        }
+                      ],
+                      "op": "-"
+                    }
+                  ]
+                },
+                {
+                  "assign": [
+                    "max_dist",
+                    {
+                      "args": [
+                        {
+                          "args": [
+                            {
+                              "var": "cities"
+                            },
+                            {
+                              "args": [
+                                {
+                                  "args": [
+                                    {
+                                      "var": "cities"
+                                    }
+                                  ],
+                                  "op": "len"
+                                },
+                                {
+                                  "int": 1
+                                }
+                              ],
+                              "op": "-"
+                            }
+                          ],
+                          "op": "at"
+                        },
+                        {
+                          "args": [
+                            {
+                              "var": "cities"
+                            },
+                            {
+                              "int": 0
+                            }
+                          ],
+                          "op": "at"
+                        }
+                      ],
+                      "op": "-"
+                    }
+                  ]
+                }
+              ]
+            }
+          },
+          {
+            "lemma": {
+              "args": [
+                {
+                  "var": "cities"
+                },
+                {
+                  "var": "i_v6"
+                }
+              ],
+              "name": "minDistancePositive"
+            }
+          },
+          {
+            "lemma": {
+              "args": [
+                {
+                  "var": "cities"
+                },
+                {
+                  "var": "i_v6"
+                }
+              ],
+              "name": "maxDistancePositive"
+            }
+          },
+          {
+            "assign": [
+              "min_distances",
+              {
+                "args": [
+                  {
+                    "var": "min_distances"
+                  },
+                  {
+                    "args": [
+                      {
+                        "var": "min_dist"
+                      }
+                    ],
+                    "op": "seq"
+                  }
+                ],
+                "op": "+"
+              }
+            ]
+          },
+          {
+            "assign": [
+              "max_distances",
+              {
+                "args": [
+                  {
+                    "var": "max_distances"
+                  },
+                  {
+                    "args": [
+                      {
+                        "var": "max_dist"
+                      }
+                    ],
+                    "op": "seq"
+                  }
+                ],
+                "op": "+"
+              }
+            ]
+          },
+          {
+            "assign": [
+              "i_v6",
+              {
+                "args": [
+                  {
+                    "var": "i_v6"
+                  },
+                  {
+                    "int": 1
+                  }
+                ],
+                "op": "+"
+              }
+            ]
+          }
+        ],
+        "cond": {
+          "args": [
+            {
+              "var": "i_v6"
+            },
+            {
+              "args": [
+                {
+                  "var": "cities"
+                }
+              ],
+              "op": "len"
+            }
+          ],
+          "op": "<"
+        },
+        "decreases": {
+          "args": [
+            {
+              "args": [
+                {
+                  "var": "cities"
+                }
+              ],
+              "op": "len"
+            },
+            {
+              "var": "i_v6"
+            }
+          ],
+          "op": "-"
+        },
+        "invariants": [
+          {
+            "args": [
+              {
+                "args": [
+                  {
+                    "int": 0
+                  },
+                  {
+                    "var": "i_v6"
+                  }
+                ],
+                "op": "<="
+              },
+              {
+                "args": [
+                  {
+                    "var": "i_v6"
+                  },
+                  {
+                    "args": [
+                      {
+                        "var": "cities"
+                      }
+                    ],
+                    "op": "len"
+                  }
+                ],
+                "op": "<="
+              }
+            ],
+            "op": "and"
+          },
+          {
+            "args": [
+              {
+                "args": [
+                  {
+                    "var": "min_distances"
+                  }
+                ],
+                "op": "len"
+              },
+              {
+                "var": "i_v6"
+              }
+            ],
+            "op": "=="
+          },
+          {
+            "args": [
+              {
+                "args": [
+                  {
+                    "var": "max_distances"
+                  }
+                ],
+                "op": "len"
+              },
+              {
+                "var": "i_v6"
+              }
+            ],
+            "op": "=="
+          },
+          {
+            "forall": {
+              "body": {
+                "args": [
+                  {
+                    "args": [
+                      {
+                        "args": [
+                          {
+                            "var": "min_distances"
+                          },
+                          {
+                            "var": "j_v"
+                          }
+                        ],
+                        "op": "at"
+                      },
+                      {
+                        "call": {
+                          "args": [
+                            {
+                              "var": "cities"
+                            },
+                            {
+                              "var": "j_v"
+                            }
+                          ],
+                          "fun": "minDistance"
+                        }
+                      }
+                    ],
+                    "op": "=="
+                  },
+                  {
+                    "args": [
+                      {
+                        "args": [
+                          {
+                            "var": "max_distances"
+                          },
+                          {
+                            "var": "j_v"
+                          }
+                        ],
+                        "op": "at"
+                      },
+                      {
+                        "call": {
+                          "args": [
+                            {
+                              "var": "cities"
+                            },
+                            {
+                              "var": "j_v"
+                            }
+                          ],
+                          "fun": "maxDistance"
+                        }
+                      }
+                    ],
+                    "op": "=="
+                  }
+                ],
+                "op": "and"
+              },
+              "hi": {
+                "var": "i_v6"
+              },
+              "lo": {
+                "int": 0
+              },
+              "var": "j_v"
+            }
+          },
+          {
+            "forall": {
+              "body": {
+                "args": [
+                  {
+                    "args": [
+                      {
+                        "args": [
+                          {
+                            "var": "min_distances"
+                          },
+                          {
+                            "var": "j_v2"
+                          }
+                        ],
+                        "op": "at"
+                      },
+                      {
+                        "int": 0
+                      }
+                    ],
+                    "op": ">"
+                  },
+                  {
+                    "args": [
+                      {
+                        "args": [
+                          {
+                            "var": "max_distances"
+                          },
+                          {
+                            "var": "j_v2"
+                          }
+                        ],
+                        "op": "at"
+                      },
+                      {
+                        "int": 0
+                      }
+                    ],
+                    "op": ">"
+                  }
+                ],
+                "op": "and"
+              },
+              "hi": {
+                "var": "i_v6"
+              },
+              "lo": {
+                "int": 0
+              },
+              "var": "j_v2"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "assign": [
+        "r",
+        {
+          "args": [
+            {
+              "var": "min_distances"
+            },
+            {
+              "var": "max_distances"
+            }
+          ],
+          "op": "pair"
+        }
+      ]
+    }
+  ],
+  "ensures": [
+    {
+      "call": {
+        "args": [
+          {
+            "var": "cities"
+          },
+          {
+            "args": [
+              {
+                "var": "r"
+              }
+            ],
+            "op": "fst"
+          },
+          {
+            "args": [
+              {
+                "var": "r"
+              }
+            ],
+            "op": "snd"
+          }
+        ],
+        "fun": "validOutput"
+      }
+    }
+  ],
+  "gate": "recursion",
+  "lemmas": [
+    {
+      "body": [
+        {
+          "if": {
+            "cond": {
+              "args": [
+                {
+                  "var": "i_v4"
+                },
+                {
+                  "int": 0
+                }
+              ],
+              "op": "=="
+            },
+            "else": [
+              {
+                "if": {
+                  "cond": {
+                    "args": [
+                      {
+                        "var": "i_v4"
+                      },
+                      {
+                        "args": [
+                          {
+                            "args": [
+                              {
+                                "var": "cities_v5"
+                              }
+                            ],
+                            "op": "len"
+                          },
+                          {
+                            "int": 1
+                          }
+                        ],
+                        "op": "-"
+                      }
+                    ],
+                    "op": "=="
+                  },
+                  "else": [
+                    {
+                      "assert": {
+                        "args": [
+                          {
+                            "args": [
+                              {
+                                "var": "cities_v5"
+                              },
+                              {
+                                "var": "i_v4"
+                              }
+                            ],
+                            "op": "at"
+                          },
+                          {
+                            "args": [
+                              {
+                                "var": "cities_v5"
+                              },
+                              {
+                                "int": 0
+                              }
+                            ],
+                            "op": "at"
+                          }
+                        ],
+                        "op": ">"
+                      }
+                    }
+                  ],
+                  "then": [
+                    {
+                      "assert": {
+                        "args": [
+                          {
+                            "args": [
+                              {
+                                "var": "cities_v5"
+                              },
+                              {
+                                "var": "i_v4"
+                              }
+                            ],
+                            "op": "at"
+                          },
+                          {
+                            "args": [
+                              {
+                                "var": "cities_v5"
+                              },
+                              {
+                                "int": 0
+                              }
+                            ],
+                            "op": "at"
+                          }
+                        ],
+                        "op": ">"
+                      }
+                    }
+                  ]
+                }
+              }
+            ],
+            "then": [
+              {
+                "assert": {
+                  "args": [
+                    {
+                      "args": [
+                        {
+                          "var": "cities_v5"
+                        },
+                        {
+                          "args": [
+                            {
+                              "args": [
+                                {
+                                  "var": "cities_v5"
+                                }
+                              ],
+                              "op": "len"
+                            },
+                            {
+                              "int": 1
+                            }
+                          ],
+                          "op": "-"
+                        }
+                      ],
+                      "op": "at"
+                    },
+                    {
+                      "args": [
+                        {
+                          "var": "cities_v5"
+                        },
+                        {
+                          "int": 0
+                        }
+                      ],
+                      "op": "at"
+                    }
+                  ],
+                  "op": ">"
+                }
+              }
+            ]
+          }
+        }
+      ],
+      "ensures": [
+        {
+          "args": [
+            {
+              "call": {
+                "args": [
+                  {
+                    "var": "cities_v5"
+                  },
+                  {
+                    "var": "i_v4"
+                  }
+                ],
+                "fun": "maxDistance"
+              }
+            },
+            {
+              "int": 0
+            }
+          ],
+          "op": ">"
+        }
+      ],
+      "name": "maxDistancePositive",
+      "params": [
+        {
+          "name": "cities_v5",
+          "type": "seq"
+        },
+        {
+          "name": "i_v4",
+          "type": "int"
+        }
+      ],
+      "requires": [
+        {
+          "call": {
+            "args": [
+              {
+                "var": "cities_v5"
+              }
+            ],
+            "fun": "validInput"
+          }
+        },
+        {
+          "args": [
+            {
+              "int": 0
+            },
+            {
+              "var": "i_v4"
+            }
+          ],
+          "op": "<="
+        },
+        {
+          "args": [
+            {
+              "var": "i_v4"
+            },
+            {
+              "args": [
+                {
+                  "var": "cities_v5"
+                }
+              ],
+              "op": "len"
+            }
+          ],
+          "op": "<"
+        }
+      ]
+    },
+    {
+      "body": [
+        {
+          "if": {
+            "cond": {
+              "args": [
+                {
+                  "var": "i_v5"
+                },
+                {
+                  "int": 0
+                }
+              ],
+              "op": "=="
+            },
+            "else": [
+              {
+                "if": {
+                  "cond": {
+                    "args": [
+                      {
+                        "var": "i_v5"
+                      },
+                      {
+                        "args": [
+                          {
+                            "args": [
+                              {
+                                "var": "cities_v6"
+                              }
+                            ],
+                            "op": "len"
+                          },
+                          {
+                            "int": 1
+                          }
+                        ],
+                        "op": "-"
+                      }
+                    ],
+                    "op": "=="
+                  },
+                  "else": [
+                    {
+                      "assert": {
+                        "args": [
+                          {
+                            "args": [
+                              {
+                                "var": "cities_v6"
+                              },
+                              {
+                                "var": "i_v5"
+                              }
+                            ],
+                            "op": "at"
+                          },
+                          {
+                            "args": [
+                              {
+                                "var": "cities_v6"
+                              },
+                              {
+                                "args": [
+                                  {
+                                    "var": "i_v5"
+                                  },
+                                  {
+                                    "int": 1
+                                  }
+                                ],
+                                "op": "-"
+                              }
+                            ],
+                            "op": "at"
+                          }
+                        ],
+                        "op": ">"
+                      }
+                    },
+                    {
+                      "assert": {
+                        "args": [
+                          {
+                            "args": [
+                              {
+                                "var": "cities_v6"
+                              },
+                              {
+                                "args": [
+                                  {
+                                    "var": "i_v5"
+                                  },
+                                  {
+                                    "int": 1
+                                  }
+                                ],
+                                "op": "+"
+                              }
+                            ],
+                            "op": "at"
+                          },
+                          {
+                            "args": [
+                              {
+                                "var": "cities_v6"
+                              },
+                              {
+                                "var": "i_v5"
+                              }
+                            ],
+                            "op": "at"
+                          }
+                        ],
+                        "op": ">"
+                      }
+                    }
+                  ],
+                  "then": [
+                    {
+                      "assert": {
+                        "args": [
+                          {
+                            "args": [
+                              {
+                                "var": "cities_v6"
+                              },
+                              {
+                                "var": "i_v5"
+                              }
+                            ],
+                            "op": "at"
+                          },
+                          {
+                            "args": [
+                              {
+                                "var": "cities_v6"
+                              },
+                              {
+                                "args": [
+                                  {
+                                    "var": "i_v5"
+                                  },
+                                  {
+                                    "int": 1
+                                  }
+                                ],
+                                "op": "-"
+                              }
+                            ],
+                            "op": "at"
+                          }
+                        ],
+                        "op": ">"
+                      }
+                    }
+                  ]
+                }
+              }
+            ],
+            "then": [
+              {
+                "assert": {
+                  "args": [
+                    {
+                      "args": [
+                        {
+                          "var": "cities_v6"
+                        },
+                        {
+                          "int": 1
+                        }
+                      ],
+                      "op": "at"
+                    },
+                    {
+                      "args": [
+                        {
+                          "var": "cities_v6"
+                        },
+                        {
+                          "int": 0
+                        }
+                      ],
+                      "op": "at"
+                    }
+                  ],
+                  "op": ">"
+                }
+              }
+            ]
+          }
+        }
+      ],
+      "ensures": [
+        {
+          "args": [
+            {
+              "call": {
+                "args": [
+                  {
+                    "var": "cities_v6"
+                  },
+                  {
+                    "var": "i_v5"
+                  }
+                ],
+                "fun": "minDistance"
+              }
+            },
+            {
+              "int": 0
+            }
+          ],
+          "op": ">"
+        }
+      ],
+      "name": "minDistancePositive",
+      "params": [
+        {
+          "name": "cities_v6",
+          "type": "seq"
+        },
+        {
+          "name": "i_v5",
+          "type": "int"
+        }
+      ],
+      "requires": [
+        {
+          "call": {
+            "args": [
+              {
+                "var": "cities_v6"
+              }
+            ],
+            "fun": "validInput"
+          }
+        },
+        {
+          "args": [
+            {
+              "int": 0
+            },
+            {
+              "var": "i_v5"
+            }
+          ],
+          "op": "<="
+        },
+        {
+          "args": [
+            {
+              "var": "i_v5"
+            },
+            {
+              "args": [
+                {
+                  "var": "cities_v6"
+                }
+              ],
+              "op": "len"
+            }
+          ],
+          "op": "<"
+        }
+      ]
+    }
+  ],
+  "name": "vericoding_da0297__calculateDistances",
+  "params": [
+    {
+      "name": "cities",
+      "type": "seq"
+    }
+  ],
+  "requires": [
+    {
+      "call": {
+        "args": [
+          {
+            "var": "cities"
+          }
+        ],
+        "fun": "validInput"
+      }
+    }
+  ],
+  "returns": [
+    {
+      "name": "r",
+      "type": {
+        "pair": [
+          "seq",
+          "seq"
+        ]
+      }
+    }
+  ],
+  "spec_funs": [
+    {
+      "body": {
+        "args": [
+          {
+            "args": [
+              {
+                "args": [
+                  {
+                    "var": "cities_v"
+                  }
+                ],
+                "op": "len"
+              },
+              {
+                "int": 2
+              }
+            ],
+            "op": ">="
+          },
+          {
+            "forall": {
+              "body": {
+                "forall": {
+                  "body": {
+                    "args": [
+                      {
+                        "args": [
+                          {
+                            "var": "cities_v"
+                          },
+                          {
+                            "var": "i"
+                          }
+                        ],
+                        "op": "at"
+                      },
+                      {
+                        "args": [
+                          {
+                            "var": "cities_v"
+                          },
+                          {
+                            "var": "j"
+                          }
+                        ],
+                        "op": "at"
+                      }
+                    ],
+                    "op": "<"
+                  },
+                  "hi": {
+                    "args": [
+                      {
+                        "var": "cities_v"
+                      }
+                    ],
+                    "op": "len"
+                  },
+                  "lo": {
+                    "args": [
+                      {
+                        "var": "i"
+                      },
+                      {
+                        "int": 1
+                      }
+                    ],
+                    "op": "+"
+                  },
+                  "var": "j"
+                }
+              },
+              "hi": {
+                "args": [
+                  {
+                    "var": "cities_v"
+                  }
+                ],
+                "op": "len"
+              },
+              "lo": {
+                "int": 0
+              },
+              "var": "i"
+            }
+          }
+        ],
+        "op": "and"
+      },
+      "decreases": {
+        "int": 0
+      },
+      "name": "validInput",
+      "params": [
+        {
+          "name": "cities_v",
+          "type": "seq"
+        }
+      ],
+      "result": "bool"
+    },
+    {
+      "body": {
+        "ite": {
+          "cond": {
+            "args": [
+              {
+                "call": {
+                  "args": [
+                    {
+                      "var": "cities_v2"
+                    }
+                  ],
+                  "fun": "validInput"
+                }
+              },
+              {
+                "args": [
+                  {
+                    "args": [
+                      {
+                        "int": 0
+                      },
+                      {
+                        "var": "i_v"
+                      }
+                    ],
+                    "op": "<="
+                  },
+                  {
+                    "args": [
+                      {
+                        "var": "i_v"
+                      },
+                      {
+                        "args": [
+                          {
+                            "var": "cities_v2"
+                          }
+                        ],
+                        "op": "len"
+                      }
+                    ],
+                    "op": "<"
+                  }
+                ],
+                "op": "and"
+              }
+            ],
+            "op": "and"
+          },
+          "else": {
+            "int": 0
+          },
+          "then": {
+            "ite": {
+              "cond": {
+                "args": [
+                  {
+                    "var": "i_v"
+                  },
+                  {
+                    "int": 0
+                  }
+                ],
+                "op": "=="
+              },
+              "else": {
+                "ite": {
+                  "cond": {
+                    "args": [
+                      {
+                        "var": "i_v"
+                      },
+                      {
+                        "args": [
+                          {
+                            "args": [
+                              {
+                                "var": "cities_v2"
+                              }
+                            ],
+                            "op": "len"
+                          },
+                          {
+                            "int": 1
+                          }
+                        ],
+                        "op": "-"
+                      }
+                    ],
+                    "op": "=="
+                  },
+                  "else": {
+                    "ite": {
+                      "cond": {
+                        "args": [
+                          {
+                            "args": [
+                              {
+                                "args": [
+                                  {
+                                    "var": "cities_v2"
+                                  },
+                                  {
+                                    "var": "i_v"
+                                  }
+                                ],
+                                "op": "at"
+                              },
+                              {
+                                "args": [
+                                  {
+                                    "var": "cities_v2"
+                                  },
+                                  {
+                                    "args": [
+                                      {
+                                        "var": "i_v"
+                                      },
+                                      {
+                                        "int": 1
+                                      }
+                                    ],
+                                    "op": "-"
+                                  }
+                                ],
+                                "op": "at"
+                              }
+                            ],
+                            "op": "-"
+                          },
+                          {
+                            "args": [
+                              {
+                                "args": [
+                                  {
+                                    "var": "cities_v2"
+                                  },
+                                  {
+                                    "args": [
+                                      {
+                                        "var": "i_v"
+                                      },
+                                      {
+                                        "int": 1
+                                      }
+                                    ],
+                                    "op": "+"
+                                  }
+                                ],
+                                "op": "at"
+                              },
+                              {
+                                "args": [
+                                  {
+                                    "var": "cities_v2"
+                                  },
+                                  {
+                                    "var": "i_v"
+                                  }
+                                ],
+                                "op": "at"
+                              }
+                            ],
+                            "op": "-"
+                          }
+                        ],
+                        "op": "<="
+                      },
+                      "else": {
+                        "args": [
+                          {
+                            "args": [
+                              {
+                                "var": "cities_v2"
+                              },
+                              {
+                                "args": [
+                                  {
+                                    "var": "i_v"
+                                  },
+                                  {
+                                    "int": 1
+                                  }
+                                ],
+                                "op": "+"
+                              }
+                            ],
+                            "op": "at"
+                          },
+                          {
+                            "args": [
+                              {
+                                "var": "cities_v2"
+                              },
+                              {
+                                "var": "i_v"
+                              }
+                            ],
+                            "op": "at"
+                          }
+                        ],
+                        "op": "-"
+                      },
+                      "then": {
+                        "args": [
+                          {
+                            "args": [
+                              {
+                                "var": "cities_v2"
+                              },
+                              {
+                                "var": "i_v"
+                              }
+                            ],
+                            "op": "at"
+                          },
+                          {
+                            "args": [
+                              {
+                                "var": "cities_v2"
+                              },
+                              {
+                                "args": [
+                                  {
+                                    "var": "i_v"
+                                  },
+                                  {
+                                    "int": 1
+                                  }
+                                ],
+                                "op": "-"
+                              }
+                            ],
+                            "op": "at"
+                          }
+                        ],
+                        "op": "-"
+                      }
+                    }
+                  },
+                  "then": {
+                    "args": [
+                      {
+                        "args": [
+                          {
+                            "var": "cities_v2"
+                          },
+                          {
+                            "var": "i_v"
+                          }
+                        ],
+                        "op": "at"
+                      },
+                      {
+                        "args": [
+                          {
+                            "var": "cities_v2"
+                          },
+                          {
+                            "args": [
+                              {
+                                "var": "i_v"
+                              },
+                              {
+                                "int": 1
+                              }
+                            ],
+                            "op": "-"
+                          }
+                        ],
+                        "op": "at"
+                      }
+                    ],
+                    "op": "-"
+                  }
+                }
+              },
+              "then": {
+                "args": [
+                  {
+                    "args": [
+                      {
+                        "var": "cities_v2"
+                      },
+                      {
+                        "int": 1
+                      }
+                    ],
+                    "op": "at"
+                  },
+                  {
+                    "args": [
+                      {
+                        "var": "cities_v2"
+                      },
+                      {
+                        "int": 0
+                      }
+                    ],
+                    "op": "at"
+                  }
+                ],
+                "op": "-"
+              }
+            }
+          }
+        }
+      },
+      "decreases": {
+        "int": 0
+      },
+      "name": "minDistance",
+      "params": [
+        {
+          "name": "cities_v2",
+          "type": "seq"
+        },
+        {
+          "name": "i_v",
+          "type": "int"
+        }
+      ],
+      "result": "int"
+    },
+    {
+      "body": {
+        "ite": {
+          "cond": {
+            "args": [
+              {
+                "call": {
+                  "args": [
+                    {
+                      "var": "cities_v3"
+                    }
+                  ],
+                  "fun": "validInput"
+                }
+              },
+              {
+                "args": [
+                  {
+                    "args": [
+                      {
+                        "int": 0
+                      },
+                      {
+                        "var": "i_v2"
+                      }
+                    ],
+                    "op": "<="
+                  },
+                  {
+                    "args": [
+                      {
+                        "var": "i_v2"
+                      },
+                      {
+                        "args": [
+                          {
+                            "var": "cities_v3"
+                          }
+                        ],
+                        "op": "len"
+                      }
+                    ],
+                    "op": "<"
+                  }
+                ],
+                "op": "and"
+              }
+            ],
+            "op": "and"
+          },
+          "else": {
+            "int": 0
+          },
+          "then": {
+            "ite": {
+              "cond": {
+                "args": [
+                  {
+                    "var": "i_v2"
+                  },
+                  {
+                    "int": 0
+                  }
+                ],
+                "op": "=="
+              },
+              "else": {
+                "ite": {
+                  "cond": {
+                    "args": [
+                      {
+                        "var": "i_v2"
+                      },
+                      {
+                        "args": [
+                          {
+                            "args": [
+                              {
+                                "var": "cities_v3"
+                              }
+                            ],
+                            "op": "len"
+                          },
+                          {
+                            "int": 1
+                          }
+                        ],
+                        "op": "-"
+                      }
+                    ],
+                    "op": "=="
+                  },
+                  "else": {
+                    "ite": {
+                      "cond": {
+                        "args": [
+                          {
+                            "args": [
+                              {
+                                "args": [
+                                  {
+                                    "var": "cities_v3"
+                                  },
+                                  {
+                                    "var": "i_v2"
+                                  }
+                                ],
+                                "op": "at"
+                              },
+                              {
+                                "args": [
+                                  {
+                                    "var": "cities_v3"
+                                  },
+                                  {
+                                    "int": 0
+                                  }
+                                ],
+                                "op": "at"
+                              }
+                            ],
+                            "op": "-"
+                          },
+                          {
+                            "args": [
+                              {
+                                "args": [
+                                  {
+                                    "var": "cities_v3"
+                                  },
+                                  {
+                                    "args": [
+                                      {
+                                        "args": [
+                                          {
+                                            "var": "cities_v3"
+                                          }
+                                        ],
+                                        "op": "len"
+                                      },
+                                      {
+                                        "int": 1
+                                      }
+                                    ],
+                                    "op": "-"
+                                  }
+                                ],
+                                "op": "at"
+                              },
+                              {
+                                "args": [
+                                  {
+                                    "var": "cities_v3"
+                                  },
+                                  {
+                                    "var": "i_v2"
+                                  }
+                                ],
+                                "op": "at"
+                              }
+                            ],
+                            "op": "-"
+                          }
+                        ],
+                        "op": ">="
+                      },
+                      "else": {
+                        "args": [
+                          {
+                            "args": [
+                              {
+                                "var": "cities_v3"
+                              },
+                              {
+                                "args": [
+                                  {
+                                    "args": [
+                                      {
+                                        "var": "cities_v3"
+                                      }
+                                    ],
+                                    "op": "len"
+                                  },
+                                  {
+                                    "int": 1
+                                  }
+                                ],
+                                "op": "-"
+                              }
+                            ],
+                            "op": "at"
+                          },
+                          {
+                            "args": [
+                              {
+                                "var": "cities_v3"
+                              },
+                              {
+                                "var": "i_v2"
+                              }
+                            ],
+                            "op": "at"
+                          }
+                        ],
+                        "op": "-"
+                      },
+                      "then": {
+                        "args": [
+                          {
+                            "args": [
+                              {
+                                "var": "cities_v3"
+                              },
+                              {
+                                "var": "i_v2"
+                              }
+                            ],
+                            "op": "at"
+                          },
+                          {
+                            "args": [
+                              {
+                                "var": "cities_v3"
+                              },
+                              {
+                                "int": 0
+                              }
+                            ],
+                            "op": "at"
+                          }
+                        ],
+                        "op": "-"
+                      }
+                    }
+                  },
+                  "then": {
+                    "args": [
+                      {
+                        "args": [
+                          {
+                            "var": "cities_v3"
+                          },
+                          {
+                            "var": "i_v2"
+                          }
+                        ],
+                        "op": "at"
+                      },
+                      {
+                        "args": [
+                          {
+                            "var": "cities_v3"
+                          },
+                          {
+                            "int": 0
+                          }
+                        ],
+                        "op": "at"
+                      }
+                    ],
+                    "op": "-"
+                  }
+                }
+              },
+              "then": {
+                "args": [
+                  {
+                    "args": [
+                      {
+                        "var": "cities_v3"
+                      },
+                      {
+                        "args": [
+                          {
+                            "args": [
+                              {
+                                "var": "cities_v3"
+                              }
+                            ],
+                            "op": "len"
+                          },
+                          {
+                            "int": 1
+                          }
+                        ],
+                        "op": "-"
+                      }
+                    ],
+                    "op": "at"
+                  },
+                  {
+                    "args": [
+                      {
+                        "var": "cities_v3"
+                      },
+                      {
+                        "int": 0
+                      }
+                    ],
+                    "op": "at"
+                  }
+                ],
+                "op": "-"
+              }
+            }
+          }
+        }
+      },
+      "decreases": {
+        "int": 0
+      },
+      "name": "maxDistance",
+      "params": [
+        {
+          "name": "cities_v3",
+          "type": "seq"
+        },
+        {
+          "name": "i_v2",
+          "type": "int"
+        }
+      ],
+      "result": "int"
+    },
+    {
+      "body": {
+        "args": [
+          {
+            "call": {
+              "args": [
+                {
+                  "var": "cities_v4"
+                }
+              ],
+              "fun": "validInput"
+            }
+          },
+          {
+            "args": [
+              {
+                "args": [
+                  {
+                    "var": "min_distances_v"
+                  }
+                ],
+                "op": "len"
+              },
+              {
+                "args": [
+                  {
+                    "var": "cities_v4"
+                  }
+                ],
+                "op": "len"
+              }
+            ],
+            "op": "=="
+          },
+          {
+            "args": [
+              {
+                "args": [
+                  {
+                    "var": "max_distances_v"
+                  }
+                ],
+                "op": "len"
+              },
+              {
+                "args": [
+                  {
+                    "var": "cities_v4"
+                  }
+                ],
+                "op": "len"
+              }
+            ],
+            "op": "=="
+          },
+          {
+            "forall": {
+              "body": {
+                "args": [
+                  {
+                    "args": [
+                      {
+                        "args": [
+                          {
+                            "var": "min_distances_v"
+                          },
+                          {
+                            "var": "i_v3"
+                          }
+                        ],
+                        "op": "at"
+                      },
+                      {
+                        "call": {
+                          "args": [
+                            {
+                              "var": "cities_v4"
+                            },
+                            {
+                              "var": "i_v3"
+                            }
+                          ],
+                          "fun": "minDistance"
+                        }
+                      }
+                    ],
+                    "op": "=="
+                  },
+                  {
+                    "args": [
+                      {
+                        "args": [
+                          {
+                            "var": "max_distances_v"
+                          },
+                          {
+                            "var": "i_v3"
+                          }
+                        ],
+                        "op": "at"
+                      },
+                      {
+                        "call": {
+                          "args": [
+                            {
+                              "var": "cities_v4"
+                            },
+                            {
+                              "var": "i_v3"
+                            }
+                          ],
+                          "fun": "maxDistance"
+                        }
+                      }
+                    ],
+                    "op": "=="
+                  },
+                  {
+                    "args": [
+                      {
+                        "args": [
+                          {
+                            "var": "min_distances_v"
+                          },
+                          {
+                            "var": "i_v3"
+                          }
+                        ],
+                        "op": "at"
+                      },
+                      {
+                        "int": 0
+                      }
+                    ],
+                    "op": ">"
+                  },
+                  {
+                    "args": [
+                      {
+                        "args": [
+                          {
+                            "var": "max_distances_v"
+                          },
+                          {
+                            "var": "i_v3"
+                          }
+                        ],
+                        "op": "at"
+                      },
+                      {
+                        "int": 0
+                      }
+                    ],
+                    "op": ">"
+                  }
+                ],
+                "op": "and"
+              },
+              "hi": {
+                "args": [
+                  {
+                    "var": "cities_v4"
+                  }
+                ],
+                "op": "len"
+              },
+              "lo": {
+                "int": 0
+              },
+              "var": "i_v3"
+            }
+          }
+        ],
+        "op": "and"
+      },
+      "decreases": {
+        "int": 0
+      },
+      "name": "validOutput",
+      "params": [
+        {
+          "name": "cities_v4",
+          "type": "seq"
+        },
+        {
+          "name": "min_distances_v",
+          "type": "seq"
+        },
+        {
+          "name": "max_distances_v",
+          "type": "seq"
+        }
+      ],
+      "result": "bool"
+    }
+  ],
+  "t": 1
+}

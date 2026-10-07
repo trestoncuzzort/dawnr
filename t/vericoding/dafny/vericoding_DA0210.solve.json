@@ -1,0 +1,321 @@
+{
+  "body": [
+    {
+      "if": {
+        "cond": {
+          "args": [
+            {
+              "args": [
+                {
+                  "var": "n"
+                },
+                {
+                  "int": 2
+                }
+              ],
+              "op": "mod"
+            },
+            {
+              "int": 1
+            }
+          ],
+          "op": "=="
+        },
+        "else": [
+          {
+            "assign": [
+              "result",
+              {
+                "args": [
+                  {
+                    "int": 119
+                  },
+                  {
+                    "int": 104
+                  },
+                  {
+                    "int": 105
+                  },
+                  {
+                    "int": 116
+                  },
+                  {
+                    "int": 101
+                  },
+                  {
+                    "int": 10
+                  },
+                  {
+                    "int": 49
+                  },
+                  {
+                    "int": 32
+                  },
+                  {
+                    "int": 50
+                  },
+                  {
+                    "int": 10
+                  }
+                ],
+                "op": "seq"
+              }
+            ]
+          }
+        ],
+        "then": [
+          {
+            "assign": [
+              "result",
+              {
+                "args": [
+                  {
+                    "int": 98
+                  },
+                  {
+                    "int": 108
+                  },
+                  {
+                    "int": 97
+                  },
+                  {
+                    "int": 99
+                  },
+                  {
+                    "int": 107
+                  },
+                  {
+                    "int": 10
+                  }
+                ],
+                "op": "seq"
+              }
+            ]
+          }
+        ]
+      }
+    }
+  ],
+  "ensures": [
+    {
+      "call": {
+        "args": [
+          {
+            "var": "n"
+          },
+          {
+            "var": "result"
+          }
+        ],
+        "fun": "validResult"
+      }
+    }
+  ],
+  "gate": "recursion",
+  "name": "vericoding_da0210__solve",
+  "params": [
+    {
+      "name": "n",
+      "type": "int"
+    }
+  ],
+  "requires": [
+    {
+      "call": {
+        "args": [
+          {
+            "var": "n"
+          }
+        ],
+        "fun": "validInput"
+      }
+    }
+  ],
+  "returns": [
+    {
+      "name": "result",
+      "type": "seq"
+    }
+  ],
+  "spec_funs": [
+    {
+      "body": {
+        "args": [
+          {
+            "var": "n_v"
+          },
+          {
+            "int": 2
+          }
+        ],
+        "op": ">="
+      },
+      "decreases": {
+        "int": 0
+      },
+      "name": "validInput",
+      "params": [
+        {
+          "name": "n_v",
+          "type": "int"
+        }
+      ],
+      "result": "bool"
+    },
+    {
+      "body": {
+        "args": [
+          {
+            "args": [
+              {
+                "var": "n_v2"
+              },
+              {
+                "int": 2
+              }
+            ],
+            "op": "mod"
+          },
+          {
+            "int": 1
+          }
+        ],
+        "op": "=="
+      },
+      "decreases": {
+        "int": 0
+      },
+      "name": "isWinForBlack",
+      "params": [
+        {
+          "name": "n_v2",
+          "type": "int"
+        }
+      ],
+      "result": "bool"
+    },
+    {
+      "body": {
+        "ite": {
+          "cond": {
+            "call": {
+              "args": [
+                {
+                  "var": "n_v3"
+                }
+              ],
+              "fun": "validInput"
+            }
+          },
+          "else": {
+            "bool": false
+          },
+          "then": {
+            "ite": {
+              "cond": {
+                "call": {
+                  "args": [
+                    {
+                      "var": "n_v3"
+                    }
+                  ],
+                  "fun": "isWinForBlack"
+                }
+              },
+              "else": {
+                "args": [
+                  {
+                    "var": "result_v"
+                  },
+                  {
+                    "args": [
+                      {
+                        "int": 119
+                      },
+                      {
+                        "int": 104
+                      },
+                      {
+                        "int": 105
+                      },
+                      {
+                        "int": 116
+                      },
+                      {
+                        "int": 101
+                      },
+                      {
+                        "int": 10
+                      },
+                      {
+                        "int": 49
+                      },
+                      {
+                        "int": 32
+                      },
+                      {
+                        "int": 50
+                      },
+                      {
+                        "int": 10
+                      }
+                    ],
+                    "op": "seq"
+                  }
+                ],
+                "op": "=="
+              },
+              "then": {
+                "args": [
+                  {
+                    "var": "result_v"
+                  },
+                  {
+                    "args": [
+                      {
+                        "int": 98
+                      },
+                      {
+                        "int": 108
+                      },
+                      {
+                        "int": 97
+                      },
+                      {
+                        "int": 99
+                      },
+                      {
+                        "int": 107
+                      },
+                      {
+                        "int": 10
+                      }
+                    ],
+                    "op": "seq"
+                  }
+                ],
+                "op": "=="
+              }
+            }
+          }
+        }
+      },
+      "decreases": {
+        "int": 0
+      },
+      "name": "validResult",
+      "params": [
+        {
+          "name": "n_v3",
+          "type": "int"
+        },
+        {
+          "name": "result_v",
+          "type": "seq"
+        }
+      ],
+      "result": "bool"
+    }
+  ],
+  "t": 1
+}

@@ -1,0 +1,538 @@
+{
+  "body": [
+    {
+      "if": {
+        "cond": {
+          "args": [
+            {
+              "args": [
+                {
+                  "var": "input"
+                },
+                {
+                  "int": 0
+                }
+              ],
+              "op": "at"
+            },
+            {
+              "args": [
+                {
+                  "var": "input"
+                },
+                {
+                  "int": 2
+                }
+              ],
+              "op": "at"
+            }
+          ],
+          "op": "=="
+        },
+        "else": [
+          {
+            "assign": [
+              "result",
+              {
+                "args": [
+                  {
+                    "int": 68
+                  },
+                  {
+                    "int": 10
+                  }
+                ],
+                "op": "seq"
+              }
+            ]
+          }
+        ],
+        "then": [
+          {
+            "assign": [
+              "result",
+              {
+                "args": [
+                  {
+                    "int": 72
+                  },
+                  {
+                    "int": 10
+                  }
+                ],
+                "op": "seq"
+              }
+            ]
+          }
+        ]
+      }
+    }
+  ],
+  "ensures": [
+    {
+      "args": [
+        {
+          "var": "result"
+        },
+        {
+          "call": {
+            "args": [
+              {
+                "var": "input"
+              }
+            ],
+            "fun": "correctOutput"
+          }
+        }
+      ],
+      "op": "=="
+    },
+    {
+      "args": [
+        {
+          "args": [
+            {
+              "var": "result"
+            },
+            {
+              "args": [
+                {
+                  "int": 72
+                },
+                {
+                  "int": 10
+                }
+              ],
+              "op": "seq"
+            }
+          ],
+          "op": "=="
+        },
+        {
+          "args": [
+            {
+              "var": "result"
+            },
+            {
+              "args": [
+                {
+                  "int": 68
+                },
+                {
+                  "int": 10
+                }
+              ],
+              "op": "seq"
+            }
+          ],
+          "op": "=="
+        }
+      ],
+      "op": "or"
+    }
+  ],
+  "gate": "recursion",
+  "name": "vericoding_da0633__solve",
+  "params": [
+    {
+      "name": "input",
+      "type": "seq"
+    }
+  ],
+  "requires": [
+    {
+      "forall": {
+        "body": {
+          "args": [
+            {
+              "args": [
+                {
+                  "args": [
+                    {
+                      "var": "input"
+                    },
+                    {
+                      "var": "k"
+                    }
+                  ],
+                  "op": "at"
+                },
+                {
+                  "int": 0
+                }
+              ],
+              "op": ">="
+            },
+            {
+              "args": [
+                {
+                  "args": [
+                    {
+                      "var": "input"
+                    },
+                    {
+                      "var": "k"
+                    }
+                  ],
+                  "op": "at"
+                },
+                {
+                  "int": 1114111
+                }
+              ],
+              "op": "<="
+            }
+          ],
+          "op": "and"
+        },
+        "hi": {
+          "args": [
+            {
+              "var": "input"
+            }
+          ],
+          "op": "len"
+        },
+        "lo": {
+          "int": 0
+        },
+        "var": "k"
+      }
+    },
+    {
+      "call": {
+        "args": [
+          {
+            "var": "input"
+          }
+        ],
+        "fun": "validInput"
+      }
+    }
+  ],
+  "returns": [
+    {
+      "name": "result",
+      "type": "seq"
+    }
+  ],
+  "spec_funs": [
+    {
+      "body": {
+        "args": [
+          {
+            "args": [
+              {
+                "args": [
+                  {
+                    "var": "input_v"
+                  }
+                ],
+                "op": "len"
+              },
+              {
+                "int": 3
+              }
+            ],
+            "op": ">="
+          },
+          {
+            "args": [
+              {
+                "args": [
+                  {
+                    "var": "input_v"
+                  },
+                  {
+                    "int": 1
+                  }
+                ],
+                "op": "at"
+              },
+              {
+                "int": 32
+              }
+            ],
+            "op": "=="
+          },
+          {
+            "args": [
+              {
+                "args": [
+                  {
+                    "var": "input_v"
+                  },
+                  {
+                    "int": 0
+                  }
+                ],
+                "op": "at"
+              },
+              {
+                "args": [
+                  {
+                    "int": 72
+                  },
+                  {
+                    "int": 68
+                  }
+                ],
+                "op": "set"
+              }
+            ],
+            "op": "in"
+          },
+          {
+            "args": [
+              {
+                "args": [
+                  {
+                    "var": "input_v"
+                  },
+                  {
+                    "int": 2
+                  }
+                ],
+                "op": "at"
+              },
+              {
+                "args": [
+                  {
+                    "int": 72
+                  },
+                  {
+                    "int": 68
+                  }
+                ],
+                "op": "set"
+              }
+            ],
+            "op": "in"
+          },
+          {
+            "args": [
+              {
+                "args": [
+                  {
+                    "args": [
+                      {
+                        "var": "input_v"
+                      }
+                    ],
+                    "op": "len"
+                  },
+                  {
+                    "int": 3
+                  }
+                ],
+                "op": "=="
+              },
+              {
+                "args": [
+                  {
+                    "args": [
+                      {
+                        "args": [
+                          {
+                            "var": "input_v"
+                          }
+                        ],
+                        "op": "len"
+                      },
+                      {
+                        "int": 3
+                      }
+                    ],
+                    "op": ">"
+                  },
+                  {
+                    "args": [
+                      {
+                        "args": [
+                          {
+                            "var": "input_v"
+                          },
+                          {
+                            "int": 3
+                          }
+                        ],
+                        "op": "at"
+                      },
+                      {
+                        "int": 10
+                      }
+                    ],
+                    "op": "=="
+                  }
+                ],
+                "op": "and"
+              }
+            ],
+            "op": "or"
+          }
+        ],
+        "op": "and"
+      },
+      "decreases": {
+        "int": 0
+      },
+      "name": "validInput",
+      "params": [
+        {
+          "name": "input_v",
+          "type": "seq"
+        }
+      ],
+      "result": "bool"
+    },
+    {
+      "body": {
+        "ite": {
+          "cond": {
+            "call": {
+              "args": [
+                {
+                  "var": "input_v2"
+                }
+              ],
+              "fun": "validInput"
+            }
+          },
+          "else": {
+            "args": [],
+            "op": "seq"
+          },
+          "then": {
+            "ite": {
+              "cond": {
+                "args": [
+                  {
+                    "args": [
+                      {
+                        "args": [
+                          {
+                            "args": [
+                              {
+                                "var": "input_v2"
+                              },
+                              {
+                                "int": 0
+                              }
+                            ],
+                            "op": "at"
+                          },
+                          {
+                            "int": 72
+                          }
+                        ],
+                        "op": "=="
+                      },
+                      {
+                        "args": [
+                          {
+                            "args": [
+                              {
+                                "var": "input_v2"
+                              },
+                              {
+                                "int": 2
+                              }
+                            ],
+                            "op": "at"
+                          },
+                          {
+                            "int": 72
+                          }
+                        ],
+                        "op": "=="
+                      }
+                    ],
+                    "op": "and"
+                  },
+                  {
+                    "args": [
+                      {
+                        "args": [
+                          {
+                            "args": [
+                              {
+                                "var": "input_v2"
+                              },
+                              {
+                                "int": 0
+                              }
+                            ],
+                            "op": "at"
+                          },
+                          {
+                            "int": 68
+                          }
+                        ],
+                        "op": "=="
+                      },
+                      {
+                        "args": [
+                          {
+                            "args": [
+                              {
+                                "var": "input_v2"
+                              },
+                              {
+                                "int": 2
+                              }
+                            ],
+                            "op": "at"
+                          },
+                          {
+                            "int": 68
+                          }
+                        ],
+                        "op": "=="
+                      }
+                    ],
+                    "op": "and"
+                  }
+                ],
+                "op": "or"
+              },
+              "else": {
+                "args": [
+                  {
+                    "int": 68
+                  },
+                  {
+                    "int": 10
+                  }
+                ],
+                "op": "seq"
+              },
+              "then": {
+                "args": [
+                  {
+                    "int": 72
+                  },
+                  {
+                    "int": 10
+                  }
+                ],
+                "op": "seq"
+              }
+            }
+          }
+        }
+      },
+      "decreases": {
+        "int": 0
+      },
+      "name": "correctOutput",
+      "params": [
+        {
+          "name": "input_v2",
+          "type": "seq"
+        }
+      ],
+      "result": "seq"
+    }
+  ],
+  "t": 1
+}

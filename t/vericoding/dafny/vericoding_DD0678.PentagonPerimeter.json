@@ -1,0 +1,68 @@
+{
+  "body": [
+    {
+      "assign": [
+        "perimeter",
+        {
+          "args": [
+            {
+              "int": 5
+            },
+            {
+              "var": "side"
+            }
+          ],
+          "op": "*"
+        }
+      ]
+    }
+  ],
+  "ensures": [
+    {
+      "args": [
+        {
+          "var": "perimeter"
+        },
+        {
+          "args": [
+            {
+              "int": 5
+            },
+            {
+              "var": "side"
+            }
+          ],
+          "op": "*"
+        }
+      ],
+      "op": "=="
+    }
+  ],
+  "name": "vericoding_dd0678__pentagonPerimeter",
+  "params": [
+    {
+      "name": "side",
+      "type": "int"
+    }
+  ],
+  "requires": [
+    {
+      "args": [
+        {
+          "var": "side"
+        },
+        {
+          "int": 0
+        }
+      ],
+      "op": ">"
+    }
+  ],
+  "returns": [
+    {
+      "name": "perimeter",
+      "type": "int"
+    }
+  ],
+  "t": 1
+}

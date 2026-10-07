@@ -1,0 +1,827 @@
+{
+  "body": [
+    {
+      "assign": [
+        "result",
+        {
+          "args": [],
+          "op": "seq"
+        }
+      ]
+    },
+    {
+      "var": {
+        "init": {
+          "int": 0
+        },
+        "name": "i_v4",
+        "type": "int"
+      }
+    },
+    {
+      "while": {
+        "body": [
+          {
+            "lemma": {
+              "args": [
+                {
+                  "args": [
+                    {
+                      "var": "x1"
+                    },
+                    {
+                      "var": "i_v4"
+                    }
+                  ],
+                  "op": "at"
+                },
+                {
+                  "args": [
+                    {
+                      "var": "x2"
+                    },
+                    {
+                      "var": "i_v4"
+                    }
+                  ],
+                  "op": "at"
+                }
+              ],
+              "name": "bitwiseOrCommutative"
+            }
+          },
+          {
+            "assign": [
+              "result",
+              {
+                "args": [
+                  {
+                    "var": "result"
+                  },
+                  {
+                    "args": [
+                      {
+                        "call": {
+                          "args": [
+                            {
+                              "args": [
+                                {
+                                  "var": "x1"
+                                },
+                                {
+                                  "var": "i_v4"
+                                }
+                              ],
+                              "op": "at"
+                            },
+                            {
+                              "args": [
+                                {
+                                  "var": "x2"
+                                },
+                                {
+                                  "var": "i_v4"
+                                }
+                              ],
+                              "op": "at"
+                            }
+                          ],
+                          "fun": "bitwiseOr"
+                        }
+                      }
+                    ],
+                    "op": "seq"
+                  }
+                ],
+                "op": "+"
+              }
+            ]
+          },
+          {
+            "assign": [
+              "i_v4",
+              {
+                "args": [
+                  {
+                    "var": "i_v4"
+                  },
+                  {
+                    "int": 1
+                  }
+                ],
+                "op": "+"
+              }
+            ]
+          }
+        ],
+        "cond": {
+          "args": [
+            {
+              "var": "i_v4"
+            },
+            {
+              "args": [
+                {
+                  "var": "x1"
+                }
+              ],
+              "op": "len"
+            }
+          ],
+          "op": "<"
+        },
+        "decreases": {
+          "args": [
+            {
+              "args": [
+                {
+                  "var": "x1"
+                }
+              ],
+              "op": "len"
+            },
+            {
+              "var": "i_v4"
+            }
+          ],
+          "op": "-"
+        },
+        "invariants": [
+          {
+            "args": [
+              {
+                "args": [
+                  {
+                    "int": 0
+                  },
+                  {
+                    "var": "i_v4"
+                  }
+                ],
+                "op": "<="
+              },
+              {
+                "args": [
+                  {
+                    "var": "i_v4"
+                  },
+                  {
+                    "args": [
+                      {
+                        "var": "x1"
+                      }
+                    ],
+                    "op": "len"
+                  }
+                ],
+                "op": "<="
+              }
+            ],
+            "op": "and"
+          },
+          {
+            "args": [
+              {
+                "args": [
+                  {
+                    "var": "result"
+                  }
+                ],
+                "op": "len"
+              },
+              {
+                "var": "i_v4"
+              }
+            ],
+            "op": "=="
+          },
+          {
+            "forall": {
+              "body": {
+                "args": [
+                  {
+                    "args": [
+                      {
+                        "var": "result"
+                      },
+                      {
+                        "var": "j"
+                      }
+                    ],
+                    "op": "at"
+                  },
+                  {
+                    "call": {
+                      "args": [
+                        {
+                          "args": [
+                            {
+                              "var": "x1"
+                            },
+                            {
+                              "var": "j"
+                            }
+                          ],
+                          "op": "at"
+                        },
+                        {
+                          "args": [
+                            {
+                              "var": "x2"
+                            },
+                            {
+                              "var": "j"
+                            }
+                          ],
+                          "op": "at"
+                        }
+                      ],
+                      "fun": "bitwiseOr"
+                    }
+                  }
+                ],
+                "op": "=="
+              },
+              "hi": {
+                "var": "i_v4"
+              },
+              "lo": {
+                "int": 0
+              },
+              "var": "j"
+            }
+          },
+          {
+            "forall": {
+              "body": {
+                "args": [
+                  {
+                    "call": {
+                      "args": [
+                        {
+                          "args": [
+                            {
+                              "var": "x1"
+                            },
+                            {
+                              "var": "j_v"
+                            }
+                          ],
+                          "op": "at"
+                        },
+                        {
+                          "args": [
+                            {
+                              "var": "x2"
+                            },
+                            {
+                              "var": "j_v"
+                            }
+                          ],
+                          "op": "at"
+                        }
+                      ],
+                      "fun": "bitwiseOr"
+                    }
+                  },
+                  {
+                    "call": {
+                      "args": [
+                        {
+                          "args": [
+                            {
+                              "var": "x2"
+                            },
+                            {
+                              "var": "j_v"
+                            }
+                          ],
+                          "op": "at"
+                        },
+                        {
+                          "args": [
+                            {
+                              "var": "x1"
+                            },
+                            {
+                              "var": "j_v"
+                            }
+                          ],
+                          "op": "at"
+                        }
+                      ],
+                      "fun": "bitwiseOr"
+                    }
+                  }
+                ],
+                "op": "=="
+              },
+              "hi": {
+                "var": "i_v4"
+              },
+              "lo": {
+                "int": 0
+              },
+              "var": "j_v"
+            }
+          },
+          {
+            "forall": {
+              "body": {
+                "args": [
+                  {
+                    "call": {
+                      "args": [
+                        {
+                          "args": [
+                            {
+                              "var": "x1"
+                            },
+                            {
+                              "var": "j_v2"
+                            }
+                          ],
+                          "op": "at"
+                        },
+                        {
+                          "int": 0
+                        }
+                      ],
+                      "fun": "bitwiseOr"
+                    }
+                  },
+                  {
+                    "args": [
+                      {
+                        "var": "x1"
+                      },
+                      {
+                        "var": "j_v2"
+                      }
+                    ],
+                    "op": "at"
+                  }
+                ],
+                "op": "=="
+              },
+              "hi": {
+                "var": "i_v4"
+              },
+              "lo": {
+                "int": 0
+              },
+              "var": "j_v2"
+            }
+          },
+          {
+            "forall": {
+              "body": {
+                "args": [
+                  {
+                    "call": {
+                      "args": [
+                        {
+                          "args": [
+                            {
+                              "var": "x1"
+                            },
+                            {
+                              "var": "j_v3"
+                            }
+                          ],
+                          "op": "at"
+                        },
+                        {
+                          "args": [
+                            {
+                              "var": "x1"
+                            },
+                            {
+                              "var": "j_v3"
+                            }
+                          ],
+                          "op": "at"
+                        }
+                      ],
+                      "fun": "bitwiseOr"
+                    }
+                  },
+                  {
+                    "args": [
+                      {
+                        "var": "x1"
+                      },
+                      {
+                        "var": "j_v3"
+                      }
+                    ],
+                    "op": "at"
+                  }
+                ],
+                "op": "=="
+              },
+              "hi": {
+                "var": "i_v4"
+              },
+              "lo": {
+                "int": 0
+              },
+              "var": "j_v3"
+            }
+          }
+        ]
+      }
+    }
+  ],
+  "ensures": [
+    {
+      "args": [
+        {
+          "args": [
+            {
+              "var": "result"
+            }
+          ],
+          "op": "len"
+        },
+        {
+          "args": [
+            {
+              "var": "x1"
+            }
+          ],
+          "op": "len"
+        }
+      ],
+      "op": "=="
+    },
+    {
+      "forall": {
+        "body": {
+          "args": [
+            {
+              "args": [
+                {
+                  "var": "result"
+                },
+                {
+                  "var": "i"
+                }
+              ],
+              "op": "at"
+            },
+            {
+              "call": {
+                "args": [
+                  {
+                    "args": [
+                      {
+                        "var": "x1"
+                      },
+                      {
+                        "var": "i"
+                      }
+                    ],
+                    "op": "at"
+                  },
+                  {
+                    "args": [
+                      {
+                        "var": "x2"
+                      },
+                      {
+                        "var": "i"
+                      }
+                    ],
+                    "op": "at"
+                  }
+                ],
+                "fun": "bitwiseOr"
+              }
+            }
+          ],
+          "op": "=="
+        },
+        "hi": {
+          "args": [
+            {
+              "var": "result"
+            }
+          ],
+          "op": "len"
+        },
+        "lo": {
+          "int": 0
+        },
+        "var": "i"
+      }
+    },
+    {
+      "forall": {
+        "body": {
+          "args": [
+            {
+              "call": {
+                "args": [
+                  {
+                    "args": [
+                      {
+                        "var": "x1"
+                      },
+                      {
+                        "var": "i_v"
+                      }
+                    ],
+                    "op": "at"
+                  },
+                  {
+                    "args": [
+                      {
+                        "var": "x2"
+                      },
+                      {
+                        "var": "i_v"
+                      }
+                    ],
+                    "op": "at"
+                  }
+                ],
+                "fun": "bitwiseOr"
+              }
+            },
+            {
+              "call": {
+                "args": [
+                  {
+                    "args": [
+                      {
+                        "var": "x2"
+                      },
+                      {
+                        "var": "i_v"
+                      }
+                    ],
+                    "op": "at"
+                  },
+                  {
+                    "args": [
+                      {
+                        "var": "x1"
+                      },
+                      {
+                        "var": "i_v"
+                      }
+                    ],
+                    "op": "at"
+                  }
+                ],
+                "fun": "bitwiseOr"
+              }
+            }
+          ],
+          "op": "=="
+        },
+        "hi": {
+          "args": [
+            {
+              "var": "result"
+            }
+          ],
+          "op": "len"
+        },
+        "lo": {
+          "int": 0
+        },
+        "var": "i_v"
+      }
+    },
+    {
+      "forall": {
+        "body": {
+          "args": [
+            {
+              "call": {
+                "args": [
+                  {
+                    "args": [
+                      {
+                        "var": "x1"
+                      },
+                      {
+                        "var": "i_v2"
+                      }
+                    ],
+                    "op": "at"
+                  },
+                  {
+                    "int": 0
+                  }
+                ],
+                "fun": "bitwiseOr"
+              }
+            },
+            {
+              "args": [
+                {
+                  "var": "x1"
+                },
+                {
+                  "var": "i_v2"
+                }
+              ],
+              "op": "at"
+            }
+          ],
+          "op": "=="
+        },
+        "hi": {
+          "args": [
+            {
+              "var": "x1"
+            }
+          ],
+          "op": "len"
+        },
+        "lo": {
+          "int": 0
+        },
+        "var": "i_v2"
+      }
+    },
+    {
+      "forall": {
+        "body": {
+          "args": [
+            {
+              "call": {
+                "args": [
+                  {
+                    "args": [
+                      {
+                        "var": "x1"
+                      },
+                      {
+                        "var": "i_v3"
+                      }
+                    ],
+                    "op": "at"
+                  },
+                  {
+                    "args": [
+                      {
+                        "var": "x1"
+                      },
+                      {
+                        "var": "i_v3"
+                      }
+                    ],
+                    "op": "at"
+                  }
+                ],
+                "fun": "bitwiseOr"
+              }
+            },
+            {
+              "args": [
+                {
+                  "var": "x1"
+                },
+                {
+                  "var": "i_v3"
+                }
+              ],
+              "op": "at"
+            }
+          ],
+          "op": "=="
+        },
+        "hi": {
+          "args": [
+            {
+              "var": "x1"
+            }
+          ],
+          "op": "len"
+        },
+        "lo": {
+          "int": 0
+        },
+        "var": "i_v3"
+      }
+    }
+  ],
+  "gate": "recursion",
+  "lemmas": [
+    {
+      "body": [],
+      "ensures": [
+        {
+          "args": [
+            {
+              "call": {
+                "args": [
+                  {
+                    "var": "x_v3"
+                  },
+                  {
+                    "var": "y_v"
+                  }
+                ],
+                "fun": "bitwiseOr"
+              }
+            },
+            {
+              "call": {
+                "args": [
+                  {
+                    "var": "y_v"
+                  },
+                  {
+                    "var": "x_v3"
+                  }
+                ],
+                "fun": "bitwiseOr"
+              }
+            }
+          ],
+          "op": "=="
+        }
+      ],
+      "name": "bitwiseOrCommutative",
+      "params": [
+        {
+          "name": "x_v3",
+          "type": "int"
+        },
+        {
+          "name": "y_v",
+          "type": "int"
+        }
+      ],
+      "requires": []
+    }
+  ],
+  "name": "vericoding_dt0258__numpyBitwiseOr",
+  "params": [
+    {
+      "name": "x1",
+      "type": "seq"
+    },
+    {
+      "name": "x2",
+      "type": "seq"
+    }
+  ],
+  "requires": [
+    {
+      "args": [
+        {
+          "args": [
+            {
+              "var": "x1"
+            }
+          ],
+          "op": "len"
+        },
+        {
+          "args": [
+            {
+              "var": "x2"
+            }
+          ],
+          "op": "len"
+        }
+      ],
+      "op": "=="
+    }
+  ],
+  "returns": [
+    {
+      "name": "result",
+      "type": "seq"
+    }
+  ],
+  "spec_funs": [
+    {
+      "body": {
+        "int": 0
+      },
+      "decreases": {
+        "int": 0
+      },
+      "name": "bitwiseOr",
+      "params": [
+        {
+          "name": "x",
+          "type": "int"
+        },
+        {
+          "name": "y",
+          "type": "int"
+        }
+      ],
+      "result": "int"
+    }
+  ],
+  "t": 1
+}

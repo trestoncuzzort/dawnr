@@ -1,0 +1,1039 @@
+{
+  "body": [
+    {
+      "lemma": {
+        "args": [
+          {
+            "var": "a"
+          },
+          {
+            "var": "i"
+          },
+          {
+            "var": "j"
+          }
+        ],
+        "name": "sum_difference"
+      }
+    },
+    {
+      "assign": [
+        "r",
+        {
+          "args": [
+            {
+              "args": [
+                {
+                  "var": "c"
+                },
+                {
+                  "var": "j"
+                }
+              ],
+              "op": "at"
+            },
+            {
+              "args": [
+                {
+                  "var": "c"
+                },
+                {
+                  "var": "i"
+                }
+              ],
+              "op": "at"
+            }
+          ],
+          "op": "-"
+        }
+      ]
+    }
+  ],
+  "ensures": [
+    {
+      "args": [
+        {
+          "var": "r"
+        },
+        {
+          "call": {
+            "args": [
+              {
+                "var": "a"
+              },
+              {
+                "var": "i"
+              },
+              {
+                "var": "j"
+              }
+            ],
+            "fun": "sum"
+          }
+        }
+      ],
+      "op": "=="
+    }
+  ],
+  "gate": "recursion",
+  "lemmas": [
+    {
+      "body": [
+        {
+          "if": {
+            "cond": {
+              "args": [
+                {
+                  "var": "j_v2"
+                },
+                {
+                  "var": "k"
+                }
+              ],
+              "op": "=="
+            },
+            "else": [
+              {
+                "lemma": {
+                  "args": [
+                    {
+                      "var": "a_v3"
+                    },
+                    {
+                      "var": "i_v3"
+                    },
+                    {
+                      "var": "j_v2"
+                    },
+                    {
+                      "args": [
+                        {
+                          "var": "k"
+                        },
+                        {
+                          "int": 1
+                        }
+                      ],
+                      "op": "-"
+                    }
+                  ],
+                  "name": "sum_split"
+                }
+              },
+              {
+                "assert": {
+                  "args": [
+                    {
+                      "call": {
+                        "args": [
+                          {
+                            "var": "a_v3"
+                          },
+                          {
+                            "var": "i_v3"
+                          },
+                          {
+                            "var": "k"
+                          }
+                        ],
+                        "fun": "sum"
+                      }
+                    },
+                    {
+                      "args": [
+                        {
+                          "call": {
+                            "args": [
+                              {
+                                "var": "a_v3"
+                              },
+                              {
+                                "var": "i_v3"
+                              },
+                              {
+                                "args": [
+                                  {
+                                    "var": "k"
+                                  },
+                                  {
+                                    "int": 1
+                                  }
+                                ],
+                                "op": "-"
+                              }
+                            ],
+                            "fun": "sum"
+                          }
+                        },
+                        {
+                          "args": [
+                            {
+                              "var": "a_v3"
+                            },
+                            {
+                              "args": [
+                                {
+                                  "var": "k"
+                                },
+                                {
+                                  "int": 1
+                                }
+                              ],
+                              "op": "-"
+                            }
+                          ],
+                          "op": "at"
+                        }
+                      ],
+                      "op": "+"
+                    }
+                  ],
+                  "op": "=="
+                }
+              },
+              {
+                "assert": {
+                  "args": [
+                    {
+                      "call": {
+                        "args": [
+                          {
+                            "var": "a_v3"
+                          },
+                          {
+                            "var": "i_v3"
+                          },
+                          {
+                            "args": [
+                              {
+                                "var": "k"
+                              },
+                              {
+                                "int": 1
+                              }
+                            ],
+                            "op": "-"
+                          }
+                        ],
+                        "fun": "sum"
+                      }
+                    },
+                    {
+                      "args": [
+                        {
+                          "call": {
+                            "args": [
+                              {
+                                "var": "a_v3"
+                              },
+                              {
+                                "var": "i_v3"
+                              },
+                              {
+                                "var": "j_v2"
+                              }
+                            ],
+                            "fun": "sum"
+                          }
+                        },
+                        {
+                          "call": {
+                            "args": [
+                              {
+                                "var": "a_v3"
+                              },
+                              {
+                                "var": "j_v2"
+                              },
+                              {
+                                "args": [
+                                  {
+                                    "var": "k"
+                                  },
+                                  {
+                                    "int": 1
+                                  }
+                                ],
+                                "op": "-"
+                              }
+                            ],
+                            "fun": "sum"
+                          }
+                        }
+                      ],
+                      "op": "+"
+                    }
+                  ],
+                  "op": "=="
+                }
+              },
+              {
+                "assert": {
+                  "args": [
+                    {
+                      "call": {
+                        "args": [
+                          {
+                            "var": "a_v3"
+                          },
+                          {
+                            "var": "j_v2"
+                          },
+                          {
+                            "var": "k"
+                          }
+                        ],
+                        "fun": "sum"
+                      }
+                    },
+                    {
+                      "args": [
+                        {
+                          "call": {
+                            "args": [
+                              {
+                                "var": "a_v3"
+                              },
+                              {
+                                "var": "j_v2"
+                              },
+                              {
+                                "args": [
+                                  {
+                                    "var": "k"
+                                  },
+                                  {
+                                    "int": 1
+                                  }
+                                ],
+                                "op": "-"
+                              }
+                            ],
+                            "fun": "sum"
+                          }
+                        },
+                        {
+                          "args": [
+                            {
+                              "var": "a_v3"
+                            },
+                            {
+                              "args": [
+                                {
+                                  "var": "k"
+                                },
+                                {
+                                  "int": 1
+                                }
+                              ],
+                              "op": "-"
+                            }
+                          ],
+                          "op": "at"
+                        }
+                      ],
+                      "op": "+"
+                    }
+                  ],
+                  "op": "=="
+                }
+              }
+            ],
+            "then": [
+              {
+                "assert": {
+                  "args": [
+                    {
+                      "call": {
+                        "args": [
+                          {
+                            "var": "a_v3"
+                          },
+                          {
+                            "var": "j_v2"
+                          },
+                          {
+                            "var": "k"
+                          }
+                        ],
+                        "fun": "sum"
+                      }
+                    },
+                    {
+                      "int": 0
+                    }
+                  ],
+                  "op": "=="
+                }
+              }
+            ]
+          }
+        }
+      ],
+      "decreases": {
+        "args": [
+          {
+            "var": "k"
+          },
+          {
+            "var": "j_v2"
+          }
+        ],
+        "op": "-"
+      },
+      "ensures": [
+        {
+          "args": [
+            {
+              "call": {
+                "args": [
+                  {
+                    "var": "a_v3"
+                  },
+                  {
+                    "var": "i_v3"
+                  },
+                  {
+                    "var": "k"
+                  }
+                ],
+                "fun": "sum"
+              }
+            },
+            {
+              "args": [
+                {
+                  "call": {
+                    "args": [
+                      {
+                        "var": "a_v3"
+                      },
+                      {
+                        "var": "i_v3"
+                      },
+                      {
+                        "var": "j_v2"
+                      }
+                    ],
+                    "fun": "sum"
+                  }
+                },
+                {
+                  "call": {
+                    "args": [
+                      {
+                        "var": "a_v3"
+                      },
+                      {
+                        "var": "j_v2"
+                      },
+                      {
+                        "var": "k"
+                      }
+                    ],
+                    "fun": "sum"
+                  }
+                }
+              ],
+              "op": "+"
+            }
+          ],
+          "op": "=="
+        }
+      ],
+      "name": "sum_split",
+      "params": [
+        {
+          "name": "a_v3",
+          "type": "seq"
+        },
+        {
+          "name": "i_v3",
+          "type": "int"
+        },
+        {
+          "name": "j_v2",
+          "type": "int"
+        },
+        {
+          "name": "k",
+          "type": "int"
+        }
+      ],
+      "requires": [
+        {
+          "args": [
+            {
+              "int": 0
+            },
+            {
+              "var": "i_v3"
+            }
+          ],
+          "op": "<="
+        },
+        {
+          "args": [
+            {
+              "var": "i_v3"
+            },
+            {
+              "var": "j_v2"
+            }
+          ],
+          "op": "<="
+        },
+        {
+          "args": [
+            {
+              "var": "j_v2"
+            },
+            {
+              "var": "k"
+            }
+          ],
+          "op": "<="
+        },
+        {
+          "args": [
+            {
+              "var": "k"
+            },
+            {
+              "args": [
+                {
+                  "var": "a_v3"
+                }
+              ],
+              "op": "len"
+            }
+          ],
+          "op": "<="
+        }
+      ]
+    },
+    {
+      "body": [
+        {
+          "lemma": {
+            "args": [
+              {
+                "var": "a_v4"
+              },
+              {
+                "int": 0
+              },
+              {
+                "var": "i_v4"
+              },
+              {
+                "var": "j_v3"
+              }
+            ],
+            "name": "sum_split"
+          }
+        },
+        {
+          "assert": {
+            "args": [
+              {
+                "call": {
+                  "args": [
+                    {
+                      "var": "a_v4"
+                    },
+                    {
+                      "int": 0
+                    },
+                    {
+                      "var": "j_v3"
+                    }
+                  ],
+                  "fun": "sum"
+                }
+              },
+              {
+                "args": [
+                  {
+                    "call": {
+                      "args": [
+                        {
+                          "var": "a_v4"
+                        },
+                        {
+                          "int": 0
+                        },
+                        {
+                          "var": "i_v4"
+                        }
+                      ],
+                      "fun": "sum"
+                    }
+                  },
+                  {
+                    "call": {
+                      "args": [
+                        {
+                          "var": "a_v4"
+                        },
+                        {
+                          "var": "i_v4"
+                        },
+                        {
+                          "var": "j_v3"
+                        }
+                      ],
+                      "fun": "sum"
+                    }
+                  }
+                ],
+                "op": "+"
+              }
+            ],
+            "op": "=="
+          }
+        }
+      ],
+      "ensures": [
+        {
+          "args": [
+            {
+              "call": {
+                "args": [
+                  {
+                    "var": "a_v4"
+                  },
+                  {
+                    "var": "i_v4"
+                  },
+                  {
+                    "var": "j_v3"
+                  }
+                ],
+                "fun": "sum"
+              }
+            },
+            {
+              "args": [
+                {
+                  "call": {
+                    "args": [
+                      {
+                        "var": "a_v4"
+                      },
+                      {
+                        "int": 0
+                      },
+                      {
+                        "var": "j_v3"
+                      }
+                    ],
+                    "fun": "sum"
+                  }
+                },
+                {
+                  "call": {
+                    "args": [
+                      {
+                        "var": "a_v4"
+                      },
+                      {
+                        "int": 0
+                      },
+                      {
+                        "var": "i_v4"
+                      }
+                    ],
+                    "fun": "sum"
+                  }
+                }
+              ],
+              "op": "-"
+            }
+          ],
+          "op": "=="
+        }
+      ],
+      "name": "sum_difference",
+      "params": [
+        {
+          "name": "a_v4",
+          "type": "seq"
+        },
+        {
+          "name": "i_v4",
+          "type": "int"
+        },
+        {
+          "name": "j_v3",
+          "type": "int"
+        }
+      ],
+      "requires": [
+        {
+          "args": [
+            {
+              "int": 0
+            },
+            {
+              "var": "i_v4"
+            }
+          ],
+          "op": "<="
+        },
+        {
+          "args": [
+            {
+              "var": "i_v4"
+            },
+            {
+              "var": "j_v3"
+            }
+          ],
+          "op": "<="
+        },
+        {
+          "args": [
+            {
+              "var": "j_v3"
+            },
+            {
+              "args": [
+                {
+                  "var": "a_v4"
+                }
+              ],
+              "op": "len"
+            }
+          ],
+          "op": "<="
+        }
+      ]
+    }
+  ],
+  "name": "vericoding_dd0493__queryFast",
+  "params": [
+    {
+      "name": "a",
+      "type": "seq"
+    },
+    {
+      "name": "c",
+      "type": "seq"
+    },
+    {
+      "name": "i",
+      "type": "int"
+    },
+    {
+      "name": "j",
+      "type": "int"
+    }
+  ],
+  "requires": [
+    {
+      "args": [
+        {
+          "int": 0
+        },
+        {
+          "var": "i"
+        }
+      ],
+      "op": "<="
+    },
+    {
+      "args": [
+        {
+          "var": "i"
+        },
+        {
+          "var": "j"
+        }
+      ],
+      "op": "<="
+    },
+    {
+      "args": [
+        {
+          "var": "j"
+        },
+        {
+          "args": [
+            {
+              "var": "a"
+            }
+          ],
+          "op": "len"
+        }
+      ],
+      "op": "<="
+    },
+    {
+      "call": {
+        "args": [
+          {
+            "var": "a"
+          },
+          {
+            "var": "c"
+          }
+        ],
+        "fun": "is_prefix_sum_for"
+      }
+    }
+  ],
+  "returns": [
+    {
+      "name": "r",
+      "type": "int"
+    }
+  ],
+  "spec_funs": [
+    {
+      "body": {
+        "ite": {
+          "cond": {
+            "args": [
+              {
+                "args": [
+                  {
+                    "int": 0
+                  },
+                  {
+                    "var": "i_v"
+                  }
+                ],
+                "op": "<="
+              },
+              {
+                "args": [
+                  {
+                    "var": "i_v"
+                  },
+                  {
+                    "var": "j_v"
+                  }
+                ],
+                "op": "<="
+              },
+              {
+                "args": [
+                  {
+                    "var": "j_v"
+                  },
+                  {
+                    "args": [
+                      {
+                        "var": "a_v"
+                      }
+                    ],
+                    "op": "len"
+                  }
+                ],
+                "op": "<="
+              }
+            ],
+            "op": "and"
+          },
+          "else": {
+            "int": 0
+          },
+          "then": {
+            "ite": {
+              "cond": {
+                "args": [
+                  {
+                    "var": "i_v"
+                  },
+                  {
+                    "var": "j_v"
+                  }
+                ],
+                "op": "=="
+              },
+              "else": {
+                "args": [
+                  {
+                    "args": [
+                      {
+                        "var": "a_v"
+                      },
+                      {
+                        "args": [
+                          {
+                            "var": "j_v"
+                          },
+                          {
+                            "int": 1
+                          }
+                        ],
+                        "op": "-"
+                      }
+                    ],
+                    "op": "at"
+                  },
+                  {
+                    "call": {
+                      "args": [
+                        {
+                          "var": "a_v"
+                        },
+                        {
+                          "var": "i_v"
+                        },
+                        {
+                          "args": [
+                            {
+                              "var": "j_v"
+                            },
+                            {
+                              "int": 1
+                            }
+                          ],
+                          "op": "-"
+                        }
+                      ],
+                      "fun": "sum"
+                    }
+                  }
+                ],
+                "op": "+"
+              },
+              "then": {
+                "int": 0
+              }
+            }
+          }
+        }
+      },
+      "decreases": {
+        "var": "j_v"
+      },
+      "name": "sum",
+      "params": [
+        {
+          "name": "a_v",
+          "type": "seq"
+        },
+        {
+          "name": "i_v",
+          "type": "int"
+        },
+        {
+          "name": "j_v",
+          "type": "int"
+        }
+      ],
+      "result": "int"
+    },
+    {
+      "body": {
+        "args": [
+          {
+            "args": [
+              {
+                "args": [
+                  {
+                    "args": [
+                      {
+                        "var": "a_v2"
+                      }
+                    ],
+                    "op": "len"
+                  },
+                  {
+                    "int": 1
+                  }
+                ],
+                "op": "+"
+              },
+              {
+                "args": [
+                  {
+                    "var": "c_v"
+                  }
+                ],
+                "op": "len"
+              }
+            ],
+            "op": "=="
+          },
+          {
+            "forall": {
+              "body": {
+                "args": [
+                  {
+                    "args": [
+                      {
+                        "var": "c_v"
+                      },
+                      {
+                        "var": "i_v2"
+                      }
+                    ],
+                    "op": "at"
+                  },
+                  {
+                    "call": {
+                      "args": [
+                        {
+                          "var": "a_v2"
+                        },
+                        {
+                          "int": 0
+                        },
+                        {
+                          "var": "i_v2"
+                        }
+                      ],
+                      "fun": "sum"
+                    }
+                  }
+                ],
+                "op": "=="
+              },
+              "hi": {
+                "args": [
+                  {
+                    "args": [
+                      {
+                        "var": "a_v2"
+                      }
+                    ],
+                    "op": "len"
+                  },
+                  {
+                    "int": 1
+                  }
+                ],
+                "op": "+"
+              },
+              "lo": {
+                "int": 0
+              },
+              "var": "i_v2"
+            }
+          }
+        ],
+        "op": "and"
+      },
+      "decreases": {
+        "int": 0
+      },
+      "name": "is_prefix_sum_for",
+      "params": [
+        {
+          "name": "a_v2",
+          "type": "seq"
+        },
+        {
+          "name": "c_v",
+          "type": "seq"
+        }
+      ],
+      "result": "bool"
+    }
+  ],
+  "t": 1
+}

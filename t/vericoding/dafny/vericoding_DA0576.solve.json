@@ -1,0 +1,1362 @@
+{
+  "body": [
+    {
+      "var": {
+        "init": {
+          "call": {
+            "args": [
+              {
+                "var": "input"
+              }
+            ],
+            "fun": "vericoding_da0576__parseInput"
+          }
+        },
+        "name": "tokens",
+        "type": "seq"
+      }
+    },
+    {
+      "var": {
+        "init": {
+          "args": [
+            {
+              "var": "tokens"
+            },
+            {
+              "int": 0
+            }
+          ],
+          "op": "at"
+        },
+        "name": "r_v3",
+        "type": "int"
+      }
+    },
+    {
+      "var": {
+        "init": {
+          "args": [
+            {
+              "var": "tokens"
+            },
+            {
+              "int": 1
+            }
+          ],
+          "op": "at"
+        },
+        "name": "d_v3",
+        "type": "int"
+      }
+    },
+    {
+      "var": {
+        "init": {
+          "args": [
+            {
+              "var": "tokens"
+            },
+            {
+              "int": 2
+            }
+          ],
+          "op": "at"
+        },
+        "name": "x0_v3",
+        "type": "int"
+      }
+    },
+    {
+      "assign": [
+        "result",
+        {
+          "args": [],
+          "op": "seq"
+        }
+      ]
+    },
+    {
+      "var": {
+        "init": {
+          "int": 1
+        },
+        "name": "i",
+        "type": "int"
+      }
+    },
+    {
+      "while": {
+        "body": [
+          {
+            "var": {
+              "init": {
+                "call": {
+                  "args": [
+                    {
+                      "var": "r_v3"
+                    },
+                    {
+                      "var": "d_v3"
+                    },
+                    {
+                      "var": "x0_v3"
+                    },
+                    {
+                      "var": "i"
+                    }
+                  ],
+                  "fun": "calculateRecurrence"
+                }
+              },
+              "name": "currentValue",
+              "type": "int"
+            }
+          },
+          {
+            "var": {
+              "init": {
+                "call": {
+                  "args": [
+                    {
+                      "var": "currentValue"
+                    }
+                  ],
+                  "fun": "vericoding_da0576__intToStringMethod"
+                }
+              },
+              "name": "currentStr",
+              "type": "seq"
+            }
+          },
+          {
+            "assign": [
+              "result",
+              {
+                "args": [
+                  {
+                    "args": [
+                      {
+                        "var": "result"
+                      },
+                      {
+                        "var": "currentStr"
+                      }
+                    ],
+                    "op": "+"
+                  },
+                  {
+                    "args": [
+                      {
+                        "int": 10
+                      }
+                    ],
+                    "op": "seq"
+                  }
+                ],
+                "op": "+"
+              }
+            ]
+          },
+          {
+            "assign": [
+              "i",
+              {
+                "args": [
+                  {
+                    "var": "i"
+                  },
+                  {
+                    "int": 1
+                  }
+                ],
+                "op": "+"
+              }
+            ]
+          }
+        ],
+        "cond": {
+          "args": [
+            {
+              "var": "i"
+            },
+            {
+              "int": 10
+            }
+          ],
+          "op": "<="
+        },
+        "decreases": {
+          "args": [
+            {
+              "int": 10
+            },
+            {
+              "var": "i"
+            }
+          ],
+          "op": "-"
+        },
+        "invariants": [
+          {
+            "args": [
+              {
+                "args": [
+                  {
+                    "int": 1
+                  },
+                  {
+                    "var": "i"
+                  }
+                ],
+                "op": "<="
+              },
+              {
+                "args": [
+                  {
+                    "var": "i"
+                  },
+                  {
+                    "int": 11
+                  }
+                ],
+                "op": "<="
+              }
+            ],
+            "op": "and"
+          },
+          {
+            "args": [
+              {
+                "var": "result"
+              },
+              {
+                "call": {
+                  "args": [
+                    {
+                      "var": "r_v3"
+                    },
+                    {
+                      "var": "d_v3"
+                    },
+                    {
+                      "var": "x0_v3"
+                    },
+                    {
+                      "args": [
+                        {
+                          "var": "i"
+                        },
+                        {
+                          "int": 1
+                        }
+                      ],
+                      "op": "-"
+                    }
+                  ],
+                  "fun": "generateOutputUpToIteration"
+                }
+              }
+            ],
+            "op": "=="
+          }
+        ]
+      }
+    }
+  ],
+  "ensures": [
+    {
+      "args": [
+        {
+          "var": "result"
+        },
+        {
+          "call": {
+            "args": [
+              {
+                "args": [
+                  {
+                    "call": {
+                      "args": [
+                        {
+                          "var": "input"
+                        }
+                      ],
+                      "fun": "parseInputPure"
+                    }
+                  },
+                  {
+                    "int": 0
+                  }
+                ],
+                "op": "at"
+              },
+              {
+                "args": [
+                  {
+                    "call": {
+                      "args": [
+                        {
+                          "var": "input"
+                        }
+                      ],
+                      "fun": "parseInputPure"
+                    }
+                  },
+                  {
+                    "int": 1
+                  }
+                ],
+                "op": "at"
+              },
+              {
+                "args": [
+                  {
+                    "call": {
+                      "args": [
+                        {
+                          "var": "input"
+                        }
+                      ],
+                      "fun": "parseInputPure"
+                    }
+                  },
+                  {
+                    "int": 2
+                  }
+                ],
+                "op": "at"
+              }
+            ],
+            "fun": "generateExpectedOutput"
+          }
+        }
+      ],
+      "op": "=="
+    }
+  ],
+  "gate": "recursion",
+  "methods": [
+    {
+      "body": [
+        {
+          "assign": [
+            "tokens",
+            {
+              "call": {
+                "args": [
+                  {
+                    "var": "input"
+                  }
+                ],
+                "fun": "parseInputPure"
+              }
+            }
+          ]
+        }
+      ],
+      "ensures": [
+        {
+          "args": [
+            {
+              "var": "tokens"
+            },
+            {
+              "call": {
+                "args": [
+                  {
+                    "var": "input"
+                  }
+                ],
+                "fun": "parseInputPure"
+              }
+            }
+          ],
+          "op": "=="
+        },
+        {
+          "args": [
+            {
+              "args": [
+                {
+                  "var": "tokens"
+                }
+              ],
+              "op": "len"
+            },
+            {
+              "int": 3
+            }
+          ],
+          "op": "=="
+        },
+        {
+          "args": [
+            {
+              "int": 2
+            },
+            {
+              "args": [
+                {
+                  "var": "tokens"
+                },
+                {
+                  "int": 0
+                }
+              ],
+              "op": "at"
+            }
+          ],
+          "op": "<="
+        },
+        {
+          "args": [
+            {
+              "args": [
+                {
+                  "var": "tokens"
+                },
+                {
+                  "int": 0
+                }
+              ],
+              "op": "at"
+            },
+            {
+              "int": 5
+            }
+          ],
+          "op": "<="
+        },
+        {
+          "args": [
+            {
+              "int": 1
+            },
+            {
+              "args": [
+                {
+                  "var": "tokens"
+                },
+                {
+                  "int": 1
+                }
+              ],
+              "op": "at"
+            }
+          ],
+          "op": "<="
+        },
+        {
+          "args": [
+            {
+              "args": [
+                {
+                  "var": "tokens"
+                },
+                {
+                  "int": 1
+                }
+              ],
+              "op": "at"
+            },
+            {
+              "int": 100
+            }
+          ],
+          "op": "<="
+        },
+        {
+          "args": [
+            {
+              "args": [
+                {
+                  "var": "tokens"
+                },
+                {
+                  "int": 1
+                }
+              ],
+              "op": "at"
+            },
+            {
+              "args": [
+                {
+                  "var": "tokens"
+                },
+                {
+                  "int": 2
+                }
+              ],
+              "op": "at"
+            }
+          ],
+          "op": "<"
+        },
+        {
+          "args": [
+            {
+              "args": [
+                {
+                  "var": "tokens"
+                },
+                {
+                  "int": 2
+                }
+              ],
+              "op": "at"
+            },
+            {
+              "int": 200
+            }
+          ],
+          "op": "<="
+        }
+      ],
+      "name": "vericoding_da0576__parseInput",
+      "params": [
+        {
+          "name": "input",
+          "type": "seq"
+        }
+      ],
+      "requires": [
+        {
+          "forall": {
+            "body": {
+              "args": [
+                {
+                  "args": [
+                    {
+                      "args": [
+                        {
+                          "var": "input"
+                        },
+                        {
+                          "var": "k"
+                        }
+                      ],
+                      "op": "at"
+                    },
+                    {
+                      "int": 0
+                    }
+                  ],
+                  "op": ">="
+                },
+                {
+                  "args": [
+                    {
+                      "args": [
+                        {
+                          "var": "input"
+                        },
+                        {
+                          "var": "k"
+                        }
+                      ],
+                      "op": "at"
+                    },
+                    {
+                      "int": 1114111
+                    }
+                  ],
+                  "op": "<="
+                }
+              ],
+              "op": "and"
+            },
+            "hi": {
+              "args": [
+                {
+                  "var": "input"
+                }
+              ],
+              "op": "len"
+            },
+            "lo": {
+              "int": 0
+            },
+            "var": "k"
+          }
+        },
+        {
+          "args": [
+            {
+              "args": [
+                {
+                  "var": "input"
+                }
+              ],
+              "op": "len"
+            },
+            {
+              "int": 0
+            }
+          ],
+          "op": ">"
+        },
+        {
+          "call": {
+            "args": [
+              {
+                "var": "input"
+              }
+            ],
+            "fun": "validInput"
+          }
+        }
+      ],
+      "returns": [
+        {
+          "name": "tokens",
+          "type": "seq"
+        }
+      ]
+    },
+    {
+      "body": [
+        {
+          "assign": [
+            "s",
+            {
+              "call": {
+                "args": [
+                  {
+                    "var": "n"
+                  }
+                ],
+                "fun": "intToString"
+              }
+            }
+          ]
+        }
+      ],
+      "ensures": [
+        {
+          "args": [
+            {
+              "var": "s"
+            },
+            {
+              "call": {
+                "args": [
+                  {
+                    "var": "n"
+                  }
+                ],
+                "fun": "intToString"
+              }
+            }
+          ],
+          "op": "=="
+        }
+      ],
+      "name": "vericoding_da0576__intToStringMethod",
+      "params": [
+        {
+          "name": "n",
+          "type": "int"
+        }
+      ],
+      "requires": [],
+      "returns": [
+        {
+          "name": "s",
+          "type": "seq"
+        }
+      ]
+    }
+  ],
+  "name": "vericoding_da0576__solve",
+  "params": [
+    {
+      "name": "input",
+      "type": "seq"
+    }
+  ],
+  "requires": [
+    {
+      "forall": {
+        "body": {
+          "args": [
+            {
+              "args": [
+                {
+                  "args": [
+                    {
+                      "var": "input"
+                    },
+                    {
+                      "var": "k"
+                    }
+                  ],
+                  "op": "at"
+                },
+                {
+                  "int": 0
+                }
+              ],
+              "op": ">="
+            },
+            {
+              "args": [
+                {
+                  "args": [
+                    {
+                      "var": "input"
+                    },
+                    {
+                      "var": "k"
+                    }
+                  ],
+                  "op": "at"
+                },
+                {
+                  "int": 1114111
+                }
+              ],
+              "op": "<="
+            }
+          ],
+          "op": "and"
+        },
+        "hi": {
+          "args": [
+            {
+              "var": "input"
+            }
+          ],
+          "op": "len"
+        },
+        "lo": {
+          "int": 0
+        },
+        "var": "k"
+      }
+    },
+    {
+      "args": [
+        {
+          "args": [
+            {
+              "var": "input"
+            }
+          ],
+          "op": "len"
+        },
+        {
+          "int": 0
+        }
+      ],
+      "op": ">"
+    },
+    {
+      "call": {
+        "args": [
+          {
+            "var": "input"
+          }
+        ],
+        "fun": "validInput"
+      }
+    }
+  ],
+  "returns": [
+    {
+      "name": "result",
+      "type": "seq"
+    }
+  ],
+  "spec_funs": [
+    {
+      "body": {
+        "args": [
+          {
+            "int": 2
+          },
+          {
+            "int": 1
+          },
+          {
+            "int": 2
+          }
+        ],
+        "op": "seq"
+      },
+      "decreases": {
+        "int": 0
+      },
+      "name": "parseInputPure",
+      "params": [
+        {
+          "name": "input_v",
+          "type": "seq"
+        }
+      ],
+      "result": "seq"
+    },
+    {
+      "body": {
+        "ite": {
+          "cond": {
+            "args": [
+              {
+                "args": [
+                  {
+                    "var": "input_v2"
+                  }
+                ],
+                "op": "len"
+              },
+              {
+                "int": 0
+              }
+            ],
+            "op": ">"
+          },
+          "else": {
+            "bool": false
+          },
+          "then": {
+            "args": [
+              {
+                "args": [
+                  {
+                    "args": [
+                      {
+                        "call": {
+                          "args": [
+                            {
+                              "var": "input_v2"
+                            }
+                          ],
+                          "fun": "parseInputPure"
+                        }
+                      }
+                    ],
+                    "op": "len"
+                  },
+                  {
+                    "int": 3
+                  }
+                ],
+                "op": "=="
+              },
+              {
+                "args": [
+                  {
+                    "args": [
+                      {
+                        "int": 2
+                      },
+                      {
+                        "args": [
+                          {
+                            "call": {
+                              "args": [
+                                {
+                                  "var": "input_v2"
+                                }
+                              ],
+                              "fun": "parseInputPure"
+                            }
+                          },
+                          {
+                            "int": 0
+                          }
+                        ],
+                        "op": "at"
+                      }
+                    ],
+                    "op": "<="
+                  },
+                  {
+                    "args": [
+                      {
+                        "args": [
+                          {
+                            "call": {
+                              "args": [
+                                {
+                                  "var": "input_v2"
+                                }
+                              ],
+                              "fun": "parseInputPure"
+                            }
+                          },
+                          {
+                            "int": 0
+                          }
+                        ],
+                        "op": "at"
+                      },
+                      {
+                        "int": 5
+                      }
+                    ],
+                    "op": "<="
+                  }
+                ],
+                "op": "and"
+              },
+              {
+                "args": [
+                  {
+                    "args": [
+                      {
+                        "int": 1
+                      },
+                      {
+                        "args": [
+                          {
+                            "call": {
+                              "args": [
+                                {
+                                  "var": "input_v2"
+                                }
+                              ],
+                              "fun": "parseInputPure"
+                            }
+                          },
+                          {
+                            "int": 1
+                          }
+                        ],
+                        "op": "at"
+                      }
+                    ],
+                    "op": "<="
+                  },
+                  {
+                    "args": [
+                      {
+                        "args": [
+                          {
+                            "call": {
+                              "args": [
+                                {
+                                  "var": "input_v2"
+                                }
+                              ],
+                              "fun": "parseInputPure"
+                            }
+                          },
+                          {
+                            "int": 1
+                          }
+                        ],
+                        "op": "at"
+                      },
+                      {
+                        "int": 100
+                      }
+                    ],
+                    "op": "<="
+                  }
+                ],
+                "op": "and"
+              },
+              {
+                "args": [
+                  {
+                    "args": [
+                      {
+                        "args": [
+                          {
+                            "call": {
+                              "args": [
+                                {
+                                  "var": "input_v2"
+                                }
+                              ],
+                              "fun": "parseInputPure"
+                            }
+                          },
+                          {
+                            "int": 1
+                          }
+                        ],
+                        "op": "at"
+                      },
+                      {
+                        "args": [
+                          {
+                            "call": {
+                              "args": [
+                                {
+                                  "var": "input_v2"
+                                }
+                              ],
+                              "fun": "parseInputPure"
+                            }
+                          },
+                          {
+                            "int": 2
+                          }
+                        ],
+                        "op": "at"
+                      }
+                    ],
+                    "op": "<"
+                  },
+                  {
+                    "args": [
+                      {
+                        "args": [
+                          {
+                            "call": {
+                              "args": [
+                                {
+                                  "var": "input_v2"
+                                }
+                              ],
+                              "fun": "parseInputPure"
+                            }
+                          },
+                          {
+                            "int": 2
+                          }
+                        ],
+                        "op": "at"
+                      },
+                      {
+                        "int": 200
+                      }
+                    ],
+                    "op": "<="
+                  }
+                ],
+                "op": "and"
+              }
+            ],
+            "op": "and"
+          }
+        }
+      },
+      "decreases": {
+        "int": 0
+      },
+      "name": "validInput",
+      "params": [
+        {
+          "name": "input_v2",
+          "type": "seq"
+        }
+      ],
+      "result": "bool"
+    },
+    {
+      "body": {
+        "args": [],
+        "op": "seq"
+      },
+      "decreases": {
+        "int": 0
+      },
+      "name": "intToString",
+      "params": [
+        {
+          "name": "n",
+          "type": "int"
+        }
+      ],
+      "result": "seq"
+    },
+    {
+      "body": {
+        "ite": {
+          "cond": {
+            "args": [
+              {
+                "var": "n_v"
+              },
+              {
+                "int": 1
+              }
+            ],
+            "op": ">="
+          },
+          "else": {
+            "int": 0
+          },
+          "then": {
+            "ite": {
+              "cond": {
+                "args": [
+                  {
+                    "var": "n_v"
+                  },
+                  {
+                    "int": 1
+                  }
+                ],
+                "op": "=="
+              },
+              "else": {
+                "args": [
+                  {
+                    "args": [
+                      {
+                        "var": "r"
+                      },
+                      {
+                        "call": {
+                          "args": [
+                            {
+                              "var": "r"
+                            },
+                            {
+                              "var": "d"
+                            },
+                            {
+                              "var": "x0"
+                            },
+                            {
+                              "args": [
+                                {
+                                  "var": "n_v"
+                                },
+                                {
+                                  "int": 1
+                                }
+                              ],
+                              "op": "-"
+                            }
+                          ],
+                          "fun": "calculateRecurrence"
+                        }
+                      }
+                    ],
+                    "op": "*"
+                  },
+                  {
+                    "var": "d"
+                  }
+                ],
+                "op": "-"
+              },
+              "then": {
+                "args": [
+                  {
+                    "args": [
+                      {
+                        "var": "r"
+                      },
+                      {
+                        "var": "x0"
+                      }
+                    ],
+                    "op": "*"
+                  },
+                  {
+                    "var": "d"
+                  }
+                ],
+                "op": "-"
+              }
+            }
+          }
+        }
+      },
+      "decreases": {
+        "var": "n_v"
+      },
+      "name": "calculateRecurrence",
+      "params": [
+        {
+          "name": "r",
+          "type": "int"
+        },
+        {
+          "name": "d",
+          "type": "int"
+        },
+        {
+          "name": "x0",
+          "type": "int"
+        },
+        {
+          "name": "n_v",
+          "type": "int"
+        }
+      ],
+      "result": "int"
+    },
+    {
+      "body": {
+        "ite": {
+          "cond": {
+            "args": [
+              {
+                "var": "iterations"
+              },
+              {
+                "int": 0
+              }
+            ],
+            "op": ">="
+          },
+          "else": {
+            "args": [],
+            "op": "seq"
+          },
+          "then": {
+            "ite": {
+              "cond": {
+                "args": [
+                  {
+                    "var": "iterations"
+                  },
+                  {
+                    "int": 0
+                  }
+                ],
+                "op": "=="
+              },
+              "else": {
+                "args": [
+                  {
+                    "args": [
+                      {
+                        "call": {
+                          "args": [
+                            {
+                              "var": "r_v"
+                            },
+                            {
+                              "var": "d_v"
+                            },
+                            {
+                              "var": "x0_v"
+                            },
+                            {
+                              "args": [
+                                {
+                                  "var": "iterations"
+                                },
+                                {
+                                  "int": 1
+                                }
+                              ],
+                              "op": "-"
+                            }
+                          ],
+                          "fun": "generateOutputUpToIteration"
+                        }
+                      },
+                      {
+                        "call": {
+                          "args": [
+                            {
+                              "call": {
+                                "args": [
+                                  {
+                                    "var": "r_v"
+                                  },
+                                  {
+                                    "var": "d_v"
+                                  },
+                                  {
+                                    "var": "x0_v"
+                                  },
+                                  {
+                                    "var": "iterations"
+                                  }
+                                ],
+                                "fun": "calculateRecurrence"
+                              }
+                            }
+                          ],
+                          "fun": "intToString"
+                        }
+                      }
+                    ],
+                    "op": "+"
+                  },
+                  {
+                    "args": [
+                      {
+                        "int": 10
+                      }
+                    ],
+                    "op": "seq"
+                  }
+                ],
+                "op": "+"
+              },
+              "then": {
+                "args": [],
+                "op": "seq"
+              }
+            }
+          }
+        }
+      },
+      "decreases": {
+        "var": "iterations"
+      },
+      "name": "generateOutputUpToIteration",
+      "params": [
+        {
+          "name": "r_v",
+          "type": "int"
+        },
+        {
+          "name": "d_v",
+          "type": "int"
+        },
+        {
+          "name": "x0_v",
+          "type": "int"
+        },
+        {
+          "name": "iterations",
+          "type": "int"
+        }
+      ],
+      "result": "seq"
+    },
+    {
+      "body": {
+        "call": {
+          "args": [
+            {
+              "var": "r_v2"
+            },
+            {
+              "var": "d_v2"
+            },
+            {
+              "var": "x0_v2"
+            },
+            {
+              "int": 10
+            }
+          ],
+          "fun": "generateOutputUpToIteration"
+        }
+      },
+      "decreases": {
+        "int": 0
+      },
+      "name": "generateExpectedOutput",
+      "params": [
+        {
+          "name": "r_v2",
+          "type": "int"
+        },
+        {
+          "name": "d_v2",
+          "type": "int"
+        },
+        {
+          "name": "x0_v2",
+          "type": "int"
+        }
+      ],
+      "result": "seq"
+    }
+  ],
+  "t": 1
+}

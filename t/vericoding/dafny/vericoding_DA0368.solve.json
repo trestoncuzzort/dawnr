@@ -1,0 +1,1210 @@
+{
+  "body": [
+    {
+      "if": {
+        "cond": {
+          "args": [
+            {
+              "args": [
+                {
+                  "var": "n"
+                },
+                {
+                  "int": 1
+                }
+              ],
+              "op": "=="
+            },
+            {
+              "args": [
+                {
+                  "var": "m"
+                },
+                {
+                  "int": 1
+                }
+              ],
+              "op": "=="
+            }
+          ],
+          "op": "and"
+        },
+        "else": [
+          {
+            "if": {
+              "cond": {
+                "args": [
+                  {
+                    "var": "n"
+                  },
+                  {
+                    "int": 1
+                  }
+                ],
+                "op": "=="
+              },
+              "else": [
+                {
+                  "if": {
+                    "cond": {
+                      "args": [
+                        {
+                          "var": "m"
+                        },
+                        {
+                          "int": 1
+                        }
+                      ],
+                      "op": "=="
+                    },
+                    "else": [
+                      {
+                        "assign": [
+                          "result",
+                          {
+                            "args": [
+                              {
+                                "args": [
+                                  {
+                                    "var": "n"
+                                  },
+                                  {
+                                    "int": 2
+                                  }
+                                ],
+                                "op": "-"
+                              },
+                              {
+                                "args": [
+                                  {
+                                    "var": "m"
+                                  },
+                                  {
+                                    "int": 2
+                                  }
+                                ],
+                                "op": "-"
+                              }
+                            ],
+                            "op": "*"
+                          }
+                        ]
+                      }
+                    ],
+                    "then": [
+                      {
+                        "assign": [
+                          "result",
+                          {
+                            "args": [
+                              {
+                                "var": "n"
+                              },
+                              {
+                                "int": 2
+                              }
+                            ],
+                            "op": "-"
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                }
+              ],
+              "then": [
+                {
+                  "assign": [
+                    "result",
+                    {
+                      "args": [
+                        {
+                          "var": "m"
+                        },
+                        {
+                          "int": 2
+                        }
+                      ],
+                      "op": "-"
+                    }
+                  ]
+                }
+              ]
+            }
+          }
+        ],
+        "then": [
+          {
+            "assign": [
+              "result",
+              {
+                "int": 1
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "lemma": {
+        "args": [
+          {
+            "var": "n"
+          },
+          {
+            "var": "m"
+          }
+        ],
+        "name": "countFaceDownCardsNonNegative"
+      }
+    }
+  ],
+  "ensures": [
+    {
+      "args": [
+        {
+          "var": "result"
+        },
+        {
+          "call": {
+            "args": [
+              {
+                "var": "n"
+              },
+              {
+                "var": "m"
+              }
+            ],
+            "fun": "countFaceDownCards"
+          }
+        }
+      ],
+      "op": "=="
+    },
+    {
+      "args": [
+        {
+          "var": "result"
+        },
+        {
+          "int": 0
+        }
+      ],
+      "op": ">="
+    }
+  ],
+  "gate": "recursion",
+  "lemmas": [
+    {
+      "body": [
+        {
+          "if": {
+            "cond": {
+              "args": [
+                {
+                  "args": [
+                    {
+                      "var": "n_v3"
+                    },
+                    {
+                      "int": 1
+                    }
+                  ],
+                  "op": "=="
+                },
+                {
+                  "args": [
+                    {
+                      "var": "m_v3"
+                    },
+                    {
+                      "int": 1
+                    }
+                  ],
+                  "op": "=="
+                }
+              ],
+              "op": "and"
+            },
+            "else": [
+              {
+                "if": {
+                  "cond": {
+                    "args": [
+                      {
+                        "var": "n_v3"
+                      },
+                      {
+                        "int": 1
+                      }
+                    ],
+                    "op": "=="
+                  },
+                  "else": [
+                    {
+                      "if": {
+                        "cond": {
+                          "args": [
+                            {
+                              "var": "m_v3"
+                            },
+                            {
+                              "int": 1
+                            }
+                          ],
+                          "op": "=="
+                        },
+                        "else": [
+                          {
+                            "assert": {
+                              "args": [
+                                {
+                                  "args": [
+                                    {
+                                      "var": "n_v3"
+                                    },
+                                    {
+                                      "int": 2
+                                    }
+                                  ],
+                                  "op": ">="
+                                },
+                                {
+                                  "args": [
+                                    {
+                                      "var": "m_v3"
+                                    },
+                                    {
+                                      "int": 2
+                                    }
+                                  ],
+                                  "op": ">="
+                                }
+                              ],
+                              "op": "and"
+                            }
+                          },
+                          {
+                            "if": {
+                              "cond": {
+                                "args": [
+                                  {
+                                    "args": [
+                                      {
+                                        "var": "n_v3"
+                                      },
+                                      {
+                                        "int": 2
+                                      }
+                                    ],
+                                    "op": "=="
+                                  },
+                                  {
+                                    "args": [
+                                      {
+                                        "var": "m_v3"
+                                      },
+                                      {
+                                        "int": 2
+                                      }
+                                    ],
+                                    "op": "=="
+                                  }
+                                ],
+                                "op": "or"
+                              },
+                              "else": [
+                                {
+                                  "assert": {
+                                    "args": [
+                                      {
+                                        "args": [
+                                          {
+                                            "var": "n_v3"
+                                          },
+                                          {
+                                            "int": 3
+                                          }
+                                        ],
+                                        "op": ">="
+                                      },
+                                      {
+                                        "args": [
+                                          {
+                                            "var": "m_v3"
+                                          },
+                                          {
+                                            "int": 3
+                                          }
+                                        ],
+                                        "op": ">="
+                                      }
+                                    ],
+                                    "op": "and"
+                                  }
+                                },
+                                {
+                                  "assert": {
+                                    "args": [
+                                      {
+                                        "args": [
+                                          {
+                                            "args": [
+                                              {
+                                                "var": "n_v3"
+                                              },
+                                              {
+                                                "int": 2
+                                              }
+                                            ],
+                                            "op": "-"
+                                          },
+                                          {
+                                            "int": 1
+                                          }
+                                        ],
+                                        "op": ">="
+                                      },
+                                      {
+                                        "args": [
+                                          {
+                                            "args": [
+                                              {
+                                                "var": "m_v3"
+                                              },
+                                              {
+                                                "int": 2
+                                              }
+                                            ],
+                                            "op": "-"
+                                          },
+                                          {
+                                            "int": 1
+                                          }
+                                        ],
+                                        "op": ">="
+                                      }
+                                    ],
+                                    "op": "and"
+                                  }
+                                },
+                                {
+                                  "assert": {
+                                    "args": [
+                                      {
+                                        "args": [
+                                          {
+                                            "args": [
+                                              {
+                                                "var": "n_v3"
+                                              },
+                                              {
+                                                "int": 2
+                                              }
+                                            ],
+                                            "op": "-"
+                                          },
+                                          {
+                                            "args": [
+                                              {
+                                                "var": "m_v3"
+                                              },
+                                              {
+                                                "int": 2
+                                              }
+                                            ],
+                                            "op": "-"
+                                          }
+                                        ],
+                                        "op": "*"
+                                      },
+                                      {
+                                        "int": 1
+                                      }
+                                    ],
+                                    "op": ">="
+                                  }
+                                }
+                              ],
+                              "then": [
+                                {
+                                  "assert": {
+                                    "args": [
+                                      {
+                                        "args": [
+                                          {
+                                            "args": [
+                                              {
+                                                "var": "n_v3"
+                                              },
+                                              {
+                                                "int": 2
+                                              }
+                                            ],
+                                            "op": "-"
+                                          },
+                                          {
+                                            "args": [
+                                              {
+                                                "var": "m_v3"
+                                              },
+                                              {
+                                                "int": 2
+                                              }
+                                            ],
+                                            "op": "-"
+                                          }
+                                        ],
+                                        "op": "*"
+                                      },
+                                      {
+                                        "int": 0
+                                      }
+                                    ],
+                                    "op": "=="
+                                  }
+                                }
+                              ]
+                            }
+                          },
+                          {
+                            "assert": {
+                              "args": [
+                                {
+                                  "args": [
+                                    {
+                                      "call": {
+                                        "args": [
+                                          {
+                                            "var": "n_v3"
+                                          },
+                                          {
+                                            "var": "m_v3"
+                                          }
+                                        ],
+                                        "fun": "countFaceDownCards"
+                                      }
+                                    },
+                                    {
+                                      "args": [
+                                        {
+                                          "args": [
+                                            {
+                                              "var": "n_v3"
+                                            },
+                                            {
+                                              "int": 2
+                                            }
+                                          ],
+                                          "op": "-"
+                                        },
+                                        {
+                                          "args": [
+                                            {
+                                              "var": "m_v3"
+                                            },
+                                            {
+                                              "int": 2
+                                            }
+                                          ],
+                                          "op": "-"
+                                        }
+                                      ],
+                                      "op": "*"
+                                    }
+                                  ],
+                                  "op": "=="
+                                },
+                                {
+                                  "args": [
+                                    {
+                                      "args": [
+                                        {
+                                          "args": [
+                                            {
+                                              "var": "n_v3"
+                                            },
+                                            {
+                                              "int": 2
+                                            }
+                                          ],
+                                          "op": "-"
+                                        },
+                                        {
+                                          "args": [
+                                            {
+                                              "var": "m_v3"
+                                            },
+                                            {
+                                              "int": 2
+                                            }
+                                          ],
+                                          "op": "-"
+                                        }
+                                      ],
+                                      "op": "*"
+                                    },
+                                    {
+                                      "int": 0
+                                    }
+                                  ],
+                                  "op": ">="
+                                }
+                              ],
+                              "op": "and"
+                            }
+                          }
+                        ],
+                        "then": [
+                          {
+                            "assert": {
+                              "args": [
+                                {
+                                  "var": "n_v3"
+                                },
+                                {
+                                  "int": 2
+                                }
+                              ],
+                              "op": ">="
+                            }
+                          },
+                          {
+                            "if": {
+                              "cond": {
+                                "args": [
+                                  {
+                                    "var": "n_v3"
+                                  },
+                                  {
+                                    "int": 2
+                                  }
+                                ],
+                                "op": "=="
+                              },
+                              "else": [
+                                {
+                                  "assert": {
+                                    "args": [
+                                      {
+                                        "var": "n_v3"
+                                      },
+                                      {
+                                        "int": 3
+                                      }
+                                    ],
+                                    "op": ">="
+                                  }
+                                },
+                                {
+                                  "assert": {
+                                    "args": [
+                                      {
+                                        "args": [
+                                          {
+                                            "call": {
+                                              "args": [
+                                                {
+                                                  "var": "n_v3"
+                                                },
+                                                {
+                                                  "var": "m_v3"
+                                                }
+                                              ],
+                                              "fun": "countFaceDownCards"
+                                            }
+                                          },
+                                          {
+                                            "args": [
+                                              {
+                                                "var": "n_v3"
+                                              },
+                                              {
+                                                "int": 2
+                                              }
+                                            ],
+                                            "op": "-"
+                                          }
+                                        ],
+                                        "op": "=="
+                                      },
+                                      {
+                                        "args": [
+                                          {
+                                            "args": [
+                                              {
+                                                "var": "n_v3"
+                                              },
+                                              {
+                                                "int": 2
+                                              }
+                                            ],
+                                            "op": "-"
+                                          },
+                                          {
+                                            "int": 1
+                                          }
+                                        ],
+                                        "op": ">="
+                                      }
+                                    ],
+                                    "op": "and"
+                                  }
+                                }
+                              ],
+                              "then": [
+                                {
+                                  "assert": {
+                                    "args": [
+                                      {
+                                        "args": [
+                                          {
+                                            "call": {
+                                              "args": [
+                                                {
+                                                  "var": "n_v3"
+                                                },
+                                                {
+                                                  "var": "m_v3"
+                                                }
+                                              ],
+                                              "fun": "countFaceDownCards"
+                                            }
+                                          },
+                                          {
+                                            "args": [
+                                              {
+                                                "var": "n_v3"
+                                              },
+                                              {
+                                                "int": 2
+                                              }
+                                            ],
+                                            "op": "-"
+                                          }
+                                        ],
+                                        "op": "=="
+                                      },
+                                      {
+                                        "args": [
+                                          {
+                                            "args": [
+                                              {
+                                                "var": "n_v3"
+                                              },
+                                              {
+                                                "int": 2
+                                              }
+                                            ],
+                                            "op": "-"
+                                          },
+                                          {
+                                            "int": 0
+                                          }
+                                        ],
+                                        "op": "=="
+                                      }
+                                    ],
+                                    "op": "and"
+                                  }
+                                }
+                              ]
+                            }
+                          }
+                        ]
+                      }
+                    }
+                  ],
+                  "then": [
+                    {
+                      "assert": {
+                        "args": [
+                          {
+                            "var": "m_v3"
+                          },
+                          {
+                            "int": 1
+                          }
+                        ],
+                        "op": ">="
+                      }
+                    },
+                    {
+                      "if": {
+                        "cond": {
+                          "args": [
+                            {
+                              "var": "m_v3"
+                            },
+                            {
+                              "int": 1
+                            }
+                          ],
+                          "op": "=="
+                        },
+                        "else": [
+                          {
+                            "if": {
+                              "cond": {
+                                "args": [
+                                  {
+                                    "var": "m_v3"
+                                  },
+                                  {
+                                    "int": 2
+                                  }
+                                ],
+                                "op": "=="
+                              },
+                              "else": [
+                                {
+                                  "assert": {
+                                    "args": [
+                                      {
+                                        "var": "m_v3"
+                                      },
+                                      {
+                                        "int": 3
+                                      }
+                                    ],
+                                    "op": ">="
+                                  }
+                                },
+                                {
+                                  "assert": {
+                                    "args": [
+                                      {
+                                        "args": [
+                                          {
+                                            "call": {
+                                              "args": [
+                                                {
+                                                  "var": "n_v3"
+                                                },
+                                                {
+                                                  "var": "m_v3"
+                                                }
+                                              ],
+                                              "fun": "countFaceDownCards"
+                                            }
+                                          },
+                                          {
+                                            "args": [
+                                              {
+                                                "var": "m_v3"
+                                              },
+                                              {
+                                                "int": 2
+                                              }
+                                            ],
+                                            "op": "-"
+                                          }
+                                        ],
+                                        "op": "=="
+                                      },
+                                      {
+                                        "args": [
+                                          {
+                                            "args": [
+                                              {
+                                                "var": "m_v3"
+                                              },
+                                              {
+                                                "int": 2
+                                              }
+                                            ],
+                                            "op": "-"
+                                          },
+                                          {
+                                            "int": 1
+                                          }
+                                        ],
+                                        "op": ">="
+                                      }
+                                    ],
+                                    "op": "and"
+                                  }
+                                }
+                              ],
+                              "then": [
+                                {
+                                  "assert": {
+                                    "args": [
+                                      {
+                                        "args": [
+                                          {
+                                            "call": {
+                                              "args": [
+                                                {
+                                                  "var": "n_v3"
+                                                },
+                                                {
+                                                  "var": "m_v3"
+                                                }
+                                              ],
+                                              "fun": "countFaceDownCards"
+                                            }
+                                          },
+                                          {
+                                            "args": [
+                                              {
+                                                "var": "m_v3"
+                                              },
+                                              {
+                                                "int": 2
+                                              }
+                                            ],
+                                            "op": "-"
+                                          }
+                                        ],
+                                        "op": "=="
+                                      },
+                                      {
+                                        "args": [
+                                          {
+                                            "args": [
+                                              {
+                                                "var": "m_v3"
+                                              },
+                                              {
+                                                "int": 2
+                                              }
+                                            ],
+                                            "op": "-"
+                                          },
+                                          {
+                                            "int": 0
+                                          }
+                                        ],
+                                        "op": "=="
+                                      }
+                                    ],
+                                    "op": "and"
+                                  }
+                                }
+                              ]
+                            }
+                          }
+                        ],
+                        "then": [
+                          {
+                            "assert": {
+                              "bool": false
+                            }
+                          }
+                        ]
+                      }
+                    }
+                  ]
+                }
+              }
+            ],
+            "then": [
+              {
+                "assert": {
+                  "args": [
+                    {
+                      "call": {
+                        "args": [
+                          {
+                            "var": "n_v3"
+                          },
+                          {
+                            "var": "m_v3"
+                          }
+                        ],
+                        "fun": "countFaceDownCards"
+                      }
+                    },
+                    {
+                      "int": 1
+                    }
+                  ],
+                  "op": "=="
+                }
+              }
+            ]
+          }
+        }
+      ],
+      "ensures": [
+        {
+          "args": [
+            {
+              "call": {
+                "args": [
+                  {
+                    "var": "n_v3"
+                  },
+                  {
+                    "var": "m_v3"
+                  }
+                ],
+                "fun": "countFaceDownCards"
+              }
+            },
+            {
+              "int": 0
+            }
+          ],
+          "op": ">="
+        }
+      ],
+      "name": "countFaceDownCardsNonNegative",
+      "params": [
+        {
+          "name": "n_v3",
+          "type": "int"
+        },
+        {
+          "name": "m_v3",
+          "type": "int"
+        }
+      ],
+      "requires": [
+        {
+          "call": {
+            "args": [
+              {
+                "var": "n_v3"
+              },
+              {
+                "var": "m_v3"
+              }
+            ],
+            "fun": "validInput"
+          }
+        }
+      ]
+    }
+  ],
+  "name": "vericoding_da0368__solve",
+  "params": [
+    {
+      "name": "n",
+      "type": "int"
+    },
+    {
+      "name": "m",
+      "type": "int"
+    }
+  ],
+  "requires": [
+    {
+      "call": {
+        "args": [
+          {
+            "var": "n"
+          },
+          {
+            "var": "m"
+          }
+        ],
+        "fun": "validInput"
+      }
+    }
+  ],
+  "returns": [
+    {
+      "name": "result",
+      "type": "int"
+    }
+  ],
+  "spec_funs": [
+    {
+      "body": {
+        "args": [
+          {
+            "args": [
+              {
+                "var": "n_v"
+              },
+              {
+                "int": 1
+              }
+            ],
+            "op": ">="
+          },
+          {
+            "args": [
+              {
+                "var": "m_v"
+              },
+              {
+                "int": 1
+              }
+            ],
+            "op": ">="
+          }
+        ],
+        "op": "and"
+      },
+      "decreases": {
+        "int": 0
+      },
+      "name": "validInput",
+      "params": [
+        {
+          "name": "n_v",
+          "type": "int"
+        },
+        {
+          "name": "m_v",
+          "type": "int"
+        }
+      ],
+      "result": "bool"
+    },
+    {
+      "body": {
+        "ite": {
+          "cond": {
+            "call": {
+              "args": [
+                {
+                  "var": "n_v2"
+                },
+                {
+                  "var": "m_v2"
+                }
+              ],
+              "fun": "validInput"
+            }
+          },
+          "else": {
+            "int": 0
+          },
+          "then": {
+            "ite": {
+              "cond": {
+                "args": [
+                  {
+                    "args": [
+                      {
+                        "var": "n_v2"
+                      },
+                      {
+                        "int": 1
+                      }
+                    ],
+                    "op": "=="
+                  },
+                  {
+                    "args": [
+                      {
+                        "var": "m_v2"
+                      },
+                      {
+                        "int": 1
+                      }
+                    ],
+                    "op": "=="
+                  }
+                ],
+                "op": "and"
+              },
+              "else": {
+                "ite": {
+                  "cond": {
+                    "args": [
+                      {
+                        "var": "n_v2"
+                      },
+                      {
+                        "int": 1
+                      }
+                    ],
+                    "op": "=="
+                  },
+                  "else": {
+                    "ite": {
+                      "cond": {
+                        "args": [
+                          {
+                            "var": "m_v2"
+                          },
+                          {
+                            "int": 1
+                          }
+                        ],
+                        "op": "=="
+                      },
+                      "else": {
+                        "args": [
+                          {
+                            "args": [
+                              {
+                                "var": "n_v2"
+                              },
+                              {
+                                "int": 2
+                              }
+                            ],
+                            "op": "-"
+                          },
+                          {
+                            "args": [
+                              {
+                                "var": "m_v2"
+                              },
+                              {
+                                "int": 2
+                              }
+                            ],
+                            "op": "-"
+                          }
+                        ],
+                        "op": "*"
+                      },
+                      "then": {
+                        "args": [
+                          {
+                            "var": "n_v2"
+                          },
+                          {
+                            "int": 2
+                          }
+                        ],
+                        "op": "-"
+                      }
+                    }
+                  },
+                  "then": {
+                    "args": [
+                      {
+                        "var": "m_v2"
+                      },
+                      {
+                        "int": 2
+                      }
+                    ],
+                    "op": "-"
+                  }
+                }
+              },
+              "then": {
+                "int": 1
+              }
+            }
+          }
+        }
+      },
+      "decreases": {
+        "int": 0
+      },
+      "name": "countFaceDownCards",
+      "params": [
+        {
+          "name": "n_v2",
+          "type": "int"
+        },
+        {
+          "name": "m_v2",
+          "type": "int"
+        }
+      ],
+      "result": "int"
+    }
+  ],
+  "t": 1
+}

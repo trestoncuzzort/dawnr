@@ -1,0 +1,1201 @@
+{
+  "body": [
+    {
+      "if": {
+        "cond": {
+          "args": [
+            {
+              "var": "k"
+            },
+            {
+              "int": 0
+            }
+          ],
+          "op": "=="
+        },
+        "else": [
+          {
+            "var": {
+              "init": {
+                "args": [
+                  {
+                    "int": 1
+                  }
+                ],
+                "op": "seq"
+              },
+              "name": "prev",
+              "type": "seq"
+            }
+          },
+          {
+            "var": {
+              "init": {
+                "int": 1
+              },
+              "name": "row",
+              "type": "int"
+            }
+          },
+          {
+            "while": {
+              "body": [
+                {
+                  "var": {
+                    "init": {
+                      "args": [
+                        {
+                          "int": 1
+                        }
+                      ],
+                      "op": "seq"
+                    },
+                    "name": "next",
+                    "type": "seq"
+                  }
+                },
+                {
+                  "var": {
+                    "init": {
+                      "int": 1
+                    },
+                    "name": "j",
+                    "type": "int"
+                  }
+                },
+                {
+                  "while": {
+                    "body": [
+                      {
+                        "var": {
+                          "init": {
+                            "args": [
+                              {
+                                "args": [
+                                  {
+                                    "var": "prev"
+                                  },
+                                  {
+                                    "args": [
+                                      {
+                                        "var": "j"
+                                      },
+                                      {
+                                        "int": 1
+                                      }
+                                    ],
+                                    "op": "-"
+                                  }
+                                ],
+                                "op": "at"
+                              },
+                              {
+                                "args": [
+                                  {
+                                    "var": "prev"
+                                  },
+                                  {
+                                    "var": "j"
+                                  }
+                                ],
+                                "op": "at"
+                              }
+                            ],
+                            "op": "+"
+                          },
+                          "name": "val",
+                          "type": "int"
+                        }
+                      },
+                      {
+                        "lemma": {
+                          "args": [
+                            {
+                              "var": "row"
+                            },
+                            {
+                              "var": "j"
+                            }
+                          ],
+                          "name": "binomialRecurrence"
+                        }
+                      },
+                      {
+                        "assign": [
+                          "next",
+                          {
+                            "args": [
+                              {
+                                "var": "next"
+                              },
+                              {
+                                "args": [
+                                  {
+                                    "var": "val"
+                                  }
+                                ],
+                                "op": "seq"
+                              }
+                            ],
+                            "op": "+"
+                          }
+                        ]
+                      },
+                      {
+                        "assign": [
+                          "j",
+                          {
+                            "args": [
+                              {
+                                "var": "j"
+                              },
+                              {
+                                "int": 1
+                              }
+                            ],
+                            "op": "+"
+                          }
+                        ]
+                      }
+                    ],
+                    "cond": {
+                      "args": [
+                        {
+                          "var": "j"
+                        },
+                        {
+                          "var": "row"
+                        }
+                      ],
+                      "op": "<"
+                    },
+                    "decreases": {
+                      "args": [
+                        {
+                          "var": "row"
+                        },
+                        {
+                          "var": "j"
+                        }
+                      ],
+                      "op": "-"
+                    },
+                    "invariants": [
+                      {
+                        "args": [
+                          {
+                            "args": [
+                              {
+                                "int": 1
+                              },
+                              {
+                                "var": "j"
+                              }
+                            ],
+                            "op": "<="
+                          },
+                          {
+                            "args": [
+                              {
+                                "var": "j"
+                              },
+                              {
+                                "var": "row"
+                              }
+                            ],
+                            "op": "<="
+                          }
+                        ],
+                        "op": "and"
+                      },
+                      {
+                        "args": [
+                          {
+                            "args": [
+                              {
+                                "var": "next"
+                              }
+                            ],
+                            "op": "len"
+                          },
+                          {
+                            "var": "j"
+                          }
+                        ],
+                        "op": "=="
+                      },
+                      {
+                        "forall": {
+                          "body": {
+                            "args": [
+                              {
+                                "args": [
+                                  {
+                                    "var": "next"
+                                  },
+                                  {
+                                    "var": "i_v4"
+                                  }
+                                ],
+                                "op": "at"
+                              },
+                              {
+                                "call": {
+                                  "args": [
+                                    {
+                                      "var": "row"
+                                    },
+                                    {
+                                      "var": "i_v4"
+                                    }
+                                  ],
+                                  "fun": "binomial"
+                                }
+                              }
+                            ],
+                            "op": "=="
+                          },
+                          "hi": {
+                            "var": "j"
+                          },
+                          "lo": {
+                            "int": 0
+                          },
+                          "var": "i_v4"
+                        }
+                      },
+                      {
+                        "forall": {
+                          "body": {
+                            "args": [
+                              {
+                                "args": [
+                                  {
+                                    "var": "next"
+                                  },
+                                  {
+                                    "var": "i_v5"
+                                  }
+                                ],
+                                "op": "at"
+                              },
+                              {
+                                "int": 0
+                              }
+                            ],
+                            "op": ">"
+                          },
+                          "hi": {
+                            "var": "j"
+                          },
+                          "lo": {
+                            "int": 0
+                          },
+                          "var": "i_v5"
+                        }
+                      }
+                    ]
+                  }
+                },
+                {
+                  "assign": [
+                    "next",
+                    {
+                      "args": [
+                        {
+                          "var": "next"
+                        },
+                        {
+                          "args": [
+                            {
+                              "int": 1
+                            }
+                          ],
+                          "op": "seq"
+                        }
+                      ],
+                      "op": "+"
+                    }
+                  ]
+                },
+                {
+                  "assign": [
+                    "prev",
+                    {
+                      "var": "next"
+                    }
+                  ]
+                },
+                {
+                  "assign": [
+                    "row",
+                    {
+                      "args": [
+                        {
+                          "var": "row"
+                        },
+                        {
+                          "int": 1
+                        }
+                      ],
+                      "op": "+"
+                    }
+                  ]
+                }
+              ],
+              "cond": {
+                "args": [
+                  {
+                    "var": "row"
+                  },
+                  {
+                    "var": "k"
+                  }
+                ],
+                "op": "<="
+              },
+              "decreases": {
+                "args": [
+                  {
+                    "var": "k"
+                  },
+                  {
+                    "var": "row"
+                  }
+                ],
+                "op": "-"
+              },
+              "invariants": [
+                {
+                  "args": [
+                    {
+                      "args": [
+                        {
+                          "int": 1
+                        },
+                        {
+                          "var": "row"
+                        }
+                      ],
+                      "op": "<="
+                    },
+                    {
+                      "args": [
+                        {
+                          "var": "row"
+                        },
+                        {
+                          "args": [
+                            {
+                              "var": "k"
+                            },
+                            {
+                              "int": 1
+                            }
+                          ],
+                          "op": "+"
+                        }
+                      ],
+                      "op": "<="
+                    }
+                  ],
+                  "op": "and"
+                },
+                {
+                  "args": [
+                    {
+                      "args": [
+                        {
+                          "var": "prev"
+                        }
+                      ],
+                      "op": "len"
+                    },
+                    {
+                      "var": "row"
+                    }
+                  ],
+                  "op": "=="
+                },
+                {
+                  "forall": {
+                    "body": {
+                      "args": [
+                        {
+                          "args": [
+                            {
+                              "var": "prev"
+                            },
+                            {
+                              "var": "i_v2"
+                            }
+                          ],
+                          "op": "at"
+                        },
+                        {
+                          "call": {
+                            "args": [
+                              {
+                                "args": [
+                                  {
+                                    "var": "row"
+                                  },
+                                  {
+                                    "int": 1
+                                  }
+                                ],
+                                "op": "-"
+                              },
+                              {
+                                "var": "i_v2"
+                              }
+                            ],
+                            "fun": "binomial"
+                          }
+                        }
+                      ],
+                      "op": "=="
+                    },
+                    "hi": {
+                      "args": [
+                        {
+                          "var": "prev"
+                        }
+                      ],
+                      "op": "len"
+                    },
+                    "lo": {
+                      "int": 0
+                    },
+                    "var": "i_v2"
+                  }
+                },
+                {
+                  "forall": {
+                    "body": {
+                      "args": [
+                        {
+                          "args": [
+                            {
+                              "var": "prev"
+                            },
+                            {
+                              "var": "i_v3"
+                            }
+                          ],
+                          "op": "at"
+                        },
+                        {
+                          "int": 0
+                        }
+                      ],
+                      "op": ">"
+                    },
+                    "hi": {
+                      "args": [
+                        {
+                          "var": "prev"
+                        }
+                      ],
+                      "op": "len"
+                    },
+                    "lo": {
+                      "int": 0
+                    },
+                    "var": "i_v3"
+                  }
+                }
+              ]
+            }
+          },
+          {
+            "assign": [
+              "result",
+              {
+                "var": "prev"
+              }
+            ]
+          }
+        ],
+        "then": [
+          {
+            "assign": [
+              "result",
+              {
+                "args": [
+                  {
+                    "int": 1
+                  }
+                ],
+                "op": "seq"
+              }
+            ]
+          }
+        ]
+      }
+    }
+  ],
+  "ensures": [
+    {
+      "args": [
+        {
+          "args": [
+            {
+              "var": "result"
+            }
+          ],
+          "op": "len"
+        },
+        {
+          "args": [
+            {
+              "var": "k"
+            },
+            {
+              "int": 1
+            }
+          ],
+          "op": "+"
+        }
+      ],
+      "op": "=="
+    },
+    {
+      "forall": {
+        "body": {
+          "args": [
+            {
+              "args": [
+                {
+                  "var": "result"
+                },
+                {
+                  "var": "i"
+                }
+              ],
+              "op": "at"
+            },
+            {
+              "call": {
+                "args": [
+                  {
+                    "var": "k"
+                  },
+                  {
+                    "var": "i"
+                  }
+                ],
+                "fun": "binomial"
+              }
+            }
+          ],
+          "op": "=="
+        },
+        "hi": {
+          "args": [
+            {
+              "var": "result"
+            }
+          ],
+          "op": "len"
+        },
+        "lo": {
+          "int": 0
+        },
+        "var": "i"
+      }
+    },
+    {
+      "forall": {
+        "body": {
+          "args": [
+            {
+              "args": [
+                {
+                  "var": "result"
+                },
+                {
+                  "var": "i_v"
+                }
+              ],
+              "op": "at"
+            },
+            {
+              "int": 0
+            }
+          ],
+          "op": ">"
+        },
+        "hi": {
+          "args": [
+            {
+              "var": "result"
+            }
+          ],
+          "op": "len"
+        },
+        "lo": {
+          "int": 0
+        },
+        "var": "i_v"
+      }
+    }
+  ],
+  "gate": "recursion",
+  "lemmas": [
+    {
+      "body": [
+        {
+          "if": {
+            "cond": {
+              "args": [
+                {
+                  "var": "k_v2"
+                },
+                {
+                  "int": 1
+                }
+              ],
+              "op": "=="
+            },
+            "else": [],
+            "then": [
+              {
+                "assert": {
+                  "args": [
+                    {
+                      "call": {
+                        "args": [
+                          {
+                            "var": "n_v"
+                          },
+                          {
+                            "var": "k_v2"
+                          }
+                        ],
+                        "fun": "binomial"
+                      }
+                    },
+                    {
+                      "var": "n_v"
+                    }
+                  ],
+                  "op": "=="
+                }
+              },
+              {
+                "assert": {
+                  "args": [
+                    {
+                      "args": [
+                        {
+                          "call": {
+                            "args": [
+                              {
+                                "args": [
+                                  {
+                                    "var": "n_v"
+                                  },
+                                  {
+                                    "int": 1
+                                  }
+                                ],
+                                "op": "-"
+                              },
+                              {
+                                "args": [
+                                  {
+                                    "var": "k_v2"
+                                  },
+                                  {
+                                    "int": 1
+                                  }
+                                ],
+                                "op": "-"
+                              }
+                            ],
+                            "fun": "binomial"
+                          }
+                        },
+                        {
+                          "call": {
+                            "args": [
+                              {
+                                "args": [
+                                  {
+                                    "var": "n_v"
+                                  },
+                                  {
+                                    "int": 1
+                                  }
+                                ],
+                                "op": "-"
+                              },
+                              {
+                                "int": 0
+                              }
+                            ],
+                            "fun": "binomial"
+                          }
+                        }
+                      ],
+                      "op": "=="
+                    },
+                    {
+                      "args": [
+                        {
+                          "call": {
+                            "args": [
+                              {
+                                "args": [
+                                  {
+                                    "var": "n_v"
+                                  },
+                                  {
+                                    "int": 1
+                                  }
+                                ],
+                                "op": "-"
+                              },
+                              {
+                                "int": 0
+                              }
+                            ],
+                            "fun": "binomial"
+                          }
+                        },
+                        {
+                          "int": 1
+                        }
+                      ],
+                      "op": "=="
+                    }
+                  ],
+                  "op": "and"
+                }
+              },
+              {
+                "assert": {
+                  "args": [
+                    {
+                      "args": [
+                        {
+                          "call": {
+                            "args": [
+                              {
+                                "args": [
+                                  {
+                                    "var": "n_v"
+                                  },
+                                  {
+                                    "int": 1
+                                  }
+                                ],
+                                "op": "-"
+                              },
+                              {
+                                "var": "k_v2"
+                              }
+                            ],
+                            "fun": "binomial"
+                          }
+                        },
+                        {
+                          "call": {
+                            "args": [
+                              {
+                                "args": [
+                                  {
+                                    "var": "n_v"
+                                  },
+                                  {
+                                    "int": 1
+                                  }
+                                ],
+                                "op": "-"
+                              },
+                              {
+                                "int": 1
+                              }
+                            ],
+                            "fun": "binomial"
+                          }
+                        }
+                      ],
+                      "op": "=="
+                    },
+                    {
+                      "args": [
+                        {
+                          "call": {
+                            "args": [
+                              {
+                                "args": [
+                                  {
+                                    "var": "n_v"
+                                  },
+                                  {
+                                    "int": 1
+                                  }
+                                ],
+                                "op": "-"
+                              },
+                              {
+                                "int": 1
+                              }
+                            ],
+                            "fun": "binomial"
+                          }
+                        },
+                        {
+                          "args": [
+                            {
+                              "var": "n_v"
+                            },
+                            {
+                              "int": 1
+                            }
+                          ],
+                          "op": "-"
+                        }
+                      ],
+                      "op": "=="
+                    }
+                  ],
+                  "op": "and"
+                }
+              }
+            ]
+          }
+        }
+      ],
+      "ensures": [
+        {
+          "args": [
+            {
+              "call": {
+                "args": [
+                  {
+                    "var": "n_v"
+                  },
+                  {
+                    "var": "k_v2"
+                  }
+                ],
+                "fun": "binomial"
+              }
+            },
+            {
+              "args": [
+                {
+                  "call": {
+                    "args": [
+                      {
+                        "args": [
+                          {
+                            "var": "n_v"
+                          },
+                          {
+                            "int": 1
+                          }
+                        ],
+                        "op": "-"
+                      },
+                      {
+                        "args": [
+                          {
+                            "var": "k_v2"
+                          },
+                          {
+                            "int": 1
+                          }
+                        ],
+                        "op": "-"
+                      }
+                    ],
+                    "fun": "binomial"
+                  }
+                },
+                {
+                  "call": {
+                    "args": [
+                      {
+                        "args": [
+                          {
+                            "var": "n_v"
+                          },
+                          {
+                            "int": 1
+                          }
+                        ],
+                        "op": "-"
+                      },
+                      {
+                        "var": "k_v2"
+                      }
+                    ],
+                    "fun": "binomial"
+                  }
+                }
+              ],
+              "op": "+"
+            }
+          ],
+          "op": "=="
+        }
+      ],
+      "name": "binomialRecurrence",
+      "params": [
+        {
+          "name": "n_v",
+          "type": "int"
+        },
+        {
+          "name": "k_v2",
+          "type": "int"
+        }
+      ],
+      "requires": [
+        {
+          "args": [
+            {
+              "int": 0
+            },
+            {
+              "var": "k_v2"
+            }
+          ],
+          "op": "<"
+        },
+        {
+          "args": [
+            {
+              "var": "k_v2"
+            },
+            {
+              "var": "n_v"
+            }
+          ],
+          "op": "<="
+        },
+        {
+          "args": [
+            {
+              "var": "k_v2"
+            },
+            {
+              "var": "n_v"
+            }
+          ],
+          "op": "<"
+        }
+      ]
+    }
+  ],
+  "name": "vericoding_da0609__getRow",
+  "params": [
+    {
+      "name": "k",
+      "type": "int"
+    }
+  ],
+  "requires": [
+    {
+      "args": [
+        {
+          "int": 0
+        },
+        {
+          "var": "k"
+        }
+      ],
+      "op": "<="
+    },
+    {
+      "args": [
+        {
+          "var": "k"
+        },
+        {
+          "int": 33
+        }
+      ],
+      "op": "<="
+    }
+  ],
+  "returns": [
+    {
+      "name": "result",
+      "type": "seq"
+    }
+  ],
+  "spec_funs": [
+    {
+      "body": {
+        "ite": {
+          "cond": {
+            "args": [
+              {
+                "args": [
+                  {
+                    "int": 0
+                  },
+                  {
+                    "var": "k_v"
+                  }
+                ],
+                "op": "<="
+              },
+              {
+                "args": [
+                  {
+                    "var": "k_v"
+                  },
+                  {
+                    "var": "n"
+                  }
+                ],
+                "op": "<="
+              }
+            ],
+            "op": "and"
+          },
+          "else": {
+            "int": 0
+          },
+          "then": {
+            "ite": {
+              "cond": {
+                "args": [
+                  {
+                    "args": [
+                      {
+                        "var": "k_v"
+                      },
+                      {
+                        "int": 0
+                      }
+                    ],
+                    "op": "=="
+                  },
+                  {
+                    "args": [
+                      {
+                        "var": "k_v"
+                      },
+                      {
+                        "var": "n"
+                      }
+                    ],
+                    "op": "=="
+                  }
+                ],
+                "op": "or"
+              },
+              "else": {
+                "ite": {
+                  "cond": {
+                    "args": [
+                      {
+                        "var": "k_v"
+                      },
+                      {
+                        "int": 1
+                      }
+                    ],
+                    "op": "=="
+                  },
+                  "else": {
+                    "args": [
+                      {
+                        "call": {
+                          "args": [
+                            {
+                              "args": [
+                                {
+                                  "var": "n"
+                                },
+                                {
+                                  "int": 1
+                                }
+                              ],
+                              "op": "-"
+                            },
+                            {
+                              "args": [
+                                {
+                                  "var": "k_v"
+                                },
+                                {
+                                  "int": 1
+                                }
+                              ],
+                              "op": "-"
+                            }
+                          ],
+                          "fun": "binomial"
+                        }
+                      },
+                      {
+                        "call": {
+                          "args": [
+                            {
+                              "args": [
+                                {
+                                  "var": "n"
+                                },
+                                {
+                                  "int": 1
+                                }
+                              ],
+                              "op": "-"
+                            },
+                            {
+                              "var": "k_v"
+                            }
+                          ],
+                          "fun": "binomial"
+                        }
+                      }
+                    ],
+                    "op": "+"
+                  },
+                  "then": {
+                    "var": "n"
+                  }
+                }
+              },
+              "then": {
+                "int": 1
+              }
+            }
+          }
+        }
+      },
+      "decreases": {
+        "args": [
+          {
+            "var": "n"
+          },
+          {
+            "var": "k_v"
+          }
+        ],
+        "op": "+"
+      },
+      "name": "binomial",
+      "params": [
+        {
+          "name": "n",
+          "type": "int"
+        },
+        {
+          "name": "k_v",
+          "type": "int"
+        }
+      ],
+      "result": "int"
+    }
+  ],
+  "t": 1
+}

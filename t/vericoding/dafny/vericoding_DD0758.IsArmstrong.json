@@ -1,0 +1,371 @@
+{
+  "body": [
+    {
+      "var": {
+        "init": {
+          "args": [
+            {
+              "var": "n"
+            },
+            {
+              "int": 100
+            }
+          ],
+          "op": "div"
+        },
+        "name": "hundreds",
+        "type": "int"
+      }
+    },
+    {
+      "var": {
+        "init": {
+          "args": [
+            {
+              "args": [
+                {
+                  "var": "n"
+                },
+                {
+                  "int": 10
+                }
+              ],
+              "op": "div"
+            },
+            {
+              "int": 10
+            }
+          ],
+          "op": "mod"
+        },
+        "name": "tens",
+        "type": "int"
+      }
+    },
+    {
+      "var": {
+        "init": {
+          "args": [
+            {
+              "var": "n"
+            },
+            {
+              "int": 10
+            }
+          ],
+          "op": "mod"
+        },
+        "name": "units",
+        "type": "int"
+      }
+    },
+    {
+      "var": {
+        "init": {
+          "args": [
+            {
+              "args": [
+                {
+                  "args": [
+                    {
+                      "args": [
+                        {
+                          "var": "hundreds"
+                        },
+                        {
+                          "var": "hundreds"
+                        }
+                      ],
+                      "op": "*"
+                    },
+                    {
+                      "var": "hundreds"
+                    }
+                  ],
+                  "op": "*"
+                },
+                {
+                  "args": [
+                    {
+                      "args": [
+                        {
+                          "var": "tens"
+                        },
+                        {
+                          "var": "tens"
+                        }
+                      ],
+                      "op": "*"
+                    },
+                    {
+                      "var": "tens"
+                    }
+                  ],
+                  "op": "*"
+                }
+              ],
+              "op": "+"
+            },
+            {
+              "args": [
+                {
+                  "args": [
+                    {
+                      "var": "units"
+                    },
+                    {
+                      "var": "units"
+                    }
+                  ],
+                  "op": "*"
+                },
+                {
+                  "var": "units"
+                }
+              ],
+              "op": "*"
+            }
+          ],
+          "op": "+"
+        },
+        "name": "sumOfCubes",
+        "type": "int"
+      }
+    },
+    {
+      "assign": [
+        "result",
+        {
+          "args": [
+            {
+              "var": "n"
+            },
+            {
+              "var": "sumOfCubes"
+            }
+          ],
+          "op": "=="
+        }
+      ]
+    }
+  ],
+  "ensures": [
+    {
+      "args": [
+        {
+          "var": "result"
+        },
+        {
+          "args": [
+            {
+              "var": "n"
+            },
+            {
+              "args": [
+                {
+                  "args": [
+                    {
+                      "args": [
+                        {
+                          "args": [
+                            {
+                              "args": [
+                                {
+                                  "var": "n"
+                                },
+                                {
+                                  "int": 100
+                                }
+                              ],
+                              "op": "div"
+                            },
+                            {
+                              "args": [
+                                {
+                                  "var": "n"
+                                },
+                                {
+                                  "int": 100
+                                }
+                              ],
+                              "op": "div"
+                            }
+                          ],
+                          "op": "*"
+                        },
+                        {
+                          "args": [
+                            {
+                              "var": "n"
+                            },
+                            {
+                              "int": 100
+                            }
+                          ],
+                          "op": "div"
+                        }
+                      ],
+                      "op": "*"
+                    },
+                    {
+                      "args": [
+                        {
+                          "args": [
+                            {
+                              "args": [
+                                {
+                                  "args": [
+                                    {
+                                      "var": "n"
+                                    },
+                                    {
+                                      "int": 10
+                                    }
+                                  ],
+                                  "op": "div"
+                                },
+                                {
+                                  "int": 10
+                                }
+                              ],
+                              "op": "mod"
+                            },
+                            {
+                              "args": [
+                                {
+                                  "args": [
+                                    {
+                                      "var": "n"
+                                    },
+                                    {
+                                      "int": 10
+                                    }
+                                  ],
+                                  "op": "div"
+                                },
+                                {
+                                  "int": 10
+                                }
+                              ],
+                              "op": "mod"
+                            }
+                          ],
+                          "op": "*"
+                        },
+                        {
+                          "args": [
+                            {
+                              "args": [
+                                {
+                                  "var": "n"
+                                },
+                                {
+                                  "int": 10
+                                }
+                              ],
+                              "op": "div"
+                            },
+                            {
+                              "int": 10
+                            }
+                          ],
+                          "op": "mod"
+                        }
+                      ],
+                      "op": "*"
+                    }
+                  ],
+                  "op": "+"
+                },
+                {
+                  "args": [
+                    {
+                      "args": [
+                        {
+                          "args": [
+                            {
+                              "var": "n"
+                            },
+                            {
+                              "int": 10
+                            }
+                          ],
+                          "op": "mod"
+                        },
+                        {
+                          "args": [
+                            {
+                              "var": "n"
+                            },
+                            {
+                              "int": 10
+                            }
+                          ],
+                          "op": "mod"
+                        }
+                      ],
+                      "op": "*"
+                    },
+                    {
+                      "args": [
+                        {
+                          "var": "n"
+                        },
+                        {
+                          "int": 10
+                        }
+                      ],
+                      "op": "mod"
+                    }
+                  ],
+                  "op": "*"
+                }
+              ],
+              "op": "+"
+            }
+          ],
+          "op": "=="
+        }
+      ],
+      "op": "=="
+    }
+  ],
+  "name": "vericoding_dd0758__isArmstrong",
+  "params": [
+    {
+      "name": "n",
+      "type": "int"
+    }
+  ],
+  "requires": [
+    {
+      "args": [
+        {
+          "int": 100
+        },
+        {
+          "var": "n"
+        }
+      ],
+      "op": "<="
+    },
+    {
+      "args": [
+        {
+          "var": "n"
+        },
+        {
+          "int": 1000
+        }
+      ],
+      "op": "<"
+    }
+  ],
+  "returns": [
+    {
+      "name": "result",
+      "type": "bool"
+    }
+  ],
+  "t": 1
+}

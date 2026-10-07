@@ -1,0 +1,586 @@
+{
+  "body": [
+    {
+      "if": {
+        "cond": {
+          "args": [
+            {
+              "var": "c"
+            },
+            {
+              "var": "f"
+            }
+          ],
+          "op": ">"
+        },
+        "else": [
+          {
+            "var": {
+              "init": {
+                "call": {
+                  "args": [
+                    {
+                      "var": "c"
+                    },
+                    {
+                      "var": "f"
+                    }
+                  ],
+                  "fun": "mid"
+                }
+              },
+              "name": "m",
+              "type": "int"
+            }
+          },
+          {
+            "if": {
+              "cond": {
+                "args": [
+                  {
+                    "args": [
+                      {
+                        "var": "v"
+                      },
+                      {
+                        "var": "m"
+                      }
+                    ],
+                    "op": "at"
+                  },
+                  {
+                    "var": "elem"
+                  }
+                ],
+                "op": "<="
+              },
+              "else": [
+                {
+                  "assign": [
+                    "p",
+                    {
+                      "call": {
+                        "args": [
+                          {
+                            "var": "v"
+                          },
+                          {
+                            "var": "elem"
+                          },
+                          {
+                            "var": "c"
+                          },
+                          {
+                            "args": [
+                              {
+                                "var": "m"
+                              },
+                              {
+                                "int": 1
+                              }
+                            ],
+                            "op": "-"
+                          }
+                        ],
+                        "fun": "vericoding_dj0142__binarySearchRecursive"
+                      }
+                    }
+                  ]
+                }
+              ],
+              "then": [
+                {
+                  "assign": [
+                    "p",
+                    {
+                      "call": {
+                        "args": [
+                          {
+                            "var": "v"
+                          },
+                          {
+                            "var": "elem"
+                          },
+                          {
+                            "args": [
+                              {
+                                "var": "m"
+                              },
+                              {
+                                "int": 1
+                              }
+                            ],
+                            "op": "+"
+                          },
+                          {
+                            "var": "f"
+                          }
+                        ],
+                        "fun": "vericoding_dj0142__binarySearchRecursive"
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          }
+        ],
+        "then": [
+          {
+            "assign": [
+              "p",
+              {
+                "var": "f"
+              }
+            ]
+          }
+        ]
+      }
+    }
+  ],
+  "decreases": {
+    "args": [
+      {
+        "args": [
+          {
+            "var": "f"
+          },
+          {
+            "var": "c"
+          }
+        ],
+        "op": "-"
+      },
+      {
+        "int": 1
+      }
+    ],
+    "op": "+"
+  },
+  "ensures": [
+    {
+      "args": [
+        {
+          "args": [
+            {
+              "int": 1
+            }
+          ],
+          "op": "neg"
+        },
+        {
+          "var": "p"
+        }
+      ],
+      "op": "<="
+    },
+    {
+      "args": [
+        {
+          "var": "p"
+        },
+        {
+          "args": [
+            {
+              "var": "v"
+            }
+          ],
+          "op": "len"
+        }
+      ],
+      "op": "<"
+    },
+    {
+      "forall": {
+        "body": {
+          "args": [
+            {
+              "args": [
+                {
+                  "var": "v"
+                },
+                {
+                  "var": "u"
+                }
+              ],
+              "op": "at"
+            },
+            {
+              "var": "elem"
+            }
+          ],
+          "op": "<="
+        },
+        "hi": {
+          "args": [
+            {
+              "var": "p"
+            },
+            {
+              "int": 1
+            }
+          ],
+          "op": "+"
+        },
+        "lo": {
+          "int": 0
+        },
+        "var": "u"
+      }
+    },
+    {
+      "forall": {
+        "body": {
+          "args": [
+            {
+              "args": [
+                {
+                  "var": "v"
+                },
+                {
+                  "var": "w"
+                }
+              ],
+              "op": "at"
+            },
+            {
+              "var": "elem"
+            }
+          ],
+          "op": ">"
+        },
+        "hi": {
+          "args": [
+            {
+              "var": "v"
+            }
+          ],
+          "op": "len"
+        },
+        "lo": {
+          "args": [
+            {
+              "var": "p"
+            },
+            {
+              "int": 1
+            }
+          ],
+          "op": "+"
+        },
+        "var": "w"
+      }
+    }
+  ],
+  "gate": "recursion",
+  "name": "vericoding_dj0142__binarySearchRecursive",
+  "params": [
+    {
+      "name": "v",
+      "type": "seq"
+    },
+    {
+      "name": "elem",
+      "type": "int"
+    },
+    {
+      "name": "c",
+      "type": "int"
+    },
+    {
+      "name": "f",
+      "type": "int"
+    }
+  ],
+  "requires": [
+    {
+      "args": [
+        {
+          "args": [
+            {
+              "var": "v"
+            }
+          ],
+          "op": "len"
+        },
+        {
+          "int": 100000
+        }
+      ],
+      "op": "<="
+    },
+    {
+      "forall": {
+        "body": {
+          "forall": {
+            "body": {
+              "args": [
+                {
+                  "args": [
+                    {
+                      "var": "v"
+                    },
+                    {
+                      "var": "i"
+                    }
+                  ],
+                  "op": "at"
+                },
+                {
+                  "args": [
+                    {
+                      "var": "v"
+                    },
+                    {
+                      "var": "j"
+                    }
+                  ],
+                  "op": "at"
+                }
+              ],
+              "op": "<="
+            },
+            "hi": {
+              "args": [
+                {
+                  "var": "v"
+                }
+              ],
+              "op": "len"
+            },
+            "lo": {
+              "args": [
+                {
+                  "var": "i"
+                },
+                {
+                  "int": 1
+                }
+              ],
+              "op": "+"
+            },
+            "var": "j"
+          }
+        },
+        "hi": {
+          "args": [
+            {
+              "var": "v"
+            }
+          ],
+          "op": "len"
+        },
+        "lo": {
+          "int": 0
+        },
+        "var": "i"
+      }
+    },
+    {
+      "args": [
+        {
+          "int": 0
+        },
+        {
+          "var": "c"
+        }
+      ],
+      "op": "<="
+    },
+    {
+      "args": [
+        {
+          "var": "c"
+        },
+        {
+          "args": [
+            {
+              "var": "f"
+            },
+            {
+              "int": 1
+            }
+          ],
+          "op": "+"
+        }
+      ],
+      "op": "<="
+    },
+    {
+      "args": [
+        {
+          "args": [
+            {
+              "var": "f"
+            },
+            {
+              "int": 1
+            }
+          ],
+          "op": "+"
+        },
+        {
+          "args": [
+            {
+              "var": "v"
+            }
+          ],
+          "op": "len"
+        }
+      ],
+      "op": "<="
+    },
+    {
+      "forall": {
+        "body": {
+          "args": [
+            {
+              "args": [
+                {
+                  "var": "v"
+                },
+                {
+                  "var": "k"
+                }
+              ],
+              "op": "at"
+            },
+            {
+              "var": "elem"
+            }
+          ],
+          "op": "<="
+        },
+        "hi": {
+          "var": "c"
+        },
+        "lo": {
+          "int": 0
+        },
+        "var": "k"
+      }
+    },
+    {
+      "forall": {
+        "body": {
+          "args": [
+            {
+              "args": [
+                {
+                  "var": "v"
+                },
+                {
+                  "var": "k_v"
+                }
+              ],
+              "op": "at"
+            },
+            {
+              "var": "elem"
+            }
+          ],
+          "op": ">"
+        },
+        "hi": {
+          "args": [
+            {
+              "var": "v"
+            }
+          ],
+          "op": "len"
+        },
+        "lo": {
+          "args": [
+            {
+              "var": "f"
+            },
+            {
+              "int": 1
+            }
+          ],
+          "op": "+"
+        },
+        "var": "k_v"
+      }
+    }
+  ],
+  "returns": [
+    {
+      "name": "p",
+      "type": "int"
+    }
+  ],
+  "spec_funs": [
+    {
+      "body": {
+        "ite": {
+          "cond": {
+            "args": [
+              {
+                "var": "c_v"
+              },
+              {
+                "args": [
+                  {
+                    "var": "f_v"
+                  },
+                  {
+                    "int": 1
+                  }
+                ],
+                "op": "+"
+              }
+            ],
+            "op": "<="
+          },
+          "else": {
+            "int": 0
+          },
+          "then": {
+            "args": [
+              {
+                "var": "c_v"
+              },
+              {
+                "args": [
+                  {
+                    "args": [
+                      {
+                        "var": "f_v"
+                      },
+                      {
+                        "var": "c_v"
+                      }
+                    ],
+                    "op": "-"
+                  },
+                  {
+                    "int": 2
+                  }
+                ],
+                "op": "div"
+              }
+            ],
+            "op": "+"
+          }
+        }
+      },
+      "decreases": {
+        "int": 0
+      },
+      "name": "mid",
+      "params": [
+        {
+          "name": "c_v",
+          "type": "int"
+        },
+        {
+          "name": "f_v",
+          "type": "int"
+        }
+      ],
+      "result": "int"
+    }
+  ],
+  "t": 1
+}

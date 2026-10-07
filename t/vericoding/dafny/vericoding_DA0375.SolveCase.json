@@ -1,0 +1,926 @@
+{
+  "body": [
+    {
+      "var": {
+        "init": {
+          "call": {
+            "args": [
+              {
+                "var": "ratings"
+              },
+              {
+                "var": "k"
+              }
+            ],
+            "fun": "countOccurrences"
+          }
+        },
+        "name": "count",
+        "type": "int"
+      }
+    },
+    {
+      "if": {
+        "cond": {
+          "args": [
+            {
+              "var": "count"
+            },
+            {
+              "args": [
+                {
+                  "var": "ratings"
+                }
+              ],
+              "op": "len"
+            }
+          ],
+          "op": "=="
+        },
+        "else": [
+          {
+            "if": {
+              "cond": {
+                "args": [
+                  {
+                    "var": "count"
+                  },
+                  {
+                    "int": 0
+                  }
+                ],
+                "op": ">"
+              },
+              "else": [
+                {
+                  "var": {
+                    "init": {
+                      "call": {
+                        "args": [
+                          {
+                            "var": "ratings"
+                          }
+                        ],
+                        "fun": "sum"
+                      }
+                    },
+                    "name": "sum_v",
+                    "type": "int"
+                  }
+                },
+                {
+                  "if": {
+                    "cond": {
+                      "args": [
+                        {
+                          "args": [
+                            {
+                              "var": "k"
+                            },
+                            {
+                              "args": [
+                                {
+                                  "var": "ratings"
+                                }
+                              ],
+                              "op": "len"
+                            }
+                          ],
+                          "op": "*"
+                        },
+                        {
+                          "var": "sum_v"
+                        }
+                      ],
+                      "op": "=="
+                    },
+                    "else": [
+                      {
+                        "assign": [
+                          "answer",
+                          {
+                            "int": 2
+                          }
+                        ]
+                      }
+                    ],
+                    "then": [
+                      {
+                        "assign": [
+                          "answer",
+                          {
+                            "int": 1
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                }
+              ],
+              "then": [
+                {
+                  "assign": [
+                    "answer",
+                    {
+                      "int": 1
+                    }
+                  ]
+                }
+              ]
+            }
+          }
+        ],
+        "then": [
+          {
+            "assign": [
+              "answer",
+              {
+                "int": 0
+              }
+            ]
+          }
+        ]
+      }
+    }
+  ],
+  "ensures": [
+    {
+      "args": [
+        {
+          "var": "answer"
+        },
+        {
+          "int": 0
+        }
+      ],
+      "op": ">="
+    },
+    {
+      "args": [
+        {
+          "var": "answer"
+        },
+        {
+          "int": 2
+        }
+      ],
+      "op": "<="
+    },
+    {
+      "args": [
+        {
+          "call": {
+            "args": [
+              {
+                "var": "k"
+              },
+              {
+                "var": "ratings"
+              }
+            ],
+            "fun": "allInfected"
+          }
+        },
+        {
+          "args": [
+            {
+              "var": "answer"
+            },
+            {
+              "int": 0
+            }
+          ],
+          "op": "=="
+        }
+      ],
+      "op": "implies"
+    },
+    {
+      "args": [
+        {
+          "args": [
+            {
+              "call": {
+                "args": [
+                  {
+                    "var": "k"
+                  },
+                  {
+                    "var": "ratings"
+                  }
+                ],
+                "fun": "canInfectInOneContest"
+              }
+            },
+            {
+              "args": [
+                {
+                  "call": {
+                    "args": [
+                      {
+                        "var": "k"
+                      },
+                      {
+                        "var": "ratings"
+                      }
+                    ],
+                    "fun": "allInfected"
+                  }
+                }
+              ],
+              "op": "not"
+            }
+          ],
+          "op": "and"
+        },
+        {
+          "args": [
+            {
+              "var": "answer"
+            },
+            {
+              "int": 1
+            }
+          ],
+          "op": "=="
+        }
+      ],
+      "op": "implies"
+    },
+    {
+      "args": [
+        {
+          "call": {
+            "args": [
+              {
+                "var": "k"
+              },
+              {
+                "var": "ratings"
+              }
+            ],
+            "fun": "requiresTwoContests"
+          }
+        },
+        {
+          "args": [
+            {
+              "var": "answer"
+            },
+            {
+              "int": 2
+            }
+          ],
+          "op": "=="
+        }
+      ],
+      "op": "implies"
+    }
+  ],
+  "gate": "recursion",
+  "name": "vericoding_da0375__solveCase",
+  "params": [
+    {
+      "name": "n",
+      "type": "int"
+    },
+    {
+      "name": "k",
+      "type": "int"
+    },
+    {
+      "name": "ratings",
+      "type": "seq"
+    }
+  ],
+  "requires": [
+    {
+      "call": {
+        "args": [
+          {
+            "var": "n"
+          },
+          {
+            "var": "ratings"
+          }
+        ],
+        "fun": "validInput"
+      }
+    }
+  ],
+  "returns": [
+    {
+      "name": "answer",
+      "type": "int"
+    }
+  ],
+  "spec_funs": [
+    {
+      "body": {
+        "ite": {
+          "cond": {
+            "args": [
+              {
+                "args": [
+                  {
+                    "var": "s"
+                  }
+                ],
+                "op": "len"
+              },
+              {
+                "int": 0
+              }
+            ],
+            "op": "=="
+          },
+          "else": {
+            "ite": {
+              "cond": {
+                "args": [
+                  {
+                    "args": [
+                      {
+                        "var": "s"
+                      },
+                      {
+                        "int": 0
+                      }
+                    ],
+                    "op": "at"
+                  },
+                  {
+                    "var": "x"
+                  }
+                ],
+                "op": "=="
+              },
+              "else": {
+                "call": {
+                  "args": [
+                    {
+                      "args": [
+                        {
+                          "var": "s"
+                        },
+                        {
+                          "int": 1
+                        },
+                        {
+                          "args": [
+                            {
+                              "var": "s"
+                            }
+                          ],
+                          "op": "len"
+                        }
+                      ],
+                      "op": "slice"
+                    },
+                    {
+                      "var": "x"
+                    }
+                  ],
+                  "fun": "countOccurrences"
+                }
+              },
+              "then": {
+                "args": [
+                  {
+                    "int": 1
+                  },
+                  {
+                    "call": {
+                      "args": [
+                        {
+                          "args": [
+                            {
+                              "var": "s"
+                            },
+                            {
+                              "int": 1
+                            },
+                            {
+                              "args": [
+                                {
+                                  "var": "s"
+                                }
+                              ],
+                              "op": "len"
+                            }
+                          ],
+                          "op": "slice"
+                        },
+                        {
+                          "var": "x"
+                        }
+                      ],
+                      "fun": "countOccurrences"
+                    }
+                  }
+                ],
+                "op": "+"
+              }
+            }
+          },
+          "then": {
+            "int": 0
+          }
+        }
+      },
+      "decreases": {
+        "args": [
+          {
+            "var": "s"
+          }
+        ],
+        "op": "len"
+      },
+      "name": "countOccurrences",
+      "params": [
+        {
+          "name": "s",
+          "type": "seq"
+        },
+        {
+          "name": "x",
+          "type": "int"
+        }
+      ],
+      "result": "int"
+    },
+    {
+      "body": {
+        "args": [
+          {
+            "exists": {
+              "body": {
+                "args": [
+                  {
+                    "args": [
+                      {
+                        "var": "ratings_v"
+                      },
+                      {
+                        "var": "k_v2"
+                      }
+                    ],
+                    "op": "at"
+                  },
+                  {
+                    "var": "k_v"
+                  }
+                ],
+                "op": "=="
+              },
+              "hi": {
+                "args": [
+                  {
+                    "var": "ratings_v"
+                  }
+                ],
+                "op": "len"
+              },
+              "lo": {
+                "int": 0
+              },
+              "var": "k_v2"
+            }
+          },
+          {
+            "args": [
+              {
+                "call": {
+                  "args": [
+                    {
+                      "var": "ratings_v"
+                    },
+                    {
+                      "var": "k_v"
+                    }
+                  ],
+                  "fun": "countOccurrences"
+                }
+              },
+              {
+                "args": [
+                  {
+                    "var": "ratings_v"
+                  }
+                ],
+                "op": "len"
+              }
+            ],
+            "op": "=="
+          }
+        ],
+        "op": "and"
+      },
+      "decreases": {
+        "int": 0
+      },
+      "name": "allInfected",
+      "params": [
+        {
+          "name": "k_v",
+          "type": "int"
+        },
+        {
+          "name": "ratings_v",
+          "type": "seq"
+        }
+      ],
+      "result": "bool"
+    },
+    {
+      "body": {
+        "ite": {
+          "cond": {
+            "args": [
+              {
+                "args": [
+                  {
+                    "var": "s_v"
+                  }
+                ],
+                "op": "len"
+              },
+              {
+                "int": 0
+              }
+            ],
+            "op": "=="
+          },
+          "else": {
+            "args": [
+              {
+                "args": [
+                  {
+                    "var": "s_v"
+                  },
+                  {
+                    "int": 0
+                  }
+                ],
+                "op": "at"
+              },
+              {
+                "call": {
+                  "args": [
+                    {
+                      "args": [
+                        {
+                          "var": "s_v"
+                        },
+                        {
+                          "int": 1
+                        },
+                        {
+                          "args": [
+                            {
+                              "var": "s_v"
+                            }
+                          ],
+                          "op": "len"
+                        }
+                      ],
+                      "op": "slice"
+                    }
+                  ],
+                  "fun": "sum"
+                }
+              }
+            ],
+            "op": "+"
+          },
+          "then": {
+            "int": 0
+          }
+        }
+      },
+      "decreases": {
+        "args": [
+          {
+            "var": "s_v"
+          }
+        ],
+        "op": "len"
+      },
+      "name": "sum",
+      "params": [
+        {
+          "name": "s_v",
+          "type": "seq"
+        }
+      ],
+      "result": "int"
+    },
+    {
+      "body": {
+        "args": [
+          {
+            "args": [
+              {
+                "var": "n_v"
+              },
+              {
+                "int": 2
+              }
+            ],
+            "op": ">="
+          },
+          {
+            "args": [
+              {
+                "args": [
+                  {
+                    "var": "ratings_v2"
+                  }
+                ],
+                "op": "len"
+              },
+              {
+                "var": "n_v"
+              }
+            ],
+            "op": "=="
+          }
+        ],
+        "op": "and"
+      },
+      "decreases": {
+        "int": 0
+      },
+      "name": "validInput",
+      "params": [
+        {
+          "name": "n_v",
+          "type": "int"
+        },
+        {
+          "name": "ratings_v2",
+          "type": "seq"
+        }
+      ],
+      "result": "bool"
+    },
+    {
+      "body": {
+        "args": [
+          {
+            "args": [
+              {
+                "exists": {
+                  "body": {
+                    "args": [
+                      {
+                        "args": [
+                          {
+                            "var": "ratings_v3"
+                          },
+                          {
+                            "var": "k_v4"
+                          }
+                        ],
+                        "op": "at"
+                      },
+                      {
+                        "var": "k_v3"
+                      }
+                    ],
+                    "op": "=="
+                  },
+                  "hi": {
+                    "args": [
+                      {
+                        "var": "ratings_v3"
+                      }
+                    ],
+                    "op": "len"
+                  },
+                  "lo": {
+                    "int": 0
+                  },
+                  "var": "k_v4"
+                }
+              }
+            ],
+            "op": "not"
+          },
+          {
+            "args": [
+              {
+                "args": [
+                  {
+                    "var": "k_v3"
+                  },
+                  {
+                    "args": [
+                      {
+                        "var": "ratings_v3"
+                      }
+                    ],
+                    "op": "len"
+                  }
+                ],
+                "op": "*"
+              },
+              {
+                "call": {
+                  "args": [
+                    {
+                      "var": "ratings_v3"
+                    }
+                  ],
+                  "fun": "sum"
+                }
+              }
+            ],
+            "op": "!="
+          }
+        ],
+        "op": "and"
+      },
+      "decreases": {
+        "int": 0
+      },
+      "name": "requiresTwoContests",
+      "params": [
+        {
+          "name": "k_v3",
+          "type": "int"
+        },
+        {
+          "name": "ratings_v3",
+          "type": "seq"
+        }
+      ],
+      "result": "bool"
+    },
+    {
+      "body": {
+        "args": [
+          {
+            "args": [
+              {
+                "exists": {
+                  "body": {
+                    "args": [
+                      {
+                        "args": [
+                          {
+                            "var": "ratings_v4"
+                          },
+                          {
+                            "var": "k_v6"
+                          }
+                        ],
+                        "op": "at"
+                      },
+                      {
+                        "var": "k_v5"
+                      }
+                    ],
+                    "op": "=="
+                  },
+                  "hi": {
+                    "args": [
+                      {
+                        "var": "ratings_v4"
+                      }
+                    ],
+                    "op": "len"
+                  },
+                  "lo": {
+                    "int": 0
+                  },
+                  "var": "k_v6"
+                }
+              },
+              {
+                "args": [
+                  {
+                    "call": {
+                      "args": [
+                        {
+                          "var": "ratings_v4"
+                        },
+                        {
+                          "var": "k_v5"
+                        }
+                      ],
+                      "fun": "countOccurrences"
+                    }
+                  },
+                  {
+                    "args": [
+                      {
+                        "var": "ratings_v4"
+                      }
+                    ],
+                    "op": "len"
+                  }
+                ],
+                "op": "!="
+              }
+            ],
+            "op": "and"
+          },
+          {
+            "args": [
+              {
+                "args": [
+                  {
+                    "exists": {
+                      "body": {
+                        "args": [
+                          {
+                            "args": [
+                              {
+                                "var": "ratings_v4"
+                              },
+                              {
+                                "var": "k_v7"
+                              }
+                            ],
+                            "op": "at"
+                          },
+                          {
+                            "var": "k_v5"
+                          }
+                        ],
+                        "op": "=="
+                      },
+                      "hi": {
+                        "args": [
+                          {
+                            "var": "ratings_v4"
+                          }
+                        ],
+                        "op": "len"
+                      },
+                      "lo": {
+                        "int": 0
+                      },
+                      "var": "k_v7"
+                    }
+                  }
+                ],
+                "op": "not"
+              },
+              {
+                "args": [
+                  {
+                    "args": [
+                      {
+                        "var": "k_v5"
+                      },
+                      {
+                        "args": [
+                          {
+                            "var": "ratings_v4"
+                          }
+                        ],
+                        "op": "len"
+                      }
+                    ],
+                    "op": "*"
+                  },
+                  {
+                    "call": {
+                      "args": [
+                        {
+                          "var": "ratings_v4"
+                        }
+                      ],
+                      "fun": "sum"
+                    }
+                  }
+                ],
+                "op": "=="
+              }
+            ],
+            "op": "and"
+          }
+        ],
+        "op": "or"
+      },
+      "decreases": {
+        "int": 0
+      },
+      "name": "canInfectInOneContest",
+      "params": [
+        {
+          "name": "k_v5",
+          "type": "int"
+        },
+        {
+          "name": "ratings_v4",
+          "type": "seq"
+        }
+      ],
+      "result": "bool"
+    }
+  ],
+  "t": 1
+}

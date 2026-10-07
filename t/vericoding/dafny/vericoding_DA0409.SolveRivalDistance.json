@@ -1,0 +1,1328 @@
+{
+  "body": [
+    {
+      "var": {
+        "init": {
+          "int": 0
+        },
+        "name": "initialDistance",
+        "type": "int"
+      }
+    },
+    {
+      "if": {
+        "cond": {
+          "args": [
+            {
+              "var": "a"
+            },
+            {
+              "var": "b"
+            }
+          ],
+          "op": ">="
+        },
+        "else": [
+          {
+            "assign": [
+              "initialDistance",
+              {
+                "args": [
+                  {
+                    "var": "b"
+                  },
+                  {
+                    "var": "a"
+                  }
+                ],
+                "op": "-"
+              }
+            ]
+          }
+        ],
+        "then": [
+          {
+            "assign": [
+              "initialDistance",
+              {
+                "args": [
+                  {
+                    "var": "a"
+                  },
+                  {
+                    "var": "b"
+                  }
+                ],
+                "op": "-"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "var": {
+        "init": {
+          "args": [
+            {
+              "var": "initialDistance"
+            },
+            {
+              "var": "x"
+            }
+          ],
+          "op": "+"
+        },
+        "name": "maxPossibleDistance",
+        "type": "int"
+      }
+    },
+    {
+      "var": {
+        "init": {
+          "args": [
+            {
+              "var": "n"
+            },
+            {
+              "int": 1
+            }
+          ],
+          "op": "-"
+        },
+        "name": "maxLineDistance",
+        "type": "int"
+      }
+    },
+    {
+      "if": {
+        "cond": {
+          "args": [
+            {
+              "var": "maxPossibleDistance"
+            },
+            {
+              "var": "maxLineDistance"
+            }
+          ],
+          "op": "<="
+        },
+        "else": [
+          {
+            "assign": [
+              "result",
+              {
+                "var": "maxLineDistance"
+              }
+            ]
+          }
+        ],
+        "then": [
+          {
+            "assign": [
+              "result",
+              {
+                "var": "maxPossibleDistance"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "lemma": {
+        "args": [
+          {
+            "var": "n"
+          },
+          {
+            "var": "x"
+          },
+          {
+            "var": "a"
+          },
+          {
+            "var": "b"
+          }
+        ],
+        "name": "maxDistanceProperties"
+      }
+    }
+  ],
+  "ensures": [
+    {
+      "call": {
+        "args": [
+          {
+            "var": "n"
+          },
+          {
+            "var": "x"
+          },
+          {
+            "var": "a"
+          },
+          {
+            "var": "b"
+          },
+          {
+            "var": "result"
+          }
+        ],
+        "fun": "validResult"
+      }
+    },
+    {
+      "args": [
+        {
+          "var": "result"
+        },
+        {
+          "int": 0
+        }
+      ],
+      "op": ">="
+    }
+  ],
+  "gate": "recursion",
+  "lemmas": [
+    {
+      "body": [
+        {
+          "assert": {
+            "args": [
+              {
+                "ite": {
+                  "cond": {
+                    "args": [
+                      {
+                        "var": "a_v4"
+                      },
+                      {
+                        "var": "b_v4"
+                      }
+                    ],
+                    "op": ">="
+                  },
+                  "else": {
+                    "args": [
+                      {
+                        "var": "b_v4"
+                      },
+                      {
+                        "var": "a_v4"
+                      }
+                    ],
+                    "op": "-"
+                  },
+                  "then": {
+                    "args": [
+                      {
+                        "var": "a_v4"
+                      },
+                      {
+                        "var": "b_v4"
+                      }
+                    ],
+                    "op": "-"
+                  }
+                }
+              },
+              {
+                "int": 0
+              }
+            ],
+            "op": ">="
+          }
+        },
+        {
+          "assert": {
+            "args": [
+              {
+                "args": [
+                  {
+                    "ite": {
+                      "cond": {
+                        "args": [
+                          {
+                            "var": "a_v4"
+                          },
+                          {
+                            "var": "b_v4"
+                          }
+                        ],
+                        "op": ">="
+                      },
+                      "else": {
+                        "args": [
+                          {
+                            "var": "b_v4"
+                          },
+                          {
+                            "var": "a_v4"
+                          }
+                        ],
+                        "op": "-"
+                      },
+                      "then": {
+                        "args": [
+                          {
+                            "var": "a_v4"
+                          },
+                          {
+                            "var": "b_v4"
+                          }
+                        ],
+                        "op": "-"
+                      }
+                    }
+                  },
+                  {
+                    "var": "x_v4"
+                  }
+                ],
+                "op": "+"
+              },
+              {
+                "ite": {
+                  "cond": {
+                    "args": [
+                      {
+                        "var": "a_v4"
+                      },
+                      {
+                        "var": "b_v4"
+                      }
+                    ],
+                    "op": ">="
+                  },
+                  "else": {
+                    "args": [
+                      {
+                        "var": "b_v4"
+                      },
+                      {
+                        "var": "a_v4"
+                      }
+                    ],
+                    "op": "-"
+                  },
+                  "then": {
+                    "args": [
+                      {
+                        "var": "a_v4"
+                      },
+                      {
+                        "var": "b_v4"
+                      }
+                    ],
+                    "op": "-"
+                  }
+                }
+              }
+            ],
+            "op": ">="
+          }
+        },
+        {
+          "assert": {
+            "args": [
+              {
+                "args": [
+                  {
+                    "args": [
+                      {
+                        "var": "n_v4"
+                      },
+                      {
+                        "int": 1
+                      }
+                    ],
+                    "op": "-"
+                  },
+                  {
+                    "args": [
+                      {
+                        "var": "n_v4"
+                      },
+                      {
+                        "int": 1
+                      }
+                    ],
+                    "op": "-"
+                  }
+                ],
+                "op": "=="
+              },
+              {
+                "args": [
+                  {
+                    "args": [
+                      {
+                        "var": "n_v4"
+                      },
+                      {
+                        "int": 1
+                      }
+                    ],
+                    "op": "-"
+                  },
+                  {
+                    "int": 0
+                  }
+                ],
+                "op": ">="
+              }
+            ],
+            "op": "and"
+          }
+        },
+        {
+          "if": {
+            "cond": {
+              "args": [
+                {
+                  "args": [
+                    {
+                      "ite": {
+                        "cond": {
+                          "args": [
+                            {
+                              "var": "a_v4"
+                            },
+                            {
+                              "var": "b_v4"
+                            }
+                          ],
+                          "op": ">="
+                        },
+                        "else": {
+                          "args": [
+                            {
+                              "var": "b_v4"
+                            },
+                            {
+                              "var": "a_v4"
+                            }
+                          ],
+                          "op": "-"
+                        },
+                        "then": {
+                          "args": [
+                            {
+                              "var": "a_v4"
+                            },
+                            {
+                              "var": "b_v4"
+                            }
+                          ],
+                          "op": "-"
+                        }
+                      }
+                    },
+                    {
+                      "var": "x_v4"
+                    }
+                  ],
+                  "op": "+"
+                },
+                {
+                  "args": [
+                    {
+                      "var": "n_v4"
+                    },
+                    {
+                      "int": 1
+                    }
+                  ],
+                  "op": "-"
+                }
+              ],
+              "op": "<="
+            },
+            "else": [
+              {
+                "assert": {
+                  "args": [
+                    {
+                      "call": {
+                        "args": [
+                          {
+                            "var": "n_v4"
+                          },
+                          {
+                            "var": "x_v4"
+                          },
+                          {
+                            "var": "a_v4"
+                          },
+                          {
+                            "var": "b_v4"
+                          }
+                        ],
+                        "fun": "maxDistance"
+                      }
+                    },
+                    {
+                      "args": [
+                        {
+                          "var": "n_v4"
+                        },
+                        {
+                          "int": 1
+                        }
+                      ],
+                      "op": "-"
+                    }
+                  ],
+                  "op": "=="
+                }
+              },
+              {
+                "assert": {
+                  "args": [
+                    {
+                      "call": {
+                        "args": [
+                          {
+                            "var": "n_v4"
+                          },
+                          {
+                            "var": "x_v4"
+                          },
+                          {
+                            "var": "a_v4"
+                          },
+                          {
+                            "var": "b_v4"
+                          }
+                        ],
+                        "fun": "maxDistance"
+                      }
+                    },
+                    {
+                      "args": [
+                        {
+                          "var": "n_v4"
+                        },
+                        {
+                          "int": 1
+                        }
+                      ],
+                      "op": "-"
+                    }
+                  ],
+                  "op": "=="
+                }
+              },
+              {
+                "assert": {
+                  "args": [
+                    {
+                      "args": [
+                        {
+                          "int": 0
+                        },
+                        {
+                          "call": {
+                            "args": [
+                              {
+                                "var": "n_v4"
+                              },
+                              {
+                                "var": "x_v4"
+                              },
+                              {
+                                "var": "a_v4"
+                              },
+                              {
+                                "var": "b_v4"
+                              }
+                            ],
+                            "fun": "maxDistance"
+                          }
+                        }
+                      ],
+                      "op": "<="
+                    },
+                    {
+                      "args": [
+                        {
+                          "call": {
+                            "args": [
+                              {
+                                "var": "n_v4"
+                              },
+                              {
+                                "var": "x_v4"
+                              },
+                              {
+                                "var": "a_v4"
+                              },
+                              {
+                                "var": "b_v4"
+                              }
+                            ],
+                            "fun": "maxDistance"
+                          }
+                        },
+                        {
+                          "args": [
+                            {
+                              "var": "n_v4"
+                            },
+                            {
+                              "int": 1
+                            }
+                          ],
+                          "op": "-"
+                        }
+                      ],
+                      "op": "<="
+                    }
+                  ],
+                  "op": "and"
+                }
+              }
+            ],
+            "then": [
+              {
+                "assert": {
+                  "args": [
+                    {
+                      "call": {
+                        "args": [
+                          {
+                            "var": "n_v4"
+                          },
+                          {
+                            "var": "x_v4"
+                          },
+                          {
+                            "var": "a_v4"
+                          },
+                          {
+                            "var": "b_v4"
+                          }
+                        ],
+                        "fun": "maxDistance"
+                      }
+                    },
+                    {
+                      "args": [
+                        {
+                          "ite": {
+                            "cond": {
+                              "args": [
+                                {
+                                  "var": "a_v4"
+                                },
+                                {
+                                  "var": "b_v4"
+                                }
+                              ],
+                              "op": ">="
+                            },
+                            "else": {
+                              "args": [
+                                {
+                                  "var": "b_v4"
+                                },
+                                {
+                                  "var": "a_v4"
+                                }
+                              ],
+                              "op": "-"
+                            },
+                            "then": {
+                              "args": [
+                                {
+                                  "var": "a_v4"
+                                },
+                                {
+                                  "var": "b_v4"
+                                }
+                              ],
+                              "op": "-"
+                            }
+                          }
+                        },
+                        {
+                          "var": "x_v4"
+                        }
+                      ],
+                      "op": "+"
+                    }
+                  ],
+                  "op": "=="
+                }
+              },
+              {
+                "assert": {
+                  "args": [
+                    {
+                      "call": {
+                        "args": [
+                          {
+                            "var": "n_v4"
+                          },
+                          {
+                            "var": "x_v4"
+                          },
+                          {
+                            "var": "a_v4"
+                          },
+                          {
+                            "var": "b_v4"
+                          }
+                        ],
+                        "fun": "maxDistance"
+                      }
+                    },
+                    {
+                      "int": 0
+                    }
+                  ],
+                  "op": ">="
+                }
+              },
+              {
+                "assert": {
+                  "args": [
+                    {
+                      "call": {
+                        "args": [
+                          {
+                            "var": "n_v4"
+                          },
+                          {
+                            "var": "x_v4"
+                          },
+                          {
+                            "var": "a_v4"
+                          },
+                          {
+                            "var": "b_v4"
+                          }
+                        ],
+                        "fun": "maxDistance"
+                      }
+                    },
+                    {
+                      "args": [
+                        {
+                          "var": "n_v4"
+                        },
+                        {
+                          "int": 1
+                        }
+                      ],
+                      "op": "-"
+                    }
+                  ],
+                  "op": "<="
+                }
+              }
+            ]
+          }
+        }
+      ],
+      "ensures": [
+        {
+          "args": [
+            {
+              "int": 0
+            },
+            {
+              "call": {
+                "args": [
+                  {
+                    "var": "n_v4"
+                  },
+                  {
+                    "var": "x_v4"
+                  },
+                  {
+                    "var": "a_v4"
+                  },
+                  {
+                    "var": "b_v4"
+                  }
+                ],
+                "fun": "maxDistance"
+              }
+            }
+          ],
+          "op": "<="
+        },
+        {
+          "args": [
+            {
+              "call": {
+                "args": [
+                  {
+                    "var": "n_v4"
+                  },
+                  {
+                    "var": "x_v4"
+                  },
+                  {
+                    "var": "a_v4"
+                  },
+                  {
+                    "var": "b_v4"
+                  }
+                ],
+                "fun": "maxDistance"
+              }
+            },
+            {
+              "args": [
+                {
+                  "var": "n_v4"
+                },
+                {
+                  "int": 1
+                }
+              ],
+              "op": "-"
+            }
+          ],
+          "op": "<="
+        }
+      ],
+      "name": "maxDistanceProperties",
+      "params": [
+        {
+          "name": "n_v4",
+          "type": "int"
+        },
+        {
+          "name": "x_v4",
+          "type": "int"
+        },
+        {
+          "name": "a_v4",
+          "type": "int"
+        },
+        {
+          "name": "b_v4",
+          "type": "int"
+        }
+      ],
+      "requires": [
+        {
+          "call": {
+            "args": [
+              {
+                "var": "n_v4"
+              },
+              {
+                "var": "x_v4"
+              },
+              {
+                "var": "a_v4"
+              },
+              {
+                "var": "b_v4"
+              }
+            ],
+            "fun": "validInput"
+          }
+        }
+      ]
+    }
+  ],
+  "name": "vericoding_da0409__solveRivalDistance",
+  "params": [
+    {
+      "name": "n",
+      "type": "int"
+    },
+    {
+      "name": "x",
+      "type": "int"
+    },
+    {
+      "name": "a",
+      "type": "int"
+    },
+    {
+      "name": "b",
+      "type": "int"
+    }
+  ],
+  "requires": [
+    {
+      "call": {
+        "args": [
+          {
+            "var": "n"
+          },
+          {
+            "var": "x"
+          },
+          {
+            "var": "a"
+          },
+          {
+            "var": "b"
+          }
+        ],
+        "fun": "validInput"
+      }
+    }
+  ],
+  "returns": [
+    {
+      "name": "result",
+      "type": "int"
+    }
+  ],
+  "spec_funs": [
+    {
+      "body": {
+        "args": [
+          {
+            "args": [
+              {
+                "args": [
+                  {
+                    "int": 2
+                  },
+                  {
+                    "var": "n_v"
+                  }
+                ],
+                "op": "<="
+              },
+              {
+                "args": [
+                  {
+                    "var": "n_v"
+                  },
+                  {
+                    "int": 100
+                  }
+                ],
+                "op": "<="
+              }
+            ],
+            "op": "and"
+          },
+          {
+            "args": [
+              {
+                "args": [
+                  {
+                    "int": 0
+                  },
+                  {
+                    "var": "x_v"
+                  }
+                ],
+                "op": "<="
+              },
+              {
+                "args": [
+                  {
+                    "var": "x_v"
+                  },
+                  {
+                    "int": 100
+                  }
+                ],
+                "op": "<="
+              }
+            ],
+            "op": "and"
+          },
+          {
+            "args": [
+              {
+                "args": [
+                  {
+                    "int": 1
+                  },
+                  {
+                    "var": "a_v"
+                  }
+                ],
+                "op": "<="
+              },
+              {
+                "args": [
+                  {
+                    "var": "a_v"
+                  },
+                  {
+                    "var": "n_v"
+                  }
+                ],
+                "op": "<="
+              }
+            ],
+            "op": "and"
+          },
+          {
+            "args": [
+              {
+                "args": [
+                  {
+                    "int": 1
+                  },
+                  {
+                    "var": "b_v"
+                  }
+                ],
+                "op": "<="
+              },
+              {
+                "args": [
+                  {
+                    "var": "b_v"
+                  },
+                  {
+                    "var": "n_v"
+                  }
+                ],
+                "op": "<="
+              }
+            ],
+            "op": "and"
+          },
+          {
+            "args": [
+              {
+                "var": "a_v"
+              },
+              {
+                "var": "b_v"
+              }
+            ],
+            "op": "!="
+          }
+        ],
+        "op": "and"
+      },
+      "decreases": {
+        "int": 0
+      },
+      "name": "validInput",
+      "params": [
+        {
+          "name": "n_v",
+          "type": "int"
+        },
+        {
+          "name": "x_v",
+          "type": "int"
+        },
+        {
+          "name": "a_v",
+          "type": "int"
+        },
+        {
+          "name": "b_v",
+          "type": "int"
+        }
+      ],
+      "result": "bool"
+    },
+    {
+      "body": {
+        "ite": {
+          "cond": {
+            "call": {
+              "args": [
+                {
+                  "var": "n_v2"
+                },
+                {
+                  "var": "x_v2"
+                },
+                {
+                  "var": "a_v2"
+                },
+                {
+                  "var": "b_v2"
+                }
+              ],
+              "fun": "validInput"
+            }
+          },
+          "else": {
+            "int": 0
+          },
+          "then": {
+            "ite": {
+              "cond": {
+                "args": [
+                  {
+                    "args": [
+                      {
+                        "ite": {
+                          "cond": {
+                            "args": [
+                              {
+                                "var": "a_v2"
+                              },
+                              {
+                                "var": "b_v2"
+                              }
+                            ],
+                            "op": ">="
+                          },
+                          "else": {
+                            "args": [
+                              {
+                                "var": "b_v2"
+                              },
+                              {
+                                "var": "a_v2"
+                              }
+                            ],
+                            "op": "-"
+                          },
+                          "then": {
+                            "args": [
+                              {
+                                "var": "a_v2"
+                              },
+                              {
+                                "var": "b_v2"
+                              }
+                            ],
+                            "op": "-"
+                          }
+                        }
+                      },
+                      {
+                        "var": "x_v2"
+                      }
+                    ],
+                    "op": "+"
+                  },
+                  {
+                    "args": [
+                      {
+                        "var": "n_v2"
+                      },
+                      {
+                        "int": 1
+                      }
+                    ],
+                    "op": "-"
+                  }
+                ],
+                "op": "<="
+              },
+              "else": {
+                "args": [
+                  {
+                    "var": "n_v2"
+                  },
+                  {
+                    "int": 1
+                  }
+                ],
+                "op": "-"
+              },
+              "then": {
+                "args": [
+                  {
+                    "ite": {
+                      "cond": {
+                        "args": [
+                          {
+                            "var": "a_v2"
+                          },
+                          {
+                            "var": "b_v2"
+                          }
+                        ],
+                        "op": ">="
+                      },
+                      "else": {
+                        "args": [
+                          {
+                            "var": "b_v2"
+                          },
+                          {
+                            "var": "a_v2"
+                          }
+                        ],
+                        "op": "-"
+                      },
+                      "then": {
+                        "args": [
+                          {
+                            "var": "a_v2"
+                          },
+                          {
+                            "var": "b_v2"
+                          }
+                        ],
+                        "op": "-"
+                      }
+                    }
+                  },
+                  {
+                    "var": "x_v2"
+                  }
+                ],
+                "op": "+"
+              }
+            }
+          }
+        }
+      },
+      "decreases": {
+        "int": 0
+      },
+      "name": "maxDistance",
+      "params": [
+        {
+          "name": "n_v2",
+          "type": "int"
+        },
+        {
+          "name": "x_v2",
+          "type": "int"
+        },
+        {
+          "name": "a_v2",
+          "type": "int"
+        },
+        {
+          "name": "b_v2",
+          "type": "int"
+        }
+      ],
+      "result": "int"
+    },
+    {
+      "body": {
+        "ite": {
+          "cond": {
+            "call": {
+              "args": [
+                {
+                  "var": "n_v3"
+                },
+                {
+                  "var": "x_v3"
+                },
+                {
+                  "var": "a_v3"
+                },
+                {
+                  "var": "b_v3"
+                }
+              ],
+              "fun": "validInput"
+            }
+          },
+          "else": {
+            "bool": false
+          },
+          "then": {
+            "args": [
+              {
+                "args": [
+                  {
+                    "var": "result_v"
+                  },
+                  {
+                    "call": {
+                      "args": [
+                        {
+                          "var": "n_v3"
+                        },
+                        {
+                          "var": "x_v3"
+                        },
+                        {
+                          "var": "a_v3"
+                        },
+                        {
+                          "var": "b_v3"
+                        }
+                      ],
+                      "fun": "maxDistance"
+                    }
+                  }
+                ],
+                "op": "=="
+              },
+              {
+                "args": [
+                  {
+                    "args": [
+                      {
+                        "int": 0
+                      },
+                      {
+                        "var": "result_v"
+                      }
+                    ],
+                    "op": "<="
+                  },
+                  {
+                    "args": [
+                      {
+                        "var": "result_v"
+                      },
+                      {
+                        "args": [
+                          {
+                            "var": "n_v3"
+                          },
+                          {
+                            "int": 1
+                          }
+                        ],
+                        "op": "-"
+                      }
+                    ],
+                    "op": "<="
+                  }
+                ],
+                "op": "and"
+              }
+            ],
+            "op": "and"
+          }
+        }
+      },
+      "decreases": {
+        "int": 0
+      },
+      "name": "validResult",
+      "params": [
+        {
+          "name": "n_v3",
+          "type": "int"
+        },
+        {
+          "name": "x_v3",
+          "type": "int"
+        },
+        {
+          "name": "a_v3",
+          "type": "int"
+        },
+        {
+          "name": "b_v3",
+          "type": "int"
+        },
+        {
+          "name": "result_v",
+          "type": "int"
+        }
+      ],
+      "result": "bool"
+    }
+  ],
+  "t": 1
+}

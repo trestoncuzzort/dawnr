@@ -1,0 +1,622 @@
+{
+  "body": [
+    {
+      "if": {
+        "cond": {
+          "args": [
+            {
+              "var": "t_v"
+            },
+            {
+              "int": 0
+            }
+          ],
+          "op": "=="
+        },
+        "else": [
+          {
+            "if": {
+              "cond": {
+                "args": [
+                  {
+                    "var": "n"
+                  },
+                  {
+                    "int": 1
+                  }
+                ],
+                "op": "=="
+              },
+              "else": [
+                {
+                  "var": {
+                    "init": {
+                      "call": {
+                        "args": [
+                          {
+                            "var": "n"
+                          }
+                        ],
+                        "fun": "totalGlasses"
+                      }
+                    },
+                    "name": "totalCapacity",
+                    "type": "int"
+                  }
+                },
+                {
+                  "if": {
+                    "cond": {
+                      "args": [
+                        {
+                          "var": "t_v"
+                        },
+                        {
+                          "var": "totalCapacity"
+                        }
+                      ],
+                      "op": ">="
+                    },
+                    "else": [
+                      {
+                        "assign": [
+                          "result",
+                          {
+                            "call": {
+                              "args": [
+                                {
+                                  "var": "t_v"
+                                },
+                                {
+                                  "var": "totalCapacity"
+                                }
+                              ],
+                              "fun": "min"
+                            }
+                          }
+                        ]
+                      }
+                    ],
+                    "then": [
+                      {
+                        "assign": [
+                          "result",
+                          {
+                            "var": "totalCapacity"
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                },
+                {
+                  "if": {
+                    "cond": {
+                      "args": [
+                        {
+                          "args": [
+                            {
+                              "var": "t_v"
+                            },
+                            {
+                              "int": 1
+                            }
+                          ],
+                          "op": ">="
+                        },
+                        {
+                          "args": [
+                            {
+                              "var": "result"
+                            },
+                            {
+                              "int": 1
+                            }
+                          ],
+                          "op": "<"
+                        }
+                      ],
+                      "op": "and"
+                    },
+                    "else": [],
+                    "then": [
+                      {
+                        "assign": [
+                          "result",
+                          {
+                            "int": 1
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                }
+              ],
+              "then": [
+                {
+                  "assign": [
+                    "result",
+                    {
+                      "int": 1
+                    }
+                  ]
+                }
+              ]
+            }
+          }
+        ],
+        "then": [
+          {
+            "assign": [
+              "result",
+              {
+                "int": 0
+              }
+            ]
+          }
+        ]
+      }
+    }
+  ],
+  "ensures": [
+    {
+      "call": {
+        "args": [
+          {
+            "var": "result"
+          },
+          {
+            "var": "n"
+          },
+          {
+            "var": "t_v"
+          }
+        ],
+        "fun": "validResult"
+      }
+    },
+    {
+      "call": {
+        "args": [
+          {
+            "var": "result"
+          },
+          {
+            "var": "n"
+          },
+          {
+            "var": "t_v"
+          }
+        ],
+        "fun": "correctForEdgeCases"
+      }
+    }
+  ],
+  "gate": "recursion",
+  "name": "vericoding_da0010__solve",
+  "params": [
+    {
+      "name": "n",
+      "type": "int"
+    },
+    {
+      "name": "t_v",
+      "type": "int"
+    }
+  ],
+  "requires": [
+    {
+      "call": {
+        "args": [
+          {
+            "var": "n"
+          },
+          {
+            "var": "t_v"
+          }
+        ],
+        "fun": "validInput"
+      }
+    }
+  ],
+  "returns": [
+    {
+      "name": "result",
+      "type": "int"
+    }
+  ],
+  "spec_funs": [
+    {
+      "body": {
+        "args": [
+          {
+            "args": [
+              {
+                "var": "n_v"
+              },
+              {
+                "args": [
+                  {
+                    "var": "n_v"
+                  },
+                  {
+                    "int": 1
+                  }
+                ],
+                "op": "+"
+              }
+            ],
+            "op": "*"
+          },
+          {
+            "int": 2
+          }
+        ],
+        "op": "div"
+      },
+      "decreases": {
+        "int": 0
+      },
+      "name": "totalGlasses",
+      "params": [
+        {
+          "name": "n_v",
+          "type": "int"
+        }
+      ],
+      "result": "int"
+    },
+    {
+      "body": {
+        "args": [
+          {
+            "args": [
+              {
+                "args": [
+                  {
+                    "var": "t_v2"
+                  },
+                  {
+                    "int": 0
+                  }
+                ],
+                "op": "=="
+              },
+              {
+                "args": [
+                  {
+                    "var": "result_v"
+                  },
+                  {
+                    "int": 0
+                  }
+                ],
+                "op": "=="
+              }
+            ],
+            "op": "implies"
+          },
+          {
+            "args": [
+              {
+                "args": [
+                  {
+                    "args": [
+                      {
+                        "var": "n_v2"
+                      },
+                      {
+                        "int": 1
+                      }
+                    ],
+                    "op": "=="
+                  },
+                  {
+                    "args": [
+                      {
+                        "var": "t_v2"
+                      },
+                      {
+                        "int": 1
+                      }
+                    ],
+                    "op": ">="
+                  }
+                ],
+                "op": "and"
+              },
+              {
+                "args": [
+                  {
+                    "var": "result_v"
+                  },
+                  {
+                    "int": 1
+                  }
+                ],
+                "op": "=="
+              }
+            ],
+            "op": "implies"
+          },
+          {
+            "args": [
+              {
+                "args": [
+                  {
+                    "args": [
+                      {
+                        "var": "n_v2"
+                      },
+                      {
+                        "int": 1
+                      }
+                    ],
+                    "op": "=="
+                  },
+                  {
+                    "args": [
+                      {
+                        "var": "t_v2"
+                      },
+                      {
+                        "int": 0
+                      }
+                    ],
+                    "op": "=="
+                  }
+                ],
+                "op": "and"
+              },
+              {
+                "args": [
+                  {
+                    "var": "result_v"
+                  },
+                  {
+                    "int": 0
+                  }
+                ],
+                "op": "=="
+              }
+            ],
+            "op": "implies"
+          },
+          {
+            "args": [
+              {
+                "args": [
+                  {
+                    "args": [
+                      {
+                        "var": "t_v2"
+                      },
+                      {
+                        "int": 1
+                      }
+                    ],
+                    "op": ">="
+                  },
+                  {
+                    "args": [
+                      {
+                        "var": "n_v2"
+                      },
+                      {
+                        "int": 1
+                      }
+                    ],
+                    "op": ">"
+                  }
+                ],
+                "op": "and"
+              },
+              {
+                "args": [
+                  {
+                    "var": "result_v"
+                  },
+                  {
+                    "int": 1
+                  }
+                ],
+                "op": ">="
+              }
+            ],
+            "op": "implies"
+          }
+        ],
+        "op": "and"
+      },
+      "decreases": {
+        "int": 0
+      },
+      "name": "correctForEdgeCases",
+      "params": [
+        {
+          "name": "result_v",
+          "type": "int"
+        },
+        {
+          "name": "n_v2",
+          "type": "int"
+        },
+        {
+          "name": "t_v2",
+          "type": "int"
+        }
+      ],
+      "result": "bool"
+    },
+    {
+      "body": {
+        "args": [
+          {
+            "args": [
+              {
+                "args": [
+                  {
+                    "int": 1
+                  },
+                  {
+                    "var": "n_v3"
+                  }
+                ],
+                "op": "<="
+              },
+              {
+                "args": [
+                  {
+                    "var": "n_v3"
+                  },
+                  {
+                    "int": 10
+                  }
+                ],
+                "op": "<="
+              }
+            ],
+            "op": "and"
+          },
+          {
+            "args": [
+              {
+                "args": [
+                  {
+                    "int": 0
+                  },
+                  {
+                    "var": "t_v3"
+                  }
+                ],
+                "op": "<="
+              },
+              {
+                "args": [
+                  {
+                    "var": "t_v3"
+                  },
+                  {
+                    "int": 10000
+                  }
+                ],
+                "op": "<="
+              }
+            ],
+            "op": "and"
+          }
+        ],
+        "op": "and"
+      },
+      "decreases": {
+        "int": 0
+      },
+      "name": "validInput",
+      "params": [
+        {
+          "name": "n_v3",
+          "type": "int"
+        },
+        {
+          "name": "t_v3",
+          "type": "int"
+        }
+      ],
+      "result": "bool"
+    },
+    {
+      "body": {
+        "args": [
+          {
+            "args": [
+              {
+                "var": "result_v2"
+              },
+              {
+                "int": 0
+              }
+            ],
+            "op": ">="
+          },
+          {
+            "args": [
+              {
+                "var": "result_v2"
+              },
+              {
+                "call": {
+                  "args": [
+                    {
+                      "var": "n_v4"
+                    }
+                  ],
+                  "fun": "totalGlasses"
+                }
+              }
+            ],
+            "op": "<="
+          }
+        ],
+        "op": "and"
+      },
+      "decreases": {
+        "int": 0
+      },
+      "name": "validResult",
+      "params": [
+        {
+          "name": "result_v2",
+          "type": "int"
+        },
+        {
+          "name": "n_v4",
+          "type": "int"
+        },
+        {
+          "name": "t_v4",
+          "type": "int"
+        }
+      ],
+      "result": "bool"
+    },
+    {
+      "body": {
+        "ite": {
+          "cond": {
+            "args": [
+              {
+                "var": "a"
+              },
+              {
+                "var": "b"
+              }
+            ],
+            "op": "<="
+          },
+          "else": {
+            "var": "b"
+          },
+          "then": {
+            "var": "a"
+          }
+        }
+      },
+      "decreases": {
+        "int": 0
+      },
+      "name": "min",
+      "params": [
+        {
+          "name": "a",
+          "type": "int"
+        },
+        {
+          "name": "b",
+          "type": "int"
+        }
+      ],
+      "result": "int"
+    }
+  ],
+  "t": 1
+}

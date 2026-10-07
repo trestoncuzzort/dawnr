@@ -1,0 +1,604 @@
+{
+  "body": [
+    {
+      "if": {
+        "cond": {
+          "args": [
+            {
+              "args": [
+                {
+                  "var": "numbers"
+                }
+              ],
+              "op": "len"
+            },
+            {
+              "int": 0
+            }
+          ],
+          "op": "=="
+        },
+        "else": [
+          {
+            "assign": [
+              "res",
+              {
+                "args": [
+                  {
+                    "args": [
+                      {
+                        "var": "numbers"
+                      },
+                      {
+                        "int": 0
+                      }
+                    ],
+                    "op": "at"
+                  }
+                ],
+                "op": "seq"
+              }
+            ]
+          },
+          {
+            "var": {
+              "init": {
+                "int": 1
+              },
+              "name": "i_v2",
+              "type": "int"
+            }
+          },
+          {
+            "while": {
+              "body": [
+                {
+                  "assign": [
+                    "res",
+                    {
+                      "args": [
+                        {
+                          "var": "res"
+                        },
+                        {
+                          "args": [
+                            {
+                              "var": "delim"
+                            },
+                            {
+                              "args": [
+                                {
+                                  "var": "numbers"
+                                },
+                                {
+                                  "var": "i_v2"
+                                }
+                              ],
+                              "op": "at"
+                            }
+                          ],
+                          "op": "seq"
+                        }
+                      ],
+                      "op": "+"
+                    }
+                  ]
+                },
+                {
+                  "assign": [
+                    "i_v2",
+                    {
+                      "args": [
+                        {
+                          "var": "i_v2"
+                        },
+                        {
+                          "int": 1
+                        }
+                      ],
+                      "op": "+"
+                    }
+                  ]
+                }
+              ],
+              "cond": {
+                "args": [
+                  {
+                    "var": "i_v2"
+                  },
+                  {
+                    "args": [
+                      {
+                        "var": "numbers"
+                      }
+                    ],
+                    "op": "len"
+                  }
+                ],
+                "op": "<"
+              },
+              "decreases": {
+                "args": [
+                  {
+                    "args": [
+                      {
+                        "var": "numbers"
+                      }
+                    ],
+                    "op": "len"
+                  },
+                  {
+                    "var": "i_v2"
+                  }
+                ],
+                "op": "-"
+              },
+              "invariants": [
+                {
+                  "args": [
+                    {
+                      "args": [
+                        {
+                          "int": 1
+                        },
+                        {
+                          "var": "i_v2"
+                        }
+                      ],
+                      "op": "<="
+                    },
+                    {
+                      "args": [
+                        {
+                          "var": "i_v2"
+                        },
+                        {
+                          "args": [
+                            {
+                              "var": "numbers"
+                            }
+                          ],
+                          "op": "len"
+                        }
+                      ],
+                      "op": "<="
+                    }
+                  ],
+                  "op": "and"
+                },
+                {
+                  "args": [
+                    {
+                      "args": [
+                        {
+                          "var": "res"
+                        }
+                      ],
+                      "op": "len"
+                    },
+                    {
+                      "args": [
+                        {
+                          "args": [
+                            {
+                              "int": 2
+                            },
+                            {
+                              "var": "i_v2"
+                            }
+                          ],
+                          "op": "*"
+                        },
+                        {
+                          "int": 1
+                        }
+                      ],
+                      "op": "-"
+                    }
+                  ],
+                  "op": "=="
+                },
+                {
+                  "forall": {
+                    "body": {
+                      "args": [
+                        {
+                          "args": [
+                            {
+                              "args": [
+                                {
+                                  "var": "j"
+                                },
+                                {
+                                  "int": 2
+                                }
+                              ],
+                              "op": "mod"
+                            },
+                            {
+                              "int": 0
+                            }
+                          ],
+                          "op": "=="
+                        },
+                        {
+                          "args": [
+                            {
+                              "args": [
+                                {
+                                  "var": "res"
+                                },
+                                {
+                                  "var": "j"
+                                }
+                              ],
+                              "op": "at"
+                            },
+                            {
+                              "args": [
+                                {
+                                  "var": "numbers"
+                                },
+                                {
+                                  "args": [
+                                    {
+                                      "var": "j"
+                                    },
+                                    {
+                                      "int": 2
+                                    }
+                                  ],
+                                  "op": "div"
+                                }
+                              ],
+                              "op": "at"
+                            }
+                          ],
+                          "op": "=="
+                        }
+                      ],
+                      "op": "implies"
+                    },
+                    "hi": {
+                      "args": [
+                        {
+                          "var": "res"
+                        }
+                      ],
+                      "op": "len"
+                    },
+                    "lo": {
+                      "int": 0
+                    },
+                    "var": "j"
+                  }
+                },
+                {
+                  "forall": {
+                    "body": {
+                      "args": [
+                        {
+                          "args": [
+                            {
+                              "args": [
+                                {
+                                  "var": "j_v"
+                                },
+                                {
+                                  "int": 2
+                                }
+                              ],
+                              "op": "mod"
+                            },
+                            {
+                              "int": 1
+                            }
+                          ],
+                          "op": "=="
+                        },
+                        {
+                          "args": [
+                            {
+                              "args": [
+                                {
+                                  "var": "res"
+                                },
+                                {
+                                  "var": "j_v"
+                                }
+                              ],
+                              "op": "at"
+                            },
+                            {
+                              "var": "delim"
+                            }
+                          ],
+                          "op": "=="
+                        }
+                      ],
+                      "op": "implies"
+                    },
+                    "hi": {
+                      "args": [
+                        {
+                          "var": "res"
+                        }
+                      ],
+                      "op": "len"
+                    },
+                    "lo": {
+                      "int": 0
+                    },
+                    "var": "j_v"
+                  }
+                }
+              ]
+            }
+          }
+        ],
+        "then": [
+          {
+            "assign": [
+              "res",
+              {
+                "args": [],
+                "op": "seq"
+              }
+            ]
+          }
+        ]
+      }
+    }
+  ],
+  "ensures": [
+    {
+      "args": [
+        {
+          "args": [
+            {
+              "args": [
+                {
+                  "var": "numbers"
+                }
+              ],
+              "op": "len"
+            },
+            {
+              "int": 0
+            }
+          ],
+          "op": "=="
+        },
+        {
+          "args": [
+            {
+              "args": [
+                {
+                  "var": "res"
+                }
+              ],
+              "op": "len"
+            },
+            {
+              "int": 0
+            }
+          ],
+          "op": "=="
+        }
+      ],
+      "op": "implies"
+    },
+    {
+      "args": [
+        {
+          "args": [
+            {
+              "args": [
+                {
+                  "var": "numbers"
+                }
+              ],
+              "op": "len"
+            },
+            {
+              "int": 0
+            }
+          ],
+          "op": "!="
+        },
+        {
+          "args": [
+            {
+              "args": [
+                {
+                  "var": "res"
+                }
+              ],
+              "op": "len"
+            },
+            {
+              "args": [
+                {
+                  "args": [
+                    {
+                      "int": 2
+                    },
+                    {
+                      "args": [
+                        {
+                          "var": "numbers"
+                        }
+                      ],
+                      "op": "len"
+                    }
+                  ],
+                  "op": "*"
+                },
+                {
+                  "int": 1
+                }
+              ],
+              "op": "-"
+            }
+          ],
+          "op": "=="
+        }
+      ],
+      "op": "implies"
+    },
+    {
+      "forall": {
+        "body": {
+          "args": [
+            {
+              "args": [
+                {
+                  "args": [
+                    {
+                      "var": "i"
+                    },
+                    {
+                      "int": 2
+                    }
+                  ],
+                  "op": "mod"
+                },
+                {
+                  "int": 0
+                }
+              ],
+              "op": "=="
+            },
+            {
+              "args": [
+                {
+                  "args": [
+                    {
+                      "var": "res"
+                    },
+                    {
+                      "var": "i"
+                    }
+                  ],
+                  "op": "at"
+                },
+                {
+                  "args": [
+                    {
+                      "var": "numbers"
+                    },
+                    {
+                      "args": [
+                        {
+                          "var": "i"
+                        },
+                        {
+                          "int": 2
+                        }
+                      ],
+                      "op": "div"
+                    }
+                  ],
+                  "op": "at"
+                }
+              ],
+              "op": "=="
+            }
+          ],
+          "op": "implies"
+        },
+        "hi": {
+          "args": [
+            {
+              "var": "res"
+            }
+          ],
+          "op": "len"
+        },
+        "lo": {
+          "int": 0
+        },
+        "var": "i"
+      }
+    },
+    {
+      "forall": {
+        "body": {
+          "args": [
+            {
+              "args": [
+                {
+                  "args": [
+                    {
+                      "var": "i_v"
+                    },
+                    {
+                      "int": 2
+                    }
+                  ],
+                  "op": "mod"
+                },
+                {
+                  "int": 1
+                }
+              ],
+              "op": "=="
+            },
+            {
+              "args": [
+                {
+                  "args": [
+                    {
+                      "var": "res"
+                    },
+                    {
+                      "var": "i_v"
+                    }
+                  ],
+                  "op": "at"
+                },
+                {
+                  "var": "delim"
+                }
+              ],
+              "op": "=="
+            }
+          ],
+          "op": "implies"
+        },
+        "hi": {
+          "args": [
+            {
+              "var": "res"
+            }
+          ],
+          "op": "len"
+        },
+        "lo": {
+          "int": 0
+        },
+        "var": "i_v"
+      }
+    }
+  ],
+  "gate": "loops",
+  "name": "vericoding_dj0148__intersperse",
+  "params": [
+    {
+      "name": "numbers",
+      "type": "seq"
+    },
+    {
+      "name": "delim",
+      "type": "int"
+    }
+  ],
+  "requires": [],
+  "returns": [
+    {
+      "name": "res",
+      "type": "seq"
+    }
+  ],
+  "t": 1
+}

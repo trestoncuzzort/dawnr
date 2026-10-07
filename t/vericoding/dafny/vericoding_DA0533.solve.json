@@ -1,0 +1,539 @@
+{
+  "body": [
+    {
+      "var": {
+        "init": {
+          "var": "a1"
+        },
+        "name": "max",
+        "type": "int"
+      }
+    },
+    {
+      "var": {
+        "init": {
+          "var": "a1"
+        },
+        "name": "min",
+        "type": "int"
+      }
+    },
+    {
+      "if": {
+        "cond": {
+          "args": [
+            {
+              "var": "a2"
+            },
+            {
+              "var": "max"
+            }
+          ],
+          "op": ">"
+        },
+        "else": [],
+        "then": [
+          {
+            "assign": [
+              "max",
+              {
+                "var": "a2"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "if": {
+        "cond": {
+          "args": [
+            {
+              "var": "a3"
+            },
+            {
+              "var": "max"
+            }
+          ],
+          "op": ">"
+        },
+        "else": [],
+        "then": [
+          {
+            "assign": [
+              "max",
+              {
+                "var": "a3"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "if": {
+        "cond": {
+          "args": [
+            {
+              "var": "a2"
+            },
+            {
+              "var": "min"
+            }
+          ],
+          "op": "<"
+        },
+        "else": [],
+        "then": [
+          {
+            "assign": [
+              "min",
+              {
+                "var": "a2"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "if": {
+        "cond": {
+          "args": [
+            {
+              "var": "a3"
+            },
+            {
+              "var": "min"
+            }
+          ],
+          "op": "<"
+        },
+        "else": [],
+        "then": [
+          {
+            "assign": [
+              "min",
+              {
+                "var": "a3"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "assign": [
+        "result",
+        {
+          "args": [
+            {
+              "var": "max"
+            },
+            {
+              "var": "min"
+            }
+          ],
+          "op": "-"
+        }
+      ]
+    }
+  ],
+  "ensures": [
+    {
+      "args": [
+        {
+          "var": "result"
+        },
+        {
+          "int": 0
+        }
+      ],
+      "op": ">="
+    },
+    {
+      "args": [
+        {
+          "var": "result"
+        },
+        {
+          "call": {
+            "args": [
+              {
+                "var": "a1"
+              },
+              {
+                "var": "a2"
+              },
+              {
+                "var": "a3"
+              }
+            ],
+            "fun": "minimumCost"
+          }
+        }
+      ],
+      "op": "=="
+    }
+  ],
+  "gate": "recursion",
+  "name": "vericoding_da0533__solve",
+  "params": [
+    {
+      "name": "a1",
+      "type": "int"
+    },
+    {
+      "name": "a2",
+      "type": "int"
+    },
+    {
+      "name": "a3",
+      "type": "int"
+    }
+  ],
+  "requires": [
+    {
+      "call": {
+        "args": [
+          {
+            "var": "a1"
+          },
+          {
+            "var": "a2"
+          },
+          {
+            "var": "a3"
+          }
+        ],
+        "fun": "validInput"
+      }
+    }
+  ],
+  "returns": [
+    {
+      "name": "result",
+      "type": "int"
+    }
+  ],
+  "spec_funs": [
+    {
+      "body": {
+        "args": [
+          {
+            "args": [
+              {
+                "args": [
+                  {
+                    "int": 1
+                  },
+                  {
+                    "var": "a1_v"
+                  }
+                ],
+                "op": "<="
+              },
+              {
+                "args": [
+                  {
+                    "var": "a1_v"
+                  },
+                  {
+                    "int": 100
+                  }
+                ],
+                "op": "<="
+              }
+            ],
+            "op": "and"
+          },
+          {
+            "args": [
+              {
+                "args": [
+                  {
+                    "int": 1
+                  },
+                  {
+                    "var": "a2_v"
+                  }
+                ],
+                "op": "<="
+              },
+              {
+                "args": [
+                  {
+                    "var": "a2_v"
+                  },
+                  {
+                    "int": 100
+                  }
+                ],
+                "op": "<="
+              }
+            ],
+            "op": "and"
+          },
+          {
+            "args": [
+              {
+                "args": [
+                  {
+                    "int": 1
+                  },
+                  {
+                    "var": "a3_v"
+                  }
+                ],
+                "op": "<="
+              },
+              {
+                "args": [
+                  {
+                    "var": "a3_v"
+                  },
+                  {
+                    "int": 100
+                  }
+                ],
+                "op": "<="
+              }
+            ],
+            "op": "and"
+          }
+        ],
+        "op": "and"
+      },
+      "decreases": {
+        "int": 0
+      },
+      "name": "validInput",
+      "params": [
+        {
+          "name": "a1_v",
+          "type": "int"
+        },
+        {
+          "name": "a2_v",
+          "type": "int"
+        },
+        {
+          "name": "a3_v",
+          "type": "int"
+        }
+      ],
+      "result": "bool"
+    },
+    {
+      "body": {
+        "ite": {
+          "cond": {
+            "args": [
+              {
+                "args": [
+                  {
+                    "var": "a1_v2"
+                  },
+                  {
+                    "var": "a2_v2"
+                  }
+                ],
+                "op": "<="
+              },
+              {
+                "args": [
+                  {
+                    "var": "a1_v2"
+                  },
+                  {
+                    "var": "a3_v2"
+                  }
+                ],
+                "op": "<="
+              }
+            ],
+            "op": "and"
+          },
+          "else": {
+            "ite": {
+              "cond": {
+                "args": [
+                  {
+                    "var": "a2_v2"
+                  },
+                  {
+                    "var": "a3_v2"
+                  }
+                ],
+                "op": "<="
+              },
+              "else": {
+                "var": "a3_v2"
+              },
+              "then": {
+                "var": "a2_v2"
+              }
+            }
+          },
+          "then": {
+            "var": "a1_v2"
+          }
+        }
+      },
+      "decreases": {
+        "int": 0
+      },
+      "name": "minOfThree",
+      "params": [
+        {
+          "name": "a1_v2",
+          "type": "int"
+        },
+        {
+          "name": "a2_v2",
+          "type": "int"
+        },
+        {
+          "name": "a3_v2",
+          "type": "int"
+        }
+      ],
+      "result": "int"
+    },
+    {
+      "body": {
+        "ite": {
+          "cond": {
+            "args": [
+              {
+                "args": [
+                  {
+                    "var": "a1_v3"
+                  },
+                  {
+                    "var": "a2_v3"
+                  }
+                ],
+                "op": ">="
+              },
+              {
+                "args": [
+                  {
+                    "var": "a1_v3"
+                  },
+                  {
+                    "var": "a3_v3"
+                  }
+                ],
+                "op": ">="
+              }
+            ],
+            "op": "and"
+          },
+          "else": {
+            "ite": {
+              "cond": {
+                "args": [
+                  {
+                    "var": "a2_v3"
+                  },
+                  {
+                    "var": "a3_v3"
+                  }
+                ],
+                "op": ">="
+              },
+              "else": {
+                "var": "a3_v3"
+              },
+              "then": {
+                "var": "a2_v3"
+              }
+            }
+          },
+          "then": {
+            "var": "a1_v3"
+          }
+        }
+      },
+      "decreases": {
+        "int": 0
+      },
+      "name": "maxOfThree",
+      "params": [
+        {
+          "name": "a1_v3",
+          "type": "int"
+        },
+        {
+          "name": "a2_v3",
+          "type": "int"
+        },
+        {
+          "name": "a3_v3",
+          "type": "int"
+        }
+      ],
+      "result": "int"
+    },
+    {
+      "body": {
+        "args": [
+          {
+            "call": {
+              "args": [
+                {
+                  "var": "a1_v4"
+                },
+                {
+                  "var": "a2_v4"
+                },
+                {
+                  "var": "a3_v4"
+                }
+              ],
+              "fun": "maxOfThree"
+            }
+          },
+          {
+            "call": {
+              "args": [
+                {
+                  "var": "a1_v4"
+                },
+                {
+                  "var": "a2_v4"
+                },
+                {
+                  "var": "a3_v4"
+                }
+              ],
+              "fun": "minOfThree"
+            }
+          }
+        ],
+        "op": "-"
+      },
+      "decreases": {
+        "int": 0
+      },
+      "name": "minimumCost",
+      "params": [
+        {
+          "name": "a1_v4",
+          "type": "int"
+        },
+        {
+          "name": "a2_v4",
+          "type": "int"
+        },
+        {
+          "name": "a3_v4",
+          "type": "int"
+        }
+      ],
+      "result": "int"
+    }
+  ],
+  "t": 1
+}

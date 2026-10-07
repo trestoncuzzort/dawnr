@@ -1,0 +1,547 @@
+{
+  "body": [
+    {
+      "var": {
+        "init": {
+          "call": {
+            "args": [
+              {
+                "var": "x"
+              },
+              {
+                "var": "a"
+              }
+            ],
+            "fun": "distance"
+          }
+        },
+        "name": "distA",
+        "type": "int"
+      }
+    },
+    {
+      "var": {
+        "init": {
+          "call": {
+            "args": [
+              {
+                "var": "x"
+              },
+              {
+                "var": "b"
+              }
+            ],
+            "fun": "distance"
+          }
+        },
+        "name": "distB",
+        "type": "int"
+      }
+    },
+    {
+      "if": {
+        "cond": {
+          "args": [
+            {
+              "var": "distA"
+            },
+            {
+              "var": "distB"
+            }
+          ],
+          "op": "<"
+        },
+        "else": [
+          {
+            "assign": [
+              "result",
+              {
+                "args": [
+                  {
+                    "int": 66
+                  }
+                ],
+                "op": "seq"
+              }
+            ]
+          }
+        ],
+        "then": [
+          {
+            "assign": [
+              "result",
+              {
+                "args": [
+                  {
+                    "int": 65
+                  }
+                ],
+                "op": "seq"
+              }
+            ]
+          }
+        ]
+      }
+    }
+  ],
+  "ensures": [
+    {
+      "args": [
+        {
+          "args": [
+            {
+              "var": "result"
+            },
+            {
+              "args": [
+                {
+                  "int": 65
+                }
+              ],
+              "op": "seq"
+            }
+          ],
+          "op": "=="
+        },
+        {
+          "args": [
+            {
+              "var": "result"
+            },
+            {
+              "args": [
+                {
+                  "int": 66
+                }
+              ],
+              "op": "seq"
+            }
+          ],
+          "op": "=="
+        }
+      ],
+      "op": "or"
+    },
+    {
+      "call": {
+        "args": [
+          {
+            "var": "x"
+          },
+          {
+            "var": "a"
+          },
+          {
+            "var": "b"
+          },
+          {
+            "var": "result"
+          }
+        ],
+        "fun": "correctResult"
+      }
+    }
+  ],
+  "gate": "recursion",
+  "name": "vericoding_da0672__solve",
+  "params": [
+    {
+      "name": "x",
+      "type": "int"
+    },
+    {
+      "name": "a",
+      "type": "int"
+    },
+    {
+      "name": "b",
+      "type": "int"
+    }
+  ],
+  "requires": [
+    {
+      "call": {
+        "args": [
+          {
+            "var": "x"
+          },
+          {
+            "var": "a"
+          },
+          {
+            "var": "b"
+          }
+        ],
+        "fun": "validInput"
+      }
+    }
+  ],
+  "returns": [
+    {
+      "name": "result",
+      "type": "seq"
+    }
+  ],
+  "spec_funs": [
+    {
+      "body": {
+        "ite": {
+          "cond": {
+            "args": [
+              {
+                "var": "s"
+              },
+              {
+                "var": "t_v"
+              }
+            ],
+            "op": ">="
+          },
+          "else": {
+            "args": [
+              {
+                "var": "t_v"
+              },
+              {
+                "var": "s"
+              }
+            ],
+            "op": "-"
+          },
+          "then": {
+            "args": [
+              {
+                "var": "s"
+              },
+              {
+                "var": "t_v"
+              }
+            ],
+            "op": "-"
+          }
+        }
+      },
+      "decreases": {
+        "int": 0
+      },
+      "name": "distance",
+      "params": [
+        {
+          "name": "s",
+          "type": "int"
+        },
+        {
+          "name": "t_v",
+          "type": "int"
+        }
+      ],
+      "result": "int"
+    },
+    {
+      "body": {
+        "args": [
+          {
+            "args": [
+              {
+                "args": [
+                  {
+                    "int": 1
+                  },
+                  {
+                    "var": "x_v"
+                  }
+                ],
+                "op": "<="
+              },
+              {
+                "args": [
+                  {
+                    "var": "x_v"
+                  },
+                  {
+                    "int": 1000
+                  }
+                ],
+                "op": "<="
+              }
+            ],
+            "op": "and"
+          },
+          {
+            "args": [
+              {
+                "args": [
+                  {
+                    "int": 1
+                  },
+                  {
+                    "var": "a_v"
+                  }
+                ],
+                "op": "<="
+              },
+              {
+                "args": [
+                  {
+                    "var": "a_v"
+                  },
+                  {
+                    "int": 1000
+                  }
+                ],
+                "op": "<="
+              }
+            ],
+            "op": "and"
+          },
+          {
+            "args": [
+              {
+                "args": [
+                  {
+                    "int": 1
+                  },
+                  {
+                    "var": "b_v"
+                  }
+                ],
+                "op": "<="
+              },
+              {
+                "args": [
+                  {
+                    "var": "b_v"
+                  },
+                  {
+                    "int": 1000
+                  }
+                ],
+                "op": "<="
+              }
+            ],
+            "op": "and"
+          },
+          {
+            "args": [
+              {
+                "var": "x_v"
+              },
+              {
+                "var": "a_v"
+              }
+            ],
+            "op": "!="
+          },
+          {
+            "args": [
+              {
+                "var": "x_v"
+              },
+              {
+                "var": "b_v"
+              }
+            ],
+            "op": "!="
+          },
+          {
+            "args": [
+              {
+                "var": "a_v"
+              },
+              {
+                "var": "b_v"
+              }
+            ],
+            "op": "!="
+          },
+          {
+            "args": [
+              {
+                "call": {
+                  "args": [
+                    {
+                      "var": "x_v"
+                    },
+                    {
+                      "var": "a_v"
+                    }
+                  ],
+                  "fun": "distance"
+                }
+              },
+              {
+                "call": {
+                  "args": [
+                    {
+                      "var": "x_v"
+                    },
+                    {
+                      "var": "b_v"
+                    }
+                  ],
+                  "fun": "distance"
+                }
+              }
+            ],
+            "op": "!="
+          }
+        ],
+        "op": "and"
+      },
+      "decreases": {
+        "int": 0
+      },
+      "name": "validInput",
+      "params": [
+        {
+          "name": "x_v",
+          "type": "int"
+        },
+        {
+          "name": "a_v",
+          "type": "int"
+        },
+        {
+          "name": "b_v",
+          "type": "int"
+        }
+      ],
+      "result": "bool"
+    },
+    {
+      "body": {
+        "args": [
+          {
+            "args": [
+              {
+                "args": [
+                  {
+                    "var": "result_v"
+                  },
+                  {
+                    "args": [
+                      {
+                        "int": 65
+                      }
+                    ],
+                    "op": "seq"
+                  }
+                ],
+                "op": "=="
+              },
+              {
+                "args": [
+                  {
+                    "call": {
+                      "args": [
+                        {
+                          "var": "x_v2"
+                        },
+                        {
+                          "var": "a_v2"
+                        }
+                      ],
+                      "fun": "distance"
+                    }
+                  },
+                  {
+                    "call": {
+                      "args": [
+                        {
+                          "var": "x_v2"
+                        },
+                        {
+                          "var": "b_v2"
+                        }
+                      ],
+                      "fun": "distance"
+                    }
+                  }
+                ],
+                "op": "<"
+              }
+            ],
+            "op": "=="
+          },
+          {
+            "args": [
+              {
+                "args": [
+                  {
+                    "var": "result_v"
+                  },
+                  {
+                    "args": [
+                      {
+                        "int": 66
+                      }
+                    ],
+                    "op": "seq"
+                  }
+                ],
+                "op": "=="
+              },
+              {
+                "args": [
+                  {
+                    "call": {
+                      "args": [
+                        {
+                          "var": "x_v2"
+                        },
+                        {
+                          "var": "b_v2"
+                        }
+                      ],
+                      "fun": "distance"
+                    }
+                  },
+                  {
+                    "call": {
+                      "args": [
+                        {
+                          "var": "x_v2"
+                        },
+                        {
+                          "var": "a_v2"
+                        }
+                      ],
+                      "fun": "distance"
+                    }
+                  }
+                ],
+                "op": "<"
+              }
+            ],
+            "op": "=="
+          }
+        ],
+        "op": "and"
+      },
+      "decreases": {
+        "int": 0
+      },
+      "name": "correctResult",
+      "params": [
+        {
+          "name": "x_v2",
+          "type": "int"
+        },
+        {
+          "name": "a_v2",
+          "type": "int"
+        },
+        {
+          "name": "b_v2",
+          "type": "int"
+        },
+        {
+          "name": "result_v",
+          "type": "seq"
+        }
+      ],
+      "result": "bool"
+    }
+  ],
+  "t": 1
+}

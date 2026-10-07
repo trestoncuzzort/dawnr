@@ -1,0 +1,1569 @@
+{
+  "body": [
+    {
+      "assign": [
+        "result",
+        {
+          "call": {
+            "args": [
+              {
+                "var": "a"
+              },
+              {
+                "var": "b"
+              }
+            ],
+            "fun": "minStripsNeeded"
+          }
+        }
+      ]
+    },
+    {
+      "lemma": {
+        "args": [
+          {
+            "var": "a"
+          },
+          {
+            "var": "b"
+          }
+        ],
+        "name": "minStripsCorrectness"
+      }
+    }
+  ],
+  "ensures": [
+    {
+      "call": {
+        "args": [
+          {
+            "var": "a"
+          },
+          {
+            "var": "b"
+          },
+          {
+            "var": "result"
+          }
+        ],
+        "fun": "correctResult"
+      }
+    }
+  ],
+  "gate": "recursion",
+  "lemmas": [
+    {
+      "body": [
+        {
+          "if": {
+            "cond": {
+              "args": [
+                {
+                  "var": "b_v4"
+                },
+                {
+                  "int": 1
+                }
+              ],
+              "op": "<="
+            },
+            "else": [
+              {
+                "assert": {
+                  "args": [
+                    {
+                      "call": {
+                        "args": [
+                          {
+                            "var": "a_v5"
+                          },
+                          {
+                            "var": "b_v4"
+                          }
+                        ],
+                        "fun": "minStripsNeeded"
+                      }
+                    },
+                    {
+                      "call": {
+                        "args": [
+                          {
+                            "args": [
+                              {
+                                "var": "b_v4"
+                              },
+                              {
+                                "int": 1
+                              }
+                            ],
+                            "op": "-"
+                          },
+                          {
+                            "args": [
+                              {
+                                "var": "a_v5"
+                              },
+                              {
+                                "int": 1
+                              }
+                            ],
+                            "op": "-"
+                          }
+                        ],
+                        "fun": "ceilingDivision"
+                      }
+                    }
+                  ],
+                  "op": "=="
+                }
+              },
+              {
+                "if": {
+                  "cond": {
+                    "args": [
+                      {
+                        "args": [
+                          {
+                            "args": [
+                              {
+                                "var": "b_v4"
+                              },
+                              {
+                                "int": 1
+                              }
+                            ],
+                            "op": "-"
+                          },
+                          {
+                            "args": [
+                              {
+                                "var": "a_v5"
+                              },
+                              {
+                                "int": 1
+                              }
+                            ],
+                            "op": "-"
+                          }
+                        ],
+                        "op": "mod"
+                      },
+                      {
+                        "int": 0
+                      }
+                    ],
+                    "op": "=="
+                  },
+                  "else": [
+                    {
+                      "assert": {
+                        "args": [
+                          {
+                            "args": [
+                              {
+                                "var": "b_v4"
+                              },
+                              {
+                                "int": 1
+                              }
+                            ],
+                            "op": "-"
+                          },
+                          {
+                            "int": 0
+                          }
+                        ],
+                        "op": ">="
+                      }
+                    },
+                    {
+                      "assert": {
+                        "args": [
+                          {
+                            "call": {
+                              "args": [
+                                {
+                                  "var": "a_v5"
+                                },
+                                {
+                                  "var": "b_v4"
+                                }
+                              ],
+                              "fun": "minStripsNeeded"
+                            }
+                          },
+                          {
+                            "args": [
+                              {
+                                "args": [
+                                  {
+                                    "args": [
+                                      {
+                                        "var": "b_v4"
+                                      },
+                                      {
+                                        "int": 1
+                                      }
+                                    ],
+                                    "op": "-"
+                                  },
+                                  {
+                                    "args": [
+                                      {
+                                        "var": "a_v5"
+                                      },
+                                      {
+                                        "int": 1
+                                      }
+                                    ],
+                                    "op": "-"
+                                  }
+                                ],
+                                "op": "div"
+                              },
+                              {
+                                "int": 1
+                              }
+                            ],
+                            "op": "+"
+                          }
+                        ],
+                        "op": "=="
+                      }
+                    },
+                    {
+                      "assert": {
+                        "args": [
+                          {
+                            "args": [
+                              {
+                                "call": {
+                                  "args": [
+                                    {
+                                      "var": "a_v5"
+                                    },
+                                    {
+                                      "var": "b_v4"
+                                    }
+                                  ],
+                                  "fun": "minStripsNeeded"
+                                }
+                              },
+                              {
+                                "args": [
+                                  {
+                                    "var": "a_v5"
+                                  },
+                                  {
+                                    "int": 1
+                                  }
+                                ],
+                                "op": "-"
+                              }
+                            ],
+                            "op": "*"
+                          },
+                          {
+                            "args": [
+                              {
+                                "var": "b_v4"
+                              },
+                              {
+                                "int": 1
+                              }
+                            ],
+                            "op": "-"
+                          }
+                        ],
+                        "op": ">"
+                      }
+                    },
+                    {
+                      "assert": {
+                        "args": [
+                          {
+                            "args": [
+                              {
+                                "call": {
+                                  "args": [
+                                    {
+                                      "call": {
+                                        "args": [
+                                          {
+                                            "var": "a_v5"
+                                          },
+                                          {
+                                            "var": "b_v4"
+                                          }
+                                        ],
+                                        "fun": "minStripsNeeded"
+                                      }
+                                    },
+                                    {
+                                      "var": "a_v5"
+                                    }
+                                  ],
+                                  "fun": "socketsAfterStrips"
+                                }
+                              },
+                              {
+                                "args": [
+                                  {
+                                    "int": 1
+                                  },
+                                  {
+                                    "args": [
+                                      {
+                                        "call": {
+                                          "args": [
+                                            {
+                                              "var": "a_v5"
+                                            },
+                                            {
+                                              "var": "b_v4"
+                                            }
+                                          ],
+                                          "fun": "minStripsNeeded"
+                                        }
+                                      },
+                                      {
+                                        "args": [
+                                          {
+                                            "var": "a_v5"
+                                          },
+                                          {
+                                            "int": 1
+                                          }
+                                        ],
+                                        "op": "-"
+                                      }
+                                    ],
+                                    "op": "*"
+                                  }
+                                ],
+                                "op": "+"
+                              }
+                            ],
+                            "op": "=="
+                          },
+                          {
+                            "args": [
+                              {
+                                "args": [
+                                  {
+                                    "int": 1
+                                  },
+                                  {
+                                    "args": [
+                                      {
+                                        "call": {
+                                          "args": [
+                                            {
+                                              "var": "a_v5"
+                                            },
+                                            {
+                                              "var": "b_v4"
+                                            }
+                                          ],
+                                          "fun": "minStripsNeeded"
+                                        }
+                                      },
+                                      {
+                                        "args": [
+                                          {
+                                            "var": "a_v5"
+                                          },
+                                          {
+                                            "int": 1
+                                          }
+                                        ],
+                                        "op": "-"
+                                      }
+                                    ],
+                                    "op": "*"
+                                  }
+                                ],
+                                "op": "+"
+                              },
+                              {
+                                "args": [
+                                  {
+                                    "int": 1
+                                  },
+                                  {
+                                    "args": [
+                                      {
+                                        "var": "b_v4"
+                                      },
+                                      {
+                                        "int": 1
+                                      }
+                                    ],
+                                    "op": "-"
+                                  }
+                                ],
+                                "op": "+"
+                              }
+                            ],
+                            "op": ">"
+                          },
+                          {
+                            "args": [
+                              {
+                                "args": [
+                                  {
+                                    "int": 1
+                                  },
+                                  {
+                                    "args": [
+                                      {
+                                        "var": "b_v4"
+                                      },
+                                      {
+                                        "int": 1
+                                      }
+                                    ],
+                                    "op": "-"
+                                  }
+                                ],
+                                "op": "+"
+                              },
+                              {
+                                "var": "b_v4"
+                              }
+                            ],
+                            "op": "=="
+                          }
+                        ],
+                        "op": "and"
+                      }
+                    }
+                  ],
+                  "then": [
+                    {
+                      "assert": {
+                        "args": [
+                          {
+                            "call": {
+                              "args": [
+                                {
+                                  "var": "a_v5"
+                                },
+                                {
+                                  "var": "b_v4"
+                                }
+                              ],
+                              "fun": "minStripsNeeded"
+                            }
+                          },
+                          {
+                            "args": [
+                              {
+                                "args": [
+                                  {
+                                    "var": "b_v4"
+                                  },
+                                  {
+                                    "int": 1
+                                  }
+                                ],
+                                "op": "-"
+                              },
+                              {
+                                "args": [
+                                  {
+                                    "var": "a_v5"
+                                  },
+                                  {
+                                    "int": 1
+                                  }
+                                ],
+                                "op": "-"
+                              }
+                            ],
+                            "op": "div"
+                          }
+                        ],
+                        "op": "=="
+                      }
+                    },
+                    {
+                      "assert": {
+                        "args": [
+                          {
+                            "args": [
+                              {
+                                "call": {
+                                  "args": [
+                                    {
+                                      "var": "a_v5"
+                                    },
+                                    {
+                                      "var": "b_v4"
+                                    }
+                                  ],
+                                  "fun": "minStripsNeeded"
+                                }
+                              },
+                              {
+                                "args": [
+                                  {
+                                    "var": "a_v5"
+                                  },
+                                  {
+                                    "int": 1
+                                  }
+                                ],
+                                "op": "-"
+                              }
+                            ],
+                            "op": "*"
+                          },
+                          {
+                            "args": [
+                              {
+                                "var": "b_v4"
+                              },
+                              {
+                                "int": 1
+                              }
+                            ],
+                            "op": "-"
+                          }
+                        ],
+                        "op": "=="
+                      }
+                    },
+                    {
+                      "assert": {
+                        "args": [
+                          {
+                            "args": [
+                              {
+                                "call": {
+                                  "args": [
+                                    {
+                                      "call": {
+                                        "args": [
+                                          {
+                                            "var": "a_v5"
+                                          },
+                                          {
+                                            "var": "b_v4"
+                                          }
+                                        ],
+                                        "fun": "minStripsNeeded"
+                                      }
+                                    },
+                                    {
+                                      "var": "a_v5"
+                                    }
+                                  ],
+                                  "fun": "socketsAfterStrips"
+                                }
+                              },
+                              {
+                                "args": [
+                                  {
+                                    "int": 1
+                                  },
+                                  {
+                                    "args": [
+                                      {
+                                        "call": {
+                                          "args": [
+                                            {
+                                              "var": "a_v5"
+                                            },
+                                            {
+                                              "var": "b_v4"
+                                            }
+                                          ],
+                                          "fun": "minStripsNeeded"
+                                        }
+                                      },
+                                      {
+                                        "args": [
+                                          {
+                                            "var": "a_v5"
+                                          },
+                                          {
+                                            "int": 1
+                                          }
+                                        ],
+                                        "op": "-"
+                                      }
+                                    ],
+                                    "op": "*"
+                                  }
+                                ],
+                                "op": "+"
+                              }
+                            ],
+                            "op": "=="
+                          },
+                          {
+                            "args": [
+                              {
+                                "args": [
+                                  {
+                                    "int": 1
+                                  },
+                                  {
+                                    "args": [
+                                      {
+                                        "call": {
+                                          "args": [
+                                            {
+                                              "var": "a_v5"
+                                            },
+                                            {
+                                              "var": "b_v4"
+                                            }
+                                          ],
+                                          "fun": "minStripsNeeded"
+                                        }
+                                      },
+                                      {
+                                        "args": [
+                                          {
+                                            "var": "a_v5"
+                                          },
+                                          {
+                                            "int": 1
+                                          }
+                                        ],
+                                        "op": "-"
+                                      }
+                                    ],
+                                    "op": "*"
+                                  }
+                                ],
+                                "op": "+"
+                              },
+                              {
+                                "args": [
+                                  {
+                                    "int": 1
+                                  },
+                                  {
+                                    "args": [
+                                      {
+                                        "var": "b_v4"
+                                      },
+                                      {
+                                        "int": 1
+                                      }
+                                    ],
+                                    "op": "-"
+                                  }
+                                ],
+                                "op": "+"
+                              }
+                            ],
+                            "op": "=="
+                          },
+                          {
+                            "args": [
+                              {
+                                "args": [
+                                  {
+                                    "int": 1
+                                  },
+                                  {
+                                    "args": [
+                                      {
+                                        "var": "b_v4"
+                                      },
+                                      {
+                                        "int": 1
+                                      }
+                                    ],
+                                    "op": "-"
+                                  }
+                                ],
+                                "op": "+"
+                              },
+                              {
+                                "var": "b_v4"
+                              }
+                            ],
+                            "op": "=="
+                          }
+                        ],
+                        "op": "and"
+                      }
+                    }
+                  ]
+                }
+              },
+              {
+                "if": {
+                  "cond": {
+                    "args": [
+                      {
+                        "call": {
+                          "args": [
+                            {
+                              "var": "a_v5"
+                            },
+                            {
+                              "var": "b_v4"
+                            }
+                          ],
+                          "fun": "minStripsNeeded"
+                        }
+                      },
+                      {
+                        "int": 0
+                      }
+                    ],
+                    "op": ">"
+                  },
+                  "else": [],
+                  "then": [
+                    {
+                      "assert": {
+                        "args": [
+                          {
+                            "args": [
+                              {
+                                "args": [
+                                  {
+                                    "call": {
+                                      "args": [
+                                        {
+                                          "var": "a_v5"
+                                        },
+                                        {
+                                          "var": "b_v4"
+                                        }
+                                      ],
+                                      "fun": "minStripsNeeded"
+                                    }
+                                  },
+                                  {
+                                    "int": 1
+                                  }
+                                ],
+                                "op": "-"
+                              },
+                              {
+                                "args": [
+                                  {
+                                    "var": "a_v5"
+                                  },
+                                  {
+                                    "int": 1
+                                  }
+                                ],
+                                "op": "-"
+                              }
+                            ],
+                            "op": "*"
+                          },
+                          {
+                            "args": [
+                              {
+                                "var": "b_v4"
+                              },
+                              {
+                                "int": 1
+                              }
+                            ],
+                            "op": "-"
+                          }
+                        ],
+                        "op": "<"
+                      }
+                    },
+                    {
+                      "assert": {
+                        "args": [
+                          {
+                            "args": [
+                              {
+                                "call": {
+                                  "args": [
+                                    {
+                                      "args": [
+                                        {
+                                          "call": {
+                                            "args": [
+                                              {
+                                                "var": "a_v5"
+                                              },
+                                              {
+                                                "var": "b_v4"
+                                              }
+                                            ],
+                                            "fun": "minStripsNeeded"
+                                          }
+                                        },
+                                        {
+                                          "int": 1
+                                        }
+                                      ],
+                                      "op": "-"
+                                    },
+                                    {
+                                      "var": "a_v5"
+                                    }
+                                  ],
+                                  "fun": "socketsAfterStrips"
+                                }
+                              },
+                              {
+                                "args": [
+                                  {
+                                    "int": 1
+                                  },
+                                  {
+                                    "args": [
+                                      {
+                                        "args": [
+                                          {
+                                            "call": {
+                                              "args": [
+                                                {
+                                                  "var": "a_v5"
+                                                },
+                                                {
+                                                  "var": "b_v4"
+                                                }
+                                              ],
+                                              "fun": "minStripsNeeded"
+                                            }
+                                          },
+                                          {
+                                            "int": 1
+                                          }
+                                        ],
+                                        "op": "-"
+                                      },
+                                      {
+                                        "args": [
+                                          {
+                                            "var": "a_v5"
+                                          },
+                                          {
+                                            "int": 1
+                                          }
+                                        ],
+                                        "op": "-"
+                                      }
+                                    ],
+                                    "op": "*"
+                                  }
+                                ],
+                                "op": "+"
+                              }
+                            ],
+                            "op": "=="
+                          },
+                          {
+                            "args": [
+                              {
+                                "args": [
+                                  {
+                                    "int": 1
+                                  },
+                                  {
+                                    "args": [
+                                      {
+                                        "args": [
+                                          {
+                                            "call": {
+                                              "args": [
+                                                {
+                                                  "var": "a_v5"
+                                                },
+                                                {
+                                                  "var": "b_v4"
+                                                }
+                                              ],
+                                              "fun": "minStripsNeeded"
+                                            }
+                                          },
+                                          {
+                                            "int": 1
+                                          }
+                                        ],
+                                        "op": "-"
+                                      },
+                                      {
+                                        "args": [
+                                          {
+                                            "var": "a_v5"
+                                          },
+                                          {
+                                            "int": 1
+                                          }
+                                        ],
+                                        "op": "-"
+                                      }
+                                    ],
+                                    "op": "*"
+                                  }
+                                ],
+                                "op": "+"
+                              },
+                              {
+                                "args": [
+                                  {
+                                    "int": 1
+                                  },
+                                  {
+                                    "args": [
+                                      {
+                                        "var": "b_v4"
+                                      },
+                                      {
+                                        "int": 1
+                                      }
+                                    ],
+                                    "op": "-"
+                                  }
+                                ],
+                                "op": "+"
+                              }
+                            ],
+                            "op": "<"
+                          },
+                          {
+                            "args": [
+                              {
+                                "args": [
+                                  {
+                                    "int": 1
+                                  },
+                                  {
+                                    "args": [
+                                      {
+                                        "var": "b_v4"
+                                      },
+                                      {
+                                        "int": 1
+                                      }
+                                    ],
+                                    "op": "-"
+                                  }
+                                ],
+                                "op": "+"
+                              },
+                              {
+                                "var": "b_v4"
+                              }
+                            ],
+                            "op": "=="
+                          }
+                        ],
+                        "op": "and"
+                      }
+                    }
+                  ]
+                }
+              }
+            ],
+            "then": [
+              {
+                "assert": {
+                  "args": [
+                    {
+                      "call": {
+                        "args": [
+                          {
+                            "var": "a_v5"
+                          },
+                          {
+                            "var": "b_v4"
+                          }
+                        ],
+                        "fun": "minStripsNeeded"
+                      }
+                    },
+                    {
+                      "int": 0
+                    }
+                  ],
+                  "op": "=="
+                }
+              },
+              {
+                "assert": {
+                  "args": [
+                    {
+                      "args": [
+                        {
+                          "call": {
+                            "args": [
+                              {
+                                "int": 0
+                              },
+                              {
+                                "var": "a_v5"
+                              }
+                            ],
+                            "fun": "socketsAfterStrips"
+                          }
+                        },
+                        {
+                          "int": 1
+                        }
+                      ],
+                      "op": "=="
+                    },
+                    {
+                      "args": [
+                        {
+                          "int": 1
+                        },
+                        {
+                          "var": "b_v4"
+                        }
+                      ],
+                      "op": ">="
+                    }
+                  ],
+                  "op": "and"
+                }
+              }
+            ]
+          }
+        }
+      ],
+      "ensures": [
+        {
+          "call": {
+            "args": [
+              {
+                "var": "a_v5"
+              },
+              {
+                "var": "b_v4"
+              },
+              {
+                "call": {
+                  "args": [
+                    {
+                      "var": "a_v5"
+                    },
+                    {
+                      "var": "b_v4"
+                    }
+                  ],
+                  "fun": "minStripsNeeded"
+                }
+              }
+            ],
+            "fun": "correctResult"
+          }
+        }
+      ],
+      "name": "minStripsCorrectness",
+      "params": [
+        {
+          "name": "a_v5",
+          "type": "int"
+        },
+        {
+          "name": "b_v4",
+          "type": "int"
+        }
+      ],
+      "requires": [
+        {
+          "call": {
+            "args": [
+              {
+                "var": "a_v5"
+              },
+              {
+                "var": "b_v4"
+              }
+            ],
+            "fun": "validInput"
+          }
+        }
+      ]
+    }
+  ],
+  "name": "vericoding_da0505__solve",
+  "params": [
+    {
+      "name": "a",
+      "type": "int"
+    },
+    {
+      "name": "b",
+      "type": "int"
+    }
+  ],
+  "requires": [
+    {
+      "call": {
+        "args": [
+          {
+            "var": "a"
+          },
+          {
+            "var": "b"
+          }
+        ],
+        "fun": "validInput"
+      }
+    }
+  ],
+  "returns": [
+    {
+      "name": "result",
+      "type": "int"
+    }
+  ],
+  "spec_funs": [
+    {
+      "body": {
+        "args": [
+          {
+            "args": [
+              {
+                "var": "a_v"
+              },
+              {
+                "int": 1
+              }
+            ],
+            "op": ">"
+          },
+          {
+            "args": [
+              {
+                "var": "b_v"
+              },
+              {
+                "int": 0
+              }
+            ],
+            "op": ">="
+          }
+        ],
+        "op": "and"
+      },
+      "decreases": {
+        "int": 0
+      },
+      "name": "validInput",
+      "params": [
+        {
+          "name": "a_v",
+          "type": "int"
+        },
+        {
+          "name": "b_v",
+          "type": "int"
+        }
+      ],
+      "result": "bool"
+    },
+    {
+      "body": {
+        "ite": {
+          "cond": {
+            "args": [
+              {
+                "var": "y"
+              },
+              {
+                "int": 0
+              }
+            ],
+            "op": ">"
+          },
+          "else": {
+            "int": 0
+          },
+          "then": {
+            "ite": {
+              "cond": {
+                "args": [
+                  {
+                    "args": [
+                      {
+                        "var": "x"
+                      },
+                      {
+                        "var": "y"
+                      }
+                    ],
+                    "op": "mod"
+                  },
+                  {
+                    "int": 0
+                  }
+                ],
+                "op": "=="
+              },
+              "else": {
+                "ite": {
+                  "cond": {
+                    "args": [
+                      {
+                        "var": "x"
+                      },
+                      {
+                        "int": 0
+                      }
+                    ],
+                    "op": ">="
+                  },
+                  "else": {
+                    "args": [
+                      {
+                        "var": "x"
+                      },
+                      {
+                        "var": "y"
+                      }
+                    ],
+                    "op": "div"
+                  },
+                  "then": {
+                    "args": [
+                      {
+                        "args": [
+                          {
+                            "var": "x"
+                          },
+                          {
+                            "var": "y"
+                          }
+                        ],
+                        "op": "div"
+                      },
+                      {
+                        "int": 1
+                      }
+                    ],
+                    "op": "+"
+                  }
+                }
+              },
+              "then": {
+                "args": [
+                  {
+                    "var": "x"
+                  },
+                  {
+                    "var": "y"
+                  }
+                ],
+                "op": "div"
+              }
+            }
+          }
+        }
+      },
+      "decreases": {
+        "int": 0
+      },
+      "name": "ceilingDivision",
+      "params": [
+        {
+          "name": "x",
+          "type": "int"
+        },
+        {
+          "name": "y",
+          "type": "int"
+        }
+      ],
+      "result": "int"
+    },
+    {
+      "body": {
+        "ite": {
+          "cond": {
+            "call": {
+              "args": [
+                {
+                  "var": "a_v2"
+                },
+                {
+                  "var": "b_v2"
+                }
+              ],
+              "fun": "validInput"
+            }
+          },
+          "else": {
+            "int": 0
+          },
+          "then": {
+            "ite": {
+              "cond": {
+                "args": [
+                  {
+                    "var": "b_v2"
+                  },
+                  {
+                    "int": 1
+                  }
+                ],
+                "op": "<="
+              },
+              "else": {
+                "call": {
+                  "args": [
+                    {
+                      "args": [
+                        {
+                          "var": "b_v2"
+                        },
+                        {
+                          "int": 1
+                        }
+                      ],
+                      "op": "-"
+                    },
+                    {
+                      "args": [
+                        {
+                          "var": "a_v2"
+                        },
+                        {
+                          "int": 1
+                        }
+                      ],
+                      "op": "-"
+                    }
+                  ],
+                  "fun": "ceilingDivision"
+                }
+              },
+              "then": {
+                "int": 0
+              }
+            }
+          }
+        }
+      },
+      "decreases": {
+        "int": 0
+      },
+      "name": "minStripsNeeded",
+      "params": [
+        {
+          "name": "a_v2",
+          "type": "int"
+        },
+        {
+          "name": "b_v2",
+          "type": "int"
+        }
+      ],
+      "result": "int"
+    },
+    {
+      "body": {
+        "ite": {
+          "cond": {
+            "args": [
+              {
+                "args": [
+                  {
+                    "var": "a_v3"
+                  },
+                  {
+                    "int": 1
+                  }
+                ],
+                "op": ">"
+              },
+              {
+                "args": [
+                  {
+                    "var": "strips"
+                  },
+                  {
+                    "int": 0
+                  }
+                ],
+                "op": ">="
+              }
+            ],
+            "op": "and"
+          },
+          "else": {
+            "int": 0
+          },
+          "then": {
+            "args": [
+              {
+                "int": 1
+              },
+              {
+                "args": [
+                  {
+                    "var": "strips"
+                  },
+                  {
+                    "args": [
+                      {
+                        "var": "a_v3"
+                      },
+                      {
+                        "int": 1
+                      }
+                    ],
+                    "op": "-"
+                  }
+                ],
+                "op": "*"
+              }
+            ],
+            "op": "+"
+          }
+        }
+      },
+      "decreases": {
+        "int": 0
+      },
+      "name": "socketsAfterStrips",
+      "params": [
+        {
+          "name": "strips",
+          "type": "int"
+        },
+        {
+          "name": "a_v3",
+          "type": "int"
+        }
+      ],
+      "result": "int"
+    },
+    {
+      "body": {
+        "ite": {
+          "cond": {
+            "call": {
+              "args": [
+                {
+                  "var": "a_v4"
+                },
+                {
+                  "var": "b_v3"
+                }
+              ],
+              "fun": "validInput"
+            }
+          },
+          "else": {
+            "bool": false
+          },
+          "then": {
+            "args": [
+              {
+                "args": [
+                  {
+                    "var": "result_v"
+                  },
+                  {
+                    "int": 0
+                  }
+                ],
+                "op": ">="
+              },
+              {
+                "args": [
+                  {
+                    "call": {
+                      "args": [
+                        {
+                          "var": "result_v"
+                        },
+                        {
+                          "var": "a_v4"
+                        }
+                      ],
+                      "fun": "socketsAfterStrips"
+                    }
+                  },
+                  {
+                    "var": "b_v3"
+                  }
+                ],
+                "op": ">="
+              },
+              {
+                "args": [
+                  {
+                    "args": [
+                      {
+                        "var": "result_v"
+                      },
+                      {
+                        "int": 0
+                      }
+                    ],
+                    "op": "=="
+                  },
+                  {
+                    "args": [
+                      {
+                        "call": {
+                          "args": [
+                            {
+                              "args": [
+                                {
+                                  "var": "result_v"
+                                },
+                                {
+                                  "int": 1
+                                }
+                              ],
+                              "op": "-"
+                            },
+                            {
+                              "var": "a_v4"
+                            }
+                          ],
+                          "fun": "socketsAfterStrips"
+                        }
+                      },
+                      {
+                        "var": "b_v3"
+                      }
+                    ],
+                    "op": "<"
+                  }
+                ],
+                "op": "or"
+              }
+            ],
+            "op": "and"
+          }
+        }
+      },
+      "decreases": {
+        "int": 0
+      },
+      "name": "correctResult",
+      "params": [
+        {
+          "name": "a_v4",
+          "type": "int"
+        },
+        {
+          "name": "b_v3",
+          "type": "int"
+        },
+        {
+          "name": "result_v",
+          "type": "int"
+        }
+      ],
+      "result": "bool"
+    }
+  ],
+  "t": 1
+}

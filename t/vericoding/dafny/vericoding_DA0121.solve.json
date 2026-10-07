@@ -1,0 +1,736 @@
+{
+  "body": [
+    {
+      "var": {
+        "init": {
+          "int": 0
+        },
+        "name": "coconuts",
+        "type": "int"
+      }
+    },
+    {
+      "var": {
+        "init": {
+          "int": 0
+        },
+        "name": "exchange",
+        "type": "int"
+      }
+    },
+    {
+      "var": {
+        "init": {
+          "args": [
+            {
+              "var": "x"
+            },
+            {
+              "var": "z"
+            }
+          ],
+          "op": "mod"
+        },
+        "name": "rx",
+        "type": "int"
+      }
+    },
+    {
+      "var": {
+        "init": {
+          "args": [
+            {
+              "var": "y"
+            },
+            {
+              "var": "z"
+            }
+          ],
+          "op": "mod"
+        },
+        "name": "ry",
+        "type": "int"
+      }
+    },
+    {
+      "var": {
+        "init": {
+          "args": [
+            {
+              "var": "rx"
+            },
+            {
+              "var": "ry"
+            }
+          ],
+          "op": "+"
+        },
+        "name": "s",
+        "type": "int"
+      }
+    },
+    {
+      "if": {
+        "cond": {
+          "args": [
+            {
+              "var": "s"
+            },
+            {
+              "var": "z"
+            }
+          ],
+          "op": "<"
+        },
+        "else": [
+          {
+            "assign": [
+              "coconuts",
+              {
+                "args": [
+                  {
+                    "args": [
+                      {
+                        "args": [
+                          {
+                            "var": "x"
+                          },
+                          {
+                            "var": "z"
+                          }
+                        ],
+                        "op": "div"
+                      },
+                      {
+                        "args": [
+                          {
+                            "var": "y"
+                          },
+                          {
+                            "var": "z"
+                          }
+                        ],
+                        "op": "div"
+                      }
+                    ],
+                    "op": "+"
+                  },
+                  {
+                    "int": 1
+                  }
+                ],
+                "op": "+"
+              }
+            ]
+          },
+          {
+            "if": {
+              "cond": {
+                "args": [
+                  {
+                    "var": "rx"
+                  },
+                  {
+                    "var": "ry"
+                  }
+                ],
+                "op": ">"
+              },
+              "else": [
+                {
+                  "assign": [
+                    "exchange",
+                    {
+                      "args": [
+                        {
+                          "var": "z"
+                        },
+                        {
+                          "var": "ry"
+                        }
+                      ],
+                      "op": "-"
+                    }
+                  ]
+                }
+              ],
+              "then": [
+                {
+                  "assign": [
+                    "exchange",
+                    {
+                      "args": [
+                        {
+                          "var": "z"
+                        },
+                        {
+                          "var": "rx"
+                        }
+                      ],
+                      "op": "-"
+                    }
+                  ]
+                }
+              ]
+            }
+          }
+        ],
+        "then": [
+          {
+            "assign": [
+              "coconuts",
+              {
+                "args": [
+                  {
+                    "args": [
+                      {
+                        "var": "x"
+                      },
+                      {
+                        "var": "z"
+                      }
+                    ],
+                    "op": "div"
+                  },
+                  {
+                    "args": [
+                      {
+                        "var": "y"
+                      },
+                      {
+                        "var": "z"
+                      }
+                    ],
+                    "op": "div"
+                  }
+                ],
+                "op": "+"
+              }
+            ]
+          },
+          {
+            "assign": [
+              "exchange",
+              {
+                "int": 0
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "assign": [
+        "r",
+        {
+          "args": [
+            {
+              "var": "coconuts"
+            },
+            {
+              "var": "exchange"
+            }
+          ],
+          "op": "pair"
+        }
+      ]
+    }
+  ],
+  "ensures": [
+    {
+      "args": [
+        {
+          "args": [
+            {
+              "var": "r"
+            }
+          ],
+          "op": "fst"
+        },
+        {
+          "call": {
+            "args": [
+              {
+                "var": "x"
+              },
+              {
+                "var": "y"
+              },
+              {
+                "var": "z"
+              }
+            ],
+            "fun": "maxCoconuts"
+          }
+        }
+      ],
+      "op": "=="
+    },
+    {
+      "args": [
+        {
+          "args": [
+            {
+              "var": "r"
+            }
+          ],
+          "op": "snd"
+        },
+        {
+          "call": {
+            "args": [
+              {
+                "var": "x"
+              },
+              {
+                "var": "y"
+              },
+              {
+                "var": "z"
+              }
+            ],
+            "fun": "minExchange"
+          }
+        }
+      ],
+      "op": "=="
+    },
+    {
+      "args": [
+        {
+          "args": [
+            {
+              "var": "r"
+            }
+          ],
+          "op": "fst"
+        },
+        {
+          "args": [
+            {
+              "args": [
+                {
+                  "var": "x"
+                },
+                {
+                  "var": "z"
+                }
+              ],
+              "op": "div"
+            },
+            {
+              "args": [
+                {
+                  "var": "y"
+                },
+                {
+                  "var": "z"
+                }
+              ],
+              "op": "div"
+            }
+          ],
+          "op": "+"
+        }
+      ],
+      "op": ">="
+    },
+    {
+      "args": [
+        {
+          "args": [
+            {
+              "var": "r"
+            }
+          ],
+          "op": "fst"
+        },
+        {
+          "args": [
+            {
+              "args": [
+                {
+                  "args": [
+                    {
+                      "var": "x"
+                    },
+                    {
+                      "var": "z"
+                    }
+                  ],
+                  "op": "div"
+                },
+                {
+                  "args": [
+                    {
+                      "var": "y"
+                    },
+                    {
+                      "var": "z"
+                    }
+                  ],
+                  "op": "div"
+                }
+              ],
+              "op": "+"
+            },
+            {
+              "int": 1
+            }
+          ],
+          "op": "+"
+        }
+      ],
+      "op": "<="
+    },
+    {
+      "args": [
+        {
+          "args": [
+            {
+              "var": "r"
+            }
+          ],
+          "op": "snd"
+        },
+        {
+          "int": 0
+        }
+      ],
+      "op": ">="
+    },
+    {
+      "args": [
+        {
+          "args": [
+            {
+              "var": "r"
+            }
+          ],
+          "op": "snd"
+        },
+        {
+          "var": "z"
+        }
+      ],
+      "op": "<"
+    }
+  ],
+  "gate": "recursion",
+  "name": "vericoding_da0121__solve",
+  "params": [
+    {
+      "name": "x",
+      "type": "int"
+    },
+    {
+      "name": "y",
+      "type": "int"
+    },
+    {
+      "name": "z",
+      "type": "int"
+    }
+  ],
+  "requires": [
+    {
+      "call": {
+        "args": [
+          {
+            "var": "x"
+          },
+          {
+            "var": "y"
+          },
+          {
+            "var": "z"
+          }
+        ],
+        "fun": "validInput"
+      }
+    }
+  ],
+  "returns": [
+    {
+      "name": "r",
+      "type": {
+        "pair": [
+          "int",
+          "int"
+        ]
+      }
+    }
+  ],
+  "spec_funs": [
+    {
+      "body": {
+        "args": [
+          {
+            "args": [
+              {
+                "var": "x_v"
+              },
+              {
+                "int": 0
+              }
+            ],
+            "op": ">="
+          },
+          {
+            "args": [
+              {
+                "var": "y_v"
+              },
+              {
+                "int": 0
+              }
+            ],
+            "op": ">="
+          },
+          {
+            "args": [
+              {
+                "var": "z_v"
+              },
+              {
+                "int": 0
+              }
+            ],
+            "op": ">"
+          }
+        ],
+        "op": "and"
+      },
+      "decreases": {
+        "int": 0
+      },
+      "name": "validInput",
+      "params": [
+        {
+          "name": "x_v",
+          "type": "int"
+        },
+        {
+          "name": "y_v",
+          "type": "int"
+        },
+        {
+          "name": "z_v",
+          "type": "int"
+        }
+      ],
+      "result": "bool"
+    },
+    {
+      "body": {
+        "ite": {
+          "cond": {
+            "call": {
+              "args": [
+                {
+                  "var": "x_v2"
+                },
+                {
+                  "var": "y_v2"
+                },
+                {
+                  "var": "z_v2"
+                }
+              ],
+              "fun": "validInput"
+            }
+          },
+          "else": {
+            "int": 0
+          },
+          "then": {
+            "args": [
+              {
+                "args": [
+                  {
+                    "var": "x_v2"
+                  },
+                  {
+                    "var": "y_v2"
+                  }
+                ],
+                "op": "+"
+              },
+              {
+                "var": "z_v2"
+              }
+            ],
+            "op": "div"
+          }
+        }
+      },
+      "decreases": {
+        "int": 0
+      },
+      "name": "maxCoconuts",
+      "params": [
+        {
+          "name": "x_v2",
+          "type": "int"
+        },
+        {
+          "name": "y_v2",
+          "type": "int"
+        },
+        {
+          "name": "z_v2",
+          "type": "int"
+        }
+      ],
+      "result": "int"
+    },
+    {
+      "body": {
+        "ite": {
+          "cond": {
+            "call": {
+              "args": [
+                {
+                  "var": "x_v3"
+                },
+                {
+                  "var": "y_v3"
+                },
+                {
+                  "var": "z_v3"
+                }
+              ],
+              "fun": "validInput"
+            }
+          },
+          "else": {
+            "int": 0
+          },
+          "then": {
+            "ite": {
+              "cond": {
+                "args": [
+                  {
+                    "args": [
+                      {
+                        "args": [
+                          {
+                            "var": "x_v3"
+                          },
+                          {
+                            "var": "z_v3"
+                          }
+                        ],
+                        "op": "mod"
+                      },
+                      {
+                        "args": [
+                          {
+                            "var": "y_v3"
+                          },
+                          {
+                            "var": "z_v3"
+                          }
+                        ],
+                        "op": "mod"
+                      }
+                    ],
+                    "op": "+"
+                  },
+                  {
+                    "var": "z_v3"
+                  }
+                ],
+                "op": "<"
+              },
+              "else": {
+                "args": [
+                  {
+                    "var": "z_v3"
+                  },
+                  {
+                    "ite": {
+                      "cond": {
+                        "args": [
+                          {
+                            "args": [
+                              {
+                                "var": "x_v3"
+                              },
+                              {
+                                "var": "z_v3"
+                              }
+                            ],
+                            "op": "mod"
+                          },
+                          {
+                            "args": [
+                              {
+                                "var": "y_v3"
+                              },
+                              {
+                                "var": "z_v3"
+                              }
+                            ],
+                            "op": "mod"
+                          }
+                        ],
+                        "op": ">"
+                      },
+                      "else": {
+                        "args": [
+                          {
+                            "var": "y_v3"
+                          },
+                          {
+                            "var": "z_v3"
+                          }
+                        ],
+                        "op": "mod"
+                      },
+                      "then": {
+                        "args": [
+                          {
+                            "var": "x_v3"
+                          },
+                          {
+                            "var": "z_v3"
+                          }
+                        ],
+                        "op": "mod"
+                      }
+                    }
+                  }
+                ],
+                "op": "-"
+              },
+              "then": {
+                "int": 0
+              }
+            }
+          }
+        }
+      },
+      "decreases": {
+        "int": 0
+      },
+      "name": "minExchange",
+      "params": [
+        {
+          "name": "x_v3",
+          "type": "int"
+        },
+        {
+          "name": "y_v3",
+          "type": "int"
+        },
+        {
+          "name": "z_v3",
+          "type": "int"
+        }
+      ],
+      "result": "int"
+    }
+  ],
+  "t": 1
+}

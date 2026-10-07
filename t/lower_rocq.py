@@ -10945,6 +10945,10 @@ def _glit(v, ty) -> str:
         return f"({_glit(v[0], t1)}, {_glit(v[1], t2)})"
     if ty == "set":
         return _set_lit(v)   # SPEC.md "Finite sets" (2026-09-27)
+    if ty == "seq":
+        # PREDICT T53: a seq inside a pair (the heap rewrite's `(result, array)` return) is one ((Z -> Z) * Z) value,
+        # the same two slots `default_term("seq")` gives it
+        return f"({_seq_lambda(list(v))}, {_zlit(len(v))})"
     if ty == "bool":
         return "true" if v else "false"
     return _zlit(v)
@@ -10981,6 +10985,8 @@ def _to_interp_value(v, ty):
         return interp.Pair(_to_interp_value(v[0], t1), _to_interp_value(v[1], t2))
     if ty == "set":
         return frozenset(v)   # SPEC.md "Finite sets": interp's own set value
+    if ty == "seq":
+        return tuple(v)       # PREDICT T53: interp's own runtime seq, inside a pair
     return v
 
 
@@ -12122,6 +12128,12 @@ def _value_cert(cx, task, body, witness, def_text, w=None):
                      f"  | |- context [S.In ?x {applied}] => rewrite (t_out x)\n"
                      "  end.\n")
         lines.append("  t_set_ground.\n")
+    elif any(ret in _fv(e, set()) for e in task["ensures"]) and isinstance(ret_t, dict) and "seq" in ret_t.get("pair", ()):
+        # PREDICT T53: a pair holding a seq (the heap rewrite's `(result, array)`) carries a function, and the twin's
+        # computed function (updates over the input) is equal to a literal lambda only extensionally, never by
+        # `reflexivity` (measured: scale_all's twin). Rocq normalizes the computed value itself instead.
+        lines.append(f"  remember {applied} as t_out eqn:Ht_out.\n")
+        lines.append("  cbv in Ht_out. subst t_out.\n")
     elif any(ret in _fv(e, set()) for e in task["ensures"]):
         lines.append(f"  assert (t_out : {applied} = {retlit}) "
                      f"by (cbv; reflexivity).\n")
