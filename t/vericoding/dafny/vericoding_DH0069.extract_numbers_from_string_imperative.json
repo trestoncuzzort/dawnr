@@ -1,0 +1,846 @@
+{
+  "body": [
+    {
+      "assign": [
+        "numbers",
+        {
+          "args": [],
+          "op": "seq"
+        }
+      ]
+    },
+    {
+      "var": {
+        "init": {
+          "int": 0
+        },
+        "name": "current_number_v",
+        "type": "int"
+      }
+    },
+    {
+      "var": {
+        "init": {
+          "bool": false
+        },
+        "name": "in_number_v",
+        "type": "bool"
+      }
+    },
+    {
+      "var": {
+        "init": {
+          "int": 0
+        },
+        "name": "i_v",
+        "type": "int"
+      }
+    },
+    {
+      "while": {
+        "body": [
+          {
+            "var": {
+              "init": {
+                "args": [
+                  {
+                    "var": "s"
+                  },
+                  {
+                    "var": "i_v"
+                  }
+                ],
+                "op": "at"
+              },
+              "name": "c",
+              "type": "int"
+            }
+          },
+          {
+            "if": {
+              "cond": {
+                "args": [
+                  {
+                    "args": [
+                      {
+                        "int": 48
+                      },
+                      {
+                        "var": "c"
+                      }
+                    ],
+                    "op": "<="
+                  },
+                  {
+                    "args": [
+                      {
+                        "var": "c"
+                      },
+                      {
+                        "int": 57
+                      }
+                    ],
+                    "op": "<="
+                  }
+                ],
+                "op": "and"
+              },
+              "else": [
+                {
+                  "if": {
+                    "cond": {
+                      "var": "in_number_v"
+                    },
+                    "else": [],
+                    "then": [
+                      {
+                        "assign": [
+                          "numbers",
+                          {
+                            "args": [
+                              {
+                                "var": "numbers"
+                              },
+                              {
+                                "args": [
+                                  {
+                                    "var": "current_number_v"
+                                  }
+                                ],
+                                "op": "seq"
+                              }
+                            ],
+                            "op": "+"
+                          }
+                        ]
+                      },
+                      {
+                        "assign": [
+                          "current_number_v",
+                          {
+                            "int": 0
+                          }
+                        ]
+                      },
+                      {
+                        "assign": [
+                          "in_number_v",
+                          {
+                            "bool": false
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                }
+              ],
+              "then": [
+                {
+                  "var": {
+                    "init": {
+                      "args": [
+                        {
+                          "var": "c"
+                        },
+                        {
+                          "int": 48
+                        }
+                      ],
+                      "op": "-"
+                    },
+                    "name": "digit",
+                    "type": "int"
+                  }
+                },
+                {
+                  "assign": [
+                    "current_number_v",
+                    {
+                      "args": [
+                        {
+                          "args": [
+                            {
+                              "var": "current_number_v"
+                            },
+                            {
+                              "int": 10
+                            }
+                          ],
+                          "op": "*"
+                        },
+                        {
+                          "var": "digit"
+                        }
+                      ],
+                      "op": "+"
+                    }
+                  ]
+                },
+                {
+                  "assign": [
+                    "in_number_v",
+                    {
+                      "bool": true
+                    }
+                  ]
+                }
+              ]
+            }
+          },
+          {
+            "assign": [
+              "i_v",
+              {
+                "args": [
+                  {
+                    "var": "i_v"
+                  },
+                  {
+                    "int": 1
+                  }
+                ],
+                "op": "+"
+              }
+            ]
+          }
+        ],
+        "cond": {
+          "args": [
+            {
+              "var": "i_v"
+            },
+            {
+              "args": [
+                {
+                  "var": "s"
+                }
+              ],
+              "op": "len"
+            }
+          ],
+          "op": "<"
+        },
+        "decreases": {
+          "args": [
+            {
+              "args": [
+                {
+                  "var": "s"
+                }
+              ],
+              "op": "len"
+            },
+            {
+              "var": "i_v"
+            }
+          ],
+          "op": "-"
+        },
+        "invariants": [
+          {
+            "args": [
+              {
+                "args": [
+                  {
+                    "int": 0
+                  },
+                  {
+                    "var": "i_v"
+                  }
+                ],
+                "op": "<="
+              },
+              {
+                "args": [
+                  {
+                    "var": "i_v"
+                  },
+                  {
+                    "args": [
+                      {
+                        "var": "s"
+                      }
+                    ],
+                    "op": "len"
+                  }
+                ],
+                "op": "<="
+              }
+            ],
+            "op": "and"
+          },
+          {
+            "args": [
+              {
+                "var": "current_number_v"
+              },
+              {
+                "int": 0
+              }
+            ],
+            "op": ">="
+          },
+          {
+            "args": [
+              {
+                "args": [
+                  {
+                    "var": "in_number_v"
+                  }
+                ],
+                "op": "not"
+              },
+              {
+                "args": [
+                  {
+                    "var": "current_number_v"
+                  },
+                  {
+                    "int": 0
+                  }
+                ],
+                "op": "=="
+              }
+            ],
+            "op": "implies"
+          },
+          {
+            "args": [
+              {
+                "call": {
+                  "args": [
+                    {
+                      "var": "s"
+                    },
+                    {
+                      "var": "i_v"
+                    },
+                    {
+                      "var": "current_number_v"
+                    },
+                    {
+                      "var": "in_number_v"
+                    },
+                    {
+                      "var": "numbers"
+                    }
+                  ],
+                  "fun": "extract_numbers_helper"
+                }
+              },
+              {
+                "call": {
+                  "args": [
+                    {
+                      "var": "s"
+                    }
+                  ],
+                  "fun": "extract_numbers_from_string"
+                }
+              }
+            ],
+            "op": "=="
+          }
+        ]
+      }
+    },
+    {
+      "if": {
+        "cond": {
+          "var": "in_number_v"
+        },
+        "else": [],
+        "then": [
+          {
+            "assign": [
+              "numbers",
+              {
+                "args": [
+                  {
+                    "var": "numbers"
+                  },
+                  {
+                    "args": [
+                      {
+                        "var": "current_number_v"
+                      }
+                    ],
+                    "op": "seq"
+                  }
+                ],
+                "op": "+"
+              }
+            ]
+          }
+        ]
+      }
+    }
+  ],
+  "ensures": [
+    {
+      "args": [
+        {
+          "var": "numbers"
+        },
+        {
+          "call": {
+            "args": [
+              {
+                "var": "s"
+              }
+            ],
+            "fun": "extract_numbers_from_string"
+          }
+        }
+      ],
+      "op": "=="
+    }
+  ],
+  "gate": "recursion",
+  "name": "vericoding_dh0069__extract_numbers_from_string_imperative",
+  "params": [
+    {
+      "name": "s",
+      "type": "seq"
+    }
+  ],
+  "requires": [
+    {
+      "forall": {
+        "body": {
+          "args": [
+            {
+              "args": [
+                {
+                  "args": [
+                    {
+                      "var": "s"
+                    },
+                    {
+                      "var": "k"
+                    }
+                  ],
+                  "op": "at"
+                },
+                {
+                  "int": 0
+                }
+              ],
+              "op": ">="
+            },
+            {
+              "args": [
+                {
+                  "args": [
+                    {
+                      "var": "s"
+                    },
+                    {
+                      "var": "k"
+                    }
+                  ],
+                  "op": "at"
+                },
+                {
+                  "int": 1114111
+                }
+              ],
+              "op": "<="
+            }
+          ],
+          "op": "and"
+        },
+        "hi": {
+          "args": [
+            {
+              "var": "s"
+            }
+          ],
+          "op": "len"
+        },
+        "lo": {
+          "int": 0
+        },
+        "var": "k"
+      }
+    }
+  ],
+  "returns": [
+    {
+      "name": "numbers",
+      "type": "seq"
+    }
+  ],
+  "spec_funs": [
+    {
+      "body": {
+        "ite": {
+          "cond": {
+            "args": [
+              {
+                "args": [
+                  {
+                    "args": [
+                      {
+                        "int": 0
+                      },
+                      {
+                        "var": "i"
+                      }
+                    ],
+                    "op": "<="
+                  },
+                  {
+                    "args": [
+                      {
+                        "var": "i"
+                      },
+                      {
+                        "args": [
+                          {
+                            "var": "s_v"
+                          }
+                        ],
+                        "op": "len"
+                      }
+                    ],
+                    "op": "<="
+                  }
+                ],
+                "op": "and"
+              },
+              {
+                "args": [
+                  {
+                    "var": "current_number"
+                  },
+                  {
+                    "int": 0
+                  }
+                ],
+                "op": ">="
+              }
+            ],
+            "op": "and"
+          },
+          "else": {
+            "args": [],
+            "op": "seq"
+          },
+          "then": {
+            "ite": {
+              "cond": {
+                "args": [
+                  {
+                    "var": "i"
+                  },
+                  {
+                    "args": [
+                      {
+                        "var": "s_v"
+                      }
+                    ],
+                    "op": "len"
+                  }
+                ],
+                "op": "=="
+              },
+              "else": {
+                "ite": {
+                  "cond": {
+                    "args": [
+                      {
+                        "args": [
+                          {
+                            "int": 48
+                          },
+                          {
+                            "args": [
+                              {
+                                "var": "s_v"
+                              },
+                              {
+                                "var": "i"
+                              }
+                            ],
+                            "op": "at"
+                          }
+                        ],
+                        "op": "<="
+                      },
+                      {
+                        "args": [
+                          {
+                            "args": [
+                              {
+                                "var": "s_v"
+                              },
+                              {
+                                "var": "i"
+                              }
+                            ],
+                            "op": "at"
+                          },
+                          {
+                            "int": 57
+                          }
+                        ],
+                        "op": "<="
+                      }
+                    ],
+                    "op": "and"
+                  },
+                  "else": {
+                    "ite": {
+                      "cond": {
+                        "var": "in_number"
+                      },
+                      "else": {
+                        "call": {
+                          "args": [
+                            {
+                              "var": "s_v"
+                            },
+                            {
+                              "args": [
+                                {
+                                  "var": "i"
+                                },
+                                {
+                                  "int": 1
+                                }
+                              ],
+                              "op": "+"
+                            },
+                            {
+                              "int": 0
+                            },
+                            {
+                              "bool": false
+                            },
+                            {
+                              "var": "numbers_v"
+                            }
+                          ],
+                          "fun": "extract_numbers_helper"
+                        }
+                      },
+                      "then": {
+                        "call": {
+                          "args": [
+                            {
+                              "var": "s_v"
+                            },
+                            {
+                              "args": [
+                                {
+                                  "var": "i"
+                                },
+                                {
+                                  "int": 1
+                                }
+                              ],
+                              "op": "+"
+                            },
+                            {
+                              "int": 0
+                            },
+                            {
+                              "bool": false
+                            },
+                            {
+                              "args": [
+                                {
+                                  "var": "numbers_v"
+                                },
+                                {
+                                  "args": [
+                                    {
+                                      "var": "current_number"
+                                    }
+                                  ],
+                                  "op": "seq"
+                                }
+                              ],
+                              "op": "+"
+                            }
+                          ],
+                          "fun": "extract_numbers_helper"
+                        }
+                      }
+                    }
+                  },
+                  "then": {
+                    "call": {
+                      "args": [
+                        {
+                          "var": "s_v"
+                        },
+                        {
+                          "args": [
+                            {
+                              "var": "i"
+                            },
+                            {
+                              "int": 1
+                            }
+                          ],
+                          "op": "+"
+                        },
+                        {
+                          "args": [
+                            {
+                              "args": [
+                                {
+                                  "var": "current_number"
+                                },
+                                {
+                                  "int": 10
+                                }
+                              ],
+                              "op": "*"
+                            },
+                            {
+                              "args": [
+                                {
+                                  "args": [
+                                    {
+                                      "var": "s_v"
+                                    },
+                                    {
+                                      "var": "i"
+                                    }
+                                  ],
+                                  "op": "at"
+                                },
+                                {
+                                  "int": 48
+                                }
+                              ],
+                              "op": "-"
+                            }
+                          ],
+                          "op": "+"
+                        },
+                        {
+                          "bool": true
+                        },
+                        {
+                          "var": "numbers_v"
+                        }
+                      ],
+                      "fun": "extract_numbers_helper"
+                    }
+                  }
+                }
+              },
+              "then": {
+                "ite": {
+                  "cond": {
+                    "var": "in_number"
+                  },
+                  "else": {
+                    "var": "numbers_v"
+                  },
+                  "then": {
+                    "args": [
+                      {
+                        "var": "numbers_v"
+                      },
+                      {
+                        "args": [
+                          {
+                            "var": "current_number"
+                          }
+                        ],
+                        "op": "seq"
+                      }
+                    ],
+                    "op": "+"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "decreases": {
+        "args": [
+          {
+            "args": [
+              {
+                "var": "s_v"
+              }
+            ],
+            "op": "len"
+          },
+          {
+            "var": "i"
+          }
+        ],
+        "op": "-"
+      },
+      "name": "extract_numbers_helper",
+      "params": [
+        {
+          "name": "s_v",
+          "type": "seq"
+        },
+        {
+          "name": "i",
+          "type": "int"
+        },
+        {
+          "name": "current_number",
+          "type": "int"
+        },
+        {
+          "name": "in_number",
+          "type": "bool"
+        },
+        {
+          "name": "numbers_v",
+          "type": "seq"
+        }
+      ],
+      "result": "seq"
+    },
+    {
+      "body": {
+        "call": {
+          "args": [
+            {
+              "var": "s_v2"
+            },
+            {
+              "int": 0
+            },
+            {
+              "int": 0
+            },
+            {
+              "bool": false
+            },
+            {
+              "args": [],
+              "op": "seq"
+            }
+          ],
+          "fun": "extract_numbers_helper"
+        }
+      },
+      "decreases": {
+        "int": 0
+      },
+      "name": "extract_numbers_from_string",
+      "params": [
+        {
+          "name": "s_v2",
+          "type": "seq"
+        }
+      ],
+      "result": "seq"
+    }
+  ],
+  "t": 1
+}

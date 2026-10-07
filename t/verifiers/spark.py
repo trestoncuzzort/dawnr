@@ -333,6 +333,11 @@ _GNATPROVE_WHY = missing("spark", "T_GNATPROVE", ['gnatprove'], [".local/gnatpro
 # only load-induced misreads on quiet re-check.
 DEFAULT_STEPS = 20_000
 WALL_S = 180
+# PREDICT T58: a program over Long_Float gets 100x the steps. Raising a limit helps only where the prover reports
+# reaching it (SPARK UG 7.8, read under receipt eeffe70f487e), and floats were measured to do exactly that: rate_limit
+# proves at 10x; pid_step's non-linear goal reports the limit at 100x too and stays a timeout. Integer programs keep
+# DEFAULT_STEPS, so no other cell's budget moves.
+FLOAT_STEPS = 2_000_000
 
 # ---------------------------------------------------------------------------
 # WHERE THE TIME ACTUALLY GOES, and the one knob that moves it (2026-09-19,
@@ -1048,11 +1053,13 @@ def version() -> str:
     return v if _prover() == "z3" else f"{v} / prover {_prover()}"
 
 
-def verify(path: Path, budget: int = DEFAULT_STEPS) -> Result:
+def verify(path: Path, budget: int | None = None) -> Result:
     if not GNATPROVE:
         raise SystemExit(_GNATPROVE_WHY)
     src_hash = sha256_file(path)
     src_text = safe_text(path)
+    if budget is None:
+        budget = FLOAT_STEPS if re.search(r"\bLong_Float\b", src_text) else DEFAULT_STEPS
     active = _active_code(src_text)
     banned = [m.group(0) for m in BANNED.finditer(active)]
     cert_named = CERT_ENTITY in active.lower()

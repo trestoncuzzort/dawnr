@@ -1,0 +1,676 @@
+{
+  "body": [
+    {
+      "var": {
+        "init": {
+          "args": [
+            {
+              "var": "n"
+            },
+            {
+              "int": 1000
+            }
+          ],
+          "op": "mod"
+        },
+        "name": "remainder",
+        "type": "int"
+      }
+    },
+    {
+      "if": {
+        "cond": {
+          "args": [
+            {
+              "var": "remainder"
+            },
+            {
+              "int": 0
+            }
+          ],
+          "op": "=="
+        },
+        "else": [
+          {
+            "assign": [
+              "change",
+              {
+                "args": [
+                  {
+                    "int": 1000
+                  },
+                  {
+                    "var": "remainder"
+                  }
+                ],
+                "op": "-"
+              }
+            ]
+          }
+        ],
+        "then": [
+          {
+            "assign": [
+              "change",
+              {
+                "int": 0
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "lemma": {
+        "args": [
+          {
+            "var": "n"
+          }
+        ],
+        "name": "changeProperties"
+      }
+    }
+  ],
+  "ensures": [
+    {
+      "call": {
+        "args": [
+          {
+            "var": "change"
+          }
+        ],
+        "fun": "validChange"
+      }
+    },
+    {
+      "args": [
+        {
+          "var": "change"
+        },
+        {
+          "call": {
+            "args": [
+              {
+                "var": "n"
+              }
+            ],
+            "fun": "correctChange"
+          }
+        }
+      ],
+      "op": "=="
+    }
+  ],
+  "gate": "recursion",
+  "lemmas": [
+    {
+      "body": [
+        {
+          "assert": {
+            "args": [
+              {
+                "args": [
+                  {
+                    "int": 0
+                  },
+                  {
+                    "args": [
+                      {
+                        "var": "n_v3"
+                      },
+                      {
+                        "int": 1000
+                      }
+                    ],
+                    "op": "mod"
+                  }
+                ],
+                "op": "<="
+              },
+              {
+                "args": [
+                  {
+                    "args": [
+                      {
+                        "var": "n_v3"
+                      },
+                      {
+                        "int": 1000
+                      }
+                    ],
+                    "op": "mod"
+                  },
+                  {
+                    "int": 1000
+                  }
+                ],
+                "op": "<"
+              }
+            ],
+            "op": "and"
+          }
+        },
+        {
+          "if": {
+            "cond": {
+              "args": [
+                {
+                  "args": [
+                    {
+                      "var": "n_v3"
+                    },
+                    {
+                      "int": 1000
+                    }
+                  ],
+                  "op": "mod"
+                },
+                {
+                  "int": 0
+                }
+              ],
+              "op": "=="
+            },
+            "else": [
+              {
+                "assert": {
+                  "args": [
+                    {
+                      "args": [
+                        {
+                          "int": 1
+                        },
+                        {
+                          "args": [
+                            {
+                              "var": "n_v3"
+                            },
+                            {
+                              "int": 1000
+                            }
+                          ],
+                          "op": "mod"
+                        }
+                      ],
+                      "op": "<="
+                    },
+                    {
+                      "args": [
+                        {
+                          "args": [
+                            {
+                              "var": "n_v3"
+                            },
+                            {
+                              "int": 1000
+                            }
+                          ],
+                          "op": "mod"
+                        },
+                        {
+                          "int": 999
+                        }
+                      ],
+                      "op": "<="
+                    }
+                  ],
+                  "op": "and"
+                }
+              },
+              {
+                "assert": {
+                  "args": [
+                    {
+                      "args": [
+                        {
+                          "int": 1000
+                        },
+                        {
+                          "args": [
+                            {
+                              "var": "n_v3"
+                            },
+                            {
+                              "int": 1000
+                            }
+                          ],
+                          "op": "mod"
+                        }
+                      ],
+                      "op": "-"
+                    },
+                    {
+                      "int": 1
+                    }
+                  ],
+                  "op": ">="
+                }
+              },
+              {
+                "assert": {
+                  "args": [
+                    {
+                      "args": [
+                        {
+                          "int": 1000
+                        },
+                        {
+                          "args": [
+                            {
+                              "var": "n_v3"
+                            },
+                            {
+                              "int": 1000
+                            }
+                          ],
+                          "op": "mod"
+                        }
+                      ],
+                      "op": "-"
+                    },
+                    {
+                      "int": 999
+                    }
+                  ],
+                  "op": "<="
+                }
+              },
+              {
+                "assert": {
+                  "args": [
+                    {
+                      "args": [
+                        {
+                          "call": {
+                            "args": [
+                              {
+                                "var": "n_v3"
+                              }
+                            ],
+                            "fun": "correctChange"
+                          }
+                        },
+                        {
+                          "args": [
+                            {
+                              "args": [
+                                {
+                                  "int": 1000
+                                },
+                                {
+                                  "args": [
+                                    {
+                                      "var": "n_v3"
+                                    },
+                                    {
+                                      "int": 1000
+                                    }
+                                  ],
+                                  "op": "mod"
+                                }
+                              ],
+                              "op": "-"
+                            },
+                            {
+                              "int": 1000
+                            }
+                          ],
+                          "op": "mod"
+                        }
+                      ],
+                      "op": "=="
+                    },
+                    {
+                      "args": [
+                        {
+                          "args": [
+                            {
+                              "args": [
+                                {
+                                  "int": 1000
+                                },
+                                {
+                                  "args": [
+                                    {
+                                      "var": "n_v3"
+                                    },
+                                    {
+                                      "int": 1000
+                                    }
+                                  ],
+                                  "op": "mod"
+                                }
+                              ],
+                              "op": "-"
+                            },
+                            {
+                              "int": 1000
+                            }
+                          ],
+                          "op": "mod"
+                        },
+                        {
+                          "args": [
+                            {
+                              "int": 1000
+                            },
+                            {
+                              "args": [
+                                {
+                                  "var": "n_v3"
+                                },
+                                {
+                                  "int": 1000
+                                }
+                              ],
+                              "op": "mod"
+                            }
+                          ],
+                          "op": "-"
+                        }
+                      ],
+                      "op": "=="
+                    }
+                  ],
+                  "op": "and"
+                }
+              }
+            ],
+            "then": [
+              {
+                "assert": {
+                  "args": [
+                    {
+                      "args": [
+                        {
+                          "call": {
+                            "args": [
+                              {
+                                "var": "n_v3"
+                              }
+                            ],
+                            "fun": "correctChange"
+                          }
+                        },
+                        {
+                          "args": [
+                            {
+                              "args": [
+                                {
+                                  "int": 1000
+                                },
+                                {
+                                  "int": 0
+                                }
+                              ],
+                              "op": "-"
+                            },
+                            {
+                              "int": 1000
+                            }
+                          ],
+                          "op": "mod"
+                        }
+                      ],
+                      "op": "=="
+                    },
+                    {
+                      "args": [
+                        {
+                          "args": [
+                            {
+                              "args": [
+                                {
+                                  "int": 1000
+                                },
+                                {
+                                  "int": 0
+                                }
+                              ],
+                              "op": "-"
+                            },
+                            {
+                              "int": 1000
+                            }
+                          ],
+                          "op": "mod"
+                        },
+                        {
+                          "int": 0
+                        }
+                      ],
+                      "op": "=="
+                    }
+                  ],
+                  "op": "and"
+                }
+              }
+            ]
+          }
+        }
+      ],
+      "ensures": [
+        {
+          "args": [
+            {
+              "int": 0
+            },
+            {
+              "call": {
+                "args": [
+                  {
+                    "var": "n_v3"
+                  }
+                ],
+                "fun": "correctChange"
+              }
+            }
+          ],
+          "op": "<="
+        },
+        {
+          "args": [
+            {
+              "call": {
+                "args": [
+                  {
+                    "var": "n_v3"
+                  }
+                ],
+                "fun": "correctChange"
+              }
+            },
+            {
+              "int": 999
+            }
+          ],
+          "op": "<="
+        }
+      ],
+      "name": "changeProperties",
+      "params": [
+        {
+          "name": "n_v3",
+          "type": "int"
+        }
+      ],
+      "requires": [
+        {
+          "call": {
+            "args": [
+              {
+                "var": "n_v3"
+              }
+            ],
+            "fun": "validInput"
+          }
+        }
+      ]
+    }
+  ],
+  "name": "vericoding_da0484__solve",
+  "params": [
+    {
+      "name": "n",
+      "type": "int"
+    }
+  ],
+  "requires": [
+    {
+      "call": {
+        "args": [
+          {
+            "var": "n"
+          }
+        ],
+        "fun": "validInput"
+      }
+    }
+  ],
+  "returns": [
+    {
+      "name": "change",
+      "type": "int"
+    }
+  ],
+  "spec_funs": [
+    {
+      "body": {
+        "args": [
+          {
+            "args": [
+              {
+                "int": 0
+              },
+              {
+                "var": "change_v"
+              }
+            ],
+            "op": "<="
+          },
+          {
+            "args": [
+              {
+                "var": "change_v"
+              },
+              {
+                "int": 999
+              }
+            ],
+            "op": "<="
+          }
+        ],
+        "op": "and"
+      },
+      "decreases": {
+        "int": 0
+      },
+      "name": "validChange",
+      "params": [
+        {
+          "name": "change_v",
+          "type": "int"
+        }
+      ],
+      "result": "bool"
+    },
+    {
+      "body": {
+        "args": [
+          {
+            "args": [
+              {
+                "int": 1
+              },
+              {
+                "var": "n_v"
+              }
+            ],
+            "op": "<="
+          },
+          {
+            "args": [
+              {
+                "var": "n_v"
+              },
+              {
+                "int": 10000
+              }
+            ],
+            "op": "<="
+          }
+        ],
+        "op": "and"
+      },
+      "decreases": {
+        "int": 0
+      },
+      "name": "validInput",
+      "params": [
+        {
+          "name": "n_v",
+          "type": "int"
+        }
+      ],
+      "result": "bool"
+    },
+    {
+      "body": {
+        "ite": {
+          "cond": {
+            "call": {
+              "args": [
+                {
+                  "var": "n_v2"
+                }
+              ],
+              "fun": "validInput"
+            }
+          },
+          "else": {
+            "int": 0
+          },
+          "then": {
+            "args": [
+              {
+                "args": [
+                  {
+                    "int": 1000
+                  },
+                  {
+                    "args": [
+                      {
+                        "var": "n_v2"
+                      },
+                      {
+                        "int": 1000
+                      }
+                    ],
+                    "op": "mod"
+                  }
+                ],
+                "op": "-"
+              },
+              {
+                "int": 1000
+              }
+            ],
+            "op": "mod"
+          }
+        }
+      },
+      "decreases": {
+        "int": 0
+      },
+      "name": "correctChange",
+      "params": [
+        {
+          "name": "n_v2",
+          "type": "int"
+        }
+      ],
+      "result": "int"
+    }
+  ],
+  "t": 1
+}

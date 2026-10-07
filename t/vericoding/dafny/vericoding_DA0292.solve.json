@@ -1,0 +1,1921 @@
+{
+  "body": [
+    {
+      "var": {
+        "init": {
+          "int": 1
+        },
+        "name": "left",
+        "type": "int"
+      }
+    },
+    {
+      "var": {
+        "init": {
+          "args": [
+            {
+              "var": "s"
+            }
+          ],
+          "op": "len"
+        },
+        "name": "right",
+        "type": "int"
+      }
+    },
+    {
+      "assign": [
+        "result",
+        {
+          "args": [
+            {
+              "var": "s"
+            }
+          ],
+          "op": "len"
+        }
+      ]
+    },
+    {
+      "while": {
+        "body": [
+          {
+            "var": {
+              "init": {
+                "args": [
+                  {
+                    "args": [
+                      {
+                        "var": "left"
+                      },
+                      {
+                        "var": "right"
+                      }
+                    ],
+                    "op": "+"
+                  },
+                  {
+                    "int": 2
+                  }
+                ],
+                "op": "div"
+              },
+              "name": "mid",
+              "type": "int"
+            }
+          },
+          {
+            "var": {
+              "init": {
+                "call": {
+                  "args": [
+                    {
+                      "var": "s"
+                    },
+                    {
+                      "var": "k"
+                    },
+                    {
+                      "var": "mid"
+                    }
+                  ],
+                  "fun": "vericoding_da0292__canFormat"
+                }
+              },
+              "name": "canMid",
+              "type": "bool"
+            }
+          },
+          {
+            "if": {
+              "cond": {
+                "var": "canMid"
+              },
+              "else": [
+                {
+                  "assign": [
+                    "left",
+                    {
+                      "args": [
+                        {
+                          "var": "mid"
+                        },
+                        {
+                          "int": 1
+                        }
+                      ],
+                      "op": "+"
+                    }
+                  ]
+                }
+              ],
+              "then": [
+                {
+                  "assign": [
+                    "right",
+                    {
+                      "var": "mid"
+                    }
+                  ]
+                }
+              ]
+            }
+          }
+        ],
+        "cond": {
+          "args": [
+            {
+              "var": "left"
+            },
+            {
+              "var": "right"
+            }
+          ],
+          "op": "<"
+        },
+        "decreases": {
+          "args": [
+            {
+              "var": "right"
+            },
+            {
+              "var": "left"
+            }
+          ],
+          "op": "-"
+        },
+        "invariants": [
+          {
+            "args": [
+              {
+                "args": [
+                  {
+                    "int": 1
+                  },
+                  {
+                    "var": "left"
+                  }
+                ],
+                "op": "<="
+              },
+              {
+                "args": [
+                  {
+                    "var": "left"
+                  },
+                  {
+                    "var": "right"
+                  }
+                ],
+                "op": "<="
+              },
+              {
+                "args": [
+                  {
+                    "var": "right"
+                  },
+                  {
+                    "args": [
+                      {
+                        "var": "s"
+                      }
+                    ],
+                    "op": "len"
+                  }
+                ],
+                "op": "<="
+              }
+            ],
+            "op": "and"
+          },
+          {
+            "call": {
+              "args": [
+                {
+                  "var": "s"
+                },
+                {
+                  "var": "k"
+                },
+                {
+                  "var": "right"
+                }
+              ],
+              "fun": "canFormatText"
+            }
+          },
+          {
+            "args": [
+              {
+                "args": [
+                  {
+                    "var": "left"
+                  },
+                  {
+                    "int": 1
+                  }
+                ],
+                "op": ">"
+              },
+              {
+                "args": [
+                  {
+                    "call": {
+                      "args": [
+                        {
+                          "var": "s"
+                        },
+                        {
+                          "var": "k"
+                        },
+                        {
+                          "args": [
+                            {
+                              "var": "left"
+                            },
+                            {
+                              "int": 1
+                            }
+                          ],
+                          "op": "-"
+                        }
+                      ],
+                      "fun": "canFormatText"
+                    }
+                  }
+                ],
+                "op": "not"
+              }
+            ],
+            "op": "implies"
+          }
+        ]
+      }
+    },
+    {
+      "assign": [
+        "result",
+        {
+          "var": "left"
+        }
+      ]
+    }
+  ],
+  "ensures": [
+    {
+      "args": [
+        {
+          "var": "result"
+        },
+        {
+          "int": 1
+        }
+      ],
+      "op": ">="
+    },
+    {
+      "args": [
+        {
+          "var": "result"
+        },
+        {
+          "args": [
+            {
+              "var": "s"
+            }
+          ],
+          "op": "len"
+        }
+      ],
+      "op": "<="
+    },
+    {
+      "call": {
+        "args": [
+          {
+            "var": "s"
+          },
+          {
+            "var": "k"
+          },
+          {
+            "var": "result"
+          }
+        ],
+        "fun": "canFormatText"
+      }
+    },
+    {
+      "args": [
+        {
+          "args": [
+            {
+              "var": "result"
+            },
+            {
+              "int": 1
+            }
+          ],
+          "op": ">"
+        },
+        {
+          "args": [
+            {
+              "call": {
+                "args": [
+                  {
+                    "var": "s"
+                  },
+                  {
+                    "var": "k"
+                  },
+                  {
+                    "args": [
+                      {
+                        "var": "result"
+                      },
+                      {
+                        "int": 1
+                      }
+                    ],
+                    "op": "-"
+                  }
+                ],
+                "fun": "canFormatText"
+              }
+            }
+          ],
+          "op": "not"
+        }
+      ],
+      "op": "implies"
+    }
+  ],
+  "gate": "recursion",
+  "methods": [
+    {
+      "body": [
+        {
+          "if": {
+            "cond": {
+              "args": [
+                {
+                  "var": "pos"
+                },
+                {
+                  "args": [
+                    {
+                      "var": "s"
+                    }
+                  ],
+                  "op": "len"
+                }
+              ],
+              "op": "=="
+            },
+            "else": [],
+            "then": [
+              {
+                "return": [
+                  "result",
+                  {
+                    "args": [
+                      {
+                        "args": [
+                          {
+                            "var": "lines"
+                          },
+                          {
+                            "var": "k"
+                          }
+                        ],
+                        "op": "<="
+                      },
+                      {
+                        "args": [
+                          {
+                            "var": "currentLine"
+                          },
+                          {
+                            "var": "maxWidth"
+                          }
+                        ],
+                        "op": "<="
+                      }
+                    ],
+                    "op": "and"
+                  }
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "if": {
+            "cond": {
+              "args": [
+                {
+                  "args": [
+                    {
+                      "args": [
+                        {
+                          "var": "s"
+                        },
+                        {
+                          "var": "pos"
+                        }
+                      ],
+                      "op": "at"
+                    },
+                    {
+                      "int": 32
+                    }
+                  ],
+                  "op": "=="
+                },
+                {
+                  "args": [
+                    {
+                      "args": [
+                        {
+                          "var": "s"
+                        },
+                        {
+                          "var": "pos"
+                        }
+                      ],
+                      "op": "at"
+                    },
+                    {
+                      "int": 45
+                    }
+                  ],
+                  "op": "=="
+                }
+              ],
+              "op": "or"
+            },
+            "else": [
+              {
+                "if": {
+                  "cond": {
+                    "args": [
+                      {
+                        "args": [
+                          {
+                            "var": "currentLine"
+                          },
+                          {
+                            "int": 1
+                          }
+                        ],
+                        "op": "+"
+                      },
+                      {
+                        "var": "maxWidth"
+                      }
+                    ],
+                    "op": ">"
+                  },
+                  "else": [
+                    {
+                      "assign": [
+                        "result",
+                        {
+                          "call": {
+                            "args": [
+                              {
+                                "var": "s"
+                              },
+                              {
+                                "var": "k"
+                              },
+                              {
+                                "var": "maxWidth"
+                              },
+                              {
+                                "args": [
+                                  {
+                                    "var": "pos"
+                                  },
+                                  {
+                                    "int": 1
+                                  }
+                                ],
+                                "op": "+"
+                              },
+                              {
+                                "var": "lines"
+                              },
+                              {
+                                "args": [
+                                  {
+                                    "var": "currentLine"
+                                  },
+                                  {
+                                    "int": 1
+                                  }
+                                ],
+                                "op": "+"
+                              }
+                            ],
+                            "fun": "vericoding_da0292__checkFormattingHelper"
+                          }
+                        }
+                      ]
+                    }
+                  ],
+                  "then": [
+                    {
+                      "assign": [
+                        "result",
+                        {
+                          "bool": false
+                        }
+                      ]
+                    }
+                  ]
+                }
+              }
+            ],
+            "then": [
+              {
+                "if": {
+                  "cond": {
+                    "args": [
+                      {
+                        "args": [
+                          {
+                            "var": "currentLine"
+                          },
+                          {
+                            "int": 1
+                          }
+                        ],
+                        "op": "+"
+                      },
+                      {
+                        "var": "maxWidth"
+                      }
+                    ],
+                    "op": ">"
+                  },
+                  "else": [
+                    {
+                      "var": {
+                        "init": {
+                          "call": {
+                            "args": [
+                              {
+                                "var": "s"
+                              },
+                              {
+                                "var": "k"
+                              },
+                              {
+                                "var": "maxWidth"
+                              },
+                              {
+                                "args": [
+                                  {
+                                    "var": "pos"
+                                  },
+                                  {
+                                    "int": 1
+                                  }
+                                ],
+                                "op": "+"
+                              },
+                              {
+                                "var": "lines"
+                              },
+                              {
+                                "args": [
+                                  {
+                                    "var": "currentLine"
+                                  },
+                                  {
+                                    "int": 1
+                                  }
+                                ],
+                                "op": "+"
+                              }
+                            ],
+                            "fun": "vericoding_da0292__checkFormattingHelper"
+                          }
+                        },
+                        "name": "continueOnLine",
+                        "type": "bool"
+                      }
+                    },
+                    {
+                      "if": {
+                        "cond": {
+                          "var": "continueOnLine"
+                        },
+                        "else": [],
+                        "then": [
+                          {
+                            "return": [
+                              "result",
+                              {
+                                "bool": true
+                              }
+                            ]
+                          }
+                        ]
+                      }
+                    },
+                    {
+                      "if": {
+                        "cond": {
+                          "args": [
+                            {
+                              "var": "lines"
+                            },
+                            {
+                              "var": "k"
+                            }
+                          ],
+                          "op": "<"
+                        },
+                        "else": [],
+                        "then": [
+                          {
+                            "assign": [
+                              "result",
+                              {
+                                "call": {
+                                  "args": [
+                                    {
+                                      "var": "s"
+                                    },
+                                    {
+                                      "var": "k"
+                                    },
+                                    {
+                                      "var": "maxWidth"
+                                    },
+                                    {
+                                      "args": [
+                                        {
+                                          "var": "pos"
+                                        },
+                                        {
+                                          "int": 1
+                                        }
+                                      ],
+                                      "op": "+"
+                                    },
+                                    {
+                                      "args": [
+                                        {
+                                          "var": "lines"
+                                        },
+                                        {
+                                          "int": 1
+                                        }
+                                      ],
+                                      "op": "+"
+                                    },
+                                    {
+                                      "int": 1
+                                    }
+                                  ],
+                                  "fun": "vericoding_da0292__checkFormattingHelper"
+                                }
+                              }
+                            ]
+                          },
+                          {
+                            "return": [
+                              "result",
+                              {
+                                "var": "result"
+                              }
+                            ]
+                          }
+                        ]
+                      }
+                    },
+                    {
+                      "assign": [
+                        "result",
+                        {
+                          "bool": false
+                        }
+                      ]
+                    }
+                  ],
+                  "then": [
+                    {
+                      "if": {
+                        "cond": {
+                          "args": [
+                            {
+                              "args": [
+                                {
+                                  "var": "lines"
+                                },
+                                {
+                                  "int": 1
+                                }
+                              ],
+                              "op": "+"
+                            },
+                            {
+                              "var": "k"
+                            }
+                          ],
+                          "op": ">"
+                        },
+                        "else": [
+                          {
+                            "assign": [
+                              "result",
+                              {
+                                "call": {
+                                  "args": [
+                                    {
+                                      "var": "s"
+                                    },
+                                    {
+                                      "var": "k"
+                                    },
+                                    {
+                                      "var": "maxWidth"
+                                    },
+                                    {
+                                      "args": [
+                                        {
+                                          "var": "pos"
+                                        },
+                                        {
+                                          "int": 1
+                                        }
+                                      ],
+                                      "op": "+"
+                                    },
+                                    {
+                                      "args": [
+                                        {
+                                          "var": "lines"
+                                        },
+                                        {
+                                          "int": 1
+                                        }
+                                      ],
+                                      "op": "+"
+                                    },
+                                    {
+                                      "int": 1
+                                    }
+                                  ],
+                                  "fun": "vericoding_da0292__checkFormattingHelper"
+                                }
+                              }
+                            ]
+                          }
+                        ],
+                        "then": [
+                          {
+                            "assign": [
+                              "result",
+                              {
+                                "bool": false
+                              }
+                            ]
+                          }
+                        ]
+                      }
+                    }
+                  ]
+                }
+              }
+            ]
+          }
+        }
+      ],
+      "decreases": {
+        "args": [
+          {
+            "args": [
+              {
+                "var": "s"
+              }
+            ],
+            "op": "len"
+          },
+          {
+            "var": "pos"
+          }
+        ],
+        "op": "-"
+      },
+      "ensures": [
+        {
+          "args": [
+            {
+              "var": "result"
+            },
+            {
+              "call": {
+                "args": [
+                  {
+                    "var": "s"
+                  },
+                  {
+                    "var": "k"
+                  },
+                  {
+                    "var": "maxWidth"
+                  },
+                  {
+                    "var": "pos"
+                  },
+                  {
+                    "var": "lines"
+                  },
+                  {
+                    "var": "currentLine"
+                  }
+                ],
+                "fun": "checkFormatting"
+              }
+            }
+          ],
+          "op": "=="
+        }
+      ],
+      "name": "vericoding_da0292__checkFormattingHelper",
+      "params": [
+        {
+          "name": "s",
+          "type": "seq"
+        },
+        {
+          "name": "k",
+          "type": "int"
+        },
+        {
+          "name": "maxWidth",
+          "type": "int"
+        },
+        {
+          "name": "pos",
+          "type": "int"
+        },
+        {
+          "name": "lines",
+          "type": "int"
+        },
+        {
+          "name": "currentLine",
+          "type": "int"
+        }
+      ],
+      "requires": [
+        {
+          "forall": {
+            "body": {
+              "args": [
+                {
+                  "args": [
+                    {
+                      "args": [
+                        {
+                          "var": "s"
+                        },
+                        {
+                          "var": "k_v2"
+                        }
+                      ],
+                      "op": "at"
+                    },
+                    {
+                      "int": 0
+                    }
+                  ],
+                  "op": ">="
+                },
+                {
+                  "args": [
+                    {
+                      "args": [
+                        {
+                          "var": "s"
+                        },
+                        {
+                          "var": "k_v2"
+                        }
+                      ],
+                      "op": "at"
+                    },
+                    {
+                      "int": 1114111
+                    }
+                  ],
+                  "op": "<="
+                }
+              ],
+              "op": "and"
+            },
+            "hi": {
+              "args": [
+                {
+                  "var": "s"
+                }
+              ],
+              "op": "len"
+            },
+            "lo": {
+              "int": 0
+            },
+            "var": "k_v2"
+          }
+        },
+        {
+          "args": [
+            {
+              "var": "k"
+            },
+            {
+              "int": 1
+            }
+          ],
+          "op": ">="
+        },
+        {
+          "args": [
+            {
+              "args": [
+                {
+                  "var": "s"
+                }
+              ],
+              "op": "len"
+            },
+            {
+              "int": 1
+            }
+          ],
+          "op": ">="
+        },
+        {
+          "args": [
+            {
+              "var": "maxWidth"
+            },
+            {
+              "int": 1
+            }
+          ],
+          "op": ">="
+        },
+        {
+          "args": [
+            {
+              "int": 0
+            },
+            {
+              "var": "pos"
+            }
+          ],
+          "op": "<="
+        },
+        {
+          "args": [
+            {
+              "var": "pos"
+            },
+            {
+              "args": [
+                {
+                  "var": "s"
+                }
+              ],
+              "op": "len"
+            }
+          ],
+          "op": "<="
+        },
+        {
+          "args": [
+            {
+              "var": "lines"
+            },
+            {
+              "int": 1
+            }
+          ],
+          "op": ">="
+        },
+        {
+          "args": [
+            {
+              "var": "currentLine"
+            },
+            {
+              "int": 0
+            }
+          ],
+          "op": ">="
+        }
+      ],
+      "returns": [
+        {
+          "name": "result",
+          "type": "bool"
+        }
+      ]
+    },
+    {
+      "body": [
+        {
+          "assign": [
+            "can",
+            {
+              "call": {
+                "args": [
+                  {
+                    "var": "s"
+                  },
+                  {
+                    "var": "k"
+                  },
+                  {
+                    "var": "width"
+                  },
+                  {
+                    "int": 0
+                  },
+                  {
+                    "int": 1
+                  },
+                  {
+                    "int": 0
+                  }
+                ],
+                "fun": "vericoding_da0292__checkFormattingHelper"
+              }
+            }
+          ]
+        }
+      ],
+      "ensures": [
+        {
+          "args": [
+            {
+              "var": "can"
+            },
+            {
+              "call": {
+                "args": [
+                  {
+                    "var": "s"
+                  },
+                  {
+                    "var": "k"
+                  },
+                  {
+                    "var": "width"
+                  }
+                ],
+                "fun": "canFormatText"
+              }
+            }
+          ],
+          "op": "=="
+        }
+      ],
+      "name": "vericoding_da0292__canFormat",
+      "params": [
+        {
+          "name": "s",
+          "type": "seq"
+        },
+        {
+          "name": "k",
+          "type": "int"
+        },
+        {
+          "name": "width",
+          "type": "int"
+        }
+      ],
+      "requires": [
+        {
+          "forall": {
+            "body": {
+              "args": [
+                {
+                  "args": [
+                    {
+                      "args": [
+                        {
+                          "var": "s"
+                        },
+                        {
+                          "var": "k_v3"
+                        }
+                      ],
+                      "op": "at"
+                    },
+                    {
+                      "int": 0
+                    }
+                  ],
+                  "op": ">="
+                },
+                {
+                  "args": [
+                    {
+                      "args": [
+                        {
+                          "var": "s"
+                        },
+                        {
+                          "var": "k_v3"
+                        }
+                      ],
+                      "op": "at"
+                    },
+                    {
+                      "int": 1114111
+                    }
+                  ],
+                  "op": "<="
+                }
+              ],
+              "op": "and"
+            },
+            "hi": {
+              "args": [
+                {
+                  "var": "s"
+                }
+              ],
+              "op": "len"
+            },
+            "lo": {
+              "int": 0
+            },
+            "var": "k_v3"
+          }
+        },
+        {
+          "args": [
+            {
+              "var": "k"
+            },
+            {
+              "int": 1
+            }
+          ],
+          "op": ">="
+        },
+        {
+          "args": [
+            {
+              "args": [
+                {
+                  "var": "s"
+                }
+              ],
+              "op": "len"
+            },
+            {
+              "int": 1
+            }
+          ],
+          "op": ">="
+        },
+        {
+          "args": [
+            {
+              "var": "width"
+            },
+            {
+              "int": 1
+            }
+          ],
+          "op": ">="
+        }
+      ],
+      "returns": [
+        {
+          "name": "can",
+          "type": "bool"
+        }
+      ]
+    }
+  ],
+  "name": "vericoding_da0292__solve",
+  "params": [
+    {
+      "name": "k",
+      "type": "int"
+    },
+    {
+      "name": "s",
+      "type": "seq"
+    }
+  ],
+  "requires": [
+    {
+      "forall": {
+        "body": {
+          "args": [
+            {
+              "args": [
+                {
+                  "args": [
+                    {
+                      "var": "s"
+                    },
+                    {
+                      "var": "k_v5"
+                    }
+                  ],
+                  "op": "at"
+                },
+                {
+                  "int": 0
+                }
+              ],
+              "op": ">="
+            },
+            {
+              "args": [
+                {
+                  "args": [
+                    {
+                      "var": "s"
+                    },
+                    {
+                      "var": "k_v5"
+                    }
+                  ],
+                  "op": "at"
+                },
+                {
+                  "int": 1114111
+                }
+              ],
+              "op": "<="
+            }
+          ],
+          "op": "and"
+        },
+        "hi": {
+          "args": [
+            {
+              "var": "s"
+            }
+          ],
+          "op": "len"
+        },
+        "lo": {
+          "int": 0
+        },
+        "var": "k_v5"
+      }
+    },
+    {
+      "args": [
+        {
+          "var": "k"
+        },
+        {
+          "int": 1
+        }
+      ],
+      "op": ">="
+    },
+    {
+      "args": [
+        {
+          "args": [
+            {
+              "var": "s"
+            }
+          ],
+          "op": "len"
+        },
+        {
+          "int": 1
+        }
+      ],
+      "op": ">="
+    }
+  ],
+  "returns": [
+    {
+      "name": "result",
+      "type": "int"
+    }
+  ],
+  "spec_funs": [
+    {
+      "body": {
+        "ite": {
+          "cond": {
+            "args": [
+              {
+                "args": [
+                  {
+                    "var": "k_v"
+                  },
+                  {
+                    "int": 1
+                  }
+                ],
+                "op": ">="
+              },
+              {
+                "args": [
+                  {
+                    "args": [
+                      {
+                        "var": "s_v"
+                      }
+                    ],
+                    "op": "len"
+                  },
+                  {
+                    "int": 1
+                  }
+                ],
+                "op": ">="
+              },
+              {
+                "args": [
+                  {
+                    "var": "maxWidth"
+                  },
+                  {
+                    "int": 1
+                  }
+                ],
+                "op": ">="
+              },
+              {
+                "args": [
+                  {
+                    "args": [
+                      {
+                        "int": 0
+                      },
+                      {
+                        "var": "pos"
+                      }
+                    ],
+                    "op": "<="
+                  },
+                  {
+                    "args": [
+                      {
+                        "var": "pos"
+                      },
+                      {
+                        "args": [
+                          {
+                            "var": "s_v"
+                          }
+                        ],
+                        "op": "len"
+                      }
+                    ],
+                    "op": "<="
+                  }
+                ],
+                "op": "and"
+              },
+              {
+                "args": [
+                  {
+                    "var": "lines"
+                  },
+                  {
+                    "int": 1
+                  }
+                ],
+                "op": ">="
+              },
+              {
+                "args": [
+                  {
+                    "var": "currentLine"
+                  },
+                  {
+                    "int": 0
+                  }
+                ],
+                "op": ">="
+              }
+            ],
+            "op": "and"
+          },
+          "else": {
+            "bool": false
+          },
+          "then": {
+            "ite": {
+              "cond": {
+                "args": [
+                  {
+                    "var": "pos"
+                  },
+                  {
+                    "args": [
+                      {
+                        "var": "s_v"
+                      }
+                    ],
+                    "op": "len"
+                  }
+                ],
+                "op": "=="
+              },
+              "else": {
+                "ite": {
+                  "cond": {
+                    "args": [
+                      {
+                        "args": [
+                          {
+                            "args": [
+                              {
+                                "var": "s_v"
+                              },
+                              {
+                                "var": "pos"
+                              }
+                            ],
+                            "op": "at"
+                          },
+                          {
+                            "int": 32
+                          }
+                        ],
+                        "op": "=="
+                      },
+                      {
+                        "args": [
+                          {
+                            "args": [
+                              {
+                                "var": "s_v"
+                              },
+                              {
+                                "var": "pos"
+                              }
+                            ],
+                            "op": "at"
+                          },
+                          {
+                            "int": 45
+                          }
+                        ],
+                        "op": "=="
+                      }
+                    ],
+                    "op": "or"
+                  },
+                  "else": {
+                    "ite": {
+                      "cond": {
+                        "args": [
+                          {
+                            "args": [
+                              {
+                                "var": "currentLine"
+                              },
+                              {
+                                "int": 1
+                              }
+                            ],
+                            "op": "+"
+                          },
+                          {
+                            "var": "maxWidth"
+                          }
+                        ],
+                        "op": ">"
+                      },
+                      "else": {
+                        "call": {
+                          "args": [
+                            {
+                              "var": "s_v"
+                            },
+                            {
+                              "var": "k_v"
+                            },
+                            {
+                              "var": "maxWidth"
+                            },
+                            {
+                              "args": [
+                                {
+                                  "var": "pos"
+                                },
+                                {
+                                  "int": 1
+                                }
+                              ],
+                              "op": "+"
+                            },
+                            {
+                              "var": "lines"
+                            },
+                            {
+                              "args": [
+                                {
+                                  "var": "currentLine"
+                                },
+                                {
+                                  "int": 1
+                                }
+                              ],
+                              "op": "+"
+                            }
+                          ],
+                          "fun": "checkFormatting"
+                        }
+                      },
+                      "then": {
+                        "bool": false
+                      }
+                    }
+                  },
+                  "then": {
+                    "ite": {
+                      "cond": {
+                        "args": [
+                          {
+                            "args": [
+                              {
+                                "var": "currentLine"
+                              },
+                              {
+                                "int": 1
+                              }
+                            ],
+                            "op": "+"
+                          },
+                          {
+                            "var": "maxWidth"
+                          }
+                        ],
+                        "op": ">"
+                      },
+                      "else": {
+                        "args": [
+                          {
+                            "call": {
+                              "args": [
+                                {
+                                  "var": "s_v"
+                                },
+                                {
+                                  "var": "k_v"
+                                },
+                                {
+                                  "var": "maxWidth"
+                                },
+                                {
+                                  "args": [
+                                    {
+                                      "var": "pos"
+                                    },
+                                    {
+                                      "int": 1
+                                    }
+                                  ],
+                                  "op": "+"
+                                },
+                                {
+                                  "var": "lines"
+                                },
+                                {
+                                  "args": [
+                                    {
+                                      "var": "currentLine"
+                                    },
+                                    {
+                                      "int": 1
+                                    }
+                                  ],
+                                  "op": "+"
+                                }
+                              ],
+                              "fun": "checkFormatting"
+                            }
+                          },
+                          {
+                            "args": [
+                              {
+                                "args": [
+                                  {
+                                    "var": "lines"
+                                  },
+                                  {
+                                    "var": "k_v"
+                                  }
+                                ],
+                                "op": "<"
+                              },
+                              {
+                                "call": {
+                                  "args": [
+                                    {
+                                      "var": "s_v"
+                                    },
+                                    {
+                                      "var": "k_v"
+                                    },
+                                    {
+                                      "var": "maxWidth"
+                                    },
+                                    {
+                                      "args": [
+                                        {
+                                          "var": "pos"
+                                        },
+                                        {
+                                          "int": 1
+                                        }
+                                      ],
+                                      "op": "+"
+                                    },
+                                    {
+                                      "args": [
+                                        {
+                                          "var": "lines"
+                                        },
+                                        {
+                                          "int": 1
+                                        }
+                                      ],
+                                      "op": "+"
+                                    },
+                                    {
+                                      "int": 1
+                                    }
+                                  ],
+                                  "fun": "checkFormatting"
+                                }
+                              }
+                            ],
+                            "op": "and"
+                          }
+                        ],
+                        "op": "or"
+                      },
+                      "then": {
+                        "ite": {
+                          "cond": {
+                            "args": [
+                              {
+                                "args": [
+                                  {
+                                    "var": "lines"
+                                  },
+                                  {
+                                    "int": 1
+                                  }
+                                ],
+                                "op": "+"
+                              },
+                              {
+                                "var": "k_v"
+                              }
+                            ],
+                            "op": ">"
+                          },
+                          "else": {
+                            "call": {
+                              "args": [
+                                {
+                                  "var": "s_v"
+                                },
+                                {
+                                  "var": "k_v"
+                                },
+                                {
+                                  "var": "maxWidth"
+                                },
+                                {
+                                  "args": [
+                                    {
+                                      "var": "pos"
+                                    },
+                                    {
+                                      "int": 1
+                                    }
+                                  ],
+                                  "op": "+"
+                                },
+                                {
+                                  "args": [
+                                    {
+                                      "var": "lines"
+                                    },
+                                    {
+                                      "int": 1
+                                    }
+                                  ],
+                                  "op": "+"
+                                },
+                                {
+                                  "int": 1
+                                }
+                              ],
+                              "fun": "checkFormatting"
+                            }
+                          },
+                          "then": {
+                            "bool": false
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              },
+              "then": {
+                "args": [
+                  {
+                    "args": [
+                      {
+                        "var": "lines"
+                      },
+                      {
+                        "var": "k_v"
+                      }
+                    ],
+                    "op": "<="
+                  },
+                  {
+                    "args": [
+                      {
+                        "var": "currentLine"
+                      },
+                      {
+                        "var": "maxWidth"
+                      }
+                    ],
+                    "op": "<="
+                  }
+                ],
+                "op": "and"
+              }
+            }
+          }
+        }
+      },
+      "decreases": {
+        "args": [
+          {
+            "args": [
+              {
+                "var": "s_v"
+              }
+            ],
+            "op": "len"
+          },
+          {
+            "var": "pos"
+          }
+        ],
+        "op": "-"
+      },
+      "name": "checkFormatting",
+      "params": [
+        {
+          "name": "s_v",
+          "type": "seq"
+        },
+        {
+          "name": "k_v",
+          "type": "int"
+        },
+        {
+          "name": "maxWidth",
+          "type": "int"
+        },
+        {
+          "name": "pos",
+          "type": "int"
+        },
+        {
+          "name": "lines",
+          "type": "int"
+        },
+        {
+          "name": "currentLine",
+          "type": "int"
+        }
+      ],
+      "result": "bool"
+    },
+    {
+      "body": {
+        "ite": {
+          "cond": {
+            "args": [
+              {
+                "args": [
+                  {
+                    "var": "k_v2"
+                  },
+                  {
+                    "int": 1
+                  }
+                ],
+                "op": ">="
+              },
+              {
+                "args": [
+                  {
+                    "args": [
+                      {
+                        "var": "s_v2"
+                      }
+                    ],
+                    "op": "len"
+                  },
+                  {
+                    "int": 1
+                  }
+                ],
+                "op": ">="
+              },
+              {
+                "args": [
+                  {
+                    "var": "maxWidth_v"
+                  },
+                  {
+                    "int": 1
+                  }
+                ],
+                "op": ">="
+              }
+            ],
+            "op": "and"
+          },
+          "else": {
+            "bool": false
+          },
+          "then": {
+            "call": {
+              "args": [
+                {
+                  "var": "s_v2"
+                },
+                {
+                  "var": "k_v2"
+                },
+                {
+                  "var": "maxWidth_v"
+                },
+                {
+                  "int": 0
+                },
+                {
+                  "int": 1
+                },
+                {
+                  "int": 0
+                }
+              ],
+              "fun": "checkFormatting"
+            }
+          }
+        }
+      },
+      "decreases": {
+        "int": 0
+      },
+      "name": "canFormatText",
+      "params": [
+        {
+          "name": "s_v2",
+          "type": "seq"
+        },
+        {
+          "name": "k_v2",
+          "type": "int"
+        },
+        {
+          "name": "maxWidth_v",
+          "type": "int"
+        }
+      ],
+      "result": "bool"
+    }
+  ],
+  "t": 1
+}

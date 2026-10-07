@@ -1,0 +1,35 @@
+{
+  "body": [
+    {
+      "assign": [
+        "result",
+        {
+          "int": 9
+        }
+      ]
+    }
+  ],
+  "ensures": [
+    {
+      "args": [
+        {
+          "var": "result"
+        },
+        {
+          "int": 10
+        }
+      ],
+      "op": "<"
+    }
+  ],
+  "name": "vericoding_dj0135__arithmeticWeird",
+  "params": [],
+  "requires": [],
+  "returns": [
+    {
+      "name": "result",
+      "type": "int"
+    }
+  ],
+  "t": 1
+}

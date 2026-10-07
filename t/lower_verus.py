@@ -5996,8 +5996,11 @@ def _gint(e) -> int:
     certificate rather than emitting a wrong one."""
     if isinstance(e, dict) and "int" in e:
         return e["int"]
+    e = _proj_ground(e)
     op = e.get("op") if isinstance(e, dict) else None
-    args = e.get("args", []) if isinstance(e, dict) else []
+    args = [_proj_ground(a) for a in e.get("args", [])] if isinstance(e, dict) else []
+    if op in ("fst", "snd"):
+        raise ValueError(f"quantifier bound not ground: {e!r}")
     if op == "len" and len(args) == 1 and "_seq" in args[0]:
         return len(args[0]["_seq"])
     if op == "len" and len(args) == 1 and "_nested_seq" in args[0]:
@@ -6029,6 +6032,16 @@ def _gint(e) -> int:
         r = a % abs(b)
         return r if op == "mod" else (a - r) // b
     raise ValueError(f"quantifier bound not ground: {e!r}")
+
+
+def _proj_ground(e):
+    """PREDICT T53: `fst`/`snd` of a pair literal is that component. A heap twin's certificate grounds the rewrite's
+    `t_out` as `pair(value, seq)`, so a bound such as `len(snd(t_out))` reaches `_gint` as a projection of a literal;
+    anything that is not a literal pair is left as it is, and `_gint` still refuses it."""
+    while (isinstance(e, dict) and e.get("op") in ("fst", "snd") and len(e.get("args", ())) == 1
+           and isinstance(e["args"][0], dict) and e["args"][0].get("op") == "pair"):
+        e = e["args"][0]["args"][0 if e["op"] == "fst" else 1]
+    return e
 
 
 def _unroll(e: dict, budget: list, spec_funs: dict | None = None) -> dict:

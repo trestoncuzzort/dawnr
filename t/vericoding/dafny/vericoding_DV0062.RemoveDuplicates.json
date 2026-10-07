@@ -1,0 +1,473 @@
+{
+  "body": [
+    {
+      "if": {
+        "cond": {
+          "args": [
+            {
+              "args": [
+                {
+                  "var": "nums"
+                }
+              ],
+              "op": "len"
+            },
+            {
+              "int": 0
+            }
+          ],
+          "op": "=="
+        },
+        "else": [
+          {
+            "var": {
+              "init": {
+                "int": 1
+              },
+              "name": "unique",
+              "type": "int"
+            }
+          },
+          {
+            "var": {
+              "init": {
+                "int": 1
+              },
+              "name": "i_v",
+              "type": "int"
+            }
+          },
+          {
+            "var": {
+              "init": {
+                "args": [
+                  {
+                    "var": "nums"
+                  },
+                  {
+                    "int": 0
+                  }
+                ],
+                "op": "at"
+              },
+              "name": "lastUnique",
+              "type": "int"
+            }
+          },
+          {
+            "while": {
+              "body": [
+                {
+                  "if": {
+                    "cond": {
+                      "args": [
+                        {
+                          "args": [
+                            {
+                              "var": "nums"
+                            },
+                            {
+                              "var": "i_v"
+                            }
+                          ],
+                          "op": "at"
+                        },
+                        {
+                          "var": "lastUnique"
+                        }
+                      ],
+                      "op": "!="
+                    },
+                    "else": [],
+                    "then": [
+                      {
+                        "assign": [
+                          "unique",
+                          {
+                            "args": [
+                              {
+                                "var": "unique"
+                              },
+                              {
+                                "int": 1
+                              }
+                            ],
+                            "op": "+"
+                          }
+                        ]
+                      },
+                      {
+                        "assign": [
+                          "lastUnique",
+                          {
+                            "args": [
+                              {
+                                "var": "nums"
+                              },
+                              {
+                                "var": "i_v"
+                              }
+                            ],
+                            "op": "at"
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                },
+                {
+                  "assign": [
+                    "i_v",
+                    {
+                      "args": [
+                        {
+                          "var": "i_v"
+                        },
+                        {
+                          "int": 1
+                        }
+                      ],
+                      "op": "+"
+                    }
+                  ]
+                }
+              ],
+              "cond": {
+                "args": [
+                  {
+                    "var": "i_v"
+                  },
+                  {
+                    "args": [
+                      {
+                        "var": "nums"
+                      }
+                    ],
+                    "op": "len"
+                  }
+                ],
+                "op": "<"
+              },
+              "decreases": {
+                "args": [
+                  {
+                    "args": [
+                      {
+                        "var": "nums"
+                      }
+                    ],
+                    "op": "len"
+                  },
+                  {
+                    "var": "i_v"
+                  }
+                ],
+                "op": "-"
+              },
+              "invariants": [
+                {
+                  "args": [
+                    {
+                      "args": [
+                        {
+                          "int": 1
+                        },
+                        {
+                          "var": "i_v"
+                        }
+                      ],
+                      "op": "<="
+                    },
+                    {
+                      "args": [
+                        {
+                          "var": "i_v"
+                        },
+                        {
+                          "args": [
+                            {
+                              "var": "nums"
+                            }
+                          ],
+                          "op": "len"
+                        }
+                      ],
+                      "op": "<="
+                    }
+                  ],
+                  "op": "and"
+                },
+                {
+                  "args": [
+                    {
+                      "args": [
+                        {
+                          "int": 1
+                        },
+                        {
+                          "var": "unique"
+                        }
+                      ],
+                      "op": "<="
+                    },
+                    {
+                      "args": [
+                        {
+                          "var": "unique"
+                        },
+                        {
+                          "var": "i_v"
+                        }
+                      ],
+                      "op": "<="
+                    }
+                  ],
+                  "op": "and"
+                },
+                {
+                  "args": [
+                    {
+                      "args": [
+                        {
+                          "var": "lastUnique"
+                        },
+                        {
+                          "args": [
+                            {
+                              "var": "nums"
+                            },
+                            {
+                              "int": 0
+                            }
+                          ],
+                          "op": "at"
+                        }
+                      ],
+                      "op": "=="
+                    },
+                    {
+                      "exists": {
+                        "body": {
+                          "args": [
+                            {
+                              "args": [
+                                {
+                                  "var": "nums"
+                                },
+                                {
+                                  "var": "j_v"
+                                }
+                              ],
+                              "op": "at"
+                            },
+                            {
+                              "var": "lastUnique"
+                            }
+                          ],
+                          "op": "=="
+                        },
+                        "hi": {
+                          "var": "i_v"
+                        },
+                        "lo": {
+                          "int": 0
+                        },
+                        "var": "j_v"
+                      }
+                    }
+                  ],
+                  "op": "or"
+                },
+                {
+                  "forall": {
+                    "body": {
+                      "args": [
+                        {
+                          "args": [
+                            {
+                              "args": [
+                                {
+                                  "var": "nums"
+                                },
+                                {
+                                  "var": "j_v2"
+                                }
+                              ],
+                              "op": "at"
+                            },
+                            {
+                              "var": "lastUnique"
+                            }
+                          ],
+                          "op": "!="
+                        },
+                        {
+                          "args": [
+                            {
+                              "args": [
+                                {
+                                  "var": "nums"
+                                },
+                                {
+                                  "var": "j_v2"
+                                }
+                              ],
+                              "op": "at"
+                            },
+                            {
+                              "var": "lastUnique"
+                            }
+                          ],
+                          "op": "<"
+                        }
+                      ],
+                      "op": "implies"
+                    },
+                    "hi": {
+                      "var": "i_v"
+                    },
+                    "lo": {
+                      "int": 0
+                    },
+                    "var": "j_v2"
+                  }
+                }
+              ]
+            }
+          },
+          {
+            "assign": [
+              "result",
+              {
+                "var": "unique"
+              }
+            ]
+          }
+        ],
+        "then": [
+          {
+            "assign": [
+              "result",
+              {
+                "int": 0
+              }
+            ]
+          }
+        ]
+      }
+    }
+  ],
+  "ensures": [
+    {
+      "args": [
+        {
+          "var": "result"
+        },
+        {
+          "int": 0
+        }
+      ],
+      "op": ">="
+    },
+    {
+      "args": [
+        {
+          "var": "result"
+        },
+        {
+          "args": [
+            {
+              "var": "nums"
+            }
+          ],
+          "op": "len"
+        }
+      ],
+      "op": "<="
+    }
+  ],
+  "gate": "loops",
+  "name": "vericoding_dv0062__removeDuplicates",
+  "params": [
+    {
+      "name": "nums",
+      "type": "seq"
+    }
+  ],
+  "requires": [
+    {
+      "forall": {
+        "body": {
+          "forall": {
+            "body": {
+              "args": [
+                {
+                  "args": [
+                    {
+                      "var": "nums"
+                    },
+                    {
+                      "var": "i"
+                    }
+                  ],
+                  "op": "at"
+                },
+                {
+                  "args": [
+                    {
+                      "var": "nums"
+                    },
+                    {
+                      "var": "j"
+                    }
+                  ],
+                  "op": "at"
+                }
+              ],
+              "op": "<="
+            },
+            "hi": {
+              "args": [
+                {
+                  "var": "nums"
+                }
+              ],
+              "op": "len"
+            },
+            "lo": {
+              "args": [
+                {
+                  "var": "i"
+                },
+                {
+                  "int": 1
+                }
+              ],
+              "op": "+"
+            },
+            "var": "j"
+          }
+        },
+        "hi": {
+          "args": [
+            {
+              "var": "nums"
+            }
+          ],
+          "op": "len"
+        },
+        "lo": {
+          "int": 0
+        },
+        "var": "i"
+      }
+    }
+  ],
+  "returns": [
+    {
+      "name": "result",
+      "type": "int"
+    }
+  ],
+  "t": 1
+}

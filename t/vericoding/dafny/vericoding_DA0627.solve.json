@@ -1,0 +1,592 @@
+{
+  "body": [
+    {
+      "var": {
+        "init": {
+          "call": {
+            "args": [
+              {
+                "var": "input"
+              }
+            ],
+            "fun": "trimNewline"
+          }
+        },
+        "name": "trimmed",
+        "type": "seq"
+      }
+    },
+    {
+      "if": {
+        "cond": {
+          "call": {
+            "args": [
+              {
+                "var": "trimmed"
+              }
+            ],
+            "fun": "validWeather"
+          }
+        },
+        "else": [
+          {
+            "assign": [
+              "result",
+              {
+                "args": [],
+                "op": "seq"
+              }
+            ]
+          }
+        ],
+        "then": [
+          {
+            "assign": [
+              "result",
+              {
+                "args": [
+                  {
+                    "call": {
+                      "args": [
+                        {
+                          "var": "trimmed"
+                        }
+                      ],
+                      "fun": "nextWeather"
+                    }
+                  },
+                  {
+                    "args": [
+                      {
+                        "int": 10
+                      }
+                    ],
+                    "op": "seq"
+                  }
+                ],
+                "op": "+"
+              }
+            ]
+          }
+        ]
+      }
+    }
+  ],
+  "ensures": [
+    {
+      "ite": {
+        "cond": {
+          "call": {
+            "args": [
+              {
+                "call": {
+                  "args": [
+                    {
+                      "var": "input"
+                    }
+                  ],
+                  "fun": "trimNewline"
+                }
+              }
+            ],
+            "fun": "validWeather"
+          }
+        },
+        "else": {
+          "args": [
+            {
+              "var": "result"
+            },
+            {
+              "args": [],
+              "op": "seq"
+            }
+          ],
+          "op": "=="
+        },
+        "then": {
+          "args": [
+            {
+              "var": "result"
+            },
+            {
+              "args": [
+                {
+                  "call": {
+                    "args": [
+                      {
+                        "call": {
+                          "args": [
+                            {
+                              "var": "input"
+                            }
+                          ],
+                          "fun": "trimNewline"
+                        }
+                      }
+                    ],
+                    "fun": "nextWeather"
+                  }
+                },
+                {
+                  "args": [
+                    {
+                      "int": 10
+                    }
+                  ],
+                  "op": "seq"
+                }
+              ],
+              "op": "+"
+            }
+          ],
+          "op": "=="
+        }
+      }
+    }
+  ],
+  "gate": "recursion",
+  "name": "vericoding_da0627__solve",
+  "params": [
+    {
+      "name": "input",
+      "type": "seq"
+    }
+  ],
+  "requires": [
+    {
+      "forall": {
+        "body": {
+          "args": [
+            {
+              "args": [
+                {
+                  "args": [
+                    {
+                      "var": "input"
+                    },
+                    {
+                      "var": "k"
+                    }
+                  ],
+                  "op": "at"
+                },
+                {
+                  "int": 0
+                }
+              ],
+              "op": ">="
+            },
+            {
+              "args": [
+                {
+                  "args": [
+                    {
+                      "var": "input"
+                    },
+                    {
+                      "var": "k"
+                    }
+                  ],
+                  "op": "at"
+                },
+                {
+                  "int": 1114111
+                }
+              ],
+              "op": "<="
+            }
+          ],
+          "op": "and"
+        },
+        "hi": {
+          "args": [
+            {
+              "var": "input"
+            }
+          ],
+          "op": "len"
+        },
+        "lo": {
+          "int": 0
+        },
+        "var": "k"
+      }
+    }
+  ],
+  "returns": [
+    {
+      "name": "result",
+      "type": "seq"
+    }
+  ],
+  "spec_funs": [
+    {
+      "body": {
+        "ite": {
+          "cond": {
+            "args": [
+              {
+                "args": [
+                  {
+                    "args": [
+                      {
+                        "var": "input_v"
+                      }
+                    ],
+                    "op": "len"
+                  },
+                  {
+                    "int": 0
+                  }
+                ],
+                "op": ">"
+              },
+              {
+                "args": [
+                  {
+                    "args": [
+                      {
+                        "var": "input_v"
+                      },
+                      {
+                        "args": [
+                          {
+                            "args": [
+                              {
+                                "var": "input_v"
+                              }
+                            ],
+                            "op": "len"
+                          },
+                          {
+                            "int": 1
+                          }
+                        ],
+                        "op": "-"
+                      }
+                    ],
+                    "op": "at"
+                  },
+                  {
+                    "int": 10
+                  }
+                ],
+                "op": "=="
+              }
+            ],
+            "op": "and"
+          },
+          "else": {
+            "var": "input_v"
+          },
+          "then": {
+            "args": [
+              {
+                "var": "input_v"
+              },
+              {
+                "int": 0
+              },
+              {
+                "args": [
+                  {
+                    "args": [
+                      {
+                        "var": "input_v"
+                      }
+                    ],
+                    "op": "len"
+                  },
+                  {
+                    "int": 1
+                  }
+                ],
+                "op": "-"
+              }
+            ],
+            "op": "slice"
+          }
+        }
+      },
+      "decreases": {
+        "int": 0
+      },
+      "name": "trimNewline",
+      "params": [
+        {
+          "name": "input_v",
+          "type": "seq"
+        }
+      ],
+      "result": "seq"
+    },
+    {
+      "body": {
+        "args": [
+          {
+            "args": [
+              {
+                "var": "weather"
+              },
+              {
+                "args": [
+                  {
+                    "int": 83
+                  },
+                  {
+                    "int": 117
+                  },
+                  {
+                    "int": 110
+                  },
+                  {
+                    "int": 110
+                  },
+                  {
+                    "int": 121
+                  }
+                ],
+                "op": "seq"
+              }
+            ],
+            "op": "=="
+          },
+          {
+            "args": [
+              {
+                "var": "weather"
+              },
+              {
+                "args": [
+                  {
+                    "int": 67
+                  },
+                  {
+                    "int": 108
+                  },
+                  {
+                    "int": 111
+                  },
+                  {
+                    "int": 117
+                  },
+                  {
+                    "int": 100
+                  },
+                  {
+                    "int": 121
+                  }
+                ],
+                "op": "seq"
+              }
+            ],
+            "op": "=="
+          },
+          {
+            "args": [
+              {
+                "var": "weather"
+              },
+              {
+                "args": [
+                  {
+                    "int": 82
+                  },
+                  {
+                    "int": 97
+                  },
+                  {
+                    "int": 105
+                  },
+                  {
+                    "int": 110
+                  },
+                  {
+                    "int": 121
+                  }
+                ],
+                "op": "seq"
+              }
+            ],
+            "op": "=="
+          }
+        ],
+        "op": "or"
+      },
+      "decreases": {
+        "int": 0
+      },
+      "name": "validWeather",
+      "params": [
+        {
+          "name": "weather",
+          "type": "seq"
+        }
+      ],
+      "result": "bool"
+    },
+    {
+      "body": {
+        "ite": {
+          "cond": {
+            "call": {
+              "args": [
+                {
+                  "var": "weather_v"
+                }
+              ],
+              "fun": "validWeather"
+            }
+          },
+          "else": {
+            "args": [],
+            "op": "seq"
+          },
+          "then": {
+            "ite": {
+              "cond": {
+                "args": [
+                  {
+                    "var": "weather_v"
+                  },
+                  {
+                    "args": [
+                      {
+                        "int": 83
+                      },
+                      {
+                        "int": 117
+                      },
+                      {
+                        "int": 110
+                      },
+                      {
+                        "int": 110
+                      },
+                      {
+                        "int": 121
+                      }
+                    ],
+                    "op": "seq"
+                  }
+                ],
+                "op": "=="
+              },
+              "else": {
+                "ite": {
+                  "cond": {
+                    "args": [
+                      {
+                        "var": "weather_v"
+                      },
+                      {
+                        "args": [
+                          {
+                            "int": 67
+                          },
+                          {
+                            "int": 108
+                          },
+                          {
+                            "int": 111
+                          },
+                          {
+                            "int": 117
+                          },
+                          {
+                            "int": 100
+                          },
+                          {
+                            "int": 121
+                          }
+                        ],
+                        "op": "seq"
+                      }
+                    ],
+                    "op": "=="
+                  },
+                  "else": {
+                    "args": [
+                      {
+                        "int": 83
+                      },
+                      {
+                        "int": 117
+                      },
+                      {
+                        "int": 110
+                      },
+                      {
+                        "int": 110
+                      },
+                      {
+                        "int": 121
+                      }
+                    ],
+                    "op": "seq"
+                  },
+                  "then": {
+                    "args": [
+                      {
+                        "int": 82
+                      },
+                      {
+                        "int": 97
+                      },
+                      {
+                        "int": 105
+                      },
+                      {
+                        "int": 110
+                      },
+                      {
+                        "int": 121
+                      }
+                    ],
+                    "op": "seq"
+                  }
+                }
+              },
+              "then": {
+                "args": [
+                  {
+                    "int": 67
+                  },
+                  {
+                    "int": 108
+                  },
+                  {
+                    "int": 111
+                  },
+                  {
+                    "int": 117
+                  },
+                  {
+                    "int": 100
+                  },
+                  {
+                    "int": 121
+                  }
+                ],
+                "op": "seq"
+              }
+            }
+          }
+        }
+      },
+      "decreases": {
+        "int": 0
+      },
+      "name": "nextWeather",
+      "params": [
+        {
+          "name": "weather_v",
+          "type": "seq"
+        }
+      ],
+      "result": "seq"
+    }
+  ],
+  "t": 1
+}

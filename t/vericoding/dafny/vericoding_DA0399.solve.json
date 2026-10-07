@@ -1,0 +1,900 @@
+{
+  "body": [
+    {
+      "assign": [
+        "result",
+        {
+          "args": [
+            {
+              "args": [
+                {
+                  "int": 6
+                },
+                {
+                  "var": "a"
+                }
+              ],
+              "op": "-"
+            },
+            {
+              "var": "b"
+            }
+          ],
+          "op": "-"
+        }
+      ]
+    },
+    {
+      "lemma": {
+        "args": [
+          {
+            "var": "a"
+          },
+          {
+            "var": "b"
+          }
+        ],
+        "name": "lateBrotherCorrect"
+      }
+    }
+  ],
+  "ensures": [
+    {
+      "call": {
+        "args": [
+          {
+            "var": "a"
+          },
+          {
+            "var": "b"
+          },
+          {
+            "var": "result"
+          }
+        ],
+        "fun": "isValidResult"
+      }
+    },
+    {
+      "args": [
+        {
+          "var": "result"
+        },
+        {
+          "call": {
+            "args": [
+              {
+                "var": "a"
+              },
+              {
+                "var": "b"
+              }
+            ],
+            "fun": "lateBrother"
+          }
+        }
+      ],
+      "op": "=="
+    }
+  ],
+  "gate": "recursion",
+  "lemmas": [
+    {
+      "body": [
+        {
+          "assert": {
+            "args": [
+              {
+                "call": {
+                  "args": [
+                    {
+                      "var": "a_v4"
+                    },
+                    {
+                      "var": "b_v4"
+                    }
+                  ],
+                  "fun": "lateBrother"
+                }
+              },
+              {
+                "args": [
+                  {
+                    "args": [
+                      {
+                        "int": 6
+                      },
+                      {
+                        "var": "a_v4"
+                      }
+                    ],
+                    "op": "-"
+                  },
+                  {
+                    "var": "b_v4"
+                  }
+                ],
+                "op": "-"
+              }
+            ],
+            "op": "=="
+          }
+        },
+        {
+          "assert": {
+            "args": [
+              {
+                "args": [
+                  {
+                    "args": [
+                      {
+                        "var": "a_v4"
+                      },
+                      {
+                        "var": "b_v4"
+                      }
+                    ],
+                    "op": "+"
+                  },
+                  {
+                    "int": 3
+                  }
+                ],
+                "op": "=="
+              },
+              {
+                "args": [
+                  {
+                    "args": [
+                      {
+                        "var": "a_v4"
+                      },
+                      {
+                        "var": "b_v4"
+                      }
+                    ],
+                    "op": "+"
+                  },
+                  {
+                    "int": 4
+                  }
+                ],
+                "op": "=="
+              },
+              {
+                "args": [
+                  {
+                    "args": [
+                      {
+                        "var": "a_v4"
+                      },
+                      {
+                        "var": "b_v4"
+                      }
+                    ],
+                    "op": "+"
+                  },
+                  {
+                    "int": 5
+                  }
+                ],
+                "op": "=="
+              }
+            ],
+            "op": "or"
+          }
+        },
+        {
+          "if": {
+            "cond": {
+              "args": [
+                {
+                  "args": [
+                    {
+                      "var": "a_v4"
+                    },
+                    {
+                      "var": "b_v4"
+                    }
+                  ],
+                  "op": "+"
+                },
+                {
+                  "int": 3
+                }
+              ],
+              "op": "=="
+            },
+            "else": [
+              {
+                "if": {
+                  "cond": {
+                    "args": [
+                      {
+                        "args": [
+                          {
+                            "var": "a_v4"
+                          },
+                          {
+                            "var": "b_v4"
+                          }
+                        ],
+                        "op": "+"
+                      },
+                      {
+                        "int": 4
+                      }
+                    ],
+                    "op": "=="
+                  },
+                  "else": [
+                    {
+                      "assert": {
+                        "args": [
+                          {
+                            "args": [
+                              {
+                                "var": "a_v4"
+                              },
+                              {
+                                "var": "b_v4"
+                              }
+                            ],
+                            "op": "+"
+                          },
+                          {
+                            "int": 5
+                          }
+                        ],
+                        "op": "=="
+                      }
+                    },
+                    {
+                      "assert": {
+                        "args": [
+                          {
+                            "args": [
+                              {
+                                "args": [
+                                  {
+                                    "var": "a_v4"
+                                  },
+                                  {
+                                    "int": 2
+                                  }
+                                ],
+                                "op": "=="
+                              },
+                              {
+                                "args": [
+                                  {
+                                    "var": "b_v4"
+                                  },
+                                  {
+                                    "int": 3
+                                  }
+                                ],
+                                "op": "=="
+                              }
+                            ],
+                            "op": "and"
+                          },
+                          {
+                            "args": [
+                              {
+                                "args": [
+                                  {
+                                    "var": "a_v4"
+                                  },
+                                  {
+                                    "int": 3
+                                  }
+                                ],
+                                "op": "=="
+                              },
+                              {
+                                "args": [
+                                  {
+                                    "var": "b_v4"
+                                  },
+                                  {
+                                    "int": 2
+                                  }
+                                ],
+                                "op": "=="
+                              }
+                            ],
+                            "op": "and"
+                          }
+                        ],
+                        "op": "or"
+                      }
+                    },
+                    {
+                      "assert": {
+                        "args": [
+                          {
+                            "call": {
+                              "args": [
+                                {
+                                  "var": "a_v4"
+                                },
+                                {
+                                  "var": "b_v4"
+                                }
+                              ],
+                              "fun": "lateBrother"
+                            }
+                          },
+                          {
+                            "int": 1
+                          }
+                        ],
+                        "op": "=="
+                      }
+                    }
+                  ],
+                  "then": [
+                    {
+                      "assert": {
+                        "args": [
+                          {
+                            "args": [
+                              {
+                                "args": [
+                                  {
+                                    "var": "a_v4"
+                                  },
+                                  {
+                                    "int": 1
+                                  }
+                                ],
+                                "op": "=="
+                              },
+                              {
+                                "args": [
+                                  {
+                                    "var": "b_v4"
+                                  },
+                                  {
+                                    "int": 3
+                                  }
+                                ],
+                                "op": "=="
+                              }
+                            ],
+                            "op": "and"
+                          },
+                          {
+                            "args": [
+                              {
+                                "args": [
+                                  {
+                                    "var": "a_v4"
+                                  },
+                                  {
+                                    "int": 3
+                                  }
+                                ],
+                                "op": "=="
+                              },
+                              {
+                                "args": [
+                                  {
+                                    "var": "b_v4"
+                                  },
+                                  {
+                                    "int": 1
+                                  }
+                                ],
+                                "op": "=="
+                              }
+                            ],
+                            "op": "and"
+                          }
+                        ],
+                        "op": "or"
+                      }
+                    },
+                    {
+                      "assert": {
+                        "args": [
+                          {
+                            "call": {
+                              "args": [
+                                {
+                                  "var": "a_v4"
+                                },
+                                {
+                                  "var": "b_v4"
+                                }
+                              ],
+                              "fun": "lateBrother"
+                            }
+                          },
+                          {
+                            "int": 2
+                          }
+                        ],
+                        "op": "=="
+                      }
+                    }
+                  ]
+                }
+              }
+            ],
+            "then": [
+              {
+                "assert": {
+                  "args": [
+                    {
+                      "args": [
+                        {
+                          "args": [
+                            {
+                              "var": "a_v4"
+                            },
+                            {
+                              "int": 1
+                            }
+                          ],
+                          "op": "=="
+                        },
+                        {
+                          "args": [
+                            {
+                              "var": "b_v4"
+                            },
+                            {
+                              "int": 2
+                            }
+                          ],
+                          "op": "=="
+                        }
+                      ],
+                      "op": "and"
+                    },
+                    {
+                      "args": [
+                        {
+                          "args": [
+                            {
+                              "var": "a_v4"
+                            },
+                            {
+                              "int": 2
+                            }
+                          ],
+                          "op": "=="
+                        },
+                        {
+                          "args": [
+                            {
+                              "var": "b_v4"
+                            },
+                            {
+                              "int": 1
+                            }
+                          ],
+                          "op": "=="
+                        }
+                      ],
+                      "op": "and"
+                    }
+                  ],
+                  "op": "or"
+                }
+              },
+              {
+                "assert": {
+                  "args": [
+                    {
+                      "call": {
+                        "args": [
+                          {
+                            "var": "a_v4"
+                          },
+                          {
+                            "var": "b_v4"
+                          }
+                        ],
+                        "fun": "lateBrother"
+                      }
+                    },
+                    {
+                      "int": 3
+                    }
+                  ],
+                  "op": "=="
+                }
+              }
+            ]
+          }
+        }
+      ],
+      "ensures": [
+        {
+          "args": [
+            {
+              "int": 1
+            },
+            {
+              "call": {
+                "args": [
+                  {
+                    "var": "a_v4"
+                  },
+                  {
+                    "var": "b_v4"
+                  }
+                ],
+                "fun": "lateBrother"
+              }
+            }
+          ],
+          "op": "<="
+        },
+        {
+          "args": [
+            {
+              "call": {
+                "args": [
+                  {
+                    "var": "a_v4"
+                  },
+                  {
+                    "var": "b_v4"
+                  }
+                ],
+                "fun": "lateBrother"
+              }
+            },
+            {
+              "int": 3
+            }
+          ],
+          "op": "<="
+        },
+        {
+          "args": [
+            {
+              "call": {
+                "args": [
+                  {
+                    "var": "a_v4"
+                  },
+                  {
+                    "var": "b_v4"
+                  }
+                ],
+                "fun": "lateBrother"
+              }
+            },
+            {
+              "var": "a_v4"
+            }
+          ],
+          "op": "!="
+        },
+        {
+          "args": [
+            {
+              "call": {
+                "args": [
+                  {
+                    "var": "a_v4"
+                  },
+                  {
+                    "var": "b_v4"
+                  }
+                ],
+                "fun": "lateBrother"
+              }
+            },
+            {
+              "var": "b_v4"
+            }
+          ],
+          "op": "!="
+        }
+      ],
+      "name": "lateBrotherCorrect",
+      "params": [
+        {
+          "name": "a_v4",
+          "type": "int"
+        },
+        {
+          "name": "b_v4",
+          "type": "int"
+        }
+      ],
+      "requires": [
+        {
+          "call": {
+            "args": [
+              {
+                "var": "a_v4"
+              },
+              {
+                "var": "b_v4"
+              }
+            ],
+            "fun": "validBrotherNumbers"
+          }
+        }
+      ]
+    }
+  ],
+  "name": "vericoding_da0399__solve",
+  "params": [
+    {
+      "name": "a",
+      "type": "int"
+    },
+    {
+      "name": "b",
+      "type": "int"
+    }
+  ],
+  "requires": [
+    {
+      "call": {
+        "args": [
+          {
+            "var": "a"
+          },
+          {
+            "var": "b"
+          }
+        ],
+        "fun": "validBrotherNumbers"
+      }
+    }
+  ],
+  "returns": [
+    {
+      "name": "result",
+      "type": "int"
+    }
+  ],
+  "spec_funs": [
+    {
+      "body": {
+        "args": [
+          {
+            "args": [
+              {
+                "args": [
+                  {
+                    "int": 1
+                  },
+                  {
+                    "var": "a_v"
+                  }
+                ],
+                "op": "<="
+              },
+              {
+                "args": [
+                  {
+                    "var": "a_v"
+                  },
+                  {
+                    "int": 3
+                  }
+                ],
+                "op": "<="
+              }
+            ],
+            "op": "and"
+          },
+          {
+            "args": [
+              {
+                "args": [
+                  {
+                    "int": 1
+                  },
+                  {
+                    "var": "b_v"
+                  }
+                ],
+                "op": "<="
+              },
+              {
+                "args": [
+                  {
+                    "var": "b_v"
+                  },
+                  {
+                    "int": 3
+                  }
+                ],
+                "op": "<="
+              }
+            ],
+            "op": "and"
+          },
+          {
+            "args": [
+              {
+                "var": "a_v"
+              },
+              {
+                "var": "b_v"
+              }
+            ],
+            "op": "!="
+          }
+        ],
+        "op": "and"
+      },
+      "decreases": {
+        "int": 0
+      },
+      "name": "validBrotherNumbers",
+      "params": [
+        {
+          "name": "a_v",
+          "type": "int"
+        },
+        {
+          "name": "b_v",
+          "type": "int"
+        }
+      ],
+      "result": "bool"
+    },
+    {
+      "body": {
+        "ite": {
+          "cond": {
+            "call": {
+              "args": [
+                {
+                  "var": "a_v2"
+                },
+                {
+                  "var": "b_v2"
+                }
+              ],
+              "fun": "validBrotherNumbers"
+            }
+          },
+          "else": {
+            "int": 0
+          },
+          "then": {
+            "args": [
+              {
+                "args": [
+                  {
+                    "int": 6
+                  },
+                  {
+                    "var": "a_v2"
+                  }
+                ],
+                "op": "-"
+              },
+              {
+                "var": "b_v2"
+              }
+            ],
+            "op": "-"
+          }
+        }
+      },
+      "decreases": {
+        "int": 0
+      },
+      "name": "lateBrother",
+      "params": [
+        {
+          "name": "a_v2",
+          "type": "int"
+        },
+        {
+          "name": "b_v2",
+          "type": "int"
+        }
+      ],
+      "result": "int"
+    },
+    {
+      "body": {
+        "args": [
+          {
+            "call": {
+              "args": [
+                {
+                  "var": "a_v3"
+                },
+                {
+                  "var": "b_v3"
+                }
+              ],
+              "fun": "validBrotherNumbers"
+            }
+          },
+          {
+            "args": [
+              {
+                "args": [
+                  {
+                    "args": [
+                      {
+                        "int": 1
+                      },
+                      {
+                        "var": "result_v"
+                      }
+                    ],
+                    "op": "<="
+                  },
+                  {
+                    "args": [
+                      {
+                        "var": "result_v"
+                      },
+                      {
+                        "int": 3
+                      }
+                    ],
+                    "op": "<="
+                  }
+                ],
+                "op": "and"
+              },
+              {
+                "args": [
+                  {
+                    "var": "result_v"
+                  },
+                  {
+                    "var": "a_v3"
+                  }
+                ],
+                "op": "!="
+              },
+              {
+                "args": [
+                  {
+                    "var": "result_v"
+                  },
+                  {
+                    "var": "b_v3"
+                  }
+                ],
+                "op": "!="
+              }
+            ],
+            "op": "and"
+          }
+        ],
+        "op": "implies"
+      },
+      "decreases": {
+        "int": 0
+      },
+      "name": "isValidResult",
+      "params": [
+        {
+          "name": "a_v3",
+          "type": "int"
+        },
+        {
+          "name": "b_v3",
+          "type": "int"
+        },
+        {
+          "name": "result_v",
+          "type": "int"
+        }
+      ],
+      "result": "bool"
+    }
+  ],
+  "t": 1
+}

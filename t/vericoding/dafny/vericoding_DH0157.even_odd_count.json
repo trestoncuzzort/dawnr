@@ -1,0 +1,1135 @@
+{
+  "body": [
+    {
+      "var": {
+        "init": {
+          "int": 0
+        },
+        "name": "even_count",
+        "type": "int"
+      }
+    },
+    {
+      "var": {
+        "init": {
+          "int": 0
+        },
+        "name": "odd_count",
+        "type": "int"
+      }
+    },
+    {
+      "var": {
+        "init": {
+          "call": {
+            "args": [
+              {
+                "var": "num"
+              }
+            ],
+            "fun": "abs_value"
+          }
+        },
+        "name": "abs_num",
+        "type": "int"
+      }
+    },
+    {
+      "assign": [
+        "even_count",
+        {
+          "call": {
+            "args": [
+              {
+                "var": "abs_num"
+              }
+            ],
+            "fun": "count_even_digits"
+          }
+        }
+      ]
+    },
+    {
+      "assign": [
+        "odd_count",
+        {
+          "call": {
+            "args": [
+              {
+                "var": "abs_num"
+              }
+            ],
+            "fun": "count_odd_digits"
+          }
+        }
+      ]
+    },
+    {
+      "lemma": {
+        "args": [
+          {
+            "var": "abs_num"
+          }
+        ],
+        "name": "count_digits_sum"
+      }
+    },
+    {
+      "assign": [
+        "r",
+        {
+          "args": [
+            {
+              "var": "even_count"
+            },
+            {
+              "var": "odd_count"
+            }
+          ],
+          "op": "pair"
+        }
+      ]
+    }
+  ],
+  "ensures": [
+    {
+      "args": [
+        {
+          "args": [
+            {
+              "var": "r"
+            }
+          ],
+          "op": "fst"
+        },
+        {
+          "int": 0
+        }
+      ],
+      "op": ">="
+    },
+    {
+      "args": [
+        {
+          "args": [
+            {
+              "var": "r"
+            }
+          ],
+          "op": "snd"
+        },
+        {
+          "int": 0
+        }
+      ],
+      "op": ">="
+    },
+    {
+      "args": [
+        {
+          "args": [
+            {
+              "args": [
+                {
+                  "var": "r"
+                }
+              ],
+              "op": "fst"
+            },
+            {
+              "args": [
+                {
+                  "var": "r"
+                }
+              ],
+              "op": "snd"
+            }
+          ],
+          "op": "+"
+        },
+        {
+          "int": 1
+        }
+      ],
+      "op": ">="
+    },
+    {
+      "args": [
+        {
+          "args": [
+            {
+              "var": "r"
+            }
+          ],
+          "op": "fst"
+        },
+        {
+          "call": {
+            "args": [
+              {
+                "call": {
+                  "args": [
+                    {
+                      "var": "num"
+                    }
+                  ],
+                  "fun": "abs_value"
+                }
+              }
+            ],
+            "fun": "count_even_digits"
+          }
+        }
+      ],
+      "op": "=="
+    },
+    {
+      "args": [
+        {
+          "args": [
+            {
+              "var": "r"
+            }
+          ],
+          "op": "snd"
+        },
+        {
+          "call": {
+            "args": [
+              {
+                "call": {
+                  "args": [
+                    {
+                      "var": "num"
+                    }
+                  ],
+                  "fun": "abs_value"
+                }
+              }
+            ],
+            "fun": "count_odd_digits"
+          }
+        }
+      ],
+      "op": "=="
+    },
+    {
+      "args": [
+        {
+          "args": [
+            {
+              "args": [
+                {
+                  "var": "r"
+                }
+              ],
+              "op": "fst"
+            },
+            {
+              "args": [
+                {
+                  "var": "r"
+                }
+              ],
+              "op": "snd"
+            }
+          ],
+          "op": "+"
+        },
+        {
+          "call": {
+            "args": [
+              {
+                "call": {
+                  "args": [
+                    {
+                      "var": "num"
+                    }
+                  ],
+                  "fun": "abs_value"
+                }
+              }
+            ],
+            "fun": "count_digits"
+          }
+        }
+      ],
+      "op": "=="
+    },
+    {
+      "args": [
+        {
+          "args": [
+            {
+              "var": "num"
+            },
+            {
+              "int": 0
+            }
+          ],
+          "op": "=="
+        },
+        {
+          "args": [
+            {
+              "args": [
+                {
+                  "args": [
+                    {
+                      "var": "r"
+                    }
+                  ],
+                  "op": "fst"
+                },
+                {
+                  "int": 1
+                }
+              ],
+              "op": "=="
+            },
+            {
+              "args": [
+                {
+                  "args": [
+                    {
+                      "var": "r"
+                    }
+                  ],
+                  "op": "snd"
+                },
+                {
+                  "int": 0
+                }
+              ],
+              "op": "=="
+            }
+          ],
+          "op": "and"
+        }
+      ],
+      "op": "implies"
+    },
+    {
+      "args": [
+        {
+          "args": [
+            {
+              "call": {
+                "args": [
+                  {
+                    "var": "num"
+                  }
+                ],
+                "fun": "abs_value"
+              }
+            },
+            {
+              "call": {
+                "args": [
+                  {
+                    "args": [
+                      {
+                        "var": "num"
+                      }
+                    ],
+                    "op": "neg"
+                  }
+                ],
+                "fun": "abs_value"
+              }
+            }
+          ],
+          "op": "=="
+        },
+        {
+          "args": [
+            {
+              "args": [
+                {
+                  "args": [
+                    {
+                      "var": "r"
+                    }
+                  ],
+                  "op": "fst"
+                },
+                {
+                  "call": {
+                    "args": [
+                      {
+                        "call": {
+                          "args": [
+                            {
+                              "args": [
+                                {
+                                  "var": "num"
+                                }
+                              ],
+                              "op": "neg"
+                            }
+                          ],
+                          "fun": "abs_value"
+                        }
+                      }
+                    ],
+                    "fun": "count_even_digits"
+                  }
+                }
+              ],
+              "op": "=="
+            },
+            {
+              "args": [
+                {
+                  "args": [
+                    {
+                      "var": "r"
+                    }
+                  ],
+                  "op": "snd"
+                },
+                {
+                  "call": {
+                    "args": [
+                      {
+                        "call": {
+                          "args": [
+                            {
+                              "args": [
+                                {
+                                  "var": "num"
+                                }
+                              ],
+                              "op": "neg"
+                            }
+                          ],
+                          "fun": "abs_value"
+                        }
+                      }
+                    ],
+                    "fun": "count_odd_digits"
+                  }
+                }
+              ],
+              "op": "=="
+            }
+          ],
+          "op": "and"
+        }
+      ],
+      "op": "implies"
+    }
+  ],
+  "gate": "recursion",
+  "lemmas": [
+    {
+      "body": [
+        {
+          "if": {
+            "cond": {
+              "args": [
+                {
+                  "var": "n_v3"
+                },
+                {
+                  "int": 10
+                }
+              ],
+              "op": "<"
+            },
+            "else": [
+              {
+                "lemma": {
+                  "args": [
+                    {
+                      "args": [
+                        {
+                          "var": "n_v3"
+                        },
+                        {
+                          "int": 10
+                        }
+                      ],
+                      "op": "div"
+                    }
+                  ],
+                  "name": "count_digits_sum"
+                }
+              }
+            ],
+            "then": [
+              {
+                "if": {
+                  "cond": {
+                    "call": {
+                      "args": [
+                        {
+                          "var": "n_v3"
+                        }
+                      ],
+                      "fun": "is_even_digit"
+                    }
+                  },
+                  "else": [
+                    {
+                      "assert": {
+                        "args": [
+                          {
+                            "call": {
+                              "args": [
+                                {
+                                  "var": "n_v3"
+                                }
+                              ],
+                              "fun": "count_even_digits"
+                            }
+                          },
+                          {
+                            "int": 0
+                          }
+                        ],
+                        "op": "=="
+                      }
+                    },
+                    {
+                      "assert": {
+                        "args": [
+                          {
+                            "call": {
+                              "args": [
+                                {
+                                  "var": "n_v3"
+                                }
+                              ],
+                              "fun": "count_odd_digits"
+                            }
+                          },
+                          {
+                            "int": 1
+                          }
+                        ],
+                        "op": "=="
+                      }
+                    }
+                  ],
+                  "then": [
+                    {
+                      "assert": {
+                        "args": [
+                          {
+                            "call": {
+                              "args": [
+                                {
+                                  "var": "n_v3"
+                                }
+                              ],
+                              "fun": "count_even_digits"
+                            }
+                          },
+                          {
+                            "int": 1
+                          }
+                        ],
+                        "op": "=="
+                      }
+                    },
+                    {
+                      "assert": {
+                        "args": [
+                          {
+                            "call": {
+                              "args": [
+                                {
+                                  "var": "n_v3"
+                                }
+                              ],
+                              "fun": "count_odd_digits"
+                            }
+                          },
+                          {
+                            "int": 0
+                          }
+                        ],
+                        "op": "=="
+                      }
+                    }
+                  ]
+                }
+              }
+            ]
+          }
+        }
+      ],
+      "decreases": {
+        "var": "n_v3"
+      },
+      "ensures": [
+        {
+          "args": [
+            {
+              "args": [
+                {
+                  "call": {
+                    "args": [
+                      {
+                        "var": "n_v3"
+                      }
+                    ],
+                    "fun": "count_even_digits"
+                  }
+                },
+                {
+                  "call": {
+                    "args": [
+                      {
+                        "var": "n_v3"
+                      }
+                    ],
+                    "fun": "count_odd_digits"
+                  }
+                }
+              ],
+              "op": "+"
+            },
+            {
+              "call": {
+                "args": [
+                  {
+                    "var": "n_v3"
+                  }
+                ],
+                "fun": "count_digits"
+              }
+            }
+          ],
+          "op": "=="
+        }
+      ],
+      "name": "count_digits_sum",
+      "params": [
+        {
+          "name": "n_v3",
+          "type": "int"
+        }
+      ],
+      "requires": [
+        {
+          "args": [
+            {
+              "var": "n_v3"
+            },
+            {
+              "int": 0
+            }
+          ],
+          "op": ">="
+        },
+        {
+          "args": [
+            {
+              "var": "n_v3"
+            },
+            {
+              "int": 0
+            }
+          ],
+          "op": ">="
+        }
+      ]
+    }
+  ],
+  "name": "vericoding_dh0157__even_odd_count",
+  "params": [
+    {
+      "name": "num",
+      "type": "int"
+    }
+  ],
+  "requires": [],
+  "returns": [
+    {
+      "name": "r",
+      "type": {
+        "pair": [
+          "int",
+          "int"
+        ]
+      }
+    }
+  ],
+  "spec_funs": [
+    {
+      "body": {
+        "ite": {
+          "cond": {
+            "args": [
+              {
+                "args": [
+                  {
+                    "var": "d"
+                  },
+                  {
+                    "int": 0
+                  }
+                ],
+                "op": ">="
+              },
+              {
+                "args": [
+                  {
+                    "var": "d"
+                  },
+                  {
+                    "int": 10
+                  }
+                ],
+                "op": "<"
+              }
+            ],
+            "op": "and"
+          },
+          "else": {
+            "bool": false
+          },
+          "then": {
+            "args": [
+              {
+                "args": [
+                  {
+                    "var": "d"
+                  },
+                  {
+                    "int": 2
+                  }
+                ],
+                "op": "mod"
+              },
+              {
+                "int": 0
+              }
+            ],
+            "op": "=="
+          }
+        }
+      },
+      "decreases": {
+        "int": 0
+      },
+      "name": "is_even_digit",
+      "params": [
+        {
+          "name": "d",
+          "type": "int"
+        }
+      ],
+      "result": "bool"
+    },
+    {
+      "body": {
+        "ite": {
+          "cond": {
+            "args": [
+              {
+                "args": [
+                  {
+                    "var": "n"
+                  },
+                  {
+                    "int": 0
+                  }
+                ],
+                "op": ">="
+              },
+              {
+                "args": [
+                  {
+                    "var": "n"
+                  },
+                  {
+                    "int": 0
+                  }
+                ],
+                "op": ">="
+              }
+            ],
+            "op": "and"
+          },
+          "else": {
+            "int": 0
+          },
+          "then": {
+            "ite": {
+              "cond": {
+                "args": [
+                  {
+                    "var": "n"
+                  },
+                  {
+                    "int": 10
+                  }
+                ],
+                "op": "<"
+              },
+              "else": {
+                "args": [
+                  {
+                    "ite": {
+                      "cond": {
+                        "call": {
+                          "args": [
+                            {
+                              "args": [
+                                {
+                                  "var": "n"
+                                },
+                                {
+                                  "int": 10
+                                }
+                              ],
+                              "op": "mod"
+                            }
+                          ],
+                          "fun": "is_even_digit"
+                        }
+                      },
+                      "else": {
+                        "int": 0
+                      },
+                      "then": {
+                        "int": 1
+                      }
+                    }
+                  },
+                  {
+                    "call": {
+                      "args": [
+                        {
+                          "args": [
+                            {
+                              "var": "n"
+                            },
+                            {
+                              "int": 10
+                            }
+                          ],
+                          "op": "div"
+                        }
+                      ],
+                      "fun": "count_even_digits"
+                    }
+                  }
+                ],
+                "op": "+"
+              },
+              "then": {
+                "ite": {
+                  "cond": {
+                    "call": {
+                      "args": [
+                        {
+                          "var": "n"
+                        }
+                      ],
+                      "fun": "is_even_digit"
+                    }
+                  },
+                  "else": {
+                    "int": 0
+                  },
+                  "then": {
+                    "int": 1
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "decreases": {
+        "var": "n"
+      },
+      "name": "count_even_digits",
+      "params": [
+        {
+          "name": "n",
+          "type": "int"
+        }
+      ],
+      "result": "int"
+    },
+    {
+      "body": {
+        "ite": {
+          "cond": {
+            "args": [
+              {
+                "args": [
+                  {
+                    "var": "n_v"
+                  },
+                  {
+                    "int": 0
+                  }
+                ],
+                "op": ">="
+              },
+              {
+                "args": [
+                  {
+                    "var": "n_v"
+                  },
+                  {
+                    "int": 0
+                  }
+                ],
+                "op": ">="
+              }
+            ],
+            "op": "and"
+          },
+          "else": {
+            "int": 0
+          },
+          "then": {
+            "ite": {
+              "cond": {
+                "args": [
+                  {
+                    "var": "n_v"
+                  },
+                  {
+                    "int": 10
+                  }
+                ],
+                "op": "<"
+              },
+              "else": {
+                "args": [
+                  {
+                    "ite": {
+                      "cond": {
+                        "args": [
+                          {
+                            "call": {
+                              "args": [
+                                {
+                                  "args": [
+                                    {
+                                      "var": "n_v"
+                                    },
+                                    {
+                                      "int": 10
+                                    }
+                                  ],
+                                  "op": "mod"
+                                }
+                              ],
+                              "fun": "is_even_digit"
+                            }
+                          }
+                        ],
+                        "op": "not"
+                      },
+                      "else": {
+                        "int": 0
+                      },
+                      "then": {
+                        "int": 1
+                      }
+                    }
+                  },
+                  {
+                    "call": {
+                      "args": [
+                        {
+                          "args": [
+                            {
+                              "var": "n_v"
+                            },
+                            {
+                              "int": 10
+                            }
+                          ],
+                          "op": "div"
+                        }
+                      ],
+                      "fun": "count_odd_digits"
+                    }
+                  }
+                ],
+                "op": "+"
+              },
+              "then": {
+                "ite": {
+                  "cond": {
+                    "args": [
+                      {
+                        "call": {
+                          "args": [
+                            {
+                              "var": "n_v"
+                            }
+                          ],
+                          "fun": "is_even_digit"
+                        }
+                      }
+                    ],
+                    "op": "not"
+                  },
+                  "else": {
+                    "int": 0
+                  },
+                  "then": {
+                    "int": 1
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "decreases": {
+        "var": "n_v"
+      },
+      "name": "count_odd_digits",
+      "params": [
+        {
+          "name": "n_v",
+          "type": "int"
+        }
+      ],
+      "result": "int"
+    },
+    {
+      "body": {
+        "ite": {
+          "cond": {
+            "args": [
+              {
+                "args": [
+                  {
+                    "var": "n_v2"
+                  },
+                  {
+                    "int": 0
+                  }
+                ],
+                "op": ">="
+              },
+              {
+                "args": [
+                  {
+                    "var": "n_v2"
+                  },
+                  {
+                    "int": 0
+                  }
+                ],
+                "op": ">="
+              }
+            ],
+            "op": "and"
+          },
+          "else": {
+            "int": 0
+          },
+          "then": {
+            "ite": {
+              "cond": {
+                "args": [
+                  {
+                    "var": "n_v2"
+                  },
+                  {
+                    "int": 10
+                  }
+                ],
+                "op": "<"
+              },
+              "else": {
+                "args": [
+                  {
+                    "int": 1
+                  },
+                  {
+                    "call": {
+                      "args": [
+                        {
+                          "args": [
+                            {
+                              "var": "n_v2"
+                            },
+                            {
+                              "int": 10
+                            }
+                          ],
+                          "op": "div"
+                        }
+                      ],
+                      "fun": "count_digits"
+                    }
+                  }
+                ],
+                "op": "+"
+              },
+              "then": {
+                "int": 1
+              }
+            }
+          }
+        }
+      },
+      "decreases": {
+        "var": "n_v2"
+      },
+      "name": "count_digits",
+      "params": [
+        {
+          "name": "n_v2",
+          "type": "int"
+        }
+      ],
+      "result": "int"
+    },
+    {
+      "body": {
+        "ite": {
+          "cond": {
+            "args": [
+              {
+                "var": "x"
+              },
+              {
+                "int": 0
+              }
+            ],
+            "op": "<"
+          },
+          "else": {
+            "var": "x"
+          },
+          "then": {
+            "args": [
+              {
+                "var": "x"
+              }
+            ],
+            "op": "neg"
+          }
+        }
+      },
+      "decreases": {
+        "int": 0
+      },
+      "name": "abs_value",
+      "params": [
+        {
+          "name": "x",
+          "type": "int"
+        }
+      ],
+      "result": "int"
+    }
+  ],
+  "t": 1
+}

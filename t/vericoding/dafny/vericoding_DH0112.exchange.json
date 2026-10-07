@@ -1,0 +1,468 @@
+{
+  "body": [
+    {
+      "var": {
+        "init": {
+          "call": {
+            "args": [
+              {
+                "var": "lst1"
+              }
+            ],
+            "fun": "countEven"
+          }
+        },
+        "name": "evenCount1",
+        "type": "int"
+      }
+    },
+    {
+      "var": {
+        "init": {
+          "call": {
+            "args": [
+              {
+                "var": "lst2"
+              }
+            ],
+            "fun": "countEven"
+          }
+        },
+        "name": "evenCount2",
+        "type": "int"
+      }
+    },
+    {
+      "if": {
+        "cond": {
+          "args": [
+            {
+              "args": [
+                {
+                  "var": "evenCount1"
+                },
+                {
+                  "var": "evenCount2"
+                }
+              ],
+              "op": "+"
+            },
+            {
+              "args": [
+                {
+                  "var": "lst1"
+                }
+              ],
+              "op": "len"
+            }
+          ],
+          "op": ">="
+        },
+        "else": [
+          {
+            "assign": [
+              "result",
+              {
+                "args": [
+                  {
+                    "int": 78
+                  },
+                  {
+                    "int": 79
+                  }
+                ],
+                "op": "seq"
+              }
+            ]
+          }
+        ],
+        "then": [
+          {
+            "assign": [
+              "result",
+              {
+                "args": [
+                  {
+                    "int": 89
+                  },
+                  {
+                    "int": 69
+                  },
+                  {
+                    "int": 83
+                  }
+                ],
+                "op": "seq"
+              }
+            ]
+          }
+        ]
+      }
+    }
+  ],
+  "ensures": [
+    {
+      "args": [
+        {
+          "args": [
+            {
+              "var": "result"
+            },
+            {
+              "args": [
+                {
+                  "int": 89
+                },
+                {
+                  "int": 69
+                },
+                {
+                  "int": 83
+                }
+              ],
+              "op": "seq"
+            }
+          ],
+          "op": "=="
+        },
+        {
+          "args": [
+            {
+              "var": "result"
+            },
+            {
+              "args": [
+                {
+                  "int": 78
+                },
+                {
+                  "int": 79
+                }
+              ],
+              "op": "seq"
+            }
+          ],
+          "op": "=="
+        }
+      ],
+      "op": "or"
+    },
+    {
+      "args": [
+        {
+          "args": [
+            {
+              "var": "result"
+            },
+            {
+              "args": [
+                {
+                  "int": 89
+                },
+                {
+                  "int": 69
+                },
+                {
+                  "int": 83
+                }
+              ],
+              "op": "seq"
+            }
+          ],
+          "op": "=="
+        },
+        {
+          "call": {
+            "args": [
+              {
+                "var": "lst1"
+              },
+              {
+                "var": "lst2"
+              }
+            ],
+            "fun": "canExchange"
+          }
+        }
+      ],
+      "op": "=="
+    }
+  ],
+  "gate": "recursion",
+  "name": "vericoding_dh0112__exchange",
+  "params": [
+    {
+      "name": "lst1",
+      "type": "seq"
+    },
+    {
+      "name": "lst2",
+      "type": "seq"
+    }
+  ],
+  "requires": [
+    {
+      "call": {
+        "args": [
+          {
+            "var": "lst1"
+          },
+          {
+            "var": "lst2"
+          }
+        ],
+        "fun": "validInput"
+      }
+    }
+  ],
+  "returns": [
+    {
+      "name": "result",
+      "type": "seq"
+    }
+  ],
+  "spec_funs": [
+    {
+      "body": {
+        "ite": {
+          "cond": {
+            "args": [
+              {
+                "args": [
+                  {
+                    "var": "lst"
+                  }
+                ],
+                "op": "len"
+              },
+              {
+                "int": 0
+              }
+            ],
+            "op": "=="
+          },
+          "else": {
+            "ite": {
+              "cond": {
+                "args": [
+                  {
+                    "args": [
+                      {
+                        "args": [
+                          {
+                            "var": "lst"
+                          },
+                          {
+                            "int": 0
+                          }
+                        ],
+                        "op": "at"
+                      },
+                      {
+                        "int": 2
+                      }
+                    ],
+                    "op": "mod"
+                  },
+                  {
+                    "int": 0
+                  }
+                ],
+                "op": "=="
+              },
+              "else": {
+                "call": {
+                  "args": [
+                    {
+                      "args": [
+                        {
+                          "var": "lst"
+                        },
+                        {
+                          "int": 1
+                        },
+                        {
+                          "args": [
+                            {
+                              "var": "lst"
+                            }
+                          ],
+                          "op": "len"
+                        }
+                      ],
+                      "op": "slice"
+                    }
+                  ],
+                  "fun": "countEven"
+                }
+              },
+              "then": {
+                "args": [
+                  {
+                    "int": 1
+                  },
+                  {
+                    "call": {
+                      "args": [
+                        {
+                          "args": [
+                            {
+                              "var": "lst"
+                            },
+                            {
+                              "int": 1
+                            },
+                            {
+                              "args": [
+                                {
+                                  "var": "lst"
+                                }
+                              ],
+                              "op": "len"
+                            }
+                          ],
+                          "op": "slice"
+                        }
+                      ],
+                      "fun": "countEven"
+                    }
+                  }
+                ],
+                "op": "+"
+              }
+            }
+          },
+          "then": {
+            "int": 0
+          }
+        }
+      },
+      "decreases": {
+        "args": [
+          {
+            "var": "lst"
+          }
+        ],
+        "op": "len"
+      },
+      "name": "countEven",
+      "params": [
+        {
+          "name": "lst",
+          "type": "seq"
+        }
+      ],
+      "result": "int"
+    },
+    {
+      "body": {
+        "args": [
+          {
+            "args": [
+              {
+                "args": [
+                  {
+                    "var": "lst1_v"
+                  }
+                ],
+                "op": "len"
+              },
+              {
+                "int": 0
+              }
+            ],
+            "op": ">"
+          },
+          {
+            "args": [
+              {
+                "args": [
+                  {
+                    "var": "lst2_v"
+                  }
+                ],
+                "op": "len"
+              },
+              {
+                "int": 0
+              }
+            ],
+            "op": ">"
+          }
+        ],
+        "op": "and"
+      },
+      "decreases": {
+        "int": 0
+      },
+      "name": "validInput",
+      "params": [
+        {
+          "name": "lst1_v",
+          "type": "seq"
+        },
+        {
+          "name": "lst2_v",
+          "type": "seq"
+        }
+      ],
+      "result": "bool"
+    },
+    {
+      "body": {
+        "args": [
+          {
+            "args": [
+              {
+                "call": {
+                  "args": [
+                    {
+                      "var": "lst1_v2"
+                    }
+                  ],
+                  "fun": "countEven"
+                }
+              },
+              {
+                "call": {
+                  "args": [
+                    {
+                      "var": "lst2_v2"
+                    }
+                  ],
+                  "fun": "countEven"
+                }
+              }
+            ],
+            "op": "+"
+          },
+          {
+            "args": [
+              {
+                "var": "lst1_v2"
+              }
+            ],
+            "op": "len"
+          }
+        ],
+        "op": ">="
+      },
+      "decreases": {
+        "int": 0
+      },
+      "name": "canExchange",
+      "params": [
+        {
+          "name": "lst1_v2",
+          "type": "seq"
+        },
+        {
+          "name": "lst2_v2",
+          "type": "seq"
+        }
+      ],
+      "result": "bool"
+    }
+  ],
+  "t": 1
+}

@@ -1,0 +1,422 @@
+{
+  "body": [
+    {
+      "if": {
+        "cond": {
+          "args": [
+            {
+              "var": "lo"
+            },
+            {
+              "var": "hi"
+            }
+          ],
+          "op": "<"
+        },
+        "else": [
+          {
+            "assign": [
+              "result",
+              {
+                "var": "lo"
+              }
+            ]
+          }
+        ],
+        "then": [
+          {
+            "var": {
+              "init": {
+                "args": [
+                  {
+                    "var": "lo"
+                  },
+                  {
+                    "args": [
+                      {
+                        "args": [
+                          {
+                            "var": "hi"
+                          },
+                          {
+                            "var": "lo"
+                          }
+                        ],
+                        "op": "-"
+                      },
+                      {
+                        "int": 2
+                      }
+                    ],
+                    "op": "div"
+                  }
+                ],
+                "op": "+"
+              },
+              "name": "mid",
+              "type": "int"
+            }
+          },
+          {
+            "if": {
+              "cond": {
+                "args": [
+                  {
+                    "args": [
+                      {
+                        "var": "a"
+                      },
+                      {
+                        "var": "mid"
+                      }
+                    ],
+                    "op": "at"
+                  },
+                  {
+                    "var": "key"
+                  }
+                ],
+                "op": "<"
+              },
+              "else": [
+                {
+                  "assign": [
+                    "result",
+                    {
+                      "call": {
+                        "args": [
+                          {
+                            "var": "a"
+                          },
+                          {
+                            "var": "key"
+                          },
+                          {
+                            "var": "lo"
+                          },
+                          {
+                            "var": "mid"
+                          }
+                        ],
+                        "fun": "vericoding_dv0131__binarySearchLoop"
+                      }
+                    }
+                  ]
+                }
+              ],
+              "then": [
+                {
+                  "assign": [
+                    "result",
+                    {
+                      "call": {
+                        "args": [
+                          {
+                            "var": "a"
+                          },
+                          {
+                            "var": "key"
+                          },
+                          {
+                            "args": [
+                              {
+                                "var": "mid"
+                              },
+                              {
+                                "int": 1
+                              }
+                            ],
+                            "op": "+"
+                          },
+                          {
+                            "var": "hi"
+                          }
+                        ],
+                        "fun": "vericoding_dv0131__binarySearchLoop"
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          }
+        ]
+      }
+    }
+  ],
+  "decreases": {
+    "args": [
+      {
+        "var": "hi"
+      },
+      {
+        "var": "lo"
+      }
+    ],
+    "op": "-"
+  },
+  "ensures": [
+    {
+      "args": [
+        {
+          "var": "result"
+        },
+        {
+          "int": 0
+        }
+      ],
+      "op": ">="
+    },
+    {
+      "args": [
+        {
+          "var": "lo"
+        },
+        {
+          "var": "result"
+        }
+      ],
+      "op": "<="
+    },
+    {
+      "args": [
+        {
+          "var": "result"
+        },
+        {
+          "var": "hi"
+        }
+      ],
+      "op": "<="
+    },
+    {
+      "forall": {
+        "body": {
+          "args": [
+            {
+              "args": [
+                {
+                  "var": "a"
+                },
+                {
+                  "var": "i_v"
+                }
+              ],
+              "op": "at"
+            },
+            {
+              "var": "key"
+            }
+          ],
+          "op": "<"
+        },
+        "hi": {
+          "var": "result"
+        },
+        "lo": {
+          "var": "lo"
+        },
+        "var": "i_v"
+      }
+    },
+    {
+      "forall": {
+        "body": {
+          "args": [
+            {
+              "args": [
+                {
+                  "var": "a"
+                },
+                {
+                  "var": "i_v2"
+                }
+              ],
+              "op": "at"
+            },
+            {
+              "var": "key"
+            }
+          ],
+          "op": ">="
+        },
+        "hi": {
+          "var": "hi"
+        },
+        "lo": {
+          "var": "result"
+        },
+        "var": "i_v2"
+      }
+    }
+  ],
+  "gate": "recursion",
+  "name": "vericoding_dv0131__binarySearchLoop",
+  "params": [
+    {
+      "name": "a",
+      "type": "seq"
+    },
+    {
+      "name": "key",
+      "type": "int"
+    },
+    {
+      "name": "lo",
+      "type": "int"
+    },
+    {
+      "name": "hi",
+      "type": "int"
+    }
+  ],
+  "requires": [
+    {
+      "args": [
+        {
+          "var": "lo"
+        },
+        {
+          "int": 0
+        }
+      ],
+      "op": ">="
+    },
+    {
+      "args": [
+        {
+          "var": "hi"
+        },
+        {
+          "int": 0
+        }
+      ],
+      "op": ">="
+    },
+    {
+      "args": [
+        {
+          "var": "lo"
+        },
+        {
+          "var": "hi"
+        }
+      ],
+      "op": "<="
+    },
+    {
+      "args": [
+        {
+          "var": "hi"
+        },
+        {
+          "args": [
+            {
+              "var": "a"
+            }
+          ],
+          "op": "len"
+        }
+      ],
+      "op": "<="
+    },
+    {
+      "call": {
+        "args": [
+          {
+            "var": "a"
+          },
+          {
+            "var": "key"
+          }
+        ],
+        "fun": "binarySearchPrecond"
+      }
+    }
+  ],
+  "returns": [
+    {
+      "name": "result",
+      "type": "int"
+    }
+  ],
+  "spec_funs": [
+    {
+      "body": {
+        "forall": {
+          "body": {
+            "forall": {
+              "body": {
+                "args": [
+                  {
+                    "args": [
+                      {
+                        "var": "a_v"
+                      },
+                      {
+                        "var": "i"
+                      }
+                    ],
+                    "op": "at"
+                  },
+                  {
+                    "args": [
+                      {
+                        "var": "a_v"
+                      },
+                      {
+                        "var": "j"
+                      }
+                    ],
+                    "op": "at"
+                  }
+                ],
+                "op": "<="
+              },
+              "hi": {
+                "args": [
+                  {
+                    "var": "a_v"
+                  }
+                ],
+                "op": "len"
+              },
+              "lo": {
+                "var": "i"
+              },
+              "var": "j"
+            }
+          },
+          "hi": {
+            "args": [
+              {
+                "var": "a_v"
+              }
+            ],
+            "op": "len"
+          },
+          "lo": {
+            "int": 0
+          },
+          "var": "i"
+        }
+      },
+      "decreases": {
+        "int": 0
+      },
+      "name": "binarySearchPrecond",
+      "params": [
+        {
+          "name": "a_v",
+          "type": "seq"
+        },
+        {
+          "name": "key_v",
+          "type": "int"
+        }
+      ],
+      "result": "bool"
+    }
+  ],
+  "t": 1
+}

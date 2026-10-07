@@ -1,0 +1,780 @@
+{
+  "body": [
+    {
+      "var": {
+        "init": {
+          "args": [
+            {
+              "var": "n"
+            },
+            {
+              "var": "k"
+            }
+          ],
+          "op": "mod"
+        },
+        "name": "remainder",
+        "type": "int"
+      }
+    },
+    {
+      "var": {
+        "init": {
+          "args": [
+            {
+              "var": "k"
+            },
+            {
+              "var": "remainder"
+            }
+          ],
+          "op": "-"
+        },
+        "name": "complement",
+        "type": "int"
+      }
+    },
+    {
+      "if": {
+        "cond": {
+          "args": [
+            {
+              "var": "remainder"
+            },
+            {
+              "var": "complement"
+            }
+          ],
+          "op": "<="
+        },
+        "else": [
+          {
+            "assign": [
+              "result",
+              {
+                "var": "complement"
+              }
+            ]
+          }
+        ],
+        "then": [
+          {
+            "assign": [
+              "result",
+              {
+                "var": "remainder"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "lemma": {
+        "args": [
+          {
+            "var": "n"
+          },
+          {
+            "var": "k"
+          }
+        ],
+        "name": "minValueProperties"
+      }
+    }
+  ],
+  "ensures": [
+    {
+      "call": {
+        "args": [
+          {
+            "var": "n"
+          },
+          {
+            "var": "k"
+          },
+          {
+            "var": "result"
+          }
+        ],
+        "fun": "isCorrectResult"
+      }
+    }
+  ],
+  "gate": "recursion",
+  "lemmas": [
+    {
+      "body": [
+        {
+          "assert": {
+            "args": [
+              {
+                "args": [
+                  {
+                    "int": 0
+                  },
+                  {
+                    "args": [
+                      {
+                        "var": "n_v4"
+                      },
+                      {
+                        "var": "k_v4"
+                      }
+                    ],
+                    "op": "mod"
+                  }
+                ],
+                "op": "<="
+              },
+              {
+                "args": [
+                  {
+                    "args": [
+                      {
+                        "var": "n_v4"
+                      },
+                      {
+                        "var": "k_v4"
+                      }
+                    ],
+                    "op": "mod"
+                  },
+                  {
+                    "var": "k_v4"
+                  }
+                ],
+                "op": "<"
+              }
+            ],
+            "op": "and"
+          }
+        },
+        {
+          "assert": {
+            "args": [
+              {
+                "args": [
+                  {
+                    "int": 0
+                  },
+                  {
+                    "args": [
+                      {
+                        "var": "k_v4"
+                      },
+                      {
+                        "args": [
+                          {
+                            "var": "n_v4"
+                          },
+                          {
+                            "var": "k_v4"
+                          }
+                        ],
+                        "op": "mod"
+                      }
+                    ],
+                    "op": "-"
+                  }
+                ],
+                "op": "<"
+              },
+              {
+                "args": [
+                  {
+                    "args": [
+                      {
+                        "var": "k_v4"
+                      },
+                      {
+                        "args": [
+                          {
+                            "var": "n_v4"
+                          },
+                          {
+                            "var": "k_v4"
+                          }
+                        ],
+                        "op": "mod"
+                      }
+                    ],
+                    "op": "-"
+                  },
+                  {
+                    "var": "k_v4"
+                  }
+                ],
+                "op": "<="
+              }
+            ],
+            "op": "and"
+          }
+        },
+        {
+          "if": {
+            "cond": {
+              "args": [
+                {
+                  "args": [
+                    {
+                      "var": "n_v4"
+                    },
+                    {
+                      "var": "k_v4"
+                    }
+                  ],
+                  "op": "mod"
+                },
+                {
+                  "args": [
+                    {
+                      "var": "k_v4"
+                    },
+                    {
+                      "args": [
+                        {
+                          "var": "n_v4"
+                        },
+                        {
+                          "var": "k_v4"
+                        }
+                      ],
+                      "op": "mod"
+                    }
+                  ],
+                  "op": "-"
+                }
+              ],
+              "op": "<="
+            },
+            "else": [
+              {
+                "assert": {
+                  "args": [
+                    {
+                      "call": {
+                        "args": [
+                          {
+                            "var": "n_v4"
+                          },
+                          {
+                            "var": "k_v4"
+                          }
+                        ],
+                        "fun": "minValue"
+                      }
+                    },
+                    {
+                      "args": [
+                        {
+                          "var": "k_v4"
+                        },
+                        {
+                          "args": [
+                            {
+                              "var": "n_v4"
+                            },
+                            {
+                              "var": "k_v4"
+                            }
+                          ],
+                          "op": "mod"
+                        }
+                      ],
+                      "op": "-"
+                    }
+                  ],
+                  "op": "=="
+                }
+              },
+              {
+                "assert": {
+                  "args": [
+                    {
+                      "args": [
+                        {
+                          "int": 0
+                        },
+                        {
+                          "args": [
+                            {
+                              "var": "k_v4"
+                            },
+                            {
+                              "args": [
+                                {
+                                  "var": "n_v4"
+                                },
+                                {
+                                  "var": "k_v4"
+                                }
+                              ],
+                              "op": "mod"
+                            }
+                          ],
+                          "op": "-"
+                        }
+                      ],
+                      "op": "<"
+                    },
+                    {
+                      "args": [
+                        {
+                          "args": [
+                            {
+                              "var": "k_v4"
+                            },
+                            {
+                              "args": [
+                                {
+                                  "var": "n_v4"
+                                },
+                                {
+                                  "var": "k_v4"
+                                }
+                              ],
+                              "op": "mod"
+                            }
+                          ],
+                          "op": "-"
+                        },
+                        {
+                          "var": "k_v4"
+                        }
+                      ],
+                      "op": "<"
+                    }
+                  ],
+                  "op": "and"
+                }
+              }
+            ],
+            "then": [
+              {
+                "assert": {
+                  "args": [
+                    {
+                      "call": {
+                        "args": [
+                          {
+                            "var": "n_v4"
+                          },
+                          {
+                            "var": "k_v4"
+                          }
+                        ],
+                        "fun": "minValue"
+                      }
+                    },
+                    {
+                      "args": [
+                        {
+                          "var": "n_v4"
+                        },
+                        {
+                          "var": "k_v4"
+                        }
+                      ],
+                      "op": "mod"
+                    }
+                  ],
+                  "op": "=="
+                }
+              },
+              {
+                "assert": {
+                  "args": [
+                    {
+                      "args": [
+                        {
+                          "int": 0
+                        },
+                        {
+                          "args": [
+                            {
+                              "var": "n_v4"
+                            },
+                            {
+                              "var": "k_v4"
+                            }
+                          ],
+                          "op": "mod"
+                        }
+                      ],
+                      "op": "<="
+                    },
+                    {
+                      "args": [
+                        {
+                          "args": [
+                            {
+                              "var": "n_v4"
+                            },
+                            {
+                              "var": "k_v4"
+                            }
+                          ],
+                          "op": "mod"
+                        },
+                        {
+                          "var": "k_v4"
+                        }
+                      ],
+                      "op": "<"
+                    }
+                  ],
+                  "op": "and"
+                }
+              }
+            ]
+          }
+        }
+      ],
+      "ensures": [
+        {
+          "args": [
+            {
+              "call": {
+                "args": [
+                  {
+                    "var": "n_v4"
+                  },
+                  {
+                    "var": "k_v4"
+                  }
+                ],
+                "fun": "minValue"
+              }
+            },
+            {
+              "int": 0
+            }
+          ],
+          "op": ">="
+        },
+        {
+          "args": [
+            {
+              "call": {
+                "args": [
+                  {
+                    "var": "n_v4"
+                  },
+                  {
+                    "var": "k_v4"
+                  }
+                ],
+                "fun": "minValue"
+              }
+            },
+            {
+              "var": "k_v4"
+            }
+          ],
+          "op": "<"
+        }
+      ],
+      "name": "minValueProperties",
+      "params": [
+        {
+          "name": "n_v4",
+          "type": "int"
+        },
+        {
+          "name": "k_v4",
+          "type": "int"
+        }
+      ],
+      "requires": [
+        {
+          "call": {
+            "args": [
+              {
+                "var": "n_v4"
+              },
+              {
+                "var": "k_v4"
+              }
+            ],
+            "fun": "validInput"
+          }
+        }
+      ]
+    }
+  ],
+  "name": "vericoding_da0523__solve",
+  "params": [
+    {
+      "name": "n",
+      "type": "int"
+    },
+    {
+      "name": "k",
+      "type": "int"
+    }
+  ],
+  "requires": [
+    {
+      "call": {
+        "args": [
+          {
+            "var": "n"
+          },
+          {
+            "var": "k"
+          }
+        ],
+        "fun": "validInput"
+      }
+    }
+  ],
+  "returns": [
+    {
+      "name": "result",
+      "type": "int"
+    }
+  ],
+  "spec_funs": [
+    {
+      "body": {
+        "args": [
+          {
+            "args": [
+              {
+                "var": "n_v"
+              },
+              {
+                "int": 0
+              }
+            ],
+            "op": ">="
+          },
+          {
+            "args": [
+              {
+                "var": "k_v"
+              },
+              {
+                "int": 1
+              }
+            ],
+            "op": ">="
+          }
+        ],
+        "op": "and"
+      },
+      "decreases": {
+        "int": 0
+      },
+      "name": "validInput",
+      "params": [
+        {
+          "name": "n_v",
+          "type": "int"
+        },
+        {
+          "name": "k_v",
+          "type": "int"
+        }
+      ],
+      "result": "bool"
+    },
+    {
+      "body": {
+        "ite": {
+          "cond": {
+            "call": {
+              "args": [
+                {
+                  "var": "n_v2"
+                },
+                {
+                  "var": "k_v2"
+                }
+              ],
+              "fun": "validInput"
+            }
+          },
+          "else": {
+            "int": 0
+          },
+          "then": {
+            "ite": {
+              "cond": {
+                "args": [
+                  {
+                    "args": [
+                      {
+                        "var": "n_v2"
+                      },
+                      {
+                        "var": "k_v2"
+                      }
+                    ],
+                    "op": "mod"
+                  },
+                  {
+                    "args": [
+                      {
+                        "var": "k_v2"
+                      },
+                      {
+                        "args": [
+                          {
+                            "var": "n_v2"
+                          },
+                          {
+                            "var": "k_v2"
+                          }
+                        ],
+                        "op": "mod"
+                      }
+                    ],
+                    "op": "-"
+                  }
+                ],
+                "op": "<="
+              },
+              "else": {
+                "args": [
+                  {
+                    "var": "k_v2"
+                  },
+                  {
+                    "args": [
+                      {
+                        "var": "n_v2"
+                      },
+                      {
+                        "var": "k_v2"
+                      }
+                    ],
+                    "op": "mod"
+                  }
+                ],
+                "op": "-"
+              },
+              "then": {
+                "args": [
+                  {
+                    "var": "n_v2"
+                  },
+                  {
+                    "var": "k_v2"
+                  }
+                ],
+                "op": "mod"
+              }
+            }
+          }
+        }
+      },
+      "decreases": {
+        "int": 0
+      },
+      "name": "minValue",
+      "params": [
+        {
+          "name": "n_v2",
+          "type": "int"
+        },
+        {
+          "name": "k_v2",
+          "type": "int"
+        }
+      ],
+      "result": "int"
+    },
+    {
+      "body": {
+        "ite": {
+          "cond": {
+            "call": {
+              "args": [
+                {
+                  "var": "n_v3"
+                },
+                {
+                  "var": "k_v3"
+                }
+              ],
+              "fun": "validInput"
+            }
+          },
+          "else": {
+            "bool": false
+          },
+          "then": {
+            "args": [
+              {
+                "args": [
+                  {
+                    "var": "result_v"
+                  },
+                  {
+                    "call": {
+                      "args": [
+                        {
+                          "var": "n_v3"
+                        },
+                        {
+                          "var": "k_v3"
+                        }
+                      ],
+                      "fun": "minValue"
+                    }
+                  }
+                ],
+                "op": "=="
+              },
+              {
+                "args": [
+                  {
+                    "var": "result_v"
+                  },
+                  {
+                    "int": 0
+                  }
+                ],
+                "op": ">="
+              },
+              {
+                "args": [
+                  {
+                    "var": "result_v"
+                  },
+                  {
+                    "var": "k_v3"
+                  }
+                ],
+                "op": "<"
+              }
+            ],
+            "op": "and"
+          }
+        }
+      },
+      "decreases": {
+        "int": 0
+      },
+      "name": "isCorrectResult",
+      "params": [
+        {
+          "name": "n_v3",
+          "type": "int"
+        },
+        {
+          "name": "k_v3",
+          "type": "int"
+        },
+        {
+          "name": "result_v",
+          "type": "int"
+        }
+      ],
+      "result": "bool"
+    }
+  ],
+  "t": 1
+}

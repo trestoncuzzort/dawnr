@@ -1,0 +1,576 @@
+{
+  "body": [
+    {
+      "var": {
+        "init": {
+          "call": {
+            "args": [
+              {
+                "var": "a"
+              },
+              {
+                "var": "b"
+              }
+            ],
+            "fun": "optimalMeetingPoint"
+          }
+        },
+        "name": "c",
+        "type": "int"
+      }
+    },
+    {
+      "var": {
+        "init": {
+          "call": {
+            "args": [
+              {
+                "args": [
+                  {
+                    "var": "c"
+                  },
+                  {
+                    "var": "a"
+                  }
+                ],
+                "op": "-"
+              }
+            ],
+            "fun": "abs"
+          }
+        },
+        "name": "dist_a",
+        "type": "int"
+      }
+    },
+    {
+      "var": {
+        "init": {
+          "call": {
+            "args": [
+              {
+                "args": [
+                  {
+                    "var": "b"
+                  },
+                  {
+                    "var": "c"
+                  }
+                ],
+                "op": "-"
+              }
+            ],
+            "fun": "abs"
+          }
+        },
+        "name": "dist_b",
+        "type": "int"
+      }
+    },
+    {
+      "lemma": {
+        "args": [
+          {
+            "var": "dist_a"
+          }
+        ],
+        "name": "tirednessNonNegative"
+      }
+    },
+    {
+      "lemma": {
+        "args": [
+          {
+            "var": "dist_b"
+          }
+        ],
+        "name": "tirednessNonNegative"
+      }
+    },
+    {
+      "var": {
+        "init": {
+          "call": {
+            "args": [
+              {
+                "var": "dist_a"
+              }
+            ],
+            "fun": "tirednessForSteps"
+          }
+        },
+        "name": "tiredness_a",
+        "type": "int"
+      }
+    },
+    {
+      "var": {
+        "init": {
+          "call": {
+            "args": [
+              {
+                "var": "dist_b"
+              }
+            ],
+            "fun": "tirednessForSteps"
+          }
+        },
+        "name": "tiredness_b",
+        "type": "int"
+      }
+    },
+    {
+      "assign": [
+        "result",
+        {
+          "args": [
+            {
+              "var": "tiredness_a"
+            },
+            {
+              "var": "tiredness_b"
+            }
+          ],
+          "op": "+"
+        }
+      ]
+    }
+  ],
+  "ensures": [
+    {
+      "args": [
+        {
+          "var": "result"
+        },
+        {
+          "int": 0
+        }
+      ],
+      "op": ">="
+    },
+    {
+      "args": [
+        {
+          "var": "result"
+        },
+        {
+          "call": {
+            "args": [
+              {
+                "var": "a"
+              },
+              {
+                "var": "b"
+              }
+            ],
+            "fun": "minimumTotalTiredness"
+          }
+        }
+      ],
+      "op": "=="
+    }
+  ],
+  "gate": "recursion",
+  "lemmas": [
+    {
+      "body": [],
+      "ensures": [
+        {
+          "args": [
+            {
+              "call": {
+                "args": [
+                  {
+                    "var": "n_v"
+                  }
+                ],
+                "fun": "tirednessForSteps"
+              }
+            },
+            {
+              "int": 0
+            }
+          ],
+          "op": ">="
+        }
+      ],
+      "name": "tirednessNonNegative",
+      "params": [
+        {
+          "name": "n_v",
+          "type": "int"
+        }
+      ],
+      "requires": [
+        {
+          "args": [
+            {
+              "var": "n_v"
+            },
+            {
+              "int": 0
+            }
+          ],
+          "op": ">="
+        }
+      ]
+    }
+  ],
+  "name": "vericoding_da0113__solve",
+  "params": [
+    {
+      "name": "a",
+      "type": "int"
+    },
+    {
+      "name": "b",
+      "type": "int"
+    }
+  ],
+  "requires": [
+    {
+      "call": {
+        "args": [
+          {
+            "var": "a"
+          },
+          {
+            "var": "b"
+          }
+        ],
+        "fun": "validInput"
+      }
+    }
+  ],
+  "returns": [
+    {
+      "name": "result",
+      "type": "int"
+    }
+  ],
+  "spec_funs": [
+    {
+      "body": {
+        "ite": {
+          "cond": {
+            "args": [
+              {
+                "var": "n"
+              },
+              {
+                "int": 0
+              }
+            ],
+            "op": ">="
+          },
+          "else": {
+            "int": 0
+          },
+          "then": {
+            "args": [
+              {
+                "args": [
+                  {
+                    "var": "n"
+                  },
+                  {
+                    "args": [
+                      {
+                        "var": "n"
+                      },
+                      {
+                        "int": 1
+                      }
+                    ],
+                    "op": "+"
+                  }
+                ],
+                "op": "*"
+              },
+              {
+                "int": 2
+              }
+            ],
+            "op": "div"
+          }
+        }
+      },
+      "decreases": {
+        "int": 0
+      },
+      "name": "tirednessForSteps",
+      "params": [
+        {
+          "name": "n",
+          "type": "int"
+        }
+      ],
+      "result": "int"
+    },
+    {
+      "body": {
+        "ite": {
+          "cond": {
+            "args": [
+              {
+                "var": "x"
+              },
+              {
+                "int": 0
+              }
+            ],
+            "op": ">="
+          },
+          "else": {
+            "args": [
+              {
+                "var": "x"
+              }
+            ],
+            "op": "neg"
+          },
+          "then": {
+            "var": "x"
+          }
+        }
+      },
+      "decreases": {
+        "int": 0
+      },
+      "name": "abs",
+      "params": [
+        {
+          "name": "x",
+          "type": "int"
+        }
+      ],
+      "result": "int"
+    },
+    {
+      "body": {
+        "args": [
+          {
+            "args": [
+              {
+                "var": "a_v"
+              },
+              {
+                "var": "b_v"
+              }
+            ],
+            "op": "+"
+          },
+          {
+            "int": 2
+          }
+        ],
+        "op": "div"
+      },
+      "decreases": {
+        "int": 0
+      },
+      "name": "optimalMeetingPoint",
+      "params": [
+        {
+          "name": "a_v",
+          "type": "int"
+        },
+        {
+          "name": "b_v",
+          "type": "int"
+        }
+      ],
+      "result": "int"
+    },
+    {
+      "body": {
+        "args": [
+          {
+            "args": [
+              {
+                "var": "a_v2"
+              },
+              {
+                "int": 1
+              }
+            ],
+            "op": ">="
+          },
+          {
+            "args": [
+              {
+                "var": "a_v2"
+              },
+              {
+                "int": 1000
+              }
+            ],
+            "op": "<="
+          },
+          {
+            "args": [
+              {
+                "var": "b_v2"
+              },
+              {
+                "int": 1
+              }
+            ],
+            "op": ">="
+          },
+          {
+            "args": [
+              {
+                "var": "b_v2"
+              },
+              {
+                "int": 1000
+              }
+            ],
+            "op": "<="
+          },
+          {
+            "args": [
+              {
+                "var": "a_v2"
+              },
+              {
+                "var": "b_v2"
+              }
+            ],
+            "op": "!="
+          }
+        ],
+        "op": "and"
+      },
+      "decreases": {
+        "int": 0
+      },
+      "name": "validInput",
+      "params": [
+        {
+          "name": "a_v2",
+          "type": "int"
+        },
+        {
+          "name": "b_v2",
+          "type": "int"
+        }
+      ],
+      "result": "bool"
+    },
+    {
+      "body": {
+        "ite": {
+          "cond": {
+            "call": {
+              "args": [
+                {
+                  "var": "a_v3"
+                },
+                {
+                  "var": "b_v3"
+                }
+              ],
+              "fun": "validInput"
+            }
+          },
+          "else": {
+            "int": 0
+          },
+          "then": {
+            "args": [
+              {
+                "call": {
+                  "args": [
+                    {
+                      "call": {
+                        "args": [
+                          {
+                            "args": [
+                              {
+                                "call": {
+                                  "args": [
+                                    {
+                                      "var": "a_v3"
+                                    },
+                                    {
+                                      "var": "b_v3"
+                                    }
+                                  ],
+                                  "fun": "optimalMeetingPoint"
+                                }
+                              },
+                              {
+                                "var": "a_v3"
+                              }
+                            ],
+                            "op": "-"
+                          }
+                        ],
+                        "fun": "abs"
+                      }
+                    }
+                  ],
+                  "fun": "tirednessForSteps"
+                }
+              },
+              {
+                "call": {
+                  "args": [
+                    {
+                      "call": {
+                        "args": [
+                          {
+                            "args": [
+                              {
+                                "var": "b_v3"
+                              },
+                              {
+                                "call": {
+                                  "args": [
+                                    {
+                                      "var": "a_v3"
+                                    },
+                                    {
+                                      "var": "b_v3"
+                                    }
+                                  ],
+                                  "fun": "optimalMeetingPoint"
+                                }
+                              }
+                            ],
+                            "op": "-"
+                          }
+                        ],
+                        "fun": "abs"
+                      }
+                    }
+                  ],
+                  "fun": "tirednessForSteps"
+                }
+              }
+            ],
+            "op": "+"
+          }
+        }
+      },
+      "decreases": {
+        "int": 0
+      },
+      "name": "minimumTotalTiredness",
+      "params": [
+        {
+          "name": "a_v3",
+          "type": "int"
+        },
+        {
+          "name": "b_v3",
+          "type": "int"
+        }
+      ],
+      "result": "int"
+    }
+  ],
+  "t": 1
+}

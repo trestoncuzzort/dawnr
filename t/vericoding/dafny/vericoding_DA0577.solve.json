@@ -1,0 +1,2002 @@
+{
+  "body": [
+    {
+      "assign": [
+        "result",
+        {
+          "call": {
+            "args": [
+              {
+                "var": "a"
+              },
+              {
+                "var": "m"
+              },
+              {
+                "var": "k"
+              }
+            ],
+            "fun": "greedyPackFromEnd"
+          }
+        }
+      ]
+    },
+    {
+      "lemma": {
+        "args": [
+          {
+            "var": "a"
+          },
+          {
+            "var": "m"
+          },
+          {
+            "var": "k"
+          }
+        ],
+        "name": "greedyPackFromEndBound"
+      }
+    }
+  ],
+  "ensures": [
+    {
+      "args": [
+        {
+          "int": 0
+        },
+        {
+          "var": "result"
+        }
+      ],
+      "op": "<="
+    },
+    {
+      "args": [
+        {
+          "var": "result"
+        },
+        {
+          "var": "n"
+        }
+      ],
+      "op": "<="
+    },
+    {
+      "args": [
+        {
+          "var": "result"
+        },
+        {
+          "call": {
+            "args": [
+              {
+                "var": "a"
+              },
+              {
+                "var": "m"
+              },
+              {
+                "var": "k"
+              }
+            ],
+            "fun": "greedyPackFromEnd"
+          }
+        }
+      ],
+      "op": "=="
+    }
+  ],
+  "gate": "recursion",
+  "lemmas": [
+    {
+      "body": [
+        {
+          "if": {
+            "cond": {
+              "args": [
+                {
+                  "var": "pos_v"
+                },
+                {
+                  "int": 0
+                }
+              ],
+              "op": "<"
+            },
+            "else": [
+              {
+                "if": {
+                  "cond": {
+                    "args": [
+                      {
+                        "args": [
+                          {
+                            "var": "a_v3"
+                          },
+                          {
+                            "var": "pos_v"
+                          }
+                        ],
+                        "op": "at"
+                      },
+                      {
+                        "var": "capacity_v2"
+                      }
+                    ],
+                    "op": ">"
+                  },
+                  "else": [
+                    {
+                      "if": {
+                        "cond": {
+                          "args": [
+                            {
+                              "args": [
+                                {
+                                  "var": "a_v3"
+                                },
+                                {
+                                  "var": "pos_v"
+                                }
+                              ],
+                              "op": "at"
+                            },
+                            {
+                              "var": "current_box_space_v"
+                            }
+                          ],
+                          "op": "<="
+                        },
+                        "else": [
+                          {
+                            "if": {
+                              "cond": {
+                                "args": [
+                                  {
+                                    "var": "boxes_left_v"
+                                  },
+                                  {
+                                    "int": 1
+                                  }
+                                ],
+                                "op": ">"
+                              },
+                              "else": [
+                                {
+                                  "assert": {
+                                    "args": [
+                                      {
+                                        "call": {
+                                          "args": [
+                                            {
+                                              "var": "a_v3"
+                                            },
+                                            {
+                                              "var": "pos_v"
+                                            },
+                                            {
+                                              "var": "boxes_left_v"
+                                            },
+                                            {
+                                              "var": "capacity_v2"
+                                            },
+                                            {
+                                              "var": "current_box_space_v"
+                                            }
+                                          ],
+                                          "fun": "greedyPackFromEndHelper"
+                                        }
+                                      },
+                                      {
+                                        "int": 0
+                                      }
+                                    ],
+                                    "op": "=="
+                                  }
+                                }
+                              ],
+                              "then": [
+                                {
+                                  "lemma": {
+                                    "args": [
+                                      {
+                                        "var": "a_v3"
+                                      },
+                                      {
+                                        "args": [
+                                          {
+                                            "var": "pos_v"
+                                          },
+                                          {
+                                            "int": 1
+                                          }
+                                        ],
+                                        "op": "-"
+                                      },
+                                      {
+                                        "args": [
+                                          {
+                                            "var": "boxes_left_v"
+                                          },
+                                          {
+                                            "int": 1
+                                          }
+                                        ],
+                                        "op": "-"
+                                      },
+                                      {
+                                        "var": "capacity_v2"
+                                      },
+                                      {
+                                        "args": [
+                                          {
+                                            "var": "capacity_v2"
+                                          },
+                                          {
+                                            "args": [
+                                              {
+                                                "var": "a_v3"
+                                              },
+                                              {
+                                                "var": "pos_v"
+                                              }
+                                            ],
+                                            "op": "at"
+                                          }
+                                        ],
+                                        "op": "-"
+                                      }
+                                    ],
+                                    "name": "greedyPackFromEndHelperBound"
+                                  }
+                                },
+                                {
+                                  "assert": {
+                                    "args": [
+                                      {
+                                        "call": {
+                                          "args": [
+                                            {
+                                              "var": "a_v3"
+                                            },
+                                            {
+                                              "var": "pos_v"
+                                            },
+                                            {
+                                              "var": "boxes_left_v"
+                                            },
+                                            {
+                                              "var": "capacity_v2"
+                                            },
+                                            {
+                                              "var": "current_box_space_v"
+                                            }
+                                          ],
+                                          "fun": "greedyPackFromEndHelper"
+                                        }
+                                      },
+                                      {
+                                        "args": [
+                                          {
+                                            "int": 1
+                                          },
+                                          {
+                                            "call": {
+                                              "args": [
+                                                {
+                                                  "var": "a_v3"
+                                                },
+                                                {
+                                                  "args": [
+                                                    {
+                                                      "var": "pos_v"
+                                                    },
+                                                    {
+                                                      "int": 1
+                                                    }
+                                                  ],
+                                                  "op": "-"
+                                                },
+                                                {
+                                                  "args": [
+                                                    {
+                                                      "var": "boxes_left_v"
+                                                    },
+                                                    {
+                                                      "int": 1
+                                                    }
+                                                  ],
+                                                  "op": "-"
+                                                },
+                                                {
+                                                  "var": "capacity_v2"
+                                                },
+                                                {
+                                                  "args": [
+                                                    {
+                                                      "var": "capacity_v2"
+                                                    },
+                                                    {
+                                                      "args": [
+                                                        {
+                                                          "var": "a_v3"
+                                                        },
+                                                        {
+                                                          "var": "pos_v"
+                                                        }
+                                                      ],
+                                                      "op": "at"
+                                                    }
+                                                  ],
+                                                  "op": "-"
+                                                }
+                                              ],
+                                              "fun": "greedyPackFromEndHelper"
+                                            }
+                                          }
+                                        ],
+                                        "op": "+"
+                                      }
+                                    ],
+                                    "op": "=="
+                                  }
+                                },
+                                {
+                                  "assert": {
+                                    "args": [
+                                      {
+                                        "call": {
+                                          "args": [
+                                            {
+                                              "var": "a_v3"
+                                            },
+                                            {
+                                              "args": [
+                                                {
+                                                  "var": "pos_v"
+                                                },
+                                                {
+                                                  "int": 1
+                                                }
+                                              ],
+                                              "op": "-"
+                                            },
+                                            {
+                                              "args": [
+                                                {
+                                                  "var": "boxes_left_v"
+                                                },
+                                                {
+                                                  "int": 1
+                                                }
+                                              ],
+                                              "op": "-"
+                                            },
+                                            {
+                                              "var": "capacity_v2"
+                                            },
+                                            {
+                                              "args": [
+                                                {
+                                                  "var": "capacity_v2"
+                                                },
+                                                {
+                                                  "args": [
+                                                    {
+                                                      "var": "a_v3"
+                                                    },
+                                                    {
+                                                      "var": "pos_v"
+                                                    }
+                                                  ],
+                                                  "op": "at"
+                                                }
+                                              ],
+                                              "op": "-"
+                                            }
+                                          ],
+                                          "fun": "greedyPackFromEndHelper"
+                                        }
+                                      },
+                                      {
+                                        "int": 0
+                                      }
+                                    ],
+                                    "op": ">="
+                                  }
+                                },
+                                {
+                                  "assert": {
+                                    "args": [
+                                      {
+                                        "call": {
+                                          "args": [
+                                            {
+                                              "var": "a_v3"
+                                            },
+                                            {
+                                              "var": "pos_v"
+                                            },
+                                            {
+                                              "var": "boxes_left_v"
+                                            },
+                                            {
+                                              "var": "capacity_v2"
+                                            },
+                                            {
+                                              "var": "current_box_space_v"
+                                            }
+                                          ],
+                                          "fun": "greedyPackFromEndHelper"
+                                        }
+                                      },
+                                      {
+                                        "args": [
+                                          {
+                                            "args": [
+                                              {
+                                                "args": [
+                                                  {
+                                                    "int": 1
+                                                  },
+                                                  {
+                                                    "var": "pos_v"
+                                                  }
+                                                ],
+                                                "op": "+"
+                                              },
+                                              {
+                                                "int": 1
+                                              }
+                                            ],
+                                            "op": "-"
+                                          },
+                                          {
+                                            "int": 1
+                                          }
+                                        ],
+                                        "op": "+"
+                                      }
+                                    ],
+                                    "op": "<="
+                                  }
+                                }
+                              ]
+                            }
+                          }
+                        ],
+                        "then": [
+                          {
+                            "lemma": {
+                              "args": [
+                                {
+                                  "var": "a_v3"
+                                },
+                                {
+                                  "args": [
+                                    {
+                                      "var": "pos_v"
+                                    },
+                                    {
+                                      "int": 1
+                                    }
+                                  ],
+                                  "op": "-"
+                                },
+                                {
+                                  "var": "boxes_left_v"
+                                },
+                                {
+                                  "var": "capacity_v2"
+                                },
+                                {
+                                  "args": [
+                                    {
+                                      "var": "current_box_space_v"
+                                    },
+                                    {
+                                      "args": [
+                                        {
+                                          "var": "a_v3"
+                                        },
+                                        {
+                                          "var": "pos_v"
+                                        }
+                                      ],
+                                      "op": "at"
+                                    }
+                                  ],
+                                  "op": "-"
+                                }
+                              ],
+                              "name": "greedyPackFromEndHelperBound"
+                            }
+                          },
+                          {
+                            "assert": {
+                              "args": [
+                                {
+                                  "call": {
+                                    "args": [
+                                      {
+                                        "var": "a_v3"
+                                      },
+                                      {
+                                        "var": "pos_v"
+                                      },
+                                      {
+                                        "var": "boxes_left_v"
+                                      },
+                                      {
+                                        "var": "capacity_v2"
+                                      },
+                                      {
+                                        "var": "current_box_space_v"
+                                      }
+                                    ],
+                                    "fun": "greedyPackFromEndHelper"
+                                  }
+                                },
+                                {
+                                  "args": [
+                                    {
+                                      "int": 1
+                                    },
+                                    {
+                                      "call": {
+                                        "args": [
+                                          {
+                                            "var": "a_v3"
+                                          },
+                                          {
+                                            "args": [
+                                              {
+                                                "var": "pos_v"
+                                              },
+                                              {
+                                                "int": 1
+                                              }
+                                            ],
+                                            "op": "-"
+                                          },
+                                          {
+                                            "var": "boxes_left_v"
+                                          },
+                                          {
+                                            "var": "capacity_v2"
+                                          },
+                                          {
+                                            "args": [
+                                              {
+                                                "var": "current_box_space_v"
+                                              },
+                                              {
+                                                "args": [
+                                                  {
+                                                    "var": "a_v3"
+                                                  },
+                                                  {
+                                                    "var": "pos_v"
+                                                  }
+                                                ],
+                                                "op": "at"
+                                              }
+                                            ],
+                                            "op": "-"
+                                          }
+                                        ],
+                                        "fun": "greedyPackFromEndHelper"
+                                      }
+                                    }
+                                  ],
+                                  "op": "+"
+                                }
+                              ],
+                              "op": "=="
+                            }
+                          },
+                          {
+                            "assert": {
+                              "args": [
+                                {
+                                  "int": 0
+                                },
+                                {
+                                  "call": {
+                                    "args": [
+                                      {
+                                        "var": "a_v3"
+                                      },
+                                      {
+                                        "args": [
+                                          {
+                                            "var": "pos_v"
+                                          },
+                                          {
+                                            "int": 1
+                                          }
+                                        ],
+                                        "op": "-"
+                                      },
+                                      {
+                                        "var": "boxes_left_v"
+                                      },
+                                      {
+                                        "var": "capacity_v2"
+                                      },
+                                      {
+                                        "args": [
+                                          {
+                                            "var": "current_box_space_v"
+                                          },
+                                          {
+                                            "args": [
+                                              {
+                                                "var": "a_v3"
+                                              },
+                                              {
+                                                "var": "pos_v"
+                                              }
+                                            ],
+                                            "op": "at"
+                                          }
+                                        ],
+                                        "op": "-"
+                                      }
+                                    ],
+                                    "fun": "greedyPackFromEndHelper"
+                                  }
+                                }
+                              ],
+                              "op": "<="
+                            }
+                          },
+                          {
+                            "assert": {
+                              "args": [
+                                {
+                                  "call": {
+                                    "args": [
+                                      {
+                                        "var": "a_v3"
+                                      },
+                                      {
+                                        "var": "pos_v"
+                                      },
+                                      {
+                                        "var": "boxes_left_v"
+                                      },
+                                      {
+                                        "var": "capacity_v2"
+                                      },
+                                      {
+                                        "var": "current_box_space_v"
+                                      }
+                                    ],
+                                    "fun": "greedyPackFromEndHelper"
+                                  }
+                                },
+                                {
+                                  "args": [
+                                    {
+                                      "args": [
+                                        {
+                                          "args": [
+                                            {
+                                              "int": 1
+                                            },
+                                            {
+                                              "var": "pos_v"
+                                            }
+                                          ],
+                                          "op": "+"
+                                        },
+                                        {
+                                          "int": 1
+                                        }
+                                      ],
+                                      "op": "-"
+                                    },
+                                    {
+                                      "int": 1
+                                    }
+                                  ],
+                                  "op": "+"
+                                }
+                              ],
+                              "op": "<="
+                            }
+                          }
+                        ]
+                      }
+                    }
+                  ],
+                  "then": [
+                    {
+                      "assert": {
+                        "args": [
+                          {
+                            "call": {
+                              "args": [
+                                {
+                                  "var": "a_v3"
+                                },
+                                {
+                                  "var": "pos_v"
+                                },
+                                {
+                                  "var": "boxes_left_v"
+                                },
+                                {
+                                  "var": "capacity_v2"
+                                },
+                                {
+                                  "var": "current_box_space_v"
+                                }
+                              ],
+                              "fun": "greedyPackFromEndHelper"
+                            }
+                          },
+                          {
+                            "int": 0
+                          }
+                        ],
+                        "op": "=="
+                      }
+                    }
+                  ]
+                }
+              }
+            ],
+            "then": [
+              {
+                "assert": {
+                  "args": [
+                    {
+                      "call": {
+                        "args": [
+                          {
+                            "var": "a_v3"
+                          },
+                          {
+                            "var": "pos_v"
+                          },
+                          {
+                            "var": "boxes_left_v"
+                          },
+                          {
+                            "var": "capacity_v2"
+                          },
+                          {
+                            "var": "current_box_space_v"
+                          }
+                        ],
+                        "fun": "greedyPackFromEndHelper"
+                      }
+                    },
+                    {
+                      "int": 0
+                    }
+                  ],
+                  "op": "=="
+                }
+              }
+            ]
+          }
+        }
+      ],
+      "decreases": {
+        "args": [
+          {
+            "var": "pos_v"
+          },
+          {
+            "int": 1
+          }
+        ],
+        "op": "+"
+      },
+      "ensures": [
+        {
+          "args": [
+            {
+              "int": 0
+            },
+            {
+              "call": {
+                "args": [
+                  {
+                    "var": "a_v3"
+                  },
+                  {
+                    "var": "pos_v"
+                  },
+                  {
+                    "var": "boxes_left_v"
+                  },
+                  {
+                    "var": "capacity_v2"
+                  },
+                  {
+                    "var": "current_box_space_v"
+                  }
+                ],
+                "fun": "greedyPackFromEndHelper"
+              }
+            }
+          ],
+          "op": "<="
+        },
+        {
+          "args": [
+            {
+              "call": {
+                "args": [
+                  {
+                    "var": "a_v3"
+                  },
+                  {
+                    "var": "pos_v"
+                  },
+                  {
+                    "var": "boxes_left_v"
+                  },
+                  {
+                    "var": "capacity_v2"
+                  },
+                  {
+                    "var": "current_box_space_v"
+                  }
+                ],
+                "fun": "greedyPackFromEndHelper"
+              }
+            },
+            {
+              "args": [
+                {
+                  "var": "pos_v"
+                },
+                {
+                  "int": 1
+                }
+              ],
+              "op": "+"
+            }
+          ],
+          "op": "<="
+        }
+      ],
+      "name": "greedyPackFromEndHelperBound",
+      "params": [
+        {
+          "name": "a_v3",
+          "type": "seq"
+        },
+        {
+          "name": "pos_v",
+          "type": "int"
+        },
+        {
+          "name": "boxes_left_v",
+          "type": "int"
+        },
+        {
+          "name": "capacity_v2",
+          "type": "int"
+        },
+        {
+          "name": "current_box_space_v",
+          "type": "int"
+        }
+      ],
+      "requires": [
+        {
+          "args": [
+            {
+              "var": "capacity_v2"
+            },
+            {
+              "int": 1
+            }
+          ],
+          "op": ">="
+        },
+        {
+          "forall": {
+            "body": {
+              "args": [
+                {
+                  "args": [
+                    {
+                      "int": 1
+                    },
+                    {
+                      "args": [
+                        {
+                          "var": "a_v3"
+                        },
+                        {
+                          "var": "i_v2"
+                        }
+                      ],
+                      "op": "at"
+                    }
+                  ],
+                  "op": "<="
+                },
+                {
+                  "args": [
+                    {
+                      "args": [
+                        {
+                          "var": "a_v3"
+                        },
+                        {
+                          "var": "i_v2"
+                        }
+                      ],
+                      "op": "at"
+                    },
+                    {
+                      "var": "capacity_v2"
+                    }
+                  ],
+                  "op": "<="
+                }
+              ],
+              "op": "and"
+            },
+            "hi": {
+              "args": [
+                {
+                  "var": "a_v3"
+                }
+              ],
+              "op": "len"
+            },
+            "lo": {
+              "int": 0
+            },
+            "var": "i_v2"
+          }
+        },
+        {
+          "args": [
+            {
+              "var": "boxes_left_v"
+            },
+            {
+              "int": 1
+            }
+          ],
+          "op": ">="
+        },
+        {
+          "args": [
+            {
+              "int": 0
+            },
+            {
+              "var": "current_box_space_v"
+            }
+          ],
+          "op": "<="
+        },
+        {
+          "args": [
+            {
+              "var": "current_box_space_v"
+            },
+            {
+              "var": "capacity_v2"
+            }
+          ],
+          "op": "<="
+        },
+        {
+          "args": [
+            {
+              "args": [
+                {
+                  "int": 1
+                }
+              ],
+              "op": "neg"
+            },
+            {
+              "var": "pos_v"
+            }
+          ],
+          "op": "<="
+        },
+        {
+          "args": [
+            {
+              "var": "pos_v"
+            },
+            {
+              "args": [
+                {
+                  "var": "a_v3"
+                }
+              ],
+              "op": "len"
+            }
+          ],
+          "op": "<"
+        }
+      ]
+    },
+    {
+      "body": [
+        {
+          "if": {
+            "cond": {
+              "args": [
+                {
+                  "args": [
+                    {
+                      "var": "a_v4"
+                    }
+                  ],
+                  "op": "len"
+                },
+                {
+                  "int": 0
+                }
+              ],
+              "op": "=="
+            },
+            "else": [
+              {
+                "lemma": {
+                  "args": [
+                    {
+                      "var": "a_v4"
+                    },
+                    {
+                      "args": [
+                        {
+                          "args": [
+                            {
+                              "var": "a_v4"
+                            }
+                          ],
+                          "op": "len"
+                        },
+                        {
+                          "int": 1
+                        }
+                      ],
+                      "op": "-"
+                    },
+                    {
+                      "var": "boxes_v"
+                    },
+                    {
+                      "var": "capacity_v3"
+                    },
+                    {
+                      "var": "capacity_v3"
+                    }
+                  ],
+                  "name": "greedyPackFromEndHelperBound"
+                }
+              }
+            ],
+            "then": [
+              {
+                "assert": {
+                  "args": [
+                    {
+                      "call": {
+                        "args": [
+                          {
+                            "var": "a_v4"
+                          },
+                          {
+                            "var": "boxes_v"
+                          },
+                          {
+                            "var": "capacity_v3"
+                          }
+                        ],
+                        "fun": "greedyPackFromEnd"
+                      }
+                    },
+                    {
+                      "call": {
+                        "args": [
+                          {
+                            "var": "a_v4"
+                          },
+                          {
+                            "args": [
+                              {
+                                "int": 1
+                              }
+                            ],
+                            "op": "neg"
+                          },
+                          {
+                            "var": "boxes_v"
+                          },
+                          {
+                            "var": "capacity_v3"
+                          },
+                          {
+                            "var": "capacity_v3"
+                          }
+                        ],
+                        "fun": "greedyPackFromEndHelper"
+                      }
+                    }
+                  ],
+                  "op": "=="
+                }
+              },
+              {
+                "assert": {
+                  "args": [
+                    {
+                      "call": {
+                        "args": [
+                          {
+                            "var": "a_v4"
+                          },
+                          {
+                            "args": [
+                              {
+                                "int": 1
+                              }
+                            ],
+                            "op": "neg"
+                          },
+                          {
+                            "var": "boxes_v"
+                          },
+                          {
+                            "var": "capacity_v3"
+                          },
+                          {
+                            "var": "capacity_v3"
+                          }
+                        ],
+                        "fun": "greedyPackFromEndHelper"
+                      }
+                    },
+                    {
+                      "int": 0
+                    }
+                  ],
+                  "op": "=="
+                }
+              }
+            ]
+          }
+        }
+      ],
+      "ensures": [
+        {
+          "args": [
+            {
+              "int": 0
+            },
+            {
+              "call": {
+                "args": [
+                  {
+                    "var": "a_v4"
+                  },
+                  {
+                    "var": "boxes_v"
+                  },
+                  {
+                    "var": "capacity_v3"
+                  }
+                ],
+                "fun": "greedyPackFromEnd"
+              }
+            }
+          ],
+          "op": "<="
+        },
+        {
+          "args": [
+            {
+              "call": {
+                "args": [
+                  {
+                    "var": "a_v4"
+                  },
+                  {
+                    "var": "boxes_v"
+                  },
+                  {
+                    "var": "capacity_v3"
+                  }
+                ],
+                "fun": "greedyPackFromEnd"
+              }
+            },
+            {
+              "args": [
+                {
+                  "var": "a_v4"
+                }
+              ],
+              "op": "len"
+            }
+          ],
+          "op": "<="
+        }
+      ],
+      "name": "greedyPackFromEndBound",
+      "params": [
+        {
+          "name": "a_v4",
+          "type": "seq"
+        },
+        {
+          "name": "boxes_v",
+          "type": "int"
+        },
+        {
+          "name": "capacity_v3",
+          "type": "int"
+        }
+      ],
+      "requires": [
+        {
+          "args": [
+            {
+              "var": "boxes_v"
+            },
+            {
+              "int": 1
+            }
+          ],
+          "op": ">="
+        },
+        {
+          "args": [
+            {
+              "var": "capacity_v3"
+            },
+            {
+              "int": 1
+            }
+          ],
+          "op": ">="
+        },
+        {
+          "forall": {
+            "body": {
+              "args": [
+                {
+                  "args": [
+                    {
+                      "int": 1
+                    },
+                    {
+                      "args": [
+                        {
+                          "var": "a_v4"
+                        },
+                        {
+                          "var": "i_v3"
+                        }
+                      ],
+                      "op": "at"
+                    }
+                  ],
+                  "op": "<="
+                },
+                {
+                  "args": [
+                    {
+                      "args": [
+                        {
+                          "var": "a_v4"
+                        },
+                        {
+                          "var": "i_v3"
+                        }
+                      ],
+                      "op": "at"
+                    },
+                    {
+                      "var": "capacity_v3"
+                    }
+                  ],
+                  "op": "<="
+                }
+              ],
+              "op": "and"
+            },
+            "hi": {
+              "args": [
+                {
+                  "var": "a_v4"
+                }
+              ],
+              "op": "len"
+            },
+            "lo": {
+              "int": 0
+            },
+            "var": "i_v3"
+          }
+        }
+      ]
+    }
+  ],
+  "name": "vericoding_da0577__solve",
+  "params": [
+    {
+      "name": "n",
+      "type": "int"
+    },
+    {
+      "name": "m",
+      "type": "int"
+    },
+    {
+      "name": "k",
+      "type": "int"
+    },
+    {
+      "name": "a",
+      "type": "seq"
+    }
+  ],
+  "requires": [
+    {
+      "args": [
+        {
+          "var": "n"
+        },
+        {
+          "int": 0
+        }
+      ],
+      "op": ">="
+    },
+    {
+      "args": [
+        {
+          "var": "m"
+        },
+        {
+          "int": 1
+        }
+      ],
+      "op": ">="
+    },
+    {
+      "args": [
+        {
+          "var": "k"
+        },
+        {
+          "int": 1
+        }
+      ],
+      "op": ">="
+    },
+    {
+      "args": [
+        {
+          "args": [
+            {
+              "var": "a"
+            }
+          ],
+          "op": "len"
+        },
+        {
+          "var": "n"
+        }
+      ],
+      "op": "=="
+    },
+    {
+      "forall": {
+        "body": {
+          "args": [
+            {
+              "args": [
+                {
+                  "int": 1
+                },
+                {
+                  "args": [
+                    {
+                      "var": "a"
+                    },
+                    {
+                      "var": "i_v4"
+                    }
+                  ],
+                  "op": "at"
+                }
+              ],
+              "op": "<="
+            },
+            {
+              "args": [
+                {
+                  "args": [
+                    {
+                      "var": "a"
+                    },
+                    {
+                      "var": "i_v4"
+                    }
+                  ],
+                  "op": "at"
+                },
+                {
+                  "var": "k"
+                }
+              ],
+              "op": "<="
+            }
+          ],
+          "op": "and"
+        },
+        "hi": {
+          "args": [
+            {
+              "var": "a"
+            }
+          ],
+          "op": "len"
+        },
+        "lo": {
+          "int": 0
+        },
+        "var": "i_v4"
+      }
+    }
+  ],
+  "returns": [
+    {
+      "name": "result",
+      "type": "int"
+    }
+  ],
+  "spec_funs": [
+    {
+      "body": {
+        "ite": {
+          "cond": {
+            "args": [
+              {
+                "args": [
+                  {
+                    "var": "capacity"
+                  },
+                  {
+                    "int": 1
+                  }
+                ],
+                "op": ">="
+              },
+              {
+                "forall": {
+                  "body": {
+                    "args": [
+                      {
+                        "args": [
+                          {
+                            "int": 1
+                          },
+                          {
+                            "args": [
+                              {
+                                "var": "a_v"
+                              },
+                              {
+                                "var": "i"
+                              }
+                            ],
+                            "op": "at"
+                          }
+                        ],
+                        "op": "<="
+                      },
+                      {
+                        "args": [
+                          {
+                            "args": [
+                              {
+                                "var": "a_v"
+                              },
+                              {
+                                "var": "i"
+                              }
+                            ],
+                            "op": "at"
+                          },
+                          {
+                            "var": "capacity"
+                          }
+                        ],
+                        "op": "<="
+                      }
+                    ],
+                    "op": "and"
+                  },
+                  "hi": {
+                    "args": [
+                      {
+                        "var": "a_v"
+                      }
+                    ],
+                    "op": "len"
+                  },
+                  "lo": {
+                    "int": 0
+                  },
+                  "var": "i"
+                }
+              },
+              {
+                "args": [
+                  {
+                    "var": "boxes_left"
+                  },
+                  {
+                    "int": 1
+                  }
+                ],
+                "op": ">="
+              },
+              {
+                "args": [
+                  {
+                    "args": [
+                      {
+                        "int": 0
+                      },
+                      {
+                        "var": "current_box_space"
+                      }
+                    ],
+                    "op": "<="
+                  },
+                  {
+                    "args": [
+                      {
+                        "var": "current_box_space"
+                      },
+                      {
+                        "var": "capacity"
+                      }
+                    ],
+                    "op": "<="
+                  }
+                ],
+                "op": "and"
+              }
+            ],
+            "op": "and"
+          },
+          "else": {
+            "int": 0
+          },
+          "then": {
+            "ite": {
+              "cond": {
+                "args": [
+                  {
+                    "var": "pos"
+                  },
+                  {
+                    "int": 0
+                  }
+                ],
+                "op": "<"
+              },
+              "else": {
+                "ite": {
+                  "cond": {
+                    "args": [
+                      {
+                        "var": "pos"
+                      },
+                      {
+                        "args": [
+                          {
+                            "var": "a_v"
+                          }
+                        ],
+                        "op": "len"
+                      }
+                    ],
+                    "op": ">="
+                  },
+                  "else": {
+                    "ite": {
+                      "cond": {
+                        "args": [
+                          {
+                            "args": [
+                              {
+                                "var": "a_v"
+                              },
+                              {
+                                "var": "pos"
+                              }
+                            ],
+                            "op": "at"
+                          },
+                          {
+                            "var": "capacity"
+                          }
+                        ],
+                        "op": ">"
+                      },
+                      "else": {
+                        "ite": {
+                          "cond": {
+                            "args": [
+                              {
+                                "args": [
+                                  {
+                                    "var": "a_v"
+                                  },
+                                  {
+                                    "var": "pos"
+                                  }
+                                ],
+                                "op": "at"
+                              },
+                              {
+                                "var": "current_box_space"
+                              }
+                            ],
+                            "op": "<="
+                          },
+                          "else": {
+                            "ite": {
+                              "cond": {
+                                "args": [
+                                  {
+                                    "var": "boxes_left"
+                                  },
+                                  {
+                                    "int": 1
+                                  }
+                                ],
+                                "op": ">"
+                              },
+                              "else": {
+                                "int": 0
+                              },
+                              "then": {
+                                "args": [
+                                  {
+                                    "int": 1
+                                  },
+                                  {
+                                    "call": {
+                                      "args": [
+                                        {
+                                          "var": "a_v"
+                                        },
+                                        {
+                                          "args": [
+                                            {
+                                              "var": "pos"
+                                            },
+                                            {
+                                              "int": 1
+                                            }
+                                          ],
+                                          "op": "-"
+                                        },
+                                        {
+                                          "args": [
+                                            {
+                                              "var": "boxes_left"
+                                            },
+                                            {
+                                              "int": 1
+                                            }
+                                          ],
+                                          "op": "-"
+                                        },
+                                        {
+                                          "var": "capacity"
+                                        },
+                                        {
+                                          "args": [
+                                            {
+                                              "var": "capacity"
+                                            },
+                                            {
+                                              "args": [
+                                                {
+                                                  "var": "a_v"
+                                                },
+                                                {
+                                                  "var": "pos"
+                                                }
+                                              ],
+                                              "op": "at"
+                                            }
+                                          ],
+                                          "op": "-"
+                                        }
+                                      ],
+                                      "fun": "greedyPackFromEndHelper"
+                                    }
+                                  }
+                                ],
+                                "op": "+"
+                              }
+                            }
+                          },
+                          "then": {
+                            "args": [
+                              {
+                                "int": 1
+                              },
+                              {
+                                "call": {
+                                  "args": [
+                                    {
+                                      "var": "a_v"
+                                    },
+                                    {
+                                      "args": [
+                                        {
+                                          "var": "pos"
+                                        },
+                                        {
+                                          "int": 1
+                                        }
+                                      ],
+                                      "op": "-"
+                                    },
+                                    {
+                                      "var": "boxes_left"
+                                    },
+                                    {
+                                      "var": "capacity"
+                                    },
+                                    {
+                                      "args": [
+                                        {
+                                          "var": "current_box_space"
+                                        },
+                                        {
+                                          "args": [
+                                            {
+                                              "var": "a_v"
+                                            },
+                                            {
+                                              "var": "pos"
+                                            }
+                                          ],
+                                          "op": "at"
+                                        }
+                                      ],
+                                      "op": "-"
+                                    }
+                                  ],
+                                  "fun": "greedyPackFromEndHelper"
+                                }
+                              }
+                            ],
+                            "op": "+"
+                          }
+                        }
+                      },
+                      "then": {
+                        "int": 0
+                      }
+                    }
+                  },
+                  "then": {
+                    "int": 0
+                  }
+                }
+              },
+              "then": {
+                "int": 0
+              }
+            }
+          }
+        }
+      },
+      "decreases": {
+        "args": [
+          {
+            "var": "pos"
+          },
+          {
+            "int": 1
+          }
+        ],
+        "op": "+"
+      },
+      "name": "greedyPackFromEndHelper",
+      "params": [
+        {
+          "name": "a_v",
+          "type": "seq"
+        },
+        {
+          "name": "pos",
+          "type": "int"
+        },
+        {
+          "name": "boxes_left",
+          "type": "int"
+        },
+        {
+          "name": "capacity",
+          "type": "int"
+        },
+        {
+          "name": "current_box_space",
+          "type": "int"
+        }
+      ],
+      "result": "int"
+    },
+    {
+      "body": {
+        "ite": {
+          "cond": {
+            "args": [
+              {
+                "args": [
+                  {
+                    "var": "boxes"
+                  },
+                  {
+                    "int": 1
+                  }
+                ],
+                "op": ">="
+              },
+              {
+                "args": [
+                  {
+                    "var": "capacity_v"
+                  },
+                  {
+                    "int": 1
+                  }
+                ],
+                "op": ">="
+              },
+              {
+                "forall": {
+                  "body": {
+                    "args": [
+                      {
+                        "args": [
+                          {
+                            "int": 1
+                          },
+                          {
+                            "args": [
+                              {
+                                "var": "a_v2"
+                              },
+                              {
+                                "var": "i_v"
+                              }
+                            ],
+                            "op": "at"
+                          }
+                        ],
+                        "op": "<="
+                      },
+                      {
+                        "args": [
+                          {
+                            "args": [
+                              {
+                                "var": "a_v2"
+                              },
+                              {
+                                "var": "i_v"
+                              }
+                            ],
+                            "op": "at"
+                          },
+                          {
+                            "var": "capacity_v"
+                          }
+                        ],
+                        "op": "<="
+                      }
+                    ],
+                    "op": "and"
+                  },
+                  "hi": {
+                    "args": [
+                      {
+                        "var": "a_v2"
+                      }
+                    ],
+                    "op": "len"
+                  },
+                  "lo": {
+                    "int": 0
+                  },
+                  "var": "i_v"
+                }
+              }
+            ],
+            "op": "and"
+          },
+          "else": {
+            "int": 0
+          },
+          "then": {
+            "call": {
+              "args": [
+                {
+                  "var": "a_v2"
+                },
+                {
+                  "args": [
+                    {
+                      "args": [
+                        {
+                          "var": "a_v2"
+                        }
+                      ],
+                      "op": "len"
+                    },
+                    {
+                      "int": 1
+                    }
+                  ],
+                  "op": "-"
+                },
+                {
+                  "var": "boxes"
+                },
+                {
+                  "var": "capacity_v"
+                },
+                {
+                  "var": "capacity_v"
+                }
+              ],
+              "fun": "greedyPackFromEndHelper"
+            }
+          }
+        }
+      },
+      "decreases": {
+        "int": 0
+      },
+      "name": "greedyPackFromEnd",
+      "params": [
+        {
+          "name": "a_v2",
+          "type": "seq"
+        },
+        {
+          "name": "boxes",
+          "type": "int"
+        },
+        {
+          "name": "capacity_v",
+          "type": "int"
+        }
+      ],
+      "result": "int"
+    }
+  ],
+  "t": 1
+}

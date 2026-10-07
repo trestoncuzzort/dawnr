@@ -1,0 +1,135 @@
+{
+  "body": [
+    {
+      "var": {
+        "init": {
+          "int": 0
+        },
+        "name": "x",
+        "type": "int"
+      }
+    },
+    {
+      "var": {
+        "init": {
+          "int": 0
+        },
+        "name": "y",
+        "type": "int"
+      }
+    },
+    {
+      "assign": [
+        "x",
+        {
+          "args": [
+            {
+              "int": 191
+            },
+            {
+              "int": 7
+            }
+          ],
+          "op": "div"
+        }
+      ]
+    },
+    {
+      "assign": [
+        "y",
+        {
+          "args": [
+            {
+              "int": 191
+            },
+            {
+              "int": 7
+            }
+          ],
+          "op": "mod"
+        }
+      ]
+    },
+    {
+      "assign": [
+        "r",
+        {
+          "args": [
+            {
+              "var": "x"
+            },
+            {
+              "var": "y"
+            }
+          ],
+          "op": "pair"
+        }
+      ]
+    }
+  ],
+  "ensures": [
+    {
+      "args": [
+        {
+          "args": [
+            {
+              "var": "r"
+            }
+          ],
+          "op": "fst"
+        },
+        {
+          "args": [
+            {
+              "int": 191
+            },
+            {
+              "int": 7
+            }
+          ],
+          "op": "div"
+        }
+      ],
+      "op": "=="
+    },
+    {
+      "args": [
+        {
+          "args": [
+            {
+              "var": "r"
+            }
+          ],
+          "op": "snd"
+        },
+        {
+          "args": [
+            {
+              "int": 191
+            },
+            {
+              "int": 7
+            }
+          ],
+          "op": "mod"
+        }
+      ],
+      "op": "=="
+    }
+  ],
+  "name": "vericoding_dd0052__calDiv",
+  "params": [],
+  "requires": [],
+  "returns": [
+    {
+      "name": "r",
+      "type": {
+        "pair": [
+          "int",
+          "int"
+        ]
+      }
+    }
+  ],
+  "t": 1
+}

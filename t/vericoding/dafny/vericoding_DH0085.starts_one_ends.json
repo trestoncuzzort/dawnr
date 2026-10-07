@@ -1,0 +1,445 @@
+{
+  "body": [
+    {
+      "assign": [
+        "result",
+        {
+          "args": [
+            {
+              "args": [
+                {
+                  "call": {
+                    "args": [
+                      {
+                        "var": "n"
+                      }
+                    ],
+                    "fun": "countStartsWith1"
+                  }
+                },
+                {
+                  "call": {
+                    "args": [
+                      {
+                        "var": "n"
+                      }
+                    ],
+                    "fun": "countEndsWith1"
+                  }
+                }
+              ],
+              "op": "+"
+            },
+            {
+              "call": {
+                "args": [
+                  {
+                    "var": "n"
+                  }
+                ],
+                "fun": "countStartsAndEndsWith1"
+              }
+            }
+          ],
+          "op": "-"
+        }
+      ]
+    }
+  ],
+  "ensures": [
+    {
+      "args": [
+        {
+          "var": "result"
+        },
+        {
+          "args": [
+            {
+              "args": [
+                {
+                  "call": {
+                    "args": [
+                      {
+                        "var": "n"
+                      }
+                    ],
+                    "fun": "countStartsWith1"
+                  }
+                },
+                {
+                  "call": {
+                    "args": [
+                      {
+                        "var": "n"
+                      }
+                    ],
+                    "fun": "countEndsWith1"
+                  }
+                }
+              ],
+              "op": "+"
+            },
+            {
+              "call": {
+                "args": [
+                  {
+                    "var": "n"
+                  }
+                ],
+                "fun": "countStartsAndEndsWith1"
+              }
+            }
+          ],
+          "op": "-"
+        }
+      ],
+      "op": "=="
+    },
+    {
+      "args": [
+        {
+          "var": "result"
+        },
+        {
+          "int": 0
+        }
+      ],
+      "op": ">="
+    }
+  ],
+  "gate": "recursion",
+  "name": "vericoding_dh0085__starts_one_ends",
+  "params": [
+    {
+      "name": "n",
+      "type": "int"
+    }
+  ],
+  "requires": [
+    {
+      "call": {
+        "args": [
+          {
+            "var": "n"
+          }
+        ],
+        "fun": "validInput"
+      }
+    }
+  ],
+  "returns": [
+    {
+      "name": "result",
+      "type": "int"
+    }
+  ],
+  "spec_funs": [
+    {
+      "body": {
+        "args": [
+          {
+            "var": "n_v"
+          },
+          {
+            "int": 1
+          }
+        ],
+        "op": ">="
+      },
+      "decreases": {
+        "int": 0
+      },
+      "name": "validInput",
+      "params": [
+        {
+          "name": "n_v",
+          "type": "int"
+        }
+      ],
+      "result": "bool"
+    },
+    {
+      "body": {
+        "ite": {
+          "cond": {
+            "args": [
+              {
+                "var": "exp"
+              },
+              {
+                "int": 0
+              }
+            ],
+            "op": ">="
+          },
+          "else": {
+            "int": 0
+          },
+          "then": {
+            "ite": {
+              "cond": {
+                "args": [
+                  {
+                    "var": "exp"
+                  },
+                  {
+                    "int": 0
+                  }
+                ],
+                "op": "=="
+              },
+              "else": {
+                "args": [
+                  {
+                    "var": "base"
+                  },
+                  {
+                    "call": {
+                      "args": [
+                        {
+                          "var": "base"
+                        },
+                        {
+                          "args": [
+                            {
+                              "var": "exp"
+                            },
+                            {
+                              "int": 1
+                            }
+                          ],
+                          "op": "-"
+                        }
+                      ],
+                      "fun": "power"
+                    }
+                  }
+                ],
+                "op": "*"
+              },
+              "then": {
+                "int": 1
+              }
+            }
+          }
+        }
+      },
+      "decreases": {
+        "var": "exp"
+      },
+      "name": "power",
+      "params": [
+        {
+          "name": "base",
+          "type": "int"
+        },
+        {
+          "name": "exp",
+          "type": "int"
+        }
+      ],
+      "result": "int"
+    },
+    {
+      "body": {
+        "ite": {
+          "cond": {
+            "args": [
+              {
+                "var": "n_v2"
+              },
+              {
+                "int": 1
+              }
+            ],
+            "op": ">="
+          },
+          "else": {
+            "int": 0
+          },
+          "then": {
+            "ite": {
+              "cond": {
+                "args": [
+                  {
+                    "var": "n_v2"
+                  },
+                  {
+                    "int": 2
+                  }
+                ],
+                "op": "<="
+              },
+              "else": {
+                "call": {
+                  "args": [
+                    {
+                      "int": 10
+                    },
+                    {
+                      "args": [
+                        {
+                          "var": "n_v2"
+                        },
+                        {
+                          "int": 2
+                        }
+                      ],
+                      "op": "-"
+                    }
+                  ],
+                  "fun": "power"
+                }
+              },
+              "then": {
+                "int": 1
+              }
+            }
+          }
+        }
+      },
+      "decreases": {
+        "int": 0
+      },
+      "name": "countStartsAndEndsWith1",
+      "params": [
+        {
+          "name": "n_v2",
+          "type": "int"
+        }
+      ],
+      "result": "int"
+    },
+    {
+      "body": {
+        "ite": {
+          "cond": {
+            "args": [
+              {
+                "var": "n_v3"
+              },
+              {
+                "int": 1
+              }
+            ],
+            "op": ">="
+          },
+          "else": {
+            "int": 0
+          },
+          "then": {
+            "call": {
+              "args": [
+                {
+                  "int": 10
+                },
+                {
+                  "args": [
+                    {
+                      "var": "n_v3"
+                    },
+                    {
+                      "int": 1
+                    }
+                  ],
+                  "op": "-"
+                }
+              ],
+              "fun": "power"
+            }
+          }
+        }
+      },
+      "decreases": {
+        "int": 0
+      },
+      "name": "countStartsWith1",
+      "params": [
+        {
+          "name": "n_v3",
+          "type": "int"
+        }
+      ],
+      "result": "int"
+    },
+    {
+      "body": {
+        "ite": {
+          "cond": {
+            "args": [
+              {
+                "var": "n_v4"
+              },
+              {
+                "int": 1
+              }
+            ],
+            "op": ">="
+          },
+          "else": {
+            "int": 0
+          },
+          "then": {
+            "ite": {
+              "cond": {
+                "args": [
+                  {
+                    "var": "n_v4"
+                  },
+                  {
+                    "int": 1
+                  }
+                ],
+                "op": "=="
+              },
+              "else": {
+                "args": [
+                  {
+                    "int": 9
+                  },
+                  {
+                    "call": {
+                      "args": [
+                        {
+                          "int": 10
+                        },
+                        {
+                          "args": [
+                            {
+                              "var": "n_v4"
+                            },
+                            {
+                              "int": 2
+                            }
+                          ],
+                          "op": "-"
+                        }
+                      ],
+                      "fun": "power"
+                    }
+                  }
+                ],
+                "op": "*"
+              },
+              "then": {
+                "int": 1
+              }
+            }
+          }
+        }
+      },
+      "decreases": {
+        "int": 0
+      },
+      "name": "countEndsWith1",
+      "params": [
+        {
+          "name": "n_v4",
+          "type": "int"
+        }
+      ],
+      "result": "int"
+    }
+  ],
+  "t": 1
+}

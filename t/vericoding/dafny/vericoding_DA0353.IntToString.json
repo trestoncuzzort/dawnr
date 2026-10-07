@@ -1,0 +1,353 @@
+{
+  "body": [
+    {
+      "if": {
+        "cond": {
+          "args": [
+            {
+              "var": "n"
+            },
+            {
+              "int": 0
+            }
+          ],
+          "op": "=="
+        },
+        "else": [
+          {
+            "assign": [
+              "s",
+              {
+                "args": [],
+                "op": "seq"
+              }
+            ]
+          },
+          {
+            "var": {
+              "init": {
+                "var": "n"
+              },
+              "name": "temp",
+              "type": "int"
+            }
+          },
+          {
+            "while": {
+              "body": [
+                {
+                  "var": {
+                    "init": {
+                      "args": [
+                        {
+                          "var": "temp"
+                        },
+                        {
+                          "int": 10
+                        }
+                      ],
+                      "op": "mod"
+                    },
+                    "name": "digit",
+                    "type": "int"
+                  }
+                },
+                {
+                  "assign": [
+                    "s",
+                    {
+                      "args": [
+                        {
+                          "args": [
+                            {
+                              "args": [
+                                {
+                                  "int": 48
+                                },
+                                {
+                                  "var": "digit"
+                                }
+                              ],
+                              "op": "+"
+                            }
+                          ],
+                          "op": "seq"
+                        },
+                        {
+                          "var": "s"
+                        }
+                      ],
+                      "op": "+"
+                    }
+                  ]
+                },
+                {
+                  "assign": [
+                    "temp",
+                    {
+                      "args": [
+                        {
+                          "var": "temp"
+                        },
+                        {
+                          "int": 10
+                        }
+                      ],
+                      "op": "div"
+                    }
+                  ]
+                }
+              ],
+              "cond": {
+                "args": [
+                  {
+                    "var": "temp"
+                  },
+                  {
+                    "int": 0
+                  }
+                ],
+                "op": ">"
+              },
+              "decreases": {
+                "args": [
+                  {
+                    "var": "temp"
+                  },
+                  {
+                    "int": 0
+                  }
+                ],
+                "op": "-"
+              },
+              "invariants": [
+                {
+                  "args": [
+                    {
+                      "var": "temp"
+                    },
+                    {
+                      "int": 0
+                    }
+                  ],
+                  "op": ">="
+                },
+                {
+                  "forall": {
+                    "body": {
+                      "args": [
+                        {
+                          "args": [
+                            {
+                              "int": 48
+                            },
+                            {
+                              "args": [
+                                {
+                                  "var": "s"
+                                },
+                                {
+                                  "var": "i_v"
+                                }
+                              ],
+                              "op": "at"
+                            }
+                          ],
+                          "op": "<="
+                        },
+                        {
+                          "args": [
+                            {
+                              "args": [
+                                {
+                                  "var": "s"
+                                },
+                                {
+                                  "var": "i_v"
+                                }
+                              ],
+                              "op": "at"
+                            },
+                            {
+                              "int": 57
+                            }
+                          ],
+                          "op": "<="
+                        }
+                      ],
+                      "op": "and"
+                    },
+                    "hi": {
+                      "args": [
+                        {
+                          "var": "s"
+                        }
+                      ],
+                      "op": "len"
+                    },
+                    "lo": {
+                      "int": 0
+                    },
+                    "var": "i_v"
+                  }
+                },
+                {
+                  "args": [
+                    {
+                      "args": [
+                        {
+                          "var": "temp"
+                        },
+                        {
+                          "int": 0
+                        }
+                      ],
+                      "op": ">"
+                    },
+                    {
+                      "args": [
+                        {
+                          "args": [
+                            {
+                              "var": "s"
+                            }
+                          ],
+                          "op": "len"
+                        },
+                        {
+                          "int": 0
+                        }
+                      ],
+                      "op": ">"
+                    }
+                  ],
+                  "op": "or"
+                }
+              ]
+            }
+          }
+        ],
+        "then": [
+          {
+            "assign": [
+              "s",
+              {
+                "args": [
+                  {
+                    "int": 48
+                  }
+                ],
+                "op": "seq"
+              }
+            ]
+          }
+        ]
+      }
+    }
+  ],
+  "ensures": [
+    {
+      "args": [
+        {
+          "args": [
+            {
+              "var": "s"
+            }
+          ],
+          "op": "len"
+        },
+        {
+          "int": 0
+        }
+      ],
+      "op": ">"
+    },
+    {
+      "forall": {
+        "body": {
+          "args": [
+            {
+              "args": [
+                {
+                  "int": 48
+                },
+                {
+                  "args": [
+                    {
+                      "var": "s"
+                    },
+                    {
+                      "var": "i"
+                    }
+                  ],
+                  "op": "at"
+                }
+              ],
+              "op": "<="
+            },
+            {
+              "args": [
+                {
+                  "args": [
+                    {
+                      "var": "s"
+                    },
+                    {
+                      "var": "i"
+                    }
+                  ],
+                  "op": "at"
+                },
+                {
+                  "int": 57
+                }
+              ],
+              "op": "<="
+            }
+          ],
+          "op": "and"
+        },
+        "hi": {
+          "args": [
+            {
+              "var": "s"
+            }
+          ],
+          "op": "len"
+        },
+        "lo": {
+          "int": 0
+        },
+        "var": "i"
+      }
+    }
+  ],
+  "gate": "loops",
+  "name": "vericoding_da0353__intToString",
+  "params": [
+    {
+      "name": "n",
+      "type": "int"
+    }
+  ],
+  "requires": [
+    {
+      "args": [
+        {
+          "var": "n"
+        },
+        {
+          "int": 0
+        }
+      ],
+      "op": ">="
+    }
+  ],
+  "returns": [
+    {
+      "name": "s",
+      "type": "seq"
+    }
+  ],
+  "t": 1
+}

@@ -1,0 +1,138 @@
+{
+  "body": [
+    {
+      "assign": [
+        "gcd",
+        {
+          "int": 1
+        }
+      ]
+    }
+  ],
+  "ensures": [
+    {
+      "args": [
+        {
+          "var": "gcd"
+        },
+        {
+          "int": 0
+        }
+      ],
+      "op": ">"
+    },
+    {
+      "args": [
+        {
+          "var": "gcd"
+        },
+        {
+          "var": "n"
+        }
+      ],
+      "op": "<="
+    },
+    {
+      "args": [
+        {
+          "var": "gcd"
+        },
+        {
+          "var": "m"
+        }
+      ],
+      "op": "<="
+    },
+    {
+      "args": [
+        {
+          "args": [
+            {
+              "var": "m"
+            },
+            {
+              "var": "gcd"
+            }
+          ],
+          "op": "mod"
+        },
+        {
+          "int": 0
+        }
+      ],
+      "op": "=="
+    },
+    {
+      "args": [
+        {
+          "args": [
+            {
+              "var": "n"
+            },
+            {
+              "var": "gcd"
+            }
+          ],
+          "op": "mod"
+        },
+        {
+          "int": 0
+        }
+      ],
+      "op": "=="
+    }
+  ],
+  "name": "vericoding_dd0533__euclid",
+  "params": [
+    {
+      "name": "m",
+      "type": "int"
+    },
+    {
+      "name": "n",
+      "type": "int"
+    }
+  ],
+  "requires": [
+    {
+      "args": [
+        {
+          "var": "m"
+        },
+        {
+          "int": 1
+        }
+      ],
+      "op": ">"
+    },
+    {
+      "args": [
+        {
+          "var": "n"
+        },
+        {
+          "int": 1
+        }
+      ],
+      "op": ">"
+    },
+    {
+      "args": [
+        {
+          "var": "m"
+        },
+        {
+          "var": "n"
+        }
+      ],
+      "op": ">="
+    }
+  ],
+  "returns": [
+    {
+      "name": "gcd",
+      "type": "int"
+    }
+  ],
+  "t": 1
+}

@@ -1,0 +1,603 @@
+{
+  "body": [
+    {
+      "lemma": {
+        "args": [
+          {
+            "var": "a"
+          },
+          {
+            "var": "b"
+          }
+        ],
+        "name": "bothCanTakeCondition"
+      }
+    },
+    {
+      "if": {
+        "cond": {
+          "args": [
+            {
+              "args": [
+                {
+                  "var": "a"
+                },
+                {
+                  "int": 8
+                }
+              ],
+              "op": "<="
+            },
+            {
+              "args": [
+                {
+                  "var": "b"
+                },
+                {
+                  "int": 8
+                }
+              ],
+              "op": "<="
+            }
+          ],
+          "op": "and"
+        },
+        "else": [
+          {
+            "assign": [
+              "result",
+              {
+                "args": [
+                  {
+                    "int": 58
+                  },
+                  {
+                    "int": 40
+                  }
+                ],
+                "op": "seq"
+              }
+            ]
+          }
+        ],
+        "then": [
+          {
+            "assign": [
+              "result",
+              {
+                "args": [
+                  {
+                    "int": 89
+                  },
+                  {
+                    "int": 97
+                  },
+                  {
+                    "int": 121
+                  },
+                  {
+                    "int": 33
+                  }
+                ],
+                "op": "seq"
+              }
+            ]
+          }
+        ]
+      }
+    }
+  ],
+  "ensures": [
+    {
+      "args": [
+        {
+          "call": {
+            "args": [
+              {
+                "var": "a"
+              },
+              {
+                "var": "b"
+              }
+            ],
+            "fun": "bothCanTake"
+          }
+        },
+        {
+          "args": [
+            {
+              "var": "result"
+            },
+            {
+              "args": [
+                {
+                  "int": 89
+                },
+                {
+                  "int": 97
+                },
+                {
+                  "int": 121
+                },
+                {
+                  "int": 33
+                }
+              ],
+              "op": "seq"
+            }
+          ],
+          "op": "=="
+        }
+      ],
+      "op": "=="
+    },
+    {
+      "args": [
+        {
+          "args": [
+            {
+              "call": {
+                "args": [
+                  {
+                    "var": "a"
+                  },
+                  {
+                    "var": "b"
+                  }
+                ],
+                "fun": "bothCanTake"
+              }
+            }
+          ],
+          "op": "not"
+        },
+        {
+          "args": [
+            {
+              "var": "result"
+            },
+            {
+              "args": [
+                {
+                  "int": 58
+                },
+                {
+                  "int": 40
+                }
+              ],
+              "op": "seq"
+            }
+          ],
+          "op": "=="
+        }
+      ],
+      "op": "=="
+    },
+    {
+      "args": [
+        {
+          "args": [
+            {
+              "var": "result"
+            },
+            {
+              "args": [
+                {
+                  "int": 89
+                },
+                {
+                  "int": 97
+                },
+                {
+                  "int": 121
+                },
+                {
+                  "int": 33
+                }
+              ],
+              "op": "seq"
+            }
+          ],
+          "op": "=="
+        },
+        {
+          "args": [
+            {
+              "var": "result"
+            },
+            {
+              "args": [
+                {
+                  "int": 58
+                },
+                {
+                  "int": 40
+                }
+              ],
+              "op": "seq"
+            }
+          ],
+          "op": "=="
+        }
+      ],
+      "op": "or"
+    }
+  ],
+  "gate": "recursion",
+  "lemmas": [
+    {
+      "body": [
+        {
+          "assert": {
+            "args": [
+              {
+                "args": [
+                  {
+                    "int": 16
+                  },
+                  {
+                    "int": 2
+                  }
+                ],
+                "op": "div"
+              },
+              {
+                "int": 8
+              }
+            ],
+            "op": "=="
+          }
+        },
+        {
+          "assert": {
+            "args": [
+              {
+                "call": {
+                  "args": [
+                    {
+                      "var": "a_v3"
+                    },
+                    {
+                      "int": 16
+                    }
+                  ],
+                  "fun": "canTakeNonAdjacent"
+                }
+              },
+              {
+                "args": [
+                  {
+                    "var": "a_v3"
+                  },
+                  {
+                    "int": 8
+                  }
+                ],
+                "op": "<="
+              }
+            ],
+            "op": "=="
+          }
+        },
+        {
+          "assert": {
+            "args": [
+              {
+                "call": {
+                  "args": [
+                    {
+                      "var": "b_v3"
+                    },
+                    {
+                      "int": 16
+                    }
+                  ],
+                  "fun": "canTakeNonAdjacent"
+                }
+              },
+              {
+                "args": [
+                  {
+                    "var": "b_v3"
+                  },
+                  {
+                    "int": 8
+                  }
+                ],
+                "op": "<="
+              }
+            ],
+            "op": "=="
+          }
+        }
+      ],
+      "ensures": [
+        {
+          "args": [
+            {
+              "call": {
+                "args": [
+                  {
+                    "var": "a_v3"
+                  },
+                  {
+                    "var": "b_v3"
+                  }
+                ],
+                "fun": "bothCanTake"
+              }
+            },
+            {
+              "args": [
+                {
+                  "args": [
+                    {
+                      "var": "a_v3"
+                    },
+                    {
+                      "int": 8
+                    }
+                  ],
+                  "op": "<="
+                },
+                {
+                  "args": [
+                    {
+                      "var": "b_v3"
+                    },
+                    {
+                      "int": 8
+                    }
+                  ],
+                  "op": "<="
+                }
+              ],
+              "op": "and"
+            }
+          ],
+          "op": "=="
+        }
+      ],
+      "name": "bothCanTakeCondition",
+      "params": [
+        {
+          "name": "a_v3",
+          "type": "int"
+        },
+        {
+          "name": "b_v3",
+          "type": "int"
+        }
+      ],
+      "requires": [
+        {
+          "call": {
+            "args": [
+              {
+                "var": "a_v3"
+              },
+              {
+                "var": "b_v3"
+              }
+            ],
+            "fun": "validInput"
+          }
+        }
+      ]
+    }
+  ],
+  "name": "vericoding_da0556__solveCakeProblem",
+  "params": [
+    {
+      "name": "a",
+      "type": "int"
+    },
+    {
+      "name": "b",
+      "type": "int"
+    }
+  ],
+  "requires": [
+    {
+      "call": {
+        "args": [
+          {
+            "var": "a"
+          },
+          {
+            "var": "b"
+          }
+        ],
+        "fun": "validInput"
+      }
+    }
+  ],
+  "returns": [
+    {
+      "name": "result",
+      "type": "seq"
+    }
+  ],
+  "spec_funs": [
+    {
+      "body": {
+        "args": [
+          {
+            "var": "pieces"
+          },
+          {
+            "args": [
+              {
+                "var": "total"
+              },
+              {
+                "int": 2
+              }
+            ],
+            "op": "div"
+          }
+        ],
+        "op": "<="
+      },
+      "decreases": {
+        "int": 0
+      },
+      "name": "canTakeNonAdjacent",
+      "params": [
+        {
+          "name": "pieces",
+          "type": "int"
+        },
+        {
+          "name": "total",
+          "type": "int"
+        }
+      ],
+      "result": "bool"
+    },
+    {
+      "body": {
+        "args": [
+          {
+            "call": {
+              "args": [
+                {
+                  "var": "a_v"
+                },
+                {
+                  "int": 16
+                }
+              ],
+              "fun": "canTakeNonAdjacent"
+            }
+          },
+          {
+            "call": {
+              "args": [
+                {
+                  "var": "b_v"
+                },
+                {
+                  "int": 16
+                }
+              ],
+              "fun": "canTakeNonAdjacent"
+            }
+          }
+        ],
+        "op": "and"
+      },
+      "decreases": {
+        "int": 0
+      },
+      "name": "bothCanTake",
+      "params": [
+        {
+          "name": "a_v",
+          "type": "int"
+        },
+        {
+          "name": "b_v",
+          "type": "int"
+        }
+      ],
+      "result": "bool"
+    },
+    {
+      "body": {
+        "args": [
+          {
+            "args": [
+              {
+                "args": [
+                  {
+                    "int": 1
+                  },
+                  {
+                    "var": "a_v2"
+                  }
+                ],
+                "op": "<="
+              },
+              {
+                "args": [
+                  {
+                    "var": "a_v2"
+                  },
+                  {
+                    "int": 16
+                  }
+                ],
+                "op": "<="
+              }
+            ],
+            "op": "and"
+          },
+          {
+            "args": [
+              {
+                "args": [
+                  {
+                    "int": 1
+                  },
+                  {
+                    "var": "b_v2"
+                  }
+                ],
+                "op": "<="
+              },
+              {
+                "args": [
+                  {
+                    "var": "b_v2"
+                  },
+                  {
+                    "int": 16
+                  }
+                ],
+                "op": "<="
+              }
+            ],
+            "op": "and"
+          },
+          {
+            "args": [
+              {
+                "args": [
+                  {
+                    "var": "a_v2"
+                  },
+                  {
+                    "var": "b_v2"
+                  }
+                ],
+                "op": "+"
+              },
+              {
+                "int": 16
+              }
+            ],
+            "op": "<="
+          }
+        ],
+        "op": "and"
+      },
+      "decreases": {
+        "int": 0
+      },
+      "name": "validInput",
+      "params": [
+        {
+          "name": "a_v2",
+          "type": "int"
+        },
+        {
+          "name": "b_v2",
+          "type": "int"
+        }
+      ],
+      "result": "bool"
+    }
+  ],
+  "t": 1
+}

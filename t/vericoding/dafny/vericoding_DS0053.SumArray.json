@@ -1,0 +1,1357 @@
+{
+  "body": [
+    {
+      "if": {
+        "cond": {
+          "args": [
+            {
+              "var": "start"
+            },
+            {
+              "int": 0
+            }
+          ],
+          "op": "<"
+        },
+        "else": [],
+        "then": [
+          {
+            "assign": [
+              "result",
+              {
+                "int": 0
+              }
+            ]
+          },
+          {
+            "return": [
+              "result",
+              {
+                "var": "result"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "var": {
+        "init": {
+          "int": 0
+        },
+        "name": "s",
+        "type": "int"
+      }
+    },
+    {
+      "var": {
+        "init": {
+          "var": "start"
+        },
+        "name": "i",
+        "type": "int"
+      }
+    },
+    {
+      "while": {
+        "body": [
+          {
+            "var": {
+              "init": {
+                "args": [
+                  {
+                    "var": "i"
+                  },
+                  {
+                    "var": "start"
+                  }
+                ],
+                "op": "-"
+              },
+              "name": "oldLen",
+              "type": "int"
+            }
+          },
+          {
+            "lemma": {
+              "args": [
+                {
+                  "var": "a"
+                },
+                {
+                  "var": "start"
+                },
+                {
+                  "var": "oldLen"
+                }
+              ],
+              "name": "sumRangeAppend"
+            }
+          },
+          {
+            "assign": [
+              "s",
+              {
+                "args": [
+                  {
+                    "var": "s"
+                  },
+                  {
+                    "args": [
+                      {
+                        "var": "a"
+                      },
+                      {
+                        "var": "i"
+                      }
+                    ],
+                    "op": "at"
+                  }
+                ],
+                "op": "+"
+              }
+            ]
+          },
+          {
+            "assign": [
+              "i",
+              {
+                "args": [
+                  {
+                    "var": "i"
+                  },
+                  {
+                    "int": 1
+                  }
+                ],
+                "op": "+"
+              }
+            ]
+          }
+        ],
+        "cond": {
+          "args": [
+            {
+              "var": "i"
+            },
+            {
+              "var": "finish"
+            }
+          ],
+          "op": "<"
+        },
+        "decreases": {
+          "args": [
+            {
+              "var": "finish"
+            },
+            {
+              "var": "i"
+            }
+          ],
+          "op": "-"
+        },
+        "invariants": [
+          {
+            "args": [
+              {
+                "args": [
+                  {
+                    "var": "start"
+                  },
+                  {
+                    "var": "i"
+                  }
+                ],
+                "op": "<="
+              },
+              {
+                "args": [
+                  {
+                    "var": "i"
+                  },
+                  {
+                    "var": "finish"
+                  }
+                ],
+                "op": "<="
+              }
+            ],
+            "op": "and"
+          },
+          {
+            "args": [
+              {
+                "var": "s"
+              },
+              {
+                "call": {
+                  "args": [
+                    {
+                      "var": "a"
+                    },
+                    {
+                      "var": "start"
+                    },
+                    {
+                      "args": [
+                        {
+                          "var": "i"
+                        },
+                        {
+                          "var": "start"
+                        }
+                      ],
+                      "op": "-"
+                    }
+                  ],
+                  "fun": "sumRange"
+                }
+              }
+            ],
+            "op": "=="
+          }
+        ]
+      }
+    },
+    {
+      "assign": [
+        "result",
+        {
+          "var": "s"
+        }
+      ]
+    }
+  ],
+  "ensures": [
+    {
+      "args": [
+        {
+          "var": "result"
+        },
+        {
+          "call": {
+            "args": [
+              {
+                "var": "a"
+              },
+              {
+                "var": "start"
+              },
+              {
+                "args": [
+                  {
+                    "var": "finish"
+                  },
+                  {
+                    "var": "start"
+                  }
+                ],
+                "op": "-"
+              }
+            ],
+            "fun": "sumRange"
+          }
+        }
+      ],
+      "op": "=="
+    }
+  ],
+  "gate": "recursion",
+  "lemmas": [
+    {
+      "body": [
+        {
+          "if": {
+            "cond": {
+              "args": [
+                {
+                  "var": "len_v2"
+                },
+                {
+                  "int": 0
+                }
+              ],
+              "op": "=="
+            },
+            "else": [
+              {
+                "lemma": {
+                  "args": [
+                    {
+                      "var": "a_v2"
+                    },
+                    {
+                      "args": [
+                        {
+                          "var": "start_v2"
+                        },
+                        {
+                          "int": 1
+                        }
+                      ],
+                      "op": "+"
+                    },
+                    {
+                      "args": [
+                        {
+                          "var": "len_v2"
+                        },
+                        {
+                          "int": 1
+                        }
+                      ],
+                      "op": "-"
+                    }
+                  ],
+                  "name": "sumRangeUnfold"
+                }
+              },
+              {
+                "assert": {
+                  "args": [
+                    {
+                      "call": {
+                        "args": [
+                          {
+                            "var": "a_v2"
+                          },
+                          {
+                            "var": "start_v2"
+                          },
+                          {
+                            "var": "len_v2"
+                          }
+                        ],
+                        "fun": "sumRange"
+                      }
+                    },
+                    {
+                      "args": [
+                        {
+                          "args": [
+                            {
+                              "var": "a_v2"
+                            },
+                            {
+                              "var": "start_v2"
+                            }
+                          ],
+                          "op": "at"
+                        },
+                        {
+                          "call": {
+                            "args": [
+                              {
+                                "var": "a_v2"
+                              },
+                              {
+                                "args": [
+                                  {
+                                    "var": "start_v2"
+                                  },
+                                  {
+                                    "int": 1
+                                  }
+                                ],
+                                "op": "+"
+                              },
+                              {
+                                "args": [
+                                  {
+                                    "var": "len_v2"
+                                  },
+                                  {
+                                    "int": 1
+                                  }
+                                ],
+                                "op": "-"
+                              }
+                            ],
+                            "fun": "sumRange"
+                          }
+                        }
+                      ],
+                      "op": "+"
+                    }
+                  ],
+                  "op": "=="
+                }
+              }
+            ],
+            "then": []
+          }
+        }
+      ],
+      "decreases": {
+        "var": "len_v2"
+      },
+      "ensures": [
+        {
+          "args": [
+            {
+              "call": {
+                "args": [
+                  {
+                    "var": "a_v2"
+                  },
+                  {
+                    "var": "start_v2"
+                  },
+                  {
+                    "var": "len_v2"
+                  }
+                ],
+                "fun": "sumRange"
+              }
+            },
+            {
+              "ite": {
+                "cond": {
+                  "args": [
+                    {
+                      "var": "len_v2"
+                    },
+                    {
+                      "int": 0
+                    }
+                  ],
+                  "op": "=="
+                },
+                "else": {
+                  "args": [
+                    {
+                      "args": [
+                        {
+                          "var": "a_v2"
+                        },
+                        {
+                          "var": "start_v2"
+                        }
+                      ],
+                      "op": "at"
+                    },
+                    {
+                      "call": {
+                        "args": [
+                          {
+                            "var": "a_v2"
+                          },
+                          {
+                            "args": [
+                              {
+                                "var": "start_v2"
+                              },
+                              {
+                                "int": 1
+                              }
+                            ],
+                            "op": "+"
+                          },
+                          {
+                            "args": [
+                              {
+                                "var": "len_v2"
+                              },
+                              {
+                                "int": 1
+                              }
+                            ],
+                            "op": "-"
+                          }
+                        ],
+                        "fun": "sumRange"
+                      }
+                    }
+                  ],
+                  "op": "+"
+                },
+                "then": {
+                  "int": 0
+                }
+              }
+            }
+          ],
+          "op": "=="
+        }
+      ],
+      "name": "sumRangeUnfold",
+      "params": [
+        {
+          "name": "a_v2",
+          "type": "seq"
+        },
+        {
+          "name": "start_v2",
+          "type": "int"
+        },
+        {
+          "name": "len_v2",
+          "type": "int"
+        }
+      ],
+      "requires": [
+        {
+          "args": [
+            {
+              "int": 0
+            },
+            {
+              "var": "start_v2"
+            }
+          ],
+          "op": "<="
+        },
+        {
+          "args": [
+            {
+              "int": 0
+            },
+            {
+              "var": "len_v2"
+            }
+          ],
+          "op": "<="
+        },
+        {
+          "args": [
+            {
+              "args": [
+                {
+                  "var": "start_v2"
+                },
+                {
+                  "var": "len_v2"
+                }
+              ],
+              "op": "+"
+            },
+            {
+              "args": [
+                {
+                  "var": "a_v2"
+                }
+              ],
+              "op": "len"
+            }
+          ],
+          "op": "<="
+        }
+      ]
+    },
+    {
+      "body": [
+        {
+          "if": {
+            "cond": {
+              "args": [
+                {
+                  "var": "len_v3"
+                },
+                {
+                  "int": 0
+                }
+              ],
+              "op": "=="
+            },
+            "else": [
+              {
+                "lemma": {
+                  "args": [
+                    {
+                      "var": "a_v3"
+                    },
+                    {
+                      "var": "start_v3"
+                    },
+                    {
+                      "args": [
+                        {
+                          "var": "len_v3"
+                        },
+                        {
+                          "int": 1
+                        }
+                      ],
+                      "op": "+"
+                    }
+                  ],
+                  "name": "sumRangeUnfold"
+                }
+              },
+              {
+                "lemma": {
+                  "args": [
+                    {
+                      "var": "a_v3"
+                    },
+                    {
+                      "var": "start_v3"
+                    },
+                    {
+                      "var": "len_v3"
+                    }
+                  ],
+                  "name": "sumRangeUnfold"
+                }
+              },
+              {
+                "lemma": {
+                  "args": [
+                    {
+                      "var": "a_v3"
+                    },
+                    {
+                      "args": [
+                        {
+                          "var": "start_v3"
+                        },
+                        {
+                          "int": 1
+                        }
+                      ],
+                      "op": "+"
+                    },
+                    {
+                      "args": [
+                        {
+                          "var": "len_v3"
+                        },
+                        {
+                          "int": 1
+                        }
+                      ],
+                      "op": "-"
+                    }
+                  ],
+                  "name": "sumRangeAppend"
+                }
+              },
+              {
+                "assert": {
+                  "args": [
+                    {
+                      "call": {
+                        "args": [
+                          {
+                            "var": "a_v3"
+                          },
+                          {
+                            "var": "start_v3"
+                          },
+                          {
+                            "args": [
+                              {
+                                "var": "len_v3"
+                              },
+                              {
+                                "int": 1
+                              }
+                            ],
+                            "op": "+"
+                          }
+                        ],
+                        "fun": "sumRange"
+                      }
+                    },
+                    {
+                      "args": [
+                        {
+                          "args": [
+                            {
+                              "var": "a_v3"
+                            },
+                            {
+                              "var": "start_v3"
+                            }
+                          ],
+                          "op": "at"
+                        },
+                        {
+                          "call": {
+                            "args": [
+                              {
+                                "var": "a_v3"
+                              },
+                              {
+                                "args": [
+                                  {
+                                    "var": "start_v3"
+                                  },
+                                  {
+                                    "int": 1
+                                  }
+                                ],
+                                "op": "+"
+                              },
+                              {
+                                "var": "len_v3"
+                              }
+                            ],
+                            "fun": "sumRange"
+                          }
+                        }
+                      ],
+                      "op": "+"
+                    }
+                  ],
+                  "op": "=="
+                }
+              },
+              {
+                "assert": {
+                  "args": [
+                    {
+                      "call": {
+                        "args": [
+                          {
+                            "var": "a_v3"
+                          },
+                          {
+                            "var": "start_v3"
+                          },
+                          {
+                            "var": "len_v3"
+                          }
+                        ],
+                        "fun": "sumRange"
+                      }
+                    },
+                    {
+                      "args": [
+                        {
+                          "args": [
+                            {
+                              "var": "a_v3"
+                            },
+                            {
+                              "var": "start_v3"
+                            }
+                          ],
+                          "op": "at"
+                        },
+                        {
+                          "call": {
+                            "args": [
+                              {
+                                "var": "a_v3"
+                              },
+                              {
+                                "args": [
+                                  {
+                                    "var": "start_v3"
+                                  },
+                                  {
+                                    "int": 1
+                                  }
+                                ],
+                                "op": "+"
+                              },
+                              {
+                                "args": [
+                                  {
+                                    "var": "len_v3"
+                                  },
+                                  {
+                                    "int": 1
+                                  }
+                                ],
+                                "op": "-"
+                              }
+                            ],
+                            "fun": "sumRange"
+                          }
+                        }
+                      ],
+                      "op": "+"
+                    }
+                  ],
+                  "op": "=="
+                }
+              },
+              {
+                "assert": {
+                  "args": [
+                    {
+                      "call": {
+                        "args": [
+                          {
+                            "var": "a_v3"
+                          },
+                          {
+                            "args": [
+                              {
+                                "var": "start_v3"
+                              },
+                              {
+                                "int": 1
+                              }
+                            ],
+                            "op": "+"
+                          },
+                          {
+                            "var": "len_v3"
+                          }
+                        ],
+                        "fun": "sumRange"
+                      }
+                    },
+                    {
+                      "args": [
+                        {
+                          "call": {
+                            "args": [
+                              {
+                                "var": "a_v3"
+                              },
+                              {
+                                "args": [
+                                  {
+                                    "var": "start_v3"
+                                  },
+                                  {
+                                    "int": 1
+                                  }
+                                ],
+                                "op": "+"
+                              },
+                              {
+                                "args": [
+                                  {
+                                    "var": "len_v3"
+                                  },
+                                  {
+                                    "int": 1
+                                  }
+                                ],
+                                "op": "-"
+                              }
+                            ],
+                            "fun": "sumRange"
+                          }
+                        },
+                        {
+                          "args": [
+                            {
+                              "var": "a_v3"
+                            },
+                            {
+                              "args": [
+                                {
+                                  "var": "start_v3"
+                                },
+                                {
+                                  "var": "len_v3"
+                                }
+                              ],
+                              "op": "+"
+                            }
+                          ],
+                          "op": "at"
+                        }
+                      ],
+                      "op": "+"
+                    }
+                  ],
+                  "op": "=="
+                }
+              },
+              {
+                "assert": {
+                  "args": [
+                    {
+                      "call": {
+                        "args": [
+                          {
+                            "var": "a_v3"
+                          },
+                          {
+                            "var": "start_v3"
+                          },
+                          {
+                            "args": [
+                              {
+                                "var": "len_v3"
+                              },
+                              {
+                                "int": 1
+                              }
+                            ],
+                            "op": "+"
+                          }
+                        ],
+                        "fun": "sumRange"
+                      }
+                    },
+                    {
+                      "args": [
+                        {
+                          "call": {
+                            "args": [
+                              {
+                                "var": "a_v3"
+                              },
+                              {
+                                "var": "start_v3"
+                              },
+                              {
+                                "var": "len_v3"
+                              }
+                            ],
+                            "fun": "sumRange"
+                          }
+                        },
+                        {
+                          "args": [
+                            {
+                              "var": "a_v3"
+                            },
+                            {
+                              "args": [
+                                {
+                                  "var": "start_v3"
+                                },
+                                {
+                                  "var": "len_v3"
+                                }
+                              ],
+                              "op": "+"
+                            }
+                          ],
+                          "op": "at"
+                        }
+                      ],
+                      "op": "+"
+                    }
+                  ],
+                  "op": "=="
+                }
+              }
+            ],
+            "then": [
+              {
+                "lemma": {
+                  "args": [
+                    {
+                      "var": "a_v3"
+                    },
+                    {
+                      "var": "start_v3"
+                    },
+                    {
+                      "int": 1
+                    }
+                  ],
+                  "name": "sumRangeUnfold"
+                }
+              },
+              {
+                "assert": {
+                  "args": [
+                    {
+                      "call": {
+                        "args": [
+                          {
+                            "var": "a_v3"
+                          },
+                          {
+                            "var": "start_v3"
+                          },
+                          {
+                            "int": 0
+                          }
+                        ],
+                        "fun": "sumRange"
+                      }
+                    },
+                    {
+                      "int": 0
+                    }
+                  ],
+                  "op": "=="
+                }
+              },
+              {
+                "assert": {
+                  "args": [
+                    {
+                      "call": {
+                        "args": [
+                          {
+                            "var": "a_v3"
+                          },
+                          {
+                            "var": "start_v3"
+                          },
+                          {
+                            "int": 1
+                          }
+                        ],
+                        "fun": "sumRange"
+                      }
+                    },
+                    {
+                      "args": [
+                        {
+                          "var": "a_v3"
+                        },
+                        {
+                          "var": "start_v3"
+                        }
+                      ],
+                      "op": "at"
+                    }
+                  ],
+                  "op": "=="
+                }
+              }
+            ]
+          }
+        }
+      ],
+      "decreases": {
+        "var": "len_v3"
+      },
+      "ensures": [
+        {
+          "args": [
+            {
+              "call": {
+                "args": [
+                  {
+                    "var": "a_v3"
+                  },
+                  {
+                    "var": "start_v3"
+                  },
+                  {
+                    "args": [
+                      {
+                        "var": "len_v3"
+                      },
+                      {
+                        "int": 1
+                      }
+                    ],
+                    "op": "+"
+                  }
+                ],
+                "fun": "sumRange"
+              }
+            },
+            {
+              "args": [
+                {
+                  "call": {
+                    "args": [
+                      {
+                        "var": "a_v3"
+                      },
+                      {
+                        "var": "start_v3"
+                      },
+                      {
+                        "var": "len_v3"
+                      }
+                    ],
+                    "fun": "sumRange"
+                  }
+                },
+                {
+                  "args": [
+                    {
+                      "var": "a_v3"
+                    },
+                    {
+                      "args": [
+                        {
+                          "var": "start_v3"
+                        },
+                        {
+                          "var": "len_v3"
+                        }
+                      ],
+                      "op": "+"
+                    }
+                  ],
+                  "op": "at"
+                }
+              ],
+              "op": "+"
+            }
+          ],
+          "op": "=="
+        }
+      ],
+      "name": "sumRangeAppend",
+      "params": [
+        {
+          "name": "a_v3",
+          "type": "seq"
+        },
+        {
+          "name": "start_v3",
+          "type": "int"
+        },
+        {
+          "name": "len_v3",
+          "type": "int"
+        }
+      ],
+      "requires": [
+        {
+          "args": [
+            {
+              "int": 0
+            },
+            {
+              "var": "start_v3"
+            }
+          ],
+          "op": "<="
+        },
+        {
+          "args": [
+            {
+              "int": 0
+            },
+            {
+              "var": "len_v3"
+            }
+          ],
+          "op": "<="
+        },
+        {
+          "args": [
+            {
+              "args": [
+                {
+                  "args": [
+                    {
+                      "var": "start_v3"
+                    },
+                    {
+                      "var": "len_v3"
+                    }
+                  ],
+                  "op": "+"
+                },
+                {
+                  "int": 1
+                }
+              ],
+              "op": "+"
+            },
+            {
+              "args": [
+                {
+                  "var": "a_v3"
+                }
+              ],
+              "op": "len"
+            }
+          ],
+          "op": "<="
+        }
+      ]
+    }
+  ],
+  "name": "vericoding_ds0053__sumArray",
+  "params": [
+    {
+      "name": "a",
+      "type": "seq"
+    },
+    {
+      "name": "start",
+      "type": "int"
+    },
+    {
+      "name": "finish",
+      "type": "int"
+    }
+  ],
+  "requires": [
+    {
+      "args": [
+        {
+          "var": "start"
+        },
+        {
+          "var": "finish"
+        }
+      ],
+      "op": "<="
+    },
+    {
+      "args": [
+        {
+          "var": "finish"
+        },
+        {
+          "args": [
+            {
+              "var": "a"
+            }
+          ],
+          "op": "len"
+        }
+      ],
+      "op": "<="
+    }
+  ],
+  "returns": [
+    {
+      "name": "result",
+      "type": "int"
+    }
+  ],
+  "spec_funs": [
+    {
+      "body": {
+        "ite": {
+          "cond": {
+            "args": [
+              {
+                "args": [
+                  {
+                    "var": "len_v"
+                  },
+                  {
+                    "int": 0
+                  }
+                ],
+                "op": "<="
+              },
+              {
+                "args": [
+                  {
+                    "var": "start_v"
+                  },
+                  {
+                    "int": 0
+                  }
+                ],
+                "op": "<"
+              },
+              {
+                "args": [
+                  {
+                    "args": [
+                      {
+                        "var": "start_v"
+                      },
+                      {
+                        "var": "len_v"
+                      }
+                    ],
+                    "op": "+"
+                  },
+                  {
+                    "args": [
+                      {
+                        "var": "a_v"
+                      }
+                    ],
+                    "op": "len"
+                  }
+                ],
+                "op": ">"
+              }
+            ],
+            "op": "or"
+          },
+          "else": {
+            "ite": {
+              "cond": {
+                "args": [
+                  {
+                    "var": "len_v"
+                  },
+                  {
+                    "int": 0
+                  }
+                ],
+                "op": "=="
+              },
+              "else": {
+                "args": [
+                  {
+                    "args": [
+                      {
+                        "var": "a_v"
+                      },
+                      {
+                        "var": "start_v"
+                      }
+                    ],
+                    "op": "at"
+                  },
+                  {
+                    "call": {
+                      "args": [
+                        {
+                          "var": "a_v"
+                        },
+                        {
+                          "args": [
+                            {
+                              "var": "start_v"
+                            },
+                            {
+                              "int": 1
+                            }
+                          ],
+                          "op": "+"
+                        },
+                        {
+                          "args": [
+                            {
+                              "var": "len_v"
+                            },
+                            {
+                              "int": 1
+                            }
+                          ],
+                          "op": "-"
+                        }
+                      ],
+                      "fun": "sumRange"
+                    }
+                  }
+                ],
+                "op": "+"
+              },
+              "then": {
+                "int": 0
+              }
+            }
+          },
+          "then": {
+            "int": 0
+          }
+        }
+      },
+      "decreases": {
+        "var": "len_v"
+      },
+      "name": "sumRange",
+      "params": [
+        {
+          "name": "a_v",
+          "type": "seq"
+        },
+        {
+          "name": "start_v",
+          "type": "int"
+        },
+        {
+          "name": "len_v",
+          "type": "int"
+        }
+      ],
+      "result": "int"
+    }
+  ],
+  "t": 1
+}

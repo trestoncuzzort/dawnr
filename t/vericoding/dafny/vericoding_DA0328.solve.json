@@ -1,0 +1,1088 @@
+{
+  "body": [
+    {
+      "var": {
+        "init": {
+          "var": "games"
+        },
+        "name": "g",
+        "type": "seq"
+      }
+    },
+    {
+      "var": {
+        "init": {
+          "var": "bills"
+        },
+        "name": "b",
+        "type": "seq"
+      }
+    },
+    {
+      "assign": [
+        "result",
+        {
+          "int": 0
+        }
+      ]
+    },
+    {
+      "while": {
+        "body": [
+          {
+            "if": {
+              "cond": {
+                "args": [
+                  {
+                    "args": [
+                      {
+                        "var": "b"
+                      },
+                      {
+                        "int": 0
+                      }
+                    ],
+                    "op": "at"
+                  },
+                  {
+                    "args": [
+                      {
+                        "var": "g"
+                      },
+                      {
+                        "int": 0
+                      }
+                    ],
+                    "op": "at"
+                  }
+                ],
+                "op": ">="
+              },
+              "else": [
+                {
+                  "assign": [
+                    "g",
+                    {
+                      "args": [
+                        {
+                          "var": "g"
+                        },
+                        {
+                          "int": 1
+                        },
+                        {
+                          "args": [
+                            {
+                              "var": "g"
+                            }
+                          ],
+                          "op": "len"
+                        }
+                      ],
+                      "op": "slice"
+                    }
+                  ]
+                }
+              ],
+              "then": [
+                {
+                  "assign": [
+                    "result",
+                    {
+                      "args": [
+                        {
+                          "var": "result"
+                        },
+                        {
+                          "int": 1
+                        }
+                      ],
+                      "op": "+"
+                    }
+                  ]
+                },
+                {
+                  "assign": [
+                    "g",
+                    {
+                      "args": [
+                        {
+                          "var": "g"
+                        },
+                        {
+                          "int": 1
+                        },
+                        {
+                          "args": [
+                            {
+                              "var": "g"
+                            }
+                          ],
+                          "op": "len"
+                        }
+                      ],
+                      "op": "slice"
+                    }
+                  ]
+                },
+                {
+                  "assign": [
+                    "b",
+                    {
+                      "args": [
+                        {
+                          "var": "b"
+                        },
+                        {
+                          "int": 1
+                        },
+                        {
+                          "args": [
+                            {
+                              "var": "b"
+                            }
+                          ],
+                          "op": "len"
+                        }
+                      ],
+                      "op": "slice"
+                    }
+                  ]
+                }
+              ]
+            }
+          }
+        ],
+        "cond": {
+          "args": [
+            {
+              "args": [
+                {
+                  "args": [
+                    {
+                      "var": "g"
+                    }
+                  ],
+                  "op": "len"
+                },
+                {
+                  "int": 0
+                }
+              ],
+              "op": ">"
+            },
+            {
+              "args": [
+                {
+                  "args": [
+                    {
+                      "var": "b"
+                    }
+                  ],
+                  "op": "len"
+                },
+                {
+                  "int": 0
+                }
+              ],
+              "op": ">"
+            }
+          ],
+          "op": "and"
+        },
+        "decreases": {
+          "args": [
+            {
+              "args": [
+                {
+                  "args": [
+                    {
+                      "var": "g"
+                    }
+                  ],
+                  "op": "len"
+                },
+                {
+                  "int": 0
+                }
+              ],
+              "op": "-"
+            },
+            {
+              "ite": {
+                "cond": {
+                  "args": [
+                    {
+                      "args": [
+                        {
+                          "var": "g"
+                        }
+                      ],
+                      "op": "len"
+                    },
+                    {
+                      "int": 0
+                    }
+                  ],
+                  "op": ">"
+                },
+                "else": {
+                  "args": [
+                    {
+                      "int": 0
+                    },
+                    {
+                      "int": 1
+                    }
+                  ],
+                  "op": "-"
+                },
+                "then": {
+                  "args": [
+                    {
+                      "args": [
+                        {
+                          "var": "b"
+                        }
+                      ],
+                      "op": "len"
+                    },
+                    {
+                      "int": 0
+                    }
+                  ],
+                  "op": "-"
+                }
+              }
+            }
+          ],
+          "op": "+"
+        },
+        "invariants": [
+          {
+            "args": [
+              {
+                "args": [
+                  {
+                    "int": 0
+                  },
+                  {
+                    "args": [
+                      {
+                        "var": "g"
+                      }
+                    ],
+                    "op": "len"
+                  }
+                ],
+                "op": "<="
+              },
+              {
+                "args": [
+                  {
+                    "args": [
+                      {
+                        "var": "g"
+                      }
+                    ],
+                    "op": "len"
+                  },
+                  {
+                    "args": [
+                      {
+                        "var": "games"
+                      }
+                    ],
+                    "op": "len"
+                  }
+                ],
+                "op": "<="
+              }
+            ],
+            "op": "and"
+          },
+          {
+            "args": [
+              {
+                "args": [
+                  {
+                    "int": 0
+                  },
+                  {
+                    "args": [
+                      {
+                        "var": "b"
+                      }
+                    ],
+                    "op": "len"
+                  }
+                ],
+                "op": "<="
+              },
+              {
+                "args": [
+                  {
+                    "args": [
+                      {
+                        "var": "b"
+                      }
+                    ],
+                    "op": "len"
+                  },
+                  {
+                    "args": [
+                      {
+                        "var": "bills"
+                      }
+                    ],
+                    "op": "len"
+                  }
+                ],
+                "op": "<="
+              }
+            ],
+            "op": "and"
+          },
+          {
+            "forall": {
+              "body": {
+                "args": [
+                  {
+                    "args": [
+                      {
+                        "var": "g"
+                      },
+                      {
+                        "var": "i_v6"
+                      }
+                    ],
+                    "op": "at"
+                  },
+                  {
+                    "int": 1
+                  }
+                ],
+                "op": ">="
+              },
+              "hi": {
+                "args": [
+                  {
+                    "var": "g"
+                  }
+                ],
+                "op": "len"
+              },
+              "lo": {
+                "int": 0
+              },
+              "var": "i_v6"
+            }
+          },
+          {
+            "forall": {
+              "body": {
+                "args": [
+                  {
+                    "args": [
+                      {
+                        "var": "b"
+                      },
+                      {
+                        "var": "i_v7"
+                      }
+                    ],
+                    "op": "at"
+                  },
+                  {
+                    "int": 1
+                  }
+                ],
+                "op": ">="
+              },
+              "hi": {
+                "args": [
+                  {
+                    "var": "b"
+                  }
+                ],
+                "op": "len"
+              },
+              "lo": {
+                "int": 0
+              },
+              "var": "i_v7"
+            }
+          },
+          {
+            "args": [
+              {
+                "args": [
+                  {
+                    "var": "result"
+                  },
+                  {
+                    "call": {
+                      "args": [
+                        {
+                          "var": "g"
+                        },
+                        {
+                          "var": "b"
+                        }
+                      ],
+                      "fun": "countBuyableGames"
+                    }
+                  }
+                ],
+                "op": "+"
+              },
+              {
+                "call": {
+                  "args": [
+                    {
+                      "var": "games"
+                    },
+                    {
+                      "var": "bills"
+                    }
+                  ],
+                  "fun": "countBuyableGames"
+                }
+              }
+            ],
+            "op": "=="
+          },
+          {
+            "args": [
+              {
+                "args": [
+                  {
+                    "int": 0
+                  },
+                  {
+                    "var": "result"
+                  }
+                ],
+                "op": "<="
+              },
+              {
+                "args": [
+                  {
+                    "var": "result"
+                  },
+                  {
+                    "args": [
+                      {
+                        "args": [
+                          {
+                            "var": "games"
+                          }
+                        ],
+                        "op": "len"
+                      },
+                      {
+                        "args": [
+                          {
+                            "var": "g"
+                          }
+                        ],
+                        "op": "len"
+                      }
+                    ],
+                    "op": "-"
+                  }
+                ],
+                "op": "<="
+              }
+            ],
+            "op": "and"
+          }
+        ]
+      }
+    }
+  ],
+  "ensures": [
+    {
+      "args": [
+        {
+          "int": 0
+        },
+        {
+          "var": "result"
+        }
+      ],
+      "op": "<="
+    },
+    {
+      "args": [
+        {
+          "var": "result"
+        },
+        {
+          "var": "n"
+        }
+      ],
+      "op": "<="
+    },
+    {
+      "args": [
+        {
+          "var": "result"
+        },
+        {
+          "var": "m"
+        }
+      ],
+      "op": "<="
+    },
+    {
+      "args": [
+        {
+          "var": "result"
+        },
+        {
+          "call": {
+            "args": [
+              {
+                "var": "games"
+              },
+              {
+                "var": "bills"
+              }
+            ],
+            "fun": "countBuyableGames"
+          }
+        }
+      ],
+      "op": "=="
+    }
+  ],
+  "gate": "recursion",
+  "name": "vericoding_da0328__solve",
+  "params": [
+    {
+      "name": "n",
+      "type": "int"
+    },
+    {
+      "name": "m",
+      "type": "int"
+    },
+    {
+      "name": "games",
+      "type": "seq"
+    },
+    {
+      "name": "bills",
+      "type": "seq"
+    }
+  ],
+  "requires": [
+    {
+      "call": {
+        "args": [
+          {
+            "var": "n"
+          },
+          {
+            "var": "m"
+          },
+          {
+            "var": "games"
+          },
+          {
+            "var": "bills"
+          }
+        ],
+        "fun": "validInput"
+      }
+    }
+  ],
+  "returns": [
+    {
+      "name": "result",
+      "type": "int"
+    }
+  ],
+  "spec_funs": [
+    {
+      "body": {
+        "ite": {
+          "cond": {
+            "args": [
+              {
+                "forall": {
+                  "body": {
+                    "args": [
+                      {
+                        "args": [
+                          {
+                            "var": "games_v"
+                          },
+                          {
+                            "var": "i"
+                          }
+                        ],
+                        "op": "at"
+                      },
+                      {
+                        "int": 1
+                      }
+                    ],
+                    "op": ">="
+                  },
+                  "hi": {
+                    "args": [
+                      {
+                        "var": "games_v"
+                      }
+                    ],
+                    "op": "len"
+                  },
+                  "lo": {
+                    "int": 0
+                  },
+                  "var": "i"
+                }
+              },
+              {
+                "forall": {
+                  "body": {
+                    "args": [
+                      {
+                        "args": [
+                          {
+                            "var": "bills_v"
+                          },
+                          {
+                            "var": "i_v"
+                          }
+                        ],
+                        "op": "at"
+                      },
+                      {
+                        "int": 1
+                      }
+                    ],
+                    "op": ">="
+                  },
+                  "hi": {
+                    "args": [
+                      {
+                        "var": "bills_v"
+                      }
+                    ],
+                    "op": "len"
+                  },
+                  "lo": {
+                    "int": 0
+                  },
+                  "var": "i_v"
+                }
+              }
+            ],
+            "op": "and"
+          },
+          "else": {
+            "int": 0
+          },
+          "then": {
+            "ite": {
+              "cond": {
+                "args": [
+                  {
+                    "args": [
+                      {
+                        "var": "games_v"
+                      }
+                    ],
+                    "op": "len"
+                  },
+                  {
+                    "int": 0
+                  }
+                ],
+                "op": "=="
+              },
+              "else": {
+                "ite": {
+                  "cond": {
+                    "args": [
+                      {
+                        "args": [
+                          {
+                            "var": "bills_v"
+                          }
+                        ],
+                        "op": "len"
+                      },
+                      {
+                        "int": 0
+                      }
+                    ],
+                    "op": "=="
+                  },
+                  "else": {
+                    "ite": {
+                      "cond": {
+                        "args": [
+                          {
+                            "args": [
+                              {
+                                "var": "bills_v"
+                              },
+                              {
+                                "int": 0
+                              }
+                            ],
+                            "op": "at"
+                          },
+                          {
+                            "args": [
+                              {
+                                "var": "games_v"
+                              },
+                              {
+                                "int": 0
+                              }
+                            ],
+                            "op": "at"
+                          }
+                        ],
+                        "op": ">="
+                      },
+                      "else": {
+                        "call": {
+                          "args": [
+                            {
+                              "args": [
+                                {
+                                  "var": "games_v"
+                                },
+                                {
+                                  "int": 1
+                                },
+                                {
+                                  "args": [
+                                    {
+                                      "var": "games_v"
+                                    }
+                                  ],
+                                  "op": "len"
+                                }
+                              ],
+                              "op": "slice"
+                            },
+                            {
+                              "var": "bills_v"
+                            }
+                          ],
+                          "fun": "countBuyableGames"
+                        }
+                      },
+                      "then": {
+                        "args": [
+                          {
+                            "int": 1
+                          },
+                          {
+                            "call": {
+                              "args": [
+                                {
+                                  "args": [
+                                    {
+                                      "var": "games_v"
+                                    },
+                                    {
+                                      "int": 1
+                                    },
+                                    {
+                                      "args": [
+                                        {
+                                          "var": "games_v"
+                                        }
+                                      ],
+                                      "op": "len"
+                                    }
+                                  ],
+                                  "op": "slice"
+                                },
+                                {
+                                  "args": [
+                                    {
+                                      "var": "bills_v"
+                                    },
+                                    {
+                                      "int": 1
+                                    },
+                                    {
+                                      "args": [
+                                        {
+                                          "var": "bills_v"
+                                        }
+                                      ],
+                                      "op": "len"
+                                    }
+                                  ],
+                                  "op": "slice"
+                                }
+                              ],
+                              "fun": "countBuyableGames"
+                            }
+                          }
+                        ],
+                        "op": "+"
+                      }
+                    }
+                  },
+                  "then": {
+                    "int": 0
+                  }
+                }
+              },
+              "then": {
+                "int": 0
+              }
+            }
+          }
+        }
+      },
+      "decreases": {
+        "args": [
+          {
+            "args": [
+              {
+                "var": "games_v"
+              }
+            ],
+            "op": "len"
+          },
+          {
+            "args": [
+              {
+                "var": "bills_v"
+              }
+            ],
+            "op": "len"
+          }
+        ],
+        "op": "+"
+      },
+      "name": "countBuyableGames",
+      "params": [
+        {
+          "name": "games_v",
+          "type": "seq"
+        },
+        {
+          "name": "bills_v",
+          "type": "seq"
+        }
+      ],
+      "result": "int"
+    },
+    {
+      "body": {
+        "args": [
+          {
+            "args": [
+              {
+                "var": "n_v"
+              },
+              {
+                "int": 1
+              }
+            ],
+            "op": ">="
+          },
+          {
+            "args": [
+              {
+                "var": "m_v"
+              },
+              {
+                "int": 1
+              }
+            ],
+            "op": ">="
+          },
+          {
+            "args": [
+              {
+                "args": [
+                  {
+                    "var": "games_v2"
+                  }
+                ],
+                "op": "len"
+              },
+              {
+                "var": "n_v"
+              }
+            ],
+            "op": "=="
+          },
+          {
+            "args": [
+              {
+                "args": [
+                  {
+                    "var": "bills_v2"
+                  }
+                ],
+                "op": "len"
+              },
+              {
+                "var": "m_v"
+              }
+            ],
+            "op": "=="
+          },
+          {
+            "forall": {
+              "body": {
+                "args": [
+                  {
+                    "args": [
+                      {
+                        "int": 1
+                      },
+                      {
+                        "args": [
+                          {
+                            "var": "games_v2"
+                          },
+                          {
+                            "var": "i_v2"
+                          }
+                        ],
+                        "op": "at"
+                      }
+                    ],
+                    "op": "<="
+                  },
+                  {
+                    "args": [
+                      {
+                        "args": [
+                          {
+                            "var": "games_v2"
+                          },
+                          {
+                            "var": "i_v2"
+                          }
+                        ],
+                        "op": "at"
+                      },
+                      {
+                        "int": 1000
+                      }
+                    ],
+                    "op": "<="
+                  }
+                ],
+                "op": "and"
+              },
+              "hi": {
+                "args": [
+                  {
+                    "var": "games_v2"
+                  }
+                ],
+                "op": "len"
+              },
+              "lo": {
+                "int": 0
+              },
+              "var": "i_v2"
+            }
+          },
+          {
+            "forall": {
+              "body": {
+                "args": [
+                  {
+                    "args": [
+                      {
+                        "int": 1
+                      },
+                      {
+                        "args": [
+                          {
+                            "var": "bills_v2"
+                          },
+                          {
+                            "var": "i_v3"
+                          }
+                        ],
+                        "op": "at"
+                      }
+                    ],
+                    "op": "<="
+                  },
+                  {
+                    "args": [
+                      {
+                        "args": [
+                          {
+                            "var": "bills_v2"
+                          },
+                          {
+                            "var": "i_v3"
+                          }
+                        ],
+                        "op": "at"
+                      },
+                      {
+                        "int": 1000
+                      }
+                    ],
+                    "op": "<="
+                  }
+                ],
+                "op": "and"
+              },
+              "hi": {
+                "args": [
+                  {
+                    "var": "bills_v2"
+                  }
+                ],
+                "op": "len"
+              },
+              "lo": {
+                "int": 0
+              },
+              "var": "i_v3"
+            }
+          }
+        ],
+        "op": "and"
+      },
+      "decreases": {
+        "int": 0
+      },
+      "name": "validInput",
+      "params": [
+        {
+          "name": "n_v",
+          "type": "int"
+        },
+        {
+          "name": "m_v",
+          "type": "int"
+        },
+        {
+          "name": "games_v2",
+          "type": "seq"
+        },
+        {
+          "name": "bills_v2",
+          "type": "seq"
+        }
+      ],
+      "result": "bool"
+    }
+  ],
+  "t": 1
+}

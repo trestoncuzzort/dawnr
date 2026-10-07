@@ -1,0 +1,1011 @@
+{
+  "body": [
+    {
+      "var": {
+        "init": {
+          "int": 0
+        },
+        "name": "sum",
+        "type": "int"
+      }
+    },
+    {
+      "var": {
+        "init": {
+          "int": 0
+        },
+        "name": "i",
+        "type": "int"
+      }
+    },
+    {
+      "while": {
+        "body": [
+          {
+            "lemma": {
+              "args": [
+                {
+                  "var": "years"
+                },
+                {
+                  "int": 0
+                },
+                {
+                  "var": "i"
+                }
+              ],
+              "name": "sumRangeAppend"
+            }
+          },
+          {
+            "assign": [
+              "sum",
+              {
+                "args": [
+                  {
+                    "var": "sum"
+                  },
+                  {
+                    "args": [
+                      {
+                        "var": "years"
+                      },
+                      {
+                        "var": "i"
+                      }
+                    ],
+                    "op": "at"
+                  }
+                ],
+                "op": "+"
+              }
+            ]
+          },
+          {
+            "assign": [
+              "i",
+              {
+                "args": [
+                  {
+                    "var": "i"
+                  },
+                  {
+                    "int": 1
+                  }
+                ],
+                "op": "+"
+              }
+            ]
+          }
+        ],
+        "cond": {
+          "args": [
+            {
+              "var": "i"
+            },
+            {
+              "var": "n"
+            }
+          ],
+          "op": "<"
+        },
+        "decreases": {
+          "args": [
+            {
+              "var": "n"
+            },
+            {
+              "var": "i"
+            }
+          ],
+          "op": "-"
+        },
+        "invariants": [
+          {
+            "args": [
+              {
+                "args": [
+                  {
+                    "int": 0
+                  },
+                  {
+                    "var": "i"
+                  }
+                ],
+                "op": "<="
+              },
+              {
+                "args": [
+                  {
+                    "var": "i"
+                  },
+                  {
+                    "var": "n"
+                  }
+                ],
+                "op": "<="
+              }
+            ],
+            "op": "and"
+          },
+          {
+            "args": [
+              {
+                "var": "n"
+              },
+              {
+                "args": [
+                  {
+                    "var": "years"
+                  }
+                ],
+                "op": "len"
+              }
+            ],
+            "op": "=="
+          },
+          {
+            "args": [
+              {
+                "var": "sum"
+              },
+              {
+                "call": {
+                  "args": [
+                    {
+                      "var": "years"
+                    },
+                    {
+                      "int": 0
+                    },
+                    {
+                      "var": "i"
+                    }
+                  ],
+                  "fun": "sumRange"
+                }
+              }
+            ],
+            "op": "=="
+          }
+        ]
+      }
+    },
+    {
+      "assign": [
+        "result",
+        {
+          "args": [
+            {
+              "var": "sum"
+            },
+            {
+              "var": "n"
+            }
+          ],
+          "op": "div"
+        }
+      ]
+    }
+  ],
+  "ensures": [
+    {
+      "args": [
+        {
+          "var": "result"
+        },
+        {
+          "args": [
+            {
+              "call": {
+                "args": [
+                  {
+                    "var": "years"
+                  },
+                  {
+                    "int": 0
+                  },
+                  {
+                    "args": [
+                      {
+                        "var": "years"
+                      }
+                    ],
+                    "op": "len"
+                  }
+                ],
+                "fun": "sumRange"
+              }
+            },
+            {
+              "var": "n"
+            }
+          ],
+          "op": "div"
+        }
+      ],
+      "op": "=="
+    }
+  ],
+  "gate": "recursion",
+  "lemmas": [
+    {
+      "body": [
+        {
+          "if": {
+            "cond": {
+              "args": [
+                {
+                  "var": "start_v"
+                },
+                {
+                  "var": "end_v"
+                }
+              ],
+              "op": "=="
+            },
+            "else": [
+              {
+                "assert": {
+                  "args": [
+                    {
+                      "call": {
+                        "args": [
+                          {
+                            "var": "s_v"
+                          },
+                          {
+                            "var": "start_v"
+                          },
+                          {
+                            "args": [
+                              {
+                                "var": "end_v"
+                              },
+                              {
+                                "int": 1
+                              }
+                            ],
+                            "op": "+"
+                          }
+                        ],
+                        "fun": "sumRange"
+                      }
+                    },
+                    {
+                      "args": [
+                        {
+                          "args": [
+                            {
+                              "var": "s_v"
+                            },
+                            {
+                              "var": "start_v"
+                            }
+                          ],
+                          "op": "at"
+                        },
+                        {
+                          "call": {
+                            "args": [
+                              {
+                                "var": "s_v"
+                              },
+                              {
+                                "args": [
+                                  {
+                                    "var": "start_v"
+                                  },
+                                  {
+                                    "int": 1
+                                  }
+                                ],
+                                "op": "+"
+                              },
+                              {
+                                "args": [
+                                  {
+                                    "var": "end_v"
+                                  },
+                                  {
+                                    "int": 1
+                                  }
+                                ],
+                                "op": "+"
+                              }
+                            ],
+                            "fun": "sumRange"
+                          }
+                        }
+                      ],
+                      "op": "+"
+                    }
+                  ],
+                  "op": "=="
+                }
+              },
+              {
+                "lemma": {
+                  "args": [
+                    {
+                      "var": "s_v"
+                    },
+                    {
+                      "args": [
+                        {
+                          "var": "start_v"
+                        },
+                        {
+                          "int": 1
+                        }
+                      ],
+                      "op": "+"
+                    },
+                    {
+                      "var": "end_v"
+                    }
+                  ],
+                  "name": "sumRangeAppend"
+                }
+              },
+              {
+                "assert": {
+                  "args": [
+                    {
+                      "call": {
+                        "args": [
+                          {
+                            "var": "s_v"
+                          },
+                          {
+                            "args": [
+                              {
+                                "var": "start_v"
+                              },
+                              {
+                                "int": 1
+                              }
+                            ],
+                            "op": "+"
+                          },
+                          {
+                            "args": [
+                              {
+                                "var": "end_v"
+                              },
+                              {
+                                "int": 1
+                              }
+                            ],
+                            "op": "+"
+                          }
+                        ],
+                        "fun": "sumRange"
+                      }
+                    },
+                    {
+                      "args": [
+                        {
+                          "call": {
+                            "args": [
+                              {
+                                "var": "s_v"
+                              },
+                              {
+                                "args": [
+                                  {
+                                    "var": "start_v"
+                                  },
+                                  {
+                                    "int": 1
+                                  }
+                                ],
+                                "op": "+"
+                              },
+                              {
+                                "var": "end_v"
+                              }
+                            ],
+                            "fun": "sumRange"
+                          }
+                        },
+                        {
+                          "args": [
+                            {
+                              "var": "s_v"
+                            },
+                            {
+                              "var": "end_v"
+                            }
+                          ],
+                          "op": "at"
+                        }
+                      ],
+                      "op": "+"
+                    }
+                  ],
+                  "op": "=="
+                }
+              },
+              {
+                "assert": {
+                  "args": [
+                    {
+                      "call": {
+                        "args": [
+                          {
+                            "var": "s_v"
+                          },
+                          {
+                            "var": "start_v"
+                          },
+                          {
+                            "var": "end_v"
+                          }
+                        ],
+                        "fun": "sumRange"
+                      }
+                    },
+                    {
+                      "args": [
+                        {
+                          "args": [
+                            {
+                              "var": "s_v"
+                            },
+                            {
+                              "var": "start_v"
+                            }
+                          ],
+                          "op": "at"
+                        },
+                        {
+                          "call": {
+                            "args": [
+                              {
+                                "var": "s_v"
+                              },
+                              {
+                                "args": [
+                                  {
+                                    "var": "start_v"
+                                  },
+                                  {
+                                    "int": 1
+                                  }
+                                ],
+                                "op": "+"
+                              },
+                              {
+                                "var": "end_v"
+                              }
+                            ],
+                            "fun": "sumRange"
+                          }
+                        }
+                      ],
+                      "op": "+"
+                    }
+                  ],
+                  "op": "=="
+                }
+              },
+              {
+                "assert": {
+                  "args": [
+                    {
+                      "call": {
+                        "args": [
+                          {
+                            "var": "s_v"
+                          },
+                          {
+                            "var": "start_v"
+                          },
+                          {
+                            "args": [
+                              {
+                                "var": "end_v"
+                              },
+                              {
+                                "int": 1
+                              }
+                            ],
+                            "op": "+"
+                          }
+                        ],
+                        "fun": "sumRange"
+                      }
+                    },
+                    {
+                      "args": [
+                        {
+                          "call": {
+                            "args": [
+                              {
+                                "var": "s_v"
+                              },
+                              {
+                                "var": "start_v"
+                              },
+                              {
+                                "var": "end_v"
+                              }
+                            ],
+                            "fun": "sumRange"
+                          }
+                        },
+                        {
+                          "args": [
+                            {
+                              "var": "s_v"
+                            },
+                            {
+                              "var": "end_v"
+                            }
+                          ],
+                          "op": "at"
+                        }
+                      ],
+                      "op": "+"
+                    }
+                  ],
+                  "op": "=="
+                }
+              }
+            ],
+            "then": [
+              {
+                "assert": {
+                  "args": [
+                    {
+                      "call": {
+                        "args": [
+                          {
+                            "var": "s_v"
+                          },
+                          {
+                            "var": "start_v"
+                          },
+                          {
+                            "var": "end_v"
+                          }
+                        ],
+                        "fun": "sumRange"
+                      }
+                    },
+                    {
+                      "int": 0
+                    }
+                  ],
+                  "op": "=="
+                }
+              },
+              {
+                "assert": {
+                  "args": [
+                    {
+                      "call": {
+                        "args": [
+                          {
+                            "var": "s_v"
+                          },
+                          {
+                            "var": "start_v"
+                          },
+                          {
+                            "args": [
+                              {
+                                "var": "end_v"
+                              },
+                              {
+                                "int": 1
+                              }
+                            ],
+                            "op": "+"
+                          }
+                        ],
+                        "fun": "sumRange"
+                      }
+                    },
+                    {
+                      "args": [
+                        {
+                          "var": "s_v"
+                        },
+                        {
+                          "var": "start_v"
+                        }
+                      ],
+                      "op": "at"
+                    }
+                  ],
+                  "op": "=="
+                }
+              },
+              {
+                "assert": {
+                  "args": [
+                    {
+                      "args": [
+                        {
+                          "var": "s_v"
+                        },
+                        {
+                          "var": "start_v"
+                        }
+                      ],
+                      "op": "at"
+                    },
+                    {
+                      "args": [
+                        {
+                          "var": "s_v"
+                        },
+                        {
+                          "var": "end_v"
+                        }
+                      ],
+                      "op": "at"
+                    }
+                  ],
+                  "op": "=="
+                }
+              }
+            ]
+          }
+        }
+      ],
+      "decreases": {
+        "args": [
+          {
+            "var": "end_v"
+          },
+          {
+            "var": "start_v"
+          }
+        ],
+        "op": "-"
+      },
+      "ensures": [
+        {
+          "args": [
+            {
+              "call": {
+                "args": [
+                  {
+                    "var": "s_v"
+                  },
+                  {
+                    "var": "start_v"
+                  },
+                  {
+                    "args": [
+                      {
+                        "var": "end_v"
+                      },
+                      {
+                        "int": 1
+                      }
+                    ],
+                    "op": "+"
+                  }
+                ],
+                "fun": "sumRange"
+              }
+            },
+            {
+              "args": [
+                {
+                  "call": {
+                    "args": [
+                      {
+                        "var": "s_v"
+                      },
+                      {
+                        "var": "start_v"
+                      },
+                      {
+                        "var": "end_v"
+                      }
+                    ],
+                    "fun": "sumRange"
+                  }
+                },
+                {
+                  "args": [
+                    {
+                      "var": "s_v"
+                    },
+                    {
+                      "var": "end_v"
+                    }
+                  ],
+                  "op": "at"
+                }
+              ],
+              "op": "+"
+            }
+          ],
+          "op": "=="
+        }
+      ],
+      "name": "sumRangeAppend",
+      "params": [
+        {
+          "name": "s_v",
+          "type": "seq"
+        },
+        {
+          "name": "start_v",
+          "type": "int"
+        },
+        {
+          "name": "end_v",
+          "type": "int"
+        }
+      ],
+      "requires": [
+        {
+          "args": [
+            {
+              "int": 0
+            },
+            {
+              "var": "start_v"
+            }
+          ],
+          "op": "<="
+        },
+        {
+          "args": [
+            {
+              "var": "start_v"
+            },
+            {
+              "var": "end_v"
+            }
+          ],
+          "op": "<="
+        },
+        {
+          "args": [
+            {
+              "var": "end_v"
+            },
+            {
+              "args": [
+                {
+                  "var": "s_v"
+                }
+              ],
+              "op": "len"
+            }
+          ],
+          "op": "<"
+        }
+      ]
+    }
+  ],
+  "name": "vericoding_da0101__solve",
+  "params": [
+    {
+      "name": "n",
+      "type": "int"
+    },
+    {
+      "name": "years",
+      "type": "seq"
+    }
+  ],
+  "requires": [
+    {
+      "call": {
+        "args": [
+          {
+            "var": "n"
+          },
+          {
+            "var": "years"
+          }
+        ],
+        "fun": "validInput"
+      }
+    }
+  ],
+  "returns": [
+    {
+      "name": "result",
+      "type": "int"
+    }
+  ],
+  "spec_funs": [
+    {
+      "body": {
+        "args": [
+          {
+            "args": [
+              {
+                "var": "n_v"
+              },
+              {
+                "int": 0
+              }
+            ],
+            "op": ">"
+          },
+          {
+            "args": [
+              {
+                "args": [
+                  {
+                    "var": "years_v"
+                  }
+                ],
+                "op": "len"
+              },
+              {
+                "var": "n_v"
+              }
+            ],
+            "op": "=="
+          }
+        ],
+        "op": "and"
+      },
+      "decreases": {
+        "int": 0
+      },
+      "name": "validInput",
+      "params": [
+        {
+          "name": "n_v",
+          "type": "int"
+        },
+        {
+          "name": "years_v",
+          "type": "seq"
+        }
+      ],
+      "result": "bool"
+    },
+    {
+      "body": {
+        "ite": {
+          "cond": {
+            "args": [
+              {
+                "args": [
+                  {
+                    "int": 0
+                  },
+                  {
+                    "var": "start"
+                  }
+                ],
+                "op": "<="
+              },
+              {
+                "args": [
+                  {
+                    "var": "start"
+                  },
+                  {
+                    "var": "end"
+                  }
+                ],
+                "op": "<="
+              },
+              {
+                "args": [
+                  {
+                    "var": "end"
+                  },
+                  {
+                    "args": [
+                      {
+                        "var": "s"
+                      }
+                    ],
+                    "op": "len"
+                  }
+                ],
+                "op": "<="
+              }
+            ],
+            "op": "and"
+          },
+          "else": {
+            "int": 0
+          },
+          "then": {
+            "ite": {
+              "cond": {
+                "args": [
+                  {
+                    "var": "start"
+                  },
+                  {
+                    "var": "end"
+                  }
+                ],
+                "op": "=="
+              },
+              "else": {
+                "args": [
+                  {
+                    "args": [
+                      {
+                        "var": "s"
+                      },
+                      {
+                        "var": "start"
+                      }
+                    ],
+                    "op": "at"
+                  },
+                  {
+                    "call": {
+                      "args": [
+                        {
+                          "var": "s"
+                        },
+                        {
+                          "args": [
+                            {
+                              "var": "start"
+                            },
+                            {
+                              "int": 1
+                            }
+                          ],
+                          "op": "+"
+                        },
+                        {
+                          "var": "end"
+                        }
+                      ],
+                      "fun": "sumRange"
+                    }
+                  }
+                ],
+                "op": "+"
+              },
+              "then": {
+                "int": 0
+              }
+            }
+          }
+        }
+      },
+      "decreases": {
+        "args": [
+          {
+            "var": "end"
+          },
+          {
+            "var": "start"
+          }
+        ],
+        "op": "-"
+      },
+      "name": "sumRange",
+      "params": [
+        {
+          "name": "s",
+          "type": "seq"
+        },
+        {
+          "name": "start",
+          "type": "int"
+        },
+        {
+          "name": "end",
+          "type": "int"
+        }
+      ],
+      "result": "int"
+    }
+  ],
+  "t": 1
+}

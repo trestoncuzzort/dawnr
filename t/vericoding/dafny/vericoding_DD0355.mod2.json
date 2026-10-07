@@ -1,0 +1,423 @@
+{
+  "body": [
+    {
+      "var": {
+        "init": {
+          "var": "n"
+        },
+        "name": "m",
+        "type": "int"
+      }
+    },
+    {
+      "assign": [
+        "a",
+        {
+          "int": 0
+        }
+      ]
+    },
+    {
+      "var": {
+        "init": {
+          "int": 1
+        },
+        "name": "pow5",
+        "type": "int"
+      }
+    },
+    {
+      "while": {
+        "body": [
+          {
+            "var": {
+              "init": {
+                "var": "m"
+              },
+              "name": "mm",
+              "type": "int"
+            }
+          },
+          {
+            "var": {
+              "init": {
+                "args": [
+                  {
+                    "var": "mm"
+                  },
+                  {
+                    "int": 3
+                  }
+                ],
+                "op": "div"
+              },
+              "name": "mmdiv_int",
+              "type": "int"
+            }
+          },
+          {
+            "var": {
+              "init": {
+                "var": "mmdiv_int"
+              },
+              "name": "mmdiv",
+              "type": "int"
+            }
+          },
+          {
+            "var": {
+              "init": {
+                "args": [
+                  {
+                    "var": "mm"
+                  },
+                  {
+                    "int": 4
+                  }
+                ],
+                "op": "mod"
+              },
+              "name": "digit_int",
+              "type": "int"
+            }
+          },
+          {
+            "var": {
+              "init": {
+                "var": "digit_int"
+              },
+              "name": "digit",
+              "type": "int"
+            }
+          },
+          {
+            "var": {
+              "init": {
+                "args": [
+                  {
+                    "var": "pow5"
+                  },
+                  {
+                    "var": "digit"
+                  }
+                ],
+                "op": "*"
+              },
+              "name": "add_int",
+              "type": "int"
+            }
+          },
+          {
+            "var": {
+              "init": {
+                "var": "add_int"
+              },
+              "name": "add",
+              "type": "int"
+            }
+          },
+          {
+            "assign": [
+              "a",
+              {
+                "args": [
+                  {
+                    "var": "a"
+                  },
+                  {
+                    "var": "add"
+                  }
+                ],
+                "op": "+"
+              }
+            ]
+          },
+          {
+            "var": {
+              "init": {
+                "args": [
+                  {
+                    "var": "pow5"
+                  },
+                  {
+                    "int": 5
+                  }
+                ],
+                "op": "*"
+              },
+              "name": "pow5_int",
+              "type": "int"
+            }
+          },
+          {
+            "var": {
+              "init": {
+                "var": "pow5_int"
+              },
+              "name": "pow5n",
+              "type": "int"
+            }
+          },
+          {
+            "assign": [
+              "pow5",
+              {
+                "var": "pow5n"
+              }
+            ]
+          },
+          {
+            "assign": [
+              "m",
+              {
+                "var": "mmdiv"
+              }
+            ]
+          }
+        ],
+        "cond": {
+          "args": [
+            {
+              "var": "m"
+            },
+            {
+              "int": 0
+            }
+          ],
+          "op": ">"
+        },
+        "decreases": {
+          "var": "m"
+        },
+        "invariants": [
+          {
+            "args": [
+              {
+                "args": [
+                  {
+                    "var": "a"
+                  },
+                  {
+                    "args": [
+                      {
+                        "var": "pow5"
+                      },
+                      {
+                        "call": {
+                          "args": [
+                            {
+                              "var": "m"
+                            }
+                          ],
+                          "fun": "f2"
+                        }
+                      }
+                    ],
+                    "op": "*"
+                  }
+                ],
+                "op": "+"
+              },
+              {
+                "call": {
+                  "args": [
+                    {
+                      "var": "n"
+                    }
+                  ],
+                  "fun": "f2"
+                }
+              }
+            ],
+            "op": "=="
+          },
+          {
+            "args": [
+              {
+                "var": "a"
+              },
+              {
+                "int": 0
+              }
+            ],
+            "op": ">="
+          },
+          {
+            "args": [
+              {
+                "var": "m"
+              },
+              {
+                "int": 0
+              }
+            ],
+            "op": ">="
+          },
+          {
+            "args": [
+              {
+                "var": "pow5"
+              },
+              {
+                "int": 0
+              }
+            ],
+            "op": ">="
+          }
+        ]
+      }
+    }
+  ],
+  "ensures": [
+    {
+      "args": [
+        {
+          "var": "a"
+        },
+        {
+          "int": 0
+        }
+      ],
+      "op": ">="
+    },
+    {
+      "args": [
+        {
+          "var": "a"
+        },
+        {
+          "call": {
+            "args": [
+              {
+                "var": "n"
+              }
+            ],
+            "fun": "f2"
+          }
+        }
+      ],
+      "op": "=="
+    }
+  ],
+  "gate": "recursion",
+  "name": "vericoding_dd0355__mod2",
+  "params": [
+    {
+      "name": "n",
+      "type": "int"
+    }
+  ],
+  "requires": [
+    {
+      "args": [
+        {
+          "var": "n"
+        },
+        {
+          "int": 0
+        }
+      ],
+      "op": ">="
+    }
+  ],
+  "returns": [
+    {
+      "name": "a",
+      "type": "int"
+    }
+  ],
+  "spec_funs": [
+    {
+      "body": {
+        "ite": {
+          "cond": {
+            "args": [
+              {
+                "var": "n_v"
+              },
+              {
+                "int": 0
+              }
+            ],
+            "op": ">="
+          },
+          "else": {
+            "int": 0
+          },
+          "then": {
+            "ite": {
+              "cond": {
+                "args": [
+                  {
+                    "var": "n_v"
+                  },
+                  {
+                    "int": 0
+                  }
+                ],
+                "op": "=="
+              },
+              "else": {
+                "args": [
+                  {
+                    "args": [
+                      {
+                        "int": 5
+                      },
+                      {
+                        "call": {
+                          "args": [
+                            {
+                              "args": [
+                                {
+                                  "var": "n_v"
+                                },
+                                {
+                                  "int": 3
+                                }
+                              ],
+                              "op": "div"
+                            }
+                          ],
+                          "fun": "f2"
+                        }
+                      }
+                    ],
+                    "op": "*"
+                  },
+                  {
+                    "args": [
+                      {
+                        "var": "n_v"
+                      },
+                      {
+                        "int": 4
+                      }
+                    ],
+                    "op": "mod"
+                  }
+                ],
+                "op": "+"
+              },
+              "then": {
+                "int": 0
+              }
+            }
+          }
+        }
+      },
+      "decreases": {
+        "var": "n_v"
+      },
+      "name": "f2",
+      "params": [
+        {
+          "name": "n_v",
+          "type": "int"
+        }
+      ],
+      "result": "int"
+    }
+  ],
+  "t": 1
+}

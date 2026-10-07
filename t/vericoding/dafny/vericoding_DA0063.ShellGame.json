@@ -1,0 +1,751 @@
+{
+  "body": [
+    {
+      "var": {
+        "init": {
+          "args": [
+            {
+              "var": "n"
+            },
+            {
+              "int": 6
+            }
+          ],
+          "op": "mod"
+        },
+        "name": "remainder",
+        "type": "int"
+      }
+    },
+    {
+      "if": {
+        "cond": {
+          "args": [
+            {
+              "var": "remainder"
+            },
+            {
+              "int": 0
+            }
+          ],
+          "op": "=="
+        },
+        "else": [
+          {
+            "if": {
+              "cond": {
+                "args": [
+                  {
+                    "var": "remainder"
+                  },
+                  {
+                    "int": 1
+                  }
+                ],
+                "op": "=="
+              },
+              "else": [
+                {
+                  "if": {
+                    "cond": {
+                      "args": [
+                        {
+                          "var": "remainder"
+                        },
+                        {
+                          "int": 2
+                        }
+                      ],
+                      "op": "=="
+                    },
+                    "else": [
+                      {
+                        "if": {
+                          "cond": {
+                            "args": [
+                              {
+                                "var": "remainder"
+                              },
+                              {
+                                "int": 3
+                              }
+                            ],
+                            "op": "=="
+                          },
+                          "else": [
+                            {
+                              "if": {
+                                "cond": {
+                                  "args": [
+                                    {
+                                      "var": "remainder"
+                                    },
+                                    {
+                                      "int": 4
+                                    }
+                                  ],
+                                  "op": "=="
+                                },
+                                "else": [
+                                  {
+                                    "var": {
+                                      "init": {
+                                        "call": {
+                                          "args": [
+                                            {
+                                              "call": {
+                                                "args": [
+                                                  {
+                                                    "var": "x"
+                                                  },
+                                                  {
+                                                    "int": 1
+                                                  }
+                                                ],
+                                                "fun": "swapMove"
+                                              }
+                                            },
+                                            {
+                                              "int": 2
+                                            }
+                                          ],
+                                          "fun": "swapMove"
+                                        }
+                                      },
+                                      "name": "temp1_v",
+                                      "type": "int"
+                                    }
+                                  },
+                                  {
+                                    "var": {
+                                      "init": {
+                                        "call": {
+                                          "args": [
+                                            {
+                                              "var": "temp1_v"
+                                            },
+                                            {
+                                              "int": 3
+                                            }
+                                          ],
+                                          "fun": "swapMove"
+                                        }
+                                      },
+                                      "name": "temp2_v",
+                                      "type": "int"
+                                    }
+                                  },
+                                  {
+                                    "var": {
+                                      "init": {
+                                        "call": {
+                                          "args": [
+                                            {
+                                              "var": "temp2_v"
+                                            },
+                                            {
+                                              "int": 4
+                                            }
+                                          ],
+                                          "fun": "swapMove"
+                                        }
+                                      },
+                                      "name": "temp3",
+                                      "type": "int"
+                                    }
+                                  },
+                                  {
+                                    "assign": [
+                                      "result",
+                                      {
+                                        "call": {
+                                          "args": [
+                                            {
+                                              "var": "temp3"
+                                            },
+                                            {
+                                              "int": 5
+                                            }
+                                          ],
+                                          "fun": "swapMove"
+                                        }
+                                      }
+                                    ]
+                                  }
+                                ],
+                                "then": [
+                                  {
+                                    "var": {
+                                      "init": {
+                                        "call": {
+                                          "args": [
+                                            {
+                                              "call": {
+                                                "args": [
+                                                  {
+                                                    "var": "x"
+                                                  },
+                                                  {
+                                                    "int": 1
+                                                  }
+                                                ],
+                                                "fun": "swapMove"
+                                              }
+                                            },
+                                            {
+                                              "int": 2
+                                            }
+                                          ],
+                                          "fun": "swapMove"
+                                        }
+                                      },
+                                      "name": "temp1",
+                                      "type": "int"
+                                    }
+                                  },
+                                  {
+                                    "var": {
+                                      "init": {
+                                        "call": {
+                                          "args": [
+                                            {
+                                              "var": "temp1"
+                                            },
+                                            {
+                                              "int": 3
+                                            }
+                                          ],
+                                          "fun": "swapMove"
+                                        }
+                                      },
+                                      "name": "temp2",
+                                      "type": "int"
+                                    }
+                                  },
+                                  {
+                                    "assign": [
+                                      "result",
+                                      {
+                                        "call": {
+                                          "args": [
+                                            {
+                                              "var": "temp2"
+                                            },
+                                            {
+                                              "int": 4
+                                            }
+                                          ],
+                                          "fun": "swapMove"
+                                        }
+                                      }
+                                    ]
+                                  }
+                                ]
+                              }
+                            }
+                          ],
+                          "then": [
+                            {
+                              "var": {
+                                "init": {
+                                  "call": {
+                                    "args": [
+                                      {
+                                        "call": {
+                                          "args": [
+                                            {
+                                              "var": "x"
+                                            },
+                                            {
+                                              "int": 1
+                                            }
+                                          ],
+                                          "fun": "swapMove"
+                                        }
+                                      },
+                                      {
+                                        "int": 2
+                                      }
+                                    ],
+                                    "fun": "swapMove"
+                                  }
+                                },
+                                "name": "temp",
+                                "type": "int"
+                              }
+                            },
+                            {
+                              "assign": [
+                                "result",
+                                {
+                                  "call": {
+                                    "args": [
+                                      {
+                                        "var": "temp"
+                                      },
+                                      {
+                                        "int": 3
+                                      }
+                                    ],
+                                    "fun": "swapMove"
+                                  }
+                                }
+                              ]
+                            }
+                          ]
+                        }
+                      }
+                    ],
+                    "then": [
+                      {
+                        "assign": [
+                          "result",
+                          {
+                            "call": {
+                              "args": [
+                                {
+                                  "call": {
+                                    "args": [
+                                      {
+                                        "var": "x"
+                                      },
+                                      {
+                                        "int": 1
+                                      }
+                                    ],
+                                    "fun": "swapMove"
+                                  }
+                                },
+                                {
+                                  "int": 2
+                                }
+                              ],
+                              "fun": "swapMove"
+                            }
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                }
+              ],
+              "then": [
+                {
+                  "assign": [
+                    "result",
+                    {
+                      "call": {
+                        "args": [
+                          {
+                            "var": "x"
+                          },
+                          {
+                            "int": 1
+                          }
+                        ],
+                        "fun": "swapMove"
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          }
+        ],
+        "then": [
+          {
+            "assign": [
+              "result",
+              {
+                "var": "x"
+              }
+            ]
+          }
+        ]
+      }
+    }
+  ],
+  "ensures": [
+    {
+      "call": {
+        "args": [
+          {
+            "var": "result"
+          }
+        ],
+        "fun": "validPosition"
+      }
+    }
+  ],
+  "gate": "recursion",
+  "name": "vericoding_da0063__shellGame",
+  "params": [
+    {
+      "name": "n",
+      "type": "int"
+    },
+    {
+      "name": "x",
+      "type": "int"
+    }
+  ],
+  "requires": [
+    {
+      "args": [
+        {
+          "var": "n"
+        },
+        {
+          "int": 1
+        }
+      ],
+      "op": ">="
+    },
+    {
+      "args": [
+        {
+          "var": "n"
+        },
+        {
+          "int": 2000000000
+        }
+      ],
+      "op": "<="
+    },
+    {
+      "call": {
+        "args": [
+          {
+            "var": "x"
+          }
+        ],
+        "fun": "validPosition"
+      }
+    }
+  ],
+  "returns": [
+    {
+      "name": "result",
+      "type": "int"
+    }
+  ],
+  "spec_funs": [
+    {
+      "body": {
+        "args": [
+          {
+            "args": [
+              {
+                "int": 0
+              },
+              {
+                "var": "pos"
+              }
+            ],
+            "op": "<="
+          },
+          {
+            "args": [
+              {
+                "var": "pos"
+              },
+              {
+                "int": 2
+              }
+            ],
+            "op": "<="
+          }
+        ],
+        "op": "and"
+      },
+      "decreases": {
+        "int": 0
+      },
+      "name": "validPosition",
+      "params": [
+        {
+          "name": "pos",
+          "type": "int"
+        }
+      ],
+      "result": "bool"
+    },
+    {
+      "body": {
+        "ite": {
+          "cond": {
+            "args": [
+              {
+                "call": {
+                  "args": [
+                    {
+                      "var": "pos_v"
+                    }
+                  ],
+                  "fun": "validPosition"
+                }
+              },
+              {
+                "args": [
+                  {
+                    "var": "moveNum"
+                  },
+                  {
+                    "int": 1
+                  }
+                ],
+                "op": ">="
+              }
+            ],
+            "op": "and"
+          },
+          "else": {
+            "int": 0
+          },
+          "then": {
+            "ite": {
+              "cond": {
+                "args": [
+                  {
+                    "args": [
+                      {
+                        "var": "moveNum"
+                      },
+                      {
+                        "int": 2
+                      }
+                    ],
+                    "op": "mod"
+                  },
+                  {
+                    "int": 1
+                  }
+                ],
+                "op": "=="
+              },
+              "else": {
+                "ite": {
+                  "cond": {
+                    "args": [
+                      {
+                        "var": "pos_v"
+                      },
+                      {
+                        "int": 1
+                      }
+                    ],
+                    "op": "=="
+                  },
+                  "else": {
+                    "ite": {
+                      "cond": {
+                        "args": [
+                          {
+                            "var": "pos_v"
+                          },
+                          {
+                            "int": 2
+                          }
+                        ],
+                        "op": "=="
+                      },
+                      "else": {
+                        "int": 0
+                      },
+                      "then": {
+                        "int": 1
+                      }
+                    }
+                  },
+                  "then": {
+                    "int": 2
+                  }
+                }
+              },
+              "then": {
+                "ite": {
+                  "cond": {
+                    "args": [
+                      {
+                        "var": "pos_v"
+                      },
+                      {
+                        "int": 0
+                      }
+                    ],
+                    "op": "=="
+                  },
+                  "else": {
+                    "ite": {
+                      "cond": {
+                        "args": [
+                          {
+                            "var": "pos_v"
+                          },
+                          {
+                            "int": 1
+                          }
+                        ],
+                        "op": "=="
+                      },
+                      "else": {
+                        "int": 2
+                      },
+                      "then": {
+                        "int": 0
+                      }
+                    }
+                  },
+                  "then": {
+                    "int": 1
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "decreases": {
+        "int": 0
+      },
+      "name": "swapMove",
+      "params": [
+        {
+          "name": "pos_v",
+          "type": "int"
+        },
+        {
+          "name": "moveNum",
+          "type": "int"
+        }
+      ],
+      "result": "int"
+    },
+    {
+      "body": {
+        "ite": {
+          "cond": {
+            "args": [
+              {
+                "call": {
+                  "args": [
+                    {
+                      "var": "pos_v2"
+                    }
+                  ],
+                  "fun": "validPosition"
+                }
+              },
+              {
+                "args": [
+                  {
+                    "var": "moveNum_v"
+                  },
+                  {
+                    "int": 1
+                  }
+                ],
+                "op": ">="
+              },
+              {
+                "args": [
+                  {
+                    "var": "count"
+                  },
+                  {
+                    "int": 0
+                  }
+                ],
+                "op": ">="
+              }
+            ],
+            "op": "and"
+          },
+          "else": {
+            "int": 0
+          },
+          "then": {
+            "ite": {
+              "cond": {
+                "args": [
+                  {
+                    "var": "count"
+                  },
+                  {
+                    "int": 0
+                  }
+                ],
+                "op": "=="
+              },
+              "else": {
+                "call": {
+                  "args": [
+                    {
+                      "call": {
+                        "args": [
+                          {
+                            "var": "pos_v2"
+                          },
+                          {
+                            "var": "moveNum_v"
+                          }
+                        ],
+                        "fun": "swapMove"
+                      }
+                    },
+                    {
+                      "args": [
+                        {
+                          "var": "moveNum_v"
+                        },
+                        {
+                          "int": 1
+                        }
+                      ],
+                      "op": "+"
+                    },
+                    {
+                      "args": [
+                        {
+                          "var": "count"
+                        },
+                        {
+                          "int": 1
+                        }
+                      ],
+                      "op": "-"
+                    }
+                  ],
+                  "fun": "applyMoves"
+                }
+              },
+              "then": {
+                "var": "pos_v2"
+              }
+            }
+          }
+        }
+      },
+      "decreases": {
+        "var": "count"
+      },
+      "name": "applyMoves",
+      "params": [
+        {
+          "name": "pos_v2",
+          "type": "int"
+        },
+        {
+          "name": "moveNum_v",
+          "type": "int"
+        },
+        {
+          "name": "count",
+          "type": "int"
+        }
+      ],
+      "result": "int"
+    }
+  ],
+  "t": 1
+}

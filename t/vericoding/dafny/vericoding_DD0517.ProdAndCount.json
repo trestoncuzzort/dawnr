@@ -1,0 +1,1033 @@
+{
+  "body": [
+    {
+      "var": {
+        "init": {
+          "int": 0
+        },
+        "name": "prod",
+        "type": "int"
+      }
+    },
+    {
+      "var": {
+        "init": {
+          "int": 0
+        },
+        "name": "count",
+        "type": "int"
+      }
+    },
+    {
+      "assign": [
+        "prod",
+        {
+          "int": 1
+        }
+      ]
+    },
+    {
+      "assign": [
+        "count",
+        {
+          "int": 0
+        }
+      ]
+    },
+    {
+      "var": {
+        "init": {
+          "int": 0
+        },
+        "name": "i",
+        "type": "int"
+      }
+    },
+    {
+      "while": {
+        "body": [
+          {
+            "assign": [
+              "prod",
+              {
+                "args": [
+                  {
+                    "var": "prod"
+                  },
+                  {
+                    "call": {
+                      "args": [
+                        {
+                          "args": [
+                            {
+                              "var": "q"
+                            },
+                            {
+                              "var": "i"
+                            }
+                          ],
+                          "op": "at"
+                        }
+                      ],
+                      "fun": "prody"
+                    }
+                  }
+                ],
+                "op": "*"
+              }
+            ]
+          },
+          {
+            "lemma": {
+              "args": [
+                {
+                  "var": "key"
+                },
+                {
+                  "args": [
+                    {
+                      "var": "q"
+                    },
+                    {
+                      "int": 0
+                    },
+                    {
+                      "var": "i"
+                    }
+                  ],
+                  "op": "slice"
+                },
+                {
+                  "args": [
+                    {
+                      "var": "q"
+                    },
+                    {
+                      "var": "i"
+                    }
+                  ],
+                  "op": "at"
+                }
+              ],
+              "name": "recursiveCountAppend"
+            }
+          },
+          {
+            "assign": [
+              "count",
+              {
+                "args": [
+                  {
+                    "var": "count"
+                  },
+                  {
+                    "call": {
+                      "args": [
+                        {
+                          "args": [
+                            {
+                              "var": "q"
+                            },
+                            {
+                              "var": "i"
+                            }
+                          ],
+                          "op": "at"
+                        },
+                        {
+                          "var": "key"
+                        }
+                      ],
+                      "fun": "county"
+                    }
+                  }
+                ],
+                "op": "+"
+              }
+            ]
+          },
+          {
+            "assign": [
+              "i",
+              {
+                "args": [
+                  {
+                    "var": "i"
+                  },
+                  {
+                    "int": 1
+                  }
+                ],
+                "op": "+"
+              }
+            ]
+          }
+        ],
+        "cond": {
+          "args": [
+            {
+              "var": "i"
+            },
+            {
+              "args": [
+                {
+                  "var": "q"
+                }
+              ],
+              "op": "len"
+            }
+          ],
+          "op": "<"
+        },
+        "decreases": {
+          "args": [
+            {
+              "args": [
+                {
+                  "var": "q"
+                }
+              ],
+              "op": "len"
+            },
+            {
+              "var": "i"
+            }
+          ],
+          "op": "-"
+        },
+        "invariants": [
+          {
+            "args": [
+              {
+                "args": [
+                  {
+                    "int": 0
+                  },
+                  {
+                    "var": "i"
+                  }
+                ],
+                "op": "<="
+              },
+              {
+                "args": [
+                  {
+                    "var": "i"
+                  },
+                  {
+                    "args": [
+                      {
+                        "var": "q"
+                      }
+                    ],
+                    "op": "len"
+                  }
+                ],
+                "op": "<="
+              }
+            ],
+            "op": "and"
+          },
+          {
+            "args": [
+              {
+                "var": "prod"
+              },
+              {
+                "call": {
+                  "args": [
+                    {
+                      "args": [
+                        {
+                          "var": "q"
+                        },
+                        {
+                          "int": 0
+                        },
+                        {
+                          "var": "i"
+                        }
+                      ],
+                      "op": "slice"
+                    }
+                  ],
+                  "fun": "recursivePositiveProduct"
+                }
+              }
+            ],
+            "op": "=="
+          },
+          {
+            "args": [
+              {
+                "var": "count"
+              },
+              {
+                "call": {
+                  "args": [
+                    {
+                      "var": "key"
+                    },
+                    {
+                      "args": [
+                        {
+                          "var": "q"
+                        },
+                        {
+                          "int": 0
+                        },
+                        {
+                          "var": "i"
+                        }
+                      ],
+                      "op": "slice"
+                    }
+                  ],
+                  "fun": "recursiveCount"
+                }
+              }
+            ],
+            "op": "=="
+          }
+        ]
+      }
+    },
+    {
+      "assign": [
+        "r",
+        {
+          "args": [
+            {
+              "var": "prod"
+            },
+            {
+              "var": "count"
+            }
+          ],
+          "op": "pair"
+        }
+      ]
+    }
+  ],
+  "ensures": [
+    {
+      "args": [
+        {
+          "args": [
+            {
+              "var": "r"
+            }
+          ],
+          "op": "snd"
+        },
+        {
+          "int": 0
+        }
+      ],
+      "op": ">="
+    },
+    {
+      "args": [
+        {
+          "args": [
+            {
+              "var": "r"
+            }
+          ],
+          "op": "fst"
+        },
+        {
+          "call": {
+            "args": [
+              {
+                "var": "q"
+              }
+            ],
+            "fun": "recursivePositiveProduct"
+          }
+        }
+      ],
+      "op": "=="
+    },
+    {
+      "args": [
+        {
+          "args": [
+            {
+              "var": "r"
+            }
+          ],
+          "op": "snd"
+        },
+        {
+          "call": {
+            "args": [
+              {
+                "var": "key"
+              },
+              {
+                "var": "q"
+              }
+            ],
+            "fun": "recursiveCount"
+          }
+        }
+      ],
+      "op": "=="
+    }
+  ],
+  "gate": "recursion",
+  "lemmas": [
+    {
+      "body": [
+        {
+          "if": {
+            "cond": {
+              "args": [
+                {
+                  "var": "q_v4"
+                },
+                {
+                  "args": [],
+                  "op": "seq"
+                }
+              ],
+              "op": "=="
+            },
+            "else": [
+              {
+                "assert": {
+                  "args": [
+                    {
+                      "args": [
+                        {
+                          "var": "q_v4"
+                        },
+                        {
+                          "args": [
+                            {
+                              "var": "elem_v3"
+                            }
+                          ],
+                          "op": "seq"
+                        }
+                      ],
+                      "op": "+"
+                    },
+                    {
+                      "args": [],
+                      "op": "seq"
+                    }
+                  ],
+                  "op": "!="
+                }
+              },
+              {
+                "assert": {
+                  "args": [
+                    {
+                      "args": [
+                        {
+                          "args": [
+                            {
+                              "var": "q_v4"
+                            },
+                            {
+                              "args": [
+                                {
+                                  "var": "elem_v3"
+                                }
+                              ],
+                              "op": "seq"
+                            }
+                          ],
+                          "op": "+"
+                        }
+                      ],
+                      "op": "len"
+                    },
+                    {
+                      "args": [
+                        {
+                          "args": [
+                            {
+                              "var": "q_v4"
+                            }
+                          ],
+                          "op": "len"
+                        },
+                        {
+                          "int": 1
+                        }
+                      ],
+                      "op": "+"
+                    }
+                  ],
+                  "op": "=="
+                }
+              },
+              {
+                "assert": {
+                  "args": [
+                    {
+                      "args": [
+                        {
+                          "args": [
+                            {
+                              "var": "q_v4"
+                            },
+                            {
+                              "args": [
+                                {
+                                  "var": "elem_v3"
+                                }
+                              ],
+                              "op": "seq"
+                            }
+                          ],
+                          "op": "+"
+                        },
+                        {
+                          "args": [
+                            {
+                              "args": [
+                                {
+                                  "args": [
+                                    {
+                                      "var": "q_v4"
+                                    },
+                                    {
+                                      "args": [
+                                        {
+                                          "var": "elem_v3"
+                                        }
+                                      ],
+                                      "op": "seq"
+                                    }
+                                  ],
+                                  "op": "+"
+                                }
+                              ],
+                              "op": "len"
+                            },
+                            {
+                              "int": 1
+                            }
+                          ],
+                          "op": "-"
+                        }
+                      ],
+                      "op": "at"
+                    },
+                    {
+                      "var": "elem_v3"
+                    }
+                  ],
+                  "op": "=="
+                }
+              }
+            ],
+            "then": [
+              {
+                "assert": {
+                  "args": [
+                    {
+                      "args": [
+                        {
+                          "var": "q_v4"
+                        },
+                        {
+                          "args": [
+                            {
+                              "var": "elem_v3"
+                            }
+                          ],
+                          "op": "seq"
+                        }
+                      ],
+                      "op": "+"
+                    },
+                    {
+                      "args": [
+                        {
+                          "var": "elem_v3"
+                        }
+                      ],
+                      "op": "seq"
+                    }
+                  ],
+                  "op": "=="
+                }
+              }
+            ]
+          }
+        }
+      ],
+      "ensures": [
+        {
+          "args": [
+            {
+              "call": {
+                "args": [
+                  {
+                    "var": "key_v3"
+                  },
+                  {
+                    "args": [
+                      {
+                        "var": "q_v4"
+                      },
+                      {
+                        "args": [
+                          {
+                            "var": "elem_v3"
+                          }
+                        ],
+                        "op": "seq"
+                      }
+                    ],
+                    "op": "+"
+                  }
+                ],
+                "fun": "recursiveCount"
+              }
+            },
+            {
+              "args": [
+                {
+                  "call": {
+                    "args": [
+                      {
+                        "var": "key_v3"
+                      },
+                      {
+                        "var": "q_v4"
+                      }
+                    ],
+                    "fun": "recursiveCount"
+                  }
+                },
+                {
+                  "call": {
+                    "args": [
+                      {
+                        "var": "elem_v3"
+                      },
+                      {
+                        "var": "key_v3"
+                      }
+                    ],
+                    "fun": "county"
+                  }
+                }
+              ],
+              "op": "+"
+            }
+          ],
+          "op": "=="
+        }
+      ],
+      "name": "recursiveCountAppend",
+      "params": [
+        {
+          "name": "key_v3",
+          "type": "int"
+        },
+        {
+          "name": "q_v4",
+          "type": "seq"
+        },
+        {
+          "name": "elem_v3",
+          "type": "int"
+        }
+      ],
+      "requires": []
+    }
+  ],
+  "name": "vericoding_dd0517__prodAndCount",
+  "params": [
+    {
+      "name": "q",
+      "type": "seq"
+    },
+    {
+      "name": "key",
+      "type": "int"
+    }
+  ],
+  "requires": [],
+  "returns": [
+    {
+      "name": "r",
+      "type": {
+        "pair": [
+          "int",
+          "int"
+        ]
+      }
+    }
+  ],
+  "spec_funs": [
+    {
+      "body": {
+        "ite": {
+          "cond": {
+            "args": [
+              {
+                "var": "elem"
+              },
+              {
+                "var": "key_v"
+              }
+            ],
+            "op": "=="
+          },
+          "else": {
+            "int": 0
+          },
+          "then": {
+            "int": 1
+          }
+        }
+      },
+      "decreases": {
+        "int": 0
+      },
+      "name": "county",
+      "params": [
+        {
+          "name": "elem",
+          "type": "int"
+        },
+        {
+          "name": "key_v",
+          "type": "int"
+        }
+      ],
+      "result": "int"
+    },
+    {
+      "body": {
+        "ite": {
+          "cond": {
+            "args": [
+              {
+                "var": "elem_v"
+              },
+              {
+                "int": 0
+              }
+            ],
+            "op": "<="
+          },
+          "else": {
+            "var": "elem_v"
+          },
+          "then": {
+            "int": 1
+          }
+        }
+      },
+      "decreases": {
+        "int": 0
+      },
+      "name": "prody",
+      "params": [
+        {
+          "name": "elem_v",
+          "type": "int"
+        }
+      ],
+      "result": "int"
+    },
+    {
+      "body": {
+        "ite": {
+          "cond": {
+            "args": [
+              {
+                "var": "q_v"
+              },
+              {
+                "args": [],
+                "op": "seq"
+              }
+            ],
+            "op": "=="
+          },
+          "else": {
+            "ite": {
+              "cond": {
+                "args": [
+                  {
+                    "args": [
+                      {
+                        "var": "q_v"
+                      },
+                      {
+                        "args": [
+                          {
+                            "args": [
+                              {
+                                "var": "q_v"
+                              }
+                            ],
+                            "op": "len"
+                          },
+                          {
+                            "int": 1
+                          }
+                        ],
+                        "op": "-"
+                      }
+                    ],
+                    "op": "at"
+                  },
+                  {
+                    "var": "key_v2"
+                  }
+                ],
+                "op": "=="
+              },
+              "else": {
+                "call": {
+                  "args": [
+                    {
+                      "var": "key_v2"
+                    },
+                    {
+                      "args": [
+                        {
+                          "var": "q_v"
+                        },
+                        {
+                          "int": 0
+                        },
+                        {
+                          "args": [
+                            {
+                              "args": [
+                                {
+                                  "var": "q_v"
+                                }
+                              ],
+                              "op": "len"
+                            },
+                            {
+                              "int": 1
+                            }
+                          ],
+                          "op": "-"
+                        }
+                      ],
+                      "op": "slice"
+                    }
+                  ],
+                  "fun": "recursiveCount"
+                }
+              },
+              "then": {
+                "args": [
+                  {
+                    "int": 1
+                  },
+                  {
+                    "call": {
+                      "args": [
+                        {
+                          "var": "key_v2"
+                        },
+                        {
+                          "args": [
+                            {
+                              "var": "q_v"
+                            },
+                            {
+                              "int": 0
+                            },
+                            {
+                              "args": [
+                                {
+                                  "args": [
+                                    {
+                                      "var": "q_v"
+                                    }
+                                  ],
+                                  "op": "len"
+                                },
+                                {
+                                  "int": 1
+                                }
+                              ],
+                              "op": "-"
+                            }
+                          ],
+                          "op": "slice"
+                        }
+                      ],
+                      "fun": "recursiveCount"
+                    }
+                  }
+                ],
+                "op": "+"
+              }
+            }
+          },
+          "then": {
+            "int": 0
+          }
+        }
+      },
+      "decreases": {
+        "args": [
+          {
+            "var": "q_v"
+          }
+        ],
+        "op": "len"
+      },
+      "name": "recursiveCount",
+      "params": [
+        {
+          "name": "key_v2",
+          "type": "int"
+        },
+        {
+          "name": "q_v",
+          "type": "seq"
+        }
+      ],
+      "result": "int"
+    },
+    {
+      "body": {
+        "ite": {
+          "cond": {
+            "args": [
+              {
+                "var": "q_v2"
+              },
+              {
+                "args": [],
+                "op": "seq"
+              }
+            ],
+            "op": "=="
+          },
+          "else": {
+            "ite": {
+              "cond": {
+                "args": [
+                  {
+                    "args": [
+                      {
+                        "var": "q_v2"
+                      },
+                      {
+                        "int": 0
+                      }
+                    ],
+                    "op": "at"
+                  },
+                  {
+                    "int": 0
+                  }
+                ],
+                "op": "<="
+              },
+              "else": {
+                "args": [
+                  {
+                    "args": [
+                      {
+                        "var": "q_v2"
+                      },
+                      {
+                        "int": 0
+                      }
+                    ],
+                    "op": "at"
+                  },
+                  {
+                    "call": {
+                      "args": [
+                        {
+                          "args": [
+                            {
+                              "var": "q_v2"
+                            },
+                            {
+                              "int": 1
+                            },
+                            {
+                              "args": [
+                                {
+                                  "var": "q_v2"
+                                }
+                              ],
+                              "op": "len"
+                            }
+                          ],
+                          "op": "slice"
+                        }
+                      ],
+                      "fun": "recursivePositiveProduct"
+                    }
+                  }
+                ],
+                "op": "*"
+              },
+              "then": {
+                "call": {
+                  "args": [
+                    {
+                      "args": [
+                        {
+                          "var": "q_v2"
+                        },
+                        {
+                          "int": 1
+                        },
+                        {
+                          "args": [
+                            {
+                              "var": "q_v2"
+                            }
+                          ],
+                          "op": "len"
+                        }
+                      ],
+                      "op": "slice"
+                    }
+                  ],
+                  "fun": "recursivePositiveProduct"
+                }
+              }
+            }
+          },
+          "then": {
+            "int": 1
+          }
+        }
+      },
+      "decreases": {
+        "args": [
+          {
+            "var": "q_v2"
+          }
+        ],
+        "op": "len"
+      },
+      "name": "recursivePositiveProduct",
+      "params": [
+        {
+          "name": "q_v2",
+          "type": "seq"
+        }
+      ],
+      "result": "int"
+    }
+  ],
+  "t": 1
+}

@@ -1,0 +1,342 @@
+{
+  "body": [
+    {
+      "assign": [
+        "result",
+        {
+          "args": [
+            {
+              "args": [
+                {
+                  "var": "h"
+                },
+                {
+                  "var": "h_v"
+                }
+              ],
+              "op": "-"
+            },
+            {
+              "args": [
+                {
+                  "var": "w"
+                },
+                {
+                  "var": "w_v"
+                }
+              ],
+              "op": "-"
+            }
+          ],
+          "op": "*"
+        }
+      ]
+    }
+  ],
+  "ensures": [
+    {
+      "args": [
+        {
+          "var": "result"
+        },
+        {
+          "call": {
+            "args": [
+              {
+                "var": "h"
+              },
+              {
+                "var": "w"
+              },
+              {
+                "var": "h_v"
+              },
+              {
+                "var": "w_v"
+              }
+            ],
+            "fun": "whiteCellsRemaining"
+          }
+        }
+      ],
+      "op": "=="
+    },
+    {
+      "args": [
+        {
+          "var": "result"
+        },
+        {
+          "int": 0
+        }
+      ],
+      "op": ">="
+    }
+  ],
+  "gate": "recursion",
+  "name": "vericoding_da0500__solve",
+  "params": [
+    {
+      "name": "h",
+      "type": "int"
+    },
+    {
+      "name": "w",
+      "type": "int"
+    },
+    {
+      "name": "h_v",
+      "type": "int"
+    },
+    {
+      "name": "w_v",
+      "type": "int"
+    }
+  ],
+  "requires": [
+    {
+      "call": {
+        "args": [
+          {
+            "var": "h"
+          },
+          {
+            "var": "w"
+          },
+          {
+            "var": "h_v"
+          },
+          {
+            "var": "w_v"
+          }
+        ],
+        "fun": "validInput"
+      }
+    }
+  ],
+  "returns": [
+    {
+      "name": "result",
+      "type": "int"
+    }
+  ],
+  "spec_funs": [
+    {
+      "body": {
+        "args": [
+          {
+            "args": [
+              {
+                "args": [
+                  {
+                    "int": 1
+                  },
+                  {
+                    "var": "h_v2"
+                  }
+                ],
+                "op": "<="
+              },
+              {
+                "args": [
+                  {
+                    "var": "h_v2"
+                  },
+                  {
+                    "int": 20
+                  }
+                ],
+                "op": "<="
+              }
+            ],
+            "op": "and"
+          },
+          {
+            "args": [
+              {
+                "args": [
+                  {
+                    "int": 1
+                  },
+                  {
+                    "var": "w_v2"
+                  }
+                ],
+                "op": "<="
+              },
+              {
+                "args": [
+                  {
+                    "var": "w_v2"
+                  },
+                  {
+                    "int": 20
+                  }
+                ],
+                "op": "<="
+              }
+            ],
+            "op": "and"
+          },
+          {
+            "args": [
+              {
+                "args": [
+                  {
+                    "int": 1
+                  },
+                  {
+                    "var": "h_v3"
+                  }
+                ],
+                "op": "<="
+              },
+              {
+                "args": [
+                  {
+                    "var": "h_v3"
+                  },
+                  {
+                    "var": "h_v2"
+                  }
+                ],
+                "op": "<="
+              }
+            ],
+            "op": "and"
+          },
+          {
+            "args": [
+              {
+                "args": [
+                  {
+                    "int": 1
+                  },
+                  {
+                    "var": "w_v3"
+                  }
+                ],
+                "op": "<="
+              },
+              {
+                "args": [
+                  {
+                    "var": "w_v3"
+                  },
+                  {
+                    "var": "w_v2"
+                  }
+                ],
+                "op": "<="
+              }
+            ],
+            "op": "and"
+          }
+        ],
+        "op": "and"
+      },
+      "decreases": {
+        "int": 0
+      },
+      "name": "validInput",
+      "params": [
+        {
+          "name": "h_v2",
+          "type": "int"
+        },
+        {
+          "name": "w_v2",
+          "type": "int"
+        },
+        {
+          "name": "h_v3",
+          "type": "int"
+        },
+        {
+          "name": "w_v3",
+          "type": "int"
+        }
+      ],
+      "result": "bool"
+    },
+    {
+      "body": {
+        "ite": {
+          "cond": {
+            "call": {
+              "args": [
+                {
+                  "var": "h_v4"
+                },
+                {
+                  "var": "w_v4"
+                },
+                {
+                  "var": "h_v5"
+                },
+                {
+                  "var": "w_v5"
+                }
+              ],
+              "fun": "validInput"
+            }
+          },
+          "else": {
+            "int": 0
+          },
+          "then": {
+            "args": [
+              {
+                "args": [
+                  {
+                    "var": "h_v4"
+                  },
+                  {
+                    "var": "h_v5"
+                  }
+                ],
+                "op": "-"
+              },
+              {
+                "args": [
+                  {
+                    "var": "w_v4"
+                  },
+                  {
+                    "var": "w_v5"
+                  }
+                ],
+                "op": "-"
+              }
+            ],
+            "op": "*"
+          }
+        }
+      },
+      "decreases": {
+        "int": 0
+      },
+      "name": "whiteCellsRemaining",
+      "params": [
+        {
+          "name": "h_v4",
+          "type": "int"
+        },
+        {
+          "name": "w_v4",
+          "type": "int"
+        },
+        {
+          "name": "h_v5",
+          "type": "int"
+        },
+        {
+          "name": "w_v5",
+          "type": "int"
+        }
+      ],
+      "result": "int"
+    }
+  ],
+  "t": 1
+}

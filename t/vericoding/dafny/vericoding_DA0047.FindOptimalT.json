@@ -1,0 +1,1213 @@
+{
+  "body": [
+    {
+      "var": {
+        "init": {
+          "int": 0
+        },
+        "name": "t_v",
+        "type": "int"
+      }
+    },
+    {
+      "var": {
+        "init": {
+          "int": 0
+        },
+        "name": "min_cost",
+        "type": "int"
+      }
+    },
+    {
+      "assign": [
+        "t_v",
+        {
+          "int": 1
+        }
+      ]
+    },
+    {
+      "assign": [
+        "min_cost",
+        {
+          "call": {
+            "args": [
+              {
+                "var": "sticks"
+              },
+              {
+                "int": 1
+              }
+            ],
+            "fun": "costForT"
+          }
+        }
+      ]
+    },
+    {
+      "var": {
+        "init": {
+          "int": 2
+        },
+        "name": "current_t",
+        "type": "int"
+      }
+    },
+    {
+      "while": {
+        "body": [
+          {
+            "var": {
+              "init": {
+                "call": {
+                  "args": [
+                    {
+                      "var": "sticks"
+                    },
+                    {
+                      "var": "current_t"
+                    }
+                  ],
+                  "fun": "costForT"
+                }
+              },
+              "name": "current_cost",
+              "type": "int"
+            }
+          },
+          {
+            "if": {
+              "cond": {
+                "args": [
+                  {
+                    "var": "current_cost"
+                  },
+                  {
+                    "var": "min_cost"
+                  }
+                ],
+                "op": "<"
+              },
+              "else": [],
+              "then": [
+                {
+                  "assign": [
+                    "min_cost",
+                    {
+                      "var": "current_cost"
+                    }
+                  ]
+                },
+                {
+                  "assign": [
+                    "t_v",
+                    {
+                      "var": "current_t"
+                    }
+                  ]
+                }
+              ]
+            }
+          },
+          {
+            "assign": [
+              "current_t",
+              {
+                "args": [
+                  {
+                    "var": "current_t"
+                  },
+                  {
+                    "int": 1
+                  }
+                ],
+                "op": "+"
+              }
+            ]
+          }
+        ],
+        "cond": {
+          "args": [
+            {
+              "var": "current_t"
+            },
+            {
+              "int": 99
+            }
+          ],
+          "op": "<="
+        },
+        "decreases": {
+          "args": [
+            {
+              "int": 99
+            },
+            {
+              "var": "current_t"
+            }
+          ],
+          "op": "-"
+        },
+        "invariants": [
+          {
+            "args": [
+              {
+                "args": [
+                  {
+                    "int": 1
+                  },
+                  {
+                    "var": "t_v"
+                  }
+                ],
+                "op": "<="
+              },
+              {
+                "args": [
+                  {
+                    "var": "t_v"
+                  },
+                  {
+                    "int": 99
+                  }
+                ],
+                "op": "<="
+              }
+            ],
+            "op": "and"
+          },
+          {
+            "args": [
+              {
+                "args": [
+                  {
+                    "int": 2
+                  },
+                  {
+                    "var": "current_t"
+                  }
+                ],
+                "op": "<="
+              },
+              {
+                "args": [
+                  {
+                    "var": "current_t"
+                  },
+                  {
+                    "int": 100
+                  }
+                ],
+                "op": "<="
+              }
+            ],
+            "op": "and"
+          },
+          {
+            "args": [
+              {
+                "var": "min_cost"
+              },
+              {
+                "call": {
+                  "args": [
+                    {
+                      "var": "sticks"
+                    },
+                    {
+                      "var": "t_v"
+                    }
+                  ],
+                  "fun": "costForT"
+                }
+              }
+            ],
+            "op": "=="
+          },
+          {
+            "args": [
+              {
+                "var": "min_cost"
+              },
+              {
+                "int": 0
+              }
+            ],
+            "op": ">="
+          },
+          {
+            "forall": {
+              "body": {
+                "args": [
+                  {
+                    "args": [
+                      {
+                        "var": "other_t_v"
+                      },
+                      {
+                        "int": 99
+                      }
+                    ],
+                    "op": "<="
+                  },
+                  {
+                    "args": [
+                      {
+                        "call": {
+                          "args": [
+                            {
+                              "var": "sticks"
+                            },
+                            {
+                              "var": "t_v"
+                            }
+                          ],
+                          "fun": "costForT"
+                        }
+                      },
+                      {
+                        "call": {
+                          "args": [
+                            {
+                              "var": "sticks"
+                            },
+                            {
+                              "var": "other_t_v"
+                            }
+                          ],
+                          "fun": "costForT"
+                        }
+                      }
+                    ],
+                    "op": "<="
+                  }
+                ],
+                "op": "implies"
+              },
+              "hi": {
+                "var": "current_t"
+              },
+              "lo": {
+                "int": 1
+              },
+              "var": "other_t_v"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "assign": [
+        "r",
+        {
+          "args": [
+            {
+              "var": "t_v"
+            },
+            {
+              "var": "min_cost"
+            }
+          ],
+          "op": "pair"
+        }
+      ]
+    }
+  ],
+  "ensures": [
+    {
+      "args": [
+        {
+          "int": 1
+        },
+        {
+          "args": [
+            {
+              "var": "r"
+            }
+          ],
+          "op": "fst"
+        }
+      ],
+      "op": "<="
+    },
+    {
+      "args": [
+        {
+          "args": [
+            {
+              "var": "r"
+            }
+          ],
+          "op": "fst"
+        },
+        {
+          "int": 99
+        }
+      ],
+      "op": "<="
+    },
+    {
+      "args": [
+        {
+          "args": [
+            {
+              "var": "r"
+            }
+          ],
+          "op": "snd"
+        },
+        {
+          "int": 0
+        }
+      ],
+      "op": ">="
+    },
+    {
+      "args": [
+        {
+          "args": [
+            {
+              "var": "r"
+            }
+          ],
+          "op": "snd"
+        },
+        {
+          "call": {
+            "args": [
+              {
+                "var": "sticks"
+              },
+              {
+                "args": [
+                  {
+                    "var": "r"
+                  }
+                ],
+                "op": "fst"
+              }
+            ],
+            "fun": "costForT"
+          }
+        }
+      ],
+      "op": "=="
+    },
+    {
+      "call": {
+        "args": [
+          {
+            "var": "sticks"
+          },
+          {
+            "args": [
+              {
+                "var": "r"
+              }
+            ],
+            "op": "fst"
+          }
+        ],
+        "fun": "isOptimalT"
+      }
+    }
+  ],
+  "gate": "recursion",
+  "name": "vericoding_da0047__findOptimalT",
+  "params": [
+    {
+      "name": "n",
+      "type": "int"
+    },
+    {
+      "name": "sticks",
+      "type": "seq"
+    }
+  ],
+  "requires": [
+    {
+      "call": {
+        "args": [
+          {
+            "var": "n"
+          },
+          {
+            "var": "sticks"
+          }
+        ],
+        "fun": "validInput"
+      }
+    }
+  ],
+  "returns": [
+    {
+      "name": "r",
+      "type": {
+        "pair": [
+          "int",
+          "int"
+        ]
+      }
+    }
+  ],
+  "spec_funs": [
+    {
+      "body": {
+        "ite": {
+          "cond": {
+            "args": [
+              {
+                "var": "x"
+              },
+              {
+                "int": 0
+              }
+            ],
+            "op": ">="
+          },
+          "else": {
+            "args": [
+              {
+                "var": "x"
+              }
+            ],
+            "op": "neg"
+          },
+          "then": {
+            "var": "x"
+          }
+        }
+      },
+      "decreases": {
+        "int": 0
+      },
+      "name": "abs",
+      "params": [
+        {
+          "name": "x",
+          "type": "int"
+        }
+      ],
+      "result": "int"
+    },
+    {
+      "body": {
+        "ite": {
+          "cond": {
+            "args": [
+              {
+                "var": "a"
+              },
+              {
+                "var": "b"
+              }
+            ],
+            "op": ">="
+          },
+          "else": {
+            "var": "b"
+          },
+          "then": {
+            "var": "a"
+          }
+        }
+      },
+      "decreases": {
+        "int": 0
+      },
+      "name": "max",
+      "params": [
+        {
+          "name": "a",
+          "type": "int"
+        },
+        {
+          "name": "b",
+          "type": "int"
+        }
+      ],
+      "result": "int"
+    },
+    {
+      "body": {
+        "ite": {
+          "cond": {
+            "args": [
+              {
+                "forall": {
+                  "body": {
+                    "args": [
+                      {
+                        "args": [
+                          {
+                            "int": 1
+                          },
+                          {
+                            "args": [
+                              {
+                                "var": "sticks_v"
+                              },
+                              {
+                                "var": "i"
+                              }
+                            ],
+                            "op": "at"
+                          }
+                        ],
+                        "op": "<="
+                      },
+                      {
+                        "args": [
+                          {
+                            "args": [
+                              {
+                                "var": "sticks_v"
+                              },
+                              {
+                                "var": "i"
+                              }
+                            ],
+                            "op": "at"
+                          },
+                          {
+                            "int": 100
+                          }
+                        ],
+                        "op": "<="
+                      }
+                    ],
+                    "op": "and"
+                  },
+                  "hi": {
+                    "args": [
+                      {
+                        "var": "sticks_v"
+                      }
+                    ],
+                    "op": "len"
+                  },
+                  "lo": {
+                    "int": 0
+                  },
+                  "var": "i"
+                }
+              },
+              {
+                "args": [
+                  {
+                    "args": [
+                      {
+                        "int": 1
+                      },
+                      {
+                        "var": "t_v2"
+                      }
+                    ],
+                    "op": "<="
+                  },
+                  {
+                    "args": [
+                      {
+                        "var": "t_v2"
+                      },
+                      {
+                        "int": 99
+                      }
+                    ],
+                    "op": "<="
+                  }
+                ],
+                "op": "and"
+              },
+              {
+                "args": [
+                  {
+                    "args": [
+                      {
+                        "int": 0
+                      },
+                      {
+                        "var": "index"
+                      }
+                    ],
+                    "op": "<="
+                  },
+                  {
+                    "args": [
+                      {
+                        "var": "index"
+                      },
+                      {
+                        "args": [
+                          {
+                            "var": "sticks_v"
+                          }
+                        ],
+                        "op": "len"
+                      }
+                    ],
+                    "op": "<="
+                  }
+                ],
+                "op": "and"
+              }
+            ],
+            "op": "and"
+          },
+          "else": {
+            "int": 0
+          },
+          "then": {
+            "ite": {
+              "cond": {
+                "args": [
+                  {
+                    "var": "index"
+                  },
+                  {
+                    "args": [
+                      {
+                        "var": "sticks_v"
+                      }
+                    ],
+                    "op": "len"
+                  }
+                ],
+                "op": "=="
+              },
+              "else": {
+                "args": [
+                  {
+                    "call": {
+                      "args": [
+                        {
+                          "int": 0
+                        },
+                        {
+                          "args": [
+                            {
+                              "call": {
+                                "args": [
+                                  {
+                                    "args": [
+                                      {
+                                        "var": "t_v2"
+                                      },
+                                      {
+                                        "args": [
+                                          {
+                                            "var": "sticks_v"
+                                          },
+                                          {
+                                            "var": "index"
+                                          }
+                                        ],
+                                        "op": "at"
+                                      }
+                                    ],
+                                    "op": "-"
+                                  }
+                                ],
+                                "fun": "abs"
+                              }
+                            },
+                            {
+                              "int": 1
+                            }
+                          ],
+                          "op": "-"
+                        }
+                      ],
+                      "fun": "max"
+                    }
+                  },
+                  {
+                    "call": {
+                      "args": [
+                        {
+                          "var": "sticks_v"
+                        },
+                        {
+                          "var": "t_v2"
+                        },
+                        {
+                          "args": [
+                            {
+                              "var": "index"
+                            },
+                            {
+                              "int": 1
+                            }
+                          ],
+                          "op": "+"
+                        }
+                      ],
+                      "fun": "sumCosts"
+                    }
+                  }
+                ],
+                "op": "+"
+              },
+              "then": {
+                "int": 0
+              }
+            }
+          }
+        }
+      },
+      "decreases": {
+        "args": [
+          {
+            "args": [
+              {
+                "var": "sticks_v"
+              }
+            ],
+            "op": "len"
+          },
+          {
+            "var": "index"
+          }
+        ],
+        "op": "-"
+      },
+      "name": "sumCosts",
+      "params": [
+        {
+          "name": "sticks_v",
+          "type": "seq"
+        },
+        {
+          "name": "t_v2",
+          "type": "int"
+        },
+        {
+          "name": "index",
+          "type": "int"
+        }
+      ],
+      "result": "int"
+    },
+    {
+      "body": {
+        "ite": {
+          "cond": {
+            "args": [
+              {
+                "forall": {
+                  "body": {
+                    "args": [
+                      {
+                        "args": [
+                          {
+                            "int": 1
+                          },
+                          {
+                            "args": [
+                              {
+                                "var": "sticks_v2"
+                              },
+                              {
+                                "var": "i_v"
+                              }
+                            ],
+                            "op": "at"
+                          }
+                        ],
+                        "op": "<="
+                      },
+                      {
+                        "args": [
+                          {
+                            "args": [
+                              {
+                                "var": "sticks_v2"
+                              },
+                              {
+                                "var": "i_v"
+                              }
+                            ],
+                            "op": "at"
+                          },
+                          {
+                            "int": 100
+                          }
+                        ],
+                        "op": "<="
+                      }
+                    ],
+                    "op": "and"
+                  },
+                  "hi": {
+                    "args": [
+                      {
+                        "var": "sticks_v2"
+                      }
+                    ],
+                    "op": "len"
+                  },
+                  "lo": {
+                    "int": 0
+                  },
+                  "var": "i_v"
+                }
+              },
+              {
+                "args": [
+                  {
+                    "args": [
+                      {
+                        "int": 1
+                      },
+                      {
+                        "var": "t_v3"
+                      }
+                    ],
+                    "op": "<="
+                  },
+                  {
+                    "args": [
+                      {
+                        "var": "t_v3"
+                      },
+                      {
+                        "int": 99
+                      }
+                    ],
+                    "op": "<="
+                  }
+                ],
+                "op": "and"
+              }
+            ],
+            "op": "and"
+          },
+          "else": {
+            "int": 0
+          },
+          "then": {
+            "call": {
+              "args": [
+                {
+                  "var": "sticks_v2"
+                },
+                {
+                  "var": "t_v3"
+                },
+                {
+                  "int": 0
+                }
+              ],
+              "fun": "sumCosts"
+            }
+          }
+        }
+      },
+      "decreases": {
+        "int": 0
+      },
+      "name": "costForT",
+      "params": [
+        {
+          "name": "sticks_v2",
+          "type": "seq"
+        },
+        {
+          "name": "t_v3",
+          "type": "int"
+        }
+      ],
+      "result": "int"
+    },
+    {
+      "body": {
+        "args": [
+          {
+            "args": [
+              {
+                "args": [
+                  {
+                    "int": 1
+                  },
+                  {
+                    "var": "n_v"
+                  }
+                ],
+                "op": "<="
+              },
+              {
+                "args": [
+                  {
+                    "var": "n_v"
+                  },
+                  {
+                    "int": 1000
+                  }
+                ],
+                "op": "<="
+              }
+            ],
+            "op": "and"
+          },
+          {
+            "args": [
+              {
+                "args": [
+                  {
+                    "var": "sticks_v3"
+                  }
+                ],
+                "op": "len"
+              },
+              {
+                "var": "n_v"
+              }
+            ],
+            "op": "=="
+          },
+          {
+            "forall": {
+              "body": {
+                "args": [
+                  {
+                    "args": [
+                      {
+                        "int": 1
+                      },
+                      {
+                        "args": [
+                          {
+                            "var": "sticks_v3"
+                          },
+                          {
+                            "var": "i_v2"
+                          }
+                        ],
+                        "op": "at"
+                      }
+                    ],
+                    "op": "<="
+                  },
+                  {
+                    "args": [
+                      {
+                        "args": [
+                          {
+                            "var": "sticks_v3"
+                          },
+                          {
+                            "var": "i_v2"
+                          }
+                        ],
+                        "op": "at"
+                      },
+                      {
+                        "int": 100
+                      }
+                    ],
+                    "op": "<="
+                  }
+                ],
+                "op": "and"
+              },
+              "hi": {
+                "args": [
+                  {
+                    "var": "sticks_v3"
+                  }
+                ],
+                "op": "len"
+              },
+              "lo": {
+                "int": 0
+              },
+              "var": "i_v2"
+            }
+          }
+        ],
+        "op": "and"
+      },
+      "decreases": {
+        "int": 0
+      },
+      "name": "validInput",
+      "params": [
+        {
+          "name": "n_v",
+          "type": "int"
+        },
+        {
+          "name": "sticks_v3",
+          "type": "seq"
+        }
+      ],
+      "result": "bool"
+    },
+    {
+      "body": {
+        "ite": {
+          "cond": {
+            "args": [
+              {
+                "forall": {
+                  "body": {
+                    "args": [
+                      {
+                        "args": [
+                          {
+                            "int": 1
+                          },
+                          {
+                            "args": [
+                              {
+                                "var": "sticks_v4"
+                              },
+                              {
+                                "var": "i_v3"
+                              }
+                            ],
+                            "op": "at"
+                          }
+                        ],
+                        "op": "<="
+                      },
+                      {
+                        "args": [
+                          {
+                            "args": [
+                              {
+                                "var": "sticks_v4"
+                              },
+                              {
+                                "var": "i_v3"
+                              }
+                            ],
+                            "op": "at"
+                          },
+                          {
+                            "int": 100
+                          }
+                        ],
+                        "op": "<="
+                      }
+                    ],
+                    "op": "and"
+                  },
+                  "hi": {
+                    "args": [
+                      {
+                        "var": "sticks_v4"
+                      }
+                    ],
+                    "op": "len"
+                  },
+                  "lo": {
+                    "int": 0
+                  },
+                  "var": "i_v3"
+                }
+              },
+              {
+                "args": [
+                  {
+                    "args": [
+                      {
+                        "int": 1
+                      },
+                      {
+                        "var": "t_v4"
+                      }
+                    ],
+                    "op": "<="
+                  },
+                  {
+                    "args": [
+                      {
+                        "var": "t_v4"
+                      },
+                      {
+                        "int": 99
+                      }
+                    ],
+                    "op": "<="
+                  }
+                ],
+                "op": "and"
+              }
+            ],
+            "op": "and"
+          },
+          "else": {
+            "bool": false
+          },
+          "then": {
+            "forall": {
+              "body": {
+                "args": [
+                  {
+                    "call": {
+                      "args": [
+                        {
+                          "var": "sticks_v4"
+                        },
+                        {
+                          "var": "t_v4"
+                        }
+                      ],
+                      "fun": "costForT"
+                    }
+                  },
+                  {
+                    "call": {
+                      "args": [
+                        {
+                          "var": "sticks_v4"
+                        },
+                        {
+                          "var": "other_t"
+                        }
+                      ],
+                      "fun": "costForT"
+                    }
+                  }
+                ],
+                "op": "<="
+              },
+              "hi": {
+                "args": [
+                  {
+                    "int": 99
+                  },
+                  {
+                    "int": 1
+                  }
+                ],
+                "op": "+"
+              },
+              "lo": {
+                "int": 1
+              },
+              "var": "other_t"
+            }
+          }
+        }
+      },
+      "decreases": {
+        "int": 0
+      },
+      "name": "isOptimalT",
+      "params": [
+        {
+          "name": "sticks_v4",
+          "type": "seq"
+        },
+        {
+          "name": "t_v4",
+          "type": "int"
+        }
+      ],
+      "result": "bool"
+    }
+  ],
+  "t": 1
+}

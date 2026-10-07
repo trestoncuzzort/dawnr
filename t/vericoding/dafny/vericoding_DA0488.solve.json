@@ -1,0 +1,346 @@
+{
+  "body": [
+    {
+      "if": {
+        "cond": {
+          "args": [
+            {
+              "var": "d"
+            },
+            {
+              "args": [
+                {
+                  "var": "t_v"
+                },
+                {
+                  "var": "s"
+                }
+              ],
+              "op": "*"
+            }
+          ],
+          "op": "<="
+        },
+        "else": [
+          {
+            "assign": [
+              "result",
+              {
+                "args": [
+                  {
+                    "int": 78
+                  },
+                  {
+                    "int": 111
+                  }
+                ],
+                "op": "seq"
+              }
+            ]
+          }
+        ],
+        "then": [
+          {
+            "assign": [
+              "result",
+              {
+                "args": [
+                  {
+                    "int": 89
+                  },
+                  {
+                    "int": 101
+                  },
+                  {
+                    "int": 115
+                  }
+                ],
+                "op": "seq"
+              }
+            ]
+          }
+        ]
+      }
+    }
+  ],
+  "ensures": [
+    {
+      "args": [
+        {
+          "call": {
+            "args": [
+              {
+                "var": "d"
+              },
+              {
+                "var": "t_v"
+              },
+              {
+                "var": "s"
+              }
+            ],
+            "fun": "canTravel"
+          }
+        },
+        {
+          "args": [
+            {
+              "var": "result"
+            },
+            {
+              "args": [
+                {
+                  "int": 89
+                },
+                {
+                  "int": 101
+                },
+                {
+                  "int": 115
+                }
+              ],
+              "op": "seq"
+            }
+          ],
+          "op": "=="
+        }
+      ],
+      "op": "implies"
+    },
+    {
+      "args": [
+        {
+          "args": [
+            {
+              "call": {
+                "args": [
+                  {
+                    "var": "d"
+                  },
+                  {
+                    "var": "t_v"
+                  },
+                  {
+                    "var": "s"
+                  }
+                ],
+                "fun": "canTravel"
+              }
+            }
+          ],
+          "op": "not"
+        },
+        {
+          "args": [
+            {
+              "var": "result"
+            },
+            {
+              "args": [
+                {
+                  "int": 78
+                },
+                {
+                  "int": 111
+                }
+              ],
+              "op": "seq"
+            }
+          ],
+          "op": "=="
+        }
+      ],
+      "op": "implies"
+    }
+  ],
+  "gate": "recursion",
+  "name": "vericoding_da0488__solve",
+  "params": [
+    {
+      "name": "d",
+      "type": "int"
+    },
+    {
+      "name": "t_v",
+      "type": "int"
+    },
+    {
+      "name": "s",
+      "type": "int"
+    }
+  ],
+  "requires": [
+    {
+      "call": {
+        "args": [
+          {
+            "var": "d"
+          },
+          {
+            "var": "t_v"
+          },
+          {
+            "var": "s"
+          }
+        ],
+        "fun": "validInput"
+      }
+    }
+  ],
+  "returns": [
+    {
+      "name": "result",
+      "type": "seq"
+    }
+  ],
+  "spec_funs": [
+    {
+      "body": {
+        "args": [
+          {
+            "args": [
+              {
+                "args": [
+                  {
+                    "int": 1
+                  },
+                  {
+                    "var": "d_v"
+                  }
+                ],
+                "op": "<="
+              },
+              {
+                "args": [
+                  {
+                    "var": "d_v"
+                  },
+                  {
+                    "int": 10000
+                  }
+                ],
+                "op": "<="
+              }
+            ],
+            "op": "and"
+          },
+          {
+            "args": [
+              {
+                "args": [
+                  {
+                    "int": 1
+                  },
+                  {
+                    "var": "t_v2"
+                  }
+                ],
+                "op": "<="
+              },
+              {
+                "args": [
+                  {
+                    "var": "t_v2"
+                  },
+                  {
+                    "int": 10000
+                  }
+                ],
+                "op": "<="
+              }
+            ],
+            "op": "and"
+          },
+          {
+            "args": [
+              {
+                "args": [
+                  {
+                    "int": 1
+                  },
+                  {
+                    "var": "s_v"
+                  }
+                ],
+                "op": "<="
+              },
+              {
+                "args": [
+                  {
+                    "var": "s_v"
+                  },
+                  {
+                    "int": 10000
+                  }
+                ],
+                "op": "<="
+              }
+            ],
+            "op": "and"
+          }
+        ],
+        "op": "and"
+      },
+      "decreases": {
+        "int": 0
+      },
+      "name": "validInput",
+      "params": [
+        {
+          "name": "d_v",
+          "type": "int"
+        },
+        {
+          "name": "t_v2",
+          "type": "int"
+        },
+        {
+          "name": "s_v",
+          "type": "int"
+        }
+      ],
+      "result": "bool"
+    },
+    {
+      "body": {
+        "args": [
+          {
+            "var": "d_v2"
+          },
+          {
+            "args": [
+              {
+                "var": "t_v3"
+              },
+              {
+                "var": "s_v2"
+              }
+            ],
+            "op": "*"
+          }
+        ],
+        "op": "<="
+      },
+      "decreases": {
+        "int": 0
+      },
+      "name": "canTravel",
+      "params": [
+        {
+          "name": "d_v2",
+          "type": "int"
+        },
+        {
+          "name": "t_v3",
+          "type": "int"
+        },
+        {
+          "name": "s_v2",
+          "type": "int"
+        }
+      ],
+      "result": "bool"
+    }
+  ],
+  "t": 1
+}

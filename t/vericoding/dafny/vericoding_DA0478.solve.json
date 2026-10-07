@@ -1,0 +1,1138 @@
+{
+  "body": [
+    {
+      "if": {
+        "cond": {
+          "args": [
+            {
+              "args": [
+                {
+                  "var": "k"
+                },
+                {
+                  "int": 2
+                }
+              ],
+              "op": "mod"
+            },
+            {
+              "int": 1
+            }
+          ],
+          "op": "=="
+        },
+        "else": [
+          {
+            "var": {
+              "init": {
+                "args": [
+                  {
+                    "var": "n"
+                  },
+                  {
+                    "var": "k"
+                  }
+                ],
+                "op": "div"
+              },
+              "name": "cnt1_v",
+              "type": "int"
+            }
+          },
+          {
+            "var": {
+              "init": {
+                "args": [
+                  {
+                    "args": [
+                      {
+                        "var": "n"
+                      },
+                      {
+                        "var": "k"
+                      }
+                    ],
+                    "op": "div"
+                  },
+                  {
+                    "ite": {
+                      "cond": {
+                        "args": [
+                          {
+                            "args": [
+                              {
+                                "var": "n"
+                              },
+                              {
+                                "var": "k"
+                              }
+                            ],
+                            "op": "mod"
+                          },
+                          {
+                            "args": [
+                              {
+                                "var": "k"
+                              },
+                              {
+                                "int": 2
+                              }
+                            ],
+                            "op": "div"
+                          }
+                        ],
+                        "op": ">="
+                      },
+                      "else": {
+                        "int": 0
+                      },
+                      "then": {
+                        "int": 1
+                      }
+                    }
+                  }
+                ],
+                "op": "+"
+              },
+              "name": "cnt2",
+              "type": "int"
+            }
+          },
+          {
+            "assign": [
+              "result",
+              {
+                "args": [
+                  {
+                    "args": [
+                      {
+                        "args": [
+                          {
+                            "var": "cnt1_v"
+                          },
+                          {
+                            "var": "cnt1_v"
+                          }
+                        ],
+                        "op": "*"
+                      },
+                      {
+                        "var": "cnt1_v"
+                      }
+                    ],
+                    "op": "*"
+                  },
+                  {
+                    "args": [
+                      {
+                        "args": [
+                          {
+                            "var": "cnt2"
+                          },
+                          {
+                            "var": "cnt2"
+                          }
+                        ],
+                        "op": "*"
+                      },
+                      {
+                        "var": "cnt2"
+                      }
+                    ],
+                    "op": "*"
+                  }
+                ],
+                "op": "+"
+              }
+            ]
+          }
+        ],
+        "then": [
+          {
+            "var": {
+              "init": {
+                "args": [
+                  {
+                    "var": "n"
+                  },
+                  {
+                    "var": "k"
+                  }
+                ],
+                "op": "div"
+              },
+              "name": "cnt1",
+              "type": "int"
+            }
+          },
+          {
+            "assign": [
+              "result",
+              {
+                "args": [
+                  {
+                    "args": [
+                      {
+                        "var": "cnt1"
+                      },
+                      {
+                        "var": "cnt1"
+                      }
+                    ],
+                    "op": "*"
+                  },
+                  {
+                    "var": "cnt1"
+                  }
+                ],
+                "op": "*"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "lemma": {
+        "args": [
+          {
+            "var": "n"
+          },
+          {
+            "var": "k"
+          }
+        ],
+        "name": "countValidTriplesCorrect"
+      }
+    }
+  ],
+  "ensures": [
+    {
+      "args": [
+        {
+          "var": "result"
+        },
+        {
+          "int": 0
+        }
+      ],
+      "op": ">="
+    },
+    {
+      "args": [
+        {
+          "var": "result"
+        },
+        {
+          "call": {
+            "args": [
+              {
+                "var": "n"
+              },
+              {
+                "var": "k"
+              }
+            ],
+            "fun": "countValidTriples"
+          }
+        }
+      ],
+      "op": "=="
+    }
+  ],
+  "gate": "recursion",
+  "lemmas": [
+    {
+      "body": [
+        {
+          "if": {
+            "cond": {
+              "args": [
+                {
+                  "args": [
+                    {
+                      "var": "k_v3"
+                    },
+                    {
+                      "int": 2
+                    }
+                  ],
+                  "op": "mod"
+                },
+                {
+                  "int": 1
+                }
+              ],
+              "op": "=="
+            },
+            "else": [
+              {
+                "assert": {
+                  "args": [
+                    {
+                      "args": [
+                        {
+                          "var": "n_v3"
+                        },
+                        {
+                          "var": "k_v3"
+                        }
+                      ],
+                      "op": "div"
+                    },
+                    {
+                      "int": 0
+                    }
+                  ],
+                  "op": ">="
+                }
+              },
+              {
+                "assert": {
+                  "args": [
+                    {
+                      "args": [
+                        {
+                          "args": [
+                            {
+                              "var": "n_v3"
+                            },
+                            {
+                              "var": "k_v3"
+                            }
+                          ],
+                          "op": "div"
+                        },
+                        {
+                          "ite": {
+                            "cond": {
+                              "args": [
+                                {
+                                  "args": [
+                                    {
+                                      "var": "n_v3"
+                                    },
+                                    {
+                                      "var": "k_v3"
+                                    }
+                                  ],
+                                  "op": "mod"
+                                },
+                                {
+                                  "args": [
+                                    {
+                                      "var": "k_v3"
+                                    },
+                                    {
+                                      "int": 2
+                                    }
+                                  ],
+                                  "op": "div"
+                                }
+                              ],
+                              "op": ">="
+                            },
+                            "else": {
+                              "int": 0
+                            },
+                            "then": {
+                              "int": 1
+                            }
+                          }
+                        }
+                      ],
+                      "op": "+"
+                    },
+                    {
+                      "int": 0
+                    }
+                  ],
+                  "op": ">="
+                }
+              },
+              {
+                "assert": {
+                  "args": [
+                    {
+                      "args": [
+                        {
+                          "args": [
+                            {
+                              "args": [
+                                {
+                                  "var": "n_v3"
+                                },
+                                {
+                                  "var": "k_v3"
+                                }
+                              ],
+                              "op": "div"
+                            },
+                            {
+                              "args": [
+                                {
+                                  "var": "n_v3"
+                                },
+                                {
+                                  "var": "k_v3"
+                                }
+                              ],
+                              "op": "div"
+                            }
+                          ],
+                          "op": "*"
+                        },
+                        {
+                          "args": [
+                            {
+                              "var": "n_v3"
+                            },
+                            {
+                              "var": "k_v3"
+                            }
+                          ],
+                          "op": "div"
+                        }
+                      ],
+                      "op": "*"
+                    },
+                    {
+                      "int": 0
+                    }
+                  ],
+                  "op": ">="
+                }
+              },
+              {
+                "assert": {
+                  "args": [
+                    {
+                      "args": [
+                        {
+                          "args": [
+                            {
+                              "args": [
+                                {
+                                  "args": [
+                                    {
+                                      "var": "n_v3"
+                                    },
+                                    {
+                                      "var": "k_v3"
+                                    }
+                                  ],
+                                  "op": "div"
+                                },
+                                {
+                                  "ite": {
+                                    "cond": {
+                                      "args": [
+                                        {
+                                          "args": [
+                                            {
+                                              "var": "n_v3"
+                                            },
+                                            {
+                                              "var": "k_v3"
+                                            }
+                                          ],
+                                          "op": "mod"
+                                        },
+                                        {
+                                          "args": [
+                                            {
+                                              "var": "k_v3"
+                                            },
+                                            {
+                                              "int": 2
+                                            }
+                                          ],
+                                          "op": "div"
+                                        }
+                                      ],
+                                      "op": ">="
+                                    },
+                                    "else": {
+                                      "int": 0
+                                    },
+                                    "then": {
+                                      "int": 1
+                                    }
+                                  }
+                                }
+                              ],
+                              "op": "+"
+                            },
+                            {
+                              "args": [
+                                {
+                                  "args": [
+                                    {
+                                      "var": "n_v3"
+                                    },
+                                    {
+                                      "var": "k_v3"
+                                    }
+                                  ],
+                                  "op": "div"
+                                },
+                                {
+                                  "ite": {
+                                    "cond": {
+                                      "args": [
+                                        {
+                                          "args": [
+                                            {
+                                              "var": "n_v3"
+                                            },
+                                            {
+                                              "var": "k_v3"
+                                            }
+                                          ],
+                                          "op": "mod"
+                                        },
+                                        {
+                                          "args": [
+                                            {
+                                              "var": "k_v3"
+                                            },
+                                            {
+                                              "int": 2
+                                            }
+                                          ],
+                                          "op": "div"
+                                        }
+                                      ],
+                                      "op": ">="
+                                    },
+                                    "else": {
+                                      "int": 0
+                                    },
+                                    "then": {
+                                      "int": 1
+                                    }
+                                  }
+                                }
+                              ],
+                              "op": "+"
+                            }
+                          ],
+                          "op": "*"
+                        },
+                        {
+                          "args": [
+                            {
+                              "args": [
+                                {
+                                  "var": "n_v3"
+                                },
+                                {
+                                  "var": "k_v3"
+                                }
+                              ],
+                              "op": "div"
+                            },
+                            {
+                              "ite": {
+                                "cond": {
+                                  "args": [
+                                    {
+                                      "args": [
+                                        {
+                                          "var": "n_v3"
+                                        },
+                                        {
+                                          "var": "k_v3"
+                                        }
+                                      ],
+                                      "op": "mod"
+                                    },
+                                    {
+                                      "args": [
+                                        {
+                                          "var": "k_v3"
+                                        },
+                                        {
+                                          "int": 2
+                                        }
+                                      ],
+                                      "op": "div"
+                                    }
+                                  ],
+                                  "op": ">="
+                                },
+                                "else": {
+                                  "int": 0
+                                },
+                                "then": {
+                                  "int": 1
+                                }
+                              }
+                            }
+                          ],
+                          "op": "+"
+                        }
+                      ],
+                      "op": "*"
+                    },
+                    {
+                      "int": 0
+                    }
+                  ],
+                  "op": ">="
+                }
+              }
+            ],
+            "then": [
+              {
+                "assert": {
+                  "args": [
+                    {
+                      "args": [
+                        {
+                          "var": "n_v3"
+                        },
+                        {
+                          "var": "k_v3"
+                        }
+                      ],
+                      "op": "div"
+                    },
+                    {
+                      "int": 0
+                    }
+                  ],
+                  "op": ">="
+                }
+              },
+              {
+                "assert": {
+                  "args": [
+                    {
+                      "args": [
+                        {
+                          "args": [
+                            {
+                              "args": [
+                                {
+                                  "var": "n_v3"
+                                },
+                                {
+                                  "var": "k_v3"
+                                }
+                              ],
+                              "op": "div"
+                            },
+                            {
+                              "args": [
+                                {
+                                  "var": "n_v3"
+                                },
+                                {
+                                  "var": "k_v3"
+                                }
+                              ],
+                              "op": "div"
+                            }
+                          ],
+                          "op": "*"
+                        },
+                        {
+                          "args": [
+                            {
+                              "var": "n_v3"
+                            },
+                            {
+                              "var": "k_v3"
+                            }
+                          ],
+                          "op": "div"
+                        }
+                      ],
+                      "op": "*"
+                    },
+                    {
+                      "int": 0
+                    }
+                  ],
+                  "op": ">="
+                }
+              }
+            ]
+          }
+        }
+      ],
+      "ensures": [
+        {
+          "args": [
+            {
+              "call": {
+                "args": [
+                  {
+                    "var": "n_v3"
+                  },
+                  {
+                    "var": "k_v3"
+                  }
+                ],
+                "fun": "countValidTriples"
+              }
+            },
+            {
+              "int": 0
+            }
+          ],
+          "op": ">="
+        }
+      ],
+      "name": "countValidTriplesCorrect",
+      "params": [
+        {
+          "name": "n_v3",
+          "type": "int"
+        },
+        {
+          "name": "k_v3",
+          "type": "int"
+        }
+      ],
+      "requires": [
+        {
+          "args": [
+            {
+              "var": "n_v3"
+            },
+            {
+              "int": 1
+            }
+          ],
+          "op": ">="
+        },
+        {
+          "args": [
+            {
+              "var": "k_v3"
+            },
+            {
+              "int": 1
+            }
+          ],
+          "op": ">="
+        }
+      ]
+    }
+  ],
+  "name": "vericoding_da0478__solve",
+  "params": [
+    {
+      "name": "n",
+      "type": "int"
+    },
+    {
+      "name": "k",
+      "type": "int"
+    }
+  ],
+  "requires": [
+    {
+      "call": {
+        "args": [
+          {
+            "var": "n"
+          },
+          {
+            "var": "k"
+          }
+        ],
+        "fun": "validInput"
+      }
+    }
+  ],
+  "returns": [
+    {
+      "name": "result",
+      "type": "int"
+    }
+  ],
+  "spec_funs": [
+    {
+      "body": {
+        "args": [
+          {
+            "args": [
+              {
+                "var": "n_v"
+              },
+              {
+                "int": 1
+              }
+            ],
+            "op": ">="
+          },
+          {
+            "args": [
+              {
+                "var": "k_v"
+              },
+              {
+                "int": 1
+              }
+            ],
+            "op": ">="
+          }
+        ],
+        "op": "and"
+      },
+      "decreases": {
+        "int": 0
+      },
+      "name": "validInput",
+      "params": [
+        {
+          "name": "n_v",
+          "type": "int"
+        },
+        {
+          "name": "k_v",
+          "type": "int"
+        }
+      ],
+      "result": "bool"
+    },
+    {
+      "body": {
+        "ite": {
+          "cond": {
+            "args": [
+              {
+                "args": [
+                  {
+                    "var": "n_v2"
+                  },
+                  {
+                    "int": 1
+                  }
+                ],
+                "op": ">="
+              },
+              {
+                "args": [
+                  {
+                    "var": "k_v2"
+                  },
+                  {
+                    "int": 1
+                  }
+                ],
+                "op": ">="
+              }
+            ],
+            "op": "and"
+          },
+          "else": {
+            "int": 0
+          },
+          "then": {
+            "ite": {
+              "cond": {
+                "args": [
+                  {
+                    "args": [
+                      {
+                        "var": "k_v2"
+                      },
+                      {
+                        "int": 2
+                      }
+                    ],
+                    "op": "mod"
+                  },
+                  {
+                    "int": 1
+                  }
+                ],
+                "op": "=="
+              },
+              "else": {
+                "args": [
+                  {
+                    "args": [
+                      {
+                        "args": [
+                          {
+                            "args": [
+                              {
+                                "var": "n_v2"
+                              },
+                              {
+                                "var": "k_v2"
+                              }
+                            ],
+                            "op": "div"
+                          },
+                          {
+                            "args": [
+                              {
+                                "var": "n_v2"
+                              },
+                              {
+                                "var": "k_v2"
+                              }
+                            ],
+                            "op": "div"
+                          }
+                        ],
+                        "op": "*"
+                      },
+                      {
+                        "args": [
+                          {
+                            "var": "n_v2"
+                          },
+                          {
+                            "var": "k_v2"
+                          }
+                        ],
+                        "op": "div"
+                      }
+                    ],
+                    "op": "*"
+                  },
+                  {
+                    "args": [
+                      {
+                        "args": [
+                          {
+                            "args": [
+                              {
+                                "args": [
+                                  {
+                                    "var": "n_v2"
+                                  },
+                                  {
+                                    "var": "k_v2"
+                                  }
+                                ],
+                                "op": "div"
+                              },
+                              {
+                                "ite": {
+                                  "cond": {
+                                    "args": [
+                                      {
+                                        "args": [
+                                          {
+                                            "var": "n_v2"
+                                          },
+                                          {
+                                            "var": "k_v2"
+                                          }
+                                        ],
+                                        "op": "mod"
+                                      },
+                                      {
+                                        "args": [
+                                          {
+                                            "var": "k_v2"
+                                          },
+                                          {
+                                            "int": 2
+                                          }
+                                        ],
+                                        "op": "div"
+                                      }
+                                    ],
+                                    "op": ">="
+                                  },
+                                  "else": {
+                                    "int": 0
+                                  },
+                                  "then": {
+                                    "int": 1
+                                  }
+                                }
+                              }
+                            ],
+                            "op": "+"
+                          },
+                          {
+                            "args": [
+                              {
+                                "args": [
+                                  {
+                                    "var": "n_v2"
+                                  },
+                                  {
+                                    "var": "k_v2"
+                                  }
+                                ],
+                                "op": "div"
+                              },
+                              {
+                                "ite": {
+                                  "cond": {
+                                    "args": [
+                                      {
+                                        "args": [
+                                          {
+                                            "var": "n_v2"
+                                          },
+                                          {
+                                            "var": "k_v2"
+                                          }
+                                        ],
+                                        "op": "mod"
+                                      },
+                                      {
+                                        "args": [
+                                          {
+                                            "var": "k_v2"
+                                          },
+                                          {
+                                            "int": 2
+                                          }
+                                        ],
+                                        "op": "div"
+                                      }
+                                    ],
+                                    "op": ">="
+                                  },
+                                  "else": {
+                                    "int": 0
+                                  },
+                                  "then": {
+                                    "int": 1
+                                  }
+                                }
+                              }
+                            ],
+                            "op": "+"
+                          }
+                        ],
+                        "op": "*"
+                      },
+                      {
+                        "args": [
+                          {
+                            "args": [
+                              {
+                                "var": "n_v2"
+                              },
+                              {
+                                "var": "k_v2"
+                              }
+                            ],
+                            "op": "div"
+                          },
+                          {
+                            "ite": {
+                              "cond": {
+                                "args": [
+                                  {
+                                    "args": [
+                                      {
+                                        "var": "n_v2"
+                                      },
+                                      {
+                                        "var": "k_v2"
+                                      }
+                                    ],
+                                    "op": "mod"
+                                  },
+                                  {
+                                    "args": [
+                                      {
+                                        "var": "k_v2"
+                                      },
+                                      {
+                                        "int": 2
+                                      }
+                                    ],
+                                    "op": "div"
+                                  }
+                                ],
+                                "op": ">="
+                              },
+                              "else": {
+                                "int": 0
+                              },
+                              "then": {
+                                "int": 1
+                              }
+                            }
+                          }
+                        ],
+                        "op": "+"
+                      }
+                    ],
+                    "op": "*"
+                  }
+                ],
+                "op": "+"
+              },
+              "then": {
+                "args": [
+                  {
+                    "args": [
+                      {
+                        "args": [
+                          {
+                            "var": "n_v2"
+                          },
+                          {
+                            "var": "k_v2"
+                          }
+                        ],
+                        "op": "div"
+                      },
+                      {
+                        "args": [
+                          {
+                            "var": "n_v2"
+                          },
+                          {
+                            "var": "k_v2"
+                          }
+                        ],
+                        "op": "div"
+                      }
+                    ],
+                    "op": "*"
+                  },
+                  {
+                    "args": [
+                      {
+                        "var": "n_v2"
+                      },
+                      {
+                        "var": "k_v2"
+                      }
+                    ],
+                    "op": "div"
+                  }
+                ],
+                "op": "*"
+              }
+            }
+          }
+        }
+      },
+      "decreases": {
+        "int": 0
+      },
+      "name": "countValidTriples",
+      "params": [
+        {
+          "name": "n_v2",
+          "type": "int"
+        },
+        {
+          "name": "k_v2",
+          "type": "int"
+        }
+      ],
+      "result": "int"
+    }
+  ],
+  "t": 1
+}

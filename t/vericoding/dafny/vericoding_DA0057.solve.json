@@ -1,0 +1,1228 @@
+{
+  "body": [
+    {
+      "if": {
+        "cond": {
+          "args": [
+            {
+              "args": [
+                {
+                  "var": "b"
+                },
+                {
+                  "var": "f"
+                }
+              ],
+              "op": "<"
+            },
+            {
+              "args": [
+                {
+                  "var": "b"
+                },
+                {
+                  "args": [
+                    {
+                      "var": "a"
+                    },
+                    {
+                      "var": "f"
+                    }
+                  ],
+                  "op": "-"
+                }
+              ],
+              "op": "<"
+            }
+          ],
+          "op": "or"
+        },
+        "else": [],
+        "then": [
+          {
+            "return": [
+              "result",
+              {
+                "args": [
+                  {
+                    "int": 1
+                  }
+                ],
+                "op": "neg"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "if": {
+        "cond": {
+          "args": [
+            {
+              "var": "k"
+            },
+            {
+              "int": 1
+            }
+          ],
+          "op": "=="
+        },
+        "else": [
+          {
+            "if": {
+              "cond": {
+                "args": [
+                  {
+                    "var": "b"
+                  },
+                  {
+                    "args": [
+                      {
+                        "args": [
+                          {
+                            "int": 2
+                          },
+                          {
+                            "var": "a"
+                          }
+                        ],
+                        "op": "*"
+                      },
+                      {
+                        "var": "f"
+                      }
+                    ],
+                    "op": "-"
+                  }
+                ],
+                "op": "<"
+              },
+              "else": [],
+              "then": [
+                {
+                  "return": [
+                    "result",
+                    {
+                      "args": [
+                        {
+                          "int": 1
+                        }
+                      ],
+                      "op": "neg"
+                    }
+                  ]
+                }
+              ]
+            }
+          },
+          {
+            "var": {
+              "init": {
+                "int": 0
+              },
+              "name": "refuels",
+              "type": "int"
+            }
+          },
+          {
+            "var": {
+              "init": {
+                "var": "b"
+              },
+              "name": "fuel",
+              "type": "int"
+            }
+          },
+          {
+            "if": {
+              "cond": {
+                "args": [
+                  {
+                    "var": "fuel"
+                  },
+                  {
+                    "var": "a"
+                  }
+                ],
+                "op": "<"
+              },
+              "else": [],
+              "then": [
+                {
+                  "assign": [
+                    "refuels",
+                    {
+                      "args": [
+                        {
+                          "var": "refuels"
+                        },
+                        {
+                          "int": 1
+                        }
+                      ],
+                      "op": "+"
+                    }
+                  ]
+                },
+                {
+                  "assign": [
+                    "fuel",
+                    {
+                      "var": "b"
+                    }
+                  ]
+                }
+              ]
+            }
+          },
+          {
+            "assign": [
+              "fuel",
+              {
+                "args": [
+                  {
+                    "var": "fuel"
+                  },
+                  {
+                    "var": "a"
+                  }
+                ],
+                "op": "-"
+              }
+            ]
+          },
+          {
+            "if": {
+              "cond": {
+                "args": [
+                  {
+                    "var": "fuel"
+                  },
+                  {
+                    "var": "a"
+                  }
+                ],
+                "op": "<"
+              },
+              "else": [],
+              "then": [
+                {
+                  "if": {
+                    "cond": {
+                      "args": [
+                        {
+                          "var": "fuel"
+                        },
+                        {
+                          "args": [
+                            {
+                              "var": "a"
+                            },
+                            {
+                              "var": "f"
+                            }
+                          ],
+                          "op": "-"
+                        }
+                      ],
+                      "op": "<"
+                    },
+                    "else": [],
+                    "then": [
+                      {
+                        "return": [
+                          "result",
+                          {
+                            "args": [
+                              {
+                                "int": 1
+                              }
+                            ],
+                            "op": "neg"
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                },
+                {
+                  "assign": [
+                    "refuels",
+                    {
+                      "args": [
+                        {
+                          "var": "refuels"
+                        },
+                        {
+                          "int": 1
+                        }
+                      ],
+                      "op": "+"
+                    }
+                  ]
+                },
+                {
+                  "assign": [
+                    "fuel",
+                    {
+                      "var": "b"
+                    }
+                  ]
+                }
+              ]
+            }
+          },
+          {
+            "if": {
+              "cond": {
+                "args": [
+                  {
+                    "var": "refuels"
+                  },
+                  {
+                    "var": "k"
+                  }
+                ],
+                "op": ">"
+              },
+              "else": [],
+              "then": [
+                {
+                  "return": [
+                    "result",
+                    {
+                      "args": [
+                        {
+                          "int": 1
+                        }
+                      ],
+                      "op": "neg"
+                    }
+                  ]
+                }
+              ]
+            }
+          },
+          {
+            "assign": [
+              "result",
+              {
+                "var": "refuels"
+              }
+            ]
+          }
+        ],
+        "then": [
+          {
+            "if": {
+              "cond": {
+                "args": [
+                  {
+                    "var": "b"
+                  },
+                  {
+                    "var": "a"
+                  }
+                ],
+                "op": ">="
+              },
+              "else": [
+                {
+                  "if": {
+                    "cond": {
+                      "args": [
+                        {
+                          "var": "b"
+                        },
+                        {
+                          "var": "f"
+                        }
+                      ],
+                      "op": ">="
+                    },
+                    "else": [
+                      {
+                        "assign": [
+                          "result",
+                          {
+                            "args": [
+                              {
+                                "int": 1
+                              }
+                            ],
+                            "op": "neg"
+                          }
+                        ]
+                      }
+                    ],
+                    "then": [
+                      {
+                        "assign": [
+                          "result",
+                          {
+                            "int": 1
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                }
+              ],
+              "then": [
+                {
+                  "assign": [
+                    "result",
+                    {
+                      "int": 0
+                    }
+                  ]
+                }
+              ]
+            }
+          }
+        ]
+      }
+    }
+  ],
+  "ensures": [
+    {
+      "args": [
+        {
+          "var": "result"
+        },
+        {
+          "args": [
+            {
+              "int": 1
+            }
+          ],
+          "op": "neg"
+        }
+      ],
+      "op": ">="
+    },
+    {
+      "args": [
+        {
+          "args": [
+            {
+              "var": "result"
+            },
+            {
+              "args": [
+                {
+                  "int": 1
+                }
+              ],
+              "op": "neg"
+            }
+          ],
+          "op": "=="
+        },
+        {
+          "call": {
+            "args": [
+              {
+                "var": "a"
+              },
+              {
+                "var": "b"
+              },
+              {
+                "var": "f"
+              },
+              {
+                "var": "k"
+              }
+            ],
+            "fun": "impossibleConditions"
+          }
+        }
+      ],
+      "op": "=="
+    },
+    {
+      "args": [
+        {
+          "args": [
+            {
+              "var": "result"
+            },
+            {
+              "int": 0
+            }
+          ],
+          "op": ">="
+        },
+        {
+          "args": [
+            {
+              "var": "result"
+            },
+            {
+              "var": "k"
+            }
+          ],
+          "op": "<="
+        }
+      ],
+      "op": "implies"
+    },
+    {
+      "args": [
+        {
+          "args": [
+            {
+              "var": "result"
+            },
+            {
+              "int": 0
+            }
+          ],
+          "op": ">="
+        },
+        {
+          "call": {
+            "args": [
+              {
+                "var": "a"
+              },
+              {
+                "var": "b"
+              },
+              {
+                "var": "f"
+              },
+              {
+                "var": "k"
+              }
+            ],
+            "fun": "feasibilityConditions"
+          }
+        }
+      ],
+      "op": "implies"
+    },
+    {
+      "call": {
+        "args": [
+          {
+            "var": "a"
+          },
+          {
+            "var": "b"
+          },
+          {
+            "var": "f"
+          },
+          {
+            "var": "k"
+          },
+          {
+            "var": "result"
+          }
+        ],
+        "fun": "singleJourneyResult"
+      }
+    },
+    {
+      "call": {
+        "args": [
+          {
+            "var": "a"
+          },
+          {
+            "var": "b"
+          },
+          {
+            "var": "f"
+          },
+          {
+            "var": "k"
+          },
+          {
+            "var": "result"
+          }
+        ],
+        "fun": "multiJourneyFeasibility"
+      }
+    }
+  ],
+  "gate": "recursion",
+  "name": "vericoding_da0057__solve",
+  "params": [
+    {
+      "name": "a",
+      "type": "int"
+    },
+    {
+      "name": "b",
+      "type": "int"
+    },
+    {
+      "name": "f",
+      "type": "int"
+    },
+    {
+      "name": "k",
+      "type": "int"
+    }
+  ],
+  "requires": [
+    {
+      "call": {
+        "args": [
+          {
+            "var": "a"
+          },
+          {
+            "var": "b"
+          },
+          {
+            "var": "f"
+          },
+          {
+            "var": "k"
+          }
+        ],
+        "fun": "validInput"
+      }
+    }
+  ],
+  "returns": [
+    {
+      "name": "result",
+      "type": "int"
+    }
+  ],
+  "spec_funs": [
+    {
+      "body": {
+        "args": [
+          {
+            "args": [
+              {
+                "args": [
+                  {
+                    "var": "k_v"
+                  },
+                  {
+                    "int": 1
+                  }
+                ],
+                "op": ">"
+              },
+              {
+                "args": [
+                  {
+                    "var": "result_v"
+                  },
+                  {
+                    "int": 0
+                  }
+                ],
+                "op": ">="
+              }
+            ],
+            "op": "and"
+          },
+          {
+            "args": [
+              {
+                "args": [
+                  {
+                    "var": "b_v"
+                  },
+                  {
+                    "var": "f_v"
+                  }
+                ],
+                "op": ">="
+              },
+              {
+                "args": [
+                  {
+                    "var": "b_v"
+                  },
+                  {
+                    "args": [
+                      {
+                        "var": "a_v"
+                      },
+                      {
+                        "var": "f_v"
+                      }
+                    ],
+                    "op": "-"
+                  }
+                ],
+                "op": ">="
+              },
+              {
+                "args": [
+                  {
+                    "var": "b_v"
+                  },
+                  {
+                    "args": [
+                      {
+                        "args": [
+                          {
+                            "int": 2
+                          },
+                          {
+                            "var": "a_v"
+                          }
+                        ],
+                        "op": "*"
+                      },
+                      {
+                        "var": "f_v"
+                      }
+                    ],
+                    "op": "-"
+                  }
+                ],
+                "op": ">="
+              }
+            ],
+            "op": "and"
+          }
+        ],
+        "op": "implies"
+      },
+      "decreases": {
+        "int": 0
+      },
+      "name": "multiJourneyFeasibility",
+      "params": [
+        {
+          "name": "a_v",
+          "type": "int"
+        },
+        {
+          "name": "b_v",
+          "type": "int"
+        },
+        {
+          "name": "f_v",
+          "type": "int"
+        },
+        {
+          "name": "k_v",
+          "type": "int"
+        },
+        {
+          "name": "result_v",
+          "type": "int"
+        }
+      ],
+      "result": "bool"
+    },
+    {
+      "body": {
+        "args": [
+          {
+            "args": [
+              {
+                "var": "b_v2"
+              },
+              {
+                "var": "f_v2"
+              }
+            ],
+            "op": ">="
+          },
+          {
+            "args": [
+              {
+                "var": "b_v2"
+              },
+              {
+                "args": [
+                  {
+                    "var": "a_v2"
+                  },
+                  {
+                    "var": "f_v2"
+                  }
+                ],
+                "op": "-"
+              }
+            ],
+            "op": ">="
+          },
+          {
+            "args": [
+              {
+                "args": [
+                  {
+                    "var": "k_v2"
+                  },
+                  {
+                    "int": 1
+                  }
+                ],
+                "op": "<="
+              },
+              {
+                "args": [
+                  {
+                    "var": "b_v2"
+                  },
+                  {
+                    "args": [
+                      {
+                        "args": [
+                          {
+                            "int": 2
+                          },
+                          {
+                            "var": "a_v2"
+                          }
+                        ],
+                        "op": "*"
+                      },
+                      {
+                        "var": "f_v2"
+                      }
+                    ],
+                    "op": "-"
+                  }
+                ],
+                "op": ">="
+              }
+            ],
+            "op": "or"
+          },
+          {
+            "args": [
+              {
+                "args": [
+                  {
+                    "var": "k_v2"
+                  },
+                  {
+                    "int": 1
+                  }
+                ],
+                "op": "=="
+              },
+              {
+                "args": [
+                  {
+                    "args": [
+                      {
+                        "var": "b_v2"
+                      },
+                      {
+                        "var": "a_v2"
+                      }
+                    ],
+                    "op": ">="
+                  },
+                  {
+                    "args": [
+                      {
+                        "var": "b_v2"
+                      },
+                      {
+                        "var": "f_v2"
+                      }
+                    ],
+                    "op": ">="
+                  }
+                ],
+                "op": "or"
+              }
+            ],
+            "op": "implies"
+          }
+        ],
+        "op": "and"
+      },
+      "decreases": {
+        "int": 0
+      },
+      "name": "feasibilityConditions",
+      "params": [
+        {
+          "name": "a_v2",
+          "type": "int"
+        },
+        {
+          "name": "b_v2",
+          "type": "int"
+        },
+        {
+          "name": "f_v2",
+          "type": "int"
+        },
+        {
+          "name": "k_v2",
+          "type": "int"
+        }
+      ],
+      "result": "bool"
+    },
+    {
+      "body": {
+        "args": [
+          {
+            "args": [
+              {
+                "var": "b_v3"
+              },
+              {
+                "var": "f_v3"
+              }
+            ],
+            "op": "<"
+          },
+          {
+            "args": [
+              {
+                "var": "b_v3"
+              },
+              {
+                "args": [
+                  {
+                    "var": "a_v3"
+                  },
+                  {
+                    "var": "f_v3"
+                  }
+                ],
+                "op": "-"
+              }
+            ],
+            "op": "<"
+          },
+          {
+            "args": [
+              {
+                "args": [
+                  {
+                    "var": "k_v3"
+                  },
+                  {
+                    "int": 1
+                  }
+                ],
+                "op": ">"
+              },
+              {
+                "args": [
+                  {
+                    "var": "b_v3"
+                  },
+                  {
+                    "args": [
+                      {
+                        "args": [
+                          {
+                            "int": 2
+                          },
+                          {
+                            "var": "a_v3"
+                          }
+                        ],
+                        "op": "*"
+                      },
+                      {
+                        "var": "f_v3"
+                      }
+                    ],
+                    "op": "-"
+                  }
+                ],
+                "op": "<"
+              }
+            ],
+            "op": "and"
+          },
+          {
+            "args": [
+              {
+                "args": [
+                  {
+                    "var": "k_v3"
+                  },
+                  {
+                    "int": 1
+                  }
+                ],
+                "op": "=="
+              },
+              {
+                "args": [
+                  {
+                    "var": "b_v3"
+                  },
+                  {
+                    "var": "a_v3"
+                  }
+                ],
+                "op": "<"
+              },
+              {
+                "args": [
+                  {
+                    "var": "b_v3"
+                  },
+                  {
+                    "var": "f_v3"
+                  }
+                ],
+                "op": "<"
+              }
+            ],
+            "op": "and"
+          }
+        ],
+        "op": "or"
+      },
+      "decreases": {
+        "int": 0
+      },
+      "name": "impossibleConditions",
+      "params": [
+        {
+          "name": "a_v3",
+          "type": "int"
+        },
+        {
+          "name": "b_v3",
+          "type": "int"
+        },
+        {
+          "name": "f_v3",
+          "type": "int"
+        },
+        {
+          "name": "k_v3",
+          "type": "int"
+        }
+      ],
+      "result": "bool"
+    },
+    {
+      "body": {
+        "args": [
+          {
+            "args": [
+              {
+                "var": "a_v4"
+              },
+              {
+                "int": 0
+              }
+            ],
+            "op": ">"
+          },
+          {
+            "args": [
+              {
+                "var": "b_v4"
+              },
+              {
+                "int": 0
+              }
+            ],
+            "op": ">"
+          },
+          {
+            "args": [
+              {
+                "var": "f_v4"
+              },
+              {
+                "int": 0
+              }
+            ],
+            "op": ">"
+          },
+          {
+            "args": [
+              {
+                "var": "k_v4"
+              },
+              {
+                "int": 0
+              }
+            ],
+            "op": ">"
+          },
+          {
+            "args": [
+              {
+                "var": "f_v4"
+              },
+              {
+                "var": "a_v4"
+              }
+            ],
+            "op": "<"
+          }
+        ],
+        "op": "and"
+      },
+      "decreases": {
+        "int": 0
+      },
+      "name": "validInput",
+      "params": [
+        {
+          "name": "a_v4",
+          "type": "int"
+        },
+        {
+          "name": "b_v4",
+          "type": "int"
+        },
+        {
+          "name": "f_v4",
+          "type": "int"
+        },
+        {
+          "name": "k_v4",
+          "type": "int"
+        }
+      ],
+      "result": "bool"
+    },
+    {
+      "body": {
+        "args": [
+          {
+            "args": [
+              {
+                "args": [
+                  {
+                    "var": "k_v5"
+                  },
+                  {
+                    "int": 1
+                  }
+                ],
+                "op": "=="
+              },
+              {
+                "args": [
+                  {
+                    "var": "result_v2"
+                  },
+                  {
+                    "int": 0
+                  }
+                ],
+                "op": ">="
+              }
+            ],
+            "op": "and"
+          },
+          {
+            "args": [
+              {
+                "args": [
+                  {
+                    "args": [
+                      {
+                        "var": "b_v5"
+                      },
+                      {
+                        "var": "a_v5"
+                      }
+                    ],
+                    "op": ">="
+                  },
+                  {
+                    "args": [
+                      {
+                        "var": "result_v2"
+                      },
+                      {
+                        "int": 0
+                      }
+                    ],
+                    "op": "=="
+                  }
+                ],
+                "op": "and"
+              },
+              {
+                "args": [
+                  {
+                    "args": [
+                      {
+                        "var": "b_v5"
+                      },
+                      {
+                        "var": "a_v5"
+                      }
+                    ],
+                    "op": "<"
+                  },
+                  {
+                    "args": [
+                      {
+                        "var": "b_v5"
+                      },
+                      {
+                        "var": "f_v5"
+                      }
+                    ],
+                    "op": ">="
+                  },
+                  {
+                    "args": [
+                      {
+                        "var": "result_v2"
+                      },
+                      {
+                        "int": 1
+                      }
+                    ],
+                    "op": "=="
+                  }
+                ],
+                "op": "and"
+              }
+            ],
+            "op": "or"
+          }
+        ],
+        "op": "implies"
+      },
+      "decreases": {
+        "int": 0
+      },
+      "name": "singleJourneyResult",
+      "params": [
+        {
+          "name": "a_v5",
+          "type": "int"
+        },
+        {
+          "name": "b_v5",
+          "type": "int"
+        },
+        {
+          "name": "f_v5",
+          "type": "int"
+        },
+        {
+          "name": "k_v5",
+          "type": "int"
+        },
+        {
+          "name": "result_v2",
+          "type": "int"
+        }
+      ],
+      "result": "bool"
+    }
+  ],
+  "t": 1
+}

@@ -1,0 +1,597 @@
+{
+  "body": [
+    {
+      "var": {
+        "init": {
+          "int": 0
+        },
+        "name": "takahashi",
+        "type": "int"
+      }
+    },
+    {
+      "var": {
+        "init": {
+          "int": 0
+        },
+        "name": "aoki",
+        "type": "int"
+      }
+    },
+    {
+      "if": {
+        "cond": {
+          "args": [
+            {
+              "var": "a"
+            },
+            {
+              "var": "k"
+            }
+          ],
+          "op": ">="
+        },
+        "else": [
+          {
+            "assign": [
+              "takahashi",
+              {
+                "int": 0
+              }
+            ]
+          },
+          {
+            "var": {
+              "init": {
+                "args": [
+                  {
+                    "var": "k"
+                  },
+                  {
+                    "var": "a"
+                  }
+                ],
+                "op": "-"
+              },
+              "name": "remaining",
+              "type": "int"
+            }
+          },
+          {
+            "if": {
+              "cond": {
+                "args": [
+                  {
+                    "var": "remaining"
+                  },
+                  {
+                    "var": "b"
+                  }
+                ],
+                "op": "<="
+              },
+              "else": [
+                {
+                  "assign": [
+                    "aoki",
+                    {
+                      "int": 0
+                    }
+                  ]
+                }
+              ],
+              "then": [
+                {
+                  "assign": [
+                    "aoki",
+                    {
+                      "args": [
+                        {
+                          "var": "b"
+                        },
+                        {
+                          "var": "remaining"
+                        }
+                      ],
+                      "op": "-"
+                    }
+                  ]
+                }
+              ]
+            }
+          }
+        ],
+        "then": [
+          {
+            "assign": [
+              "takahashi",
+              {
+                "args": [
+                  {
+                    "var": "a"
+                  },
+                  {
+                    "var": "k"
+                  }
+                ],
+                "op": "-"
+              }
+            ]
+          },
+          {
+            "assign": [
+              "aoki",
+              {
+                "var": "b"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "assign": [
+        "r",
+        {
+          "args": [
+            {
+              "var": "takahashi"
+            },
+            {
+              "var": "aoki"
+            }
+          ],
+          "op": "pair"
+        }
+      ]
+    }
+  ],
+  "ensures": [
+    {
+      "call": {
+        "args": [
+          {
+            "var": "a"
+          },
+          {
+            "var": "b"
+          },
+          {
+            "var": "k"
+          },
+          {
+            "args": [
+              {
+                "var": "r"
+              }
+            ],
+            "op": "fst"
+          },
+          {
+            "args": [
+              {
+                "var": "r"
+              }
+            ],
+            "op": "snd"
+          }
+        ],
+        "fun": "correctResult"
+      }
+    }
+  ],
+  "gate": "recursion",
+  "name": "vericoding_da0475__solve",
+  "params": [
+    {
+      "name": "a",
+      "type": "int"
+    },
+    {
+      "name": "b",
+      "type": "int"
+    },
+    {
+      "name": "k",
+      "type": "int"
+    }
+  ],
+  "requires": [
+    {
+      "call": {
+        "args": [
+          {
+            "var": "a"
+          },
+          {
+            "var": "b"
+          },
+          {
+            "var": "k"
+          }
+        ],
+        "fun": "validInput"
+      }
+    }
+  ],
+  "returns": [
+    {
+      "name": "r",
+      "type": {
+        "pair": [
+          "int",
+          "int"
+        ]
+      }
+    }
+  ],
+  "spec_funs": [
+    {
+      "body": {
+        "args": [
+          {
+            "args": [
+              {
+                "var": "a_v"
+              },
+              {
+                "int": 0
+              }
+            ],
+            "op": ">="
+          },
+          {
+            "args": [
+              {
+                "var": "b_v"
+              },
+              {
+                "int": 0
+              }
+            ],
+            "op": ">="
+          },
+          {
+            "args": [
+              {
+                "var": "k_v"
+              },
+              {
+                "int": 0
+              }
+            ],
+            "op": ">="
+          }
+        ],
+        "op": "and"
+      },
+      "decreases": {
+        "int": 0
+      },
+      "name": "validInput",
+      "params": [
+        {
+          "name": "a_v",
+          "type": "int"
+        },
+        {
+          "name": "b_v",
+          "type": "int"
+        },
+        {
+          "name": "k_v",
+          "type": "int"
+        }
+      ],
+      "result": "bool"
+    },
+    {
+      "body": {
+        "ite": {
+          "cond": {
+            "call": {
+              "args": [
+                {
+                  "var": "a_v2"
+                },
+                {
+                  "var": "b_v2"
+                },
+                {
+                  "var": "k_v2"
+                }
+              ],
+              "fun": "validInput"
+            }
+          },
+          "else": {
+            "int": 0
+          },
+          "then": {
+            "ite": {
+              "cond": {
+                "args": [
+                  {
+                    "var": "a_v2"
+                  },
+                  {
+                    "var": "k_v2"
+                  }
+                ],
+                "op": ">="
+              },
+              "else": {
+                "ite": {
+                  "cond": {
+                    "args": [
+                      {
+                        "args": [
+                          {
+                            "var": "k_v2"
+                          },
+                          {
+                            "var": "a_v2"
+                          }
+                        ],
+                        "op": "-"
+                      },
+                      {
+                        "var": "b_v2"
+                      }
+                    ],
+                    "op": "<"
+                  },
+                  "else": {
+                    "int": 0
+                  },
+                  "then": {
+                    "args": [
+                      {
+                        "var": "b_v2"
+                      },
+                      {
+                        "args": [
+                          {
+                            "var": "k_v2"
+                          },
+                          {
+                            "var": "a_v2"
+                          }
+                        ],
+                        "op": "-"
+                      }
+                    ],
+                    "op": "-"
+                  }
+                }
+              },
+              "then": {
+                "var": "b_v2"
+              }
+            }
+          }
+        }
+      },
+      "decreases": {
+        "int": 0
+      },
+      "name": "expectedAokiCookies",
+      "params": [
+        {
+          "name": "a_v2",
+          "type": "int"
+        },
+        {
+          "name": "b_v2",
+          "type": "int"
+        },
+        {
+          "name": "k_v2",
+          "type": "int"
+        }
+      ],
+      "result": "int"
+    },
+    {
+      "body": {
+        "ite": {
+          "cond": {
+            "call": {
+              "args": [
+                {
+                  "var": "a_v3"
+                },
+                {
+                  "var": "b_v3"
+                },
+                {
+                  "var": "k_v3"
+                }
+              ],
+              "fun": "validInput"
+            }
+          },
+          "else": {
+            "int": 0
+          },
+          "then": {
+            "ite": {
+              "cond": {
+                "args": [
+                  {
+                    "var": "a_v3"
+                  },
+                  {
+                    "var": "k_v3"
+                  }
+                ],
+                "op": ">="
+              },
+              "else": {
+                "int": 0
+              },
+              "then": {
+                "args": [
+                  {
+                    "var": "a_v3"
+                  },
+                  {
+                    "var": "k_v3"
+                  }
+                ],
+                "op": "-"
+              }
+            }
+          }
+        }
+      },
+      "decreases": {
+        "int": 0
+      },
+      "name": "expectedTakahashiCookies",
+      "params": [
+        {
+          "name": "a_v3",
+          "type": "int"
+        },
+        {
+          "name": "b_v3",
+          "type": "int"
+        },
+        {
+          "name": "k_v3",
+          "type": "int"
+        }
+      ],
+      "result": "int"
+    },
+    {
+      "body": {
+        "ite": {
+          "cond": {
+            "call": {
+              "args": [
+                {
+                  "var": "a_v4"
+                },
+                {
+                  "var": "b_v4"
+                },
+                {
+                  "var": "k_v4"
+                }
+              ],
+              "fun": "validInput"
+            }
+          },
+          "else": {
+            "bool": false
+          },
+          "then": {
+            "args": [
+              {
+                "args": [
+                  {
+                    "var": "takahashi_v"
+                  },
+                  {
+                    "call": {
+                      "args": [
+                        {
+                          "var": "a_v4"
+                        },
+                        {
+                          "var": "b_v4"
+                        },
+                        {
+                          "var": "k_v4"
+                        }
+                      ],
+                      "fun": "expectedTakahashiCookies"
+                    }
+                  }
+                ],
+                "op": "=="
+              },
+              {
+                "args": [
+                  {
+                    "var": "aoki_v"
+                  },
+                  {
+                    "call": {
+                      "args": [
+                        {
+                          "var": "a_v4"
+                        },
+                        {
+                          "var": "b_v4"
+                        },
+                        {
+                          "var": "k_v4"
+                        }
+                      ],
+                      "fun": "expectedAokiCookies"
+                    }
+                  }
+                ],
+                "op": "=="
+              },
+              {
+                "args": [
+                  {
+                    "var": "takahashi_v"
+                  },
+                  {
+                    "int": 0
+                  }
+                ],
+                "op": ">="
+              },
+              {
+                "args": [
+                  {
+                    "var": "aoki_v"
+                  },
+                  {
+                    "int": 0
+                  }
+                ],
+                "op": ">="
+              }
+            ],
+            "op": "and"
+          }
+        }
+      },
+      "decreases": {
+        "int": 0
+      },
+      "name": "correctResult",
+      "params": [
+        {
+          "name": "a_v4",
+          "type": "int"
+        },
+        {
+          "name": "b_v4",
+          "type": "int"
+        },
+        {
+          "name": "k_v4",
+          "type": "int"
+        },
+        {
+          "name": "takahashi_v",
+          "type": "int"
+        },
+        {
+          "name": "aoki_v",
+          "type": "int"
+        }
+      ],
+      "result": "bool"
+    }
+  ],
+  "t": 1
+}

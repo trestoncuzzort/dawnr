@@ -1,0 +1,116 @@
+{
+  "body": [
+    {
+      "assign": [
+        "number",
+        {
+          "args": [
+            {
+              "args": [
+                {
+                  "var": "n"
+                },
+                {
+                  "args": [
+                    {
+                      "args": [
+                        {
+                          "int": 7
+                        },
+                        {
+                          "var": "n"
+                        }
+                      ],
+                      "op": "*"
+                    },
+                    {
+                      "int": 5
+                    }
+                  ],
+                  "op": "-"
+                }
+              ],
+              "op": "*"
+            },
+            {
+              "int": 2
+            }
+          ],
+          "op": "div"
+        }
+      ]
+    }
+  ],
+  "ensures": [
+    {
+      "args": [
+        {
+          "var": "number"
+        },
+        {
+          "args": [
+            {
+              "args": [
+                {
+                  "var": "n"
+                },
+                {
+                  "args": [
+                    {
+                      "args": [
+                        {
+                          "int": 7
+                        },
+                        {
+                          "var": "n"
+                        }
+                      ],
+                      "op": "*"
+                    },
+                    {
+                      "int": 5
+                    }
+                  ],
+                  "op": "-"
+                }
+              ],
+              "op": "*"
+            },
+            {
+              "int": 2
+            }
+          ],
+          "op": "div"
+        }
+      ],
+      "op": "=="
+    }
+  ],
+  "name": "vericoding_dd0778__nthNonagonalNumber",
+  "params": [
+    {
+      "name": "n",
+      "type": "int"
+    }
+  ],
+  "requires": [
+    {
+      "args": [
+        {
+          "var": "n"
+        },
+        {
+          "int": 0
+        }
+      ],
+      "op": ">="
+    }
+  ],
+  "returns": [
+    {
+      "name": "number",
+      "type": "int"
+    }
+  ],
+  "t": 1
+}

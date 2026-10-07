@@ -1,0 +1,111 @@
+{
+  "body": [
+    {
+      "assign": [
+        "result",
+        {
+          "args": [
+            {
+              "args": [
+                {
+                  "int": 2
+                },
+                {
+                  "var": "x"
+                }
+              ],
+              "op": "*"
+            },
+            {
+              "args": [
+                {
+                  "int": 4
+                },
+                {
+                  "var": "x"
+                }
+              ],
+              "op": "*"
+            }
+          ],
+          "op": "pair"
+        }
+      ]
+    }
+  ],
+  "ensures": [
+    {
+      "args": [
+        {
+          "args": [
+            {
+              "var": "result"
+            }
+          ],
+          "op": "fst"
+        },
+        {
+          "args": [
+            {
+              "int": 2
+            },
+            {
+              "var": "x"
+            }
+          ],
+          "op": "*"
+        }
+      ],
+      "op": "=="
+    },
+    {
+      "args": [
+        {
+          "args": [
+            {
+              "var": "result"
+            }
+          ],
+          "op": "snd"
+        },
+        {
+          "args": [
+            {
+              "int": 2
+            },
+            {
+              "args": [
+                {
+                  "var": "result"
+                }
+              ],
+              "op": "fst"
+            }
+          ],
+          "op": "*"
+        }
+      ],
+      "op": "=="
+    }
+  ],
+  "name": "vericoding_dv0139__doubleQuadruple",
+  "params": [
+    {
+      "name": "x",
+      "type": "int"
+    }
+  ],
+  "requires": [],
+  "returns": [
+    {
+      "name": "result",
+      "type": {
+        "pair": [
+          "int",
+          "int"
+        ]
+      }
+    }
+  ],
+  "t": 1
+}

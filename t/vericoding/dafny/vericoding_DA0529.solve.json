@@ -1,0 +1,286 @@
+{
+  "body": [
+    {
+      "assign": [
+        "attacks",
+        {
+          "call": {
+            "args": [
+              {
+                "var": "h"
+              },
+              {
+                "var": "a"
+              }
+            ],
+            "fun": "ceilDiv"
+          }
+        }
+      ]
+    }
+  ],
+  "ensures": [
+    {
+      "call": {
+        "args": [
+          {
+            "var": "attacks"
+          },
+          {
+            "var": "h"
+          },
+          {
+            "var": "a"
+          }
+        ],
+        "fun": "isMinimumAttacks"
+      }
+    },
+    {
+      "args": [
+        {
+          "var": "attacks"
+        },
+        {
+          "call": {
+            "args": [
+              {
+                "var": "h"
+              },
+              {
+                "var": "a"
+              }
+            ],
+            "fun": "ceilDiv"
+          }
+        }
+      ],
+      "op": "=="
+    }
+  ],
+  "gate": "recursion",
+  "name": "vericoding_da0529__solve",
+  "params": [
+    {
+      "name": "h",
+      "type": "int"
+    },
+    {
+      "name": "a",
+      "type": "int"
+    }
+  ],
+  "requires": [
+    {
+      "call": {
+        "args": [
+          {
+            "var": "h"
+          },
+          {
+            "var": "a"
+          }
+        ],
+        "fun": "validInput"
+      }
+    }
+  ],
+  "returns": [
+    {
+      "name": "attacks",
+      "type": "int"
+    }
+  ],
+  "spec_funs": [
+    {
+      "body": {
+        "args": [
+          {
+            "args": [
+              {
+                "var": "attacks_v"
+              },
+              {
+                "int": 1
+              }
+            ],
+            "op": ">="
+          },
+          {
+            "args": [
+              {
+                "args": [
+                  {
+                    "var": "attacks_v"
+                  },
+                  {
+                    "var": "a_v"
+                  }
+                ],
+                "op": "*"
+              },
+              {
+                "var": "h_v"
+              }
+            ],
+            "op": ">="
+          },
+          {
+            "args": [
+              {
+                "args": [
+                  {
+                    "args": [
+                      {
+                        "var": "attacks_v"
+                      },
+                      {
+                        "int": 1
+                      }
+                    ],
+                    "op": "-"
+                  },
+                  {
+                    "var": "a_v"
+                  }
+                ],
+                "op": "*"
+              },
+              {
+                "var": "h_v"
+              }
+            ],
+            "op": "<"
+          }
+        ],
+        "op": "and"
+      },
+      "decreases": {
+        "int": 0
+      },
+      "name": "isMinimumAttacks",
+      "params": [
+        {
+          "name": "attacks_v",
+          "type": "int"
+        },
+        {
+          "name": "h_v",
+          "type": "int"
+        },
+        {
+          "name": "a_v",
+          "type": "int"
+        }
+      ],
+      "result": "bool"
+    },
+    {
+      "body": {
+        "args": [
+          {
+            "args": [
+              {
+                "var": "h_v2"
+              },
+              {
+                "int": 1
+              }
+            ],
+            "op": ">="
+          },
+          {
+            "args": [
+              {
+                "var": "a_v2"
+              },
+              {
+                "int": 1
+              }
+            ],
+            "op": ">="
+          }
+        ],
+        "op": "and"
+      },
+      "decreases": {
+        "int": 0
+      },
+      "name": "validInput",
+      "params": [
+        {
+          "name": "h_v2",
+          "type": "int"
+        },
+        {
+          "name": "a_v2",
+          "type": "int"
+        }
+      ],
+      "result": "bool"
+    },
+    {
+      "body": {
+        "ite": {
+          "cond": {
+            "args": [
+              {
+                "var": "a_v3"
+              },
+              {
+                "int": 0
+              }
+            ],
+            "op": ">"
+          },
+          "else": {
+            "int": 0
+          },
+          "then": {
+            "args": [
+              {
+                "args": [
+                  {
+                    "args": [
+                      {
+                        "var": "h_v3"
+                      },
+                      {
+                        "var": "a_v3"
+                      }
+                    ],
+                    "op": "+"
+                  },
+                  {
+                    "int": 1
+                  }
+                ],
+                "op": "-"
+              },
+              {
+                "var": "a_v3"
+              }
+            ],
+            "op": "div"
+          }
+        }
+      },
+      "decreases": {
+        "int": 0
+      },
+      "name": "ceilDiv",
+      "params": [
+        {
+          "name": "h_v3",
+          "type": "int"
+        },
+        {
+          "name": "a_v3",
+          "type": "int"
+        }
+      ],
+      "result": "int"
+    }
+  ],
+  "t": 1
+}

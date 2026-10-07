@@ -1,0 +1,457 @@
+{
+  "body": [
+    {
+      "var": {
+        "init": {
+          "call": {
+            "args": [
+              {
+                "args": [
+                  {
+                    "var": "x"
+                  },
+                  {
+                    "var": "y"
+                  }
+                ],
+                "op": "-"
+              }
+            ],
+            "fun": "abs"
+          }
+        },
+        "name": "diff",
+        "type": "int"
+      }
+    },
+    {
+      "if": {
+        "cond": {
+          "args": [
+            {
+              "var": "diff"
+            },
+            {
+              "int": 1
+            }
+          ],
+          "op": ">"
+        },
+        "else": [
+          {
+            "assign": [
+              "winner",
+              {
+                "args": [
+                  {
+                    "int": 66
+                  },
+                  {
+                    "int": 114
+                  },
+                  {
+                    "int": 111
+                  },
+                  {
+                    "int": 119
+                  },
+                  {
+                    "int": 110
+                  }
+                ],
+                "op": "seq"
+              }
+            ]
+          }
+        ],
+        "then": [
+          {
+            "assign": [
+              "winner",
+              {
+                "args": [
+                  {
+                    "int": 65
+                  },
+                  {
+                    "int": 108
+                  },
+                  {
+                    "int": 105
+                  },
+                  {
+                    "int": 99
+                  },
+                  {
+                    "int": 101
+                  }
+                ],
+                "op": "seq"
+              }
+            ]
+          }
+        ]
+      }
+    }
+  ],
+  "ensures": [
+    {
+      "args": [
+        {
+          "args": [
+            {
+              "var": "winner"
+            },
+            {
+              "args": [
+                {
+                  "int": 65
+                },
+                {
+                  "int": 108
+                },
+                {
+                  "int": 105
+                },
+                {
+                  "int": 99
+                },
+                {
+                  "int": 101
+                }
+              ],
+              "op": "seq"
+            }
+          ],
+          "op": "=="
+        },
+        {
+          "args": [
+            {
+              "var": "winner"
+            },
+            {
+              "args": [
+                {
+                  "int": 66
+                },
+                {
+                  "int": 114
+                },
+                {
+                  "int": 111
+                },
+                {
+                  "int": 119
+                },
+                {
+                  "int": 110
+                }
+              ],
+              "op": "seq"
+            }
+          ],
+          "op": "=="
+        }
+      ],
+      "op": "or"
+    },
+    {
+      "args": [
+        {
+          "args": [
+            {
+              "var": "winner"
+            },
+            {
+              "args": [
+                {
+                  "int": 65
+                },
+                {
+                  "int": 108
+                },
+                {
+                  "int": 105
+                },
+                {
+                  "int": 99
+                },
+                {
+                  "int": 101
+                }
+              ],
+              "op": "seq"
+            }
+          ],
+          "op": "=="
+        },
+        {
+          "call": {
+            "args": [
+              {
+                "var": "x"
+              },
+              {
+                "var": "y"
+              }
+            ],
+            "fun": "aliceWins"
+          }
+        }
+      ],
+      "op": "=="
+    },
+    {
+      "args": [
+        {
+          "args": [
+            {
+              "var": "winner"
+            },
+            {
+              "args": [
+                {
+                  "int": 66
+                },
+                {
+                  "int": 114
+                },
+                {
+                  "int": 111
+                },
+                {
+                  "int": 119
+                },
+                {
+                  "int": 110
+                }
+              ],
+              "op": "seq"
+            }
+          ],
+          "op": "=="
+        },
+        {
+          "call": {
+            "args": [
+              {
+                "var": "x"
+              },
+              {
+                "var": "y"
+              }
+            ],
+            "fun": "brownWins"
+          }
+        }
+      ],
+      "op": "=="
+    }
+  ],
+  "gate": "recursion",
+  "name": "vericoding_da0422__determineWinner",
+  "params": [
+    {
+      "name": "x",
+      "type": "int"
+    },
+    {
+      "name": "y",
+      "type": "int"
+    }
+  ],
+  "requires": [
+    {
+      "call": {
+        "args": [
+          {
+            "var": "x"
+          },
+          {
+            "var": "y"
+          }
+        ],
+        "fun": "validInput"
+      }
+    }
+  ],
+  "returns": [
+    {
+      "name": "winner",
+      "type": "seq"
+    }
+  ],
+  "spec_funs": [
+    {
+      "body": {
+        "args": [
+          {
+            "args": [
+              {
+                "var": "x_v"
+              },
+              {
+                "int": 0
+              }
+            ],
+            "op": ">="
+          },
+          {
+            "args": [
+              {
+                "var": "y_v"
+              },
+              {
+                "int": 0
+              }
+            ],
+            "op": ">="
+          }
+        ],
+        "op": "and"
+      },
+      "decreases": {
+        "int": 0
+      },
+      "name": "validInput",
+      "params": [
+        {
+          "name": "x_v",
+          "type": "int"
+        },
+        {
+          "name": "y_v",
+          "type": "int"
+        }
+      ],
+      "result": "bool"
+    },
+    {
+      "body": {
+        "ite": {
+          "cond": {
+            "args": [
+              {
+                "var": "x_v2"
+              },
+              {
+                "int": 0
+              }
+            ],
+            "op": ">="
+          },
+          "else": {
+            "args": [
+              {
+                "var": "x_v2"
+              }
+            ],
+            "op": "neg"
+          },
+          "then": {
+            "var": "x_v2"
+          }
+        }
+      },
+      "decreases": {
+        "int": 0
+      },
+      "name": "abs",
+      "params": [
+        {
+          "name": "x_v2",
+          "type": "int"
+        }
+      ],
+      "result": "int"
+    },
+    {
+      "body": {
+        "args": [
+          {
+            "call": {
+              "args": [
+                {
+                  "args": [
+                    {
+                      "var": "x_v3"
+                    },
+                    {
+                      "var": "y_v2"
+                    }
+                  ],
+                  "op": "-"
+                }
+              ],
+              "fun": "abs"
+            }
+          },
+          {
+            "int": 1
+          }
+        ],
+        "op": ">"
+      },
+      "decreases": {
+        "int": 0
+      },
+      "name": "aliceWins",
+      "params": [
+        {
+          "name": "x_v3",
+          "type": "int"
+        },
+        {
+          "name": "y_v2",
+          "type": "int"
+        }
+      ],
+      "result": "bool"
+    },
+    {
+      "body": {
+        "args": [
+          {
+            "call": {
+              "args": [
+                {
+                  "args": [
+                    {
+                      "var": "x_v4"
+                    },
+                    {
+                      "var": "y_v3"
+                    }
+                  ],
+                  "op": "-"
+                }
+              ],
+              "fun": "abs"
+            }
+          },
+          {
+            "int": 1
+          }
+        ],
+        "op": "<="
+      },
+      "decreases": {
+        "int": 0
+      },
+      "name": "brownWins",
+      "params": [
+        {
+          "name": "x_v4",
+          "type": "int"
+        },
+        {
+          "name": "y_v3",
+          "type": "int"
+        }
+      ],
+      "result": "bool"
+    }
+  ],
+  "t": 1
+}

@@ -1,0 +1,835 @@
+{
+  "body": [
+    {
+      "var": {
+        "init": {
+          "int": 0
+        },
+        "name": "i_v7",
+        "type": "int"
+      }
+    },
+    {
+      "while": {
+        "body": [
+          {
+            "if": {
+              "cond": {
+                "args": [
+                  {
+                    "args": [
+                      {
+                        "args": [
+                          {
+                            "var": "a"
+                          },
+                          {
+                            "var": "i_v7"
+                          }
+                        ],
+                        "op": "at"
+                      },
+                      {
+                        "int": 2
+                      }
+                    ],
+                    "op": "mod"
+                  },
+                  {
+                    "int": 0
+                  }
+                ],
+                "op": "!="
+              },
+              "else": [],
+              "then": [
+                {
+                  "lemma": {
+                    "args": [
+                      {
+                        "var": "a"
+                      }
+                    ],
+                    "name": "allEvenNotHasOdd"
+                  }
+                },
+                {
+                  "return": [
+                    "result",
+                    {
+                      "args": [
+                        {
+                          "int": 70
+                        },
+                        {
+                          "int": 105
+                        },
+                        {
+                          "int": 114
+                        },
+                        {
+                          "int": 115
+                        },
+                        {
+                          "int": 116
+                        }
+                      ],
+                      "op": "seq"
+                    }
+                  ]
+                }
+              ]
+            }
+          },
+          {
+            "assign": [
+              "i_v7",
+              {
+                "args": [
+                  {
+                    "var": "i_v7"
+                  },
+                  {
+                    "int": 1
+                  }
+                ],
+                "op": "+"
+              }
+            ]
+          }
+        ],
+        "cond": {
+          "args": [
+            {
+              "var": "i_v7"
+            },
+            {
+              "args": [
+                {
+                  "var": "a"
+                }
+              ],
+              "op": "len"
+            }
+          ],
+          "op": "<"
+        },
+        "decreases": {
+          "args": [
+            {
+              "args": [
+                {
+                  "var": "a"
+                }
+              ],
+              "op": "len"
+            },
+            {
+              "var": "i_v7"
+            }
+          ],
+          "op": "-"
+        },
+        "invariants": [
+          {
+            "args": [
+              {
+                "args": [
+                  {
+                    "int": 0
+                  },
+                  {
+                    "var": "i_v7"
+                  }
+                ],
+                "op": "<="
+              },
+              {
+                "args": [
+                  {
+                    "var": "i_v7"
+                  },
+                  {
+                    "args": [
+                      {
+                        "var": "a"
+                      }
+                    ],
+                    "op": "len"
+                  }
+                ],
+                "op": "<="
+              }
+            ],
+            "op": "and"
+          },
+          {
+            "forall": {
+              "body": {
+                "args": [
+                  {
+                    "args": [
+                      {
+                        "args": [
+                          {
+                            "var": "a"
+                          },
+                          {
+                            "var": "j"
+                          }
+                        ],
+                        "op": "at"
+                      },
+                      {
+                        "int": 2
+                      }
+                    ],
+                    "op": "mod"
+                  },
+                  {
+                    "int": 0
+                  }
+                ],
+                "op": "=="
+              },
+              "hi": {
+                "var": "i_v7"
+              },
+              "lo": {
+                "int": 0
+              },
+              "var": "j"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "lemma": {
+        "args": [
+          {
+            "var": "a"
+          }
+        ],
+        "name": "allEvenNotHasOdd"
+      }
+    },
+    {
+      "assign": [
+        "result",
+        {
+          "args": [
+            {
+              "int": 83
+            },
+            {
+              "int": 101
+            },
+            {
+              "int": 99
+            },
+            {
+              "int": 111
+            },
+            {
+              "int": 110
+            },
+            {
+              "int": 100
+            }
+          ],
+          "op": "seq"
+        }
+      ]
+    }
+  ],
+  "ensures": [
+    {
+      "args": [
+        {
+          "args": [
+            {
+              "var": "result"
+            },
+            {
+              "args": [
+                {
+                  "int": 83
+                },
+                {
+                  "int": 101
+                },
+                {
+                  "int": 99
+                },
+                {
+                  "int": 111
+                },
+                {
+                  "int": 110
+                },
+                {
+                  "int": 100
+                }
+              ],
+              "op": "seq"
+            }
+          ],
+          "op": "=="
+        },
+        {
+          "call": {
+            "args": [
+              {
+                "var": "a"
+              }
+            ],
+            "fun": "allEven"
+          }
+        }
+      ],
+      "op": "=="
+    },
+    {
+      "args": [
+        {
+          "args": [
+            {
+              "var": "result"
+            },
+            {
+              "args": [
+                {
+                  "int": 70
+                },
+                {
+                  "int": 105
+                },
+                {
+                  "int": 114
+                },
+                {
+                  "int": 115
+                },
+                {
+                  "int": 116
+                }
+              ],
+              "op": "seq"
+            }
+          ],
+          "op": "=="
+        },
+        {
+          "call": {
+            "args": [
+              {
+                "var": "a"
+              }
+            ],
+            "fun": "hasOdd"
+          }
+        }
+      ],
+      "op": "=="
+    },
+    {
+      "args": [
+        {
+          "args": [
+            {
+              "var": "result"
+            },
+            {
+              "args": [
+                {
+                  "int": 70
+                },
+                {
+                  "int": 105
+                },
+                {
+                  "int": 114
+                },
+                {
+                  "int": 115
+                },
+                {
+                  "int": 116
+                }
+              ],
+              "op": "seq"
+            }
+          ],
+          "op": "=="
+        },
+        {
+          "args": [
+            {
+              "var": "result"
+            },
+            {
+              "args": [
+                {
+                  "int": 83
+                },
+                {
+                  "int": 101
+                },
+                {
+                  "int": 99
+                },
+                {
+                  "int": 111
+                },
+                {
+                  "int": 110
+                },
+                {
+                  "int": 100
+                }
+              ],
+              "op": "seq"
+            }
+          ],
+          "op": "=="
+        }
+      ],
+      "op": "or"
+    }
+  ],
+  "gate": "recursion",
+  "lemmas": [
+    {
+      "body": [
+        {
+          "if": {
+            "cond": {
+              "call": {
+                "args": [
+                  {
+                    "var": "a_v3"
+                  }
+                ],
+                "fun": "allEven"
+              }
+            },
+            "else": [
+              {
+                "assert": {
+                  "args": [
+                    {
+                      "forall": {
+                        "body": {
+                          "args": [
+                            {
+                              "args": [
+                                {
+                                  "args": [
+                                    {
+                                      "var": "a_v3"
+                                    },
+                                    {
+                                      "var": "i_v4"
+                                    }
+                                  ],
+                                  "op": "at"
+                                },
+                                {
+                                  "int": 2
+                                }
+                              ],
+                              "op": "mod"
+                            },
+                            {
+                              "int": 0
+                            }
+                          ],
+                          "op": "=="
+                        },
+                        "hi": {
+                          "args": [
+                            {
+                              "var": "a_v3"
+                            }
+                          ],
+                          "op": "len"
+                        },
+                        "lo": {
+                          "int": 0
+                        },
+                        "var": "i_v4"
+                      }
+                    }
+                  ],
+                  "op": "not"
+                }
+              },
+              {
+                "assert": {
+                  "exists": {
+                    "body": {
+                      "args": [
+                        {
+                          "args": [
+                            {
+                              "args": [
+                                {
+                                  "args": [
+                                    {
+                                      "var": "a_v3"
+                                    },
+                                    {
+                                      "var": "i_v5"
+                                    }
+                                  ],
+                                  "op": "at"
+                                },
+                                {
+                                  "int": 2
+                                }
+                              ],
+                              "op": "mod"
+                            },
+                            {
+                              "int": 0
+                            }
+                          ],
+                          "op": "=="
+                        }
+                      ],
+                      "op": "not"
+                    },
+                    "hi": {
+                      "args": [
+                        {
+                          "var": "a_v3"
+                        }
+                      ],
+                      "op": "len"
+                    },
+                    "lo": {
+                      "int": 0
+                    },
+                    "var": "i_v5"
+                  }
+                }
+              },
+              {
+                "assert": {
+                  "exists": {
+                    "body": {
+                      "args": [
+                        {
+                          "args": [
+                            {
+                              "args": [
+                                {
+                                  "var": "a_v3"
+                                },
+                                {
+                                  "var": "i_v6"
+                                }
+                              ],
+                              "op": "at"
+                            },
+                            {
+                              "int": 2
+                            }
+                          ],
+                          "op": "mod"
+                        },
+                        {
+                          "int": 1
+                        }
+                      ],
+                      "op": "=="
+                    },
+                    "hi": {
+                      "args": [
+                        {
+                          "var": "a_v3"
+                        }
+                      ],
+                      "op": "len"
+                    },
+                    "lo": {
+                      "int": 0
+                    },
+                    "var": "i_v6"
+                  }
+                }
+              }
+            ],
+            "then": [
+              {
+                "assert": {
+                  "forall": {
+                    "body": {
+                      "args": [
+                        {
+                          "args": [
+                            {
+                              "args": [
+                                {
+                                  "var": "a_v3"
+                                },
+                                {
+                                  "var": "i_v2"
+                                }
+                              ],
+                              "op": "at"
+                            },
+                            {
+                              "int": 2
+                            }
+                          ],
+                          "op": "mod"
+                        },
+                        {
+                          "int": 0
+                        }
+                      ],
+                      "op": "=="
+                    },
+                    "hi": {
+                      "args": [
+                        {
+                          "var": "a_v3"
+                        }
+                      ],
+                      "op": "len"
+                    },
+                    "lo": {
+                      "int": 0
+                    },
+                    "var": "i_v2"
+                  }
+                }
+              },
+              {
+                "assert": {
+                  "args": [
+                    {
+                      "exists": {
+                        "body": {
+                          "args": [
+                            {
+                              "args": [
+                                {
+                                  "args": [
+                                    {
+                                      "var": "a_v3"
+                                    },
+                                    {
+                                      "var": "i_v3"
+                                    }
+                                  ],
+                                  "op": "at"
+                                },
+                                {
+                                  "int": 2
+                                }
+                              ],
+                              "op": "mod"
+                            },
+                            {
+                              "int": 1
+                            }
+                          ],
+                          "op": "=="
+                        },
+                        "hi": {
+                          "args": [
+                            {
+                              "var": "a_v3"
+                            }
+                          ],
+                          "op": "len"
+                        },
+                        "lo": {
+                          "int": 0
+                        },
+                        "var": "i_v3"
+                      }
+                    }
+                  ],
+                  "op": "not"
+                }
+              }
+            ]
+          }
+        }
+      ],
+      "ensures": [
+        {
+          "args": [
+            {
+              "call": {
+                "args": [
+                  {
+                    "var": "a_v3"
+                  }
+                ],
+                "fun": "allEven"
+              }
+            },
+            {
+              "args": [
+                {
+                  "call": {
+                    "args": [
+                      {
+                        "var": "a_v3"
+                      }
+                    ],
+                    "fun": "hasOdd"
+                  }
+                }
+              ],
+              "op": "not"
+            }
+          ],
+          "op": "=="
+        }
+      ],
+      "name": "allEvenNotHasOdd",
+      "params": [
+        {
+          "name": "a_v3",
+          "type": "seq"
+        }
+      ],
+      "requires": []
+    }
+  ],
+  "name": "vericoding_da0108__solve",
+  "params": [
+    {
+      "name": "a",
+      "type": "seq"
+    }
+  ],
+  "requires": [],
+  "returns": [
+    {
+      "name": "result",
+      "type": "seq"
+    }
+  ],
+  "spec_funs": [
+    {
+      "body": {
+        "forall": {
+          "body": {
+            "args": [
+              {
+                "args": [
+                  {
+                    "args": [
+                      {
+                        "var": "a_v"
+                      },
+                      {
+                        "var": "i"
+                      }
+                    ],
+                    "op": "at"
+                  },
+                  {
+                    "int": 2
+                  }
+                ],
+                "op": "mod"
+              },
+              {
+                "int": 0
+              }
+            ],
+            "op": "=="
+          },
+          "hi": {
+            "args": [
+              {
+                "var": "a_v"
+              }
+            ],
+            "op": "len"
+          },
+          "lo": {
+            "int": 0
+          },
+          "var": "i"
+        }
+      },
+      "decreases": {
+        "int": 0
+      },
+      "name": "allEven",
+      "params": [
+        {
+          "name": "a_v",
+          "type": "seq"
+        }
+      ],
+      "result": "bool"
+    },
+    {
+      "body": {
+        "exists": {
+          "body": {
+            "args": [
+              {
+                "args": [
+                  {
+                    "args": [
+                      {
+                        "var": "a_v2"
+                      },
+                      {
+                        "var": "i_v"
+                      }
+                    ],
+                    "op": "at"
+                  },
+                  {
+                    "int": 2
+                  }
+                ],
+                "op": "mod"
+              },
+              {
+                "int": 1
+              }
+            ],
+            "op": "=="
+          },
+          "hi": {
+            "args": [
+              {
+                "var": "a_v2"
+              }
+            ],
+            "op": "len"
+          },
+          "lo": {
+            "int": 0
+          },
+          "var": "i_v"
+        }
+      },
+      "decreases": {
+        "int": 0
+      },
+      "name": "hasOdd",
+      "params": [
+        {
+          "name": "a_v2",
+          "type": "seq"
+        }
+      ],
+      "result": "bool"
+    }
+  ],
+  "t": 1
+}

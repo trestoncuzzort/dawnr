@@ -1,0 +1,282 @@
+{
+  "body": [
+    {
+      "assign": [
+        "d",
+        {
+          "args": [
+            {
+              "var": "n"
+            },
+            {
+              "int": 1
+            }
+          ],
+          "op": "-"
+        }
+      ]
+    },
+    {
+      "while": {
+        "body": [
+          {
+            "if": {
+              "cond": {
+                "args": [
+                  {
+                    "args": [
+                      {
+                        "var": "n"
+                      },
+                      {
+                        "var": "d"
+                      }
+                    ],
+                    "op": "mod"
+                  },
+                  {
+                    "int": 0
+                  }
+                ],
+                "op": "=="
+              },
+              "else": [],
+              "then": [
+                {
+                  "return": [
+                    "d",
+                    {
+                      "var": "d"
+                    }
+                  ]
+                }
+              ]
+            }
+          },
+          {
+            "assign": [
+              "d",
+              {
+                "args": [
+                  {
+                    "var": "d"
+                  },
+                  {
+                    "int": 1
+                  }
+                ],
+                "op": "-"
+              }
+            ]
+          }
+        ],
+        "cond": {
+          "args": [
+            {
+              "var": "d"
+            },
+            {
+              "int": 1
+            }
+          ],
+          "op": ">="
+        },
+        "decreases": {
+          "args": [
+            {
+              "var": "d"
+            },
+            {
+              "int": 1
+            }
+          ],
+          "op": "-"
+        },
+        "invariants": [
+          {
+            "args": [
+              {
+                "args": [
+                  {
+                    "int": 1
+                  },
+                  {
+                    "var": "d"
+                  }
+                ],
+                "op": "<="
+              },
+              {
+                "args": [
+                  {
+                    "var": "d"
+                  },
+                  {
+                    "var": "n"
+                  }
+                ],
+                "op": "<"
+              }
+            ],
+            "op": "and"
+          },
+          {
+            "forall": {
+              "body": {
+                "args": [
+                  {
+                    "args": [
+                      {
+                        "var": "n"
+                      },
+                      {
+                        "var": "k_v"
+                      }
+                    ],
+                    "op": "mod"
+                  },
+                  {
+                    "int": 0
+                  }
+                ],
+                "op": "!="
+              },
+              "hi": {
+                "var": "n"
+              },
+              "lo": {
+                "args": [
+                  {
+                    "var": "d"
+                  },
+                  {
+                    "int": 1
+                  }
+                ],
+                "op": "+"
+              },
+              "var": "k_v"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "assign": [
+        "d",
+        {
+          "int": 1
+        }
+      ]
+    }
+  ],
+  "ensures": [
+    {
+      "args": [
+        {
+          "int": 1
+        },
+        {
+          "var": "d"
+        }
+      ],
+      "op": "<="
+    },
+    {
+      "args": [
+        {
+          "var": "d"
+        },
+        {
+          "var": "n"
+        }
+      ],
+      "op": "<"
+    },
+    {
+      "args": [
+        {
+          "args": [
+            {
+              "var": "n"
+            },
+            {
+              "var": "d"
+            }
+          ],
+          "op": "mod"
+        },
+        {
+          "int": 0
+        }
+      ],
+      "op": "=="
+    },
+    {
+      "forall": {
+        "body": {
+          "args": [
+            {
+              "args": [
+                {
+                  "var": "n"
+                },
+                {
+                  "var": "k"
+                }
+              ],
+              "op": "mod"
+            },
+            {
+              "int": 0
+            }
+          ],
+          "op": "!="
+        },
+        "hi": {
+          "var": "n"
+        },
+        "lo": {
+          "args": [
+            {
+              "var": "d"
+            },
+            {
+              "int": 1
+            }
+          ],
+          "op": "+"
+        },
+        "var": "k"
+      }
+    }
+  ],
+  "gate": "loops",
+  "name": "humaneval_dafny_024_largest_divisor__largest_divisor",
+  "params": [
+    {
+      "name": "n",
+      "type": "int"
+    }
+  ],
+  "requires": [
+    {
+      "args": [
+        {
+          "var": "n"
+        },
+        {
+          "int": 1
+        }
+      ],
+      "op": ">"
+    }
+  ],
+  "returns": [
+    {
+      "name": "d",
+      "type": "int"
+    }
+  ],
+  "t": 1
+}

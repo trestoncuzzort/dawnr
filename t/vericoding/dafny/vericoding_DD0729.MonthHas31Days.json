@@ -1,0 +1,173 @@
+{
+  "body": [
+    {
+      "assign": [
+        "result",
+        {
+          "args": [
+            {
+              "args": [
+                {
+                  "var": "month"
+                },
+                {
+                  "int": 1
+                }
+              ],
+              "op": "=="
+            },
+            {
+              "args": [
+                {
+                  "var": "month"
+                },
+                {
+                  "int": 3
+                }
+              ],
+              "op": "=="
+            },
+            {
+              "args": [
+                {
+                  "var": "month"
+                },
+                {
+                  "int": 5
+                }
+              ],
+              "op": "=="
+            },
+            {
+              "args": [
+                {
+                  "var": "month"
+                },
+                {
+                  "int": 7
+                }
+              ],
+              "op": "=="
+            },
+            {
+              "args": [
+                {
+                  "var": "month"
+                },
+                {
+                  "int": 8
+                }
+              ],
+              "op": "=="
+            },
+            {
+              "args": [
+                {
+                  "var": "month"
+                },
+                {
+                  "int": 10
+                }
+              ],
+              "op": "=="
+            },
+            {
+              "args": [
+                {
+                  "var": "month"
+                },
+                {
+                  "int": 12
+                }
+              ],
+              "op": "=="
+            }
+          ],
+          "op": "or"
+        }
+      ]
+    }
+  ],
+  "ensures": [
+    {
+      "args": [
+        {
+          "var": "result"
+        },
+        {
+          "args": [
+            {
+              "var": "month"
+            },
+            {
+              "args": [
+                {
+                  "int": 1
+                },
+                {
+                  "int": 3
+                },
+                {
+                  "int": 5
+                },
+                {
+                  "int": 7
+                },
+                {
+                  "int": 8
+                },
+                {
+                  "int": 10
+                },
+                {
+                  "int": 12
+                }
+              ],
+              "op": "set"
+            }
+          ],
+          "op": "in"
+        }
+      ],
+      "op": "=="
+    }
+  ],
+  "name": "vericoding_dd0729__monthHas31Days",
+  "params": [
+    {
+      "name": "month",
+      "type": "int"
+    }
+  ],
+  "requires": [
+    {
+      "args": [
+        {
+          "int": 1
+        },
+        {
+          "var": "month"
+        }
+      ],
+      "op": "<="
+    },
+    {
+      "args": [
+        {
+          "var": "month"
+        },
+        {
+          "int": 12
+        }
+      ],
+      "op": "<="
+    }
+  ],
+  "returns": [
+    {
+      "name": "result",
+      "type": "bool"
+    }
+  ],
+  "t": 1
+}

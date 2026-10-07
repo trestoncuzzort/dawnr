@@ -1,0 +1,339 @@
+{
+  "body": [
+    {
+      "assign": [
+        "max_val",
+        {
+          "call": {
+            "args": [
+              {
+                "var": "l"
+              }
+            ],
+            "fun": "max_element_func"
+          }
+        }
+      ]
+    }
+  ],
+  "ensures": [
+    {
+      "call": {
+        "args": [
+          {
+            "var": "l"
+          },
+          {
+            "var": "max_val"
+          }
+        ],
+        "fun": "isMaxElement"
+      }
+    }
+  ],
+  "gate": "recursion",
+  "name": "vericoding_dh0035__findMaxElement",
+  "params": [
+    {
+      "name": "l",
+      "type": "seq"
+    }
+  ],
+  "requires": [
+    {
+      "call": {
+        "args": [
+          {
+            "var": "l"
+          }
+        ],
+        "fun": "validInput"
+      }
+    }
+  ],
+  "returns": [
+    {
+      "name": "max_val",
+      "type": "int"
+    }
+  ],
+  "spec_funs": [
+    {
+      "body": {
+        "args": [
+          {
+            "args": [
+              {
+                "var": "l_v"
+              }
+            ],
+            "op": "len"
+          },
+          {
+            "int": 0
+          }
+        ],
+        "op": ">"
+      },
+      "decreases": {
+        "int": 0
+      },
+      "name": "validInput",
+      "params": [
+        {
+          "name": "l_v",
+          "type": "seq"
+        }
+      ],
+      "result": "bool"
+    },
+    {
+      "body": {
+        "args": [
+          {
+            "exists": {
+              "body": {
+                "args": [
+                  {
+                    "args": [
+                      {
+                        "var": "l_v2"
+                      },
+                      {
+                        "var": "k"
+                      }
+                    ],
+                    "op": "at"
+                  },
+                  {
+                    "var": "max_val_v"
+                  }
+                ],
+                "op": "=="
+              },
+              "hi": {
+                "args": [
+                  {
+                    "var": "l_v2"
+                  }
+                ],
+                "op": "len"
+              },
+              "lo": {
+                "int": 0
+              },
+              "var": "k"
+            }
+          },
+          {
+            "forall": {
+              "body": {
+                "args": [
+                  {
+                    "args": [
+                      {
+                        "var": "l_v2"
+                      },
+                      {
+                        "var": "i"
+                      }
+                    ],
+                    "op": "at"
+                  },
+                  {
+                    "var": "max_val_v"
+                  }
+                ],
+                "op": "<="
+              },
+              "hi": {
+                "args": [
+                  {
+                    "var": "l_v2"
+                  }
+                ],
+                "op": "len"
+              },
+              "lo": {
+                "int": 0
+              },
+              "var": "i"
+            }
+          }
+        ],
+        "op": "and"
+      },
+      "decreases": {
+        "int": 0
+      },
+      "name": "isMaxElement",
+      "params": [
+        {
+          "name": "l_v2",
+          "type": "seq"
+        },
+        {
+          "name": "max_val_v",
+          "type": "int"
+        }
+      ],
+      "result": "bool"
+    },
+    {
+      "body": {
+        "ite": {
+          "cond": {
+            "args": [
+              {
+                "args": [
+                  {
+                    "var": "l_v3"
+                  }
+                ],
+                "op": "len"
+              },
+              {
+                "int": 0
+              }
+            ],
+            "op": ">"
+          },
+          "else": {
+            "int": 0
+          },
+          "then": {
+            "ite": {
+              "cond": {
+                "args": [
+                  {
+                    "args": [
+                      {
+                        "var": "l_v3"
+                      }
+                    ],
+                    "op": "len"
+                  },
+                  {
+                    "int": 1
+                  }
+                ],
+                "op": "=="
+              },
+              "else": {
+                "ite": {
+                  "cond": {
+                    "args": [
+                      {
+                        "args": [
+                          {
+                            "var": "l_v3"
+                          },
+                          {
+                            "int": 0
+                          }
+                        ],
+                        "op": "at"
+                      },
+                      {
+                        "call": {
+                          "args": [
+                            {
+                              "args": [
+                                {
+                                  "var": "l_v3"
+                                },
+                                {
+                                  "int": 1
+                                },
+                                {
+                                  "args": [
+                                    {
+                                      "var": "l_v3"
+                                    }
+                                  ],
+                                  "op": "len"
+                                }
+                              ],
+                              "op": "slice"
+                            }
+                          ],
+                          "fun": "max_element_func"
+                        }
+                      }
+                    ],
+                    "op": ">"
+                  },
+                  "else": {
+                    "call": {
+                      "args": [
+                        {
+                          "args": [
+                            {
+                              "var": "l_v3"
+                            },
+                            {
+                              "int": 1
+                            },
+                            {
+                              "args": [
+                                {
+                                  "var": "l_v3"
+                                }
+                              ],
+                              "op": "len"
+                            }
+                          ],
+                          "op": "slice"
+                        }
+                      ],
+                      "fun": "max_element_func"
+                    }
+                  },
+                  "then": {
+                    "args": [
+                      {
+                        "var": "l_v3"
+                      },
+                      {
+                        "int": 0
+                      }
+                    ],
+                    "op": "at"
+                  }
+                }
+              },
+              "then": {
+                "args": [
+                  {
+                    "var": "l_v3"
+                  },
+                  {
+                    "int": 0
+                  }
+                ],
+                "op": "at"
+              }
+            }
+          }
+        }
+      },
+      "decreases": {
+        "args": [
+          {
+            "var": "l_v3"
+          }
+        ],
+        "op": "len"
+      },
+      "name": "max_element_func",
+      "params": [
+        {
+          "name": "l_v3",
+          "type": "seq"
+        }
+      ],
+      "result": "int"
+    }
+  ],
+  "t": 1
+}

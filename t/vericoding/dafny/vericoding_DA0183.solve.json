@@ -1,0 +1,2289 @@
+{
+  "body": [
+    {
+      "var": {
+        "init": {
+          "call": {
+            "args": [
+              {
+                "var": "a"
+              },
+              {
+                "var": "b"
+              },
+              {
+                "var": "c"
+              }
+            ],
+            "fun": "allExpressions"
+          }
+        },
+        "name": "exprs",
+        "type": "seq"
+      }
+    },
+    {
+      "var": {
+        "init": {
+          "args": [
+            {
+              "args": [
+                {
+                  "var": "a"
+                },
+                {
+                  "var": "b"
+                }
+              ],
+              "op": "*"
+            },
+            {
+              "var": "c"
+            }
+          ],
+          "op": "*"
+        },
+        "name": "e0",
+        "type": "int"
+      }
+    },
+    {
+      "var": {
+        "init": {
+          "args": [
+            {
+              "var": "a"
+            },
+            {
+              "args": [
+                {
+                  "var": "b"
+                },
+                {
+                  "var": "c"
+                }
+              ],
+              "op": "*"
+            }
+          ],
+          "op": "+"
+        },
+        "name": "e1",
+        "type": "int"
+      }
+    },
+    {
+      "var": {
+        "init": {
+          "args": [
+            {
+              "args": [
+                {
+                  "var": "a"
+                },
+                {
+                  "var": "b"
+                }
+              ],
+              "op": "*"
+            },
+            {
+              "var": "c"
+            }
+          ],
+          "op": "+"
+        },
+        "name": "e2",
+        "type": "int"
+      }
+    },
+    {
+      "var": {
+        "init": {
+          "args": [
+            {
+              "var": "a"
+            },
+            {
+              "args": [
+                {
+                  "var": "b"
+                },
+                {
+                  "var": "c"
+                }
+              ],
+              "op": "+"
+            }
+          ],
+          "op": "*"
+        },
+        "name": "e3",
+        "type": "int"
+      }
+    },
+    {
+      "var": {
+        "init": {
+          "args": [
+            {
+              "args": [
+                {
+                  "var": "a"
+                },
+                {
+                  "var": "b"
+                }
+              ],
+              "op": "+"
+            },
+            {
+              "var": "c"
+            }
+          ],
+          "op": "*"
+        },
+        "name": "e4",
+        "type": "int"
+      }
+    },
+    {
+      "var": {
+        "init": {
+          "args": [
+            {
+              "args": [
+                {
+                  "var": "a"
+                },
+                {
+                  "var": "b"
+                }
+              ],
+              "op": "+"
+            },
+            {
+              "var": "c"
+            }
+          ],
+          "op": "+"
+        },
+        "name": "e5",
+        "type": "int"
+      }
+    },
+    {
+      "assign": [
+        "result",
+        {
+          "var": "e0"
+        }
+      ]
+    },
+    {
+      "if": {
+        "cond": {
+          "args": [
+            {
+              "var": "e1"
+            },
+            {
+              "var": "result"
+            }
+          ],
+          "op": ">"
+        },
+        "else": [],
+        "then": [
+          {
+            "assign": [
+              "result",
+              {
+                "var": "e1"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "if": {
+        "cond": {
+          "args": [
+            {
+              "var": "e2"
+            },
+            {
+              "var": "result"
+            }
+          ],
+          "op": ">"
+        },
+        "else": [],
+        "then": [
+          {
+            "assign": [
+              "result",
+              {
+                "var": "e2"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "if": {
+        "cond": {
+          "args": [
+            {
+              "var": "e3"
+            },
+            {
+              "var": "result"
+            }
+          ],
+          "op": ">"
+        },
+        "else": [],
+        "then": [
+          {
+            "assign": [
+              "result",
+              {
+                "var": "e3"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "if": {
+        "cond": {
+          "args": [
+            {
+              "var": "e4"
+            },
+            {
+              "var": "result"
+            }
+          ],
+          "op": ">"
+        },
+        "else": [],
+        "then": [
+          {
+            "assign": [
+              "result",
+              {
+                "var": "e4"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "if": {
+        "cond": {
+          "args": [
+            {
+              "var": "e5"
+            },
+            {
+              "var": "result"
+            }
+          ],
+          "op": ">"
+        },
+        "else": [],
+        "then": [
+          {
+            "assign": [
+              "result",
+              {
+                "var": "e5"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "lemma": {
+        "args": [
+          {
+            "var": "a"
+          },
+          {
+            "var": "b"
+          },
+          {
+            "var": "c"
+          }
+        ],
+        "name": "maxExpressionCorrectness"
+      }
+    }
+  ],
+  "ensures": [
+    {
+      "call": {
+        "args": [
+          {
+            "var": "result"
+          },
+          {
+            "var": "a"
+          },
+          {
+            "var": "b"
+          },
+          {
+            "var": "c"
+          }
+        ],
+        "fun": "isMaxOfAllExpressions"
+      }
+    },
+    {
+      "args": [
+        {
+          "var": "result"
+        },
+        {
+          "call": {
+            "args": [
+              {
+                "var": "a"
+              },
+              {
+                "var": "b"
+              },
+              {
+                "var": "c"
+              }
+            ],
+            "fun": "maxExpression"
+          }
+        }
+      ],
+      "op": "=="
+    }
+  ],
+  "gate": "recursion",
+  "lemmas": [
+    {
+      "body": [
+        {
+          "assert": {
+            "args": [
+              {
+                "args": [
+                  {
+                    "call": {
+                      "args": [
+                        {
+                          "var": "a_v5"
+                        },
+                        {
+                          "var": "b_v5"
+                        },
+                        {
+                          "var": "c_v5"
+                        }
+                      ],
+                      "fun": "maxExpression"
+                    }
+                  },
+                  {
+                    "args": [
+                      {
+                        "call": {
+                          "args": [
+                            {
+                              "var": "a_v5"
+                            },
+                            {
+                              "var": "b_v5"
+                            },
+                            {
+                              "var": "c_v5"
+                            }
+                          ],
+                          "fun": "allExpressions"
+                        }
+                      },
+                      {
+                        "int": 0
+                      }
+                    ],
+                    "op": "at"
+                  }
+                ],
+                "op": "=="
+              },
+              {
+                "args": [
+                  {
+                    "call": {
+                      "args": [
+                        {
+                          "var": "a_v5"
+                        },
+                        {
+                          "var": "b_v5"
+                        },
+                        {
+                          "var": "c_v5"
+                        }
+                      ],
+                      "fun": "maxExpression"
+                    }
+                  },
+                  {
+                    "args": [
+                      {
+                        "call": {
+                          "args": [
+                            {
+                              "var": "a_v5"
+                            },
+                            {
+                              "var": "b_v5"
+                            },
+                            {
+                              "var": "c_v5"
+                            }
+                          ],
+                          "fun": "allExpressions"
+                        }
+                      },
+                      {
+                        "int": 1
+                      }
+                    ],
+                    "op": "at"
+                  }
+                ],
+                "op": "=="
+              },
+              {
+                "args": [
+                  {
+                    "call": {
+                      "args": [
+                        {
+                          "var": "a_v5"
+                        },
+                        {
+                          "var": "b_v5"
+                        },
+                        {
+                          "var": "c_v5"
+                        }
+                      ],
+                      "fun": "maxExpression"
+                    }
+                  },
+                  {
+                    "args": [
+                      {
+                        "call": {
+                          "args": [
+                            {
+                              "var": "a_v5"
+                            },
+                            {
+                              "var": "b_v5"
+                            },
+                            {
+                              "var": "c_v5"
+                            }
+                          ],
+                          "fun": "allExpressions"
+                        }
+                      },
+                      {
+                        "int": 2
+                      }
+                    ],
+                    "op": "at"
+                  }
+                ],
+                "op": "=="
+              },
+              {
+                "args": [
+                  {
+                    "call": {
+                      "args": [
+                        {
+                          "var": "a_v5"
+                        },
+                        {
+                          "var": "b_v5"
+                        },
+                        {
+                          "var": "c_v5"
+                        }
+                      ],
+                      "fun": "maxExpression"
+                    }
+                  },
+                  {
+                    "args": [
+                      {
+                        "call": {
+                          "args": [
+                            {
+                              "var": "a_v5"
+                            },
+                            {
+                              "var": "b_v5"
+                            },
+                            {
+                              "var": "c_v5"
+                            }
+                          ],
+                          "fun": "allExpressions"
+                        }
+                      },
+                      {
+                        "int": 3
+                      }
+                    ],
+                    "op": "at"
+                  }
+                ],
+                "op": "=="
+              },
+              {
+                "args": [
+                  {
+                    "call": {
+                      "args": [
+                        {
+                          "var": "a_v5"
+                        },
+                        {
+                          "var": "b_v5"
+                        },
+                        {
+                          "var": "c_v5"
+                        }
+                      ],
+                      "fun": "maxExpression"
+                    }
+                  },
+                  {
+                    "args": [
+                      {
+                        "call": {
+                          "args": [
+                            {
+                              "var": "a_v5"
+                            },
+                            {
+                              "var": "b_v5"
+                            },
+                            {
+                              "var": "c_v5"
+                            }
+                          ],
+                          "fun": "allExpressions"
+                        }
+                      },
+                      {
+                        "int": 4
+                      }
+                    ],
+                    "op": "at"
+                  }
+                ],
+                "op": "=="
+              },
+              {
+                "args": [
+                  {
+                    "call": {
+                      "args": [
+                        {
+                          "var": "a_v5"
+                        },
+                        {
+                          "var": "b_v5"
+                        },
+                        {
+                          "var": "c_v5"
+                        }
+                      ],
+                      "fun": "maxExpression"
+                    }
+                  },
+                  {
+                    "args": [
+                      {
+                        "call": {
+                          "args": [
+                            {
+                              "var": "a_v5"
+                            },
+                            {
+                              "var": "b_v5"
+                            },
+                            {
+                              "var": "c_v5"
+                            }
+                          ],
+                          "fun": "allExpressions"
+                        }
+                      },
+                      {
+                        "int": 5
+                      }
+                    ],
+                    "op": "at"
+                  }
+                ],
+                "op": "=="
+              }
+            ],
+            "op": "or"
+          }
+        },
+        {
+          "assert": {
+            "forall": {
+              "body": {
+                "args": [
+                  {
+                    "call": {
+                      "args": [
+                        {
+                          "var": "a_v5"
+                        },
+                        {
+                          "var": "b_v5"
+                        },
+                        {
+                          "var": "c_v5"
+                        }
+                      ],
+                      "fun": "maxExpression"
+                    }
+                  },
+                  {
+                    "args": [
+                      {
+                        "call": {
+                          "args": [
+                            {
+                              "var": "a_v5"
+                            },
+                            {
+                              "var": "b_v5"
+                            },
+                            {
+                              "var": "c_v5"
+                            }
+                          ],
+                          "fun": "allExpressions"
+                        }
+                      },
+                      {
+                        "var": "i_v"
+                      }
+                    ],
+                    "op": "at"
+                  }
+                ],
+                "op": ">="
+              },
+              "hi": {
+                "args": [
+                  {
+                    "call": {
+                      "args": [
+                        {
+                          "var": "a_v5"
+                        },
+                        {
+                          "var": "b_v5"
+                        },
+                        {
+                          "var": "c_v5"
+                        }
+                      ],
+                      "fun": "allExpressions"
+                    }
+                  }
+                ],
+                "op": "len"
+              },
+              "lo": {
+                "int": 0
+              },
+              "var": "i_v"
+            }
+          }
+        }
+      ],
+      "ensures": [
+        {
+          "call": {
+            "args": [
+              {
+                "call": {
+                  "args": [
+                    {
+                      "var": "a_v5"
+                    },
+                    {
+                      "var": "b_v5"
+                    },
+                    {
+                      "var": "c_v5"
+                    }
+                  ],
+                  "fun": "maxExpression"
+                }
+              },
+              {
+                "var": "a_v5"
+              },
+              {
+                "var": "b_v5"
+              },
+              {
+                "var": "c_v5"
+              }
+            ],
+            "fun": "isMaxOfAllExpressions"
+          }
+        }
+      ],
+      "name": "maxExpressionCorrectness",
+      "params": [
+        {
+          "name": "a_v5",
+          "type": "int"
+        },
+        {
+          "name": "b_v5",
+          "type": "int"
+        },
+        {
+          "name": "c_v5",
+          "type": "int"
+        }
+      ],
+      "requires": [
+        {
+          "call": {
+            "args": [
+              {
+                "var": "a_v5"
+              },
+              {
+                "var": "b_v5"
+              },
+              {
+                "var": "c_v5"
+              }
+            ],
+            "fun": "validInput"
+          }
+        }
+      ]
+    }
+  ],
+  "name": "vericoding_da0183__solve",
+  "params": [
+    {
+      "name": "a",
+      "type": "int"
+    },
+    {
+      "name": "b",
+      "type": "int"
+    },
+    {
+      "name": "c",
+      "type": "int"
+    }
+  ],
+  "requires": [
+    {
+      "call": {
+        "args": [
+          {
+            "var": "a"
+          },
+          {
+            "var": "b"
+          },
+          {
+            "var": "c"
+          }
+        ],
+        "fun": "validInput"
+      }
+    }
+  ],
+  "returns": [
+    {
+      "name": "result",
+      "type": "int"
+    }
+  ],
+  "spec_funs": [
+    {
+      "body": {
+        "args": [
+          {
+            "args": [
+              {
+                "args": [
+                  {
+                    "int": 1
+                  },
+                  {
+                    "var": "a_v"
+                  }
+                ],
+                "op": "<="
+              },
+              {
+                "args": [
+                  {
+                    "var": "a_v"
+                  },
+                  {
+                    "int": 10
+                  }
+                ],
+                "op": "<="
+              }
+            ],
+            "op": "and"
+          },
+          {
+            "args": [
+              {
+                "args": [
+                  {
+                    "int": 1
+                  },
+                  {
+                    "var": "b_v"
+                  }
+                ],
+                "op": "<="
+              },
+              {
+                "args": [
+                  {
+                    "var": "b_v"
+                  },
+                  {
+                    "int": 10
+                  }
+                ],
+                "op": "<="
+              }
+            ],
+            "op": "and"
+          },
+          {
+            "args": [
+              {
+                "args": [
+                  {
+                    "int": 1
+                  },
+                  {
+                    "var": "c_v"
+                  }
+                ],
+                "op": "<="
+              },
+              {
+                "args": [
+                  {
+                    "var": "c_v"
+                  },
+                  {
+                    "int": 10
+                  }
+                ],
+                "op": "<="
+              }
+            ],
+            "op": "and"
+          }
+        ],
+        "op": "and"
+      },
+      "decreases": {
+        "int": 0
+      },
+      "name": "validInput",
+      "params": [
+        {
+          "name": "a_v",
+          "type": "int"
+        },
+        {
+          "name": "b_v",
+          "type": "int"
+        },
+        {
+          "name": "c_v",
+          "type": "int"
+        }
+      ],
+      "result": "bool"
+    },
+    {
+      "body": {
+        "args": [
+          {
+            "args": [
+              {
+                "args": [
+                  {
+                    "var": "a_v2"
+                  },
+                  {
+                    "var": "b_v2"
+                  }
+                ],
+                "op": "*"
+              },
+              {
+                "var": "c_v2"
+              }
+            ],
+            "op": "*"
+          },
+          {
+            "args": [
+              {
+                "var": "a_v2"
+              },
+              {
+                "args": [
+                  {
+                    "var": "b_v2"
+                  },
+                  {
+                    "var": "c_v2"
+                  }
+                ],
+                "op": "*"
+              }
+            ],
+            "op": "+"
+          },
+          {
+            "args": [
+              {
+                "args": [
+                  {
+                    "var": "a_v2"
+                  },
+                  {
+                    "var": "b_v2"
+                  }
+                ],
+                "op": "*"
+              },
+              {
+                "var": "c_v2"
+              }
+            ],
+            "op": "+"
+          },
+          {
+            "args": [
+              {
+                "var": "a_v2"
+              },
+              {
+                "args": [
+                  {
+                    "var": "b_v2"
+                  },
+                  {
+                    "var": "c_v2"
+                  }
+                ],
+                "op": "+"
+              }
+            ],
+            "op": "*"
+          },
+          {
+            "args": [
+              {
+                "args": [
+                  {
+                    "var": "a_v2"
+                  },
+                  {
+                    "var": "b_v2"
+                  }
+                ],
+                "op": "+"
+              },
+              {
+                "var": "c_v2"
+              }
+            ],
+            "op": "*"
+          },
+          {
+            "args": [
+              {
+                "args": [
+                  {
+                    "var": "a_v2"
+                  },
+                  {
+                    "var": "b_v2"
+                  }
+                ],
+                "op": "+"
+              },
+              {
+                "var": "c_v2"
+              }
+            ],
+            "op": "+"
+          }
+        ],
+        "op": "seq"
+      },
+      "decreases": {
+        "int": 0
+      },
+      "name": "allExpressions",
+      "params": [
+        {
+          "name": "a_v2",
+          "type": "int"
+        },
+        {
+          "name": "b_v2",
+          "type": "int"
+        },
+        {
+          "name": "c_v2",
+          "type": "int"
+        }
+      ],
+      "result": "seq"
+    },
+    {
+      "body": {
+        "ite": {
+          "cond": {
+            "call": {
+              "args": [
+                {
+                  "var": "a_v3"
+                },
+                {
+                  "var": "b_v3"
+                },
+                {
+                  "var": "c_v3"
+                }
+              ],
+              "fun": "validInput"
+            }
+          },
+          "else": {
+            "bool": false
+          },
+          "then": {
+            "args": [
+              {
+                "exists": {
+                  "body": {
+                    "args": [
+                      {
+                        "args": [
+                          {
+                            "call": {
+                              "args": [
+                                {
+                                  "var": "a_v3"
+                                },
+                                {
+                                  "var": "b_v3"
+                                },
+                                {
+                                  "var": "c_v3"
+                                }
+                              ],
+                              "fun": "allExpressions"
+                            }
+                          },
+                          {
+                            "var": "k"
+                          }
+                        ],
+                        "op": "at"
+                      },
+                      {
+                        "var": "result_v"
+                      }
+                    ],
+                    "op": "=="
+                  },
+                  "hi": {
+                    "args": [
+                      {
+                        "call": {
+                          "args": [
+                            {
+                              "var": "a_v3"
+                            },
+                            {
+                              "var": "b_v3"
+                            },
+                            {
+                              "var": "c_v3"
+                            }
+                          ],
+                          "fun": "allExpressions"
+                        }
+                      }
+                    ],
+                    "op": "len"
+                  },
+                  "lo": {
+                    "int": 0
+                  },
+                  "var": "k"
+                }
+              },
+              {
+                "forall": {
+                  "body": {
+                    "args": [
+                      {
+                        "var": "result_v"
+                      },
+                      {
+                        "args": [
+                          {
+                            "call": {
+                              "args": [
+                                {
+                                  "var": "a_v3"
+                                },
+                                {
+                                  "var": "b_v3"
+                                },
+                                {
+                                  "var": "c_v3"
+                                }
+                              ],
+                              "fun": "allExpressions"
+                            }
+                          },
+                          {
+                            "var": "i"
+                          }
+                        ],
+                        "op": "at"
+                      }
+                    ],
+                    "op": ">="
+                  },
+                  "hi": {
+                    "args": [
+                      {
+                        "call": {
+                          "args": [
+                            {
+                              "var": "a_v3"
+                            },
+                            {
+                              "var": "b_v3"
+                            },
+                            {
+                              "var": "c_v3"
+                            }
+                          ],
+                          "fun": "allExpressions"
+                        }
+                      }
+                    ],
+                    "op": "len"
+                  },
+                  "lo": {
+                    "int": 0
+                  },
+                  "var": "i"
+                }
+              }
+            ],
+            "op": "and"
+          }
+        }
+      },
+      "decreases": {
+        "int": 0
+      },
+      "name": "isMaxOfAllExpressions",
+      "params": [
+        {
+          "name": "result_v",
+          "type": "int"
+        },
+        {
+          "name": "a_v3",
+          "type": "int"
+        },
+        {
+          "name": "b_v3",
+          "type": "int"
+        },
+        {
+          "name": "c_v3",
+          "type": "int"
+        }
+      ],
+      "result": "bool"
+    },
+    {
+      "body": {
+        "ite": {
+          "cond": {
+            "call": {
+              "args": [
+                {
+                  "var": "a_v4"
+                },
+                {
+                  "var": "b_v4"
+                },
+                {
+                  "var": "c_v4"
+                }
+              ],
+              "fun": "validInput"
+            }
+          },
+          "else": {
+            "int": 0
+          },
+          "then": {
+            "ite": {
+              "cond": {
+                "args": [
+                  {
+                    "args": [
+                      {
+                        "args": [
+                          {
+                            "call": {
+                              "args": [
+                                {
+                                  "var": "a_v4"
+                                },
+                                {
+                                  "var": "b_v4"
+                                },
+                                {
+                                  "var": "c_v4"
+                                }
+                              ],
+                              "fun": "allExpressions"
+                            }
+                          },
+                          {
+                            "int": 0
+                          }
+                        ],
+                        "op": "at"
+                      },
+                      {
+                        "args": [
+                          {
+                            "call": {
+                              "args": [
+                                {
+                                  "var": "a_v4"
+                                },
+                                {
+                                  "var": "b_v4"
+                                },
+                                {
+                                  "var": "c_v4"
+                                }
+                              ],
+                              "fun": "allExpressions"
+                            }
+                          },
+                          {
+                            "int": 1
+                          }
+                        ],
+                        "op": "at"
+                      }
+                    ],
+                    "op": ">="
+                  },
+                  {
+                    "args": [
+                      {
+                        "args": [
+                          {
+                            "call": {
+                              "args": [
+                                {
+                                  "var": "a_v4"
+                                },
+                                {
+                                  "var": "b_v4"
+                                },
+                                {
+                                  "var": "c_v4"
+                                }
+                              ],
+                              "fun": "allExpressions"
+                            }
+                          },
+                          {
+                            "int": 0
+                          }
+                        ],
+                        "op": "at"
+                      },
+                      {
+                        "args": [
+                          {
+                            "call": {
+                              "args": [
+                                {
+                                  "var": "a_v4"
+                                },
+                                {
+                                  "var": "b_v4"
+                                },
+                                {
+                                  "var": "c_v4"
+                                }
+                              ],
+                              "fun": "allExpressions"
+                            }
+                          },
+                          {
+                            "int": 2
+                          }
+                        ],
+                        "op": "at"
+                      }
+                    ],
+                    "op": ">="
+                  },
+                  {
+                    "args": [
+                      {
+                        "args": [
+                          {
+                            "call": {
+                              "args": [
+                                {
+                                  "var": "a_v4"
+                                },
+                                {
+                                  "var": "b_v4"
+                                },
+                                {
+                                  "var": "c_v4"
+                                }
+                              ],
+                              "fun": "allExpressions"
+                            }
+                          },
+                          {
+                            "int": 0
+                          }
+                        ],
+                        "op": "at"
+                      },
+                      {
+                        "args": [
+                          {
+                            "call": {
+                              "args": [
+                                {
+                                  "var": "a_v4"
+                                },
+                                {
+                                  "var": "b_v4"
+                                },
+                                {
+                                  "var": "c_v4"
+                                }
+                              ],
+                              "fun": "allExpressions"
+                            }
+                          },
+                          {
+                            "int": 3
+                          }
+                        ],
+                        "op": "at"
+                      }
+                    ],
+                    "op": ">="
+                  },
+                  {
+                    "args": [
+                      {
+                        "args": [
+                          {
+                            "call": {
+                              "args": [
+                                {
+                                  "var": "a_v4"
+                                },
+                                {
+                                  "var": "b_v4"
+                                },
+                                {
+                                  "var": "c_v4"
+                                }
+                              ],
+                              "fun": "allExpressions"
+                            }
+                          },
+                          {
+                            "int": 0
+                          }
+                        ],
+                        "op": "at"
+                      },
+                      {
+                        "args": [
+                          {
+                            "call": {
+                              "args": [
+                                {
+                                  "var": "a_v4"
+                                },
+                                {
+                                  "var": "b_v4"
+                                },
+                                {
+                                  "var": "c_v4"
+                                }
+                              ],
+                              "fun": "allExpressions"
+                            }
+                          },
+                          {
+                            "int": 4
+                          }
+                        ],
+                        "op": "at"
+                      }
+                    ],
+                    "op": ">="
+                  },
+                  {
+                    "args": [
+                      {
+                        "args": [
+                          {
+                            "call": {
+                              "args": [
+                                {
+                                  "var": "a_v4"
+                                },
+                                {
+                                  "var": "b_v4"
+                                },
+                                {
+                                  "var": "c_v4"
+                                }
+                              ],
+                              "fun": "allExpressions"
+                            }
+                          },
+                          {
+                            "int": 0
+                          }
+                        ],
+                        "op": "at"
+                      },
+                      {
+                        "args": [
+                          {
+                            "call": {
+                              "args": [
+                                {
+                                  "var": "a_v4"
+                                },
+                                {
+                                  "var": "b_v4"
+                                },
+                                {
+                                  "var": "c_v4"
+                                }
+                              ],
+                              "fun": "allExpressions"
+                            }
+                          },
+                          {
+                            "int": 5
+                          }
+                        ],
+                        "op": "at"
+                      }
+                    ],
+                    "op": ">="
+                  }
+                ],
+                "op": "and"
+              },
+              "else": {
+                "ite": {
+                  "cond": {
+                    "args": [
+                      {
+                        "args": [
+                          {
+                            "args": [
+                              {
+                                "call": {
+                                  "args": [
+                                    {
+                                      "var": "a_v4"
+                                    },
+                                    {
+                                      "var": "b_v4"
+                                    },
+                                    {
+                                      "var": "c_v4"
+                                    }
+                                  ],
+                                  "fun": "allExpressions"
+                                }
+                              },
+                              {
+                                "int": 1
+                              }
+                            ],
+                            "op": "at"
+                          },
+                          {
+                            "args": [
+                              {
+                                "call": {
+                                  "args": [
+                                    {
+                                      "var": "a_v4"
+                                    },
+                                    {
+                                      "var": "b_v4"
+                                    },
+                                    {
+                                      "var": "c_v4"
+                                    }
+                                  ],
+                                  "fun": "allExpressions"
+                                }
+                              },
+                              {
+                                "int": 2
+                              }
+                            ],
+                            "op": "at"
+                          }
+                        ],
+                        "op": ">="
+                      },
+                      {
+                        "args": [
+                          {
+                            "args": [
+                              {
+                                "call": {
+                                  "args": [
+                                    {
+                                      "var": "a_v4"
+                                    },
+                                    {
+                                      "var": "b_v4"
+                                    },
+                                    {
+                                      "var": "c_v4"
+                                    }
+                                  ],
+                                  "fun": "allExpressions"
+                                }
+                              },
+                              {
+                                "int": 1
+                              }
+                            ],
+                            "op": "at"
+                          },
+                          {
+                            "args": [
+                              {
+                                "call": {
+                                  "args": [
+                                    {
+                                      "var": "a_v4"
+                                    },
+                                    {
+                                      "var": "b_v4"
+                                    },
+                                    {
+                                      "var": "c_v4"
+                                    }
+                                  ],
+                                  "fun": "allExpressions"
+                                }
+                              },
+                              {
+                                "int": 3
+                              }
+                            ],
+                            "op": "at"
+                          }
+                        ],
+                        "op": ">="
+                      },
+                      {
+                        "args": [
+                          {
+                            "args": [
+                              {
+                                "call": {
+                                  "args": [
+                                    {
+                                      "var": "a_v4"
+                                    },
+                                    {
+                                      "var": "b_v4"
+                                    },
+                                    {
+                                      "var": "c_v4"
+                                    }
+                                  ],
+                                  "fun": "allExpressions"
+                                }
+                              },
+                              {
+                                "int": 1
+                              }
+                            ],
+                            "op": "at"
+                          },
+                          {
+                            "args": [
+                              {
+                                "call": {
+                                  "args": [
+                                    {
+                                      "var": "a_v4"
+                                    },
+                                    {
+                                      "var": "b_v4"
+                                    },
+                                    {
+                                      "var": "c_v4"
+                                    }
+                                  ],
+                                  "fun": "allExpressions"
+                                }
+                              },
+                              {
+                                "int": 4
+                              }
+                            ],
+                            "op": "at"
+                          }
+                        ],
+                        "op": ">="
+                      },
+                      {
+                        "args": [
+                          {
+                            "args": [
+                              {
+                                "call": {
+                                  "args": [
+                                    {
+                                      "var": "a_v4"
+                                    },
+                                    {
+                                      "var": "b_v4"
+                                    },
+                                    {
+                                      "var": "c_v4"
+                                    }
+                                  ],
+                                  "fun": "allExpressions"
+                                }
+                              },
+                              {
+                                "int": 1
+                              }
+                            ],
+                            "op": "at"
+                          },
+                          {
+                            "args": [
+                              {
+                                "call": {
+                                  "args": [
+                                    {
+                                      "var": "a_v4"
+                                    },
+                                    {
+                                      "var": "b_v4"
+                                    },
+                                    {
+                                      "var": "c_v4"
+                                    }
+                                  ],
+                                  "fun": "allExpressions"
+                                }
+                              },
+                              {
+                                "int": 5
+                              }
+                            ],
+                            "op": "at"
+                          }
+                        ],
+                        "op": ">="
+                      }
+                    ],
+                    "op": "and"
+                  },
+                  "else": {
+                    "ite": {
+                      "cond": {
+                        "args": [
+                          {
+                            "args": [
+                              {
+                                "args": [
+                                  {
+                                    "call": {
+                                      "args": [
+                                        {
+                                          "var": "a_v4"
+                                        },
+                                        {
+                                          "var": "b_v4"
+                                        },
+                                        {
+                                          "var": "c_v4"
+                                        }
+                                      ],
+                                      "fun": "allExpressions"
+                                    }
+                                  },
+                                  {
+                                    "int": 2
+                                  }
+                                ],
+                                "op": "at"
+                              },
+                              {
+                                "args": [
+                                  {
+                                    "call": {
+                                      "args": [
+                                        {
+                                          "var": "a_v4"
+                                        },
+                                        {
+                                          "var": "b_v4"
+                                        },
+                                        {
+                                          "var": "c_v4"
+                                        }
+                                      ],
+                                      "fun": "allExpressions"
+                                    }
+                                  },
+                                  {
+                                    "int": 3
+                                  }
+                                ],
+                                "op": "at"
+                              }
+                            ],
+                            "op": ">="
+                          },
+                          {
+                            "args": [
+                              {
+                                "args": [
+                                  {
+                                    "call": {
+                                      "args": [
+                                        {
+                                          "var": "a_v4"
+                                        },
+                                        {
+                                          "var": "b_v4"
+                                        },
+                                        {
+                                          "var": "c_v4"
+                                        }
+                                      ],
+                                      "fun": "allExpressions"
+                                    }
+                                  },
+                                  {
+                                    "int": 2
+                                  }
+                                ],
+                                "op": "at"
+                              },
+                              {
+                                "args": [
+                                  {
+                                    "call": {
+                                      "args": [
+                                        {
+                                          "var": "a_v4"
+                                        },
+                                        {
+                                          "var": "b_v4"
+                                        },
+                                        {
+                                          "var": "c_v4"
+                                        }
+                                      ],
+                                      "fun": "allExpressions"
+                                    }
+                                  },
+                                  {
+                                    "int": 4
+                                  }
+                                ],
+                                "op": "at"
+                              }
+                            ],
+                            "op": ">="
+                          },
+                          {
+                            "args": [
+                              {
+                                "args": [
+                                  {
+                                    "call": {
+                                      "args": [
+                                        {
+                                          "var": "a_v4"
+                                        },
+                                        {
+                                          "var": "b_v4"
+                                        },
+                                        {
+                                          "var": "c_v4"
+                                        }
+                                      ],
+                                      "fun": "allExpressions"
+                                    }
+                                  },
+                                  {
+                                    "int": 2
+                                  }
+                                ],
+                                "op": "at"
+                              },
+                              {
+                                "args": [
+                                  {
+                                    "call": {
+                                      "args": [
+                                        {
+                                          "var": "a_v4"
+                                        },
+                                        {
+                                          "var": "b_v4"
+                                        },
+                                        {
+                                          "var": "c_v4"
+                                        }
+                                      ],
+                                      "fun": "allExpressions"
+                                    }
+                                  },
+                                  {
+                                    "int": 5
+                                  }
+                                ],
+                                "op": "at"
+                              }
+                            ],
+                            "op": ">="
+                          }
+                        ],
+                        "op": "and"
+                      },
+                      "else": {
+                        "ite": {
+                          "cond": {
+                            "args": [
+                              {
+                                "args": [
+                                  {
+                                    "args": [
+                                      {
+                                        "call": {
+                                          "args": [
+                                            {
+                                              "var": "a_v4"
+                                            },
+                                            {
+                                              "var": "b_v4"
+                                            },
+                                            {
+                                              "var": "c_v4"
+                                            }
+                                          ],
+                                          "fun": "allExpressions"
+                                        }
+                                      },
+                                      {
+                                        "int": 3
+                                      }
+                                    ],
+                                    "op": "at"
+                                  },
+                                  {
+                                    "args": [
+                                      {
+                                        "call": {
+                                          "args": [
+                                            {
+                                              "var": "a_v4"
+                                            },
+                                            {
+                                              "var": "b_v4"
+                                            },
+                                            {
+                                              "var": "c_v4"
+                                            }
+                                          ],
+                                          "fun": "allExpressions"
+                                        }
+                                      },
+                                      {
+                                        "int": 4
+                                      }
+                                    ],
+                                    "op": "at"
+                                  }
+                                ],
+                                "op": ">="
+                              },
+                              {
+                                "args": [
+                                  {
+                                    "args": [
+                                      {
+                                        "call": {
+                                          "args": [
+                                            {
+                                              "var": "a_v4"
+                                            },
+                                            {
+                                              "var": "b_v4"
+                                            },
+                                            {
+                                              "var": "c_v4"
+                                            }
+                                          ],
+                                          "fun": "allExpressions"
+                                        }
+                                      },
+                                      {
+                                        "int": 3
+                                      }
+                                    ],
+                                    "op": "at"
+                                  },
+                                  {
+                                    "args": [
+                                      {
+                                        "call": {
+                                          "args": [
+                                            {
+                                              "var": "a_v4"
+                                            },
+                                            {
+                                              "var": "b_v4"
+                                            },
+                                            {
+                                              "var": "c_v4"
+                                            }
+                                          ],
+                                          "fun": "allExpressions"
+                                        }
+                                      },
+                                      {
+                                        "int": 5
+                                      }
+                                    ],
+                                    "op": "at"
+                                  }
+                                ],
+                                "op": ">="
+                              }
+                            ],
+                            "op": "and"
+                          },
+                          "else": {
+                            "ite": {
+                              "cond": {
+                                "args": [
+                                  {
+                                    "args": [
+                                      {
+                                        "call": {
+                                          "args": [
+                                            {
+                                              "var": "a_v4"
+                                            },
+                                            {
+                                              "var": "b_v4"
+                                            },
+                                            {
+                                              "var": "c_v4"
+                                            }
+                                          ],
+                                          "fun": "allExpressions"
+                                        }
+                                      },
+                                      {
+                                        "int": 4
+                                      }
+                                    ],
+                                    "op": "at"
+                                  },
+                                  {
+                                    "args": [
+                                      {
+                                        "call": {
+                                          "args": [
+                                            {
+                                              "var": "a_v4"
+                                            },
+                                            {
+                                              "var": "b_v4"
+                                            },
+                                            {
+                                              "var": "c_v4"
+                                            }
+                                          ],
+                                          "fun": "allExpressions"
+                                        }
+                                      },
+                                      {
+                                        "int": 5
+                                      }
+                                    ],
+                                    "op": "at"
+                                  }
+                                ],
+                                "op": ">="
+                              },
+                              "else": {
+                                "args": [
+                                  {
+                                    "call": {
+                                      "args": [
+                                        {
+                                          "var": "a_v4"
+                                        },
+                                        {
+                                          "var": "b_v4"
+                                        },
+                                        {
+                                          "var": "c_v4"
+                                        }
+                                      ],
+                                      "fun": "allExpressions"
+                                    }
+                                  },
+                                  {
+                                    "int": 5
+                                  }
+                                ],
+                                "op": "at"
+                              },
+                              "then": {
+                                "args": [
+                                  {
+                                    "call": {
+                                      "args": [
+                                        {
+                                          "var": "a_v4"
+                                        },
+                                        {
+                                          "var": "b_v4"
+                                        },
+                                        {
+                                          "var": "c_v4"
+                                        }
+                                      ],
+                                      "fun": "allExpressions"
+                                    }
+                                  },
+                                  {
+                                    "int": 4
+                                  }
+                                ],
+                                "op": "at"
+                              }
+                            }
+                          },
+                          "then": {
+                            "args": [
+                              {
+                                "call": {
+                                  "args": [
+                                    {
+                                      "var": "a_v4"
+                                    },
+                                    {
+                                      "var": "b_v4"
+                                    },
+                                    {
+                                      "var": "c_v4"
+                                    }
+                                  ],
+                                  "fun": "allExpressions"
+                                }
+                              },
+                              {
+                                "int": 3
+                              }
+                            ],
+                            "op": "at"
+                          }
+                        }
+                      },
+                      "then": {
+                        "args": [
+                          {
+                            "call": {
+                              "args": [
+                                {
+                                  "var": "a_v4"
+                                },
+                                {
+                                  "var": "b_v4"
+                                },
+                                {
+                                  "var": "c_v4"
+                                }
+                              ],
+                              "fun": "allExpressions"
+                            }
+                          },
+                          {
+                            "int": 2
+                          }
+                        ],
+                        "op": "at"
+                      }
+                    }
+                  },
+                  "then": {
+                    "args": [
+                      {
+                        "call": {
+                          "args": [
+                            {
+                              "var": "a_v4"
+                            },
+                            {
+                              "var": "b_v4"
+                            },
+                            {
+                              "var": "c_v4"
+                            }
+                          ],
+                          "fun": "allExpressions"
+                        }
+                      },
+                      {
+                        "int": 1
+                      }
+                    ],
+                    "op": "at"
+                  }
+                }
+              },
+              "then": {
+                "args": [
+                  {
+                    "call": {
+                      "args": [
+                        {
+                          "var": "a_v4"
+                        },
+                        {
+                          "var": "b_v4"
+                        },
+                        {
+                          "var": "c_v4"
+                        }
+                      ],
+                      "fun": "allExpressions"
+                    }
+                  },
+                  {
+                    "int": 0
+                  }
+                ],
+                "op": "at"
+              }
+            }
+          }
+        }
+      },
+      "decreases": {
+        "int": 0
+      },
+      "name": "maxExpression",
+      "params": [
+        {
+          "name": "a_v4",
+          "type": "int"
+        },
+        {
+          "name": "b_v4",
+          "type": "int"
+        },
+        {
+          "name": "c_v4",
+          "type": "int"
+        }
+      ],
+      "result": "int"
+    }
+  ],
+  "t": 1
+}

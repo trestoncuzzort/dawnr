@@ -1,0 +1,1456 @@
+{
+  "body": [
+    {
+      "assign": [
+        "result",
+        {
+          "int": 0
+        }
+      ]
+    },
+    {
+      "var": {
+        "init": {
+          "int": 1
+        },
+        "name": "i_v3",
+        "type": "int"
+      }
+    },
+    {
+      "while": {
+        "body": [
+          {
+            "if": {
+              "cond": {
+                "args": [
+                  {
+                    "args": [
+                      {
+                        "var": "s"
+                      },
+                      {
+                        "var": "i_v3"
+                      }
+                    ],
+                    "op": "at"
+                  },
+                  {
+                    "args": [
+                      {
+                        "var": "s"
+                      },
+                      {
+                        "args": [
+                          {
+                            "var": "i_v3"
+                          },
+                          {
+                            "int": 1
+                          }
+                        ],
+                        "op": "-"
+                      }
+                    ],
+                    "op": "at"
+                  }
+                ],
+                "op": "=="
+              },
+              "else": [],
+              "then": [
+                {
+                  "assign": [
+                    "result",
+                    {
+                      "args": [
+                        {
+                          "var": "result"
+                        },
+                        {
+                          "int": 1
+                        }
+                      ],
+                      "op": "+"
+                    }
+                  ]
+                }
+              ]
+            }
+          },
+          {
+            "lemma": {
+              "args": [
+                {
+                  "var": "s"
+                },
+                {
+                  "var": "i_v3"
+                }
+              ],
+              "name": "count_adjacent_same_pairs_incremental"
+            }
+          },
+          {
+            "lemma": {
+              "args": [
+                {
+                  "var": "s"
+                },
+                {
+                  "args": [
+                    {
+                      "var": "i_v3"
+                    },
+                    {
+                      "int": 1
+                    }
+                  ],
+                  "op": "+"
+                }
+              ],
+              "name": "count_adjacent_same_pairs_bounded"
+            }
+          },
+          {
+            "assign": [
+              "i_v3",
+              {
+                "args": [
+                  {
+                    "var": "i_v3"
+                  },
+                  {
+                    "int": 1
+                  }
+                ],
+                "op": "+"
+              }
+            ]
+          }
+        ],
+        "cond": {
+          "args": [
+            {
+              "var": "i_v3"
+            },
+            {
+              "var": "n"
+            }
+          ],
+          "op": "<"
+        },
+        "decreases": {
+          "args": [
+            {
+              "var": "n"
+            },
+            {
+              "var": "i_v3"
+            }
+          ],
+          "op": "-"
+        },
+        "invariants": [
+          {
+            "args": [
+              {
+                "args": [
+                  {
+                    "int": 1
+                  },
+                  {
+                    "var": "i_v3"
+                  }
+                ],
+                "op": "<="
+              },
+              {
+                "args": [
+                  {
+                    "var": "i_v3"
+                  },
+                  {
+                    "var": "n"
+                  }
+                ],
+                "op": "<="
+              }
+            ],
+            "op": "and"
+          },
+          {
+            "args": [
+              {
+                "var": "result"
+              },
+              {
+                "call": {
+                  "args": [
+                    {
+                      "var": "s"
+                    },
+                    {
+                      "var": "i_v3"
+                    }
+                  ],
+                  "fun": "count_adjacent_same_pairs_up_to"
+                }
+              }
+            ],
+            "op": "=="
+          },
+          {
+            "args": [
+              {
+                "var": "result"
+              },
+              {
+                "int": 0
+              }
+            ],
+            "op": ">="
+          },
+          {
+            "args": [
+              {
+                "var": "result"
+              },
+              {
+                "args": [
+                  {
+                    "var": "i_v3"
+                  },
+                  {
+                    "int": 1
+                  }
+                ],
+                "op": "-"
+              }
+            ],
+            "op": "<="
+          }
+        ]
+      }
+    }
+  ],
+  "ensures": [
+    {
+      "args": [
+        {
+          "var": "result"
+        },
+        {
+          "int": 0
+        }
+      ],
+      "op": ">="
+    },
+    {
+      "args": [
+        {
+          "var": "result"
+        },
+        {
+          "args": [
+            {
+              "var": "n"
+            },
+            {
+              "int": 1
+            }
+          ],
+          "op": "-"
+        }
+      ],
+      "op": "<="
+    },
+    {
+      "args": [
+        {
+          "var": "result"
+        },
+        {
+          "call": {
+            "args": [
+              {
+                "var": "s"
+              },
+              {
+                "var": "n"
+              }
+            ],
+            "fun": "count_adjacent_same_pairs"
+          }
+        }
+      ],
+      "op": "=="
+    }
+  ],
+  "gate": "recursion",
+  "lemmas": [
+    {
+      "body": [
+        {
+          "if": {
+            "cond": {
+              "args": [
+                {
+                  "var": "i_v"
+                },
+                {
+                  "int": 0
+                }
+              ],
+              "op": "=="
+            },
+            "else": [
+              {
+                "if": {
+                  "cond": {
+                    "args": [
+                      {
+                        "var": "i_v"
+                      },
+                      {
+                        "int": 1
+                      }
+                    ],
+                    "op": "=="
+                  },
+                  "else": [
+                    {
+                      "lemma": {
+                        "args": [
+                          {
+                            "var": "s_v4"
+                          },
+                          {
+                            "args": [
+                              {
+                                "var": "i_v"
+                              },
+                              {
+                                "int": 1
+                              }
+                            ],
+                            "op": "-"
+                          }
+                        ],
+                        "name": "count_adjacent_same_pairs_bounded"
+                      }
+                    },
+                    {
+                      "assert": {
+                        "args": [
+                          {
+                            "call": {
+                              "args": [
+                                {
+                                  "var": "s_v4"
+                                },
+                                {
+                                  "args": [
+                                    {
+                                      "var": "i_v"
+                                    },
+                                    {
+                                      "int": 1
+                                    }
+                                  ],
+                                  "op": "-"
+                                }
+                              ],
+                              "fun": "count_adjacent_same_pairs_up_to"
+                            }
+                          },
+                          {
+                            "args": [
+                              {
+                                "var": "i_v"
+                              },
+                              {
+                                "int": 2
+                              }
+                            ],
+                            "op": "-"
+                          }
+                        ],
+                        "op": "<="
+                      }
+                    },
+                    {
+                      "assert": {
+                        "args": [
+                          {
+                            "ite": {
+                              "cond": {
+                                "args": [
+                                  {
+                                    "args": [
+                                      {
+                                        "var": "s_v4"
+                                      },
+                                      {
+                                        "args": [
+                                          {
+                                            "var": "i_v"
+                                          },
+                                          {
+                                            "int": 1
+                                          }
+                                        ],
+                                        "op": "-"
+                                      }
+                                    ],
+                                    "op": "at"
+                                  },
+                                  {
+                                    "args": [
+                                      {
+                                        "var": "s_v4"
+                                      },
+                                      {
+                                        "args": [
+                                          {
+                                            "var": "i_v"
+                                          },
+                                          {
+                                            "int": 2
+                                          }
+                                        ],
+                                        "op": "-"
+                                      }
+                                    ],
+                                    "op": "at"
+                                  }
+                                ],
+                                "op": "=="
+                              },
+                              "else": {
+                                "int": 0
+                              },
+                              "then": {
+                                "int": 1
+                              }
+                            }
+                          },
+                          {
+                            "int": 1
+                          }
+                        ],
+                        "op": "<="
+                      }
+                    },
+                    {
+                      "assert": {
+                        "args": [
+                          {
+                            "call": {
+                              "args": [
+                                {
+                                  "var": "s_v4"
+                                },
+                                {
+                                  "var": "i_v"
+                                }
+                              ],
+                              "fun": "count_adjacent_same_pairs_up_to"
+                            }
+                          },
+                          {
+                            "args": [
+                              {
+                                "ite": {
+                                  "cond": {
+                                    "args": [
+                                      {
+                                        "args": [
+                                          {
+                                            "var": "s_v4"
+                                          },
+                                          {
+                                            "args": [
+                                              {
+                                                "var": "i_v"
+                                              },
+                                              {
+                                                "int": 1
+                                              }
+                                            ],
+                                            "op": "-"
+                                          }
+                                        ],
+                                        "op": "at"
+                                      },
+                                      {
+                                        "args": [
+                                          {
+                                            "var": "s_v4"
+                                          },
+                                          {
+                                            "args": [
+                                              {
+                                                "var": "i_v"
+                                              },
+                                              {
+                                                "int": 2
+                                              }
+                                            ],
+                                            "op": "-"
+                                          }
+                                        ],
+                                        "op": "at"
+                                      }
+                                    ],
+                                    "op": "=="
+                                  },
+                                  "else": {
+                                    "int": 0
+                                  },
+                                  "then": {
+                                    "int": 1
+                                  }
+                                }
+                              },
+                              {
+                                "call": {
+                                  "args": [
+                                    {
+                                      "var": "s_v4"
+                                    },
+                                    {
+                                      "args": [
+                                        {
+                                          "var": "i_v"
+                                        },
+                                        {
+                                          "int": 1
+                                        }
+                                      ],
+                                      "op": "-"
+                                    }
+                                  ],
+                                  "fun": "count_adjacent_same_pairs_up_to"
+                                }
+                              }
+                            ],
+                            "op": "+"
+                          }
+                        ],
+                        "op": "=="
+                      }
+                    },
+                    {
+                      "assert": {
+                        "args": [
+                          {
+                            "call": {
+                              "args": [
+                                {
+                                  "var": "s_v4"
+                                },
+                                {
+                                  "var": "i_v"
+                                }
+                              ],
+                              "fun": "count_adjacent_same_pairs_up_to"
+                            }
+                          },
+                          {
+                            "args": [
+                              {
+                                "args": [
+                                  {
+                                    "int": 1
+                                  },
+                                  {
+                                    "var": "i_v"
+                                  }
+                                ],
+                                "op": "+"
+                              },
+                              {
+                                "int": 2
+                              }
+                            ],
+                            "op": "-"
+                          }
+                        ],
+                        "op": "<="
+                      }
+                    },
+                    {
+                      "assert": {
+                        "args": [
+                          {
+                            "call": {
+                              "args": [
+                                {
+                                  "var": "s_v4"
+                                },
+                                {
+                                  "var": "i_v"
+                                }
+                              ],
+                              "fun": "count_adjacent_same_pairs_up_to"
+                            }
+                          },
+                          {
+                            "args": [
+                              {
+                                "var": "i_v"
+                              },
+                              {
+                                "int": 1
+                              }
+                            ],
+                            "op": "-"
+                          }
+                        ],
+                        "op": "<="
+                      }
+                    }
+                  ],
+                  "then": [
+                    {
+                      "assert": {
+                        "args": [
+                          {
+                            "call": {
+                              "args": [
+                                {
+                                  "var": "s_v4"
+                                },
+                                {
+                                  "var": "i_v"
+                                }
+                              ],
+                              "fun": "count_adjacent_same_pairs_up_to"
+                            }
+                          },
+                          {
+                            "int": 0
+                          }
+                        ],
+                        "op": "=="
+                      }
+                    },
+                    {
+                      "assert": {
+                        "args": [
+                          {
+                            "int": 0
+                          },
+                          {
+                            "args": [
+                              {
+                                "var": "i_v"
+                              },
+                              {
+                                "int": 1
+                              }
+                            ],
+                            "op": "-"
+                          }
+                        ],
+                        "op": "<="
+                      }
+                    }
+                  ]
+                }
+              }
+            ],
+            "then": [
+              {
+                "assert": {
+                  "args": [
+                    {
+                      "call": {
+                        "args": [
+                          {
+                            "var": "s_v4"
+                          },
+                          {
+                            "var": "i_v"
+                          }
+                        ],
+                        "fun": "count_adjacent_same_pairs_up_to"
+                      }
+                    },
+                    {
+                      "int": 0
+                    }
+                  ],
+                  "op": "=="
+                }
+              }
+            ]
+          }
+        }
+      ],
+      "decreases": {
+        "var": "i_v"
+      },
+      "ensures": [
+        {
+          "args": [
+            {
+              "call": {
+                "args": [
+                  {
+                    "var": "s_v4"
+                  },
+                  {
+                    "var": "i_v"
+                  }
+                ],
+                "fun": "count_adjacent_same_pairs_up_to"
+              }
+            },
+            {
+              "int": 0
+            }
+          ],
+          "op": ">="
+        },
+        {
+          "args": [
+            {
+              "args": [
+                {
+                  "var": "i_v"
+                },
+                {
+                  "int": 1
+                }
+              ],
+              "op": ">="
+            },
+            {
+              "args": [
+                {
+                  "call": {
+                    "args": [
+                      {
+                        "var": "s_v4"
+                      },
+                      {
+                        "var": "i_v"
+                      }
+                    ],
+                    "fun": "count_adjacent_same_pairs_up_to"
+                  }
+                },
+                {
+                  "args": [
+                    {
+                      "var": "i_v"
+                    },
+                    {
+                      "int": 1
+                    }
+                  ],
+                  "op": "-"
+                }
+              ],
+              "op": "<="
+            }
+          ],
+          "op": "implies"
+        },
+        {
+          "args": [
+            {
+              "args": [
+                {
+                  "var": "i_v"
+                },
+                {
+                  "int": 0
+                }
+              ],
+              "op": "=="
+            },
+            {
+              "args": [
+                {
+                  "call": {
+                    "args": [
+                      {
+                        "var": "s_v4"
+                      },
+                      {
+                        "var": "i_v"
+                      }
+                    ],
+                    "fun": "count_adjacent_same_pairs_up_to"
+                  }
+                },
+                {
+                  "int": 0
+                }
+              ],
+              "op": "=="
+            }
+          ],
+          "op": "implies"
+        }
+      ],
+      "name": "count_adjacent_same_pairs_bounded",
+      "params": [
+        {
+          "name": "s_v4",
+          "type": "seq"
+        },
+        {
+          "name": "i_v",
+          "type": "int"
+        }
+      ],
+      "requires": [
+        {
+          "args": [
+            {
+              "args": [
+                {
+                  "var": "s_v4"
+                }
+              ],
+              "op": "len"
+            },
+            {
+              "var": "i_v"
+            }
+          ],
+          "op": ">="
+        },
+        {
+          "args": [
+            {
+              "var": "i_v"
+            },
+            {
+              "int": 0
+            }
+          ],
+          "op": ">="
+        }
+      ]
+    },
+    {
+      "body": [
+        {
+          "if": {
+            "cond": {
+              "args": [
+                {
+                  "var": "i_v2"
+                },
+                {
+                  "int": 1
+                }
+              ],
+              "op": "=="
+            },
+            "else": [],
+            "then": [
+              {
+                "assert": {
+                  "args": [
+                    {
+                      "call": {
+                        "args": [
+                          {
+                            "var": "s_v5"
+                          },
+                          {
+                            "int": 1
+                          }
+                        ],
+                        "fun": "count_adjacent_same_pairs_up_to"
+                      }
+                    },
+                    {
+                      "int": 0
+                    }
+                  ],
+                  "op": "=="
+                }
+              },
+              {
+                "assert": {
+                  "args": [
+                    {
+                      "call": {
+                        "args": [
+                          {
+                            "var": "s_v5"
+                          },
+                          {
+                            "int": 2
+                          }
+                        ],
+                        "fun": "count_adjacent_same_pairs_up_to"
+                      }
+                    },
+                    {
+                      "ite": {
+                        "cond": {
+                          "args": [
+                            {
+                              "args": [
+                                {
+                                  "var": "s_v5"
+                                },
+                                {
+                                  "int": 1
+                                }
+                              ],
+                              "op": "at"
+                            },
+                            {
+                              "args": [
+                                {
+                                  "var": "s_v5"
+                                },
+                                {
+                                  "int": 0
+                                }
+                              ],
+                              "op": "at"
+                            }
+                          ],
+                          "op": "=="
+                        },
+                        "else": {
+                          "int": 0
+                        },
+                        "then": {
+                          "int": 1
+                        }
+                      }
+                    }
+                  ],
+                  "op": "=="
+                }
+              }
+            ]
+          }
+        }
+      ],
+      "ensures": [
+        {
+          "args": [
+            {
+              "call": {
+                "args": [
+                  {
+                    "var": "s_v5"
+                  },
+                  {
+                    "args": [
+                      {
+                        "var": "i_v2"
+                      },
+                      {
+                        "int": 1
+                      }
+                    ],
+                    "op": "+"
+                  }
+                ],
+                "fun": "count_adjacent_same_pairs_up_to"
+              }
+            },
+            {
+              "args": [
+                {
+                  "call": {
+                    "args": [
+                      {
+                        "var": "s_v5"
+                      },
+                      {
+                        "var": "i_v2"
+                      }
+                    ],
+                    "fun": "count_adjacent_same_pairs_up_to"
+                  }
+                },
+                {
+                  "ite": {
+                    "cond": {
+                      "args": [
+                        {
+                          "args": [
+                            {
+                              "var": "i_v2"
+                            },
+                            {
+                              "int": 1
+                            }
+                          ],
+                          "op": ">="
+                        },
+                        {
+                          "args": [
+                            {
+                              "args": [
+                                {
+                                  "var": "s_v5"
+                                },
+                                {
+                                  "var": "i_v2"
+                                }
+                              ],
+                              "op": "at"
+                            },
+                            {
+                              "args": [
+                                {
+                                  "var": "s_v5"
+                                },
+                                {
+                                  "args": [
+                                    {
+                                      "var": "i_v2"
+                                    },
+                                    {
+                                      "int": 1
+                                    }
+                                  ],
+                                  "op": "-"
+                                }
+                              ],
+                              "op": "at"
+                            }
+                          ],
+                          "op": "=="
+                        }
+                      ],
+                      "op": "and"
+                    },
+                    "else": {
+                      "int": 0
+                    },
+                    "then": {
+                      "int": 1
+                    }
+                  }
+                }
+              ],
+              "op": "+"
+            }
+          ],
+          "op": "=="
+        }
+      ],
+      "name": "count_adjacent_same_pairs_incremental",
+      "params": [
+        {
+          "name": "s_v5",
+          "type": "seq"
+        },
+        {
+          "name": "i_v2",
+          "type": "int"
+        }
+      ],
+      "requires": [
+        {
+          "args": [
+            {
+              "args": [
+                {
+                  "var": "s_v5"
+                }
+              ],
+              "op": "len"
+            },
+            {
+              "var": "i_v2"
+            }
+          ],
+          "op": ">"
+        },
+        {
+          "args": [
+            {
+              "var": "i_v2"
+            },
+            {
+              "int": 1
+            }
+          ],
+          "op": ">="
+        }
+      ]
+    }
+  ],
+  "name": "vericoding_da0151__solve",
+  "params": [
+    {
+      "name": "n",
+      "type": "int"
+    },
+    {
+      "name": "s",
+      "type": "seq"
+    }
+  ],
+  "requires": [
+    {
+      "forall": {
+        "body": {
+          "args": [
+            {
+              "args": [
+                {
+                  "args": [
+                    {
+                      "var": "s"
+                    },
+                    {
+                      "var": "k"
+                    }
+                  ],
+                  "op": "at"
+                },
+                {
+                  "int": 0
+                }
+              ],
+              "op": ">="
+            },
+            {
+              "args": [
+                {
+                  "args": [
+                    {
+                      "var": "s"
+                    },
+                    {
+                      "var": "k"
+                    }
+                  ],
+                  "op": "at"
+                },
+                {
+                  "int": 1114111
+                }
+              ],
+              "op": "<="
+            }
+          ],
+          "op": "and"
+        },
+        "hi": {
+          "args": [
+            {
+              "var": "s"
+            }
+          ],
+          "op": "len"
+        },
+        "lo": {
+          "int": 0
+        },
+        "var": "k"
+      }
+    },
+    {
+      "call": {
+        "args": [
+          {
+            "var": "n"
+          },
+          {
+            "var": "s"
+          }
+        ],
+        "fun": "validInput"
+      }
+    }
+  ],
+  "returns": [
+    {
+      "name": "result",
+      "type": "int"
+    }
+  ],
+  "spec_funs": [
+    {
+      "body": {
+        "ite": {
+          "cond": {
+            "args": [
+              {
+                "args": [
+                  {
+                    "args": [
+                      {
+                        "var": "s_v"
+                      }
+                    ],
+                    "op": "len"
+                  },
+                  {
+                    "var": "i"
+                  }
+                ],
+                "op": ">="
+              },
+              {
+                "args": [
+                  {
+                    "var": "i"
+                  },
+                  {
+                    "int": 0
+                  }
+                ],
+                "op": ">="
+              }
+            ],
+            "op": "and"
+          },
+          "else": {
+            "int": 0
+          },
+          "then": {
+            "ite": {
+              "cond": {
+                "args": [
+                  {
+                    "var": "i"
+                  },
+                  {
+                    "int": 1
+                  }
+                ],
+                "op": "<="
+              },
+              "else": {
+                "args": [
+                  {
+                    "ite": {
+                      "cond": {
+                        "args": [
+                          {
+                            "args": [
+                              {
+                                "var": "s_v"
+                              },
+                              {
+                                "args": [
+                                  {
+                                    "var": "i"
+                                  },
+                                  {
+                                    "int": 1
+                                  }
+                                ],
+                                "op": "-"
+                              }
+                            ],
+                            "op": "at"
+                          },
+                          {
+                            "args": [
+                              {
+                                "var": "s_v"
+                              },
+                              {
+                                "args": [
+                                  {
+                                    "var": "i"
+                                  },
+                                  {
+                                    "int": 2
+                                  }
+                                ],
+                                "op": "-"
+                              }
+                            ],
+                            "op": "at"
+                          }
+                        ],
+                        "op": "=="
+                      },
+                      "else": {
+                        "int": 0
+                      },
+                      "then": {
+                        "int": 1
+                      }
+                    }
+                  },
+                  {
+                    "call": {
+                      "args": [
+                        {
+                          "var": "s_v"
+                        },
+                        {
+                          "args": [
+                            {
+                              "var": "i"
+                            },
+                            {
+                              "int": 1
+                            }
+                          ],
+                          "op": "-"
+                        }
+                      ],
+                      "fun": "count_adjacent_same_pairs_up_to"
+                    }
+                  }
+                ],
+                "op": "+"
+              },
+              "then": {
+                "int": 0
+              }
+            }
+          }
+        }
+      },
+      "decreases": {
+        "var": "i"
+      },
+      "name": "count_adjacent_same_pairs_up_to",
+      "params": [
+        {
+          "name": "s_v",
+          "type": "seq"
+        },
+        {
+          "name": "i",
+          "type": "int"
+        }
+      ],
+      "result": "int"
+    },
+    {
+      "body": {
+        "ite": {
+          "cond": {
+            "args": [
+              {
+                "args": [
+                  {
+                    "var": "n_v"
+                  },
+                  {
+                    "int": 1
+                  }
+                ],
+                "op": ">="
+              },
+              {
+                "args": [
+                  {
+                    "args": [
+                      {
+                        "var": "s_v2"
+                      }
+                    ],
+                    "op": "len"
+                  },
+                  {
+                    "var": "n_v"
+                  }
+                ],
+                "op": "=="
+              }
+            ],
+            "op": "and"
+          },
+          "else": {
+            "int": 0
+          },
+          "then": {
+            "call": {
+              "args": [
+                {
+                  "var": "s_v2"
+                },
+                {
+                  "var": "n_v"
+                }
+              ],
+              "fun": "count_adjacent_same_pairs_up_to"
+            }
+          }
+        }
+      },
+      "decreases": {
+        "int": 0
+      },
+      "name": "count_adjacent_same_pairs",
+      "params": [
+        {
+          "name": "s_v2",
+          "type": "seq"
+        },
+        {
+          "name": "n_v",
+          "type": "int"
+        }
+      ],
+      "result": "int"
+    },
+    {
+      "body": {
+        "args": [
+          {
+            "args": [
+              {
+                "var": "n_v2"
+              },
+              {
+                "int": 1
+              }
+            ],
+            "op": ">="
+          },
+          {
+            "args": [
+              {
+                "args": [
+                  {
+                    "var": "s_v3"
+                  }
+                ],
+                "op": "len"
+              },
+              {
+                "var": "n_v2"
+              }
+            ],
+            "op": "=="
+          }
+        ],
+        "op": "and"
+      },
+      "decreases": {
+        "int": 0
+      },
+      "name": "validInput",
+      "params": [
+        {
+          "name": "n_v2",
+          "type": "int"
+        },
+        {
+          "name": "s_v3",
+          "type": "seq"
+        }
+      ],
+      "result": "bool"
+    }
+  ],
+  "t": 1
+}

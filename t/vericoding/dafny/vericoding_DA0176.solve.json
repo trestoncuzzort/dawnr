@@ -1,0 +1,689 @@
+{
+  "body": [
+    {
+      "var": {
+        "init": {
+          "int": 0
+        },
+        "name": "days_different",
+        "type": "int"
+      }
+    },
+    {
+      "var": {
+        "init": {
+          "int": 0
+        },
+        "name": "days_same",
+        "type": "int"
+      }
+    },
+    {
+      "assign": [
+        "days_different",
+        {
+          "ite": {
+            "cond": {
+              "args": [
+                {
+                  "var": "a"
+                },
+                {
+                  "var": "b"
+                }
+              ],
+              "op": "<"
+            },
+            "else": {
+              "var": "b"
+            },
+            "then": {
+              "var": "a"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "var": {
+        "init": {
+          "ite": {
+            "cond": {
+              "args": [
+                {
+                  "var": "a"
+                },
+                {
+                  "var": "b"
+                }
+              ],
+              "op": ">"
+            },
+            "else": {
+              "args": [
+                {
+                  "var": "b"
+                },
+                {
+                  "var": "days_different"
+                }
+              ],
+              "op": "-"
+            },
+            "then": {
+              "args": [
+                {
+                  "var": "a"
+                },
+                {
+                  "var": "days_different"
+                }
+              ],
+              "op": "-"
+            }
+          }
+        },
+        "name": "remaining",
+        "type": "int"
+      }
+    },
+    {
+      "assign": [
+        "days_same",
+        {
+          "args": [
+            {
+              "var": "remaining"
+            },
+            {
+              "int": 2
+            }
+          ],
+          "op": "div"
+        }
+      ]
+    },
+    {
+      "lemma": {
+        "args": [
+          {
+            "var": "a"
+          },
+          {
+            "var": "b"
+          }
+        ],
+        "name": "maxDifferentDaysProperties"
+      }
+    },
+    {
+      "lemma": {
+        "args": [
+          {
+            "var": "a"
+          },
+          {
+            "var": "b"
+          }
+        ],
+        "name": "sameDaysProperties"
+      }
+    },
+    {
+      "assign": [
+        "r",
+        {
+          "args": [
+            {
+              "var": "days_different"
+            },
+            {
+              "var": "days_same"
+            }
+          ],
+          "op": "pair"
+        }
+      ]
+    }
+  ],
+  "ensures": [
+    {
+      "args": [
+        {
+          "args": [
+            {
+              "var": "r"
+            }
+          ],
+          "op": "fst"
+        },
+        {
+          "call": {
+            "args": [
+              {
+                "var": "a"
+              },
+              {
+                "var": "b"
+              }
+            ],
+            "fun": "maxDifferentDays"
+          }
+        }
+      ],
+      "op": "=="
+    },
+    {
+      "args": [
+        {
+          "args": [
+            {
+              "var": "r"
+            }
+          ],
+          "op": "snd"
+        },
+        {
+          "call": {
+            "args": [
+              {
+                "var": "a"
+              },
+              {
+                "var": "b"
+              }
+            ],
+            "fun": "sameDays"
+          }
+        }
+      ],
+      "op": "=="
+    },
+    {
+      "args": [
+        {
+          "args": [
+            {
+              "var": "r"
+            }
+          ],
+          "op": "fst"
+        },
+        {
+          "int": 0
+        }
+      ],
+      "op": ">="
+    },
+    {
+      "args": [
+        {
+          "args": [
+            {
+              "var": "r"
+            }
+          ],
+          "op": "snd"
+        },
+        {
+          "int": 0
+        }
+      ],
+      "op": ">="
+    },
+    {
+      "args": [
+        {
+          "args": [
+            {
+              "var": "r"
+            }
+          ],
+          "op": "fst"
+        },
+        {
+          "var": "a"
+        }
+      ],
+      "op": "<="
+    },
+    {
+      "args": [
+        {
+          "args": [
+            {
+              "var": "r"
+            }
+          ],
+          "op": "fst"
+        },
+        {
+          "var": "b"
+        }
+      ],
+      "op": "<="
+    }
+  ],
+  "gate": "recursion",
+  "lemmas": [
+    {
+      "body": [],
+      "ensures": [
+        {
+          "args": [
+            {
+              "call": {
+                "args": [
+                  {
+                    "var": "a_v5"
+                  },
+                  {
+                    "var": "b_v5"
+                  }
+                ],
+                "fun": "sameDays"
+              }
+            },
+            {
+              "int": 0
+            }
+          ],
+          "op": ">="
+        }
+      ],
+      "name": "sameDaysProperties",
+      "params": [
+        {
+          "name": "a_v5",
+          "type": "int"
+        },
+        {
+          "name": "b_v5",
+          "type": "int"
+        }
+      ],
+      "requires": [
+        {
+          "call": {
+            "args": [
+              {
+                "var": "a_v5"
+              },
+              {
+                "var": "b_v5"
+              }
+            ],
+            "fun": "validInput"
+          }
+        }
+      ]
+    },
+    {
+      "body": [],
+      "ensures": [
+        {
+          "args": [
+            {
+              "call": {
+                "args": [
+                  {
+                    "var": "a_v6"
+                  },
+                  {
+                    "var": "b_v6"
+                  }
+                ],
+                "fun": "maxDifferentDays"
+              }
+            },
+            {
+              "int": 0
+            }
+          ],
+          "op": ">="
+        },
+        {
+          "args": [
+            {
+              "call": {
+                "args": [
+                  {
+                    "var": "a_v6"
+                  },
+                  {
+                    "var": "b_v6"
+                  }
+                ],
+                "fun": "maxDifferentDays"
+              }
+            },
+            {
+              "var": "a_v6"
+            }
+          ],
+          "op": "<="
+        },
+        {
+          "args": [
+            {
+              "call": {
+                "args": [
+                  {
+                    "var": "a_v6"
+                  },
+                  {
+                    "var": "b_v6"
+                  }
+                ],
+                "fun": "maxDifferentDays"
+              }
+            },
+            {
+              "var": "b_v6"
+            }
+          ],
+          "op": "<="
+        },
+        {
+          "args": [
+            {
+              "call": {
+                "args": [
+                  {
+                    "var": "a_v6"
+                  },
+                  {
+                    "var": "b_v6"
+                  }
+                ],
+                "fun": "maxDifferentDays"
+              }
+            },
+            {
+              "ite": {
+                "cond": {
+                  "args": [
+                    {
+                      "var": "a_v6"
+                    },
+                    {
+                      "var": "b_v6"
+                    }
+                  ],
+                  "op": "<"
+                },
+                "else": {
+                  "var": "b_v6"
+                },
+                "then": {
+                  "var": "a_v6"
+                }
+              }
+            }
+          ],
+          "op": "=="
+        }
+      ],
+      "name": "maxDifferentDaysProperties",
+      "params": [
+        {
+          "name": "a_v6",
+          "type": "int"
+        },
+        {
+          "name": "b_v6",
+          "type": "int"
+        }
+      ],
+      "requires": [
+        {
+          "call": {
+            "args": [
+              {
+                "var": "a_v6"
+              },
+              {
+                "var": "b_v6"
+              }
+            ],
+            "fun": "validInput"
+          }
+        }
+      ]
+    }
+  ],
+  "name": "vericoding_da0176__solve",
+  "params": [
+    {
+      "name": "a",
+      "type": "int"
+    },
+    {
+      "name": "b",
+      "type": "int"
+    }
+  ],
+  "requires": [
+    {
+      "call": {
+        "args": [
+          {
+            "var": "a"
+          },
+          {
+            "var": "b"
+          }
+        ],
+        "fun": "validInput"
+      }
+    }
+  ],
+  "returns": [
+    {
+      "name": "r",
+      "type": {
+        "pair": [
+          "int",
+          "int"
+        ]
+      }
+    }
+  ],
+  "spec_funs": [
+    {
+      "body": {
+        "args": [
+          {
+            "args": [
+              {
+                "var": "a_v"
+              },
+              {
+                "int": 1
+              }
+            ],
+            "op": ">="
+          },
+          {
+            "args": [
+              {
+                "var": "b_v"
+              },
+              {
+                "int": 1
+              }
+            ],
+            "op": ">="
+          }
+        ],
+        "op": "and"
+      },
+      "decreases": {
+        "int": 0
+      },
+      "name": "validInput",
+      "params": [
+        {
+          "name": "a_v",
+          "type": "int"
+        },
+        {
+          "name": "b_v",
+          "type": "int"
+        }
+      ],
+      "result": "bool"
+    },
+    {
+      "body": {
+        "ite": {
+          "cond": {
+            "args": [
+              {
+                "var": "a_v2"
+              },
+              {
+                "var": "b_v2"
+              }
+            ],
+            "op": "<"
+          },
+          "else": {
+            "var": "b_v2"
+          },
+          "then": {
+            "var": "a_v2"
+          }
+        }
+      },
+      "decreases": {
+        "int": 0
+      },
+      "name": "maxDifferentDays",
+      "params": [
+        {
+          "name": "a_v2",
+          "type": "int"
+        },
+        {
+          "name": "b_v2",
+          "type": "int"
+        }
+      ],
+      "result": "int"
+    },
+    {
+      "body": {
+        "ite": {
+          "cond": {
+            "args": [
+              {
+                "var": "a_v3"
+              },
+              {
+                "var": "b_v3"
+              }
+            ],
+            "op": ">"
+          },
+          "else": {
+            "args": [
+              {
+                "var": "b_v3"
+              },
+              {
+                "call": {
+                  "args": [
+                    {
+                      "var": "a_v3"
+                    },
+                    {
+                      "var": "b_v3"
+                    }
+                  ],
+                  "fun": "maxDifferentDays"
+                }
+              }
+            ],
+            "op": "-"
+          },
+          "then": {
+            "args": [
+              {
+                "var": "a_v3"
+              },
+              {
+                "call": {
+                  "args": [
+                    {
+                      "var": "a_v3"
+                    },
+                    {
+                      "var": "b_v3"
+                    }
+                  ],
+                  "fun": "maxDifferentDays"
+                }
+              }
+            ],
+            "op": "-"
+          }
+        }
+      },
+      "decreases": {
+        "int": 0
+      },
+      "name": "remainingAfterDifferent",
+      "params": [
+        {
+          "name": "a_v3",
+          "type": "int"
+        },
+        {
+          "name": "b_v3",
+          "type": "int"
+        }
+      ],
+      "result": "int"
+    },
+    {
+      "body": {
+        "args": [
+          {
+            "call": {
+              "args": [
+                {
+                  "var": "a_v4"
+                },
+                {
+                  "var": "b_v4"
+                }
+              ],
+              "fun": "remainingAfterDifferent"
+            }
+          },
+          {
+            "int": 2
+          }
+        ],
+        "op": "div"
+      },
+      "decreases": {
+        "int": 0
+      },
+      "name": "sameDays",
+      "params": [
+        {
+          "name": "a_v4",
+          "type": "int"
+        },
+        {
+          "name": "b_v4",
+          "type": "int"
+        }
+      ],
+      "result": "int"
+    }
+  ],
+  "t": 1
+}

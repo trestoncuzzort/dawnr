@@ -1,0 +1,870 @@
+{
+  "body": [
+    {
+      "assign": [
+        "years",
+        {
+          "int": 0
+        }
+      ]
+    },
+    {
+      "var": {
+        "init": {
+          "int": 6
+        },
+        "name": "mAX",
+        "type": "int"
+      }
+    },
+    {
+      "while": {
+        "body": [
+          {
+            "assign": [
+              "years",
+              {
+                "args": [
+                  {
+                    "var": "years"
+                  },
+                  {
+                    "int": 1
+                  }
+                ],
+                "op": "+"
+              }
+            ]
+          }
+        ],
+        "cond": {
+          "args": [
+            {
+              "args": [
+                {
+                  "var": "years"
+                },
+                {
+                  "var": "mAX"
+                }
+              ],
+              "op": "<"
+            },
+            {
+              "args": [
+                {
+                  "args": [
+                    {
+                      "var": "a"
+                    },
+                    {
+                      "call": {
+                        "args": [
+                          {
+                            "int": 3
+                          },
+                          {
+                            "var": "years"
+                          }
+                        ],
+                        "fun": "pow"
+                      }
+                    }
+                  ],
+                  "op": "*"
+                },
+                {
+                  "args": [
+                    {
+                      "var": "b"
+                    },
+                    {
+                      "call": {
+                        "args": [
+                          {
+                            "int": 2
+                          },
+                          {
+                            "var": "years"
+                          }
+                        ],
+                        "fun": "pow"
+                      }
+                    }
+                  ],
+                  "op": "*"
+                }
+              ],
+              "op": "<="
+            }
+          ],
+          "op": "and"
+        },
+        "decreases": {
+          "args": [
+            {
+              "var": "mAX"
+            },
+            {
+              "var": "years"
+            }
+          ],
+          "op": "-"
+        },
+        "invariants": [
+          {
+            "args": [
+              {
+                "args": [
+                  {
+                    "int": 0
+                  },
+                  {
+                    "var": "years"
+                  }
+                ],
+                "op": "<="
+              },
+              {
+                "args": [
+                  {
+                    "var": "years"
+                  },
+                  {
+                    "var": "mAX"
+                  }
+                ],
+                "op": "<="
+              }
+            ],
+            "op": "and"
+          },
+          {
+            "args": [
+              {
+                "args": [
+                  {
+                    "var": "years"
+                  },
+                  {
+                    "int": 0
+                  }
+                ],
+                "op": "=="
+              },
+              {
+                "args": [
+                  {
+                    "args": [
+                      {
+                        "var": "a"
+                      },
+                      {
+                        "call": {
+                          "args": [
+                            {
+                              "int": 3
+                            },
+                            {
+                              "args": [
+                                {
+                                  "var": "years"
+                                },
+                                {
+                                  "int": 1
+                                }
+                              ],
+                              "op": "-"
+                            }
+                          ],
+                          "fun": "pow"
+                        }
+                      }
+                    ],
+                    "op": "*"
+                  },
+                  {
+                    "args": [
+                      {
+                        "var": "b"
+                      },
+                      {
+                        "call": {
+                          "args": [
+                            {
+                              "int": 2
+                            },
+                            {
+                              "args": [
+                                {
+                                  "var": "years"
+                                },
+                                {
+                                  "int": 1
+                                }
+                              ],
+                              "op": "-"
+                            }
+                          ],
+                          "fun": "pow"
+                        }
+                      }
+                    ],
+                    "op": "*"
+                  }
+                ],
+                "op": "<="
+              }
+            ],
+            "op": "or"
+          }
+        ]
+      }
+    },
+    {
+      "if": {
+        "cond": {
+          "args": [
+            {
+              "var": "years"
+            },
+            {
+              "var": "mAX"
+            }
+          ],
+          "op": "=="
+        },
+        "else": [],
+        "then": [
+          {
+            "lemma": {
+              "args": [
+                {
+                  "var": "a"
+                },
+                {
+                  "var": "b"
+                }
+              ],
+              "name": "bound_ab"
+            }
+          }
+        ]
+      }
+    }
+  ],
+  "ensures": [
+    {
+      "args": [
+        {
+          "var": "years"
+        },
+        {
+          "int": 0
+        }
+      ],
+      "op": ">="
+    },
+    {
+      "args": [
+        {
+          "args": [
+            {
+              "var": "a"
+            },
+            {
+              "call": {
+                "args": [
+                  {
+                    "int": 3
+                  },
+                  {
+                    "var": "years"
+                  }
+                ],
+                "fun": "pow"
+              }
+            }
+          ],
+          "op": "*"
+        },
+        {
+          "args": [
+            {
+              "var": "b"
+            },
+            {
+              "call": {
+                "args": [
+                  {
+                    "int": 2
+                  },
+                  {
+                    "var": "years"
+                  }
+                ],
+                "fun": "pow"
+              }
+            }
+          ],
+          "op": "*"
+        }
+      ],
+      "op": ">"
+    },
+    {
+      "args": [
+        {
+          "args": [
+            {
+              "var": "years"
+            },
+            {
+              "int": 0
+            }
+          ],
+          "op": "=="
+        },
+        {
+          "args": [
+            {
+              "args": [
+                {
+                  "var": "a"
+                },
+                {
+                  "call": {
+                    "args": [
+                      {
+                        "int": 3
+                      },
+                      {
+                        "args": [
+                          {
+                            "var": "years"
+                          },
+                          {
+                            "int": 1
+                          }
+                        ],
+                        "op": "-"
+                      }
+                    ],
+                    "fun": "pow"
+                  }
+                }
+              ],
+              "op": "*"
+            },
+            {
+              "args": [
+                {
+                  "var": "b"
+                },
+                {
+                  "call": {
+                    "args": [
+                      {
+                        "int": 2
+                      },
+                      {
+                        "args": [
+                          {
+                            "var": "years"
+                          },
+                          {
+                            "int": 1
+                          }
+                        ],
+                        "op": "-"
+                      }
+                    ],
+                    "fun": "pow"
+                  }
+                }
+              ],
+              "op": "*"
+            }
+          ],
+          "op": "<="
+        }
+      ],
+      "op": "or"
+    }
+  ],
+  "gate": "recursion",
+  "lemmas": [
+    {
+      "body": [],
+      "ensures": [
+        {
+          "args": [
+            {
+              "call": {
+                "args": [
+                  {
+                    "int": 2
+                  },
+                  {
+                    "int": 6
+                  }
+                ],
+                "fun": "pow"
+              }
+            },
+            {
+              "int": 64
+            }
+          ],
+          "op": "=="
+        },
+        {
+          "args": [
+            {
+              "call": {
+                "args": [
+                  {
+                    "int": 3
+                  },
+                  {
+                    "int": 6
+                  }
+                ],
+                "fun": "pow"
+              }
+            },
+            {
+              "int": 729
+            }
+          ],
+          "op": "=="
+        }
+      ],
+      "name": "pow_constants",
+      "params": [],
+      "requires": []
+    },
+    {
+      "body": [
+        {
+          "lemma": {
+            "args": [],
+            "name": "pow_constants"
+          }
+        },
+        {
+          "assert": {
+            "args": [
+              {
+                "args": [
+                  {
+                    "var": "a_v"
+                  },
+                  {
+                    "call": {
+                      "args": [
+                        {
+                          "int": 3
+                        },
+                        {
+                          "int": 6
+                        }
+                      ],
+                      "fun": "pow"
+                    }
+                  }
+                ],
+                "op": "*"
+              },
+              {
+                "call": {
+                  "args": [
+                    {
+                      "int": 3
+                    },
+                    {
+                      "int": 6
+                    }
+                  ],
+                  "fun": "pow"
+                }
+              }
+            ],
+            "op": ">="
+          }
+        },
+        {
+          "assert": {
+            "args": [
+              {
+                "args": [
+                  {
+                    "var": "b_v"
+                  },
+                  {
+                    "call": {
+                      "args": [
+                        {
+                          "int": 2
+                        },
+                        {
+                          "int": 6
+                        }
+                      ],
+                      "fun": "pow"
+                    }
+                  }
+                ],
+                "op": "*"
+              },
+              {
+                "args": [
+                  {
+                    "int": 10
+                  },
+                  {
+                    "call": {
+                      "args": [
+                        {
+                          "int": 2
+                        },
+                        {
+                          "int": 6
+                        }
+                      ],
+                      "fun": "pow"
+                    }
+                  }
+                ],
+                "op": "*"
+              }
+            ],
+            "op": "<="
+          }
+        },
+        {
+          "assert": {
+            "args": [
+              {
+                "call": {
+                  "args": [
+                    {
+                      "int": 3
+                    },
+                    {
+                      "int": 6
+                    }
+                  ],
+                  "fun": "pow"
+                }
+              },
+              {
+                "args": [
+                  {
+                    "int": 10
+                  },
+                  {
+                    "call": {
+                      "args": [
+                        {
+                          "int": 2
+                        },
+                        {
+                          "int": 6
+                        }
+                      ],
+                      "fun": "pow"
+                    }
+                  }
+                ],
+                "op": "*"
+              }
+            ],
+            "op": ">"
+          }
+        },
+        {
+          "assert": {
+            "args": [
+              {
+                "args": [
+                  {
+                    "var": "a_v"
+                  },
+                  {
+                    "call": {
+                      "args": [
+                        {
+                          "int": 3
+                        },
+                        {
+                          "int": 6
+                        }
+                      ],
+                      "fun": "pow"
+                    }
+                  }
+                ],
+                "op": "*"
+              },
+              {
+                "args": [
+                  {
+                    "var": "b_v"
+                  },
+                  {
+                    "call": {
+                      "args": [
+                        {
+                          "int": 2
+                        },
+                        {
+                          "int": 6
+                        }
+                      ],
+                      "fun": "pow"
+                    }
+                  }
+                ],
+                "op": "*"
+              }
+            ],
+            "op": ">"
+          }
+        }
+      ],
+      "ensures": [
+        {
+          "args": [
+            {
+              "args": [
+                {
+                  "var": "a_v"
+                },
+                {
+                  "call": {
+                    "args": [
+                      {
+                        "int": 3
+                      },
+                      {
+                        "int": 6
+                      }
+                    ],
+                    "fun": "pow"
+                  }
+                }
+              ],
+              "op": "*"
+            },
+            {
+              "args": [
+                {
+                  "var": "b_v"
+                },
+                {
+                  "call": {
+                    "args": [
+                      {
+                        "int": 2
+                      },
+                      {
+                        "int": 6
+                      }
+                    ],
+                    "fun": "pow"
+                  }
+                }
+              ],
+              "op": "*"
+            }
+          ],
+          "op": ">"
+        }
+      ],
+      "name": "bound_ab",
+      "params": [
+        {
+          "name": "a_v",
+          "type": "int"
+        },
+        {
+          "name": "b_v",
+          "type": "int"
+        }
+      ],
+      "requires": [
+        {
+          "args": [
+            {
+              "int": 1
+            },
+            {
+              "var": "a_v"
+            }
+          ],
+          "op": "<="
+        },
+        {
+          "args": [
+            {
+              "var": "a_v"
+            },
+            {
+              "var": "b_v"
+            }
+          ],
+          "op": "<="
+        },
+        {
+          "args": [
+            {
+              "var": "b_v"
+            },
+            {
+              "int": 10
+            }
+          ],
+          "op": "<="
+        }
+      ]
+    }
+  ],
+  "name": "vericoding_da0071__solve",
+  "params": [
+    {
+      "name": "a",
+      "type": "int"
+    },
+    {
+      "name": "b",
+      "type": "int"
+    }
+  ],
+  "requires": [
+    {
+      "args": [
+        {
+          "int": 1
+        },
+        {
+          "var": "a"
+        }
+      ],
+      "op": "<="
+    },
+    {
+      "args": [
+        {
+          "var": "a"
+        },
+        {
+          "var": "b"
+        }
+      ],
+      "op": "<="
+    },
+    {
+      "args": [
+        {
+          "var": "b"
+        },
+        {
+          "int": 10
+        }
+      ],
+      "op": "<="
+    }
+  ],
+  "returns": [
+    {
+      "name": "years",
+      "type": "int"
+    }
+  ],
+  "spec_funs": [
+    {
+      "body": {
+        "ite": {
+          "cond": {
+            "args": [
+              {
+                "var": "exp"
+              },
+              {
+                "int": 0
+              }
+            ],
+            "op": ">="
+          },
+          "else": {
+            "int": 0
+          },
+          "then": {
+            "ite": {
+              "cond": {
+                "args": [
+                  {
+                    "var": "exp"
+                  },
+                  {
+                    "int": 0
+                  }
+                ],
+                "op": "=="
+              },
+              "else": {
+                "args": [
+                  {
+                    "var": "base"
+                  },
+                  {
+                    "call": {
+                      "args": [
+                        {
+                          "var": "base"
+                        },
+                        {
+                          "args": [
+                            {
+                              "var": "exp"
+                            },
+                            {
+                              "int": 1
+                            }
+                          ],
+                          "op": "-"
+                        }
+                      ],
+                      "fun": "pow"
+                    }
+                  }
+                ],
+                "op": "*"
+              },
+              "then": {
+                "int": 1
+              }
+            }
+          }
+        }
+      },
+      "decreases": {
+        "var": "exp"
+      },
+      "name": "pow",
+      "params": [
+        {
+          "name": "base",
+          "type": "int"
+        },
+        {
+          "name": "exp",
+          "type": "int"
+        }
+      ],
+      "result": "int"
+    }
+  ],
+  "t": 1
+}

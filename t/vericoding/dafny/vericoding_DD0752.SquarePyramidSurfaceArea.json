@@ -1,0 +1,131 @@
+{
+  "body": [
+    {
+      "assign": [
+        "area",
+        {
+          "args": [
+            {
+              "args": [
+                {
+                  "var": "baseEdge"
+                },
+                {
+                  "var": "baseEdge"
+                }
+              ],
+              "op": "*"
+            },
+            {
+              "args": [
+                {
+                  "args": [
+                    {
+                      "int": 2
+                    },
+                    {
+                      "var": "baseEdge"
+                    }
+                  ],
+                  "op": "*"
+                },
+                {
+                  "var": "height"
+                }
+              ],
+              "op": "*"
+            }
+          ],
+          "op": "+"
+        }
+      ]
+    }
+  ],
+  "ensures": [
+    {
+      "args": [
+        {
+          "var": "area"
+        },
+        {
+          "args": [
+            {
+              "args": [
+                {
+                  "var": "baseEdge"
+                },
+                {
+                  "var": "baseEdge"
+                }
+              ],
+              "op": "*"
+            },
+            {
+              "args": [
+                {
+                  "args": [
+                    {
+                      "int": 2
+                    },
+                    {
+                      "var": "baseEdge"
+                    }
+                  ],
+                  "op": "*"
+                },
+                {
+                  "var": "height"
+                }
+              ],
+              "op": "*"
+            }
+          ],
+          "op": "+"
+        }
+      ],
+      "op": "=="
+    }
+  ],
+  "name": "vericoding_dd0752__squarePyramidSurfaceArea",
+  "params": [
+    {
+      "name": "baseEdge",
+      "type": "int"
+    },
+    {
+      "name": "height",
+      "type": "int"
+    }
+  ],
+  "requires": [
+    {
+      "args": [
+        {
+          "var": "baseEdge"
+        },
+        {
+          "int": 0
+        }
+      ],
+      "op": ">"
+    },
+    {
+      "args": [
+        {
+          "var": "height"
+        },
+        {
+          "int": 0
+        }
+      ],
+      "op": ">"
+    }
+  ],
+  "returns": [
+    {
+      "name": "area",
+      "type": "int"
+    }
+  ],
+  "t": 1
+}

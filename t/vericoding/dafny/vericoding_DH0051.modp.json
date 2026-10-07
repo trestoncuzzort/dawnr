@@ -1,0 +1,654 @@
+{
+  "body": [
+    {
+      "var": {
+        "init": {
+          "int": 1
+        },
+        "name": "res",
+        "type": "int"
+      }
+    },
+    {
+      "var": {
+        "init": {
+          "int": 2
+        },
+        "name": "b",
+        "type": "int"
+      }
+    },
+    {
+      "var": {
+        "init": {
+          "var": "n"
+        },
+        "name": "e",
+        "type": "int"
+      }
+    },
+    {
+      "while": {
+        "body": [
+          {
+            "if": {
+              "cond": {
+                "args": [
+                  {
+                    "args": [
+                      {
+                        "var": "e"
+                      },
+                      {
+                        "int": 2
+                      }
+                    ],
+                    "op": "mod"
+                  },
+                  {
+                    "int": 1
+                  }
+                ],
+                "op": "=="
+              },
+              "else": [
+                {
+                  "var": {
+                    "init": {
+                      "var": "e"
+                    },
+                    "name": "olde_v",
+                    "type": "int"
+                  }
+                },
+                {
+                  "var": {
+                    "init": {
+                      "var": "b"
+                    },
+                    "name": "oldb_v",
+                    "type": "int"
+                  }
+                },
+                {
+                  "assign": [
+                    "b",
+                    {
+                      "args": [
+                        {
+                          "var": "b"
+                        },
+                        {
+                          "var": "b"
+                        }
+                      ],
+                      "op": "*"
+                    }
+                  ]
+                },
+                {
+                  "assign": [
+                    "e",
+                    {
+                      "args": [
+                        {
+                          "var": "e"
+                        },
+                        {
+                          "int": 2
+                        }
+                      ],
+                      "op": "div"
+                    }
+                  ]
+                }
+              ],
+              "then": [
+                {
+                  "var": {
+                    "init": {
+                      "var": "e"
+                    },
+                    "name": "olde",
+                    "type": "int"
+                  }
+                },
+                {
+                  "var": {
+                    "init": {
+                      "var": "b"
+                    },
+                    "name": "oldb",
+                    "type": "int"
+                  }
+                },
+                {
+                  "var": {
+                    "init": {
+                      "var": "res"
+                    },
+                    "name": "oldres",
+                    "type": "int"
+                  }
+                },
+                {
+                  "lemma": {
+                    "args": [
+                      {
+                        "var": "oldb"
+                      },
+                      {
+                        "var": "olde"
+                      }
+                    ],
+                    "name": "powerPred"
+                  }
+                },
+                {
+                  "assign": [
+                    "res",
+                    {
+                      "args": [
+                        {
+                          "var": "res"
+                        },
+                        {
+                          "var": "b"
+                        }
+                      ],
+                      "op": "*"
+                    }
+                  ]
+                },
+                {
+                  "assign": [
+                    "e",
+                    {
+                      "args": [
+                        {
+                          "var": "e"
+                        },
+                        {
+                          "int": 1
+                        }
+                      ],
+                      "op": "-"
+                    }
+                  ]
+                }
+              ]
+            }
+          }
+        ],
+        "cond": {
+          "args": [
+            {
+              "var": "e"
+            },
+            {
+              "int": 0
+            }
+          ],
+          "op": ">"
+        },
+        "decreases": {
+          "var": "e"
+        },
+        "invariants": [
+          {
+            "args": [
+              {
+                "var": "res"
+              },
+              {
+                "int": 1
+              }
+            ],
+            "op": ">="
+          },
+          {
+            "args": [
+              {
+                "var": "b"
+              },
+              {
+                "int": 1
+              }
+            ],
+            "op": ">="
+          },
+          {
+            "args": [
+              {
+                "args": [
+                  {
+                    "var": "res"
+                  },
+                  {
+                    "call": {
+                      "args": [
+                        {
+                          "var": "b"
+                        },
+                        {
+                          "var": "e"
+                        }
+                      ],
+                      "fun": "power"
+                    }
+                  }
+                ],
+                "op": "*"
+              },
+              {
+                "call": {
+                  "args": [
+                    {
+                      "int": 2
+                    },
+                    {
+                      "var": "n"
+                    }
+                  ],
+                  "fun": "power"
+                }
+              }
+            ],
+            "op": "=="
+          },
+          {
+            "args": [
+              {
+                "var": "res"
+              },
+              {
+                "int": 0
+              }
+            ],
+            "op": ">="
+          },
+          {
+            "args": [
+              {
+                "var": "b"
+              },
+              {
+                "int": 0
+              }
+            ],
+            "op": ">="
+          },
+          {
+            "args": [
+              {
+                "var": "e"
+              },
+              {
+                "int": 0
+              }
+            ],
+            "op": ">="
+          }
+        ]
+      }
+    },
+    {
+      "assign": [
+        "result",
+        {
+          "args": [
+            {
+              "var": "res"
+            },
+            {
+              "var": "p"
+            }
+          ],
+          "op": "mod"
+        }
+      ]
+    }
+  ],
+  "ensures": [
+    {
+      "args": [
+        {
+          "var": "result"
+        },
+        {
+          "int": 0
+        }
+      ],
+      "op": ">="
+    },
+    {
+      "args": [
+        {
+          "var": "result"
+        },
+        {
+          "var": "p"
+        }
+      ],
+      "op": "<"
+    },
+    {
+      "args": [
+        {
+          "var": "result"
+        },
+        {
+          "args": [
+            {
+              "call": {
+                "args": [
+                  {
+                    "int": 2
+                  },
+                  {
+                    "var": "n"
+                  }
+                ],
+                "fun": "power"
+              }
+            },
+            {
+              "var": "p"
+            }
+          ],
+          "op": "mod"
+        }
+      ],
+      "op": "=="
+    }
+  ],
+  "gate": "recursion",
+  "lemmas": [
+    {
+      "body": [
+        {
+          "if": {
+            "cond": {
+              "args": [
+                {
+                  "var": "k"
+                },
+                {
+                  "int": 0
+                }
+              ],
+              "op": ">"
+            },
+            "else": [],
+            "then": [
+              {
+                "assert": {
+                  "args": [
+                    {
+                      "call": {
+                        "args": [
+                          {
+                            "var": "a_v"
+                          },
+                          {
+                            "var": "k"
+                          }
+                        ],
+                        "fun": "power"
+                      }
+                    },
+                    {
+                      "args": [
+                        {
+                          "var": "a_v"
+                        },
+                        {
+                          "call": {
+                            "args": [
+                              {
+                                "var": "a_v"
+                              },
+                              {
+                                "args": [
+                                  {
+                                    "var": "k"
+                                  },
+                                  {
+                                    "int": 1
+                                  }
+                                ],
+                                "op": "-"
+                              }
+                            ],
+                            "fun": "power"
+                          }
+                        }
+                      ],
+                      "op": "*"
+                    }
+                  ],
+                  "op": "=="
+                }
+              }
+            ]
+          }
+        }
+      ],
+      "ensures": [
+        {
+          "args": [
+            {
+              "args": [
+                {
+                  "var": "k"
+                },
+                {
+                  "int": 0
+                }
+              ],
+              "op": ">"
+            },
+            {
+              "args": [
+                {
+                  "call": {
+                    "args": [
+                      {
+                        "var": "a_v"
+                      },
+                      {
+                        "var": "k"
+                      }
+                    ],
+                    "fun": "power"
+                  }
+                },
+                {
+                  "args": [
+                    {
+                      "var": "a_v"
+                    },
+                    {
+                      "call": {
+                        "args": [
+                          {
+                            "var": "a_v"
+                          },
+                          {
+                            "args": [
+                              {
+                                "var": "k"
+                              },
+                              {
+                                "int": 1
+                              }
+                            ],
+                            "op": "-"
+                          }
+                        ],
+                        "fun": "power"
+                      }
+                    }
+                  ],
+                  "op": "*"
+                }
+              ],
+              "op": "=="
+            }
+          ],
+          "op": "implies"
+        }
+      ],
+      "name": "powerPred",
+      "params": [
+        {
+          "name": "a_v",
+          "type": "int"
+        },
+        {
+          "name": "k",
+          "type": "int"
+        }
+      ],
+      "requires": [
+        {
+          "args": [
+            {
+              "var": "k"
+            },
+            {
+              "int": 0
+            }
+          ],
+          "op": ">="
+        }
+      ]
+    }
+  ],
+  "name": "vericoding_dh0051__modp",
+  "params": [
+    {
+      "name": "n",
+      "type": "int"
+    },
+    {
+      "name": "p",
+      "type": "int"
+    }
+  ],
+  "requires": [
+    {
+      "args": [
+        {
+          "var": "n"
+        },
+        {
+          "int": 0
+        }
+      ],
+      "op": ">="
+    },
+    {
+      "args": [
+        {
+          "var": "p"
+        },
+        {
+          "int": 0
+        }
+      ],
+      "op": ">"
+    }
+  ],
+  "returns": [
+    {
+      "name": "result",
+      "type": "int"
+    }
+  ],
+  "spec_funs": [
+    {
+      "body": {
+        "ite": {
+          "cond": {
+            "args": [
+              {
+                "var": "exp"
+              },
+              {
+                "int": 0
+              }
+            ],
+            "op": ">="
+          },
+          "else": {
+            "int": 0
+          },
+          "then": {
+            "ite": {
+              "cond": {
+                "args": [
+                  {
+                    "var": "exp"
+                  },
+                  {
+                    "int": 0
+                  }
+                ],
+                "op": "=="
+              },
+              "else": {
+                "args": [
+                  {
+                    "var": "base"
+                  },
+                  {
+                    "call": {
+                      "args": [
+                        {
+                          "var": "base"
+                        },
+                        {
+                          "args": [
+                            {
+                              "var": "exp"
+                            },
+                            {
+                              "int": 1
+                            }
+                          ],
+                          "op": "-"
+                        }
+                      ],
+                      "fun": "power"
+                    }
+                  }
+                ],
+                "op": "*"
+              },
+              "then": {
+                "int": 1
+              }
+            }
+          }
+        }
+      },
+      "decreases": {
+        "var": "exp"
+      },
+      "name": "power",
+      "params": [
+        {
+          "name": "base",
+          "type": "int"
+        },
+        {
+          "name": "exp",
+          "type": "int"
+        }
+      ],
+      "result": "int"
+    }
+  ],
+  "t": 1
+}

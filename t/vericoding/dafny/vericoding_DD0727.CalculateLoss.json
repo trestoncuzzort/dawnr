@@ -1,0 +1,153 @@
+{
+  "body": [
+    {
+      "if": {
+        "cond": {
+          "args": [
+            {
+              "var": "costPrice"
+            },
+            {
+              "var": "sellingPrice"
+            }
+          ],
+          "op": ">"
+        },
+        "else": [
+          {
+            "assign": [
+              "loss",
+              {
+                "int": 0
+              }
+            ]
+          }
+        ],
+        "then": [
+          {
+            "assign": [
+              "loss",
+              {
+                "args": [
+                  {
+                    "var": "costPrice"
+                  },
+                  {
+                    "var": "sellingPrice"
+                  }
+                ],
+                "op": "-"
+              }
+            ]
+          }
+        ]
+      }
+    }
+  ],
+  "ensures": [
+    {
+      "args": [
+        {
+          "args": [
+            {
+              "var": "costPrice"
+            },
+            {
+              "var": "sellingPrice"
+            }
+          ],
+          "op": ">"
+        },
+        {
+          "args": [
+            {
+              "var": "loss"
+            },
+            {
+              "args": [
+                {
+                  "var": "costPrice"
+                },
+                {
+                  "var": "sellingPrice"
+                }
+              ],
+              "op": "-"
+            }
+          ],
+          "op": "=="
+        }
+      ],
+      "op": "implies"
+    },
+    {
+      "args": [
+        {
+          "args": [
+            {
+              "var": "costPrice"
+            },
+            {
+              "var": "sellingPrice"
+            }
+          ],
+          "op": "<="
+        },
+        {
+          "args": [
+            {
+              "var": "loss"
+            },
+            {
+              "int": 0
+            }
+          ],
+          "op": "=="
+        }
+      ],
+      "op": "implies"
+    }
+  ],
+  "name": "vericoding_dd0727__calculateLoss",
+  "params": [
+    {
+      "name": "costPrice",
+      "type": "int"
+    },
+    {
+      "name": "sellingPrice",
+      "type": "int"
+    }
+  ],
+  "requires": [
+    {
+      "args": [
+        {
+          "var": "costPrice"
+        },
+        {
+          "int": 0
+        }
+      ],
+      "op": ">="
+    },
+    {
+      "args": [
+        {
+          "var": "sellingPrice"
+        },
+        {
+          "int": 0
+        }
+      ],
+      "op": ">="
+    }
+  ],
+  "returns": [
+    {
+      "name": "loss",
+      "type": "int"
+    }
+  ],
+  "t": 1
+}

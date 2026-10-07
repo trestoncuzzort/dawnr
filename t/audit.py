@@ -266,10 +266,17 @@ def main(argv=None) -> int:
             print(f"{r['name']}: {r['status']}")
         else:
             sv = r["survivors"]
-            print(f"{r['name']}: {r['mutants']} mutants, {r['killed']} killed, {r['same']} same, "
-                  f"{r['diverges']} diverge, "
-                  f"{len(sv)} survivor(s)" + (f"; first: {sv[0]['op']} {sv[0]['change']} at {sv[0]['witness']}"
-                                              if sv else ""))
+            line = (f"{r['name']}: {r['mutants']} mutants, {r['killed']} killed, {r['same']} same, "
+                    f"{r['diverges']} diverge, {len(sv)} survivor(s)")
+            first = next((s for s in sv if s.get("verdict") == "verified"), sv[0] if sv else None)
+            if first:
+                line += f"; {first['op']} {first['change']} at {first['witness']}"
+            if "kernel" in r:
+                line += f"\n  {r['kernel']}: real {r['real_verdict']}"
+                if first and first.get("verdict"):
+                    line += f", this survivor {first['verdict']}" + (
+                        " (a different program, proved against the same spec)" if first["verdict"] == "verified" else "")
+            print(line)
     if args.table:
         Path(args.table).write_text(table(results, args.kernel), encoding="utf-8", newline="\n")
     return 0

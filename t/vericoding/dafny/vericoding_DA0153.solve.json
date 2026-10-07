@@ -1,0 +1,1713 @@
+{
+  "body": [
+    {
+      "var": {
+        "init": {
+          "int": 0
+        },
+        "name": "i_v5",
+        "type": "int"
+      }
+    },
+    {
+      "var": {
+        "init": {
+          "int": 15
+        },
+        "name": "cutoff_v2",
+        "type": "int"
+      }
+    },
+    {
+      "while": {
+        "body": [
+          {
+            "var": {
+              "init": {
+                "var": "cutoff_v2"
+              },
+              "name": "oldCutoff",
+              "type": "int"
+            }
+          },
+          {
+            "var": {
+              "init": {
+                "var": "i_v5"
+              },
+              "name": "oldI",
+              "type": "int"
+            }
+          },
+          {
+            "assign": [
+              "cutoff_v2",
+              {
+                "args": [
+                  {
+                    "args": [
+                      {
+                        "var": "a"
+                      },
+                      {
+                        "var": "i_v5"
+                      }
+                    ],
+                    "op": "at"
+                  },
+                  {
+                    "int": 15
+                  }
+                ],
+                "op": "+"
+              }
+            ]
+          },
+          {
+            "assign": [
+              "i_v5",
+              {
+                "args": [
+                  {
+                    "var": "i_v5"
+                  },
+                  {
+                    "int": 1
+                  }
+                ],
+                "op": "+"
+              }
+            ]
+          },
+          {
+            "lemma": {
+              "args": [
+                {
+                  "var": "a"
+                },
+                {
+                  "var": "oldI"
+                },
+                {
+                  "var": "oldCutoff"
+                }
+              ],
+              "name": "findCutoffStep"
+            }
+          }
+        ],
+        "cond": {
+          "args": [
+            {
+              "args": [
+                {
+                  "var": "i_v5"
+                },
+                {
+                  "args": [
+                    {
+                      "var": "a"
+                    }
+                  ],
+                  "op": "len"
+                }
+              ],
+              "op": "<"
+            },
+            {
+              "args": [
+                {
+                  "args": [
+                    {
+                      "var": "a"
+                    },
+                    {
+                      "var": "i_v5"
+                    }
+                  ],
+                  "op": "at"
+                },
+                {
+                  "var": "cutoff_v2"
+                }
+              ],
+              "op": "<="
+            }
+          ],
+          "op": "and"
+        },
+        "decreases": {
+          "args": [
+            {
+              "args": [
+                {
+                  "var": "a"
+                }
+              ],
+              "op": "len"
+            },
+            {
+              "var": "i_v5"
+            }
+          ],
+          "op": "-"
+        },
+        "invariants": [
+          {
+            "args": [
+              {
+                "args": [
+                  {
+                    "int": 0
+                  },
+                  {
+                    "var": "i_v5"
+                  }
+                ],
+                "op": "<="
+              },
+              {
+                "args": [
+                  {
+                    "var": "i_v5"
+                  },
+                  {
+                    "args": [
+                      {
+                        "var": "a"
+                      }
+                    ],
+                    "op": "len"
+                  }
+                ],
+                "op": "<="
+              }
+            ],
+            "op": "and"
+          },
+          {
+            "args": [
+              {
+                "var": "cutoff_v2"
+              },
+              {
+                "int": 15
+              }
+            ],
+            "op": ">="
+          },
+          {
+            "forall": {
+              "body": {
+                "args": [
+                  {
+                    "args": [
+                      {
+                        "var": "a"
+                      },
+                      {
+                        "var": "j"
+                      }
+                    ],
+                    "op": "at"
+                  },
+                  {
+                    "int": 1
+                  }
+                ],
+                "op": ">="
+              },
+              "hi": {
+                "var": "i_v5"
+              },
+              "lo": {
+                "int": 0
+              },
+              "var": "j"
+            }
+          },
+          {
+            "args": [
+              {
+                "call": {
+                  "args": [
+                    {
+                      "var": "a"
+                    },
+                    {
+                      "var": "i_v5"
+                    },
+                    {
+                      "var": "cutoff_v2"
+                    }
+                  ],
+                  "fun": "findCutoff"
+                }
+              },
+              {
+                "call": {
+                  "args": [
+                    {
+                      "var": "a"
+                    },
+                    {
+                      "int": 0
+                    },
+                    {
+                      "int": 15
+                    }
+                  ],
+                  "fun": "findCutoff"
+                }
+              }
+            ],
+            "op": "=="
+          }
+        ]
+      }
+    },
+    {
+      "if": {
+        "cond": {
+          "args": [
+            {
+              "var": "i_v5"
+            },
+            {
+              "args": [
+                {
+                  "var": "a"
+                }
+              ],
+              "op": "len"
+            }
+          ],
+          "op": "<"
+        },
+        "else": [
+          {
+            "lemma": {
+              "args": [
+                {
+                  "var": "a"
+                },
+                {
+                  "var": "cutoff_v2"
+                }
+              ],
+              "name": "findCutoffEnd"
+            }
+          }
+        ],
+        "then": [
+          {
+            "lemma": {
+              "args": [
+                {
+                  "var": "a"
+                },
+                {
+                  "var": "i_v5"
+                },
+                {
+                  "var": "cutoff_v2"
+                }
+              ],
+              "name": "findCutoffTerminate"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "lemma": {
+        "args": [
+          {
+            "var": "a"
+          },
+          {
+            "int": 0
+          },
+          {
+            "int": 15
+          }
+        ],
+        "name": "findCutoffLowerBound"
+      }
+    },
+    {
+      "assign": [
+        "result",
+        {
+          "call": {
+            "args": [
+              {
+                "int": 90
+              },
+              {
+                "var": "cutoff_v2"
+              }
+            ],
+            "fun": "min"
+          }
+        }
+      ]
+    }
+  ],
+  "ensures": [
+    {
+      "call": {
+        "args": [
+          {
+            "var": "result"
+          },
+          {
+            "var": "n"
+          },
+          {
+            "var": "a"
+          }
+        ],
+        "fun": "validOutput"
+      }
+    }
+  ],
+  "gate": "recursion",
+  "lemmas": [
+    {
+      "body": [],
+      "ensures": [
+        {
+          "args": [
+            {
+              "call": {
+                "args": [
+                  {
+                    "var": "a_v4"
+                  },
+                  {
+                    "var": "i_v2"
+                  },
+                  {
+                    "var": "c"
+                  }
+                ],
+                "fun": "findCutoff"
+              }
+            },
+            {
+              "call": {
+                "args": [
+                  {
+                    "var": "a_v4"
+                  },
+                  {
+                    "args": [
+                      {
+                        "var": "i_v2"
+                      },
+                      {
+                        "int": 1
+                      }
+                    ],
+                    "op": "+"
+                  },
+                  {
+                    "args": [
+                      {
+                        "args": [
+                          {
+                            "var": "a_v4"
+                          },
+                          {
+                            "var": "i_v2"
+                          }
+                        ],
+                        "op": "at"
+                      },
+                      {
+                        "int": 15
+                      }
+                    ],
+                    "op": "+"
+                  }
+                ],
+                "fun": "findCutoff"
+              }
+            }
+          ],
+          "op": "=="
+        }
+      ],
+      "name": "findCutoffStep",
+      "params": [
+        {
+          "name": "a_v4",
+          "type": "seq"
+        },
+        {
+          "name": "i_v2",
+          "type": "int"
+        },
+        {
+          "name": "c",
+          "type": "int"
+        }
+      ],
+      "requires": [
+        {
+          "args": [
+            {
+              "int": 0
+            },
+            {
+              "var": "i_v2"
+            }
+          ],
+          "op": "<="
+        },
+        {
+          "args": [
+            {
+              "var": "i_v2"
+            },
+            {
+              "args": [
+                {
+                  "var": "a_v4"
+                }
+              ],
+              "op": "len"
+            }
+          ],
+          "op": "<"
+        },
+        {
+          "args": [
+            {
+              "args": [
+                {
+                  "var": "a_v4"
+                },
+                {
+                  "var": "i_v2"
+                }
+              ],
+              "op": "at"
+            },
+            {
+              "var": "c"
+            }
+          ],
+          "op": "<="
+        }
+      ]
+    },
+    {
+      "body": [
+        {
+          "if": {
+            "cond": {
+              "args": [
+                {
+                  "var": "index_v"
+                },
+                {
+                  "args": [
+                    {
+                      "var": "a_v5"
+                    }
+                  ],
+                  "op": "len"
+                }
+              ],
+              "op": ">="
+            },
+            "else": [
+              {
+                "if": {
+                  "cond": {
+                    "args": [
+                      {
+                        "args": [
+                          {
+                            "var": "a_v5"
+                          },
+                          {
+                            "var": "index_v"
+                          }
+                        ],
+                        "op": "at"
+                      },
+                      {
+                        "var": "cutoff_v"
+                      }
+                    ],
+                    "op": ">"
+                  },
+                  "else": [
+                    {
+                      "assert": {
+                        "args": [
+                          {
+                            "args": [
+                              {
+                                "var": "a_v5"
+                              },
+                              {
+                                "var": "index_v"
+                              }
+                            ],
+                            "op": "at"
+                          },
+                          {
+                            "int": 1
+                          }
+                        ],
+                        "op": ">="
+                      }
+                    },
+                    {
+                      "assert": {
+                        "args": [
+                          {
+                            "args": [
+                              {
+                                "args": [
+                                  {
+                                    "args": [
+                                      {
+                                        "var": "a_v5"
+                                      },
+                                      {
+                                        "var": "index_v"
+                                      }
+                                    ],
+                                    "op": "at"
+                                  },
+                                  {
+                                    "int": 15
+                                  }
+                                ],
+                                "op": "+"
+                              },
+                              {
+                                "int": 16
+                              }
+                            ],
+                            "op": ">="
+                          },
+                          {
+                            "args": [
+                              {
+                                "int": 16
+                              },
+                              {
+                                "int": 15
+                              }
+                            ],
+                            "op": ">="
+                          }
+                        ],
+                        "op": "and"
+                      }
+                    },
+                    {
+                      "lemma": {
+                        "args": [
+                          {
+                            "var": "a_v5"
+                          },
+                          {
+                            "args": [
+                              {
+                                "var": "index_v"
+                              },
+                              {
+                                "int": 1
+                              }
+                            ],
+                            "op": "+"
+                          },
+                          {
+                            "args": [
+                              {
+                                "args": [
+                                  {
+                                    "var": "a_v5"
+                                  },
+                                  {
+                                    "var": "index_v"
+                                  }
+                                ],
+                                "op": "at"
+                              },
+                              {
+                                "int": 15
+                              }
+                            ],
+                            "op": "+"
+                          }
+                        ],
+                        "name": "findCutoffLowerBound"
+                      }
+                    },
+                    {
+                      "assert": {
+                        "args": [
+                          {
+                            "call": {
+                              "args": [
+                                {
+                                  "var": "a_v5"
+                                },
+                                {
+                                  "args": [
+                                    {
+                                      "var": "index_v"
+                                    },
+                                    {
+                                      "int": 1
+                                    }
+                                  ],
+                                  "op": "+"
+                                },
+                                {
+                                  "args": [
+                                    {
+                                      "args": [
+                                        {
+                                          "var": "a_v5"
+                                        },
+                                        {
+                                          "var": "index_v"
+                                        }
+                                      ],
+                                      "op": "at"
+                                    },
+                                    {
+                                      "int": 15
+                                    }
+                                  ],
+                                  "op": "+"
+                                }
+                              ],
+                              "fun": "findCutoff"
+                            }
+                          },
+                          {
+                            "int": 15
+                          }
+                        ],
+                        "op": ">="
+                      }
+                    },
+                    {
+                      "assert": {
+                        "args": [
+                          {
+                            "args": [
+                              {
+                                "call": {
+                                  "args": [
+                                    {
+                                      "var": "a_v5"
+                                    },
+                                    {
+                                      "var": "index_v"
+                                    },
+                                    {
+                                      "var": "cutoff_v"
+                                    }
+                                  ],
+                                  "fun": "findCutoff"
+                                }
+                              },
+                              {
+                                "call": {
+                                  "args": [
+                                    {
+                                      "var": "a_v5"
+                                    },
+                                    {
+                                      "args": [
+                                        {
+                                          "var": "index_v"
+                                        },
+                                        {
+                                          "int": 1
+                                        }
+                                      ],
+                                      "op": "+"
+                                    },
+                                    {
+                                      "args": [
+                                        {
+                                          "args": [
+                                            {
+                                              "var": "a_v5"
+                                            },
+                                            {
+                                              "var": "index_v"
+                                            }
+                                          ],
+                                          "op": "at"
+                                        },
+                                        {
+                                          "int": 15
+                                        }
+                                      ],
+                                      "op": "+"
+                                    }
+                                  ],
+                                  "fun": "findCutoff"
+                                }
+                              }
+                            ],
+                            "op": "=="
+                          },
+                          {
+                            "args": [
+                              {
+                                "call": {
+                                  "args": [
+                                    {
+                                      "var": "a_v5"
+                                    },
+                                    {
+                                      "args": [
+                                        {
+                                          "var": "index_v"
+                                        },
+                                        {
+                                          "int": 1
+                                        }
+                                      ],
+                                      "op": "+"
+                                    },
+                                    {
+                                      "args": [
+                                        {
+                                          "args": [
+                                            {
+                                              "var": "a_v5"
+                                            },
+                                            {
+                                              "var": "index_v"
+                                            }
+                                          ],
+                                          "op": "at"
+                                        },
+                                        {
+                                          "int": 15
+                                        }
+                                      ],
+                                      "op": "+"
+                                    }
+                                  ],
+                                  "fun": "findCutoff"
+                                }
+                              },
+                              {
+                                "int": 15
+                              }
+                            ],
+                            "op": ">="
+                          }
+                        ],
+                        "op": "and"
+                      }
+                    }
+                  ],
+                  "then": [
+                    {
+                      "assert": {
+                        "args": [
+                          {
+                            "args": [
+                              {
+                                "call": {
+                                  "args": [
+                                    {
+                                      "var": "a_v5"
+                                    },
+                                    {
+                                      "var": "index_v"
+                                    },
+                                    {
+                                      "var": "cutoff_v"
+                                    }
+                                  ],
+                                  "fun": "findCutoff"
+                                }
+                              },
+                              {
+                                "var": "cutoff_v"
+                              }
+                            ],
+                            "op": "=="
+                          },
+                          {
+                            "args": [
+                              {
+                                "var": "cutoff_v"
+                              },
+                              {
+                                "int": 15
+                              }
+                            ],
+                            "op": ">="
+                          }
+                        ],
+                        "op": "and"
+                      }
+                    }
+                  ]
+                }
+              }
+            ],
+            "then": [
+              {
+                "assert": {
+                  "args": [
+                    {
+                      "args": [
+                        {
+                          "call": {
+                            "args": [
+                              {
+                                "var": "a_v5"
+                              },
+                              {
+                                "var": "index_v"
+                              },
+                              {
+                                "var": "cutoff_v"
+                              }
+                            ],
+                            "fun": "findCutoff"
+                          }
+                        },
+                        {
+                          "var": "cutoff_v"
+                        }
+                      ],
+                      "op": "=="
+                    },
+                    {
+                      "args": [
+                        {
+                          "var": "cutoff_v"
+                        },
+                        {
+                          "int": 15
+                        }
+                      ],
+                      "op": ">="
+                    }
+                  ],
+                  "op": "and"
+                }
+              }
+            ]
+          }
+        }
+      ],
+      "decreases": {
+        "args": [
+          {
+            "args": [
+              {
+                "var": "a_v5"
+              }
+            ],
+            "op": "len"
+          },
+          {
+            "var": "index_v"
+          }
+        ],
+        "op": "-"
+      },
+      "ensures": [
+        {
+          "args": [
+            {
+              "call": {
+                "args": [
+                  {
+                    "var": "a_v5"
+                  },
+                  {
+                    "var": "index_v"
+                  },
+                  {
+                    "var": "cutoff_v"
+                  }
+                ],
+                "fun": "findCutoff"
+              }
+            },
+            {
+              "int": 15
+            }
+          ],
+          "op": ">="
+        }
+      ],
+      "name": "findCutoffLowerBound",
+      "params": [
+        {
+          "name": "a_v5",
+          "type": "seq"
+        },
+        {
+          "name": "index_v",
+          "type": "int"
+        },
+        {
+          "name": "cutoff_v",
+          "type": "int"
+        }
+      ],
+      "requires": [
+        {
+          "args": [
+            {
+              "int": 0
+            },
+            {
+              "var": "index_v"
+            }
+          ],
+          "op": "<="
+        },
+        {
+          "args": [
+            {
+              "var": "index_v"
+            },
+            {
+              "args": [
+                {
+                  "var": "a_v5"
+                }
+              ],
+              "op": "len"
+            }
+          ],
+          "op": "<="
+        },
+        {
+          "forall": {
+            "body": {
+              "args": [
+                {
+                  "args": [
+                    {
+                      "var": "a_v5"
+                    },
+                    {
+                      "var": "i_v3"
+                    }
+                  ],
+                  "op": "at"
+                },
+                {
+                  "int": 1
+                }
+              ],
+              "op": ">="
+            },
+            "hi": {
+              "args": [
+                {
+                  "var": "a_v5"
+                }
+              ],
+              "op": "len"
+            },
+            "lo": {
+              "int": 0
+            },
+            "var": "i_v3"
+          }
+        },
+        {
+          "args": [
+            {
+              "var": "cutoff_v"
+            },
+            {
+              "int": 15
+            }
+          ],
+          "op": ">="
+        }
+      ]
+    },
+    {
+      "body": [],
+      "ensures": [
+        {
+          "args": [
+            {
+              "call": {
+                "args": [
+                  {
+                    "var": "a_v6"
+                  },
+                  {
+                    "var": "i_v4"
+                  },
+                  {
+                    "var": "c_v"
+                  }
+                ],
+                "fun": "findCutoff"
+              }
+            },
+            {
+              "var": "c_v"
+            }
+          ],
+          "op": "=="
+        }
+      ],
+      "name": "findCutoffTerminate",
+      "params": [
+        {
+          "name": "a_v6",
+          "type": "seq"
+        },
+        {
+          "name": "i_v4",
+          "type": "int"
+        },
+        {
+          "name": "c_v",
+          "type": "int"
+        }
+      ],
+      "requires": [
+        {
+          "args": [
+            {
+              "int": 0
+            },
+            {
+              "var": "i_v4"
+            }
+          ],
+          "op": "<="
+        },
+        {
+          "args": [
+            {
+              "var": "i_v4"
+            },
+            {
+              "args": [
+                {
+                  "var": "a_v6"
+                }
+              ],
+              "op": "len"
+            }
+          ],
+          "op": "<"
+        },
+        {
+          "args": [
+            {
+              "args": [
+                {
+                  "var": "a_v6"
+                },
+                {
+                  "var": "i_v4"
+                }
+              ],
+              "op": "at"
+            },
+            {
+              "var": "c_v"
+            }
+          ],
+          "op": ">"
+        }
+      ]
+    },
+    {
+      "body": [],
+      "ensures": [
+        {
+          "args": [
+            {
+              "call": {
+                "args": [
+                  {
+                    "var": "a_v7"
+                  },
+                  {
+                    "args": [
+                      {
+                        "var": "a_v7"
+                      }
+                    ],
+                    "op": "len"
+                  },
+                  {
+                    "var": "c_v2"
+                  }
+                ],
+                "fun": "findCutoff"
+              }
+            },
+            {
+              "var": "c_v2"
+            }
+          ],
+          "op": "=="
+        }
+      ],
+      "name": "findCutoffEnd",
+      "params": [
+        {
+          "name": "a_v7",
+          "type": "seq"
+        },
+        {
+          "name": "c_v2",
+          "type": "int"
+        }
+      ],
+      "requires": [
+        {
+          "args": [
+            {
+              "int": 0
+            },
+            {
+              "args": [
+                {
+                  "var": "a_v7"
+                }
+              ],
+              "op": "len"
+            }
+          ],
+          "op": "<="
+        }
+      ]
+    }
+  ],
+  "name": "vericoding_da0153__solve",
+  "params": [
+    {
+      "name": "n",
+      "type": "int"
+    },
+    {
+      "name": "a",
+      "type": "seq"
+    }
+  ],
+  "requires": [
+    {
+      "call": {
+        "args": [
+          {
+            "var": "n"
+          },
+          {
+            "var": "a"
+          }
+        ],
+        "fun": "validInput"
+      }
+    }
+  ],
+  "returns": [
+    {
+      "name": "result",
+      "type": "int"
+    }
+  ],
+  "spec_funs": [
+    {
+      "body": {
+        "ite": {
+          "cond": {
+            "args": [
+              {
+                "var": "x"
+              },
+              {
+                "var": "y"
+              }
+            ],
+            "op": "<="
+          },
+          "else": {
+            "var": "y"
+          },
+          "then": {
+            "var": "x"
+          }
+        }
+      },
+      "decreases": {
+        "int": 0
+      },
+      "name": "min",
+      "params": [
+        {
+          "name": "x",
+          "type": "int"
+        },
+        {
+          "name": "y",
+          "type": "int"
+        }
+      ],
+      "result": "int"
+    },
+    {
+      "body": {
+        "args": [
+          {
+            "args": [
+              {
+                "var": "n_v"
+              },
+              {
+                "int": 1
+              }
+            ],
+            "op": ">="
+          },
+          {
+            "args": [
+              {
+                "var": "n_v"
+              },
+              {
+                "int": 90
+              }
+            ],
+            "op": "<="
+          },
+          {
+            "args": [
+              {
+                "args": [
+                  {
+                    "var": "a_v"
+                  }
+                ],
+                "op": "len"
+              },
+              {
+                "var": "n_v"
+              }
+            ],
+            "op": "=="
+          },
+          {
+            "forall": {
+              "body": {
+                "args": [
+                  {
+                    "args": [
+                      {
+                        "int": 1
+                      },
+                      {
+                        "args": [
+                          {
+                            "var": "a_v"
+                          },
+                          {
+                            "var": "i"
+                          }
+                        ],
+                        "op": "at"
+                      }
+                    ],
+                    "op": "<="
+                  },
+                  {
+                    "args": [
+                      {
+                        "args": [
+                          {
+                            "var": "a_v"
+                          },
+                          {
+                            "var": "i"
+                          }
+                        ],
+                        "op": "at"
+                      },
+                      {
+                        "int": 90
+                      }
+                    ],
+                    "op": "<="
+                  }
+                ],
+                "op": "and"
+              },
+              "hi": {
+                "var": "n_v"
+              },
+              "lo": {
+                "int": 0
+              },
+              "var": "i"
+            }
+          },
+          {
+            "forall": {
+              "body": {
+                "args": [
+                  {
+                    "args": [
+                      {
+                        "var": "a_v"
+                      },
+                      {
+                        "var": "i_v"
+                      }
+                    ],
+                    "op": "at"
+                  },
+                  {
+                    "args": [
+                      {
+                        "var": "a_v"
+                      },
+                      {
+                        "args": [
+                          {
+                            "var": "i_v"
+                          },
+                          {
+                            "int": 1
+                          }
+                        ],
+                        "op": "+"
+                      }
+                    ],
+                    "op": "at"
+                  }
+                ],
+                "op": "<"
+              },
+              "hi": {
+                "args": [
+                  {
+                    "var": "n_v"
+                  },
+                  {
+                    "int": 1
+                  }
+                ],
+                "op": "-"
+              },
+              "lo": {
+                "int": 0
+              },
+              "var": "i_v"
+            }
+          }
+        ],
+        "op": "and"
+      },
+      "decreases": {
+        "int": 0
+      },
+      "name": "validInput",
+      "params": [
+        {
+          "name": "n_v",
+          "type": "int"
+        },
+        {
+          "name": "a_v",
+          "type": "seq"
+        }
+      ],
+      "result": "bool"
+    },
+    {
+      "body": {
+        "ite": {
+          "cond": {
+            "args": [
+              {
+                "args": [
+                  {
+                    "int": 0
+                  },
+                  {
+                    "var": "index"
+                  }
+                ],
+                "op": "<="
+              },
+              {
+                "args": [
+                  {
+                    "var": "index"
+                  },
+                  {
+                    "args": [
+                      {
+                        "var": "a_v2"
+                      }
+                    ],
+                    "op": "len"
+                  }
+                ],
+                "op": "<="
+              }
+            ],
+            "op": "and"
+          },
+          "else": {
+            "int": 0
+          },
+          "then": {
+            "ite": {
+              "cond": {
+                "args": [
+                  {
+                    "var": "index"
+                  },
+                  {
+                    "args": [
+                      {
+                        "var": "a_v2"
+                      }
+                    ],
+                    "op": "len"
+                  }
+                ],
+                "op": ">="
+              },
+              "else": {
+                "ite": {
+                  "cond": {
+                    "args": [
+                      {
+                        "args": [
+                          {
+                            "var": "a_v2"
+                          },
+                          {
+                            "var": "index"
+                          }
+                        ],
+                        "op": "at"
+                      },
+                      {
+                        "var": "cutoff"
+                      }
+                    ],
+                    "op": ">"
+                  },
+                  "else": {
+                    "call": {
+                      "args": [
+                        {
+                          "var": "a_v2"
+                        },
+                        {
+                          "args": [
+                            {
+                              "var": "index"
+                            },
+                            {
+                              "int": 1
+                            }
+                          ],
+                          "op": "+"
+                        },
+                        {
+                          "args": [
+                            {
+                              "args": [
+                                {
+                                  "var": "a_v2"
+                                },
+                                {
+                                  "var": "index"
+                                }
+                              ],
+                              "op": "at"
+                            },
+                            {
+                              "int": 15
+                            }
+                          ],
+                          "op": "+"
+                        }
+                      ],
+                      "fun": "findCutoff"
+                    }
+                  },
+                  "then": {
+                    "var": "cutoff"
+                  }
+                }
+              },
+              "then": {
+                "var": "cutoff"
+              }
+            }
+          }
+        }
+      },
+      "decreases": {
+        "args": [
+          {
+            "args": [
+              {
+                "var": "a_v2"
+              }
+            ],
+            "op": "len"
+          },
+          {
+            "var": "index"
+          }
+        ],
+        "op": "-"
+      },
+      "name": "findCutoff",
+      "params": [
+        {
+          "name": "a_v2",
+          "type": "seq"
+        },
+        {
+          "name": "index",
+          "type": "int"
+        },
+        {
+          "name": "cutoff",
+          "type": "int"
+        }
+      ],
+      "result": "int"
+    },
+    {
+      "body": {
+        "args": [
+          {
+            "call": {
+              "args": [
+                {
+                  "var": "n_v2"
+                },
+                {
+                  "var": "a_v3"
+                }
+              ],
+              "fun": "validInput"
+            }
+          },
+          {
+            "args": [
+              {
+                "args": [
+                  {
+                    "args": [
+                      {
+                        "int": 1
+                      },
+                      {
+                        "var": "result_v"
+                      }
+                    ],
+                    "op": "<="
+                  },
+                  {
+                    "args": [
+                      {
+                        "var": "result_v"
+                      },
+                      {
+                        "int": 90
+                      }
+                    ],
+                    "op": "<="
+                  }
+                ],
+                "op": "and"
+              },
+              {
+                "args": [
+                  {
+                    "var": "result_v"
+                  },
+                  {
+                    "call": {
+                      "args": [
+                        {
+                          "int": 90
+                        },
+                        {
+                          "call": {
+                            "args": [
+                              {
+                                "var": "a_v3"
+                              },
+                              {
+                                "int": 0
+                              },
+                              {
+                                "int": 15
+                              }
+                            ],
+                            "fun": "findCutoff"
+                          }
+                        }
+                      ],
+                      "fun": "min"
+                    }
+                  }
+                ],
+                "op": "=="
+              }
+            ],
+            "op": "and"
+          }
+        ],
+        "op": "implies"
+      },
+      "decreases": {
+        "int": 0
+      },
+      "name": "validOutput",
+      "params": [
+        {
+          "name": "result_v",
+          "type": "int"
+        },
+        {
+          "name": "n_v2",
+          "type": "int"
+        },
+        {
+          "name": "a_v3",
+          "type": "seq"
+        }
+      ],
+      "result": "bool"
+    }
+  ],
+  "t": 1
+}

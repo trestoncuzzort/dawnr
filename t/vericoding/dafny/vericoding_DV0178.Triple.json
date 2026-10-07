@@ -1,0 +1,83 @@
+{
+  "body": [
+    {
+      "assign": [
+        "result",
+        {
+          "args": [
+            {
+              "var": "x"
+            },
+            {
+              "int": 3
+            }
+          ],
+          "op": "*"
+        }
+      ]
+    }
+  ],
+  "ensures": [
+    {
+      "args": [
+        {
+          "args": [
+            {
+              "var": "result"
+            },
+            {
+              "int": 3
+            }
+          ],
+          "op": "div"
+        },
+        {
+          "var": "x"
+        }
+      ],
+      "op": "=="
+    },
+    {
+      "args": [
+        {
+          "args": [
+            {
+              "args": [
+                {
+                  "var": "result"
+                },
+                {
+                  "int": 3
+                }
+              ],
+              "op": "div"
+            },
+            {
+              "int": 3
+            }
+          ],
+          "op": "*"
+        },
+        {
+          "var": "result"
+        }
+      ],
+      "op": "=="
+    }
+  ],
+  "name": "vericoding_dv0178__triple",
+  "params": [
+    {
+      "name": "x",
+      "type": "int"
+    }
+  ],
+  "requires": [],
+  "returns": [
+    {
+      "name": "result",
+      "type": "int"
+    }
+  ],
+  "t": 1
+}

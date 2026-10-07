@@ -1,0 +1,421 @@
+{
+  "body": [
+    {
+      "assign": [
+        "years",
+        {
+          "int": 0
+        }
+      ]
+    },
+    {
+      "var": {
+        "init": {
+          "int": 100
+        },
+        "name": "current",
+        "type": "int"
+      }
+    },
+    {
+      "while": {
+        "body": [
+          {
+            "var": {
+              "init": {
+                "var": "current"
+              },
+              "name": "oldCurrent",
+              "type": "int"
+            }
+          },
+          {
+            "assign": [
+              "current",
+              {
+                "args": [
+                  {
+                    "var": "current"
+                  },
+                  {
+                    "args": [
+                      {
+                        "var": "current"
+                      },
+                      {
+                        "int": 100
+                      }
+                    ],
+                    "op": "div"
+                  }
+                ],
+                "op": "+"
+              }
+            ]
+          },
+          {
+            "assign": [
+              "years",
+              {
+                "args": [
+                  {
+                    "var": "years"
+                  },
+                  {
+                    "int": 1
+                  }
+                ],
+                "op": "+"
+              }
+            ]
+          }
+        ],
+        "cond": {
+          "args": [
+            {
+              "var": "current"
+            },
+            {
+              "var": "x"
+            }
+          ],
+          "op": "<"
+        },
+        "decreases": {
+          "args": [
+            {
+              "var": "x"
+            },
+            {
+              "var": "current"
+            }
+          ],
+          "op": "-"
+        },
+        "invariants": [
+          {
+            "args": [
+              {
+                "var": "years"
+              },
+              {
+                "int": 0
+              }
+            ],
+            "op": ">="
+          },
+          {
+            "args": [
+              {
+                "var": "current"
+              },
+              {
+                "call": {
+                  "args": [
+                    {
+                      "int": 100
+                    },
+                    {
+                      "var": "years"
+                    }
+                  ],
+                  "fun": "calculateDeposit"
+                }
+              }
+            ],
+            "op": "=="
+          },
+          {
+            "args": [
+              {
+                "var": "current"
+              },
+              {
+                "int": 100
+              }
+            ],
+            "op": ">="
+          },
+          {
+            "args": [
+              {
+                "args": [
+                  {
+                    "var": "years"
+                  },
+                  {
+                    "int": 0
+                  }
+                ],
+                "op": "=="
+              },
+              {
+                "args": [
+                  {
+                    "call": {
+                      "args": [
+                        {
+                          "int": 100
+                        },
+                        {
+                          "args": [
+                            {
+                              "var": "years"
+                            },
+                            {
+                              "int": 1
+                            }
+                          ],
+                          "op": "-"
+                        }
+                      ],
+                      "fun": "calculateDeposit"
+                    }
+                  },
+                  {
+                    "var": "x"
+                  }
+                ],
+                "op": "<"
+              }
+            ],
+            "op": "or"
+          }
+        ]
+      }
+    }
+  ],
+  "ensures": [
+    {
+      "args": [
+        {
+          "var": "years"
+        },
+        {
+          "int": 0
+        }
+      ],
+      "op": ">="
+    },
+    {
+      "args": [
+        {
+          "call": {
+            "args": [
+              {
+                "int": 100
+              },
+              {
+                "var": "years"
+              }
+            ],
+            "fun": "calculateDeposit"
+          }
+        },
+        {
+          "var": "x"
+        }
+      ],
+      "op": ">="
+    },
+    {
+      "args": [
+        {
+          "args": [
+            {
+              "var": "years"
+            },
+            {
+              "int": 0
+            }
+          ],
+          "op": "=="
+        },
+        {
+          "args": [
+            {
+              "call": {
+                "args": [
+                  {
+                    "int": 100
+                  },
+                  {
+                    "args": [
+                      {
+                        "var": "years"
+                      },
+                      {
+                        "int": 1
+                      }
+                    ],
+                    "op": "-"
+                  }
+                ],
+                "fun": "calculateDeposit"
+              }
+            },
+            {
+              "var": "x"
+            }
+          ],
+          "op": "<"
+        }
+      ],
+      "op": "or"
+    }
+  ],
+  "gate": "recursion",
+  "name": "vericoding_da0476__solve",
+  "params": [
+    {
+      "name": "x",
+      "type": "int"
+    }
+  ],
+  "requires": [
+    {
+      "args": [
+        {
+          "var": "x"
+        },
+        {
+          "int": 101
+        }
+      ],
+      "op": ">="
+    }
+  ],
+  "returns": [
+    {
+      "name": "years",
+      "type": "int"
+    }
+  ],
+  "spec_funs": [
+    {
+      "body": {
+        "ite": {
+          "cond": {
+            "args": [
+              {
+                "args": [
+                  {
+                    "var": "initial"
+                  },
+                  {
+                    "int": 0
+                  }
+                ],
+                "op": ">="
+              },
+              {
+                "args": [
+                  {
+                    "var": "years_v"
+                  },
+                  {
+                    "int": 0
+                  }
+                ],
+                "op": ">="
+              }
+            ],
+            "op": "and"
+          },
+          "else": {
+            "int": 0
+          },
+          "then": {
+            "ite": {
+              "cond": {
+                "args": [
+                  {
+                    "var": "years_v"
+                  },
+                  {
+                    "int": 0
+                  }
+                ],
+                "op": "=="
+              },
+              "else": {
+                "args": [
+                  {
+                    "call": {
+                      "args": [
+                        {
+                          "var": "initial"
+                        },
+                        {
+                          "args": [
+                            {
+                              "var": "years_v"
+                            },
+                            {
+                              "int": 1
+                            }
+                          ],
+                          "op": "-"
+                        }
+                      ],
+                      "fun": "calculateDeposit"
+                    }
+                  },
+                  {
+                    "args": [
+                      {
+                        "call": {
+                          "args": [
+                            {
+                              "var": "initial"
+                            },
+                            {
+                              "args": [
+                                {
+                                  "var": "years_v"
+                                },
+                                {
+                                  "int": 1
+                                }
+                              ],
+                              "op": "-"
+                            }
+                          ],
+                          "fun": "calculateDeposit"
+                        }
+                      },
+                      {
+                        "int": 100
+                      }
+                    ],
+                    "op": "div"
+                  }
+                ],
+                "op": "+"
+              },
+              "then": {
+                "var": "initial"
+              }
+            }
+          }
+        }
+      },
+      "decreases": {
+        "var": "years_v"
+      },
+      "name": "calculateDeposit",
+      "params": [
+        {
+          "name": "initial",
+          "type": "int"
+        },
+        {
+          "name": "years_v",
+          "type": "int"
+        }
+      ],
+      "result": "int"
+    }
+  ],
+  "t": 1
+}

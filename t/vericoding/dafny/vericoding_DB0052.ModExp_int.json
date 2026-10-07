@@ -1,0 +1,448 @@
+{
+  "body": [
+    {
+      "var": {
+        "init": {
+          "call": {
+            "args": [
+              {
+                "var": "x"
+              },
+              {
+                "var": "y"
+              }
+            ],
+            "fun": "vericoding_db0052__pow"
+          }
+        },
+        "name": "t_v",
+        "type": "int"
+      }
+    },
+    {
+      "assign": [
+        "res",
+        {
+          "args": [
+            {
+              "var": "t_v"
+            },
+            {
+              "var": "z"
+            }
+          ],
+          "op": "mod"
+        }
+      ]
+    }
+  ],
+  "ensures": [
+    {
+      "args": [
+        {
+          "var": "res"
+        },
+        {
+          "int": 0
+        }
+      ],
+      "op": ">="
+    },
+    {
+      "args": [
+        {
+          "var": "res"
+        },
+        {
+          "args": [
+            {
+              "call": {
+                "args": [
+                  {
+                    "var": "x"
+                  },
+                  {
+                    "var": "y"
+                  }
+                ],
+                "fun": "exp_int"
+              }
+            },
+            {
+              "var": "z"
+            }
+          ],
+          "op": "mod"
+        }
+      ],
+      "op": "=="
+    }
+  ],
+  "gate": "recursion",
+  "methods": [
+    {
+      "body": [
+        {
+          "if": {
+            "cond": {
+              "args": [
+                {
+                  "var": "y"
+                },
+                {
+                  "int": 0
+                }
+              ],
+              "op": "=="
+            },
+            "else": [
+              {
+                "var": {
+                  "init": {
+                    "call": {
+                      "args": [
+                        {
+                          "var": "x"
+                        },
+                        {
+                          "args": [
+                            {
+                              "var": "y"
+                            },
+                            {
+                              "int": 1
+                            }
+                          ],
+                          "op": "-"
+                        }
+                      ],
+                      "fun": "vericoding_db0052__pow"
+                    }
+                  },
+                  "name": "q",
+                  "type": "int"
+                }
+              },
+              {
+                "assign": [
+                  "p",
+                  {
+                    "args": [
+                      {
+                        "var": "x"
+                      },
+                      {
+                        "var": "q"
+                      }
+                    ],
+                    "op": "*"
+                  }
+                ]
+              }
+            ],
+            "then": [
+              {
+                "assign": [
+                  "p",
+                  {
+                    "int": 1
+                  }
+                ]
+              }
+            ]
+          }
+        }
+      ],
+      "decreases": {
+        "var": "y"
+      },
+      "ensures": [
+        {
+          "args": [
+            {
+              "var": "p"
+            },
+            {
+              "int": 0
+            }
+          ],
+          "op": ">="
+        },
+        {
+          "args": [
+            {
+              "var": "p"
+            },
+            {
+              "call": {
+                "args": [
+                  {
+                    "var": "x"
+                  },
+                  {
+                    "var": "y"
+                  }
+                ],
+                "fun": "exp_int"
+              }
+            }
+          ],
+          "op": "=="
+        }
+      ],
+      "name": "vericoding_db0052__pow",
+      "params": [
+        {
+          "name": "x",
+          "type": "int"
+        },
+        {
+          "name": "y",
+          "type": "int"
+        }
+      ],
+      "requires": [
+        {
+          "args": [
+            {
+              "var": "x"
+            },
+            {
+              "int": 0
+            }
+          ],
+          "op": ">="
+        },
+        {
+          "args": [
+            {
+              "var": "y"
+            },
+            {
+              "int": 0
+            }
+          ],
+          "op": ">="
+        }
+      ],
+      "returns": [
+        {
+          "name": "p",
+          "type": "int"
+        }
+      ]
+    }
+  ],
+  "name": "vericoding_db0052__modExp_int",
+  "params": [
+    {
+      "name": "x",
+      "type": "int"
+    },
+    {
+      "name": "y",
+      "type": "int"
+    },
+    {
+      "name": "n",
+      "type": "int"
+    },
+    {
+      "name": "z",
+      "type": "int"
+    }
+  ],
+  "requires": [
+    {
+      "args": [
+        {
+          "var": "x"
+        },
+        {
+          "int": 0
+        }
+      ],
+      "op": ">="
+    },
+    {
+      "args": [
+        {
+          "var": "y"
+        },
+        {
+          "int": 0
+        }
+      ],
+      "op": ">="
+    },
+    {
+      "args": [
+        {
+          "var": "n"
+        },
+        {
+          "int": 0
+        }
+      ],
+      "op": ">="
+    },
+    {
+      "args": [
+        {
+          "var": "z"
+        },
+        {
+          "int": 0
+        }
+      ],
+      "op": ">="
+    },
+    {
+      "args": [
+        {
+          "var": "y"
+        },
+        {
+          "call": {
+            "args": [
+              {
+                "int": 2
+              },
+              {
+                "args": [
+                  {
+                    "var": "n"
+                  },
+                  {
+                    "int": 1
+                  }
+                ],
+                "op": "+"
+              }
+            ],
+            "fun": "exp_int"
+          }
+        }
+      ],
+      "op": "<"
+    },
+    {
+      "args": [
+        {
+          "var": "z"
+        },
+        {
+          "int": 1
+        }
+      ],
+      "op": ">"
+    }
+  ],
+  "returns": [
+    {
+      "name": "res",
+      "type": "int"
+    }
+  ],
+  "spec_funs": [
+    {
+      "body": {
+        "ite": {
+          "cond": {
+            "args": [
+              {
+                "args": [
+                  {
+                    "var": "x_v"
+                  },
+                  {
+                    "int": 0
+                  }
+                ],
+                "op": ">="
+              },
+              {
+                "args": [
+                  {
+                    "var": "y_v"
+                  },
+                  {
+                    "int": 0
+                  }
+                ],
+                "op": ">="
+              }
+            ],
+            "op": "and"
+          },
+          "else": {
+            "int": 0
+          },
+          "then": {
+            "ite": {
+              "cond": {
+                "args": [
+                  {
+                    "var": "y_v"
+                  },
+                  {
+                    "int": 0
+                  }
+                ],
+                "op": "=="
+              },
+              "else": {
+                "args": [
+                  {
+                    "var": "x_v"
+                  },
+                  {
+                    "call": {
+                      "args": [
+                        {
+                          "var": "x_v"
+                        },
+                        {
+                          "args": [
+                            {
+                              "var": "y_v"
+                            },
+                            {
+                              "int": 1
+                            }
+                          ],
+                          "op": "-"
+                        }
+                      ],
+                      "fun": "exp_int"
+                    }
+                  }
+                ],
+                "op": "*"
+              },
+              "then": {
+                "int": 1
+              }
+            }
+          }
+        }
+      },
+      "decreases": {
+        "var": "y_v"
+      },
+      "name": "exp_int",
+      "params": [
+        {
+          "name": "x_v",
+          "type": "int"
+        },
+        {
+          "name": "y_v",
+          "type": "int"
+        }
+      ],
+      "result": "int"
+    }
+  ],
+  "t": 1
+}

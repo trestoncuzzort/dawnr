@@ -1,0 +1,776 @@
+{
+  "body": [
+    {
+      "assign": [
+        "result",
+        {
+          "args": [
+            {
+              "args": [
+                {
+                  "var": "x"
+                },
+                {
+                  "var": "z"
+                }
+              ],
+              "op": "-"
+            },
+            {
+              "args": [
+                {
+                  "var": "y"
+                },
+                {
+                  "var": "z"
+                }
+              ],
+              "op": "+"
+            }
+          ],
+          "op": "div"
+        }
+      ]
+    },
+    {
+      "lemma": {
+        "args": [
+          {
+            "var": "x"
+          },
+          {
+            "var": "y"
+          },
+          {
+            "var": "z"
+          }
+        ],
+        "name": "maxPeopleNonNegative"
+      }
+    },
+    {
+      "lemma": {
+        "args": [
+          {
+            "args": [
+              {
+                "var": "x"
+              },
+              {
+                "var": "z"
+              }
+            ],
+            "op": "-"
+          },
+          {
+            "args": [
+              {
+                "var": "y"
+              },
+              {
+                "var": "z"
+              }
+            ],
+            "op": "+"
+          },
+          {
+            "var": "result"
+          }
+        ],
+        "name": "divisionProperty"
+      }
+    }
+  ],
+  "ensures": [
+    {
+      "call": {
+        "args": [
+          {
+            "var": "x"
+          },
+          {
+            "var": "y"
+          },
+          {
+            "var": "z"
+          },
+          {
+            "var": "result"
+          }
+        ],
+        "fun": "validSolution"
+      }
+    }
+  ],
+  "gate": "recursion",
+  "lemmas": [
+    {
+      "body": [],
+      "ensures": [
+        {
+          "args": [
+            {
+              "args": [
+                {
+                  "var": "quotient"
+                },
+                {
+                  "var": "divisor"
+                }
+              ],
+              "op": "*"
+            },
+            {
+              "var": "dividend"
+            }
+          ],
+          "op": "<="
+        },
+        {
+          "args": [
+            {
+              "var": "dividend"
+            },
+            {
+              "args": [
+                {
+                  "args": [
+                    {
+                      "var": "quotient"
+                    },
+                    {
+                      "int": 1
+                    }
+                  ],
+                  "op": "+"
+                },
+                {
+                  "var": "divisor"
+                }
+              ],
+              "op": "*"
+            }
+          ],
+          "op": "<"
+        }
+      ],
+      "name": "divisionProperty",
+      "params": [
+        {
+          "name": "dividend",
+          "type": "int"
+        },
+        {
+          "name": "divisor",
+          "type": "int"
+        },
+        {
+          "name": "quotient",
+          "type": "int"
+        }
+      ],
+      "requires": [
+        {
+          "args": [
+            {
+              "var": "divisor"
+            },
+            {
+              "int": 0
+            }
+          ],
+          "op": ">"
+        },
+        {
+          "args": [
+            {
+              "var": "quotient"
+            },
+            {
+              "args": [
+                {
+                  "var": "dividend"
+                },
+                {
+                  "var": "divisor"
+                }
+              ],
+              "op": "div"
+            }
+          ],
+          "op": "=="
+        }
+      ]
+    },
+    {
+      "body": [
+        {
+          "assert": {
+            "args": [
+              {
+                "args": [
+                  {
+                    "var": "y_v4"
+                  },
+                  {
+                    "var": "z_v4"
+                  }
+                ],
+                "op": "+"
+              },
+              {
+                "int": 2
+              }
+            ],
+            "op": ">="
+          }
+        },
+        {
+          "assert": {
+            "args": [
+              {
+                "var": "x_v4"
+              },
+              {
+                "args": [
+                  {
+                    "var": "y_v4"
+                  },
+                  {
+                    "args": [
+                      {
+                        "int": 2
+                      },
+                      {
+                        "var": "z_v4"
+                      }
+                    ],
+                    "op": "*"
+                  }
+                ],
+                "op": "+"
+              }
+            ],
+            "op": ">="
+          }
+        },
+        {
+          "assert": {
+            "args": [
+              {
+                "args": [
+                  {
+                    "var": "x_v4"
+                  },
+                  {
+                    "var": "z_v4"
+                  }
+                ],
+                "op": "-"
+              },
+              {
+                "args": [
+                  {
+                    "var": "y_v4"
+                  },
+                  {
+                    "var": "z_v4"
+                  }
+                ],
+                "op": "+"
+              }
+            ],
+            "op": ">="
+          }
+        },
+        {
+          "assert": {
+            "args": [
+              {
+                "args": [
+                  {
+                    "var": "x_v4"
+                  },
+                  {
+                    "var": "z_v4"
+                  }
+                ],
+                "op": "-"
+              },
+              {
+                "int": 2
+              }
+            ],
+            "op": ">="
+          }
+        },
+        {
+          "assert": {
+            "args": [
+              {
+                "args": [
+                  {
+                    "args": [
+                      {
+                        "var": "x_v4"
+                      },
+                      {
+                        "var": "z_v4"
+                      }
+                    ],
+                    "op": "-"
+                  },
+                  {
+                    "args": [
+                      {
+                        "var": "y_v4"
+                      },
+                      {
+                        "var": "z_v4"
+                      }
+                    ],
+                    "op": "+"
+                  }
+                ],
+                "op": "div"
+              },
+              {
+                "int": 0
+              }
+            ],
+            "op": ">="
+          }
+        }
+      ],
+      "ensures": [
+        {
+          "args": [
+            {
+              "call": {
+                "args": [
+                  {
+                    "var": "x_v4"
+                  },
+                  {
+                    "var": "y_v4"
+                  },
+                  {
+                    "var": "z_v4"
+                  }
+                ],
+                "fun": "maxPeople"
+              }
+            },
+            {
+              "int": 0
+            }
+          ],
+          "op": ">="
+        }
+      ],
+      "name": "maxPeopleNonNegative",
+      "params": [
+        {
+          "name": "x_v4",
+          "type": "int"
+        },
+        {
+          "name": "y_v4",
+          "type": "int"
+        },
+        {
+          "name": "z_v4",
+          "type": "int"
+        }
+      ],
+      "requires": [
+        {
+          "call": {
+            "args": [
+              {
+                "var": "x_v4"
+              },
+              {
+                "var": "y_v4"
+              },
+              {
+                "var": "z_v4"
+              }
+            ],
+            "fun": "validInput"
+          }
+        }
+      ]
+    }
+  ],
+  "name": "vericoding_da0586__solve",
+  "params": [
+    {
+      "name": "x",
+      "type": "int"
+    },
+    {
+      "name": "y",
+      "type": "int"
+    },
+    {
+      "name": "z",
+      "type": "int"
+    }
+  ],
+  "requires": [
+    {
+      "call": {
+        "args": [
+          {
+            "var": "x"
+          },
+          {
+            "var": "y"
+          },
+          {
+            "var": "z"
+          }
+        ],
+        "fun": "validInput"
+      }
+    }
+  ],
+  "returns": [
+    {
+      "name": "result",
+      "type": "int"
+    }
+  ],
+  "spec_funs": [
+    {
+      "body": {
+        "args": [
+          {
+            "args": [
+              {
+                "var": "x_v"
+              },
+              {
+                "int": 1
+              }
+            ],
+            "op": ">="
+          },
+          {
+            "args": [
+              {
+                "var": "y_v"
+              },
+              {
+                "int": 1
+              }
+            ],
+            "op": ">="
+          },
+          {
+            "args": [
+              {
+                "var": "z_v"
+              },
+              {
+                "int": 1
+              }
+            ],
+            "op": ">="
+          },
+          {
+            "args": [
+              {
+                "args": [
+                  {
+                    "var": "y_v"
+                  },
+                  {
+                    "args": [
+                      {
+                        "int": 2
+                      },
+                      {
+                        "var": "z_v"
+                      }
+                    ],
+                    "op": "*"
+                  }
+                ],
+                "op": "+"
+              },
+              {
+                "var": "x_v"
+              }
+            ],
+            "op": "<="
+          }
+        ],
+        "op": "and"
+      },
+      "decreases": {
+        "int": 0
+      },
+      "name": "validInput",
+      "params": [
+        {
+          "name": "x_v",
+          "type": "int"
+        },
+        {
+          "name": "y_v",
+          "type": "int"
+        },
+        {
+          "name": "z_v",
+          "type": "int"
+        }
+      ],
+      "result": "bool"
+    },
+    {
+      "body": {
+        "ite": {
+          "cond": {
+            "call": {
+              "args": [
+                {
+                  "var": "x_v2"
+                },
+                {
+                  "var": "y_v2"
+                },
+                {
+                  "var": "z_v2"
+                }
+              ],
+              "fun": "validInput"
+            }
+          },
+          "else": {
+            "int": 0
+          },
+          "then": {
+            "args": [
+              {
+                "args": [
+                  {
+                    "var": "x_v2"
+                  },
+                  {
+                    "var": "z_v2"
+                  }
+                ],
+                "op": "-"
+              },
+              {
+                "args": [
+                  {
+                    "var": "y_v2"
+                  },
+                  {
+                    "var": "z_v2"
+                  }
+                ],
+                "op": "+"
+              }
+            ],
+            "op": "div"
+          }
+        }
+      },
+      "decreases": {
+        "int": 0
+      },
+      "name": "maxPeople",
+      "params": [
+        {
+          "name": "x_v2",
+          "type": "int"
+        },
+        {
+          "name": "y_v2",
+          "type": "int"
+        },
+        {
+          "name": "z_v2",
+          "type": "int"
+        }
+      ],
+      "result": "int"
+    },
+    {
+      "body": {
+        "ite": {
+          "cond": {
+            "call": {
+              "args": [
+                {
+                  "var": "x_v3"
+                },
+                {
+                  "var": "y_v3"
+                },
+                {
+                  "var": "z_v3"
+                }
+              ],
+              "fun": "validInput"
+            }
+          },
+          "else": {
+            "bool": false
+          },
+          "then": {
+            "args": [
+              {
+                "args": [
+                  {
+                    "var": "result_v"
+                  },
+                  {
+                    "call": {
+                      "args": [
+                        {
+                          "var": "x_v3"
+                        },
+                        {
+                          "var": "y_v3"
+                        },
+                        {
+                          "var": "z_v3"
+                        }
+                      ],
+                      "fun": "maxPeople"
+                    }
+                  }
+                ],
+                "op": "=="
+              },
+              {
+                "args": [
+                  {
+                    "var": "result_v"
+                  },
+                  {
+                    "int": 0
+                  }
+                ],
+                "op": ">="
+              },
+              {
+                "args": [
+                  {
+                    "args": [
+                      {
+                        "args": [
+                          {
+                            "var": "result_v"
+                          },
+                          {
+                            "args": [
+                              {
+                                "var": "y_v3"
+                              },
+                              {
+                                "var": "z_v3"
+                              }
+                            ],
+                            "op": "+"
+                          }
+                        ],
+                        "op": "*"
+                      },
+                      {
+                        "args": [
+                          {
+                            "var": "x_v3"
+                          },
+                          {
+                            "var": "z_v3"
+                          }
+                        ],
+                        "op": "-"
+                      }
+                    ],
+                    "op": "<="
+                  },
+                  {
+                    "args": [
+                      {
+                        "args": [
+                          {
+                            "var": "x_v3"
+                          },
+                          {
+                            "var": "z_v3"
+                          }
+                        ],
+                        "op": "-"
+                      },
+                      {
+                        "args": [
+                          {
+                            "args": [
+                              {
+                                "var": "result_v"
+                              },
+                              {
+                                "int": 1
+                              }
+                            ],
+                            "op": "+"
+                          },
+                          {
+                            "args": [
+                              {
+                                "var": "y_v3"
+                              },
+                              {
+                                "var": "z_v3"
+                              }
+                            ],
+                            "op": "+"
+                          }
+                        ],
+                        "op": "*"
+                      }
+                    ],
+                    "op": "<"
+                  }
+                ],
+                "op": "and"
+              }
+            ],
+            "op": "and"
+          }
+        }
+      },
+      "decreases": {
+        "int": 0
+      },
+      "name": "validSolution",
+      "params": [
+        {
+          "name": "x_v3",
+          "type": "int"
+        },
+        {
+          "name": "y_v3",
+          "type": "int"
+        },
+        {
+          "name": "z_v3",
+          "type": "int"
+        },
+        {
+          "name": "result_v",
+          "type": "int"
+        }
+      ],
+      "result": "bool"
+    }
+  ],
+  "t": 1
+}

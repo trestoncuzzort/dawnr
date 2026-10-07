@@ -1,0 +1,1097 @@
+{
+  "body": [
+    {
+      "var": {
+        "init": {
+          "ite": {
+            "cond": {
+              "args": [
+                {
+                  "var": "b"
+                },
+                {
+                  "int": 0
+                }
+              ],
+              "op": ">="
+            },
+            "else": {
+              "args": [
+                {
+                  "args": [
+                    {
+                      "args": [
+                        {
+                          "var": "b"
+                        },
+                        {
+                          "var": "k"
+                        }
+                      ],
+                      "op": "-"
+                    },
+                    {
+                      "int": 1
+                    }
+                  ],
+                  "op": "+"
+                },
+                {
+                  "var": "k"
+                }
+              ],
+              "op": "div"
+            },
+            "then": {
+              "args": [
+                {
+                  "var": "b"
+                },
+                {
+                  "var": "k"
+                }
+              ],
+              "op": "div"
+            }
+          }
+        },
+        "name": "countUpToB",
+        "type": "int"
+      }
+    },
+    {
+      "var": {
+        "init": {
+          "ite": {
+            "cond": {
+              "args": [
+                {
+                  "args": [
+                    {
+                      "var": "a"
+                    },
+                    {
+                      "int": 1
+                    }
+                  ],
+                  "op": "-"
+                },
+                {
+                  "int": 0
+                }
+              ],
+              "op": ">="
+            },
+            "else": {
+              "args": [
+                {
+                  "args": [
+                    {
+                      "args": [
+                        {
+                          "args": [
+                            {
+                              "var": "a"
+                            },
+                            {
+                              "int": 1
+                            }
+                          ],
+                          "op": "-"
+                        },
+                        {
+                          "var": "k"
+                        }
+                      ],
+                      "op": "-"
+                    },
+                    {
+                      "int": 1
+                    }
+                  ],
+                  "op": "+"
+                },
+                {
+                  "var": "k"
+                }
+              ],
+              "op": "div"
+            },
+            "then": {
+              "args": [
+                {
+                  "args": [
+                    {
+                      "var": "a"
+                    },
+                    {
+                      "int": 1
+                    }
+                  ],
+                  "op": "-"
+                },
+                {
+                  "var": "k"
+                }
+              ],
+              "op": "div"
+            }
+          }
+        },
+        "name": "countUpToAMinus1",
+        "type": "int"
+      }
+    },
+    {
+      "assign": [
+        "result",
+        {
+          "args": [
+            {
+              "var": "countUpToB"
+            },
+            {
+              "var": "countUpToAMinus1"
+            }
+          ],
+          "op": "-"
+        }
+      ]
+    }
+  ],
+  "ensures": [
+    {
+      "args": [
+        {
+          "var": "result"
+        },
+        {
+          "int": 0
+        }
+      ],
+      "op": ">="
+    },
+    {
+      "args": [
+        {
+          "var": "result"
+        },
+        {
+          "call": {
+            "args": [
+              {
+                "var": "k"
+              },
+              {
+                "var": "a"
+              },
+              {
+                "var": "b"
+              }
+            ],
+            "fun": "countDivisiblesInRange"
+          }
+        }
+      ],
+      "op": "=="
+    }
+  ],
+  "gate": "recursion",
+  "lemmas": [
+    {
+      "body": [
+        {
+          "assert": {
+            "args": [
+              {
+                "args": [
+                  {
+                    "var": "x"
+                  },
+                  {
+                    "args": [
+                      {
+                        "args": [
+                          {
+                            "args": [
+                              {
+                                "var": "x"
+                              },
+                              {
+                                "var": "k_v3"
+                              }
+                            ],
+                            "op": "div"
+                          },
+                          {
+                            "var": "k_v3"
+                          }
+                        ],
+                        "op": "*"
+                      },
+                      {
+                        "args": [
+                          {
+                            "var": "x"
+                          },
+                          {
+                            "var": "k_v3"
+                          }
+                        ],
+                        "op": "mod"
+                      }
+                    ],
+                    "op": "+"
+                  }
+                ],
+                "op": "=="
+              },
+              {
+                "args": [
+                  {
+                    "args": [
+                      {
+                        "int": 0
+                      },
+                      {
+                        "args": [
+                          {
+                            "var": "x"
+                          },
+                          {
+                            "var": "k_v3"
+                          }
+                        ],
+                        "op": "mod"
+                      }
+                    ],
+                    "op": "<="
+                  },
+                  {
+                    "args": [
+                      {
+                        "args": [
+                          {
+                            "var": "x"
+                          },
+                          {
+                            "var": "k_v3"
+                          }
+                        ],
+                        "op": "mod"
+                      },
+                      {
+                        "var": "k_v3"
+                      }
+                    ],
+                    "op": "<"
+                  }
+                ],
+                "op": "and"
+              }
+            ],
+            "op": "and"
+          }
+        },
+        {
+          "assert": {
+            "args": [
+              {
+                "args": [
+                  {
+                    "var": "y"
+                  },
+                  {
+                    "args": [
+                      {
+                        "args": [
+                          {
+                            "args": [
+                              {
+                                "var": "y"
+                              },
+                              {
+                                "var": "k_v3"
+                              }
+                            ],
+                            "op": "div"
+                          },
+                          {
+                            "var": "k_v3"
+                          }
+                        ],
+                        "op": "*"
+                      },
+                      {
+                        "args": [
+                          {
+                            "var": "y"
+                          },
+                          {
+                            "var": "k_v3"
+                          }
+                        ],
+                        "op": "mod"
+                      }
+                    ],
+                    "op": "+"
+                  }
+                ],
+                "op": "=="
+              },
+              {
+                "args": [
+                  {
+                    "args": [
+                      {
+                        "int": 0
+                      },
+                      {
+                        "args": [
+                          {
+                            "var": "y"
+                          },
+                          {
+                            "var": "k_v3"
+                          }
+                        ],
+                        "op": "mod"
+                      }
+                    ],
+                    "op": "<="
+                  },
+                  {
+                    "args": [
+                      {
+                        "args": [
+                          {
+                            "var": "y"
+                          },
+                          {
+                            "var": "k_v3"
+                          }
+                        ],
+                        "op": "mod"
+                      },
+                      {
+                        "var": "k_v3"
+                      }
+                    ],
+                    "op": "<"
+                  }
+                ],
+                "op": "and"
+              }
+            ],
+            "op": "and"
+          }
+        },
+        {
+          "if": {
+            "cond": {
+              "args": [
+                {
+                  "args": [
+                    {
+                      "var": "x"
+                    },
+                    {
+                      "var": "k_v3"
+                    }
+                  ],
+                  "op": "div"
+                },
+                {
+                  "args": [
+                    {
+                      "var": "y"
+                    },
+                    {
+                      "var": "k_v3"
+                    }
+                  ],
+                  "op": "div"
+                }
+              ],
+              "op": ">"
+            },
+            "else": [],
+            "then": [
+              {
+                "assert": {
+                  "args": [
+                    {
+                      "args": [
+                        {
+                          "var": "x"
+                        },
+                        {
+                          "var": "k_v3"
+                        }
+                      ],
+                      "op": "div"
+                    },
+                    {
+                      "args": [
+                        {
+                          "args": [
+                            {
+                              "var": "y"
+                            },
+                            {
+                              "var": "k_v3"
+                            }
+                          ],
+                          "op": "div"
+                        },
+                        {
+                          "int": 1
+                        }
+                      ],
+                      "op": "+"
+                    }
+                  ],
+                  "op": ">="
+                }
+              },
+              {
+                "assert": {
+                  "args": [
+                    {
+                      "args": [
+                        {
+                          "var": "x"
+                        },
+                        {
+                          "args": [
+                            {
+                              "args": [
+                                {
+                                  "args": [
+                                    {
+                                      "var": "x"
+                                    },
+                                    {
+                                      "var": "k_v3"
+                                    }
+                                  ],
+                                  "op": "div"
+                                },
+                                {
+                                  "var": "k_v3"
+                                }
+                              ],
+                              "op": "*"
+                            },
+                            {
+                              "args": [
+                                {
+                                  "var": "x"
+                                },
+                                {
+                                  "var": "k_v3"
+                                }
+                              ],
+                              "op": "mod"
+                            }
+                          ],
+                          "op": "+"
+                        }
+                      ],
+                      "op": "=="
+                    },
+                    {
+                      "args": [
+                        {
+                          "args": [
+                            {
+                              "args": [
+                                {
+                                  "args": [
+                                    {
+                                      "var": "x"
+                                    },
+                                    {
+                                      "var": "k_v3"
+                                    }
+                                  ],
+                                  "op": "div"
+                                },
+                                {
+                                  "var": "k_v3"
+                                }
+                              ],
+                              "op": "*"
+                            },
+                            {
+                              "args": [
+                                {
+                                  "var": "x"
+                                },
+                                {
+                                  "var": "k_v3"
+                                }
+                              ],
+                              "op": "mod"
+                            }
+                          ],
+                          "op": "+"
+                        },
+                        {
+                          "args": [
+                            {
+                              "args": [
+                                {
+                                  "args": [
+                                    {
+                                      "args": [
+                                        {
+                                          "var": "y"
+                                        },
+                                        {
+                                          "var": "k_v3"
+                                        }
+                                      ],
+                                      "op": "div"
+                                    },
+                                    {
+                                      "int": 1
+                                    }
+                                  ],
+                                  "op": "+"
+                                },
+                                {
+                                  "var": "k_v3"
+                                }
+                              ],
+                              "op": "*"
+                            },
+                            {
+                              "int": 0
+                            }
+                          ],
+                          "op": "+"
+                        }
+                      ],
+                      "op": ">="
+                    }
+                  ],
+                  "op": "and"
+                }
+              },
+              {
+                "assert": {
+                  "args": [
+                    {
+                      "var": "x"
+                    },
+                    {
+                      "args": [
+                        {
+                          "args": [
+                            {
+                              "args": [
+                                {
+                                  "var": "y"
+                                },
+                                {
+                                  "var": "k_v3"
+                                }
+                              ],
+                              "op": "div"
+                            },
+                            {
+                              "var": "k_v3"
+                            }
+                          ],
+                          "op": "*"
+                        },
+                        {
+                          "var": "k_v3"
+                        }
+                      ],
+                      "op": "+"
+                    }
+                  ],
+                  "op": ">="
+                }
+              },
+              {
+                "assert": {
+                  "args": [
+                    {
+                      "var": "x"
+                    },
+                    {
+                      "args": [
+                        {
+                          "args": [
+                            {
+                              "var": "y"
+                            },
+                            {
+                              "args": [
+                                {
+                                  "var": "y"
+                                },
+                                {
+                                  "var": "k_v3"
+                                }
+                              ],
+                              "op": "mod"
+                            }
+                          ],
+                          "op": "-"
+                        },
+                        {
+                          "var": "k_v3"
+                        }
+                      ],
+                      "op": "+"
+                    }
+                  ],
+                  "op": ">="
+                }
+              },
+              {
+                "assert": {
+                  "args": [
+                    {
+                      "var": "x"
+                    },
+                    {
+                      "args": [
+                        {
+                          "args": [
+                            {
+                              "var": "y"
+                            },
+                            {
+                              "var": "k_v3"
+                            }
+                          ],
+                          "op": "+"
+                        },
+                        {
+                          "args": [
+                            {
+                              "var": "y"
+                            },
+                            {
+                              "var": "k_v3"
+                            }
+                          ],
+                          "op": "mod"
+                        }
+                      ],
+                      "op": "-"
+                    }
+                  ],
+                  "op": ">="
+                }
+              },
+              {
+                "assert": {
+                  "args": [
+                    {
+                      "var": "x"
+                    },
+                    {
+                      "var": "y"
+                    }
+                  ],
+                  "op": ">"
+                }
+              },
+              {
+                "assert": {
+                  "bool": false
+                }
+              }
+            ]
+          }
+        },
+        {
+          "assert": {
+            "args": [
+              {
+                "args": [
+                  {
+                    "var": "x"
+                  },
+                  {
+                    "var": "k_v3"
+                  }
+                ],
+                "op": "div"
+              },
+              {
+                "args": [
+                  {
+                    "var": "y"
+                  },
+                  {
+                    "var": "k_v3"
+                  }
+                ],
+                "op": "div"
+              }
+            ],
+            "op": "<="
+          }
+        }
+      ],
+      "ensures": [
+        {
+          "args": [
+            {
+              "args": [
+                {
+                  "var": "x"
+                },
+                {
+                  "var": "k_v3"
+                }
+              ],
+              "op": "div"
+            },
+            {
+              "args": [
+                {
+                  "var": "y"
+                },
+                {
+                  "var": "k_v3"
+                }
+              ],
+              "op": "div"
+            }
+          ],
+          "op": "<="
+        }
+      ],
+      "name": "divMonotonicPositive",
+      "params": [
+        {
+          "name": "x",
+          "type": "int"
+        },
+        {
+          "name": "y",
+          "type": "int"
+        },
+        {
+          "name": "k_v3",
+          "type": "int"
+        }
+      ],
+      "requires": [
+        {
+          "args": [
+            {
+              "var": "k_v3"
+            },
+            {
+              "int": 0
+            }
+          ],
+          "op": ">"
+        },
+        {
+          "args": [
+            {
+              "int": 0
+            },
+            {
+              "var": "x"
+            }
+          ],
+          "op": "<="
+        },
+        {
+          "args": [
+            {
+              "var": "x"
+            },
+            {
+              "var": "y"
+            }
+          ],
+          "op": "<="
+        }
+      ]
+    }
+  ],
+  "name": "vericoding_da0043__solve",
+  "params": [
+    {
+      "name": "k",
+      "type": "int"
+    },
+    {
+      "name": "a",
+      "type": "int"
+    },
+    {
+      "name": "b",
+      "type": "int"
+    }
+  ],
+  "requires": [
+    {
+      "call": {
+        "args": [
+          {
+            "var": "k"
+          },
+          {
+            "var": "a"
+          },
+          {
+            "var": "b"
+          }
+        ],
+        "fun": "validInput"
+      }
+    }
+  ],
+  "returns": [
+    {
+      "name": "result",
+      "type": "int"
+    }
+  ],
+  "spec_funs": [
+    {
+      "body": {
+        "args": [
+          {
+            "args": [
+              {
+                "var": "k_v"
+              },
+              {
+                "int": 0
+              }
+            ],
+            "op": ">"
+          },
+          {
+            "args": [
+              {
+                "var": "a_v"
+              },
+              {
+                "var": "b_v"
+              }
+            ],
+            "op": "<="
+          }
+        ],
+        "op": "and"
+      },
+      "decreases": {
+        "int": 0
+      },
+      "name": "validInput",
+      "params": [
+        {
+          "name": "k_v",
+          "type": "int"
+        },
+        {
+          "name": "a_v",
+          "type": "int"
+        },
+        {
+          "name": "b_v",
+          "type": "int"
+        }
+      ],
+      "result": "bool"
+    },
+    {
+      "body": {
+        "ite": {
+          "cond": {
+            "args": [
+              {
+                "var": "b_v2"
+              },
+              {
+                "int": 0
+              }
+            ],
+            "op": ">"
+          },
+          "else": {
+            "int": 0
+          },
+          "then": {
+            "ite": {
+              "cond": {
+                "args": [
+                  {
+                    "var": "a_v2"
+                  },
+                  {
+                    "int": 0
+                  }
+                ],
+                "op": ">="
+              },
+              "else": {
+                "args": [
+                  {
+                    "args": [
+                      {
+                        "args": [
+                          {
+                            "var": "a_v2"
+                          },
+                          {
+                            "var": "b_v2"
+                          }
+                        ],
+                        "op": "-"
+                      },
+                      {
+                        "int": 1
+                      }
+                    ],
+                    "op": "+"
+                  },
+                  {
+                    "var": "b_v2"
+                  }
+                ],
+                "op": "div"
+              },
+              "then": {
+                "args": [
+                  {
+                    "var": "a_v2"
+                  },
+                  {
+                    "var": "b_v2"
+                  }
+                ],
+                "op": "div"
+              }
+            }
+          }
+        }
+      },
+      "decreases": {
+        "int": 0
+      },
+      "name": "floorDiv",
+      "params": [
+        {
+          "name": "a_v2",
+          "type": "int"
+        },
+        {
+          "name": "b_v2",
+          "type": "int"
+        }
+      ],
+      "result": "int"
+    },
+    {
+      "body": {
+        "ite": {
+          "cond": {
+            "args": [
+              {
+                "args": [
+                  {
+                    "var": "k_v2"
+                  },
+                  {
+                    "int": 0
+                  }
+                ],
+                "op": ">"
+              },
+              {
+                "args": [
+                  {
+                    "var": "a_v3"
+                  },
+                  {
+                    "var": "b_v3"
+                  }
+                ],
+                "op": "<="
+              }
+            ],
+            "op": "and"
+          },
+          "else": {
+            "int": 0
+          },
+          "then": {
+            "args": [
+              {
+                "call": {
+                  "args": [
+                    {
+                      "var": "b_v3"
+                    },
+                    {
+                      "var": "k_v2"
+                    }
+                  ],
+                  "fun": "floorDiv"
+                }
+              },
+              {
+                "call": {
+                  "args": [
+                    {
+                      "args": [
+                        {
+                          "var": "a_v3"
+                        },
+                        {
+                          "int": 1
+                        }
+                      ],
+                      "op": "-"
+                    },
+                    {
+                      "var": "k_v2"
+                    }
+                  ],
+                  "fun": "floorDiv"
+                }
+              }
+            ],
+            "op": "-"
+          }
+        }
+      },
+      "decreases": {
+        "int": 0
+      },
+      "name": "countDivisiblesInRange",
+      "params": [
+        {
+          "name": "k_v2",
+          "type": "int"
+        },
+        {
+          "name": "a_v3",
+          "type": "int"
+        },
+        {
+          "name": "b_v3",
+          "type": "int"
+        }
+      ],
+      "result": "int"
+    }
+  ],
+  "t": 1
+}

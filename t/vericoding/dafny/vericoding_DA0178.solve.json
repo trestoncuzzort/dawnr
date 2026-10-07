@@ -1,0 +1,1269 @@
+{
+  "body": [
+    {
+      "var": {
+        "init": {
+          "int": 0
+        },
+        "name": "count",
+        "type": "int"
+      }
+    },
+    {
+      "var": {
+        "init": {
+          "int": 1
+        },
+        "name": "finger",
+        "type": "int"
+      }
+    },
+    {
+      "while": {
+        "body": [
+          {
+            "var": {
+              "init": {
+                "args": [
+                  {
+                    "call": {
+                      "args": [
+                        {
+                          "var": "friends"
+                        }
+                      ],
+                      "fun": "sum_sequence"
+                    }
+                  },
+                  {
+                    "var": "finger"
+                  }
+                ],
+                "op": "+"
+              },
+              "name": "total_sum",
+              "type": "int"
+            }
+          },
+          {
+            "var": {
+              "init": {
+                "args": [
+                  {
+                    "var": "n"
+                  },
+                  {
+                    "int": 1
+                  }
+                ],
+                "op": "+"
+              },
+              "name": "total_people",
+              "type": "int"
+            }
+          },
+          {
+            "if": {
+              "cond": {
+                "args": [
+                  {
+                    "args": [
+                      {
+                        "var": "total_sum"
+                      },
+                      {
+                        "var": "total_people"
+                      }
+                    ],
+                    "op": "mod"
+                  },
+                  {
+                    "int": 1
+                  }
+                ],
+                "op": "!="
+              },
+              "else": [],
+              "then": [
+                {
+                  "assign": [
+                    "count",
+                    {
+                      "args": [
+                        {
+                          "var": "count"
+                        },
+                        {
+                          "int": 1
+                        }
+                      ],
+                      "op": "+"
+                    }
+                  ]
+                }
+              ]
+            }
+          },
+          {
+            "assign": [
+              "finger",
+              {
+                "args": [
+                  {
+                    "var": "finger"
+                  },
+                  {
+                    "int": 1
+                  }
+                ],
+                "op": "+"
+              }
+            ]
+          }
+        ],
+        "cond": {
+          "args": [
+            {
+              "var": "finger"
+            },
+            {
+              "int": 5
+            }
+          ],
+          "op": "<="
+        },
+        "decreases": {
+          "args": [
+            {
+              "int": 5
+            },
+            {
+              "var": "finger"
+            }
+          ],
+          "op": "-"
+        },
+        "invariants": [
+          {
+            "args": [
+              {
+                "args": [
+                  {
+                    "int": 1
+                  },
+                  {
+                    "var": "finger"
+                  }
+                ],
+                "op": "<="
+              },
+              {
+                "args": [
+                  {
+                    "var": "finger"
+                  },
+                  {
+                    "int": 6
+                  }
+                ],
+                "op": "<="
+              }
+            ],
+            "op": "and"
+          },
+          {
+            "args": [
+              {
+                "var": "count"
+              },
+              {
+                "args": [
+                  {
+                    "call": {
+                      "args": [
+                        {
+                          "var": "n"
+                        },
+                        {
+                          "var": "friends"
+                        },
+                        {
+                          "int": 1
+                        }
+                      ],
+                      "fun": "countValidChoicesHelper"
+                    }
+                  },
+                  {
+                    "call": {
+                      "args": [
+                        {
+                          "var": "n"
+                        },
+                        {
+                          "var": "friends"
+                        },
+                        {
+                          "var": "finger"
+                        }
+                      ],
+                      "fun": "countValidChoicesHelper"
+                    }
+                  }
+                ],
+                "op": "-"
+              }
+            ],
+            "op": "=="
+          },
+          {
+            "args": [
+              {
+                "args": [
+                  {
+                    "int": 0
+                  },
+                  {
+                    "var": "count"
+                  }
+                ],
+                "op": "<="
+              },
+              {
+                "args": [
+                  {
+                    "var": "count"
+                  },
+                  {
+                    "args": [
+                      {
+                        "var": "finger"
+                      },
+                      {
+                        "int": 1
+                      }
+                    ],
+                    "op": "-"
+                  }
+                ],
+                "op": "<="
+              }
+            ],
+            "op": "and"
+          }
+        ]
+      }
+    },
+    {
+      "lemma": {
+        "args": [
+          {
+            "var": "n"
+          },
+          {
+            "var": "friends"
+          }
+        ],
+        "name": "countValidChoicesBounds"
+      }
+    },
+    {
+      "assign": [
+        "result",
+        {
+          "var": "count"
+        }
+      ]
+    }
+  ],
+  "ensures": [
+    {
+      "args": [
+        {
+          "int": 0
+        },
+        {
+          "var": "result"
+        }
+      ],
+      "op": "<="
+    },
+    {
+      "args": [
+        {
+          "var": "result"
+        },
+        {
+          "int": 5
+        }
+      ],
+      "op": "<="
+    },
+    {
+      "args": [
+        {
+          "var": "result"
+        },
+        {
+          "call": {
+            "args": [
+              {
+                "var": "n"
+              },
+              {
+                "var": "friends"
+              }
+            ],
+            "fun": "countValidChoices"
+          }
+        }
+      ],
+      "op": "=="
+    }
+  ],
+  "gate": "recursion",
+  "lemmas": [
+    {
+      "body": [
+        {
+          "if": {
+            "cond": {
+              "args": [
+                {
+                  "var": "finger_count_v"
+                },
+                {
+                  "int": 5
+                }
+              ],
+              "op": ">"
+            },
+            "else": [
+              {
+                "lemma": {
+                  "args": [
+                    {
+                      "var": "n_v5"
+                    },
+                    {
+                      "var": "friends_v5"
+                    },
+                    {
+                      "args": [
+                        {
+                          "var": "finger_count_v"
+                        },
+                        {
+                          "int": 1
+                        }
+                      ],
+                      "op": "+"
+                    },
+                    {
+                      "ite": {
+                        "cond": {
+                          "args": [
+                            {
+                              "call": {
+                                "args": [
+                                  {
+                                    "var": "n_v5"
+                                  },
+                                  {
+                                    "var": "friends_v5"
+                                  },
+                                  {
+                                    "var": "finger_count_v"
+                                  }
+                                ],
+                                "fun": "dimaCleans"
+                              }
+                            }
+                          ],
+                          "op": "not"
+                        },
+                        "else": {
+                          "var": "accumulator"
+                        },
+                        "then": {
+                          "args": [
+                            {
+                              "var": "accumulator"
+                            },
+                            {
+                              "int": 1
+                            }
+                          ],
+                          "op": "+"
+                        }
+                      }
+                    }
+                  ],
+                  "name": "countValidChoicesHelperCorrectness"
+                }
+              }
+            ],
+            "then": [
+              {
+                "assert": {
+                  "args": [
+                    {
+                      "call": {
+                        "args": [
+                          {
+                            "var": "n_v5"
+                          },
+                          {
+                            "var": "friends_v5"
+                          },
+                          {
+                            "var": "finger_count_v"
+                          }
+                        ],
+                        "fun": "countValidChoicesHelper"
+                      }
+                    },
+                    {
+                      "int": 0
+                    }
+                  ],
+                  "op": "=="
+                }
+              }
+            ]
+          }
+        }
+      ],
+      "decreases": {
+        "args": [
+          {
+            "int": 6
+          },
+          {
+            "var": "finger_count_v"
+          }
+        ],
+        "op": "-"
+      },
+      "ensures": [
+        {
+          "args": [
+            {
+              "args": [
+                {
+                  "call": {
+                    "args": [
+                      {
+                        "var": "n_v5"
+                      },
+                      {
+                        "var": "friends_v5"
+                      },
+                      {
+                        "var": "finger_count_v"
+                      }
+                    ],
+                    "fun": "countValidChoicesHelper"
+                  }
+                },
+                {
+                  "var": "accumulator"
+                }
+              ],
+              "op": "+"
+            },
+            {
+              "int": 0
+            }
+          ],
+          "op": ">="
+        },
+        {
+          "args": [
+            {
+              "args": [
+                {
+                  "call": {
+                    "args": [
+                      {
+                        "var": "n_v5"
+                      },
+                      {
+                        "var": "friends_v5"
+                      },
+                      {
+                        "var": "finger_count_v"
+                      }
+                    ],
+                    "fun": "countValidChoicesHelper"
+                  }
+                },
+                {
+                  "var": "accumulator"
+                }
+              ],
+              "op": "+"
+            },
+            {
+              "int": 5
+            }
+          ],
+          "op": "<="
+        }
+      ],
+      "name": "countValidChoicesHelperCorrectness",
+      "params": [
+        {
+          "name": "n_v5",
+          "type": "int"
+        },
+        {
+          "name": "friends_v5",
+          "type": "seq"
+        },
+        {
+          "name": "finger_count_v",
+          "type": "int"
+        },
+        {
+          "name": "accumulator",
+          "type": "int"
+        }
+      ],
+      "requires": [
+        {
+          "call": {
+            "args": [
+              {
+                "var": "n_v5"
+              },
+              {
+                "var": "friends_v5"
+              }
+            ],
+            "fun": "validInput"
+          }
+        },
+        {
+          "args": [
+            {
+              "int": 1
+            },
+            {
+              "var": "finger_count_v"
+            }
+          ],
+          "op": "<="
+        },
+        {
+          "args": [
+            {
+              "var": "finger_count_v"
+            },
+            {
+              "int": 6
+            }
+          ],
+          "op": "<="
+        },
+        {
+          "args": [
+            {
+              "int": 0
+            },
+            {
+              "var": "accumulator"
+            }
+          ],
+          "op": "<="
+        },
+        {
+          "args": [
+            {
+              "var": "accumulator"
+            },
+            {
+              "args": [
+                {
+                  "var": "finger_count_v"
+                },
+                {
+                  "int": 1
+                }
+              ],
+              "op": "-"
+            }
+          ],
+          "op": "<="
+        }
+      ]
+    },
+    {
+      "body": [
+        {
+          "lemma": {
+            "args": [
+              {
+                "var": "n_v6"
+              },
+              {
+                "var": "friends_v6"
+              },
+              {
+                "int": 1
+              },
+              {
+                "int": 0
+              }
+            ],
+            "name": "countValidChoicesHelperCorrectness"
+          }
+        }
+      ],
+      "ensures": [
+        {
+          "args": [
+            {
+              "int": 0
+            },
+            {
+              "call": {
+                "args": [
+                  {
+                    "var": "n_v6"
+                  },
+                  {
+                    "var": "friends_v6"
+                  }
+                ],
+                "fun": "countValidChoices"
+              }
+            }
+          ],
+          "op": "<="
+        },
+        {
+          "args": [
+            {
+              "call": {
+                "args": [
+                  {
+                    "var": "n_v6"
+                  },
+                  {
+                    "var": "friends_v6"
+                  }
+                ],
+                "fun": "countValidChoices"
+              }
+            },
+            {
+              "int": 5
+            }
+          ],
+          "op": "<="
+        }
+      ],
+      "name": "countValidChoicesBounds",
+      "params": [
+        {
+          "name": "n_v6",
+          "type": "int"
+        },
+        {
+          "name": "friends_v6",
+          "type": "seq"
+        }
+      ],
+      "requires": [
+        {
+          "call": {
+            "args": [
+              {
+                "var": "n_v6"
+              },
+              {
+                "var": "friends_v6"
+              }
+            ],
+            "fun": "validInput"
+          }
+        }
+      ]
+    }
+  ],
+  "name": "vericoding_da0178__solve",
+  "params": [
+    {
+      "name": "n",
+      "type": "int"
+    },
+    {
+      "name": "friends",
+      "type": "seq"
+    }
+  ],
+  "requires": [
+    {
+      "call": {
+        "args": [
+          {
+            "var": "n"
+          },
+          {
+            "var": "friends"
+          }
+        ],
+        "fun": "validInput"
+      }
+    }
+  ],
+  "returns": [
+    {
+      "name": "result",
+      "type": "int"
+    }
+  ],
+  "spec_funs": [
+    {
+      "body": {
+        "args": [
+          {
+            "args": [
+              {
+                "var": "n_v"
+              },
+              {
+                "int": 1
+              }
+            ],
+            "op": ">="
+          },
+          {
+            "args": [
+              {
+                "args": [
+                  {
+                    "var": "friends_v"
+                  }
+                ],
+                "op": "len"
+              },
+              {
+                "var": "n_v"
+              }
+            ],
+            "op": "=="
+          },
+          {
+            "forall": {
+              "body": {
+                "args": [
+                  {
+                    "args": [
+                      {
+                        "int": 1
+                      },
+                      {
+                        "args": [
+                          {
+                            "var": "friends_v"
+                          },
+                          {
+                            "var": "i"
+                          }
+                        ],
+                        "op": "at"
+                      }
+                    ],
+                    "op": "<="
+                  },
+                  {
+                    "args": [
+                      {
+                        "args": [
+                          {
+                            "var": "friends_v"
+                          },
+                          {
+                            "var": "i"
+                          }
+                        ],
+                        "op": "at"
+                      },
+                      {
+                        "int": 5
+                      }
+                    ],
+                    "op": "<="
+                  }
+                ],
+                "op": "and"
+              },
+              "hi": {
+                "args": [
+                  {
+                    "var": "friends_v"
+                  }
+                ],
+                "op": "len"
+              },
+              "lo": {
+                "int": 0
+              },
+              "var": "i"
+            }
+          }
+        ],
+        "op": "and"
+      },
+      "decreases": {
+        "int": 0
+      },
+      "name": "validInput",
+      "params": [
+        {
+          "name": "n_v",
+          "type": "int"
+        },
+        {
+          "name": "friends_v",
+          "type": "seq"
+        }
+      ],
+      "result": "bool"
+    },
+    {
+      "body": {
+        "ite": {
+          "cond": {
+            "args": [
+              {
+                "args": [
+                  {
+                    "var": "s"
+                  }
+                ],
+                "op": "len"
+              },
+              {
+                "int": 0
+              }
+            ],
+            "op": "=="
+          },
+          "else": {
+            "args": [
+              {
+                "args": [
+                  {
+                    "var": "s"
+                  },
+                  {
+                    "int": 0
+                  }
+                ],
+                "op": "at"
+              },
+              {
+                "call": {
+                  "args": [
+                    {
+                      "args": [
+                        {
+                          "var": "s"
+                        },
+                        {
+                          "int": 1
+                        },
+                        {
+                          "args": [
+                            {
+                              "var": "s"
+                            }
+                          ],
+                          "op": "len"
+                        }
+                      ],
+                      "op": "slice"
+                    }
+                  ],
+                  "fun": "sum_sequence"
+                }
+              }
+            ],
+            "op": "+"
+          },
+          "then": {
+            "int": 0
+          }
+        }
+      },
+      "decreases": {
+        "args": [
+          {
+            "var": "s"
+          }
+        ],
+        "op": "len"
+      },
+      "name": "sum_sequence",
+      "params": [
+        {
+          "name": "s",
+          "type": "seq"
+        }
+      ],
+      "result": "int"
+    },
+    {
+      "body": {
+        "ite": {
+          "cond": {
+            "args": [
+              {
+                "call": {
+                  "args": [
+                    {
+                      "var": "n_v2"
+                    },
+                    {
+                      "var": "friends_v2"
+                    }
+                  ],
+                  "fun": "validInput"
+                }
+              },
+              {
+                "args": [
+                  {
+                    "args": [
+                      {
+                        "int": 1
+                      },
+                      {
+                        "var": "dima_fingers"
+                      }
+                    ],
+                    "op": "<="
+                  },
+                  {
+                    "args": [
+                      {
+                        "var": "dima_fingers"
+                      },
+                      {
+                        "int": 5
+                      }
+                    ],
+                    "op": "<="
+                  }
+                ],
+                "op": "and"
+              }
+            ],
+            "op": "and"
+          },
+          "else": {
+            "bool": false
+          },
+          "then": {
+            "args": [
+              {
+                "args": [
+                  {
+                    "args": [
+                      {
+                        "call": {
+                          "args": [
+                            {
+                              "var": "friends_v2"
+                            }
+                          ],
+                          "fun": "sum_sequence"
+                        }
+                      },
+                      {
+                        "var": "dima_fingers"
+                      }
+                    ],
+                    "op": "+"
+                  },
+                  {
+                    "args": [
+                      {
+                        "var": "n_v2"
+                      },
+                      {
+                        "int": 1
+                      }
+                    ],
+                    "op": "+"
+                  }
+                ],
+                "op": "mod"
+              },
+              {
+                "int": 1
+              }
+            ],
+            "op": "=="
+          }
+        }
+      },
+      "decreases": {
+        "int": 0
+      },
+      "name": "dimaCleans",
+      "params": [
+        {
+          "name": "n_v2",
+          "type": "int"
+        },
+        {
+          "name": "friends_v2",
+          "type": "seq"
+        },
+        {
+          "name": "dima_fingers",
+          "type": "int"
+        }
+      ],
+      "result": "bool"
+    },
+    {
+      "body": {
+        "ite": {
+          "cond": {
+            "args": [
+              {
+                "call": {
+                  "args": [
+                    {
+                      "var": "n_v3"
+                    },
+                    {
+                      "var": "friends_v3"
+                    }
+                  ],
+                  "fun": "validInput"
+                }
+              },
+              {
+                "args": [
+                  {
+                    "args": [
+                      {
+                        "int": 1
+                      },
+                      {
+                        "var": "finger_count"
+                      }
+                    ],
+                    "op": "<="
+                  },
+                  {
+                    "args": [
+                      {
+                        "var": "finger_count"
+                      },
+                      {
+                        "int": 6
+                      }
+                    ],
+                    "op": "<="
+                  }
+                ],
+                "op": "and"
+              }
+            ],
+            "op": "and"
+          },
+          "else": {
+            "int": 0
+          },
+          "then": {
+            "ite": {
+              "cond": {
+                "args": [
+                  {
+                    "var": "finger_count"
+                  },
+                  {
+                    "int": 5
+                  }
+                ],
+                "op": ">"
+              },
+              "else": {
+                "ite": {
+                  "cond": {
+                    "args": [
+                      {
+                        "call": {
+                          "args": [
+                            {
+                              "var": "n_v3"
+                            },
+                            {
+                              "var": "friends_v3"
+                            },
+                            {
+                              "var": "finger_count"
+                            }
+                          ],
+                          "fun": "dimaCleans"
+                        }
+                      }
+                    ],
+                    "op": "not"
+                  },
+                  "else": {
+                    "call": {
+                      "args": [
+                        {
+                          "var": "n_v3"
+                        },
+                        {
+                          "var": "friends_v3"
+                        },
+                        {
+                          "args": [
+                            {
+                              "var": "finger_count"
+                            },
+                            {
+                              "int": 1
+                            }
+                          ],
+                          "op": "+"
+                        }
+                      ],
+                      "fun": "countValidChoicesHelper"
+                    }
+                  },
+                  "then": {
+                    "args": [
+                      {
+                        "int": 1
+                      },
+                      {
+                        "call": {
+                          "args": [
+                            {
+                              "var": "n_v3"
+                            },
+                            {
+                              "var": "friends_v3"
+                            },
+                            {
+                              "args": [
+                                {
+                                  "var": "finger_count"
+                                },
+                                {
+                                  "int": 1
+                                }
+                              ],
+                              "op": "+"
+                            }
+                          ],
+                          "fun": "countValidChoicesHelper"
+                        }
+                      }
+                    ],
+                    "op": "+"
+                  }
+                }
+              },
+              "then": {
+                "int": 0
+              }
+            }
+          }
+        }
+      },
+      "decreases": {
+        "args": [
+          {
+            "int": 6
+          },
+          {
+            "var": "finger_count"
+          }
+        ],
+        "op": "-"
+      },
+      "name": "countValidChoicesHelper",
+      "params": [
+        {
+          "name": "n_v3",
+          "type": "int"
+        },
+        {
+          "name": "friends_v3",
+          "type": "seq"
+        },
+        {
+          "name": "finger_count",
+          "type": "int"
+        }
+      ],
+      "result": "int"
+    },
+    {
+      "body": {
+        "ite": {
+          "cond": {
+            "call": {
+              "args": [
+                {
+                  "var": "n_v4"
+                },
+                {
+                  "var": "friends_v4"
+                }
+              ],
+              "fun": "validInput"
+            }
+          },
+          "else": {
+            "int": 0
+          },
+          "then": {
+            "call": {
+              "args": [
+                {
+                  "var": "n_v4"
+                },
+                {
+                  "var": "friends_v4"
+                },
+                {
+                  "int": 1
+                }
+              ],
+              "fun": "countValidChoicesHelper"
+            }
+          }
+        }
+      },
+      "decreases": {
+        "int": 0
+      },
+      "name": "countValidChoices",
+      "params": [
+        {
+          "name": "n_v4",
+          "type": "int"
+        },
+        {
+          "name": "friends_v4",
+          "type": "seq"
+        }
+      ],
+      "result": "int"
+    }
+  ],
+  "t": 1
+}

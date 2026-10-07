@@ -1,0 +1,1155 @@
+{
+  "body": [
+    {
+      "var": {
+        "init": {
+          "int": 0
+        },
+        "name": "minIndex_v",
+        "type": "int"
+      }
+    },
+    {
+      "var": {
+        "init": {
+          "call": {
+            "args": [
+              {
+                "var": "n"
+              },
+              {
+                "var": "a"
+              },
+              {
+                "int": 0
+              }
+            ],
+            "fun": "computeCC"
+          }
+        },
+        "name": "minValue_v",
+        "type": "int"
+      }
+    },
+    {
+      "var": {
+        "init": {
+          "int": 1
+        },
+        "name": "i_v3",
+        "type": "int"
+      }
+    },
+    {
+      "while": {
+        "body": [
+          {
+            "var": {
+              "init": {
+                "call": {
+                  "args": [
+                    {
+                      "var": "n"
+                    },
+                    {
+                      "var": "a"
+                    },
+                    {
+                      "var": "i_v3"
+                    }
+                  ],
+                  "fun": "computeCC"
+                }
+              },
+              "name": "currentValue",
+              "type": "int"
+            }
+          },
+          {
+            "if": {
+              "cond": {
+                "args": [
+                  {
+                    "var": "currentValue"
+                  },
+                  {
+                    "var": "minValue_v"
+                  }
+                ],
+                "op": "<"
+              },
+              "else": [],
+              "then": [
+                {
+                  "assign": [
+                    "minValue_v",
+                    {
+                      "var": "currentValue"
+                    }
+                  ]
+                },
+                {
+                  "assign": [
+                    "minIndex_v",
+                    {
+                      "var": "i_v3"
+                    }
+                  ]
+                }
+              ]
+            }
+          },
+          {
+            "assign": [
+              "i_v3",
+              {
+                "args": [
+                  {
+                    "var": "i_v3"
+                  },
+                  {
+                    "int": 1
+                  }
+                ],
+                "op": "+"
+              }
+            ]
+          }
+        ],
+        "cond": {
+          "args": [
+            {
+              "var": "i_v3"
+            },
+            {
+              "var": "n"
+            }
+          ],
+          "op": "<"
+        },
+        "decreases": {
+          "args": [
+            {
+              "var": "n"
+            },
+            {
+              "var": "i_v3"
+            }
+          ],
+          "op": "-"
+        },
+        "invariants": [
+          {
+            "args": [
+              {
+                "args": [
+                  {
+                    "int": 1
+                  },
+                  {
+                    "var": "i_v3"
+                  }
+                ],
+                "op": "<="
+              },
+              {
+                "args": [
+                  {
+                    "var": "i_v3"
+                  },
+                  {
+                    "var": "n"
+                  }
+                ],
+                "op": "<="
+              }
+            ],
+            "op": "and"
+          },
+          {
+            "args": [
+              {
+                "args": [
+                  {
+                    "int": 0
+                  },
+                  {
+                    "var": "minIndex_v"
+                  }
+                ],
+                "op": "<="
+              },
+              {
+                "args": [
+                  {
+                    "var": "minIndex_v"
+                  },
+                  {
+                    "var": "i_v3"
+                  }
+                ],
+                "op": "<"
+              }
+            ],
+            "op": "and"
+          },
+          {
+            "args": [
+              {
+                "var": "minValue_v"
+              },
+              {
+                "call": {
+                  "args": [
+                    {
+                      "var": "n"
+                    },
+                    {
+                      "var": "a"
+                    },
+                    {
+                      "var": "minIndex_v"
+                    }
+                  ],
+                  "fun": "computeCC"
+                }
+              }
+            ],
+            "op": "=="
+          },
+          {
+            "forall": {
+              "body": {
+                "args": [
+                  {
+                    "args": [
+                      {
+                        "var": "minValue_v"
+                      },
+                      {
+                        "call": {
+                          "args": [
+                            {
+                              "var": "n"
+                            },
+                            {
+                              "var": "a"
+                            },
+                            {
+                              "var": "j_v2"
+                            }
+                          ],
+                          "fun": "computeCC"
+                        }
+                      }
+                    ],
+                    "op": "<="
+                  },
+                  {
+                    "args": [
+                      {
+                        "args": [
+                          {
+                            "var": "minValue_v"
+                          },
+                          {
+                            "call": {
+                              "args": [
+                                {
+                                  "var": "n"
+                                },
+                                {
+                                  "var": "a"
+                                },
+                                {
+                                  "var": "j_v2"
+                                }
+                              ],
+                              "fun": "computeCC"
+                            }
+                          }
+                        ],
+                        "op": "<"
+                      },
+                      {
+                        "args": [
+                          {
+                            "var": "minIndex_v"
+                          },
+                          {
+                            "var": "j_v2"
+                          }
+                        ],
+                        "op": "<="
+                      }
+                    ],
+                    "op": "or"
+                  }
+                ],
+                "op": "and"
+              },
+              "hi": {
+                "var": "i_v3"
+              },
+              "lo": {
+                "int": 0
+              },
+              "var": "j_v2"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "lemma": {
+        "args": [
+          {
+            "var": "n"
+          },
+          {
+            "var": "a"
+          },
+          {
+            "var": "minIndex_v"
+          },
+          {
+            "var": "minValue_v"
+          }
+        ],
+        "name": "optimalEntranceExists"
+      }
+    },
+    {
+      "assign": [
+        "result",
+        {
+          "args": [
+            {
+              "var": "minIndex_v"
+            },
+            {
+              "int": 1
+            }
+          ],
+          "op": "+"
+        }
+      ]
+    }
+  ],
+  "ensures": [
+    {
+      "args": [
+        {
+          "int": 1
+        },
+        {
+          "var": "result"
+        }
+      ],
+      "op": "<="
+    },
+    {
+      "args": [
+        {
+          "var": "result"
+        },
+        {
+          "var": "n"
+        }
+      ],
+      "op": "<="
+    },
+    {
+      "call": {
+        "args": [
+          {
+            "var": "n"
+          },
+          {
+            "var": "a"
+          },
+          {
+            "var": "result"
+          }
+        ],
+        "fun": "isOptimalEntrance"
+      }
+    }
+  ],
+  "gate": "recursion",
+  "lemmas": [
+    {
+      "body": [],
+      "ensures": [
+        {
+          "call": {
+            "args": [
+              {
+                "var": "n_v5"
+              },
+              {
+                "var": "a_v5"
+              },
+              {
+                "args": [
+                  {
+                    "var": "minIndex"
+                  },
+                  {
+                    "int": 1
+                  }
+                ],
+                "op": "+"
+              }
+            ],
+            "fun": "isOptimalEntrance"
+          }
+        }
+      ],
+      "name": "optimalEntranceExists",
+      "params": [
+        {
+          "name": "n_v5",
+          "type": "int"
+        },
+        {
+          "name": "a_v5",
+          "type": "seq"
+        },
+        {
+          "name": "minIndex",
+          "type": "int"
+        },
+        {
+          "name": "minValue",
+          "type": "int"
+        }
+      ],
+      "requires": [
+        {
+          "call": {
+            "args": [
+              {
+                "var": "n_v5"
+              },
+              {
+                "var": "a_v5"
+              }
+            ],
+            "fun": "validInput"
+          }
+        },
+        {
+          "args": [
+            {
+              "int": 0
+            },
+            {
+              "var": "minIndex"
+            }
+          ],
+          "op": "<="
+        },
+        {
+          "args": [
+            {
+              "var": "minIndex"
+            },
+            {
+              "var": "n_v5"
+            }
+          ],
+          "op": "<"
+        },
+        {
+          "args": [
+            {
+              "var": "minValue"
+            },
+            {
+              "call": {
+                "args": [
+                  {
+                    "var": "n_v5"
+                  },
+                  {
+                    "var": "a_v5"
+                  },
+                  {
+                    "var": "minIndex"
+                  }
+                ],
+                "fun": "computeCC"
+              }
+            }
+          ],
+          "op": "=="
+        },
+        {
+          "forall": {
+            "body": {
+              "args": [
+                {
+                  "args": [
+                    {
+                      "var": "minValue"
+                    },
+                    {
+                      "call": {
+                        "args": [
+                          {
+                            "var": "n_v5"
+                          },
+                          {
+                            "var": "a_v5"
+                          },
+                          {
+                            "var": "j_v"
+                          }
+                        ],
+                        "fun": "computeCC"
+                      }
+                    }
+                  ],
+                  "op": "<="
+                },
+                {
+                  "args": [
+                    {
+                      "args": [
+                        {
+                          "var": "minValue"
+                        },
+                        {
+                          "call": {
+                            "args": [
+                              {
+                                "var": "n_v5"
+                              },
+                              {
+                                "var": "a_v5"
+                              },
+                              {
+                                "var": "j_v"
+                              }
+                            ],
+                            "fun": "computeCC"
+                          }
+                        }
+                      ],
+                      "op": "<"
+                    },
+                    {
+                      "args": [
+                        {
+                          "var": "minIndex"
+                        },
+                        {
+                          "var": "j_v"
+                        }
+                      ],
+                      "op": "<="
+                    }
+                  ],
+                  "op": "or"
+                }
+              ],
+              "op": "and"
+            },
+            "hi": {
+              "var": "n_v5"
+            },
+            "lo": {
+              "int": 0
+            },
+            "var": "j_v"
+          }
+        }
+      ]
+    }
+  ],
+  "name": "vericoding_da0174__solve",
+  "params": [
+    {
+      "name": "n",
+      "type": "int"
+    },
+    {
+      "name": "a",
+      "type": "seq"
+    }
+  ],
+  "requires": [
+    {
+      "call": {
+        "args": [
+          {
+            "var": "n"
+          },
+          {
+            "var": "a"
+          }
+        ],
+        "fun": "validInput"
+      }
+    }
+  ],
+  "returns": [
+    {
+      "name": "result",
+      "type": "int"
+    }
+  ],
+  "spec_funs": [
+    {
+      "body": {
+        "args": [
+          {
+            "args": [
+              {
+                "var": "n_v"
+              },
+              {
+                "int": 2
+              }
+            ],
+            "op": ">="
+          },
+          {
+            "args": [
+              {
+                "args": [
+                  {
+                    "var": "a_v"
+                  }
+                ],
+                "op": "len"
+              },
+              {
+                "var": "n_v"
+              }
+            ],
+            "op": "=="
+          },
+          {
+            "forall": {
+              "body": {
+                "args": [
+                  {
+                    "args": [
+                      {
+                        "var": "a_v"
+                      },
+                      {
+                        "var": "i"
+                      }
+                    ],
+                    "op": "at"
+                  },
+                  {
+                    "int": 0
+                  }
+                ],
+                "op": ">="
+              },
+              "hi": {
+                "var": "n_v"
+              },
+              "lo": {
+                "int": 0
+              },
+              "var": "i"
+            }
+          }
+        ],
+        "op": "and"
+      },
+      "decreases": {
+        "int": 0
+      },
+      "name": "validInput",
+      "params": [
+        {
+          "name": "n_v",
+          "type": "int"
+        },
+        {
+          "name": "a_v",
+          "type": "seq"
+        }
+      ],
+      "result": "bool"
+    },
+    {
+      "body": {
+        "ite": {
+          "cond": {
+            "args": [
+              {
+                "var": "n_v2"
+              },
+              {
+                "int": 2
+              }
+            ],
+            "op": ">="
+          },
+          "else": {
+            "int": 0
+          },
+          "then": {
+            "ite": {
+              "cond": {
+                "args": [
+                  {
+                    "var": "b"
+                  },
+                  {
+                    "int": 0
+                  }
+                ],
+                "op": "<"
+              },
+              "else": {
+                "args": [
+                  {
+                    "args": [
+                      {
+                        "args": [
+                          {
+                            "var": "b"
+                          },
+                          {
+                            "var": "n_v2"
+                          }
+                        ],
+                        "op": "+"
+                      },
+                      {
+                        "int": 1
+                      }
+                    ],
+                    "op": "-"
+                  },
+                  {
+                    "var": "n_v2"
+                  }
+                ],
+                "op": "div"
+              },
+              "then": {
+                "args": [
+                  {
+                    "var": "b"
+                  },
+                  {
+                    "var": "n_v2"
+                  }
+                ],
+                "op": "div"
+              }
+            }
+          }
+        }
+      },
+      "decreases": {
+        "int": 0
+      },
+      "name": "computeC",
+      "params": [
+        {
+          "name": "n_v2",
+          "type": "int"
+        },
+        {
+          "name": "b",
+          "type": "int"
+        }
+      ],
+      "result": "int"
+    },
+    {
+      "body": {
+        "ite": {
+          "cond": {
+            "args": [
+              {
+                "args": [
+                  {
+                    "int": 0
+                  },
+                  {
+                    "var": "i_v"
+                  }
+                ],
+                "op": "<="
+              },
+              {
+                "args": [
+                  {
+                    "var": "i_v"
+                  },
+                  {
+                    "args": [
+                      {
+                        "var": "a_v2"
+                      }
+                    ],
+                    "op": "len"
+                  }
+                ],
+                "op": "<"
+              }
+            ],
+            "op": "and"
+          },
+          "else": {
+            "int": 0
+          },
+          "then": {
+            "args": [
+              {
+                "args": [
+                  {
+                    "var": "a_v2"
+                  },
+                  {
+                    "var": "i_v"
+                  }
+                ],
+                "op": "at"
+              },
+              {
+                "var": "i_v"
+              }
+            ],
+            "op": "-"
+          }
+        }
+      },
+      "decreases": {
+        "int": 0
+      },
+      "name": "computeB",
+      "params": [
+        {
+          "name": "a_v2",
+          "type": "seq"
+        },
+        {
+          "name": "i_v",
+          "type": "int"
+        }
+      ],
+      "result": "int"
+    },
+    {
+      "body": {
+        "ite": {
+          "cond": {
+            "args": [
+              {
+                "call": {
+                  "args": [
+                    {
+                      "var": "n_v3"
+                    },
+                    {
+                      "var": "a_v3"
+                    }
+                  ],
+                  "fun": "validInput"
+                }
+              },
+              {
+                "args": [
+                  {
+                    "args": [
+                      {
+                        "int": 0
+                      },
+                      {
+                        "var": "i_v2"
+                      }
+                    ],
+                    "op": "<="
+                  },
+                  {
+                    "args": [
+                      {
+                        "var": "i_v2"
+                      },
+                      {
+                        "var": "n_v3"
+                      }
+                    ],
+                    "op": "<"
+                  }
+                ],
+                "op": "and"
+              }
+            ],
+            "op": "and"
+          },
+          "else": {
+            "int": 0
+          },
+          "then": {
+            "args": [
+              {
+                "var": "n_v3"
+              },
+              {
+                "call": {
+                  "args": [
+                    {
+                      "var": "n_v3"
+                    },
+                    {
+                      "call": {
+                        "args": [
+                          {
+                            "var": "a_v3"
+                          },
+                          {
+                            "var": "i_v2"
+                          }
+                        ],
+                        "fun": "computeB"
+                      }
+                    }
+                  ],
+                  "fun": "computeC"
+                }
+              }
+            ],
+            "op": "*"
+          }
+        }
+      },
+      "decreases": {
+        "int": 0
+      },
+      "name": "computeCC",
+      "params": [
+        {
+          "name": "n_v3",
+          "type": "int"
+        },
+        {
+          "name": "a_v3",
+          "type": "seq"
+        },
+        {
+          "name": "i_v2",
+          "type": "int"
+        }
+      ],
+      "result": "int"
+    },
+    {
+      "body": {
+        "ite": {
+          "cond": {
+            "args": [
+              {
+                "call": {
+                  "args": [
+                    {
+                      "var": "n_v4"
+                    },
+                    {
+                      "var": "a_v4"
+                    }
+                  ],
+                  "fun": "validInput"
+                }
+              },
+              {
+                "args": [
+                  {
+                    "args": [
+                      {
+                        "int": 1
+                      },
+                      {
+                        "var": "entrance"
+                      }
+                    ],
+                    "op": "<="
+                  },
+                  {
+                    "args": [
+                      {
+                        "var": "entrance"
+                      },
+                      {
+                        "var": "n_v4"
+                      }
+                    ],
+                    "op": "<="
+                  }
+                ],
+                "op": "and"
+              }
+            ],
+            "op": "and"
+          },
+          "else": {
+            "bool": false
+          },
+          "then": {
+            "forall": {
+              "body": {
+                "args": [
+                  {
+                    "args": [
+                      {
+                        "call": {
+                          "args": [
+                            {
+                              "var": "n_v4"
+                            },
+                            {
+                              "var": "a_v4"
+                            },
+                            {
+                              "args": [
+                                {
+                                  "var": "entrance"
+                                },
+                                {
+                                  "int": 1
+                                }
+                              ],
+                              "op": "-"
+                            }
+                          ],
+                          "fun": "computeCC"
+                        }
+                      },
+                      {
+                        "call": {
+                          "args": [
+                            {
+                              "var": "n_v4"
+                            },
+                            {
+                              "var": "a_v4"
+                            },
+                            {
+                              "var": "j"
+                            }
+                          ],
+                          "fun": "computeCC"
+                        }
+                      }
+                    ],
+                    "op": "<="
+                  },
+                  {
+                    "args": [
+                      {
+                        "args": [
+                          {
+                            "call": {
+                              "args": [
+                                {
+                                  "var": "n_v4"
+                                },
+                                {
+                                  "var": "a_v4"
+                                },
+                                {
+                                  "args": [
+                                    {
+                                      "var": "entrance"
+                                    },
+                                    {
+                                      "int": 1
+                                    }
+                                  ],
+                                  "op": "-"
+                                }
+                              ],
+                              "fun": "computeCC"
+                            }
+                          },
+                          {
+                            "call": {
+                              "args": [
+                                {
+                                  "var": "n_v4"
+                                },
+                                {
+                                  "var": "a_v4"
+                                },
+                                {
+                                  "var": "j"
+                                }
+                              ],
+                              "fun": "computeCC"
+                            }
+                          }
+                        ],
+                        "op": "<"
+                      },
+                      {
+                        "args": [
+                          {
+                            "args": [
+                              {
+                                "var": "entrance"
+                              },
+                              {
+                                "int": 1
+                              }
+                            ],
+                            "op": "-"
+                          },
+                          {
+                            "var": "j"
+                          }
+                        ],
+                        "op": "<="
+                      }
+                    ],
+                    "op": "or"
+                  }
+                ],
+                "op": "and"
+              },
+              "hi": {
+                "var": "n_v4"
+              },
+              "lo": {
+                "int": 0
+              },
+              "var": "j"
+            }
+          }
+        }
+      },
+      "decreases": {
+        "int": 0
+      },
+      "name": "isOptimalEntrance",
+      "params": [
+        {
+          "name": "n_v4",
+          "type": "int"
+        },
+        {
+          "name": "a_v4",
+          "type": "seq"
+        },
+        {
+          "name": "entrance",
+          "type": "int"
+        }
+      ],
+      "result": "bool"
+    }
+  ],
+  "t": 1
+}

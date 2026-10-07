@@ -1,0 +1,862 @@
+{
+  "body": [
+    {
+      "var": {
+        "init": {
+          "int": 0
+        },
+        "name": "sum",
+        "type": "int"
+      }
+    },
+    {
+      "var": {
+        "init": {
+          "var": "w"
+        },
+        "name": "currentW",
+        "type": "int"
+      }
+    },
+    {
+      "var": {
+        "init": {
+          "var": "h"
+        },
+        "name": "currentH",
+        "type": "int"
+      }
+    },
+    {
+      "var": {
+        "init": {
+          "var": "k"
+        },
+        "name": "remaining",
+        "type": "int"
+      }
+    },
+    {
+      "while": {
+        "body": [
+          {
+            "assign": [
+              "sum",
+              {
+                "args": [
+                  {
+                    "var": "sum"
+                  },
+                  {
+                    "call": {
+                      "args": [
+                        {
+                          "var": "currentW"
+                        },
+                        {
+                          "var": "currentH"
+                        }
+                      ],
+                      "fun": "perimeter"
+                    }
+                  }
+                ],
+                "op": "+"
+              }
+            ]
+          },
+          {
+            "assign": [
+              "currentW",
+              {
+                "args": [
+                  {
+                    "var": "currentW"
+                  },
+                  {
+                    "int": 4
+                  }
+                ],
+                "op": "-"
+              }
+            ]
+          },
+          {
+            "assign": [
+              "currentH",
+              {
+                "args": [
+                  {
+                    "var": "currentH"
+                  },
+                  {
+                    "int": 4
+                  }
+                ],
+                "op": "-"
+              }
+            ]
+          },
+          {
+            "assign": [
+              "remaining",
+              {
+                "args": [
+                  {
+                    "var": "remaining"
+                  },
+                  {
+                    "int": 1
+                  }
+                ],
+                "op": "-"
+              }
+            ]
+          }
+        ],
+        "cond": {
+          "args": [
+            {
+              "var": "remaining"
+            },
+            {
+              "int": 0
+            }
+          ],
+          "op": ">"
+        },
+        "decreases": {
+          "args": [
+            {
+              "var": "remaining"
+            },
+            {
+              "int": 0
+            }
+          ],
+          "op": "-"
+        },
+        "invariants": [
+          {
+            "args": [
+              {
+                "args": [
+                  {
+                    "int": 0
+                  },
+                  {
+                    "var": "remaining"
+                  }
+                ],
+                "op": "<="
+              },
+              {
+                "args": [
+                  {
+                    "var": "remaining"
+                  },
+                  {
+                    "var": "k"
+                  }
+                ],
+                "op": "<="
+              }
+            ],
+            "op": "and"
+          },
+          {
+            "args": [
+              {
+                "var": "currentW"
+              },
+              {
+                "args": [
+                  {
+                    "var": "w"
+                  },
+                  {
+                    "args": [
+                      {
+                        "int": 4
+                      },
+                      {
+                        "args": [
+                          {
+                            "var": "k"
+                          },
+                          {
+                            "var": "remaining"
+                          }
+                        ],
+                        "op": "-"
+                      }
+                    ],
+                    "op": "*"
+                  }
+                ],
+                "op": "-"
+              }
+            ],
+            "op": "=="
+          },
+          {
+            "args": [
+              {
+                "var": "currentH"
+              },
+              {
+                "args": [
+                  {
+                    "var": "h"
+                  },
+                  {
+                    "args": [
+                      {
+                        "int": 4
+                      },
+                      {
+                        "args": [
+                          {
+                            "var": "k"
+                          },
+                          {
+                            "var": "remaining"
+                          }
+                        ],
+                        "op": "-"
+                      }
+                    ],
+                    "op": "*"
+                  }
+                ],
+                "op": "-"
+              }
+            ],
+            "op": "=="
+          },
+          {
+            "args": [
+              {
+                "args": [
+                  {
+                    "var": "currentW"
+                  },
+                  {
+                    "int": 3
+                  }
+                ],
+                "op": ">="
+              },
+              {
+                "args": [
+                  {
+                    "var": "currentH"
+                  },
+                  {
+                    "int": 3
+                  }
+                ],
+                "op": ">="
+              }
+            ],
+            "op": "and"
+          },
+          {
+            "args": [
+              {
+                "var": "sum"
+              },
+              {
+                "args": [
+                  {
+                    "call": {
+                      "args": [
+                        {
+                          "var": "w"
+                        },
+                        {
+                          "var": "h"
+                        },
+                        {
+                          "var": "k"
+                        }
+                      ],
+                      "fun": "computeSum"
+                    }
+                  },
+                  {
+                    "call": {
+                      "args": [
+                        {
+                          "var": "currentW"
+                        },
+                        {
+                          "var": "currentH"
+                        },
+                        {
+                          "var": "remaining"
+                        }
+                      ],
+                      "fun": "computeSum"
+                    }
+                  }
+                ],
+                "op": "-"
+              }
+            ],
+            "op": "=="
+          }
+        ]
+      }
+    },
+    {
+      "assign": [
+        "result",
+        {
+          "var": "sum"
+        }
+      ]
+    }
+  ],
+  "ensures": [
+    {
+      "args": [
+        {
+          "var": "result"
+        },
+        {
+          "call": {
+            "args": [
+              {
+                "var": "w"
+              },
+              {
+                "var": "h"
+              },
+              {
+                "var": "k"
+              }
+            ],
+            "fun": "computeSum"
+          }
+        }
+      ],
+      "op": "=="
+    }
+  ],
+  "gate": "recursion",
+  "name": "vericoding_da0212__gildCells",
+  "params": [
+    {
+      "name": "w",
+      "type": "int"
+    },
+    {
+      "name": "h",
+      "type": "int"
+    },
+    {
+      "name": "k",
+      "type": "int"
+    }
+  ],
+  "requires": [
+    {
+      "call": {
+        "args": [
+          {
+            "var": "w"
+          },
+          {
+            "var": "h"
+          },
+          {
+            "var": "k"
+          }
+        ],
+        "fun": "validInput"
+      }
+    }
+  ],
+  "returns": [
+    {
+      "name": "result",
+      "type": "int"
+    }
+  ],
+  "spec_funs": [
+    {
+      "body": {
+        "args": [
+          {
+            "args": [
+              {
+                "var": "w_v"
+              },
+              {
+                "int": 3
+              }
+            ],
+            "op": ">="
+          },
+          {
+            "args": [
+              {
+                "var": "h_v"
+              },
+              {
+                "int": 3
+              }
+            ],
+            "op": ">="
+          },
+          {
+            "args": [
+              {
+                "var": "w_v"
+              },
+              {
+                "int": 100
+              }
+            ],
+            "op": "<="
+          },
+          {
+            "args": [
+              {
+                "var": "h_v"
+              },
+              {
+                "int": 100
+              }
+            ],
+            "op": "<="
+          },
+          {
+            "args": [
+              {
+                "var": "k_v"
+              },
+              {
+                "int": 1
+              }
+            ],
+            "op": ">="
+          },
+          {
+            "args": [
+              {
+                "var": "k_v"
+              },
+              {
+                "args": [
+                  {
+                    "args": [
+                      {
+                        "ite": {
+                          "cond": {
+                            "args": [
+                              {
+                                "var": "w_v"
+                              },
+                              {
+                                "var": "h_v"
+                              }
+                            ],
+                            "op": "<="
+                          },
+                          "else": {
+                            "var": "h_v"
+                          },
+                          "then": {
+                            "var": "w_v"
+                          }
+                        }
+                      },
+                      {
+                        "int": 1
+                      }
+                    ],
+                    "op": "+"
+                  },
+                  {
+                    "int": 4
+                  }
+                ],
+                "op": "div"
+              }
+            ],
+            "op": "<="
+          },
+          {
+            "args": [
+              {
+                "args": [
+                  {
+                    "var": "w_v"
+                  },
+                  {
+                    "args": [
+                      {
+                        "int": 4
+                      },
+                      {
+                        "var": "k_v"
+                      }
+                    ],
+                    "op": "*"
+                  }
+                ],
+                "op": "-"
+              },
+              {
+                "int": 3
+              }
+            ],
+            "op": ">="
+          },
+          {
+            "args": [
+              {
+                "args": [
+                  {
+                    "var": "h_v"
+                  },
+                  {
+                    "args": [
+                      {
+                        "int": 4
+                      },
+                      {
+                        "var": "k_v"
+                      }
+                    ],
+                    "op": "*"
+                  }
+                ],
+                "op": "-"
+              },
+              {
+                "int": 3
+              }
+            ],
+            "op": ">="
+          }
+        ],
+        "op": "and"
+      },
+      "decreases": {
+        "int": 0
+      },
+      "name": "validInput",
+      "params": [
+        {
+          "name": "w_v",
+          "type": "int"
+        },
+        {
+          "name": "h_v",
+          "type": "int"
+        },
+        {
+          "name": "k_v",
+          "type": "int"
+        }
+      ],
+      "result": "bool"
+    },
+    {
+      "body": {
+        "ite": {
+          "cond": {
+            "args": [
+              {
+                "args": [
+                  {
+                    "var": "w_v2"
+                  },
+                  {
+                    "int": 1
+                  }
+                ],
+                "op": ">="
+              },
+              {
+                "args": [
+                  {
+                    "var": "h_v2"
+                  },
+                  {
+                    "int": 1
+                  }
+                ],
+                "op": ">="
+              }
+            ],
+            "op": "and"
+          },
+          "else": {
+            "int": 0
+          },
+          "then": {
+            "args": [
+              {
+                "args": [
+                  {
+                    "var": "w_v2"
+                  },
+                  {
+                    "int": 2
+                  }
+                ],
+                "op": "*"
+              },
+              {
+                "args": [
+                  {
+                    "args": [
+                      {
+                        "var": "h_v2"
+                      },
+                      {
+                        "int": 2
+                      }
+                    ],
+                    "op": "-"
+                  },
+                  {
+                    "int": 2
+                  }
+                ],
+                "op": "*"
+              }
+            ],
+            "op": "+"
+          }
+        }
+      },
+      "decreases": {
+        "int": 0
+      },
+      "name": "perimeter",
+      "params": [
+        {
+          "name": "w_v2",
+          "type": "int"
+        },
+        {
+          "name": "h_v2",
+          "type": "int"
+        }
+      ],
+      "result": "int"
+    },
+    {
+      "body": {
+        "ite": {
+          "cond": {
+            "args": [
+              {
+                "args": [
+                  {
+                    "args": [
+                      {
+                        "var": "w_v3"
+                      },
+                      {
+                        "int": 3
+                      }
+                    ],
+                    "op": ">="
+                  },
+                  {
+                    "args": [
+                      {
+                        "var": "h_v3"
+                      },
+                      {
+                        "int": 3
+                      }
+                    ],
+                    "op": ">="
+                  },
+                  {
+                    "args": [
+                      {
+                        "var": "k_v2"
+                      },
+                      {
+                        "int": 0
+                      }
+                    ],
+                    "op": ">="
+                  }
+                ],
+                "op": "and"
+              },
+              {
+                "args": [
+                  {
+                    "args": [
+                      {
+                        "args": [
+                          {
+                            "var": "w_v3"
+                          },
+                          {
+                            "args": [
+                              {
+                                "int": 4
+                              },
+                              {
+                                "var": "k_v2"
+                              }
+                            ],
+                            "op": "*"
+                          }
+                        ],
+                        "op": "-"
+                      },
+                      {
+                        "int": 3
+                      }
+                    ],
+                    "op": ">="
+                  },
+                  {
+                    "args": [
+                      {
+                        "args": [
+                          {
+                            "var": "h_v3"
+                          },
+                          {
+                            "args": [
+                              {
+                                "int": 4
+                              },
+                              {
+                                "var": "k_v2"
+                              }
+                            ],
+                            "op": "*"
+                          }
+                        ],
+                        "op": "-"
+                      },
+                      {
+                        "int": 3
+                      }
+                    ],
+                    "op": ">="
+                  }
+                ],
+                "op": "and"
+              }
+            ],
+            "op": "and"
+          },
+          "else": {
+            "int": 0
+          },
+          "then": {
+            "ite": {
+              "cond": {
+                "args": [
+                  {
+                    "var": "k_v2"
+                  },
+                  {
+                    "int": 0
+                  }
+                ],
+                "op": "=="
+              },
+              "else": {
+                "args": [
+                  {
+                    "call": {
+                      "args": [
+                        {
+                          "var": "w_v3"
+                        },
+                        {
+                          "var": "h_v3"
+                        }
+                      ],
+                      "fun": "perimeter"
+                    }
+                  },
+                  {
+                    "call": {
+                      "args": [
+                        {
+                          "args": [
+                            {
+                              "var": "w_v3"
+                            },
+                            {
+                              "int": 4
+                            }
+                          ],
+                          "op": "-"
+                        },
+                        {
+                          "args": [
+                            {
+                              "var": "h_v3"
+                            },
+                            {
+                              "int": 4
+                            }
+                          ],
+                          "op": "-"
+                        },
+                        {
+                          "args": [
+                            {
+                              "var": "k_v2"
+                            },
+                            {
+                              "int": 1
+                            }
+                          ],
+                          "op": "-"
+                        }
+                      ],
+                      "fun": "computeSum"
+                    }
+                  }
+                ],
+                "op": "+"
+              },
+              "then": {
+                "int": 0
+              }
+            }
+          }
+        }
+      },
+      "decreases": {
+        "var": "k_v2"
+      },
+      "name": "computeSum",
+      "params": [
+        {
+          "name": "w_v3",
+          "type": "int"
+        },
+        {
+          "name": "h_v3",
+          "type": "int"
+        },
+        {
+          "name": "k_v2",
+          "type": "int"
+        }
+      ],
+      "result": "int"
+    }
+  ],
+  "t": 1
+}
