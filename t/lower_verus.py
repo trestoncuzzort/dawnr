@@ -5783,10 +5783,16 @@ class _V1:
             req = ("    requires\n        "
                    + ",\n        ".join(expr(e) for e in reqs) + ",\n")
         ens = ",\n        ".join(expr(e) for e in enss)
+        # PREDICT T60: a structurally recursive task's postcondition over a structurally recursive spec fn needs the
+        # constructed value's children unfolded too (`bst(Node(x, Leaf, Leaf), lo, hi)` reads `bst(Leaf, ..)`), one
+        # level past Verus's default, the same reveal a lemma's induction step gets above; it adds no assumption
+        fuel = "".join(f"    reveal_with_fuel({f}, 2);\n" for f in _structural_rec_funs()
+                       if dec and any(_calls(e, f) for e in enss))
         main = (
             f"proof fn {self.name}({ps}) -> ({rname}: {rtype})\n"
             f"{req}    ensures\n        {ens},\n{dec}"
             "{\n"
+            f"{fuel}"
             f"    let mut {rname}: {rtype};\n"
             + "\n".join(main_lines) + "\n"
             f"    {rname}\n"

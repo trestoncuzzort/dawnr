@@ -1,4 +1,4 @@
-# t cross-kernel agreement, 2026-10-07 16:47Z
+# t cross-kernel agreement, 2026-10-07 17:49Z
 
 Cell = real outcome / twin outcome. Agreement means `verified / refuted` in every present column. A real-VERIFIED, twin-VERIFIED cell reads `verified / decorative` (the spec cannot tell real and twin apart) or `verified / unsound` (the twin's own measured witness says a sound kernel must refute it, and this one did not); neither counts as agreement.
 
@@ -110,7 +110,7 @@ Cell = real outcome / twin outcome. Agreement means `verified / refuted` in ever
 | tail | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted |
 | tree_count | verified / refuted | verified / refuted | abstain / abstain | abstain / abstain | verified / refuted | verified / refuted | verified / refuted |
 | tree_height | verified / refuted | verified / refuted | abstain / abstain | abstain / abstain | verified / refuted | verified / refuted | verified / refuted |
-| tree_insert | verified / refuted | verified / refuted | abstain / abstain | abstain / abstain | verified / refuted | verified / refuted | verified / refuted |
+| tree_insert | verified / refuted | verified / refuted | abstain / abstain | abstain / abstain | abstain / abstain | unproved / refuted | verified / refuted |
 | tree_mirror | verified / refuted | verified / refuted | abstain / abstain | abstain / abstain | verified / refuted | verified / refuted | verified / refuted |
 | tree_sum | verified / refuted | verified / refuted | abstain / abstain | abstain / abstain | verified / refuted | verified / refuted | verified / refuted |
 | weighted_sum | verified / refuted | verified / refuted | abstain / abstain | abstain / abstain | verified / refuted | abstain / abstain | abstain / abstain |
@@ -140,8 +140,8 @@ Verdict basis: every source file hashed; e.g. `abs.dfy` 9fe1e7e805cfacce…, `ab
 | spark | 1 | 34 | relu_all |
 | dafny | 0 | 3 | (none) |
 | verus | 0 | 10 | (none) |
-| lean | 0 | 25 | (none) |
-| rocq | 0 | 30 | (none) |
+| lean | 0 | 26 | (none) |
+| rocq | 0 | 31 | (none) |
 | fstar | 0 | 30 | (none) |
 
 Of the 5 tasks in six, 4 are framac alone, 1 is spark alone.
@@ -154,8 +154,8 @@ Of the 5 tasks in six, 4 are framac alone, 1 is spark alone.
 | verus | 107 | 104 | 104 of 104 (100%) | 7 |
 | spark | 84 | 80 | 79 of 80 (98%) | 30 |
 | framac | 72 | 70 | 70 of 70 (100%) | 42 |
-| lean | 93 | 89 | 89 of 89 (100%) | 21 |
-| rocq | 86 | 84 | 84 of 84 (100%) | 28 |
+| lean | 92 | 88 | 88 of 88 (100%) | 22 |
+| rocq | 86 | 83 | 83 of 83 (100%) | 28 |
 | fstar | 88 | 84 | 84 of 84 (100%) | 26 |
 
 Verified with the twin refuted in all seven columns: 65 of 114 tasks.

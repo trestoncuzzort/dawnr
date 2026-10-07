@@ -26,6 +26,20 @@ prev=$(sed -n 's/^Pinned commit: `\([0-9a-f]\{40\}\)`.*/\1/p' "$here/t/ENGINE.md
 
 owned() { local f; for f in "${OWNED[@]}"; do [ "$1" = "$f" ] && return 0; done; return 1; }
 
+# A file the engine adds at COMMIT that dawnr already tracks is dawnr's own file of the same name: extracting would
+# overwrite it silently (2026-10-07: the engine's new t/repair.py would have replaced dawnr's model-repair loop).
+clash=()
+while IFS= read -r f; do
+  owned "$f" && continue
+  git -C "$here" ls-files --error-unmatch -- "$f" >/dev/null 2>&1 && clash+=("$f")
+done < <(comm -13 <(git -C "$eng" ls-tree -r --name-only "$prev" -- t | sort) \
+                  <(git -C "$eng" ls-tree -r --name-only "$commit" -- t | sort))
+if [ "${#clash[@]}" -gt 0 ]; then
+  echo "refused: t-proof-engine ${commit:0:8} adds files dawnr already owns; rename them in the engine or list them in OWNED:" >&2
+  printf '  %s\n' "${clash[@]}" >&2
+  exit 1
+fi
+
 excl=()
 for f in "${OWNED[@]}"; do excl+=(--exclude="$f"); done
 git -C "$eng" archive "$commit" -- t | tar -x -C "$here" "${excl[@]}"

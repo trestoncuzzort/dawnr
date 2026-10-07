@@ -2682,3 +2682,265 @@ Both tables were regenerated from a clean clone at 9c7b147, and are installed (`
 
 Across the five benchmark corpora (all but ACSL by Example), 102 tasks have a kernel-proved one-edit wrong program,
 and 72 of them are specification gaps by hand reading.
+
+## T60 registered (2026-10-07 17:23Z, after hand probes and before the clean-clone run): tree_insert states the search-tree order
+
+**The change.** The last of the seven weak specs T54 found in t's own suite. tree_insert's contract said only that
+`x` is in the result and the size grew by one, so inserting on either side, or on the wrong side, passed. It now
+states the classic bounded form:
+- `requires bst(tr, lo, hi)` and `lo <= x < hi`;
+- `ensures bst(m, lo, hi)`, where `bst(Node(v, l, r), lo, hi)` is `lo <= v < hi`, `bst(l, lo, v)` and
+  `bst(r, v, hi)`;
+- each recursive call passes its child's interval, so its own postcondition is exactly what the parent needs.
+
+Verus's lowering gives a structurally recursive task's proof one more level of fuel for each structurally recursive
+spec fn its ensures calls. This is the reveal a lemma's induction step already gets; it adds no assumption.
+`bst(Node(x, Leaf, Leaf), lo, hi)` reads `bst` at the leaves too.
+
+**Measured before this registration, stated plainly.**
+- **The audit:** 0 survivors (14 of 14 behaviour-changing mutants killed). The twin, a tie sent left, breaks
+  `bst(m, lo, hi)` at a stated input.
+- **The kernels, hand probes:**
+  - Dafny, Verus and F* read verified/refuted.
+  - Rocq reads unproved: its structural induction fixes every other parameter, and the recursive calls change `lo`
+    and `hi`. Generalizing the hypothesis is the named open item.
+  - Lean refuses by name: a structurally recursive task with `requires` is not lowered yet.
+  - SPARK and Frama-C refuse recursive datatypes, as before.
+- **Byte identity:**
+  - tree_insert moves in every kernel.
+  - The fuel rule also moves the Verus lowerings of tree_count, tree_height, tree_mirror and tree_sum, and AlgoVeri's
+    bst insert and search. Each was re-proved in Verus with the twin refuted, unchanged.
+- **Suite:** passes. The Dafny text test now expects the bounded recursive call.
+
+**Bars**, for the clean-clone tables at this registration's commit:
+(1) The matrix: Lean 88 and Rocq 83 (tree_insert leaves both); Dafny 111, Verus 104, F* 84 unchanged; SPARK 79,
+Frama-C 70 unchanged; all seven 65.
+(2) The AlgoVeri table does not move.
+(3) `t/AUDIT-TASKS.md`: 0 of 114 tasks admit a survivor.
+
+### T60 read (2026-10-07 18:10Z): every bar held.
+
+Regenerated from a clean clone at 07311fa, and installed.
+(1) **Held:** Lean 88 (tree_insert refused by name) and Rocq 83 (tree_insert unproved); every other kernel unchanged;
+all seven 65.
+(2) **Held:** the AlgoVeri table did not move.
+(3) **Held:** `t/AUDIT-TASKS.md` reads 0 of 114 tasks admitting a survivor: 1,578 of 1,578 behaviour-changing mutants
+killed. With T55, every gap the audit found in t's own task suite is closed. The autonomy suite's one survivor is
+nearest_index's tie, intended.
+- **What it cost:** two cells, the same trade as T55. Rocq's structural induction needs its hypothesis generalized
+  over the parameters a recursive call changes. Lean needs structurally recursive tasks with `requires`. Both are
+  named open items.
+
+## T61 registered (2026-10-07 18:30Z, after hand runs and before the clean-clone run): R1 and R2, proved specification repair
+
+**The change.** `t/repair.py` (`cli.py repair`), programme R1 of the zoom-out's section 8:
+- **Clause grammar** over each task's own vocabulary: result-to-parameter equalities and disjunctions; membership,
+  extremal bounds and attainment; bounds against 0, ±1, parameters and lengths; the converse of a subset-only
+  postcondition (each element predicate, and all of them conjoined); a boolean result equal to a comparison; equality
+  with the task's own spec functions.
+- **Daikon-style fitted clauses**, read numerically off the real program's values on the whole domain: affine in at
+  most two int atoms, `(p op q) % r` and `/ r`, and a finite output set.
+- **Selection:** a clause is kept only if it holds for the real program at every domain point, and a greedy cover
+  picks the fewest that kill every survivor.
+- **Checks:** the repaired task is audited again from scratch, then proved in the kernel.
+- **R1b:** where the old loop invariants cannot carry the stronger contract, each repair clause is moved onto the
+  loop's accumulators and prefix index, along with "the running value is attained in the scanned prefix". Candidates
+  are kept if they hold at every loop-head state the interpreter observes and mention a variable the loop assigns,
+  and the kernel proves them.
+- **Refusal:** a task whose real body never reads its parameters is refused by name, since a constant answer is no
+  evidence of the intended one.
+- **R2:** `--patches` prints each proved repair as source lines in the kernel's own language (its lowering's
+  expression printer).
+
+**Prior art, read** (receipt dc2c168fbaca):
+- SpecFuzzer: grammar fuzzing, a Daikon filter over a test suite, mutation ranking; nothing is proved.
+- NL2Contract: LLM-inferred contracts.
+
+Here the filter is the whole bounded domain, the target is the measured survivors, and soundness for every input is
+the kernel's proof, so a fitted clause true only on the domain reads unproved.
+
+**Measured before this registration, stated plainly** (hand runs, `t/repair.py --kernel K --jobs 4`):
+
+| corpus | kernel | specs with survivors | repaired to zero survivors | proved, twin refuted | refused: input-blind |
+|---|---|---|---|---|---|
+| DafnyBench | Dafny | 53 | 24 | 19 | 0 |
+| vericoding, Dafny track | Dafny | 54 | 12 | 9 | 5 |
+| HumanEval-Dafny | Dafny | 6 | 2 | 2 | 0 |
+| vericoding, Verus track | Verus | 20 | 4 | 3 | 6 |
+
+- **Against the hand classification:** 25 of the 72 gaps are repaired with a kernel proof (DafnyBench 14 of 23,
+  vericoding Dafny 6 of 31, Verus 3 of 13, HumanEval-Dafny 2 of 5). Three intended-latitude specs are pinned
+  harder than their authors chose: reconstructFromMaxSum twice, and a "not found" sentinel.
+- **Examples of repairs:**
+  - `c == a or c == b` for the `max` routines;
+  - `0 <= r.1 and r.1 < b` for Euclidean division;
+  - `z == (x == y)` for the precedence slip;
+  - for MutDafny's three subset-only specs, the converse (their authors' own suggested fix) with the loop invariant
+    that carries it.
+  - For maxDifference, attainment with `exists k in [0, i) . a[k] == maxVal` (and minVal) as invariants.
+- **The unrepaired gaps are mostly unrepairable from their own vocabulary.** The APPS- and NumPy-derived specs do not
+  define the function the task computes, so no clause over their terms can pin the answer. Writing that function is
+  writing the specification.
+- **Input-blind solutions:**
+  - 13 of vericoding's 509 Dafny solutions and 8 of its 63 Verus solutions never read a parameter; none in its Lean
+    track, HumanEval-Dafny, ACSL by Example, or DafnyBench beyond a paramless example.
+  - Checked against vericoding's own repository: `vericoded/verus/VA0216_vericoded.rs` returns `'R'` for every
+    input. Its spec defines a `winner` function its `ensures` never uses.
+- **Suite:** passes (`t/test_repair.py`, 6 tests).
+
+**Bars**, for the clean-clone tables at this registration's commit:
+(1) Each corpus's table reproduces the hand run's counts exactly. A kernel verdict may differ by one task per corpus.
+(2) No repaired contract is installed whose real body the kernel did not prove. The patches list only proved
+repairs.
+
+### T61 read (2026-10-07 18:34Z): both bars held, exactly.
+
+All four tables were regenerated from a clean clone at b2a51bf and are installed: `t/REPAIR-*.md`, and the proved
+repairs as source lines in `t/repairs/*.md`. Every count matches the hand runs, kernel verdicts included:
+DafnyBench 24 repaired and 19 proved; vericoding Dafny 12 and 9; HumanEval-Dafny 2 and 2; vericoding Verus 4 and 3.
+25 of the 72 hand-read gaps are repaired with a kernel proof.
+
+## T62 registered (2026-10-07 18:42Z, after hand runs and before the clean-clone run): R4, ship what was proved
+
+**The change.** `t/build.py` (`cli.py build`) compiles each task's proven lowering with that kernel's ordinary
+toolchain, runs the executable on up to 40 domain points, and compares every result with t's interpreter:
+- **`c`:** the Frama-C lowering, whose ACSL is comments, with a generated `main`, built by gcc with
+  `-ffp-contract=off` (every float operation rounds once). The call is read from the C signature: data, lengths, the
+  result's buffer, a scratch buffer per sequence local, renamed keywords mapped back. Each buffer is sized by the
+  function's own `requires`.
+- **`c64`:** the same with C's `int` at 64 bits.
+- **`dafny-py`:** the Dafny lowering with a generated `Main`, through Dafny's Python backend.
+
+Prior art (receipt cdec03946087): Dafny's backends and target toolchains are in its trusted base, and a verified
+CakeML backend is being built in HOL4. This is not a verified compiler. It is a cheap test of lowering, backend and
+toolchain together, on the domain, in several languages.
+
+**Measured before this registration, stated plainly** (hand runs, 114 tasks and 25 autonomy routines):
+
+| suite | target | built and run | agree everywhere | agree inside int32, differ beyond | disagree | points |
+|---|---|---|---|---|---|---|
+| tasks | c | 56 | 32 | 23 | 1 | 2,189 |
+| tasks | c64 | 56 | 54 | 2 | 0 | 2,189 |
+| tasks | dafny-py | 74 | 74 | 0 | 0 | 2,881 |
+| autonomy | c | 24 | 16 | 6 | 2 | 954 |
+| autonomy | c64 | 24 | 23 | 1 | 0 | 954 |
+| autonomy | dafny-py | 20 | 20 | 0 | 0 | 794 |
+
+- **No disagreement is a lowering bug.** Every C disagreement is integer width:
+  - **The finding:** the Frama-C proof uses WP's Typed+nat model, mathematical integers pinned on purpose because
+    t's integers are unbounded, and the shipped C uses 32-bit `int`.
+  - **At inputs beyond int32:** the 23 and 6 "agree inside int32" tasks differ only there.
+  - **Inside int32 inputs:** three routines overflow an intermediate (`(r + 1) * (r + 1)` in root_floor,
+    `2 * decel * dist` in stop_distance_ok, `prev + max_step` in throttle_limit). All three agree at 64 bits.
+  - **At 64 bits:** the remaining cases are values beyond 2^63 (a cube of -2^31 - 1, factorial(21)).
+- **The fix is not a wider type.** It is a proof at the width that ships: WP's machine-integer model with runtime
+  error guards, under stated input ranges. This is the named next item (R4b).
+- **Dafny's Python build agrees on every point it runs.** root_floor's compiled recursion exceeds Python's recursion
+  limit at large n, which is reported as a target limit.
+- **Not built:** datatypes, sets, maps, strings, pairs and reals in C, and floats in Dafny (refused by the lowering).
+- **Suite:** passes (`t/test_build.py`).
+
+**Bars**, for the clean-clone tables at this registration's commit:
+(1) The six tables reproduce the hand runs' counts. A count may differ by one per table only from a target's own
+timeouts.
+(2) No table shows a disagreement inside int32 that 64 bits does not resolve.
+
+### T62 read (2026-10-07 18:43Z): both bars held, exactly.
+
+The six tables were regenerated from a clean clone at 8c24ed6 and are installed (`t/BUILD-*.md`); every count
+matches the hand runs.
+- 9,961 compiled runs of proven routines, in C (32 and 64 bits) and Python, against the interpreter.
+- No lowering bug.
+- Every C disagreement is integer width: the proof's integers are mathematical, the shipped C's are 32 bits.
+
+## T63 registered (2026-10-07 18:52Z, after hand runs and before the clean-clone run): R4b, the proof at the width that ships
+
+**The change.** `t/ship.py` (`cli.py ship`) proves each routine's Frama-C lowering again, this time with WP's
+machine-integer model and `-wp-rte`. Every signed operation then owes a no-overflow proof (WP manual 33.0,
+section 1.5, receipt 3fe411d90de6). Each routine reads one of:
+- **ships for every int32 input:** everything is proved at full width;
+- **ships within ±2^k:** an overflow guard is open at full width, and k (4 to 30) is the largest bound on every int
+  input and sequence element, with lengths at most 1000, under which every goal proves. It is stated as the
+  routine's proved operating envelope;
+- **no envelope found:** open even at ±16;
+- **contract open at machine width.**
+
+The matrix's own proofs are unchanged (Typed+nat, t's unbounded integers). This is a second proof, of the binary
+T62 compiled.
+
+**Measured before this registration, stated plainly** (hand runs):
+
+| suite | ships for every int32 input | ships within an envelope | no envelope found | contract open | C refuses |
+|---|---|---|---|---|---|
+| tasks (114) | 45 | 7 | 19 | 1 | 42 |
+| autonomy (25) | 16 | 5 | 2 | 1 | 1 |
+
+- **The envelopes:**
+  - abs ships within ±2^30: its `-x` overflows at INT_MIN, the classic case.
+  - debounce ±2^30, throttle_limit and aabb_overlap ±2^29.
+  - crosstrack_side and stop_distance_ok ±2^14: a product of two inputs, and `2 * decel * dist`.
+  - scale_all and sum_upto ±2^15.
+- **"No envelope found" is not "unsafe".** Most are loops whose counter or accumulator WP cannot bound without an
+  invariant that relates it to the index (`c <= i`), and non-linear goals (root_floor's `(r + 1) * (r + 1)`).
+  Inferring such bounding invariants from observed loop states, as R1b does, is the next item (R4c).
+- **Contract open at machine width:** filter_pos's loop invariant (the T55 frame gap) and pid_step (a float timeout,
+  as in the matrix).
+- **Suite:** passes (`t/test_ship.py`).
+
+**Bars**, for the clean-clone tables at this registration's commit:
+(1) Both tables reproduce the hand runs' counts. An envelope's k may differ by one only where a goal sits at the
+step budget.
+(2) No routine reads "ships for every int32 input" whose C build (T62) disagrees with the interpreter inside int32.
+
+### T63 read (2026-10-07 19:01Z): both bars held.
+
+Regenerated from a clean clone at da18d3e, and installed (`t/SHIP-TASKS.md`, `t/SHIP-AUTONOMY.md`).
+(1) **Held:** every count and every envelope matches the hand runs:
+  - task suite: 45 for every int32 input, 7 within an envelope, 19 with none found;
+  - autonomy suite: 16, 5 and 2.
+
+  The first clean run differed only in the order of open goal names, because WP's provers finish in any order. They
+  are now sorted (da18d3e), and the installed tables are from the second run.
+(2) **Held:** root_floor, stop_distance_ok and throttle_limit, whose 32-bit builds disagree inside int32, read "no
+envelope found", "within ±2^14" and "within ±2^29"; none reads "ships for every int32 input".
+
+## T64 registered (2026-10-07 19:10Z, after hand runs and before the clean-clone run): R4c, bounds inferred for the width proof
+
+**The change.** Where an overflow guard is open, `t/ship.py` now infers bounding loop invariants before searching
+for an envelope:
+- **Candidates:** `v <= w`, `w <= v`, or (only when the tighter bound fails) `v <= w + 1`, between an int the loop
+  assigns and another int in scope (a parameter, a local, a sequence's length, 0).
+- **Filter:** kept when true at every loop-head state the interpreter observes (R1b's states).
+- **Placement:** inserted into the matching C loop's annotation as named invariants `t_bJ`.
+- **Pruning:** Houdini (Flanagan and Leino) drops any whose own goal fails, until the rest are proved together.
+- **Envelope stage:** the candidates also include `-(w * 2^k) <= v <= w * 2^k`, an accumulator bounded by a counter
+  times the envelope.
+
+The matrix's proofs are unchanged; the invariants exist only in the width proof's C file.
+
+**Measured before this registration, stated plainly:**
+- **Tasks:**
+  - 47 ship for every int32 input (from 45): count_matches and count_pos_for, each held by
+    `0 <= c <= i <= s_n`;
+  - 7 within an envelope, 17 with none found.
+- **Autonomy:** unchanged (16, 5, 2).
+- **What the inference cannot reach:**
+  - an overflow inside a library C helper (t_sum_c, t_pow_c, t_gcd_c), outside the task's own loops;
+  - a contract already open (double_all's frame gap);
+  - non-linear division (grid_cell, low_pass_step).
+- **Suite:** the three new tests pass.
+
+**Bars**, for the clean-clone tables at this registration's commit:
+(1) Both tables reproduce: tasks 47, 7, 17; autonomy 16, 5, 2.
+(2) Every invariant a table lists was proved in that run (Houdini's survivors, with every goal closed).
+
+### T64 read (2026-10-07 19:16Z): both bars held.
+
+Regenerated from a clean clone at 2517d84, and installed.
+(1) **Held:** tasks 47, 7, 17; autonomy 16, 5, 2.
+(2) **Held:** each listed invariant is a Houdini survivor of a run in which every goal closed.
+
+**Note (2026-10-07 19:20Z):** T61's `t/repair.py` is renamed `t/contract_repair.py` (and its test
+`t/test_contract_repair.py`). dawnr, which carries this engine under its own `t/`, already has a `t/repair.py`: a
+model-driven proof-repair loop that five of its modules import. The engine sync overwrote it, and the overwrite was
+caught before any commit. `cli.py repair` is unchanged. The entries above keep the old name as written.

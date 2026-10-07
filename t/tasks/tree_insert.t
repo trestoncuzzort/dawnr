@@ -1,7 +1,10 @@
 datatype Tree = Leaf | Node(v: int, l: Tree, r: Tree)
 t 1
 gate recursion
-task tree_insert(tr: Tree, x: int) returns (m: Tree)
+task tree_insert(tr: Tree, x: int, lo: int, hi: int) returns (m: Tree)
+  requires bst(tr, lo, hi)
+  requires lo <= x and x < hi
+  ensures bst(m, lo, hi)
   ensures in_tree(m, x)
   ensures size(m) == size(tr) + 1
   decreases tr
@@ -11,6 +14,9 @@ spec fun in_tree(q: Tree, y: int): bool
 spec fun size(q: Tree): int
   decreases q
 = case q { Leaf => 0, Node(v, l, r) => 1 + size(l) + size(r) }
+spec fun bst(q: Tree, lo: int, hi: int): bool
+  decreases q
+= case q { Leaf => true, Node(v, l, r) => lo <= v and v < hi and bst(l, lo, v) and bst(r, v, hi) }
 {
-  m := case tr { Leaf => Tree.Node(x, Tree.Leaf, Tree.Leaf), Node(v, l, r) => if x < v then Tree.Node(v, tree_insert(l, x), r) else Tree.Node(v, l, tree_insert(r, x)) };
+  m := case tr { Leaf => Tree.Node(x, Tree.Leaf, Tree.Leaf), Node(v, l, r) => if x < v then Tree.Node(v, tree_insert(l, x, lo, v), r) else Tree.Node(v, l, tree_insert(r, x, v, hi)) };
 }

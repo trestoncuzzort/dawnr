@@ -13,6 +13,9 @@ tlib.py, harness.py, names.py and run_par.py already require):
     verify FILE.t|DIR [--kernels a,b] [--flake N] [--jobs N] [--table PATH] [--json]
     twin FILE.t [--json]                the ladder's chosen operator + witness
     audit FILE.t|DIR [--kernel K]       the one-edit mutants the spec lets through (t/audit.py)
+    repair FILE.t|DIR [--kernel K]      the clauses that kill those mutants, proved (t/contract_repair.py)
+    build FILE.t|DIR [--to c|c64|dafny-py]  the proven lowerings compiled and run (t/build.py)
+    ship FILE.t|DIR                     the C proved at machine width, with its envelope (t/ship.py)
     explain WORD [--kernel K]           one sentence per kernel for an outcome word
 
 Every flag also accepts `--flag=value` (argparse's own long-option form;
@@ -462,6 +465,32 @@ def cmd_audit(args) -> int:
     return audit.main(argv)
 
 
+def cmd_repair(args) -> int:
+    import contract_repair as repair   # programme R1: proved specification repair
+    argv = [str(args.target), "--jobs", str(args.jobs)]
+    for flag in ("kernel", "table", "write"):
+        if getattr(args, flag):
+            argv += [f"--{flag}", getattr(args, flag)]
+    argv += ["--json"] if args.json else []
+    return repair.main(argv)
+
+
+def cmd_build(args) -> int:
+    import build   # programme R4: ship what was proved
+    argv = [str(args.target), "--target", args.to, "--jobs", str(args.jobs)]
+    argv += ["--table", args.table] if args.table else []
+    argv += ["--json"] if args.json else []
+    return build.main(argv)
+
+
+def cmd_ship(args) -> int:
+    import ship   # programme R4b: the proof at the width that ships
+    argv = [str(args.target), "--jobs", str(args.jobs)]
+    argv += ["--table", args.table] if args.table else []
+    argv += ["--json"] if args.json else []
+    return ship.main(argv)
+
+
 # ===========================================================================
 # argparse wiring
 # ===========================================================================
@@ -523,6 +552,30 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--table", metavar="PATH", help="where the Markdown table is written")
     p.add_argument("--json", action="store_true")
     p.set_defaults(func=cmd_audit)
+
+    p = sub.add_parser("repair", help="add the clauses that kill an audit's survivors, then prove them (t/contract_repair.py)")
+    p.add_argument("target", metavar="FILE.t|DIR")
+    p.add_argument("--kernel", help="prove each repaired task in this kernel")
+    p.add_argument("--jobs", type=int, default=1)
+    p.add_argument("--table", metavar="PATH", help="where the Markdown table is written")
+    p.add_argument("--write", metavar="DIR", help="where each repaired task is written as JSON")
+    p.add_argument("--json", action="store_true")
+    p.set_defaults(func=cmd_repair)
+
+    p = sub.add_parser("build", help="compile the proven lowerings and run them against the interpreter (t/build.py)")
+    p.add_argument("target", metavar="FILE.t|DIR")
+    p.add_argument("--to", default="c", help="c, c64 or dafny-py")
+    p.add_argument("--jobs", type=int, default=1)
+    p.add_argument("--table", metavar="PATH")
+    p.add_argument("--json", action="store_true")
+    p.set_defaults(func=cmd_build)
+
+    p = sub.add_parser("ship", help="prove the C at the width that ships, with its operating envelope (t/ship.py)")
+    p.add_argument("target", metavar="FILE.t|DIR")
+    p.add_argument("--jobs", type=int, default=1)
+    p.add_argument("--table", metavar="PATH")
+    p.add_argument("--json", action="store_true")
+    p.set_defaults(func=cmd_ship)
 
     p = sub.add_parser("explain", help="what a verdict means, per kernel")
     p.add_argument("verdict", metavar="WORD",
