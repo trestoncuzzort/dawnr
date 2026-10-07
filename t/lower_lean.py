@@ -2558,6 +2558,7 @@ import harness                                 # noqa: E402
 import interp                                  # noqa: E402
 import names                                   # noqa: E402
 import surface                                 # noqa: E402
+import tshape                                  # noqa: E402
 from verifiers import lean as lean_backend     # noqa: E402
 
 CMP_OPS = {"<": "<", "<=": "≤", ">": ">", ">=": "≥"}
@@ -2584,7 +2585,7 @@ DIV_MOD = {"div": "/", "mod": "%"}
 # core's `List.mergeSort` among them, does not reduce under `decide`, and `native_decide` is banned by the adapter).
 # `sort` is a stable insertion sort (an earlier element goes before the equal ones after it), the same list Python's
 # sorted gives; "maxs" is max/min of one argument (SPEC.md "Reductions (v1)"), "in" membership in a seq.
-LEAN_LIB = frozenset({"min", "max", "abs", "sum", "gcd", "pow", "isqrt", "rev", "sort", "maxs", "in",
+LEAN_LIB = frozenset({"min", "max", "abs", "sum", "gcd", "pow", "isqrt", "rev", "sort", "maxs", "in", "toset",
                       "any", "all",   # any/all over a seq<bool>, or over a comprehension of a seq (a predicate)
                       "fold", "max_by", "min_by"})   # SPEC.md "Higher-order calls (v1)"; sort_by refused by name
 STRLIB_OPS = {"split", "join", "tostr", "count", "find", "strip", "lstrip",
@@ -3049,9 +3050,11 @@ class Lower:
             c = node["comp"]
             nm = f"t_comp{k}" if "seq" in c else f"t_compr{k}"
             if c["cond"] == {"bool": True}:
-                ga_names += [f"{nm}_length", f"{nm}_get"] + ([f"{nm}_get0"] if "lo" in c else [])
+                ga_names += [f"{nm}_length", f"{nm}_get"] + ([f"{nm}_get0"] if "lo" in c else []) + [f"{nm}_getn"]
             else:
                 ga_names += [f"{nm}_length"] + ([f"{nm}_all"] if c["body"] == {"var": c["var"]} else [])
+                if "seq" in c:
+                    ga_names.append(f"{nm}_step")   # PREDICT T45: a count over a growing prefix
             self.lib_fns += [nm]
         if self.comps and (self._has(task, "op", "slice") or self._has(body, "op", "slice")):
             ga_names += ["t_seq_slice_get", "t_seq_slice_get_r"]   # PREDICT T12: a comprehension over a slice
@@ -3109,6 +3112,14 @@ class Lower:
             if has_op("upper"):
                 ga_names += ["t_str_upper", "t_str_islowerletter"]
             ga_names += ["List.drop_zero", "List.take_length"]
+        if _uses_sets(task) or _uses_sets(body):
+            # SPEC.md "Finite sets" in Lean (PREDICT T29): the tree-set lemmas grind needs, membership through each
+            # operation and size through insert/erase (mem_ofList is grind-annotated in core already)
+            # (mem_insert, mem_erase, mem_iff_contains, contains_insert/erase/empty, size_insert/erase/empty and
+            # mem_ofList are grind-annotated in core already: naming them again only draws "redundant" warnings)
+            ga_names += [f"Std.ExtTreeSet.{n}" for n in (
+                "mem_union_iff", "mem_inter_iff", "mem_diff_iff", "size_le_size_insert", "size_insert_le",
+                "not_mem_empty")] + ["t_set_size_pos"]
         self.ga = "" if not ga_names else " [" + ", ".join(ga_names) + "]"
         # THE CLOSURE-PREDICATE TIMEOUT (2026-09-14, lean-closure, this
         # session's own item): `self.ga`, handed to `grind` as an
@@ -3141,6 +3152,7 @@ class Lower:
         self.ga_wo_sfuns = ("" if not other_ga_names else
                             " [" + ", ".join(other_ga_names) + "]")
         self.sfun_names_ga = simp_names
+        self.set_quants = tshape.collection_quantified(task, body)   # set ranges only: seq ones are desugared
         self.sfun_quantified = bool(self.sfuns) and (
             _sfun_under_quantifier(task, set(self.sfuns))
             or _sfun_under_quantifier(body, set(self.sfuns)))
@@ -3275,6 +3287,31 @@ class Lower:
 
     # ---------- SPEC.md "Datatypes (v2): fields" ----------
 
+    def _set_term(self, e: dict, env: dict, types: dict, dep: bool) -> str:
+        """SPEC.md "Finite sets" in Lean (2026-10-07, PREDICT T29): a set is core Std's extensional tree set of ints,
+        whose `=` is extensional (ExtTreeSet.ext_mem), so t's `==` is Lean's own equality. A display is an insert
+        chain; a union or difference with a singleton display is `insert`/`erase` (the same set, extensionally), which
+        the size lemmas speak about; card is the size as an Int."""
+        op, args = e["op"], e["args"]
+        t = lambda a: self.term(a, env, types, dep)
+        single = lambda a: isinstance(a, dict) and a.get("op") == "set" and len(a.get("args", [])) == 1
+        if op == "set":
+            out = "(∅ : (Std.ExtTreeSet Int compare))"
+            for a in args:
+                out = f"({out}.insert {t(a)})"
+            return out
+        if op == "union":
+            return f"({t(args[0])}.insert {t(args[1]['args'][0])})" if single(args[1]) else f"({t(args[0])} ∪ {t(args[1])})"
+        if op == "diff":
+            return f"({t(args[0])}.erase {t(args[1]['args'][0])})" if single(args[1]) else f"({t(args[0])} \\ {t(args[1])})"
+        if op == "inter":
+            return f"({t(args[0])} ∩ {t(args[1])})"
+        if op == "card":
+            return f"(({t(args[0])}.size : Int))"
+        if op == "toset":
+            return f"(Std.ExtTreeSet.ofList {t(args[0])} compare)"
+        return f"({t(args[1])}.contains {t(args[0])})"   # x in s, as a Bool
+
     def _dt_ctors(self, dname: str) -> list:
         for d in self.task.get("datatypes", []):
             if d["name"] == dname:
@@ -3372,6 +3409,10 @@ class Lower:
                 return self.methods[f]["returns"][0]["type"]
             return self.sfuns[f]["result"]
         op = e["op"]
+        if op in ("set", "union", "inter", "diff", "toset"):
+            return "set"   # SPEC.md "Finite sets" in Lean (PREDICT T29)
+        if op == "card":
+            return "int"
         if op == "+":
             # SPEC.md "Sequences: literals, concatenation, slices (v1)":
             # `+` is polymorphic by operand type exactly as `==` already
@@ -3663,6 +3704,14 @@ class Lower:
                         "a domain-guarded loop) is not lowered for lean")
                 return f"({c['fun']}_t {args})"
             return f"({c['fun']}_s {args})"
+        if ("forall" in e or "exists" in e) and "in" in (e.get("forall") or e.get("exists")):
+            # SPEC.md "Quantifiers over a collection" in Lean (PREDICT T30): a set range computed as a Bool over the
+            # set's list of members; the closers carry the bridge (List.all_eq_true, ExtTreeSet.mem_toList)
+            q = e.get("forall") or e.get("exists")
+            b = self.fresh(q["var"])
+            coll = self.term(q["in"], env, types, dep)
+            body = self.term(q["body"], {**env, q["var"]: b}, {**types, q["var"]: "int"}, dep)
+            return f"(({coll}).toList.{'all' if 'forall' in e else 'any'} (fun ({b} : Int) => {body}))"
         if "forall" in e or "exists" in e:
             raise NotImplementedError(
                 "bounded quantifier in computational position "
@@ -3809,6 +3858,9 @@ class Lower:
                     body = f"(!{cond} || {body})" if op == "all" else f"({cond} && {body})"
                 return f"({fn} {src} (fun ({v} : {self.lean_type(et)}) => {body}))"
             return f"({fn} {self.term(a, env, types, dep)} (fun (t_b : Bool) => t_b))"
+        if op in ("set", "union", "inter", "diff", "card", "toset") or (
+                op == "in" and self.sort(e["args"][1], types) == "set"):
+            return self._set_term(e, env, types, dep)
         if op in LEAN_LIB_TERM or op == "in":
             # SPEC.md "The library (v1)" in Lean (PREDICT T9): the prelude's definitions, applied
             args = [self.term(a, env, types, dep) for a in e.get("args", [])]
@@ -3852,6 +3904,16 @@ class Lower:
         # Lean's `instDecidableForall`-style instance for `p → q` over two
         # decidable Props makes `decide` exact for it too, and `dcond`
         # already owns its short-circuit definedness.
+        if op in ("and", "or", "not", "implies") and tshape.collection_quantified({}, [e]):
+            # SPEC.md "Quantifiers over a collection" in Lean (PREDICT T30): a connective over a set range is
+            # computed as a Bool from its operands' terms, so the range reaches its `toList.all` form; `decide`
+            # over the Prop form has no Decidable instance for `∀ x, x ∈ s → ...` (measured on is_bst)
+            ts = [self.term(a, env, types, dep) for a in e["args"]]
+            if op == "not":
+                return f"(!{ts[0]})"
+            if op == "implies":
+                return f"(!{ts[0]} || {ts[1]})"
+            return "(" + (" && " if op == "and" else " || ").join(ts) + ")"
         if (op in ("==", "!=") or op in CMP_OPS
                 or op in ("and", "or", "not", "implies")):
             # BOOLEANS AS COMPUTATIONAL VALUES (2026-09-10): a
@@ -3879,6 +3941,15 @@ class Lower:
             v = env.get(e["var"], e["var"])
             assert types[e["var"]] == "bool", f"int var {e['var']} as Prop"
             return f"({v} = true)"
+        if ("forall" in e or "exists" in e) and "in" in (e.get("forall") or e.get("exists")):
+            # SPEC.md "Quantifiers over a collection" in Lean (PREDICT T30): a set range (a seq range was desugared
+            # to indices before any lowering), membership as the range
+            q = e.get("forall") or e.get("exists")
+            b = self.fresh(q["var"])
+            coll = self.term(q["in"], env, types)
+            body = self.prop(q["body"], {**env, q["var"]: b}, {**types, q["var"]: "int"})
+            return (f"(∀ ({b} : Int), {b} ∈ {coll} → {body})" if "forall" in e
+                    else f"(∃ ({b} : Int), {b} ∈ {coll} ∧ {body})")
         if "forall" in e:
             q = e["forall"]
             b = self.fresh(q["var"])
@@ -3968,6 +4039,9 @@ class Lower:
             return f"({self.term(e, env, types)} = true)"
         if op in ("any", "all"):
             return f"({self.term(e, env, types)} = true)"   # PREDICT T9: the bridge lemmas carry it to the quantifier
+        if op == "in" and self.sort(e["args"][1], types) == "set":
+            x, st = (self.term(a, env, types) for a in e["args"])
+            return f"({x} ∈ {st})"   # SPEC.md "Finite sets" in Lean (PREDICT T29)
         if op == "in":
             # SPEC.md "The library (v1)" in Lean (PREDICT T9): membership in a seq is List membership
             if not self._is_seqsort(self.sort(e["args"][1], types)):
@@ -4033,6 +4107,14 @@ class Lower:
                 self.dcond(c["cond"], env, types),
                 guard(cp, self.dcond(c["then"], env, types)),
                 guard(f"¬{cp}", self.dcond(c["else"], env, types))])
+        if ("forall" in e or "exists" in e) and "in" in (e.get("forall") or e.get("exists")):
+            # SPEC.md "Quantifiers over a collection": the set defined, the body at every member
+            q = e.get("forall") or e.get("exists")
+            b = self.fresh(q["var"])
+            db = self.dcond(q["body"], {**env, q["var"]: b}, {**types, q["var"]: "int"})
+            coll = self.term(q["in"], env, types)
+            return self._conj([self.dcond(q["in"], env, types),
+                               None if db is None else f"(∀ ({b} : Int), {b} ∈ {coll} → {db})"])
         if "forall" in e or "exists" in e:
             q = e["forall"] if "forall" in e else e["exists"]
             b = self.fresh(q["var"])
@@ -4491,7 +4573,7 @@ class Lower:
             # recurse past one level either, exactly like the pair branch
             # above.
             return "List (List Int)"
-        return {"int": "Int", "bool": "Bool", "seq": "List Int"}[t]
+        return {"int": "Int", "bool": "Bool", "seq": "List Int", "set": "(Std.ExtTreeSet Int compare)"}[t]
 
     def binders(self, names_types: list[tuple[str, str]]) -> str:
         return " ".join(f"({n} : {self.lean_type(t)})"
@@ -5767,6 +5849,13 @@ class Lower:
         theorems), so the fix reaches wherever a spec_fun call under a
         quantifier surfaces, not just the loop-preservation site the
         five committed timeout rows happened to hit it at first."""
+        if self.set_quants:
+            # SPEC.md "Quantifiers over a collection" in Lean (PREDICT T30): a set range computed as `toList.all`
+            # reaches grind only through `all = true`, whose iff grind does not instantiate forward (measured);
+            # simp states it as the quantifier first. Spec funs recursive on an int stay out (their equation loops)
+            names = ", ".join(self.sfun_names_ga + ["List.all_eq_true", "List.any_eq_true",
+                                                   "Std.ExtTreeSet.mem_toList", "decide_eq_true_eq"])
+            return f"(first | (simp only [{names}] at * <;> grind{self.ga}) | grind{self.ga})"
         if self.sfun_quantified and self.sfun_names_ga:
             names = ", ".join(self.sfun_names_ga)
             return (f"(first | (simp only [{names}] at * <;> "
@@ -6881,9 +6970,15 @@ class Lower:
                 at_n, at_i, call = "(t_a + (t_n : Int))", "(t_a + t_i)", f"t_compr{k} t_a{fargs}"
                 at_m = "(t_a + (n : Int))"
             btypes = {**self.types, v: elem}
+            # PREDICT T39: the body's VALUE reads a slice's element as the base's, `s[a..b][j]` as `s[a + j]` (equal
+            # wherever defined; the definedness theorems still state the slice's bounds from the task's own AST).
+            # grind normalizes the nested `drop`/`take` a stepped slice desugars to past every lemma pattern
+            # (odd_positions, T32's read); the flat read matches the ensures' own `s[2 * k + 1]`. The very same
+            # object for a body without one (byte identity)
+            body_v = _flat_slice_at(c["body"])
 
             def body_at(x: str) -> str:
-                return self.term(c["body"], {**fenv, v: x}, btypes)
+                return self.term(body_v, {**fenv, v: x}, btypes)
 
             def cond_at(x: str) -> str:
                 return self.prop(c["cond"], {**fenv, v: x}, btypes)
@@ -6912,6 +7007,17 @@ class Lower:
                     f"      simp only [hl, he, Nat.sub_self, List.getElem?_cons_zero, Option.getD_some]\n"
                     f"      all_goals (first | rfl | (rw [he2]) | simp [he2])\n")
                 thms += [f"{nm}_length", f"{nm}_get"]
+                # PREDICT T32: the element at a Nat index too. grind normalizes a literal `(0 : Int).toNat` to `0`, which
+                # `_get`'s pattern `[t_i.toNat]!` then never matches (measured: doubled_head's `u[0]` unproved); this
+                # pattern ranges over the Nat itself. Proved from `_get` at `(t_i : Int)`, rewriting only the cast.
+                at_nat = "(t_s[t_i]!)" if "seq" in c else "(t_a + (t_i : Int))"
+                out.append(
+                    f"theorem {nm}_getn {head} (t_n : Nat) :\n"
+                    f"    ∀ (t_i : Nat), t_i < t_n → ({call} t_n)[t_i]! = {body_at(at_nat)} := by\n"
+                    f"  intro t_i h1\n"
+                    f"  have h := {nm}_get {'t_s' if 'seq' in c else 't_a'}{fargs} t_n (t_i : Int) (by omega) (by omega)\n"
+                    f"  simpa only [Int.toNat_natCast] using h\n")
+                thms.append(f"{nm}_getn")
                 if "lo" in c:
                     # a range from 0, the common case, as its own corollary with `0 + t_i` already simplified (measured,
                     # diffs: grind did not equate s[((0 + w) + 1).toNat]! with s[(w + 1).toNat]! through the toNat)
@@ -6932,6 +7038,24 @@ class Lower:
                 f"(if {cond_at(at_m)} then [{body_at(at_m)}] else []) := rfl\n"
                 f"    rw [hcomp]; split <;> simp <;> omega\n")
             thms.append(f"{nm}_length")
+            if "seq" in c:
+                # PREDICT T45: the length one step on, at an Int index, the step a count over a growing prefix needs
+                # (count_evens_skip's invariant `c == len([y for y in s[0..i] if ...])`: grind did not unfold the
+                # definition through `(i + 1).toNat`, measured); seq sources only
+                out.append(
+                    f"theorem {nm}_step {head} :\n"
+                    f"    ∀ (t_i : Int), 0 ≤ t_i → (({call} (t_i + 1).toNat).length : Int) = "
+                    f"(({call} t_i.toNat).length : Int) + (if {cond_at(at_i)} then 1 else 0) := by\n"
+                    f"  intro t_i h0\n"
+                    f"  have he : (t_i + 1).toNat = t_i.toNat + 1 := by omega\n"
+                    f"  rw [he]\n"
+                    f"  have hcomp : {call} (t_i.toNat + 1) = {call} t_i.toNat ++ "
+                    f"(if {cond_at(at_i)} then [{body_at(at_i)}] else []) := rfl\n"
+                    f"  rw [hcomp]\n"
+                    f"  by_cases hc : {cond_at(at_i)}\n"
+                    f"  · simp only [if_pos hc]; simp\n"
+                    f"  · simp only [if_neg hc]; simp\n")
+                thms.append(f"{nm}_step")
             if is_filter:
                 ctop = cond_at(f"({call} t_n)[t_i.toNat]!")
                 out.append(
@@ -7401,6 +7525,11 @@ theorem t_str_join_split_roundtrip (s : List Int) (c : Int) :
     def lower(self) -> str:
         header = (f"-- t task {self.name!r} -> lean4, generated by "
                   f"lower_lean.py; every verdict is the kernel's.\n")
+        if _uses_sets(self.task) or _uses_sets(self.body):
+            # SPEC.md "Finite sets" in Lean (2026-10-07, PREDICT T29): core Std's extensional tree sets, and the one
+            # fact their lemmas leave grind to chain (a member makes the size positive, so `size_erase`'s Nat
+            # subtraction is exact), proved here once from isEmpty_eq_size_beq_zero, isEmpty_iff and not_mem_empty
+            header += "import Std.Data.ExtTreeSet\n" + LEAN_SET_PRELUDE
         dt_src = ""
         for d in self.task.get("datatypes", []):
             # SPEC.md "Datatypes (v1)" (2026-09-27): t's datatype IS
@@ -7418,7 +7547,12 @@ theorem t_str_join_split_roundtrip (s : List Int) (c : Int) :
                     f" ({f['name']} : {self.lean_type(f['type'])})"
                     for f in c.get("fields", []))
                 for c in d["ctors"])
-            dt_src += f"inductive {_ldt(d['name'])} where\n{ctor_lines}\n  deriving DecidableEq\n\n"
+            # a field read whose value is this datatype has a `default` arm when some constructor lacks the field, which
+            # needs Inhabited (measured on AlgoVeri's zig: `tree.left`); derived only then, so no other text changes
+            inh = (", Inhabited" if self._has(self.task, "field") and any(
+                f.get("type") == {"datatype": d["name"]} for dd in self.task.get("datatypes", [])
+                for c in dd["ctors"] for f in c.get("fields") or []) else "")
+            dt_src += f"inductive {_ldt(d['name'])} where\n{ctor_lines}\n  deriving DecidableEq{inh}\n\n"
         seq_src = self.emit_seq_helpers()
         seq_thms = []
         if self.seq_mut:
@@ -7664,6 +7798,33 @@ theorem t_str_join_split_roundtrip (s : List Int) (c : Int) :
     # handed to grind. Only a proved theorem is ever added, so this can
     # make no wrong program verify; a lemma grind cannot prove fails the
     # file (unproved), and `#print axioms` audits it like every theorem.
+    def _definition_signs(self, l: dict, ptypes: dict) -> list:
+        """`try have` sign facts for the products inside each spec_fun a lemma's ensures calls, instantiated at the
+        call's arguments; only a product whose factors mention the function's own parameters alone (none bound
+        inside it), and at most eight."""
+        out = []
+        for e in l["ensures"]:
+            for c in _lemma_call_nodes(e, []):
+                f = self.sfuns.get(c["call"]["fun"])
+                if f is None:
+                    continue
+                params = [p["name"] for p in f["params"]]
+                env = {p: self.term(a, {}, dict(ptypes)) for p, a in zip(params, c["call"]["args"])}
+                ftypes = {p["name"]: p["type"] for p in f["params"]}
+                for m in _lemma_mul_nodes(f["body"], []):
+                    a, b = m["args"]
+                    if not (_lemma_vars(m, set()) <= set(params)) or ("int" in a and "int" in b):
+                        continue
+                    try:
+                        ta, tb = self.term(a, env, ftypes), self.term(b, env, ftypes)
+                    except (KeyError, NotImplementedError):
+                        continue
+                    fact = (f"try have _mpd{len(out)} : (0:Int) ≤ ({ta}) * ({tb}) := "
+                            f"Int.mul_nonneg (by omega) (by omega)")
+                    if all(fact.split(":", 1)[1] != o.split(":", 1)[1] for o in out):
+                        out.append(fact)
+        return out[:8]
+
     def emit_lemmas(self) -> tuple[str, list]:
         lemmas = self.task.get("lemmas", [])
         if not lemmas:
@@ -7691,6 +7852,10 @@ theorem t_str_join_split_roundtrip (s : List Int) (c : Int) :
                      f"Int.mul_nonneg (by omega) (by omega)"
                      for i, a in enumerate(ints[:4]) for b in ints[i:4]
                      if self._has(l["ensures"], "op", "*")]
+            # the same bridge for a product inside a definition the ensures calls, instantiated at the call's own
+            # arguments, stated right before each closer so that omega sees the inductive hypotheses `have`d above
+            # (2026-10-07, AlgoVeri integer_exponential: `0 <= b * spec_pow(b, e - 1)` was all grind lacked)
+            dsigns = self._definition_signs(l, ptypes)
             k = [0]
 
             def tac(stmts, ind):
@@ -7725,6 +7890,7 @@ theorem t_str_join_split_roundtrip (s : List Int) (c : Int) :
                         sub[0] = f"{ind}· " + sub[0].lstrip()
                         lines += sub
                     return lines
+                lines += [f"{ind}{x}" for x in dsigns]
                 lines.append(f"{ind}{base}")
                 return lines
 
@@ -8128,7 +8294,8 @@ theorem t_str_join_split_roundtrip (s : List Int) (c : Int) :
         # true only when the loop's own state-var scan (`lower_loop`,
         # above) already found nothing else to do about it.
         return {"int": "(0 : Int)", "bool": "false",
-                "seq": "([] : List Int)"}.get(t)
+                "seq": "([] : List Int)",
+                "set": "(∅ : (Std.ExtTreeSet Int compare))"}.get(t)   # SPEC.md "Finite sets" in Lean (PREDICT T29)
 
     @staticmethod
     def _hok_components(n: int) -> list[str]:
@@ -9831,6 +9998,8 @@ theorem t_str_join_split_roundtrip (s : List Int) (c : Int) :
 
     def _prove(self, e: dict, tenv: dict, venv: dict, types: dict) -> str:
         g = self._closer()
+        if ("forall" in e or "exists" in e) and "in" in (e.get("forall") or e.get("exists")):
+            return g   # a set range (SPEC.md "Quantifiers over a collection"): the closer's own decide/grind
         if "forall" in e:
             q = e["forall"]
             lo, hi = self._cev(q["lo"], venv), self._cev(q["hi"], venv)
@@ -9928,6 +10097,22 @@ theorem t_str_join_split_roundtrip (s : List Int) (c : Int) :
 
     def _refute(self, e: dict, tenv: dict, venv: dict, types: dict) -> str:
         g = self._closer()
+        if "forall" in e and "in" in e["forall"]:
+            # SPEC.md "Quantifiers over a collection": refuted at a member where the body fails, the hypothesis
+            # applied to it with one membership proof, which decide gives on a ground set
+            q = e["forall"]
+            coll = self._cev(q["in"], venv)
+            if isinstance(coll, (frozenset, tuple, list)):
+                for k in (sorted(coll) if isinstance(coll, frozenset) else coll):
+                    v2 = {**venv, q["var"]: k}
+                    if self._cev(q["body"], v2) is False:
+                        t2 = {**tenv, q["var"]: self._gterm(k, "int")}
+                        rb = self._refute(q["body"], t2, v2, {**types, q["var"]: "int"})
+                        h = self.fresh_hyp()
+                        return f"(intro {h}; exact absurd ({h} ({k} : Int) (by {g})) (by {rb}))"
+            return g
+        if "exists" in e and "in" in e["exists"]:
+            return g
         if "forall" in e:
             q = e["forall"]
             lo, hi = self._cev(q["lo"], venv), self._cev(q["hi"], venv)
@@ -10108,6 +10293,11 @@ theorem t_str_join_split_roundtrip (s : List Int) (c : Int) :
             return "true" if v else "false"
         if ty == "seq":
             return "([" + ", ".join(str(int(x)) for x in v) + "] : List Int)"
+        if ty == "set":
+            out = "(∅ : (Std.ExtTreeSet Int compare))"   # SPEC.md "Finite sets" in Lean: a ground set as its insert chain
+            for x in v:
+                out = f"({out}.insert {self._gterm(x, 'int')})"
+            return out
         n = int(v)
         return f"({n} : Int)" if n >= 0 else f"(({n}) : Int)"
 
@@ -10137,6 +10327,8 @@ theorem t_str_join_split_roundtrip (s : List Int) (c : Int) :
         -- no new branch needed, only guarding the existing one so it
         does not mistake a nested-seq type dict for a pair's and crash on
         the missing "pair" key."""
+        if ty == "set":
+            return frozenset(v)   # SPEC.md "Finite sets": _j shows a set as its sorted list
         if isinstance(ty, dict) and "pair" in ty:
             t1, t2 = ty["pair"]
             return interp.Pair(self._unshow(v[0], t1),
@@ -11145,6 +11337,25 @@ theorem t_any_iff {α : Type} [Inhabited α] (s : List α) (p : α → Bool) :
 _LEAN_LIB_ORDER = ["min", "max", "abs", "gcd", "pow", "isqrt", "sum", "rev", "sort", "maxs", "anyall"]
 
 
+def _flat_slice_at(e):
+    """`e` with each `s[a..b][j]` (s a variable) read as `s[a + j]`; `e` itself when it holds none (PREDICT T39)."""
+    if isinstance(e, list):
+        out = [_flat_slice_at(x) for x in e]
+        return e if all(a is b for a, b in zip(out, e)) else out
+    if not isinstance(e, dict):
+        return e
+    if e.get("op") == "at" and len(e.get("args", [])) == 2:
+        s_e, i_e = e["args"]
+        if isinstance(s_e, dict) and s_e.get("op") == "slice" and "var" in s_e["args"][0]:
+            base, a_e, _ = s_e["args"]
+            i2 = _flat_slice_at(i_e)
+            # a slice from the literal 0 reads the index itself: `_get0`'s own `0 + ` simplification must not meet a
+            # second one (every_other read MALFORMED with `s[0 + 2 * i]`)
+            return {"op": "at", "args": [base, i2 if a_e == {"int": 0} else {"op": "+", "args": [a_e, i2]}]}
+    out = {k: _flat_slice_at(v) for k, v in e.items()}
+    return e if all(out[k] is e[k] for k in e) else out
+
+
 def _comp_key(e: dict) -> str:
     """A comprehension's shape: its filter and body with the bound variable renamed, and whether the source is a seq
     or a range (SPEC.md "Comprehensions (v1)", PREDICT T12)."""
@@ -11227,6 +11438,29 @@ def _lib_prelude(used: set) -> tuple[str, list]:
 _SET_OPS_T = {"set", "card", "union", "inter", "diff"}
 
 
+LEAN_SET_PRELUDE = """
+theorem t_set_size_pos (a : Std.ExtTreeSet Int compare) (x : Int) (h : x ∈ a) : 0 < a.size := by
+  rcases Nat.eq_zero_or_pos a.size with hz | hp
+  · exfalso
+    have he : a.isEmpty = true := by rw [Std.ExtTreeSet.isEmpty_eq_size_beq_zero]; simp [hz]
+    have := Std.ExtTreeSet.isEmpty_iff.mp he
+    subst this
+    exact Std.ExtTreeSet.not_mem_empty h
+  · exact hp
+"""
+
+
+def _set_of_compound(obj) -> bool:
+    """A set type of anything but ints ({"set": T}), the one shape Lean's sets do not carry yet."""
+    if isinstance(obj, dict):
+        if isinstance(obj.get("set"), (str, dict)) and len(obj) == 1:
+            return True
+        return any(_set_of_compound(v) for v in obj.values())
+    if isinstance(obj, list):
+        return any(_set_of_compound(v) for v in obj)
+    return False
+
+
 def _uses_sets(obj) -> bool:
     """True iff `obj` mentions t's set type or one of its six operations
     anywhere (SPEC.md "Finite sets", 2026-09-27), by the same generic walk
@@ -11243,9 +11477,17 @@ def _uses_sets(obj) -> bool:
 def lower(task: dict, body: list, witness: dict | None = None) -> str:
     import tshape
     task, body = tshape.desugar_seq_quants(task, body)   # SPEC.md "Quantifiers over a collection": seq ranges as indices
-    tshape.abstain_unless_carried(task, body, "lean", carried={"comp-reduction", "comp"},
+    task, body = tshape.desugar_par(task, body)          # PREDICT T47: a parallel loop as its sequential `for`
+    task, body = tshape.desugar_exits(task, body)        # PREDICT T44: break/continue rewritten; `while true` stays
+    tshape.abstain_on_heap(task, "lean")                   # SPEC.md "Heap (v1)" (PREDICT T46): Dafny first
+    tshape.abstain_on_floats(task, body, "lean")           # SPEC.md "Floats (v1)" (PREDICT T48)
+    tshape.abstain_unless_carried(task, body, "lean", carried={"comp-reduction", "comp", "collection-quant", "exit"},
                                   lib=LEAN_LIB)   # PREDICT T9: the library; any/all over a comprehension
-    if _uses_sets(task) or _uses_sets(body):
+    if _set_of_compound(task) or _set_of_compound(body):
+        raise NotImplementedError(
+            "lean lowering: a set of a compound element type (SPEC.md 'Compositional types (v1)'): "
+            "Lean carries sets of ints only, as Std.ExtTreeSet Int compare (SPEC.md 'Finite sets')")
+    if False:
         # FINITE SETS (2026-09-27, SPEC.md "Finite sets (v1)"): this column
         # is core Lean 4 with no Mathlib (measured: the toolchain here is
         # `leanprover/lean4:v4.33.1` alone, and every dated note in this

@@ -129,6 +129,19 @@ class LamV:
         return ev(self.body, sub, self.funs, self.st)
 
 
+OLD_KEY = "\x00old"     # SPEC.md "Heap (v1)": the entry contents of the arrays, for old(e)
+
+
+def heap_arrays(task: dict) -> list:
+    """The array parameters (SPEC.md "Heap (v1)"), in declaration order."""
+    return [p["name"] for p in task["params"] if p["type"] == "array"]
+
+
+def heap_mods(task: dict) -> list:
+    """The arrays a run's observable result includes: those named in `modifies`."""
+    return list(task.get("modifies", []))
+
+
 class LoopExit(Exception):
     """SPEC.md "Early exits (v1)" (2026-10-06): a `break` or a `continue`, unwinding to the innermost enclosing
     loop's executor; never seen outside one, since check_wf places the statements."""
@@ -689,6 +702,12 @@ def ev(e: dict, env: dict, funs: dict, st: St):
         if v is None:
             raise Undef(f"{e['var']} read before assignment", expr=e)
         return v
+    if "old" in e:
+        # SPEC.md "Heap (v1)" (PREDICT T46): e in the task's entry state, which the run that set OLD_KEY recorded
+        o = env.get(OLD_KEY)
+        if o is None:
+            raise Budget("old(...) outside a task run that recorded its entry state")
+        return ev(e["old"], {**env, **o}, funs, st)
     if "ite" in e:
         c = e["ite"]
         return ev(c["then" if ev(c["cond"], env, funs, st) else "else"],
@@ -1008,6 +1027,29 @@ def ev(e: dict, env: dict, funs: dict, st: St):
         return _str_startswith(a[0], a[1])
     if op == "endswith":
         return _str_endswith(a[0], a[1])
+    if op in ("+", "-", "*", "div") and isinstance(a[0], float):
+        # SPEC.md "Floats (v1)" (PREDICT T48): binary64, rounded to nearest even (Python's float is exactly that);
+        # DEFINED IFF the result is finite: a zero divisor, an overflow or a NaN has no value, as SPARK makes each a
+        # check
+        x, y = a[0], a[1]
+        if op == "div" and y == 0.0:
+            raise Undef("float division by zero", expr=e)
+        r = x + y if op == "+" else x - y if op == "-" else x * y if op == "*" else x / y
+        if not math.isfinite(r):
+            raise Undef(f"float {op} overflows", expr=e)
+        return r
+    if op == "float":
+        try:
+            r = float(a[0])            # correctly rounded from an int or a Fraction (RNE)
+        except OverflowError:
+            raise Undef("float() overflows", expr=e) from None
+        if not math.isfinite(r):
+            raise Undef("float() overflows", expr=e)
+        return r
+    if op == "sqrt":
+        if a[0] < 0.0:
+            raise Undef("sqrt of a negative", expr=e)
+        return math.sqrt(a[0])         # IEEE's correctly rounded square root
     if op == "+":
         if isinstance(a[0], tuple):
             # s + t on two seqs is concatenation (SPEC.md "Sequences:
@@ -1139,6 +1181,27 @@ def exec_body(body: list, env: dict, funs: dict, st: St, hook=None,
         if "assign" in s:
             name, e = s["assign"]
             env[name] = ev(e, env, funs, st)
+        elif "par" in s:
+            # SPEC.md "Concurrency (v1)" (PREDICT T47): the iterations in REVERSE order, a second schedule beside the
+            # kernels' sequential one; `par-race` makes every schedule compute the same thing, so a disagreement
+            # with a kernel would expose a gap in the rule
+            w = s["par"]
+            lo = ev(w["lo"], env, funs, st)
+            hi = ev(w["hi"], env, funs, st)
+            for i in reversed(range(lo, hi)):
+                env[w["var"]] = i
+                exec_body(w["body"], env, funs, st, hook, trace=trace, path=(*location, "par", "body"))
+            env.pop(w["var"], None)
+        elif "aset" in s:
+            # SPEC.md "Heap (v1)" (PREDICT T46): one element written; the array is a seq value replaced whole, which
+            # is the same program as writing in place because nothing aliases it
+            name, ie, ve = s["aset"]
+            cur = env[name]
+            i = ev(ie, env, funs, st)
+            v = ev(ve, env, funs, st)
+            if not 0 <= i < len(cur):
+                raise Undef(f"{name}[{i}] := outside [0,{len(cur)})", expr=s)
+            env[name] = tuple(cur[:i]) + (v,) + tuple(cur[i + 1:])
         elif "return" in s:
             name, e = s["return"]
             env[name] = ev(e, env, funs, st)
@@ -1220,6 +1283,10 @@ def assigned(body: list, out: set | None = None) -> set:
     for s in body:
         if "assign" in s:
             out.add(s["assign"][0])
+        elif "aset" in s:
+            out.add(s["aset"][0])          # SPEC.md "Heap (v1)": a write changes the array
+        elif "par" in s:
+            assigned(s["par"]["body"], out)   # SPEC.md "Concurrency (v1)"
         elif "return" in s:
             out.add(s["return"][0])
         elif "var" in s and isinstance(s["var"], dict):
@@ -1456,6 +1523,9 @@ def ladders(task: dict) -> dict:
           # SPEC.md "Exact rationals (v1)" (2026-10-06): the ints as reals, the halves, thirds and quarters
           # between the small ones, and each real literal with its neighbours at a half, near first.
           "real": _real_ladder(ints, rat_literals(task)),
+          # SPEC.md "Floats (v1)" (2026-10-07): small values and halves first, then a value that needs rounding,
+          # the largest finite doubles (an overflow twin's witness) and a subnormal-scale one
+          "float": (0.0, 1.0, -1.0, 0.5, 2.0, -0.5, -2.0, 3.0, 0.1, 1.5, 10.0, 1e308, -1e308, 1e-300),
           "nested_seq": _nested_seq_ladder(seqs),
           # SPEC.md "Finite sets" (2026-09-27): the seq ladder's tuples
           # read as sets, duplicates collapsed, so the near corner (the
@@ -1497,6 +1567,12 @@ def ladders(task: dict) -> dict:
                                    else lad[f"datatype:{f['type']['datatype']}"] if isinstance(f["type"], dict)
                                    else lad[f["type"]])[:DT_FIELD_NEAR]) for f in c["fields"]]
                     vals.extend(v for v in _ctor_values(d["name"], c["name"], cols) if v not in vals)
+            if rec:
+                # SPEC.md "Datatypes (v3): recursion": after the near corner, every shape of up to DT_SHAPE_NODES
+                # recursive constructors, its int fields labelled 0, 1, 2, ... in order (the first datatype field's
+                # subtree, the node's own ints, then the rest): a binary tree so labelled is a search tree with
+                # distinct keys, the input a BST contract's requires asks for and the near corner almost never has
+                vals.extend(v for v in _labelled_shapes(d, ctors, lad) if v not in vals)
             lad[f"datatype:{d['name']}"] = tuple(vals)
     return lad
 
@@ -1504,6 +1580,137 @@ def ladders(task: dict) -> dict:
 DT_FIELD_NEAR = 3        # values per field drawn from its own ladder (SPEC.md "Datatypes (v2): fields")
 DT_CTOR_CAP = 12         # values per constructor with fields, the near corner first
 DT_DEPTH = 2             # rounds of a recursive constructor over the values so far (SPEC.md "Datatypes (v3)")
+
+
+DT_SHAPE_NODES = 5       # the labelled shapes' size bound, in recursive constructors (SPEC.md "Datatypes (v3)")
+DT_SHAPE_CAP = 80        # labelled shapes per datatype, smallest first
+
+
+def _labelled_shapes(d: dict, ctors: list, lad: dict) -> list:
+    """Every shape of up to DT_SHAPE_NODES recursive constructors over the first base constructor, int fields
+    labelled in order (see the ladder's note), other non-datatype fields at their ladder's first value; at most
+    DT_SHAPE_CAP, fewest nodes first."""
+    name = d["name"]
+    base = next((c for c in ctors if isinstance(c, dict)
+                 and not any(f["type"] == {"datatype": name} for f in c.get("fields") or [])), None)
+    recs = [c for c in ctors if isinstance(c, dict) and any(f["type"] == {"datatype": name} for f in c.get("fields") or [])]
+    if base is None or not recs or any(isinstance(f["type"], dict) and f["type"] != {"datatype": name}
+                                       for c in [base] + recs for f in c.get("fields") or []):
+        return []
+
+    def first(t):
+        col = lad.get(t) if isinstance(t, str) else None
+        return col[0] if col else None
+
+    def base_val():
+        return Ctor(name, base["name"], tuple(first(f["type"]) for f in base.get("fields") or []))
+
+    def shapes(n):
+        """Unlabelled shapes with exactly n recursive nodes, as nested (ctor, [children]) tuples."""
+        if n == 0:
+            return [None]
+        out = []
+        for c in recs:
+            k = sum(1 for f in c["fields"] if f["type"] == {"datatype": name})
+            for split in _compositions(n - 1, k):
+                for kids in _product([shapes(m) for m in split]):
+                    out.append((c, kids))
+                    if len(out) > DT_SHAPE_CAP:
+                        return out
+        return out
+
+    def label(sh, nxt):
+        if sh is None:
+            return base_val()
+        c, kids = sh
+        kids = list(kids)
+        args, first_dt, fields = [], True, c["fields"]
+        built = {}
+        # in order: the first datatype field's subtree, then the ints, then the remaining subtrees
+        dt_idx = [i for i, f in enumerate(fields) if f["type"] == {"datatype": name}]
+        if dt_idx:
+            built[dt_idx[0]] = label(kids[0], nxt)
+        for i, f in enumerate(fields):
+            if f["type"] == "int":
+                built[i] = nxt[0]
+                nxt[0] += 1
+            elif f["type"] != {"datatype": name}:
+                built[i] = first(f["type"])
+        for j, i in enumerate(dt_idx[1:], start=1):
+            built[i] = label(kids[j], nxt)
+        return Ctor(name, c["name"], tuple(built[i] for i in range(len(fields))))
+
+    out = []
+    for n in range(1, DT_SHAPE_NODES + 1):
+        for sh in shapes(n):
+            out.append(label(sh, [0]))
+            if len(out) >= DT_SHAPE_CAP:
+                return out + _bool_variants(out, name, recs)
+    return out + _bool_variants(out, name, recs)
+
+
+DT_BOOL_VARIANTS_CAP = 3 * DT_SHAPE_CAP   # bool variants of the labelled shapes (_bool_variants)
+
+
+def _bool_variants(shapes: list, name: str, recs: list) -> list:
+    """SPEC.md "Datatypes (v3): recursion" (PREDICT T38): a labelled shape fixes every bool field at its ladder's first
+    value, so a red-black node is always black and no shape meets a red-child precondition (measured on
+    llrbt_rotate_left: no input satisfied `requires`). For a recursive constructor with a bool field, each shape
+    also enters with one node's bools flipped, every node in turn, then with all of them flipped; after the plain
+    shapes, so their order is unchanged, and capped. Empty for every other datatype."""
+    if not any(f["type"] == "bool" for c in recs for f in c.get("fields") or []):
+        return []
+
+    def flip(v, k, cnt, every):
+        if not isinstance(v, Ctor) or v.dtype != name:
+            return v
+        mine = cnt[0]
+        cnt[0] += 1
+        fields = next(c for c in recs if c["name"] == v.ctor)["fields"] if any(c["name"] == v.ctor for c in recs) \
+            else []
+        args = []
+        for i, a in enumerate(v.args):
+            ty = fields[i]["type"] if i < len(fields) else None
+            if ty == "bool" and (every or mine == k):
+                args.append(not a)
+            elif ty == {"datatype": name}:
+                args.append(flip(a, k, cnt, every))
+            else:
+                args.append(a)
+        return Ctor(v.dtype, v.ctor, tuple(args))
+
+    def nodes(v) -> int:
+        if not isinstance(v, Ctor) or v.dtype != name:
+            return 0
+        return (1 if any(c["name"] == v.ctor for c in recs) else 0) + sum(nodes(a) for a in v.args)
+
+    out = []
+    for v in shapes:
+        for k in range(nodes(v)):
+            out.append(flip(v, k, [0], False))
+        out.append(flip(v, -1, [0], True))
+        if len(out) >= DT_BOOL_VARIANTS_CAP:
+            break
+    seen = set(shapes)
+    return [v for v in dict.fromkeys(out) if v not in seen][:DT_BOOL_VARIANTS_CAP]
+
+
+def _compositions(total: int, parts: int):
+    """Every way to write `total` as an ordered sum of `parts` non-negative ints."""
+    if parts == 0:
+        if total == 0:
+            yield ()
+        return
+    for i in range(total + 1):
+        for rest in _compositions(total - i, parts - 1):
+            yield (i,) + rest
+
+
+def _product(cols: list):
+    out = [()]
+    for col in cols:
+        out = [p + (x,) for p in out for x in col]
+    return out
 
 
 def ctor_size(v) -> int:
@@ -1588,6 +1795,8 @@ def _ladder(lad: dict, ty) -> tuple:
                     for vals in itertools.product(vs, repeat=n):
                         out.append(MapV.of(list(zip(keys, vals))))
             return tuple(_dedup(out))
+    if ty == "array":
+        return lad["seq"]                  # SPEC.md "Heap (v1)": an array's input is a seq of ints
     return lad[ty]
 
 
@@ -1718,6 +1927,9 @@ class Reference:
         self.ret = task["returns"][0]["name"]
         self.funs = funs_of(task, task["body"])
         self.points: list[tuple[dict, object]] = []
+        self.arrays = heap_arrays(task)      # SPEC.md "Heap (v1)"
+        self.mods = heap_mods(task)
+        self.heaps: list[dict] = []          # each point's final contents of the modified arrays
         self.n_req = 0        # points satisfying `requires`; 0 separates a
                               # vacuous precondition from a body that never
                               # returns a value (probes fz_p_vac_unsat and
@@ -1751,8 +1963,7 @@ class Reference:
             if not sat:
                 continue
             self.n_req += 1
-            env = dict(env0)
-            env[self.ret] = None
+            env = self._start(env0)
             try:
                 exec_body(task["body"], env, self.funs, st)
                 v = env[self.ret]
@@ -1761,8 +1972,21 @@ class Reference:
             except (Undef, Budget, RecursionError):
                 continue              # undecided, so it witnesses nothing
             self.points.append((env0, v))
+            self.heaps.append(self._heap(env))
 
-    def _breaks_ensures(self, env0: dict, got) -> bool | None:
+    def _start(self, env0: dict) -> dict:
+        """The env a run starts from: the inputs, the return unassigned and, for a task with arrays (SPEC.md "Heap
+        (v1)"), their entry contents for old(e)."""
+        env = dict(env0)
+        env[self.ret] = None
+        if self.arrays:
+            env[OLD_KEY] = {a: env0[a] for a in self.arrays}
+        return env
+
+    def _heap(self, env: dict) -> dict:
+        return {a: env[a] for a in self.mods}
+
+    def _breaks_ensures(self, env0: dict, got, heap: dict | None = None) -> bool | None:
         """Does the twin's value actually FALSIFY `ensures` here? True is the
         only thing that forces a sound kernel to refute; a value that merely
         DIFFERS may still satisfy a loose spec (abs's twin returns -x, which
@@ -1771,6 +1995,9 @@ class Reference:
         question could not be decided within budget."""
         env = dict(env0)
         env[self.ret] = got
+        if self.arrays:
+            env[OLD_KEY] = {a: env0[a] for a in self.arrays}   # SPEC.md "Heap (v1)"
+            env.update(heap or {})
         st = St()
         try:
             for c in self.task["ensures"]:
@@ -1794,10 +2021,9 @@ class Reference:
         because only that is grounds for saying a kernel MUST refute; see
         refuting_witness, which searches for one."""
         funs = funs_of(self.task, twin_body)
-        for env0, real in self.points:
+        for k, (env0, real) in enumerate(self.points):
             st = St()
-            env = dict(env0)
-            env[self.ret] = None
+            env = self._start(env0)
             try:
                 exec_body(twin_body, env, funs, st)
                 got = env[self.ret]
@@ -1805,17 +2031,31 @@ class Reference:
                 w = _shown(env0)
                 w.update(_kind="undefined", _real=_j(real), _twin=str(u),
                          _ens=True)   # no value at all cannot satisfy ensures
+                self._heap_fields(w, k, None)
                 return w
             except (Budget, RecursionError):
                 continue
-            if got is None or _tv(got) != _tv(real):
+            gh = self._heap(env)
+            if got is None or _tv(got) != _tv(real) or self._heap_differs(gh, k):
                 w = _shown(env0)
                 w.update(_kind="value", _real=_j(real),
                          _twin="no value" if got is None else _j(got),
                          _ens=(True if got is None
-                               else self._breaks_ensures(env0, got)))
+                               else self._breaks_ensures(env0, got, gh)))
+                self._heap_fields(w, k, gh)
                 return w
         return None
+
+    def _heap_differs(self, gh: dict, k: int) -> bool:
+        return bool(self.mods) and {a: _tv(v) for a, v in gh.items()} != {a: _tv(v) for a, v in self.heaps[k].items()}
+
+    def _heap_fields(self, w: dict, k: int, gh: dict | None) -> None:
+        """SPEC.md "Heap (v1)": a witness of a task with modified arrays records their final contents, the real
+        body's and (when it has a value) the twin's, beside the return values; nothing for any other task."""
+        if self.mods:
+            w["_real_heap"] = {a: _j(v) for a, v in self.heaps[k].items()}
+            if gh is not None:
+                w["_twin_heap"] = {a: _j(v) for a, v in gh.items()}
 
     def refuting_witness(self, twin_body: list) -> dict | None:
         """The first domain point where the twin's value FALSIFIES `ensures`
@@ -1826,10 +2066,9 @@ class Reference:
         what a ground-truth grader (ROADMAP.md 10.1) should ask for, since a
         REFUTED it does not predict is a finding about the kernel."""
         funs = funs_of(self.task, twin_body)
-        for env0, real in self.points:
+        for k, (env0, real) in enumerate(self.points):
             st = St()
-            env = dict(env0)
-            env[self.ret] = None
+            env = self._start(env0)
             try:
                 exec_body(twin_body, env, funs, st)
                 got = env[self.ret]
@@ -1837,6 +2076,7 @@ class Reference:
                 w = _shown(env0)
                 w.update(_kind="undefined", _real=_j(real), _twin=str(u),
                          _ens=True)
+                self._heap_fields(w, k, None)
                 return w
             except (Budget, RecursionError):
                 continue
@@ -1844,11 +2084,14 @@ class Reference:
                 w = _shown(env0)
                 w.update(_kind="value", _real=_j(real), _twin="no value",
                          _ens=True)
+                self._heap_fields(w, k, None)
                 return w
-            if self._breaks_ensures(env0, got) is True:
+            gh = self._heap(env)
+            if self._breaks_ensures(env0, got, gh) is True:
                 w = _shown(env0)
                 w.update(_kind="value", _real=_j(real), _twin=_j(got),
                          _ens=True)
+                self._heap_fields(w, k, gh)
                 return w
         return None
 

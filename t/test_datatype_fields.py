@@ -15,10 +15,7 @@ sys.path.insert(0, str(HERE))
 import interp  # noqa: E402
 import lower_dafny  # noqa: E402
 import lower_framac  # noqa: E402
-import lower_fstar  # noqa: E402
 import lower_lean  # noqa: E402
-import lower_rocq  # noqa: E402
-import lower_spark  # noqa: E402
 import lower_verus  # noqa: E402
 import names  # noqa: E402
 import surface  # noqa: E402
@@ -175,11 +172,15 @@ def test_lean():
     ok("| _ => default" not in text(lower_lean, "color_code"), "v1's enumeration reads no field")
 
 
-def test_four_kernels_refuse_by_name():
+def test_every_kernel_lowers_fields():
+    # Rocq, F*, SPARK and Frama-C lower datatypes since PREDICT T34-T37 (test_rocq_datatypes.py,
+    # test_fstar_datatypes.py, test_spark_datatypes.py, test_framac_datatypes.py)
+    import lower_fstar
+    import lower_rocq
+    import lower_spark
     task = load("shape_area")
-    for mod in (lower_rocq, lower_fstar, lower_spark, lower_framac):
-        e = refusal(mod, task)
-        ok("datatypes" in e and "SPEC.md" in e, f"{mod.__name__} refuses datatypes by name: {e[:80]}")
+    for mod in (lower_dafny, lower_verus, lower_lean, lower_rocq, lower_fstar, lower_spark, lower_framac):
+        ok(refusal(mod, task) == "", f"{mod.__name__} lowers shape_area")
 
 
 def test_names_sanitize_fields_and_binders():

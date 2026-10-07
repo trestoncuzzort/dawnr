@@ -133,7 +133,7 @@ def test_malformed_examples():
 
     # 5. valid-type: a param declares an unknown type.
     t = _v0_base()
-    t["params"] = [{"name": "x", "type": "float"}]
+    t["params"] = [{"name": "x", "type": "complex"}]
     cases.append(("valid-type", t))
 
     # 6. quant-shadow: a forall's bound variable shadows a param.

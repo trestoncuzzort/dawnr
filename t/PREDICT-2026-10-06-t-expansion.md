@@ -1410,3 +1410,810 @@ and triggers).
 (2) `all_pos_set` reads verified with the twin refuted in Dafny and Verus, and abstains by name in the other five.
 (3) No other cell moves against T25's matrix.
 (4) Dafny and Verus gain two each. Lean, Rocq, F*, SPARK and Frama-C gain one each.
+
+### T25 read (2026-10-07 03:45Z): recursive datatypes in Dafny, Verus and Lean. All four bars held.
+
+The matrix was regenerated from a clean clone at 947c37c (`t/AGREEMENT.md`) and compared cell by cell with T24's.
+(1) **Held:** the five tree tasks read verified with the twin refuted in Dafny, Verus and Lean (15 cells).
+(2) **Held:** Rocq, F*, SPARK and Frama-C abstain by name on all five (20 cells).
+(3) **Held:** no other cell moved.
+(4) **Held:** Dafny 99, Verus 91, Lean 73; the other four unchanged. All seven stays 48, now of 99. Every kernel still
+refutes the twin of every real it verifies (100%).
+
+## T27 registered (2026-10-07 04:01Z, after hand probes and before the clean-clone runs): AlgoVeri's BST family, first five (G12)
+
+`bst_search`, `bst_insert`, `bst_zig`, `bst_zigzag` and `bst_zigzig` are stated in t, making 27 AlgoVeri programs.
+`t/algoveri/MAPPING.md` gives them clause by clause. They stand on recursive datatypes (T25) and set-ranged
+quantifiers (T26), letter for letter, apart from three spellings with Dafny's meaning: `e.Node?` as a `case`, `+` on
+sets as `union`, and `{v}` as t's set display. The rotations carry proof lemmas: zig one, zig_zag and zig_zig four
+each.
+
+**Engine changes, each found while writing these:**
+- **Labelled shapes in the witness ladder:** every shape of up to five nodes, int fields labelled in order, so that
+  BST requires have inputs. zig_zag had none before.
+- **Dafny:** a certificate prints a ground set it states as a set display.
+- **Verus, set certificates:** recursive spec fns revealed to the witness's depth, and the set-valued spec fns'
+  memberships stated at each constructor literal. search's and insert's twins were unproved before.
+- **Verus, well-definedness lemmas:** structural recursion revealed one level past the default.
+
+**Measured before this registration, stated plainly.**
+- **Dafny:** all five COUNT.
+- **Verus:** search and insert COUNT. zig, zig_zag and zig_zig are unproved, the reason named in SPEC.md and MAPPING.md:
+  `res.val`'s definedness from `view(res) == view(tree)`.
+- **Byte identity:** every lowering of the 101 tasks and the 22 earlier AlgoVeri programs is unchanged, real and twin,
+  all seven kernels, with the witness.
+- **Suite:** the whole suite passes (701).
+
+**Bars**, for the clean-clone matrix of the 101 and the AlgoVeri table of 27:
+(1) No cell of the 101 moves against T26's matrix.
+(2) The five read verified with the twin refuted in Dafny. In Verus, search and insert read verified/refuted, and the
+three rotations do not. Lean, Rocq, F*, SPARK and Frama-C abstain by name on all five.
+(3) The 22 earlier AlgoVeri programs read as in T24's table.
+(4) AlgoVeri Dafny 27 of 27, Verus 9.
+
+### T26 read (2026-10-07 04:03Z): quantifiers over a collection. All four bars held; all seven goes from 48 to 49.
+
+The matrix was regenerated from a clean clone at c48c57f (`t/AGREEMENT.md`) and compared cell by cell with T25's.
+(1) **Held:** `none_neg`, its contract written as `forall x in s . x >= 0`, reads verified with the twin refuted in all
+seven kernels. All seven goes from 48 to 49.
+(2) **Held:** `all_pos_set` reads verified with the twin refuted in Dafny and Verus, and abstains by name in Lean, Rocq,
+F*, SPARK and Frama-C.
+(3) **Held:** no other cell moved.
+(4) **Held:** Dafny 101, Verus 93, Lean 74, Rocq 63, F* 60, SPARK 57, Frama-C 50. Every kernel still refutes the twin of
+every real it verifies (100%).
+
+## T28 registered (2026-10-07 04:09Z, after hand probes and before the clean-clone runs): the sign bridge for a product inside a lemma's definitions (Lean)
+
+AlgoVeri's `integer_exponential` verifies with the twin refuted in six kernels. Lean alone kept it from all seven,
+and not for its loop: the helper lemma `pow_nonneg` failed. From `spec_pow(b, e - 1) >= 0` and `b >= 0`, grind's
+linear arithmetic does not derive `b * spec_pow(b, e - 1) >= 0`. That product sits inside the definition the lemma's
+ensures calls. The lemma closer's existing sign bridge covers only products of int parameters in the ensures.
+
+**Design.** `Lower._definition_signs`: for each spec_fun call in a lemma's ensures, every product in that function's
+body whose factors mention only its own parameters is instantiated at the call's arguments. Its sign is stated as
+`try have _mpd<k> : (0:Int) <= A * B := Int.mul_nonneg (by omega) (by omega)` before each closer, after the inductive
+hypothesis, so omega sees it. There are at most eight such facts, and `try` keeps a fact that does not hold out of the
+proof.
+
+**Measured before this registration, stated plainly.**
+- **Hand probe:** with the one fact added to the emitted file, pow_nonneg_l, the loop lemma and the contract verify.
+- **Lean, `cli verify`:** integer_exponential COUNTS. fast_exponential is still unproved: its loop's preservation needs
+  `pow_square`'s fact, which Lean's loop helper does not receive. That is named and not part of this registration.
+- **Byte identity:** of the 101 tasks and 27 AlgoVeri programs, exactly four lowerings change: Lean's real and twin of
+  fast_exponential and integer_exponential.
+- **Suite:** the whole suite passes (703).
+
+**Bars**, for the clean-clone matrix of the 101 and the AlgoVeri table of 27, after T27's:
+(1) No cell of the 101 moves against T27's matrix.
+(2) AlgoVeri integer_exponential reads verified with the twin refuted in Lean, so it is verified/refuted in all seven:
+AlgoVeri's first all-seven contract.
+(3) fast_exponential's Lean cell keeps T27's verdict. No other AlgoVeri cell moves.
+
+## T29 registered (2026-10-07 04:21Z, after hand probes and before the clean-clone runs): finite sets in Lean (G13)
+
+SPEC.md "Finite sets", the Lean note of 2026-10-07. Lean refused every set, on the ground that core Lean has no
+finite-set type. Lean 4.33's own Std ships `Std.ExtTreeSet`, extensional and decidable. A set of ints is
+`Std.ExtTreeSet Int compare`:
+- the operations are `∪`, `∩` and `\`, with `insert`/`erase` for a singleton second operand;
+- `card` is size, membership is `∈`/`contains`, `toset` is `ofList`, and `==` is Lean's `=`;
+- grind gets the membership and size lemmas core leaves untagged, plus one proved fact, `t_set_size_pos`;
+- certificates close by `decide`.
+
+**The Lean adapter's ban list allows exactly one import line**, `import Std.Data.ExtTreeSet`, a toolchain module.
+Every other import stays banned, and the axiom audit is unchanged. Receipt 76156bbbd011 (the ExtTreeSet API page,
+and the lemma file of the toolchain itself).
+
+**Measured before this registration, stated plainly.**
+- **Lean, `cli verify`:**
+  - set_toggle and set_collect COUNT.
+  - members_upto is unproved: membership in a slice, `s[i] ∈ s[0..n]`, is not derived.
+  - all_pos_set (a set-ranged quantifier) and words_seen (`set<seq>`) are refused by name.
+- **Byte identity:** of the 101 tasks and 27 AlgoVeri programs, exactly six lowerings change, all from a refusal to
+  a lowering: Lean's real and twin of members_upto, set_collect and set_toggle.
+- **Suite:** the whole suite passes (707). `test_lean_lib`'s "toset stays refused" became "toset is lowered", as this
+  registration intends.
+
+**Bars**, read from the clean-clone matrix of the 101 that follows T27's. The same run reads T28, whose cells are
+disjoint from these:
+(1) set_toggle and set_collect read verified with the twin refuted in Lean. With Dafny and Verus, and Rocq and F*,
+which already verify both, each is then verified/refuted in five kernels.
+(2) members_upto's Lean cell moves from abstain to unproved. all_pos_set and words_seen keep their Lean refusals.
+(3) No other cell of the 101 moves against T27's matrix. Lean gains 2.
+
+### T27 read (2026-10-07 04:37Z): AlgoVeri's BST family, first five. All four bars held.
+
+Both tables were regenerated from a clean clone at f047482: the matrix of 101 (`t/AGREEMENT.md`) and the AlgoVeri table
+of 27 (`t/ALGOVERI.md`).
+(1) **Held:** no cell of the 101 moved against T26's matrix.
+(2) **Held:** the five read verified with the twin refuted in Dafny. In Verus, search and insert are verified/refuted and
+the three rotations unproved, for the named `res.val` definedness. Lean, Rocq, F*, SPARK and Frama-C abstain by name.
+(3) **Held:** the 22 earlier programs read as in T24's table. One cell, F*'s insertion_sort, kept its verdict
+(timeout/timeout) but is marked FLAKED: its reruns disagreed on the way to the same verdict, so the cell is
+provisional, as before.
+(4) **Held:** AlgoVeri Dafny 27 of 27, Verus 9, the rest unchanged (F* 5, SPARK 3, Frama-C 2, Rocq 1, Lean 0).
+
+### T28 and T29 read (2026-10-07 05:18Z): every bar held.
+
+Both tables were regenerated from a clean clone at d8188c8, which carries T28 and T29 and not T30: the matrix of 101
+(`t/AGREEMENT.md`) and the AlgoVeri table of 27 (`t/ALGOVERI.md`).
+
+**T28**, the sign bridge for a product inside a lemma's definitions:
+(1) **Held:** no cell of the 101 moved for T28. The only cells that moved are T29's three, below.
+(2) **Held:** AlgoVeri's integer_exponential reads verified with the twin refuted in Lean. It is now verified/refuted
+in all seven, AlgoVeri's first such contract.
+(3) **Held:** fast_exponential's Lean cell kept its verdict. No other AlgoVeri cell moved. F*'s insertion_sort kept
+timeout/timeout, and this run's reruns agreed, so the FLAKED mark is gone.
+
+**T29**, finite sets in Lean:
+(1) **Held:** set_toggle and set_collect read verified with the twin refuted in Lean.
+(2) **Held:** members_upto's Lean cell moved from abstain to unproved/refuted. all_pos_set and words_seen kept their
+Lean refusals; at d8188c8, T30 had not yet landed.
+(3) **Held:** no other cell of the 101 moved. Lean went from 74 to 76, and all seven stayed at 49.
+
+AlgoVeri: Dafny 27, Verus 9, F* 5, SPARK 3, Frama-C 2, Lean 1, Rocq 1; all seven 1.
+
+## T30 registered (2026-10-07 04:43Z, after hand probes and before the clean-clone runs): set-ranged quantifiers in Lean
+
+Lean refused a quantifier over a set's members. On T29's tree sets it now states one in both positions:
+- **In a Prop:** `∀ x, x ∈ S → P` (`∃ x, x ∈ S ∧ P`).
+- **Computed as a Bool:** `S.toList.all (fun x => P)` (`any`). A connective whose operands include one is computed as a
+  Bool too (`&&`, `||`, `!`), because `decide` over the Prop form has no Decidable instance (measured on is_bst).
+- **Closers:** a task with a set range first simps the spec funs and `List.all_eq_true`, `List.any_eq_true`,
+  `ExtTreeSet.mem_toList` and `decide_eq_true_eq` before grind. grind does not use an `all = true` hypothesis
+  through the iff unless simp first states it as the quantifier (measured).
+- **Inhabited:** a datatype that is a field's type derives `Inhabited` when the task reads fields, which the default
+  arm of a field read needs. Measured on AlgoVeri's zig: `tree.left`.
+
+**Measured before this registration, stated plainly.**
+- all_pos_set COUNTS in Lean.
+- AlgoVeri's zig, zig_zag and zig_zig lower in Lean. Their twins are refuted, by kernel-checked certificates over trees
+  and sets. Their reals are unproved: the lemmas' steps reason through the Bool is_bst, and grind does not close
+  them.
+- search and insert stay refused by name: a structurally recursive task with requires (T25).
+- **Byte identity:** exactly these change, all_pos_set's Lean pair and the five BST programs' Lean pairs.
+- **Suite:** the whole suite passes (708).
+
+**Bars**, for the clean-clone runs after T28's and T29's:
+(1) all_pos_set reads verified with the twin refuted in Lean, making three kernels.
+(2) AlgoVeri zig, zig_zag and zig_zig read unproved with the twin refuted in Lean, where they abstained. search and
+insert abstain.
+(3) No other cell moves against T28's and T29's tables.
+
+## T31 registered (2026-10-07 05:08Z, after hand probes and before the clean-clone runs): seq locals in Frama-C
+
+Frama-C refused every seq local except a slice alias, and `rev` everywhere. palindrome was one of four tasks Frama-C
+alone kept out of all seven. Frama-C now gives such a local the workspace a method call's local already had: SPEC.md
+"The library (v1)", the Frama-C note of 2026-10-07. Receipt 74ec03028a6f: ACSL by Example's reverse_copy, whose
+contract for its destination buffer is the one emitted here.
+- **`rev`** (the shelved T20 patch): in a specification, the element rewrite `rev(s)[k] == s[len(s) - 1 - k]`; in
+  code, T19's write loop.
+- **The workspace** (`_local_scratch`). A seq local qualifies when:
+  - its initializer can be written: a copy, `seq(n, v)`, `s[i := v]`, a literal, `rev` of a variable, or a map;
+  - its length is a function of the params;
+  - it is written once, outside any loop.
+
+  It becomes a caller-provided `int *u, int u_n`: `\valid`, separated from every other buffer,
+  `requires u_n == <length>`, and in the `assigns`. Every other seq local keeps the refusal by name.
+- **The certificate** (`_cert_seq_cells`). It replays such a local cell by cell at the witness, and asserts each
+  ground length and index as a goal first. A seq equality assigned to a bool is decided the way a branch is.
+- **Three tasks:**
+  - `rev_equal`: `r == (b == rev(a))` through a local `rev(a)`;
+  - `doubled_head`: a map into a local;
+  - `set_first`: an update into a local.
+
+**Measured before this registration, stated plainly.**
+- **Frama-C, `cli verify`:** palindrome COUNTS. Six probes of a seq local (a copy, a fill, an update, a literal, a
+  map, and `rev` compared to a parameter) read verified with the twin refuted.
+- **All seven, `cli verify`:**
+  - palindrome and set_first read verified/refuted in every kernel.
+  - rev_equal is verified/refuted in six kernels; Rocq's real is unproved.
+  - doubled_head is verified/refuted in six kernels; Lean's real is unproved.
+- **A named gap outside this registration's tasks.** The rev probe with `requires len(s) == len(t2)` drew the witness
+  `s=[0], t2=[1]`. There, Dafny's and F*'s twins read unproved: refuting needs `[1] != rev([0])`. Rocq's real read
+  unproved there too. rev_equal's witness is `a=[], b=[0]`, decided by length alone.
+- **Byte identity:** of the 101 tasks and 27 AlgoVeri programs, exactly two lowerings change: Frama-C's real and twin
+  of palindrome, both from a refusal to a lowering.
+- **Suite:** the whole suite passes (713). `test_framac_lib`'s "palindrome refuses rev" became "rev is lowered", as
+  this registration intends.
+
+**Bars**, for the clean-clone matrix of 104 that follows T30's registration. The same run reads T30, whose cells are
+disjoint from these:
+(1) palindrome reads verified with the twin refuted in Frama-C, so all seven reach 50 of the 101.
+(2) set_first reads verified/refuted in all seven. rev_equal reads the same in six, with Rocq's real unproved.
+doubled_head reads the same in six, with Lean's real unproved.
+(3) No other cell moves against T29's and T30's tables. Frama-C gains 4 (palindrome and the three).
+
+## T32 registered (2026-10-07 05:17Z, after hand probes and before the clean-clone runs): a map's element at a Nat index (Lean)
+
+T31's hand probe left doubled_head unproved in Lean alone. Its spec needs `t_comp1_get` at index 0, and the lemma's
+pattern is `(t_comp1 t_s t_n)[t_i.toNat]!`. grind normalizes the goal's `(0 : Int).toNat` to `0`, so the pattern never
+matches. With the instance stated by hand, the file verifies. Receipt 4ba739e6c40b: the Lean reference's E-matching
+chapter, where patterns match modulo congruence and nothing equates a literal with `?t_i.toNat`.
+
+**Design.** Each map comprehension also gets `t_compK_getn`: the element at a Nat index, `∀ (t_i : Nat), t_i < t_n →
+(t_compK t_s t_n)[t_i]! = body[t_s[t_i]!]` (over a range, `t_a + (t_i : Int)`). It is proved from `_get` at
+`(t_i : Int)` by `simpa only [Int.toNat_natCast]`, which rewrites only the cast, and it is handed to grind beside the
+others. A filter gets nothing new.
+
+**Measured before this registration, stated plainly.**
+- **Lean, `cli verify`, the eight tasks whose Lean text changes:**
+  - doubled_head reads verified/refuted.
+  - all_positive, diffs, doubled, every_other, has_negative and squares stay verified/refuted.
+  - odd_positions stays unproved/refuted.
+- **odd_positions is a named gap, the same mismatch one step further.** Its strided slice is a range map over
+  `s[1..len(s)]`. grind normalizes the slice to `List.take (len + -1).toNat (List.drop 1 s)`, which
+  `t_seq_slice_get`'s pattern (`drop a.toNat`, `take (b - a).toNat`) does not match. A Nat-indexed slice lemma was
+  probed: grind registers its pattern but never instantiates it, because the element sits in an implication whose
+  antecedents grind does not discharge. More E-matching rounds did not change that. It is not part of this
+  registration.
+- **Byte identity:** of the 104 tasks and 27 AlgoVeri programs, exactly 16 lowerings change, the Lean pairs of those
+  eight tasks.
+- **Suite:** the whole suite passes (713).
+
+**Bars**, for the clean-clone matrix of 104 that reads T30 and T31 too. This replaces T31 bar (2)'s Lean clause for
+doubled_head:
+(1) doubled_head reads verified/refuted in Lean, so with T31 it is verified/refuted in all seven.
+(2) The other seven tasks keep their Lean verdicts.
+(3) No other cell moves for this change.
+
+### T30, T31 and T32 read (2026-10-07 05:53Z): every bar held.
+
+Both tables were regenerated from a clean clone at 9095774, which carries T30, T31 and T32 and not T33 or T34: the
+matrix of 104 (`t/AGREEMENT.md`) and the AlgoVeri table of 27 (`t/ALGOVERI.md`).
+
+**T30**, set-ranged quantifiers in Lean:
+(1) **Held:** all_pos_set reads verified with the twin refuted in Lean, making three kernels.
+(2) **Held:** AlgoVeri's zig, zig_zag and zig_zig read unproved/refuted in Lean, where they abstained. search and
+insert abstain.
+(3) **Held:** no other cell moved.
+
+**T31**, seq locals in Frama-C:
+(1) **Held:** palindrome reads verified/refuted in Frama-C. All seven reach 50 on the 101.
+(2) **Held**, as T32 amended:
+- set_first reads verified/refuted in all seven.
+- rev_equal does in six, with Rocq's real unproved.
+- doubled_head does in all seven: its Lean clause was replaced by T32's bar (1) before the run.
+
+(3) **Held:** no other cell moved, and Frama-C gained 4 (50 to 54).
+
+**T32**, a map's element at a Nat index in Lean:
+(1) **Held:** doubled_head reads verified/refuted in Lean.
+(2) **Held:** the other seven tasks kept their Lean verdicts, odd_positions still unproved/refuted.
+(3) **Held:** no other cell moved.
+
+**The matrix of 104, by kernel (verified with the twin refuted):**
+
+| kernel | count |
+|---|---|
+| Dafny | 104 |
+| Verus | 96 |
+| Lean | 80 |
+| Rocq | 65 |
+| F* | 63 |
+| SPARK | 60 |
+| Frama-C | 54 |
+
+All seven: 52 (49 of the 101, plus palindrome, set_first and doubled_head). AlgoVeri is unchanged at Dafny 27,
+Verus 9, F* 5, SPARK 3, Frama-C 2, Lean 1, Rocq 1, with all seven 1.
+
+## T33 registered (2026-10-07 05:24Z, after hand probes and before the clean-clone run that follows clean25): one orientation for a seq equality (Rocq)
+
+T31's rev_equal is verified/refuted in six kernels; Rocq's real is unproved. The code tests `u == b` with `u = rev(a)`
+and the contract states `b == rev(a)`. Rocq renders each operand in its own place:
+- code: `(a_len =? b_len) && t_seq_eqb a_len (t_rev a a_len) b`
+- contract: `b_len = a_len /\ forall k < b_len, b k = t_rev a a_len k`
+
+The closer ends the false branch by `congruence` between the contract's forall and the code's negated fact. Those are
+two different terms here, so nothing closes it. Receipt d051845f7561: Rocq's congruence is congruence closure, which
+closes a hypothesis against the negation of another only when they are the same term.
+
+**Design.** `_seq_eq_order`: in all three places Rocq states a seq `==` (code, contract, certificate arm), the operand
+whose rendered function sorts first leads, with its own length as the bound.
+
+**Measured before this registration, stated plainly.**
+- **Hand probes:** a hand proof compiles. So does the closer once the flipped facts are added and the lengths
+  substituted.
+- **Rocq, `cli verify`:** rev_equal COUNTS. double_all, palindrome and swap_rows, whose Rocq text changes, stay
+  verified/refuted.
+- **Byte identity:** of the 104 tasks and 27 AlgoVeri programs, exactly six lowerings change:
+  - Rocq's real and twin of palindrome and rev_equal;
+  - the real of double_all and swap_rows.
+- **Suite:** the whole suite passes (714).
+
+**Bars**, for the clean-clone matrix that follows clean25 (which runs at 9095774, without this change):
+(1) rev_equal reads verified/refuted in Rocq. With T31's six, it is then verified/refuted in all seven.
+(2) double_all, palindrome and swap_rows keep their Rocq verdicts.
+(3) No other cell moves against clean25's table.
+
+## T34 registered (2026-10-07 05:49Z, after hand probes and before the clean-clone runs): datatypes in Rocq
+
+The zoom-out's decision 5 (internal/RESEARCH-2026-10-07-zoom-out.md), first half. Rocq refused every datatype.
+Receipt 3366ce62013e: the Rocq reference on inductive types and on reasoning with them. SPEC.md "Datatypes" v1, v2
+and v3 carry the Rocq notes.
+
+**Design.**
+- **Types.** A t datatype is Rocq's own `Inductive`: `dt_<D>` is the type and `dt_<D>_<C>` a constructor. A field is
+  the constructor's argument, of type int, bool or a datatype.
+- **Equality.** `==` is Leibniz equality in a Prop. In a bool it is a decider built by `decide equality`.
+- **Expressions.** `case` is Rocq's `match`. `e.f` is a projection, and its definedness obligation (the constructor
+  declares `f`) is a lemma proved by cases.
+- **Proofs.** A straight-line proof first destructs each matched variable and each decided equality (`t_dt_cases`),
+  then runs the usual search.
+- **Recursion.** A spec fun or task whose measure is a datatype parameter is a structural `Fixpoint`, so the guard
+  checker is the termination proof. Its contract is proved by induction:
+  - each case is unfolded one step;
+  - an `if` the unfolding cannot pass is destructed;
+  - the inductive hypotheses' conjuncts are split, and their `= true` facts rewritten in.
+- **Certificates.** A certificate grounds a constructor witness as its term.
+- **Refused by name:** a seq, set or pair field.
+
+**Measured before this registration, stated plainly.**
+- **Rocq, `cli verify`, the 12 datatype tasks:**
+  - Nine COUNT: color_code, shape_area, manhattan, rect_area, tree_sum, tree_count, tree_height, tree_mirror and
+    tree_insert.
+  - bag_size and checked_tail abstain by name (a seq field).
+  - some_negative, a loop over an Opt state, lowers and reads unproved/unproved.
+- **AlgoVeri, the six datatype programs:**
+  - The five BST programs still abstain by name, on the set-ranged quantifier.
+  - discrete_log_naive (a loop with an Option return) lowers and reads unproved/unproved.
+  - None is malformed.
+- **Byte identity:** of the 104 tasks and 27 AlgoVeri programs, exactly 26 lowerings change:
+  - the Rocq real and twin of the 12 datatype tasks (bag_size and checked_tail only in their refusal text);
+  - discrete_log_naive's Rocq real and twin.
+- **Suite:** the whole suite passes (719). The two tests that pinned "Rocq refuses datatypes" now pin the three
+  kernels that still do, as this registration intends.
+
+**Bars**, for the clean-clone matrix and AlgoVeri table that follow T33's registration:
+(1) The nine read verified/refuted in Rocq; Rocq gains 9.
+(2) Each of the nine is then verified/refuted in Dafny, Verus, Lean and Rocq, four kernels, where it was three.
+(3) bag_size and checked_tail abstain in Rocq. some_negative reads unproved in Rocq, and AlgoVeri's
+discrete_log_naive reads unproved there. No other cell moves for this change.
+
+### T33 and T34 read (2026-10-07 06:29Z): every predicted cell held; one unrelated cell moved under load I caused.
+
+Both tables were regenerated from a clean clone at 1da07b8, which carries T33 and T34 and not T35 or later: the
+matrix of 104 and the AlgoVeri table of 27.
+
+**T33**, one orientation for a seq equality in Rocq:
+(1) **Held:** rev_equal reads verified with the twin refuted in Rocq, so it is in all seven. All seven: 53.
+(2) **Held:** double_all, palindrome and swap_rows kept their Rocq verdicts.
+(3) **Did not hold as measured.** sum_tail's Lean twin read timeout, where it was refuted.
+- Nothing in T33 or T34 touches Lean. The cause is mine: I was running SPARK and F* proofs beside the clean-clone
+  run.
+- Rerun alone at 06:15Z, sum_tail's Lean twin is refuted, as before.
+- The table is installed as measured, and the next clean-clone run, with nothing beside it, re-measures the cell.
+- In the AlgoVeri table, F*'s insertion_sort, the known flaky cell, read timeout/refuted, marked FLAKED.
+
+**T34**, datatypes in Rocq:
+(1) **Held:** the nine read verified/refuted in Rocq. Rocq went from 65 to 75: those nine, plus T33's rev_equal.
+(2) **Held:** each of the nine is verified/refuted in four kernels: Dafny, Verus, Lean and Rocq.
+(3) **Held for this change:** bag_size and checked_tail abstain in Rocq. some_negative and AlgoVeri's
+discrete_log_naive read unproved/unproved there. The cells that moved besides are not Rocq's, as T33's (3) records.
+
+**The matrix of 104, by kernel (verified with the twin refuted):**
+
+| kernel | count |
+|---|---|
+| Dafny | 104 |
+| Verus | 96 |
+| Lean | 79 (80 with sum_tail's re-measured twin) |
+| Rocq | 75 |
+| F* | 63 |
+| SPARK | 60 |
+| Frama-C | 54 |
+
+All seven: 53.
+
+## T35 registered (2026-10-07 06:04Z, after hand probes and before the clean-clone run that follows clean26): datatypes in F*
+
+The zoom-out's decision 5, second half. F* refused every datatype. Receipt fc51eb6283ec: the F* book's chapter
+"Inductive types and pattern matching". SPEC.md "Datatypes" v1, v2 and v3 carry the F* notes.
+
+**Design.**
+- **Types.** A t datatype is F*'s own inductive type: `dt_<D>` the type, `Dt_<D>_<C>` a constructor, `f_<f>` a field.
+- **Equality.** The type is an eqtype, so `==` is `=` in a bool and `==` in a Prop.
+- **Expressions.** `case` is F*'s `match`, which F* checks exhaustive. `e.f` is a function whose argument is refined
+  to the constructors that declare `f`, so F* proves the read's definedness wherever it occurs.
+- **Recursion.** Recursion on a datatype parameter is `(decreases q)`, F*'s subterm ordering.
+- **Certificates.** A certificate's formula is built from the original task, as before, and for a datatype task its
+  calls are renamed to the file's own names. tree_sum's `total` is an F* keyword, so the file says `t_total`; a
+  certificate naming `total` read MALFORMED, measured before this fix.
+- **Refused by name:** a seq, set or pair field.
+
+**Measured before this registration, stated plainly.**
+- **F*, `cli verify`, the 12 datatype tasks:**
+  - Ten COUNT: color_code, shape_area, manhattan, rect_area, some_negative, tree_sum, tree_count, tree_height,
+    tree_mirror and tree_insert. some_negative is a loop over an Opt state, which Rocq leaves unproved.
+  - bag_size and checked_tail abstain by name (a seq field).
+- **AlgoVeri:**
+  - The five BST programs abstain by name, on the set-ranged quantifier.
+  - discrete_log_naive's real times out and its twin is refuted.
+- **Byte identity:** of the 104 tasks and 27 AlgoVeri programs, exactly 26 lowerings change: the F* real and twin of
+  the 12 datatype tasks, and of discrete_log_naive.
+- **Suite:** the whole suite passes (724). Three tests changed, as this registration intends:
+  - the two refusal tests now pin SPARK and Frama-C;
+  - the F* shape tests skip datatype tasks, which test_fstar_datatypes.py covers;
+  - test_names allows a rename only of the kernel's own keywords.
+
+**Bars**, for the clean-clone matrix and AlgoVeri table that follow clean26 (which runs at 1da07b8, without this
+change):
+(1) The ten read verified/refuted in F*; F* gains 10.
+(2) With T34's Rocq cells, the nine Rocq carries are verified/refuted in five kernels (Dafny, Verus, Lean, Rocq, F*).
+some_negative is in four: Dafny, Verus, Lean and F*.
+(3) bag_size and checked_tail abstain in F*, and AlgoVeri's discrete_log_naive reads timeout/refuted in F*. No other
+cell moves for this change.
+
+## T36 registered (2026-10-07 06:13Z, after hand probes and before the clean-clone run that follows clean26): datatypes in SPARK
+
+SPARK refused every datatype. Receipt f33fe37e88f8: learn.adacore.com, "More about records", on variant records.
+SPEC.md "Datatypes" v1, v2 and v3 carry the SPARK notes.
+
+**Design.**
+- **Types.** A t datatype is an Ada discriminated record. The discriminant is an enumeration of the constructors,
+  `Dt_<D>_Tag`, with a default, so the type is definite. A constructor's field is the component `F_<C>_<f>`, since
+  Ada forbids one component name twice in a record.
+- **Field reads.** A read is the component selection, and its discriminant check, which gnatprove proves, is the
+  read's definedness. A field several constructors declare is a function over the tag, whose `Pre` names them.
+- **Expressions.** `case` is an Ada case expression on the tag, `==` the record's predefined equality, and a
+  constructor a qualified aggregate.
+- **Certificates.** A certificate binds a datatype parameter by name in a declare expression. A static aggregate
+  selected under another variant's alternative is a compile-time error (measured: shape_area's twin read MALFORMED).
+- **Definedness formula.** `defined()` states a field read's and a match's obligations as a t match.
+  some_negative's crash (KeyError) is fixed by this.
+- **Refused by name:** a recursive datatype (an Ada record cannot hold itself without access types), and a seq, set
+  or pair field.
+
+**Measured before this registration, stated plainly.**
+- **SPARK, `cli verify`:**
+  - color_code, shape_area, manhattan, rect_area and some_negative COUNT.
+  - The five recursive tree tasks, bag_size and checked_tail refuse by name.
+  - AlgoVeri's discrete_log_naive COUNTS.
+- **Byte identity:** of the 104 tasks and 27 AlgoVeri programs, exactly 26 lowerings change:
+  - the SPARK real and twin of the 12 datatype tasks (seven of them only in their refusal text);
+  - discrete_log_naive's SPARK pair.
+- **Suite:** the whole suite passes (728). The fields refusal test now pins Frama-C alone; the recursion test accepts
+  SPARK's refusal by name.
+
+**Bars**, for the clean-clone matrix and AlgoVeri table that follow clean26 (which runs at 1da07b8, without T35 or
+this change). The same run reads T35:
+(1) The five read verified/refuted in SPARK; SPARK gains 5.
+(2) color_code, shape_area, manhattan and rect_area are then verified/refuted in six kernels, all but Frama-C.
+some_negative is in five: all but Rocq and Frama-C.
+(3) AlgoVeri's discrete_log_naive reads verified/refuted in SPARK (AlgoVeri SPARK 3 to 4). No other cell moves for
+this change.
+
+## T37 registered (2026-10-07 06:32Z, after hand probes and before the clean-clone run that reads T35-T37): datatypes in Frama-C
+
+Frama-C was the last kernel refusing every datatype, and for color_code, shape_area, manhattan and rect_area it was
+the only kernel left once T34-T36 landed. Receipt 030f8d5520b2: the ACSL language source, on `\let` and on struct
+terms. SPEC.md "Datatypes" v1 and v2 carry the Frama-C notes.
+
+**Design.**
+- **Values.** A t datatype is a C struct passed by value, the encoding the pairs already use: `int tag` (an enum
+  constant per constructor) and every variant's fields `f_<C>_<f>`. A constructor is a C99 compound literal.
+- **Equality.** ACSL needs no struct literal: `x == C(a, b)` is `x.tag == C` and the fields. Other equality is the
+  tag-aware predicate `dt_<D>_eq`.
+- **Matches.** A match is a conditional on the tag. Its binders are bound by `\let` in ACSL and replaced by their
+  field in C.
+- **Definedness.** A field read owes its constructor: `defs()` states it in a specification, and an assert states
+  it before the statement in code.
+- **Parameters.** Each datatype parameter `requires dt_<D>_ok(p)`, its tag one of its constructors'.
+- **Certificates.** A certificate declares a datatype witness as its compound literal. It decides each match, and
+  each nested min, max or abs, at the ground state, asserted. manhattan's twin carried a live `?:` for a nested abs
+  before that last step.
+- **This landing takes datatype parameters.** A datatype return or local, `==` on datatypes in executable position,
+  a recursive datatype and a seq, set or pair field refuse by name.
+
+**Measured before this registration, stated plainly.**
+- **Frama-C, `cli verify`:** color_code, shape_area, manhattan and rect_area COUNT. some_negative and
+  discrete_log_naive (a datatype return), the five trees (recursive), and bag_size and checked_tail (seq fields)
+  refuse by name.
+- **Byte identity:** of the 104 tasks and 27 AlgoVeri programs, exactly 26 lowerings change: the Frama-C pairs of
+  the 12 datatype tasks and of discrete_log_naive. No other task's certificate changed for the nested-conditional
+  step.
+- **Suite:** the whole suite passes (732). The fields test that pinned "Frama-C refuses" now checks that all seven
+  lower shape_area.
+
+**Bars**, for the clean-clone matrix and AlgoVeri table at this registration's commit, which read T35, T36 and T37
+together, with no proof run beside them:
+(1) The four read verified/refuted in Frama-C; Frama-C gains 4.
+(2) With T34-T36, color_code, shape_area, manhattan and rect_area are verified/refuted in all seven, so all seven
+gains 4 (53 to 57). The fifth reaches 58 only if sum_tail's Lean twin is no longer the unrelated timeout T33's read
+recorded, and sum_tail is not all-seven anyway: SPARK and Frama-C keep it out.
+(3) No other cell moves for T35-T37 beyond their own bars. sum_tail's Lean twin reads refuted again, unloaded.
+
+### T35, T36 and T37 read (2026-10-07 07:23Z): every bar held. Datatypes are verified/refuted in all seven kernels.
+
+Both tables were regenerated from a clean clone at 3e67882, which carries T35, T36 and T37, with no proof run
+beside it: the matrix of 104 (`t/AGREEMENT.md`) and the AlgoVeri table of 27 (`t/ALGOVERI.md`).
+- The AlgoVeri half was OOM-killed at the unit's 8 GB cap (peak 8 GB plus 5.3 GB swap), near the end of its Lean
+  column. It was re-run alone at the same commit with 2 jobs under 11 GB.
+- With less load, two F* twins of AlgoVeri moved from timeout to refuted: bubble_sort and max_subarray_sum. Neither
+  touches a datatype, and both reals still time out, so no count of verified-with-twin-refuted moves.
+- insertion_sort's F* cell kept its verdict, and is no longer marked FLAKED.
+
+**T35**, datatypes in F*:
+(1) **Held:** the ten read verified/refuted in F*. F* went from 63 to 73.
+(2) **Held:** the nine Rocq carries are verified/refuted in five kernels. some_negative is in four: Dafny, Verus,
+Lean and F*.
+(3) **Held:** bag_size and checked_tail abstain in F*. AlgoVeri's discrete_log_naive reads timeout/refuted in F*.
+
+**T36**, datatypes in SPARK:
+(1) **Held:** color_code, shape_area, manhattan, rect_area and some_negative read verified/refuted in SPARK. SPARK
+went from 60 to 65.
+(2) **Held:** the four are in six kernels, all but Frama-C. some_negative is in five, all but Rocq and Frama-C.
+(3) **Held:** AlgoVeri's discrete_log_naive reads verified/refuted in SPARK, so AlgoVeri SPARK went from 3 to 4.
+
+**T37**, datatypes in Frama-C:
+(1) **Held:** the four read verified/refuted in Frama-C. Frama-C went from 54 to 58.
+(2) **Held:** color_code, shape_area, manhattan and rect_area are verified/refuted in all seven. All seven went from
+53 to 57.
+(3) **Held:** no other cell moved for T35-T37. sum_tail's Lean twin, unloaded, is refuted again, as T33's read said
+it would be. Lean is back at 80.
+
+**The matrix of 104, by kernel (verified with the twin refuted):**
+
+| kernel | count |
+|---|---|
+| Dafny | 104 |
+| Verus | 96 |
+| Lean | 80 |
+| Rocq | 75 |
+| F* | 73 |
+| SPARK | 65 |
+| Frama-C | 58 |
+
+All seven: 57. Frama-C alone keeps double_all, grid_row_sums and swap_rows out of all seven; Lean alone keeps
+odd_positions out.
+
+## T38, T39 and T40 registered (2026-10-07 07:26Z, after hand probes and before the clean-clone runs)
+
+Three disjoint changes, read from one clean-clone matrix and one AlgoVeri table. The AlgoVeri half runs alone at 2
+jobs under 11 GB, as clean27's re-run did.
+
+**T38: AlgoVeri's left-leaning red-black tree, three contracts.** `llrbt_rotateleft`, `llrbt_rotateright` and
+`llrbt_flipcolor` are stated (MAPPING.md, README.md).
+- **Encoding.** t's datatypes are monomorphic and not mutually recursive, so `Node` with `Option<Node>` children is
+  one `Tree` whose `Nil` is the source's `None`. Each member function is a spec fun agreeing with the source on
+  every `Node`.
+- **Proofs.** The two rotations carry an order lemma, as bst_zig does.
+- **Witness ladder.** The ladder found no input satisfying their `requires`, because every labelled shape held each
+  bool field at its first value, so every node was black. Receipt 7d3153ed1847 (SmallCheck's small-scope
+  enumeration): for a recursive datatype with a bool field only, each labelled shape now also enters with one
+  node's bools flipped and with all of them flipped, appended and capped (SPEC.md "Datatypes (v3)").
+
+**T39: a slice read in a Lean comprehension body is the base's read** (receipt 4ba739e6c40b, the grind E-matching
+chapter, as T32). odd_positions' stepped slice desugars to a map whose body reads `s[1..len(s)][2*i]`. grind
+normalizes that nested `drop`/`take` past every lemma pattern, so T32's read left it unproved. The helper's body now
+reads `s[1 + 2*i]`, which is equal wherever the slice is defined. The definedness theorems still state the slice's
+bounds from the task's own AST, and a slice from the literal 0 reads the bare index. With a `0 + ` left in,
+every_other's `_get0` read MALFORMED in the first probe; fixed before this registration.
+
+**T40: datatype returns and locals in Frama-C** (receipt 030f8d5520b2, as T37). A datatype return or local is the
+struct by value, as a pair's is. The loop frame havocs it by name. The certificate declares and compares constructor
+values by their t text. `==` on datatypes in executable position still refuses by name.
+
+**Measured before this registration, stated plainly.**
+- **T38, `cli verify`, all seven on the three:**
+  - Dafny verifies each with the twin refuted.
+  - Lean: unproved/refuted. Verus: unproved/unproved.
+  - Rocq, F*, SPARK and Frama-C abstain by name on the set-ranged quantifier in `is_bst`.
+- **T39, Lean:** odd_positions and every_other read verified/refuted.
+- **T40, Frama-C:** some_negative reads verified/refuted. AlgoVeri's discrete_log_naive refuses by name, on its
+  executable `==` on an Option.
+- **Byte identity:** of the 104 tasks and 27 AlgoVeri programs, exactly eight lowerings change, and three programs
+  are new:
+  - the Lean pairs of every_other and odd_positions;
+  - the Frama-C pairs of some_negative and discrete_log_naive.
+
+  No earlier witness changed for the ladder's bool variants.
+- **Suite:** the whole suite passes (734).
+
+**Bars**, for the clean-clone matrix of 104 and the AlgoVeri table of 30 at this registration's commit:
+(1) odd_positions reads verified/refuted in Lean, so it is in all seven: all seven go from 57 to 58, and Lean from 80
+to 81. every_other keeps verified/refuted.
+(2) some_negative reads verified/refuted in Frama-C, so it is in six (all but Rocq): Frama-C goes from 58 to 59.
+(3) AlgoVeri grows to 30 programs. The three LLRB programs are verified/refuted in Dafny (30 of 30), unproved
+otherwise or abstaining as measured above. discrete_log_naive's Frama-C cell stays an abstention, with its new reason.
+No other cell moves.
+
+### T38, T39 and T40 read (2026-10-07 08:06Z): every bar held.
+
+Both tables were regenerated from a clean clone at 7a5f9f8, with no proof run beside it: the matrix of 104 (3 jobs),
+then the AlgoVeri table of 30 (2 jobs), in one unit under 11 GB, with no OOM.
+(1) **Held:** odd_positions reads verified/refuted in Lean, so it is in all seven: all seven went from 57 to 58, and
+Lean from 80 to 81. every_other kept verified/refuted.
+(2) **Held:** some_negative reads verified/refuted in Frama-C (59), so it is in six. Rocq alone keeps it out.
+(3) **Held:** AlgoVeri has 30 programs.
+- The three LLRB programs are verified/refuted in Dafny (30 of 30), unproved/refuted in Lean and unproved/unproved
+  in Verus. Rocq, F*, SPARK and Frama-C abstain, on the set-ranged quantifier.
+- discrete_log_naive's Frama-C cell stayed an abstention, with its new reason.
+- No other cell moved, in either table.
+
+Single-kernel blockers now: Frama-C keeps double_all, grid_row_sums and swap_rows from all seven, and Rocq keeps
+some_negative.
+
+## T41 and T42 registered (2026-10-07 08:11Z, after hand probes and before the clean-clone runs)
+
+**T41: Rocq, a loop over a datatype state.** some_negative was Rocq's only gap to all seven: its loop invariant is a
+`match` on the `Opt` state, which the generic search never splits. Receipt 3366ce62013e (Rocq's reasoning with
+inductives, as T34).
+- For a datatype task, `t_dis` and `t_side` each gain a LAST alternative, `solve [ t_dt_cases; t_vc0 ]`. It is tried
+  only when every earlier one fails, so no goal an earlier one closed changes how it closes.
+- The value certificate missed the twin's computed value: `_fv` did not see a return used as a `match` scrutinee.
+  `_fv` now walks constructors, field reads and matches.
+
+**T42: seq fields in Rocq, F* and SPARK.**
+- **Rocq:** a seq field is one `((Z -> Z) * Z)` value, read through `fst` and `snd`. A datatype holding one gets no
+  decider, and `==` on it refuses by name, since Leibniz equality on a function is not t's extensional seq
+  equality. `t_dt_cases` also splits a variable read through a field's projection, then reduces the projections.
+  Before that, bag_size's `dt_Bag_f_active b` was no `match` on `b`, so nothing split it.
+- **F\*:** a seq field is `Seq.seq int`. The type is then no eqtype, so `==` is propositional only, and a computed
+  `==` refuses by name.
+- **SPARK:** a seq field is a `Seq` component, and the seq preamble is emitted for it.
+
+Receipts fc51eb6283ec and f33fe37e88f8, as T35 and T36.
+
+**Measured before this registration, stated plainly.**
+- **Rocq, the 12 datatype tasks:**
+  - some_negative and bag_size now COUNT, beside the nine.
+  - checked_tail refuses by name: `==` on a datatype holding a seq.
+  - AlgoVeri's discrete_log_naive moves from unproved/unproved to unproved/refuted.
+- **F\* and SPARK:** bag_size and checked_tail COUNT in both.
+- **Byte identity:**
+  - Every datatype task's Rocq lowering changes (the alternative and the case tactic), and so does
+    discrete_log_naive's. The nine earlier tasks were re-verified: unchanged.
+  - The F* and SPARK pairs of bag_size and checked_tail change, from refusals.
+- **Suite:** the whole suite passes (737).
+
+**Bars**, for the clean-clone matrix and AlgoVeri table at this registration's commit:
+(1) some_negative reads verified/refuted in Rocq, so it is in all seven: all seven go from 58 to 59, and Rocq from 75
+to 77 with bag_size.
+(2) bag_size reads verified/refuted in Rocq, F* and SPARK, so it is in six (all but Frama-C). checked_tail reads it in
+F* and SPARK, so it is in five (Rocq and Frama-C refuse by name). F* goes from 73 to 75, and SPARK from 65 to 67.
+(3) discrete_log_naive's Rocq cell reads unproved/refuted. No other cell moves.
+
+### T41 and T42 read (2026-10-07 08:52Z): every bar held.
+
+Both tables were regenerated from a clean clone at fb3e1f8, with no proof run beside it: the matrix of 104 (3 jobs),
+then the AlgoVeri table of 30 (2 jobs), in one unit under 11 GB, with no OOM.
+(1) **Held:** some_negative reads verified/refuted in Rocq, so it is in all seven: all seven went from 58 to 59. Rocq
+went from 75 to 77 with bag_size.
+(2) **Held:** bag_size reads verified/refuted in Rocq, F* and SPARK, so it is in six; Frama-C alone keeps it out.
+checked_tail reads verified/refuted in F* and SPARK, so it is in five; Rocq and Frama-C refuse it by name. F* went
+from 73 to 75, and SPARK from 65 to 67.
+(3) **Held:** discrete_log_naive's Rocq cell reads unproved/refuted. AlgoVeri stays at 30 programs: Dafny 30,
+Verus 9, F* 5, SPARK 4, Frama-C 2, Lean 1, Rocq 1; all seven 1.
+- No other cell moved, in either table.
+
+## T43, T44 and T45 registered (2026-10-07 09:03Z, after hand probes and before the clean-clone runs)
+
+**T43: a datatype with a seq field, flattened in Frama-C.** bag_size (`datatype Bag = Bag(items: seq, active:
+bool)`) was Frama-C's only gap on it. A C struct field cannot hold a seq buffer. Receipt 7210be66f2c9: ACSL by
+Example's Stack keeps (pointer, capacity, size) in a struct passed by pointer and moves the buffer's obligations into
+predicates over the struct. t's datatypes are passed by value, so the backend's existing answer for a pair with a seq
+component is taken instead (`_pair_flat`, DESIGN-framac-nested-seq.md section 5).
+- **The flattening:** a datatype with one constructor whose fields are int, bool and seq is a FLATTENED parameter,
+  each field its own C parameter (`int *b_items, int b_items_n, int b_active`). `b.items` is the bare name
+  `b_items`, so every reader of a seq (`len`, `at`, definedness) takes it unchanged, and the seq field joins the seq
+  parameters' `_n >= 0`, `\valid_read` and pairwise `\separated` clauses.
+- **The certificate:** declares the witness field by field.
+- **Refused by name:** any other use of such a datatype (a return, local, constructor, match, equality, call
+  argument, spec-function parameter), and a seq field in a datatype of several constructors (checked_tail, whose
+  refusal is reworded).
+
+**T44: early exits in Verus, Lean, Rocq, F*, SPARK and Frama-C.** Receipt 28d3ddecb054. One rewrite,
+`tshape.desugar_exits`, not six lowerings: every one of the six already carries `return` inside a loop (SPEC "Early
+exit (v1)"), which owes the task's `ensures` and not the invariant.
+- **`continue`:** the statements after it on its path move into the other branch of each `if` on that path. The
+  iteration ends in the same state, where the invariants and `decreases` are owed exactly as at the `continue`.
+- **`break`:** becomes the loop's continuation (the rest of the task body) followed by `return`. When the
+  continuation ends in an assignment to the return name, that assignment becomes the `return`.
+- **Refused by name:** a `break` of a loop nested in another loop's body, unless the rest of that body ends in
+  `return` and holds no `continue`; a `break` or `continue` in a method body; a `break` in a task with several returns.
+- **`while true`** is left as written.
+- **Checked against the interpreter** (`test_exits_desugar.py`): on every input of a small domain (seqs over
+  {-1, 0, 1, 2} up to length 3, ints -2..3) the rewrite computes what the original computes. Covered: the three
+  tasks, their twins, and five programs written to reach each case (nested `if`s, two loops in a row, a loop inside
+  an `if`, a nested loop followed by `return`, `continue` beside `return`).
+
+**Measured before this registration, stated plainly.**
+- **T43:** bag_size COUNTS in Frama-C (verified, its collapse-if twin refuted).
+- **T44 and T45, the four tasks in the six kernels** (`cli.py verify`, 3 jobs): every carried cell reads
+  verified/refuted. That is index_of and find_zero in all six, count_evens_skip in Verus, Lean, F* and SPARK, and evens
+  in F* and SPARK (and still in Lean). Rocq and Frama-C refuse count_evens_skip and evens by name (filters).
+- **What the first probe found, and what fixed it:**
+  - SPARK emitted the comprehension's function after the loop function whose contract calls it (malformed): the
+    comprehensions now come first.
+  - Verus left count_evens_skip unproved: its comprehension recursion is `drop_last` over the whole source, so a
+    prefix `s[0..i + 1]` needs subrange extensionality at every step. Two broadcast lemmas (`t_compK_prefix`,
+    `t_compK_whole`) state it once, and a loop's proof function now uses them.
+  - Lean left it unproved: grind did not unfold the filter through `(i + 1).toNat`, so `t_compK_step` states the
+    length one step on.
+  - Frama-C left find_zero unproved on one smoke goal: the dead code after `while (1)`. The rewrite now drops
+    statements after a `while true` that has no `break` left, and Frama-C emits no trailing `return` there.
+- **Byte identity:** every lowering of the 104 tasks and the 30 AlgoVeri programs, real and twin, in all seven
+  kernels, with the witness (1,560 and 450 entries), was compared with fb3e1f8. Only bag_size and checked_tail
+  (Frama-C), the three early-exit tasks (the six kernels) and evens (F*, SPARK, and Lean's new step lemma) change;
+  no AlgoVeri lowering changes.
+- **Suite:** the whole suite passes (746, with test_exits_desugar.py's 51 checks).
+
+**Bars**, for the clean-clone matrix and AlgoVeri table at this registration's commit:
+(1) bag_size reads verified/refuted in Frama-C, and index_of and find_zero in Verus, Lean, Rocq, F*, SPARK and
+Frama-C, so all three are in all seven: all seven go from 59 to 62.
+(2) count_evens_skip reads verified/refuted in Verus, Lean, F* and SPARK (five kernels with Dafny), and evens in F* and
+SPARK (five); Rocq and Frama-C refuse both by name. evens keeps verified/refuted in Lean.
+(3) Per kernel: Verus 96 to 99, Lean 81 to 84, Rocq 77 to 79, F* 75 to 79, SPARK 67 to 71, Frama-C 59 to 62; Dafny 104.
+checked_tail keeps its Frama-C refusal, reworded. No other cell moves.
+(4) The AlgoVeri table does not move (no lowering of it changed).
+
+**T45: filtered comprehensions in F* and SPARK.** Receipt 0e4e244fa954 (F*'s fuel-instrumented equation for a `let
+rec`, fetched). Dafny's own shape: a prefix-form recursion keeping the last element when the condition holds, its
+contract the length bound and, for a pure filter, the condition at every element; the definedness is the condition at
+every element and the body where it holds. SPARK's definedness formula gains the comprehension case
+lower_verus.defined already has (count_evens_skip's ensures holds one).
+
+### T43, T44 and T45 read (2026-10-07 09:45Z): every bar held.
+
+Both tables were regenerated from a clean clone at 0ddcce3, with no proof run beside it: the matrix of 104 (3 jobs),
+then the AlgoVeri table of 30 (2 jobs), in one unit under 11 GB, with no OOM.
+(1) **Held:** bag_size reads verified/refuted in Frama-C, and index_of and find_zero in Verus, Lean, Rocq, F*, SPARK
+and Frama-C, so all three are in all seven: all seven went from 59 to 62.
+(2) **Held:** count_evens_skip reads verified/refuted in Verus, Lean, F* and SPARK, and evens in F* and SPARK; Rocq
+and Frama-C refuse both by name. evens kept verified/refuted in Lean.
+(3) **Held:** Verus 99, Lean 84, Rocq 79, F* 79, SPARK 71, Frama-C 62, Dafny 104. checked_tail kept its Frama-C
+refusal. No other cell moved.
+(4) **Held:** the AlgoVeri table did not move.
+
+## T46, T47, T48 and T49 registered (2026-10-07 09:50Z, after hand probes and before the clean-clone runs)
+
+The operator, 2026-10-07 09:00Z: add the heap, floats and concurrency to t, under a new north star
+(`NORTH-STAR.md`, "write it once, prove it everywhere it ships"), whose first target they are. Each is in SPEC.md
+with its own section, SYNTAX.md, t.gbnf (`grammar_check.py`: 114 of 114 committed programs accepted), the checker
+(rules with a `malformed/` example each), the interpreter, the twins and the Python hand-back.
+
+**T46: Heap (v1), arrays by reference.** Receipt 76b38f46f235 (Ada RM 6.2: by copy and by reference agree when nothing
+is aliased; Dafny's `array<T>`).
+- **The form:** an `array` task parameter, `modifies a`, `a[i] := e`, and `old(e)` in an ensures or a loop
+  invariant. No aliasing; an array is nothing but a task parameter.
+- **The observable result** is the return value and the modified arrays' final contents. Witnesses record both
+  (`_real_heap`, `_twin_heap`), and the real-witness scan reads them.
+- **Dafny** lowers it natively. The other six refuse it by name (`tshape.has_heap`).
+- **Four tasks:** reverse_in_place, swap_at, clamp_all, ring_push.
+
+**T47: Concurrency (v1), parallel loops.** Receipt 1338b1d7d06d (rayon's par_iter_mut; Dafny's forall statement).
+- **The form:** `parallel for i in [lo, hi)`, whose iterations run in any interleaving.
+- **Race freedom is checked by rule** (`par-race`, `par-exit`): an iteration writes only its own element, reads a
+  written array only there, assigns only its own locals and has fixed bounds. So every schedule equals the
+  sequential loop, which each kernel verifies (`tshape.desugar_par`).
+- **The interpreter** runs the iterations in reverse, a second schedule; `test_concurrency.py` checks it against
+  the sequential rewrite on every domain point. The hand-back runs them on a thread pool.
+- **Three tasks:** scale_all, offset_all, relu_all.
+
+**T48: Floats (v1), IEEE-754 binary64.** Receipt 18db794aff2e (the SPARK UG's semantics of floating point).
+- **The form:** `float`, `float(x)`, `sqrt`, `real(f)`. Arithmetic rounds to nearest even and is defined only when
+  finite; a float never mixes with an int or a real.
+- **The interpreter and the hand-back** compute in Python's float, with a finiteness check after each operation.
+- **T49, SPARK:** `Long_Float`, literals as the exact decimal value of their double. `sqrt`, `real(f)` and a run-time
+  `float(n)` refuse by name. The other six refuse floats by name.
+- **Three tasks:** sat_scale, deadband, rate_limit (autonomy shapes: saturation, deadband, rate limiter).
+
+**Measured before this registration, stated plainly.**
+- **Dafny, the seven heap and parallel tasks:** every one verified, with its twin refuted. scale_all's twin
+  differs from the real body only in the array, and its certificate grounds the twin's final contents.
+  reverse_in_place first timed out reading `a[..][k]`; with `a[k]` and `a.Length` read on the array itself (the
+  terms Dafny's array axioms trigger on) it verified, and the other six re-verified.
+- **SPARK, the three float tasks:** sat_scale and deadband verified with the twin refuted. rate_limit's real body
+  TIMES OUT: its ensures `r >= prev - step` where `r = prev + step` needs the monotonicity of rounding, which Z3 (the
+  pinned prover) did not find within the budget.
+- **Every other cell** of the ten tasks is a refusal by name (heap, or floats).
+- **Byte identity:** no lowering of the 104 matrix tasks or the 30 AlgoVeri programs changes (the 10 tasks are new).
+- **Suite:** the whole suite passes, including test_heap.py, test_concurrency.py and test_floats.py.
+
+**Bars**, for the clean-clone matrix and AlgoVeri table at this registration's commit:
+(1) The matrix has 114 tasks. Dafny reads verified/refuted on all of them except the three float tasks, which it
+refuses by name: 111.
+(2) SPARK reads verified/refuted on sat_scale and deadband (73), and timeout/refuted on rate_limit.
+(3) Every other new cell is abstain/abstain, and no cell of the 104 moves. All seven stays 62 of 114.
+(4) The AlgoVeri table does not move.
+

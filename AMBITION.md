@@ -6,6 +6,16 @@ the route, and every number here links to the run that produced it. The ideas
 being worked toward are kept at the end of this file, stated plainly, with
 where each one stands.
 
+## The north star since 2026-10-07
+
+The operator, 2026-10-07: "we need a new north star and this one's up to you." It is set in the engine repository's
+`NORTH-STAR.md` (github.com/trestoncuzzort/t-proof-engine): **write it once, prove it everywhere it ships.** A
+safety-critical routine is written once in t and proved in the toolchains industry certifies with (SPARK, Frama-C,
+Dafny) and in the research kernels, every specification checked by its twin, shown on autonomy code (navigation,
+control, scheduling) with floats, in-place arrays and concurrency. dawnr's place in it is that file's target 6: a
+model that drafts the t for a routine from a plain requirement, kept only when the kernels prove it. The sections
+below stand as dawnr's own goals, under that one.
+
 ## The direction since 2026-10-01
 
 The operator, the evening of 2026-09-30, after the question "are we holding out for math that does

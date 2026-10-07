@@ -85,7 +85,9 @@ native_decide + its axioms' names, the `axiom` keyword anywhere (not
 line-anchored), macro/syntax/elab/notation machinery (an in-file macro can
 expand to sorryAx), guard_msgs, set_option (covers maxHeartbeats and
 debug.skipKernelTC), #eval/#exit/run_cmd/initialize/import (compiler-API
-and elaboration-abort routes), variable (hypothesis smuggling into a
+and elaboration-abort routes; since 2026-10-07 one exact line is allowed,
+`import Std.Data.ExtTreeSet`, a module of the toolchain's own Std that the
+set lowering needs: IMPORT_ALLOW), variable (hypothesis smuggling into a
 same-named theorem), implemented_by/extern (compiler-trust attributes).
 None of these tokens appears in lower_lean.py output; the scan runs on
 comment-stripped text so an honest comment mentioning "sorry" does not
@@ -147,6 +149,12 @@ BANNED = re.compile(
     r"builtin_initialize|import|variable|implemented_by|extern)\b"
     r"|#eval\b|#exit\b")
 AXIOM_ALLOW = {"propext", "Classical.choice", "Quot.sound"}
+# The one import a lowering may write (SPEC.md "Finite sets" in Lean, 2026-10-07, PREDICT T29): a module of the
+# toolchain's own Std, compiled with Lean itself and trusted exactly as the implicit prelude is. The ban below still
+# refuses every other `import`, and the axiom audit still covers every theorem whatever it was proved with.
+IMPORT_ALLOW = frozenset({"Std.Data.ExtTreeSet"})
+_ALLOWED_IMPORT_LINE = re.compile(r"^import[ \t]+(" + "|".join(re.escape(m) for m in sorted(IMPORT_ALLOW)) + r")[ \t]*$",
+                                  re.M)
 # Incompleteness marks: a tactic that stopped, said nothing false. These
 # minted REFUTED until 2026-09-02; "failed" matches nearly any error text,
 # so the old name REFUTED_MARKS was the bug (ROADMAP 10.7), not just a
@@ -230,8 +238,9 @@ def verify(path: Path, budget: int = DEFAULT_HEARTBEATS) -> Result:
     # NFKC for the ban scan only: fullwidth/compatibility homoglyphs of the
     # ASCII tokens normalize onto them. Names are extracted from the
     # un-normalized text so `#print axioms <name>` resolves what was declared.
+    # an allow-listed import line is removed before the scan; `import` anywhere else is still banned
     banned = [m.group(0) for m in
-              BANNED.finditer(unicodedata.normalize("NFKC", stripped))]
+              BANNED.finditer(_ALLOWED_IMPORT_LINE.sub("", unicodedata.normalize("NFKC", stripped)))]
     theorems: list[str] = []
     for m in THEOREM_RE.finditer(stripped):
         if m.group(1) not in theorems:

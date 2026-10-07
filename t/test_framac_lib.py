@@ -75,7 +75,8 @@ def test_certificates():
 
 
 def test_refusals_by_name():
-    for name, word in (("palindrome", "rev"), ("first_sorted", "sort"), ("all_positive", "all")):
+    # rev is lowered since PREDICT T31 (test_framac_seq_locals.py); sort and all still refuse by name
+    for name, word in (("first_sorted", "sort"), ("all_positive", "all")):
         task = tasks_io.load_task(str(HERE / "tasks" / f"{name}.t"))
         try:
             lower_framac.lower(task, task["body"])

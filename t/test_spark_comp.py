@@ -6,7 +6,7 @@ every element over T_Range, a Subprogram_Variant, and `Seqs.Add` of the last ele
 written through the identity `T_Ix` and the count is clamped at the call site; the recursion is guarded by
 `R_Has (T_Range'(0, T_N), T_N - 1)`, the Has_Element term through which a T_Range quantifier is instantiated
 (measured on diffs: without it, the Pre's instance at T_N - 1 was out of reach at five times the step budget). A
-filter, and a comprehension inside a spec_fun, method or lemma, refuse by name."""
+comprehension inside a spec_fun, method or lemma refuses by name; a filter is carried since PREDICT T45."""
 from __future__ import annotations
 
 import sys
@@ -59,9 +59,17 @@ def test_the_recursion_is_guarded_by_the_has_element_term():
     assert "(for all T_K in T_Range'(Big_Integer'(0), T_N) =>" in src
 
 
+def test_filter():
+    # PREDICT T45: the map's recursion, the last element added only when the condition holds of it
+    src = spark("evens")
+    assert "Post => Len (T_Comp1'Result) <= T_N" in src
+    assert "(for all T_K in T_Range'(Big_Integer'(0), Len (T_Comp1'Result)) =>" in src
+    assert "elsif (T_Mod (Elem (T_S, (T_N - Big_Integer'(1))), Big_Integer'(2)) = Big_Integer'(0)) then Seqs.Add (" in src
+    assert "      else T_Comp1 (T_S, T_N - Big_Integer'(1)));" in src
+    assert "T_Comp1 (S, I)" in spark("count_evens_skip"), "a count over a growing prefix"
+
+
 def test_refusals_by_name():
-    assert "filtered comprehension is not lowered yet" in refusal(load("evens"))
-    assert "not lowered yet" in refusal(load("count_evens_skip"))
     task = surface.parse("""t 1
 task twice_len(s: seq) returns (r: int)
   ensures r == dbl(s)

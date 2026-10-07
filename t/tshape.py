@@ -11,6 +11,8 @@ what is lowered and what is not.
 """
 from __future__ import annotations
 
+import copy
+
 V1_PAIR_SIDES = ("int", "bool", "seq")
 
 
@@ -261,7 +263,7 @@ STRLIB2_OPS = frozenset({"index", "rfind", "zfill", "center", "ljust", "rjust", 
 
 def _scope_of(task: dict, body: list) -> dict:
     """name -> declared type over params, the return, locals anywhere and spec_fun params (shadowing ignored)."""
-    out = {p["name"]: p["type"] for p in task.get("params", [])}
+    out = {p["name"]: ("seq" if p["type"] == "array" else p["type"]) for p in task.get("params", [])}   # Heap (v1)
     for r in task.get("returns", []):
         out[r["name"]] = r["type"]
     for f in task.get("spec_funs", []):
@@ -379,10 +381,266 @@ def has_exit(task: dict, body: list) -> bool:
     return walk(body or []) or walk(task.get("methods", []))
 
 
+def _rename_var(x, old: str, new: str):
+    if isinstance(x, list):
+        return [_rename_var(v, old, new) for v in x]
+    if not isinstance(x, dict):
+        return x
+    if x.get("var") == old:
+        return {**x, "var": new}
+    return {k: _rename_var(v, old, new) for k, v in x.items()}
+
+
+def desugar_par(task: dict, body: list) -> tuple:
+    """SPEC.md "Concurrency (v1)" (PREDICT T47): each `parallel for i in [lo, hi)` as the sequential `for` it equals
+    under `par-race`: `var i := lo; while i < hi invariant lo <= i and i <= hi, ... decreases hi - i { body;
+    i := i + 1; }`. The index is renamed when another declaration in the body already has its name, so two parallel
+    loops in one block declare two variables. The real body stays the same object as task["body"]."""
+    def has(x) -> bool:
+        if isinstance(x, dict):
+            return "par" in x or any(has(v) for v in x.values())
+        return isinstance(x, list) and any(has(v) for v in x)
+    if not has(body or []) and not has(task.get("body") or []):
+        return task, body
+    names: set = set()
+
+    def declared(x):
+        if isinstance(x, dict):
+            if "var" in x and isinstance(x["var"], dict):
+                names.add(x["var"]["name"])
+            if "par" in x and isinstance(x["par"], dict):
+                names.add(x["par"]["var"])
+            for v in x.values():
+                declared(v)
+        elif isinstance(x, list):
+            for v in x:
+                declared(v)
+    counter = [0]
+
+    def one(stmts: list) -> list:
+        out = []
+        for st in stmts:
+            if "par" in st:
+                w = st["par"]
+                counter[0] += 1
+                i = w["var"]
+                if i in seen:
+                    i2 = f"{i}_p{counter[0]}"
+                    w = _rename_var(w, i, i2)
+                    w["var"] = i2
+                    i = i2
+                seen.add(i)
+                iv = {"var": i}
+                out.append({"var": {"name": i, "type": "int", "init": copy.deepcopy(w["lo"])}})
+                out.append({"while": {
+                    "cond": {"op": "<", "args": [iv, copy.deepcopy(w["hi"])]},
+                    "invariants": [{"op": "<=", "args": [copy.deepcopy(w["lo"]), iv]},
+                                   {"op": "<=", "args": [iv, copy.deepcopy(w["hi"])]}] + copy.deepcopy(w["invariants"]),
+                    "decreases": {"op": "-", "args": [copy.deepcopy(w["hi"]), iv]},
+                    "body": one(copy.deepcopy(w["body"])) + [{"assign": [i, {"op": "+", "args": [iv, {"int": 1}]}]}]}})
+            elif "if" in st:
+                f = st["if"]
+                out.append({"if": {**f, "then": one(f["then"]), "else": one(f.get("else", []))}})
+            elif "while" in st:
+                out.append({"while": {**st["while"], "body": one(st["while"]["body"])}})
+            else:
+                if "var" in st and isinstance(st["var"], dict):
+                    seen.add(st["var"]["name"])
+                out.append(st)
+        return out
+    seen: set = {p["name"] for p in task.get("params", [])} | {r["name"] for r in task.get("returns", [])}
+    new_body = one(body or [])
+    new = dict(task)
+    if "body" in task:
+        seen = {p["name"] for p in task.get("params", [])} | {r["name"] for r in task.get("returns", [])}
+        counter[0] = 0
+        new["body"] = new_body if body is task["body"] else one(task["body"])
+    return new, new_body
+
+
+def has_float(task: dict, body: list) -> bool:
+    """Whether the task or this body names the float type or a float operation (SPEC.md "Floats (v1)", PREDICT T48)."""
+    def ftype(t) -> bool:
+        if t == "float":
+            return True
+        if isinstance(t, dict):
+            return any(ftype(v) for v in t.values())
+        return isinstance(t, list) and any(ftype(v) for v in t)
+
+    def walk(x) -> bool:
+        if isinstance(x, dict):
+            if ftype(x.get("type")) or ftype(x.get("result")) or x.get("op") in ("float", "sqrt"):
+                return True
+            return any(walk(v) for v in x.values())
+        return isinstance(x, list) and any(walk(v) for v in x)
+    return walk([task.get("params"), task.get("returns"), task.get("requires"), task.get("ensures"),
+                 task.get("spec_funs"), task.get("methods"), task.get("lemmas"), body or []])
+
+
+def abstain_on_floats(task: dict, body: list, kernel: str) -> None:
+    if has_float(task, body):
+        raise NotImplementedError(f"{kernel}: floats are not lowered yet (SPEC.md 'Floats (v1)')")
+
+
+def has_heap(task: dict) -> bool:
+    """Whether the task has an array parameter (SPEC.md "Heap (v1)", PREDICT T46)."""
+    return any(p.get("type") == "array" for p in task.get("params", []))
+
+
+def abstain_on_heap(task: dict, kernel: str) -> None:
+    if has_heap(task):
+        raise NotImplementedError(f"{kernel}: arrays by reference are not lowered yet (SPEC.md 'Heap (v1)')")
+
+
 def abstain_on_exits(task: dict, body: list, kernel: str) -> None:
     if has_exit(task, body):
         raise NotImplementedError(f"{kernel}: break, continue and while-true loops are not lowered yet "
                                   f"(SPEC.md 'Early exits (v1)')")
+
+
+# PREDICT T44: `break` and `continue` rewritten away, once for every kernel that writes a loop as a recursive function
+# and already carries `return` inside a loop (SPEC.md "Early exit (v1)"). Receipt 28d3ddecb054.
+# - `continue` ends the iteration: what follows it on its path never runs, so the rest of the body moves into the
+#   other branch of each `if` on that path (`_skip_rest`). The iteration ends in the same state, where the invariants
+#   and `decreases` are owed exactly as at the `continue`.
+# - `break` leaves the loop, and what runs next is the loop's continuation: the rest of the task body after it. So a
+#   `break` becomes that continuation followed by `return` (`_walk`); a `return` inside a loop owes the task's
+#   `ensures` and not the invariant, which is the `break` rule. A loop inside another loop's body has the rest of that
+#   body and then the next iteration as its continuation, which no statement list says; its `break` is refused by
+#   name, unless the rest of that body ends in `return` and holds no `continue`.
+# `while true` is left as it is. The rewrite is checked against the interpreter (test_exits_desugar.py).
+
+def _is_exit(s: dict, key: str) -> bool:
+    return isinstance(s, dict) and key in s and s[key] is True
+
+
+def _level_has(stmts: list, key: str) -> bool:
+    """Whether `stmts` holds a `break`/`continue` of the loop whose body they are in: through `if`s, never inside a
+    nested loop."""
+    for s in stmts:
+        if _is_exit(s, key):
+            return True
+        if "if" in s and (_level_has(s["if"]["then"], key) or _level_has(s["if"].get("else", []), key)):
+            return True
+    return False
+
+
+def _ends(stmts: list) -> bool:
+    """Whether control never runs past the end of `stmts`: it ends in `return`, or in an `if` whose branches both do."""
+    if not stmts:
+        return False
+    s = stmts[-1]
+    if "return" in s:
+        return True
+    return "if" in s and _ends(s["if"]["then"]) and _ends(s["if"].get("else", []))
+
+
+def _walk(stmts: list, cont, brk, ret: str) -> list:
+    """`stmts` with every `break` replaced. `cont`: the statements that run after `stmts` up to the task's end, or None
+    inside a loop body, where it is unknown. `brk`: what a `break` at this level becomes, or None outside any loop."""
+    out = []
+    for i, s in enumerate(stmts):
+        rest = stmts[i + 1:]
+        if cont is not None:
+            here = rest + cont
+        else:
+            here = rest if _ends(rest) and not _level_has(rest, "continue") else None
+        if _is_exit(s, "break"):
+            if brk is None:
+                raise NotImplementedError(
+                    "a `break` of a loop nested in another loop's body (SPEC.md 'Early exits (v1)', PREDICT T44): its "
+                    "continuation is the rest of the outer iteration, which this lowering does not write as statements")
+            return out + brk
+        if "if" in s:
+            f = s["if"]
+            out.append({"if": {**f, "then": _walk(f["then"], here, brk, ret),
+                               "else": _walk(f.get("else", []), here, brk, ret)}})
+        elif "while" in s:
+            w = s["while"]
+            inner = None
+            if here is not None:
+                k = _walk(copy.deepcopy(here), [], brk, ret)
+                if not _ends(k):
+                    # the continuation's last assignment to the return name becomes the `return` itself
+                    last = k[-1] if k else None
+                    if last is not None and "assign" in last and last["assign"][0] == ret:
+                        k = k[:-1] + [{"return": [ret, last["assign"][1]]}]
+                    else:
+                        k = k + [{"return": [ret, {"var": ret}]}]
+                inner = k
+            out.append({"while": {**w, "body": _walk(w["body"], None, inner, ret)}})
+        else:
+            out.append(s)
+    return out
+
+
+def _skip_rest(stmts: list, rest: list) -> list:
+    """`stmts` followed by `rest`, where a `continue` at this level skips everything after it, `rest` included."""
+    out = []
+    for i, s in enumerate(stmts):
+        if _is_exit(s, "continue"):
+            return out
+        if "return" in s:
+            return out + [s]
+        if "if" in s and _level_has([s], "continue"):
+            k = _skip_rest(stmts[i + 1:], rest)
+            f = s["if"]
+            return out + [{"if": {**f, "then": _skip_rest(f["then"], k), "else": _skip_rest(f.get("else", []), k)}}]
+        out.append(s)
+    return out if _ends(out) else out + rest
+
+
+def _continues(stmts: list) -> list:
+    out = []
+    for s in stmts:
+        if out and "while" in out[-1] and out[-1]["while"].get("cond") == {"bool": True}:
+            # after the rewrite a `while true` has no `break` left, so nothing after it runs: the statements are
+            # dropped (measured: Frama-C's smoke test flags the dead `r := i` after find_zero's loop)
+            break
+        if "if" in s:
+            f = s["if"]
+            out.append({"if": {**f, "then": _continues(f["then"]), "else": _continues(f.get("else", []))}})
+        elif "while" in s:
+            w = s["while"]
+            out.append({"while": {**w, "body": _skip_rest(_continues(w["body"]), [])}})
+        else:
+            out.append(s)
+    return out
+
+
+def desugar_exits(task: dict, body: list) -> tuple:
+    """(task, body) with no `break` and no `continue` in `body` or in `task["body"]` (PREDICT T44, the comment above), or
+    both as they are when `body` has neither. The real body stays the same object as `task["body"]`, as
+    `desugar_seq_quants` keeps it: a lowering tells real from twin by identity. A method body with either, or a `break`
+    in a task of several returns, is refused by name."""
+    def any_exit(x) -> bool:
+        if isinstance(x, dict):
+            return _is_exit(x, "break") or _is_exit(x, "continue") or any(any_exit(v) for v in x.values())
+        return isinstance(x, list) and any(any_exit(v) for v in x)
+    if not any_exit(body or []) and not any_exit(task.get("body") or []):
+        return task, body
+    if any_exit(task.get("methods", [])):
+        raise NotImplementedError("a `break` or `continue` in a method body is not lowered yet "
+                                  "(SPEC.md 'Early exits (v1)', PREDICT T44)")
+    if len(task["returns"]) != 1:
+        raise NotImplementedError("a `break` in a task with several returns: `return` names one "
+                                  "(SPEC.md 'Early exits (v1)', PREDICT T44)")
+    import check_wf
+
+    def one(b: list) -> list:
+        if not any_exit(b or []):
+            return b
+        out = _continues(_walk(copy.deepcopy(b), [], None, task["returns"][0]["name"]))
+        errs = check_wf.check_wf({**task, "body": out})
+        if errs and not check_wf.check_wf({**task, "body": b}):
+            raise NotImplementedError(
+                f"the rewrite of `break`/`continue` (PREDICT T44) gives an ill-formed body: {errs[0]}")
+        return out
+    new_body = one(body)
+    new = dict(task)
+    if "body" in task:
+        new["body"] = new_body if body is task["body"] else one(task["body"])
+    return new, new_body
 
 
 def has_comprehension(task: dict, body: list, under_reduction_ok: bool = False) -> bool:

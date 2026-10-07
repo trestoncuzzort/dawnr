@@ -29,6 +29,7 @@ ver ::= "0" | "1"
 gatepart ::= "" | "gate" sp id sp
 clauses ::= clause*
 clause ::= ws ("requires" | "ensures" | "decreases") sp expr
+         | ws "modifies" sp id (ws "," ws id)*
 specfuns ::= (specfun | inlinefun)*
 specfun ::= ws "spec" sp "fun" sp id ws params ws ":" ws type ws "decreases" sp expr ws "=" ws expr
 inlinefun ::= ws "inline" sp "fun" sp id ws params ws ":" ws type ws "=" ws expr semi
@@ -51,11 +52,13 @@ stmt ::= simple term
        | "if" sp expr ws block (ws "else" ws block)?
        | "while" sp expr invariants ws "decreases" sp expr ws block
        | "for" sp id (ws "," ws id)? sp "in" sp ("[" ws expr ws "," ws expr ws ")" | expr) invariants ws block
+       | "parallel" sp "for" sp id sp "in" sp "[" ws expr ws "," ws expr ws ")" invariants ws block
 invariants ::= (ws "invariant" sp expr)*
 simple ::= "return" sp expr
          | "break"
          | "continue"
          | "var" sp id ws ":" ws type ws ":=" ws expr
+         | id ws "[" ws expr ws "]" ws ":=" ws expr
          | id ws ":=" ws expr
 term ::= ws ";" | [ \t\r\n]
 semi ::= ws ";" | ""

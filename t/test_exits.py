@@ -126,10 +126,25 @@ def test_dafny_text_and_comprehension_key():
     ok("continue;" in d and "function t_comp1(" in d and "t_comp2" not in d,
        "count_evens_skip in Dafny: continue, and one comprehension function for the prefix and the whole: %s" % d)
     ok("t_comp1(s, i)" in d and "t_comp1(s, |s|)" in d, "the prefix call and the whole: %s" % d)
-    for kernel in ("verus", "spark", "fstar"):
+    # PREDICT T44: the other six carry the exits through tshape.desugar_exits (test_exits_desugar.py)
+    for kernel in ("verus", "lean", "rocq", "spark", "fstar", "framac"):
         out = subprocess.run([sys.executable, str(HERE / "cli.py"), "lower", str(HERE / "tasks" / "index_of.t"),
                               "--kernel", kernel], capture_output=True, text=True, timeout=120)
-        ok("break, continue and while-true loops are not lowered yet" in out.stdout + out.stderr, "%s abstains by name" % kernel)
+        ok(out.returncode == 0 and "not lowered yet" not in out.stdout + out.stderr and "break" not in out.stdout,
+           "%s lowers index_of with its break rewritten: %s" % (kernel, out.stderr[-300:]))
+    def low(name, kernel):
+        out = subprocess.run([sys.executable, str(HERE / "cli.py"), "lower", str(HERE / "tasks" / f"{name}.t"),
+                              "--kernel", kernel], capture_output=True, text=True, timeout=120)
+        return out.stdout + out.stderr
+    c = low("find_zero", "framac")
+    ok("while (1) {" in c and not c.rstrip().endswith("return r;\n}") and c.count("return r;") == 2,
+       "Frama-C: no dead return after a while-true left only by return (its smoke test flags it)")
+    v = low("count_evens_skip", "verus")
+    ok("pub broadcast proof fn t_comp1_prefix(" in v and "broadcast use t_comp1_whole;" in v,
+       "Verus: a comprehension over a prefix gets its step and whole lemmas (PREDICT T45)")
+    ok(low("count_evens_skip", "lean").count("theorem t_comp1_step") == 1, "Lean: a filter's length one step on")
+    a = low("count_evens_skip", "spark")
+    ok(a.index("function T_Comp1") < a.index("function W_1"), "SPARK: the comprehension before the loop that calls it")
 
 
 if __name__ == "__main__":

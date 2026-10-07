@@ -4635,6 +4635,11 @@ class _V1:
         # SPEC.md "Sorting (v1)" (2026-10-06): a clause that indexes a sort owes `0 <= i < len(sort(s))`, which
         # needs the sort's facts stated first (t_sort_spec), here as beside a statement
         pre = "".join(f"    t_sort_spec({expr(a)});\n" for a in _sort_args([obligation] + list(context)))
+        # SPEC.md "Datatypes (v3): recursion" (2026-10-07): a structurally recursive spec fn the obligation or its
+        # context calls is revealed one level past the default, so a clause can read a field the earlier clauses
+        # establish through it (BST zig: `res.val` is defined because view(res) == view(tree) is non-empty)
+        pre += "".join(f"    reveal_with_fuel({f}, 2);\n" for f in _structural_rec_funs()
+                       if _calls(obligation, f) or any(_calls(c, f) for c in context))
         self.wf.append(
             f"proof fn {lname}({ps})\n{req}"
             "{\n"
@@ -5244,6 +5249,7 @@ class _V1:
             f"    decreases ({expr(dec)}) + (2int),\n"
             "{\n"
             + "".join(ln + "\n" for ln in _hof_lemma_lines("    "))   # SPEC.md "Higher-order calls (v1)"
+            + "".join(ln + "\n" for ln in _comp_lemma_lines("    ", loop=True))   # PREDICT T45
             + f"{old_lets}{carry_pre}{shadows}{guard_pre}"
             f"    if {expr(cond)} {{\n"
             + "\n".join(inner) + "\n"
@@ -5641,9 +5647,7 @@ class _V1:
             # SPEC.md "Reductions (v1)" (2026-10-06)
             lib_lines.append("    broadcast use t_toset_mem;")
             lib_lines.append("    broadcast use t_toset_sub;")
-        for key, (k, _node) in sorted(_COMP_INDEX.items(), key=lambda kv: kv[1][0]):
-            lib_lines.append(f"    reveal_with_fuel(t_comp{k}, 6);")
-            lib_lines.append(f"    broadcast use t_comp{k}_spec;")
+        lib_lines += _comp_lemma_lines("    ")
         lib_lines += _hof_lemma_lines("    ")   # SPEC.md "Higher-order calls (v1)" (2026-10-06)
         param_names = {p["name"] for p in task["params"]}
         # SPEC.md "Reductions (v1)" (2026-10-06): vstd's max_ensures/min_ensures are not broadcast; stated for every
@@ -6618,6 +6622,11 @@ _VLIB["sort"] = (
 # SPEC.md "Comprehensions (v1)" (2026-10-06): one `spec fn` per comprehension, recursing from the end, with a broadcast
 # lemma carrying the ensures its shape admits (as t_rev_spec does), revealed with fuel inside the proof fn.
 _COMP_INDEX: dict = {}
+# PREDICT T45: the shapes some instance of which ranges over a prefix `s[0..e]`; each gets two more broadcast lemmas,
+# `t_comp{k}_prefix` (the prefix of length n is the one of length n - 1 and the element at n - 1, under the subrange
+# extensionality that the drop_last recursion needs at every step) and `t_comp{k}_whole` (the prefix of the full
+# length is the whole), so a loop invariant over `s[0..i]` meets a postcondition over `s` (count_evens_skip)
+_COMP_PREFIX: set = set()
 
 
 def _comp_key(e: dict) -> str:
@@ -6660,11 +6669,15 @@ def _comp_free(node: dict) -> list:
 
 def _comp_register(task: dict, body: list) -> None:
     _COMP_INDEX.clear()
+    _COMP_PREFIX.clear()
 
     def walk(x):
         if isinstance(x, dict):
             if "comp" in x:
                 _COMP_INDEX.setdefault(_comp_key(x), (len(_COMP_INDEX) + 1, x))
+                src = x["comp"].get("seq")
+                if isinstance(src, dict) and src.get("op") == "slice" and src["args"][1] == {"int": 0}:
+                    _COMP_PREFIX.add(_comp_key(x))
             for v in x.values():
                 walk(v)
         elif isinstance(x, list):
@@ -6733,6 +6746,22 @@ def _comp_blocks(task: dict, body: list) -> list:
             f"if {expr(c['cond'])} {{ t_p.push({expr(c['body'])}) }} else {{ t_p }} }} }}\n"
             f"pub broadcast proof fn t_comp{k}_spec({', '.join(params)})\n    ensures {', '.join(ens)},\n    decreases {size},\n"
             f"{{ if !({base}) {{ {rec_call}; }} }}\n")
+        if key in _COMP_PREFIX and "seq" in c:
+            # PREDICT T45 (`_COMP_PREFIX`): the element at n - 1 named by a placeholder, as the filter's ensures does
+            fv_args = "".join(f", {n}" for n in fvs)
+            fv_params = "".join(f", {n}: {_vty(hints[n])}" for n in fvs)
+            at_last = {"op": "at", "args": [{"var": "t_s"}, {"op": "-", "args": [{"var": "t_n"}, {"int": 1}]}]}
+            pre_n = f"t_comp{k}(t_s.subrange(0, t_n - 1){fv_args})"
+            step = (f"if {expr(subst(c['cond'], {v: at_last}))} {{ {pre_n}.push({expr(subst(c['body'], {v: at_last}))}) }} "
+                    f"else {{ {pre_n} }}")
+            out.append(
+                f"pub broadcast proof fn t_comp{k}_prefix(t_s: {_vty(src_t)}, t_n: int{fv_params})\n"
+                f"    requires 0 < t_n <= t_s.len(),\n"
+                f"    ensures #[trigger] t_comp{k}(t_s.subrange(0, t_n){fv_args}) == ({step}),\n"
+                f"{{ assert(t_s.subrange(0, t_n).drop_last() =~= t_s.subrange(0, t_n - 1)); }}\n"
+                f"pub broadcast proof fn t_comp{k}_whole(t_s: {_vty(src_t)}{fv_params})\n"
+                f"    ensures #[trigger] t_comp{k}(t_s.subrange(0, t_s.len() as int){fv_args}) == t_comp{k}(t_s{fv_args}),\n"
+                f"{{ assert(t_s.subrange(0, t_s.len() as int) =~= t_s); }}\n")
     return out
 
 
@@ -7013,6 +7042,21 @@ def _hof_blocks(task: dict, body: list) -> list:
     return out
 
 
+def _comp_lemma_lines(ind: str, loop: bool = False) -> list:
+    """The fuel and `broadcast use` lines a proof fn needs for the registered comprehensions. A loop's helper gets
+    them only for a shape over a prefix (PREDICT T45, `_COMP_PREFIX`): its invariant is where a prefix is read."""
+    out = []
+    for key, (k, _node) in sorted(_COMP_INDEX.items(), key=lambda kv: kv[1][0]):
+        if loop and key not in _COMP_PREFIX:
+            continue
+        out.append(f"{ind}reveal_with_fuel(t_comp{k}, 6);")
+        out.append(f"{ind}broadcast use t_comp{k}_spec;")
+        if key in _COMP_PREFIX and "seq" in _node["comp"]:
+            out.append(f"{ind}broadcast use t_comp{k}_prefix;")
+            out.append(f"{ind}broadcast use t_comp{k}_whole;")
+    return out
+
+
 def _hof_lemma_lines(ind: str) -> list:
     """The `broadcast use` lines a proof fn needs for the registered shapes (fold needs none: its one unfolding per
     loop step is the default fuel)."""
@@ -7173,6 +7217,64 @@ def _lib_blocks(task: dict, body: list) -> list:
     return [_VLIB[n] for n in _VLIB_ORDER if n in used]
 
 
+def _ctor_literals(e, out: list) -> list:
+    """Every constructor literal in an expression, inner ones too, each once."""
+    if isinstance(e, dict):
+        if "ctor" in e and e not in out:
+            out.append(e)
+        for v in e.values():
+            _ctor_literals(v, out)
+    elif isinstance(e, list):
+        for v in e:
+            _ctor_literals(v, out)
+    return out
+
+
+def _set_membership_facts(task: dict, formula: dict) -> str:
+    """SPEC.md "Datatypes (v3): recursion" with "Quantifiers over a collection" (2026-10-07): for each constructor
+    literal in a certificate and each set-valued spec fn of one parameter of its datatype, the set's elements as
+    asserted memberships, computed by the interpreter and re-proved by the kernel from the revealed definition.
+    Refuting a quantifier over such a set needs an element to instantiate it at, and the SMT arm has no term naming
+    one (measured on a BST insert twin: `is_bst` of a ground tree was not refuted until `view(c).contains(0)` was
+    stated)."""
+    lines = []
+    funs = interp.funs_of(task, task.get("body") or [])
+    for c in _ctor_literals(formula, []):
+        for name, f in sorted(_SCOPE_FUNS.items()):
+            ps = f.get("params", [])
+            if (f.get("result") != "set" or len(ps) != 1
+                    or ps[0]["type"] != {"datatype": c["ctor"]["dtype"]}):
+                continue
+            try:
+                val = interp.ev({"call": {"fun": name, "args": [c]}}, {}, funs, interp.St())
+            except Exception:                                 # noqa: BLE001  (no fact is better than a guessed one)
+                continue
+            lines += [f"    assert({name}({expr(c)}).contains({k}int));\n" for k in sorted(val)]
+    return "".join(lines)
+
+
+def _structural_rec_funs() -> list:
+    """The spec funs in scope that recurse on a datatype parameter (SPEC.md "Datatypes (v3): recursion")."""
+    out = []
+    for name, f in sorted(_SCOPE_FUNS.items()):
+        dec = f.get("decreases") or {}
+        ptypes = {p["name"]: p["type"] for p in f.get("params", [])}
+        if (_calls(f.get("body") or {}, name) and "var" in dec
+                and isinstance(ptypes.get(dec["var"]), dict) and "datatype" in ptypes[dec["var"]]):
+            out.append(name)
+    return out
+
+
+def _ctor_depth(e) -> int:
+    """The deepest nesting of constructor literals in an expression."""
+    if isinstance(e, dict):
+        inner = max([_ctor_depth(v) for v in e.values()] or [0])
+        return inner + 1 if "ctor" in e else inner
+    if isinstance(e, list):
+        return max([_ctor_depth(v) for v in e] or [0])
+    return 0
+
+
 def _certificate(task: dict, twin_body: list, w: dict) -> str | None:
     """The appended t_refutation_certificate block for a measured twin
     witness, or None when the witness is not expressible as a ground
@@ -7190,6 +7292,13 @@ def _certificate(task: dict, twin_body: list, w: dict) -> str | None:
     if _uses_sets(formula) or _sort_args(formula) or _uses_maps(formula):
         # a formula that sorts (SPEC.md "Sorting (v1)"): sort_by is not computed, its lemma is stated first
         pre = "".join(f"    t_sort_spec({expr(a)});\n" for a in _sort_args(formula))
+        # SPEC.md "Datatypes (v3): recursion" (2026-10-07): the SMT arm unfolds a recursive spec fn only to its
+        # default fuel, too shallow for a tree witness; each one the formula calls is revealed to the witness's
+        # constructor depth plus two (measured on a BST search twin: unproved at the default, accepted so)
+        rec = sorted(f for f, d in _SCOPE_FUNS.items() if _calls(d.get("body") or {}, f) and _calls(formula, f))
+        depth = _ctor_depth(formula) + 2
+        pre += "".join(f"    reveal_with_fuel({f}, {depth});\n" for f in rec)
+        pre += _set_membership_facts(task, formula)
         # SPEC.md "Finite sets" (2026-09-27): verus's interpreter does not
         # evaluate a set's cardinality (measured: `assert(set![1int, 2int,
         # 1int].len() == 2) by (compute_only)` fails with "failed to
@@ -7243,7 +7352,11 @@ def lower(task: dict, body: list, witness: dict | None = None) -> str:
     # SPEC.md "Exact rationals (v1)" (2026-10-06): Verus has no reals; a task that names one abstains by name
     tshape.abstain_on_reals(task, body, "verus")
     tshape.abstain_on_library(task, body, "verus", carried=VERUS_LIB)   # SPEC.md "The library (v1)" (2026-10-06)
-    tshape.abstain_on_exits(task, body, "verus")   # SPEC.md "Early exits (v1)" (2026-10-06): a loop here is a recursive fn
+    # PREDICT T44: `break` and `continue` rewritten into `return` and branches (tshape.desugar_exits); `while true` stays
+    task, body = tshape.desugar_par(task, body)          # PREDICT T47: a parallel loop as its sequential `for`
+    task, body = tshape.desugar_exits(task, body)
+    tshape.abstain_on_heap(task, "verus")                # SPEC.md "Heap (v1)" (PREDICT T46): Dafny first
+    tshape.abstain_on_floats(task, body, "verus")        # SPEC.md "Floats (v1)" (PREDICT T48)
     _comp_register(task, body)   # SPEC.md "Comprehensions (v1)" (2026-10-06)
     # NAMES (2026-09-11, ROADMAP 13.2): sanitize away any identifier that
     # collides with a Verus/Rust reserved word, before either lowering
