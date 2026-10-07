@@ -6188,6 +6188,7 @@ def _method_src(task: dict, m: dict, used: set) -> tuple[Ctx, str]:
 
 def lower(task: dict, body: list, witness: dict | None = None) -> str:
     import tshape
+    task, body = tshape.desugar_seq_quants(task, body)   # SPEC.md "Quantifiers over a collection": seq ranges as indices
     tshape.abstain_unless_carried(task, body, "fstar", carried=frozenset({"real", "comp"}), lib=FSTAR_LIB)
     _comp_refusal(task, body)                              # PREDICT T16: maps carried, the rest refused by name
     _LIB_USED.clear()

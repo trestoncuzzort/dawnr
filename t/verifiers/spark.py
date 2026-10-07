@@ -920,7 +920,7 @@ def _run(src_text: str, unit: str, budget: int, warnings: bool,
         # here keeps harness filenames free (twins live in *.twin.ads outside).
         (work / unit).write_text(src_text, encoding="utf-8")
         cmd = [str(GNATPROVE), "-P", "t_work.gpr", "--steps", str(budget),
-               "--prover=z3", "--quiet", f"-j{_jobs()}"]
+               f"--prover={_prover()}", "--quiet", f"-j{_jobs()}"]
         if warnings:
             cmd.append("--proof-warnings=on")
         if cntexmp:
@@ -1027,13 +1027,25 @@ def _escalate_variant_timeout(src_text: str, unit: str, audit: dict,
         + why2)
 
 
+def _prover() -> str:
+    """The prover gnatprove runs: the pinned Z3 unless T_SPARK_PROVER names another of its built-ins (cvc5, altergo;
+    gnatprove's own default is cvc5). Set only for the common-mode audit (PREDICT T22, internal/RESEARCH-2026-10-07-
+    zoom-out.md D6), never for the matrix of record; a non-default prover is named in version(), so a table built
+    under it says so."""
+    p = os.environ.get("T_SPARK_PROVER", "z3")
+    if p not in ("z3", "cvc5", "altergo"):
+        raise SystemExit(f"T_SPARK_PROVER={p!r}: one of z3, cvc5, altergo")
+    return p
+
+
 def version() -> str:
     if not GNATPROVE:
         raise SystemExit(_GNATPROVE_WHY)
     p = subprocess.run([str(GNATPROVE), "--version"],
                        capture_output=True, text=True)
     first = p.stdout.strip().splitlines()
-    return "gnatprove " + " / ".join(first[:2])
+    v = "gnatprove " + " / ".join(first[:2])
+    return v if _prover() == "z3" else f"{v} / prover {_prover()}"
 
 
 def verify(path: Path, budget: int = DEFAULT_STEPS) -> Result:

@@ -12586,6 +12586,7 @@ def _comp_refusal(task: dict, body: list) -> None:
 # t_refutation_certificate instead of an unprovable spec theorem.
 def lower(task: dict, body: list, witness: dict | None = None) -> str:
     import tshape
+    task, body = tshape.desugar_seq_quants(task, body)   # SPEC.md "Quantifiers over a collection": seq ranges as indices
     import rocq_lib
     tshape.abstain_unless_carried(task, body, "rocq", carried={"comp-reduction", "comp"},
                                   lib=rocq_lib.ROCQ_LIB)   # PREDICT T10: the library in Rocq

@@ -44,8 +44,11 @@ _CLASSES = [
      "A quantifier ranges over a half-open interval of integers: exists k in [lo, hi) . P. "
      "Give the interval the problem implies."),
     ("element quantifier",
-     re.compile(r"\b(forall|exists)\s+\w+\s+in\s+(?!\[)"),
-     "A quantifier ranges over indices, not elements: forall i in [0, len(s)) . P(s[i])."),
+     # since SPEC.md "Quantifiers over a collection" (2026-10-07) `forall x in s . P` exists; a range with a postfix
+     # (an index, a slice, a field) still does not parse, since the `.` after the range is the quantifier's own
+     re.compile(r"\b(forall|exists)\s+\w+\s+in\s+(?!\[|\()\w+\s*[\[.]\s*\w"),
+     "A quantifier over a collection takes a name, a call or a parenthesized range: forall x in (s[1..]) . x >= 0; "
+     "over indices it is forall i in [0, len(s)) . s[i] >= 0."),
     ("power",
      re.compile(r"\*\*|\^"),
      "There is no power operator: multiply, or define the power with a recursive spec fun."),

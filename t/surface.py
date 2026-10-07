@@ -623,10 +623,30 @@ class Parser:
         self.eat("sym", "=", "Datatype")
         ctors = []
         cnames = []
+        # the name is in scope for its own fields' types, so a recursive field parses and check_wf refuses it by name
+        # (`ctor-field-type`, SPEC.md "Datatypes (v2): fields") instead of a syntax error here
+        self.datatypes[name] = cnames
         while True:
             ctok = self.tok
             cname = self.name("Datatype")
-            ctors.append(self.mark(ctok, {"name": cname}))
+            ctor = {"name": cname}
+            if self.opt("sym", "("):
+                # SPEC.md "Datatypes (v2): fields" (2026-10-07): `C(f1: T1, f2: T2)`, Dafny's constructor
+                # parameters with names (reference manual 5.14.1); a constructor without fields keeps v1's AST
+                fields = []
+                if not self.at("sym", ")"):
+                    while True:
+                        ftok = self.tok
+                        fname = self.name("Datatype")
+                        self.eat("sym", ":", "Datatype")
+                        ftype = self.ptype()
+                        self.production = "Datatype"
+                        fields.append(self.mark(ftok, {"name": fname, "type": ftype}))
+                        if not self.opt("sym", ","):
+                            break
+                self.eat("sym", ")", "Datatype")
+                ctor["fields"] = fields
+            ctors.append(self.mark(ctok, ctor))
             cnames.append(cname)
             if not self.opt("sym", "|"):
                 break
@@ -1055,6 +1075,33 @@ class Parser:
             kind = self.eat("kw").text
             v = self.name("Expr")
             self.eat("kw", "in")
+            if not self.at("sym", "["):
+                # SPEC.md "Quantifiers over a collection" (2026-10-07): `forall x in S . P`, x ranging over the elements
+                # of a set or seq S. S is a name, a call or a parenthesized expression, read with no postfix, since
+                # a `.` after it is the quantifier's own separator and not a field (`view(l) . x < v`)
+                rtok = self.tok
+                if self.opt("sym", "("):
+                    rng = self.expr()
+                    self.production = "Expr"
+                    self.eat("sym", ")")
+                else:
+                    ident = self.name("Expr")
+                    if self.opt("sym", "("):
+                        cargs = []
+                        if not self.at("sym", ")"):
+                            while True:
+                                cargs.append(self.expr())
+                                self.production = "Expr"
+                                if not self.opt("sym", ","):
+                                    break
+                        self.eat("sym", ")")
+                        rng = self.mark(rtok, {"call": {"fun": ident, "args": cargs}})
+                    else:
+                        rng = self.mark(rtok, {"var": ident})
+                self.eat("sym", ".")
+                body = self.expr()
+                self.production = "Expr"
+                return self.mark(start, {kind: {"var": v, "in": rng, "body": body}})
             self.eat("sym", "[")
             lo = self.expr()
             self.production = "Expr"
@@ -1460,7 +1507,9 @@ class Parser:
                         self.err(tok, "a projection is .0, .1, .2, ...; "
                                  "found .%s" % tok.text, "Op")
                     continue
-                if self.tok.kind == "id" and self.tok.text in STR_METHODS:
+                if (self.tok.kind == "id" and self.tok.text in STR_METHODS
+                        and self.i + 1 < len(self.toks) and self.toks[self.i + 1].text == "("):
+                    # (a member name with no call is a field, below: SPEC.md "Datatypes (v2): fields")
                     # s.split(), s.count(t), sep.join(rows), ... (SPEC.md
                     # "The string library", 2026-09-11): postfix, so it
                     # composes with indexing and slicing the same way .0/.1
@@ -1521,11 +1570,18 @@ class Parser:
                                      % (name, len(margs)), "Op")
                         e = self.mark(start, {"op": name, "args": [e]})
                     continue
-                # Neither .0/.1 nor a known string-library member: "Op"
+                if self.tok.kind == "id" and not (self.i + 1 < len(self.toks)
+                                                 and self.toks[self.i + 1].text == "("):
+                    # SPEC.md "Datatypes (v2): fields" (2026-10-07): `e.f`, the field f of a datatype value, Dafny's
+                    # destructor (reference manual 5.14.1), defined iff e was built by a constructor carrying f
+                    ftok = self.eat("id")
+                    e = self.mark(start, {"field": {"of": e, "name": ftok.text}})
+                    continue
+                # Neither .0/.1 nor a known string-library member nor a field: "Op"
                 # again, since the message names the set of valid operators
                 # a dot may introduce.
                 self.err(self.tok, "a dot must be followed by a projection "
-                         ".0, .1, .2, ... or a string-library member", "Op")
+                         ".0, .1, .2, ..., a string-library member or a field", "Op")
             break
         return e
 
@@ -1711,7 +1767,14 @@ class Parser:
             ident = self.name()
             if (self.at("sym", ".") and self.i + 1 < len(self.toks)
                     and self.toks[self.i + 1].kind == "id"
-                    and self.toks[self.i + 1].text not in STR_METHODS):
+                    and self.toks[self.i + 1].text not in STR_METHODS
+                    and (ident in self.datatypes or not self.datatypes
+                         or (self.i + 2 < len(self.toks) and self.toks[self.i + 2].text == "("))):
+                # (SPEC.md "Datatypes (v2): fields", 2026-10-07: once a program declares a datatype, `x.f` on a
+                # name that is not one of them is field access, read by p_postfix; a program declaring none
+                # keeps reading any `Name.Name` as a constructor, as before. `X.c(...)` is always a
+                # constructor, so the grammar's one form for it is the parser's too; an undeclared X is
+                # check_wf's refusal, by name)
                 # SPEC.md "Datatypes (v1)" (2026-09-27): `D.C`, a
                 # constructor value, qualified the way Dafny's own
                 # datatype values are (reference manual 5.14) since a
@@ -2045,11 +2108,21 @@ def pexpr(e, floor: int = P_QUANT) -> str:
         return _wrap("if %s then %s else %s"
                      % (pexpr(it["cond"]), pexpr(it["then"]),
                         pexpr(it["else"])), P_QUANT, floor)
+    if kind in ("forall", "exists") and "in" in e[kind]:
+        # SPEC.md "Quantifiers over a collection": a name or a call prints bare, anything else in parentheses
+        q = e[kind]
+        r = q["in"]
+        rt = pexpr(r) if ("var" in r or "call" in r) else "(%s)" % pexpr(r)
+        return _wrap("%s %s in %s . %s" % (kind, _ident(q["var"]), rt, pexpr(q["body"])), P_QUANT, floor)
     if kind in ("forall", "exists"):
         q = e[kind]
         return _wrap("%s %s in [%s, %s) . %s"
                      % (kind, _ident(q["var"]), pexpr(q["lo"]),
                         pexpr(q["hi"]), pexpr(q["body"])), P_QUANT, floor)
+    if kind == "field":
+        # SPEC.md "Datatypes (v2): fields" (2026-10-07): `e.f`, the notation p_postfix parses back
+        f = e["field"]
+        return _wrap("%s.%s" % (pexpr(f["of"], P_POSTFIX), _ident(f["name"])), P_POSTFIX, floor)
     if kind == "ctor":
         # SPEC.md "Datatypes (v1)" (2026-09-27): `D.C` or `D.C(a1, ...)`,
         # the notation `p_atom`'s ctor-reference branch parses back.
@@ -2251,6 +2324,15 @@ def _decimal_of(n: int, d: int) -> str:
     return ("-" if n < 0 else "") + (whole or "0") + "." + frac
 
 
+def _ctor_decl_text(c: dict) -> str:
+    """One constructor of a `datatype` line: `C`, or `C(f1: T1, ...)` when it carries fields (SPEC.md "Datatypes (v2):
+    fields", 2026-10-07)."""
+    if "fields" not in c:
+        return _ident(c["name"])
+    return "%s(%s)" % (_ident(c["name"]),
+                       ", ".join("%s: %s" % (_ident(f["name"]), _print_type(f["type"])) for f in c["fields"]))
+
+
 def _print_type(t) -> str:
     """`int`, `bool`, `seq`, `set` print as themselves; a product `{"pair":
     [T1, T2]}` or `{"tuple": [T1, ..., Tn]}` as `(T1, ..., Tn)`; `{"seq":
@@ -2349,7 +2431,7 @@ def print_task(task: dict) -> str:
         # SPEC.md "Datatypes (v1)" (2026-09-27): `datatype_decl()`'s own
         # notation, printed back before the "t N" line the way it was read.
         lines.append("datatype %s = %s" % (_ident(d["name"]),
-                     " | ".join(_ident(c["name"]) for c in d["ctors"])))
+                     " | ".join(_ctor_decl_text(c) for c in d["ctors"])))
     lines.append("t %d" % t["t"])
     if "gate" in t:
         lines.append("gate %s" % _ident(t["gate"]))
@@ -2369,7 +2451,7 @@ def print_task(task: dict) -> str:
         fps = ", ".join("%s: %s" % (_ident(p["name"]), _print_type(p["type"]))
                         for p in fn["params"])
         lines.append("spec fun %s(%s): %s" % (_ident(fn["name"]), fps,
-                                              fn["result"]))
+                                              _print_type(fn["result"])))
         lines.append("  decreases %s" % pexpr(fn["decreases"]))
         lines.append("= %s" % pexpr(fn["body"]))
     for lm in t.get("lemmas", []):

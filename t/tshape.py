@@ -115,6 +115,140 @@ def abstain_unless_carried(task: dict, body: list, kernel: str, carried: set = f
     if "strlib2" not in carried and strlib2_used(task, body):
         raise NotImplementedError(f"{kernel}: the string library's second wave is not lowered yet "
                                   f"(SPEC.md 'The string library (v2)')")
+    if "collection-quant" not in carried and collection_quantified(task, body):
+        raise NotImplementedError(f"{kernel}: a quantifier over a set's or seq's elements is not lowered yet "
+                                  f"(SPEC.md 'Quantifiers over a collection')")
+
+
+def desugar_seq_quants(task: dict, body: list) -> tuple[dict, list]:
+    """SPEC.md "Quantifiers over a collection" (2026-10-07): `forall x in S . P` over a SEQ S is exact sugar for
+    `forall i in [0, len(S)) . P[x := S[i]]`, the index form every kernel's automation is built around (a membership
+    range over a seq leaves Dafny and Verus a witness index to find, measured on a loop probe). Rewritten here, before
+    any lowering sees the task, so all seven state it; a set range is left as it is. Returns (task, body) themselves
+    when nothing is rewritten, so a task with no such quantifier lowers byte for byte as before."""
+    import check_wf
+    funs = {f["name"]: f for f in task.get("spec_funs", [])}
+    dtypes = {d["name"]: d for d in task.get("datatypes", [])}
+    taken = set()
+
+    def names(x):
+        if isinstance(x, dict):
+            for v in x.values():
+                names(v)
+        elif isinstance(x, list):
+            for v in x:
+                names(v)
+        elif isinstance(x, str):
+            taken.add(x)
+    names(task)
+    names(body)
+    ctr = [0]
+
+    def fresh() -> str:
+        while True:
+            ctr[0] += 1
+            n = f"qi{ctr[0]}"
+            if n not in taken:
+                taken.add(n)
+                return n
+
+    def sub(x, m: dict):
+        if isinstance(x, list):
+            return [sub(v, m) for v in x]
+        if not isinstance(x, dict):
+            return x
+        if "var" in x and isinstance(x["var"], str) and len(x) == 1:
+            return m.get(x["var"], x)
+        for k in ("forall", "exists"):
+            if isinstance(x.get(k), dict):
+                q = x[k]
+                inner = {a: b for a, b in m.items() if a != q["var"]}
+                return {k: {kk: (sub(vv, inner) if kk == "body" else sub(vv, m) if kk != "var" else vv)
+                            for kk, vv in q.items()}}
+        if "comp" in x:
+            c = x["comp"]
+            inner = {a: b for a, b in m.items() if a != c["var"]}
+            return {"comp": {kk: (sub(vv, inner) if kk in ("cond", "body") else sub(vv, m) if kk != "var" else vv)
+                             for kk, vv in c.items()}}
+        if "lam" in x:
+            inner = {a: b for a, b in m.items() if a not in x["lam"]["vars"]}
+            return {"lam": {"vars": x["lam"]["vars"], "body": sub(x["lam"]["body"], inner)}}
+        if "match" in x:
+            mm = x["match"]
+            return {"match": {"scrutinee": sub(mm["scrutinee"], m),
+                              "arms": [{**a, "body": sub(a["body"], {k: v for k, v in m.items()
+                                                                        if k not in (a.get("binders") or [])})}
+                                       for a in mm["arms"]]}}
+        return {k: sub(v, m) for k, v in x.items()}
+
+    def walk(x, env: dict):
+        if isinstance(x, list):
+            return [walk(v, env) for v in x]
+        if not isinstance(x, dict):
+            return x
+        for k in ("forall", "exists"):
+            if isinstance(x.get(k), dict) and "in" in x[k]:
+                q = x[k]
+                rng = walk(q["in"], env)
+                try:
+                    rt, errs = check_wf.expression_type(rng, dict(env), functions=funs, datatypes=dtypes)
+                except Exception:                     # noqa: BLE001  (an untypeable range stays as written)
+                    rt, errs = None, ["?"]
+                is_seq = not errs and (rt == "seq" or (isinstance(rt, dict) and set(rt) == {"seq"}))
+                el = ("int" if rt == "seq" else rt["seq"]) if is_seq else "int"
+                body = walk(q["body"], {**env, q["var"]: el})
+                if not is_seq:
+                    return {k: {"var": q["var"], "in": rng, "body": body}}
+                i = fresh()
+                return {k: {"var": i, "lo": {"int": 0}, "hi": {"op": "len", "args": [rng]},
+                            "body": sub(body, {q["var"]: {"op": "at", "args": [rng, {"var": i}]}})}}
+        return {kk: walk(vv, env) for kk, vv in x.items()}
+
+    if not collection_quantified(task, body):
+        return task, body
+    env = {p["name"]: p["type"] for p in task["params"]}
+    env.update({r["name"]: r["type"] for r in task["returns"]})
+
+    def locals_of(stmts):
+        for st in stmts or []:
+            if isinstance(st, dict):
+                if "var" in st and isinstance(st["var"], dict):
+                    env.setdefault(st["var"]["name"], st["var"]["type"])
+                for v in st.values():
+                    if isinstance(v, (list, dict)):
+                        locals_of(v if isinstance(v, list) else [v])
+    locals_of(body)
+    new = dict(task)
+    for k in ("requires", "ensures", "decreases"):
+        if k in task:
+            new[k] = walk(task[k], env)
+    new["spec_funs"] = [{**f, "body": walk(f["body"], {**env, **{p["name"]: p["type"] for p in f["params"]}})}
+                        for f in task.get("spec_funs", [])]
+    if "spec_funs" not in task:
+        del new["spec_funs"]
+    for key in ("lemmas", "methods"):
+        if key in task:
+            new[key] = [walk(x, {**env, **{p["name"]: p["type"] for p in x.get("params", [])}}) for x in task[key]]
+    new_body = walk(body, env)
+    if "body" in task:
+        # the real body stays the same object as task["body"]: a lowering tells real from twin by identity
+        new["body"] = new_body if body is task["body"] else walk(task["body"], env)
+    return new, new_body
+
+
+def collection_quantified(task: dict, body: list) -> bool:
+    """Does any quantifier in the task or body range over a set's or seq's elements (SPEC.md "Quantifiers over a
+    collection", 2026-10-07)?"""
+    def walk(x) -> bool:
+        if isinstance(x, dict):
+            for k in ("forall", "exists"):
+                if isinstance(x.get(k), dict) and "in" in x[k]:
+                    return True
+            return any(walk(v) for v in x.values())
+        if isinstance(x, list):
+            return any(walk(v) for v in x)
+        return False
+    return walk(body) or walk({k: v for k, v in task.items() if k != "body"})
 
 
 LIB_OPS = frozenset({"min", "max", "abs", "sum", "gcd", "pow", "isqrt", "rev", "sort",

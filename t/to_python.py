@@ -26,8 +26,8 @@ internal/ENTERPRISE-PLAN-2026-09-19.md; Meyer's design by contract, where a viol
 fault and is reported at the call). The check runs the guard beside the interpreter too: on drawn inputs the
 `requires` excludes, the Python must refuse.
 
-Not translated (the answer keeps its `t` form only): datatypes (constructors and `match`), which no answer has
-needed yet.
+Not translated (the answer keeps its `t` form only): datatypes (constructors, `match` and field access), which no
+answer has needed yet.
 """
 from __future__ import annotations
 
@@ -104,7 +104,7 @@ class _Writer:
         if "ite" in e:
             c = e["ite"]
             return f"({self.expr(c['then'])} if {self.expr(c['cond'])} else {self.expr(c['else'])})"
-        if "ctor" in e or "match" in e:
+        if "ctor" in e or "match" in e or "field" in e:
             raise Unsupported("datatypes")
         if "lam" in e:
             # SPEC.md "Higher-order calls (v1)" (2026-10-06): Python's own lambda
@@ -121,6 +121,9 @@ class _Writer:
             q = e[kind]
             fn = "all" if kind == "forall" else "any"
             v = _ident(q["var"])
+            if "in" in q:
+                # SPEC.md "Quantifiers over a collection": Python iterates a set or a list directly
+                return f"{fn}({self.expr(q['body'])} for {v} in {self.expr(q['in'])})"
             return f"{fn}({self.expr(q['body'])} for {v} in range({self.expr(q['lo'])}, {self.expr(q['hi'])}))"
         if "call" in e:
             c = e["call"]

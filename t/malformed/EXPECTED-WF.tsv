@@ -71,3 +71,10 @@ wf-map-types.t	4	9	map-types
 wf-map-lit-types.t	4	8	map-lit-types
 wf-lambda-position.t	4	13	lambda-position
 wf-hof-types.t	4	8	hof-types
+wf-ctor-argtype.t	4	8	ctor-argtype
+wf-ctor-field-type.t	1	1	ctor-field-type
+wf-field-dup.t	1	1	field-dup
+wf-field-unknown.t	4	9	field-unknown
+wf-field-type-clash.t	4	9	field-type-clash
+wf-datatype-base.t	1	1	datatype-base
+wf-quant-range.t	3	8	quant-range

@@ -19,8 +19,10 @@
 
 root ::= ws (datatype ws)* task ws
 
-# `datatype D = C1 | C2 | ...` before the `t N` line (SPEC.md "Datatypes (v1)", 2026-09-27)
-datatype ::= "datatype" sp id ws "=" ws id (ws "|" ws id)*
+# `datatype D = C1 | C2(f: T, ...) | ...` before the `t N` line (SPEC.md "Datatypes (v1)", 2026-09-27;
+# fields: "Datatypes (v2): fields", 2026-10-07)
+datatype ::= "datatype" sp id ws "=" ws ctordecl (ws "|" ws ctordecl)*
+ctordecl ::= id (ws "(" ws param (ws "," ws param)* ws ")")?
 
 task ::= "t" sp ver sp gatepart "task" sp id ws params ws "returns" ws "(" ws id ws ":" ws type ws ")" clauses specfuns ws block
 ver ::= "0" | "1"
@@ -64,6 +66,10 @@ expr ::= quant | ite | lam | implies
 # SPEC.md "Higher-order calls (v1)" (2026-10-06): a lambda, placed by the checker (the argument of fold, sort_by, max_by, min_by)
 lam ::= (id | "(" ws id (ws "," ws id)* ws ")") ws "=>" ws expr
 quant ::= ("forall" | "exists") sp id sp "in" sp "[" ws expr ws "," ws expr ws ")" ws "." ws expr
+        | ("forall" | "exists") sp id sp "in" sp qrange ws "." ws expr
+# the elements of a set or seq (SPEC.md "Quantifiers over a collection", 2026-10-07): a name, a call, or a
+# parenthesized expression, with no postfix, since the `.` after it is the quantifier's own
+qrange ::= id | id ws "(" ws args ws ")" | "(" ws expr ws ")"
 ite ::= "if" sp expr sp "then" sp expr sp "else" sp expr
 implies ::= disj (ws "==>" ws (quant | ite | implies))?
 disj ::= conj (sp "or" sp conj)*
@@ -92,6 +98,7 @@ post ::= "[" ws ".." ws expr ws "]"
        | "." strm1 ws "(" ws expr ws ")"
        | "." strm12 ws "(" ws expr (ws "," ws expr)? ws ")"
        | "." strm2 ws "(" ws expr ws "," ws expr ws ")"
+       | "." id
 # string-library members by the argument counts the parser takes (SPEC.md "The string library", v1 and v2)
 strm0 ::= "lower" | "upper" | "isdigit" | "isalpha" | "isupper" | "islower" | "capitalize" | "swapcase" | "title"
         | "isspace" | "isalnum" | "splitlines"
@@ -116,14 +123,14 @@ atom ::= "[" ws expr sp "for" sp id sp "in" sp ("[" ws expr ws "," ws expr ws ")
        | ("union" | "inter" | "setminus") ws "(" ws expr ws "," ws expr ws ")"
        | "{" ws args ws "}"
        | "case" sp expr ws "{" ws arm (ws "," ws arm)* ws "}"
-       | id ws "." ws id
+       | id ws "." ws id (ws "(" ws args ws ")")?
        | "(" ws expr (ws "," ws expr)+ ws ")"
        | "(" ws expr ws ")"
        | "[" ws args ws "]"
        | id ws "(" ws args ws ")"
        | id
 args ::= "" | expr (ws "," ws expr)*
-arm ::= id ws "=>" ws expr
+arm ::= id (ws "(" ws id (ws "," ws id)* ws ")")? ws "=>" ws expr
 
 nat ::= [0-9]+
 # a stepped slice's step (SPEC.md "Stepped slices (v1)", 2026-10-06): a positive literal

@@ -3216,3 +3216,22 @@ is queued, and the ones running are read as they finish.
   datatypes with fields, D8 kernel-checked twin audit of public benchmark specs, D9 DafnyComp.
 - **Next (10-07):** D6 (SPARK per prover, Frama-C through Why3's Z3/CVC5, Rocq's rocqchk replay), D7 (Lean
   mvcgen on AlgoVeri loops), the near misses (palindrome, odd_positions, swap_rows, double_all), then G9.
+- **T22 (10-07 02:12Z), the common-mode audit (D6):** the SMT-backed legs re-run under a second solver (SPARK under
+  CVC5 and Alt-Ergo, Frama-C under Z3 and CVC5, Dafny under CVC5). Over 298 cells verified under the default, no
+  second solver refuted a verified real. Re-verified by a second solver: SPARK 56 of 56, Dafny 86 of 88, Frama-C 33
+  of 49. Dafny's twin side under CVC5 is unmeasurable: Boogie's model converter has no Real case.
+- **T23 (10-07 02:53Z), datatypes with fields (G9) in Dafny, Verus and Lean:** records and non-recursive sums; six
+  tasks, 18 cells; all four bars held (matrix of 94 at 0d091f5: Dafny 94, Verus 86, Lean 67).
+- **T24 (10-07 03:27Z), AlgoVeri's discrete_logarithm:** the first AlgoVeri contract datatypes with fields make
+  stateable (22 now), and five engine defects it found (Lean and Verus prelude names, Dafny's replay and unroller
+  on datatypes, Lean's looping simp on a recursive helper). grid_row_sums counts in Lean (68). The AlgoVeri table of
+  record regenerated (Dafny 22, Verus 7, F* 5).
+- **T25 (registered 10-07 03:09Z), recursive datatypes (G10):** trees in Dafny, Verus (Box) and Lean (structural
+  recursion, induction); five tree tasks, 15 cells by hand. Clean-clone matrix running.
+- **T26 (registered 10-07 03:28Z), quantifiers over a collection (G11):** a seq range desugared to indices in all
+  seven kernels, a set range in Dafny and Verus; none_neg counts in all seven by hand (all seven 48 -> 49 if it holds).
+- **Engine pinned at 0cc7aba (10-07):** dawnr's idiom hint for an element quantifier rewritten, since the form now
+  exists; dawnr's t/ suite 2187 passed, the locallm suites that use the engine 566 passed.
+- **Next:** AlgoVeri's BST family (search, rotations, splay, insert, delete) over the collection quantifiers, which
+  needs a deeper witness ladder and proof steps in the programs; then datatypes in Rocq and F*.
+

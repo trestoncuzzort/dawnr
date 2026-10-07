@@ -239,8 +239,9 @@ def _sub(e: dict, path: tuple):
             yield from _sub(e["ite"][k], path + ("ite", k))
     elif "forall" in e or "exists" in e:
         q = "forall" if "forall" in e else "exists"
-        for k in ("lo", "hi", "body"):
-            yield from _sub(e[q][k], path + (q, k))
+        for k in ("lo", "hi", "in", "body"):   # "in": SPEC.md "Quantifiers over a collection"
+            if k in e[q]:
+                yield from _sub(e[q][k], path + (q, k))
     elif "lam" in e:
         yield from _sub(e["lam"]["body"], path + ("lam", "body"))   # SPEC.md "Higher-order calls (v1)"
     elif "comp" in e:
@@ -257,6 +258,9 @@ def _sub(e: dict, path: tuple):
         # an empty loop today, kept general for the record case ahead.
         for i, a in enumerate(e["ctor"].get("args", [])):
             yield from _sub(a, path + ("ctor", "args", i))
+    elif "field" in e:
+        # SPEC.md "Datatypes (v2): fields" (2026-10-07): the value whose field is read is a mutation site
+        yield from _sub(e["field"]["of"], path + ("field", "of"))
     elif "match" in e:
         yield from _sub(e["match"]["scrutinee"], path + ("match", "scrutinee"))
         for i, arm in enumerate(e["match"]["arms"]):
@@ -390,6 +394,69 @@ def _c_wrong_var(body, scope):
                 for m in range(len(comps)):
                     if m != k and comps[m] == comps[k]:
                         yield _replace(body, sp, _projection(node["args"][0], m))
+    # SPEC.md "Datatypes (v3): recursion" (2026-10-07): inside a match arm, a binder read as another binder of the same
+    # field type (a tree's `l` for its `r`). Binders only, never a parameter: a parameter in a recursive call's place
+    # would not terminate. After every move above, so a task whose twin came from one keeps it.
+    for path, e, _sc, _k in _exprs(body, scope):
+        for sp, node, arm_sc in _sub_arms(e, path, {}):
+            if "var" in node and node["var"] in arm_sc:
+                for alt, alt_ty in arm_sc.items():
+                    if alt != node["var"] and alt_ty == arm_sc[node["var"]]:
+                        yield _replace(body, sp, {"var": alt})
+
+
+def _arm_types(arms: list) -> dict:
+    """The field types of the datatype whose constructors these arms name (the first datatype that declares them all),
+    by constructor name; {} when no declared datatype does."""
+    names = {a["ctor"] for a in arms}
+    for d in _CTX["datatypes"].values():
+        ctors = {c["name"]: c for c in d.get("ctors", [])}
+        if names <= set(ctors):
+            return {n: [f["type"] for f in ctors[n].get("fields") or []] for n in ctors}
+    return {}
+
+
+def _sub_arms(e: dict, path: tuple, arm_sc: dict):
+    """`_sub`'s pre-order, case for case, carrying the match-arm binders in scope at each node, typed by their
+    constructor's fields; a name a quantifier, comprehension or lambda rebinds leaves the scope beneath it."""
+    yield path, e, arm_sc
+    if "op" in e:
+        for i, a in enumerate(e["args"]):
+            yield from _sub_arms(a, path + ("args", i), arm_sc)
+    elif "ite" in e:
+        for k in ("cond", "then", "else"):
+            yield from _sub_arms(e["ite"][k], path + ("ite", k), arm_sc)
+    elif "forall" in e or "exists" in e:
+        q = "forall" if "forall" in e else "exists"
+        inner = {k: v for k, v in arm_sc.items() if k != e[q]["var"]}
+        for k in ("lo", "hi", "in"):
+            if k in e[q]:
+                yield from _sub_arms(e[q][k], path + (q, k), arm_sc)
+        yield from _sub_arms(e[q]["body"], path + (q, "body"), inner)
+    elif "lam" in e:
+        inner = {k: v for k, v in arm_sc.items() if k not in e["lam"]["vars"]}
+        yield from _sub_arms(e["lam"]["body"], path + ("lam", "body"), inner)
+    elif "comp" in e:
+        inner = {k: v for k, v in arm_sc.items() if k != e["comp"]["var"]}
+        for k in ("seq", "lo", "hi", "cond", "body"):
+            if k in e["comp"]:
+                yield from _sub_arms(e["comp"][k], path + ("comp", k), inner if k in ("cond", "body") else arm_sc)
+    elif "call" in e:
+        for i, a in enumerate(e["call"]["args"]):
+            yield from _sub_arms(a, path + ("call", "args", i), arm_sc)
+    elif "ctor" in e:
+        for i, a in enumerate(e["ctor"].get("args", [])):
+            yield from _sub_arms(a, path + ("ctor", "args", i), arm_sc)
+    elif "field" in e:
+        yield from _sub_arms(e["field"]["of"], path + ("field", "of"), arm_sc)
+    elif "match" in e:
+        m = e["match"]
+        yield from _sub_arms(m["scrutinee"], path + ("match", "scrutinee"), arm_sc)
+        ftypes = _arm_types(m["arms"])
+        for i, arm in enumerate(m["arms"]):
+            sc = {k: v for k, v in arm_sc.items() if k not in (arm.get("binders") or [])}
+            sc.update(zip(arm.get("binders") or [], ftypes.get(arm["ctor"], [])))
+            yield from _sub_arms(arm["body"], path + ("match", "arms", i, "body"), sc)
 
 
 _CTX: dict = {"functions": {}, "datatypes": {}}

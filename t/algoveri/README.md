@@ -19,11 +19,16 @@ existential over an index permutation. Of those 22, 21 are written here. `k_smal
 existential over a sequence (a sorted permutation whose k-th element is the result), which t's bounded quantifiers
 cannot state as written.
 
-The other 55 need what t does not state today, and some need more than one of these:
+The other 55 needed what t did not state on 2026-10-06, and some need more than one of these:
 
 - a quantifier over all sequences: the optimality contracts of the dynamic programs, 7;
 - datatypes with fields, such as trees and options: 37;
 - heaps, classes or graphs: 23.
+
+Since datatypes carry fields (SPEC.md "Datatypes (v2): fields", 2026-10-07), `discrete_logarithm`, whose result is
+an `Option<int>`, is written here too, making 22 programs. Of the other 36 datatype contracts:
+- `linearsys_gf2` needs a quantifier over all sequences;
+- the rest need recursive datatypes (trees, tries, segment trees), set-valued helpers or graphs.
 
 `internal/RESEARCH-2026-10-06-landscape.md` gives the counts.
 

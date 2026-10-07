@@ -1134,3 +1134,279 @@ The matrix was regenerated from a clean clone of t-proof-engine at 25e3491 (`t/A
 Per kernel: Dafny 88, Verus 80, Rocq 62, Lean 61, F* 59, SPARK 56, Frama-C 49. Every kernel still refutes the twin
 of every real it verifies (100%).
 
+## T22 registered (2026-10-07 01:47Z, before any run): the common-mode audit, SPARK's half (D6)
+
+Four of the seven legs run on Z3: Dafny through Boogie, Verus, F*, and SPARK as this engine pins it
+(`--prover=z3`), although gnatprove's own default is CVC5 (receipt add8ff238c99). A solver-specific false proof
+would then show up in four columns at once. This audit measures how much of SPARK's column depends on Z3. The
+same files are re-run under gnatprove's bundled CVC5 and Alt-Ergo, through a new `T_SPARK_PROVER` switch. Its
+default stays Z3, so the matrix of record is unchanged, and a non-default prover is named in the backend version.
+
+**Bars.** Against SPARK's 56 cells verified with the twin refuted under Z3:
+(1) Under CVC5, at least 50 of the 56 stay verified with the twin refuted.
+(2) Under Alt-Ergo, at least 35 of the 56 do.
+(3) No real program verified under Z3 is REFUTED under another prover. That would be a disagreement in kind, and
+the first thing read. A TIMEOUT or UNPROVED under another prover is a budget or strength difference, since gnatprove's
+`--steps` is prover-specific.
+(4) Every twin refuted under Z3 is refuted under the other two. A certificate is one ground goal, which any of the
+three should discharge.
+
+**What would falsify the design of the audit:** gnatprove refusing a prover for these files (a tool error, not a
+verdict), which would make that column unmeasurable rather than disagreeing.
+
+T22's Frama-C half, registered 2026-10-07 01:49Z before its runs. WP's goals go to Alt-Ergo (pinned) and, through Why3 1.8.2,
+to Z3 4.16.0 and CVC5 1.3.2 (registered with `why3 config detect`; Why3 does not recognize either exact version, so
+its nearest drivers are used, which the read will say). A new `T_FRAMAC_PROVER` switch selects one; its default stays
+Alt-Ergo. One-task check: `clamp` verifies with its twin refuted under all three.
+
+**Bars**, against Frama-C's 49 cells verified with the twin refuted under Alt-Ergo:
+(5) Under Z3, at least 40 stay verified with the twin refuted; under CVC5, at least 40.
+(6) No real program verified under Alt-Ergo is REFUTED under Z3 or CVC5.
+
+T22's Dafny half, registered 2026-10-07 01:50Z before its run. Boogie's CVC5 route (`--solver-path` to gnatprove's bundled CVC5
+1.3.2, `/proverOpt:SOLVER=CVC5`, which Boogie marks experimental), selected by a new `T_DAFNY_SOLVER` switch whose
+default stays Z3.
+
+**One-task check, stated plainly:** `clamp`'s real verifies under CVC5, but its twin's certificate, a ground goal Z3
+discharges, is UNPROVED: CVC5 gave up without exhausting its budget. So certificate acceptance itself can depend on
+the solver, and the run measures how often.
+
+**Bars**, against Dafny's 88:
+(7) Under CVC5, at least 75 reals stay verified; the count with the twin also refuted is read as measured, not
+predicted.
+(8) No real verified under Z3 is REFUTED under CVC5.
+
+Verus and F* run on Z3 alone and have no second solver here.
+
+
+### T22 read (2026-10-07 02:12Z): the common-mode audit. No verified real is refuted under a second solver; three of the five count bars are missed.
+
+Five alternate-solver columns ran over the 88 tasks (`/home/t/scratch/t-matrix/AGREEMENT-{spark-cvc5,spark-altergo,
+framac-z3,framac-cvc5,dafny-cvc5}.md`). Each cell was compared with the installed table (clean18).
+
+| leg | default | second solver | counted under default | still counted | real re-verified | real REFUTED |
+|---|---|---|---|---|---|---|
+| SPARK | Z3 | CVC5 1.3.2 | 56 | 48 | 48 | 0 |
+| SPARK | Z3 | Alt-Ergo | 56 | 53 | 53 | 0 |
+| Frama-C | Alt-Ergo | Z3 4.16.0 | 49 | 18 | 18 | 0 |
+| Frama-C | Alt-Ergo | CVC5 1.3.2 | 49 | 33 | 33 | 0 |
+| Dafny | Z3 | CVC5 1.3.2 | 88 | 0 (twin side unmeasurable, below) | 86 | 0 |
+
+(1) **Missed:** under CVC5, 48 of SPARK's 56 stay counted (bar: 50). The eight lost reals are 6 UNPROVED and 2
+TIMEOUT: diffs, every_other, has_duplicate, odd_positions, palindrome, reverse, squares, tail.
+(2) **Held:** under Alt-Ergo, 53 of 56 (bar: 35). The three lost are UNPROVED: average, half_way, safe_ratio, the
+tasks with reals and division.
+(3) **Held:** no real verified under Z3 is REFUTED under CVC5 or Alt-Ergo.
+(4) **Missed by one cell:** under Alt-Ergo, every twin is refuted. Under CVC5, `diffs`'s twin certificate times
+out. That certificate unfolds the comprehension's recursive expression function at the witness, which is not one
+flat ground goal.
+(5) **Missed in both:** Frama-C under Z3 keeps 18 of 49 and under CVC5 33 of 49 (bar: 40 each).
+   - The Z3 losses are 31 genuine timeouts. Rerun by hand with WP's cache off, `all_nonneg`'s loop-invariant and
+     ensures goals are still open at 60 s, where Alt-Ergo proves them.
+   - Under Z3, 8 twin certificates are also UNPROVED: count_matches, digit_sum, double_all, gcd_of, largest,
+     min_max, row_max_len, seq_max. Each needs an ACSL recursive logic function evaluated at the witness.
+   - Under CVC5, 9 reals are UNPROVED and 7 TIMEOUT, and every twin is refuted.
+(6) **Held:** no real verified under Alt-Ergo is REFUTED under Z3 or CVC5.
+(7) **Held:** under CVC5, 86 of Dafny's 88 reals verify (bar: 75). `first_sorted` and `sort_it` time out.
+(8) **Held:** no real verified under Z3 is REFUTED under CVC5.
+
+**Dafny's twin side under CVC5 is unmeasurable.** This is the registered falsifier, a tool error rather than a
+verdict (receipt 04b99488c420).
+- Every twin's main run is a failing proof, so Boogie asks the solver for a counterexample model.
+- Boogie's model converter has no case for a Real value, and CVC5's model carries `0.0`, so Boogie throws
+  `BadExprFromProver` before reporting any verdict.
+- The certificates themselves verify under CVC5 when run alone. The adapter still refuses every one, correctly,
+  because the main run printed no result.
+- Dafny 4.11 sets `EnhancedErrorMessages = 1` whenever its counterexample option binding runs, so
+  `/enhancedErrorMessages:0` is overridden. CVC5 refuses `produce-models=false` after initialization.
+- No engine code changed. Accepting a crashed main run would weaken the certificate door.
+
+**What it measures.** Over five columns and 298 cells that verify under the default solver, no second solver refuted
+a verified real: a solver-specific false proof would have shown here, and none did. Re-verification by a second
+solver:
+- **SPARK:** all 56 of its counted reals are re-verified by CVC5 or Alt-Ergo, and their losses do not overlap.
+- **Dafny:** 86 of 88.
+- **Frama-C:** 33 of 49. The other 16 rest on Alt-Ergo alone: all_nonneg, any_neg_for, contains, diffs, every_other,
+  first_even, has_duplicate, has_elem, largest, linear_search, min_max, remainder, reverse, root_floor,
+  row_max_len, seq_max.
+
+**Proof strength.** It is solver-specific, and much more so in Frama-C than registered. WP's encoding suits
+Alt-Ergo, and Z3 loses 31 of 49 there.
+
+**Twin certificates.** They are solver-robust when the certificate is one flat ground goal. They depend on the
+solver when they must unfold a recursive function at the witness (1 cell in SPARK under CVC5, 8 in Frama-C under
+Z3).
+
+**Still open.** Verus and F* run on Z3 alone. Lean's cells have no independent re-check here (lean4checker is not
+installed). Rocq's are re-checked by `coqchk`.
+
+## T23 registered (2026-10-07 02:32Z, after hand probes and before the clean-clone matrix): datatypes with fields in Dafny, Verus and Lean (G9, first wave)
+
+SPEC.md "Datatypes (v2): fields". Constructors carry int, bool or seq fields, which gives records and non-recursive
+sums: `D.C(a, ...)`, `case` arms binding fields, `e.f`. Six tasks are added, making 94:
+- `shape_area`: a three-constructor sum matched in requires, ensures and body;
+- `manhattan`: a record;
+- `rect_area`: field access under a discriminating requires;
+- `some_negative`: an option built in a loop under a quantified invariant;
+- `bag_size`: a bool and a seq field;
+- `checked_tail`: a seq field, compared by structural equality.
+
+Receipts: f28afa1d8db8 (Dafny), 2d503d12f07a (Verus), 134d11c182fc (Lean).
+
+**Measured before this registration, stated plainly.**
+- **Hand probes:** all six COUNT in Dafny, Verus and Lean on scratch runs (18 cells). `bag_size` was measured with
+  its bool field named `open`, renamed `active` since, so that no committed task needs a keyword rename (`test_names`);
+  its re-run under the committed name (finished 02:32Z) COUNTS in all three.
+- **Defects the probes found and fixed:**
+  - a witness showed a bool field as Python's `False`, which the parser cannot read back;
+  - Verus read the datatype declarations before renaming a keyword-named field;
+  - Verus derived `PartialEq` on an enum with a `Seq` field, which does not compile;
+  - Lean's sign lemmas named match binders outside their scope;
+  - Lean's preservation step `split` the contract's own Prop-valued match.
+- **Byte identity:** every lowering of the 88 previous tasks and the 21 AlgoVeri tasks is unchanged: real and twin,
+  all seven kernels, with the witness. The other four kernels refuse all six by name.
+- **Suite:** the whole suite passes (686).
+
+**Bars**, for the clean-clone matrix that follows:
+(1) The six read verified with the twin refuted in Dafny, Verus and Lean: 18 cells.
+(2) Rocq, F*, SPARK and Frama-C refuse all six by name: 24 cells.
+(3) No cell of the 88 moves against the installed table.
+(4) Per kernel: Dafny 94, Verus 86, Lean 67; the other four unchanged. All seven stays 48, now of 94.
+
+## T24 registered (2026-10-07 02:49Z, after hand probes and before the clean-clone runs): AlgoVeri's discrete_logarithm, and five engine defects it found
+
+`discrete_logarithm` is the first AlgoVeri contract that datatypes with fields make stateable. Its result is
+`Option<int>`, and its helpers are `spec_pow_mod`, recursive on an int, and `is_discrete_log`. It is the 22nd
+AlgoVeri program (`t/algoveri/MAPPING.md` names its two departures: a monomorphic `Option`, and total helpers).
+Of the other 36 datatype contracts, `linearsys_gf2` needs a quantifier over all sequences. The remaining 35 need
+recursive datatypes, set-valued helpers or graphs.
+
+**Five defects, found while writing it and fixed:**
+1. Lean's prelude declares `Option`: a datatype of that name was "already declared". A datatype named like an
+   uppercase entry of `names.KEYWORDS["lean"]` is now emitted as `t_<name>` in Lean text.
+2. Verus's `use Option::*` was ambiguous with Rust's prelude (E0659). For a prelude type name the import is now
+   qualified `self::`. A datatype named `Seq`, `Set`, `Map` or `Multiset` is refused by name, since it would
+   shadow the vstd type the lowering names.
+3. Dafny's undefined-kind replay (`_ev_undef`) had no constructor, field or match case, so a twin undefined inside
+   a constructor argument had no certificate.
+4. Dafny's certificate unroller walked a ground match's arms with their binders unbound. It now reduces a match on a
+   ground constructor to the chosen arm, recording `scrutinee == literal` as an equation the kernel re-proves when
+   they differ.
+5. Lean's `simp only` closer cited a recursive spec_fun's equation, which never stops rewriting (maxRecDepth, which
+   `first` does not catch). Recursive spec_funs are now grind hints only.
+
+**Measured before this registration, stated plainly.**
+- `discrete_logarithm`: Dafny COUNTS, Verus COUNTS. In Lean the real verifies, and the twin is unproved: the
+  certificate's `simp` loops on `spec_pow_mod` at ground arguments. This is named, not fixed: it needs guarded
+  unfolding lemmas or a Nat-fuel definition the kernel can evaluate.
+- A probe with `datatype Option` COUNTS in Dafny, Verus and Lean.
+- Of the 94 tasks' lowerings, changed:
+  - the Dafny twins of `rect_area`, `shape_area` and `some_negative` (their certificates reduce the match); all three
+    re-verified, still refuted;
+  - `grid_row_sums` in Lean (fix 5): it now COUNTS in Lean, where it was a near miss.
+- Of the AlgoVeri lowerings, changed: Lean real and twin of bubble_sort, insertion_sort, matrix_multiply,
+  quick_sort and solve_longest_common_subsequence. Probed, all keep their T13 verdicts (unproved, or timeout).
+- The whole suite passes (686).
+
+**Bars**, for the clean-clone matrix of the 94 and a clean-clone regeneration of `t/ALGOVERI.md` (22 programs):
+(1) `grid_row_sums` reads verified with the twin refuted in Lean. No other cell moves against T23's matrix.
+(2) Lean goes from 67 to 68. All seven stays 48: `grid_row_sums` still needs Frama-C.
+(3) `discrete_log_naive` reads verified with the twin refuted in Dafny and Verus, verified with the twin unproved in
+Lean, and abstains elsewhere. Dafny is 22 of 22.
+(4) No AlgoVeri cell reads differently from T13's table with T15's and T17's measured repairs applied, except as
+follows. The five Lean rows above keep their verdicts. T16, T18, T19 and T21 landed after those AlgoVeri runs and
+were never measured on AlgoVeri, so the F*, SPARK and Frama-C counts are read as measured.
+
+### T23 read (2026-10-07 02:53Z): datatypes with fields in Dafny, Verus and Lean. All four bars held.
+
+The matrix was regenerated from a clean clone of t-proof-engine at 0d091f5 (`t/AGREEMENT.md`) and compared cell by
+cell with the installed table.
+(1) **Held:** the six new tasks read verified with the twin refuted in Dafny, Verus and Lean (18 cells).
+(2) **Held:** Rocq, F*, SPARK and Frama-C abstain by name on all six (24 cells).
+(3) **Held:** no cell of the 88 moved. Only the six new rows differ.
+(4) **Held:** per kernel, Dafny 94, Verus 86, Lean 67, Rocq 62, F* 59, SPARK 56, Frama-C 49. All seven stays 48, now
+of 94. Every kernel still refutes the twin of every real it verifies (100%).
+
+## T25 registered (2026-10-07 03:09Z, after hand probes and before the clean-clone matrix): recursive datatypes in Dafny, Verus and Lean (G10)
+
+SPEC.md "Datatypes (v3): recursion". A field may have its own datatype's type, or the type of one declared before
+it, and spec functions, lemmas and self-recursive tasks may take a datatype value as their measure. Five tasks are
+added, making 99:
+- `tree_sum` and `tree_count`: an int fold, the second with a nonnegativity clause the induction must carry;
+- `tree_mirror`: a tree result, stated as `m == mirror(tr)`;
+- `tree_insert`: BST-order insertion, a self-call under an `if` inside a match arm;
+- `tree_height`: `max` of the two recursive results.
+
+Receipt fb16ecad608c (Verus decreases-to; Box probe). The Lean design reuses 134d11c182fc (TPIL ch. 7, the
+recursor), with the tree probe measured.
+
+**Measured before this registration, stated plainly.**
+- **Hand probes:** all five COUNT in Dafny, Verus and Lean on scratch runs (15 cells). `tree_insert` was re-run
+  under its committed name: its spec function was renamed from `has`, which is a Verus keyword.
+- **Two defects in a first statement, fixed before committing:**
+  - `tree_mirror` was first stated by its total and size alone, which the identity function also meets. The twin
+    harness rightly found no refutable twin, so the contract was strengthened to `m == mirror(tr)`.
+  - `tree_height` failed in Verus, because a proof fn self-call cannot be an argument of a spec function, and in Lean,
+    because grind was not given `t_max`. Both are fixed: the calls are bound by `let`s first, and the library
+    functions are grind hints.
+- **Byte identity:** every lowering of the 94 committed tasks and the 22 AlgoVeri programs is unchanged, real and
+  twin, all seven kernels, with the witness. The twin harness's new binder move picks no earlier task's twin.
+- **Suite:** the whole suite passes (694). The grammar and the parser agree on all 99 canonical forms; the printer
+  now spells a spec function's datatype result by name.
+
+**Bars**, for the clean-clone matrix of the 99 that follows:
+(1) The five read verified with the twin refuted in Dafny, Verus and Lean: 15 cells.
+(2) Rocq, F*, SPARK and Frama-C refuse all five by name: 20 cells.
+(3) No other cell moves against T24's matrix.
+(4) Per kernel: Dafny 99, Verus 91, and Lean five more than T24's matrix reads. All seven stays 48, now of 99.
+
+### T24 read (2026-10-07 03:27Z): AlgoVeri's discrete_logarithm and five engine defects. All four bars held.
+
+Both tables were regenerated from a clean clone at fbce7d9: the matrix of 94 (`t/AGREEMENT.md`) and the 22 AlgoVeri
+programs (`t/ALGOVERI.md`, the first AlgoVeri table of record since T13's).
+(1) **Held:** `grid_row_sums` reads verified with the twin refuted in Lean. It is the only cell of the 94 that moved.
+(2) **Held:** Lean goes from 67 to 68, and all seven stays 48. `grid_row_sums` still needs Frama-C.
+(3) **Held:** `discrete_log_naive` reads verified with the twin refuted in Dafny and Verus, verified with the twin
+unproved in Lean, and abstains elsewhere. Dafny is 22 of 22.
+(4) **Held:** no Lean AlgoVeri row changed. Every other change against T13's table is a T15 or T17 repair, now in the
+table of record:
+- Verus: quick_sort verified/refuted; kmp and merge_sort unproved with the twin refuted; matrix_multiply unproved.
+- F*: binary_search and linear_search verified/refuted; kmp unproved/refuted; bubble_sort and insertion_sort
+  timeout.
+- SPARK: longest_common_subsequence and string_search_naive timeout with the twin refuted.
+
+F*'s merge_sort also moved, from abstain to unproved/refuted: T16's comprehensions, read as measured. The AlgoVeri
+counts are Dafny 22, Verus 7, F* 5, SPARK 3, Frama-C 2, Rocq 1, Lean 0. Two MALFORMED cells remain, the two T13
+named: Verus poly_multiply_naive and F* longest_palindromic_substring.
+
+Receipts behind T24's fixes, which its commit message miscited: 134d11c182fc (Lean) and 2d503d12f07a (Verus).
+
+## T26 registered (2026-10-07 03:28Z, after hand probes and before the clean-clone matrix): quantifiers over a collection (G11)
+
+SPEC.md "Quantifiers over a collection": `forall x in S . P` over the elements of a set or a seq, the form AlgoVeri's
+BST contracts state.
+- **A seq range** is exact sugar for the index form. `tshape.desugar_seq_quants` rewrites it at the top of every
+  lowering, typed by check_wf, so all seven kernels state it.
+- **A set range** is stated natively in Dafny (membership) and Verus (`contains`, as range and trigger). The other
+  five refuse it by name.
+
+Two tasks are added, making 101: `none_neg` (a seq range in the contract, an index invariant in the loop) and
+`all_pos_set` (a set range). Receipt aad9cbc9ffae (Dafny reference: quantifier expressions; Verus guide: forall
+and triggers).
+
+**Measured before this registration, stated plainly.**
+- **Hand probes:** `none_neg` COUNTS in all seven kernels. `all_pos_set` COUNTS in Dafny and Verus, and the other five
+  abstain by name.
+- **A first statement of `none_neg`, with membership left as membership:** Dafny and Verus could not prove it. An
+  invariant in membership form over a slice was unproved in Dafny and Verus and timed out in Lean and Rocq. That
+  measurement is why a seq range is desugared to indices.
+- **A G9 defect, fixed:** check_wf collected a field's types in a Python set, which a datatype-typed field (a dict)
+  cannot enter. It was found by AlgoVeri's BST contracts, written in scratch and not part of this registration.
+- **Byte identity:** every lowering of the 99 tasks and the 22 AlgoVeri programs is unchanged.
+- **Suite and grammar:** the whole suite passes (699). The grammar and the parser agree on all 101 canonical forms.
+
+**Bars**, for the clean-clone matrix of the 101 that follows (after T25's):
+(1) `none_neg` reads verified with the twin refuted in all seven kernels, so all seven goes from 48 to 49.
+(2) `all_pos_set` reads verified with the twin refuted in Dafny and Verus, and abstains by name in the other five.
+(3) No other cell moves against T25's matrix.
+(4) Dafny and Verus gain two each. Lean, Rocq, F*, SPARK and Frama-C gain one each.

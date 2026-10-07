@@ -2299,6 +2299,16 @@ _SCOPE: dict = {}        # name -> t type of every param, return and local of th
                          # (v1)", 2026-10-06): `expr` and `defined` read an operand's type here where the kernel's
                          # text differs by it (a map's insert, dom().contains, and the membership `at` owes)
 _SCOPE_FUNS: dict = {}
+_SCOPE_DTYPES: dict = {}   # datatype name -> its declaration, for `e.f`'s definedness (SPEC.md "Datatypes (v2): fields")
+# Rust's and vstd's preludes declare these, so `use D::*;` on a local enum of the same name is ambiguous (rustc E0659,
+# measured 2026-10-07 on `datatype Option`); for them the import is qualified `self::`, which resolves to the local enum
+_VERUS_PRELUDE_TYPES = frozenset({
+    "Option", "Result", "Vec", "String", "Box", "Iterator", "IntoIterator", "Default", "Clone", "Copy", "Eq",
+    "PartialEq", "Ord", "PartialOrd", "Fn", "FnMut", "FnOnce", "Drop", "Send", "Sync", "Sized", "From", "Into",
+    "ToString", "ToOwned", "AsRef", "AsMut", "Ghost", "Tracked"})
+# the vstd types this file's own lowering names (Seq<int>, Set<int>, Map<..>): a t datatype of the same name would
+# shadow them, so it is refused by name
+_VERUS_OWN_TYPES = frozenset({"Seq", "Set", "Map", "Multiset"})
 
 
 def _ty_of(e):
@@ -2340,7 +2350,7 @@ def _has_indexable(e: dict) -> bool:
         return any(_has_indexable(c[k]) for k in ("cond", "then", "else"))
     if "forall" in e or "exists" in e:
         q = e.get("forall") or e.get("exists")
-        return any(_has_indexable(q[k]) for k in ("lo", "hi", "body"))
+        return any(_has_indexable(q[k]) for k in ("lo", "hi", "in", "body") if k in q)
     return False
 
 
@@ -2373,8 +2383,9 @@ def _free_vars(e) -> set:
                 return
             if "forall" in x or "exists" in x:
                 q = x.get("forall") or x.get("exists")
-                walk(q["lo"], bound)
-                walk(q["hi"], bound)
+                for k in ("lo", "hi", "in"):   # "in": SPEC.md "Quantifiers over a collection"
+                    if k in q:
+                        walk(q[k], bound)
                 walk(q["body"], bound | {q["var"]})
                 return
             for val in x.values():
@@ -2395,8 +2406,9 @@ def _nested_index_terms(e: dict, v: str, out: dict, inner: frozenset = frozenset
     if isinstance(e, dict):
         if "forall" in e or "exists" in e:
             q = e.get("forall") or e.get("exists")
-            _nested_index_terms(q["lo"], v, out, inner, depth + 1)
-            _nested_index_terms(q["hi"], v, out, inner, depth + 1)
+            for k in ("lo", "hi", "in"):
+                if k in q:
+                    _nested_index_terms(q[k], v, out, inner, depth + 1)
             if q["var"] != v:   # a nested binder of the same name shadows v: its body's v is not ours
                 _nested_index_terms(q["body"], v, out, inner | {q["var"]}, depth + 1)
             return
@@ -2481,8 +2493,9 @@ def _at_roots_by_var(e: dict, v: str, out: dict) -> None:
             _at_roots_by_var(a, v, out)
     elif "forall" in e or "exists" in e:
         q = e.get("forall") or e.get("exists")
-        for k in ("lo", "hi"):
-            _at_roots_by_var(q[k], v, out)
+        for k in ("lo", "hi", "in"):
+            if k in q:
+                _at_roots_by_var(q[k], v, out)
 
 
 def _nested_at_roots_by_var(e: dict, v: str, out: dict) -> None:
@@ -2527,8 +2540,9 @@ def _nested_at_roots_by_var(e: dict, v: str, out: dict) -> None:
             _nested_at_roots_by_var(a, v, out)
     elif "forall" in e or "exists" in e:
         q = e.get("forall") or e.get("exists")
-        for k in ("lo", "hi"):
-            _nested_at_roots_by_var(q[k], v, out)
+        for k in ("lo", "hi", "in"):
+            if k in q:
+                _nested_at_roots_by_var(q[k], v, out)
         if q["var"] != v:
             _nested_at_roots_by_var(q["body"], v, out)
 
@@ -2573,8 +2587,9 @@ def _offset_at_by_var(e: dict, v: str, out: dict) -> None:
             _offset_at_by_var(a, v, out)
     elif "forall" in e or "exists" in e:
         q = e.get("forall") or e.get("exists")
-        for k in ("lo", "hi"):
-            _offset_at_by_var(q[k], v, out)
+        for k in ("lo", "hi", "in"):
+            if k in q:
+                _offset_at_by_var(q[k], v, out)
 
 
 def _root_plus_offset_trigger(body: dict, v: str, roots: dict) -> str | None:
@@ -2655,7 +2670,7 @@ def _has_fixed_at(e: dict, v: str) -> bool:
         return any(_has_fixed_at(a, v) for a in e["call"]["args"])
     if "forall" in e or "exists" in e:
         q = e.get("forall") or e.get("exists")
-        return any(_has_fixed_at(q[k], v) for k in ("lo", "hi"))
+        return any(_has_fixed_at(q[k], v) for k in ("lo", "hi", "in") if k in q)
     return False
 
 
@@ -2678,6 +2693,61 @@ def _has_chained_at(e) -> bool:
     if isinstance(e, list):
         return any(_has_chained_at(x) for x in e)
     return False
+
+
+_NATIVE_OPS = frozenset({"+", "-", "*", "neg", "div", "mod", "==", "!=", "<", "<=", ">", ">=", "not", "and", "or",
+                         "implies"})
+
+
+def _vhoist(e: dict, name: str) -> dict:
+    """SPEC.md "Datatypes (v3): recursion" (2026-10-07): a self-call (a proof fn call) inside an argument of a spec
+    function (a spec_fun, or a library op printed as one, `t_max`) is a Verus mode error ("cannot call function ... with
+    mode proof", measured on tree_height), so it is bound by a `let` first, at the top of the expression or of the
+    match arm it sits in. Only calls every path through that block evaluates are moved: never out of an `if`
+    branch, a short-circuit operand or a binder's body. Returns `e` itself when nothing moves."""
+    ctr = [0]
+
+    def walk(x, in_spec, binds):
+        if not isinstance(x, dict):
+            return x
+        if "call" in x:
+            c = x["call"]
+            args = [walk(a, in_spec or c["fun"] != name, binds) for a in c["args"]]
+            new = {"call": {**c, "args": args}}
+            if c["fun"] == name and in_spec:
+                v = f"t_h{ctr[0]}"
+                ctr[0] += 1
+                binds.append([v, new])
+                return {"var": v}
+            return new
+        if "match" in x:
+            m = x["match"]
+            arms = []
+            for a in m["arms"]:
+                inner: list = []
+                body = walk(a["body"], False, inner)
+                arms.append({**a, "body": {"_vlet": {"binds": inner, "body": body}} if inner else body})
+            return {"match": {"scrutinee": walk(m["scrutinee"], in_spec, binds), "arms": arms}}
+        if "ite" in x:
+            c = x["ite"]
+            return {"ite": {**c, "cond": walk(c["cond"], in_spec, binds)}}
+        if x.get("op") in ("and", "or", "implies"):
+            return {**x, "args": [walk(x["args"][0], in_spec, binds)] + list(x["args"][1:])}
+        if "op" in x:
+            spec = x["op"] not in _NATIVE_OPS
+            return {**x, "args": [walk(a, in_spec or spec, binds) for a in x["args"]]}
+        if "ctor" in x:
+            c = x["ctor"]
+            return {"ctor": {**c, "args": [walk(a, in_spec, binds) for a in c.get("args", [])]}}
+        if "field" in x:
+            return {"field": {**x["field"], "of": walk(x["field"]["of"], in_spec, binds)}}
+        return x
+
+    top: list = []
+    out = walk(e, False, top)
+    if top:
+        out = {"_vlet": {"binds": top, "body": out}}
+    return e if out == e else out
 
 
 def expr(e: dict, vty: str | None = None) -> str:
@@ -2725,6 +2795,10 @@ def expr(e: dict, vty: str | None = None) -> str:
         if not e["_nested_seq"]:
             return "Seq::<Seq<int>>::empty()"
         return "seq![" + ", ".join(expr(r) for r in e["_nested_seq"]) + "]"
+    if "_vlet" in e:
+        # _vhoist's binding block (SPEC.md "Datatypes (v3): recursion")
+        lets = "".join(f"let {v} = {expr(c)}; " for v, c in e["_vlet"]["binds"])
+        return f"{{ {lets}{expr(e['_vlet']['body'], vty)} }}"
     if "int" in e:
         return f"({e['int']}int)" if _SUFFIX_INT else str(e["int"])
     if "var" in e:
@@ -2743,9 +2817,37 @@ def expr(e: dict, vty: str | None = None) -> str:
         # ever follows.
         c = e["ctor"]
         if c.get("args"):
-            cargs = ", ".join(expr(a) for a in c["args"])
+            fields = _ctor_fields(c["dtype"], c["name"])
+            cargs = ", ".join(f"Box::new({expr(a)})" if i < len(fields) and _is_dt_field(fields[i]) else expr(a)
+                              for i, a in enumerate(c["args"]))
             return f"{c['dtype']}::{c['name']}({cargs})"
         return f"{c['dtype']}::{c['name']}"
+    if "field" in e:
+        # SPEC.md "Datatypes (v2): fields" (2026-10-07): a tuple variant's field read by a match on the value, the
+        # field's position bound in the constructors that carry it and `arbitrary()` in the rest (Verus guide,
+        # "Enum": match works as in Rust); the definedness obligation (`defined()`'s field case) is what rules
+        # the rest out, so `arbitrary()` is never the value of a defined read
+        fld = e["field"]
+        import check_wf
+        t, _errs = check_wf.expression_type(fld["of"], dict(_SCOPE), functions=dict(_SCOPE_FUNS),
+                                            datatypes=dict(_SCOPE_DTYPES))
+        decl = _SCOPE_DTYPES.get(t.get("datatype")) if isinstance(t, dict) else None
+        if decl is None:
+            raise NotImplementedError("verus: a field access whose datatype is not in scope here "
+                                      "(SPEC.md 'Datatypes (v2): fields')")
+        arms = []
+        carried_all = True
+        for c in decl["ctors"]:
+            names = [f["name"] for f in c.get("fields", [])]
+            if fld["name"] in names:
+                pats = ", ".join("t_fv" if n == fld["name"] else "_" for n in names)
+                boxed = _is_dt_field(c["fields"][names.index(fld["name"])])
+                arms.append(f"{_vctor(c['name'])}({pats}) => {'*t_fv' if boxed else 't_fv'}")
+            else:
+                carried_all = False
+        if not carried_all:
+            arms.append("_ => vstd::pervasive::arbitrary()")
+        return f"(match {expr(fld['of'])} {{ {', '.join(arms)} }})"
     if "match" in e:
         # `match e { C1 => e1, C2 => e2, }` -- Rust's own match expression,
         # exhaustive over the enum's variants (check_wf already proved
@@ -2759,12 +2861,11 @@ def expr(e: dict, vty: str | None = None) -> str:
         # belongs to.
         m = e["match"]
         scrut = expr(m["scrutinee"])
+        afields = _arm_fields(m["arms"])
+        heads = [_arm_head(a, afields.get(a["ctor"], [])) for a in m["arms"]]
         arms = ", ".join(
-            "%s%s => %s" % (
-                a["ctor"],
-                "(%s)" % ", ".join(a["binders"]) if a.get("binders") else "",
-                expr(a["body"], vty))
-            for a in m["arms"])
+            "%s => %s" % (head, ("{ %s%s }" % (lets, expr(a["body"], vty))) if lets else expr(a["body"], vty))
+            for a, (head, lets) in zip(m["arms"], heads))
         return f"(match {scrut} {{ {arms} }})"
     if "call" in e:
         c = e["call"]
@@ -2777,6 +2878,15 @@ def expr(e: dict, vty: str | None = None) -> str:
         return f"t_comp{k}({', '.join(src + _comp_free(e))})"
     if e.get("op") in _HOF_OPS:
         return _hof_call(e)   # SPEC.md "Higher-order calls (v1)" (2026-10-06): the registered spec fn
+    if ("forall" in e or "exists" in e) and "in" in (e.get("forall") or e.get("exists")):
+        # SPEC.md "Quantifiers over a collection" (2026-10-07): vstd's `contains`, on a Set or a Seq alike, as the
+        # range and the trigger (a function call naming the bound variable, the Verus guide's rule for a trigger)
+        kind = "forall" if "forall" in e else "exists"
+        q = e[kind]
+        v, coll = q["var"], expr(q["in"])
+        glue = "==>" if kind == "forall" else "&&"
+        return (f"({kind}|{v}: int| #![trigger {coll}.contains({v})] {coll}.contains({v}) {glue} "
+                f"{expr(q['body'])})")
     if "forall" in e or "exists" in e:
         kind = "forall" if "forall" in e else "exists"
         q = e[kind]
@@ -3212,6 +3322,26 @@ def defined(e: dict, is_real=None) -> dict:
         # argument is (v1's constructors are nullary, so this is TRUE for
         # every ctor this landing; kept general for the record case ahead).
         return _conj([defined(a, is_real) for a in e["ctor"].get("args", [])])
+    if "field" in e:
+        # SPEC.md "Datatypes (v2): fields" (2026-10-07): `e.f` is defined iff e is and e's constructor carries f
+        # (Dafny's destructor requires its discriminator, reference manual 5.14.1). The discriminator is stated as
+        # a match, exactly as a match's own definedness is stated, true on the constructors that carry f; on a
+        # record, or any datatype whose every constructor carries f, it is just e's own definedness
+        import check_wf
+        fld = e["field"]
+        d_of = defined(fld["of"], is_real)
+        t, _errs = check_wf.expression_type(fld["of"], dict(_SCOPE), functions=dict(_SCOPE_FUNS),
+                                            datatypes=dict(_SCOPE_DTYPES))
+        decl = _SCOPE_DTYPES.get(t.get("datatype")) if isinstance(t, dict) else None
+        if decl is None:
+            raise NotImplementedError("a field access whose datatype is not in scope here (SPEC.md 'Datatypes (v2)')")
+        ctors = decl.get("ctors", [])
+        carries = [any(f["name"] == fld["name"] for f in c.get("fields", [])) for c in ctors]
+        if all(carries):
+            return d_of
+        arms = [{"ctor": c["name"], "binders": [f"t_fb{i}" for i in range(len(c.get("fields", [])))],
+                 "body": {"bool": bool(has)}} for c, has in zip(ctors, carries)]
+        return _conj([d_of, {"match": {"scrutinee": fld["of"], "arms": arms}}])
     if "match" in e:
         # A match's result is defined iff the scrutinee is AND the body of
         # the arm ACTUALLY TAKEN is -- reusing "match" itself as the
@@ -3227,6 +3357,10 @@ def defined(e: dict, is_real=None) -> dict:
     if "forall" in e or "exists" in e:
         q = e.get("forall") or e.get("exists")
         db = defined(q["body"], is_real)
+        if "in" in q:
+            # SPEC.md "Quantifiers over a collection": the collection defined, the body at every element
+            return _conj([defined(q["in"], is_real),
+                          TRUE if db == TRUE else {"forall": {"var": q["var"], "in": q["in"], "body": db}}])
         body_ob = (TRUE if db == TRUE else
                    {"forall": {"var": q["var"], "lo": q["lo"], "hi": q["hi"],
                                "body": db}})
@@ -3419,8 +3553,9 @@ def _nested_eq_bridges(e: dict, scope: dict, out: list) -> None:
             _nested_eq_bridges(a, scope, out)
     elif "forall" in e or "exists" in e:
         q = e.get("forall") or e.get("exists")
-        for k in ("lo", "hi", "body"):
-            _nested_eq_bridges(q[k], scope, out)
+        for k in ("lo", "hi", "in", "body"):
+            if k in q:
+                _nested_eq_bridges(q[k], scope, out)
 
 
 def _walk_at_seq_params(e, seq_params: set, seen: set) -> None:
@@ -3551,6 +3686,8 @@ def subst(e: dict, m: dict) -> dict:
         kind = "forall" if "forall" in e else "exists"
         q = e[kind]
         inner = {k: v for k, v in m.items() if k != q["var"]}
+        if "in" in q:
+            return {kind: {"var": q["var"], "in": subst(q["in"], m), "body": subst(q["body"], inner)}}
         return {kind: {"var": q["var"], "lo": subst(q["lo"], m),
                        "hi": subst(q["hi"], m),
                        "body": subst(q["body"], inner)}}
@@ -3572,6 +3709,8 @@ def subst(e: dict, m: dict) -> dict:
         c = e["ctor"]
         return {"ctor": {"dtype": c["dtype"], "name": c["name"],
                          "args": [subst(a, m) for a in c.get("args", [])]}}
+    if "field" in e:
+        return {"field": {"of": subst(e["field"]["of"], m), "name": e["field"]["name"]}}
     if "match" in e:
         mm = e["match"]
         return {"match": {
@@ -3582,6 +3721,61 @@ def subst(e: dict, m: dict) -> dict:
                                     if k not in a.get("binders", [])})}
                      for a in mm["arms"]]}}
     return {"op": e["op"], "args": [subst(a, m) for a in e.get("args", [])]}
+
+
+def _is_dt_field(f: dict) -> bool:
+    """A field of a datatype type, which a Rust enum holds as Box<D> (SPEC.md "Datatypes (v3): recursion")."""
+    return isinstance(f.get("type"), dict) and "datatype" in f["type"]
+
+
+def _ctor_fields(dtype: str, cname: str) -> list:
+    d = _SCOPE_DTYPES.get(dtype) or {}
+    return next((c.get("fields") or [] for c in d.get("ctors", []) if c["name"] == cname), [])
+
+
+def _arm_fields(arms: list) -> dict:
+    """Constructor name -> its fields, for the datatype whose constructors these arms name."""
+    names = {a["ctor"] for a in arms}
+    for d in _SCOPE_DTYPES.values():
+        ctors = {c["name"]: c for c in d.get("ctors", [])}
+        if names <= set(ctors):
+            return {n: ctors[n].get("fields") or [] for n in ctors}
+    return {}
+
+
+def _reads_var(e, name: str) -> bool:
+    if isinstance(e, dict):
+        if e.get("var") == name:
+            return True
+        return any(_reads_var(v, name) for v in e.values())
+    if isinstance(e, list):
+        return any(_reads_var(v, name) for v in e)
+    return False
+
+
+def _arm_head(a: dict, fields: list) -> tuple[str, str]:
+    """An arm's pattern and the lets that read its boxed binders: a datatype field is a Box<D>, bound under a fresh
+    name and read as `let b = *t_box_b;`, so the arm body prints unchanged (measured 2026-10-07: Verus accepts a
+    recursive call on such a let-bound value under `decreases`, and rejects one on the Box itself, E0308)."""
+    binders = a.get("binders") or []
+    pats, lets = [], []
+    for b, f in zip(binders, fields):
+        if _is_dt_field(f):
+            pats.append(f"t_box_{b}")
+            if _reads_var(a["body"], b):
+                lets.append(f"let {b} = *t_box_{b}; ")
+        else:
+            pats.append(b)
+    return _vctor(a["ctor"]) + (f"({', '.join(pats)})" if binders else ""), "".join(lets)
+
+
+def _vctor(c: str) -> str:
+    """A variant's name in a pattern: bare (the glob import puts it in scope), or `D::D` for a constructor named like
+    its own datatype, which the import leaves out (SPEC.md "Datatypes (v2): fields")."""
+    d = _SCOPE_DTYPES.get(c)
+    if d is not None and any(ct["name"] == c for ct in d.get("ctors", [])):
+        return f"{c}::{c}"
+    return c
 
 
 def _calls(e: dict, name: str) -> bool:
@@ -3595,9 +3789,11 @@ def _calls(e: dict, name: str) -> bool:
         return any(_calls(c[k], name) for k in ("cond", "then", "else"))
     if "forall" in e or "exists" in e:
         q = e.get("forall") or e.get("exists")
-        return any(_calls(q[k], name) for k in ("lo", "hi", "body"))
+        return any(_calls(q[k], name) for k in ("lo", "hi", "in", "body") if k in q)
     if "ctor" in e:
         return any(_calls(a, name) for a in e["ctor"].get("args", []))
+    if "field" in e:
+        return _calls(e["field"]["of"], name)
     if "match" in e:
         m = e["match"]
         return (_calls(m["scrutinee"], name)
@@ -3715,7 +3911,7 @@ def _has_nonlinear(e: dict) -> bool:
         return any(_has_nonlinear(a) for a in e["call"]["args"])
     if "forall" in e or "exists" in e:
         q = e.get("forall") or e.get("exists")
-        return any(_has_nonlinear(q[k]) for k in ("lo", "hi", "body"))
+        return any(_has_nonlinear(q[k]) for k in ("lo", "hi", "in", "body") if k in q)
     if "op" in e:
         if e["op"] == "*":
             a, b = e["args"]
@@ -3752,7 +3948,7 @@ def _verus_sole_calls_nonlinear_specfn(e: dict, task: dict) -> bool:
             return any(walk(x["ite"][k]) for k in ("cond", "then", "else"))
         if "forall" in x or "exists" in x:
             q = x.get("forall") or x.get("exists")
-            return any(walk(q[k]) for k in ("lo", "hi", "body"))
+            return any(walk(q[k]) for k in ("lo", "hi", "in", "body") if k in q)
         if "op" in x:
             return any(walk(a) for a in x.get("args", []))
         return False
@@ -3830,9 +4026,10 @@ def _prenex(e: dict, fresh) -> tuple[list[str], dict]:
         v = next(fresh)
         body = subst(q["body"], {q["var"]: v})
         bs, mat = _prenex(body, fresh)
-        rng = {"op": "and", "args": [
-            {"op": "<=", "args": [q["lo"], {"var": v}]},
-            {"op": "<", "args": [{"var": v}, q["hi"]]}]}
+        rng = ({"op": "in", "args": [{"var": v}, q["in"]]} if "in" in q else
+               {"op": "and", "args": [
+                   {"op": "<=", "args": [q["lo"], {"var": v}]},
+                   {"op": "<", "args": [{"var": v}, q["hi"]]}]})
         return [v] + bs, {"op": "implies", "args": [rng, mat]}
     if "ite" in e:
         c = e["ite"]
@@ -3875,7 +4072,9 @@ def _div_mod_pairs(e: dict) -> list[tuple[dict, dict]]:
             return
         if "forall" in n or "exists" in n:
             q = n.get("forall") or n.get("exists")
-            walk(q["lo"]); walk(q["hi"]); walk(q["body"])
+            for k in ("lo", "hi", "in", "body"):
+                if k in q:
+                    walk(q[k])
             return
         if "op" in n:
             if n["op"] in ("div", "mod"):
@@ -4617,7 +4816,7 @@ class _V1:
                 lines += _sort_lemma_lines(e, ind)
                 self._assert_defined(e, lines, ind)
                 self._assert_nested_eq(e, scope, lines, ind)
-                lines.append(f"{ind}{name} = {expr(e, scope[name][0])};")
+                lines.append(f"{ind}{name} = {expr(_vhoist(e, self.task['name']), scope[name][0])};")
             elif "return" in s:
                 rname, e = s["return"]
                 assert rname == self.task["returns"][0]["name"], \
@@ -5212,10 +5411,31 @@ class _V1:
         # qualify them.
         datatype_blocks = []
         for d in task.get("datatypes", []):
-            ctors = ", ".join(c["name"] for c in d["ctors"])
+            # SPEC.md "Datatypes (v2): fields" (2026-10-07): a constructor with fields is a tuple variant, the
+            # shape this file's ctor and match printing already writes (`C(a, b)`, `C(x, y) => ...`); Verus guide,
+            # "Enum": declared with round parentheses
+            ctors = ", ".join(c["name"] + ("(" + ", ".join(f"Box<{_vty(f['type'])}>" if _is_dt_field(f)
+                                                     else _vty(f["type"]) for f in c["fields"]) + ")"
+                                           if c.get("fields") else "") for c in d["ctors"])
+            # a constructor named like its datatype (a record, `datatype Point = Point(x: int, y: int)`) makes a
+            # glob import ambiguous (rustc E0659, measured 2026-10-07): import the other variants only, and
+            # `_vctor` spells that one qualified
+            others = [c["name"] for c in d["ctors"] if c["name"] != d["name"]]
+            if d["name"] in _VERUS_OWN_TYPES:
+                raise NotImplementedError(
+                    f"verus lowering: a datatype named {d['name']} would shadow vstd's own {d['name']}, which this "
+                    f"lowering names (SPEC.md 'Datatypes (v2): fields')")
+            path = f"self::{d['name']}" if d["name"] in _VERUS_PRELUDE_TYPES else d["name"]
+            if len(others) == len(d["ctors"]):
+                use = f"use {path}::*;\n"
+            else:
+                use = f"use {path}::{{{', '.join(others)}}};\n" if others else ""
+            # spec-mode `==` is structural for every type and needs no derive (measured 2026-10-07, checked_tail
+            # verifies without it); vstd's Seq implements no PartialEq, so an enum with a seq field cannot derive
+            # one, and v1's derive stays only where it compiles
+            seqf = any(f["type"] == "seq" for c in d["ctors"] for f in c.get("fields") or [])
             datatype_blocks.append(
-                f"#[derive(PartialEq, Eq)]\nenum {d['name']} {{ {ctors} }}\n"
-                f"use {d['name']}::*;\n")
+                ("" if seqf else "#[derive(PartialEq, Eq)]\n") + f"enum {d['name']} {{ {ctors} }}\n" + use)
         blocks = (datatype_blocks + strlib_blocks + lib_blocks + rotate_blocks
                   + spec_blocks + lemma_blocks
                   + method_blocks + self.wf + self.helpers + [main])
@@ -5732,6 +5952,11 @@ def _tlit(v, ty=None):
         # as a witness dict's pair (a plain 2-list) does above.
         dtype = ty["datatype"]
         if v.startswith(dtype + "."):
+            if "(" in v:
+                # SPEC.md "Datatypes (v2): fields" (2026-10-07): interp._j wrote "Dtype.Ctor(a1, ...)", t's own
+                # notation for the value, so it is read back by the parser (a seq field is its list literal)
+                import surface
+                return surface.parse_expr(v)
             return {"ctor": {"dtype": dtype, "name": v[len(dtype) + 1:],
                             "args": []}}
         raise ValueError(f"witness value {v!r} is not a {dtype} constructor")
@@ -5839,9 +6064,18 @@ def _unroll(e: dict, budget: list, spec_funs: dict | None = None) -> dict:
     if "forall" in e or "exists" in e:
         kind = "forall" if "forall" in e else "exists"
         q = e[kind]
-        lo, hi = _gint(q["lo"]), _gint(q["hi"])
+        if "in" in q:
+            # SPEC.md "Quantifiers over a collection": only a literal collection is unrolled; anything else raises,
+            # which refuses the certificate rather than guessing its elements
+            coll = q["in"]
+            if not (isinstance(coll, dict) and ("_set" in coll or "_seq" in coll)):
+                raise ValueError("a collection quantifier over a non-literal collection is not unrolled")
+            points = coll.get("_set", coll.get("_seq"))
+        else:
+            lo, hi = _gint(q["lo"]), _gint(q["hi"])
+            points = range(lo, hi)
         insts = []
-        for k in range(lo, hi):
+        for k in points:
             budget[0] -= 1
             if budget[0] < 0:
                 raise ValueError("quantifier unroll budget exhausted")
@@ -5943,6 +6177,11 @@ def _to_py(v, ty=None):
     is a tuple of TUPLES (interp.py, `_j`'s docstring), and a tuple of
     lists is a different Python value that would silently fail every
     tuple-identity/equality check interp.ev does on it."""
+    if isinstance(ty, dict) and "datatype" in ty and isinstance(v, str):
+        # SPEC.md "Datatypes (v1)/(v2)": interp._j wrote "D.C" or "D.C(a, ...)", t's own notation for the value, so
+        # it is read back by the parser and built by the interpreter (a ctor node's value is its interp.Ctor)
+        import surface
+        return interp.ev(surface.parse_expr(v), {}, {}, interp.St())
     if isinstance(ty, dict) and "pair" in ty:
         t1, t2 = ty["pair"]
         a, b = v
@@ -6230,6 +6469,8 @@ def _cert_formula(task: dict, twin_body: list, w: dict) -> dict | None:
             tw = w.get("_twin")
             if isinstance(tw, str) and ret_type == "real" and _RAT_TEXT.match(tw):
                 pass   # SPEC.md "Exact rationals (v1)": a real return's value, interp._j's "n/d" text
+            elif isinstance(tw, str) and isinstance(ret_type, dict) and "datatype" in ret_type:
+                pass   # SPEC.md "Datatypes (v2): fields": a datatype return's "D.C(a, ...)" text, which _tlit reads back
             elif not isinstance(tw, (bool, int, list)):
                 return None
             m2 = dict(m)
@@ -6405,7 +6646,8 @@ def _comp_free(node: dict) -> list:
                 return out | walk(c["cond"], inner) | walk(c["body"], inner)
             if "forall" in x or "exists" in x:
                 q = x.get("forall") or x.get("exists")
-                return walk(q["lo"], bound) | walk(q["hi"], bound) | walk(q["body"], bound | {q["var"]})
+                rng = walk(q["in"], bound) if "in" in q else walk(q["lo"], bound) | walk(q["hi"], bound)
+                return rng | walk(q["body"], bound | {q["var"]})
             if "call" in x:
                 return set().union(*(walk(a, bound) for a in x["call"]["args"])) if x["call"]["args"] else set()
             return set().union(*(walk(v, bound) for v in x.values())) if x else set()
@@ -6545,7 +6787,8 @@ def _hof_fv(x, bound: frozenset) -> set:
             return out | _hof_fv(c["cond"], inner) | _hof_fv(c["body"], inner)
         if "forall" in x or "exists" in x:
             q = x.get("forall") or x.get("exists")
-            return _hof_fv(q["lo"], bound) | _hof_fv(q["hi"], bound) | _hof_fv(q["body"], bound | {q["var"]})
+            rng = _hof_fv(q["in"], bound) if "in" in q else _hof_fv(q["lo"], bound) | _hof_fv(q["hi"], bound)
+            return rng | _hof_fv(q["body"], bound | {q["var"]})
         return set().union(*(_hof_fv(v, bound) for v in x.values())) if x else set()
     if isinstance(x, list):
         return set().union(*(_hof_fv(v, bound) for v in x)) if x else set()
@@ -6988,10 +7231,13 @@ def _certificate(task: dict, twin_body: list, w: dict) -> str | None:
 def lower(task: dict, body: list, witness: dict | None = None) -> str:
     global _SUFFIX_INT
     import tshape
+    task, body = tshape.desugar_seq_quants(task, body)   # SPEC.md "Quantifiers over a collection": seq ranges as indices
     _EMPTIES.clear()
     _EMPTIES.update(tshape.empty_display_types(task, body))
     _SCOPE.clear()
     _SCOPE.update(tshape._scope_of(task, body))   # SPEC.md "Maps (v1)" (2026-10-06): the operand types expr reads
+    _SCOPE_DTYPES.clear()
+    _SCOPE_DTYPES.update({d["name"]: d for d in task.get("datatypes", [])})
     _SCOPE_FUNS.clear()
     _SCOPE_FUNS.update({f["name"]: f for f in task.get("spec_funs", [])})
     # SPEC.md "Exact rationals (v1)" (2026-10-06): Verus has no reals; a task that names one abstains by name
@@ -7013,6 +7259,8 @@ def lower(task: dict, body: list, witness: dict | None = None) -> str:
     # object from task["body"] (2026-09-11, names.rename_body's note)
     body = names.rename_body(twin_body, renames) if twin_body is not None else task["body"]
     witness = names.remap_witness(witness, renames)
+    _SCOPE_DTYPES.clear()   # again, with the renamed fields e.f now reads (SPEC.md "Datatypes (v2): fields")
+    _SCOPE_DTYPES.update({d["name"]: d for d in task.get("datatypes", [])})
     _hof_register(task, body)   # SPEC.md "Higher-order calls (v1)" (2026-10-06), on the renamed nodes expr will see
     if task.get("t", 0) == 0:
         if task.get("lemmas"):
