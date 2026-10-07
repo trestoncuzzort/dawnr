@@ -68,6 +68,14 @@ import re
 # ===========================================================================
 
 RULES: dict[str, str] = {
+    "array-param-only": "an array is a task parameter, nothing else: no array local, return, spec-function or method parameter, field or component (Heap (v1))",
+    "array-assign": "an array is written one element at a time, never assigned whole (Heap (v1))",
+    "aset-modifies": "a[i] := e writes an array parameter named in modifies, at an int index, an int value (Heap (v1))",
+    "modifies-array": "modifies names array parameters of the task, each once (Heap (v1))",
+    "old-position": "old(e) appears in an ensures or a loop invariant of the task, never inside another old (Heap (v1))",
+    "par-race": "a parallel loop writes an array only at its own index i, reads a written array only there, assigns only its own locals, has fixed bounds and no parallel loop inside (Concurrency (v1))",
+    "par-exit": "a parallel loop's body has no return, and no break or continue of its own (Concurrency (v1))",
+    "float-conv": "float(x) rounds an int or a real to a float, real(f) is a float's exact value, sqrt takes a float, and a float never mixes with an int or a real (Floats (v1))",
     "arith-int": "+ - * neg take all ints or all reals, / both, % ints only; real(x) converts (Division and modulo; Exact rationals)",
     "assign-target": "assign targets a return or a local in scope (Gate 2)",
     "assign-type": "assign's expression type must match the target's declared type",
@@ -306,7 +314,8 @@ LIB_OPS = frozenset({"min", "max", "abs", "sum", "gcd", "pow", "isqrt", "rev",  
                      "sort",                                                        # SPEC.md "Sorting (v1)" (2026-10-06)
                      "any", "all", "toset",                                         # SPEC.md "Reductions (v1)" (2026-10-06)
                      "isint", "toint",                                              # SPEC.md "The string library (v2)" (2026-10-06)
-                     "fold", "sort_by", "max_by", "min_by"})                        # SPEC.md "Higher-order calls (v1)"
+                     "fold", "sort_by", "max_by", "min_by",                         # SPEC.md "Higher-order calls (v1)"
+                     "float", "sqrt"})                                              # SPEC.md "Floats (v1)" (2026-10-07)
 HOF_OPS = frozenset({"fold", "sort_by", "max_by", "min_by"})
 V1_OPS = (V0_OPS | {"len", "at", "div", "mod", "update", "fill", "seq", "slice"}
          | {"pair", "fst", "snd", "tuple", "proj"} | {"toreal", "floor", "ceil"} | STRLIB_OPS | SET_OPS | LIB_OPS
@@ -317,11 +326,13 @@ UNARY = {"neg", "not", "len", "fst", "snd", "tostr",
          "lower", "upper", "isdigit", "isalpha", "isupper",
          "islower", "card", "toreal", "floor", "ceil", "abs", "sum", "isqrt", "rev", "sort", "keys",
          "any", "all", "toset",
-         "capitalize", "swapcase", "title", "isspace", "isalnum", "splitlines", "isint", "toint"}
+         "capitalize", "swapcase", "title", "isspace", "isalnum", "splitlines", "isint", "toint",
+         "float", "sqrt"}
 NARY = {"and", "or"}
 BOOLR = {"==", "!=", "<", "<=", ">", ">=", "and", "or", "not", "implies"}
 INTR = {"+", "-", "*", "neg", "len"}
-BASE_TYPES = ("int", "bool", "seq", "real")     # the scalars and the string; "real": SPEC.md "Exact rationals (v1)" (2026-10-06)
+# the scalars and the string; "real": SPEC.md "Exact rationals (v1)" (2026-10-06); "float": "Floats (v1)" (2026-10-07)
+BASE_TYPES = ("int", "bool", "seq", "real", "float")
 # SPEC.md "Seq-valued spec_funs (v1)" (2026-09-27) listed three result types; since SPEC.md "Compositional types
 # (v1)" (2026-10-06) a spec_fun takes and returns any type, so `_valid_type` decides and the list is gone.
 
@@ -351,6 +362,8 @@ def _valid_type(t, dtypes=frozenset()) -> bool:
     else (an unknown string, a malformed dict), here rather than as a KeyError three checks later."""
     if t in BASE_TYPES or t == "set":
         return True
+    if t == "array":
+        return True        # SPEC.md "Heap (v1)": where it may appear is `array-param-only`'s question, asked once
     if not (isinstance(t, dict) and len(t) == 1):
         return False
     (kind, inner), = t.items()
@@ -498,6 +511,8 @@ def _ty(e, env, funs, dtypes, ver, errs, bound, expect=None):
         if t is None:
             _e(errs, e, f"unbound var {e['var']}", "unbound")
         return t
+    if "old" in e:
+        return _ty(e["old"], env, funs, dtypes, ver, errs, bound, expect)   # SPEC.md "Heap (v1)": where is old-position
     if ("ite" in e or "forall" in e or "exists" in e or "call" in e
             or "ctor" in e or "match" in e):
         if ver == 0:
@@ -864,12 +879,12 @@ def _ty(e, env, funs, dtypes, ver, errs, bound, expect=None):
         return _set_of(_elem(ts[0]))
     if op in ("min", "max"):
         # SPEC.md "The library (v1)" (2026-10-06): two ints or two reals, never mixed
-        if not (ts[0] == ts[1] and ts[0] in ("int", "real")):
-            _e(errs, e, f"{op} wants two ints or two reals, found {ts!r}", "lib-types")
-            return ts[0] if ts[0] in ("int", "real") else "int"
+        if not (ts[0] == ts[1] and ts[0] in ("int", "real", "float")):
+            _e(errs, e, f"{op} wants two ints, two reals or two floats, found {ts!r}", "lib-types")
+            return ts[0] if ts[0] in ("int", "real", "float") else "int"
         return ts[0]
     if op == "abs":
-        if ts[0] not in ("int", "real"):
+        if ts[0] not in ("int", "real", "float"):
             _e(errs, e, f"abs wants an int or a real, found {ts[0]!r}", "lib-types")
             return "int"
         return ts[0]
@@ -1040,18 +1055,31 @@ def _ty(e, env, funs, dtypes, ver, errs, bound, expect=None):
         # division (the op stays "div"; the type decides), `%` is int-only.
         if ts and all(t == "real" for t in ts) and op != "mod":
             return "real"
+        if ts and all(t == "float" for t in ts) and op != "mod":
+            return "float"                 # SPEC.md "Floats (v1)": IEEE binary64, rounded to nearest even
         if any(t != "int" for t in ts):
             _e(errs, e, f"{op} wants all ints or all reals (not {ts!r}); write real(x) to convert", "arith-int")
             return "real" if "real" in ts and op != "mod" else "int"
         return "int"
+    if op == "float":
+        if ts[0] not in ("int", "real"):
+            _e(errs, e, f"float wants an int or a real, found {ts[0]!r}", "float-conv")
+        return "float"
+    if op == "sqrt":
+        if ts[0] != "float":
+            _e(errs, e, f"sqrt wants a float, found {ts[0]!r}", "float-conv")
+        return "float"
+    if op == "toreal" and ts[0] == "float":
+        return "real"                      # SPEC.md "Floats (v1)": a float's exact value
     if op in ("toreal", "floor", "ceil"):
         want = "int" if op == "toreal" else "real"
         if ts[0] != want:
             _e(errs, e, f"{op} wants a {want}, found {ts[0]!r}", "real-conv")
         return "real" if op == "toreal" else "int"
     if op in ("<", "<=", ">", ">="):
-        if not (all(t == "int" for t in ts) or all(t == "real" for t in ts)):
-            _e(errs, e, f"{op} compares two ints or two reals (SPEC.md gate 1; Exact rationals)", "cmp-int")
+        if not (all(t == "int" for t in ts) or all(t == "real" for t in ts) or all(t == "float" for t in ts)):
+            _e(errs, e, f"{op} compares two ints, two reals or two floats (SPEC.md gate 1; Exact rationals; Floats)",
+               "cmp-int")
         return "bool"
     if op in ("==", "!="):
         # Two seqs compare extensionally since SPEC.md "Sequences as
@@ -1197,7 +1225,9 @@ def check_wf(task: dict, positions: dict | None = None,
     if ver == 0 and (funs or "decreases" in task or "gate" in task
                      or "methods" in task or "lemmas" in task):
         _e(errs, task, "v1 field in a v0 task", "v0-frozen")
-    penv = {p["name"]: p["type"] for p in task["params"]}
+    # SPEC.md "Heap (v1)" (PREDICT T46): an array parameter reads as a seq, its contents; writes are `aset`
+    penv = {p["name"]: ("seq" if p["type"] == "array" else p["type"]) for p in task["params"]}
+    _check_heap(task, errs)
     # v0 is int only (SPEC.md v0; `bool` and `seq` are v1 types), for the return as for the parameters: a `t 0`
     # task returning bool passed this check and the Verus and Rocq v0 lowerings emitted it as int (2026-10-03)
     if ver == 0 and any(t != "int" for t in list(penv.values()) + [r["type"] for r in task["returns"]]):
@@ -1280,7 +1310,10 @@ def check_wf(task: dict, positions: dict | None = None,
                                "result": ret["type"], "body": None,
                                "decreases": None}
     _check_call_positions(task["body"], all_methods, errs)
-    _check_stmts(task["body"], dict(eenv), bfuns, dtypes, ver, errs, {ret["name"]},
+    benv = dict(eenv)
+    if any(p["type"] == "array" for p in task["params"]):
+        benv[HEAP_KEY] = ({p["name"] for p in task["params"] if p["type"] == "array"}, set(task.get("modifies", [])))
+    _check_stmts(task["body"], benv, bfuns, dtypes, ver, errs, {ret["name"]},
                  lemmas=lsigs)
     _check_returns(task["body"], ret["name"], errs)
     return errs
@@ -1541,10 +1574,200 @@ def _returns_somewhere(body: list) -> bool:
     return False
 
 
+HEAP_KEY = "\x00heap"     # SPEC.md "Heap (v1)": (array parameters, modifies), carried in a body's env
+
+
+def _has_array(t) -> bool:
+    if t == "array":
+        return True
+    if isinstance(t, dict):
+        return any(_has_array(v) for v in t.values())
+    if isinstance(t, list):
+        return any(_has_array(v) for v in t)
+    return False
+
+
+def _olds(x, inside=False):
+    """(old nodes, an old nested inside another) in x."""
+    n, nested = 0, False
+    if isinstance(x, dict):
+        if "old" in x:
+            n, nested = 1, inside
+            m, nn = _olds(x["old"], True)
+            return n + m, nested or nn
+        for v in x.values():
+            m, nn = _olds(v, inside)
+            n, nested = n + m, nested or nn
+    elif isinstance(x, list):
+        for v in x:
+            m, nn = _olds(v, inside)
+            n, nested = n + m, nested or nn
+    return n, nested
+
+
+def _par_reads(x, written: set, i: str, ok_at: bool = False) -> bool:
+    """Whether x reads an array the loop writes anywhere but at the iteration's own element (or its length)."""
+    if isinstance(x, list):
+        return any(_par_reads(v, written, i) for v in x)
+    if not isinstance(x, dict):
+        return False
+    if "var" in x and isinstance(x["var"], str):
+        return x["var"] in written and not ok_at
+    if x.get("op") == "at" and len(x.get("args", [])) == 2 and isinstance(x["args"][0], dict) \
+            and x["args"][0].get("var") in written:
+        return x["args"][1] != {"var": i} or _par_reads(x["args"][1], written, i)
+    if x.get("op") == "len" and len(x.get("args", [])) == 1 and isinstance(x["args"][0], dict) \
+            and x["args"][0].get("var") in written:
+        return False
+    return any(_par_reads(v, written, i) for v in x.values())
+
+
+def _check_par(s, env, funs, dtypes, ver, errs, lemmas, in_lemma) -> None:
+    """SPEC.md "Concurrency (v1)" (PREDICT T47): the bounds, the invariants and the body typed as a `for`'s, and the
+    race-freedom rules that make every interleaving the sequential one."""
+    w = s["par"]
+    i = w["var"]
+    if i in env:
+        _e(errs, s, f"parallel for: {i} shadows a name in scope", "local-shadow")
+    for b in (w["lo"], w["hi"]):
+        if _ty(b, env, funs, dtypes, ver, errs, set()) != "int":
+            _e(errs, s, "parallel for: a bound is not int", "par-race")
+    inner = dict(env)
+    inner[i] = "int"
+    for inv in w.get("invariants", []):
+        if _ty(inv, inner, funs, dtypes, ver, errs, set()) != "bool":
+            _e(errs, s, "loop invariant is not bool", "loop-invariant-bool")
+
+    def walk(stmts, depth: int, declared: set):
+        for st in stmts or []:
+            if not isinstance(st, dict):
+                continue
+            if "return" in st:
+                _e(errs, st, "return inside a parallel loop", "par-exit")
+            elif ("break" in st or "continue" in st) and depth == 0:
+                _e(errs, st, "break or continue of a parallel loop", "par-exit")
+            elif "par" in st:
+                _e(errs, st, "a parallel loop inside a parallel loop", "par-race")
+            elif "aset" in st:
+                if st["aset"][1] != {"var": i}:
+                    _e(errs, st, f"{st['aset'][0]}[...] := in a parallel loop writes another iteration's element; "
+                                 f"only {st['aset'][0]}[{i}] is this iteration's", "par-race")
+            elif "assign" in st:
+                if st["assign"][0] not in declared:
+                    _e(errs, st, f"parallel loop assigns {st['assign'][0]}, which every iteration shares", "par-race")
+            elif "var" in st and isinstance(st["var"], dict):
+                declared.add(st["var"]["name"])
+            elif "if" in st:
+                walk(st["if"]["then"], depth, set(declared))
+                walk(st["if"].get("else"), depth, set(declared))
+            elif "while" in st:
+                walk(st["while"]["body"], depth + 1, set(declared))
+    walk(w["body"], 0, set())
+    written = set()
+
+    def writes(stmts):
+        for st in stmts or []:
+            if isinstance(st, dict):
+                if "aset" in st:
+                    written.add(st["aset"][0])
+                for v in st.values():
+                    if isinstance(v, dict):
+                        writes(v.get("body") or [])
+                        writes(v.get("then") or [])
+                        writes(v.get("else") or [])
+    writes(w["body"])
+    if _par_reads(w["body"], written, i) or _par_reads([w["lo"], w["hi"]], written, i):
+        _e(errs, s, "a parallel loop reads an array it writes at another iteration's element", "par-race")
+    # every outer name passes `assign-target` here: assigning one is `par-race`'s error, already reported above
+    _check_stmts(w["body"], inner, funs, dtypes, ver, errs, {n for n in env if isinstance(n, str)},
+                 lemmas, in_lemma, 1)
+
+
+def _check_heap(task, errs) -> None:
+    """SPEC.md "Heap (v1)" (PREDICT T46): where an array and `old` may appear, and what `modifies` names."""
+    for p in task["params"]:
+        if p["type"] != "array" and _has_array(p["type"]):
+            _e(errs, p, f"param {p['name']}: an array is a parameter's whole type", "array-param-only")
+    places = [("return", r["type"], r) for r in task["returns"]]
+    for f in task.get("spec_funs", []):
+        places += [("spec_fun parameter", q["type"], q) for q in f["params"]] + [("spec_fun result", f["result"], f)]
+    for k in ("methods", "lemmas"):
+        for m in task.get(k, []):
+            places += [(k[:-1] + " parameter", q["type"], q) for q in m.get("params", [])]
+            places += [(k[:-1] + " return", q["type"], q) for q in m.get("returns", [])]
+    for d in task.get("datatypes", []):
+        for c in d["ctors"]:
+            places += [("field", f["type"], d) for f in c.get("fields", [])]
+
+    def locals_(x):
+        if isinstance(x, dict):
+            if "var" in x and isinstance(x["var"], dict):
+                places.append(("local", x["var"].get("type"), x))
+            for v in x.values():
+                locals_(v)
+        elif isinstance(x, list):
+            for v in x:
+                locals_(v)
+    locals_([task.get("body", []), task.get("methods", []), task.get("lemmas", [])])
+    for what, t, node in places:
+        if _has_array(t):
+            _e(errs, node, f"an array as a {what}: an array is a task parameter only", "array-param-only")
+    arrays = {p["name"] for p in task["params"] if p["type"] == "array"}
+    mods = task.get("modifies")
+    if mods is not None:
+        seen = set()
+        for n in mods:
+            if n not in arrays or n in seen:
+                _e(errs, task, f"modifies {n}: not an array parameter, or named twice", "modifies-array")
+            seen.add(n)
+    # old: in an ensures and a loop invariant, never nested
+    bad = _olds([task.get("requires", []), task.get("spec_funs", []), task.get("methods", []),
+                 task.get("lemmas", []), task.get("decreases")])[0]
+
+    def body_olds(stmts) -> int:
+        k = 0
+        for st in stmts or []:
+            if not isinstance(st, dict):
+                continue
+            if "while" in st and isinstance(st["while"], dict):
+                w = st["while"]
+                k += _olds([w.get("cond"), w.get("decreases")])[0] + body_olds(w.get("body"))
+            elif "if" in st and isinstance(st["if"], dict):
+                f = st["if"]
+                k += _olds(f.get("cond"))[0] + body_olds(f.get("then")) + body_olds(f.get("else"))
+            elif "par" in st and isinstance(st["par"], dict):
+                f = st["par"]                  # SPEC.md "Concurrency (v1)": its invariants may say old(...)
+                k += _olds([f.get("lo"), f.get("hi")])[0] + body_olds(f.get("body"))
+            else:
+                k += _olds(st)[0]
+        return k
+    if bad or body_olds(task.get("body")):
+        _e(errs, task, "old(...) outside an ensures or a loop invariant", "old-position")
+    if _olds([task.get("ensures", []), task.get("body", [])])[1]:
+        _e(errs, task, "old(...) nested inside another old", "old-position")
+
+
 def _check_stmts(body, env, funs, dtypes, ver, errs, assignable, lemmas=None,
                  in_lemma=False, loop_depth=0):
     lemmas = {} if lemmas is None else lemmas
     for s in body:
+        if "aset" in s:
+            # SPEC.md "Heap (v1)" (PREDICT T46)
+            n, i, e = s["aset"]
+            arrays, mods = env.get(HEAP_KEY, (set(), set()))
+            if n not in arrays or n not in mods:
+                _e(errs, s, f"{n}[...] := writes {n}, not an array parameter named in modifies", "aset-modifies")
+            if _ty(i, env, funs, dtypes, ver, errs, set()) != "int":
+                _e(errs, s, f"{n}[...] := has an index that is not int", "aset-modifies")
+            if _ty(e, env, funs, dtypes, ver, errs, set(), "int") != "int":
+                _e(errs, s, f"{n}[...] := writes a value that is not int", "aset-modifies")
+            continue
+        if "par" in s:
+            _check_par(s, env, funs, dtypes, ver, errs, lemmas, in_lemma)
+            continue
+        if "assign" in s and s["assign"][0] in env.get(HEAP_KEY, (set(), set()))[0]:
+            _e(errs, s, f"assign to the array {s['assign'][0]} whole", "array-assign")
+            continue
         if "assign" in s:
             n, e = s["assign"]
             if n not in assignable:
@@ -1561,7 +1784,7 @@ def _check_stmts(body, env, funs, dtypes, ver, errs, assignable, lemmas=None,
             if not _valid_type(d["type"], dtypes):
                 _e(errs, s, f"local {d['name']} has an invalid type: "
                        f"{d['type']!r}", "valid-type")
-            if _ty(d["init"], env, funs, dtypes, ver, errs, set(), d["type"]) != d["type"]:
+            if _ty(d["init"], env, funs, dtypes, ver, errs, set(), d["type"]) != d["type"] and not _has_array(d["type"]):
                 _e(errs, s, f"local {d['name']} init type mismatch", "assign-type")
             env[d["name"]] = d["type"]
             assignable.add(d["name"])

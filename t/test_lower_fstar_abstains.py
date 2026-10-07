@@ -362,13 +362,8 @@ class CommittedTasksUnaffectedTest(unittest.TestCase):
         for path in sorted(glob.glob(os.path.join(here, "tasks", "*.t"))):
             task = tasks_io.load_task(path)
             if task.get("datatypes"):
-                # SPEC.md "Datatypes (v1)" (2026-09-27): fstar abstains by
-                # name on a datatype-carrying task (lf.lower's own guard,
-                # tested directly in test_lower_fstar_refusals.py), so
-                # `tasks/color_code.t` has nothing for this quantifier/loop
-                # -shape check below to inspect.
-                with self.assertRaises(NotImplementedError):
-                    lf.lower(task, task["body"])
+                # F* lowers datatypes since PREDICT T35 (test_fstar_datatypes.py checks them); this shape check is
+                # about the tasks before them
                 continue
             try:
                 out = lf.lower(task, task["body"])

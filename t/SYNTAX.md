@@ -618,6 +618,53 @@ parameters scope over its body only and may not shadow a name in scope;
 a lambda in any other position is refused by the checker
 (`lambda-position`), and there is no function type.
 
+### Heap (v1): arrays by reference
+
+```json
+{"params": [{"name": "a", "type": "array"}], "modifies": ["a"]}
+{"aset": ["a", {"var": "i"}, {"var": "x"}]}
+{"old": {"var": "a"}}
+```
+written: `task f(a: array) returns (r: int) modifies a` · `a[i] := x;` · `old(a)`
+
+Since 2026-10-07 (SPEC.md "Heap (v1)"), a task parameter may be an
+`array`: a seq of ints passed by reference. Read as a value it is its
+current contents (`len(a)`, `a[i]`, `a == rev(old(a))`). It is written one
+element at a time by `a[i] := e;`, and only if the header names it in
+`modifies`. `old(e)` is e in the task's entry state, written in an `ensures`
+or a loop invariant. Two array parameters are never the same array. An
+array is nothing but a task parameter (`array-param-only`).
+
+### Concurrency (v1): parallel loops
+
+```json
+{"par": {"var": "i", "lo": {"int": 0}, "hi": {"op": "len", "args": [{"var": "a"}]}, "invariants": [], "body": [...]}}
+```
+written: `parallel for i in [0, len(a)) invariant ... { a[i] := a[i] * k; }`
+
+Since 2026-10-07 (SPEC.md "Concurrency (v1)"), the iterations of a
+`parallel for` run concurrently. Its body writes an array only at its own
+element `a[i]`, reads a written array only there, assigns only its own
+locals and has no `return`, `break` or `continue` (`par-race`,
+`par-exit`), so every schedule computes what the sequential loop computes,
+and the kernels verify that loop.
+
+### Floats (v1): IEEE-754 binary64
+
+```json
+{"params": [{"name": "x", "type": "float"}]}
+{"op": "float", "args": [{"rat": [3, 2]}]}
+{"op": "sqrt", "args": [{"var": "x"}]}
+{"op": "toreal", "args": [{"var": "x"}]}
+```
+written: `x: float` · `float(1.5)` · `sqrt(x)` · `real(x)`
+
+Since 2026-10-07 (SPEC.md "Floats (v1)"), `float` is the IEEE double.
+`+ - * /` on two floats round to nearest (ties to even) and have a value
+only when it is finite. `float(x)` rounds an int or a real, `real(f)` is
+a float's exact value (for stating error bounds) and `sqrt` is correctly
+rounded. A float never mixes with an int or a real (`float-conv`).
+
 ### Nested sequences (v1)
 
 ```json
@@ -896,13 +943,14 @@ own module) to reuse the same positions once it exists.
 ## What does not exist (on purpose)
 
 No unbounded quantifiers. No
-mutation of sequences in place (a seq is a value, updated functionally), no
-arrays, no heap, no aliasing. No mutual recursion, no function values
+mutation of sequences in place (a seq is a value, updated functionally); the
+one heap is an array parameter written in place (SPEC.md "Heap (v1)"), with
+no allocation and no aliasing. No mutual recursion, no function values
 (since 2026-10-06 a lambda is only the function argument of `fold`,
 `sort_by`, `max_by` and `min_by`, SPEC.md "Higher-order calls"). A character and a string are sugar over `int` and `seq`, not
-their own types. No floating point: `real` is the exact rational, with no
-rounding, no `round`, no `sqrt` (a root is specified as `r * r == x`), and a
-problem whose answer depends on IEEE rounding is not posed in t. Since 2026-10-06 a pair, a tuple, a seq and a set hold
+their own types. `real` is the exact rational, with no rounding; since 2026-10-07 `float`
+is the IEEE double beside it (SPEC.md "Floats (v1)"), and `real(f)` measures
+a float against exact arithmetic. Since 2026-10-06 a pair, a tuple, a seq and a set hold
 any types at any depth ("Compositional types"); what a type still cannot
 be is a function, a reference or a map (maps are the next landing,
 SPEC.md). One return value (a tuple return carries several).

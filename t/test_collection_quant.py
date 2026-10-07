@@ -97,7 +97,8 @@ def test_set_range_in_dafny_and_verus():
     ok("forall|x: int| #![trigger s.contains(x)] s.contains(x) ==> (x > (0int))" in text(lower_verus, "all_pos_set"),
        "Verus's contains, as range and trigger")
     task = load("all_pos_set")
-    for mod in (lower_lean, lower_rocq, lower_fstar, lower_spark, lower_framac):
+    # Lean states set ranges since PREDICT T30 (test_lean_sets.py); the other four still refuse by name
+    for mod in (lower_rocq, lower_fstar, lower_spark, lower_framac):
         try:
             mod.lower(task, task["body"])
             ok(False, f"{mod.__name__} refuses a set range")

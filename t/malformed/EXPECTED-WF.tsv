@@ -78,3 +78,11 @@ wf-field-unknown.t	4	9	field-unknown
 wf-field-type-clash.t	4	9	field-type-clash
 wf-datatype-base.t	1	1	datatype-base
 wf-quant-range.t	3	8	quant-range
+wf-array-param-only.t	5	7	array-param-only
+wf-array-assign.t	6	3	array-assign
+wf-aset-modifies.t	6	3	aset-modifies
+wf-modifies-array.t	1	1	modifies-array
+wf-old-position.t	1	1	old-position
+wf-par-race.t	7	5	par-race
+wf-par-exit.t	8	5	par-exit
+wf-float-conv.t	5	23	float-conv

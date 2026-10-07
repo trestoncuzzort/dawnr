@@ -585,6 +585,15 @@ class Parser:
             # only ever accepts a KEYWORD, so the name is read here first.
             name = self.eat("id", production="Type").text
             return self.mark(start, {"datatype": name})
+        if self.tok.kind == "id" and self.tok.text == "float" and "float" not in self.datatypes:
+            # SPEC.md "Floats (v1)" (2026-10-07, PREDICT T48): IEEE-754 binary64. Contextual, as `array` is
+            self.eat("id", production="Type")
+            return "float"
+        if self.tok.kind == "id" and self.tok.text == "array" and "array" not in self.datatypes:
+            # SPEC.md "Heap (v1)" (2026-10-07, PREDICT T46): a seq of ints passed by reference; check_wf keeps it to
+            # task parameters (`array-param-only`). Contextual, so an existing name `array` still reads as a name
+            self.eat("id", production="Type")
+            return "array"
         if self.at("kw", "map"):
             # SPEC.md "Maps (v1)" (2026-10-06): map<K, V>, both written, no shorthand
             self.eat("kw")
@@ -684,9 +693,19 @@ class Parser:
         task["returns"] = [self.mark(rtok, {"name": rname, "type": rtype})]
 
         requires, ensures, dec = [], [], None
-        while self.tok.kind == "kw" and self.tok.text in (
-                "requires", "ensures", "decreases"):
+        modifies = None
+        while (self.tok.kind == "kw" and self.tok.text in ("requires", "ensures", "decreases")) or (
+                self.tok.kind == "id" and self.tok.text == "modifies"):
             self.production = "Task"
+            if self.tok.kind == "id":
+                # SPEC.md "Heap (v1)" (PREDICT T46): `modifies a, b`, the arrays the task may write (contextual)
+                mtok = self.eat("id")
+                if modifies is not None:
+                    self.err(mtok, "a task has at most one modifies clause")
+                modifies = [self.name()]
+                while self.opt("sym", ","):
+                    modifies.append(self.name())
+                continue
             wtok = self.eat("kw")
             what = wtok.text
             e = self.expr()
@@ -701,6 +720,8 @@ class Parser:
                 dec = e
         task["requires"] = requires
         task["ensures"] = ensures
+        if modifies is not None:
+            task["modifies"] = modifies
 
         funs, helpers, methods, lemmas = [], [], [], []
         while (self.at("kw", "spec") or self.at_inline_fun() or self.at_method()
@@ -943,6 +964,38 @@ class Parser:
             self.eat("sym", ")")
             self.opt("sym", ";")
             return self.mark(t, {"lemma": {"name": name, "args": args}})
+        if (t.kind == "id" and t.text == "parallel" and self.i + 1 < len(self.toks)
+                and self.toks[self.i + 1].kind == "kw" and self.toks[self.i + 1].text == "for"):
+            # SPEC.md "Concurrency (v1)" (PREDICT T47): `parallel for i in [lo, hi) invariant ... { ... }`, contextual
+            self.eat("id")
+            self.eat("kw", "for")
+            var = self.name("Stmt")
+            self.eat("kw", "in")
+            self.eat("sym", "[", "Stmt")
+            lo = self.expr()
+            self.production = "Stmt"
+            self.eat("sym", ",", "Stmt")
+            hi = self.expr()
+            self.production = "Stmt"
+            self.eat("sym", ")", "Stmt")
+            invs = []
+            while self.opt("kw", "invariant"):
+                invs.append(self.expr())
+                self.production = "Stmt"
+            body = self.block()
+            return self.mark(t, {"par": {"var": var, "lo": lo, "hi": hi, "invariants": invs, "body": body}})
+        if (t.kind == "id" and self.i + 1 < len(self.toks) and self.toks[self.i + 1].kind == "sym"
+                and self.toks[self.i + 1].text == "["):
+            # SPEC.md "Heap (v1)" (PREDICT T46): `a[i] := e;`, one element of an array written in place
+            target = self.name()
+            self.eat("sym", "[", "Stmt")
+            idx = self.expr()
+            self.production = "Stmt"
+            self.eat("sym", "]", "Stmt")
+            self.eat("sym", ":=", "Stmt")
+            e = self.expr()
+            self.opt("sym", ";")
+            return self.mark(t, {"aset": [target, idx, e]})
         if t.kind == "id":
             target = self.name()
             self.eat("sym", ":=", "Stmt")
@@ -1283,6 +1336,9 @@ class Parser:
                 elif "while" in st:
                     st["while"]["body"] = walk(st["while"]["body"], dict(scope))
                     out.append(st)
+                elif "par" in st:
+                    st["par"]["body"] = walk(st["par"]["body"], {**scope, st["par"]["var"]: "int"})
+                    out.append(st)
                 else:
                     out.append(st)
             return out
@@ -1611,6 +1667,15 @@ class Parser:
             return self.mark(t, {"op": "seq",
                                  "args": [{"int": cp}
                                           for cp in self.eat("str").text]})
+        if (t.kind == "id" and t.text == "old" and self.i + 1 < len(self.toks)
+                and self.toks[self.i + 1].kind == "sym" and self.toks[self.i + 1].text == "("):
+            # SPEC.md "Heap (v1)" (PREDICT T46): old(e), e in the task's entry state (contextual)
+            self.eat("id")
+            self.eat("sym", "(")
+            inner = self.expr()
+            self.production = "Expr"
+            self.eat("sym", ")")
+            return self.mark(t, {"old": inner})
         if self.at("kw", "true"):
             self.eat("kw")
             return self.mark(t, {"bool": True})
@@ -1826,6 +1891,8 @@ def _assigned_names(stmts: list) -> set:
             out |= _assigned_names(st["while"]["body"])
         elif "for" in st:
             out |= _assigned_names(st["for"]["body"])
+        elif "par" in st:
+            out |= _assigned_names(st["par"]["body"])
     return out
 
 
@@ -1840,6 +1907,8 @@ def _declared_names(stmts: list) -> set:
             out |= _declared_names(st["while"]["body"])
         elif "for" in st:
             out |= set(st["for"]["names"]) | _declared_names(st["for"]["body"])
+        elif "par" in st:
+            out |= {st["par"]["var"]} | _declared_names(st["par"]["body"])
     return out
 
 
@@ -1858,7 +1927,8 @@ LIB_NAMES = frozenset({"min", "max", "abs", "sum", "gcd", "pow", "isqrt", "rev",
                        "keys", "remove",                                                    # SPEC.md "Maps (v1)" (2026-10-06)
                        "any", "all", "toset",                                               # SPEC.md "Reductions (v1)" (2026-10-06)
                        "isint", "toint",                                                    # SPEC.md "The string library (v2)" (2026-10-06)
-                       "fold", "sort_by", "max_by", "min_by"})                              # SPEC.md "Higher-order calls (v1)"
+                       "fold", "sort_by", "max_by", "min_by",                               # SPEC.md "Higher-order calls (v1)"
+                       "float", "sqrt"})                                                    # SPEC.md "Floats (v1)" (2026-10-07)
 
 
 def _resolve_library(task: dict) -> None:
@@ -2077,6 +2147,8 @@ def pexpr(e, floor: int = P_QUANT) -> str:
         # A negative literal binds like a unary minus for the reader; it is
         # one token for the parser.
         return _wrap(str(n), P_UNARY if n < 0 else P_POSTFIX, floor)
+    if kind == "old":
+        return "old(%s)" % pexpr(e["old"])           # SPEC.md "Heap (v1)": a call-like atom, so no floor
     if kind == "lam":
         # SPEC.md "Higher-order calls (v1)" (2026-10-06): `x => e`, `(a, x) => e`; only ever an argument, so no floor
         lv = e["lam"]["vars"]
@@ -2351,6 +2423,8 @@ def _print_type(t) -> str:
         if kind == "datatype" and isinstance(inner, str):
             return inner
         raise SurfaceError("not a t type: %r" % (t,))
+    if t in ("array", "float"):
+        return t                       # SPEC.md "Heap (v1)": a parameter's mode; "Floats (v1)": binary64
     if t not in VAL_TYPES:
         raise SurfaceError("not a t type: %r" % (t,))
     return t
@@ -2377,6 +2451,10 @@ def pstmts(body: list, ind: str) -> list:
             out.append("%s%s(%s);" % (ind, _ident(c["name"]),
                                       ", ".join(pexpr(a) for a in c["args"])))
             continue
+        if kind == "aset":
+            tgt, idx, val = s["aset"]          # SPEC.md "Heap (v1)"
+            out.append("%s%s[%s] := %s;" % (ind, _ident(tgt), pexpr(idx), pexpr(val)))
+            continue
         if kind == "assign":
             tgt, val = s["assign"]
             out.append("%s%s := %s;" % (ind, _ident(tgt), pexpr(val)))
@@ -2392,6 +2470,14 @@ def pstmts(body: list, ind: str) -> list:
             if f["else"]:
                 out.append("%s} else {" % ind)
                 out += pstmts(f["else"], ind + "  ")
+            out.append("%s}" % ind)
+        elif kind == "par":
+            w = s["par"]                       # SPEC.md "Concurrency (v1)"
+            out.append("%sparallel for %s in [%s, %s)" % (ind, _ident(w["var"]), pexpr(w["lo"]), pexpr(w["hi"])))
+            for inv in w["invariants"]:
+                out.append("%s  invariant %s" % (ind, pexpr(inv)))
+            out.append("%s{" % ind)
+            out += pstmts(w["body"], ind + "  ")
             out.append("%s}" % ind)
         elif kind == "while":
             w = s["while"]
@@ -2416,7 +2502,7 @@ def print_task(task: dict) -> str:
             raise SurfaceError("task is missing required field %r" % k)
     unknown = set(t) - {"t", "name", "params", "returns", "requires",
                         "ensures", "gate", "spec_funs", "methods",
-                        "lemmas", "decreases", "body", "datatypes"}
+                        "lemmas", "decreases", "body", "datatypes", "modifies"}
     if unknown:
         raise SurfaceError("task carries fields t does not define: %s"
                            % " ".join(sorted(unknown)))
@@ -2441,6 +2527,8 @@ def print_task(task: dict) -> str:
     lines.append("task %s(%s) returns (%s: %s)"
                  % (_ident(t["name"]), ps, _ident(r["name"]),
                     _print_type(r["type"])))
+    if "modifies" in t:
+        lines.append("  modifies %s" % ", ".join(_ident(n) for n in t["modifies"]))   # SPEC.md "Heap (v1)"
     for e in t["requires"]:
         lines.append("  requires %s" % pexpr(e))
     for e in t["ensures"]:

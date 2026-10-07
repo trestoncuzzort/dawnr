@@ -207,6 +207,9 @@ def _stmts(body: list, scope: list, prefix: tuple = ()):
             yield from _stmts(s["if"]["else"], sc, p + ("if", "else"))
         elif "while" in s:
             yield from _stmts(s["while"]["body"], sc, p + ("while", "body"))
+        elif "par" in s:
+            # SPEC.md "Concurrency (v1)": the body, with the iteration's index in scope
+            yield from _stmts(s["par"]["body"], sc + [(s["par"]["var"], "int")], p + ("par", "body"))
 
 
 def _exprs(body: list, scope: list):
@@ -218,6 +221,10 @@ def _exprs(body: list, scope: list):
     for p, s, sc in _stmts(body, scope):
         if "assign" in s:
             yield p + ("assign", 1), s["assign"][1], sc, "rhs"
+        elif "aset" in s:
+            # SPEC.md "Heap (v1)": a write's index and value break like any right-hand side
+            yield p + ("aset", 1), s["aset"][1], sc, "rhs"
+            yield p + ("aset", 2), s["aset"][2], sc, "rhs"
         elif "return" in s:
             yield p + ("return", 1), s["return"][1], sc, "rhs"
         elif "var" in s:
@@ -927,9 +934,13 @@ def real_witness(task: dict) -> dict | None:
     than collapsing both cases into one "value" witness."""
     _set_ctx(task)
     ref = interp.Reference(task)
-    for env0, got in ref.points:
+    for k, (env0, got) in enumerate(ref.points):
         env = dict(env0)
         env[ref.ret] = got
+        if ref.arrays:
+            # SPEC.md "Heap (v1)": the ensures reads the arrays' final contents, and old(...) their entry ones
+            env[interp.OLD_KEY] = {a: env0[a] for a in ref.arrays}
+            env.update(ref.heaps[k])
         # ROADMAP 13.4, framac-measure, 2026-09-11: check_measures=True
         # only on THIS scan's own St (interp.Reference above built `got`
         # with a default, unchecked St, so a bad decreases never keeps a
@@ -976,6 +987,8 @@ def real_witness(task: dict) -> dict | None:
             continue          # a bad measure IN `requires` decides nothing
         env = dict(env0)
         env[ret] = None
+        if ref.arrays:
+            env[interp.OLD_KEY] = {a: env0[a] for a in ref.arrays}   # SPEC.md "Heap (v1)"
         try:
             interp.exec_body(task["body"], env, funs, st)
         except interp.MeasureViolation as mv:

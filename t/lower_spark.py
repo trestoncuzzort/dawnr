@@ -1502,8 +1502,24 @@ TYPE = {"int": "Big_Integer", "bool": "Boolean", "seq": "Seq",
         # SPEC.md "Exact rationals (v1)" (2026-10-06): Ada 2022's Big_Real (A.5.7), an exact rational with
         # Numerator/Denominator in lowest terms; gnatprove maps it to the reals (measured on this desktop:
         # literals as quotients, "/" with its Pre, To_Big_Real, the comparisons)
-        "real": "Big_Real"}
+        "real": "Big_Real",
+        # SPEC.md "Floats (v1)" (PREDICT T49): GNAT's Long_Float, IEEE binary64 with ties-to-even rounding, its
+        # infinities and NaN invalid values that gnatprove's overflow checks rule out (the SPARK UG's "Semantics
+        # of Floating Point Operations"), which is t's definedness for a float operation exactly
+        "float": "Long_Float"}
 _RAT_TEXT = __import__("re").compile(r"^-?\d+/\d+$")   # interp._j's rendering of a real witness value
+
+
+def _float_lit(v: float) -> str:
+    """SPEC.md "Floats (v1)": a double as an Ada real literal of its EXACT decimal value (every double has one), so
+    the literal names that double with no rounding left to the compiler; Ada wants a digit on both sides of the
+    point and takes an exponent."""
+    from decimal import Decimal
+    sign, digits, exp = Decimal(v).as_tuple()
+    ds = "".join(str(d) for d in digits) or "0"
+    mant = ds[0] + "." + (ds[1:] or "0")
+    e10 = exp + len(ds) - 1
+    return f"Long_Float'({'-' if sign else ''}{mant}E{e10})"
 
 
 def _real_lit(n: int, d: int) -> str:
@@ -2512,6 +2528,127 @@ def _is_nested_seq(ty) -> bool:
     return isinstance(ty, dict) and "seq" in ty
 
 
+# DATATYPES in SPARK (PREDICT T36, 2026-10-07; SPEC.md "Datatypes (v1)", "(v2): fields"). A t datatype is an Ada
+# discriminated record whose discriminant is the constructor (learn.adacore.com, "More about records": variant
+# records): an enumeration `Dt_<D>_Tag` of literals `Dt_<D>_<C>`, and `Dt_<D>` with one variant per constructor, a
+# field the component `F_<C>_<f>` (Ada forbids a component name twice in one record, t allows a field in several
+# constructors). The discriminant has a default, so the type is definite and a field can hold another datatype.
+# A field read is the component selection, whose discriminant check gnatprove proves: that check is the read's
+# definedness; a field several constructors declare is a function over the tag with a `Pre` naming them. `case` is an
+# Ada case expression on the tag, each binder its constructor's component. `==` is Ada's predefined record equality,
+# which composes Big_Integer's own. A recursive datatype (it needs access types) and a seq, set or pair field refuse
+# by name. `_DTS` holds the task's declarations for exactly one `lower()` call.
+_DTS: dict = {}
+
+
+def _dt_of(t) -> str | None:
+    return t["datatype"] if isinstance(t, dict) and "datatype" in t else None
+
+
+def _adt(d: str) -> str:
+    return f"Dt_{d}"
+
+
+def _actor(d: str, c: str) -> str:
+    return f"Dt_{d}_{c}"
+
+
+def _acomp(c: str, f: str) -> str:
+    return f"F_{c}_{f}"
+
+
+def _dt_fields(d: str, c: str) -> list:
+    return next(k for k in _DTS[d]["ctors"] if k["name"] == c).get("fields", [])
+
+
+def _dt_field_type(d: str, f: str):
+    for k in _DTS[d]["ctors"]:
+        for fd in k.get("fields", []):
+            if fd["name"] == f:
+                return fd["type"]
+    raise NotImplementedError(f"spark: {d} has no field {f!r}")
+
+
+def _dt_field_ctors(d: str, f: str) -> list:
+    return [k["name"] for k in _DTS[d]["ctors"] if any(fd["name"] == f for fd in k.get("fields", []))]
+
+
+def _dt_check(task: dict) -> None:
+    names = {d["name"] for d in task.get("datatypes", [])}
+    for d in task.get("datatypes", []):
+        for k in d["ctors"]:
+            for fd in k.get("fields", []):
+                t = fd["type"]
+                if _dt_of(t) == d["name"]:
+                    raise NotImplementedError(
+                        "spark: a recursive datatype (SPEC.md 'Datatypes (v3): recursion'): an Ada record cannot hold "
+                        "itself without access types, which this lowering does not build")
+                if t not in ("int", "bool", "seq") and _dt_of(t) not in names:    # seq: PREDICT T42
+                    raise NotImplementedError(
+                        f"spark: a datatype field of type {t!r} (SPEC.md 'Datatypes (v2): fields'): only int, bool, seq "
+                        "and datatype fields are lowered yet")
+
+
+def _dt_decls(task: dict) -> str:
+    out = []
+    for d in task.get("datatypes", []):
+        name = d["name"]
+        tags = ", ".join(_actor(name, k["name"]) for k in d["ctors"])
+        out.append(f"   type {_adt(name)}_Tag is ({tags});\n")
+        variants = []
+        for k in d["ctors"]:
+            comps = "".join(f"            {_acomp(k['name'], fd['name'])} : {ada_type(fd['type'])};\n"
+                            for fd in k.get("fields", [])) or "            null;\n"
+            variants.append(f"         when {_actor(name, k['name'])} =>\n{comps}")
+        out.append(f"   type {_adt(name)} (Tag : {_adt(name)}_Tag := {_actor(name, d['ctors'][0]['name'])}) is record\n"
+                   f"      case Tag is\n" + "".join(variants) + "      end case;\n   end record;\n")
+        for f in {fd["name"] for k in d["ctors"] for fd in k.get("fields", [])}:
+            ctors = _dt_field_ctors(name, f)
+            if len(ctors) < 2:
+                continue
+            ft = _dt_field_type(name, f)
+            alts = ", ".join(f"when {_actor(name, c)} => X.{_acomp(c, f)}" for c in ctors)
+            if len(ctors) < len(d["ctors"]):
+                alts += f", when others => {_dead_lit(ft)}"
+            pre = " | ".join(_actor(name, c) for c in ctors)
+            out.append(f"   function {_adt(name)}_F_{f} (X : {_adt(name)}) return {ada_type(ft)} is\n"
+                       f"     (case X.Tag is {alts})\n   with Pre => X.Tag in {pre};\n")
+    return "\n".join(out)
+
+
+_DT_VARTYPES: dict = {}
+
+
+def _dt_type_of(e: dict):
+    """PREDICT T36: the datatype a field read's scrutinee denotes, read statically for `defined()` (which has no
+    typing context of its own): a constructor, a field of one, or a name whose declared type `lower()` recorded."""
+    if "ctor" in e:
+        return {"datatype": e["ctor"]["dtype"]}
+    if "field" in e:
+        return _dt_field_type(_dt_of(_dt_type_of(e["field"]["of"])), e["field"]["name"])
+    if "var" in e and e["var"] in _DT_VARTYPES:
+        return _DT_VARTYPES[e["var"]]
+    raise NotImplementedError("spark: the datatype of a field read's scrutinee is not known statically here")
+
+
+def _dt_aggregate(e: dict) -> str:
+    """A ground constructor value (a witness's own t text, parsed) as a qualified Ada aggregate."""
+    if "int" in e:
+        return f"Big_Integer'({e['int']})"
+    if "bool" in e:
+        return "True" if e["bool"] else "False"
+    if e.get("op") == "neg" and "int" in e["args"][0]:
+        return f"Big_Integer'({-e['args'][0]['int']})"
+    if e.get("op") == "seq":
+        # PREDICT T42: a ground seq field, the certificate's own seq literal
+        return _cert_lit([x["int"] if "int" in x else -x["args"][0]["int"] for x in e["args"]])
+    c = e["ctor"]
+    fields = _dt_fields(c["dtype"], c["name"])
+    assoc = [f"Tag => {_actor(c['dtype'], c['name'])}"] + [
+        f"{_acomp(c['name'], fd['name'])} => {_dt_aggregate(a)}" for a, fd in zip(c["args"], fields, strict=True)]
+    return f"{_adt(c['dtype'])}'({', '.join(assoc)})"
+
+
 def ada_type(ty) -> str:
     """The Ada type a t type maps to. TYPE[...] on its own only ever saw a
     base type; every call site that might now see a pair type ({"pair":
@@ -2521,6 +2658,8 @@ def ada_type(ty) -> str:
     only this one extra dispatch on isinstance(ty, dict), split by key."""
     if _is_nested_seq(ty):
         return "Seq2"
+    if _dt_of(ty) is not None:
+        return _adt(_dt_of(ty))                           # PREDICT T36
     if isinstance(ty, dict):
         return _pair_ada_name(ty)
     return TYPE[ty]
@@ -3550,7 +3689,7 @@ def _dead_lit(t) -> str:
         return (f"{_pair_ada_name(t)}'(P_A => {_dead_lit(t1)}, "
                f"P_B => {_dead_lit(t2)})")
     return {"int": "Big_Integer'(0)", "bool": "False",
-           "seq": "Seqs.Empty_Sequence", "real": _real_lit(0, 1)}[t]
+           "seq": "Seqs.Empty_Sequence", "real": _real_lit(0, 1), "float": "Long_Float'(0.0)"}[t]
 
 
 def locals_seq(body: list) -> bool:
@@ -4103,6 +4242,71 @@ class Lower:
         return f"T_Comp{k} ({', '.join(args)})"
 
     def _comp_text(self, k: int, c: dict, fvs: list, ftys: dict, types2: dict) -> str:
+        if c["cond"] != {"bool": True}:
+            return self._filter_text(k, c, fvs, ftys, types2)
+        return self._map_text(k, c, fvs, ftys, types2)
+
+    def _filter_text(self, k: int, c: dict, fvs: list, ftys: dict, types2: dict) -> str:
+        """PREDICT T45: a filter as a recursive expression function, the map's own shape (`_map_text`) with the last
+        element added only when the condition holds of it (Dafny's filter `t_comp`). The Post is the length bound
+        and, for a pure filter (the body is the bound variable), the condition at every element; the step a count
+        over a growing prefix needs is the definition itself, which GNATprove unfolds for an expression function."""
+        import lower_dafny
+        import lower_verus
+        v = c["var"]
+        is_seq = "seq" in c
+        z = "Big_Integer'(0)"
+        one = "Big_Integer'(1)"
+        fv_sub = {n: cap(n) for n in fvs}
+        el = (lambda i: f"Elem (T_S, {i})") if is_seq else (lambda i: f"(T_A + T_Ix ({i}))")
+        body = lambda i: self.expr(c["body"], dict(fv_sub, **{v: el(i)}), types2)
+        cond = lambda i: self.expr(c["cond"], dict(fv_sub, **{v: el(i)}), types2)
+        lower_verus._SCOPE.clear()
+        lower_verus._SCOPE.update(types2)
+        lower_verus._SCOPE_FUNS.clear()
+        lower_verus._SCOPE_FUNS.update({f["name"]: f for f in self.task.get("spec_funs", [])})
+        d_cond = lower_verus.defined(c["cond"])
+        d_body = lower_verus.defined(c["body"])
+        guard = d_body if d_body == lower_verus.TRUE else {"op": "implies", "args": [c["cond"], d_body]}
+        d = lower_verus._conj([d_cond, guard])
+
+        def flat(x):
+            if isinstance(x, dict) and x.get("op") == "and":
+                return [y for a in x["args"] for y in flat(a)]
+            return [x]
+        parts = [x for x in flat(d) if x != lower_verus.TRUE and not lower_dafny._ground_true(x)]
+        fixed = [x for x in parts if not lower_dafny._mentions_var(x, v)]
+        per_el = [x for x in parts if lower_dafny._mentions_var(x, v)]
+        fv_params = "".join(f"; {cap(n)} : {ada_type(ftys[n])}" for n in fvs)
+        fv_args = "".join(f", {cap(n)}" for n in fvs)
+        head_params = (f"T_S : Seq; T_N : Big_Integer{fv_params}" if is_seq
+                       else f"T_A : Big_Integer; T_N : Big_Integer{fv_params}")
+        pre = [f"T_N >= {z} and then T_N <= Len (T_S)"] if is_seq else [f"T_N >= {z}"]
+        if fixed:
+            pre.append(f"(if T_N > {z} then {self.expr(lower_verus._conj(fixed), fv_sub, types2)})")
+        if per_el:
+            pre.append(f"(for all T_K in T_Range'({z}, T_N) => "
+                       f"{self.expr(lower_verus._conj(per_el), dict(fv_sub, **{v: el('T_K')}), types2)})")
+        pre_txt = "\n       and then ".join(pre) if pre else "True"
+        src_args = "T_S" if is_seq else "T_A"
+        post = [f"Len (T_Comp{k}'Result) <= T_N"]
+        if c["body"] == {"var": v}:
+            held = self.expr(c["cond"], dict(fv_sub, **{v: f"Elem (T_Comp{k}'Result, T_K)"}), types2)
+            post.append(f"(for all T_K in T_Range'({z}, Len (T_Comp{k}'Result)) => {held})")
+        post_txt = "\n       and then ".join(post)
+        stop = f"not R_Has (T_Range'({z}, T_N), T_N - {one})"
+        rec = f"T_Comp{k} ({src_args}, T_N - {one}{fv_args})"
+        return (f"   function T_Comp{k} ({head_params}) return Seq\n"
+                f"   with\n"
+                f"     Pre  => {pre_txt},\n"
+                f"     Post => {post_txt},\n"
+                f"     Subprogram_Variant => (Decreases => T_N);\n\n"
+                f"   function T_Comp{k} ({head_params}) return Seq is\n"
+                f"     (if {stop} then Seqs.Empty_Sequence\n"
+                f"      elsif {cond(f'(T_N - {one})')} then Seqs.Add ({rec}, {body(f'(T_N - {one})')})\n"
+                f"      else {rec});\n")
+
+    def _map_text(self, k: int, c: dict, fvs: list, ftys: dict, types2: dict) -> str:
         """One map shape as a recursive expression function, T_Slice's own shape (SLICE_PREAMBLE): a Pre (the
         source's bound and the body's definedness), a Post stating the length and every element over T_Range, a
         Subprogram_Variant, and `Seqs.Add` of the last element onto the function at `N - 1`. The definedness is the
@@ -4187,6 +4391,16 @@ class Lower:
         own params; certificate()/_undef_obligation read it off the
         witness's own ground values instead, since there is no AST-level
         `types` dict at a witness."""
+        if "ctor" in e:
+            return {"datatype": e["ctor"]["dtype"]}          # PREDICT T36
+        if "field" in e:
+            return _dt_field_type(_dt_of(self._ty(e["field"]["of"], types)), e["field"]["name"])
+        if "match" in e:
+            m = e["match"]
+            arm = m["arms"][0]
+            d = _dt_of(self._ty(m["scrutinee"], types))
+            return self._ty(arm["body"], {**types, **{b: fd["type"] for b, fd in
+                                                     zip(arm["binders"], _dt_fields(d, arm["ctor"]))}})
         if "int" in e:
             return "int"
         if "rat" in e:
@@ -4262,6 +4476,8 @@ class Lower:
             if not (isinstance(pty, dict) and "pair" in pty):
                 raise ValueError(f"{op} of a non-pair expression")
             return pty["pair"][0 if op == "fst" else 1]
+        if op in ("float", "sqrt"):
+            return "float"  # SPEC.md "Floats (v1)"
         if op == "toreal":
             return "real"   # SPEC.md "Exact rationals (v1)": real(x)
         if op in ("floor", "ceil"):
@@ -4335,6 +4551,14 @@ class Lower:
             # SPEC.md "Exact rationals (v1)" (2026-10-06): a real literal, the quotient of two Big_Reals
             self.needs_reals = True
             return _real_lit(*e["rat"])
+        if e.get("op") == "float":
+            # SPEC.md "Floats (v1)" (PREDICT T49): float(literal), rounded here as t rounds it, written as the exact
+            # double; a run-time conversion of a Big_Integer is not lowered yet
+            a0 = e["args"][0]
+            if "rat" in a0 or "int" in a0:
+                from fractions import Fraction
+                return _float_lit(float(Fraction(*a0["rat"]) if "rat" in a0 else a0["int"]))
+            raise NotImplementedError("spark: float() of a non-literal is not lowered yet (SPEC.md 'Floats (v1)')")
         if "bool" in e:
             return "True" if e["bool"] else "False"
         if "var" in e:
@@ -4364,6 +4588,36 @@ class Lower:
             return (f"(if {self.expr(c['cond'], sub, types)} "
                     f"then {self.expr(c['then'], sub, types)} "
                     f"else {self.expr(c['else'], sub, types)})")
+        if "ctor" in e:
+            # PREDICT T36: a constructor is the qualified aggregate of its variant
+            c = e["ctor"]
+            assoc = [f"Tag => {_actor(c['dtype'], c['name'])}"] + [
+                f"{_acomp(c['name'], fd['name'])} => {self.expr(a, sub, types)}"
+                for a, fd in zip(c["args"], _dt_fields(c["dtype"], c["name"]), strict=True)]
+            return f"{_adt(c['dtype'])}'({', '.join(assoc)})"
+        if "field" in e:
+            # PREDICT T36: the component selection, whose discriminant check is the read's definedness; a field
+            # several constructors declare is the function over the tag (_dt_decls)
+            f = e["field"]
+            d = _dt_of(self._ty(f["of"], types))
+            of = self.expr(f["of"], sub, types)
+            ctors = _dt_field_ctors(d, f["name"])
+            if len(ctors) == 1:
+                return f"{of}.{_acomp(ctors[0], f['name'])}"
+            return f"{_adt(d)}_F_{f['name']} ({of})"
+        if "match" in e:
+            # PREDICT T36: an Ada case expression on the tag, each binder its constructor's component
+            m = e["match"]
+            d = _dt_of(self._ty(m["scrutinee"], types))
+            scr = self.expr(m["scrutinee"], sub, types)
+            alts = []
+            for arm in m["arms"]:
+                fields = _dt_fields(d, arm["ctor"])
+                sub2 = {**sub, **{b: f"{scr}.{_acomp(arm['ctor'], fd['name'])}"
+                                  for b, fd in zip(arm["binders"], fields, strict=True)}}
+                types2 = {**types, **{b: fd["type"] for b, fd in zip(arm["binders"], fields)}}
+                alts.append(f"when {_actor(d, arm['ctor'])} => {self.expr(arm['body'], sub2, types2)}")
+            return f"(case {scr}.Tag is {', '.join(alts)})"
         if "call" in e:
             c = e["call"]
             fun = self.fname if c["fun"] == self.task["name"] \
@@ -4637,14 +4891,23 @@ class Lower:
             self.needs_lib.add("T_Contains")
             self.needs_range = True
             return f"T_Contains ({args[1]}, {args[0]})"
+        if op == "toreal" and self._ty(e["args"][0], types) == "float":
+            raise NotImplementedError("spark: real(f) of a float is not lowered yet (SPEC.md 'Floats (v1)')")
         if op == "toreal":
             # SPEC.md "Exact rationals (v1)": real(x) is Big_Reals' own conversion from a Big_Integer
             self.needs_reals = True
             return f"To_Big_Real ({args[0]})"
+        if op == "sqrt":
+            raise NotImplementedError("spark: sqrt is not lowered yet (SPEC.md 'Floats (v1)')")
+        if op in ("min", "max") and self._ty(e["args"][0], types) == "float":
+            return f"Long_Float'{op.capitalize()} ({args[0]}, {args[1]})"   # SPEC.md "Floats (v1)"
         if op in ("floor", "ceil"):
             # Big_Reals (A.5.7) has no floor or ceiling; lower() refuses the task by name before emission
             raise NotImplementedError(
                 f"spark: {op}: Ada.Numerics.Big_Numbers.Big_Reals has no floor or ceiling (SPEC.md 'Exact rationals (v1)')")
+        if op == "div" and self._ty(e["args"][0], types) == "float":
+            # SPEC.md "Floats (v1)": Long_Float's own "/", whose division and overflow checks are its definedness
+            return f"({args[0]} / {args[1]})"
         if op == "div" and self._ty(e["args"][0], types) == "real":
             # SPEC.md "Exact rationals (v1)": exact division, Big_Reals' own "/" whose Pre (Den /= 0) is the
             # definedness obligation, checked by gnatprove at this call site exactly as T_Div's is for ints
@@ -5467,6 +5730,8 @@ def _cert_lit(v) -> str:
     either, by the same argument one level down."""
     if isinstance(v, bool):
         return "True" if v else "False"
+    if isinstance(v, float):
+        return _float_lit(v)                              # SPEC.md "Floats (v1)"
     if _is_real_value(v):
         # SPEC.md "Exact rationals (v1)" (2026-10-06): a Fraction from interp.exit_env, or a witness's "n/d"
         return _real_lit_of(v)
@@ -5519,6 +5784,8 @@ def _cert_lit_of_type(v, ty) -> str:
     second time; a seq component recurses into the same literal `_cert_lit`
     itself builds, since a seq witness value is unambiguous once `ty` says
     "seq" rather than "pair"."""
+    if ty == "float" and isinstance(v, (int, float)) and not isinstance(v, bool):
+        return _float_lit(float(v))                       # SPEC.md "Floats (v1)"
     if _is_nested_seq(ty):
         # SPEC.md "Nested sequences (v1)" (2026-09-10): a seq<seq>-typed
         # parameter's witness value, a list of row-lists, rendered as a
@@ -5532,6 +5799,10 @@ def _cert_lit_of_type(v, ty) -> str:
         for row in v:
             out = f"Rows.Add ({out}, {_cert_lit_of_type(row, ty['seq'])})"
         return out
+    if _dt_of(ty) is not None:
+        import interp
+        import surface                                     # PREDICT T36: the witness's own t text, parsed
+        return _dt_aggregate(surface.parse_expr(v if isinstance(v, str) else interp._j(v)))
     if isinstance(ty, dict):
         t1, t2 = ty["pair"]
         a, b = v
@@ -5597,6 +5868,24 @@ def defined(e: dict, is_real=None) -> dict:
         return _t_conj([defined(c["cond"], is_real), branch])
     if "call" in e:
         return _t_conj([defined(a, is_real) for a in e["call"]["args"]])
+    if "ctor" in e:
+        return _t_conj([defined(a, is_real) for a in e["ctor"]["args"]])   # PREDICT T36
+    if "field" in e or "match" in e:
+        # PREDICT T36: `e.f` owes a constructor declaring f, and a match each arm's body on its own constructor,
+        # both stated as a t match over the scrutinee
+        if "field" in e:
+            of = e["field"]["of"]
+            d = _dt_of(_dt_type_of(of))
+            has = set(_dt_field_ctors(d, e["field"]["name"]))
+            arms = [{"ctor": k["name"], "binders": [f"t_d{i}" for i in range(len(k.get("fields", [])))],
+                     "body": {"bool": k["name"] in has}} for k in _DTS[d]["ctors"]]
+            ob = TRUE if len(has) == len(_DTS[d]["ctors"]) else {"match": {"scrutinee": of, "arms": arms}}
+            return _t_conj([defined(of, is_real), ob])
+        m = e["match"]
+        bodies = [defined(a["body"], is_real) for a in m["arms"]]
+        ob = (TRUE if all(b == TRUE for b in bodies) else
+              {"match": {"scrutinee": m["scrutinee"], "arms": [{**a, "body": b} for a, b in zip(m["arms"], bodies)]}})
+        return _t_conj([defined(m["scrutinee"], is_real), ob])
     if "forall" in e or "exists" in e:
         q = e.get("forall") or e.get("exists")
         db = defined(q["body"], is_real)
@@ -5604,6 +5893,25 @@ def defined(e: dict, is_real=None) -> dict:
                    {"forall": {"var": q["var"], "lo": q["lo"], "hi": q["hi"],
                                "body": db}})
         return _t_conj([defined(q["lo"], is_real), defined(q["hi"], is_real), body_ob])
+    if "comp" in e:
+        # PREDICT T45 (a filter's count can reach an ensures): lower_verus.defined's own comprehension case, the
+        # source defined, then at every element the condition defined and the body defined where it holds
+        import lower_verus
+        c = e["comp"]
+        idx = {"var": "t_di"}
+        if "seq" in c:
+            at = {"op": "at", "args": [c["seq"], idx]}
+            lo, hi = {"int": 0}, {"op": "len", "args": [c["seq"]]}
+            src_ob = defined(c["seq"], is_real)
+        else:
+            at = idx
+            lo, hi = c["lo"], c["hi"]
+            src_ob = _t_conj([defined(c["lo"], is_real), defined(c["hi"], is_real)])
+        cond_at = lower_verus.subst(c["cond"], {c["var"]: at})
+        inner = _t_conj([defined(cond_at, is_real),
+                         _t_guard(cond_at, defined(lower_verus.subst(c["body"], {c["var"]: at}), is_real))])
+        body_ob = TRUE if inner == TRUE else {"forall": {"var": "t_di", "lo": lo, "hi": hi, "body": inner}}
+        return _t_conj([src_ob, body_ob])
     op, args = e["op"], e.get("args", [])
     if op == "at":
         s, i = args
@@ -6070,6 +6378,14 @@ def certificate(task: dict, body: list, w: dict | None, L: Lower,
     sub = {k: (_cert_lit_of_type(v, param_types[k]) if k in param_types
               else _cert_lit(v))
           for k, v in vals.items()}
+    # PREDICT T36: a datatype parameter is bound by name in a declare expression around the goal; substituted as a
+    # static aggregate, a case alternative for another variant selects a component the aggregate lacks, which GNAT
+    # rejects at compile time (measured: shape_area's twin MALFORMED)
+    dt_decls = []
+    for k in list(sub):
+        if k in param_types and _dt_of(param_types[k]) is not None:
+            dt_decls.append(f"T_W_{cap(k)} : constant {ada_type(param_types[k])} := {sub[k]};")
+            sub[k] = f"T_W_{cap(k)}"
     ret = task["returns"][0]["name"]
     # A static `types` dict for Lower._ty (SPEC.md "Sequences: literals,
     # concatenation, slices", 2026-09-09), plus the task's own declared
@@ -6208,6 +6524,8 @@ def certificate(task: dict, body: list, w: dict | None, L: Lower,
             else "(not (" + " and then ".join(ens) + "))"
         parts.append(neg)
     conj = "\n      and then ".join(parts)
+    if dt_decls:
+        conj = "declare " + " ".join(dt_decls) + " begin (" + conj + ")"   # PREDICT T36
     sig = f"function {CERT_NAME} return Boolean"
     return (pre_decls +
             f"   --  Refutation certificate: the measured witness, restated\n"
@@ -6457,9 +6775,6 @@ def _comp_refusal(task: dict, body: list) -> None:
                 if not inside_task:
                     raise NotImplementedError("spark: a comprehension inside a spec_fun, method or lemma is not "
                                               "lowered yet (SPEC.md 'Comprehensions (v1)')")
-                if x["comp"].get("cond") != {"bool": True}:
-                    raise NotImplementedError("spark: a filtered comprehension is not lowered yet "
-                                              "(SPEC.md 'Comprehensions (v1)')")
             for v in x.values():
                 walk(v, inside_task)
         elif isinstance(x, list):
@@ -6473,31 +6788,45 @@ def _comp_refusal(task: dict, body: list) -> None:
 
 
 def lower(task: dict, body: list, witness: dict | None = None) -> str:
+    # PREDICT T36: the task's datatype declarations, for the module-level helpers, for exactly this call
+    prev, prev_vt = dict(_DTS), dict(_DT_VARTYPES)
+    _DTS.clear()
+    _DTS.update({d["name"]: d for d in task.get("datatypes", [])})
+    _DT_VARTYPES.clear()
+    if task.get("datatypes"):
+        decl = [*task["params"], *task["returns"]]
+        stack = list(task.get("body") or []) + list(body or [])
+        while stack:
+            st = stack.pop()
+            if isinstance(st, dict):
+                if "var" in st and isinstance(st["var"], dict):
+                    decl.append({"name": st["var"]["name"], "type": st["var"]["type"]})
+                stack += [v for v in st.values() if isinstance(v, (dict, list))]
+            elif isinstance(st, list):
+                stack += st
+        _DT_VARTYPES.update({x["name"]: x["type"] for x in decl if _dt_of(x["type"]) is not None})
+    try:
+        return _lower(task, body, witness)
+    finally:
+        _DTS.clear()
+        _DTS.update(prev)
+        _DT_VARTYPES.clear()
+        _DT_VARTYPES.update(prev_vt)
+
+
+def _lower(task: dict, body: list, witness: dict | None = None) -> str:
     import tshape
     task, body = tshape.desugar_seq_quants(task, body)   # SPEC.md "Quantifiers over a collection": seq ranges as indices
-    tshape.abstain_unless_carried(task, body, "spark", carried=frozenset({"real", "comp"}), lib=SPARK_LIB)
+    task, body = tshape.desugar_par(task, body)          # PREDICT T47: a parallel loop as its sequential `for`
+    task, body = tshape.desugar_exits(task, body)        # PREDICT T44: break/continue rewritten; `while true` stays
+    tshape.abstain_on_heap(task, "spark")                   # SPEC.md "Heap (v1)" (PREDICT T46): Dafny first
+    tshape.abstain_unless_carried(task, body, "spark", carried=frozenset({"real", "comp", "exit", "float"}), lib=SPARK_LIB)
     _comp_refusal(task, body)                              # PREDICT T18: maps carried, the rest refused by name
     if tshape.uses_ops(body, task, {"floor", "ceil"}):
         # SPEC.md "Exact rationals (v1)" (2026-10-06): Big_Reals (Ada 2022 A.5.7) has no floor or ceiling
         raise NotImplementedError(
             "spark: floor/ceil: Ada.Numerics.Big_Numbers.Big_Reals has no floor or ceiling (SPEC.md 'Exact rationals (v1)')")
-    if task.get("datatypes"):
-        # DATATYPES (2026-09-27, SPEC.md "Datatypes (v1)"): FEATURES-TRACK.md
-        # names "Frama-C and SPARK through records with discriminants" as
-        # the eventual encoding -- an Ada discriminated record whose sole
-        # discriminant carries the enum tag, since Ada's own enumeration
-        # types have no analogue of Dafny's/Rust's/Lean's value-carrying
-        # constructor for the record wave ahead, and a plain Ada
-        # enumeration type (which WOULD fit v1's field-less case exactly)
-        # has not been measured against gnatprove's own `case` exhaustiveness
-        # checking or its equality proof obligations here. Until that is
-        # built and measured, the honest verdict is an abstention by name
-        # (SPEC.md's own rule), the same posture this column already takes
-        # for finite sets below.
-        raise NotImplementedError(
-            "spark lowering: datatypes (SPEC.md 'Datatypes (v1)'): the Ada "
-            "enumeration-type encoding is not built yet (case exhaustiveness "
-            "and equality under gnatprove unmeasured)")
+    _dt_check(task)                                        # PREDICT T36: datatypes lowered; the rest by name
     if (_uses_sets(task) or _uses_sets(body)) and not _only_seq_membership(task, body):
         # FINITE SETS (2026-09-27, SPEC.md "Finite sets (v1)"): the SPARK
         # library ships SPARK.Containers.Functional.Sets (`Contains`,
@@ -6672,6 +7001,8 @@ def lower(task: dict, body: list, witness: dict | None = None) -> str:
         m_seq, m_nested, methods_return = _methods_need(task)
         needs_nested_seq = needs_nested_seq or m_nested
         needs_seq = needs_seq or m_seq or m_nested
+    if any(fd["type"] == "seq" for d in task.get("datatypes", []) for k in d["ctors"] for fd in k.get("fields", [])):
+        needs_seq = True                                   # PREDICT T42: a datatype's seq field names Seq
 
     # The seq and range preambles put fixed Ada names in scope; a t
     # identifier capitalizing onto one of them would be captured silently,
@@ -7024,16 +7355,18 @@ def lower(task: dict, body: list, witness: dict | None = None) -> str:
         parts += [STRJOIN_PREAMBLE]
     if pair_types_used:
         parts += [_pair_preamble(pair_types_used, L.needs_pair_eq)]
+    if task.get("datatypes"):
+        parts += [_dt_decls(task)]                         # PREDICT T36
     for sf in spec_funs:
         parts += [sf]
     parts += lemma_parts
     parts += method_parts
-    for h in L.helpers:
-        parts += [h]
     if any("T_Ix (" in txt for _k, txt in L.comps.values()):
         parts += ["   function T_Ix (K : Big_Integer) return Big_Integer is (K);\n"]
     for _k, txt in sorted(L.comps.values()):
         parts += [txt]   # SPEC.md "Comprehensions (v1)", PREDICT T18: after every preamble each one calls
+    for h in L.helpers:
+        parts += [h]     # PREDICT T45: after the comprehensions, which a loop's contract may call (count_evens_skip)
     parts += [
         f"   {fsig}",
         "   with\n     " + ",\n     ".join(aspects) + ";",

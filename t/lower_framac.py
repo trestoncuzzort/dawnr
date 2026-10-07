@@ -3730,6 +3730,195 @@ def _has_partial_op(x) -> bool:
 SEQOPS = ("update", "fill")
 
 
+# DATATYPES in Frama-C (PREDICT T37, 2026-10-07; SPEC.md "Datatypes (v1)", "(v2): fields"). A t datatype is a C
+# struct passed BY VALUE, the encoding this file's pairs already use (the PAIRS section above `_pair_field_c`): `int
+# tag`, an enum constant `dt_<D>_<C>` per constructor, and one field `f_<C>_<f>` per constructor's field, int for an
+# int or bool, so every variant's storage is present and a constructor is a C99 compound literal with the others zero.
+# ACSL needs no struct literal: `x == C(a, b)` is `x.tag == dt_D_C && x.f_C_1 == a && ...`, and equality between two
+# non-literal values is the predicate `dt_D_eq`, by tag and then that constructor's fields. A match is a conditional
+# on the tag, each binder bound by ACSL's `\let` (in C, substituted by its field). A field read owes its constructor:
+# in a specification `defs()` states it, in code `code_ats` asserts it before the statement (its guard included).
+# Each datatype parameter `requires dt_D_ok(p)`, the tag one of its constructors' (a t value is always built by one).
+# Since PREDICT T40 a datatype is a return or local too (a struct value, as a pair's). `==` on datatypes in executable
+# position, a recursive datatype (a C struct cannot hold itself by value) and a seq, set or pair field refuse by name.
+_DTS: dict = {}
+
+
+def _dt_of(t) -> str | None:
+    return t["datatype"] if isinstance(t, dict) and "datatype" in t else None
+
+
+def _ctag(d: str, c: str) -> str:
+    return f"dt_{d}_{c}"
+
+
+def _cfield(c: str, f: str) -> str:
+    return f"f_{c}_{f}"
+
+
+def _dt_fields(d: str, c: str) -> list:
+    return next(k for k in _DTS[d]["ctors"] if k["name"] == c).get("fields", [])
+
+
+def _dt_field_type(d: str, f: str):
+    for k in _DTS[d]["ctors"]:
+        for fd in k.get("fields", []):
+            if fd["name"] == f:
+                return fd["type"]
+    raise NotImplementedError(f"framac: {d} has no field {f!r}")
+
+
+def _dt_field_ctors(d: str, f: str) -> list:
+    return [k["name"] for k in _DTS[d]["ctors"] if any(fd["name"] == f for fd in k.get("fields", []))]
+
+
+# PREDICT T43: a single-constructor, non-recursive datatype with a seq field cannot be a struct by value (a struct
+# field holds neither a buffer nor its `\\valid` obligation, the PAIRS section's reason). As a PARAMETER it is
+# FLATTENED instead, as a pair with a seq component is (`_pair_flat`): each field its own C parameter, the seq field
+# `int *p_f, int p_f_n`, so `p.f` IS the bare name `p_f` everywhere (`_dt_flat_field`). `_DT_FLAT` maps each such
+# parameter to its datatype for exactly one `lower()` call.
+_DT_FLAT: dict = {}
+
+
+def _dt_flattens(d: str) -> bool:
+    ks = _DTS[d]["ctors"]
+    fs = ks[0].get("fields", []) if len(ks) == 1 else []
+    return (len(ks) == 1 and any(f["type"] == "seq" for f in fs)
+            and all(f["type"] in ("int", "bool", "seq") for f in fs))
+
+
+def _dt_flat_field(e):
+    """(flattened C name, field type) for `p.f` with `p` a flattened datatype parameter, else None."""
+    if isinstance(e, dict) and "field" in e and isinstance(e["field"].get("of"), dict) and "var" in e["field"]["of"]:
+        d = _DT_FLAT.get(e["field"]["of"]["var"])
+        if d is not None:
+            return f"{e['field']['of']['var']}_{e['field']['name']}", _dt_field_type(d, e["field"]["name"])
+    return None
+
+
+def _dt_check(task: dict, body: list) -> None:
+    names = {d["name"] for d in task.get("datatypes", [])}
+    for d in task.get("datatypes", []):
+        for k in d["ctors"]:
+            for fd in k.get("fields", []):
+                t = fd["type"]
+                if _dt_of(t) == d["name"]:
+                    raise NotImplementedError(
+                        "framac: a recursive datatype (SPEC.md 'Datatypes (v3): recursion'): a C struct cannot hold "
+                        "itself by value, and the pointer encoding is not built")
+                if t == "seq" and _dt_flattens(d["name"]):
+                    continue                              # PREDICT T43: flattened, as a parameter only (below)
+                if t == "seq":
+                    raise NotImplementedError(
+                        "framac: a seq field in a datatype with several constructors or a field other than int, bool "
+                        "or seq (SPEC.md 'Datatypes (v2): fields'): a C struct field cannot hold a seq buffer, and "
+                        "only a single-constructor datatype is flattened into parameters (PREDICT T43)")
+                if t not in ("int", "bool") and _dt_of(t) not in names:
+                    raise NotImplementedError(
+                        f"framac: a datatype field of type {t!r} (SPEC.md 'Datatypes (v2): fields'): only int, bool "
+                        "and datatype fields are lowered yet")
+    flat_types = {d["name"] for d in task.get("datatypes", []) if any(
+        fd["type"] == "seq" for k in d["ctors"] for fd in k.get("fields", []))}
+    if flat_types:
+        # PREDICT T43: such a datatype exists only as flattened task parameters, each read only as `p.f` (that read
+        # is the bare C name `p_f`); any other use of `p`, and any return, local, spec-function parameter,
+        # constructor or field of the type, would need a value of it that C has no struct for
+        flat_params = {p["name"] for p in task["params"] if _dt_of(p["type"]) in flat_types}
+
+        def bad(x) -> bool:
+            if isinstance(x, list):
+                return any(bad(v) for v in x)
+            if not isinstance(x, dict):
+                return False
+            if ("field" in x and isinstance(x["field"].get("of"), dict)
+                    and x["field"]["of"].get("var") in flat_params):
+                return False                              # the one admitted use
+            if isinstance(x.get("var"), str) and x["var"] in flat_params:
+                return True
+            if isinstance(x.get("var"), dict) and _dt_of(x["var"]["type"]) in flat_types:
+                return True
+            if "ctor" in x and x["ctor"]["dtype"] in flat_types:
+                return True
+            return any(bad(v) for v in x.values())
+        typed = ([r["type"] for r in task["returns"]]
+                 + [q["type"] for f in task.get("spec_funs", []) for q in f.get("params", [])]
+                 + [f.get("result") for f in task.get("spec_funs", [])]
+                 + [q["type"] for m in task.get("methods", []) for q in m.get("params", []) + m.get("returns", [])]
+                 + [fd["type"] for d in task.get("datatypes", []) for k in d["ctors"] for fd in k.get("fields", [])])
+        if (any(_dt_of(t) in flat_types for t in typed if t is not None)
+                or bad([task.get("requires", []), task.get("ensures", []), body, task.get("spec_funs", []),
+                        task.get("methods", [])])):
+            raise NotImplementedError(
+                "framac: a datatype with a seq field (SPEC.md 'Datatypes (v2): fields') is lowered only as a "
+                "flattened task parameter read field by field: any other use of it (a return, local, constructor, "
+                "match, equality, call argument or spec-function parameter) needs a struct that holds a buffer, "
+                "which C does not")
+
+
+def _dt_decls(task: dict) -> list:
+    """The C declarations and ACSL predicates of every datatype, in declaration order."""
+    out = []
+    for d in task.get("datatypes", []):
+        name = d["name"]
+        if any(fd["type"] == "seq" for k in d["ctors"] for fd in k.get("fields", [])):
+            continue                                      # PREDICT T43: flattened, no struct
+        tags = ", ".join(_ctag(name, k["name"]) for k in d["ctors"])
+        out.append(f"enum dt_{name}_tag {{ {tags} }};")
+        fields = []
+        for k in d["ctors"]:
+            for fd in k.get("fields", []):
+                ft = fd["type"]
+                cty = f"struct dt_{_dt_of(ft)}" if _dt_of(ft) else "int"
+                fields.append(f"{cty} {_cfield(k['name'], fd['name'])};")
+        out.append(f"struct dt_{name} {{ int tag; {' '.join(fields)} }};")
+        oks, eqs = [], []
+        for k in d["ctors"]:
+            c = _ctag(name, k["name"])
+            oks.append(f"x.tag == {c}" + "".join(
+                f" && dt_{_dt_of(fd['type'])}_ok(x.{_cfield(k['name'], fd['name'])})"
+                for fd in k.get("fields", []) if _dt_of(fd["type"])))
+            parts = []
+            for fd in k.get("fields", []):
+                fn = _cfield(k["name"], fd["name"])
+                fd_d = _dt_of(fd["type"])
+                parts.append(f"dt_{fd_d}_eq(a.{fn}, b.{fn})" if fd_d else f"a.{fn} == b.{fn}")
+            if parts:
+                eqs.append(f"(a.tag == {c} ==> ({' && '.join(parts)}))")
+        out.append(f"/*@ predicate dt_{name}_ok(struct dt_{name} x) = " + " || ".join(f"({o})" for o in oks) + "; */")
+        out.append(f"/*@ predicate dt_{name}_eq(struct dt_{name} a, struct dt_{name} b) = a.tag == b.tag"
+                   + "".join(f" && {e}" for e in eqs) + "; */")
+    return out
+
+
+def _dt_arm_binds(d: str, arm: dict) -> list:
+    """(binder, field name, field type) for a match arm."""
+    return [(b, fd["name"], fd["type"]) for b, fd in zip(arm["binders"], _dt_fields(d, arm["ctor"]), strict=True)]
+
+
+def _dt_subst(e, sub: dict):
+    """`e` with each variable in `sub` replaced by its expression (a match binder by its field read, in C)."""
+    if isinstance(e, list):
+        return [_dt_subst(x, sub) for x in e]
+    if not isinstance(e, dict):
+        return e
+    if "var" in e and isinstance(e["var"], str):
+        return sub.get(e["var"], e)
+    if "match" in e:
+        m = e["match"]
+        inner = [{**a, "body": _dt_subst(a["body"], {k: v for k, v in sub.items() if k not in a["binders"]})}
+                 for a in m["arms"]]
+        return {"match": {"scrutinee": _dt_subst(m["scrutinee"], sub), "arms": inner}}
+    return {k: _dt_subst(v, sub) for k, v in e.items()}
+
+
+def _dt_is(scr: dict, d: str, ctors) -> dict:
+    """The t expression "`scr` was built by one of `ctors`", a match returning a bool, for a guard or an
+    obligation."""
+    return {"match": {"scrutinee": scr, "arms": [
+        {"ctor": k["name"], "binders": [f"t_dq{i}" for i in range(len(k.get("fields", [])))],
+         "body": {"bool": k["name"] in ctors}} for k in _DTS[d]["ctors"]]}}
+
+
 def typ(e: dict, env: dict, funs: dict):
     """Type of an expression: 'int' | 'bool' | 'seq' | {'pair': [T1, T2]}.
 
@@ -3742,6 +3931,17 @@ def typ(e: dict, env: dict, funs: dict):
     (`typ`'s only two callers that must now expect a dict back are
     `pred()`'s `==`/`!=` dispatch, which gains a pair branch below it, and
     this function's own recursion)."""
+    if "ctor" in e:
+        return {"datatype": e["ctor"]["dtype"]}          # PREDICT T37
+    if "_dtf" in e:
+        return e["_dtf"]["type"]
+    if "field" in e:
+        return _dt_field_type(_dt_of(typ(e["field"]["of"], env, funs)), e["field"]["name"])
+    if "match" in e:
+        m = e["match"]
+        arm = m["arms"][0]
+        d = _dt_of(typ(m["scrutinee"], env, funs))
+        return typ(arm["body"], {**env, **{b: t for b, _, t in _dt_arm_binds(d, arm)}}, funs)
     if "int" in e:
         return "int"
     if "bool" in e:
@@ -3831,6 +4031,9 @@ def seq_var(e: dict, env: dict) -> str:
         t = env.get(e["var"])
         if t == "seq" or is_nested_seq_type(t):
             return e["var"]
+    dflat = _dt_flat_field(e)
+    if dflat is not None and dflat[1] == "seq":
+        return dflat[0]                                   # PREDICT T43: a flattened datatype's seq field
     flat = _pair_flat(e, env)
     if flat is not None and (flat[1] == "seq" or is_nested_seq_type(flat[1])):
         # A PAIR WITH A SEQ COMPONENT, 2026-09-19: `fst(p)` IS a bare
@@ -3858,7 +4061,7 @@ def _seq_val_len_c(e: dict, env: dict, funs: dict, task_name: str,
     reached for `update`/`fill` (SPEC.md's own grammar restricts those to
     the whole right-hand side of a seq-typed assignment, `seq_assign_lines`
     above, never nested inside a `len(...)`)."""
-    if "var" in e or _pair_flat(e, env) is not None:
+    if "var" in e or _pair_flat(e, env) is not None or _dt_flat_field(e) is not None:
         # The flattened seq component of a pair PARAMETER (2026-09-19,
         # `_pair_flat`) IS a bare seq name in the emitted C, so its
         # length is the same `{v}_n` a bare seq variable's is; `seq_var`
@@ -3935,6 +4138,8 @@ def _seq_len_render(e: dict, ctx) -> str:
         # element count, formula substitution exactly like `slice`'s case
         # below, never a materialized buffer.
         return str(len(e.get("args", ())))
+    if e.get("op") == "rev":
+        return _seq_len_render(e["args"][0], ctx)       # PREDICT T20: rev keeps the length
     if e.get("op") == "slice":
         _, lo, hi = e["args"]
         return f"(({term(hi, ctx)}) - ({term(lo, ctx)}))"
@@ -4017,6 +4222,11 @@ def _seq_at_render(e: dict, k_render: str, ctx) -> str:
     if e.get("op") == "slice":
         s, lo, _ = e["args"]
         return f"{seq_var(s, ctx.env)}[({term(lo, ctx)}) + ({k_render})]"
+    if e.get("op") == "rev":
+        # SPEC.md "The library (v1)" in Frama-C (PREDICT T20): element k of rev(s) is element len(s) - 1 - k of s,
+        # a formula rewrite like the slice's
+        s0 = e["args"][0]
+        return _seq_at_render(s0, f"(({_seq_len_render(s0, ctx)}) - 1 - ({k_render}))", ctx)
     if e.get("op") == "+":
         # Concatenation (framac track, 2026-09-26): element `k` of `a + b`
         # is `a[k]` below `len(a)` and `b[k - len(a)]` from there on, the
@@ -4233,6 +4443,31 @@ def term(e: dict, ctx: Ctx) -> str:
                 f": ({term(i['else'], ctx)}))")
     if "call" in e:
         return acsl_call(e["call"], ctx)
+    if "_dtf" in e:
+        txt = f"({term(e['_dtf']['of'], ctx)}).{e['_dtf']['field']}"      # PREDICT T37: a match binder
+        return f"({txt} != 0)" if e["_dtf"]["type"] == "bool" else txt
+    if _dt_flat_field(e) is not None:
+        name, ft = _dt_flat_field(e)                      # PREDICT T43
+        if ft == "seq":
+            raise NotImplementedError(
+                "a seq-typed datatype field in ACSL TERM position (not under `len`/`at`): a seq has no ACSL term "
+                "of its own in this lowering, the same gap a bare seq-typed variable already has there")
+        return f"({name} != 0)" if ft == "bool" else name
+    if "field" in e:
+        # PREDICT T37: the constructor's own field (a field several constructors declare: chosen by the tag)
+        f = e["field"]
+        d = _dt_of(typ(f["of"], ctx.env, ctx.funs))
+        of = term(f["of"], ctx)
+        cs = _dt_field_ctors(d, f["name"])
+        txt = f"({of}).{_cfield(cs[-1], f['name'])}"
+        for c in reversed(cs[:-1]):
+            txt = f"(({of}).tag == {_ctag(d, c)} ? ({of}).{_cfield(c, f['name'])} : {txt})"
+        return f"({txt} != 0)" if typ(e, ctx.env, ctx.funs) == "bool" else txt
+    if "match" in e:
+        return _dt_match_acsl(e, ctx, term)
+    if "ctor" in e:
+        raise NotImplementedError("framac: a constructor in ACSL term position other than one side of `==` "
+                                  "(PREDICT T37) is not lowered yet")
     if "forall" in e or "exists" in e:
         raise NotImplementedError("quantifier in ACSL term position")
     op, args = e["op"], e.get("args", [])
@@ -4410,6 +4645,32 @@ def defs(e: dict, ctx: Ctx):
                       f"(\\forall integer {fresh}; ({rng}) ==> {db})"])
     if "call" in e:
         return _conj([defs(a, ctx) for a in e["call"].get("args", [])])
+    if "ctor" in e:
+        return _conj([defs(a, ctx) for a in e["ctor"]["args"]])   # PREDICT T37
+    if "field" in e:
+        # PREDICT T37: `e.f` owes a constructor that declares f
+        f = e["field"]
+        d = _dt_of(typ(f["of"], ctx.env, ctx.funs))
+        cs = _dt_field_ctors(d, f["name"])
+        tag = None if len(cs) == len(_DTS[d]["ctors"]) else (
+            "(" + " || ".join(f"({term(f['of'], ctx)}).tag == {_ctag(d, c)}" for c in cs) + ")")
+        return _conj([defs(f["of"], ctx), tag])
+    if "match" in e:
+        # PREDICT T37: each arm's body defined on its own constructor, its binders bound
+        m = e["match"]
+        d = _dt_of(typ(m["scrutinee"], ctx.env, ctx.funs))
+        scr = term(m["scrutinee"], ctx)
+        parts = [defs(m["scrutinee"], ctx)]
+        for arm in m["arms"]:
+            c2 = ctx
+            lets = ""
+            for b, fname, t in _dt_arm_binds(d, arm):
+                c2 = c2.bind(b, t)
+                lets += f"\\let {b} = ({scr}).{_cfield(arm['ctor'], fname)}; "
+            db = defs(arm["body"], c2)
+            if db is not None:
+                parts.append(f"(({scr}).tag == {_ctag(d, arm['ctor'])} ==> ({lets}{db}))")
+        return _conj(parts)
     op, args = e["op"], e.get("args", [])
     if op == "at":
         i = term(args[1], ctx)
@@ -4503,8 +4764,50 @@ def defs(e: dict, ctx: Ctx):
     return _conj([defs(a, ctx) for a in args])
 
 
+def _dt_match_acsl(e: dict, ctx, render) -> str:
+    """PREDICT T37: a match as a conditional on the tag, each arm's binders bound by ACSL's `\\let`."""
+    m = e["match"]
+    d = _dt_of(typ(m["scrutinee"], ctx.env, ctx.funs))
+    scr = term(m["scrutinee"], ctx)
+    arms = []
+    for arm in m["arms"]:
+        c2 = ctx
+        lets = ""
+        for b, f, t in _dt_arm_binds(d, arm):
+            c2 = c2.bind(b, t)
+            if b in _t_vars(arm["body"], set()):
+                lets += f"\\let {b} = ({scr}).{_cfield(arm['ctor'], f)}; "
+        arms.append((arm["ctor"], f"({lets}{render(arm['body'], c2)})" if lets else render(arm["body"], c2)))
+    txt = arms[-1][1]
+    for c, body in reversed(arms[:-1]):
+        txt = f"(({scr}).tag == {_ctag(d, c)} ? {body} : {txt})"
+    return txt
+
+
+def _dt_eq_acsl(x: str, e: dict, d: str, ctx) -> str:
+    """PREDICT T37: the ACSL predicate "the struct value `x` equals the t value `e`" -- a constructor expanded field
+    by field, anything else through `dt_D_eq`."""
+    if "ctor" in e:
+        c = e["ctor"]
+        parts = [f"({x}).tag == {_ctag(d, c['name'])}"]
+        for a, fd in zip(c["args"], _dt_fields(d, c["name"]), strict=True):
+            fx = f"({x}).{_cfield(c['name'], fd['name'])}"
+            if fd["type"] == "bool":
+                parts.append(f"(({fx} != 0) <==> {pred(a, ctx)})")
+            elif _dt_of(fd["type"]):
+                parts.append(_dt_eq_acsl(fx, a, _dt_of(fd["type"]), ctx))
+            else:
+                parts.append(f"{fx} == ({term(a, ctx)})")
+        return "(" + " && ".join(parts) + ")"
+    return f"dt_{d}_eq({x}, {term(e, ctx)})"
+
+
 def pred(e: dict, ctx: Ctx) -> str:
     """ACSL predicate (for requires/ensures/invariants/asserts/lemmas)."""
+    if "field" in e or "_dtf" in e:
+        return term(e, ctx)                              # PREDICT T37: a bool field, `!= 0`
+    if "match" in e:
+        return _dt_match_acsl(e, ctx, pred)              # PREDICT T37
     if "bool" in e:
         return "\\true" if e["bool"] else "\\false"
     if "var" in e:
@@ -4543,6 +4846,15 @@ def pred(e: dict, ctx: Ctx) -> str:
         return "(" + glue.join(pred(a, ctx) for a in args) + ")"
     if op in ("==", "!="):
         t0 = typ(args[0], ctx.env, ctx.funs)
+        if _dt_of(t0) is not None:
+            # PREDICT T37: by constructor and fields; a constructor operand expanded, never a struct literal
+            a, b = args
+            if "ctor" in a and "ctor" not in b:
+                a, b = b, a
+            if "ctor" in a:
+                raise NotImplementedError("framac: `==` between two constructors (PREDICT T37) is not lowered yet")
+            eq = _dt_eq_acsl(term(a, ctx), b, _dt_of(t0), ctx)
+            return eq if op == "==" else f"(!{eq})"
         if t0 == "bool":
             eq = f"({pred(args[0], ctx)} <==> {pred(args[1], ctx)})"
             return eq if op == "==" else f"(!{eq})"
@@ -4957,6 +5269,47 @@ def cexpr(e: dict, env: dict, funs: dict, task_name: str,
         return (f"(({cexpr(i['cond'], env, funs, task_name, _div_style)}) "
                 f"? ({cexpr(i['then'], env, funs, task_name, _div_style)}) "
                 f": ({cexpr(i['else'], env, funs, task_name, _div_style)}))")
+    if "ctor" in e:
+        # PREDICT T37: a C99 compound literal, the other variants' fields zero
+        c = e["ctor"]
+        d = c["dtype"]
+        inits = [f".tag = {_ctag(d, c['name'])}"] + [
+            f".{_cfield(c['name'], fd['name'])} = {cexpr(a, env, funs, task_name, _div_style)}"
+            for a, fd in zip(c["args"], _dt_fields(d, c["name"]), strict=True)]
+        return f"((struct dt_{d}){{{', '.join(inits)}}})"
+    if _dt_flat_field(e) is not None:
+        name, ft = _dt_flat_field(e)                      # PREDICT T43
+        if ft == "seq":
+            raise NotImplementedError(
+                "a seq-typed datatype field in C VALUE position (not under `len`/`at`): a seq has no single C "
+                "value in this lowering, only a pointer and a length")
+        return name
+    if "field" in e:
+        f = e["field"]
+        d = _dt_of(typ(f["of"], env, funs))
+        of = cexpr(f["of"], env, funs, task_name, _div_style)
+        cs = _dt_field_ctors(d, f["name"])
+        txt = f"({of}).{_cfield(cs[-1], f['name'])}"
+        for c in reversed(cs[:-1]):
+            txt = f"(({of}).tag == {_ctag(d, c)} ? ({of}).{_cfield(c, f['name'])} : {txt})"
+        return txt
+    if "match" in e:
+        # PREDICT T37: a conditional on the tag, each binder replaced by its constructor's field
+        m = e["match"]
+        d = _dt_of(typ(m["scrutinee"], env, funs))
+        scr = cexpr(m["scrutinee"], env, funs, task_name, _div_style)
+        arms = []
+        for arm in m["arms"]:
+            sub = {b: {"_dtf": {"of": m["scrutinee"], "field": _cfield(arm["ctor"], fname), "type": t}}
+                   for b, fname, t in _dt_arm_binds(d, arm)}
+            env2 = {k: v for k, v in env.items() if k not in sub}
+            arms.append((arm["ctor"], cexpr(_dt_subst(arm["body"], sub), env2, funs, task_name, _div_style)))
+        txt = arms[-1][1]
+        for c, body in reversed(arms[:-1]):
+            txt = f"(({scr}).tag == {_ctag(d, c)} ? {body} : {txt})"
+        return txt
+    if "_dtf" in e:
+        return f"({cexpr(e['_dtf']['of'], env, funs, task_name, _div_style)}).{e['_dtf']['field']}"
     if "call" in e:
         c = e["call"]
         _m = funs.get(c["fun"])
@@ -5272,6 +5625,8 @@ def cexpr(e: dict, env: dict, funs: dict, task_name: str,
         y_pos = f"(({yc}) > 0)"       # 0 or 1
         sign_y = f"({y_pos} - {y_neg})"          # 1 or -1 (y != 0)
         return f"({quo} - {neg} * {sign_y})"
+    if op in ("==", "!=") and _dt_of(typ(args[0], env, funs)) is not None:
+        raise NotImplementedError("framac: `==` on datatypes in executable position (PREDICT T37) is not lowered yet")
     if op in ("==", "!="):
         t0 = typ(args[0], env, funs)
         if t0 == "seq" or is_nested_seq_type(t0):
@@ -5441,6 +5796,30 @@ def code_ats(e: dict, env: dict, guard: tuple = ()) -> list:
         for a in e["call"]["args"]:
             out += code_ats(a, env, guard)
         return out
+    if "ctor" in e:
+        for a in e["ctor"]["args"]:
+            out += code_ats(a, env, guard)               # PREDICT T37
+        return out
+    if "field" in e:
+        # PREDICT T37: the read owes its constructor, asserted under the guard that reaches it
+        f = e["field"]
+        out += code_ats(f["of"], env, guard)
+        d = _dt_of(typ(f["of"], env, {}))
+        cs = _dt_field_ctors(d, f["name"])
+        if len(cs) < len(_DTS[d]["ctors"]):
+            out.append(("dtf", _dt_is(f["of"], d, cs), guard))
+        return out
+    if "match" in e:
+        # PREDICT T37: each arm's obligations under the guard that its constructor was matched, its binders read as
+        # the constructor's fields
+        m = e["match"]
+        out += code_ats(m["scrutinee"], env, guard)
+        d = _dt_of(typ(m["scrutinee"], env, {}))
+        for arm in m["arms"]:
+            sub = {b: {"_dtf": {"of": m["scrutinee"], "field": _cfield(arm["ctor"], fname), "type": t}}
+                   for b, fname, t in _dt_arm_binds(d, arm)}
+            out += code_ats(_dt_subst(arm["body"], sub), env, guard + (_dt_is(m["scrutinee"], d, [arm["ctor"]]),))
+        return out
     if "op" not in e:
         return out
     op, args = e["op"], e.get("args", [])
@@ -5548,6 +5927,9 @@ def at_asserts(e: dict, ctx: Ctx, indent: str, funs=None,
         elif tag == "pos":
             (sv,) = rest
             body = f"{sv}_n > 0"
+        elif tag == "dtf":
+            (cond,) = rest
+            body = pred(cond, ctx)                       # PREDICT T37: a field read's constructor
         else:                                      # "dm": bridging assert
             (node,) = rest
             if funs is not None and task_name is not None:
@@ -5651,6 +6033,8 @@ def _expr_seq_len(e: dict, lens: dict) -> dict | None:
     which costs nothing extra to support correctly."""
     if "var" in e:
         return lens.get(e["var"])
+    if e.get("op") == "rev":
+        return _expr_seq_len(e["args"][0], lens)          # PREDICT T20: rev keeps the length
     if "comp" in e and e["comp"].get("cond") == {"bool": True}:
         # SPEC.md "Comprehensions (v1)" (PREDICT T19): a map has its source's length, over a range `[lo, hi)` the
         # count `hi - lo` (the write loop asserts it equal to the buffer's length; a negative one cannot be)
@@ -6221,6 +6605,15 @@ def seq_assign_lines(target: str, e: dict, ctx: Ctx, indent: str,
             f"{target}[__k] = {src}[{idx_k}];",
         ]
 
+    if e.get("op") == "rev" and "var" in e["args"][0]:
+        # SPEC.md "The library (v1)" in Frama-C (PREDICT T20): `target := rev(s)` is the map
+        # `[s[len(s) - 1 - i] for i in [0, len(s))]` (SPEC.md's definition of rev, element by element), so it is
+        # T19's write loop with that body; the bound name t_rv is reserved (t's own names never begin with t_)
+        s0 = e["args"][0]
+        n0 = {"op": "len", "args": [s0]}
+        e = {"comp": {"var": "t_rv", "lo": {"int": 0}, "hi": n0, "cond": {"bool": True},
+                      "body": {"op": "at", "args": [s0, {"op": "-", "args": [
+                          {"op": "-", "args": [n0, {"int": 1}]}, {"var": "t_rv"}]}]}}}
     if "comp" in e:
         # SPEC.md "Comprehensions (v1)" in Frama-C (PREDICT T19): a map is a write loop, the copy loop above with
         # the body's value in place of the source's element
@@ -7277,6 +7670,58 @@ def _method_scratch(task: dict, body: list, funs: dict, used: set) -> list:
     return scratch
 
 
+# SEQ LOCALS AS WORKSPACE (PREDICT T31, 2026-10-07). A seq-typed local `var w: seq := e` whose initializer this
+# lowering can already write into a buffer (`seq_assign_lines`: a copy, `fill`, `update` of a variable, a literal,
+# `rev` of a variable, a map) and whose length is a function of the params alone (`_expr_seq_len`) gets the method
+# call's workspace: a caller-provided buffer `int *w, int w_n`, `\valid`, separated from every other buffer, sized by
+# `requires w_n == E` and listed in the `assigns` -- the contract ACSL by Example's reverse_copy states for its
+# destination. Written once, outside any loop; any other shape keeps `stmts()`'s refusal by name. `_LOCAL_WS` holds
+# the names while `stmts()` renders the body (scoped and restored by `lower()`, as `_EXEC_SEQ_LEN` is).
+_LOCAL_WS: set = set()
+_LOCAL_WS_OPS = frozenset({"fill", "update", "seq", "rev"})
+
+
+def _local_ws_init(e: dict, env: dict) -> bool:
+    if "var" in e:
+        return env.get(e["var"]) == "seq"
+    if "comp" in e:
+        return e["comp"].get("cond") == {"bool": True}
+    if e.get("op") not in _LOCAL_WS_OPS:
+        return False
+    if e["op"] in ("update", "rev"):
+        return "var" in e["args"][0] and env.get(e["args"][0]["var"]) == "seq"
+    return True
+
+
+def _local_scratch(task: dict, body: list, env: dict, funs: dict, used: set, taken: set) -> list:
+    """The workspace buffers for seq locals (see the note above), as `_method_scratch` gives them."""
+    params = {p["name"] for p in task["params"]}
+    lens = {p["name"]: {"op": "len", "args": [{"var": p["name"]}]} for p in task["params"] if p["type"] == "seq"}
+    written = set(assigned_names(body)[0])
+    env2 = dict(env)
+    out: list = []
+
+    def walk(stmts_, in_loop):
+        for s in stmts_:
+            if "var" in s:
+                v = s["var"]
+                if (v["type"] == "seq" and not in_loop and v["name"] not in written and v["name"] not in taken
+                        and f"{v['name']}_n" not in used and not _is_method_call(v["init"], funs)
+                        and _slice_alias_base(v["init"], env2) is None and _local_ws_init(v["init"], env2)):
+                    n = _expr_seq_len(v["init"], lens)
+                    if n is not None and _t_vars(n, set()) <= params:
+                        out.append((v["name"], n))
+                        lens[v["name"]] = n
+                env2[v["name"]] = v["type"]
+            elif "if" in s:
+                walk(s["if"]["then"], in_loop)
+                walk(s["if"]["else"], in_loop)
+            elif "while" in s:
+                walk(s["while"]["body"], True)
+    walk(body, False)
+    return out
+
+
 # SPEC.md "Lemmas (v1)". Each lemma is a ghost C function with an ACSL
 # contract (ACSL reference manual, "Ghost functions", and the "lemma
 # function" idiom of ACSL by Example: a ghost function whose contract is
@@ -7587,6 +8032,12 @@ def stmts(body: list, ctx: Ctx, task_name: str, indent: str,
                                           declare=v["type"] != "seq")
                 ctx = ctx.bind(v["name"], v["type"])
                 continue
+            if v["type"] == "seq" and v["name"] in _LOCAL_WS:
+                # PREDICT T31: a workspace buffer `lower()` added to the function's own parameters (`_local_scratch`),
+                # written here exactly as an assignment to a seq name is
+                out += seq_assign_lines(v["name"], v["init"], ctx, indent, ctx.funs, task_name)
+                ctx = ctx.bind(v["name"], "seq")
+                continue
             if v["type"] == "seq":
                 slice_alias = _slice_alias_base(v["init"], ctx.env)
                 if slice_alias is None:
@@ -7671,7 +8122,11 @@ def stmts(body: list, ctx: Ctx, task_name: str, indent: str,
                 continue
             out += at_asserts(v["init"], ctx, indent, ctx.funs, task_name)
             ctx = ctx.bind(v["name"], v["type"])
-            if isinstance(v["type"], dict) and "pair" in v["type"]:
+            if _dt_of(v["type"]) is not None:
+                # PREDICT T40: a datatype local, its struct by value
+                out.append(f"{indent}struct dt_{_dt_of(v['type'])} {v['name']} = "
+                           f"{cexpr(v['init'], ctx.env, ctx.funs, task_name)};")
+            elif isinstance(v["type"], dict) and "pair" in v["type"]:
                 # PAIRS, extended 2026-09-10: a pair-typed LOCAL (`var p:
                 # (int, int) := ...;`), one of the two gaps the section
                 # comment above `_pair_field_c` named by construction
@@ -8661,6 +9116,60 @@ def _flush_trace(out: list, ind: str) -> None:
     _CEV_TRACE.clear()
 
 
+def _cev_dt(e: dict, st: dict):
+    """PREDICT T37: a datatype expression's ground value, interp's own `Ctor`."""
+    import interp
+    if "ctor" in e:
+        c = e["ctor"]
+        return interp.Ctor(c["dtype"], c["name"], tuple(_cev(a, st) for a in c["args"]))
+    if "field" in e or "_dtf" in e:
+        of = e["field"]["of"] if "field" in e else e["_dtf"]["of"]
+        v = _cev(of, st)
+        for i, fd in enumerate(_dt_fields(v.dtype, v.ctor)):
+            if (fd["name"] == e["field"]["name"] if "field" in e else _cfield(v.ctor, fd["name"]) == e["_dtf"]["field"]):
+                return v.args[i]
+        raise _CertSkip("a field read on a constructor without it")
+    m = e["match"]
+    v = _cev(m["scrutinee"], st)
+    arm = next(a for a in m["arms"] if a["ctor"] == v.ctor)
+    return _cev(arm["body"], {**st, **dict(zip(arm["binders"], v.args))})
+
+
+def _cert_dt_resolve(e, ctx, st: dict, asserts: list, ind: str):
+    """PREDICT T37: `e` with every match and every read of a field several constructors share resolved at the
+    ground state, each decision asserted as a kernel goal (`(s).tag == dt_D_C`), the way an `if` is: no live `?:`
+    reaches the certificate, whose audit has no exemption for a dead arm."""
+    if isinstance(e, list):
+        return [_cert_dt_resolve(x, ctx, st, asserts, ind) for x in e]
+    if not isinstance(e, dict) or "_dtf" in e:
+        return e
+    if "match" in e:
+        m = e["match"]
+        v = _cev(m["scrutinee"], st)
+        asserts.append(f"{ind}/*@ assert ({term(m['scrutinee'], ctx)}).tag == {_ctag(v.dtype, v.ctor)}; */")
+        arm = next(a for a in m["arms"] if a["ctor"] == v.ctor)
+        sub = {b: {"_dtf": {"of": m["scrutinee"], "field": _cfield(v.ctor, fname), "type": t}}
+               for b, fname, t in _dt_arm_binds(v.dtype, arm)}
+        return _cert_dt_resolve(_dt_subst(arm["body"], sub), ctx, st, asserts, ind)
+    if "field" in e:
+        f = e["field"]
+        v = _cev(f["of"], st)
+        if len(_dt_field_ctors(v.dtype, f["name"])) > 1:
+            asserts.append(f"{ind}/*@ assert ({term(f['of'], ctx)}).tag == {_ctag(v.dtype, v.ctor)}; */")
+            return {"_dtf": {"of": f["of"], "field": _cfield(v.ctor, f["name"]),
+                             "type": _dt_field_type(v.dtype, f["name"])}}
+        return e
+    return {k: _cert_dt_resolve(x, ctx, st, asserts, ind) for k, x in e.items()}
+
+
+def _dt_has_choice(e) -> bool:
+    if isinstance(e, list):
+        return any(_dt_has_choice(x) for x in e)
+    if not isinstance(e, dict) or "_dtf" in e:
+        return False
+    return "match" in e or "field" in e or any(_dt_has_choice(x) for x in e.values())
+
+
 def _cev(e: dict, st: dict):
     """Ground evaluation of an EXECUTABLE t expression at concrete state,
     used only to pick branches and count loop iterations. Every decision it
@@ -8679,6 +9188,8 @@ def _cev(e: dict, st: dict):
         return _cev(i["then"] if _cev(i["cond"], st) else i["else"], st)
     if "call" in e:
         return _cev_call(e["call"], st)
+    if "ctor" in e or "field" in e or "_dtf" in e or "match" in e:
+        return _cev_dt(e, st)                            # PREDICT T37
     if "forall" in e or "exists" in e:
         raise _CertSkip("quantifier in executable position")
     op, args = e["op"], e.get("args", [])
@@ -8715,6 +9226,8 @@ def _cev(e: dict, st: dict):
         if n < 0:
             raise _CertSkip("undefined fill in replay")
         return [v] * n
+    if op == "rev":
+        return list(_cev(args[0], st))[::-1]          # PREDICT T31: SPEC.md's rev
     if op == "pair":
         # SPEC.md "Pairs" (2026-09-10): a pair value, defined iff both
         # components are (both already evaluated above by the time this
@@ -8794,6 +9307,23 @@ def _has_ite(x) -> bool:
     return False
 
 
+def _has_libcond(x) -> bool:
+    """True iff a `min`/`max` of two arguments or an `abs` occurs strictly INSIDE `x` (PREDICT T37): each is a C
+    conditional, so nested under an operator it reached `cexpr` as a live `?:` whose dead arm the certificate's own
+    audit rejects (measured on manhattan's twin, `abs(..) + abs(..)`); routed through the recursive arms below, the
+    top-level rule decides each one at the ground state. False for a lone top-level one, which that rule already
+    takes."""
+    def inner(y) -> bool:
+        if isinstance(y, dict):
+            if y.get("op") in ("min", "max", "abs") and (y["op"] == "abs" or len(y.get("args", [])) == 2):
+                return True
+            return any(inner(v) for v in y.values())
+        if isinstance(y, list):
+            return any(inner(v) for v in y)
+        return False
+    return isinstance(x, dict) and any(inner(v) for v in x.values())
+
+
 def _cert_cexpr(e: dict, ctx: Ctx, st: dict, funs: dict, name: str,
                 asserts: list, ind: str) -> str:
     """cexpr(), specialized for the certificate replay: every `div`/`mod`
@@ -8839,6 +9369,8 @@ def _cert_cexpr(e: dict, ctx: Ctx, st: dict, funs: dict, name: str,
     measured lifted task loses its short-circuit here, since one
     containing a partial operator anywhere falls through to the ordinary
     path below unchanged."""
+    if _DTS and _dt_has_choice(e):
+        e = _cert_dt_resolve(e, ctx, st, asserts, ind)   # PREDICT T37: matches decided at the ground tag
     if e.get("op") in ("min", "max", "abs") and (e["op"] == "abs" or len(e.get("args", [])) == 2):
         # SPEC.md "The library (v1)" (PREDICT T11): min/max/abs are C conditionals, so in the replay they are their
         # `ite`, resolved branch-free below (measured: clamp's twin read UNPROVED on a live `?:` arm at ground values)
@@ -8855,7 +9387,7 @@ def _cert_cexpr(e: dict, ctx: Ctx, st: dict, funs: dict, name: str,
         a_c = _cert_cexpr(e["args"][0], ctx, st, funs, name, asserts, ind)
         b_c = _cert_cexpr(e["args"][1], ctx, st, funs, name, asserts, ind)
         return f"(({a_c}) {'&' if e['op'] == 'and' else '|'} ({b_c}))"
-    if not _has_divmod(e) and not _has_ite(e):
+    if not _has_divmod(e) and not _has_ite(e) and not _has_libcond(e):
         return cexpr(e, ctx.env, funs, name)
     if "ite" in e:
         # BRANCH-FREE ITE (framac track, 2026-09-26; acsl clamp's
@@ -9072,6 +9604,68 @@ def _cert_method_call(target: str, e: dict, ctx: Ctx, st: dict, name: str,
     st[target] = st2[rv]
 
 
+def _cert_seq_cells(e: dict, ctx: Ctx, st: dict, name: str, out: list, ind: str) -> tuple:
+    """PREDICT T31: a seq local's ground value and, cell by cell, the C rvalue the replay stores there -- SPEC.md's
+    definition of each initializer element by element at ground indices (a copy, `rev`, `fill`, `update`, a literal,
+    a map), each ground fact it leans on (a length, an index) asserted first as a kernel goal."""
+    if "var" in e:
+        src = seq_var(e, ctx.env)
+        vals = list(_cev(e, st))
+        out.append(f"{ind}/*@ assert {src}_n == {len(vals)}; */")
+        return vals, [f"{src}[{k}]" for k in range(len(vals))]
+    if "comp" in e:
+        import lower_verus
+        c = e["comp"]
+        if c.get("cond") != {"bool": True}:
+            raise _CertSkip("a filtered comprehension in the replay")
+        if "seq" in c:
+            n = len(_cev(c["seq"], st))
+            src = seq_var(c["seq"], ctx.env)
+            out.append(f"{ind}/*@ assert {src}_n == {n}; */")
+            elems = [{"op": "at", "args": [c["seq"], {"int": k}]} for k in range(n)]
+        else:
+            lo, hi = _cev(c["lo"], st), _cev(c["hi"], st)
+            out.append(f"{ind}/*@ assert ({term(c['lo'], ctx)}) == {_int_lit(lo)}; */")
+            out.append(f"{ind}/*@ assert ({term(c['hi'], ctx)}) == {_int_lit(hi)}; */")
+            elems = [{"int": lo + k} for k in range(max(hi - lo, 0))]
+        vals, cells = [], []
+        for el in elems:
+            b = lower_verus.subst(c["body"], {c["var"]: el})
+            out.extend(at_asserts(b, ctx, ind))
+            vals.append(_cev(b, st))
+            cells.append(_cert_cexpr(b, ctx, st, ctx.funs, name, out, ind))
+        return vals, cells
+    op, args = e.get("op"), e.get("args", [])
+    if op == "rev" and "var" in args[0]:
+        src = seq_var(args[0], ctx.env)
+        vals = list(_cev(args[0], st))
+        n = len(vals)
+        out.append(f"{ind}/*@ assert {src}_n == {n}; */")
+        return vals[::-1], [f"{src}[{n - 1 - k}]" for k in range(n)]
+    if op == "seq":
+        out.extend(at_asserts(e, ctx, ind))
+        return ([_cev(a, st) for a in args],
+                [_cert_cexpr(a, ctx, st, ctx.funs, name, out, ind) for a in args])
+    if op == "fill":
+        out.extend(at_asserts(e, ctx, ind))
+        n = _cev(args[0], st)
+        if n < 0:
+            raise _CertSkip("undefined fill in replay")
+        out.append(f"{ind}/*@ assert ({term(args[0], ctx)}) == {_int_lit(n)}; */")
+        c = _cert_cexpr(args[1], ctx, st, ctx.funs, name, out, ind)
+        return [_cev(args[1], st)] * n, [c] * n
+    if op == "update" and "var" in args[0]:
+        out.extend(at_asserts(e, ctx, ind))
+        src = seq_var(args[0], ctx.env)
+        vals = list(_cev(e, st))
+        i = _cev(args[1], st)
+        out.append(f"{ind}/*@ assert {src}_n == {len(vals)}; */")
+        out.append(f"{ind}/*@ assert ({term(args[1], ctx)}) == {_int_lit(i)}; */")
+        c = _cert_cexpr(args[2], ctx, st, ctx.funs, name, out, ind)
+        return vals, [c if k == i else f"{src}[{k}]" for k in range(len(vals))]
+    raise _CertSkip("no cell-by-cell replay for this seq local's initializer")
+
+
 def _cert_stmts(body: list, ctx: Ctx, st: dict, name: str,
                 out: list, count: list) -> tuple:
     """Branch-free replay of `body` at state `st`: straight-line C plus one
@@ -9100,6 +9694,30 @@ def _cert_stmts(body: list, ctx: Ctx, st: dict, name: str,
             v = s["var"]
             ctx = ctx.bind(v["name"], v["type"])
             _cert_method_call(v["name"], v["init"], ctx, st, name, out, count)
+        elif "var" in s and s["var"]["type"] == "seq":
+            # PREDICT T31: a seq local is a fresh ground array, written cell by cell (`_cert_seq_cells`)
+            v = s["var"]
+            if v["name"] in st:
+                raise _CertSkip(f"seq local {v['name']} declared twice in the replay")
+            vals, cells = _cert_seq_cells(v["init"], ctx, st, name, out, ind)
+            out.append(f"{ind}int t_cert_{v['name']}[{max(len(vals), 1)}];")
+            out.append(f"{ind}int *{v['name']} = t_cert_{v['name']};")
+            out.append(f"{ind}int {v['name']}_n = {len(vals)};")
+            out += [f"{ind}{v['name']}[{k}] = {c};" for k, c in enumerate(cells)]
+            ctx = ctx.bind(v["name"], "seq")
+            st[v["name"]] = vals
+        elif "assign" in s and _contains_seq_eq(s["assign"][1], ctx):
+            # PREDICT T31: a bool built from a seq equality has no C value (`cexpr` refuses it); at ground values its
+            # truth is decided here and asserted as a kernel goal, the way an `if` decision is
+            n, e = s["assign"]
+            if typ(e, ctx.env, ctx.funs) != "bool":
+                raise _CertSkip("a seq equality inside a non-bool expression in the replay")
+            out += at_asserts(e, ctx, ind)
+            val = _cev(e, st)
+            g = pred(e, ctx)
+            out.append(f"{ind}/*@ assert {g if val else f'(!{g})'}; */")
+            out.append(f"{ind}{n} = {1 if val else 0};")
+            st[n] = val
         elif "assign" in s:
             n, e = s["assign"]
             out += at_asserts(e, ctx, ind)
@@ -9185,6 +9803,20 @@ def _cert_stmts(body: list, ctx: Ctx, st: dict, name: str,
     return ctx, False
 
 
+def _dt_local_types(body: list) -> dict:
+    """PREDICT T40: name -> datatype of every datatype-typed `var` in `body`."""
+    out: dict = {}
+    for st in body:
+        if "var" in st and _dt_of(st["var"]["type"]):
+            out[st["var"]["name"]] = _dt_of(st["var"]["type"])
+        if "if" in st:
+            out.update(_dt_local_types(st["if"]["then"]))
+            out.update(_dt_local_types(st["if"]["else"]))
+        if "while" in st:
+            out.update(_dt_local_types(st["while"]["body"]))
+    return out
+
+
 def _tty(v):
     """Value tagged with its t type (bool is not int; interp._tv precedent,
     restated locally so this file keeps importing nothing of interp's).
@@ -9200,6 +9832,11 @@ def _tty(v):
         return ("bool", v)
     if isinstance(v, list):
         return ("pair", v)
+    import interp
+    if isinstance(v, interp.Ctor):
+        return ("dt", interp._j(v))                  # PREDICT T40: a constructor value, by its t text
+    if isinstance(v, str):
+        return ("dt", v)
     return ("int", v)
 
 
@@ -9257,6 +9894,9 @@ def _value_certificate(task: dict, twin_body: list, w: dict,
                and all(isinstance(x, int) and not isinstance(x, bool)
                        for x in twin_val)):
             return None                # a bool-seq or non-ground value
+    elif _dt_of(rett) is not None:
+        if not isinstance(twin_val, str):
+            return None                # PREDICT T40: a datatype twin value is its t text
     elif not isinstance(twin_val, (bool, int)):
         return None                    # no-value twins have no ground replay
     if CERT_FN in used or CERT_GOAL in used:
@@ -9394,6 +10034,34 @@ def _value_certificate(task: dict, twin_body: list, w: dict,
                 decls.append(f"  struct {psname} {p['name']} = "
                              f"(struct {psname}){{{a0}, {b0}}};")
                 st[p["name"]] = v
+            elif p["name"] in _DT_FLAT:
+                # PREDICT T43: a flattened datatype witness, declared field by field exactly as its C parameters
+                # are (a seq field as array + pointer + length, the seq branch's own shape), `st` the Ctor itself
+                import interp
+                import surface
+                val = interp.ev(surface.parse_expr(v), {}, {}, interp.St())
+                for fd, fv in zip(_dt_fields(val.dtype, val.ctor), val.args):
+                    nm = f"{p['name']}_{fd['name']}"
+                    if fd["type"] == "seq":
+                        arr = f"t_cert_{nm}"
+                        if arr in used:
+                            return None
+                        vals = [int(x) for x in fv]
+                        init = ", ".join(_int_lit(x) for x in vals) or "0"
+                        decls.append(f"  int {arr}[{max(len(vals), 1)}] = {{{init}}};")
+                        decls.append(f"  int *{nm} = {arr};")
+                        decls.append(f"  int {nm}_n = {len(vals)};")
+                    else:
+                        decls.append(f"  int {nm} = {_int_lit(int(fv))};")
+                st[p["name"]] = val
+            elif _dt_of(p["type"]) is not None:
+                # PREDICT T37: a datatype witness, the t text parsed, declared as its ground compound literal
+                import interp
+                import surface
+                ast = surface.parse_expr(v)
+                decls.append(f"  struct dt_{_dt_of(p['type'])} {p['name']} = "
+                             f"{cexpr(ast, env, funs, task['name'])};")
+                st[p["name"]] = interp.ev(ast, {}, {}, interp.St())
             else:
                 decls.append(f"  int {p['name']} = {_int_lit(int(v))};")
                 st[p["name"]] = v
@@ -9415,10 +10083,13 @@ def _value_certificate(task: dict, twin_body: list, w: dict,
             st[ret] = r_vals
         else:
             _, dec = assigned_names(twin_body)
-            names = [ret] + [d for d in dec if d != ret]
+            seq_locals = _seq_local_names(twin_body)             # PREDICT T31: declared where the replay writes them
+            names = [ret] + [d for d in dec if d != ret and d not in seq_locals]
             if len(set(dec)) != len(dec) or set(dec) & set(st):
                 return None            # flattening scopes would collide
-            decls += [f"  {'struct ' + struct_name if is_pair and n == ret else 'int'}"
+            dt_names = {ret: _dt_of(rett)} if _dt_of(rett) else {}
+            dt_names.update(_dt_local_types(twin_body))                 # PREDICT T40
+            decls += [f"  {'struct dt_' + dt_names[n] if n in dt_names else 'struct ' + struct_name if is_pair and n == ret else 'int'}"
                      f" {n};" for n in names]
             _cert_stmts(twin_body, Ctx(env, funs, ret=None, label="Here"),
                         st, task["name"], body_out, [0])
@@ -9526,6 +10197,19 @@ def _value_certificate(task: dict, twin_body: list, w: dict,
              f"  /*@ assert {CERT_GOAL}: !({' && '.join(pieces)}); */",
              "  return;", "}", ""]
     return "\n".join(lines)
+
+
+def _seq_local_names(body: list) -> set:
+    """The seq-typed locals `body` declares (not by a method call), anywhere in it."""
+    out: set = set()
+    for s in body:
+        if "var" in s and s["var"]["type"] == "seq" and not ("call" in s["var"]["init"]):
+            out.add(s["var"]["name"])
+        elif "if" in s:
+            out |= _seq_local_names(s["if"]["then"]) | _seq_local_names(s["if"]["else"])
+        elif "while" in s:
+            out |= _seq_local_names(s["while"]["body"])
+    return out
 
 
 def _call_nodes(e) -> list:
@@ -10380,6 +11064,15 @@ def _always_returns(body: list) -> bool:
     if "if" in s:
         c = s["if"]
         return _always_returns(c["then"]) and _always_returns(c["else"])
+    # PREDICT T44: a `while true` with no `break` (tshape.desugar_exits leaves none) is left only by `return`
+    return "while" in s and s["while"].get("cond") == {"bool": True} and not _has_break(s["while"]["body"])
+
+
+def _has_break(stmts) -> bool:
+    if isinstance(stmts, list):
+        return any(_has_break(x) for x in stmts)
+    if isinstance(stmts, dict):
+        return stmts.get("break") is True or any(_has_break(v) for v in stmts.values())
     return False
 
 
@@ -10453,28 +11146,37 @@ def _comp_refusal(task: dict, body: list) -> None:
 
 def lower(task: dict, body: list, witness: dict | None = None,
           _unit: dict | None = None) -> str:
+    # PREDICT T37: the task's datatype declarations, for the module-level helpers, for exactly this call
+    if _unit is not None:
+        return _lower(task, body, witness, _unit)
+    prev, prev_flat = dict(_DTS), dict(_DT_FLAT)
+    _DTS.clear()
+    _DTS.update({d["name"]: d for d in task.get("datatypes", [])})
+    _DT_FLAT.clear()
+    _DT_FLAT.update({p["name"]: _dt_of(p["type"]) for p in task["params"]
+                     if _dt_of(p["type"]) is not None and _dt_flattens(_dt_of(p["type"]))})   # PREDICT T43
+    try:
+        return _lower(task, body, witness, _unit)
+    finally:
+        _DTS.clear()
+        _DTS.update(prev)
+        _DT_FLAT.clear()
+        _DT_FLAT.update(prev_flat)
+
+
+def _lower(task: dict, body: list, witness: dict | None = None,
+           _unit: dict | None = None) -> str:
     import tshape
     task, body = tshape.desugar_seq_quants(task, body)   # SPEC.md "Quantifiers over a collection": seq ranges as indices
     import framac_lib
-    tshape.abstain_unless_carried(task, body, "framac", carried={"comp"},
+    task, body = tshape.desugar_par(task, body)          # PREDICT T47: a parallel loop as its sequential `for`
+    task, body = tshape.desugar_exits(task, body)        # PREDICT T44: break/continue rewritten; `while true` stays
+    tshape.abstain_on_heap(task, "framac")                   # SPEC.md "Heap (v1)" (PREDICT T46): Dafny first
+    tshape.abstain_on_floats(task, body, "framac")           # SPEC.md "Floats (v1)" (PREDICT T48)
+    tshape.abstain_unless_carried(task, body, "framac", carried={"comp", "exit"},
                                   lib=framac_lib.FRAMAC_LIB)   # PREDICT T11: the library in Frama-C
     _comp_refusal(task, body)                              # PREDICT T19: maps assigned to a buffer, the rest by name
-    if task.get("datatypes"):
-        # DATATYPES (2026-09-27, SPEC.md "Datatypes (v1)"): FEATURES-TRACK.md
-        # names "Frama-C ... through records with discriminants" as the
-        # eventual encoding -- a C struct with an int tag field plus an
-        # ACSL predicate enumerating its legal values, since C's `enum` is
-        # an unchecked int with no ACSL exhaustiveness or WP support for a
-        # `match`-shaped case split the way a tagged struct's own
-        # discriminant would get one. That encoding, its equality
-        # predicate and a ground refutation certificate for it are not
-        # built or measured against frama-c/WP here. Until they are, the
-        # honest verdict is an abstention by name (SPEC.md's own rule),
-        # the same posture this column already takes for finite sets below.
-        raise NotImplementedError(
-            "framac lowering: datatypes (SPEC.md 'Datatypes (v1)'): the "
-            "tagged-struct encoding and its ACSL predicates/certificate are "
-            "not built or measured yet")
+    _dt_check(task, body)                                  # PREDICT T37: datatype parameters; the rest by name
     if _uses_sets(task) or _uses_sets(body):
         # FINITE SETS (2026-09-27, SPEC.md "Finite sets (v1)"): C has no
         # set value. ACSL's logic sets (`\union`, `\inter`, `\subset`)
@@ -10801,11 +11503,23 @@ def lower(task: dict, body: list, witness: dict | None = None,
         # the emitted C that is precisely what it now is.
         k = p["type"]["pair"].index("seq")
         seqs.append(f"{p['name']}_{'fst' if k == 0 else 'snd'}")
+    for pname, d in _DT_FLAT.items():
+        # PREDICT T43: a flattened datatype's seq fields join `seqs` the same way, under their flattened names
+        for fd in _dt_fields(d, _DTS[d]["ctors"][0]["name"]):
+            nm = f"{pname}_{fd['name']}"
+            for suffix in ("", "_n"):
+                if f"{nm}{suffix}" in used:
+                    raise NotImplementedError(f"name {nm}{suffix} collides with a fresh parameter this lowering "
+                                              f"synthesizes for the flattened datatype parameter {pname}")
+            if fd["type"] == "seq":
+                seqs.append(nm)
     # SPEC.md "Methods (v1)": workspace buffers for seq locals set by a
     # method call (see the methods section above `stmts()`); empty, and
     # every clause below byte-identical, for a body with no such call.
     scratch = (_method_scratch(task, body, funs, used)
                if task.get("methods") else [])
+    local_ws = _local_scratch(task, body, env, funs, used, {w for w, _ in scratch})   # PREDICT T31
+    scratch += local_ws
 
     # PAIRS (SPEC.md "Pairs", 2026-09-10): a pair-typed RETURN's struct
     # type must be declared before anything in the file uses it (the
@@ -10835,6 +11549,8 @@ def lower(task: dict, body: list, witness: dict | None = None,
                         if pt not in declared_pairs]
 
     header = []
+    if task.get("datatypes"):
+        header += _dt_decls(task)                         # PREDICT T37
     if pair_ty is not None:
         header.append(f"struct {struct_name} {{ int a; int b; }};")
     for pt in extra_pair_types:
@@ -11023,6 +11739,10 @@ def lower(task: dict, body: list, witness: dict | None = None,
                    label="Here",
                    seq_len=({ret: "\\result"} if capacity_mode else {}))
     clauses = []
+    for p in task["params"]:
+        if _dt_of(p["type"]) is not None and p["name"] not in _DT_FLAT:
+            # PREDICT T37: a t value is always built by one of its constructors (a flattened one has one, T43)
+            clauses.append(f"  requires dt_{_dt_of(p['type'])}_ok({p['name']});")
     all_seqs = list(seqs)
     for s in seqs:
         clauses.append(f"  requires {s}_n >= 0;")
@@ -11257,6 +11977,13 @@ def lower(task: dict, body: list, witness: dict | None = None,
                 continue
             sname = _pair_struct_name(*p["type"]["pair"])
             cparams.append(f"struct {sname} {p['name']}")
+        elif p["name"] in _DT_FLAT:
+            # PREDICT T43: flattened, each field its own C parameter
+            for fd in _dt_fields(_DT_FLAT[p["name"]], _DTS[_DT_FLAT[p["name"]]]["ctors"][0]["name"]):
+                nm = f"{p['name']}_{fd['name']}"
+                cparams += [f"int *{nm}", f"int {nm}_n"] if fd["type"] == "seq" else [f"int {nm}"]
+        elif _dt_of(p["type"]) is not None:
+            cparams.append(f"struct dt_{_dt_of(p['type'])} {p['name']}")   # PREDICT T37: by value
         else:
             cparams.append(f"int {p['name']}")
     if rett == "seq":
@@ -11293,6 +12020,9 @@ def lower(task: dict, body: list, witness: dict | None = None,
         prev_len = dict(_EXEC_SEQ_LEN)
         _EXEC_SEQ_LEN.clear()
         _EXEC_SEQ_LEN.update(body_seq_len)
+        prev_ws = set(_LOCAL_WS)
+        _LOCAL_WS.clear()
+        _LOCAL_WS.update(w for w, _ in local_ws)
         try:
             body_lines = stmts(body, Ctx(env, funs, ret=None, label="Here",
                                          seq_len=body_seq_len),
@@ -11300,6 +12030,8 @@ def lower(task: dict, body: list, witness: dict | None = None,
         finally:
             _EXEC_SEQ_LEN.clear()
             _EXEC_SEQ_LEN.update(prev_len)
+            _LOCAL_WS.clear()
+            _LOCAL_WS.update(prev_ws)
     # `certificate` reads the witness `w` against this SAME renamed
     # task/body/env/funs/used, `w`'s own keys already renamed to match
     # (`t_names.remap_witness`, above) -- see that function's own
@@ -11356,13 +12088,15 @@ def lower(task: dict, body: list, witness: dict | None = None,
     # CAPACITY use, nothing here grows it; the point is only to make the
     # TASK's own length invariant a real preservation obligation instead
     # of a `requires`-derivable one.
-    ret_decl = (f"  struct {struct_name} {ret};\n" if pair_ty is not None else
+    ret_decl = (f"  struct dt_{_dt_of(rett)} {ret};\n" if _dt_of(rett) is not None else   # PREDICT T40
+               f"  struct {struct_name} {ret};\n" if pair_ty is not None else
                f"  int {LEN} = {cexpr(ret_len_expr, env, funs, name)};\n"
                if tracked_exact else
                f"  int {LEN};\n" if capacity_mode else
                "" if nested_return_rows is not None else
                ("" if rett == "seq" else f"  int {ret};\n"))
-    cfun_ret_ty = (f"struct {struct_name}" if pair_ty is not None else
+    cfun_ret_ty = (f"struct dt_{_dt_of(rett)}" if _dt_of(rett) is not None else   # PREDICT T40
+                  f"struct {struct_name}" if pair_ty is not None else
                   "void" if rett == "seq" and not capacity_mode
                   else "void" if nested_return_rows is not None
                   else "int")

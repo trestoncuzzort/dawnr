@@ -82,6 +82,18 @@ def test_refusals_by_name():
     ok("not lowered yet" in refusal("pad_right_len"), "the second string wave stays refused")
 
 
+def test_seq_equality_has_one_orientation():
+    # PREDICT T33: the code's `u == b` and the contract's `b == rev(a)` state one term, so the closer's congruence
+    # between the contract's forall and the code's negated fact can close
+    src = rocq("rev_equal")
+    ok("&& t_seq_eqb a_len (t_rev a a_len) b)" in src, "the code's test, rev first")
+    ok("(a_len = b_len /\\ (forall t_k : Z, 0 <= t_k < a_len -> (t_rev a a_len) t_k = b t_k))" in src,
+       "and the contract's statement in the same order")
+    ok(lower_rocq._seq_eq_order("b", "b_len", "(t_rev a a_len)", "a_len") == ("(t_rev a a_len)", "a_len", "b", "b_len"),
+       "the operand whose function sorts first leads")
+    ok(lower_rocq._seq_eq_order("a", "n", "b", "m") == ("a", "n", "b", "m"), "an ordered pair is left alone")
+
+
 if __name__ == "__main__":
     for name, fn in sorted(globals().items()):
         if name.startswith("test_") and callable(fn):

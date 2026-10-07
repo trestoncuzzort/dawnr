@@ -11,7 +11,9 @@ specification, a C conditional in code. No ACSL `axiom` is emitted. Measured fir
 adapter's own WP flags (scratch p1.c, p2.c, 2026-10-06): every functional goal proved."""
 from __future__ import annotations
 
-FRAMAC_LIB = frozenset({"min", "max", "abs", "gcd", "pow", "isqrt", "sum", "maxs", "in"})
+# "rev" since PREDICT T20 (2026-10-07): no prelude; an element rewrite in ACSL (_seq_at_render) and T19's write loop in
+# code (seq_assign_lines), both in lower_framac
+FRAMAC_LIB = frozenset({"min", "max", "abs", "gcd", "pow", "isqrt", "sum", "maxs", "in", "rev"})
 
 _TEXT: dict[str, str] = {}
 

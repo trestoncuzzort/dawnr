@@ -86,6 +86,7 @@ class _Writer:
         self.helpers: list[str] = []          # interp function names to copy in
         self.need_divmod = False
         self.fun_names = {f["name"] for f in task.get("spec_funs", [])} | {m["name"] for m in task.get("methods", [])}
+        self.floats = "float" in json.dumps(task)     # SPEC.md "Floats (v1)": a task naming the type or float()
         self.self_name = task["name"]
 
     def _need(self, names: list[str]) -> None:
@@ -97,6 +98,17 @@ class _Writer:
     def expr(self, e: dict) -> str:
         if "int" in e:
             return repr(e["int"])
+        if e.get("op") == "float":
+            # SPEC.md "Floats (v1)": a real literal rounded here, exactly as t rounds it (Python's float of a
+            # Fraction is correctly rounded); an int converted at run time, an overflow raising
+            a0 = e["args"][0]
+            if "rat" in a0:
+                import fractions
+                v = float(fractions.Fraction(a0["rat"][0], a0["rat"][1]))
+                return repr(v)
+            return f"_t_tofloat({self.expr(a0)})"
+        if e.get("op") == "sqrt":
+            return f"_t_sqrt({self.expr(e['args'][0])})"
         if "bool" in e:
             return "True" if e["bool"] else "False"
         if "var" in e:
@@ -205,6 +217,8 @@ class _Writer:
             return f"({x[0]} & {x[1]})"
         if op == "diff":
             return f"({x[0]} - {x[1]})"
+        if op == "div" and self.floats:
+            return f"_t_fdiv({x[0]}, {x[1]})"      # SPEC.md "Floats (v1)": a float's quotient, or an int's Euclidean one
         if op in ("div", "mod"):
             self.need_divmod = True
             return f"_t_{op}({x[0]}, {x[1]})"
@@ -228,6 +242,8 @@ class _Writer:
                 return f"_str_partition3({x[0]}, {x[1]})"
             return f"_str_{op}({', '.join(x)})"
         if op in _BINOP:
+            if self.floats and op in ("+", "-", "*"):
+                return f"_t_f({x[0]} {_BINOP[op]} {x[1]})"   # SPEC.md "Floats (v1)": no value unless finite
             return f"({x[0]} {_BINOP[op]} {x[1]})"
         raise Unsupported(f"operator {op!r}")
 
@@ -239,6 +255,11 @@ class _Writer:
             if "assign" in s:
                 name, e = s["assign"]
                 out.append(f"{pad}{_ident(name)} = {self.expr(e)}")
+            elif "aset" in s:
+                # SPEC.md "Heap (v1)": the caller's list, one element written; a negative index is t's undefined
+                # write, not Python's write from the end
+                name, i, e = s["aset"]
+                out.append(f"{pad}_t_aset({_ident(name)}, {self.expr(i)}, {self.expr(e)})")
             elif "var" in s:
                 d = s["var"]
                 out.append(f"{pad}{_ident(d['name'])} = {self.expr(d['init'])}")
@@ -262,6 +283,17 @@ class _Writer:
                     out.append(f"{pad}# decreases: {surface.pexpr(w['decreases'])}")
                 out.append(f"{pad}while {self.expr(w['cond'])}:")
                 out += self.stmts(w["body"], depth + 1) or [f"{pad}{INDENT}pass"]
+            elif "par" in s:
+                # SPEC.md "Concurrency (v1)": each iteration a call on a thread pool; `par-race` gives each one its own
+                # element and its own locals, so the threads share nothing they write
+                w = s["par"]
+                self.par_k = getattr(self, "par_k", 0) + 1
+                fn = f"_t_iter{self.par_k}"
+                for inv in w.get("invariants", []):
+                    out.append(f"{pad}# invariant: {surface.pexpr(inv)}")
+                out.append(f"{pad}def {fn}({_ident(w['var'])}):")
+                out += self.stmts(w["body"], depth + 1) or [f"{pad}{INDENT}pass"]
+                out.append(f"{pad}_t_par({fn}, {self.expr(w['lo'])}, {self.expr(w['hi'])})")
             elif "lemma" in s:
                 continue                                        # ghost: erased at run time (SPEC.md "Lemmas (v1)")
             else:
@@ -332,6 +364,8 @@ def _boundary_kinds(task: dict, tests: list[str]) -> tuple[list[str], str]:
             out_containers = _containers(node.test.comparators[0])   # the deepest writing seen (an empty one says less)
 
     def form(ttype, seen: str) -> str:
+        if ttype == "array":
+            return "array"          # SPEC.md "Heap (v1)": the caller's own list, written in place, never copied
         if ttype == "seq":
             return "str" if seen in ("str", "char") else "list"
         if isinstance(ttype, dict) and "seq" in ttype:          # seq<seq>, stored as {"seq": "seq"}
@@ -381,6 +415,10 @@ def _type_guard(ttype, kind: str, v: str) -> tuple[str, str] | None:
         return f"isinstance({v}, (set, frozenset)) and all(_t_ints(x, 0) for x in {v})", "a set of integers"
     if kind == "list" and _depth(ttype):
         return f"_t_ints({v}, {_depth(ttype)})", "a list of integers" if _depth(ttype) == 1 else "a list of lists of integers"
+    if kind == "array":
+        return f"isinstance({v}, list) and _t_ints({v}, 1)", "a list of integers (written in place)"
+    if kind == "value" and ttype == "float":
+        return f"isinstance({v}, float) and __import__('math').isfinite({v})", "a finite float"   # SPEC.md "Floats (v1)"
     if kind == "value" and ttype == "int":
         return f"_t_ints({v}, 0)", "an integer"
     if kind == "value" and ttype == "bool":
@@ -437,6 +475,35 @@ def translate(task: dict, tests: list[str] | None = None, fn_name: str | None = 
     lines += [f"{INDENT}_t_result = _t_core({', '.join(params)})", f"{INDENT}return {result}", ""]
     lines += core + [""] + funs
     support: list[str] = []
+    if any(h in l for l in lines for h in ("_t_f(", "_t_fdiv(", "_t_sqrt(", "_t_tofloat(")):
+        # SPEC.md "Floats (v1)": an operation with no finite result has no value in t, so it raises here
+        support += ["def _t_f(v):", f"{INDENT}if isinstance(v, float) and not __import__('math').isfinite(v):",
+                    f"{INDENT}{INDENT}raise ArithmeticError('no finite result, undefined in t')", f"{INDENT}return v", "",
+                    "def _t_fdiv(x, y):", f"{INDENT}if isinstance(x, float):", f"{INDENT}{INDENT}if y == 0.0:",
+                    f"{INDENT}{INDENT}{INDENT}raise ArithmeticError('division by zero, undefined in t')",
+                    f"{INDENT}{INDENT}return _t_f(x / y)", f"{INDENT}if y == 0:",
+                    f"{INDENT}{INDENT}raise ArithmeticError('division by zero, undefined in t')",
+                    f"{INDENT}return (x - x % abs(y)) // y", "",
+                    "def _t_sqrt(x):", f"{INDENT}if x < 0.0:", f"{INDENT}{INDENT}raise ArithmeticError('sqrt of a negative, undefined in t')",
+                    f"{INDENT}return __import__('math').sqrt(x)", "",
+                    "def _t_tofloat(n):", f"{INDENT}try:", f"{INDENT}{INDENT}return _t_f(float(n))",
+                    f"{INDENT}except OverflowError:", f"{INDENT}{INDENT}raise ArithmeticError('float() overflows, undefined in t')", ""]
+    if any("_t_par(" in l for l in lines):
+        # SPEC.md "Concurrency (v1)": the iterations on a thread pool; where no thread can start (a sandbox), each one
+        # not yet run runs in order, the same result by `par-race`, and none runs twice
+        support += ["def _t_par(fn, lo, hi):", f"{INDENT}done = set()", "",
+                    f"{INDENT}def run(i):", f"{INDENT}{INDENT}fn(i)", f"{INDENT}{INDENT}done.add(i)", "",
+                    f"{INDENT}try:", f"{INDENT}{INDENT}import concurrent.futures",
+                    f"{INDENT}{INDENT}with concurrent.futures.ThreadPoolExecutor() as pool:",
+                    f"{INDENT}{INDENT}{INDENT}for f in [pool.submit(run, i) for i in range(lo, hi)]:",
+                    f"{INDENT}{INDENT}{INDENT}{INDENT}f.result()",
+                    f"{INDENT}except RuntimeError as e:",
+                    f"{INDENT}{INDENT}if 'thread' not in str(e):", f"{INDENT}{INDENT}{INDENT}raise",
+                    f"{INDENT}{INDENT}for i in range(lo, hi):", f"{INDENT}{INDENT}{INDENT}if i not in done:",
+                    f"{INDENT}{INDENT}{INDENT}{INDENT}run(i)", ""]
+    if any("_t_aset(" in l for l in lines):
+        support += ["def _t_aset(a, i, v):", f"{INDENT}if not 0 <= i < len(a):",
+                    f"{INDENT}{INDENT}raise IndexError('write outside the array, undefined in t')", f"{INDENT}a[i] = v", ""]
     if any("_t_update(" in l for l in lines):
         support += ["def _t_update(s, i, v):", f"{INDENT}if isinstance(s, dict):", f"{INDENT}{INDENT}return {{**s, i: v}}",
                     f"{INDENT}return s[:i] + (v,) + s[i + 1:]", ""]
@@ -508,11 +575,13 @@ def _t_value_to_py(v, kind: str):
     if isinstance(v, interp.Pair):
         return (_t_value_to_py(v.a, "value"), _t_value_to_py(v.b, "value"))
     if isinstance(v, tuple):
-        return [_t_value_to_py(x, "value") for x in v]
+        return [_t_value_to_py(x, "value") for x in v]     # an "array" too: the caller's list
     return v
 
 
-def _interp_result(task: dict, env: dict):
+def _interp_result(task: dict, env: dict, heap: dict | None = None):
+    """The interpreter's return value (and, with `heap` a dict, the final contents of the modified arrays put in
+    it: SPEC.md "Heap (v1)")."""
     funs = interp.funs_of(task, task["body"])
     st = interp.St()
     if not all(interp.ev(c, dict(env), funs, st) for c in task.get("requires", [])):
@@ -521,10 +590,16 @@ def _interp_result(task: dict, env: dict):
     ret = task["returns"][0]["name"]
     env2[ret] = None
     interp.exec_body(task["body"], env2, funs, st)
+    if heap is not None:
+        heap.update({a: env2[a] for a in interp.heap_mods(task)})
     return env2[ret], None
 
 
 _REFUSES = """
+def _t_call_heap(f, args, idx):
+    out = f(*args)
+    return out, [args[i] for i in idx]
+
 def _t_refuses(f, *args):
     try:
         f(*args)
@@ -547,8 +622,9 @@ def check(task: dict, src: str, fn: str, tests: list[str] | None = None, n: int 
     for env in interp.domain(task, names, interp.MAX_POINTS):
         if len(asserts) >= n:
             break
+        heap: dict = {}
         try:
-            got, refusal = _interp_result(task, env)
+            got, refusal = _interp_result(task, env, heap)
         except (interp.Undef, interp.Budget, RecursionError, ZeroDivisionError):
             continue
         if refusal and len(refusals) < outside:
@@ -563,6 +639,13 @@ def check(task: dict, src: str, fn: str, tests: list[str] | None = None, n: int 
             want = _t_value_to_py(got, out)
         except (ValueError, TypeError, OverflowError):
             continue                                            # not a value a Python caller could pass (a bad code point)
+        mods = interp.heap_mods(task)
+        if mods:
+            # SPEC.md "Heap (v1)": the call's result and each modified list's contents afterwards
+            idx = [i for i, (p, _t) in enumerate(names) if p in mods]
+            finals = [_t_value_to_py(heap[names[i][0]], "array") for i in idx]
+            asserts.append(f"assert _t_call_heap({fn}, {args!r}, {idx!r}) == ({want!r}, {finals!r})")
+            continue
         asserts.append(f"assert {fn}(*{args!r}) == {want!r}")
     asserts += [t.strip() for t in tests or [] if t.strip()]
     if not asserts:

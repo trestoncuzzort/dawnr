@@ -1372,6 +1372,12 @@ def expr(e: dict, self_name: str | None = None) -> str:
         return "true" if e["bool"] else "false"
     if "var" in e:
         return e["var"]
+    if "old" in e:
+        return f"old({expr(e['old'], self_name)})"       # SPEC.md "Heap (v1)": the method's entry state
+    if "_set" in e:
+        # a ground set a certificate's fact ladder states (a set-valued spec_fun at a witness, SPEC.md "Quantifiers
+        # over a collection"): Dafny's set display, its element type taken from the comparison it sits in
+        return "{" + ", ".join(str(x) for x in e["_set"]) + "}"
     if "comp" in e:
         return _comp_call(e, lambda x: expr(x, self_name))   # SPEC.md "Comprehensions (v1)" (2026-10-06)
     if e.get("op") in _HOF_OPS:
@@ -2466,6 +2472,15 @@ def stmts(body: list, indent: str, ctx: _Ctx) -> str:
         if ("assign" in s and "ite" in s["assign"][1]
                 and _calls_self([s["assign"][1]["ite"]["then"], s["assign"][1]["ite"]["else"]], ctx.self_name)):
             out.extend(_ite_assign(s["assign"][0], s["assign"][1], indent, ctx))
+            continue
+        if "aset" in s:
+            # SPEC.md "Heap (v1)": Dafny's own array element update (the array is the method's parameter)
+            name, i, e = s["aset"]
+            pre: list[str] = []
+            idx = body_expr(i, ctx, pre)
+            rhs = body_expr(e, ctx, pre)
+            out.extend(indent + p for p in pre)
+            out.append(f"{indent}{name}[{idx}] := {rhs};")
             continue
         if "assign" in s:
             name, e = s["assign"]
@@ -3758,6 +3773,18 @@ def _exec_undef(body: list, env: dict, funs: dict, st) -> bool:
         if "assign" in s:
             name, e = s["assign"]
             env[name] = _ev_undef(e, env, funs, st)
+        elif "aset" in s:
+            # SPEC.md "Heap (v1)": the write owes its index in range, as `update` does
+            name, ie, ve = s["aset"]
+            cur = list(env[name])
+            i = _ev_undef(ie, env, funs, st)
+            v = _ev_undef(ve, env, funs, st)
+            if not (0 <= i < len(cur)):
+                raise _DefViol({"op": "and", "args": [
+                    {"op": "<=", "args": [{"int": 0}, _tlit(i)]},
+                    {"op": "<", "args": [_tlit(i), {"int": len(cur)}]}]})
+            cur[i] = v
+            env[name] = cur
         elif "return" in s:
             name, e = s["return"]
             env[name] = _ev_undef(e, env, funs, st)
@@ -3803,7 +3830,7 @@ def _scope_types(task: dict) -> dict:
     not a param, need the return's type here too, not params alone. Needed
     so `_tlit` can tell a pair-typed value from a same-shaped seq (SPEC.md
     "Pairs", 2026-09-10) no matter which witness kind names it."""
-    out = {p["name"]: p["type"] for p in task["params"]}
+    out = {p["name"]: ("seq" if p["type"] == "array" else p["type"]) for p in task["params"]}   # SPEC.md "Heap (v1)"
     out[task["returns"][0]["name"]] = task["returns"][0]["type"]
 
     def walk(body: list) -> None:
@@ -3837,6 +3864,36 @@ def _witness_env(names: dict, types: dict | None = None) -> dict:
     return {k: conv(v, (types or {}).get(k)) for k, v in names.items()}
 
 
+def _old_sub(e, m_in: dict):
+    """SPEC.md "Heap (v1)": every old(x) in e replaced by x with the arrays at their input values (`m_in`)."""
+    if isinstance(e, list):
+        return [_old_sub(x, m_in) for x in e]
+    if not isinstance(e, dict):
+        return e
+    if "old" in e:
+        return subst(e["old"], m_in)
+    return {k: _old_sub(v, m_in) for k, v in e.items()}
+
+
+def _heapify(e, arrays: set):
+    """SPEC.md "Heap (v1)": an array read as a value is its contents, Dafny's `a[..]` (a write's target, a name and
+    not an expression, is left as it is)."""
+    if isinstance(e, list):
+        return [_heapify(x, arrays) for x in e]
+    if not isinstance(e, dict):
+        return e
+    a0 = e.get("args", [None])[0] if e.get("op") in ("at", "len") else None
+    if isinstance(a0, dict) and a0.get("var") in arrays and set(a0) == {"var"}:
+        # an element and the length read on the array itself, `a[i]` and `a.Length`, the terms Dafny's array axioms
+        # trigger on (measured: reverse_in_place's invariants over `a[..][k]` timed out)
+        if e["op"] == "len":
+            return {"var": f"{a0['var']}.Length"}
+        return {"op": "at", "args": [a0, _heapify(e["args"][1], arrays)]}
+    if "var" in e and isinstance(e["var"], str) and e["var"] in arrays:
+        return {"var": f"{e['var']}[..]"}
+    return {k: _heapify(v, arrays) for k, v in e.items()}
+
+
 def _certificate(task: dict, twin_body: list, w: dict) -> str | None:
     """The appended t_refutation_certificate lemma for a measured twin
     witness, or None when the witness is not expressible as a ground
@@ -3867,6 +3924,7 @@ def _certificate(task: dict, twin_body: list, w: dict) -> str | None:
     # `names`), so this never touches the exit-kind path at all: no risk of
     # binding the SAME Dafny name to two different values in one lemma.
     ret_extra: tuple[str, object] | None = None
+    heap_extra: list = []          # SPEC.md "Heap (v1)": each modified array's final contents, named for the lemma
     try:
         # scope_types.get(n) is the value's own t type (SPEC.md "Pairs",
         # 2026-09-10): needed so a pair-typed witness value is built as a
@@ -3890,9 +3948,24 @@ def _certificate(task: dict, twin_body: list, w: dict) -> str | None:
             m2[ret_name] = _tlit(tw, ret_type)
             if ret_name not in names:
                 ret_extra = (ret_name, tw)
-            parts = [subst(rq, m2) for rq in task.get("requires", [])]
-            parts.append(_not(_conj([subst(en, m2)
-                                     for en in task["ensures"]])))
+            mods = task.get("modifies", [])
+            if mods:
+                # SPEC.md "Heap (v1)": the requires reads the arrays' input, an ensures reads their final contents
+                # (the twin's, measured) and old(...) their input
+                th = w.get("_twin_heap")
+                if not isinstance(th, dict) or set(th) != set(mods):
+                    return None
+                m_in = {a: m[a] for a in mods}
+                m3 = dict(m2)
+                m3.update({a: _tlit(th[a], "seq") for a in mods})
+                for a in mods:
+                    heap_extra.append((f"t_fin_{a}", th[a]))
+                parts = [subst(rq, m) for rq in task.get("requires", [])]
+                parts.append(_not(_conj([subst(_old_sub(en, m_in), m3) for en in task["ensures"]])))
+            else:
+                parts = [subst(rq, m2) for rq in task.get("requires", [])]
+                parts.append(_not(_conj([subst(en, m2)
+                                         for en in task["ensures"]])))
         elif kind == "exit":
             loop = _twin_loop(task["body"], twin_body)
             if loop is None:
@@ -3978,8 +4051,10 @@ def _certificate(task: dict, twin_body: list, w: dict) -> str | None:
         seq_names: dict = {}
         nseq_names: dict = {}
         set_names: dict = {}
+        for a_n, _v in heap_extra:
+            scope_types = {**scope_types, a_n: "seq"}
         for n, v in (list(names.items())
-                     + ([ret_extra] if ret_extra is not None else [])):
+                     + ([ret_extra] if ret_extra is not None else []) + heap_extra):
             # scope_types-gated (SPEC.md "Pairs", 2026-09-10): a pair-typed
             # name whose two components are both plain ints renders the same
             # 2-list shape as a length-2 seq (interp._j), so
@@ -4163,6 +4238,8 @@ def _lemma_decl(l: dict, self_name: str) -> list[str]:
 def lower(task: dict, body: list, witness: dict | None = None) -> str:
     import tshape
     task, body = tshape.desugar_seq_quants(task, body)   # SPEC.md "Quantifiers over a collection": seq ranges as indices
+    task, body = tshape.desugar_par(task, body)          # PREDICT T47: a parallel loop as its sequential `for`
+    tshape.abstain_on_floats(task, body, "dafny")        # SPEC.md "Floats (v1)" (PREDICT T48): Dafny has no IEEE type
     # NAMES (2026-09-11, ROADMAP 13.2): sanitize away any identifier that
     # collides with a Dafny reserved word, before anything below ever sees
     # the task -- see names.py's module docstring. `task` is returned
@@ -4266,19 +4343,27 @@ def lower(task: dict, body: list, witness: dict | None = None) -> str:
         lines.extend(_method_decl(task, m))
         lines.append("")
 
-    ps = ", ".join(f"{p['name']}: {dafny_type(p['type'])}"
+    arrays = [p["name"] for p in task["params"] if p["type"] == "array"]
+    ps = ", ".join(f"{p['name']}: {'array<int>' if p['type'] == 'array' else dafny_type(p['type'])}"
                    for p in task["params"])
     ret = task["returns"][0]
     lines.append(f"method {method}({ps}) "
                  f"returns ({ret['name']}: {dafny_type(ret['type'])})")
+    # SPEC.md "Heap (v1)" (PREDICT T46): the arrays the method writes, and the caller's no-alias obligation stated
+    hz = (lambda x: _heapify(x, set(arrays))) if arrays else (lambda x: x)
+    if task.get("modifies"):
+        lines.append(f"  modifies {', '.join(task['modifies'])}")
+    for i, a in enumerate(arrays):
+        for b in arrays[i + 1:]:
+            lines.append(f"  requires {a} != {b}")
     for e in task.get("requires", []):
-        lines.append(f"  requires {expr(e, self_name)}")
+        lines.append(f"  requires {expr(hz(e), self_name)}")
     for e in task["ensures"]:
-        lines.append(f"  ensures {expr(e, self_name)}")
+        lines.append(f"  ensures {expr(hz(e), self_name)}")
     if "decreases" in task:
-        lines.append(f"  decreases {expr(task['decreases'], self_name)}")
+        lines.append(f"  decreases {expr(hz(task['decreases']), self_name)}")
     lines.append("{")
-    lines.append(stmts(body, "  ", ctx))
+    lines.append(stmts(hz(body), "  ", ctx))
     lines.append("}")
     lines[lib_slot:lib_slot] = _lib_defs() + _comp_defs(self_name) + _hof_defs(self_name)
     src = "\n".join(lines) + "\n"

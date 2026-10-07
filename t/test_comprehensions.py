@@ -120,10 +120,22 @@ def test_kernel_text():
     v = lowered("evens", "verus")
     ok("pub open spec fn t_comp1(t_s: Seq<int>) -> Seq<int>" in v and "pub broadcast proof fn t_comp1_spec" in v
        and "reveal_with_fuel(t_comp1, 6);" in v and "broadcast use t_comp1_spec;" in v, "evens in Verus: the spec fn, its lemma, fuel and use")
-    # F* and SPARK carry maps since PREDICT T16 and T18 and refuse a filter by name (test_fstar_comp.py,
+    # F* and SPARK carry maps since PREDICT T16 and T18, and filters since T45 (test_fstar_comp.py,
     # test_spark_comp.py)
     for kernel in ("fstar", "spark"):
-        ok("filtered comprehension is not lowered yet" in lowered("evens", kernel), "%s refuses a filter by name" % kernel)
+        ok("not lowered yet" not in lowered("evens", kernel), "%s lowers a filter" % kernel)
+    # PREDICT T32: a map's element at a Nat index too, so grind matches a literal index it has normalized
+    lean = lowered("doubled_head", "lean")
+    ok("theorem t_comp1_getn (t_s : List Int) (t_n : Nat) :" in lean
+       and "∀ (t_i : Nat), t_i < t_n → (t_comp1 t_s t_n)[t_i]! = ((2 : Int) * (t_s[t_i]!))" in lean
+       and "simpa only [Int.toNat_natCast] using h" in lean, "the Nat-indexed map lemma, from _get by the cast alone")
+    ok("grind [t_comp1_length, t_comp1_get, t_comp1_getn]" in lean, "and grind is handed it")
+    ok("t_compr1_getn" in lowered("squares", "lean"), "a range map has one too")
+    ok("t_comp1_getn" not in lowered("evens", "lean"), "a filter has none")
+    # PREDICT T39: a stepped slice's comprehension reads the base directly, no nested drop/take
+    lean = lowered("odd_positions", "lean")
+    ok("t_compr1 t_a s t_n ++ [(s[(((1 : Int) + ((2 : Int) * (t_a + (t_n : Int))))).toNat]!)]" in lean,
+       "odd_positions' element is s[1 + 2 i]")
 
 
 def test_hand_back():

@@ -77,8 +77,8 @@ def test_grind_hints_and_patterns():
 
 
 def test_refusals_by_name():
-    ok("finite sets" in refusal("members_upto") or "toset" in refusal("members_upto"),
-       "toset stays refused: %r" % refusal("members_upto"))
+    # since PREDICT T29 (2026-10-07) Lean carries finite sets of ints, toset included (ExtTreeSet.ofList)
+    ok(refusal("members_upto") == "", "toset is lowered since T29: %r" % refusal("members_upto"))
     ok("second wave" in refusal("pad_right_len") or "not lowered yet" in refusal("pad_right_len"),
        "the second string wave stays refused: %r" % refusal("pad_right_len"))
     task = surface.parse("t 1\ntask f(s: seq) returns (r: seq)\n  ensures len(r) == len(s)\n{ r := sort_by(s, x => x); }\n")
@@ -115,8 +115,8 @@ def test_comprehensions():
     ok("∀ (t_dk" in src or "(∀ (t_dk" in src, "a partial body owes its definedness at every index of the range")
     prelude = src[:src.find("def diffs_t")]
     ok("termination_by" not in prelude, "the comprehension's function is structurally recursive")
-    ok("break" in refusal("count_evens_skip") or "while-true" in refusal("count_evens_skip"),
-       "a comprehension task with an early exit still refuses by name: %r" % refusal("count_evens_skip"))
+    # PREDICT T44: an early exit is rewritten away (tshape.desugar_exits), so the filter's task lowers
+    ok(refusal("count_evens_skip") == "", "a comprehension task with an early exit lowers: %r" % refusal("count_evens_skip"))
 
 
 if __name__ == "__main__":
