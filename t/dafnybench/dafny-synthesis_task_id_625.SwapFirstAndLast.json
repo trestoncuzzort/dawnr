@@ -1,0 +1,287 @@
+{
+  "body": [
+    {
+      "assign": [
+        "a_out",
+        {
+          "var": "a"
+        }
+      ]
+    },
+    {
+      "var": {
+        "init": {
+          "args": [
+            {
+              "var": "a_out"
+            },
+            {
+              "int": 0
+            }
+          ],
+          "op": "at"
+        },
+        "name": "tmp",
+        "type": "int"
+      }
+    },
+    {
+      "assign": [
+        "a_out",
+        {
+          "args": [
+            {
+              "var": "a_out"
+            },
+            {
+              "int": 0
+            },
+            {
+              "args": [
+                {
+                  "var": "a_out"
+                },
+                {
+                  "args": [
+                    {
+                      "args": [
+                        {
+                          "var": "a_out"
+                        }
+                      ],
+                      "op": "len"
+                    },
+                    {
+                      "int": 1
+                    }
+                  ],
+                  "op": "-"
+                }
+              ],
+              "op": "at"
+            }
+          ],
+          "op": "update"
+        }
+      ]
+    },
+    {
+      "assign": [
+        "a_out",
+        {
+          "args": [
+            {
+              "var": "a_out"
+            },
+            {
+              "args": [
+                {
+                  "args": [
+                    {
+                      "var": "a_out"
+                    }
+                  ],
+                  "op": "len"
+                },
+                {
+                  "int": 1
+                }
+              ],
+              "op": "-"
+            },
+            {
+              "var": "tmp"
+            }
+          ],
+          "op": "update"
+        }
+      ]
+    }
+  ],
+  "ensures": [
+    {
+      "args": [
+        {
+          "args": [
+            {
+              "var": "a_out"
+            }
+          ],
+          "op": "len"
+        },
+        {
+          "args": [
+            {
+              "var": "a"
+            }
+          ],
+          "op": "len"
+        }
+      ],
+      "op": "=="
+    },
+    {
+      "args": [
+        {
+          "args": [
+            {
+              "var": "a_out"
+            },
+            {
+              "int": 0
+            }
+          ],
+          "op": "at"
+        },
+        {
+          "args": [
+            {
+              "var": "a"
+            },
+            {
+              "args": [
+                {
+                  "args": [
+                    {
+                      "var": "a_out"
+                    }
+                  ],
+                  "op": "len"
+                },
+                {
+                  "int": 1
+                }
+              ],
+              "op": "-"
+            }
+          ],
+          "op": "at"
+        }
+      ],
+      "op": "=="
+    },
+    {
+      "args": [
+        {
+          "args": [
+            {
+              "var": "a_out"
+            },
+            {
+              "args": [
+                {
+                  "args": [
+                    {
+                      "var": "a_out"
+                    }
+                  ],
+                  "op": "len"
+                },
+                {
+                  "int": 1
+                }
+              ],
+              "op": "-"
+            }
+          ],
+          "op": "at"
+        },
+        {
+          "args": [
+            {
+              "var": "a"
+            },
+            {
+              "int": 0
+            }
+          ],
+          "op": "at"
+        }
+      ],
+      "op": "=="
+    },
+    {
+      "forall": {
+        "body": {
+          "args": [
+            {
+              "args": [
+                {
+                  "var": "a_out"
+                },
+                {
+                  "var": "k"
+                }
+              ],
+              "op": "at"
+            },
+            {
+              "args": [
+                {
+                  "var": "a"
+                },
+                {
+                  "var": "k"
+                }
+              ],
+              "op": "at"
+            }
+          ],
+          "op": "=="
+        },
+        "hi": {
+          "args": [
+            {
+              "args": [
+                {
+                  "var": "a_out"
+                }
+              ],
+              "op": "len"
+            },
+            {
+              "int": 1
+            }
+          ],
+          "op": "-"
+        },
+        "lo": {
+          "int": 1
+        },
+        "var": "k"
+      }
+    }
+  ],
+  "name": "dafny_synthesis_task_id_625__swapFirstAndLast",
+  "params": [
+    {
+      "name": "a",
+      "type": "seq"
+    }
+  ],
+  "requires": [
+    {
+      "args": [
+        {
+          "args": [
+            {
+              "var": "a"
+            }
+          ],
+          "op": "len"
+        },
+        {
+          "int": 0
+        }
+      ],
+      "op": ">"
+    }
+  ],
+  "returns": [
+    {
+      "name": "a_out",
+      "type": "seq"
+    }
+  ],
+  "t": 1
+}

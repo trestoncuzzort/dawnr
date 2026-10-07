@@ -1,0 +1,602 @@
+{
+  "body": [
+    {
+      "assign": [
+        "oddList",
+        {
+          "args": [],
+          "op": "seq"
+        }
+      ]
+    },
+    {
+      "var": {
+        "init": {
+          "args": [
+            {
+              "var": "arr"
+            }
+          ],
+          "op": "len"
+        },
+        "name": "h",
+        "type": "int"
+      }
+    },
+    {
+      "var": {
+        "init": {
+          "int": 0
+        },
+        "name": "i_v2",
+        "type": "int"
+      }
+    },
+    {
+      "while": {
+        "body": [
+          {
+            "if": {
+              "cond": {
+                "call": {
+                  "args": [
+                    {
+                      "args": [
+                        {
+                          "var": "arr"
+                        },
+                        {
+                          "var": "i_v2"
+                        }
+                      ],
+                      "op": "at"
+                    }
+                  ],
+                  "fun": "isOdd"
+                }
+              },
+              "else": [],
+              "then": [
+                {
+                  "assign": [
+                    "oddList",
+                    {
+                      "args": [
+                        {
+                          "var": "oddList"
+                        },
+                        {
+                          "args": [
+                            {
+                              "args": [
+                                {
+                                  "var": "arr"
+                                },
+                                {
+                                  "var": "i_v2"
+                                }
+                              ],
+                              "op": "at"
+                            }
+                          ],
+                          "op": "seq"
+                        }
+                      ],
+                      "op": "+"
+                    }
+                  ]
+                }
+              ]
+            }
+          },
+          {
+            "assign": [
+              "i_v2",
+              {
+                "args": [
+                  {
+                    "var": "i_v2"
+                  },
+                  {
+                    "int": 1
+                  }
+                ],
+                "op": "+"
+              }
+            ]
+          }
+        ],
+        "cond": {
+          "args": [
+            {
+              "var": "i_v2"
+            },
+            {
+              "var": "h"
+            }
+          ],
+          "op": "<"
+        },
+        "decreases": {
+          "args": [
+            {
+              "var": "h"
+            },
+            {
+              "var": "i_v2"
+            }
+          ],
+          "op": "-"
+        },
+        "invariants": [
+          {
+            "args": [
+              {
+                "int": 0
+              },
+              {
+                "var": "i_v2"
+              }
+            ],
+            "op": "<="
+          },
+          {
+            "args": [
+              {
+                "var": "i_v2"
+              },
+              {
+                "var": "h"
+              }
+            ],
+            "op": "<="
+          },
+          {
+            "args": [
+              {
+                "args": [
+                  {
+                    "int": 0
+                  },
+                  {
+                    "var": "i_v2"
+                  }
+                ],
+                "op": "<="
+              },
+              {
+                "args": [
+                  {
+                    "var": "i_v2"
+                  },
+                  {
+                    "args": [
+                      {
+                        "var": "arr"
+                      }
+                    ],
+                    "op": "len"
+                  }
+                ],
+                "op": "<="
+              }
+            ],
+            "op": "and"
+          },
+          {
+            "args": [
+              {
+                "args": [
+                  {
+                    "int": 0
+                  },
+                  {
+                    "args": [
+                      {
+                        "var": "oddList"
+                      }
+                    ],
+                    "op": "len"
+                  }
+                ],
+                "op": "<="
+              },
+              {
+                "args": [
+                  {
+                    "args": [
+                      {
+                        "var": "oddList"
+                      }
+                    ],
+                    "op": "len"
+                  },
+                  {
+                    "var": "i_v2"
+                  }
+                ],
+                "op": "<="
+              }
+            ],
+            "op": "and"
+          },
+          {
+            "forall": {
+              "body": {
+                "args": [
+                  {
+                    "call": {
+                      "args": [
+                        {
+                          "args": [
+                            {
+                              "var": "oddList"
+                            },
+                            {
+                              "var": "k_v2"
+                            }
+                          ],
+                          "op": "at"
+                        }
+                      ],
+                      "fun": "isOdd"
+                    }
+                  },
+                  {
+                    "exists": {
+                      "body": {
+                        "args": [
+                          {
+                            "args": [
+                              {
+                                "var": "arr"
+                              },
+                              {
+                                "var": "k_v3"
+                              }
+                            ],
+                            "op": "at"
+                          },
+                          {
+                            "args": [
+                              {
+                                "var": "oddList"
+                              },
+                              {
+                                "var": "k_v2"
+                              }
+                            ],
+                            "op": "at"
+                          }
+                        ],
+                        "op": "=="
+                      },
+                      "hi": {
+                        "args": [
+                          {
+                            "var": "arr"
+                          }
+                        ],
+                        "op": "len"
+                      },
+                      "lo": {
+                        "int": 0
+                      },
+                      "var": "k_v3"
+                    }
+                  }
+                ],
+                "op": "and"
+              },
+              "hi": {
+                "args": [
+                  {
+                    "var": "oddList"
+                  }
+                ],
+                "op": "len"
+              },
+              "lo": {
+                "int": 0
+              },
+              "var": "k_v2"
+            }
+          },
+          {
+            "forall": {
+              "body": {
+                "args": [
+                  {
+                    "call": {
+                      "args": [
+                        {
+                          "args": [
+                            {
+                              "var": "arr"
+                            },
+                            {
+                              "var": "k_v4"
+                            }
+                          ],
+                          "op": "at"
+                        }
+                      ],
+                      "fun": "isOdd"
+                    }
+                  },
+                  {
+                    "exists": {
+                      "body": {
+                        "args": [
+                          {
+                            "args": [
+                              {
+                                "var": "oddList"
+                              },
+                              {
+                                "var": "k_v5"
+                              }
+                            ],
+                            "op": "at"
+                          },
+                          {
+                            "args": [
+                              {
+                                "var": "arr"
+                              },
+                              {
+                                "var": "k_v4"
+                              }
+                            ],
+                            "op": "at"
+                          }
+                        ],
+                        "op": "=="
+                      },
+                      "hi": {
+                        "args": [
+                          {
+                            "var": "oddList"
+                          }
+                        ],
+                        "op": "len"
+                      },
+                      "lo": {
+                        "int": 0
+                      },
+                      "var": "k_v5"
+                    }
+                  }
+                ],
+                "op": "implies"
+              },
+              "hi": {
+                "var": "i_v2"
+              },
+              "lo": {
+                "int": 0
+              },
+              "var": "k_v4"
+            }
+          }
+        ]
+      }
+    }
+  ],
+  "ensures": [
+    {
+      "forall": {
+        "body": {
+          "args": [
+            {
+              "call": {
+                "args": [
+                  {
+                    "args": [
+                      {
+                        "var": "oddList"
+                      },
+                      {
+                        "var": "i"
+                      }
+                    ],
+                    "op": "at"
+                  }
+                ],
+                "fun": "isOdd"
+              }
+            },
+            {
+              "exists": {
+                "body": {
+                  "args": [
+                    {
+                      "args": [
+                        {
+                          "var": "arr"
+                        },
+                        {
+                          "var": "k"
+                        }
+                      ],
+                      "op": "at"
+                    },
+                    {
+                      "args": [
+                        {
+                          "var": "oddList"
+                        },
+                        {
+                          "var": "i"
+                        }
+                      ],
+                      "op": "at"
+                    }
+                  ],
+                  "op": "=="
+                },
+                "hi": {
+                  "args": [
+                    {
+                      "var": "arr"
+                    }
+                  ],
+                  "op": "len"
+                },
+                "lo": {
+                  "int": 0
+                },
+                "var": "k"
+              }
+            }
+          ],
+          "op": "and"
+        },
+        "hi": {
+          "args": [
+            {
+              "var": "oddList"
+            }
+          ],
+          "op": "len"
+        },
+        "lo": {
+          "int": 0
+        },
+        "var": "i"
+      }
+    },
+    {
+      "forall": {
+        "body": {
+          "args": [
+            {
+              "call": {
+                "args": [
+                  {
+                    "args": [
+                      {
+                        "var": "arr"
+                      },
+                      {
+                        "var": "i_v"
+                      }
+                    ],
+                    "op": "at"
+                  }
+                ],
+                "fun": "isOdd"
+              }
+            },
+            {
+              "exists": {
+                "body": {
+                  "args": [
+                    {
+                      "args": [
+                        {
+                          "var": "oddList"
+                        },
+                        {
+                          "var": "k_v"
+                        }
+                      ],
+                      "op": "at"
+                    },
+                    {
+                      "args": [
+                        {
+                          "var": "arr"
+                        },
+                        {
+                          "var": "i_v"
+                        }
+                      ],
+                      "op": "at"
+                    }
+                  ],
+                  "op": "=="
+                },
+                "hi": {
+                  "args": [
+                    {
+                      "var": "oddList"
+                    }
+                  ],
+                  "op": "len"
+                },
+                "lo": {
+                  "int": 0
+                },
+                "var": "k_v"
+              }
+            }
+          ],
+          "op": "implies"
+        },
+        "hi": {
+          "args": [
+            {
+              "var": "arr"
+            }
+          ],
+          "op": "len"
+        },
+        "lo": {
+          "int": 0
+        },
+        "var": "i_v"
+      }
+    }
+  ],
+  "gate": "recursion",
+  "name": "dafny_synthesis_task_id_426__filterOddNumbers",
+  "params": [
+    {
+      "name": "arr",
+      "type": "seq"
+    }
+  ],
+  "requires": [],
+  "returns": [
+    {
+      "name": "oddList",
+      "type": "seq"
+    }
+  ],
+  "spec_funs": [
+    {
+      "body": {
+        "args": [
+          {
+            "args": [
+              {
+                "var": "n"
+              },
+              {
+                "int": 2
+              }
+            ],
+            "op": "mod"
+          },
+          {
+            "int": 0
+          }
+        ],
+        "op": "!="
+      },
+      "decreases": {
+        "int": 0
+      },
+      "name": "isOdd",
+      "params": [
+        {
+          "name": "n",
+          "type": "int"
+        }
+      ],
+      "result": "bool"
+    }
+  ],
+  "t": 1
+}

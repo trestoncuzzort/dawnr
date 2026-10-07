@@ -1,0 +1,195 @@
+{
+  "body": [
+    {
+      "assign": [
+        "r",
+        {
+          "var": "m"
+        }
+      ]
+    },
+    {
+      "if": {
+        "cond": {
+          "args": [
+            {
+              "args": [
+                {
+                  "int": 1
+                },
+                {
+                  "args": [
+                    {
+                      "int": 2
+                    },
+                    {
+                      "var": "r"
+                    }
+                  ],
+                  "op": "*"
+                }
+              ],
+              "op": "-"
+            },
+            {
+              "int": 0
+            }
+          ],
+          "op": ">="
+        },
+        "else": [
+          {
+            "assign": [
+              "r",
+              {
+                "args": [
+                  {
+                    "var": "r"
+                  },
+                  {
+                    "int": 3
+                  }
+                ],
+                "op": "-"
+              }
+            ]
+          }
+        ],
+        "then": [
+          {
+            "assign": [
+              "r",
+              {
+                "args": [
+                  {
+                    "int": 2
+                  },
+                  {
+                    "var": "r"
+                  }
+                ],
+                "op": "*"
+              }
+            ]
+          },
+          {
+            "assign": [
+              "r",
+              {
+                "args": [
+                  {
+                    "args": [
+                      {
+                        "var": "r"
+                      }
+                    ],
+                    "op": "neg"
+                  },
+                  {
+                    "int": 1
+                  }
+                ],
+                "op": "+"
+              }
+            ]
+          }
+        ]
+      }
+    }
+  ],
+  "ensures": [
+    {
+      "args": [
+        {
+          "var": "r"
+        },
+        {
+          "var": "x"
+        }
+      ],
+      "op": "=="
+    }
+  ],
+  "name": "prog_fun_solutions_tmp_tmp7_gmnz5f_mockexam2_p3__problem3",
+  "params": [
+    {
+      "name": "m",
+      "type": "int"
+    },
+    {
+      "name": "x",
+      "type": "int"
+    }
+  ],
+  "requires": [
+    {
+      "args": [
+        {
+          "var": "x"
+        },
+        {
+          "int": 0
+        }
+      ],
+      "op": ">="
+    },
+    {
+      "args": [
+        {
+          "args": [
+            {
+              "args": [
+                {
+                  "int": 2
+                },
+                {
+                  "var": "m"
+                }
+              ],
+              "op": "*"
+            },
+            {
+              "args": [
+                {
+                  "int": 1
+                },
+                {
+                  "var": "x"
+                }
+              ],
+              "op": "-"
+            }
+          ],
+          "op": "=="
+        },
+        {
+          "args": [
+            {
+              "var": "m"
+            },
+            {
+              "args": [
+                {
+                  "var": "x"
+                },
+                {
+                  "int": 3
+                }
+              ],
+              "op": "+"
+            }
+          ],
+          "op": "=="
+        }
+      ],
+      "op": "or"
+    }
+  ],
+  "returns": [
+    {
+      "name": "r",
+      "type": "int"
+    }
+  ],
+  "t": 1
+}

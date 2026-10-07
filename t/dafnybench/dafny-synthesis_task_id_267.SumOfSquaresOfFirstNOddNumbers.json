@@ -1,0 +1,365 @@
+{
+  "body": [
+    {
+      "assign": [
+        "sum",
+        {
+          "int": 0
+        }
+      ]
+    },
+    {
+      "var": {
+        "init": {
+          "int": 1
+        },
+        "name": "i",
+        "type": "int"
+      }
+    },
+    {
+      "var": {
+        "init": {
+          "var": "n"
+        },
+        "name": "h",
+        "type": "int"
+      }
+    },
+    {
+      "var": {
+        "init": {
+          "int": 0
+        },
+        "name": "k",
+        "type": "int"
+      }
+    },
+    {
+      "while": {
+        "body": [
+          {
+            "assign": [
+              "sum",
+              {
+                "args": [
+                  {
+                    "var": "sum"
+                  },
+                  {
+                    "args": [
+                      {
+                        "var": "i"
+                      },
+                      {
+                        "var": "i"
+                      }
+                    ],
+                    "op": "*"
+                  }
+                ],
+                "op": "+"
+              }
+            ]
+          },
+          {
+            "assign": [
+              "i",
+              {
+                "args": [
+                  {
+                    "var": "i"
+                  },
+                  {
+                    "int": 2
+                  }
+                ],
+                "op": "+"
+              }
+            ]
+          },
+          {
+            "assign": [
+              "k",
+              {
+                "args": [
+                  {
+                    "var": "k"
+                  },
+                  {
+                    "int": 1
+                  }
+                ],
+                "op": "+"
+              }
+            ]
+          }
+        ],
+        "cond": {
+          "args": [
+            {
+              "var": "k"
+            },
+            {
+              "var": "h"
+            }
+          ],
+          "op": "<"
+        },
+        "decreases": {
+          "args": [
+            {
+              "var": "h"
+            },
+            {
+              "var": "k"
+            }
+          ],
+          "op": "-"
+        },
+        "invariants": [
+          {
+            "args": [
+              {
+                "int": 0
+              },
+              {
+                "var": "k"
+              }
+            ],
+            "op": "<="
+          },
+          {
+            "args": [
+              {
+                "var": "k"
+              },
+              {
+                "var": "h"
+              }
+            ],
+            "op": "<="
+          },
+          {
+            "args": [
+              {
+                "args": [
+                  {
+                    "int": 0
+                  },
+                  {
+                    "var": "k"
+                  }
+                ],
+                "op": "<="
+              },
+              {
+                "args": [
+                  {
+                    "var": "k"
+                  },
+                  {
+                    "var": "n"
+                  }
+                ],
+                "op": "<="
+              }
+            ],
+            "op": "and"
+          },
+          {
+            "args": [
+              {
+                "var": "sum"
+              },
+              {
+                "args": [
+                  {
+                    "args": [
+                      {
+                        "args": [
+                          {
+                            "var": "k"
+                          },
+                          {
+                            "args": [
+                              {
+                                "args": [
+                                  {
+                                    "int": 2
+                                  },
+                                  {
+                                    "var": "k"
+                                  }
+                                ],
+                                "op": "*"
+                              },
+                              {
+                                "int": 1
+                              }
+                            ],
+                            "op": "-"
+                          }
+                        ],
+                        "op": "*"
+                      },
+                      {
+                        "args": [
+                          {
+                            "args": [
+                              {
+                                "int": 2
+                              },
+                              {
+                                "var": "k"
+                              }
+                            ],
+                            "op": "*"
+                          },
+                          {
+                            "int": 1
+                          }
+                        ],
+                        "op": "+"
+                      }
+                    ],
+                    "op": "*"
+                  },
+                  {
+                    "int": 3
+                  }
+                ],
+                "op": "div"
+              }
+            ],
+            "op": "=="
+          },
+          {
+            "args": [
+              {
+                "var": "i"
+              },
+              {
+                "args": [
+                  {
+                    "args": [
+                      {
+                        "int": 2
+                      },
+                      {
+                        "var": "k"
+                      }
+                    ],
+                    "op": "*"
+                  },
+                  {
+                    "int": 1
+                  }
+                ],
+                "op": "+"
+              }
+            ],
+            "op": "=="
+          }
+        ]
+      }
+    }
+  ],
+  "ensures": [
+    {
+      "args": [
+        {
+          "var": "sum"
+        },
+        {
+          "args": [
+            {
+              "args": [
+                {
+                  "args": [
+                    {
+                      "var": "n"
+                    },
+                    {
+                      "args": [
+                        {
+                          "args": [
+                            {
+                              "int": 2
+                            },
+                            {
+                              "var": "n"
+                            }
+                          ],
+                          "op": "*"
+                        },
+                        {
+                          "int": 1
+                        }
+                      ],
+                      "op": "-"
+                    }
+                  ],
+                  "op": "*"
+                },
+                {
+                  "args": [
+                    {
+                      "args": [
+                        {
+                          "int": 2
+                        },
+                        {
+                          "var": "n"
+                        }
+                      ],
+                      "op": "*"
+                    },
+                    {
+                      "int": 1
+                    }
+                  ],
+                  "op": "+"
+                }
+              ],
+              "op": "*"
+            },
+            {
+              "int": 3
+            }
+          ],
+          "op": "div"
+        }
+      ],
+      "op": "=="
+    }
+  ],
+  "gate": "loops",
+  "name": "dafny_synthesis_task_id_267__sumOfSquaresOfFirstNOddNumbers",
+  "params": [
+    {
+      "name": "n",
+      "type": "int"
+    }
+  ],
+  "requires": [
+    {
+      "args": [
+        {
+          "var": "n"
+        },
+        {
+          "int": 0
+        }
+      ],
+      "op": ">="
+    }
+  ],
+  "returns": [
+    {
+      "name": "sum",
+      "type": "int"
+    }
+  ],
+  "t": 1
+}

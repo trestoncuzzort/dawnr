@@ -1,0 +1,231 @@
+{
+  "body": [
+    {
+      "var": {
+        "init": {
+          "int": 0
+        },
+        "name": "res",
+        "type": "int"
+      }
+    },
+    {
+      "assign": [
+        "result",
+        {
+          "var": "res"
+        }
+      ]
+    }
+  ],
+  "ensures": [
+    {
+      "args": [
+        {
+          "int": 0
+        },
+        {
+          "var": "result"
+        }
+      ],
+      "op": "<="
+    },
+    {
+      "args": [
+        {
+          "var": "result"
+        },
+        {
+          "var": "n"
+        }
+      ],
+      "op": "<="
+    }
+  ],
+  "gate": "recursion",
+  "name": "vericoding_va0582__solve_core",
+  "params": [
+    {
+      "name": "n",
+      "type": "int"
+    },
+    {
+      "name": "a",
+      "type": "int"
+    },
+    {
+      "name": "b",
+      "type": "int"
+    },
+    {
+      "name": "k",
+      "type": "int"
+    },
+    {
+      "name": "h",
+      "type": "seq"
+    }
+  ],
+  "requires": [
+    {
+      "call": {
+        "args": [
+          {
+            "var": "n"
+          },
+          {
+            "var": "a"
+          },
+          {
+            "var": "b"
+          },
+          {
+            "var": "k"
+          },
+          {
+            "var": "h"
+          }
+        ],
+        "fun": "valid_input"
+      }
+    }
+  ],
+  "returns": [
+    {
+      "name": "result",
+      "type": "int"
+    }
+  ],
+  "spec_funs": [
+    {
+      "body": {
+        "args": [
+          {
+            "args": [
+              {
+                "var": "n_v"
+              },
+              {
+                "int": 0
+              }
+            ],
+            "op": ">"
+          },
+          {
+            "args": [
+              {
+                "var": "a_v"
+              },
+              {
+                "int": 0
+              }
+            ],
+            "op": ">"
+          },
+          {
+            "args": [
+              {
+                "var": "b_v"
+              },
+              {
+                "int": 0
+              }
+            ],
+            "op": ">"
+          },
+          {
+            "args": [
+              {
+                "var": "k_v"
+              },
+              {
+                "int": 0
+              }
+            ],
+            "op": ">="
+          },
+          {
+            "args": [
+              {
+                "args": [
+                  {
+                    "var": "h_v"
+                  }
+                ],
+                "op": "len"
+              },
+              {
+                "var": "n_v"
+              }
+            ],
+            "op": "=="
+          },
+          {
+            "forall": {
+              "body": {
+                "args": [
+                  {
+                    "args": [
+                      {
+                        "var": "h_v"
+                      },
+                      {
+                        "var": "i"
+                      }
+                    ],
+                    "op": "at"
+                  },
+                  {
+                    "int": 0
+                  }
+                ],
+                "op": ">"
+              },
+              "hi": {
+                "args": [
+                  {
+                    "var": "h_v"
+                  }
+                ],
+                "op": "len"
+              },
+              "lo": {
+                "int": 0
+              },
+              "var": "i"
+            }
+          }
+        ],
+        "op": "and"
+      },
+      "decreases": {
+        "int": 0
+      },
+      "name": "valid_input",
+      "params": [
+        {
+          "name": "n_v",
+          "type": "int"
+        },
+        {
+          "name": "a_v",
+          "type": "int"
+        },
+        {
+          "name": "b_v",
+          "type": "int"
+        },
+        {
+          "name": "k_v",
+          "type": "int"
+        },
+        {
+          "name": "h_v",
+          "type": "seq"
+        }
+      ],
+      "result": "bool"
+    }
+  ],
+  "t": 1
+}

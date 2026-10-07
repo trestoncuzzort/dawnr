@@ -140,6 +140,10 @@ class OldTasksByteIdenticalTest(unittest.TestCase):
                     if "t renames:" in line:
                         olds = {pair.split("->")[0].strip()
                                 for pair in line.split("t renames:", 1)[1].strip(" */)").split(",")}
+                        # PREDICT T53: Rocq reserves the whole `t_` prefix (lower_rocq's own namespace), so the
+                        # heap rewrite's fresh `t_cur_<m>`/`t_out` are renamed there by design
+                        if kernel == "rocq":
+                            olds = {o for o in olds if not (o == "t_out" or o.startswith("t_cur_"))}
                         self.assertTrue(olds <= names.KEYWORDS[kernel],
                                         f"{path} renamed {sorted(olds)} in {kernel}, not all its keywords")
                 identical += 1

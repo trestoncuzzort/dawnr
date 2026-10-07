@@ -1,0 +1,365 @@
+{
+  "body": [
+    {
+      "var": {
+        "init": {
+          "int": 0
+        },
+        "name": "x_v",
+        "type": "int"
+      }
+    },
+    {
+      "assign": [
+        "d",
+        {
+          "var": "m"
+        }
+      ]
+    },
+    {
+      "assign": [
+        "x_v",
+        {
+          "var": "n"
+        }
+      ]
+    },
+    {
+      "while": {
+        "body": [
+          {
+            "if": {
+              "cond": {
+                "args": [
+                  {
+                    "var": "d"
+                  },
+                  {
+                    "var": "x_v"
+                  }
+                ],
+                "op": ">"
+              },
+              "else": [
+                {
+                  "assign": [
+                    "x_v",
+                    {
+                      "args": [
+                        {
+                          "var": "x_v"
+                        },
+                        {
+                          "var": "d"
+                        }
+                      ],
+                      "op": "-"
+                    }
+                  ]
+                }
+              ],
+              "then": [
+                {
+                  "assign": [
+                    "d",
+                    {
+                      "args": [
+                        {
+                          "var": "d"
+                        },
+                        {
+                          "var": "x_v"
+                        }
+                      ],
+                      "op": "-"
+                    }
+                  ]
+                }
+              ]
+            }
+          }
+        ],
+        "cond": {
+          "args": [
+            {
+              "var": "d"
+            },
+            {
+              "var": "x_v"
+            }
+          ],
+          "op": "!="
+        },
+        "decreases": {
+          "args": [
+            {
+              "var": "x_v"
+            },
+            {
+              "var": "d"
+            }
+          ],
+          "op": "+"
+        },
+        "invariants": [
+          {
+            "args": [
+              {
+                "var": "x_v"
+              },
+              {
+                "int": 0
+              }
+            ],
+            "op": ">"
+          },
+          {
+            "args": [
+              {
+                "var": "d"
+              },
+              {
+                "int": 0
+              }
+            ],
+            "op": ">"
+          },
+          {
+            "args": [
+              {
+                "call": {
+                  "args": [
+                    {
+                      "var": "d"
+                    },
+                    {
+                      "var": "x_v"
+                    }
+                  ],
+                  "fun": "gcd"
+                }
+              },
+              {
+                "call": {
+                  "args": [
+                    {
+                      "var": "m"
+                    },
+                    {
+                      "var": "n"
+                    }
+                  ],
+                  "fun": "gcd"
+                }
+              }
+            ],
+            "op": "=="
+          }
+        ]
+      }
+    }
+  ],
+  "ensures": [
+    {
+      "args": [
+        {
+          "var": "d"
+        },
+        {
+          "call": {
+            "args": [
+              {
+                "var": "m"
+              },
+              {
+                "var": "n"
+              }
+            ],
+            "fun": "gcd"
+          }
+        }
+      ],
+      "op": "=="
+    }
+  ],
+  "gate": "recursion",
+  "name": "programmverifikation_und_synthese_tmp_tmppurk6ime_pvs_assignment_ex_06_hoangkim_ex_06_hoangkim__gcdI",
+  "params": [
+    {
+      "name": "m",
+      "type": "int"
+    },
+    {
+      "name": "n",
+      "type": "int"
+    }
+  ],
+  "requires": [
+    {
+      "args": [
+        {
+          "var": "m"
+        },
+        {
+          "int": 0
+        }
+      ],
+      "op": ">"
+    },
+    {
+      "args": [
+        {
+          "var": "n"
+        },
+        {
+          "int": 0
+        }
+      ],
+      "op": ">"
+    }
+  ],
+  "returns": [
+    {
+      "name": "d",
+      "type": "int"
+    }
+  ],
+  "spec_funs": [
+    {
+      "body": {
+        "ite": {
+          "cond": {
+            "args": [
+              {
+                "args": [
+                  {
+                    "var": "x"
+                  },
+                  {
+                    "int": 0
+                  }
+                ],
+                "op": ">"
+              },
+              {
+                "args": [
+                  {
+                    "var": "y"
+                  },
+                  {
+                    "int": 0
+                  }
+                ],
+                "op": ">"
+              }
+            ],
+            "op": "and"
+          },
+          "else": {
+            "int": 0
+          },
+          "then": {
+            "ite": {
+              "cond": {
+                "args": [
+                  {
+                    "var": "x"
+                  },
+                  {
+                    "var": "y"
+                  }
+                ],
+                "op": "=="
+              },
+              "else": {
+                "ite": {
+                  "cond": {
+                    "args": [
+                      {
+                        "var": "x"
+                      },
+                      {
+                        "var": "y"
+                      }
+                    ],
+                    "op": ">"
+                  },
+                  "else": {
+                    "call": {
+                      "args": [
+                        {
+                          "var": "x"
+                        },
+                        {
+                          "args": [
+                            {
+                              "var": "y"
+                            },
+                            {
+                              "var": "x"
+                            }
+                          ],
+                          "op": "-"
+                        }
+                      ],
+                      "fun": "gcd"
+                    }
+                  },
+                  "then": {
+                    "call": {
+                      "args": [
+                        {
+                          "args": [
+                            {
+                              "var": "x"
+                            },
+                            {
+                              "var": "y"
+                            }
+                          ],
+                          "op": "-"
+                        },
+                        {
+                          "var": "y"
+                        }
+                      ],
+                      "fun": "gcd"
+                    }
+                  }
+                }
+              },
+              "then": {
+                "var": "x"
+              }
+            }
+          }
+        }
+      },
+      "decreases": {
+        "args": [
+          {
+            "var": "x"
+          },
+          {
+            "var": "y"
+          }
+        ],
+        "op": "+"
+      },
+      "name": "gcd",
+      "params": [
+        {
+          "name": "x",
+          "type": "int"
+        },
+        {
+          "name": "y",
+          "type": "int"
+        }
+      ],
+      "result": "int"
+    }
+  ],
+  "t": 1
+}

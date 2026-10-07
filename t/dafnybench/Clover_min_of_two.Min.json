@@ -1,0 +1,114 @@
+{
+  "body": [
+    {
+      "if": {
+        "cond": {
+          "args": [
+            {
+              "var": "x"
+            },
+            {
+              "var": "y"
+            }
+          ],
+          "op": "<"
+        },
+        "else": [
+          {
+            "assign": [
+              "z",
+              {
+                "var": "y"
+              }
+            ]
+          }
+        ],
+        "then": [
+          {
+            "assign": [
+              "z",
+              {
+                "var": "x"
+              }
+            ]
+          }
+        ]
+      }
+    }
+  ],
+  "ensures": [
+    {
+      "args": [
+        {
+          "args": [
+            {
+              "var": "x"
+            },
+            {
+              "var": "y"
+            }
+          ],
+          "op": "<="
+        },
+        {
+          "args": [
+            {
+              "var": "z"
+            },
+            {
+              "var": "x"
+            }
+          ],
+          "op": "=="
+        }
+      ],
+      "op": "implies"
+    },
+    {
+      "args": [
+        {
+          "args": [
+            {
+              "var": "x"
+            },
+            {
+              "var": "y"
+            }
+          ],
+          "op": ">"
+        },
+        {
+          "args": [
+            {
+              "var": "z"
+            },
+            {
+              "var": "y"
+            }
+          ],
+          "op": "=="
+        }
+      ],
+      "op": "implies"
+    }
+  ],
+  "name": "clover_min_of_two__min",
+  "params": [
+    {
+      "name": "x",
+      "type": "int"
+    },
+    {
+      "name": "y",
+      "type": "int"
+    }
+  ],
+  "requires": [],
+  "returns": [
+    {
+      "name": "z",
+      "type": "int"
+    }
+  ],
+  "t": 1
+}

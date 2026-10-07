@@ -1,0 +1,137 @@
+{
+  "body": [
+    {
+      "var": {
+        "init": {
+          "int": 0
+        },
+        "name": "a",
+        "type": "int"
+      }
+    },
+    {
+      "var": {
+        "init": {
+          "int": 0
+        },
+        "name": "b",
+        "type": "int"
+      }
+    },
+    {
+      "assign": [
+        "a",
+        {
+          "args": [
+            {
+              "var": "x"
+            },
+            {
+              "int": 3
+            }
+          ],
+          "op": "+"
+        }
+      ]
+    },
+    {
+      "if": {
+        "cond": {
+          "args": [
+            {
+              "var": "x"
+            },
+            {
+              "int": 20
+            }
+          ],
+          "op": "<"
+        },
+        "else": [
+          {
+            "assign": [
+              "b",
+              {
+                "int": 16
+              }
+            ]
+          }
+        ],
+        "then": [
+          {
+            "assign": [
+              "b",
+              {
+                "args": [
+                  {
+                    "int": 32
+                  },
+                  {
+                    "var": "x"
+                  }
+                ],
+                "op": "-"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "assign": [
+        "y",
+        {
+          "args": [
+            {
+              "var": "a"
+            },
+            {
+              "var": "b"
+            }
+          ],
+          "op": "+"
+        }
+      ]
+    }
+  ],
+  "ensures": [
+    {
+      "args": [
+        {
+          "int": 25
+        },
+        {
+          "var": "y"
+        }
+      ],
+      "op": "<="
+    }
+  ],
+  "name": "dafny_verify_tmp_tmphq7j0row_test_cases_ghost__myMethod",
+  "params": [
+    {
+      "name": "x",
+      "type": "int"
+    }
+  ],
+  "requires": [
+    {
+      "args": [
+        {
+          "int": 10
+        },
+        {
+          "var": "x"
+        }
+      ],
+      "op": "<="
+    }
+  ],
+  "returns": [
+    {
+      "name": "y",
+      "type": "int"
+    }
+  ],
+  "t": 1
+}

@@ -1,0 +1,505 @@
+{
+  "body": [
+    {
+      "var": {
+        "init": {
+          "int": 0
+        },
+        "name": "counted",
+        "type": "int"
+      }
+    },
+    {
+      "var": {
+        "init": {
+          "int": 0
+        },
+        "name": "i",
+        "type": "int"
+      }
+    },
+    {
+      "while": {
+        "body": [
+          {
+            "if": {
+              "cond": {
+                "args": [
+                  {
+                    "args": [
+                      {
+                        "var": "a"
+                      },
+                      {
+                        "var": "i"
+                      }
+                    ],
+                    "op": "at"
+                  },
+                  {
+                    "var": "v"
+                  }
+                ],
+                "op": "=="
+              },
+              "else": [],
+              "then": [
+                {
+                  "assign": [
+                    "counted",
+                    {
+                      "args": [
+                        {
+                          "var": "counted"
+                        },
+                        {
+                          "int": 1
+                        }
+                      ],
+                      "op": "+"
+                    }
+                  ]
+                }
+              ]
+            }
+          },
+          {
+            "assign": [
+              "i",
+              {
+                "args": [
+                  {
+                    "var": "i"
+                  },
+                  {
+                    "int": 1
+                  }
+                ],
+                "op": "+"
+              }
+            ]
+          }
+        ],
+        "cond": {
+          "args": [
+            {
+              "var": "i"
+            },
+            {
+              "args": [
+                {
+                  "var": "a"
+                }
+              ],
+              "op": "len"
+            }
+          ],
+          "op": "<"
+        },
+        "decreases": {
+          "args": [
+            {
+              "args": [
+                {
+                  "var": "a"
+                }
+              ],
+              "op": "len"
+            },
+            {
+              "var": "i"
+            }
+          ],
+          "op": "-"
+        },
+        "invariants": [
+          {
+            "args": [
+              {
+                "args": [
+                  {
+                    "int": 0
+                  },
+                  {
+                    "var": "i"
+                  }
+                ],
+                "op": "<="
+              },
+              {
+                "args": [
+                  {
+                    "var": "i"
+                  },
+                  {
+                    "args": [
+                      {
+                        "var": "a"
+                      }
+                    ],
+                    "op": "len"
+                  }
+                ],
+                "op": "<="
+              }
+            ],
+            "op": "and"
+          },
+          {
+            "args": [
+              {
+                "args": [
+                  {
+                    "int": 0
+                  },
+                  {
+                    "var": "counted"
+                  }
+                ],
+                "op": "<="
+              },
+              {
+                "args": [
+                  {
+                    "var": "counted"
+                  },
+                  {
+                    "var": "i"
+                  }
+                ],
+                "op": "<="
+              }
+            ],
+            "op": "and"
+          },
+          {
+            "args": [
+              {
+                "var": "counted"
+              },
+              {
+                "call": {
+                  "args": [
+                    {
+                      "var": "a"
+                    },
+                    {
+                      "int": 0
+                    },
+                    {
+                      "var": "i"
+                    },
+                    {
+                      "var": "v"
+                    }
+                  ],
+                  "fun": "count4"
+                }
+              }
+            ],
+            "op": "=="
+          },
+          {
+            "args": [
+              {
+                "var": "counted"
+              },
+              {
+                "int": 0
+              }
+            ],
+            "op": ">="
+          },
+          {
+            "args": [
+              {
+                "var": "i"
+              },
+              {
+                "int": 0
+              }
+            ],
+            "op": ">="
+          }
+        ]
+      }
+    },
+    {
+      "assign": [
+        "result",
+        {
+          "var": "counted"
+        }
+      ]
+    }
+  ],
+  "ensures": [
+    {
+      "args": [
+        {
+          "var": "result"
+        },
+        {
+          "int": 0
+        }
+      ],
+      "op": ">="
+    },
+    {
+      "args": [
+        {
+          "int": 0
+        },
+        {
+          "var": "result"
+        }
+      ],
+      "op": "<="
+    },
+    {
+      "args": [
+        {
+          "var": "result"
+        },
+        {
+          "args": [
+            {
+              "var": "a"
+            }
+          ],
+          "op": "len"
+        }
+      ],
+      "op": "<="
+    },
+    {
+      "args": [
+        {
+          "var": "result"
+        },
+        {
+          "call": {
+            "args": [
+              {
+                "var": "a"
+              },
+              {
+                "int": 0
+              },
+              {
+                "args": [
+                  {
+                    "var": "a"
+                  }
+                ],
+                "op": "len"
+              },
+              {
+                "var": "v"
+              }
+            ],
+            "fun": "count4"
+          }
+        }
+      ],
+      "op": "=="
+    }
+  ],
+  "gate": "recursion",
+  "name": "acsl_count__count",
+  "params": [
+    {
+      "name": "a",
+      "type": "seq"
+    },
+    {
+      "name": "v",
+      "type": "int"
+    }
+  ],
+  "requires": [],
+  "returns": [
+    {
+      "name": "result",
+      "type": "int"
+    }
+  ],
+  "spec_funs": [
+    {
+      "body": {
+        "ite": {
+          "cond": {
+            "args": [
+              {
+                "var": "n"
+              },
+              {
+                "var": "m"
+              }
+            ],
+            "op": "<="
+          },
+          "else": {
+            "args": [
+              {
+                "call": {
+                  "args": [
+                    {
+                      "var": "a_v"
+                    },
+                    {
+                      "var": "m"
+                    },
+                    {
+                      "args": [
+                        {
+                          "var": "n"
+                        },
+                        {
+                          "int": 1
+                        }
+                      ],
+                      "op": "-"
+                    },
+                    {
+                      "var": "v_v"
+                    }
+                  ],
+                  "fun": "count4"
+                }
+              },
+              {
+                "ite": {
+                  "cond": {
+                    "args": [
+                      {
+                        "ite": {
+                          "cond": {
+                            "args": [
+                              {
+                                "args": [
+                                  {
+                                    "int": 0
+                                  },
+                                  {
+                                    "args": [
+                                      {
+                                        "var": "n"
+                                      },
+                                      {
+                                        "int": 1
+                                      }
+                                    ],
+                                    "op": "-"
+                                  }
+                                ],
+                                "op": "<="
+                              },
+                              {
+                                "args": [
+                                  {
+                                    "args": [
+                                      {
+                                        "var": "n"
+                                      },
+                                      {
+                                        "int": 1
+                                      }
+                                    ],
+                                    "op": "-"
+                                  },
+                                  {
+                                    "args": [
+                                      {
+                                        "var": "a_v"
+                                      }
+                                    ],
+                                    "op": "len"
+                                  }
+                                ],
+                                "op": "<"
+                              }
+                            ],
+                            "op": "and"
+                          },
+                          "else": {
+                            "int": 0
+                          },
+                          "then": {
+                            "args": [
+                              {
+                                "var": "a_v"
+                              },
+                              {
+                                "args": [
+                                  {
+                                    "var": "n"
+                                  },
+                                  {
+                                    "int": 1
+                                  }
+                                ],
+                                "op": "-"
+                              }
+                            ],
+                            "op": "at"
+                          }
+                        }
+                      },
+                      {
+                        "var": "v_v"
+                      }
+                    ],
+                    "op": "=="
+                  },
+                  "else": {
+                    "int": 0
+                  },
+                  "then": {
+                    "int": 1
+                  }
+                }
+              }
+            ],
+            "op": "+"
+          },
+          "then": {
+            "int": 0
+          }
+        }
+      },
+      "decreases": {
+        "args": [
+          {
+            "var": "n"
+          },
+          {
+            "var": "m"
+          }
+        ],
+        "op": "-"
+      },
+      "name": "count4",
+      "params": [
+        {
+          "name": "a_v",
+          "type": "seq"
+        },
+        {
+          "name": "m",
+          "type": "int"
+        },
+        {
+          "name": "n",
+          "type": "int"
+        },
+        {
+          "name": "v_v",
+          "type": "int"
+        }
+      ],
+      "result": "int"
+    }
+  ],
+  "t": 1
+}

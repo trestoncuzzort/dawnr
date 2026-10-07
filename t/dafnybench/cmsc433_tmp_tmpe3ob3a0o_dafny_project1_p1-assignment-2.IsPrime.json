@@ -1,0 +1,258 @@
+{
+  "body": [
+    {
+      "assign": [
+        "isPrime_v",
+        {
+          "bool": true
+        }
+      ]
+    },
+    {
+      "if": {
+        "cond": {
+          "args": [
+            {
+              "var": "m"
+            },
+            {
+              "int": 1
+            }
+          ],
+          "op": "<="
+        },
+        "else": [
+          {
+            "var": {
+              "init": {
+                "int": 2
+              },
+              "name": "i",
+              "type": "int"
+            }
+          },
+          {
+            "while": {
+              "body": [
+                {
+                  "if": {
+                    "cond": {
+                      "args": [
+                        {
+                          "args": [
+                            {
+                              "var": "m"
+                            },
+                            {
+                              "var": "i"
+                            }
+                          ],
+                          "op": "mod"
+                        },
+                        {
+                          "int": 0
+                        }
+                      ],
+                      "op": "=="
+                    },
+                    "else": [],
+                    "then": [
+                      {
+                        "assign": [
+                          "isPrime_v",
+                          {
+                            "bool": false
+                          }
+                        ]
+                      },
+                      {
+                        "return": [
+                          "isPrime_v",
+                          {
+                            "var": "isPrime_v"
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                },
+                {
+                  "assign": [
+                    "i",
+                    {
+                      "args": [
+                        {
+                          "var": "i"
+                        },
+                        {
+                          "int": 1
+                        }
+                      ],
+                      "op": "+"
+                    }
+                  ]
+                }
+              ],
+              "cond": {
+                "args": [
+                  {
+                    "var": "i"
+                  },
+                  {
+                    "var": "m"
+                  }
+                ],
+                "op": "<"
+              },
+              "decreases": {
+                "args": [
+                  {
+                    "var": "m"
+                  },
+                  {
+                    "var": "i"
+                  }
+                ],
+                "op": "-"
+              },
+              "invariants": [
+                {
+                  "args": [
+                    {
+                      "var": "isPrime_v"
+                    },
+                    {
+                      "forall": {
+                        "body": {
+                          "args": [
+                            {
+                              "args": [
+                                {
+                                  "var": "m"
+                                },
+                                {
+                                  "var": "j_v"
+                                }
+                              ],
+                              "op": "mod"
+                            },
+                            {
+                              "int": 0
+                            }
+                          ],
+                          "op": "!="
+                        },
+                        "hi": {
+                          "var": "i"
+                        },
+                        "lo": {
+                          "int": 2
+                        },
+                        "var": "j_v"
+                      }
+                    }
+                  ],
+                  "op": "=="
+                }
+              ]
+            }
+          }
+        ],
+        "then": [
+          {
+            "assign": [
+              "isPrime_v",
+              {
+                "bool": false
+              }
+            ]
+          }
+        ]
+      }
+    }
+  ],
+  "ensures": [
+    {
+      "args": [
+        {
+          "var": "isPrime_v"
+        },
+        {
+          "args": [
+            {
+              "args": [
+                {
+                  "var": "m"
+                },
+                {
+                  "int": 1
+                }
+              ],
+              "op": ">"
+            },
+            {
+              "forall": {
+                "body": {
+                  "args": [
+                    {
+                      "args": [
+                        {
+                          "var": "m"
+                        },
+                        {
+                          "var": "j"
+                        }
+                      ],
+                      "op": "mod"
+                    },
+                    {
+                      "int": 0
+                    }
+                  ],
+                  "op": "!="
+                },
+                "hi": {
+                  "var": "m"
+                },
+                "lo": {
+                  "int": 2
+                },
+                "var": "j"
+              }
+            }
+          ],
+          "op": "and"
+        }
+      ],
+      "op": "=="
+    }
+  ],
+  "gate": "loops",
+  "name": "cmsc433_tmp_tmpe3ob3a0o_dafny_project1_p1_assignment_2__isPrime",
+  "params": [
+    {
+      "name": "m",
+      "type": "int"
+    }
+  ],
+  "requires": [
+    {
+      "args": [
+        {
+          "var": "m"
+        },
+        {
+          "int": 0
+        }
+      ],
+      "op": ">"
+    }
+  ],
+  "returns": [
+    {
+      "name": "isPrime_v",
+      "type": "bool"
+    }
+  ],
+  "t": 1
+}

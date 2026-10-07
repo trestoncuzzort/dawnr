@@ -1,0 +1,194 @@
+{
+  "body": [
+    {
+      "var": {
+        "init": {
+          "int": 1
+        },
+        "name": "y",
+        "type": "int"
+      }
+    },
+    {
+      "assign": [
+        "x",
+        {
+          "int": 1
+        }
+      ]
+    },
+    {
+      "while": {
+        "body": [
+          {
+            "assign": [
+              "y",
+              {
+                "args": [
+                  {
+                    "var": "y"
+                  },
+                  {
+                    "int": 1
+                  }
+                ],
+                "op": "+"
+              }
+            ]
+          },
+          {
+            "assign": [
+              "x",
+              {
+                "args": [
+                  {
+                    "args": [
+                      {
+                        "var": "x"
+                      },
+                      {
+                        "args": [
+                          {
+                            "int": 2
+                          },
+                          {
+                            "var": "y"
+                          }
+                        ],
+                        "op": "*"
+                      }
+                    ],
+                    "op": "+"
+                  },
+                  {
+                    "int": 1
+                  }
+                ],
+                "op": "-"
+              }
+            ]
+          }
+        ],
+        "cond": {
+          "args": [
+            {
+              "var": "y"
+            },
+            {
+              "var": "a"
+            }
+          ],
+          "op": "<"
+        },
+        "decreases": {
+          "args": [
+            {
+              "var": "a"
+            },
+            {
+              "var": "y"
+            }
+          ],
+          "op": "-"
+        },
+        "invariants": [
+          {
+            "args": [
+              {
+                "args": [
+                  {
+                    "int": 1
+                  },
+                  {
+                    "var": "y"
+                  }
+                ],
+                "op": "<="
+              },
+              {
+                "args": [
+                  {
+                    "var": "y"
+                  },
+                  {
+                    "var": "a"
+                  }
+                ],
+                "op": "<="
+              }
+            ],
+            "op": "and"
+          },
+          {
+            "args": [
+              {
+                "args": [
+                  {
+                    "var": "y"
+                  },
+                  {
+                    "var": "y"
+                  }
+                ],
+                "op": "*"
+              },
+              {
+                "var": "x"
+              }
+            ],
+            "op": "=="
+          }
+        ]
+      }
+    }
+  ],
+  "ensures": [
+    {
+      "args": [
+        {
+          "var": "x"
+        },
+        {
+          "args": [
+            {
+              "var": "a"
+            },
+            {
+              "var": "a"
+            }
+          ],
+          "op": "*"
+        }
+      ],
+      "op": "=="
+    }
+  ],
+  "gate": "loops",
+  "name": "formal_methods_of_software_development_tmp_tmppryvbyty_bloque_1_lab3__sqare",
+  "params": [
+    {
+      "name": "a",
+      "type": "int"
+    }
+  ],
+  "requires": [
+    {
+      "args": [
+        {
+          "var": "a"
+        },
+        {
+          "int": 1
+        }
+      ],
+      "op": ">="
+    }
+  ],
+  "returns": [
+    {
+      "name": "x",
+      "type": "int"
+    }
+  ],
+  "t": 1
+}

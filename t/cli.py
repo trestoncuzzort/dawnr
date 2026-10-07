@@ -12,6 +12,7 @@ tlib.py, harness.py, names.py and run_par.py already require):
     lower FILE.t --kernel K|all [--out DIR]
     verify FILE.t|DIR [--kernels a,b] [--flake N] [--jobs N] [--table PATH] [--json]
     twin FILE.t [--json]                the ladder's chosen operator + witness
+    audit FILE.t|DIR [--kernel K]       the one-edit mutants the spec lets through (t/audit.py)
     explain WORD [--kernel K]           one sentence per kernel for an outcome word
 
 Every flag also accepts `--flag=value` (argparse's own long-option form;
@@ -452,6 +453,15 @@ def cmd_explain(args) -> int:
     return 0
 
 
+def cmd_audit(args) -> int:
+    import audit   # NORTH-STAR.md target 3 (D8): the spec's room for wrong programs
+    argv = [str(args.target), "--jobs", str(args.jobs)]
+    argv += ["--kernel", args.kernel] if args.kernel else []
+    argv += ["--table", args.table] if args.table else []
+    argv += ["--json"] if args.json else []
+    return audit.main(argv)
+
+
 # ===========================================================================
 # argparse wiring
 # ===========================================================================
@@ -505,6 +515,14 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("file", metavar="FILE.t")
     p.add_argument("--json", action="store_true")
     p.set_defaults(func=cmd_twin)
+
+    p = sub.add_parser("audit", help="how many one-edit mutants the spec lets through (t/audit.py)")
+    p.add_argument("target", metavar="FILE.t|DIR")
+    p.add_argument("--kernel", help="verify each real body and its first survivors in this kernel")
+    p.add_argument("--jobs", type=int, default=1)
+    p.add_argument("--table", metavar="PATH", help="where the Markdown table is written")
+    p.add_argument("--json", action="store_true")
+    p.set_defaults(func=cmd_audit)
 
     p = sub.add_parser("explain", help="what a verdict means, per kernel")
     p.add_argument("verdict", metavar="WORD",

@@ -1,0 +1,98 @@
+{
+  "body": [
+    {
+      "if": {
+        "cond": {
+          "args": [
+            {
+              "var": "x"
+            },
+            {
+              "var": "y"
+            }
+          ],
+          "op": "<="
+        },
+        "else": [
+          {
+            "assign": [
+              "r",
+              {
+                "args": [
+                  {
+                    "var": "y"
+                  },
+                  {
+                    "int": 1
+                  }
+                ],
+                "op": "-"
+              }
+            ]
+          }
+        ],
+        "then": [
+          {
+            "assign": [
+              "r",
+              {
+                "args": [
+                  {
+                    "var": "x"
+                  },
+                  {
+                    "int": 1
+                  }
+                ],
+                "op": "-"
+              }
+            ]
+          }
+        ]
+      }
+    }
+  ],
+  "ensures": [
+    {
+      "args": [
+        {
+          "var": "r"
+        },
+        {
+          "var": "x"
+        }
+      ],
+      "op": "<="
+    },
+    {
+      "args": [
+        {
+          "var": "r"
+        },
+        {
+          "var": "y"
+        }
+      ],
+      "op": "<="
+    }
+  ],
+  "name": "stunning_palm_tree_tmp_tmpr84c2iwh_ch1__minUnderSpec",
+  "params": [
+    {
+      "name": "x",
+      "type": "int"
+    },
+    {
+      "name": "y",
+      "type": "int"
+    }
+  ],
+  "requires": [],
+  "returns": [
+    {
+      "name": "r",
+      "type": "int"
+    }
+  ],
+  "t": 1
+}

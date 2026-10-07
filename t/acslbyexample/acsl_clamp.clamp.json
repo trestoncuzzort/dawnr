@@ -1,0 +1,204 @@
+{
+  "body": [
+    {
+      "assign": [
+        "result",
+        {
+          "ite": {
+            "cond": {
+              "args": [
+                {
+                  "var": "v"
+                },
+                {
+                  "var": "lower"
+                }
+              ],
+              "op": "<"
+            },
+            "else": {
+              "ite": {
+                "cond": {
+                  "args": [
+                    {
+                      "var": "upper"
+                    },
+                    {
+                      "var": "v"
+                    }
+                  ],
+                  "op": "<"
+                },
+                "else": {
+                  "var": "v"
+                },
+                "then": {
+                  "var": "upper"
+                }
+              }
+            },
+            "then": {
+              "var": "lower"
+            }
+          }
+        }
+      ]
+    }
+  ],
+  "ensures": [
+    {
+      "args": [
+        {
+          "var": "lower"
+        },
+        {
+          "var": "result"
+        }
+      ],
+      "op": "<="
+    },
+    {
+      "args": [
+        {
+          "var": "result"
+        },
+        {
+          "var": "upper"
+        }
+      ],
+      "op": "<="
+    },
+    {
+      "args": [
+        {
+          "args": [
+            {
+              "var": "v"
+            },
+            {
+              "var": "lower"
+            }
+          ],
+          "op": "<"
+        },
+        {
+          "args": [
+            {
+              "var": "result"
+            },
+            {
+              "var": "lower"
+            }
+          ],
+          "op": "=="
+        }
+      ],
+      "op": "implies"
+    },
+    {
+      "args": [
+        {
+          "args": [
+            {
+              "args": [
+                {
+                  "var": "lower"
+                },
+                {
+                  "var": "v"
+                }
+              ],
+              "op": "<="
+            },
+            {
+              "args": [
+                {
+                  "var": "v"
+                },
+                {
+                  "var": "upper"
+                }
+              ],
+              "op": "<="
+            }
+          ],
+          "op": "and"
+        },
+        {
+          "args": [
+            {
+              "var": "result"
+            },
+            {
+              "var": "v"
+            }
+          ],
+          "op": "=="
+        }
+      ],
+      "op": "implies"
+    },
+    {
+      "args": [
+        {
+          "args": [
+            {
+              "var": "upper"
+            },
+            {
+              "var": "v"
+            }
+          ],
+          "op": "<"
+        },
+        {
+          "args": [
+            {
+              "var": "result"
+            },
+            {
+              "var": "upper"
+            }
+          ],
+          "op": "=="
+        }
+      ],
+      "op": "implies"
+    }
+  ],
+  "name": "acsl_clamp__clamp",
+  "params": [
+    {
+      "name": "v",
+      "type": "int"
+    },
+    {
+      "name": "lower",
+      "type": "int"
+    },
+    {
+      "name": "upper",
+      "type": "int"
+    }
+  ],
+  "requires": [
+    {
+      "args": [
+        {
+          "var": "lower"
+        },
+        {
+          "var": "upper"
+        }
+      ],
+      "op": "<"
+    }
+  ],
+  "returns": [
+    {
+      "name": "result",
+      "type": "int"
+    }
+  ],
+  "t": 1
+}

@@ -1,0 +1,106 @@
+{
+  "body": [
+    {
+      "assign": [
+        "k",
+        {
+          "args": [
+            {
+              "var": "n"
+            },
+            {
+              "args": [
+                {
+                  "var": "n"
+                },
+                {
+                  "int": 7
+                }
+              ],
+              "op": "mod"
+            }
+          ],
+          "op": "-"
+        }
+      ]
+    }
+  ],
+  "ensures": [
+    {
+      "args": [
+        {
+          "var": "k"
+        },
+        {
+          "int": 0
+        }
+      ],
+      "op": ">="
+    },
+    {
+      "args": [
+        {
+          "var": "k"
+        },
+        {
+          "args": [
+            {
+              "var": "n"
+            },
+            {
+              "args": [
+                {
+                  "var": "n"
+                },
+                {
+                  "int": 7
+                }
+              ],
+              "op": "mod"
+            }
+          ],
+          "op": "-"
+        }
+      ],
+      "op": "=="
+    }
+  ],
+  "name": "se2011_tmp_tmp71eb82zt_ass1_ex6__ceiling7",
+  "params": [
+    {
+      "name": "n",
+      "type": "int"
+    }
+  ],
+  "requires": [
+    {
+      "args": [
+        {
+          "var": "n"
+        },
+        {
+          "int": 0
+        }
+      ],
+      "op": ">="
+    },
+    {
+      "args": [
+        {
+          "var": "n"
+        },
+        {
+          "int": 0
+        }
+      ],
+      "op": ">="
+    }
+  ],
+  "returns": [
+    {
+      "name": "k",
+      "type": "int"
+    }
+  ],
+  "t": 1
+}

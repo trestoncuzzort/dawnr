@@ -69,7 +69,7 @@ def test_body_definedness_at_every_element():
 
 def test_refusals_by_name():
     e = refusal(load("evens"))
-    ok("filtered comprehension is not lowered yet" in e, f"evens (a filter) refuses by name: {e}")
+    ok("comprehension" in e and "not lowered yet" in e, f"evens (a filter) refuses by name: {e}")  # PREDICT T55
     e = refusal(load("count_evens_skip"))
     ok("not lowered yet" in e, f"count_evens_skip refuses by name: {e}")
     task = surface.parse("""t 1
@@ -89,7 +89,7 @@ spec fun dbl(q: seq): int
 def test_other_kernels_refuse_a_filter_by_name():
     # every kernel carries maps since PREDICT T16, T18, T19; a filter is still refused by name in Frama-C
     e = refusal(load("evens"), lower_framac)
-    ok("filtered comprehension is not lowered yet" in e, f"lower_framac refuses evens by name: {e}")
+    ok("comprehension" in e and "not lowered yet" in e, f"lower_framac refuses evens by name: {e}")
 
 
 if __name__ == "__main__":

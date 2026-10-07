@@ -1,0 +1,75 @@
+{
+  "body": [
+    {
+      "assign": [
+        "r",
+        {
+          "args": [
+            {
+              "var": "students"
+            },
+            {
+              "var": "tutors"
+            }
+          ],
+          "op": "div"
+        }
+      ]
+    }
+  ],
+  "ensures": [
+    {
+      "args": [
+        {
+          "var": "r"
+        },
+        {
+          "var": "students"
+        }
+      ],
+      "op": "<"
+    }
+  ],
+  "name": "dafny_learning_experience_tmp_tmpuxvcet_u_week8_12_week9_lemma__assignmentsToMarkOne",
+  "params": [
+    {
+      "name": "students",
+      "type": "int"
+    },
+    {
+      "name": "tutors",
+      "type": "int"
+    }
+  ],
+  "requires": [
+    {
+      "args": [
+        {
+          "var": "students"
+        },
+        {
+          "int": 0
+        }
+      ],
+      "op": ">"
+    },
+    {
+      "args": [
+        {
+          "var": "tutors"
+        },
+        {
+          "int": 1
+        }
+      ],
+      "op": ">"
+    }
+  ],
+  "returns": [
+    {
+      "name": "r",
+      "type": "int"
+    }
+  ],
+  "t": 1
+}

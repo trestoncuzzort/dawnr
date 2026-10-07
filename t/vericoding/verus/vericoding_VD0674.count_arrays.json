@@ -1,0 +1,74 @@
+{
+  "body": [
+    {
+      "assign": [
+        "count",
+        {
+          "args": [
+            {
+              "var": "arrays"
+            }
+          ],
+          "op": "len"
+        }
+      ]
+    }
+  ],
+  "ensures": [
+    {
+      "args": [
+        {
+          "var": "count"
+        },
+        {
+          "int": 0
+        }
+      ],
+      "op": ">="
+    },
+    {
+      "args": [
+        {
+          "var": "count"
+        },
+        {
+          "int": 0
+        }
+      ],
+      "op": ">="
+    },
+    {
+      "args": [
+        {
+          "var": "count"
+        },
+        {
+          "args": [
+            {
+              "var": "arrays"
+            }
+          ],
+          "op": "len"
+        }
+      ],
+      "op": "=="
+    }
+  ],
+  "name": "vericoding_vd0674__count_arrays",
+  "params": [
+    {
+      "name": "arrays",
+      "type": {
+        "seq": "seq"
+      }
+    }
+  ],
+  "requires": [],
+  "returns": [
+    {
+      "name": "count",
+      "type": "int"
+    }
+  ],
+  "t": 1
+}

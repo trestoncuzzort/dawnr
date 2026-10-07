@@ -1,0 +1,179 @@
+{
+  "body": [
+    {
+      "if": {
+        "cond": {
+          "args": [
+            {
+              "var": "a"
+            },
+            {
+              "var": "b"
+            }
+          ],
+          "op": "<"
+        },
+        "else": [
+          {
+            "assign": [
+              "c",
+              {
+                "var": "b"
+              }
+            ]
+          }
+        ],
+        "then": [
+          {
+            "assign": [
+              "c",
+              {
+                "var": "a"
+              }
+            ]
+          }
+        ]
+      }
+    }
+  ],
+  "ensures": [
+    {
+      "args": [
+        {
+          "var": "c"
+        },
+        {
+          "var": "a"
+        }
+      ],
+      "op": "<="
+    },
+    {
+      "args": [
+        {
+          "var": "c"
+        },
+        {
+          "var": "b"
+        }
+      ],
+      "op": "<="
+    },
+    {
+      "args": [
+        {
+          "args": [
+            {
+              "var": "c"
+            },
+            {
+              "var": "a"
+            }
+          ],
+          "op": "=="
+        },
+        {
+          "args": [
+            {
+              "var": "c"
+            },
+            {
+              "var": "b"
+            }
+          ],
+          "op": "=="
+        }
+      ],
+      "op": "or"
+    },
+    {
+      "args": [
+        {
+          "var": "c"
+        },
+        {
+          "call": {
+            "args": [
+              {
+                "var": "a"
+              },
+              {
+                "var": "b"
+              }
+            ],
+            "fun": "min"
+          }
+        }
+      ],
+      "op": "=="
+    }
+  ],
+  "gate": "recursion",
+  "name": "dafny_tmp_tmpv_d3qi10_2_min__minMethod",
+  "params": [
+    {
+      "name": "a",
+      "type": "int"
+    },
+    {
+      "name": "b",
+      "type": "int"
+    }
+  ],
+  "requires": [],
+  "returns": [
+    {
+      "name": "c",
+      "type": "int"
+    }
+  ],
+  "spec_funs": [
+    {
+      "body": {
+        "ite": {
+          "cond": {
+            "args": [
+              {
+                "var": "a_v"
+              },
+              {
+                "var": "b_v"
+              }
+            ],
+            "op": "<"
+          },
+          "else": {
+            "var": "b_v"
+          },
+          "then": {
+            "var": "a_v"
+          }
+        }
+      },
+      "decreases": {
+        "args": [
+          {
+            "var": "a_v"
+          },
+          {
+            "var": "b_v"
+          }
+        ],
+        "op": "+"
+      },
+      "name": "min",
+      "params": [
+        {
+          "name": "a_v",
+          "type": "int"
+        },
+        {
+          "name": "b_v",
+          "type": "int"
+        }
+      ],
+      "result": "int"
+    }
+  ],
+  "t": 1
+}

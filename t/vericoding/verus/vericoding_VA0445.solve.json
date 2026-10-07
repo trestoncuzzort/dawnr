@@ -1,0 +1,389 @@
+{
+  "body": [
+    {
+      "assign": [
+        "result",
+        {
+          "int": 0
+        }
+      ]
+    }
+  ],
+  "ensures": [
+    {
+      "call": {
+        "args": [
+          {
+            "var": "result"
+          },
+          {
+            "var": "n"
+          }
+        ],
+        "fun": "valid_result"
+      }
+    }
+  ],
+  "gate": "recursion",
+  "name": "vericoding_va0445__solve",
+  "params": [
+    {
+      "name": "n",
+      "type": "int"
+    },
+    {
+      "name": "p",
+      "type": "int"
+    },
+    {
+      "name": "s",
+      "type": "seq"
+    }
+  ],
+  "requires": [
+    {
+      "forall": {
+        "body": {
+          "args": [
+            {
+              "args": [
+                {
+                  "args": [
+                    {
+                      "var": "s"
+                    },
+                    {
+                      "var": "k_v"
+                    }
+                  ],
+                  "op": "at"
+                },
+                {
+                  "int": 0
+                }
+              ],
+              "op": ">="
+            },
+            {
+              "args": [
+                {
+                  "args": [
+                    {
+                      "var": "s"
+                    },
+                    {
+                      "var": "k_v"
+                    }
+                  ],
+                  "op": "at"
+                },
+                {
+                  "int": 1114111
+                }
+              ],
+              "op": "<="
+            }
+          ],
+          "op": "and"
+        },
+        "hi": {
+          "args": [
+            {
+              "var": "s"
+            }
+          ],
+          "op": "len"
+        },
+        "lo": {
+          "int": 0
+        },
+        "var": "k_v"
+      }
+    },
+    {
+      "call": {
+        "args": [
+          {
+            "var": "n"
+          },
+          {
+            "var": "p"
+          },
+          {
+            "var": "s"
+          }
+        ],
+        "fun": "valid_input"
+      }
+    }
+  ],
+  "returns": [
+    {
+      "name": "result",
+      "type": "int"
+    }
+  ],
+  "spec_funs": [
+    {
+      "body": {
+        "args": [
+          {
+            "args": [
+              {
+                "var": "p_v"
+              },
+              {
+                "int": 2
+              }
+            ],
+            "op": ">="
+          },
+          {
+            "forall": {
+              "body": {
+                "args": [
+                  {
+                    "args": [
+                      {
+                        "var": "p_v"
+                      },
+                      {
+                        "var": "k"
+                      }
+                    ],
+                    "op": "mod"
+                  },
+                  {
+                    "int": 0
+                  }
+                ],
+                "op": "!="
+              },
+              "hi": {
+                "var": "p_v"
+              },
+              "lo": {
+                "int": 2
+              },
+              "var": "k"
+            }
+          }
+        ],
+        "op": "and"
+      },
+      "decreases": {
+        "int": 0
+      },
+      "name": "is_prime",
+      "params": [
+        {
+          "name": "p_v",
+          "type": "int"
+        }
+      ],
+      "result": "bool"
+    },
+    {
+      "body": {
+        "args": [
+          {
+            "args": [
+              {
+                "var": "n_v"
+              },
+              {
+                "int": 1
+              }
+            ],
+            "op": ">="
+          },
+          {
+            "args": [
+              {
+                "var": "p_v2"
+              },
+              {
+                "int": 2
+              }
+            ],
+            "op": ">="
+          },
+          {
+            "call": {
+              "args": [
+                {
+                  "var": "p_v2"
+                }
+              ],
+              "fun": "is_prime"
+            }
+          },
+          {
+            "args": [
+              {
+                "args": [
+                  {
+                    "var": "s_v"
+                  }
+                ],
+                "op": "len"
+              },
+              {
+                "var": "n_v"
+              }
+            ],
+            "op": "=="
+          },
+          {
+            "forall": {
+              "body": {
+                "args": [
+                  {
+                    "args": [
+                      {
+                        "int": 48
+                      },
+                      {
+                        "args": [
+                          {
+                            "var": "s_v"
+                          },
+                          {
+                            "var": "i"
+                          }
+                        ],
+                        "op": "at"
+                      }
+                    ],
+                    "op": "<="
+                  },
+                  {
+                    "args": [
+                      {
+                        "args": [
+                          {
+                            "var": "s_v"
+                          },
+                          {
+                            "var": "i"
+                          }
+                        ],
+                        "op": "at"
+                      },
+                      {
+                        "int": 57
+                      }
+                    ],
+                    "op": "<="
+                  }
+                ],
+                "op": "and"
+              },
+              "hi": {
+                "args": [
+                  {
+                    "var": "s_v"
+                  }
+                ],
+                "op": "len"
+              },
+              "lo": {
+                "int": 0
+              },
+              "var": "i"
+            }
+          }
+        ],
+        "op": "and"
+      },
+      "decreases": {
+        "int": 0
+      },
+      "name": "valid_input",
+      "params": [
+        {
+          "name": "n_v",
+          "type": "int"
+        },
+        {
+          "name": "p_v2",
+          "type": "int"
+        },
+        {
+          "name": "s_v",
+          "type": "seq"
+        }
+      ],
+      "result": "bool"
+    },
+    {
+      "body": {
+        "args": [
+          {
+            "args": [
+              {
+                "var": "result_v"
+              },
+              {
+                "int": 0
+              }
+            ],
+            "op": ">="
+          },
+          {
+            "args": [
+              {
+                "var": "result_v"
+              },
+              {
+                "args": [
+                  {
+                    "args": [
+                      {
+                        "var": "n_v2"
+                      },
+                      {
+                        "args": [
+                          {
+                            "var": "n_v2"
+                          },
+                          {
+                            "int": 1
+                          }
+                        ],
+                        "op": "+"
+                      }
+                    ],
+                    "op": "*"
+                  },
+                  {
+                    "int": 2
+                  }
+                ],
+                "op": "div"
+              }
+            ],
+            "op": "<="
+          }
+        ],
+        "op": "and"
+      },
+      "decreases": {
+        "int": 0
+      },
+      "name": "valid_result",
+      "params": [
+        {
+          "name": "result_v",
+          "type": "int"
+        },
+        {
+          "name": "n_v2",
+          "type": "int"
+        }
+      ],
+      "result": "bool"
+    }
+  ],
+  "t": 1
+}

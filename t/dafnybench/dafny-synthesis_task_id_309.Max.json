@@ -1,0 +1,109 @@
+{
+  "body": [
+    {
+      "if": {
+        "cond": {
+          "args": [
+            {
+              "var": "a"
+            },
+            {
+              "var": "b"
+            }
+          ],
+          "op": ">="
+        },
+        "else": [
+          {
+            "assign": [
+              "maxValue",
+              {
+                "var": "b"
+              }
+            ]
+          }
+        ],
+        "then": [
+          {
+            "assign": [
+              "maxValue",
+              {
+                "var": "a"
+              }
+            ]
+          }
+        ]
+      }
+    }
+  ],
+  "ensures": [
+    {
+      "args": [
+        {
+          "args": [
+            {
+              "var": "maxValue"
+            },
+            {
+              "var": "a"
+            }
+          ],
+          "op": "=="
+        },
+        {
+          "args": [
+            {
+              "var": "maxValue"
+            },
+            {
+              "var": "b"
+            }
+          ],
+          "op": "=="
+        }
+      ],
+      "op": "or"
+    },
+    {
+      "args": [
+        {
+          "var": "maxValue"
+        },
+        {
+          "var": "a"
+        }
+      ],
+      "op": ">="
+    },
+    {
+      "args": [
+        {
+          "var": "maxValue"
+        },
+        {
+          "var": "b"
+        }
+      ],
+      "op": ">="
+    }
+  ],
+  "name": "dafny_synthesis_task_id_309__max",
+  "params": [
+    {
+      "name": "a",
+      "type": "int"
+    },
+    {
+      "name": "b",
+      "type": "int"
+    }
+  ],
+  "requires": [],
+  "returns": [
+    {
+      "name": "maxValue",
+      "type": "int"
+    }
+  ],
+  "t": 1
+}

@@ -1,0 +1,68 @@
+{
+  "body": [
+    {
+      "assign": [
+        "r",
+        {
+          "args": [
+            {
+              "var": "x"
+            },
+            {
+              "int": 1
+            }
+          ],
+          "op": "+"
+        }
+      ]
+    }
+  ],
+  "ensures": [
+    {
+      "args": [
+        {
+          "var": "r"
+        },
+        {
+          "args": [
+            {
+              "var": "x"
+            },
+            {
+              "int": 1
+            }
+          ],
+          "op": "+"
+        }
+      ],
+      "op": "=="
+    }
+  ],
+  "name": "program_verification_dataset_tmp_tmpgbdrlnu__dafny_basic_examples_add_by_one_details__plus_one",
+  "params": [
+    {
+      "name": "x",
+      "type": "int"
+    }
+  ],
+  "requires": [
+    {
+      "args": [
+        {
+          "var": "x"
+        },
+        {
+          "int": 0
+        }
+      ],
+      "op": ">="
+    }
+  ],
+  "returns": [
+    {
+      "name": "r",
+      "type": "int"
+    }
+  ],
+  "t": 1
+}

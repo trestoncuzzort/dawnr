@@ -1,0 +1,737 @@
+{
+  "body": [
+    {
+      "var": {
+        "init": {
+          "args": [
+            {
+              "var": "m"
+            }
+          ],
+          "op": "len"
+        },
+        "name": "n",
+        "type": "int"
+      }
+    },
+    {
+      "var": {
+        "init": {
+          "args": [],
+          "op": "seq"
+        },
+        "name": "cov_matrix_1",
+        "type": {
+          "seq": "seq"
+        }
+      }
+    },
+    {
+      "var": {
+        "init": {
+          "int": 0
+        },
+        "name": "i_v5",
+        "type": "int"
+      }
+    },
+    {
+      "while": {
+        "body": [
+          {
+            "var": {
+              "init": {
+                "args": [],
+                "op": "seq"
+              },
+              "name": "row",
+              "type": "seq"
+            }
+          },
+          {
+            "var": {
+              "init": {
+                "int": 0
+              },
+              "name": "j_v2",
+              "type": "int"
+            }
+          },
+          {
+            "while": {
+              "body": [
+                {
+                  "assign": [
+                    "row",
+                    {
+                      "args": [
+                        {
+                          "var": "row"
+                        },
+                        {
+                          "args": [
+                            {
+                              "int": 0
+                            }
+                          ],
+                          "op": "seq"
+                        }
+                      ],
+                      "op": "+"
+                    }
+                  ]
+                },
+                {
+                  "assign": [
+                    "j_v2",
+                    {
+                      "args": [
+                        {
+                          "var": "j_v2"
+                        },
+                        {
+                          "int": 1
+                        }
+                      ],
+                      "op": "+"
+                    }
+                  ]
+                }
+              ],
+              "cond": {
+                "args": [
+                  {
+                    "var": "j_v2"
+                  },
+                  {
+                    "var": "n"
+                  }
+                ],
+                "op": "<"
+              },
+              "decreases": {
+                "args": [
+                  {
+                    "var": "n"
+                  },
+                  {
+                    "var": "j_v2"
+                  }
+                ],
+                "op": "-"
+              },
+              "invariants": [
+                {
+                  "args": [
+                    {
+                      "args": [
+                        {
+                          "var": "row"
+                        }
+                      ],
+                      "op": "len"
+                    },
+                    {
+                      "var": "j_v2"
+                    }
+                  ],
+                  "op": "=="
+                },
+                {
+                  "args": [
+                    {
+                      "var": "j_v2"
+                    },
+                    {
+                      "var": "n"
+                    }
+                  ],
+                  "op": "<="
+                },
+                {
+                  "forall": {
+                    "body": {
+                      "args": [
+                        {
+                          "args": [
+                            {
+                              "var": "row"
+                            },
+                            {
+                              "var": "c_v"
+                            }
+                          ],
+                          "op": "at"
+                        },
+                        {
+                          "int": 0
+                        }
+                      ],
+                      "op": "=="
+                    },
+                    "hi": {
+                      "args": [
+                        {
+                          "var": "row"
+                        }
+                      ],
+                      "op": "len"
+                    },
+                    "lo": {
+                      "int": 0
+                    },
+                    "var": "c_v"
+                  }
+                },
+                {
+                  "args": [
+                    {
+                      "var": "j_v2"
+                    },
+                    {
+                      "int": 0
+                    }
+                  ],
+                  "op": ">="
+                }
+              ]
+            }
+          },
+          {
+            "assign": [
+              "cov_matrix_1",
+              {
+                "args": [
+                  {
+                    "var": "cov_matrix_1"
+                  },
+                  {
+                    "args": [
+                      {
+                        "var": "row"
+                      }
+                    ],
+                    "op": "seq"
+                  }
+                ],
+                "op": "+"
+              }
+            ]
+          },
+          {
+            "assign": [
+              "i_v5",
+              {
+                "args": [
+                  {
+                    "var": "i_v5"
+                  },
+                  {
+                    "int": 1
+                  }
+                ],
+                "op": "+"
+              }
+            ]
+          }
+        ],
+        "cond": {
+          "args": [
+            {
+              "var": "i_v5"
+            },
+            {
+              "var": "n"
+            }
+          ],
+          "op": "<"
+        },
+        "decreases": {
+          "args": [
+            {
+              "var": "n"
+            },
+            {
+              "var": "i_v5"
+            }
+          ],
+          "op": "-"
+        },
+        "invariants": [
+          {
+            "args": [
+              {
+                "args": [
+                  {
+                    "var": "cov_matrix_1"
+                  }
+                ],
+                "op": "len"
+              },
+              {
+                "var": "i_v5"
+              }
+            ],
+            "op": "=="
+          },
+          {
+            "args": [
+              {
+                "var": "i_v5"
+              },
+              {
+                "var": "n"
+              }
+            ],
+            "op": "<="
+          },
+          {
+            "forall": {
+              "body": {
+                "args": [
+                  {
+                    "args": [
+                      {
+                        "args": [
+                          {
+                            "var": "cov_matrix_1"
+                          },
+                          {
+                            "var": "r"
+                          }
+                        ],
+                        "op": "at"
+                      }
+                    ],
+                    "op": "len"
+                  },
+                  {
+                    "var": "n"
+                  }
+                ],
+                "op": "=="
+              },
+              "hi": {
+                "args": [
+                  {
+                    "var": "cov_matrix_1"
+                  }
+                ],
+                "op": "len"
+              },
+              "lo": {
+                "int": 0
+              },
+              "var": "r"
+            }
+          },
+          {
+            "forall": {
+              "body": {
+                "forall": {
+                  "body": {
+                    "args": [
+                      {
+                        "args": [
+                          {
+                            "args": [
+                              {
+                                "var": "cov_matrix_1"
+                              },
+                              {
+                                "var": "r_v"
+                              }
+                            ],
+                            "op": "at"
+                          },
+                          {
+                            "var": "c"
+                          }
+                        ],
+                        "op": "at"
+                      },
+                      {
+                        "int": 0
+                      }
+                    ],
+                    "op": "=="
+                  },
+                  "hi": {
+                    "var": "n"
+                  },
+                  "lo": {
+                    "int": 0
+                  },
+                  "var": "c"
+                }
+              },
+              "hi": {
+                "args": [
+                  {
+                    "var": "cov_matrix_1"
+                  }
+                ],
+                "op": "len"
+              },
+              "lo": {
+                "int": 0
+              },
+              "var": "r_v"
+            }
+          },
+          {
+            "args": [
+              {
+                "var": "i_v5"
+              },
+              {
+                "int": 0
+              }
+            ],
+            "op": ">="
+          }
+        ]
+      }
+    },
+    {
+      "assign": [
+        "cov_matrix",
+        {
+          "var": "cov_matrix_1"
+        }
+      ]
+    }
+  ],
+  "ensures": [
+    {
+      "args": [
+        {
+          "args": [
+            {
+              "var": "cov_matrix"
+            }
+          ],
+          "op": "len"
+        },
+        {
+          "args": [
+            {
+              "var": "m"
+            }
+          ],
+          "op": "len"
+        }
+      ],
+      "op": "=="
+    },
+    {
+      "forall": {
+        "body": {
+          "args": [
+            {
+              "args": [
+                {
+                  "args": [
+                    {
+                      "var": "cov_matrix"
+                    },
+                    {
+                      "var": "i_v2"
+                    }
+                  ],
+                  "op": "at"
+                }
+              ],
+              "op": "len"
+            },
+            {
+              "args": [
+                {
+                  "var": "m"
+                }
+              ],
+              "op": "len"
+            }
+          ],
+          "op": "=="
+        },
+        "hi": {
+          "args": [
+            {
+              "var": "cov_matrix"
+            }
+          ],
+          "op": "len"
+        },
+        "lo": {
+          "int": 0
+        },
+        "var": "i_v2"
+      }
+    },
+    {
+      "forall": {
+        "body": {
+          "forall": {
+            "body": {
+              "args": [
+                {
+                  "args": [
+                    {
+                      "args": [
+                        {
+                          "var": "cov_matrix"
+                        },
+                        {
+                          "var": "i_v3"
+                        }
+                      ],
+                      "op": "at"
+                    },
+                    {
+                      "var": "j_v"
+                    }
+                  ],
+                  "op": "at"
+                },
+                {
+                  "args": [
+                    {
+                      "args": [
+                        {
+                          "var": "cov_matrix"
+                        },
+                        {
+                          "var": "j_v"
+                        }
+                      ],
+                      "op": "at"
+                    },
+                    {
+                      "var": "i_v3"
+                    }
+                  ],
+                  "op": "at"
+                }
+              ],
+              "op": "=="
+            },
+            "hi": {
+              "args": [
+                {
+                  "var": "m"
+                }
+              ],
+              "op": "len"
+            },
+            "lo": {
+              "int": 0
+            },
+            "var": "j_v"
+          }
+        },
+        "hi": {
+          "args": [
+            {
+              "var": "m"
+            }
+          ],
+          "op": "len"
+        },
+        "lo": {
+          "int": 0
+        },
+        "var": "i_v3"
+      }
+    },
+    {
+      "forall": {
+        "body": {
+          "args": [
+            {
+              "args": [
+                {
+                  "args": [
+                    {
+                      "var": "cov_matrix"
+                    },
+                    {
+                      "var": "i_v4"
+                    }
+                  ],
+                  "op": "at"
+                },
+                {
+                  "var": "i_v4"
+                }
+              ],
+              "op": "at"
+            },
+            {
+              "int": 0
+            }
+          ],
+          "op": ">="
+        },
+        "hi": {
+          "args": [
+            {
+              "var": "m"
+            }
+          ],
+          "op": "len"
+        },
+        "lo": {
+          "int": 0
+        },
+        "var": "i_v4"
+      }
+    }
+  ],
+  "gate": "loops",
+  "name": "vericoding_vt0580__numpy_cov",
+  "params": [
+    {
+      "name": "m",
+      "type": {
+        "seq": "seq"
+      }
+    }
+  ],
+  "requires": [
+    {
+      "args": [
+        {
+          "args": [
+            {
+              "var": "m"
+            }
+          ],
+          "op": "len"
+        },
+        {
+          "int": 0
+        }
+      ],
+      "op": ">"
+    },
+    {
+      "forall": {
+        "body": {
+          "args": [
+            {
+              "args": [
+                {
+                  "args": [
+                    {
+                      "var": "m"
+                    },
+                    {
+                      "var": "i"
+                    }
+                  ],
+                  "op": "at"
+                }
+              ],
+              "op": "len"
+            },
+            {
+              "int": 0
+            }
+          ],
+          "op": ">"
+        },
+        "hi": {
+          "args": [
+            {
+              "var": "m"
+            }
+          ],
+          "op": "len"
+        },
+        "lo": {
+          "int": 0
+        },
+        "var": "i"
+      }
+    },
+    {
+      "forall": {
+        "body": {
+          "forall": {
+            "body": {
+              "args": [
+                {
+                  "args": [
+                    {
+                      "args": [
+                        {
+                          "var": "m"
+                        },
+                        {
+                          "var": "i_v"
+                        }
+                      ],
+                      "op": "at"
+                    }
+                  ],
+                  "op": "len"
+                },
+                {
+                  "args": [
+                    {
+                      "args": [
+                        {
+                          "var": "m"
+                        },
+                        {
+                          "var": "j"
+                        }
+                      ],
+                      "op": "at"
+                    }
+                  ],
+                  "op": "len"
+                }
+              ],
+              "op": "=="
+            },
+            "hi": {
+              "args": [
+                {
+                  "var": "m"
+                }
+              ],
+              "op": "len"
+            },
+            "lo": {
+              "int": 0
+            },
+            "var": "j"
+          }
+        },
+        "hi": {
+          "args": [
+            {
+              "var": "m"
+            }
+          ],
+          "op": "len"
+        },
+        "lo": {
+          "int": 0
+        },
+        "var": "i_v"
+      }
+    }
+  ],
+  "returns": [
+    {
+      "name": "cov_matrix",
+      "type": {
+        "seq": "seq"
+      }
+    }
+  ],
+  "t": 1
+}

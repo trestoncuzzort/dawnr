@@ -1,0 +1,266 @@
+{
+  "body": [
+    {
+      "assign": [
+        "result",
+        {
+          "call": {
+            "args": [
+              {
+                "var": "n"
+              },
+              {
+                "var": "m"
+              }
+            ],
+            "fun": "countFaceDownCards"
+          }
+        }
+      ]
+    }
+  ],
+  "ensures": [
+    {
+      "args": [
+        {
+          "var": "result"
+        },
+        {
+          "call": {
+            "args": [
+              {
+                "var": "n"
+              },
+              {
+                "var": "m"
+              }
+            ],
+            "fun": "countFaceDownCards"
+          }
+        }
+      ],
+      "op": "=="
+    },
+    {
+      "args": [
+        {
+          "var": "result"
+        },
+        {
+          "int": 0
+        }
+      ],
+      "op": ">="
+    }
+  ],
+  "gate": "recursion",
+  "name": "vericoding_la0368__solve",
+  "params": [
+    {
+      "name": "n",
+      "type": "int"
+    },
+    {
+      "name": "m",
+      "type": "int"
+    }
+  ],
+  "requires": [
+    {
+      "call": {
+        "args": [
+          {
+            "var": "n"
+          },
+          {
+            "var": "m"
+          }
+        ],
+        "fun": "validInput"
+      }
+    }
+  ],
+  "returns": [
+    {
+      "name": "result",
+      "type": "int"
+    }
+  ],
+  "spec_funs": [
+    {
+      "body": {
+        "args": [
+          {
+            "args": [
+              {
+                "var": "n_v"
+              },
+              {
+                "int": 1
+              }
+            ],
+            "op": ">="
+          },
+          {
+            "args": [
+              {
+                "var": "m_v"
+              },
+              {
+                "int": 1
+              }
+            ],
+            "op": ">="
+          }
+        ],
+        "op": "and"
+      },
+      "decreases": {
+        "int": 0
+      },
+      "name": "validInput",
+      "params": [
+        {
+          "name": "n_v",
+          "type": "int"
+        },
+        {
+          "name": "m_v",
+          "type": "int"
+        }
+      ],
+      "result": "bool"
+    },
+    {
+      "body": {
+        "ite": {
+          "cond": {
+            "args": [
+              {
+                "args": [
+                  {
+                    "var": "n_v2"
+                  },
+                  {
+                    "int": 1
+                  }
+                ],
+                "op": "=="
+              },
+              {
+                "args": [
+                  {
+                    "var": "m_v2"
+                  },
+                  {
+                    "int": 1
+                  }
+                ],
+                "op": "=="
+              }
+            ],
+            "op": "and"
+          },
+          "else": {
+            "ite": {
+              "cond": {
+                "args": [
+                  {
+                    "var": "n_v2"
+                  },
+                  {
+                    "int": 1
+                  }
+                ],
+                "op": "=="
+              },
+              "else": {
+                "ite": {
+                  "cond": {
+                    "args": [
+                      {
+                        "var": "m_v2"
+                      },
+                      {
+                        "int": 1
+                      }
+                    ],
+                    "op": "=="
+                  },
+                  "else": {
+                    "args": [
+                      {
+                        "args": [
+                          {
+                            "var": "n_v2"
+                          },
+                          {
+                            "int": 2
+                          }
+                        ],
+                        "op": "-"
+                      },
+                      {
+                        "args": [
+                          {
+                            "var": "m_v2"
+                          },
+                          {
+                            "int": 2
+                          }
+                        ],
+                        "op": "-"
+                      }
+                    ],
+                    "op": "*"
+                  },
+                  "then": {
+                    "args": [
+                      {
+                        "var": "n_v2"
+                      },
+                      {
+                        "int": 2
+                      }
+                    ],
+                    "op": "-"
+                  }
+                }
+              },
+              "then": {
+                "args": [
+                  {
+                    "var": "m_v2"
+                  },
+                  {
+                    "int": 2
+                  }
+                ],
+                "op": "-"
+              }
+            }
+          },
+          "then": {
+            "int": 1
+          }
+        }
+      },
+      "decreases": {
+        "int": 0
+      },
+      "name": "countFaceDownCards",
+      "params": [
+        {
+          "name": "n_v2",
+          "type": "int"
+        },
+        {
+          "name": "m_v2",
+          "type": "int"
+        }
+      ],
+      "result": "int"
+    }
+  ],
+  "t": 1
+}

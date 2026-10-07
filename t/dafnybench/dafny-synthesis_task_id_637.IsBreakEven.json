@@ -1,0 +1,83 @@
+{
+  "body": [
+    {
+      "assign": [
+        "result",
+        {
+          "args": [
+            {
+              "var": "costPrice"
+            },
+            {
+              "var": "sellingPrice"
+            }
+          ],
+          "op": "=="
+        }
+      ]
+    }
+  ],
+  "ensures": [
+    {
+      "args": [
+        {
+          "var": "result"
+        },
+        {
+          "args": [
+            {
+              "var": "costPrice"
+            },
+            {
+              "var": "sellingPrice"
+            }
+          ],
+          "op": "=="
+        }
+      ],
+      "op": "=="
+    }
+  ],
+  "name": "dafny_synthesis_task_id_637__isBreakEven",
+  "params": [
+    {
+      "name": "costPrice",
+      "type": "int"
+    },
+    {
+      "name": "sellingPrice",
+      "type": "int"
+    }
+  ],
+  "requires": [
+    {
+      "args": [
+        {
+          "var": "costPrice"
+        },
+        {
+          "int": 0
+        }
+      ],
+      "op": ">="
+    },
+    {
+      "args": [
+        {
+          "var": "sellingPrice"
+        },
+        {
+          "int": 0
+        }
+      ],
+      "op": ">="
+    }
+  ],
+  "returns": [
+    {
+      "name": "result",
+      "type": "bool"
+    }
+  ],
+  "t": 1
+}

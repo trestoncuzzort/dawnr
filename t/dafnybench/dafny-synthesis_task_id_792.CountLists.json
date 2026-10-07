@@ -1,0 +1,63 @@
+{
+  "body": [
+    {
+      "assign": [
+        "count",
+        {
+          "args": [
+            {
+              "var": "lists"
+            }
+          ],
+          "op": "len"
+        }
+      ]
+    }
+  ],
+  "ensures": [
+    {
+      "args": [
+        {
+          "var": "count"
+        },
+        {
+          "int": 0
+        }
+      ],
+      "op": ">="
+    },
+    {
+      "args": [
+        {
+          "var": "count"
+        },
+        {
+          "args": [
+            {
+              "var": "lists"
+            }
+          ],
+          "op": "len"
+        }
+      ],
+      "op": "=="
+    }
+  ],
+  "name": "dafny_synthesis_task_id_792__countLists",
+  "params": [
+    {
+      "name": "lists",
+      "type": {
+        "seq": "seq"
+      }
+    }
+  ],
+  "requires": [],
+  "returns": [
+    {
+      "name": "count",
+      "type": "int"
+    }
+  ],
+  "t": 1
+}

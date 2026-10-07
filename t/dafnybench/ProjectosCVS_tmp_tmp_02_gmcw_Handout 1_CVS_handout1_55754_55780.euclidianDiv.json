@@ -1,0 +1,265 @@
+{
+  "body": [
+    {
+      "var": {
+        "init": {
+          "int": 0
+        },
+        "name": "q",
+        "type": "int"
+      }
+    },
+    {
+      "var": {
+        "init": {
+          "int": 0
+        },
+        "name": "r_v",
+        "type": "int"
+      }
+    },
+    {
+      "assign": [
+        "r_v",
+        {
+          "var": "a"
+        }
+      ]
+    },
+    {
+      "assign": [
+        "q",
+        {
+          "int": 0
+        }
+      ]
+    },
+    {
+      "while": {
+        "body": [
+          {
+            "assign": [
+              "r_v",
+              {
+                "args": [
+                  {
+                    "var": "r_v"
+                  },
+                  {
+                    "var": "b"
+                  }
+                ],
+                "op": "-"
+              }
+            ]
+          },
+          {
+            "assign": [
+              "q",
+              {
+                "args": [
+                  {
+                    "var": "q"
+                  },
+                  {
+                    "int": 1
+                  }
+                ],
+                "op": "+"
+              }
+            ]
+          }
+        ],
+        "cond": {
+          "args": [
+            {
+              "args": [
+                {
+                  "var": "r_v"
+                },
+                {
+                  "var": "b"
+                }
+              ],
+              "op": "-"
+            },
+            {
+              "int": 0
+            }
+          ],
+          "op": ">="
+        },
+        "decreases": {
+          "args": [
+            {
+              "var": "r_v"
+            },
+            {
+              "var": "b"
+            }
+          ],
+          "op": "-"
+        },
+        "invariants": [
+          {
+            "args": [
+              {
+                "args": [
+                  {
+                    "int": 0
+                  },
+                  {
+                    "var": "r_v"
+                  }
+                ],
+                "op": "<="
+              },
+              {
+                "args": [
+                  {
+                    "var": "r_v"
+                  },
+                  {
+                    "var": "a"
+                  }
+                ],
+                "op": "<="
+              }
+            ],
+            "op": "and"
+          },
+          {
+            "args": [
+              {
+                "var": "r_v"
+              },
+              {
+                "args": [
+                  {
+                    "var": "a"
+                  },
+                  {
+                    "args": [
+                      {
+                        "var": "b"
+                      },
+                      {
+                        "var": "q"
+                      }
+                    ],
+                    "op": "*"
+                  }
+                ],
+                "op": "-"
+              }
+            ],
+            "op": "=="
+          }
+        ]
+      }
+    },
+    {
+      "assign": [
+        "r",
+        {
+          "args": [
+            {
+              "var": "q"
+            },
+            {
+              "var": "r_v"
+            }
+          ],
+          "op": "pair"
+        }
+      ]
+    }
+  ],
+  "ensures": [
+    {
+      "args": [
+        {
+          "var": "a"
+        },
+        {
+          "args": [
+            {
+              "args": [
+                {
+                  "var": "b"
+                },
+                {
+                  "args": [
+                    {
+                      "var": "r"
+                    }
+                  ],
+                  "op": "fst"
+                }
+              ],
+              "op": "*"
+            },
+            {
+              "args": [
+                {
+                  "var": "r"
+                }
+              ],
+              "op": "snd"
+            }
+          ],
+          "op": "+"
+        }
+      ],
+      "op": "=="
+    }
+  ],
+  "gate": "loops",
+  "name": "projectoscvs_tmp_tmp_02_gmcw_handout_1_cvs_handout1_55754_55780__euclidianDiv",
+  "params": [
+    {
+      "name": "a",
+      "type": "int"
+    },
+    {
+      "name": "b",
+      "type": "int"
+    }
+  ],
+  "requires": [
+    {
+      "args": [
+        {
+          "var": "a"
+        },
+        {
+          "int": 0
+        }
+      ],
+      "op": ">="
+    },
+    {
+      "args": [
+        {
+          "var": "b"
+        },
+        {
+          "int": 0
+        }
+      ],
+      "op": ">"
+    }
+  ],
+  "returns": [
+    {
+      "name": "r",
+      "type": {
+        "pair": [
+          "int",
+          "int"
+        ]
+      }
+    }
+  ],
+  "t": 1
+}

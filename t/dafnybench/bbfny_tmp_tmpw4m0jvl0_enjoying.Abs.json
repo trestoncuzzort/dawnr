@@ -1,0 +1,96 @@
+{
+  "body": [
+    {
+      "assign": [
+        "y",
+        {
+          "call": {
+            "args": [
+              {
+                "var": "x"
+              }
+            ],
+            "fun": "abs_v"
+          }
+        }
+      ]
+    }
+  ],
+  "ensures": [
+    {
+      "args": [
+        {
+          "var": "y"
+        },
+        {
+          "call": {
+            "args": [
+              {
+                "var": "x"
+              }
+            ],
+            "fun": "abs_v"
+          }
+        }
+      ],
+      "op": "=="
+    }
+  ],
+  "gate": "recursion",
+  "name": "bbfny_tmp_tmpw4m0jvl0_enjoying__abs",
+  "params": [
+    {
+      "name": "x",
+      "type": "int"
+    }
+  ],
+  "requires": [],
+  "returns": [
+    {
+      "name": "y",
+      "type": "int"
+    }
+  ],
+  "spec_funs": [
+    {
+      "body": {
+        "ite": {
+          "cond": {
+            "args": [
+              {
+                "var": "x_v"
+              },
+              {
+                "int": 0
+              }
+            ],
+            "op": "<"
+          },
+          "else": {
+            "var": "x_v"
+          },
+          "then": {
+            "args": [
+              {
+                "var": "x_v"
+              }
+            ],
+            "op": "neg"
+          }
+        }
+      },
+      "decreases": {
+        "var": "x_v"
+      },
+      "name": "abs_v",
+      "params": [
+        {
+          "name": "x_v",
+          "type": "int"
+        }
+      ],
+      "result": "int"
+    }
+  ],
+  "t": 1
+}

@@ -1,0 +1,116 @@
+{
+  "body": [
+    {
+      "assign": [
+        "decagonal",
+        {
+          "args": [
+            {
+              "args": [
+                {
+                  "args": [
+                    {
+                      "int": 4
+                    },
+                    {
+                      "var": "n"
+                    }
+                  ],
+                  "op": "*"
+                },
+                {
+                  "var": "n"
+                }
+              ],
+              "op": "*"
+            },
+            {
+              "args": [
+                {
+                  "int": 3
+                },
+                {
+                  "var": "n"
+                }
+              ],
+              "op": "*"
+            }
+          ],
+          "op": "-"
+        }
+      ]
+    }
+  ],
+  "ensures": [
+    {
+      "args": [
+        {
+          "var": "decagonal"
+        },
+        {
+          "args": [
+            {
+              "args": [
+                {
+                  "args": [
+                    {
+                      "int": 4
+                    },
+                    {
+                      "var": "n"
+                    }
+                  ],
+                  "op": "*"
+                },
+                {
+                  "var": "n"
+                }
+              ],
+              "op": "*"
+            },
+            {
+              "args": [
+                {
+                  "int": 3
+                },
+                {
+                  "var": "n"
+                }
+              ],
+              "op": "*"
+            }
+          ],
+          "op": "-"
+        }
+      ],
+      "op": "=="
+    }
+  ],
+  "name": "dafny_synthesis_task_id_279__nthDecagonalNumber",
+  "params": [
+    {
+      "name": "n",
+      "type": "int"
+    }
+  ],
+  "requires": [
+    {
+      "args": [
+        {
+          "var": "n"
+        },
+        {
+          "int": 0
+        }
+      ],
+      "op": ">="
+    }
+  ],
+  "returns": [
+    {
+      "name": "decagonal",
+      "type": "int"
+    }
+  ],
+  "t": 1
+}

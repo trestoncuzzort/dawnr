@@ -1,0 +1,469 @@
+{
+  "body": [
+    {
+      "var": {
+        "init": {
+          "var": "x"
+        },
+        "name": "y1",
+        "type": "int"
+      }
+    },
+    {
+      "var": {
+        "init": {
+          "int": 1
+        },
+        "name": "y2",
+        "type": "int"
+      }
+    },
+    {
+      "while": {
+        "body": [
+          {
+            "if": {
+              "cond": {
+                "args": [
+                  {
+                    "var": "y1"
+                  },
+                  {
+                    "int": 100
+                  }
+                ],
+                "op": ">"
+              },
+              "else": [
+                {
+                  "assign": [
+                    "y1",
+                    {
+                      "args": [
+                        {
+                          "var": "y1"
+                        },
+                        {
+                          "int": 11
+                        }
+                      ],
+                      "op": "+"
+                    }
+                  ]
+                },
+                {
+                  "assign": [
+                    "y2",
+                    {
+                      "args": [
+                        {
+                          "var": "y2"
+                        },
+                        {
+                          "int": 1
+                        }
+                      ],
+                      "op": "+"
+                    }
+                  ]
+                }
+              ],
+              "then": [
+                {
+                  "if": {
+                    "cond": {
+                      "args": [
+                        {
+                          "var": "y2"
+                        },
+                        {
+                          "int": 1
+                        }
+                      ],
+                      "op": "=="
+                    },
+                    "else": [
+                      {
+                        "assign": [
+                          "y1",
+                          {
+                            "args": [
+                              {
+                                "var": "y1"
+                              },
+                              {
+                                "int": 10
+                              }
+                            ],
+                            "op": "-"
+                          }
+                        ]
+                      },
+                      {
+                        "assign": [
+                          "y2",
+                          {
+                            "args": [
+                              {
+                                "var": "y2"
+                              },
+                              {
+                                "int": 1
+                              }
+                            ],
+                            "op": "-"
+                          }
+                        ]
+                      }
+                    ],
+                    "then": [
+                      {
+                        "assign": [
+                          "z",
+                          {
+                            "args": [
+                              {
+                                "var": "y1"
+                              },
+                              {
+                                "int": 10
+                              }
+                            ],
+                            "op": "-"
+                          }
+                        ]
+                      },
+                      {
+                        "return": [
+                          "z",
+                          {
+                            "var": "z"
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                }
+              ]
+            }
+          }
+        ],
+        "cond": {
+          "bool": true
+        },
+        "decreases": {
+          "args": [
+            {
+              "args": [
+                {
+                  "args": [
+                    {
+                      "args": [
+                        {
+                          "int": 2
+                        }
+                      ],
+                      "op": "neg"
+                    },
+                    {
+                      "var": "y1"
+                    }
+                  ],
+                  "op": "*"
+                },
+                {
+                  "args": [
+                    {
+                      "int": 21
+                    },
+                    {
+                      "var": "y2"
+                    }
+                  ],
+                  "op": "*"
+                }
+              ],
+              "op": "+"
+            },
+            {
+              "args": [
+                {
+                  "int": 2
+                },
+                {
+                  "ite": {
+                    "cond": {
+                      "args": [
+                        {
+                          "var": "x"
+                        },
+                        {
+                          "int": 111
+                        }
+                      ],
+                      "op": "<"
+                    },
+                    "else": {
+                      "var": "x"
+                    },
+                    "then": {
+                      "int": 111
+                    }
+                  }
+                }
+              ],
+              "op": "*"
+            }
+          ],
+          "op": "+"
+        },
+        "invariants": [
+          {
+            "args": [
+              {
+                "var": "proveFunctionalPostcondition"
+              },
+              {
+                "args": [
+                  {
+                    "args": [
+                      {
+                        "int": 100
+                      },
+                      {
+                        "var": "x"
+                      }
+                    ],
+                    "op": "<"
+                  },
+                  {
+                    "args": [
+                      {
+                        "var": "y1"
+                      },
+                      {
+                        "var": "x"
+                      }
+                    ],
+                    "op": "=="
+                  }
+                ],
+                "op": "implies"
+              }
+            ],
+            "op": "implies"
+          },
+          {
+            "args": [
+              {
+                "var": "proveFunctionalPostcondition"
+              },
+              {
+                "args": [
+                  {
+                    "args": [
+                      {
+                        "args": [
+                          {
+                            "args": [
+                              {
+                                "var": "x"
+                              },
+                              {
+                                "int": 100
+                              }
+                            ],
+                            "op": "<="
+                          },
+                          {
+                            "args": [
+                              {
+                                "int": 100
+                              },
+                              {
+                                "var": "y1"
+                              }
+                            ],
+                            "op": "<"
+                          }
+                        ],
+                        "op": "and"
+                      },
+                      {
+                        "args": [
+                          {
+                            "var": "y2"
+                          },
+                          {
+                            "int": 1
+                          }
+                        ],
+                        "op": "=="
+                      }
+                    ],
+                    "op": "and"
+                  },
+                  {
+                    "args": [
+                      {
+                        "var": "y1"
+                      },
+                      {
+                        "int": 101
+                      }
+                    ],
+                    "op": "=="
+                  }
+                ],
+                "op": "implies"
+              }
+            ],
+            "op": "implies"
+          },
+          {
+            "args": [
+              {
+                "args": [
+                  {
+                    "args": [
+                      {
+                        "var": "y1"
+                      },
+                      {
+                        "int": 111
+                      }
+                    ],
+                    "op": "<="
+                  },
+                  {
+                    "args": [
+                      {
+                        "var": "y2"
+                      },
+                      {
+                        "int": 1
+                      }
+                    ],
+                    "op": ">="
+                  }
+                ],
+                "op": "and"
+              },
+              {
+                "args": [
+                  {
+                    "args": [
+                      {
+                        "var": "y1"
+                      },
+                      {
+                        "var": "x"
+                      }
+                    ],
+                    "op": "=="
+                  },
+                  {
+                    "args": [
+                      {
+                        "var": "y2"
+                      },
+                      {
+                        "int": 1
+                      }
+                    ],
+                    "op": "=="
+                  }
+                ],
+                "op": "and"
+              }
+            ],
+            "op": "or"
+          }
+        ]
+      }
+    },
+    {
+      "assign": [
+        "z",
+        {
+          "args": [
+            {
+              "var": "y1"
+            },
+            {
+              "int": 10
+            }
+          ],
+          "op": "-"
+        }
+      ]
+    }
+  ],
+  "ensures": [
+    {
+      "args": [
+        {
+          "var": "proveFunctionalPostcondition"
+        },
+        {
+          "args": [
+            {
+              "var": "z"
+            },
+            {
+              "ite": {
+                "cond": {
+                  "args": [
+                    {
+                      "var": "x"
+                    },
+                    {
+                      "int": 101
+                    }
+                  ],
+                  "op": ">"
+                },
+                "else": {
+                  "int": 91
+                },
+                "then": {
+                  "args": [
+                    {
+                      "var": "x"
+                    },
+                    {
+                      "int": 10
+                    }
+                  ],
+                  "op": "-"
+                }
+              }
+            }
+          ],
+          "op": "=="
+        }
+      ],
+      "op": "implies"
+    }
+  ],
+  "gate": "loops",
+  "name": "program_verification_dataset_tmp_tmpgbdrlnu__dafny_variant_examples_katzmanna__ninetyOne",
+  "params": [
+    {
+      "name": "x",
+      "type": "int"
+    },
+    {
+      "name": "proveFunctionalPostcondition",
+      "type": "bool"
+    }
+  ],
+  "requires": [],
+  "returns": [
+    {
+      "name": "z",
+      "type": "int"
+    }
+  ],
+  "t": 1
+}

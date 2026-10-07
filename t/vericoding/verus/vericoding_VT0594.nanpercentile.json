@@ -1,0 +1,285 @@
+{
+  "body": [
+    {
+      "if": {
+        "cond": {
+          "args": [
+            {
+              "args": [
+                {
+                  "var": "a"
+                }
+              ],
+              "op": "len"
+            },
+            {
+              "int": 0
+            }
+          ],
+          "op": "=="
+        },
+        "else": [
+          {
+            "if": {
+              "cond": {
+                "args": [
+                  {
+                    "args": [
+                      {
+                        "var": "a"
+                      }
+                    ],
+                    "op": "len"
+                  },
+                  {
+                    "int": 1
+                  }
+                ],
+                "op": "=="
+              },
+              "else": [
+                {
+                  "assign": [
+                    "result",
+                    {
+                      "int": 0
+                    }
+                  ]
+                }
+              ],
+              "then": [
+                {
+                  "assign": [
+                    "result",
+                    {
+                      "args": [
+                        {
+                          "var": "a"
+                        },
+                        {
+                          "int": 0
+                        }
+                      ],
+                      "op": "at"
+                    }
+                  ]
+                }
+              ]
+            }
+          }
+        ],
+        "then": [
+          {
+            "assign": [
+              "result",
+              {
+                "int": 0
+              }
+            ]
+          }
+        ]
+      }
+    }
+  ],
+  "ensures": [
+    {
+      "args": [
+        {
+          "args": [
+            {
+              "args": [
+                {
+                  "var": "a"
+                }
+              ],
+              "op": "len"
+            },
+            {
+              "int": 0
+            }
+          ],
+          "op": "=="
+        },
+        {
+          "args": [
+            {
+              "var": "result"
+            },
+            {
+              "int": 0
+            }
+          ],
+          "op": "=="
+        }
+      ],
+      "op": "implies"
+    },
+    {
+      "args": [
+        {
+          "args": [
+            {
+              "args": [
+                {
+                  "var": "a"
+                }
+              ],
+              "op": "len"
+            },
+            {
+              "int": 0
+            }
+          ],
+          "op": ">"
+        },
+        {
+          "args": [
+            {
+              "forall": {
+                "body": {
+                  "args": [
+                    {
+                      "args": [
+                        {
+                          "args": [
+                            {
+                              "var": "a"
+                            },
+                            {
+                              "var": "i"
+                            }
+                          ],
+                          "op": "at"
+                        },
+                        {
+                          "var": "result"
+                        }
+                      ],
+                      "op": "<="
+                    },
+                    {
+                      "args": [
+                        {
+                          "var": "result"
+                        },
+                        {
+                          "args": [
+                            {
+                              "var": "a"
+                            },
+                            {
+                              "var": "i"
+                            }
+                          ],
+                          "op": "at"
+                        }
+                      ],
+                      "op": "<="
+                    }
+                  ],
+                  "op": "or"
+                },
+                "hi": {
+                  "args": [
+                    {
+                      "var": "a"
+                    }
+                  ],
+                  "op": "len"
+                },
+                "lo": {
+                  "int": 0
+                },
+                "var": "i"
+              }
+            },
+            {
+              "args": [
+                {
+                  "args": [
+                    {
+                      "args": [
+                        {
+                          "var": "a"
+                        }
+                      ],
+                      "op": "len"
+                    },
+                    {
+                      "int": 1
+                    }
+                  ],
+                  "op": "=="
+                },
+                {
+                  "args": [
+                    {
+                      "var": "result"
+                    },
+                    {
+                      "args": [
+                        {
+                          "var": "a"
+                        },
+                        {
+                          "int": 0
+                        }
+                      ],
+                      "op": "at"
+                    }
+                  ],
+                  "op": "=="
+                }
+              ],
+              "op": "implies"
+            }
+          ],
+          "op": "and"
+        }
+      ],
+      "op": "implies"
+    }
+  ],
+  "name": "vericoding_vt0594__nanpercentile",
+  "params": [
+    {
+      "name": "a",
+      "type": "seq"
+    },
+    {
+      "name": "q",
+      "type": "int"
+    }
+  ],
+  "requires": [
+    {
+      "args": [
+        {
+          "int": 0
+        },
+        {
+          "var": "q"
+        }
+      ],
+      "op": "<="
+    },
+    {
+      "args": [
+        {
+          "var": "q"
+        },
+        {
+          "int": 100
+        }
+      ],
+      "op": "<="
+    }
+  ],
+  "returns": [
+    {
+      "name": "result",
+      "type": "int"
+    }
+  ],
+  "t": 1
+}

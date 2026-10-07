@@ -88,7 +88,9 @@ spec fun dbl(q: seq): int
 
 def test_framac_refuses_a_filter_by_name():
     # SPARK and Frama-C carry maps since PREDICT T18, T19 (test_spark_comp.py, test_framac_comp.py)
-    assert "filtered comprehension is not lowered yet" in refusal(load("evens"), lower_framac)
+  # PREDICT T55: evens' spec now states the comprehension too, so the refusal can name it in a spec position
+    e = refusal(load("evens"), lower_framac)
+    assert "comprehension" in e and "not lowered yet" in e, e
 
 
 if __name__ == "__main__":

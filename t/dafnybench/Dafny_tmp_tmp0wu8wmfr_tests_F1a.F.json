@@ -1,0 +1,35 @@
+{
+  "body": [
+    {
+      "assign": [
+        "r",
+        {
+          "int": 0
+        }
+      ]
+    }
+  ],
+  "ensures": [
+    {
+      "args": [
+        {
+          "var": "r"
+        },
+        {
+          "int": 0
+        }
+      ],
+      "op": "<="
+    }
+  ],
+  "name": "dafny_tmp_tmp0wu8wmfr_tests_f1a__f",
+  "params": [],
+  "requires": [],
+  "returns": [
+    {
+      "name": "r",
+      "type": "int"
+    }
+  ],
+  "t": 1
+}

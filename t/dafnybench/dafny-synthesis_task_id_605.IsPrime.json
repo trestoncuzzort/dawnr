@@ -1,0 +1,242 @@
+{
+  "body": [
+    {
+      "assign": [
+        "result",
+        {
+          "bool": true
+        }
+      ]
+    },
+    {
+      "var": {
+        "init": {
+          "int": 2
+        },
+        "name": "i",
+        "type": "int"
+      }
+    },
+    {
+      "while": {
+        "body": [
+          {
+            "if": {
+              "cond": {
+                "args": [
+                  {
+                    "args": [
+                      {
+                        "var": "n"
+                      },
+                      {
+                        "var": "i"
+                      }
+                    ],
+                    "op": "mod"
+                  },
+                  {
+                    "int": 0
+                  }
+                ],
+                "op": "=="
+              },
+              "else": [],
+              "then": [
+                {
+                  "assign": [
+                    "result",
+                    {
+                      "bool": false
+                    }
+                  ]
+                },
+                {
+                  "return": [
+                    "result",
+                    {
+                      "var": "result"
+                    }
+                  ]
+                }
+              ]
+            }
+          },
+          {
+            "assign": [
+              "i",
+              {
+                "args": [
+                  {
+                    "var": "i"
+                  },
+                  {
+                    "int": 1
+                  }
+                ],
+                "op": "+"
+              }
+            ]
+          }
+        ],
+        "cond": {
+          "args": [
+            {
+              "var": "i"
+            },
+            {
+              "args": [
+                {
+                  "var": "n"
+                },
+                {
+                  "int": 2
+                }
+              ],
+              "op": "div"
+            }
+          ],
+          "op": "<="
+        },
+        "decreases": {
+          "args": [
+            {
+              "args": [
+                {
+                  "var": "n"
+                },
+                {
+                  "int": 2
+                }
+              ],
+              "op": "div"
+            },
+            {
+              "var": "i"
+            }
+          ],
+          "op": "-"
+        },
+        "invariants": [
+          {
+            "args": [
+              {
+                "int": 2
+              },
+              {
+                "var": "i"
+              }
+            ],
+            "op": "<="
+          },
+          {
+            "args": [
+              {
+                "var": "result"
+              },
+              {
+                "forall": {
+                  "body": {
+                    "args": [
+                      {
+                        "args": [
+                          {
+                            "var": "n"
+                          },
+                          {
+                            "var": "k_v"
+                          }
+                        ],
+                        "op": "mod"
+                      },
+                      {
+                        "int": 0
+                      }
+                    ],
+                    "op": "!="
+                  },
+                  "hi": {
+                    "var": "i"
+                  },
+                  "lo": {
+                    "int": 2
+                  },
+                  "var": "k_v"
+                }
+              }
+            ],
+            "op": "=="
+          }
+        ]
+      }
+    }
+  ],
+  "ensures": [
+    {
+      "args": [
+        {
+          "var": "result"
+        },
+        {
+          "forall": {
+            "body": {
+              "args": [
+                {
+                  "args": [
+                    {
+                      "var": "n"
+                    },
+                    {
+                      "var": "k"
+                    }
+                  ],
+                  "op": "mod"
+                },
+                {
+                  "int": 0
+                }
+              ],
+              "op": "!="
+            },
+            "hi": {
+              "var": "n"
+            },
+            "lo": {
+              "int": 2
+            },
+            "var": "k"
+          }
+        }
+      ],
+      "op": "=="
+    }
+  ],
+  "gate": "loops",
+  "name": "dafny_synthesis_task_id_605__isPrime",
+  "params": [
+    {
+      "name": "n",
+      "type": "int"
+    }
+  ],
+  "requires": [
+    {
+      "args": [
+        {
+          "var": "n"
+        },
+        {
+          "int": 2
+        }
+      ],
+      "op": ">="
+    }
+  ],
+  "returns": [
+    {
+      "name": "result",
+      "type": "bool"
+    }
+  ],
+  "t": 1
+}

@@ -1,0 +1,68 @@
+{
+  "body": [
+    {
+      "assign": [
+        "result",
+        {
+          "int": 2
+        }
+      ]
+    }
+  ],
+  "ensures": [
+    {
+      "args": [
+        {
+          "var": "result"
+        },
+        {
+          "int": 0
+        }
+      ],
+      "op": ">="
+    },
+    {
+      "args": [
+        {
+          "var": "result"
+        },
+        {
+          "int": 1
+        }
+      ],
+      "op": ">="
+    },
+    {
+      "args": [
+        {
+          "int": 2
+        },
+        {
+          "var": "result"
+        }
+      ],
+      "op": "<="
+    },
+    {
+      "args": [
+        {
+          "var": "result"
+        },
+        {
+          "int": 3
+        }
+      ],
+      "op": "<="
+    }
+  ],
+  "name": "vericoding_vt0099__npy_loge10",
+  "params": [],
+  "requires": [],
+  "returns": [
+    {
+      "name": "result",
+      "type": "int"
+    }
+  ],
+  "t": 1
+}

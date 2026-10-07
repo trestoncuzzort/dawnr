@@ -1,0 +1,141 @@
+{
+  "body": [
+    {
+      "if": {
+        "cond": {
+          "args": [
+            {
+              "var": "x"
+            },
+            {
+              "var": "y"
+            }
+          ],
+          "op": ">"
+        },
+        "else": [
+          {
+            "assign": [
+              "a",
+              {
+                "var": "y"
+              }
+            ]
+          }
+        ],
+        "then": [
+          {
+            "assign": [
+              "a",
+              {
+                "var": "x"
+              }
+            ]
+          }
+        ]
+      }
+    }
+  ],
+  "ensures": [
+    {
+      "args": [
+        {
+          "args": [
+            {
+              "var": "a"
+            },
+            {
+              "var": "x"
+            }
+          ],
+          "op": "=="
+        },
+        {
+          "args": [
+            {
+              "var": "a"
+            },
+            {
+              "var": "y"
+            }
+          ],
+          "op": "=="
+        }
+      ],
+      "op": "or"
+    },
+    {
+      "args": [
+        {
+          "args": [
+            {
+              "var": "x"
+            },
+            {
+              "var": "y"
+            }
+          ],
+          "op": ">"
+        },
+        {
+          "args": [
+            {
+              "var": "a"
+            },
+            {
+              "var": "x"
+            }
+          ],
+          "op": "=="
+        }
+      ],
+      "op": "implies"
+    },
+    {
+      "args": [
+        {
+          "args": [
+            {
+              "var": "x"
+            },
+            {
+              "var": "y"
+            }
+          ],
+          "op": "<="
+        },
+        {
+          "args": [
+            {
+              "var": "a"
+            },
+            {
+              "var": "y"
+            }
+          ],
+          "op": "=="
+        }
+      ],
+      "op": "implies"
+    }
+  ],
+  "name": "dafny_tmp_tmpmvs2dmry_examples1__max",
+  "params": [
+    {
+      "name": "x",
+      "type": "int"
+    },
+    {
+      "name": "y",
+      "type": "int"
+    }
+  ],
+  "requires": [],
+  "returns": [
+    {
+      "name": "a",
+      "type": "int"
+    }
+  ],
+  "t": 1
+}

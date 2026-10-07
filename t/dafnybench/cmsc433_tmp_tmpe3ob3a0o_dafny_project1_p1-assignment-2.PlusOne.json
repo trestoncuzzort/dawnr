@@ -1,0 +1,60 @@
+{
+  "body": [
+    {
+      "assign": [
+        "y",
+        {
+          "args": [
+            {
+              "var": "x"
+            },
+            {
+              "int": 1
+            }
+          ],
+          "op": "+"
+        }
+      ]
+    }
+  ],
+  "ensures": [
+    {
+      "args": [
+        {
+          "var": "y"
+        },
+        {
+          "int": 0
+        }
+      ],
+      "op": ">"
+    }
+  ],
+  "name": "cmsc433_tmp_tmpe3ob3a0o_dafny_project1_p1_assignment_2__plusOne",
+  "params": [
+    {
+      "name": "x",
+      "type": "int"
+    }
+  ],
+  "requires": [
+    {
+      "args": [
+        {
+          "var": "x"
+        },
+        {
+          "int": 0
+        }
+      ],
+      "op": ">="
+    }
+  ],
+  "returns": [
+    {
+      "name": "y",
+      "type": "int"
+    }
+  ],
+  "t": 1
+}

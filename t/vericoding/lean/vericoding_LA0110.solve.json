@@ -1,0 +1,304 @@
+{
+  "body": [
+    {
+      "assign": [
+        "result",
+        {
+          "call": {
+            "args": [
+              {
+                "var": "r"
+              },
+              {
+                "var": "g"
+              },
+              {
+                "var": "b"
+              }
+            ],
+            "fun": "maxTables"
+          }
+        }
+      ]
+    }
+  ],
+  "ensures": [
+    {
+      "args": [
+        {
+          "var": "result"
+        },
+        {
+          "call": {
+            "args": [
+              {
+                "var": "r"
+              },
+              {
+                "var": "g"
+              },
+              {
+                "var": "b"
+              }
+            ],
+            "fun": "maxTables"
+          }
+        }
+      ],
+      "op": "=="
+    },
+    {
+      "args": [
+        {
+          "var": "result"
+        },
+        {
+          "int": 0
+        }
+      ],
+      "op": ">="
+    }
+  ],
+  "gate": "recursion",
+  "name": "vericoding_la0110__solve",
+  "params": [
+    {
+      "name": "r",
+      "type": "int"
+    },
+    {
+      "name": "g",
+      "type": "int"
+    },
+    {
+      "name": "b",
+      "type": "int"
+    }
+  ],
+  "requires": [
+    {
+      "call": {
+        "args": [
+          {
+            "var": "r"
+          },
+          {
+            "var": "g"
+          },
+          {
+            "var": "b"
+          }
+        ],
+        "fun": "validInput"
+      }
+    }
+  ],
+  "returns": [
+    {
+      "name": "result",
+      "type": "int"
+    }
+  ],
+  "spec_funs": [
+    {
+      "body": {
+        "ite": {
+          "cond": {
+            "args": [
+              {
+                "var": "a"
+              },
+              {
+                "var": "b_v"
+              }
+            ],
+            "op": "<="
+          },
+          "else": {
+            "var": "b_v"
+          },
+          "then": {
+            "var": "a"
+          }
+        }
+      },
+      "decreases": {
+        "int": 0
+      },
+      "name": "mymin",
+      "params": [
+        {
+          "name": "a",
+          "type": "int"
+        },
+        {
+          "name": "b_v",
+          "type": "int"
+        }
+      ],
+      "result": "int"
+    },
+    {
+      "body": {
+        "call": {
+          "args": [
+            {
+              "call": {
+                "args": [
+                  {
+                    "call": {
+                      "args": [
+                        {
+                          "args": [
+                            {
+                              "args": [
+                                {
+                                  "args": [
+                                    {
+                                      "var": "r_v"
+                                    },
+                                    {
+                                      "var": "g_v"
+                                    }
+                                  ],
+                                  "op": "+"
+                                },
+                                {
+                                  "var": "b_v2"
+                                }
+                              ],
+                              "op": "+"
+                            },
+                            {
+                              "int": 3
+                            }
+                          ],
+                          "op": "div"
+                        },
+                        {
+                          "args": [
+                            {
+                              "var": "r_v"
+                            },
+                            {
+                              "var": "g_v"
+                            }
+                          ],
+                          "op": "+"
+                        }
+                      ],
+                      "fun": "mymin"
+                    }
+                  },
+                  {
+                    "args": [
+                      {
+                        "var": "r_v"
+                      },
+                      {
+                        "var": "b_v2"
+                      }
+                    ],
+                    "op": "+"
+                  }
+                ],
+                "fun": "mymin"
+              }
+            },
+            {
+              "args": [
+                {
+                  "var": "g_v"
+                },
+                {
+                  "var": "b_v2"
+                }
+              ],
+              "op": "+"
+            }
+          ],
+          "fun": "mymin"
+        }
+      },
+      "decreases": {
+        "int": 0
+      },
+      "name": "maxTables",
+      "params": [
+        {
+          "name": "r_v",
+          "type": "int"
+        },
+        {
+          "name": "g_v",
+          "type": "int"
+        },
+        {
+          "name": "b_v2",
+          "type": "int"
+        }
+      ],
+      "result": "int"
+    },
+    {
+      "body": {
+        "args": [
+          {
+            "args": [
+              {
+                "var": "r_v2"
+              },
+              {
+                "int": 0
+              }
+            ],
+            "op": ">="
+          },
+          {
+            "args": [
+              {
+                "var": "g_v2"
+              },
+              {
+                "int": 0
+              }
+            ],
+            "op": ">="
+          },
+          {
+            "args": [
+              {
+                "var": "b_v3"
+              },
+              {
+                "int": 0
+              }
+            ],
+            "op": ">="
+          }
+        ],
+        "op": "and"
+      },
+      "decreases": {
+        "int": 0
+      },
+      "name": "validInput",
+      "params": [
+        {
+          "name": "r_v2",
+          "type": "int"
+        },
+        {
+          "name": "g_v2",
+          "type": "int"
+        },
+        {
+          "name": "b_v3",
+          "type": "int"
+        }
+      ],
+      "result": "bool"
+    }
+  ],
+  "t": 1
+}

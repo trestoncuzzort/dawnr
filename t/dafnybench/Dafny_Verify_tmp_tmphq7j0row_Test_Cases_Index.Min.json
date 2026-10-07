@@ -1,0 +1,109 @@
+{
+  "body": [
+    {
+      "if": {
+        "cond": {
+          "args": [
+            {
+              "var": "x"
+            },
+            {
+              "var": "y"
+            }
+          ],
+          "op": ">="
+        },
+        "else": [
+          {
+            "assign": [
+              "m",
+              {
+                "var": "x"
+              }
+            ]
+          }
+        ],
+        "then": [
+          {
+            "assign": [
+              "m",
+              {
+                "var": "y"
+              }
+            ]
+          }
+        ]
+      }
+    }
+  ],
+  "ensures": [
+    {
+      "args": [
+        {
+          "var": "m"
+        },
+        {
+          "var": "x"
+        }
+      ],
+      "op": "<="
+    },
+    {
+      "args": [
+        {
+          "var": "m"
+        },
+        {
+          "var": "y"
+        }
+      ],
+      "op": "<="
+    },
+    {
+      "args": [
+        {
+          "args": [
+            {
+              "var": "m"
+            },
+            {
+              "var": "x"
+            }
+          ],
+          "op": "=="
+        },
+        {
+          "args": [
+            {
+              "var": "m"
+            },
+            {
+              "var": "y"
+            }
+          ],
+          "op": "=="
+        }
+      ],
+      "op": "or"
+    }
+  ],
+  "name": "dafny_verify_tmp_tmphq7j0row_test_cases_index__min",
+  "params": [
+    {
+      "name": "x",
+      "type": "int"
+    },
+    {
+      "name": "y",
+      "type": "int"
+    }
+  ],
+  "requires": [],
+  "returns": [
+    {
+      "name": "m",
+      "type": "int"
+    }
+  ],
+  "t": 1
+}

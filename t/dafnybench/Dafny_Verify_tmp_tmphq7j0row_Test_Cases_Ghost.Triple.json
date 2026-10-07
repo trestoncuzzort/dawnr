@@ -1,0 +1,121 @@
+{
+  "body": [
+    {
+      "assign": [
+        "r",
+        {
+          "call": {
+            "args": [
+              {
+                "args": [
+                  {
+                    "int": 2
+                  },
+                  {
+                    "var": "x"
+                  }
+                ],
+                "op": "*"
+              },
+              {
+                "args": [
+                  {
+                    "int": 4
+                  },
+                  {
+                    "var": "x"
+                  }
+                ],
+                "op": "*"
+              }
+            ],
+            "fun": "average"
+          }
+        }
+      ]
+    }
+  ],
+  "ensures": [
+    {
+      "args": [
+        {
+          "var": "r"
+        },
+        {
+          "args": [
+            {
+              "int": 3
+            },
+            {
+              "var": "x"
+            }
+          ],
+          "op": "*"
+        }
+      ],
+      "op": "=="
+    }
+  ],
+  "gate": "recursion",
+  "name": "dafny_verify_tmp_tmphq7j0row_test_cases_ghost__triple",
+  "params": [
+    {
+      "name": "x",
+      "type": "int"
+    }
+  ],
+  "requires": [],
+  "returns": [
+    {
+      "name": "r",
+      "type": "int"
+    }
+  ],
+  "spec_funs": [
+    {
+      "body": {
+        "args": [
+          {
+            "args": [
+              {
+                "var": "a"
+              },
+              {
+                "var": "b"
+              }
+            ],
+            "op": "+"
+          },
+          {
+            "int": 2
+          }
+        ],
+        "op": "div"
+      },
+      "decreases": {
+        "args": [
+          {
+            "var": "a"
+          },
+          {
+            "var": "b"
+          }
+        ],
+        "op": "+"
+      },
+      "name": "average",
+      "params": [
+        {
+          "name": "a",
+          "type": "int"
+        },
+        {
+          "name": "b",
+          "type": "int"
+        }
+      ],
+      "result": "int"
+    }
+  ],
+  "t": 1
+}

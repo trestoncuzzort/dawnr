@@ -1,0 +1,164 @@
+{
+  "body": [
+    {
+      "var": {
+        "init": {
+          "int": 0
+        },
+        "name": "x_v",
+        "type": "int"
+      }
+    },
+    {
+      "var": {
+        "init": {
+          "int": 0
+        },
+        "name": "y_v",
+        "type": "int"
+      }
+    },
+    {
+      "var": {
+        "init": {
+          "var": "x"
+        },
+        "name": "tmp0",
+        "type": "int"
+      }
+    },
+    {
+      "var": {
+        "init": {
+          "var": "y"
+        },
+        "name": "tmp1",
+        "type": "int"
+      }
+    },
+    {
+      "assign": [
+        "x_v",
+        {
+          "var": "tmp0"
+        }
+      ]
+    },
+    {
+      "assign": [
+        "y_v",
+        {
+          "var": "tmp1"
+        }
+      ]
+    },
+    {
+      "var": {
+        "init": {
+          "var": "y_v"
+        },
+        "name": "tmp0_v",
+        "type": "int"
+      }
+    },
+    {
+      "var": {
+        "init": {
+          "var": "x_v"
+        },
+        "name": "tmp1_v",
+        "type": "int"
+      }
+    },
+    {
+      "assign": [
+        "x_v",
+        {
+          "var": "tmp0_v"
+        }
+      ]
+    },
+    {
+      "assign": [
+        "y_v",
+        {
+          "var": "tmp1_v"
+        }
+      ]
+    },
+    {
+      "assign": [
+        "r",
+        {
+          "args": [
+            {
+              "var": "x_v"
+            },
+            {
+              "var": "y_v"
+            }
+          ],
+          "op": "pair"
+        }
+      ]
+    }
+  ],
+  "ensures": [
+    {
+      "args": [
+        {
+          "args": [
+            {
+              "var": "r"
+            }
+          ],
+          "op": "fst"
+        },
+        {
+          "var": "y"
+        }
+      ],
+      "op": "=="
+    },
+    {
+      "args": [
+        {
+          "args": [
+            {
+              "var": "r"
+            }
+          ],
+          "op": "snd"
+        },
+        {
+          "var": "x"
+        }
+      ],
+      "op": "=="
+    }
+  ],
+  "name": "clover_swap_sim__swapSimultaneous",
+  "params": [
+    {
+      "name": "x",
+      "type": "int"
+    },
+    {
+      "name": "y",
+      "type": "int"
+    }
+  ],
+  "requires": [],
+  "returns": [
+    {
+      "name": "r",
+      "type": {
+        "pair": [
+          "int",
+          "int"
+        ]
+      }
+    }
+  ],
+  "t": 1
+}

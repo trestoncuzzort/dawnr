@@ -1,0 +1,154 @@
+{
+  "body": [
+    {
+      "if": {
+        "cond": {
+          "args": [
+            {
+              "var": "z"
+            },
+            {
+              "var": "y"
+            }
+          ],
+          "op": "<"
+        },
+        "else": [
+          {
+            "assign": [
+              "m",
+              {
+                "var": "y"
+              }
+            ]
+          },
+          {
+            "if": {
+              "cond": {
+                "args": [
+                  {
+                    "var": "x"
+                  },
+                  {
+                    "var": "y"
+                  }
+                ],
+                "op": "<"
+              },
+              "else": [],
+              "then": [
+                {
+                  "assign": [
+                    "m",
+                    {
+                      "var": "x"
+                    }
+                  ]
+                }
+              ]
+            }
+          }
+        ],
+        "then": [
+          {
+            "if": {
+              "cond": {
+                "args": [
+                  {
+                    "var": "z"
+                  },
+                  {
+                    "var": "x"
+                  }
+                ],
+                "op": "<"
+              },
+              "else": [
+                {
+                  "assign": [
+                    "m",
+                    {
+                      "var": "x"
+                    }
+                  ]
+                }
+              ],
+              "then": [
+                {
+                  "assign": [
+                    "m",
+                    {
+                      "var": "z"
+                    }
+                  ]
+                }
+              ]
+            }
+          }
+        ]
+      }
+    }
+  ],
+  "ensures": [
+    {
+      "args": [
+        {
+          "var": "m"
+        },
+        {
+          "var": "x"
+        }
+      ],
+      "op": "<="
+    },
+    {
+      "args": [
+        {
+          "var": "m"
+        },
+        {
+          "var": "y"
+        }
+      ],
+      "op": "<="
+    },
+    {
+      "args": [
+        {
+          "var": "m"
+        },
+        {
+          "var": "z"
+        }
+      ],
+      "op": "<="
+    }
+  ],
+  "name": "cs245_verification_tmp_tmp0h_nxhqp_a8_q2__a8Q1",
+  "params": [
+    {
+      "name": "x",
+      "type": "int"
+    },
+    {
+      "name": "y",
+      "type": "int"
+    },
+    {
+      "name": "z",
+      "type": "int"
+    }
+  ],
+  "requires": [
+    {
+      "bool": true
+    }
+  ],
+  "returns": [
+    {
+      "name": "m",
+      "type": "int"
+    }
+  ],
+  "t": 1
+}

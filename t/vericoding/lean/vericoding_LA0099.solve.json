@@ -1,0 +1,961 @@
+{
+  "body": [
+    {
+      "assign": [
+        "result",
+        {
+          "args": [
+            {
+              "ite": {
+                "cond": {
+                  "args": [
+                    {
+                      "var": "d"
+                    },
+                    {
+                      "args": [
+                        {
+                          "call": {
+                            "args": [
+                              {
+                                "var": "a"
+                              },
+                              {
+                                "var": "b"
+                              },
+                              {
+                                "var": "c"
+                              }
+                            ],
+                            "fun": "pos2"
+                          }
+                        },
+                        {
+                          "call": {
+                            "args": [
+                              {
+                                "var": "a"
+                              },
+                              {
+                                "var": "b"
+                              },
+                              {
+                                "var": "c"
+                              }
+                            ],
+                            "fun": "pos1"
+                          }
+                        }
+                      ],
+                      "op": "-"
+                    }
+                  ],
+                  "op": ">"
+                },
+                "else": {
+                  "int": 0
+                },
+                "then": {
+                  "args": [
+                    {
+                      "var": "d"
+                    },
+                    {
+                      "args": [
+                        {
+                          "call": {
+                            "args": [
+                              {
+                                "var": "a"
+                              },
+                              {
+                                "var": "b"
+                              },
+                              {
+                                "var": "c"
+                              }
+                            ],
+                            "fun": "pos2"
+                          }
+                        },
+                        {
+                          "call": {
+                            "args": [
+                              {
+                                "var": "a"
+                              },
+                              {
+                                "var": "b"
+                              },
+                              {
+                                "var": "c"
+                              }
+                            ],
+                            "fun": "pos1"
+                          }
+                        }
+                      ],
+                      "op": "-"
+                    }
+                  ],
+                  "op": "-"
+                }
+              }
+            },
+            {
+              "ite": {
+                "cond": {
+                  "args": [
+                    {
+                      "var": "d"
+                    },
+                    {
+                      "args": [
+                        {
+                          "call": {
+                            "args": [
+                              {
+                                "var": "a"
+                              },
+                              {
+                                "var": "b"
+                              },
+                              {
+                                "var": "c"
+                              }
+                            ],
+                            "fun": "pos3"
+                          }
+                        },
+                        {
+                          "call": {
+                            "args": [
+                              {
+                                "var": "a"
+                              },
+                              {
+                                "var": "b"
+                              },
+                              {
+                                "var": "c"
+                              }
+                            ],
+                            "fun": "pos2"
+                          }
+                        }
+                      ],
+                      "op": "-"
+                    }
+                  ],
+                  "op": ">"
+                },
+                "else": {
+                  "int": 0
+                },
+                "then": {
+                  "args": [
+                    {
+                      "var": "d"
+                    },
+                    {
+                      "args": [
+                        {
+                          "call": {
+                            "args": [
+                              {
+                                "var": "a"
+                              },
+                              {
+                                "var": "b"
+                              },
+                              {
+                                "var": "c"
+                              }
+                            ],
+                            "fun": "pos3"
+                          }
+                        },
+                        {
+                          "call": {
+                            "args": [
+                              {
+                                "var": "a"
+                              },
+                              {
+                                "var": "b"
+                              },
+                              {
+                                "var": "c"
+                              }
+                            ],
+                            "fun": "pos2"
+                          }
+                        }
+                      ],
+                      "op": "-"
+                    }
+                  ],
+                  "op": "-"
+                }
+              }
+            }
+          ],
+          "op": "+"
+        }
+      ]
+    }
+  ],
+  "ensures": [
+    {
+      "args": [
+        {
+          "var": "result"
+        },
+        {
+          "int": 0
+        }
+      ],
+      "op": ">="
+    },
+    {
+      "args": [
+        {
+          "var": "result"
+        },
+        {
+          "args": [
+            {
+              "ite": {
+                "cond": {
+                  "args": [
+                    {
+                      "var": "d"
+                    },
+                    {
+                      "args": [
+                        {
+                          "call": {
+                            "args": [
+                              {
+                                "var": "a"
+                              },
+                              {
+                                "var": "b"
+                              },
+                              {
+                                "var": "c"
+                              }
+                            ],
+                            "fun": "pos2"
+                          }
+                        },
+                        {
+                          "call": {
+                            "args": [
+                              {
+                                "var": "a"
+                              },
+                              {
+                                "var": "b"
+                              },
+                              {
+                                "var": "c"
+                              }
+                            ],
+                            "fun": "pos1"
+                          }
+                        }
+                      ],
+                      "op": "-"
+                    }
+                  ],
+                  "op": ">"
+                },
+                "else": {
+                  "int": 0
+                },
+                "then": {
+                  "args": [
+                    {
+                      "var": "d"
+                    },
+                    {
+                      "args": [
+                        {
+                          "call": {
+                            "args": [
+                              {
+                                "var": "a"
+                              },
+                              {
+                                "var": "b"
+                              },
+                              {
+                                "var": "c"
+                              }
+                            ],
+                            "fun": "pos2"
+                          }
+                        },
+                        {
+                          "call": {
+                            "args": [
+                              {
+                                "var": "a"
+                              },
+                              {
+                                "var": "b"
+                              },
+                              {
+                                "var": "c"
+                              }
+                            ],
+                            "fun": "pos1"
+                          }
+                        }
+                      ],
+                      "op": "-"
+                    }
+                  ],
+                  "op": "-"
+                }
+              }
+            },
+            {
+              "ite": {
+                "cond": {
+                  "args": [
+                    {
+                      "var": "d"
+                    },
+                    {
+                      "args": [
+                        {
+                          "call": {
+                            "args": [
+                              {
+                                "var": "a"
+                              },
+                              {
+                                "var": "b"
+                              },
+                              {
+                                "var": "c"
+                              }
+                            ],
+                            "fun": "pos3"
+                          }
+                        },
+                        {
+                          "call": {
+                            "args": [
+                              {
+                                "var": "a"
+                              },
+                              {
+                                "var": "b"
+                              },
+                              {
+                                "var": "c"
+                              }
+                            ],
+                            "fun": "pos2"
+                          }
+                        }
+                      ],
+                      "op": "-"
+                    }
+                  ],
+                  "op": ">"
+                },
+                "else": {
+                  "int": 0
+                },
+                "then": {
+                  "args": [
+                    {
+                      "var": "d"
+                    },
+                    {
+                      "args": [
+                        {
+                          "call": {
+                            "args": [
+                              {
+                                "var": "a"
+                              },
+                              {
+                                "var": "b"
+                              },
+                              {
+                                "var": "c"
+                              }
+                            ],
+                            "fun": "pos3"
+                          }
+                        },
+                        {
+                          "call": {
+                            "args": [
+                              {
+                                "var": "a"
+                              },
+                              {
+                                "var": "b"
+                              },
+                              {
+                                "var": "c"
+                              }
+                            ],
+                            "fun": "pos2"
+                          }
+                        }
+                      ],
+                      "op": "-"
+                    }
+                  ],
+                  "op": "-"
+                }
+              }
+            }
+          ],
+          "op": "+"
+        }
+      ],
+      "op": "=="
+    }
+  ],
+  "gate": "recursion",
+  "name": "vericoding_la0099__solve",
+  "params": [
+    {
+      "name": "a",
+      "type": "int"
+    },
+    {
+      "name": "b",
+      "type": "int"
+    },
+    {
+      "name": "c",
+      "type": "int"
+    },
+    {
+      "name": "d",
+      "type": "int"
+    }
+  ],
+  "requires": [
+    {
+      "args": [
+        {
+          "int": 1
+        },
+        {
+          "var": "a"
+        }
+      ],
+      "op": "<="
+    },
+    {
+      "args": [
+        {
+          "args": [
+            {
+              "var": "a"
+            },
+            {
+              "int": 1000000000
+            }
+          ],
+          "op": "<="
+        },
+        {
+          "args": [
+            {
+              "args": [
+                {
+                  "int": 1
+                },
+                {
+                  "var": "b"
+                }
+              ],
+              "op": "<="
+            },
+            {
+              "args": [
+                {
+                  "args": [
+                    {
+                      "var": "b"
+                    },
+                    {
+                      "int": 1000000000
+                    }
+                  ],
+                  "op": "<="
+                },
+                {
+                  "args": [
+                    {
+                      "args": [
+                        {
+                          "int": 1
+                        },
+                        {
+                          "var": "c"
+                        }
+                      ],
+                      "op": "<="
+                    },
+                    {
+                      "args": [
+                        {
+                          "args": [
+                            {
+                              "var": "c"
+                            },
+                            {
+                              "int": 1000000000
+                            }
+                          ],
+                          "op": "<="
+                        },
+                        {
+                          "args": [
+                            {
+                              "args": [
+                                {
+                                  "int": 1
+                                },
+                                {
+                                  "var": "d"
+                                }
+                              ],
+                              "op": "<="
+                            },
+                            {
+                              "args": [
+                                {
+                                  "var": "d"
+                                },
+                                {
+                                  "int": 1000000000
+                                }
+                              ],
+                              "op": "<="
+                            }
+                          ],
+                          "op": "and"
+                        }
+                      ],
+                      "op": "and"
+                    }
+                  ],
+                  "op": "and"
+                }
+              ],
+              "op": "and"
+            }
+          ],
+          "op": "and"
+        }
+      ],
+      "op": "and"
+    }
+  ],
+  "returns": [
+    {
+      "name": "result",
+      "type": "int"
+    }
+  ],
+  "spec_funs": [
+    {
+      "body": {
+        "ite": {
+          "cond": {
+            "args": [
+              {
+                "args": [
+                  {
+                    "var": "a_v"
+                  },
+                  {
+                    "var": "b_v"
+                  }
+                ],
+                "op": "<="
+              },
+              {
+                "args": [
+                  {
+                    "var": "a_v"
+                  },
+                  {
+                    "var": "c_v"
+                  }
+                ],
+                "op": "<="
+              }
+            ],
+            "op": "and"
+          },
+          "else": {
+            "ite": {
+              "cond": {
+                "args": [
+                  {
+                    "args": [
+                      {
+                        "var": "b_v"
+                      },
+                      {
+                        "var": "a_v"
+                      }
+                    ],
+                    "op": "<="
+                  },
+                  {
+                    "args": [
+                      {
+                        "var": "b_v"
+                      },
+                      {
+                        "var": "c_v"
+                      }
+                    ],
+                    "op": "<="
+                  }
+                ],
+                "op": "and"
+              },
+              "else": {
+                "var": "c_v"
+              },
+              "then": {
+                "var": "b_v"
+              }
+            }
+          },
+          "then": {
+            "var": "a_v"
+          }
+        }
+      },
+      "decreases": {
+        "int": 0
+      },
+      "name": "pos1",
+      "params": [
+        {
+          "name": "a_v",
+          "type": "int"
+        },
+        {
+          "name": "b_v",
+          "type": "int"
+        },
+        {
+          "name": "c_v",
+          "type": "int"
+        }
+      ],
+      "result": "int"
+    },
+    {
+      "body": {
+        "ite": {
+          "cond": {
+            "args": [
+              {
+                "args": [
+                  {
+                    "var": "a_v2"
+                  },
+                  {
+                    "var": "b_v2"
+                  }
+                ],
+                "op": "<="
+              },
+              {
+                "args": [
+                  {
+                    "var": "a_v2"
+                  },
+                  {
+                    "var": "c_v2"
+                  }
+                ],
+                "op": "<="
+              }
+            ],
+            "op": "and"
+          },
+          "else": {
+            "ite": {
+              "cond": {
+                "args": [
+                  {
+                    "args": [
+                      {
+                        "var": "b_v2"
+                      },
+                      {
+                        "var": "a_v2"
+                      }
+                    ],
+                    "op": "<="
+                  },
+                  {
+                    "args": [
+                      {
+                        "var": "b_v2"
+                      },
+                      {
+                        "var": "c_v2"
+                      }
+                    ],
+                    "op": "<="
+                  }
+                ],
+                "op": "and"
+              },
+              "else": {
+                "ite": {
+                  "cond": {
+                    "args": [
+                      {
+                        "var": "a_v2"
+                      },
+                      {
+                        "var": "b_v2"
+                      }
+                    ],
+                    "op": "<="
+                  },
+                  "else": {
+                    "var": "a_v2"
+                  },
+                  "then": {
+                    "var": "b_v2"
+                  }
+                }
+              },
+              "then": {
+                "ite": {
+                  "cond": {
+                    "args": [
+                      {
+                        "var": "a_v2"
+                      },
+                      {
+                        "var": "c_v2"
+                      }
+                    ],
+                    "op": "<="
+                  },
+                  "else": {
+                    "var": "a_v2"
+                  },
+                  "then": {
+                    "var": "c_v2"
+                  }
+                }
+              }
+            }
+          },
+          "then": {
+            "ite": {
+              "cond": {
+                "args": [
+                  {
+                    "var": "b_v2"
+                  },
+                  {
+                    "var": "c_v2"
+                  }
+                ],
+                "op": "<="
+              },
+              "else": {
+                "var": "b_v2"
+              },
+              "then": {
+                "var": "c_v2"
+              }
+            }
+          }
+        }
+      },
+      "decreases": {
+        "int": 0
+      },
+      "name": "pos3",
+      "params": [
+        {
+          "name": "a_v2",
+          "type": "int"
+        },
+        {
+          "name": "b_v2",
+          "type": "int"
+        },
+        {
+          "name": "c_v2",
+          "type": "int"
+        }
+      ],
+      "result": "int"
+    },
+    {
+      "body": {
+        "ite": {
+          "cond": {
+            "args": [
+              {
+                "args": [
+                  {
+                    "var": "a_v3"
+                  },
+                  {
+                    "var": "b_v3"
+                  }
+                ],
+                "op": "<="
+              },
+              {
+                "args": [
+                  {
+                    "var": "a_v3"
+                  },
+                  {
+                    "var": "c_v3"
+                  }
+                ],
+                "op": "<="
+              }
+            ],
+            "op": "and"
+          },
+          "else": {
+            "ite": {
+              "cond": {
+                "args": [
+                  {
+                    "args": [
+                      {
+                        "var": "b_v3"
+                      },
+                      {
+                        "var": "a_v3"
+                      }
+                    ],
+                    "op": "<="
+                  },
+                  {
+                    "args": [
+                      {
+                        "var": "b_v3"
+                      },
+                      {
+                        "var": "c_v3"
+                      }
+                    ],
+                    "op": "<="
+                  }
+                ],
+                "op": "and"
+              },
+              "else": {
+                "ite": {
+                  "cond": {
+                    "args": [
+                      {
+                        "var": "a_v3"
+                      },
+                      {
+                        "var": "b_v3"
+                      }
+                    ],
+                    "op": "<="
+                  },
+                  "else": {
+                    "var": "b_v3"
+                  },
+                  "then": {
+                    "var": "a_v3"
+                  }
+                }
+              },
+              "then": {
+                "ite": {
+                  "cond": {
+                    "args": [
+                      {
+                        "var": "a_v3"
+                      },
+                      {
+                        "var": "c_v3"
+                      }
+                    ],
+                    "op": "<="
+                  },
+                  "else": {
+                    "var": "c_v3"
+                  },
+                  "then": {
+                    "var": "a_v3"
+                  }
+                }
+              }
+            }
+          },
+          "then": {
+            "ite": {
+              "cond": {
+                "args": [
+                  {
+                    "var": "b_v3"
+                  },
+                  {
+                    "var": "c_v3"
+                  }
+                ],
+                "op": "<="
+              },
+              "else": {
+                "var": "c_v3"
+              },
+              "then": {
+                "var": "b_v3"
+              }
+            }
+          }
+        }
+      },
+      "decreases": {
+        "int": 0
+      },
+      "name": "pos2",
+      "params": [
+        {
+          "name": "a_v3",
+          "type": "int"
+        },
+        {
+          "name": "b_v3",
+          "type": "int"
+        },
+        {
+          "name": "c_v3",
+          "type": "int"
+        }
+      ],
+      "result": "int"
+    }
+  ],
+  "t": 1
+}

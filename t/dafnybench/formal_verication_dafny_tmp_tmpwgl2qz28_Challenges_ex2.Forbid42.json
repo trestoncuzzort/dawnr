@@ -1,0 +1,88 @@
+{
+  "body": [
+    {
+      "assign": [
+        "z",
+        {
+          "args": [
+            {
+              "var": "x"
+            },
+            {
+              "args": [
+                {
+                  "int": 42
+                },
+                {
+                  "var": "y"
+                }
+              ],
+              "op": "-"
+            }
+          ],
+          "op": "div"
+        }
+      ]
+    }
+  ],
+  "ensures": [
+    {
+      "args": [
+        {
+          "var": "z"
+        },
+        {
+          "args": [
+            {
+              "var": "x"
+            },
+            {
+              "args": [
+                {
+                  "int": 42
+                },
+                {
+                  "var": "y"
+                }
+              ],
+              "op": "-"
+            }
+          ],
+          "op": "div"
+        }
+      ],
+      "op": "=="
+    }
+  ],
+  "name": "formal_verication_dafny_tmp_tmpwgl2qz28_challenges_ex2__forbid42",
+  "params": [
+    {
+      "name": "x",
+      "type": "int"
+    },
+    {
+      "name": "y",
+      "type": "int"
+    }
+  ],
+  "requires": [
+    {
+      "args": [
+        {
+          "var": "y"
+        },
+        {
+          "int": 42
+        }
+      ],
+      "op": "!="
+    }
+  ],
+  "returns": [
+    {
+      "name": "z",
+      "type": "int"
+    }
+  ],
+  "t": 1
+}

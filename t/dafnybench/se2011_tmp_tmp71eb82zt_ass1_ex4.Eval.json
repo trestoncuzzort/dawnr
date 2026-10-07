@@ -1,0 +1,192 @@
+{
+  "body": [
+    {
+      "var": {
+        "init": {
+          "var": "x"
+        },
+        "name": "y",
+        "type": "int"
+      }
+    },
+    {
+      "var": {
+        "init": {
+          "int": 0
+        },
+        "name": "z",
+        "type": "int"
+      }
+    },
+    {
+      "while": {
+        "body": [
+          {
+            "assign": [
+              "z",
+              {
+                "args": [
+                  {
+                    "var": "z"
+                  },
+                  {
+                    "var": "x"
+                  }
+                ],
+                "op": "+"
+              }
+            ]
+          },
+          {
+            "assign": [
+              "y",
+              {
+                "args": [
+                  {
+                    "var": "y"
+                  },
+                  {
+                    "int": 1
+                  }
+                ],
+                "op": "-"
+              }
+            ]
+          }
+        ],
+        "cond": {
+          "args": [
+            {
+              "var": "y"
+            },
+            {
+              "int": 0
+            }
+          ],
+          "op": ">"
+        },
+        "decreases": {
+          "var": "y"
+        },
+        "invariants": [
+          {
+            "args": [
+              {
+                "args": [
+                  {
+                    "args": [
+                      {
+                        "int": 0
+                      },
+                      {
+                        "var": "y"
+                      }
+                    ],
+                    "op": "<="
+                  },
+                  {
+                    "args": [
+                      {
+                        "var": "y"
+                      },
+                      {
+                        "var": "x"
+                      }
+                    ],
+                    "op": "<="
+                  }
+                ],
+                "op": "and"
+              },
+              {
+                "args": [
+                  {
+                    "var": "z"
+                  },
+                  {
+                    "args": [
+                      {
+                        "var": "x"
+                      },
+                      {
+                        "args": [
+                          {
+                            "var": "x"
+                          },
+                          {
+                            "var": "y"
+                          }
+                        ],
+                        "op": "-"
+                      }
+                    ],
+                    "op": "*"
+                  }
+                ],
+                "op": "=="
+              }
+            ],
+            "op": "and"
+          }
+        ]
+      }
+    },
+    {
+      "assign": [
+        "r",
+        {
+          "var": "z"
+        }
+      ]
+    }
+  ],
+  "ensures": [
+    {
+      "args": [
+        {
+          "var": "r"
+        },
+        {
+          "args": [
+            {
+              "var": "x"
+            },
+            {
+              "var": "x"
+            }
+          ],
+          "op": "*"
+        }
+      ],
+      "op": "=="
+    }
+  ],
+  "gate": "loops",
+  "name": "se2011_tmp_tmp71eb82zt_ass1_ex4__eval",
+  "params": [
+    {
+      "name": "x",
+      "type": "int"
+    }
+  ],
+  "requires": [
+    {
+      "args": [
+        {
+          "var": "x"
+        },
+        {
+          "int": 0
+        }
+      ],
+      "op": ">="
+    }
+  ],
+  "returns": [
+    {
+      "name": "r",
+      "type": "int"
+    }
+  ],
+  "t": 1
+}

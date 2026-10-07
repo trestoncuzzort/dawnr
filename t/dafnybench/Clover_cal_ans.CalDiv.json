@@ -1,0 +1,251 @@
+{
+  "body": [
+    {
+      "var": {
+        "init": {
+          "int": 0
+        },
+        "name": "x",
+        "type": "int"
+      }
+    },
+    {
+      "var": {
+        "init": {
+          "int": 0
+        },
+        "name": "y",
+        "type": "int"
+      }
+    },
+    {
+      "var": {
+        "init": {
+          "int": 0
+        },
+        "name": "tmp0",
+        "type": "int"
+      }
+    },
+    {
+      "var": {
+        "init": {
+          "int": 191
+        },
+        "name": "tmp1",
+        "type": "int"
+      }
+    },
+    {
+      "assign": [
+        "x",
+        {
+          "var": "tmp0"
+        }
+      ]
+    },
+    {
+      "assign": [
+        "y",
+        {
+          "var": "tmp1"
+        }
+      ]
+    },
+    {
+      "while": {
+        "body": [
+          {
+            "assign": [
+              "x",
+              {
+                "args": [
+                  {
+                    "var": "x"
+                  },
+                  {
+                    "int": 1
+                  }
+                ],
+                "op": "+"
+              }
+            ]
+          },
+          {
+            "assign": [
+              "y",
+              {
+                "args": [
+                  {
+                    "int": 191
+                  },
+                  {
+                    "args": [
+                      {
+                        "int": 7
+                      },
+                      {
+                        "var": "x"
+                      }
+                    ],
+                    "op": "*"
+                  }
+                ],
+                "op": "-"
+              }
+            ]
+          }
+        ],
+        "cond": {
+          "args": [
+            {
+              "int": 7
+            },
+            {
+              "var": "y"
+            }
+          ],
+          "op": "<="
+        },
+        "decreases": {
+          "args": [
+            {
+              "var": "y"
+            },
+            {
+              "int": 7
+            }
+          ],
+          "op": "-"
+        },
+        "invariants": [
+          {
+            "args": [
+              {
+                "args": [
+                  {
+                    "int": 0
+                  },
+                  {
+                    "var": "y"
+                  }
+                ],
+                "op": "<="
+              },
+              {
+                "args": [
+                  {
+                    "args": [
+                      {
+                        "args": [
+                          {
+                            "int": 7
+                          },
+                          {
+                            "var": "x"
+                          }
+                        ],
+                        "op": "*"
+                      },
+                      {
+                        "var": "y"
+                      }
+                    ],
+                    "op": "+"
+                  },
+                  {
+                    "int": 191
+                  }
+                ],
+                "op": "=="
+              }
+            ],
+            "op": "and"
+          }
+        ]
+      }
+    },
+    {
+      "assign": [
+        "r",
+        {
+          "args": [
+            {
+              "var": "x"
+            },
+            {
+              "var": "y"
+            }
+          ],
+          "op": "pair"
+        }
+      ]
+    }
+  ],
+  "ensures": [
+    {
+      "args": [
+        {
+          "args": [
+            {
+              "var": "r"
+            }
+          ],
+          "op": "fst"
+        },
+        {
+          "args": [
+            {
+              "int": 191
+            },
+            {
+              "int": 7
+            }
+          ],
+          "op": "div"
+        }
+      ],
+      "op": "=="
+    },
+    {
+      "args": [
+        {
+          "args": [
+            {
+              "var": "r"
+            }
+          ],
+          "op": "snd"
+        },
+        {
+          "args": [
+            {
+              "int": 191
+            },
+            {
+              "int": 7
+            }
+          ],
+          "op": "mod"
+        }
+      ],
+      "op": "=="
+    }
+  ],
+  "gate": "loops",
+  "name": "clover_cal_ans__calDiv",
+  "params": [],
+  "requires": [],
+  "returns": [
+    {
+      "name": "r",
+      "type": {
+        "pair": [
+          "int",
+          "int"
+        ]
+      }
+    }
+  ],
+  "t": 1
+}

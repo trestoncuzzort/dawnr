@@ -1,0 +1,198 @@
+{
+  "body": [
+    {
+      "assign": [
+        "change",
+        {
+          "call": {
+            "args": [
+              {
+                "var": "n"
+              }
+            ],
+            "fun": "correctChange"
+          }
+        }
+      ]
+    }
+  ],
+  "ensures": [
+    {
+      "call": {
+        "args": [
+          {
+            "var": "change"
+          }
+        ],
+        "fun": "validChange"
+      }
+    },
+    {
+      "args": [
+        {
+          "var": "change"
+        },
+        {
+          "call": {
+            "args": [
+              {
+                "var": "n"
+              }
+            ],
+            "fun": "correctChange"
+          }
+        }
+      ],
+      "op": "=="
+    }
+  ],
+  "gate": "recursion",
+  "name": "vericoding_la0484__solve",
+  "params": [
+    {
+      "name": "n",
+      "type": "int"
+    }
+  ],
+  "requires": [
+    {
+      "call": {
+        "args": [
+          {
+            "var": "n"
+          }
+        ],
+        "fun": "validInput"
+      }
+    }
+  ],
+  "returns": [
+    {
+      "name": "change",
+      "type": "int"
+    }
+  ],
+  "spec_funs": [
+    {
+      "body": {
+        "args": [
+          {
+            "args": [
+              {
+                "int": 1000
+              },
+              {
+                "args": [
+                  {
+                    "var": "n_v"
+                  },
+                  {
+                    "int": 1000
+                  }
+                ],
+                "op": "mod"
+              }
+            ],
+            "op": "-"
+          },
+          {
+            "int": 1000
+          }
+        ],
+        "op": "mod"
+      },
+      "decreases": {
+        "int": 0
+      },
+      "name": "correctChange",
+      "params": [
+        {
+          "name": "n_v",
+          "type": "int"
+        }
+      ],
+      "result": "int"
+    },
+    {
+      "body": {
+        "args": [
+          {
+            "args": [
+              {
+                "int": 0
+              },
+              {
+                "var": "change_v"
+              }
+            ],
+            "op": "<="
+          },
+          {
+            "args": [
+              {
+                "var": "change_v"
+              },
+              {
+                "int": 999
+              }
+            ],
+            "op": "<="
+          }
+        ],
+        "op": "and"
+      },
+      "decreases": {
+        "int": 0
+      },
+      "name": "validChange",
+      "params": [
+        {
+          "name": "change_v",
+          "type": "int"
+        }
+      ],
+      "result": "bool"
+    },
+    {
+      "body": {
+        "args": [
+          {
+            "args": [
+              {
+                "int": 1
+              },
+              {
+                "var": "n_v2"
+              }
+            ],
+            "op": "<="
+          },
+          {
+            "args": [
+              {
+                "var": "n_v2"
+              },
+              {
+                "int": 10000
+              }
+            ],
+            "op": "<="
+          }
+        ],
+        "op": "and"
+      },
+      "decreases": {
+        "int": 0
+      },
+      "name": "validInput",
+      "params": [
+        {
+          "name": "n_v2",
+          "type": "int"
+        }
+      ],
+      "result": "bool"
+    }
+  ],
+  "t": 1
+}

@@ -1,0 +1,68 @@
+{
+  "body": [
+    {
+      "assign": [
+        "ascii",
+        {
+          "var": "c"
+        }
+      ]
+    }
+  ],
+  "ensures": [
+    {
+      "args": [
+        {
+          "var": "ascii"
+        },
+        {
+          "var": "c"
+        }
+      ],
+      "op": "=="
+    }
+  ],
+  "name": "dafny_synthesis_task_id_269__asciiValue",
+  "params": [
+    {
+      "name": "c",
+      "type": "int"
+    }
+  ],
+  "requires": [
+    {
+      "args": [
+        {
+          "args": [
+            {
+              "var": "c"
+            },
+            {
+              "int": 0
+            }
+          ],
+          "op": ">="
+        },
+        {
+          "args": [
+            {
+              "var": "c"
+            },
+            {
+              "int": 1114111
+            }
+          ],
+          "op": "<="
+        }
+      ],
+      "op": "and"
+    }
+  ],
+  "returns": [
+    {
+      "name": "ascii",
+      "type": "int"
+    }
+  ],
+  "t": 1
+}

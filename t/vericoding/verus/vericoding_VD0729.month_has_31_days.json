@@ -1,0 +1,246 @@
+{
+  "body": [
+    {
+      "assign": [
+        "result",
+        {
+          "args": [
+            {
+              "args": [
+                {
+                  "var": "month"
+                },
+                {
+                  "int": 1
+                }
+              ],
+              "op": "=="
+            },
+            {
+              "args": [
+                {
+                  "var": "month"
+                },
+                {
+                  "int": 3
+                }
+              ],
+              "op": "=="
+            },
+            {
+              "args": [
+                {
+                  "var": "month"
+                },
+                {
+                  "int": 5
+                }
+              ],
+              "op": "=="
+            },
+            {
+              "args": [
+                {
+                  "var": "month"
+                },
+                {
+                  "int": 7
+                }
+              ],
+              "op": "=="
+            },
+            {
+              "args": [
+                {
+                  "var": "month"
+                },
+                {
+                  "int": 8
+                }
+              ],
+              "op": "=="
+            },
+            {
+              "args": [
+                {
+                  "var": "month"
+                },
+                {
+                  "int": 10
+                }
+              ],
+              "op": "=="
+            },
+            {
+              "args": [
+                {
+                  "var": "month"
+                },
+                {
+                  "int": 12
+                }
+              ],
+              "op": "=="
+            }
+          ],
+          "op": "or"
+        }
+      ]
+    }
+  ],
+  "ensures": [
+    {
+      "args": [
+        {
+          "var": "result"
+        },
+        {
+          "args": [
+            {
+              "args": [
+                {
+                  "args": [
+                    {
+                      "args": [
+                        {
+                          "args": [
+                            {
+                              "args": [
+                                {
+                                  "args": [
+                                    {
+                                      "var": "month"
+                                    },
+                                    {
+                                      "int": 1
+                                    }
+                                  ],
+                                  "op": "=="
+                                },
+                                {
+                                  "args": [
+                                    {
+                                      "var": "month"
+                                    },
+                                    {
+                                      "int": 3
+                                    }
+                                  ],
+                                  "op": "=="
+                                }
+                              ],
+                              "op": "or"
+                            },
+                            {
+                              "args": [
+                                {
+                                  "var": "month"
+                                },
+                                {
+                                  "int": 5
+                                }
+                              ],
+                              "op": "=="
+                            }
+                          ],
+                          "op": "or"
+                        },
+                        {
+                          "args": [
+                            {
+                              "var": "month"
+                            },
+                            {
+                              "int": 7
+                            }
+                          ],
+                          "op": "=="
+                        }
+                      ],
+                      "op": "or"
+                    },
+                    {
+                      "args": [
+                        {
+                          "var": "month"
+                        },
+                        {
+                          "int": 8
+                        }
+                      ],
+                      "op": "=="
+                    }
+                  ],
+                  "op": "or"
+                },
+                {
+                  "args": [
+                    {
+                      "var": "month"
+                    },
+                    {
+                      "int": 10
+                    }
+                  ],
+                  "op": "=="
+                }
+              ],
+              "op": "or"
+            },
+            {
+              "args": [
+                {
+                  "var": "month"
+                },
+                {
+                  "int": 12
+                }
+              ],
+              "op": "=="
+            }
+          ],
+          "op": "or"
+        }
+      ],
+      "op": "=="
+    }
+  ],
+  "name": "vericoding_vd0729__month_has_31_days",
+  "params": [
+    {
+      "name": "month",
+      "type": "int"
+    }
+  ],
+  "requires": [
+    {
+      "args": [
+        {
+          "int": 1
+        },
+        {
+          "var": "month"
+        }
+      ],
+      "op": "<="
+    },
+    {
+      "args": [
+        {
+          "var": "month"
+        },
+        {
+          "int": 12
+        }
+      ],
+      "op": "<="
+    }
+  ],
+  "returns": [
+    {
+      "name": "result",
+      "type": "bool"
+    }
+  ],
+  "t": 1
+}

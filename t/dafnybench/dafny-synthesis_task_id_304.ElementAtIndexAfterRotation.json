@@ -1,0 +1,171 @@
+{
+  "body": [
+    {
+      "assign": [
+        "element",
+        {
+          "args": [
+            {
+              "var": "l"
+            },
+            {
+              "args": [
+                {
+                  "args": [
+                    {
+                      "args": [
+                        {
+                          "var": "index"
+                        },
+                        {
+                          "var": "n"
+                        }
+                      ],
+                      "op": "-"
+                    },
+                    {
+                      "args": [
+                        {
+                          "var": "l"
+                        }
+                      ],
+                      "op": "len"
+                    }
+                  ],
+                  "op": "+"
+                },
+                {
+                  "args": [
+                    {
+                      "var": "l"
+                    }
+                  ],
+                  "op": "len"
+                }
+              ],
+              "op": "mod"
+            }
+          ],
+          "op": "at"
+        }
+      ]
+    }
+  ],
+  "ensures": [
+    {
+      "args": [
+        {
+          "var": "element"
+        },
+        {
+          "args": [
+            {
+              "var": "l"
+            },
+            {
+              "args": [
+                {
+                  "args": [
+                    {
+                      "args": [
+                        {
+                          "var": "index"
+                        },
+                        {
+                          "var": "n"
+                        }
+                      ],
+                      "op": "-"
+                    },
+                    {
+                      "args": [
+                        {
+                          "var": "l"
+                        }
+                      ],
+                      "op": "len"
+                    }
+                  ],
+                  "op": "+"
+                },
+                {
+                  "args": [
+                    {
+                      "var": "l"
+                    }
+                  ],
+                  "op": "len"
+                }
+              ],
+              "op": "mod"
+            }
+          ],
+          "op": "at"
+        }
+      ],
+      "op": "=="
+    }
+  ],
+  "name": "dafny_synthesis_task_id_304__elementAtIndexAfterRotation",
+  "params": [
+    {
+      "name": "l",
+      "type": "seq"
+    },
+    {
+      "name": "n",
+      "type": "int"
+    },
+    {
+      "name": "index",
+      "type": "int"
+    }
+  ],
+  "requires": [
+    {
+      "args": [
+        {
+          "var": "n"
+        },
+        {
+          "int": 0
+        }
+      ],
+      "op": ">="
+    },
+    {
+      "args": [
+        {
+          "int": 0
+        },
+        {
+          "var": "index"
+        }
+      ],
+      "op": "<="
+    },
+    {
+      "args": [
+        {
+          "var": "index"
+        },
+        {
+          "args": [
+            {
+              "var": "l"
+            }
+          ],
+          "op": "len"
+        }
+      ],
+      "op": "<"
+    }
+  ],
+  "returns": [
+    {
+      "name": "element",
+      "type": "int"
+    }
+  ],
+  "t": 1
+}

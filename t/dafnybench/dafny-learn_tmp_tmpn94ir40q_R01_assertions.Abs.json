@@ -1,0 +1,131 @@
+{
+  "body": [
+    {
+      "if": {
+        "cond": {
+          "args": [
+            {
+              "var": "x"
+            },
+            {
+              "int": 0
+            }
+          ],
+          "op": "<"
+        },
+        "else": [
+          {
+            "assign": [
+              "y",
+              {
+                "var": "x"
+              }
+            ]
+          }
+        ],
+        "then": [
+          {
+            "assign": [
+              "y",
+              {
+                "args": [
+                  {
+                    "var": "x"
+                  }
+                ],
+                "op": "neg"
+              }
+            ]
+          }
+        ]
+      }
+    }
+  ],
+  "ensures": [
+    {
+      "args": [
+        {
+          "int": 0
+        },
+        {
+          "var": "y"
+        }
+      ],
+      "op": "<="
+    },
+    {
+      "args": [
+        {
+          "args": [
+            {
+              "var": "x"
+            },
+            {
+              "int": 0
+            }
+          ],
+          "op": "<"
+        },
+        {
+          "args": [
+            {
+              "var": "y"
+            },
+            {
+              "args": [
+                {
+                  "var": "x"
+                }
+              ],
+              "op": "neg"
+            }
+          ],
+          "op": "=="
+        }
+      ],
+      "op": "implies"
+    },
+    {
+      "args": [
+        {
+          "args": [
+            {
+              "var": "x"
+            },
+            {
+              "int": 0
+            }
+          ],
+          "op": ">="
+        },
+        {
+          "args": [
+            {
+              "var": "y"
+            },
+            {
+              "var": "x"
+            }
+          ],
+          "op": "=="
+        }
+      ],
+      "op": "implies"
+    }
+  ],
+  "name": "dafny_learn_tmp_tmpn94ir40q_r01_assertions__abs",
+  "params": [
+    {
+      "name": "x",
+      "type": "int"
+    }
+  ],
+  "requires": [],
+  "returns": [
+    {
+      "name": "y",
+      "type": "int"
+    }
+  ],
+  "t": 1
+}

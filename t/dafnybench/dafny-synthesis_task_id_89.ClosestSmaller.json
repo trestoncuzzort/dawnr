@@ -1,0 +1,68 @@
+{
+  "body": [
+    {
+      "assign": [
+        "m",
+        {
+          "args": [
+            {
+              "var": "n"
+            },
+            {
+              "int": 1
+            }
+          ],
+          "op": "-"
+        }
+      ]
+    }
+  ],
+  "ensures": [
+    {
+      "args": [
+        {
+          "args": [
+            {
+              "var": "m"
+            },
+            {
+              "int": 1
+            }
+          ],
+          "op": "+"
+        },
+        {
+          "var": "n"
+        }
+      ],
+      "op": "=="
+    }
+  ],
+  "name": "dafny_synthesis_task_id_89__closestSmaller",
+  "params": [
+    {
+      "name": "n",
+      "type": "int"
+    }
+  ],
+  "requires": [
+    {
+      "args": [
+        {
+          "var": "n"
+        },
+        {
+          "int": 0
+        }
+      ],
+      "op": ">"
+    }
+  ],
+  "returns": [
+    {
+      "name": "m",
+      "type": "int"
+    }
+  ],
+  "t": 1
+}

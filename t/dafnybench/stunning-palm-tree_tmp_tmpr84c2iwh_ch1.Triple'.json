@@ -1,0 +1,137 @@
+{
+  "body": [
+    {
+      "assign": [
+        "r",
+        {
+          "args": [
+            {
+              "args": [
+                {
+                  "var": "x"
+                },
+                {
+                  "var": "x"
+                }
+              ],
+              "op": "+"
+            },
+            {
+              "var": "x"
+            }
+          ],
+          "op": "+"
+        }
+      ]
+    }
+  ],
+  "ensures": [
+    {
+      "args": [
+        {
+          "call": {
+            "args": [
+              {
+                "args": [
+                  {
+                    "int": 2
+                  },
+                  {
+                    "var": "r"
+                  }
+                ],
+                "op": "*"
+              },
+              {
+                "args": [
+                  {
+                    "int": 6
+                  },
+                  {
+                    "var": "x"
+                  }
+                ],
+                "op": "*"
+              }
+            ],
+            "fun": "average"
+          }
+        },
+        {
+          "args": [
+            {
+              "int": 6
+            },
+            {
+              "var": "x"
+            }
+          ],
+          "op": "*"
+        }
+      ],
+      "op": "=="
+    }
+  ],
+  "gate": "recursion",
+  "name": "stunning_palm_tree_tmp_tmpr84c2iwh_ch1__triple_p",
+  "params": [
+    {
+      "name": "x",
+      "type": "int"
+    }
+  ],
+  "requires": [],
+  "returns": [
+    {
+      "name": "r",
+      "type": "int"
+    }
+  ],
+  "spec_funs": [
+    {
+      "body": {
+        "args": [
+          {
+            "args": [
+              {
+                "var": "a"
+              },
+              {
+                "var": "b"
+              }
+            ],
+            "op": "+"
+          },
+          {
+            "int": 2
+          }
+        ],
+        "op": "div"
+      },
+      "decreases": {
+        "args": [
+          {
+            "var": "a"
+          },
+          {
+            "var": "b"
+          }
+        ],
+        "op": "+"
+      },
+      "name": "average",
+      "params": [
+        {
+          "name": "a",
+          "type": "int"
+        },
+        {
+          "name": "b",
+          "type": "int"
+        }
+      ],
+      "result": "int"
+    }
+  ],
+  "t": 1
+}

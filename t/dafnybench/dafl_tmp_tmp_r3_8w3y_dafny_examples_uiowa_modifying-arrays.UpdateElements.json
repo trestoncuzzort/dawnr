@@ -1,0 +1,272 @@
+{
+  "body": [
+    {
+      "assign": [
+        "a_out",
+        {
+          "var": "a"
+        }
+      ]
+    },
+    {
+      "assign": [
+        "a_out",
+        {
+          "args": [
+            {
+              "var": "a_out"
+            },
+            {
+              "int": 4
+            },
+            {
+              "args": [
+                {
+                  "args": [
+                    {
+                      "var": "a_out"
+                    },
+                    {
+                      "int": 4
+                    }
+                  ],
+                  "op": "at"
+                },
+                {
+                  "int": 3
+                }
+              ],
+              "op": "+"
+            }
+          ],
+          "op": "update"
+        }
+      ]
+    },
+    {
+      "assign": [
+        "a_out",
+        {
+          "args": [
+            {
+              "var": "a_out"
+            },
+            {
+              "int": 8
+            },
+            {
+              "args": [
+                {
+                  "args": [
+                    {
+                      "var": "a_out"
+                    },
+                    {
+                      "int": 8
+                    }
+                  ],
+                  "op": "at"
+                },
+                {
+                  "int": 1
+                }
+              ],
+              "op": "+"
+            }
+          ],
+          "op": "update"
+        }
+      ]
+    },
+    {
+      "assign": [
+        "a_out",
+        {
+          "args": [
+            {
+              "var": "a_out"
+            },
+            {
+              "int": 7
+            },
+            {
+              "int": 516
+            }
+          ],
+          "op": "update"
+        }
+      ]
+    },
+    {
+      "assign": [
+        "a_out",
+        {
+          "args": [
+            {
+              "var": "a_out"
+            },
+            {
+              "int": 8
+            },
+            {
+              "args": [
+                {
+                  "args": [
+                    {
+                      "var": "a_out"
+                    },
+                    {
+                      "int": 8
+                    }
+                  ],
+                  "op": "at"
+                },
+                {
+                  "int": 1
+                }
+              ],
+              "op": "-"
+            }
+          ],
+          "op": "update"
+        }
+      ]
+    }
+  ],
+  "ensures": [
+    {
+      "args": [
+        {
+          "args": [
+            {
+              "var": "a_out"
+            }
+          ],
+          "op": "len"
+        },
+        {
+          "args": [
+            {
+              "var": "a"
+            }
+          ],
+          "op": "len"
+        }
+      ],
+      "op": "=="
+    },
+    {
+      "args": [
+        {
+          "args": [
+            {
+              "var": "a"
+            },
+            {
+              "int": 4
+            }
+          ],
+          "op": "at"
+        },
+        {
+          "args": [
+            {
+              "var": "a_out"
+            },
+            {
+              "int": 4
+            }
+          ],
+          "op": "at"
+        }
+      ],
+      "op": "<"
+    },
+    {
+      "args": [
+        {
+          "args": [
+            {
+              "var": "a_out"
+            },
+            {
+              "int": 6
+            }
+          ],
+          "op": "at"
+        },
+        {
+          "args": [
+            {
+              "var": "a"
+            },
+            {
+              "int": 6
+            }
+          ],
+          "op": "at"
+        }
+      ],
+      "op": "<="
+    },
+    {
+      "args": [
+        {
+          "args": [
+            {
+              "var": "a_out"
+            },
+            {
+              "int": 8
+            }
+          ],
+          "op": "at"
+        },
+        {
+          "args": [
+            {
+              "var": "a"
+            },
+            {
+              "int": 8
+            }
+          ],
+          "op": "at"
+        }
+      ],
+      "op": "=="
+    }
+  ],
+  "name": "dafl_tmp_tmp_r3_8w3y_dafny_examples_uiowa_modifying_arrays__updateElements",
+  "params": [
+    {
+      "name": "a",
+      "type": "seq"
+    }
+  ],
+  "requires": [
+    {
+      "args": [
+        {
+          "args": [
+            {
+              "var": "a"
+            }
+          ],
+          "op": "len"
+        },
+        {
+          "int": 10
+        }
+      ],
+      "op": "=="
+    }
+  ],
+  "returns": [
+    {
+      "name": "a_out",
+      "type": "seq"
+    }
+  ],
+  "t": 1
+}

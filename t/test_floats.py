@@ -105,9 +105,21 @@ def test_spark():
             ok("not lowered yet" in str(e) and "Floats" in str(e), f"{body} refuses by name: {e}")
 
 
+def test_framac():
+    # PREDICT T51: C doubles; ACSL's arithmetic is exact, so a t float operation is the rounded cast
+    src = tlib.lower(tasks_io.load_task(str(HERE / "tasks" / "sat_scale.t")), "framac")
+    ok("double sat_scale_t(double x, double k, double lim)" in src and "requires \\is_finite(x);" in src,
+       "double parameters, each finite")
+    ok("((double)(x * k))" in src and "/*@ assert \\is_finite(((double)(x * k))); */" in src,
+       "the rounding explicit in ACSL, finiteness asserted before the C operation")
+    ok("1.000e3" in src, "a literal as its exact decimal value")
+    cert = tlib.lower(tasks_io.load_task(str(HERE / "tasks" / "deadband.t")), "framac", twin_body=True)
+    ok("double x = 1.0e0;" in cert, "a float witness declared exactly")
+
+
 def test_kernels_refuse_by_name():
     t = tasks_io.load_task(str(HERE / "tasks" / "sat_scale.t"))
-    for k in ("dafny", "verus", "lean", "rocq", "fstar", "framac"):
+    for k in ("dafny", "verus", "lean", "rocq", "fstar"):
         try:
             tlib.lower(t, k)
             ok(False, f"{k} refuses")

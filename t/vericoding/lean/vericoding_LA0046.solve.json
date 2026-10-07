@@ -1,0 +1,286 @@
+{
+  "body": [
+    {
+      "assign": [
+        "result",
+        {
+          "call": {
+            "args": [
+              {
+                "var": "n"
+              },
+              {
+                "var": "k"
+              }
+            ],
+            "fun": "optimalMoves"
+          }
+        }
+      ]
+    }
+  ],
+  "ensures": [
+    {
+      "args": [
+        {
+          "var": "result"
+        },
+        {
+          "call": {
+            "args": [
+              {
+                "var": "n"
+              },
+              {
+                "var": "k"
+              }
+            ],
+            "fun": "optimalMoves"
+          }
+        }
+      ],
+      "op": "=="
+    },
+    {
+      "args": [
+        {
+          "var": "result"
+        },
+        {
+          "int": 0
+        }
+      ],
+      "op": ">"
+    }
+  ],
+  "gate": "recursion",
+  "name": "vericoding_la0046__solve",
+  "params": [
+    {
+      "name": "n",
+      "type": "int"
+    },
+    {
+      "name": "k",
+      "type": "int"
+    }
+  ],
+  "requires": [
+    {
+      "call": {
+        "args": [
+          {
+            "var": "n"
+          },
+          {
+            "var": "k"
+          }
+        ],
+        "fun": "validInput"
+      }
+    }
+  ],
+  "returns": [
+    {
+      "name": "result",
+      "type": "int"
+    }
+  ],
+  "spec_funs": [
+    {
+      "body": {
+        "ite": {
+          "cond": {
+            "args": [
+              {
+                "args": [
+                  {
+                    "var": "k_v"
+                  },
+                  {
+                    "int": 1
+                  }
+                ],
+                "op": "=="
+              },
+              {
+                "args": [
+                  {
+                    "var": "k_v"
+                  },
+                  {
+                    "var": "n_v"
+                  }
+                ],
+                "op": "=="
+              }
+            ],
+            "op": "or"
+          },
+          "else": {
+            "args": [
+              {
+                "args": [
+                  {
+                    "int": 3
+                  },
+                  {
+                    "var": "n_v"
+                  }
+                ],
+                "op": "*"
+              },
+              {
+                "ite": {
+                  "cond": {
+                    "args": [
+                      {
+                        "args": [
+                          {
+                            "var": "k_v"
+                          },
+                          {
+                            "int": 1
+                          }
+                        ],
+                        "op": "-"
+                      },
+                      {
+                        "args": [
+                          {
+                            "var": "n_v"
+                          },
+                          {
+                            "var": "k_v"
+                          }
+                        ],
+                        "op": "-"
+                      }
+                    ],
+                    "op": "<="
+                  },
+                  "else": {
+                    "args": [
+                      {
+                        "var": "n_v"
+                      },
+                      {
+                        "var": "k_v"
+                      }
+                    ],
+                    "op": "-"
+                  },
+                  "then": {
+                    "args": [
+                      {
+                        "var": "k_v"
+                      },
+                      {
+                        "int": 1
+                      }
+                    ],
+                    "op": "-"
+                  }
+                }
+              }
+            ],
+            "op": "+"
+          },
+          "then": {
+            "args": [
+              {
+                "int": 3
+              },
+              {
+                "var": "n_v"
+              }
+            ],
+            "op": "*"
+          }
+        }
+      },
+      "decreases": {
+        "int": 0
+      },
+      "name": "optimalMoves",
+      "params": [
+        {
+          "name": "n_v",
+          "type": "int"
+        },
+        {
+          "name": "k_v",
+          "type": "int"
+        }
+      ],
+      "result": "int"
+    },
+    {
+      "body": {
+        "args": [
+          {
+            "args": [
+              {
+                "int": 2
+              },
+              {
+                "var": "n_v2"
+              }
+            ],
+            "op": "<="
+          },
+          {
+            "args": [
+              {
+                "var": "n_v2"
+              },
+              {
+                "int": 5000
+              }
+            ],
+            "op": "<="
+          },
+          {
+            "args": [
+              {
+                "int": 1
+              },
+              {
+                "var": "k_v2"
+              }
+            ],
+            "op": "<="
+          },
+          {
+            "args": [
+              {
+                "var": "k_v2"
+              },
+              {
+                "var": "n_v2"
+              }
+            ],
+            "op": "<="
+          }
+        ],
+        "op": "and"
+      },
+      "decreases": {
+        "int": 0
+      },
+      "name": "validInput",
+      "params": [
+        {
+          "name": "n_v2",
+          "type": "int"
+        },
+        {
+          "name": "k_v2",
+          "type": "int"
+        }
+      ],
+      "result": "bool"
+    }
+  ],
+  "t": 1
+}

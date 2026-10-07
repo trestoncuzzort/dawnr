@@ -1,0 +1,315 @@
+{
+  "body": [
+    {
+      "assign": [
+        "arr_out",
+        {
+          "var": "arr"
+        }
+      ]
+    },
+    {
+      "var": {
+        "init": {
+          "args": [
+            {
+              "var": "arr_out"
+            },
+            {
+              "var": "i"
+            }
+          ],
+          "op": "at"
+        },
+        "name": "tmp",
+        "type": "int"
+      }
+    },
+    {
+      "assign": [
+        "arr_out",
+        {
+          "args": [
+            {
+              "var": "arr_out"
+            },
+            {
+              "var": "i"
+            },
+            {
+              "args": [
+                {
+                  "var": "arr_out"
+                },
+                {
+                  "var": "j"
+                }
+              ],
+              "op": "at"
+            }
+          ],
+          "op": "update"
+        }
+      ]
+    },
+    {
+      "assign": [
+        "arr_out",
+        {
+          "args": [
+            {
+              "var": "arr_out"
+            },
+            {
+              "var": "j"
+            },
+            {
+              "var": "tmp"
+            }
+          ],
+          "op": "update"
+        }
+      ]
+    }
+  ],
+  "ensures": [
+    {
+      "args": [
+        {
+          "args": [
+            {
+              "var": "arr_out"
+            }
+          ],
+          "op": "len"
+        },
+        {
+          "args": [
+            {
+              "var": "arr"
+            }
+          ],
+          "op": "len"
+        }
+      ],
+      "op": "=="
+    },
+    {
+      "args": [
+        {
+          "args": [
+            {
+              "var": "arr_out"
+            },
+            {
+              "var": "i"
+            }
+          ],
+          "op": "at"
+        },
+        {
+          "args": [
+            {
+              "var": "arr"
+            },
+            {
+              "var": "j"
+            }
+          ],
+          "op": "at"
+        }
+      ],
+      "op": "=="
+    },
+    {
+      "args": [
+        {
+          "args": [
+            {
+              "var": "arr_out"
+            },
+            {
+              "var": "j"
+            }
+          ],
+          "op": "at"
+        },
+        {
+          "args": [
+            {
+              "var": "arr"
+            },
+            {
+              "var": "i"
+            }
+          ],
+          "op": "at"
+        }
+      ],
+      "op": "=="
+    },
+    {
+      "forall": {
+        "body": {
+          "args": [
+            {
+              "args": [
+                {
+                  "args": [
+                    {
+                      "var": "k"
+                    },
+                    {
+                      "var": "i"
+                    }
+                  ],
+                  "op": "!="
+                },
+                {
+                  "args": [
+                    {
+                      "var": "k"
+                    },
+                    {
+                      "var": "j"
+                    }
+                  ],
+                  "op": "!="
+                }
+              ],
+              "op": "and"
+            },
+            {
+              "args": [
+                {
+                  "args": [
+                    {
+                      "var": "arr_out"
+                    },
+                    {
+                      "var": "k"
+                    }
+                  ],
+                  "op": "at"
+                },
+                {
+                  "args": [
+                    {
+                      "var": "arr"
+                    },
+                    {
+                      "var": "k"
+                    }
+                  ],
+                  "op": "at"
+                }
+              ],
+              "op": "=="
+            }
+          ],
+          "op": "implies"
+        },
+        "hi": {
+          "args": [
+            {
+              "var": "arr_out"
+            }
+          ],
+          "op": "len"
+        },
+        "lo": {
+          "int": 0
+        },
+        "var": "k"
+      }
+    }
+  ],
+  "name": "clover_swap_in_array__swap",
+  "params": [
+    {
+      "name": "arr",
+      "type": "seq"
+    },
+    {
+      "name": "i",
+      "type": "int"
+    },
+    {
+      "name": "j",
+      "type": "int"
+    }
+  ],
+  "requires": [
+    {
+      "args": [
+        {
+          "args": [
+            {
+              "int": 0
+            },
+            {
+              "var": "i"
+            }
+          ],
+          "op": "<="
+        },
+        {
+          "args": [
+            {
+              "var": "i"
+            },
+            {
+              "args": [
+                {
+                  "var": "arr"
+                }
+              ],
+              "op": "len"
+            }
+          ],
+          "op": "<"
+        }
+      ],
+      "op": "and"
+    },
+    {
+      "args": [
+        {
+          "args": [
+            {
+              "int": 0
+            },
+            {
+              "var": "j"
+            }
+          ],
+          "op": "<="
+        },
+        {
+          "args": [
+            {
+              "var": "j"
+            },
+            {
+              "args": [
+                {
+                  "var": "arr"
+                }
+              ],
+              "op": "len"
+            }
+          ],
+          "op": "<"
+        }
+      ],
+      "op": "and"
+    }
+  ],
+  "returns": [
+    {
+      "name": "arr_out",
+      "type": "seq"
+    }
+  ],
+  "t": 1
+}

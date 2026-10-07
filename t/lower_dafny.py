@@ -1738,8 +1738,13 @@ def _comp_key(e: dict) -> str:
     same comprehension over a prefix `s[0..i]` and over `s` is one function and `t_comp1(s[0..|s|])` meets
     `t_comp1(s)` by the slice axiom (the first registered source types the function)."""
     import json
+    import lower_verus as _lv
     c = e["comp"]
-    return json.dumps({"var": c["var"], "cond": c["cond"], "body": c["body"], "range": "lo" in c}, sort_keys=True)
+    # PREDICT T52: up to the bound variable's name (lower_lean's key already was), so `[x for x in s if p(x)]` in an
+    # ensures and `[y for y in s[0..i] if p(y)]` in an invariant are one function (measured: readings_in_band)
+    ren = {c["var"]: {"var": "$0"}}
+    return json.dumps({"cond": _lv.subst(c["cond"], ren), "body": _lv.subst(c["body"], ren), "range": "lo" in c},
+                      sort_keys=True)
 
 
 def _comp_free(node: dict) -> list:

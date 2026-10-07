@@ -1,0 +1,255 @@
+{
+  "body": [
+    {
+      "assign": [
+        "a_out",
+        {
+          "var": "a"
+        }
+      ]
+    },
+    {
+      "var": {
+        "init": {
+          "args": [
+            {
+              "var": "a_out"
+            },
+            {
+              "var": "j"
+            }
+          ],
+          "op": "at"
+        },
+        "name": "tmp0",
+        "type": "int"
+      }
+    },
+    {
+      "var": {
+        "init": {
+          "args": [
+            {
+              "var": "a_out"
+            },
+            {
+              "var": "i"
+            }
+          ],
+          "op": "at"
+        },
+        "name": "tmp1",
+        "type": "int"
+      }
+    },
+    {
+      "assign": [
+        "a_out",
+        {
+          "args": [
+            {
+              "var": "a_out"
+            },
+            {
+              "var": "i"
+            },
+            {
+              "var": "tmp0"
+            }
+          ],
+          "op": "update"
+        }
+      ]
+    },
+    {
+      "assign": [
+        "a_out",
+        {
+          "args": [
+            {
+              "var": "a_out"
+            },
+            {
+              "var": "j"
+            },
+            {
+              "var": "tmp1"
+            }
+          ],
+          "op": "update"
+        }
+      ]
+    }
+  ],
+  "ensures": [
+    {
+      "args": [
+        {
+          "args": [
+            {
+              "var": "a_out"
+            }
+          ],
+          "op": "len"
+        },
+        {
+          "args": [
+            {
+              "var": "a"
+            }
+          ],
+          "op": "len"
+        }
+      ],
+      "op": "=="
+    },
+    {
+      "args": [
+        {
+          "args": [
+            {
+              "var": "a_out"
+            },
+            {
+              "var": "i"
+            }
+          ],
+          "op": "at"
+        },
+        {
+          "args": [
+            {
+              "var": "a"
+            },
+            {
+              "var": "j"
+            }
+          ],
+          "op": "at"
+        }
+      ],
+      "op": "=="
+    },
+    {
+      "args": [
+        {
+          "args": [
+            {
+              "var": "a_out"
+            },
+            {
+              "var": "j"
+            }
+          ],
+          "op": "at"
+        },
+        {
+          "args": [
+            {
+              "var": "a"
+            },
+            {
+              "var": "i"
+            }
+          ],
+          "op": "at"
+        }
+      ],
+      "op": "=="
+    }
+  ],
+  "name": "programmverifikation_und_synthese_tmp_tmppurk6ime_pvs_assignment_ex_07_hoangkim_ex07_hoangkim__swap",
+  "params": [
+    {
+      "name": "a",
+      "type": "seq"
+    },
+    {
+      "name": "i",
+      "type": "int"
+    },
+    {
+      "name": "j",
+      "type": "int"
+    }
+  ],
+  "requires": [
+    {
+      "args": [
+        {
+          "var": "i"
+        },
+        {
+          "int": 0
+        }
+      ],
+      "op": ">="
+    },
+    {
+      "args": [
+        {
+          "var": "j"
+        },
+        {
+          "int": 0
+        }
+      ],
+      "op": ">="
+    },
+    {
+      "args": [
+        {
+          "args": [
+            {
+              "var": "a"
+            }
+          ],
+          "op": "len"
+        },
+        {
+          "int": 0
+        }
+      ],
+      "op": ">"
+    },
+    {
+      "args": [
+        {
+          "var": "i"
+        },
+        {
+          "args": [
+            {
+              "var": "a"
+            }
+          ],
+          "op": "len"
+        }
+      ],
+      "op": "<"
+    },
+    {
+      "args": [
+        {
+          "var": "j"
+        },
+        {
+          "args": [
+            {
+              "var": "a"
+            }
+          ],
+          "op": "len"
+        }
+      ],
+      "op": "<"
+    }
+  ],
+  "returns": [
+    {
+      "name": "a_out",
+      "type": "seq"
+    }
+  ],
+  "t": 1
+}

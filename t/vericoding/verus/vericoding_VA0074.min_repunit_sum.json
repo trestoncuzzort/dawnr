@@ -1,0 +1,249 @@
+{
+  "body": [
+    {
+      "if": {
+        "cond": {
+          "args": [
+            {
+              "var": "n"
+            },
+            {
+              "int": 0
+            }
+          ],
+          "op": "=="
+        },
+        "else": [
+          {
+            "assign": [
+              "result",
+              {
+                "int": 1
+              }
+            ]
+          }
+        ],
+        "then": [
+          {
+            "assign": [
+              "result",
+              {
+                "int": 0
+              }
+            ]
+          }
+        ]
+      }
+    }
+  ],
+  "ensures": [
+    {
+      "args": [
+        {
+          "var": "result"
+        },
+        {
+          "int": 0
+        }
+      ],
+      "op": ">="
+    },
+    {
+      "call": {
+        "args": [
+          {
+            "var": "n"
+          },
+          {
+            "var": "result"
+          }
+        ],
+        "fun": "valid_output"
+      }
+    }
+  ],
+  "gate": "recursion",
+  "name": "vericoding_va0074__min_repunit_sum",
+  "params": [
+    {
+      "name": "n",
+      "type": "int"
+    }
+  ],
+  "requires": [
+    {
+      "args": [
+        {
+          "var": "n"
+        },
+        {
+          "int": 0
+        }
+      ],
+      "op": ">="
+    },
+    {
+      "call": {
+        "args": [
+          {
+            "var": "n"
+          }
+        ],
+        "fun": "valid_input"
+      }
+    }
+  ],
+  "returns": [
+    {
+      "name": "result",
+      "type": "int"
+    }
+  ],
+  "spec_funs": [
+    {
+      "body": {
+        "ite": {
+          "cond": {
+            "args": [
+              {
+                "var": "n_v"
+              },
+              {
+                "int": 0
+              }
+            ],
+            "op": ">="
+          },
+          "else": {
+            "bool": false
+          },
+          "then": {
+            "bool": true
+          }
+        }
+      },
+      "decreases": {
+        "int": 0
+      },
+      "name": "valid_input",
+      "params": [
+        {
+          "name": "n_v",
+          "type": "int"
+        }
+      ],
+      "result": "bool"
+    },
+    {
+      "body": {
+        "ite": {
+          "cond": {
+            "args": [
+              {
+                "args": [
+                  {
+                    "var": "n_v2"
+                  },
+                  {
+                    "int": 0
+                  }
+                ],
+                "op": ">="
+              },
+              {
+                "args": [
+                  {
+                    "var": "result_v"
+                  },
+                  {
+                    "int": 0
+                  }
+                ],
+                "op": ">="
+              }
+            ],
+            "op": "and"
+          },
+          "else": {
+            "bool": false
+          },
+          "then": {
+            "args": [
+              {
+                "args": [
+                  {
+                    "args": [
+                      {
+                        "var": "n_v2"
+                      },
+                      {
+                        "int": 0
+                      }
+                    ],
+                    "op": "=="
+                  },
+                  {
+                    "args": [
+                      {
+                        "var": "result_v"
+                      },
+                      {
+                        "int": 0
+                      }
+                    ],
+                    "op": "=="
+                  }
+                ],
+                "op": "implies"
+              },
+              {
+                "args": [
+                  {
+                    "args": [
+                      {
+                        "var": "n_v2"
+                      },
+                      {
+                        "int": 0
+                      }
+                    ],
+                    "op": ">"
+                  },
+                  {
+                    "args": [
+                      {
+                        "var": "result_v"
+                      },
+                      {
+                        "int": 0
+                      }
+                    ],
+                    "op": ">"
+                  }
+                ],
+                "op": "implies"
+              }
+            ],
+            "op": "and"
+          }
+        }
+      },
+      "decreases": {
+        "int": 0
+      },
+      "name": "valid_output",
+      "params": [
+        {
+          "name": "n_v2",
+          "type": "int"
+        },
+        {
+          "name": "result_v",
+          "type": "int"
+        }
+      ],
+      "result": "bool"
+    }
+  ],
+  "t": 1
+}

@@ -2872,6 +2872,11 @@ def expr(e: dict, vty: str | None = None) -> str:
         return f"{c['fun']}(" + ", ".join(expr(a) for a in c["args"]) + ")"
     if "comp" in e:
         # SPEC.md "Comprehensions (v1)" (2026-10-06): the registered spec fn
+        if _comp_key(e) not in _COMP_INDEX:
+            # a certificate grounds a free variable the shape was registered with (readings_in_band's lo, hi):
+            # a shape with no spec fn of its own, refused by name rather than a KeyError
+            raise NotImplementedError("verus: a comprehension whose free variables a certificate grounds is not "
+                                      "lowered yet (SPEC.md 'Comprehensions (v1)')")
         k, _ = _COMP_INDEX[_comp_key(e)]
         c = e["comp"]
         src = [expr(c["seq"])] if "seq" in c else [expr(c["lo"]), expr(c["hi"])]
@@ -6637,7 +6642,9 @@ def _comp_key(e: dict) -> str:
     element types would collide here (not seen; the first registered source types the function)."""
     import json
     c = e["comp"]
-    return json.dumps({"var": c["var"], "cond": c["cond"], "body": c["body"], "range": "lo" in c}, sort_keys=True)
+    ren = {c["var"]: {"var": "$0"}}                  # PREDICT T52: up to the bound variable's name, as lower_lean's
+    return json.dumps({"cond": subst(c["cond"], ren), "body": subst(c["body"], ren), "range": "lo" in c},
+                      sort_keys=True)
 
 
 def _comp_free(node: dict) -> list:
@@ -7355,7 +7362,7 @@ def lower(task: dict, body: list, witness: dict | None = None) -> str:
     # PREDICT T44: `break` and `continue` rewritten into `return` and branches (tshape.desugar_exits); `while true` stays
     task, body = tshape.desugar_par(task, body)          # PREDICT T47: a parallel loop as its sequential `for`
     task, body = tshape.desugar_exits(task, body)
-    tshape.abstain_on_heap(task, "verus")                # SPEC.md "Heap (v1)" (PREDICT T46): Dafny first
+    task, body, witness = tshape.desugar_heap(task, body, witness)   # PREDICT T53: copy-in/copy-out
     tshape.abstain_on_floats(task, body, "verus")        # SPEC.md "Floats (v1)" (PREDICT T48)
     _comp_register(task, body)   # SPEC.md "Comprehensions (v1)" (2026-10-06)
     # NAMES (2026-09-11, ROADMAP 13.2): sanitize away any identifier that
@@ -7404,7 +7411,10 @@ def lower(task: dict, body: list, witness: dict | None = None) -> str:
         finally:
             _SUFFIX_INT = False
     if witness is not None:
-        cert = _certificate(task, body, witness)
+        try:
+            cert = _certificate(task, body, witness)
+        except NotImplementedError:
+            cert = None        # no certificate for this witness: the twin file stands without one (never REFUTED)
         if cert:
             src += cert
     rc = names.rename_comment(renames)

@@ -1,0 +1,434 @@
+{
+  "body": [
+    {
+      "assign": [
+        "a_out",
+        {
+          "var": "a"
+        }
+      ]
+    },
+    {
+      "var": {
+        "init": {
+          "args": [
+            {
+              "var": "a_out"
+            },
+            {
+              "var": "h"
+            }
+          ],
+          "op": "at"
+        },
+        "name": "tmp",
+        "type": "int"
+      }
+    },
+    {
+      "assign": [
+        "a_out",
+        {
+          "args": [
+            {
+              "var": "a_out"
+            },
+            {
+              "var": "h"
+            },
+            {
+              "args": [
+                {
+                  "var": "a_out"
+                },
+                {
+                  "var": "i"
+                }
+              ],
+              "op": "at"
+            }
+          ],
+          "op": "update"
+        }
+      ]
+    },
+    {
+      "assign": [
+        "a_out",
+        {
+          "args": [
+            {
+              "var": "a_out"
+            },
+            {
+              "var": "i"
+            },
+            {
+              "args": [
+                {
+                  "var": "a_out"
+                },
+                {
+                  "var": "j"
+                }
+              ],
+              "op": "at"
+            }
+          ],
+          "op": "update"
+        }
+      ]
+    },
+    {
+      "assign": [
+        "a_out",
+        {
+          "args": [
+            {
+              "var": "a_out"
+            },
+            {
+              "var": "j"
+            },
+            {
+              "var": "tmp"
+            }
+          ],
+          "op": "update"
+        }
+      ]
+    }
+  ],
+  "ensures": [
+    {
+      "args": [
+        {
+          "args": [
+            {
+              "var": "a_out"
+            }
+          ],
+          "op": "len"
+        },
+        {
+          "args": [
+            {
+              "var": "a"
+            }
+          ],
+          "op": "len"
+        }
+      ],
+      "op": "=="
+    },
+    {
+      "args": [
+        {
+          "args": [
+            {
+              "var": "a_out"
+            },
+            {
+              "var": "h"
+            }
+          ],
+          "op": "at"
+        },
+        {
+          "args": [
+            {
+              "var": "a"
+            },
+            {
+              "var": "i"
+            }
+          ],
+          "op": "at"
+        }
+      ],
+      "op": "=="
+    },
+    {
+      "args": [
+        {
+          "args": [
+            {
+              "var": "a_out"
+            },
+            {
+              "var": "j"
+            }
+          ],
+          "op": "at"
+        },
+        {
+          "args": [
+            {
+              "var": "a"
+            },
+            {
+              "var": "h"
+            }
+          ],
+          "op": "at"
+        }
+      ],
+      "op": "=="
+    },
+    {
+      "args": [
+        {
+          "args": [
+            {
+              "var": "a_out"
+            },
+            {
+              "var": "i"
+            }
+          ],
+          "op": "at"
+        },
+        {
+          "args": [
+            {
+              "var": "a"
+            },
+            {
+              "var": "j"
+            }
+          ],
+          "op": "at"
+        }
+      ],
+      "op": "=="
+    },
+    {
+      "forall": {
+        "body": {
+          "args": [
+            {
+              "args": [
+                {
+                  "args": [
+                    {
+                      "var": "k"
+                    },
+                    {
+                      "var": "h"
+                    }
+                  ],
+                  "op": "!="
+                },
+                {
+                  "args": [
+                    {
+                      "var": "k"
+                    },
+                    {
+                      "var": "i"
+                    }
+                  ],
+                  "op": "!="
+                },
+                {
+                  "args": [
+                    {
+                      "var": "k"
+                    },
+                    {
+                      "var": "j"
+                    }
+                  ],
+                  "op": "!="
+                }
+              ],
+              "op": "and"
+            },
+            {
+              "args": [
+                {
+                  "args": [
+                    {
+                      "var": "a_out"
+                    },
+                    {
+                      "var": "k"
+                    }
+                  ],
+                  "op": "at"
+                },
+                {
+                  "args": [
+                    {
+                      "var": "a"
+                    },
+                    {
+                      "var": "k"
+                    }
+                  ],
+                  "op": "at"
+                }
+              ],
+              "op": "=="
+            }
+          ],
+          "op": "implies"
+        },
+        "hi": {
+          "args": [
+            {
+              "var": "a_out"
+            }
+          ],
+          "op": "len"
+        },
+        "lo": {
+          "int": 0
+        },
+        "var": "k"
+      }
+    }
+  ],
+  "name": "dafny_tmp_tmpj88zq5zt_2_kontrakte_reverse3__swap3",
+  "params": [
+    {
+      "name": "a",
+      "type": "seq"
+    },
+    {
+      "name": "h",
+      "type": "int"
+    },
+    {
+      "name": "i",
+      "type": "int"
+    },
+    {
+      "name": "j",
+      "type": "int"
+    }
+  ],
+  "requires": [
+    {
+      "args": [
+        {
+          "int": 0
+        },
+        {
+          "var": "h"
+        }
+      ],
+      "op": "<="
+    },
+    {
+      "args": [
+        {
+          "var": "h"
+        },
+        {
+          "args": [
+            {
+              "var": "a"
+            }
+          ],
+          "op": "len"
+        }
+      ],
+      "op": "<"
+    },
+    {
+      "args": [
+        {
+          "int": 0
+        },
+        {
+          "var": "i"
+        }
+      ],
+      "op": "<="
+    },
+    {
+      "args": [
+        {
+          "var": "i"
+        },
+        {
+          "args": [
+            {
+              "var": "a"
+            }
+          ],
+          "op": "len"
+        }
+      ],
+      "op": "<"
+    },
+    {
+      "args": [
+        {
+          "int": 0
+        },
+        {
+          "var": "j"
+        }
+      ],
+      "op": "<="
+    },
+    {
+      "args": [
+        {
+          "var": "j"
+        },
+        {
+          "args": [
+            {
+              "var": "a"
+            }
+          ],
+          "op": "len"
+        }
+      ],
+      "op": "<"
+    },
+    {
+      "args": [
+        {
+          "var": "i"
+        },
+        {
+          "var": "j"
+        }
+      ],
+      "op": "!="
+    },
+    {
+      "args": [
+        {
+          "var": "j"
+        },
+        {
+          "var": "h"
+        }
+      ],
+      "op": "!="
+    },
+    {
+      "args": [
+        {
+          "var": "h"
+        },
+        {
+          "var": "i"
+        }
+      ],
+      "op": "!="
+    }
+  ],
+  "returns": [
+    {
+      "name": "a_out",
+      "type": "seq"
+    }
+  ],
+  "t": 1
+}

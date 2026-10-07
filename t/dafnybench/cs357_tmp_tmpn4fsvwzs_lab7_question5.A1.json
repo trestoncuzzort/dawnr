@@ -1,0 +1,347 @@
+{
+  "body": [
+    {
+      "assign": [
+        "r",
+        {
+          "var": "x"
+        }
+      ]
+    },
+    {
+      "if": {
+        "cond": {
+          "args": [
+            {
+              "var": "y"
+            },
+            {
+              "int": 0
+            }
+          ],
+          "op": "<"
+        },
+        "else": [
+          {
+            "var": {
+              "init": {
+                "var": "y"
+              },
+              "name": "n_v",
+              "type": "int"
+            }
+          },
+          {
+            "while": {
+              "body": [
+                {
+                  "assign": [
+                    "r",
+                    {
+                      "args": [
+                        {
+                          "var": "r"
+                        },
+                        {
+                          "int": 1
+                        }
+                      ],
+                      "op": "+"
+                    }
+                  ]
+                },
+                {
+                  "assign": [
+                    "n_v",
+                    {
+                      "args": [
+                        {
+                          "var": "n_v"
+                        },
+                        {
+                          "int": 1
+                        }
+                      ],
+                      "op": "-"
+                    }
+                  ]
+                }
+              ],
+              "cond": {
+                "args": [
+                  {
+                    "var": "n_v"
+                  },
+                  {
+                    "int": 0
+                  }
+                ],
+                "op": "!="
+              },
+              "decreases": {
+                "ite": {
+                  "cond": {
+                    "args": [
+                      {
+                        "var": "n_v"
+                      },
+                      {
+                        "int": 0
+                      }
+                    ],
+                    "op": "<="
+                  },
+                  "else": {
+                    "args": [
+                      {
+                        "var": "n_v"
+                      },
+                      {
+                        "int": 0
+                      }
+                    ],
+                    "op": "-"
+                  },
+                  "then": {
+                    "args": [
+                      {
+                        "int": 0
+                      },
+                      {
+                        "var": "n_v"
+                      }
+                    ],
+                    "op": "-"
+                  }
+                }
+              },
+              "invariants": [
+                {
+                  "args": [
+                    {
+                      "var": "r"
+                    },
+                    {
+                      "args": [
+                        {
+                          "args": [
+                            {
+                              "var": "x"
+                            },
+                            {
+                              "var": "y"
+                            }
+                          ],
+                          "op": "+"
+                        },
+                        {
+                          "var": "n_v"
+                        }
+                      ],
+                      "op": "-"
+                    }
+                  ],
+                  "op": "=="
+                },
+                {
+                  "args": [
+                    {
+                      "var": "n_v"
+                    },
+                    {
+                      "int": 0
+                    }
+                  ],
+                  "op": ">="
+                }
+              ]
+            }
+          }
+        ],
+        "then": [
+          {
+            "var": {
+              "init": {
+                "var": "y"
+              },
+              "name": "n",
+              "type": "int"
+            }
+          },
+          {
+            "while": {
+              "body": [
+                {
+                  "assign": [
+                    "r",
+                    {
+                      "args": [
+                        {
+                          "var": "r"
+                        },
+                        {
+                          "int": 1
+                        }
+                      ],
+                      "op": "-"
+                    }
+                  ]
+                },
+                {
+                  "assign": [
+                    "n",
+                    {
+                      "args": [
+                        {
+                          "var": "n"
+                        },
+                        {
+                          "int": 1
+                        }
+                      ],
+                      "op": "+"
+                    }
+                  ]
+                }
+              ],
+              "cond": {
+                "args": [
+                  {
+                    "var": "n"
+                  },
+                  {
+                    "int": 0
+                  }
+                ],
+                "op": "!="
+              },
+              "decreases": {
+                "ite": {
+                  "cond": {
+                    "args": [
+                      {
+                        "var": "n"
+                      },
+                      {
+                        "int": 0
+                      }
+                    ],
+                    "op": "<="
+                  },
+                  "else": {
+                    "args": [
+                      {
+                        "var": "n"
+                      },
+                      {
+                        "int": 0
+                      }
+                    ],
+                    "op": "-"
+                  },
+                  "then": {
+                    "args": [
+                      {
+                        "int": 0
+                      },
+                      {
+                        "var": "n"
+                      }
+                    ],
+                    "op": "-"
+                  }
+                }
+              },
+              "invariants": [
+                {
+                  "args": [
+                    {
+                      "var": "r"
+                    },
+                    {
+                      "args": [
+                        {
+                          "args": [
+                            {
+                              "var": "x"
+                            },
+                            {
+                              "var": "y"
+                            }
+                          ],
+                          "op": "+"
+                        },
+                        {
+                          "var": "n"
+                        }
+                      ],
+                      "op": "-"
+                    }
+                  ],
+                  "op": "=="
+                },
+                {
+                  "args": [
+                    {
+                      "args": [
+                        {
+                          "var": "n"
+                        }
+                      ],
+                      "op": "neg"
+                    },
+                    {
+                      "int": 0
+                    }
+                  ],
+                  "op": ">="
+                }
+              ]
+            }
+          }
+        ]
+      }
+    }
+  ],
+  "ensures": [
+    {
+      "args": [
+        {
+          "var": "r"
+        },
+        {
+          "args": [
+            {
+              "var": "x"
+            },
+            {
+              "var": "y"
+            }
+          ],
+          "op": "+"
+        }
+      ],
+      "op": "=="
+    }
+  ],
+  "gate": "loops",
+  "name": "cs357_tmp_tmpn4fsvwzs_lab7_question5__a1",
+  "params": [
+    {
+      "name": "x",
+      "type": "int"
+    },
+    {
+      "name": "y",
+      "type": "int"
+    }
+  ],
+  "requires": [],
+  "returns": [
+    {
+      "name": "r",
+      "type": "int"
+    }
+  ],
+  "t": 1
+}

@@ -1,0 +1,267 @@
+{
+  "body": [
+    {
+      "var": {
+        "init": {
+          "int": 0
+        },
+        "name": "r_v",
+        "type": "int"
+      }
+    },
+    {
+      "var": {
+        "init": {
+          "int": 0
+        },
+        "name": "s",
+        "type": "int"
+      }
+    },
+    {
+      "var": {
+        "init": {
+          "var": "p"
+        },
+        "name": "tmp0",
+        "type": "int"
+      }
+    },
+    {
+      "var": {
+        "init": {
+          "var": "q"
+        },
+        "name": "tmp1",
+        "type": "int"
+      }
+    },
+    {
+      "assign": [
+        "r_v",
+        {
+          "var": "tmp0"
+        }
+      ]
+    },
+    {
+      "assign": [
+        "s",
+        {
+          "var": "tmp1"
+        }
+      ]
+    },
+    {
+      "assign": [
+        "r_v",
+        {
+          "args": [
+            {
+              "args": [
+                {
+                  "var": "r_v"
+                },
+                {
+                  "args": [
+                    {
+                      "int": 2
+                    },
+                    {
+                      "var": "s"
+                    }
+                  ],
+                  "op": "*"
+                }
+              ],
+              "op": "-"
+            },
+            {
+              "int": 6
+            }
+          ],
+          "op": "+"
+        }
+      ]
+    },
+    {
+      "assign": [
+        "s",
+        {
+          "args": [
+            {
+              "var": "s"
+            },
+            {
+              "int": 3
+            }
+          ],
+          "op": "-"
+        }
+      ]
+    },
+    {
+      "var": {
+        "init": {
+          "var": "s"
+        },
+        "name": "tmp0_v",
+        "type": "int"
+      }
+    },
+    {
+      "var": {
+        "init": {
+          "var": "r_v"
+        },
+        "name": "tmp1_v",
+        "type": "int"
+      }
+    },
+    {
+      "assign": [
+        "r_v",
+        {
+          "var": "tmp0_v"
+        }
+      ]
+    },
+    {
+      "assign": [
+        "s",
+        {
+          "var": "tmp1_v"
+        }
+      ]
+    },
+    {
+      "assign": [
+        "r",
+        {
+          "args": [
+            {
+              "var": "r_v"
+            },
+            {
+              "var": "s"
+            }
+          ],
+          "op": "pair"
+        }
+      ]
+    }
+  ],
+  "ensures": [
+    {
+      "args": [
+        {
+          "args": [
+            {
+              "var": "r"
+            }
+          ],
+          "op": "fst"
+        },
+        {
+          "var": "x"
+        }
+      ],
+      "op": "=="
+    },
+    {
+      "args": [
+        {
+          "args": [
+            {
+              "var": "r"
+            }
+          ],
+          "op": "snd"
+        },
+        {
+          "var": "y"
+        }
+      ],
+      "op": "=="
+    }
+  ],
+  "name": "prog_fun_solutions_tmp_tmp7_gmnz5f_mockexam2_p2__problem2",
+  "params": [
+    {
+      "name": "p",
+      "type": "int"
+    },
+    {
+      "name": "q",
+      "type": "int"
+    },
+    {
+      "name": "x",
+      "type": "int"
+    },
+    {
+      "name": "y",
+      "type": "int"
+    }
+  ],
+  "requires": [
+    {
+      "args": [
+        {
+          "var": "p"
+        },
+        {
+          "args": [
+            {
+              "args": [
+                {
+                  "int": 2
+                },
+                {
+                  "var": "x"
+                }
+              ],
+              "op": "*"
+            },
+            {
+              "var": "y"
+            }
+          ],
+          "op": "+"
+        }
+      ],
+      "op": "=="
+    },
+    {
+      "args": [
+        {
+          "var": "q"
+        },
+        {
+          "args": [
+            {
+              "var": "x"
+            },
+            {
+              "int": 3
+            }
+          ],
+          "op": "+"
+        }
+      ],
+      "op": "=="
+    }
+  ],
+  "returns": [
+    {
+      "name": "r",
+      "type": {
+        "pair": [
+          "int",
+          "int"
+        ]
+      }
+    }
+  ],
+  "t": 1
+}

@@ -1,0 +1,80 @@
+{
+  "body": [
+    {
+      "if": {
+        "cond": {
+          "args": [
+            {
+              "var": "x"
+            },
+            {
+              "int": 0
+            }
+          ],
+          "op": "=="
+        },
+        "else": [
+          {
+            "assign": [
+              "y",
+              {
+                "args": [
+                  {
+                    "var": "x"
+                  }
+                ],
+                "op": "neg"
+              }
+            ]
+          }
+        ],
+        "then": [
+          {
+            "assign": [
+              "y",
+              {
+                "args": [
+                  {
+                    "var": "x"
+                  },
+                  {
+                    "int": 1
+                  }
+                ],
+                "op": "+"
+              }
+            ]
+          }
+        ]
+      }
+    }
+  ],
+  "ensures": [
+    {
+      "args": [
+        {
+          "var": "y"
+        },
+        {
+          "int": 0
+        }
+      ],
+      "op": "!="
+    }
+  ],
+  "name": "final_project_dafny_tmp_tmpmcywuqox_final_project_3__nonZeroReturn",
+  "params": [
+    {
+      "name": "x",
+      "type": "int"
+    }
+  ],
+  "requires": [],
+  "returns": [
+    {
+      "name": "y",
+      "type": "int"
+    }
+  ],
+  "t": 1
+}
