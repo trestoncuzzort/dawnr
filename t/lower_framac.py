@@ -4351,6 +4351,10 @@ class Ctx:
         return Ctx(env2, self.funs, self.ret, self.label, self.seq_len)
 
 
+# PREDICT T65: the task's read-only sequence inputs, for exactly one lower() call (set there)
+_RO_SEQ: set = set()
+
+
 def acsl_call(c: dict, ctx: Ctx) -> str:
     fun = c["fun"]
     info = ctx.funs[fun]
@@ -4366,6 +4370,13 @@ def acsl_call(c: dict, ctx: Ctx) -> str:
         else:
             parts.append(term(a, ctx))
     lab = f"{{{ctx.label}}}" if info["labeled"] else ""
+    seq_args = [a for p, a in zip(info["params"], c["args"]) if p["type"] == "seq"]
+    if (info["labeled"] and ctx.label == "Here" and seq_args
+            and all(isinstance(a, dict) and a.get("var") in _RO_SEQ for a in seq_args)):
+        # PREDICT T65: every memory the call reads is an input no code writes, so its value at entry is its value
+        # everywhere; read there, a write elsewhere (a result buffer, a loop's accumulator) needs no frame fact,
+        # which WP does not derive for a recursive logic function (filter_pos stepped out at 1,000,000 steps)
+        lab = "{Pre}"
     return f"{fun}{lab}({', '.join(parts)})"
 
 
@@ -5743,6 +5754,13 @@ def cexpr(e: dict, env: dict, funs: dict, task_name: str,
         return f"({quo} - {neg} * {sign_y})"
     if op in ("==", "!=") and _dt_of(typ(args[0], env, funs)) is not None:
         raise NotImplementedError("framac: `==` on datatypes in executable position (PREDICT T37) is not lowered yet")
+    if op in ("==", "!=") and typ(args[0], env, funs) == "bool":
+        # PREDICT T68: a t bool is carried by a C int, and WP's model of an int bool may hold any truthy value. C's
+        # `a != b` on two of them compares the ints, so 1 and 2 count as different (CERT EXP20-C's class), and a
+        # program true of t's bools went unproved (px4_hysteresis_set, px4_hysteresis_switches). `!x` is 0 or 1, so
+        # comparing the negations compares the truth values, as `pred()`'s `<==>` already does in ACSL.
+        a, b = (cexpr(x, env, funs, task_name, _div_style) for x in args)
+        return f"((!({a})) {CMP[op]} (!({b})))"
     if op in ("==", "!="):
         t0 = typ(args[0], env, funs)
         if t0 == "seq" or is_nested_seq_type(t0):
@@ -10266,8 +10284,28 @@ def _value_certificate(task: dict, twin_body: list, w: dict,
             _, dec = assigned_names(twin_body)
             seq_locals = _seq_local_names(twin_body)             # PREDICT T31: declared where the replay writes them
             names = [ret] + [d for d in dec if d != ret and d not in seq_locals]
-            if len(set(dec)) != len(dec) or set(dec) & set(st):
+            if set(dec) & set(st):
                 return None            # flattening scopes would collide
+            if len(set(dec)) != len(dec):
+                # PREDICT T69: PX4's Ringbuffer::push_back declares `available` in both arms of an `if`. The
+                # replay runs one arm, so locals of one name and one type share a single flattened slot; two
+                # types under one name still collide.
+                decl_types: dict = {}
+
+                def _walk_decls(stmts):
+                    for s0 in stmts:
+                        if "var" in s0:
+                            decl_types.setdefault(s0["var"]["name"], set()).add(repr(s0["var"]["type"]))
+                        elif "if" in s0:
+                            _walk_decls(s0["if"]["then"])
+                            _walk_decls(s0["if"]["else"])
+                        elif "while" in s0:
+                            _walk_decls(s0["while"]["body"])
+                _walk_decls(twin_body)
+                if any(len(ts) > 1 for ts in decl_types.values()):
+                    return None        # flattening scopes would collide
+                dec = list(dict.fromkeys(dec))
+                names = [ret] + [d for d in dec if d != ret and d not in seq_locals]
             dt_names = {ret: _dt_of(rett)} if _dt_of(rett) else {}
             dt_names.update(_dt_local_types(twin_body))                 # PREDICT T40
             fl_names = {ret} if rett == "float" else set()
@@ -11255,6 +11293,18 @@ def _label_entry(src: str) -> str:
 
 def _certificate_inner(task: dict, twin_body: list, w: dict,
                  env: dict, funs: dict, used: set) -> str | None:
+    # PREDICT T65: a certificate's sequences are arrays it declares and fills itself, so a call reads them where they
+    # stand, never at its function's entry: the Pre rule is off here
+    saved = set(_RO_SEQ)
+    _RO_SEQ.clear()
+    try:
+        return _certificate_kind(task, twin_body, w, env, funs, used)
+    finally:
+        _RO_SEQ.update(saved)
+
+
+def _certificate_kind(task: dict, twin_body: list, w: dict,
+                      env: dict, funs: dict, used: set) -> str | None:
     kind = w.get("_kind")
     if kind == "undefined" and w.get("_site") == "ensures":
         # 2026-09-12: an ensures undefined at the witness. The body has a
@@ -11382,9 +11432,13 @@ def lower(task: dict, body: list, witness: dict | None = None,
     # PREDICT T37: the task's datatype declarations, for the module-level helpers, for exactly this call
     if _unit is not None:
         return _lower(task, body, witness, _unit)
-    prev, prev_flat = dict(_DTS), dict(_DT_FLAT)
+    prev, prev_flat, prev_ro = dict(_DTS), dict(_DT_FLAT), set(_RO_SEQ)
     _DTS.clear()
     _DTS.update({d["name"]: d for d in task.get("datatypes", [])})
+    # PREDICT T65: the inputs no code writes (a seq parameter is a value; an array outside `modifies`)
+    _RO_SEQ.clear()
+    _RO_SEQ.update(p["name"] for p in task["params"]
+                   if p["type"] == "seq" or (p["type"] == "array" and p["name"] not in task.get("modifies", [])))
     _DT_FLAT.clear()
     _DT_FLAT.update({p["name"]: _dt_of(p["type"]) for p in task["params"]
                      if _dt_of(p["type"]) is not None and _dt_flattens(_dt_of(p["type"]))})   # PREDICT T43
@@ -11395,6 +11449,8 @@ def lower(task: dict, body: list, witness: dict | None = None,
         _DTS.update(prev)
         _DT_FLAT.clear()
         _DT_FLAT.update(prev_flat)
+        _RO_SEQ.clear()
+        _RO_SEQ.update(prev_ro)
 
 
 def _lower(task: dict, body: list, witness: dict | None = None,

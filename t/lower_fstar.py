@@ -4039,12 +4039,15 @@ def exec_flow(cx: Ctx, stmts: list, env: dict, local: dict, dummy: str,
             # likewise the other way; this is the shape both committed
             # early-exit tasks hit (`if cond { return } else {}`), so it
             # keeps the emitted term legible instead of double-wrapping.
+            # PREDICT T69: the one-sided collapse holds only when that arm ALWAYS returns. An arm that returns
+            # under its own nested condition (`if x > 0 { if y > 0 { return 1; } }`) returns where both hold;
+            # collapsing to `cb` alone lowered that task to `if x > 0 then 1 else 2`.
             if rc_t == "true" and rc_e == "true":
                 rc_if = "true"
             elif rc_e == "false":
-                rc_if = cb
+                rc_if = cb if rc_t == "true" else f"({cb} && {rc_t})"
             elif rc_t == "false":
-                rc_if = f"(not {cb})"
+                rc_if = f"(not {cb})" if rc_e == "true" else f"((not {cb}) && {rc_e})"
             else:
                 rc_if = f"(if {cb} then {rc_t} else {rc_e})"
             if rc_e == "false":

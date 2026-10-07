@@ -3686,8 +3686,8 @@ class Lower:
             c = e["call"]
             args = " ".join(self.term(a, env, types, dep) for a in c["args"])
             if c["fun"] == self.name:
-                pre = " (by first | omega | grind)" if self.task.get(
-                    "requires") else ""
+                pre = " (by first | omega | grind)" if (self.task.get(
+                    "requires") and not getattr(self, "_struct_nopre", False)) else ""   # PREDICT T66
                 return f"({self.name}_t {args}{pre})"
             if c["fun"] in self.methods:
                 # SPEC.md "Methods (v1)": the callee's own `{m}_t`,
@@ -4484,18 +4484,41 @@ class Lower:
                 # if where one arm returns and the other doesn't, without
                 # the OUTER branch itself always-returning), so this also
                 # covers cases the two one-sided branches above do not.
-                env_t, obs_t, _ = self.sym(c["then"], env, types, [])
-                env_e, obs_e, _ = self.sym(c["else"], env, types, [])
+                env_t, obs_t, ret_t = self.sym(c["then"], env, types, [])
+                env_e, obs_e, ret_e = self.sym(c["else"], env, types, [])
+                if (ret_t != "False" or ret_e != "False") and self.ret not in env:
+                    # the return slot read on a path that has not returned is never used (the result below
+                    # takes it only where `returned` holds), but it must be a term: Lean's `default`
+                    seeded = dict(env)
+                    seeded[self.ret] = "default"
+                    env_t, obs_t, ret_t = self.sym(c["then"], seeded, types, [])
+                    env_e, obs_e, ret_e = self.sym(c["else"], seeded, types, [])
                 merged = dict(env)
                 for k in set(env_t) | set(env_e):
                     t, f = env_t.get(k, k), env_e.get(k, k)
                     merged[k] = t if t == f else \
                         f"(if {cp} then {t} else {f})"
                 obs = ([ob0] if ob0 else []) \
-                    + [f"({cp} → {o})" for o in obs_t] \
-                    + [f"(¬{cp} → {o})" for o in obs_e]
+                    + [f"({cp} → {o})" for o in obs_t if o is not None] \
+                    + [f"(¬{cp} → {o})" for o in obs_e if o is not None]
                 re_, obs_r = self.to_expr(rest, merged, types)
-                return re_, obs + obs_r
+                if ret_t == "False" and ret_e == "False":
+                    return re_, obs + obs_r
+                # PREDICT T69: a `return` nested inside a branch that does not itself always return (PX4's
+                # Ringbuffer::push_back returns `(false, _end)` two `if`s deep). sym() reports the path condition
+                # under which a branch returned and freezes the return value there; the statements after the `if`
+                # run only on the other paths. This was discarded, so the return was lost: `if x > 0 { if y > 0
+                # { return 1; } } r := 2;` lowered to the constant 2.
+                if ret_t == ret_e:
+                    returned = ret_t
+                elif ret_t == "True" and ret_e == "False":
+                    returned = cp
+                elif ret_t == "False" and ret_e == "True":
+                    returned = f"(¬{cp})"
+                else:
+                    returned = f"(({cp} → {ret_t}) ∧ (¬{cp} → {ret_e}))"
+                return (f"(if {returned} then {merged[self.ret]} else {re_})",
+                        obs + [f"(¬{returned} → {o})" for o in obs_r])
             raise NotImplementedError(
                 "statements after a branch are not lowered for lean")
         if "return" in s:
@@ -6130,6 +6153,12 @@ class Lower:
             # grind closes, 0.35 s)
             alts.append("((simp (disch := omega) only [t_seq_update_get]); "
                         + self._gr() + ")")
+        # PREDICT T68: grind can derive `i = 0` from an invariant's disjunction and the branch facts and still not carry
+        # it through `s[i.toNat]!` to meet `s[0]!` (px4_hysteresis_switches' first iteration, measured: grind fails).
+        # simp_all substitutes the derived equality everywhere and normalizes `Int.toNat 0`. Last, after every other
+        # alternative, so a goal that proved before proves by the same branch (arXiv 2607.22972's failure-triggered
+        # cascade).
+        alts += ["(simp_all; done)", "(simp_all; " + self._gr() + ")"]
         closer = "(first | " + " | ".join(alts) + ")"
         return ("((repeat' apply And.intro) <;> (" + "; ".join(lines)
                 + "; " + closer + "))")
@@ -8081,6 +8110,13 @@ theorem t_str_join_split_roundtrip (s : List Int) (c : Int) :
             + f"  | grind [{self.name}_t"
             + (", " + ", ".join(f"{f}_s" for f in self.sfuns)
                if self.sfuns else "") + "]\n"
+            # PREDICT T69 (PX4's Ringbuffer::pop_front, `min(_end - _start, buf_max_len)` inside a returned pair):
+            # grind does not open `t_min`/`t_max`/`t_abs` on its own here, and `unfold` of both the task and the
+            # helper then grind closes it (measured). Offered only when the task uses one, after every alternative
+            # above, so no other task's text changes.
+            + (f"  | (unfold {self.name}_t {' '.join(h for h in self.lib_fns if h in ('t_min', 't_max', 't_abs'))}"
+               "; grind)\n"
+               if any(h in ("t_min", "t_max", "t_abs") for h in self.lib_fns) else "")
             + ("  | decide\n" if not self.task["params"] else "")
             # 2026-09-28 (fz_p_dt_eq, the conformance suite): grind does
             # not split a datatype-typed parameter on its own, so a
@@ -8131,6 +8167,14 @@ theorem t_str_join_split_roundtrip (s : List Int) (c : Int) :
         thms.append((f"{self.name}_t_spec", "the contract"))
         return "\n".join(out), thms
 
+    def _is_structural_quiet(self) -> bool:
+        """PREDICT T66: the task recurses structurally on a datatype parameter, so its definition takes no
+        precondition argument (lower_rec_structural); False for anything else, never raising."""
+        try:
+            return self._structural(self.task["decreases"], dict(self.types))
+        except NotImplementedError:
+            return False
+
     def _structural(self, dec: dict, types: dict) -> bool:
         """A datatype-valued measure (SPEC.md "Datatypes (v3): recursion"): Lean's structural recursion, which needs
         the measure to be a parameter itself; any other datatype expression is refused by name."""
@@ -8148,18 +8192,24 @@ theorem t_str_join_split_roundtrip (s : List Int) (c : Int) :
         parameter. Its def is structurally recursive (no termination clause), and its contract is proved by
         structural induction on that parameter (TPIL ch. 7: the recursor; measured on a tree probe,
         `induction tr <;> grind [size_s]` closes), with every other parameter generalized."""
-        expr, obs = self.to_expr(self.body, {}, dict(self.types))
+        # PREDICT T66: a structural definition carries no precondition argument, so its self-calls pass none
+        self._struct_nopre = True
+        try:
+            expr, obs = self.to_expr(self.body, {}, dict(self.types))
+        finally:
+            self._struct_nopre = False
         params_nt = [(p["name"], p["type"]) for p in self.task["params"]]
         pb = self.binders(params_nt)
         pnames = " ".join(n for n, _ in params_nt)
         has_pre = bool(self.task.get("requires"))
-        if has_pre:
+        ob = self._conj(obs)
+        if has_pre and ob is not None:
             raise NotImplementedError(
-                "lean lowering: a structurally recursive task with requires (SPEC.md 'Datatypes (v3): recursion': "
-                "the requires' proof argument across the induction is not built yet)")
+                "lean lowering: a structurally recursive task with requires whose body owes a definedness obligation "
+                "(SPEC.md 'Datatypes (v3): recursion': the requires' proof argument across the induction is not "
+                "built yet)")
         out = [f"def {self.name}_t {pb} : {self.lean_type(self.rett)} :=\n  {expr}\n"]
         thms = []
-        ob = self._conj(obs)
         if ob is not None:
             out.append(f"theorem {self.name}_t_wfbody {pb} :\n    {ob} := by\n  {self._grind_base()}\n")
             thms.append((f"{self.name}_t_wfbody", "body definedness"))
@@ -8167,9 +8217,12 @@ theorem t_str_join_split_roundtrip (s : List Int) (c : Int) :
         others = [n for n, _ in params_nt if n != d]
         gen = f" generalizing {' '.join(others)}" if others else ""
         names = ", ".join([f"{self.name}_t"] + [f"{f}_s" for f in self.sfuns] + list(self.lib_fns))
+        # PREDICT T66: a total body needs no precondition in its definition; the contract assumes the requires, and
+        # the induction (every other parameter generalized) carries it to each recursive call's own arguments
+        pre = f"{self.pre_conj()} → " if has_pre else ""
         out.append(
             f"theorem {self.name}_t_spec {pb} :\n"
-            f"    {self.post_conj(f'({self.name}_t {pnames})')} := by\n"
+            f"    {pre}{self.post_conj(f'({self.name}_t {pnames})')} := by\n"
             f"  induction {d}{gen} <;> (first | grind [{names}] | simp_all [{names}])\n")
         thms.append((f"{self.name}_t_spec", "the contract, by structural induction"))
         return "\n".join(out), thms
@@ -10740,7 +10793,9 @@ theorem t_str_join_split_roundtrip (s : List Int) (c : Int) :
                          for r in self.task.get("requires", [])]
                 parts.append(replay)
                 return parts
-        if self.task.get("requires") and (
+        structural = ("decreases" in self.task and self._self_calls(self.body)
+                      and self._is_structural_quiet())
+        if self.task.get("requires") and not structural and (
                 self._self_calls(self.body)
                 or (any("while" in s for s in self.body) and loop_needs)):
             applied = f"({self.name}_t {args} (by {self._closer()}))"

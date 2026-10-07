@@ -2944,3 +2944,307 @@ Regenerated from a clean clone at 2517d84, and installed.
 `t/test_contract_repair.py`). dawnr, which carries this engine under its own `t/`, already has a `t/repair.py`: a
 model-driven proof-repair loop that five of its modules import. The engine sync overwrote it, and the overwrite was
 caught before any commit. `cli.py repair` is unchanged. The entries above keep the old name as written.
+
+## T65 registered (2026-10-07 19:35Z, after a Frama-C column re-run and before the clean-clone run): R5, the frame gap closed by the entry state
+
+**The change.** In Frama-C, a call to a spec function whose sequence arguments are all inputs no code writes (a `seq`
+parameter, or an array outside `modifies`) is now read at the function's entry state, `f{Pre}(...)`, instead of
+`f{Here}(...)`. The value is the same, since nothing those arguments name is ever written. Read at `Pre`, a write
+elsewhere (the result buffer, an accumulator) needs no frame fact. WP does not derive that fact for a recursive
+logic function, and it was the gap that left filter_pos stepping out at 1,000,000 steps (T55). ACSL's `reads` clause,
+the textbook route, is marked experimental in the ACSL manual (speclang, "Memory footprint specification"). This
+answers upstream draft 7 locally. Certificates keep `{Here}`: their sequences are arrays they declare and fill
+themselves.
+
+**Measured before this registration, stated plainly:**
+- **filter_pos's file by hand:** 32 of 32 goals.
+- **The whole Frama-C column re-run** (tasks, AlgoVeri, autonomy): filter_pos timeout/refuted -> verified/refuted;
+  no other cell moves (tasks 70 -> 71, AlgoVeri 2, autonomy 21).
+- **The first version** also read `{Pre}` inside certificates, which unrefuted count_matches' twin; the rule is now
+  off there, and the cell is restored.
+- **Suite:** passes.
+
+**Bars**, for the clean-clone table at this registration's commit:
+(1) Frama-C 71; every other kernel unchanged; all seven 66 of 114 (filter_pos returns).
+(2) The autonomy table does not move.
+
+### T65 read (2026-10-07 20:12Z): both bars held.
+
+Regenerated from a clean clone at 8d3a3a5, and installed.
+(1) **Held:** Frama-C 71 (filter_pos verified/refuted); every other kernel unchanged; all seven 66 of 114. The stronger
+filter_pos T55 wrote now costs nothing.
+(2) **Held:** `t/AUTONOMY.md` unchanged.
+
+## T66 registered (2026-10-07 20:18Z, after hand probes and before the clean-clone run): R5, structural recursion with requires in Rocq and Lean
+
+**The change.** tree_insert's bounded contract (T60) passes each recursive call different bounds, and its `requires`
+must reach each call.
+- **Rocq:** for a structurally recursive task with `requires`, the induction introduces every parameter, reverts
+  all but the recursion's own, and inducts with each recursive field's hypothesis named. After the case splits,
+  each hypothesis is instantiated at the arguments of a recursive call in the goal, its premises discharged from the
+  context; a hypothesis that does not fit is skipped. Tasks without `requires` keep their proof byte for byte.
+- **Lean:** a structurally recursive task whose body owes no definedness obligation is lowered even with
+  `requires`. The total definition takes no precondition argument, and its self-calls (and its certificate's) pass
+  none. The contract theorem assumes the requires and is proved by induction with every other parameter
+  generalized. A body that owes an obligation is still refused by name.
+
+**Measured before this registration, stated plainly:**
+- **tree_insert:** verified/refuted in Rocq (the hand-written proof first: "Closed under the global context") and in
+  Lean (the spec depends only on Lean's three standard axioms).
+- **Byte identity:** tree_insert moves in Rocq (real) and Lean (real and twin). AlgoVeri's bst insert and search move
+  in Lean: from refused to carried, real unproved, twin refuted. No other lowering moves.
+- **Suite:** passes; Python 3.10 compiles.
+
+**Bars**, for the clean-clone tables at this registration's commit:
+(1) The matrix: Lean 89 and Rocq 84 (tree_insert); every other kernel unchanged; all seven 66.
+(2) AlgoVeri: Lean's insert and search read unproved / refuted; no verified/refuted count moves.
+
+### T66 read (2026-10-07 21:03Z): both bars held.
+
+Regenerated from a clean clone at 8807045, and installed.
+(1) **Held:** Lean 89 and Rocq 84 (tree_insert verified/refuted in both); every other kernel unchanged; all seven 66.
+tree_insert's stronger contract (T60) now costs nothing in Rocq or Lean.
+(2) **Held:** AlgoVeri's bst insert and search read unproved / refuted in Lean (refused before); no verified/refuted
+count moves.
+
+## T67 registered (2026-10-07 21:22Z, after hand runs and before the clean-clone run): real flight code, PX4
+
+**The change.** `t/flight/` restates 18 functions of PX4-Autopilot (BSD-3-Clause, commit dd804e4b) in t:
+- `math::constrain`, `min`, `max` (two and three arguments), `isInRange`, `signNoZero`, `signFromBool`, `sq` and
+  `negate<int16_t>`;
+- `matrix::sign` and the integer `matrix::wrap`;
+- the index search of `interpolateNXY`;
+- at double: `constrain`, `lerp`, `interpolate`, `SlewRate::update` and `AlphaFilter`'s update.
+
+Each body follows PX4's statement by statement. `t/flight/README.md` gives each one's file, line and instantiation
+and the transcription notes. PX4 ships no contracts, so they are this repository's, each audited to zero survivors.
+`t/flight/px4_diff.py` compiles PX4's own C++ at the pinned commit (its platform header replaced by a two-macro
+stub) and runs it on every domain point of the matching t task, comparing with t's interpreter.
+
+**Measured before this registration, stated plainly** (hand runs):
+- **The audit:** 18 of 18 specs admit no survivor; 541 one-edit mutants, every behaviour-changing one killed.
+- **PX4 itself against the transcription** (17 compared, the index search being internal to `interpolateNXY`):
+  - 16 agree on every point (4,745 points).
+  - `AlphaFilter<double>` differs in the last bits wherever `alpha` is not a binary32 value (alpha = 0.1). Its
+    `_alpha` member is a `float` even when the filter's type is double. Rerunning t's interpreter with `alpha`
+    rounded to binary32 reproduces PX4 on every one of the 400 points.
+  - `SlewRate<double>::update` likewise takes `dt` as `float`; on this domain every `dt` is binary32-exact.
+- **The seven kernels:**
+  - 12 integer routines are verified/refuted in all seven: constrain, min, max, min3, max3, isInRange, sign,
+    signNoZero, signFromBool, sq, negate<int16_t>, and interpolateNXY's index search (once its quantifiers were
+    stated over `x[k]`, which Verus needs as a trigger).
+  - The integer `wrap` is verified only in F*: its `rng * ((low - y) / rng + 1)` is non-linear, the wall
+    grid_cell hits in the autonomy suite.
+  - At double:
+    - constrain and the alpha update: verified/refuted in SPARK and Frama-C;
+    - lerp: SPARK verified, Frama-C timeout;
+    - the slew update: Frama-C verified, SPARK timeout;
+    - interpolate: a timeout in both (float division), and verified nowhere.
+- **At the width PX4 ships** (`t/ship.py`, WP machine integers with overflow guards):
+  - 14 routines ship for every 32-bit input.
+  - `math::sq` ships within ±2^15: squaring a 32-bit `int` past 46,340 overflows.
+  - The integer `wrap` has no envelope found.
+- **Suite:** passes (`t/test_flight.py`).
+
+**Bars**, for the clean-clone tables at this registration's commit:
+(1) `t/FLIGHT.md` (the seven kernels over `t/flight/`) reads 12 routines in all seven, and the cells above within one
+cell of a float timeout.
+(2) `t/PX4-DIFF.md` reads 16 agreeing on every point and AlphaFilter agreeing once its binary32 narrowing is applied.
+(3) `t/SHIP-FLIGHT.md` reads 14 for every int32 input and `sq` within ±2^15.
+
+### T67 read (2026-10-07 21:37Z): bars 1 and 2 held; bar 3's count was misstated in the registration
+
+Clean clone at ebc9340, unit tup-t-clean42, tables installed as `t/FLIGHT.md`, `t/PX4-DIFF.md`, `t/SHIP-FLIGHT.md`.
+
+- **(1) held.**
+  - 12 PX4 routines are verified with the twin refuted in all seven kernels: constrain, min, max, min3, max3,
+    isInRange, sign, signNoZero, signFromBool, sq, `negate<int16_t>`, and interpolateNXY's index search.
+  - The integer `wrap` is verified in F* only.
+  - At double:
+    - constrain and the alpha update: verified in SPARK and Frama-C;
+    - lerp: SPARK verified, Frama-C timeout;
+    - interpolate: a timeout in both.
+  - One cell moved, within the bar's one-cell allowance. Frama-C's slew update, verified in the hand run, timed out
+    here, so the slew update is now a timeout in both.
+  - Each kernel refutes the twin of every program it verifies.
+- **(2) held.**
+  - 16 routines agree with PX4's own compiled C++ on every point: 4,745 points.
+  - `AlphaFilter<double>` agrees on all 400 once its binary32 `alpha` is applied.
+  - 5,145 points in all.
+- **(3) missed as written.**
+  - The registration said 14 routines ship for every int32 input.
+  - The clean table reads 13, and so did the hand table it was meant to summarize (`SHIP-FLIGHT.md` from the hand
+    run: 13, 1, 1, 3). The registration miscounted; the measurement did not move.
+  - The part about `sq` held: it ships within ±2^15.
+  - The integer `wrap` has no envelope. lerp, slew and interpolate have contracts open at machine width.
+  - This is the second miscount in T67's registration after the point total. From T68 on, counts in a
+    registration are pasted from the hand table's own summary lines, not retyped.
+
+What this establishes: twelve functions from PX4's shipping autopilot, restated statement by statement, are proved
+in seven independent kernels against contracts with no surviving mutant. PX4's own C++ computes what the proved
+program computes on every point compared. The float functions are proved only in the two industrial toolchains,
+and three of them do not yet prove at machine width.
+
+## T68 registered (2026-10-07 22:04Z, after hand runs and before the clean-clone run): PX4's hysteresis, an obstacle-map index PX4's callers can push negative, and two lowering fixes found on the way
+
+**What is added.**
+- Six PX4 functions in `t/flight/`, each restated statement by statement (`t/flight/README.md` gives file and line):
+  - `systemlib::Hysteresis`, the time hysteresis commander and the land detector use:
+    - `update` and `set_state_and_update`, each with a full functional contract;
+    - `holds`: a default `Hysteresis` driven over any sample sequence never turns true while every sample is within
+      `time_from_false` of the first;
+    - `switches`: it is true at the end once a `true` request has held across `time_from_false`.
+  - `ObstacleMath::wrap_bin`, both for any `bin_count` and at `CollisionPrevention`'s `BIN_COUNT` = 72. Its
+    contract (the result is a bin index congruent to `bin`) is PX4's own: `ObstacleMathTest.WrapBin` expects -1 to
+    wrap to 71. It holds only for `bin >= -bin_count`.
+- `t/flight/findings/px4_wrap_bin_any.t`: the same function without that `requires`, with C++'s truncating `%`
+  spelled out. The kernels refute it. `px4_diff.py` runs PX4's compiled `wrap_bin` at the refuting input and at
+  `(-73, 72)`: PX4 returns -1 at both, as t's body does.
+  - `CollisionPrevention::_addDistanceSensorData` computes its lowest bin from a field of view `h_fov` that nothing
+    bounds; the MAVLink receiver copies `horizontal_fov` unchanged.
+  - Above about 12.65 rad the lowest bin is below -72, and the four 72-entry obstacle-map arrays are indexed
+    negatively (README; drafted upstream as `internal/UPSTREAM-2026-10-07.md` item 8, not filed).
+- `px4_diff.py` drives PX4's real `Hysteresis` class. It reaches each step's starting fields through PX4's public
+  methods only.
+- **Frama-C, bool comparison** (receipt 4b2df69748aa):
+  - A t bool is carried by a C int, and the lowering compiled bool `a != b` in executable C as the integer `!=`.
+    WP therefore considered `req = 2`, and `set`'s ensures 8 and 9 and `switches`' invariant 3, all true of t's
+    bools, went unproved.
+  - Bool `==`/`!=` now compares the negations, `(!(a)) != (!(b))`. For 0 and 1 this is the same comparison.
+  - The lowered text changes for the four hysteresis tasks only; every other task's Frama-C source is
+    byte-identical.
+- **Lean, loop closer** (receipt 98083e3f6f63):
+  - `grind` derives `i = 0` but does not carry it through `times[i.toNat]!` to `times[0]!`.
+  - `(simp_all; done)` and `(simp_all; grind)` are appended as the last alternatives, so a goal that proved before
+    proves by the same branch.
+  - 26 tasks' Lean sources change. Measured over all 26: the 21 verified before stay verified, the 3 not verified
+    stay so, and `holds` and `switches` now verify.
+- `holds`' requests are a seq of ints, nonzero for true, because `seq<bool>` is not lowered in five kernels yet.
+
+**Measured before this registration** (hand runs; each count pasted from the table's own summary line):
+- New tasks over the seven kernels (verified with the twin refuted):
+  - `update`, `set`, `wrap_bin_72`: all seven.
+  - `holds`, `switches`: six of seven; Rocq stops at an unsolved verification condition after about two minutes.
+  - `wrap_bin` (any `bin_count`): F* only. Its `bin % bin_count` with a symbolic modulus is the non-linear wall
+    the integer `wrap` hits.
+  - `px4_wrap_bin_any`: refuted in all seven.
+- `px4_diff.py`: "routines compared: 23; agree on every point: 22; points: 6677". AlphaFilter agrees once its
+  binary32 `alpha` is applied. The finding is reproduced at both inputs.
+- `t/ship.py` on the six new tasks: "ships for every int32 input: 2", "ships within an envelope: 3", "no envelope
+  found: 0", "contract open at machine width: 1".
+  - `switches` and `wrap_bin_72` ship for every int32 input.
+  - `update` and `set` ship within ±2^29, and `holds` within ±2^21. ship's width is t's `int` lowered to a 32-bit
+    `int`; PX4's `hrt_abstime` is 64-bit unsigned.
+  - `wrap_bin`'s contract is open at machine width.
+- The whole t suite passes (792 passed, 43 skipped, 1 xfailed), with `t/test_flight.py` (findings included) and
+  `t/test_bool_compare_and_lean_cascade.py`.
+
+**Bars**, for a clean clone at this registration's commit:
+(1) `t/FLIGHT.md` (24 tasks): "Verified with the twin refuted in all seven columns: 15 of 24 tasks". `holds` and
+`switches` are verified in the six kernels other than Rocq, and `wrap_bin` in F* only.
+(2) `t/flight/findings/` verified: `px4_wrap_bin_any` refuted in all seven.
+(3) `t/PX4-DIFF.md`: "routines compared: 23; agree on every point: 22". AlphaFilter agrees once narrowing is
+applied, and the finding reads "PX4 breaks the contract here, as t's body does".
+(4) `t/SHIP-FLIGHT.md` over all 24: 15 for every int32 input, 4 within an envelope, 1 with no envelope, 4 open.
+(5) The Lean column over `t/tasks/`, `t/autonomy/` and `t/algoveri/` reads 89, 15 and 1 verified with the twin
+refuted, as installed. The bar is that no verified cell is lost to the closer change.
+
+### T68 read (2026-10-07 22:31Z): all five bars held
+
+Clean clone at 2295304, unit tup-t-clean43b. Tables installed: `t/FLIGHT.md`, `t/FLIGHT-FINDINGS.md`,
+`t/PX4-DIFF.md`, `t/SHIP-FLIGHT.md`.
+
+- **(1) held.** "Verified with the twin refuted in all seven columns: 15 of 24 tasks": the 12 of T67, plus
+  `Hysteresis::update`, `set_state_and_update` and `wrap_bin` at 72 bins. Rocq times out on `holds` and
+  `switches`, and the other six kernels verify both. `wrap_bin` with a symbolic count is verified in F* only.
+  - One float cell is marked FLAKED: Frama-C's slew update verified on one of its flake runs, where T67's clean
+    run timed out. It is borderline under load, and the slew update is in no all-seven count.
+- **(2) held.** `px4_wrap_bin_any` is refuted in all seven kernels.
+- **(3) held.**
+  - "routines compared: 23; agree on every point: 22; points: 6677". AlphaFilter agrees once narrowing is applied.
+  - PX4's own `wrap_bin` returns -1 at both the certificate input `(-2147483648, 2147483647)` and `(-73, 72)`,
+    as t's body does.
+- **(4) held.** 15 ship for every int32 input, 4 within an envelope, 1 with no envelope found, 4 open.
+- **(5) held.** Lean verifies, with the twin refuted, 89 of `t/tasks/`, 15 of `t/autonomy/` and 1 of
+  `t/algoveri/`, as installed. The closer change cost no cell.
+
+What this establishes: a defect in PX4's shipping code was found by the method and not by reading. The contract a
+proof needs for `wrap_bin` (the one PX4's own unit test states) holds only for `bin >= -bin_count`. A kernel refutes
+the function without that bound, and PX4's compiled code fails at the kernel's own input. Tracing the callers shows
+the collision-prevention sensor path does not establish the bound. Two lowering faults were also found and fixed on
+the way: Frama-C compared bools as ints, and Lean's `grind` dropped a derived equality.
+
+## T69 registered (2026-10-07 23:14Z, after hand runs and before the clean-clone run): PX4's Ringbuffer, and six lowering faults it found
+
+**What is added.**
+- Three functions of PX4's `Ringbuffer` in `t/flight/`, restated statement by statement:
+  - `space_available`;
+  - `push_back`: its result and `_end`;
+  - `pop_front`: its result and `_start`.
+- `Ringbuffer` is the byte queue under MAVLink's outgoing message buffer.
+- The contracts:
+  - for every state the class invariant admits, `space_available` is `size - 1 - used`;
+  - `push_back` succeeds exactly when `1 <= buf_len <= available`, adds `buf_len` to the bytes in use, and leaves
+    `_end` at a stated index;
+  - `pop_front` returns `min(used, max)`, removes that many, and leaves `_start` at a stated index.
+- The class invariant admits `_start == _end == _size`, the corner PX4's own test `EmptyAndNoSpaceForHeader`
+  names.
+- `px4_diff.py` drives PX4's class. It is built with `private` defined as `public` (access only) to set
+  `_start`/`_end` and read them back.
+
+**Lowering faults found by these three functions, each fixed and measured.** None changes a published cell:
+- **Lean dropped a `return` nested inside a branch that does not itself always return**
+  (`if x > 0 { if y > 0 { return 1; } } r := 2;` lowered to the constant 2). `to_expr` now keeps the path
+  condition `sym()` already computed.
+- **F\* collapsed a one-sided return to the outer condition alone** (`if x > 0 then 1 else 2`). It now conjoins the
+  arm's own return condition.
+  - Lean, F\* and the other five verify `ret_min`, `ret_pair` and `ret_one` (hand probes, not committed).
+  - Across every committed corpus, only `px4_rb_push_back` has a `return` two `if`s deep. F\*'s lowering is
+    byte-identical for every committed task.
+- **Rocq refused the sanitizer's own rename** of a `_len` name (`buf_len` to `tn_buf_len`). The rename is accepted,
+  and the one rename that could shadow a length binder is refused by name (receipt fef4b9d2b3f6).
+- **Rocq treated a `var` in each arm of an `if` as a redeclaration**, and **Frama-C's certificate, which hoists
+  locals, refused the twin a certificate** for the same reason. Each arm is now its own scope in Rocq. Frama-C's
+  hoisting merges same-name, same-type sibling locals, since the replay runs one arm (receipt 93b9dad929af). Only
+  the two new tasks have such locals.
+- **Rocq's pair proof** gains `t_sweep` before projecting, and **Lean's straight-line proof** gains
+  `unfold f t_min; grind`. Each comes after every earlier alternative (receipts 4281a80b3bfc, 98083e3f6f63).
+
+**Measured before this registration** (hand; pasted summary lines):
+- `px4_rb_*`: "Verified with the twin refuted in all seven columns: 3 of 3 tasks".
+- ship: "ships for every int32 input: 3", with 0 within an envelope, 0 with none found and 0 open.
+- `px4_diff.py`: "routines compared: 26; agree on every point: 25; points: 7060". AlphaFilter agrees after
+  narrowing; the finding is reproduced.
+- Sources changed by the fixes:
+  - Lean: 8 tasks. The 5 verified before stay verified; `low_pass_step` stays unproved.
+  - Rocq: 6 tasks. `divmod_pair` and `swap_at` stay verified, `ring_push` and `sample_push` stay unproved, and the
+    two ring-buffer tasks now verify.
+  - Frama-C and F\*: no real-program source changes.
+- Suite: 801 passed, 43 skipped, 1 xfailed. The Python 3.10 compile is clean.
+
+**Bars**, for a clean clone at this registration's commit:
+(1) `t/FLIGHT.md`: "Verified with the twin refuted in all seven columns: 18 of 27 tasks".
+(2) `t/FLIGHT-FINDINGS.md`: `px4_wrap_bin_any` refuted in all seven, unchanged.
+(3) `t/PX4-DIFF.md`: "routines compared: 26; agree on every point: 25".
+(4) `t/SHIP-FLIGHT.md`: 18 for every int32 input, 4 within an envelope, 1 with no envelope, 4 open.
+(5) No verified cell lost to the fixes. The Lean column reads 89, 15 and 1, and the Rocq column 84, 15 and 1, over
+`t/tasks/`, `t/autonomy/` and `t/algoveri/`, as installed.
+
+### T69 read (2026-10-07 23:45Z): all five bars held
+
+Clean clone at 3b36d82, unit tup-t-clean44. Tables installed: `t/FLIGHT.md`, `t/FLIGHT-FINDINGS.md`,
+`t/PX4-DIFF.md`, `t/SHIP-FLIGHT.md`.
+
+- **(1) held.** "Verified with the twin refuted in all seven columns: 18 of 27 tasks". All three `Ringbuffer`
+  functions are in all seven. The Rocq trace cells (`holds`, `switches`) are still timeouts, and Frama-C's slew
+  update is still the one FLAKED float cell.
+- **(2) held.** `px4_wrap_bin_any` is refuted in all seven.
+- **(3) held.** "routines compared: 26; agree on every point: 25; points: 7060".
+- **(4) held.** 18 for every int32 input, 4 within an envelope, 1 with no envelope found, 4 open.
+- **(5) held.** Lean verifies 89, 15 and 1, and Rocq 84, 15 and 1, over `t/tasks/`, `t/autonomy/` and
+  `t/algoveri/`, as installed. Not one verified cell was lost to the six fixes.
+
+What this establishes: a buffer PX4 ships under MAVLink is proved in seven kernels against a contract that pins its
+indices exactly. Getting there found two semantic faults (Lean and F\* lowering an early `return` two `if`s deep
+to a different program) that 114 hand-written tasks never reached. Real code is a test of the toolchain as much
+as of the method.

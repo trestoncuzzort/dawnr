@@ -5507,7 +5507,9 @@ RESERVED = {"at", "in", "fun", "if", "then", "else", "let", "forall", "exists",
 
 
 def _ck(name: str) -> str:
-    if (name in RESERVED or name.endswith("_len") or name.startswith("sf_")
+    # PREDICT T69: a `_len` name the sanitizer has already renamed (prefix `tn_`, the rename site's own namespace)
+    # is passed; the rename site below refuses the one rename that could shadow a length binder.
+    if (name in RESERVED or (name.endswith("_len") and not name.startswith("tn_")) or name.startswith("sf_")
             or name.startswith("t_")):
         # t_ is the certificate/tactic namespace (t_w_*, t_H, t_dis, ...)
         raise NotImplementedError(
@@ -6991,7 +6993,14 @@ def exec_straight(cx: Ctx, stmts: list, env: dict, local: dict,
         elif "var" in s:
             d = s["var"]
             v = _ck(d["name"])
-            assert v not in cx.tys and v not in local, f"redeclared {v}"
+            # PREDICT T69: each arm of an `if` is its own block (the `if` case below passes each a copy of `local`),
+            # so PX4's `const size_t available` in both arms of `push_back` declares two locals. A name an earlier
+            # `var` declared at the same type may be declared again in a sibling block; a parameter or return never.
+            var_names = cx.__dict__.setdefault("_var_names", {})
+            assert v not in local and (v not in cx.tys or var_names.get(v) is not None), f"redeclared {v}"
+            if v in cx.tys and var_names.get(v) != d["type"]:
+                raise NotImplementedError(f"rocq lowering: local {v!r} declared again at another type in a sibling block")
+            var_names[v] = d["type"]
             local[v] = d["type"]
             cx.tys[v] = d["type"]
             if cur_ctx is not None:
@@ -7029,11 +7038,11 @@ def exec_straight(cx: Ctx, stmts: list, env: dict, local: dict,
             cp = cx.prop(c["cond"], env, local)
             cb = cx.bx(c["cond"], env, local)
             env_t = exec_straight(
-                cx, c["then"], env, local,
+                cx, c["then"], env, dict(local),
                 None if cur_ctx is None else cur_ctx + [cp],
                 defs_binders, acc)
             env_e = exec_straight(
-                cx, c["else"], env, local,
+                cx, c["else"], env, dict(local),
                 None if cur_ctx is None else cur_ctx + [f"(~ {cp})"],
                 defs_binders, acc)
             for v in set(env) | set(env_t) | set(env_e):
@@ -9352,6 +9361,13 @@ Qed.
     # WITH a param byte-identical (`fa` is `forall {pb},\n` exactly as
     # before whenever `pb` is non-empty).
     fa = f"forall {pb},\n" if pb else ""
+    close = _dt_close(task)
+    if isinstance(ret_t, dict) and "pair" in ret_t and not task.get("datatypes"):
+        # PREDICT T69: a pair returned through branch-dependent ifs (PX4's Ringbuffer::push_back, `(ok, _end)`)
+        # leaves `fst (if c then (a, b) else ...)` stuck until the comparison `c` is decided. When plain `t_dis`
+        # fails, t_sweep splits every comparison with its reflect lemma, and the projections then reduce. Last,
+        # so a task that proved before proves by the same branch.
+        close = "  first [ t_dis | (t_sweep; cbn [fst snd] in *; t_dis) ]."
     return f"""{def_txt}
 Definition {name}_t {pb} : {rty(ret_t)} := {expr}.
 
@@ -9360,7 +9376,7 @@ Theorem {name}_t_spec :
 Proof.
   unfold {name}_t.
   intros.
-{pdestr}{pair_line}{site_txt}{_dt_close(task)}
+{pdestr}{pair_line}{site_txt}{close}
 Qed.
 """
 
@@ -10749,6 +10765,52 @@ def _loops_def(cx: Ctx, task: dict, body: list) -> str:
     return "\n".join(gen.chunks + [def_lines])
 
 
+def _dt_rec_requires_proof(task: dict, name: str, q: str, pargs: str, unf: str) -> str:
+    """PREDICT T66: a structurally recursive task with `requires` whose recursive calls change the other arguments
+    (tree_insert's bounds, `bst(l, lo, v)`). The induction keeps every other parameter general: introduce them,
+    revert all but the recursion's own, induct with each recursive field's hypothesis named, introduce again. After
+    the case splits, each named hypothesis is instantiated at the arguments of a recursive call in the goal, and
+    its premises (the call's `requires`) are discharged from the context; a hypothesis that does not fit is skipped."""
+    args = pargs.split()
+    others = [a for a in args if a != q]
+    dt = next((p["type"]["datatype"] for p in task["params"]
+               if isinstance(p["type"], dict) and p["type"].get("datatype") and _ck(p["name"]) == q), None)
+    ctors = next((d["ctors"] for d in task.get("datatypes", []) if d["name"] == dt), [])
+    pats, ihs = [], []
+    for c in ctors:
+        bits = []
+        for f in c.get("fields", []):
+            bits.append(f"t_f_{f['name']}")
+            if isinstance(f["type"], dict) and f["type"].get("datatype") == dt:
+                bits.append(f"t_IH_{f['name']}")
+                ihs.append(f"t_IH_{f['name']}")
+        pats.append(" ".join(bits))
+    metas = " ".join(f"?t_a{i}" for i in range(len(args)))
+    pick = " ".join(f"t_a{i}" for i, a in enumerate(args) if a != q)
+    revert = f" revert {' '.join(others)}." if others else ""
+    inst = "".join(
+        f"  all: try (match goal with |- context [{name}_t {metas}] =>\n"
+        f"              let T := fresh \"t_ih\" in pose proof ({ih} {pick}) as T;\n"
+        f"              repeat (specialize (T ltac:(first [assumption | lia])));\n"
+        f"              lazymatch type of T with _ -> _ => fail | _ => idtac end end).\n" for ih in ihs)
+    return f"""Proof.
+  intros {' '.join(args)}.{revert} induction {q} as [{' | '.join(pats)}]; intros; cbn [{unf}] in *.
+  all: t_dt_cases.
+  all: repeat (match goal with |- context [if ?c then _ else _] => destruct c eqn:? end;
+               cbn [{unf}] in * ).
+  all: repeat match goal with H : _ /\\ _ |- _ => destruct H end.
+  all: repeat match goal with H : (_ && _)%bool = true |- _ => apply andb_prop in H; destruct H end.
+  all: repeat match goal with H : (_ <=? _) = true |- _ => apply Z.leb_le in H
+                         | H : (_ <? _) = true |- _ => apply Z.ltb_lt in H
+                         | H : (_ <? _) = false |- _ => apply Z.ltb_ge in H
+                         | H : (_ <=? _) = false |- _ => apply Z.leb_gt in H end.
+{inst}  all: repeat match goal with H : _ /\\ _ |- _ => destruct H end.
+  all: repeat match goal with H : ?a = true |- context [?a] => rewrite H end.
+  all: t_dis.
+Qed.
+"""
+
+
 def gen_dt_rec(cx: Ctx, body: list, q: str, counter: list) -> str:
     """PREDICT T34: a task recursing on a datatype parameter `q`: the body is Rocq's own structural Fixpoint and the
     contract is proved by induction on `q`, every other parameter fixed (the tasks so far recurse with them
@@ -10771,6 +10833,13 @@ def gen_dt_rec(cx: Ctx, body: list, q: str, counter: list) -> str:
     ens = ensures_text(cx, f"({name}_t {pargs})")
     unf = " ".join([f"{name}_t"] + [f"sf_{sf['name']}" for sf in task.get("spec_funs", [])])
     fa = f"forall {pb},\n" if pb else ""
+    if task.get("requires"):
+        return f"""{def_txt}
+Fixpoint {name}_t {pb} {{struct {q}}} : {rty(ret_t)} := {expr}.
+
+Theorem {name}_t_spec :
+  {fa}{lens_arrows(cx)}{requires_arrows(cx)}  {ens}.
+{_dt_rec_requires_proof(task, name, q, pargs, unf)}"""
     return f"""{def_txt}
 Fixpoint {name}_t {pb} {{struct {q}}} : {rty(ret_t)} := {expr}.
 
@@ -13134,6 +13203,13 @@ def _lower(task: dict, body: list, witness: dict | None = None) -> str:
     task, renames = t_names.sanitize(
         task, t_names.KEYWORDS["rocq"] | prefix_bad,
         uppercase_ok=True, prefix="tn_")
+    # PREDICT T69: `buf_len` renamed is `tn_buf_len`, which still ends in `_len`. It can only capture the length
+    # binder of a seq named `tn_buf`, so that one case is refused by name (hygiene: a shadowing binder would change
+    # the proof's meaning silently).
+    for _new in renames.values():
+        if _new.endswith("_len") and (_new[:-4] in ns_declared or _new[:-4] in renames.values()):
+            raise NotImplementedError(
+                f"rocq lowering: the renamed {_new!r} would shadow the length binder of {_new[:-4]!r}")
     if task.get("datatypes"):
         _DTS.clear()
         _DTS.update({d["name"]: d for d in task["datatypes"]})   # PREDICT T34: the renamed declarations
