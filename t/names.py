@@ -233,6 +233,11 @@ def _declared_in(node) -> set[str]:
             q = node.get(kind)
             if isinstance(q, dict) and "var" in q:
                 out.add(q["var"])
+        m = node.get("match")
+        if isinstance(m, dict):
+            # SPEC.md "Datatypes (v2): fields": an arm's binders name its fields
+            for a in m.get("arms", []):
+                out |= set(a.get("binders") or [])
         for val in node.values():
             out |= _declared_in(val)
     elif isinstance(node, list):
@@ -277,6 +282,10 @@ def _declared_names(task: dict, body: list, check_task_name: bool = True) -> set
             declared.add(p["name"])
         declared |= _declared_in([m["requires"], m["ensures"], m["body"],
                                   m.get("decreases")])
+    for d in task.get("datatypes", []):    # SPEC.md "Datatypes (v2): fields"
+        for c in d.get("ctors", []):
+            for f in c.get("fields") or []:
+                declared.add(f["name"])
     declared |= _declared_in(task.get("requires", []))
     declared |= _declared_in(task.get("ensures", []))
     if "decreases" in task:
@@ -320,10 +329,21 @@ def _rename_walk(node, mapping: dict[str, str]):
         kind = "forall" if "forall" in node else "exists"
         q = dict(node[kind])
         q["var"] = mapping.get(q["var"], q["var"])
-        for k in ("lo", "hi", "body"):
+        for k in ("lo", "hi", "in", "body"):   # "in": SPEC.md "Quantifiers over a collection"
             if k in q:
                 q[k] = _rename_walk(q[k], mapping)
         return {**node, kind: q}
+    if "field" in node and isinstance(node["field"], dict):
+        # SPEC.md "Datatypes (v2): fields": e.f, the field name renamed with its declaration
+        f = node["field"]
+        return {**node, "field": {"of": _rename_walk(f["of"], mapping),
+                                  "name": mapping.get(f["name"], f["name"])}}
+    if "match" in node and isinstance(node["match"], dict):
+        m = node["match"]
+        return {**node, "match": {
+            "scrutinee": _rename_walk(m["scrutinee"], mapping),
+            "arms": [{**a, "binders": [mapping.get(b, b) for b in a.get("binders") or []],
+                      "body": _rename_walk(a["body"], mapping)} for a in m["arms"]]}}
     if "lemma" in node and isinstance(node["lemma"], dict):
         c = node["lemma"]
         return {**node, "lemma": {"name": mapping.get(c["name"], c["name"]),
@@ -422,6 +442,11 @@ def sanitize(task: dict, reserved: set[str], uppercase_ok: bool,
              **({"decreases": _rename_walk(m["decreases"], mapping)}
                 if "decreases" in m else {})}
             for m in task["methods"]]
+    if "datatypes" in task:
+        new_task["datatypes"] = [
+            {**d, "ctors": [{**c, "fields": [{**f, "name": rn(f["name"])} for f in c["fields"]]}
+                            if c.get("fields") else c for c in d["ctors"]]}
+            for d in task["datatypes"]]
     new_task["requires"] = _rename_walk(task.get("requires", []), mapping)
     new_task["ensures"] = _rename_walk(task.get("ensures", []), mapping)
     if "decreases" in task:

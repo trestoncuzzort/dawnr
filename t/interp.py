@@ -701,6 +701,17 @@ def ev(e: dict, env: dict, funs: dict, st: St):
         c = e["ctor"]
         args = tuple(ev(a, env, funs, st) for a in c.get("args", []))
         return Ctor(c["dtype"], c["name"], args)
+    if "field" in e:
+        # SPEC.md "Datatypes (v2): fields" (2026-10-07): Dafny's destructor, defined iff the value was built by a
+        # constructor carrying the field (reference manual 5.14.1: its use requires the discriminator)
+        fld = e["field"]
+        v = ev(fld["of"], env, funs, st)
+        names = (funs.get("$fields") or {}).get(v.dtype, {}).get(v.ctor)
+        if names is None:
+            raise ValueError(f"field {fld['name']!r}: no declaration of {v.dtype}.{v.ctor} in scope")
+        if fld["name"] not in names:
+            raise Undef(f"{v.dtype}.{v.ctor} has no field {fld['name']}", expr=e)
+        return v.args[names.index(fld["name"])]
     if "match" in e:
         # {"match": {"scrutinee", "arms": [{"ctor", "binders", "body"}]}}:
         # non-strict like `ite` -- only the chosen arm's body is evaluated
@@ -740,15 +751,22 @@ def ev(e: dict, env: dict, funs: dict, st: St):
     if "forall" in e or "exists" in e:
         kind = "forall" if "forall" in e else "exists"
         q = e[kind]
-        lo = ev(q["lo"], env, funs, st)
-        hi = ev(q["hi"], env, funs, st)
-        if hi - lo > MAX_RANGE:
-            raise Budget("quantifier range")
+        if "in" in q:
+            # SPEC.md "Quantifiers over a collection" (2026-10-07): the elements of a set (in order) or of a seq
+            # (in order, repeats included), the body defined at every one, as over a range
+            coll = ev(q["in"], env, funs, st)
+            points = sorted(coll) if isinstance(coll, frozenset) else list(coll)
+        else:
+            lo = ev(q["lo"], env, funs, st)
+            hi = ev(q["hi"], env, funs, st)
+            if hi - lo > MAX_RANGE:
+                raise Budget("quantifier range")
+            points = range(lo, hi)
         acc = kind == "forall"
         # SPEC.md: the body must be defined for EVERY value in [lo, hi), so
         # every point is evaluated even after the result is decided; an empty
         # range decides without the body and is therefore defined.
-        for i in range(lo, hi):
+        for i in points:
             sub = dict(env)
             sub[q["var"]] = i
             v = ev(q["body"], sub, funs, st)
@@ -803,7 +821,7 @@ def ev(e: dict, env: dict, funs: dict, st: St):
         # silently assumed away.
         dec = f.get("decreases")
         if st.check_measures and dec is not None:
-            callee_m = ev(dec, sub, funs, st)
+            callee_m = _measure_value(ev(dec, sub, funs, st))
             stack = st._measure_stack
             if stack and stack[-1][0] == c["fun"]:
                 caller_m = stack[-1][1]
@@ -1242,6 +1260,12 @@ def funs_of(task: dict, body: list) -> dict:
     if self_calls(body, task["name"]):
         funs[task["name"]] = {"params": task["params"],
                               "_exec": (body, task["returns"][0]["name"])}
+    if task.get("datatypes"):
+        # SPEC.md "Datatypes (v2): fields" (2026-10-07): each constructor's field names in order, for `e.f` (ev's
+        # "field" case); `$` is not a t name, so the key cannot collide with a spec_fun or method
+        funs["$fields"] = {d["name"]: {c["name"]: [f["name"] for f in c.get("fields", [])]
+                                       for c in d.get("ctors", [])}
+                           for d in task["datatypes"]}
     return funs
 
 
@@ -1448,11 +1472,64 @@ def ladders(task: dict) -> dict:
     for d in task.get("datatypes", []):
         ctors = d.get("ctors", [])
         if isinstance(d.get("name"), str) and isinstance(ctors, list):
-            lad[f"datatype:{d['name']}"] = tuple(
-                Ctor(d["name"], c["name"], ())
-                for c in ctors if isinstance(c, dict)
-                and isinstance(c.get("name"), str) and not c.get("fields"))
+            vals = []
+            for c in ctors:
+                if not (isinstance(c, dict) and isinstance(c.get("name"), str)):
+                    continue
+                fields = c.get("fields") or []
+                if not fields:
+                    vals.append(Ctor(d["name"], c["name"], ()))
+                    continue
+                if any(isinstance(f["type"], dict) for f in fields):
+                    continue   # a constructor with a datatype field: the rounds below
+                # SPEC.md "Datatypes (v2): fields" (2026-10-07): a constructor with fields enters the ladder with
+                # its fields drawn from the near corner of their own ladders (the first few ints, both bools, the
+                # first few seqs), combined in shell order and capped, as a pair's ladder combines its components
+                vals.extend(_ctor_values(d["name"], c["name"], [tuple(lad[f["type"]][:DT_FIELD_NEAR]) for f in fields]))
+            # SPEC.md "Datatypes (v3): recursion" (2026-10-07): a constructor with a datatype field enters in rounds,
+            # each drawing that field from the values so far (this datatype's, or an earlier one's whole ladder),
+            # so the ladder holds every value up to depth DT_DEPTH near the corner, smallest first
+            rec = [c for c in ctors if isinstance(c, dict) and any(isinstance(f["type"], dict) for f in c.get("fields") or [])]
+            for _ in range(DT_DEPTH if rec else 0):
+                so_far = tuple(vals)
+                for c in rec:
+                    cols = [tuple((so_far if f["type"] == {"datatype": d["name"]}
+                                   else lad[f"datatype:{f['type']['datatype']}"] if isinstance(f["type"], dict)
+                                   else lad[f["type"]])[:DT_FIELD_NEAR]) for f in c["fields"]]
+                    vals.extend(v for v in _ctor_values(d["name"], c["name"], cols) if v not in vals)
+            lad[f"datatype:{d['name']}"] = tuple(vals)
     return lad
+
+
+DT_FIELD_NEAR = 3        # values per field drawn from its own ladder (SPEC.md "Datatypes (v2): fields")
+DT_CTOR_CAP = 12         # values per constructor with fields, the near corner first
+DT_DEPTH = 2             # rounds of a recursive constructor over the values so far (SPEC.md "Datatypes (v3)")
+
+
+def ctor_size(v) -> int:
+    """The number of constructors in a datatype value (SPEC.md "Datatypes (v3): recursion"): a structural descent
+    lowers it, so it is the interpreter's measure for a datatype `decreases`."""
+    if isinstance(v, Ctor):
+        return 1 + sum(ctor_size(a) for a in v.args)
+    return 0
+
+
+def _measure_value(m):
+    return ctor_size(m) if isinstance(m, Ctor) else m
+
+
+def _ctor_values(dtype: str, cname: str, cols: list) -> list:
+    """Constructor values over the given field columns, in shell order, capped at DT_CTOR_CAP."""
+    combos = [()]
+    for col in cols:
+        combos = [cmb + (x,) for cmb in combos for x in col]
+    combos.sort(key=lambda cmb: sum(_shell_rank(x, cols[i]) for i, x in enumerate(cmb)))
+    return [Ctor(dtype, cname, cmb) for cmb in combos[:DT_CTOR_CAP]]
+
+
+def _shell_rank(x, col: tuple) -> int:
+    """A field value's position in its own ladder column, the shell order a combination is ranked by."""
+    return col.index(x)
 
 
 PAIR_SHELL = 24          # 2-argument shell cap, the same magnitude
@@ -1548,6 +1625,15 @@ def _names(task: dict) -> list[tuple[str, str]]:
     return [(p["name"], p["type"]) for p in task["params"]]
 
 
+def _t_text(x) -> str:
+    """A shown value (_j's output) in t's surface notation: bools as `true`/`false`, lists as `[a, b]`."""
+    if isinstance(x, bool):
+        return "true" if x else "false"
+    if isinstance(x, list):
+        return "[%s]" % ", ".join(_t_text(y) for y in x)
+    return str(x)
+
+
 def _j(v):
     if isinstance(v, Fraction):
         # SPEC.md "Exact rationals (v1)": shown as n/d in lowest terms.
@@ -1558,7 +1644,9 @@ def _j(v):
         # shape); recursing on fields the same way Pair recurses on its
         # two components, for the record case ahead.
         if v.args:
-            return f"{v.dtype}.{v.ctor}(%s)" % ", ".join(str(_j(a)) for a in v.args)
+            # SPEC.md "Datatypes (v2): fields": each field in t's own notation (`true`, not Python's `True`), so
+            # that surface.parse_expr reads the shown value back, as every certificate does
+            return f"{v.dtype}.{v.ctor}(%s)" % ", ".join(_t_text(_j(a)) for a in v.args)
         return f"{v.dtype}.{v.ctor}"
     if isinstance(v, Pair):
         # SPEC.md "Pairs": shown as a 2-list, recursing so a seq component

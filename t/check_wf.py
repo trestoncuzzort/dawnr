@@ -112,8 +112,14 @@ RULES: dict[str, str] = {
                         "declares (Datatypes)",
     "ctor-name": "a constructor name matches [A-Za-z][A-Za-z0-9_]* (Datatypes)",
     "ctor-dup": "a constructor name is declared at most once per datatype (Datatypes)",
-    "ctor-fields-not-v1": "this v1 landing states enumerations only: a "
-                          "constructor carries no fields (Datatypes)",
+    "ctor-field-type": "a constructor field is an int, a bool, a seq, its own datatype (recursion) or a datatype "
+                       "declared before it (Datatypes (v2): fields; Datatypes (v3): recursion)",
+    "datatype-base": "some constructor of a datatype builds a value without that datatype in its fields, a base "
+                     "case (Datatypes (v3): recursion)",
+    "field-dup": "a field name is declared at most once per constructor (Datatypes (v2): fields)",
+    "field-unknown": "e.f names a field some constructor of e's datatype declares (Datatypes (v2): fields)",
+    "field-type-clash": "constructors of one datatype that share a field name give it one type "
+                        "(Datatypes (v2): fields)",
     "ctor-unknown": "a ctor names one of its datatype's own declared "
                     "constructors (Datatypes)",
     "ctor-arity": "a ctor's argument count matches its constructor's declared "
@@ -179,7 +185,10 @@ RULES: dict[str, str] = {
     "loop-invariant-bool": "each loop invariant must be bool (Gate 2)",
     "spec-fun-body-type": "a spec_fun's body type must match its declared result (Gate 3)",
     "spec-fun-result": "a spec_fun's result is any t type (Gate 3; Compositional types)",
-    "spec-fun-decreases-int": "a spec_fun's decreases must be int (Gate 3)",
+    "quant-range": "a quantifier ranges over [lo, hi) or over a set or seq's elements (Gate 1; Quantifiers over "
+                   "a collection)",
+    "spec-fun-decreases-int": "a spec_fun's decreases must be int, or a datatype value whose recursive calls "
+                              "take its fields (Gate 3; Datatypes (v3): recursion)",
     "strlib-arity": "each string-library member has a fixed arity (The string library)",
     "strlib-types": "each string-library member's argument types must "
                     "match its signature (The string library)",
@@ -522,6 +531,26 @@ def _ty(e, env, funs, dtypes, ver, errs, bound, expect=None):
                 _e(errs, e, f"{c['dtype']}.{c['name']}: field type mismatch",
                    "ctor-argtype")
         return {"datatype": c["dtype"]}
+    if "field" in e:
+        # SPEC.md "Datatypes (v2): fields" (2026-10-07): {"field": {"of": Expr, "name": f}}, Dafny's destructor, typed
+        # by the field f some constructor of the value's datatype declares (all that declare it agree on its type)
+        fld = e["field"]
+        ot = _ty(fld["of"], env, funs, dtypes, ver, errs, bound)
+        if not (isinstance(ot, dict) and set(ot) == {"datatype"} and ot["datatype"] in dtypes):
+            _e(errs, e, f"field {fld.get('name')!r} of a value that is not a datatype: {ot!r}", "field-unknown")
+            return None
+        ftys = []   # a list, not a set: a datatype field's type is a dict (SPEC.md "Datatypes (v3): recursion")
+        for ct in dtypes[ot["datatype"]].get("ctors", []):
+            for f in ((ct.get("fields") or []) if isinstance(ct, dict) else []):
+                if isinstance(f, dict) and f.get("name") == fld.get("name") and f.get("type") not in ftys:
+                    ftys.append(f.get("type"))
+        if not ftys:
+            _e(errs, e, f"{ot['datatype']} has no field {fld.get('name')!r}", "field-unknown")
+            return None
+        if len(ftys) > 1:
+            _e(errs, e, f"{ot['datatype']}.{fld.get('name')}: constructors disagree on its type", "field-type-clash")
+            return None
+        return next(iter(ftys))
     if "match" in e:
         # SPEC.md "Datatypes (v1)": {"match": {"scrutinee": Expr, "arms":
         # [{"ctor": C, "binders": [...], "body": Expr}, ...]}}, total --
@@ -613,11 +642,22 @@ def _ty(e, env, funs, dtypes, ver, errs, bound, expect=None):
         v = q["var"]
         if v in env or v in bound:
             _e(errs, e, f"bound var {v} shadows a name in scope", "quant-shadow")
-        for side in ("lo", "hi"):
-            if _ty(q[side], env, funs, dtypes, ver, errs, bound) != "int":
-                _e(errs, e, f"quantifier {side} is not int", "quant-bounds")
+        el = "int"
+        if "in" in q:
+            # SPEC.md "Quantifiers over a collection" (2026-10-07): x ranges over the elements of a set or a seq
+            rt = _ty(q["in"], env, funs, dtypes, ver, errs, bound)
+            if rt in ("set", "seq"):
+                el = "int"
+            elif isinstance(rt, dict) and set(rt) in ({"set"}, {"seq"}):
+                el = rt.get("set", rt.get("seq"))
+            else:
+                _e(errs, e, f"quantifier range is not a set or a seq: {rt!r}", "quant-range")
+        else:
+            for side in ("lo", "hi"):
+                if _ty(q[side], env, funs, dtypes, ver, errs, bound) != "int":
+                    _e(errs, e, f"quantifier {side} is not int", "quant-bounds")
         sub = dict(env)
-        sub[v] = "int"
+        sub[v] = el
         if _ty(q["body"], sub, funs, dtypes, ver, errs, bound | {v}) != "bool":
             _e(errs, e, "quantifier body is not bool", "quant-body")
         return "bool"
@@ -1123,16 +1163,34 @@ def check_wf(task: dict, positions: dict | None = None,
                    "ctor-dup")
             cnames.add(cname)
             if c.get("fields"):
-                # SPEC.md "Datatypes (v1)": "enumerations: a datatype whose
-                # constructors carry no fields ... records ... [and] non-
-                # recursive sums ... stay out of v1" for this landing --
-                # only the enum shape is implemented end to end (interp,
-                # the seven lowerings, the ladder move), so a constructor
-                # that DOES carry fields is refused here by name instead of
-                # being accepted and then mishandled downstream.
-                _e(errs, d, f"datatype {dname}: constructor {cname} carries "
-                            f"fields, not in this v1 landing (enumerations "
-                            f"only)", "ctor-fields-not-v1")
+                # SPEC.md "Datatypes (v2): fields" (2026-10-07): records and non-recursive sums, each field an int,
+                # a bool or a seq (Dafny reference manual 5.14.1's named constructor parameters). A field of a
+                # datatype, the datatype's own (recursion) included, is not in this wave and is refused by name; the
+                # v1 gate `ctor-fields-not-v1` is lifted for the field types the wave carries.
+                fnames = set()
+                for f in c["fields"]:
+                    fname = f.get("name") if isinstance(f, dict) else None
+                    if not isinstance(fname, str) or not NAME_RE.match(fname):
+                        _e(errs, d, f"datatype {dname}: bad field name {fname!r}", "ctor-name")
+                        continue
+                    if fname in fnames:
+                        _e(errs, d, f"datatype {dname}: constructor {cname} declares field {fname} twice",
+                           "field-dup")
+                    fnames.add(fname)
+                    ft = f.get("type")
+                    if (isinstance(ft, dict) and set(ft) == {"datatype"}
+                            and (ft["datatype"] == dname or ft["datatype"] in dtypes)):
+                        pass   # SPEC.md "Datatypes (v3): recursion": this datatype, or one declared before it
+                    elif ft not in ("int", "bool", "seq"):
+                        _e(errs, d, f"datatype {dname}: field {cname}.{fname} has type {ft!r}; a field is an int, "
+                                    f"a bool, a seq, {dname} itself or a datatype declared before it",
+                           "ctor-field-type")
+        # SPEC.md "Datatypes (v3): recursion" (2026-10-07): a base case, a constructor with no field of this datatype
+        # (an earlier datatype has one already), so the type has finite values and the witness ladder can name one
+        if not any(not any(isinstance(f, dict) and f.get("type") == {"datatype": dname} for f in (c.get("fields") or []))
+                   for c in ctors if isinstance(c, dict)):
+            _e(errs, d, f"datatype {dname}: every constructor has a {dname} field, so no value is finite",
+               "datatype-base")
         dtypes[dname] = d
     funs = dict(expression_funs or {})
     funs.update({f["name"]: f for f in task.get("spec_funs", [])})
@@ -1162,8 +1220,10 @@ def check_wf(task: dict, positions: dict | None = None,
             # SPEC.md "Compositional types (v1)" (2026-10-06): any t type; an invalid one is refused here by name,
             # where before an unlisted result only failed the body-type check below under a misleading message.
             _e(errs, f, f"spec_fun {f['name']} result is not a t type: {f['result']!r}", "spec-fun-result")
-        if _ty(f["decreases"], fenv, earlier, dtypes, ver, errs, set()) != "int":
-            _e(errs, f, f"spec_fun {f['name']} decreases is not int", "spec-fun-decreases-int")
+        dty = _ty(f["decreases"], fenv, earlier, dtypes, ver, errs, set())
+        if dty != "int" and not (isinstance(dty, dict) and set(dty) == {"datatype"}):
+            # an int, or (SPEC.md "Datatypes (v3): recursion") a datatype value, ordered by structure
+            _e(errs, f, f"spec_fun {f['name']} decreases is not int or a datatype value", "spec-fun-decreases-int")
         if _ty(f["body"], fenv, earlier, dtypes, ver, errs, set(), f["result"]) != f["result"]:
             _e(errs, f, f"spec_fun {f['name']} body type != result", "spec-fun-body-type")
     for e in task.get("requires", []):
@@ -1380,8 +1440,11 @@ def _check_lemma(l, i, task, funs, earlier, lnames, mnames, dtypes, ver, errs):
            "lemma-decreases")
     if not selfrec and "decreases" in l:
         _e(errs, l, f"lemma {name}: decreases without a self-call", "lemma-decreases")
-    if "decreases" in l and _ty(l["decreases"], penv, funs, dtypes, ver, errs, set()) != "int":
-        _e(errs, l, f"lemma {name}: decreases is not int", "lemma-decreases")
+    if "decreases" in l:
+        lty = _ty(l["decreases"], penv, funs, dtypes, ver, errs, set())
+        if lty != "int" and not (isinstance(lty, dict) and set(lty) == {"datatype"}):
+            # an int, or (SPEC.md "Datatypes (v3): recursion") a datatype value: induction on its structure
+            _e(errs, l, f"lemma {name}: decreases is not int or a datatype value", "lemma-decreases")
     allowed = set(earlier) | {name}
     if any(c not in allowed for c in called if isinstance(c, str)
            and c in lnames):

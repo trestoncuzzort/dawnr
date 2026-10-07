@@ -6474,6 +6474,7 @@ def _comp_refusal(task: dict, body: list) -> None:
 
 def lower(task: dict, body: list, witness: dict | None = None) -> str:
     import tshape
+    task, body = tshape.desugar_seq_quants(task, body)   # SPEC.md "Quantifiers over a collection": seq ranges as indices
     tshape.abstain_unless_carried(task, body, "spark", carried=frozenset({"real", "comp"}), lib=SPARK_LIB)
     _comp_refusal(task, body)                              # PREDICT T18: maps carried, the rest refused by name
     if tshape.uses_ops(body, task, {"floor", "ceil"}):

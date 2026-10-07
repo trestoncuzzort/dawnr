@@ -1513,6 +1513,205 @@ extension): sha256 of every committed task's, lemma's and nested file's
 lowered source, real and twin, in all seven kernels, is unchanged from
 before this landing (588 = 42 files x 7 kernels x 2 sides, byte for byte).
 
+### Datatypes (v2): fields
+
+Stated 2026-10-07 (`internal/RESEARCH-2026-10-07-zoom-out.md` decision 4, G9; PREDICT T23). v1's
+constructors carried no fields. v2 lets them carry fields, which gives **records** (one constructor) and
+**non-recursive sums** (several constructors, any of them with fields). The designs are:
+- Dafny's named constructor parameters and destructors (Dafny Reference Manual 5.14.1);
+- Rust's tuple-like enum variants (the Verus guide, "Datatypes: enums");
+- Lean's constructors with arguments (Theorem Proving in Lean 4, 7.2).
+
+Recursive datatypes are the next wave and are still refused by name.
+
+**Surface.**
+
+```
+datatype Shape = Circle(r: int) | Rect(w: int, h: int) | Dot
+datatype Point = Point(x: int, y: int)          // a record: one constructor, named like its datatype or not
+```
+
+- `Shape.Rect(2, 3)` builds a value. Its arguments are positional, one per declared field.
+- `case s { Circle(r) => ..., Rect(w, h) => ..., Dot => ... }` binds each arm's fields positionally, under
+  names the arm chooses.
+- `s.w` reads a field.
+
+**AST.** A constructor declaration gains `"fields": [{"name": f, "type": T}, ...]`. A field-less constructor keeps
+v1's shape and has no `fields` key, so every v1 task is unchanged. One new Expr:
+
+```
+{"field": {"of": Expr, "name": f}}                     // e.f
+```
+
+**Types (check_wf).**
+- `ctor-field-type`: a field is an int, a bool or a seq. A field whose type is a datatype, the datatype's own
+  included (recursion), is refused by name.
+- `field-dup`: a field name appears at most once per constructor.
+- `field-unknown`: `e.f` needs `e` to be a datatype value and `f` to be a field some constructor of that datatype
+  declares.
+- `field-type-clash`: constructors that share a field name give it one type, which is the type of `e.f`.
+- v1's `ctor-arity`, `ctor-argtype` and `match-arity` now count and type the declared fields.
+
+The v1 gate `ctor-fields-not-v1` is lifted.
+
+**Meaning.**
+- `e.f` is Dafny's destructor. It is defined iff `e` is defined and was built by a constructor that declares `f`,
+  and its value is that field.
+- A match arm's binders are the chosen constructor's fields, in declaration order.
+- Equality stays structural: the datatype, the constructor and every field.
+- `interp.funs_of` records each datatype's field names under `funs["$fields"]`, so `ev` reads a field by position.
+
+**The twins.** The witness ladder enumerates constructors with fields. Each field takes values from the near
+corner of its own type's ladder (`DT_FIELD_NEAR = 3`: the first three ints, the bools, the first three seqs). The
+combinations go in shell order, at most `DT_CTOR_CAP = 12` per constructor. A witness shows a value as
+`D.C(a, ...)` in t's own notation, with a bool field as `true` or `false`. `surface.parse_expr` reads it back, as
+every lowering's certificate does. Field access is a
+mutation site, so every existing rung reaches it. `swap-ctor` is unchanged.
+
+**Lowering status (2026-10-07).** Three of the seven kernels state the construct end to end.
+- **Dafny:** a native `datatype` with named parameters and the `.f` destructor.
+- **Verus:**
+  - Rust tuple variants, `C(int, ...)`.
+  - `e.f` is a `match` that returns `vstd::pervasive::arbitrary()` for a constructor without `f`.
+  - The discriminator is a definedness obligation, so that value is never observed where the obligation holds.
+  - A variant named like its datatype is qualified (`Point::Point`), because a glob import of it is ambiguous
+    (E0659).
+  - An enum with a seq field derives nothing. Spec-mode `==` is structural for every type, and vstd's `Seq`
+    implements no `PartialEq`. v1's `#[derive(PartialEq, Eq)]` stays wherever it compiles.
+- **Lean:**
+  - An `inductive` whose constructors take named binders.
+  - `e.f` is a `match` with a `default` arm only when some constructor lacks `f`.
+  - A match whose arms carry a quantifier is a Prop-valued match, so the quantifier stays logical.
+  - A loop whose contract has such a match states its lemma through a named predicate `{name}_t_post`, which the
+    preservation step's `split` does not look inside.
+  - A product over a match binder gets no top-level sign lemma. After a case split, the sign rule those lemmas
+    use closes it.
+
+In all three, the certificate reads a datatype witness back through the parser, and a value witness may be a
+datatype. A field or a match binder named like a kernel's keyword is renamed with its uses (`names.py`), as every
+other identifier is. SPARK, Rocq, F* and Frama-C refuse every datatype by name, as in v1.
+
+**Byte identity.** Every lowering of the 88 committed tasks and the 21 AlgoVeri tasks was compared before and
+after this landing: real and twin, in all seven kernels, with the twin's witness (1,320 and 315 entries). All are
+byte-identical.
+
+**Not in v2.**
+- A recursive constructor, or any field of datatype type.
+- A generic datatype.
+- A datatype as a pair, seq or set component.
+- A datatype in a spec_fun's signature.
+- Field update (Dafny's `e.(f := v)`).
+- Field access in the Python hand-back, which refuses datatypes by name, as in v1.
+
+### Datatypes (v3): recursion
+
+Stated 2026-10-07 (G10, PREDICT T25). A constructor field may have the type of its own datatype, or of a datatype
+declared before it, which gives trees. Spec functions, lemmas and self-recursive tasks may then recurse on such a
+value, with the value itself as the measure. The designs:
+- Dafny's inductive datatypes, ordered by structure (Reference Manual 5.14.1);
+- Verus's decreases-to relation, in which a datatype decreases to its potentially recursive fields (Verus
+  reference, `decreases_to!`);
+- Lean's recursor and structural recursion (Theorem Proving in Lean 4, ch. 7).
+
+AlgoVeri's tree, trie and segment-tree contracts need this wave. Their set-valued helpers are a separate one.
+
+**Surface.**
+
+```
+datatype Tree = Leaf | Node(v: int, l: Tree, r: Tree)
+...
+task tree_sum(tr: Tree) returns (s: int)
+  ensures s == total(tr)
+  decreases tr
+spec fun total(q: Tree): int
+  decreases q
+= case q { Leaf => 0, Node(v, l, r) => v + total(l) + total(r) }
+{
+  s := case tr { Leaf => 0, Node(v, l, r) => v + tree_sum(l) + tree_sum(r) };
+}
+```
+
+**Types (check_wf).**
+- `ctor-field-type` now admits a field of the datatype's own type or of a datatype declared before it. Every other
+  type outside int, bool and seq is still refused by name. A datatype declared later is refused by the parser, which
+  knows only the names declared so far. Mutual recursion is not in this wave.
+- `datatype-base`, new: some constructor has no field of the datatype's own type. Otherwise no value is finite,
+  and the witness ladder could not name one.
+- A spec function's or a lemma's `decreases` may be a datatype value as well as an int
+  (`spec-fun-decreases-int`, `lemma-decreases`). A task's own `decreases` already had no type rule.
+
+**Meaning.** A recursive call must take a value structurally below its measure: a field the arm's match bound.
+The kernels check this, each by its own order. The interpreter's opt-in measure check compares sizes
+(`interp.ctor_size`, the number of constructors), which every structural descent lowers.
+
+**The twins.**
+- **Ladder:** the witness ladder builds recursive values in rounds (`DT_DEPTH = 2`). Each round draws a recursive
+  field from the values so far, so a tree ladder holds `Leaf`, three one-node trees and nine two-level trees,
+  smallest first.
+- **New wrong-var move:** a match arm's binder is read as another binder of the same field type (a tree's `l` for
+  its `r`). It comes after every existing move, so no earlier task's twin changes. It is binders only: a
+  parameter in a recursive call's place would not terminate.
+
+**Lowering status (2026-10-07).** Three of the seven kernels state the construct end to end.
+- **Dafny** declares the datatype natively. A self-call inside a `case` or `if` on an assignment's right-hand side
+  is lowered as a `match` or `if` statement, each arm hoisting its own calls, since a binder exists only in its arm
+  and an untaken branch's call is never evaluated. A constructor's arguments are strict, so a self-call among them
+  is hoisted too. The certificate check admits a datatype field that names another datatype declaration in the
+  same program.
+- **Verus:**
+  - A datatype field is a `Box<D>`, built with `Box::new`.
+  - An arm binds a boxed field under a fresh name and reads it as `let b = *t_box_b;`. Verus accepts a recursive
+    call on such a value under `decreases`, and rejects one on the `Box` itself (E0308).
+  - A self-call inside a spec function's argument is bound by a `let` first, because a proof fn call in spec
+    position is a mode error.
+- **Lean:**
+  - A recursive spec function or task with a datatype measure has no termination clause, so Lean elaborates it by
+    structural recursion. Its kernel then evaluates it at a ground witness (`decide`).
+  - The contract is proved by `induction` on the measure parameter, generalizing the others, then closed by grind
+    with the function equations.
+  - A measure that is not a parameter, and a structurally recursive task with a `requires`, are refused by name.
+
+SPARK, Rocq, F* and Frama-C refuse every datatype by name, as in v1.
+
+**Byte identity.** Every lowering of the 94 committed tasks and the 22 AlgoVeri programs was compared before and
+after this landing: real and twin, all seven kernels, with the witness. All are byte-identical.
+
+**Not in v3.**
+- Mutual recursion.
+- A recursive datatype inside a seq, pair or set.
+- Set-valued spec functions over trees in Lean, which has no sets.
+- A structurally recursive Lean task with a `requires`.
+- Recursion whose measure is a datatype expression other than a parameter.
+
+### Quantifiers over a collection
+
+Stated 2026-10-07 (G11, PREDICT T26). `forall x in S . P` and `exists x in S . P` let `x` range over the elements of
+a set or a seq `S`, the form AlgoVeri's contracts state as `forall x :: x in view(left) ==> x < val`.
+- **Range:** a name, a call or a parenthesized expression, read with no postfix, since the `.` after it is the
+  quantifier's own separator and would otherwise read as a field (`view(l) . x < v`).
+- **AST:** `{"forall": {"var": x, "in": S, "body": P}}`, beside the range form's `lo`/`hi`.
+- **Types:** check_wf's new rule `quant-range` requires a set or a seq. `x` takes the element type.
+- **Meaning:** `P` must be defined at every element, as over a range. The interpreter visits a set's elements in
+  order, and a seq's in order with repeats.
+
+**A seq range is sugar.** `forall x in S . P` over a seq is `forall i in [0, len(S)) . P[x := S[i]]`. The rewrite
+(`tshape.desugar_seq_quants`) runs at the top of every lowering, typed by check_wf, so all seven kernels state it
+through the index form their automation is built around. Measured on a loop probe: written as membership over a
+seq, the contract left Dafny and Verus a witness index to find and was unproved in both; the index form verifies in
+all seven. The fresh index names, `qi<n>`, are checked against every name in the task.
+
+**A set range** is stated natively by two kernels:
+- **Dafny:** `forall x :: x in S ==> P`, whose membership Dafny takes as the trigger.
+- **Verus:** `forall|x: int| #![trigger S.contains(x)] S.contains(x) ==> P`. A trigger must be a function call
+  naming the bound variable, per the Verus guide.
+
+Lean, Rocq, F*, SPARK and Frama-C refuse a set range by name, at their entry. Lean has no sets in any case. A
+ground set range in a certificate unrolls to a finite conjunction over its elements. Its value is recorded as an
+equation the kernel re-proves unless it is already a literal.
+
+**Byte identity.** No earlier task has a collection quantifier, so the rewrite is the identity for each of them. All
+99 tasks and 22 AlgoVeri programs lower byte for byte as before.
+
 ### Compositional types (v1)
 
 Stated 2026-10-06 (the operator's direction of that morning: t is the ceiling,

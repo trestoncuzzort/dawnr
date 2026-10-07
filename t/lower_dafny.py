@@ -1376,6 +1376,14 @@ def expr(e: dict, self_name: str | None = None) -> str:
         return _comp_call(e, lambda x: expr(x, self_name))   # SPEC.md "Comprehensions (v1)" (2026-10-06)
     if e.get("op") in _HOF_OPS:
         return _hof_call(e, lambda x: expr(x, self_name))    # SPEC.md "Higher-order calls (v1)" (2026-10-06)
+    if ("forall" in e or "exists" in e) and "in" in (e.get("forall") or e.get("exists")):
+        # SPEC.md "Quantifiers over a collection" (2026-10-07): Dafny's own membership range (reference manual,
+        # quantifier expressions: `forall x :: x in S ==> P(x)`), whose `x in S` Dafny takes as the trigger
+        kind = "forall" if "forall" in e else "exists"
+        q = e[kind]
+        glue = "==>" if kind == "forall" else "&&"
+        return (f"({kind} {q['var']} :: {q['var']} in {expr(q['in'], self_name)} {glue} "
+                f"{expr(q['body'], self_name)})")
     if "forall" in e:
         q = e["forall"]
         v = q["var"]
@@ -1431,6 +1439,10 @@ def expr(e: dict, self_name: str | None = None) -> str:
             cargs = ", ".join(expr(a, self_name) for a in c["args"])
             return f"{c['dtype']}.{c['name']}({cargs})"
         return f"{c['dtype']}.{c['name']}"
+    if "field" in e:
+        # SPEC.md "Datatypes (v2): fields" (2026-10-07): Dafny's own destructor `e.f`; Dafny itself checks the
+        # discriminator it requires, the definedness obligation SPEC.md states for the field
+        return f"({expr(e['field']['of'], self_name)}).{e['field']['name']}"
     if "match" in e:
         # `match e case C1 => e1 case C2 => e2` -- Dafny's own match
         # expression (reference manual 8.5.2's statement form has a
@@ -1740,7 +1752,8 @@ def _comp_free(node: dict) -> list:
                 return out | walk(c["cond"], inner) | walk(c["body"], inner)
             if "forall" in x or "exists" in x:
                 q = x.get("forall") or x.get("exists")
-                return walk(q["lo"], bound) | walk(q["hi"], bound) | walk(q["body"], bound | {q["var"]})
+                rng = walk(q["in"], bound) if "in" in q else walk(q["lo"], bound) | walk(q["hi"], bound)
+                return rng | walk(q["body"], bound | {q["var"]})
             if "call" in x:
                 return set().union(*(walk(a, bound) for a in x["call"]["args"])) if x["call"]["args"] else set()
             return set().union(*(walk(v, bound) for v in x.values())) if x else set()
@@ -1964,7 +1977,8 @@ def _fv(x, bound: frozenset) -> set:
             return out | _fv(c["cond"], inner) | _fv(c["body"], inner)
         if "forall" in x or "exists" in x:
             q = x.get("forall") or x.get("exists")
-            return _fv(q["lo"], bound) | _fv(q["hi"], bound) | _fv(q["body"], bound | {q["var"]})
+            rng = _fv(q["in"], bound) if "in" in q else _fv(q["lo"], bound) | _fv(q["hi"], bound)
+            return rng | _fv(q["body"], bound | {q["var"]})
         return set().union(*(_fv(v, bound) for v in x.values())) if x else set()
     if isinstance(x, list):
         return set().union(*(_fv(v, bound) for v in x)) if x else set()
@@ -2307,6 +2321,12 @@ def body_expr(e: dict, ctx: _Ctx, pre: list[str], lazy: bool = False) -> str:
         tmp = ctx.fresh()
         pre.append(f"var {tmp} := {ctx.method}({args});")
         return tmp
+    if "ctor" in e and e["ctor"].get("args"):
+        # SPEC.md "Datatypes (v3): recursion" (2026-10-07): a constructor's arguments are strict, so a self-call among
+        # them is hoisted like any other (a tree's `Node(v, f(r), f(l))`); printed as the spec lowering prints it
+        c = e["ctor"]
+        cargs = ", ".join(body_expr(a, ctx, pre, lazy) for a in c["args"])
+        return f"{c['dtype']}.{c['name']}({cargs})"
     if "comp" in e:
         return _comp_call(e, lambda x: body_expr(x, ctx, pre, lazy))   # SPEC.md "Comprehensions (v1)"
     if e.get("op") in _HOF_OPS:
@@ -2315,6 +2335,11 @@ def body_expr(e: dict, ctx: _Ctx, pre: list[str], lazy: bool = False) -> str:
         q = e.get("forall") or e.get("exists")
         kind = "forall" if "forall" in e else "exists"
         v = q["var"]
+        if "in" in q:
+            # SPEC.md "Quantifiers over a collection", as in spec position
+            rng = body_expr(q["in"], ctx, pre, lazy)
+            b = body_expr(q["body"], ctx, pre, lazy=True)
+            return f"({kind} {v} :: {v} in {rng} {'==>' if kind == 'forall' else '&&'} {b})"
         lo = body_expr(q["lo"], ctx, pre, lazy)
         hi = body_expr(q["hi"], ctx, pre, lazy)
         b = body_expr(q["body"], ctx, pre, lazy=True)
@@ -2394,9 +2419,54 @@ def body_expr(e: dict, ctx: _Ctx, pre: list[str], lazy: bool = False) -> str:
     return expr(e, ctx.self_name)
 
 
+def _calls_self(e, name: str) -> bool:
+    if isinstance(e, dict):
+        if "call" in e and e["call"].get("fun") == name:
+            return True
+        return any(_calls_self(v, name) for v in e.values())
+    if isinstance(e, list):
+        return any(_calls_self(v, name) for v in e)
+    return False
+
+
+def _match_assign(target: str, e: dict, indent: str, ctx: _Ctx) -> list[str]:
+    """SPEC.md "Datatypes (v3): recursion" (2026-10-07): `x := case e { C(b, ...) => rhs, ... }` whose arms make
+    self-calls, as Dafny's match STATEMENT (reference manual 8.5.2), each arm hoisting its own calls: an arm's binders
+    exist only inside it, so its calls cannot move out of the match."""
+    m = e["match"]
+    pre: list[str] = []
+    scr = body_expr(m["scrutinee"], ctx, pre)
+    lines = [indent + p for p in pre] + [f"{indent}match {scr} {{"]
+    for a in m["arms"]:
+        pat = a["ctor"] + ("(%s)" % ", ".join(a["binders"]) if a.get("binders") else "")
+        lines.append(f"{indent}  case {pat} =>")
+        lines.append(stmts([{"assign": [target, a["body"]]}], indent + "    ", ctx))
+    lines.append(f"{indent}}}")
+    return lines
+
+
+def _ite_assign(target: str, e: dict, indent: str, ctx: _Ctx) -> list[str]:
+    """`x := if c then a else b` whose branches make self-calls, as an if STATEMENT, each branch hoisting its own
+    calls: a call in an untaken branch is never evaluated, so it cannot be hoisted above the `if` (SPEC.md "Datatypes
+    (v3): recursion", a BST insert's two recursive branches)."""
+    c = e["ite"]
+    pre: list[str] = []
+    cond = body_expr(c["cond"], ctx, pre)
+    return ([indent + p for p in pre] + [f"{indent}if {cond} {{",
+            stmts([{"assign": [target, c["then"]]}], indent + "  ", ctx), f"{indent}}} else {{",
+            stmts([{"assign": [target, c["else"]]}], indent + "  ", ctx), f"{indent}}}"])
+
+
 def stmts(body: list, indent: str, ctx: _Ctx) -> str:
     out = []
     for s in body:
+        if "assign" in s and "match" in s["assign"][1] and _calls_self(s["assign"][1], ctx.self_name):
+            out.extend(_match_assign(s["assign"][0], s["assign"][1], indent, ctx))
+            continue
+        if ("assign" in s and "ite" in s["assign"][1]
+                and _calls_self([s["assign"][1]["ite"]["then"], s["assign"][1]["ite"]["else"]], ctx.self_name)):
+            out.extend(_ite_assign(s["assign"][0], s["assign"][1], indent, ctx))
+            continue
         if "assign" in s:
             name, e = s["assign"]
             pre: list[str] = []
@@ -2576,6 +2646,16 @@ def _not(e: dict) -> dict:
 _RAT_TEXT = __import__("re").compile(r"^-?\d+/\d+$")   # interp._j's rendering of a Fraction
 
 
+def _vlit(v) -> dict:
+    """A runtime value as a t literal: a constructor directly, its fields too (SPEC.md "Datatypes (v3): recursion": a
+    field may be a constructor, whose shown text alone carries no type), anything else through its shown form."""
+    if isinstance(v, interp.Ctor):
+        return _tlit(v)
+    if isinstance(v, frozenset):
+        return _tlit(interp._j(v), "set")   # a set shows as its sorted list, which alone would read as a seq
+    return _tlit(interp._j(v))
+
+
 def _tlit(v, ty=None):
     """A measured witness value as a t literal expression. Negative ints
     become neg nodes so they emit parenthesized, `(-1)`, and never fuse
@@ -2603,7 +2683,7 @@ def _tlit(v, ty=None):
         # unmistakable by its Python type, exactly as interp.Pair is for
         # the pair case just below -- needs no `ty` at all.
         return {"ctor": {"dtype": v.dtype, "name": v.ctor,
-                         "args": [_tlit(a) for a in v.args]}}
+                         "args": [_vlit(a) for a in v.args]}}
     if isinstance(v, interp.MapV):
         # SPEC.md "Maps (v1)" (2026-10-06): a raw runtime map, unmistakable by its class; its display
         kt, vt = (ty["map"] if isinstance(ty, dict) and "map" in ty else (None, None))
@@ -2635,6 +2715,11 @@ def _tlit(v, ty=None):
             # witnesses never arrive as a "Name.Name" string).
             dtype = ty["datatype"]
             if isinstance(v, str) and v.startswith(dtype + "."):
+                if "(" in v:
+                    # SPEC.md "Datatypes (v2): fields" (2026-10-07): interp._j wrote "Dtype.Ctor(a1, ...)", t's own
+                    # notation for the value, so it is read back by the parser (a seq field is its list literal)
+                    import surface
+                    return surface.parse_expr(v)
                 return {"ctor": {"dtype": dtype, "name": v[len(dtype) + 1:],
                                 "args": []}}
             raise ValueError(f"witness value {v!r} is not a {dtype} constructor")
@@ -2691,6 +2776,8 @@ def subst(e: dict, m: dict) -> dict:
         kind = "forall" if "forall" in e else "exists"
         q = e[kind]
         inner = {k: v for k, v in m.items() if k != q["var"]}
+        if "in" in q:
+            return {kind: {"var": q["var"], "in": subst(q["in"], m), "body": subst(q["body"], inner)}}
         return {kind: {"var": q["var"], "lo": subst(q["lo"], m),
                        "hi": subst(q["hi"], m),
                        "body": subst(q["body"], inner)}}
@@ -2713,6 +2800,8 @@ def subst(e: dict, m: dict) -> dict:
         c = e["ctor"]
         return {"ctor": {"dtype": c["dtype"], "name": c["name"],
                          "args": [subst(a, m) for a in c.get("args", [])]}}
+    if "field" in e:
+        return {"field": {"of": subst(e["field"]["of"], m), "name": e["field"]["name"]}}
     if "match" in e:
         mm = e["match"]
         return {"match": {
@@ -2841,6 +2930,14 @@ def _ev(e: dict, env: dict, funs: dict, st, facts: dict, hoist):
                            "args": [x for x, _ in pairs]}}
         return pruned, interp.Ctor(c["dtype"], c["name"],
                                    tuple(v for _, v in pairs))
+    if "field" in e:
+        # SPEC.md "Datatypes (v2): fields" (2026-10-07): the destructor, replayed as interp.ev replays it
+        fld = e["field"]
+        oe, ov = _ev(fld["of"], env, funs, st, facts, hoist)
+        names = (funs.get("$fields") or {}).get(ov.dtype, {}).get(ov.ctor)
+        if names is None or fld["name"] not in names:
+            raise interp.Undef(f"{ov.dtype}.{ov.ctor} has no field {fld['name']}")
+        return {"field": {"of": oe, "name": fld["name"]}}, ov.args[names.index(fld["name"])]
     if "match" in e:
         # Non-strict, like `ite`: only the chosen arm's body is evaluated,
         # and (with `hoist` a list) the fact "the scrutinee took THIS
@@ -2851,14 +2948,17 @@ def _ev(e: dict, env: dict, funs: dict, st, facts: dict, hoist):
         se, sv = _ev(m["scrutinee"], env, funs, st, facts, hoist)
         for a in m["arms"]:
             if a["ctor"] == sv.ctor:
+                # SPEC.md "Datatypes (v2): fields" (2026-10-07): the arm's binders are the field values, written
+                # into the arm as ground literals, so the emitted fact names no binder the certificate never binds;
+                # the hoisted fact is the scrutinee's equality with the whole ground value (v1's enums: no fields,
+                # the same `D.C` as before)
+                lits = [_vlit(fv) for fv in sv.args]
                 if hoist is not None:
                     hoist.append({"op": "==", "args": [
                         se, {"ctor": {"dtype": sv.dtype, "name": sv.ctor,
-                                     "args": []}}]})
-                sub = dict(env)
-                for bname, fv in zip(a.get("binders", []), sv.args):
-                    sub[bname] = fv
-                return _ev(a["body"], sub, funs, st, facts, hoist)
+                                     "args": lits}}]})
+                body = subst(a["body"], dict(zip(a.get("binders", []), lits))) if lits else a["body"]
+                return _ev(body, env, funs, st, facts, hoist)
         raise interp.Undef(f"match: no arm for constructor {sv.ctor!r}")
     if "comp" in e:
         # SPEC.md "Comprehensions (v1)": evaluated as interp does; a certificate unrolls it first (`_unroll`)
@@ -2885,12 +2985,17 @@ def _ev(e: dict, env: dict, funs: dict, st, facts: dict, hoist):
             raise ValueError("quantifier survived unrolling")
         kind = "forall" if "forall" in e else "exists"
         q = e[kind]
-        lo = _ev(q["lo"], env, funs, st, facts, None)[1]
-        hi = _ev(q["hi"], env, funs, st, facts, None)[1]
-        if hi - lo > interp.MAX_RANGE:
-            raise interp.Budget("quantifier range")
+        if "in" in q:
+            coll = _ev(q["in"], env, funs, st, facts, None)[1]
+            points = sorted(coll) if isinstance(coll, frozenset) else list(coll)
+        else:
+            lo = _ev(q["lo"], env, funs, st, facts, None)[1]
+            hi = _ev(q["hi"], env, funs, st, facts, None)[1]
+            if hi - lo > interp.MAX_RANGE:
+                raise interp.Budget("quantifier range")
+            points = range(lo, hi)
         acc = kind == "forall"
-        for i in range(lo, hi):
+        for i in points:
             sub = dict(env)
             sub[q["var"]] = i
             v = _ev(q["body"], sub, funs, st, facts, None)[1]
@@ -3194,6 +3299,23 @@ def _unroll(e: dict, funs: dict, st, budget: list, bounds: list) -> dict:
     if "forall" in e or "exists" in e:
         kind = "forall" if "forall" in e else "exists"
         q = e[kind]
+        if "in" in q:
+            # SPEC.md "Quantifiers over a collection": a ground collection's elements, the collection's value
+            # recorded as an equation the kernel re-proves unless it is already a literal
+            rng_e = _unroll(q["in"], funs, st, budget, bounds)
+            coll = _ev(rng_e, {}, funs, st, {}, None)[1]
+            lit = _vlit(coll)
+            if rng_e != lit:
+                bounds.append({"op": "==", "args": [rng_e, lit]})
+            insts = []
+            for k in (sorted(coll) if isinstance(coll, frozenset) else list(coll)):
+                budget[0] -= 1
+                if budget[0] < 0:
+                    raise ValueError("quantifier unroll budget exhausted")
+                insts.append(_unroll(subst(q["body"], {q["var"]: _vlit(k)}), funs, st, budget, bounds))
+            if not insts:
+                return {"bool": kind == "forall"}
+            return _nary("and" if kind == "forall" else "or", insts)
         lo_e = _unroll(q["lo"], funs, st, budget, bounds)
         hi_e = _unroll(q["hi"], funs, st, budget, bounds)
         lo, hi = _gint(lo_e, funs, st), _gint(hi_e, funs, st)
@@ -3220,10 +3342,27 @@ def _unroll(e: dict, funs: dict, st, budget: list, bounds: list) -> dict:
         return {"ctor": {"dtype": c["dtype"], "name": c["name"],
                          "args": [_unroll(a, funs, st, budget, bounds)
                                   for a in c.get("args", [])]}}
+    if "field" in e:
+        return {"field": {"of": _unroll(e["field"]["of"], funs, st, budget, bounds), "name": e["field"]["name"]}}
     if "match" in e:
         m = e["match"]
+        scr = _unroll(m["scrutinee"], funs, st, budget, bounds)
+        try:
+            v = _ev(scr, {}, funs, st, {}, None)[1]
+        except (ValueError, KeyError, TypeError, IndexError, interp.Undef):
+            v = None
+        if isinstance(v, interp.Ctor):
+            # SPEC.md "Datatypes (v2): fields": a ground scrutinee selects its arm, whose binders become the field
+            # literals (exact for a known constructor); a scrutinee that is not already that literal is recorded as
+            # an equation the kernel re-proves, as a quantifier's bounds are
+            lit = _vlit(v)
+            if scr != lit:
+                bounds.append({"op": "==", "args": [scr, lit]})
+            arm = next(a for a in m["arms"] if a["ctor"] == v.ctor)
+            body = subst(arm["body"], {b: _vlit(fv) for b, fv in zip(arm.get("binders") or [], v.args)})
+            return _unroll(body, funs, st, budget, bounds)
         return {"match": {
-            "scrutinee": _unroll(m["scrutinee"], funs, st, budget, bounds),
+            "scrutinee": scr,
             "arms": [{"ctor": a["ctor"], "binders": a.get("binders", []),
                       "body": _unroll(a["body"], funs, st, budget, bounds)}
                      for a in m["arms"]]}}
@@ -3277,6 +3416,9 @@ def _name_seqs(e: dict, names: dict, used: dict,
         return {"ctor": {"dtype": c["dtype"], "name": c["name"],
                          "args": [_name_seqs(a, names, used, nnames, nused, snames, sused)
                                   for a in c.get("args", [])]}}
+    if "field" in e:
+        return {"field": {"of": _name_seqs(e["field"]["of"], names, used, nnames, nused, snames, sused),
+                          "name": e["field"]["name"]}}
     if "match" in e:
         m = e["match"]
         return {"match": {
@@ -3449,6 +3591,25 @@ def _ev_undef(e: dict, env: dict, funs: dict, st):
         return _ev_undef(c["then"] if cv else c["else"], env, funs, st)
     if "forall" in e or "exists" in e:
         raise ValueError("undefined-kind certificate: quantifier in body")
+    if "ctor" in e:
+        # SPEC.md "Datatypes (v2): fields": a constructor value, each field argument owing its own definedness first
+        c = e["ctor"]
+        return interp.Ctor(c["dtype"], c["name"], tuple(_ev_undef(a, env, funs, st) for a in c.get("args", [])))
+    if "field" in e:
+        fld = e["field"]
+        v = _ev_undef(fld["of"], env, funs, st)
+        fnames = (funs.get("$fields") or {}).get(v.dtype, {}).get(v.ctor) or []
+        if fld["name"] not in fnames:
+            # the obligation is a discriminator, which this ground-guard mirror does not state: refuse, never guess
+            raise ValueError(f"undefined-kind certificate: field {fld['name']} of {v.dtype}.{v.ctor}")
+        return v.args[fnames.index(fld["name"])]
+    if "match" in e:
+        m = e["match"]
+        v = _ev_undef(m["scrutinee"], env, funs, st)
+        for arm in m["arms"]:
+            if arm["ctor"] == v.ctor:
+                return _ev_undef(arm["body"], {**env, **dict(zip(arm.get("binders") or [], v.args))}, funs, st)
+        raise ValueError(f"undefined-kind certificate: match has no arm for {v.ctor}")
     if "call" in e:
         # 2026-09-28: a spec_fun call no longer aborts the replay. Its
         # arguments go through this mirror first, left to right, so an
@@ -3683,6 +3844,9 @@ def _certificate(task: dict, twin_body: list, w: dict) -> str | None:
     kind = w.get("_kind")
     names = {k: v for k, v in w.items() if not k.startswith("_")}
     funs = {f["name"]: f for f in task.get("spec_funs", [])}
+    if task.get("datatypes"):
+        # SPEC.md "Datatypes (v2): fields": the field names `_ev`'s destructor replay reads, as interp.funs_of carries them
+        funs["$fields"] = interp.funs_of(task, [])["$fields"]
     scope_types = _scope_types(task)
     ret_type = task["returns"][0]["type"]
     st = interp.St()
@@ -3714,7 +3878,10 @@ def _certificate(task: dict, twin_body: list, w: dict) -> str | None:
             tw = w.get("_twin")
             # SPEC.md "Exact rationals (v1)" (2026-10-06): a real return's value arrives as interp._j's "n/d"
             # text, the one string that is a ground literal here; any other string (a datatype rendering) is not.
-            if isinstance(tw, str) and not (ret_type == "real" and _RAT_TEXT.match(tw)):
+            # SPEC.md "Datatypes (v2): fields" (2026-10-07): a datatype return arrives as its "D.C(a, ...)" rendering,
+            # which _tlit now reads back for a datatype type
+            if isinstance(tw, str) and not ((ret_type == "real" and _RAT_TEXT.match(tw))
+                                            or (isinstance(ret_type, dict) and "datatype" in ret_type)):
                 return None
             if not isinstance(tw, (bool, int, list, str)):
                 return None
@@ -3994,6 +4161,8 @@ def _lemma_decl(l: dict, self_name: str) -> list[str]:
 
 
 def lower(task: dict, body: list, witness: dict | None = None) -> str:
+    import tshape
+    task, body = tshape.desugar_seq_quants(task, body)   # SPEC.md "Quantifiers over a collection": seq ranges as indices
     # NAMES (2026-09-11, ROADMAP 13.2): sanitize away any identifier that
     # collides with a Dafny reserved word, before anything below ever sees
     # the task -- see names.py's module docstring. `task` is returned
@@ -4046,7 +4215,10 @@ def lower(task: dict, body: list, witness: dict | None = None) -> str:
         # SPEC.md "Datatypes (v1)" (2026-09-27): t's datatype IS Dafny's
         # own `datatype` declaration (reference manual 5.14), one
         # constructor per ctor, v1 states nullary constructors only.
-        ctors = " | ".join(c["name"] for c in d["ctors"])
+        # SPEC.md "Datatypes (v2): fields" (2026-10-07): a constructor's named fields are Dafny's own named
+        # constructor parameters, each one a destructor (reference manual 5.14.1)
+        ctors = " | ".join(c["name"] + ("(" + ", ".join(f"{f['name']}: {dafny_type(f['type'])}" for f in c["fields"])
+                                        + ")" if c.get("fields") else "") for c in d["ctors"])
         lines.append(f"datatype {d['name']} = {ctors}")
     if task.get("datatypes"):
         lines.append("")
@@ -4060,7 +4232,10 @@ def lower(task: dict, body: list, witness: dict | None = None) -> str:
         # re-lift); a flat type prints exactly as before.
         ps = ", ".join(f"{p['name']}: {dafny_type(p['type'])}"
                        for p in f["params"])
-        lines.append(f"function {f['name']}({ps}): {TYPES[f['result']]}")
+        res = f["result"]
+        # a result that is not a flat type (SPEC.md "Datatypes (v3): recursion": a Tree) is spelled as a parameter is
+        lines.append(f"function {f['name']}({ps}): "
+                     f"{TYPES[res] if isinstance(res, str) and res in TYPES else dafny_type(res)}")
         lines.append(f"  decreases {expr(f['decreases'], self_name)}")
         lines.append("{")
         lines.append(f"  {expr(f['body'], self_name)}")

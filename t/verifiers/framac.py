@@ -286,6 +286,7 @@ from __future__ import annotations
 
 import json
 import re
+import os
 import subprocess
 import tempfile
 import time
@@ -732,7 +733,7 @@ def _consistency_probe(raw: str, defs: list, budget: int) -> tuple[list, str]:
         try:
             _, out = _run(
                 [FRAMAC, "-wp", "-wp-model", MODEL, "-wp-fct", fcts,
-                 "-wp-prover", "alt-ergo",
+                 "-wp-prover", _wp_prover(),
                  "-wp-steps", str(budget), "-wp-cache", "none", "-wp-par",
                  str(PAR), "-wp-timeout", str(GOAL_TIMEOUT_S),
                  "-wp-smoke-tests", "-wp-smoke-dead-local-init",
@@ -754,11 +755,22 @@ def _budget(steps: int) -> str:
             f"wp-smoke-timeout={SMOKE_TIMEOUT_S}s wp-par={PAR}")
 
 
+def _wp_prover() -> str:
+    """WP's prover: the pinned alt-ergo unless T_FRAMAC_PROVER names z3 or cvc5, which WP reaches through Why3. Set only
+    for the common-mode audit (PREDICT T22's Frama-C half, internal/RESEARCH-2026-10-07-zoom-out.md D6), never for the
+    matrix of record; a non-default prover is named in version(), so a table built under it says so."""
+    p = os.environ.get("T_FRAMAC_PROVER", "alt-ergo")
+    if p not in ("alt-ergo", "z3", "cvc5"):
+        raise SystemExit(f"T_FRAMAC_PROVER={p!r}: one of alt-ergo, z3, cvc5")
+    return p
+
+
 def version() -> str:
     if not FRAMAC:
         raise SystemExit(_FRAMAC_WHY)
     p = subprocess.run([FRAMAC, "-version"], capture_output=True, text=True)
-    return f"frama-c {p.stdout.strip()} / alt-ergo 2.4.3-free"
+    v = f"frama-c {p.stdout.strip()} / alt-ergo 2.4.3-free"
+    return v if _wp_prover() == "alt-ergo" else f"{v} / prover {_wp_prover()}"
 
 
 def _ver() -> str:
@@ -864,7 +876,7 @@ def verify(path: Path, budget: int = DEFAULT_STEPS) -> Result:
         with tempfile.TemporaryDirectory(prefix="t-framac-report-", ignore_cleanup_errors=True) as td:
             rj = Path(td) / "report.json"
             rc, out = _run(
-                [FRAMAC, "-wp", "-wp-model", MODEL, "-wp-prover", "alt-ergo",
+                [FRAMAC, "-wp", "-wp-model", MODEL, "-wp-prover", _wp_prover(),
                  "-wp-steps",
                  str(budget), "-wp-cache", "none", "-wp-par", str(PAR),
                  "-wp-timeout", str(GOAL_TIMEOUT_S), "-wp-smoke-tests",

@@ -75,6 +75,34 @@ Restatement: is_permutation(v1, v2) is the allowed bounded restatement len(v1) =
 
 Notes: Classic nested-loop bubble sort with adjacent swaps (v_new := v_new[j := v_new[j+1]][j+1 := v_new[j]]). Outer invariant: every pair (k,l) with l >= n-i is ordered; inner invariant adds that v_new[j] is the maximum of the prefix [0..j]. The permutation is carried through the loops as is_permutation(v, v_new) and kept by a swap lemma perm_swap proved from probe-lifted occurrence-count lemmas (occn_upd/occ_upd/occ_swap by recursion on the count bound, occ_zero, perm_occ_pt/perm_occ_upto, which lift the pointwise facts to every position of a probe seq so the bounded quantifiers of the restatement are instantiated). DEVIATION FROM THE LETTER OF THE RULES: is_sorted is an `inline fun`, not a `spec fun`. Measured reason: the twin refutation certificate only unrolls bounded quantifiers that sit in the ensures; with `spec fun is_sorted` the certificate is `assert is_sorted(r) == false` and Dafny answers 'assertion might not hold' (run on the spec-fun variant of this very file), so the twin could never read refuted. The inline fun expands to the same bounded quantifier at every use. Kernel runs on this problem: 4 (one raw dafny run, one cli verify, one scratch run of the spec-fun variant's certificate, one cli verify after renaming to v_new/is_permutation). Largest Z3 cost of any symbol about 208k of the 500k rlimit (measured on the pre-rename text). The shared lemma package was first validated in a scratch lemma-only file (not a problem attempt). Interpreter finds no counterexample to the real body; twin = collapse-if (always swap), witness v=[0,1] -> twin [1,0].
 
+## discrete_logarithm
+
+Status: stated (2026-10-07, after SPEC.md "Datatypes (v2): fields"); Dafny verifies the real program and refutes its twin. Last verdict while writing: dafny: COUNTS, real is a real proof; collapse-if twin is refuted, the kernel found this wrong
+
+```
+datatype Option<T> = Some(value: T) | None => datatype Option = Some(value: int) | None
+function spec_pow_mod(b: int, e: int, m: int): int decreases e requires m > 1 { if e <= 0 then 1 else (b * spec_pow_mod(b, e - 1, m)) % m } => spec fun spec_pow_mod(b: int, e: int, m: int): int decreases e = if m <= 1 then 0 else if e <= 0 then 1 else (b * spec_pow_mod(b, e - 1, m)) % m
+predicate is_discrete_log(g: int, h: int, p: int, x: int) requires p > 1 { spec_pow_mod(g, x, p) == h % p } => spec fun is_discrete_log(g: int, h: int, p: int, x: int): bool decreases 0 = p > 1 and spec_pow_mod(g, x, p) == h % p
+requires g >= 0 && h >= 0 && p >= 0 => requires g >= 0 and h >= 0 and p >= 0
+requires p > 1 => requires p > 1
+ensures match res case Some(x) => is_discrete_log(g, h, p, x) && 0 <= x < p && (forall k :: 0 <= k < x ==> !is_discrete_log(g, h, p, k)) case None => forall k :: 0 <= k < p ==> !is_discrete_log(g, h, p, k) => ensures case res { Some(x) => is_discrete_log(g, h, p, x) and 0 <= x and x < p and (forall k in [0, x) . not is_discrete_log(g, h, p, k)), None => forall k in [0, p) . not is_discrete_log(g, h, p, k) }
+```
+
+Notes: First stated once datatypes carry fields. Two departures from the letter, both keeping the meaning.
+- **`Option<T>` is monomorphic.** It is used only at `T = int`, and t has no generic datatypes.
+- **The helpers are total.** t spec funs are total, as for `spec_sum` in maximum_subarray_sum. `spec_pow_mod` returns 0 where Dafny's `requires m > 1` fails. `is_discrete_log` conjoins `p > 1`, which also makes its `h % p` defined. Every call in the contract has `p > 1` from the method's requires, where both values are Dafny's.
+
+Body: a linear scan. `x` runs from 0 and `cur` holds `spec_pow_mod(g, x, p)`, updated as `(g * cur) % p`, which is the definition's own step for `x + 1 > 0` and `p > 1`, so no lemma is needed. The loop stops at the first `x` with `cur == h % p`, through the guard `res == Option.None`. The invariant is the contract's own match over `res`, with `None` quantifying over `[0, x)`.
+
+The program found five engine defects as it was written:
+- Lean refused the name `Option`, its prelude's (now `t_Option` in Lean text).
+- Verus's `use Option::*` was ambiguous with Rust's prelude (now qualified `self::`).
+- Dafny's undefined-kind replay had no constructor, field or match case.
+- Dafny's certificate unroller walked a ground match's arms with their binders unbound (now it reduces the match).
+- Lean's `simp only` cited the recursive `spec_pow_mod`'s equation, which never stops rewriting (recursive spec funs are now grind hints only).
+
+Twin: collapse-if, witness g=0, h=0, p=2: real `Option.Some(1)`, twin `Option.Some(0)`.
+
 ## fast_exponential
 
 Status: stated; Dafny verifies the real program and refutes its twin. Last verdict while writing: dafny: COUNTS, real is a real proof; negate-cond twin is refuted, the kernel found this wrong

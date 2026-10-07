@@ -10454,6 +10454,7 @@ def _comp_refusal(task: dict, body: list) -> None:
 def lower(task: dict, body: list, witness: dict | None = None,
           _unit: dict | None = None) -> str:
     import tshape
+    task, body = tshape.desugar_seq_quants(task, body)   # SPEC.md "Quantifiers over a collection": seq ranges as indices
     import framac_lib
     tshape.abstain_unless_carried(task, body, "framac", carried={"comp"},
                                   lib=framac_lib.FRAMAC_LIB)   # PREDICT T11: the library in Frama-C

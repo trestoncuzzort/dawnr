@@ -181,16 +181,18 @@ their reasons are in [CORRECTIONS.md](CORRECTIONS.md). A much larger model still
 **The seven kernels.** Every committed `t` task is lowered into seven proof systems: independent front ends over
 four distinct proof engines. Z3 sits behind Dafny, Verus, F* and SPARK as run here, Alt-Ergo behind Frama-C, and
 Lean and Rocq are small trusted kernels, Rocq's re-checked by `coqchk`. Each must prove the program and refute a deliberately broken
-twin at a concrete input, or refuse by name. Of the 88 tasks, Dafny proves 88, Verus 80, Rocq 62, Lean 61, F* 59,
-SPARK 56 and Frama-C 49. In every kernel, the twin of every proved program is refuted (100%). 48 tasks are proved,
-with the twin refuted, in all seven; the rest are named refusals,
-mostly of the constructs added on 2026-10-06, which the other kernels are being taught now
+twin at a concrete input, or refuse by name. Of the 94 tasks in the installed matrix, Dafny proves 94, Verus 86,
+Lean 68, Rocq 62, F* 59, SPARK 56 and Frama-C 49. In every kernel, the twin of every proved program is refuted (100%).
+48 tasks are proved, with the twin refuted, in all seven; the rest are named refusals, mostly of the constructs added
+on 2026-10-06 and 10-07, which the other kernels are being taught now. Since 10-07 the language also has datatypes
+with fields and recursive datatypes (proved in Dafny, Verus and Lean), and quantifiers over a set's or a seq's
+elements (a seq range in all seven kernels, a set range in Dafny and Verus)
 ([the matrix](t/AGREEMENT.md), regenerated from a clean clone of the engine's own repository). The engine (the
 language, its lowerings, the kernel adapters and the tasks) now has its own repository,
 [t-proof-engine](https://github.com/trestoncuzzort/t-proof-engine); `t/` here carries a pinned copy
-([t/ENGINE.md](t/ENGINE.md)). 21 of AlgoVeri's contracts are stated in t there too ([t/algoveri/](t/algoveri/)):
-Dafny verifies all 21 with the twin refuted, the other six kernels far fewer, and the 13 cells their lowerings could
-not yet express are each named, with the repairs underway ([t/ALGOVERI.md](t/ALGOVERI.md)).
+([t/ENGINE.md](t/ENGINE.md)). 22 of AlgoVeri's contracts are stated in t there too ([t/algoveri/](t/algoveri/)):
+Dafny verifies all 22 with the twin refuted (Verus 7, F* 5, SPARK 3, Frama-C 2, Rocq 1, Lean 0). Of the 13 cells
+the lowerings could not first express, 11 are repaired and the other two are named ([t/ALGOVERI.md](t/ALGOVERI.md)).
 
 **What went wrong**, kept on the record: a file written into a folder the request did not name; two files
 "swapped" with a command that lost one; the smaller of two files removed when the larger was asked for; a

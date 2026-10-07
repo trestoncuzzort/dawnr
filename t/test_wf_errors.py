@@ -105,9 +105,9 @@ UNREACHABLE = {
     # SPEC.md "Datatypes (v1)" (2026-09-27): datatype-name/-dup/-empty and
     # ctor-name/-unknown are all guards the PARSER itself already enforces
     # before check_wf ever sees the task, exactly the same posture as
-    # "name"/"return-name"/"strlib-arity" above; ctor-fields-not-v1 and
-    # ctor-argtype guard a shape (a fielded constructor) the notation
-    # cannot write in this v1 landing at all.
+    # "name"/"return-name"/"strlib-arity" above. (SPEC.md "Datatypes (v2):
+    # fields", 2026-10-07: a fielded constructor is now written, so
+    # ctor-argtype has a fixture and ctor-fields-not-v1 is retired.)
     "datatype-name": "datatype_decl() reads a datatype's name with "
                      "self.name() (an 'id' token, already NAME_RE by "
                      "construction, exactly as a task/spec_fun name is), "
@@ -133,23 +133,10 @@ UNREACHABLE = {
                  "datatype_decl() (the declaration) and p_atom()'s "
                  "ctor-reference branch (a use), each an 'id' token, "
                  "already NAME_RE by construction.",
-    "ctor-fields-not-v1": "this v1 landing's datatype_decl() has no "
-                          "notation for a field list at all (a constructor "
-                          "is a bare name, full stop), so the parser "
-                          "cannot build a ctor dict whose 'fields' is "
-                          "non-empty; the rule guards the JSON gate for "
-                          "the record wave ahead.",
     "ctor-unknown": "p_atom()'s ctor-reference branch (`D.C`) checks `C` "
                     "against self.datatypes[D] (the declared constructor "
                     "list) and raises a SurfaceError itself when it is "
                     "not there, before any ctor AST node is built.",
-    "ctor-argtype": "reached only when a ctor's field COUNT already "
-                    "matches (ctor-arity's own guard) and at least one "
-                    "field exists to mistype; ctor-fields-not-v1 refuses "
-                    "every declared datatype with a non-empty field list "
-                    "in this v1 landing, so no ctor this file's `dtypes` "
-                    "ever builds has a field for an argument to mismatch "
-                    "against, from ANY input, malformed or not.",
 }
 
 

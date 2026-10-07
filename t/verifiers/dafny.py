@@ -297,11 +297,35 @@ _RP_CLAUSE = re.compile(r"^  ([a-z]+)\b")
 _CERT_HEAD = re.compile(r"^lemma t_refutation_certificate\(\)\s*$")
 
 
+def _solver() -> str:
+    """Boogie's SMT solver: the bundled Z3 unless T_DAFNY_SOLVER=cvc5. Set only for the common-mode audit (PREDICT
+    T22's Dafny half, internal/RESEARCH-2026-10-07-zoom-out.md D6), never for the matrix of record; a non-default
+    solver is named in version(), so a table built under it says so."""
+    s = os.environ.get("T_DAFNY_SOLVER", "z3")
+    if s not in ("z3", "cvc5"):
+        raise SystemExit(f"T_DAFNY_SOLVER={s!r}: one of z3, cvc5")
+    return s
+
+
+def _solver_args() -> list:
+    """Boogie's CVC5 route (its SOLVER option, marked experimental by Boogie): `--solver-path` to a CVC5 binary, from
+    T_CVC5 or gnatprove's bundled one, and `/proverOpt:SOLVER=CVC5`. The resource limit is passed unchanged; its
+    units are the solver's own, so a TIMEOUT under CVC5 is a budget difference, never a disagreement."""
+    if _solver() == "z3":
+        return []
+    cvc5 = os.environ.get("T_CVC5") or str(next(Path.home().glob(
+        ".local/gnatprove/*/libexec/spark/bin/cvc5"), ""))
+    if not cvc5 or not Path(cvc5).exists():
+        raise SystemExit("T_DAFNY_SOLVER=cvc5: no CVC5 binary (set T_CVC5)")
+    return ["--solver-path", cvc5, "--boogie", "/proverOpt:SOLVER=CVC5"]
+
+
 def version() -> str:
     if not DAFNY:
         raise SystemExit(_DAFNY_WHY)
     p = subprocess.run([DAFNY, "--version"], capture_output=True, text=True)
-    return f"dafny {p.stdout.strip()}"
+    v = f"dafny {p.stdout.strip()}"
+    return v if _solver() == "z3" else f"{v} / solver {_solver()}"
 
 
 def _mask_inert(s: str) -> str:
@@ -422,7 +446,7 @@ _DT_CTOR = re.compile(r"^([A-Za-z_]\w*)(?:\(([^()]*)\))?$")
 _DT_FIELD = re.compile(r"^[A-Za-z_]\w*\s*:\s*(?:int|bool|nat|seq<int>|seq<seq<int>>|string)$")
 
 
-def _inert_datatype(d: dict) -> bool:
+def _inert_datatype(d: dict, dt_names: frozenset = frozenset()) -> bool:
     """True for a datatype declaration that can hide nothing: no modifier,
     no clause, no member body, and a head that is exactly `datatype Name =
     Ctor | Ctor(field: T, ...)` with T among int, bool, nat, seq<int>,
@@ -443,9 +467,20 @@ def _inert_datatype(d: dict) -> bool:
             return False
         if c.group(2) is not None:
             fields = [f.strip() for f in c.group(2).split(",")]
-            if not fields or not all(_DT_FIELD.match(f) for f in fields):
+            if not fields or not all(_DT_FIELD.match(f) or _dt_field_named(f, dt_names) for f in fields):
                 return False
     return True
+
+
+_DT_FIELD_NAMED = re.compile(r"^[A-Za-z_]\w*\s*:\s*([A-Za-z_]\w*)$")
+
+
+def _dt_field_named(field: str, dt_names: frozenset) -> bool:
+    """A field whose type is a datatype this same program declares (SPEC.md "Datatypes (v3): recursion": a tree's
+    `l: Tree`). It is inert for the same reason the declaration is; each such datatype is itself held to
+    _inert_datatype, so a name of anything else (a class, a type synonym) stays outside the vocabulary."""
+    m = _DT_FIELD_NAMED.match(field)
+    return bool(m) and m.group(1) in dt_names
 
 
 def _certificate_shape(rprint: str | None) -> tuple[list[str], str]:
@@ -462,8 +497,9 @@ def _certificate_shape(rprint: str | None) -> tuple[list[str], str]:
     methods: list[str] = []
     names: set[str] = set()
     cert: list[dict] = []
+    dt_names = frozenset(d["name"] for d in decls if d["kind"] == "datatype" and d["name"] and not d["mods"])
     for d in decls:
-        if _inert_datatype(d):
+        if _inert_datatype(d, dt_names):
             if d["name"] in names:
                 return [], f"name declared twice: {d['name']}"
             names.add(d["name"])
@@ -534,7 +570,7 @@ def _check_certificate(path: Path, budget: int, banned: list,
     t0 = time.monotonic()
     try:
         p = run_tree(
-            [DAFNY, "verify", f"--filter-symbol={CERT_NAME}.",
+            [DAFNY, "verify", *_solver_args(), f"--filter-symbol={CERT_NAME}.",
              "--log-format", "text",
              "--resource-limit", str(budget),
              "--warn-contradictory-assumptions", str(path)],
@@ -602,7 +638,7 @@ def verify(path: Path, budget: int = DEFAULT_RLIMIT) -> Result:
     t0 = time.monotonic()
     try:
         p = run_tree(
-            [DAFNY, "verify", "--resource-limit", str(budget),
+            [DAFNY, "verify", *_solver_args(), "--resource-limit", str(budget),
              "--warn-contradictory-assumptions",
              "--rprint", rp_name, "--log-format", "text", str(path)],
             capture_output=True, text=True, timeout=WALL_S)
