@@ -208,6 +208,20 @@ were called "the student"; files and tags that still say so are these same dawnr
 be done by a larger model behind any OpenAI-compatible address (`DAWNR_WRITER_URL`): whatever writes is never
 trusted, and the checks stay on your machine.
 
+## The projects behind it
+
+dawnr grew as one repository and is now four, each with its own history:
+
+| Repository | What it is |
+|---|---|
+| **dawnr** (this one) | the assistant: the `dawnr` command, the harness, the agent, memory, retrieval, the checks, the installer and the model releases |
+| [t-proof-engine](https://github.com/trestoncuzzort/t-proof-engine) | `t`, the specification language, and its seven-prover verifier with the sabotaged-twin check |
+| [locallm](https://github.com/trestoncuzzort/locallm) | the transformer trainer that builds models from random weights, and its research record |
+| [tup](https://github.com/trestoncuzzort/tup) | Linux From Scratch built by a driver, with a receipt on every step and two boot witnesses |
+
+`locallm/` and `tup/` here are the copies they were split from on 2026-10-08; dawnr's pipeline still imports from
+`locallm/`, the way `t/` carries a pinned copy of the engine. New work on either lands in its own repository first.
+
 ## Learn more
 
 | If you want to... | Read... |

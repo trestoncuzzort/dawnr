@@ -21,6 +21,12 @@ documents. It was split out on 2026-10-06 with its history. `t/` here carries a 
 the commit) beside the pipeline scripts, which still live here. Engine changes land in t-proof-engine first, then
 `bash t/sync_engine.sh` brings them here; never edit an engine file only in this repository.
 
+**locallm and tup have their own repositories too** (split out with their history on 2026-10-08):
+[locallm](https://github.com/trestoncuzzort/locallm) holds the trainer, its experiments and findings;
+[tup](https://github.com/trestoncuzzort/tup) holds the receipted Linux From Scratch build. `locallm/` here stays the copy
+dawnr's pipeline imports from (the assistant layer, `dawnr_*`, chat, home and the tool evaluations, lives only here);
+`tup/` here is the copy it was split from. New trainer or build work lands in its own repository first.
+
 ## The rules that matter
 
 1. **Measure before you claim.** Every number in this repository links to the script that produced it. If you

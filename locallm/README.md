@@ -1,5 +1,8 @@
 # locallm
 
+> **locallm now has its own repository, with its history: [github.com/trestoncuzzort/locallm](https://github.com/trestoncuzzort/locallm).**
+> This folder is the copy dawnr's pipeline imports from; the trainer continues there.
+
 **A local learning model: a small model that learns whatever your machine writes —
 trained from scratch, on your own hardware, from your own data.**
 

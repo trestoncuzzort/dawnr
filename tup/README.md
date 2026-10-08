@@ -1,5 +1,8 @@
 # tup
 
+> **tup now has its own repository, with its history: [github.com/trestoncuzzort/tup](https://github.com/trestoncuzzort/tup).**
+> This folder is the copy it was split from on 2026-10-08; the build continues there.
+
 **A Linux distribution built from source with a receipt on every step.**
 
 tup is Linux From Scratch (arm64, r12.4) built by a driver instead of by hand,
