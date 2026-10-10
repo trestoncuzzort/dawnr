@@ -1,0 +1,1535 @@
+{
+  "cases": [
+    {
+      "compiler_flags": [
+        "-std=c++17",
+        "-O1",
+        "-ffp-contract=off",
+        "-w",
+        "-Dprivate=public",
+        "-I<source>/src/lib",
+        "-I<source>/src/lib/matrix",
+        "-I<stub>"
+      ],
+      "inputs_sha256": "48a30ab3978c77c67c4114604e770ad178738bffd558dcaf3968ee5cf0b8d8f1",
+      "name": "px4_alpha_update",
+      "planned_inputs": 400,
+      "processes": [
+        {
+          "exit_code": 0,
+          "outcome": "completed",
+          "phase": "compile",
+          "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "stdout_lines": 0,
+          "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "exit_code": 0,
+          "outcome": "completed",
+          "phase": "runtime",
+          "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "stdout_lines": 400,
+          "stdout_sha256": "3774a40b6645ce4a9514155617bd10db961abb4f334b39d4545532e3c2c26096"
+        }
+      ],
+      "result": {
+        "narrowed_points": 90,
+        "points": 400,
+        "returned_rows": 400,
+        "status": "agrees once PX4's float narrowing of alpha is applied"
+      },
+      "role": "function",
+      "task_ast_sha256": "5b23d6ec2fe56a572647a540be06f72d062dc35d76fbe8a965e6e3d22e8c7ad4",
+      "task_source_sha256": "2581fc531e4368a5730377fa3f335d34f30262de32b5a1890d6de86e00881bd8",
+      "wrapper_sha256": "e71f7dda6c561fd7e30ee20fad6e02d1b6bfca69b86b7d55fcb9a7a4b4a43f4b"
+    },
+    {
+      "compiler_flags": [
+        "-std=c++17",
+        "-O1",
+        "-ffp-contract=off",
+        "-w",
+        "-Dprivate=public",
+        "-I<source>/src/lib",
+        "-I<source>/src/lib/matrix",
+        "-I<stub>"
+      ],
+      "inputs_sha256": "47c95ad3919b8ae18bb446e4077b280b9eaa1c8c5b7461971bb5929a2e19b0fd",
+      "name": "px4_constrain",
+      "planned_inputs": 400,
+      "processes": [
+        {
+          "exit_code": 0,
+          "outcome": "completed",
+          "phase": "compile",
+          "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "stdout_lines": 0,
+          "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "exit_code": 0,
+          "outcome": "completed",
+          "phase": "runtime",
+          "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "stdout_lines": 400,
+          "stdout_sha256": "2036dfcfa616bf351f4dd34e16626d14dbe407257bdc9c52d01e9542c419d064"
+        }
+      ],
+      "result": {
+        "points": 400,
+        "returned_rows": 400,
+        "status": "agrees"
+      },
+      "role": "function",
+      "task_ast_sha256": "fce19f2450b9fb4b94326ed96032df711656997109e69ba08b5b63849cd8a091",
+      "task_source_sha256": "0613cd0e8e4b1684670964e5bb21e2c01c6f943b77aef2656a40ddec90e47a61",
+      "wrapper_sha256": "cd3af943f159319dd2de0cf5e3f6b7d9703547f18db56c346e431369c5f5d313"
+    },
+    {
+      "compiler_flags": [
+        "-std=c++17",
+        "-O1",
+        "-ffp-contract=off",
+        "-w",
+        "-Dprivate=public",
+        "-I<source>/src/lib",
+        "-I<source>/src/lib/matrix",
+        "-I<stub>"
+      ],
+      "inputs_sha256": "0c1ea09f62202016e8e405e69e122cff71864b430742416d91970f6d6aad60e8",
+      "name": "px4_constrain_f",
+      "planned_inputs": 400,
+      "processes": [
+        {
+          "exit_code": 0,
+          "outcome": "completed",
+          "phase": "compile",
+          "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "stdout_lines": 0,
+          "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "exit_code": 0,
+          "outcome": "completed",
+          "phase": "runtime",
+          "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "stdout_lines": 400,
+          "stdout_sha256": "0d1abc0dfc51ceb50aa26b2623ce3b95b23a78e05eac002531c194ad28dce15f"
+        }
+      ],
+      "result": {
+        "points": 400,
+        "returned_rows": 400,
+        "status": "agrees"
+      },
+      "role": "function",
+      "task_ast_sha256": "5887ccc1771b67bfde128299e37ae2167fa70a2744532beef8dcca54fc6f7396",
+      "task_source_sha256": "76f6cc1fba173821233a25e4ffe4597a75dc029f0ebe8c5a580f87ef6fd5fb3e",
+      "wrapper_sha256": "d435273a9f12d98d041703eb9ec56c38e9bd153dfd119d49ed45f3b4b13a686e"
+    },
+    {
+      "compiler_flags": [
+        "-std=c++17",
+        "-O1",
+        "-ffp-contract=off",
+        "-w",
+        "-Dprivate=public",
+        "-I<source>/src/lib",
+        "-I<source>/src/lib/matrix",
+        "-I<stub>"
+      ],
+      "inputs_sha256": "ead9e43e59b0259b82b0027936d2146101fdda8d2ecbe53b239f9b093b66d0be",
+      "name": "px4_hysteresis_holds",
+      "planned_inputs": 255,
+      "processes": [
+        {
+          "exit_code": 0,
+          "outcome": "completed",
+          "phase": "compile",
+          "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "stdout_lines": 0,
+          "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "exit_code": 0,
+          "outcome": "completed",
+          "phase": "runtime",
+          "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "stdout_lines": 255,
+          "stdout_sha256": "a5391a65023e1bb89776d51ce39f028a11668cfbccdf6f1b6a42e965733e5867"
+        }
+      ],
+      "result": {
+        "points": 255,
+        "returned_rows": 255,
+        "status": "agrees"
+      },
+      "role": "function",
+      "task_ast_sha256": "203a4203fffdc6bb133a4ba888d37c8e899d38a856c241c8c3a50cb929e99dc4",
+      "task_source_sha256": "7732b6bade87377a8519c2da465b2593621c9c819ee0d9c6fe47357ec515a003",
+      "wrapper_sha256": "c29256279f102929527af6c4fb99956709faaab5fe5114190ade52c71fa7158f"
+    },
+    {
+      "compiler_flags": [
+        "-std=c++17",
+        "-O1",
+        "-ffp-contract=off",
+        "-w",
+        "-Dprivate=public",
+        "-I<source>/src/lib",
+        "-I<source>/src/lib/matrix",
+        "-I<stub>"
+      ],
+      "inputs_sha256": "de2817de4a97fb8ecb4223a56064c103937770e11f2c4e8e17e928a59b10adf9",
+      "name": "px4_hysteresis_set",
+      "planned_inputs": 400,
+      "processes": [
+        {
+          "exit_code": 0,
+          "outcome": "completed",
+          "phase": "compile",
+          "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "stdout_lines": 0,
+          "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "exit_code": 0,
+          "outcome": "completed",
+          "phase": "runtime",
+          "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "stdout_lines": 400,
+          "stdout_sha256": "025fc2c456f7d86426b22d8570d34b7abf942733ad82f7feaf40b1867d77eb10"
+        }
+      ],
+      "result": {
+        "points": 400,
+        "returned_rows": 400,
+        "status": "agrees"
+      },
+      "role": "function",
+      "task_ast_sha256": "11ac7be8580d4bed0ea4556ba7806f1870a5c83ecc42e94a5027569d29ac53da",
+      "task_source_sha256": "674dae1f9ac09274146c08ec35e47b216946c7f79e7e4e4984e6c65aadf85319",
+      "wrapper_sha256": "41bbde5f4fad8ea709b2a955f252683b4130686806511cbeb9ecb0d6507e56f3"
+    },
+    {
+      "compiler_flags": [
+        "-std=c++17",
+        "-O1",
+        "-ffp-contract=off",
+        "-w",
+        "-Dprivate=public",
+        "-I<source>/src/lib",
+        "-I<source>/src/lib/matrix",
+        "-I<stub>"
+      ],
+      "inputs_sha256": "18faa54e04527e63d87a9b96085e174ab6644a15653579ca815f53e317b1d064",
+      "name": "px4_hysteresis_switches",
+      "planned_inputs": 66,
+      "processes": [
+        {
+          "exit_code": 0,
+          "outcome": "completed",
+          "phase": "compile",
+          "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "stdout_lines": 0,
+          "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "exit_code": 0,
+          "outcome": "completed",
+          "phase": "runtime",
+          "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "stdout_lines": 66,
+          "stdout_sha256": "5f27bbc3d9846dd029090821e03d0a83bb5baf452b7766d649d194c2c08f9f30"
+        }
+      ],
+      "result": {
+        "points": 66,
+        "returned_rows": 66,
+        "status": "agrees"
+      },
+      "role": "function",
+      "task_ast_sha256": "8519bb1404e6c5da9ca41b3a9be4f7b3bde132b6096545ba9b8866ec42682579",
+      "task_source_sha256": "62260f924205b7e71fa60f278c4047935ae85289ab7dae0c644a48165172b387",
+      "wrapper_sha256": "ffe8f7ea80fff6bcd2a68f1cf9c65a8eb8fb6486a6376f08dbd1d1437f47cb10"
+    },
+    {
+      "compiler_flags": [
+        "-std=c++17",
+        "-O1",
+        "-ffp-contract=off",
+        "-w",
+        "-Dprivate=public",
+        "-I<source>/src/lib",
+        "-I<source>/src/lib/matrix",
+        "-I<stub>"
+      ],
+      "inputs_sha256": "bc1ae438fdf04064892b6bebd4822f90fde0ce34ec56d10dc775f4b49af45ca0",
+      "name": "px4_hysteresis_update",
+      "planned_inputs": 324,
+      "processes": [
+        {
+          "exit_code": 0,
+          "outcome": "completed",
+          "phase": "compile",
+          "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "stdout_lines": 0,
+          "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "exit_code": 0,
+          "outcome": "completed",
+          "phase": "runtime",
+          "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "stdout_lines": 324,
+          "stdout_sha256": "6959504524fd82e1fc69e94590544a0a6196877294bd0dda211814bd1ef89490"
+        }
+      ],
+      "result": {
+        "points": 324,
+        "returned_rows": 324,
+        "status": "agrees"
+      },
+      "role": "function",
+      "task_ast_sha256": "1d10bc7d907811fd703f3aba8e0e1b1fe18d661665388b337bd39fbf5f0e81b5",
+      "task_source_sha256": "a530296c4e57035061efb3076a60bbe907bd98f1a30714b3e209a7cca89a5bb7",
+      "wrapper_sha256": "f10a109fe4a5ba2524afb70d30148fb5ea1e890984bb3c5866accf57720adb3e"
+    },
+    {
+      "compiler_flags": [
+        "-std=c++17",
+        "-O1",
+        "-ffp-contract=off",
+        "-w",
+        "-Dprivate=public",
+        "-I<source>/src/lib",
+        "-I<source>/src/lib/matrix",
+        "-I<stub>"
+      ],
+      "inputs_sha256": "5d1d4556a44e5bde352bd76dcec3b7cad66b901248486bbff9a06e8e55355b8e",
+      "name": "px4_interpolate",
+      "planned_inputs": 400,
+      "processes": [
+        {
+          "exit_code": 0,
+          "outcome": "completed",
+          "phase": "compile",
+          "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "stdout_lines": 0,
+          "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "exit_code": 0,
+          "outcome": "completed",
+          "phase": "runtime",
+          "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "stdout_lines": 400,
+          "stdout_sha256": "ad463cba618a037e2050eab24e15a061b5ce97ddb83ffc1f4774bb99ab5d8201"
+        }
+      ],
+      "result": {
+        "points": 400,
+        "returned_rows": 400,
+        "status": "agrees"
+      },
+      "role": "function",
+      "task_ast_sha256": "a5e90d03047f4754f54194a9f748d905e427a2b4fb0d13715160826e7c21b437",
+      "task_source_sha256": "51750ef876c9eb64533f05c5f0cd4dbbce881f24baa062eedd3a148cf53236d2",
+      "wrapper_sha256": "969ea54974e276a40e6f4fd1f7f613a84590cef6bc712e23c0dbc2c61196b6ad"
+    },
+    {
+      "compiler_flags": [
+        "-std=c++17",
+        "-O1",
+        "-ffp-contract=off",
+        "-w",
+        "-Dprivate=public",
+        "-I<source>/src/lib",
+        "-I<source>/src/lib/matrix",
+        "-I<stub>"
+      ],
+      "inputs_sha256": "dcdde3f2a1abbecf184cc254e7794bb2992d791487a906efc957b8ae008f64f0",
+      "name": "px4_is_in_range",
+      "planned_inputs": 400,
+      "processes": [
+        {
+          "exit_code": 0,
+          "outcome": "completed",
+          "phase": "compile",
+          "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "stdout_lines": 0,
+          "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "exit_code": 0,
+          "outcome": "completed",
+          "phase": "runtime",
+          "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "stdout_lines": 400,
+          "stdout_sha256": "3ae03b4fc715faae449e34b2c41aa5dbe493818c6248671602085d9c40280abd"
+        }
+      ],
+      "result": {
+        "points": 400,
+        "returned_rows": 400,
+        "status": "agrees"
+      },
+      "role": "function",
+      "task_ast_sha256": "49f0dea2ac482a0ef87b82a7026f4ac7b2c052804f8c068ffe322b45c68f2438",
+      "task_source_sha256": "cb0a7626b92ea3ac6f70f44ae77ea34493371f79debb2ee1cc105d21d035fb80",
+      "wrapper_sha256": "99bd56d8c96b5a0384a05f24f0650a2d9ed0e03e1759c816550ec27f78e0c80c"
+    },
+    {
+      "compiler_flags": [
+        "-std=c++17",
+        "-O1",
+        "-ffp-contract=off",
+        "-w",
+        "-Dprivate=public",
+        "-I<source>/src/lib",
+        "-I<source>/src/lib/matrix",
+        "-I<stub>"
+      ],
+      "inputs_sha256": "930a05db51e861f85664c4dc38bd6bb46739d81aeef956a09a8a3b1ee923d0ac",
+      "name": "px4_lerp",
+      "planned_inputs": 400,
+      "processes": [
+        {
+          "exit_code": 0,
+          "outcome": "completed",
+          "phase": "compile",
+          "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "stdout_lines": 0,
+          "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "exit_code": 0,
+          "outcome": "completed",
+          "phase": "runtime",
+          "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "stdout_lines": 400,
+          "stdout_sha256": "7f961a7213e69b1537b7ba04b93d348b4aa3e3dbf46efc1baffe215c533a67e7"
+        }
+      ],
+      "result": {
+        "points": 400,
+        "returned_rows": 400,
+        "status": "agrees"
+      },
+      "role": "function",
+      "task_ast_sha256": "9f2539628cfa9829be18a012b055c84e20f8f7e05bd880e1dde375e8a33c6f06",
+      "task_source_sha256": "b14616e685ffe18e317be45ff185ec8a43c3fae0ecc69cde0d5f75ebe2ca25aa",
+      "wrapper_sha256": "8fcd86625b7bea98262aaa49fd1c0309ef8fd2a84cf82e6eb0349a25db20cff9"
+    },
+    {
+      "compiler_flags": [
+        "-std=c++17",
+        "-O1",
+        "-ffp-contract=off",
+        "-w",
+        "-Dprivate=public",
+        "-I<source>/src/lib",
+        "-I<source>/src/lib/matrix",
+        "-I<stub>"
+      ],
+      "inputs_sha256": "618b6d5acbfe641e92515bf57a2994b0ce5c2e39445aad57a4894c4aa369ccba",
+      "name": "px4_max",
+      "planned_inputs": 400,
+      "processes": [
+        {
+          "exit_code": 0,
+          "outcome": "completed",
+          "phase": "compile",
+          "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "stdout_lines": 0,
+          "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "exit_code": 0,
+          "outcome": "completed",
+          "phase": "runtime",
+          "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "stdout_lines": 400,
+          "stdout_sha256": "77d9eeb7d0d277557d93bc25a0c7a09318ee509bf0b9563029ec9546161b4af5"
+        }
+      ],
+      "result": {
+        "points": 400,
+        "returned_rows": 400,
+        "status": "agrees"
+      },
+      "role": "function",
+      "task_ast_sha256": "9608f71e4dd2d1ec93db42f04c65352f7cc81afb54e1313d9aee9c0ce5a0ce15",
+      "task_source_sha256": "08c41786d999e26e7cf0bc3ed7f21174675fafc42005e13cab27e9a30bef0ad8",
+      "wrapper_sha256": "1be3f343db6a6e704f4c0db2752569b96594571a0aeb380eeff0efbada55e2a3"
+    },
+    {
+      "compiler_flags": [
+        "-std=c++17",
+        "-O1",
+        "-ffp-contract=off",
+        "-w",
+        "-Dprivate=public",
+        "-I<source>/src/lib",
+        "-I<source>/src/lib/matrix",
+        "-I<stub>"
+      ],
+      "inputs_sha256": "d1f0dbda6154d2c415089bdde8852f845661458237fa9739264626ad072bc282",
+      "name": "px4_max3",
+      "planned_inputs": 400,
+      "processes": [
+        {
+          "exit_code": 0,
+          "outcome": "completed",
+          "phase": "compile",
+          "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "stdout_lines": 0,
+          "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "exit_code": 0,
+          "outcome": "completed",
+          "phase": "runtime",
+          "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "stdout_lines": 400,
+          "stdout_sha256": "0844a655f22fd1b22b5c7a545712b04af39b2ba215a4a8962f78b1e1a0efd12a"
+        }
+      ],
+      "result": {
+        "points": 400,
+        "returned_rows": 400,
+        "status": "agrees"
+      },
+      "role": "function",
+      "task_ast_sha256": "563beb76e8417b0aac951334d13219e8a75ba3dac416a3f32c311fe984f0f221",
+      "task_source_sha256": "9934f3e2b2e5f15e5541337e739fb78c2c97d874a8d984c861e1212d0d4fa086",
+      "wrapper_sha256": "e19c5429136b3abbf780b72a378bc4cfbb8128a9f7d42ecd41a00b60a2aab35a"
+    },
+    {
+      "compiler_flags": [
+        "-std=c++17",
+        "-O1",
+        "-ffp-contract=off",
+        "-w",
+        "-Dprivate=public",
+        "-I<source>/src/lib",
+        "-I<source>/src/lib/matrix",
+        "-I<stub>"
+      ],
+      "inputs_sha256": "618b6d5acbfe641e92515bf57a2994b0ce5c2e39445aad57a4894c4aa369ccba",
+      "name": "px4_min",
+      "planned_inputs": 400,
+      "processes": [
+        {
+          "exit_code": 0,
+          "outcome": "completed",
+          "phase": "compile",
+          "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "stdout_lines": 0,
+          "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "exit_code": 0,
+          "outcome": "completed",
+          "phase": "runtime",
+          "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "stdout_lines": 400,
+          "stdout_sha256": "c31d9ede48669fd29f044c4fad06b349b21f7f64fe052aa995bd3e807548421f"
+        }
+      ],
+      "result": {
+        "points": 400,
+        "returned_rows": 400,
+        "status": "agrees"
+      },
+      "role": "function",
+      "task_ast_sha256": "d8523b3baac73031a744d71a685a3ab3872aac138e8c4c00e1d08e40832ef04d",
+      "task_source_sha256": "7f54b9a85425b6d125d78254d815937151b840623963281c466211078b6b2023",
+      "wrapper_sha256": "882da0386e7fb20cd8fe25a8176d69da6694d9f5b129b31c3965c9e9dc19d84d"
+    },
+    {
+      "compiler_flags": [
+        "-std=c++17",
+        "-O1",
+        "-ffp-contract=off",
+        "-w",
+        "-Dprivate=public",
+        "-I<source>/src/lib",
+        "-I<source>/src/lib/matrix",
+        "-I<stub>"
+      ],
+      "inputs_sha256": "d1f0dbda6154d2c415089bdde8852f845661458237fa9739264626ad072bc282",
+      "name": "px4_min3",
+      "planned_inputs": 400,
+      "processes": [
+        {
+          "exit_code": 0,
+          "outcome": "completed",
+          "phase": "compile",
+          "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "stdout_lines": 0,
+          "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "exit_code": 0,
+          "outcome": "completed",
+          "phase": "runtime",
+          "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "stdout_lines": 400,
+          "stdout_sha256": "1c750847715ab65ecc0e58b9b76d84ad376416a6f50bd3abf9b0436c653d9868"
+        }
+      ],
+      "result": {
+        "points": 400,
+        "returned_rows": 400,
+        "status": "agrees"
+      },
+      "role": "function",
+      "task_ast_sha256": "3e742bd0bb69aaa935211a020a1c2e07dad49c32295c1377e004d518c40429af",
+      "task_source_sha256": "a59aaddce6883c9a1a5e4625815ac723685bf749602c0dd9eee3339a1c55256f",
+      "wrapper_sha256": "3d18b0505f7e5444862b02dce0658ef2d0387675d13f4d26b7bea10c5cf2adae"
+    },
+    {
+      "compiler_flags": [
+        "-std=c++17",
+        "-O1",
+        "-ffp-contract=off",
+        "-w",
+        "-Dprivate=public",
+        "-I<source>/src/lib",
+        "-I<source>/src/lib/matrix",
+        "-I<stub>"
+      ],
+      "inputs_sha256": "b5381ace612038d4344e6875dc5479b9c31b21b27e787628ae6a17345b1f1e74",
+      "name": "px4_negate_i16",
+      "planned_inputs": 85,
+      "processes": [
+        {
+          "exit_code": 0,
+          "outcome": "completed",
+          "phase": "compile",
+          "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "stdout_lines": 0,
+          "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "exit_code": 0,
+          "outcome": "completed",
+          "phase": "runtime",
+          "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "stdout_lines": 85,
+          "stdout_sha256": "a8fa2b03185e5fcc1363e7883df6378fc9511c564cd5825b1a20083022566a3e"
+        }
+      ],
+      "result": {
+        "points": 85,
+        "returned_rows": 85,
+        "status": "agrees"
+      },
+      "role": "function",
+      "task_ast_sha256": "be8f34901de7c5a82cf93cd0edf946a20f771726bc4096f483e494b4a506be57",
+      "task_source_sha256": "6d70acf6729c458ac4177856b733d7fdfa0d67751ab83ddeb2091222dbd97e0d",
+      "wrapper_sha256": "1d0848ef79a3917bf69b4b8efb865a8eb65fa1240ddd64d3625d02dc4463bd72"
+    },
+    {
+      "compiler_flags": [
+        "-std=c++17",
+        "-O1",
+        "-ffp-contract=off",
+        "-w",
+        "-Dprivate=public",
+        "-I<source>/src/lib",
+        "-I<source>/src/lib/matrix",
+        "-I<stub>"
+      ],
+      "inputs_sha256": "735b244485f2e9504e446583159f5ddec50e04260afd3c31d20e1f01845bf7b2",
+      "name": "px4_rb_pop_front",
+      "planned_inputs": 104,
+      "processes": [
+        {
+          "exit_code": 0,
+          "outcome": "completed",
+          "phase": "compile",
+          "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "stdout_lines": 0,
+          "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "exit_code": 0,
+          "outcome": "completed",
+          "phase": "runtime",
+          "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "stdout_lines": 104,
+          "stdout_sha256": "f0df2a804c1228a88907deb4a85af8a1415c352f4df158ba11714b7231bd378c"
+        }
+      ],
+      "result": {
+        "points": 104,
+        "returned_rows": 104,
+        "status": "agrees"
+      },
+      "role": "function",
+      "task_ast_sha256": "632386bdf8995b541d26c128a0702844158c70dd3de895ab3fc70f64a5becb6d",
+      "task_source_sha256": "4724ef987da6b05f2b19b066874d4c114d617f422357f0e8f1da3f279d12e54c",
+      "wrapper_sha256": "efaaa1ca26a9085b80ded4b9cc59438f571c3ef148d935c545788a0db6295ad8"
+    },
+    {
+      "compiler_flags": [
+        "-std=c++17",
+        "-O1",
+        "-ffp-contract=off",
+        "-w",
+        "-Dprivate=public",
+        "-I<source>/src/lib",
+        "-I<source>/src/lib/matrix",
+        "-I<stub>"
+      ],
+      "inputs_sha256": "9de7c2f97eeab13a2d1a6b526473e252220874a564f9f4d878c2a644dc35daf4",
+      "name": "px4_rb_push_back",
+      "planned_inputs": 104,
+      "processes": [
+        {
+          "exit_code": 0,
+          "outcome": "completed",
+          "phase": "compile",
+          "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "stdout_lines": 0,
+          "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "exit_code": 0,
+          "outcome": "completed",
+          "phase": "runtime",
+          "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "stdout_lines": 104,
+          "stdout_sha256": "cbad4814be791fdf088b0d87dc6e2a6056cb563037dd6279436bea8bd6b551e7"
+        }
+      ],
+      "result": {
+        "points": 104,
+        "returned_rows": 104,
+        "status": "agrees"
+      },
+      "role": "function",
+      "task_ast_sha256": "cbf0f14e4ceb2688e247618c83ded8b7de8fbd5e423663c25a51318536d42816",
+      "task_source_sha256": "674406d05e74b6b1168a2852b0c55e0eb190d7a07742715eeefe139b90db096a",
+      "wrapper_sha256": "c6c395edcda7d070f60f786a4e43eb54d98945195a049967aeadfea6429bb721"
+    },
+    {
+      "compiler_flags": [
+        "-std=c++17",
+        "-O1",
+        "-ffp-contract=off",
+        "-w",
+        "-Dprivate=public",
+        "-I<source>/src/lib",
+        "-I<source>/src/lib/matrix",
+        "-I<stub>"
+      ],
+      "inputs_sha256": "a4eeec38c50ae26cfaaad6f84970dec355003f5ba3948d477a8b3a783838b2ff",
+      "name": "px4_rb_space_available",
+      "planned_inputs": 175,
+      "processes": [
+        {
+          "exit_code": 0,
+          "outcome": "completed",
+          "phase": "compile",
+          "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "stdout_lines": 0,
+          "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "exit_code": 0,
+          "outcome": "completed",
+          "phase": "runtime",
+          "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "stdout_lines": 175,
+          "stdout_sha256": "bb6a969e739795ed404f28b18062135660690e1f628c1fc9c7954d8cf9d7f219"
+        }
+      ],
+      "result": {
+        "points": 175,
+        "returned_rows": 175,
+        "status": "agrees"
+      },
+      "role": "function",
+      "task_ast_sha256": "d703b61176c77a7d003e1c39387de7834ab8a17b781ceedf278b27fc8c4da0c0",
+      "task_source_sha256": "e240f5e0d9f2225c8d9d037c79b9ba9ec4a18a494af60b32fbd17978d6012494",
+      "wrapper_sha256": "2511f0014530de9ee7890bd2e121e1ae86516455707a66d485c0927122e49e6f"
+    },
+    {
+      "compiler_flags": [
+        "-std=c++17",
+        "-O1",
+        "-ffp-contract=off",
+        "-w",
+        "-Dprivate=public",
+        "-I<source>/src/lib",
+        "-I<source>/src/lib/matrix",
+        "-I<stub>"
+      ],
+      "inputs_sha256": "3aa590aa31d96fc2efc070b7fd4aa89f6ae1c4325d9dcce12b6b76ba838faf9c",
+      "name": "px4_sign",
+      "planned_inputs": 86,
+      "processes": [
+        {
+          "exit_code": 0,
+          "outcome": "completed",
+          "phase": "compile",
+          "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "stdout_lines": 0,
+          "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "exit_code": 0,
+          "outcome": "completed",
+          "phase": "runtime",
+          "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "stdout_lines": 86,
+          "stdout_sha256": "c6b04384feeda4ca282bbffdcc54d403bc55efe07f52fd7416d4a369d37ea025"
+        }
+      ],
+      "result": {
+        "points": 86,
+        "returned_rows": 86,
+        "status": "agrees"
+      },
+      "role": "function",
+      "task_ast_sha256": "a6d827d80bac4216d6bdffef5a078dd341f8d33bc1b4837d43e19874435ff0ba",
+      "task_source_sha256": "398d0fe6fa78352a35eda670da78c1881874290106cf8ed377129cf634dbbffd",
+      "wrapper_sha256": "3e670b3dcea5a0f2ec800a0fac419755a56f50c000740ee7cd52d2414c57c7d1"
+    },
+    {
+      "compiler_flags": [
+        "-std=c++17",
+        "-O1",
+        "-ffp-contract=off",
+        "-w",
+        "-Dprivate=public",
+        "-I<source>/src/lib",
+        "-I<source>/src/lib/matrix",
+        "-I<stub>"
+      ],
+      "inputs_sha256": "58e437e22bb25881effecb9dd72c68b228a461b2b4d025d241032825623a3778",
+      "name": "px4_sign_from_bool",
+      "planned_inputs": 2,
+      "processes": [
+        {
+          "exit_code": 0,
+          "outcome": "completed",
+          "phase": "compile",
+          "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "stdout_lines": 0,
+          "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "exit_code": 0,
+          "outcome": "completed",
+          "phase": "runtime",
+          "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "stdout_lines": 2,
+          "stdout_sha256": "4a6fea88f1f4b219ceb90682c04fd1ba1febd0ba67fd1dd30fcca180eecbb7b5"
+        }
+      ],
+      "result": {
+        "points": 2,
+        "returned_rows": 2,
+        "status": "agrees"
+      },
+      "role": "function",
+      "task_ast_sha256": "7d8000674215e00507e6e7390efd34bc48b5bd61aac93ef20c9b2eb52d19388e",
+      "task_source_sha256": "ed70603cd531e3ea2a4df7aad0302926043d71a71bd1ba7539752acc247f7690",
+      "wrapper_sha256": "c3eef3294ad274d8ed86e68b4f0bdefe6e6f996c8303c1ba146423b89969b027"
+    },
+    {
+      "compiler_flags": [
+        "-std=c++17",
+        "-O1",
+        "-ffp-contract=off",
+        "-w",
+        "-Dprivate=public",
+        "-I<source>/src/lib",
+        "-I<source>/src/lib/matrix",
+        "-I<stub>"
+      ],
+      "inputs_sha256": "3aa590aa31d96fc2efc070b7fd4aa89f6ae1c4325d9dcce12b6b76ba838faf9c",
+      "name": "px4_sign_no_zero",
+      "planned_inputs": 86,
+      "processes": [
+        {
+          "exit_code": 0,
+          "outcome": "completed",
+          "phase": "compile",
+          "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "stdout_lines": 0,
+          "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "exit_code": 0,
+          "outcome": "completed",
+          "phase": "runtime",
+          "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "stdout_lines": 86,
+          "stdout_sha256": "6b06ee5ae53130333dca4b0003726259c77012942545f07866d1a10296ee01dc"
+        }
+      ],
+      "result": {
+        "points": 86,
+        "returned_rows": 86,
+        "status": "agrees"
+      },
+      "role": "function",
+      "task_ast_sha256": "496f15ba901761ce8d7bc3149bf74c5b7fd3d8d9df8c965bbfcbae368d4db106",
+      "task_source_sha256": "2bda2b301dbf93fde86400817c7edb9c3cabbdbb231d15fe495d8b6bb4b6c357",
+      "wrapper_sha256": "a74fa0ffcee1a114fc25d1f4a952c924270d665d133afed79bd08cc5d40e9499"
+    },
+    {
+      "compiler_flags": [
+        "-std=c++17",
+        "-O1",
+        "-ffp-contract=off",
+        "-w",
+        "-Dprivate=public",
+        "-I<source>/src/lib",
+        "-I<source>/src/lib/matrix",
+        "-I<stub>"
+      ],
+      "inputs_sha256": "15d3b03248abd13cf622d6147dc732778c62e249c8e7a5150954612abd1eebf5",
+      "name": "px4_slew_update",
+      "planned_inputs": 400,
+      "processes": [
+        {
+          "exit_code": 0,
+          "outcome": "completed",
+          "phase": "compile",
+          "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "stdout_lines": 0,
+          "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "exit_code": 0,
+          "outcome": "completed",
+          "phase": "runtime",
+          "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "stdout_lines": 400,
+          "stdout_sha256": "8ce87e6d07e71a5f8915c5d1c53ad7e0ae50d8ab137627b3d5686e5c802952be"
+        }
+      ],
+      "result": {
+        "points": 400,
+        "returned_rows": 400,
+        "status": "agrees"
+      },
+      "role": "function",
+      "task_ast_sha256": "e7e0eda10c99ccc8519f87bbce04f8f34299a705107a237333f3ed472e7e6165",
+      "task_source_sha256": "b72fa01ac73e2b2e9c88c98c15347681b7074cef6319a4664f1748fe87bc29cc",
+      "wrapper_sha256": "8fb2ad279f59bdb5b212ad3bdbb57a369dd1054f8a194748557824476534d918"
+    },
+    {
+      "compiler_flags": [
+        "-std=c++17",
+        "-O1",
+        "-ffp-contract=off",
+        "-w",
+        "-Dprivate=public",
+        "-I<source>/src/lib",
+        "-I<source>/src/lib/matrix",
+        "-I<stub>"
+      ],
+      "inputs_sha256": "3aa590aa31d96fc2efc070b7fd4aa89f6ae1c4325d9dcce12b6b76ba838faf9c",
+      "name": "px4_sq",
+      "planned_inputs": 86,
+      "processes": [
+        {
+          "exit_code": 0,
+          "outcome": "completed",
+          "phase": "compile",
+          "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "stdout_lines": 0,
+          "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "exit_code": 0,
+          "outcome": "completed",
+          "phase": "runtime",
+          "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "stdout_lines": 86,
+          "stdout_sha256": "9bb44c9127199adeeac752f6809df4710e0747cb7b1568de7139da42ecde2e6b"
+        }
+      ],
+      "result": {
+        "points": 86,
+        "returned_rows": 86,
+        "status": "agrees"
+      },
+      "role": "function",
+      "task_ast_sha256": "5a77c42267fdfe591b52980ed54201cbe53856e6fbc18f06198465c53ee9590e",
+      "task_source_sha256": "555458efa2cf0274bbe967e3c870e94c017f9062e0f5b3890427910af3c89fa6",
+      "wrapper_sha256": "d4843a800e3ea7730da82b178ebdc3d99d27551a5f91fa230397a3c8a9361bce"
+    },
+    {
+      "compiler_flags": [
+        "-std=c++17",
+        "-O1",
+        "-ffp-contract=off",
+        "-w",
+        "-Dprivate=public",
+        "-I<source>/src/lib",
+        "-I<source>/src/lib/matrix",
+        "-I<stub>"
+      ],
+      "inputs_sha256": "78839fbe7a9ac8d36e0ebf3e4afa755af89bdad92f8b02bd2a1f647b4ca0a238",
+      "name": "px4_wrap_bin",
+      "planned_inputs": 400,
+      "processes": [
+        {
+          "exit_code": 0,
+          "outcome": "completed",
+          "phase": "compile",
+          "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "stdout_lines": 0,
+          "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "exit_code": 0,
+          "outcome": "completed",
+          "phase": "runtime",
+          "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "stdout_lines": 400,
+          "stdout_sha256": "aba4e23a1e6772d7730f43bd1f821dffe3dd604a9366c90612a4113094cba7c3"
+        }
+      ],
+      "result": {
+        "points": 400,
+        "returned_rows": 400,
+        "status": "agrees"
+      },
+      "role": "function",
+      "task_ast_sha256": "5a874daefc7347225d8204f9060a1c0e932ec176012723899264ae12523893e3",
+      "task_source_sha256": "e624b042a7a949110021819d0e1ecd710ac565caad3cdf593b5af7335cdd66a1",
+      "wrapper_sha256": "cc8402b5660ed7423de18f473dee453593aee696f10b58b88c93bee03c33295d"
+    },
+    {
+      "compiler_flags": [
+        "-std=c++17",
+        "-O1",
+        "-ffp-contract=off",
+        "-w",
+        "-Dprivate=public",
+        "-I<source>/src/lib",
+        "-I<source>/src/lib/matrix",
+        "-I<stub>"
+      ],
+      "inputs_sha256": "e05c61c45ead25c8755e4493bf435b07f8fd41963cff69010be23123e56aef96",
+      "name": "px4_wrap_bin_72",
+      "planned_inputs": 87,
+      "processes": [
+        {
+          "exit_code": 0,
+          "outcome": "completed",
+          "phase": "compile",
+          "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "stdout_lines": 0,
+          "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "exit_code": 0,
+          "outcome": "completed",
+          "phase": "runtime",
+          "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "stdout_lines": 87,
+          "stdout_sha256": "ed28c377ceb1d29d89d36ed5503196c08566c79a00f366ceb417205b67fe643f"
+        }
+      ],
+      "result": {
+        "points": 87,
+        "returned_rows": 87,
+        "status": "agrees"
+      },
+      "role": "function",
+      "task_ast_sha256": "83b1ee47869baf7e960a712909013d9b6a2fdc93f534b29f54010d1f7a5584d9",
+      "task_source_sha256": "1255cb8b3bea7bf029346c0eda4d57e43eb3a8195d4faf0a78b58bdefc95cd0a",
+      "wrapper_sha256": "61b1a58caeff51e7575fc52d04c879a272e77d77ab7e9517c113869c32575e2c"
+    },
+    {
+      "compiler_flags": [
+        "-std=c++17",
+        "-O1",
+        "-ffp-contract=off",
+        "-w",
+        "-Dprivate=public",
+        "-I<source>/src/lib",
+        "-I<source>/src/lib/matrix",
+        "-I<stub>"
+      ],
+      "inputs_sha256": "5c40ece0ae1c8848b3d3624a1fcf54a94eaf170b74769874471f7cedc7bafa28",
+      "name": "px4_wrap_int",
+      "planned_inputs": 400,
+      "processes": [
+        {
+          "exit_code": 0,
+          "outcome": "completed",
+          "phase": "compile",
+          "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "stdout_lines": 0,
+          "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "exit_code": 0,
+          "outcome": "completed",
+          "phase": "runtime",
+          "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "stdout_lines": 400,
+          "stdout_sha256": "f5df6d50d297f65b18334b46a38fff2594daeebac81accf031fc4e1f0d898dc8"
+        }
+      ],
+      "result": {
+        "points": 400,
+        "returned_rows": 400,
+        "status": "agrees"
+      },
+      "role": "function",
+      "task_ast_sha256": "15abbf96a71069a43fa61b9131454f7e8060fe7ee835f8daa18d31978b6f127c",
+      "task_source_sha256": "4867c41fcf019fff0ade687e9012b5f28ee9309b20a3e548a99cb7c7cbfef0dd",
+      "wrapper_sha256": "955813cd629a3463bf145110aa7b57b6fffe7b851a38f9913311818b4a0a6566"
+    },
+    {
+      "compiler_flags": [
+        "-std=c++17",
+        "-O1",
+        "-ffp-contract=off",
+        "-w",
+        "-Dprivate=public",
+        "-I<source>/src/lib",
+        "-I<source>/src/lib/matrix",
+        "-I<stub>"
+      ],
+      "inputs_sha256": "50212e6975e0996c0b49fbdba6f7f27cef8ebaef988bc28c82d7a3cedc99237d",
+      "name": "px4_wrap_bin_any",
+      "planned_inputs": 2,
+      "processes": [
+        {
+          "exit_code": 0,
+          "outcome": "completed",
+          "phase": "compile",
+          "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "stdout_lines": 0,
+          "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "exit_code": 0,
+          "outcome": "completed",
+          "phase": "runtime",
+          "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "stdout_lines": 2,
+          "stdout_sha256": "91bf44d0a10bdb192c372abd8362e5089b7da61c9dbb2dffc0d936b0f33b5caf"
+        }
+      ],
+      "result": {
+        "returned_rows": 2,
+        "status": "PX4 breaks the contract here, as t's body does"
+      },
+      "role": "finding",
+      "task_ast_sha256": "be71715f3496f6bff3f065e101241563c72af36b682b92245a09be9c6e2b92dc",
+      "task_source_sha256": "bc06083bf7e0ceec2cd8a250ce66cbc4873de7bf3faf8ca23e9bf470adbc181b",
+      "wrapper_sha256": "cf26c9a07bd027884681d451c43705d2aee6a651bcb37c6d000ef2301b271e74"
+    }
+  ],
+  "compiler": {
+    "driver": "g++",
+    "target": "x86_64-linux-gnu",
+    "version": "13.3.0"
+  },
+  "exit_code": 0,
+  "generated_sources": [
+    {
+      "bytes": 131,
+      "name": "stub/drivers/drv_hrt.h",
+      "sha256": "241f77e7793c6c042ae558b4cc1eadc358a1d674f7096b5ed6abf4252cb78242"
+    },
+    {
+      "bytes": 228,
+      "name": "stub/px4_platform_common/defines.h",
+      "sha256": "5acb4c378812bbd1203c9ea0e0896a8ad0e8eb301b52eeadd2a983fcde9d887f"
+    }
+  ],
+  "kind": "px4_functions",
+  "limitations": [
+    "Hashes identify inputs; source and tool artifacts are not embedded.",
+    "System headers, linked libraries and compiler executable bytes are not recorded.",
+    "No claim about untested inputs or whole-module behavior."
+  ],
+  "manifest_sha256": "978cbf7ad40e314469dff750a23e6168e63f0a6c21e454ef874a1e30586f66de",
+  "run_outcome": "completed",
+  "schema": 1,
+  "scope": "bounded_native_correspondence",
+  "skips": [
+    {
+      "name": "px4_interp_index",
+      "reason": "the index is internal to interpolateNXY, which returns only the interpolated value"
+    },
+    {
+      "name": "px4_request_event_any",
+      "reason": "the handler's own statements, before and after the fix, compiled and run on every input: px4_stmt.py, PX4-STMT.md"
+    },
+    {
+      "name": "px4_arm_param_any",
+      "reason": "the handler's own statements, before and after the fix, compiled and run on every input: px4_stmt.py, PX4-STMT.md"
+    },
+    {
+      "name": "px4_stream_interval_any",
+      "reason": "the handler's own statements, before and after the fix, compiled and run on every input: px4_stmt.py, PX4-STMT.md"
+    },
+    {
+      "name": "px4_do_jump_index_any",
+      "reason": "the handler's own statements, before and after the fix, compiled and run on every input: px4_stmt.py, PX4-STMT.md"
+    },
+    {
+      "name": "px4_serial_control_any",
+      "reason": "the handler's own statements, before and after the fix, compiled and run on every input: px4_stmt.py, PX4-STMT.md"
+    },
+    {
+      "name": "px4_set_mode_field_any",
+      "reason": "the handler's own statements, before and after the fix, compiled and run on every input: px4_stmt.py, PX4-STMT.md"
+    },
+    {
+      "name": "px4_fusion_source_any",
+      "reason": "the handler's own statements, before and after the fix, compiled and run on every input: px4_stmt.py, PX4-STMT.md"
+    },
+    {
+      "name": "px4_obstacle_body_any",
+      "reason": "CollisionPrevention::_addObstacleSensorData needs the collision-prevention module; checked by PX4's own test, CollisionPreventionTest.addObstacleSensorData_bodyframe_fine_increment: it fails 50 assertions on the original code and passes with the fix (PR #29037)"
+    },
+    {
+      "name": "px4_sumd_receive_any",
+      "reason": "PX4's own sumd.cpp, built with UBSan, reports the out-of-bounds write and read at index 64 on a valid 32-channel frame (README)"
+    }
+  ],
+  "sources": [
+    {
+      "bytes": 1527,
+      "git_blob_sha1": "57c2b07f688250779ab411d84708b5282d6b3245",
+      "identity_scope": "reviewed_pinned_source",
+      "path": "LICENSE",
+      "repository": "PX4/PX4-Autopilot",
+      "revision": "dd804e4b9c490aed051bb36f8d3fca1ee137be2a",
+      "sha256": "0e31cba0e521c572e59a350286c6d1272abff7a7b6ebecb0e7d9eee6547a2106"
+    },
+    {
+      "bytes": 4092,
+      "git_blob_sha1": "e75f19d7b791e97dec3779281d47a3ae0c4f8199",
+      "identity_scope": "reviewed_pinned_source",
+      "path": "src/lib/collision_prevention/ObstacleMath.cpp",
+      "repository": "PX4/PX4-Autopilot",
+      "revision": "dd804e4b9c490aed051bb36f8d3fca1ee137be2a",
+      "sha256": "90146c4c5d67ec86a97da974f92e892a0d75ad81c3e33c1d4f849830514e7ba6"
+    },
+    {
+      "bytes": 4218,
+      "git_blob_sha1": "8a1db0217aa0c4c6ad30621e4a6ed3c3f9499186",
+      "identity_scope": "reviewed_pinned_source",
+      "path": "src/lib/collision_prevention/ObstacleMath.hpp",
+      "repository": "PX4/PX4-Autopilot",
+      "revision": "dd804e4b9c490aed051bb36f8d3fca1ee137be2a",
+      "sha256": "782e6e3fa4584954b366886973cb763a8108310f165b8b23eeb1a369186ff9e4"
+    },
+    {
+      "bytes": 2921,
+      "git_blob_sha1": "3cadc7b7ea6533ca5e910010958863cdd8f60882",
+      "identity_scope": "reviewed_pinned_source",
+      "path": "src/lib/hysteresis/hysteresis.cpp",
+      "repository": "PX4/PX4-Autopilot",
+      "revision": "dd804e4b9c490aed051bb36f8d3fca1ee137be2a",
+      "sha256": "130d99837bd79ae0ce9a29b4ba3d01c4b7c4091bce907761900a0a5f625a54fb"
+    },
+    {
+      "bytes": 2512,
+      "git_blob_sha1": "850d204825f30448503702497e9c1b53d545b78d",
+      "identity_scope": "reviewed_pinned_source",
+      "path": "src/lib/hysteresis/hysteresis.h",
+      "repository": "PX4/PX4-Autopilot",
+      "revision": "dd804e4b9c490aed051bb36f8d3fca1ee137be2a",
+      "sha256": "38666acfb04b549e3c067471fc4a5a1d8ca19bb7d07f53502430262fcaa28d23"
+    },
+    {
+      "bytes": 8147,
+      "git_blob_sha1": "4988078bb5a5c080a9d470e1705268392161c824",
+      "identity_scope": "reviewed_pinned_source",
+      "path": "src/lib/mathlib/math/Functions.hpp",
+      "repository": "PX4/PX4-Autopilot",
+      "revision": "dd804e4b9c490aed051bb36f8d3fca1ee137be2a",
+      "sha256": "e18d181be94ed4fc7aa0273ee459b9efaa584ea9b7be5a6e8e46e2ae6d000c8f"
+    },
+    {
+      "bytes": 4439,
+      "git_blob_sha1": "79a89c428406afdd731a5b769bde82141b262224",
+      "identity_scope": "reviewed_pinned_source",
+      "path": "src/lib/mathlib/math/Limits.hpp",
+      "repository": "PX4/PX4-Autopilot",
+      "revision": "dd804e4b9c490aed051bb36f8d3fca1ee137be2a",
+      "sha256": "e9a627eb54d677d1522750bd98e3fed6888ed8cdf0fc39fc311d8c3a0da3cdb9"
+    },
+    {
+      "bytes": 2519,
+      "git_blob_sha1": "71ecd806c483388d7458a9c418f701be2be52956",
+      "identity_scope": "reviewed_pinned_source",
+      "path": "src/lib/mathlib/math/SearchMin.hpp",
+      "repository": "PX4/PX4-Autopilot",
+      "revision": "dd804e4b9c490aed051bb36f8d3fca1ee137be2a",
+      "sha256": "9beba445ae3422f8c0c55caa712df6e0eedda8cf82f1de2be08919179bfb01d6"
+    },
+    {
+      "bytes": 6026,
+      "git_blob_sha1": "f26a3406ebfda7d1704e0065387b5f1902fd94ee",
+      "identity_scope": "reviewed_pinned_source",
+      "path": "src/lib/mathlib/math/TrajMath.hpp",
+      "repository": "PX4/PX4-Autopilot",
+      "revision": "dd804e4b9c490aed051bb36f8d3fca1ee137be2a",
+      "sha256": "e405c0157c7d7cfb8aa5bb52acec3719c04b667424819258e9ab2c7f7066c042"
+    },
+    {
+      "bytes": 6580,
+      "git_blob_sha1": "890346b9733c21c387c9725f8d5818fda89dffdf",
+      "identity_scope": "reviewed_pinned_source",
+      "path": "src/lib/mathlib/math/Utilities.hpp",
+      "repository": "PX4/PX4-Autopilot",
+      "revision": "dd804e4b9c490aed051bb36f8d3fca1ee137be2a",
+      "sha256": "68839f70c41387dc5847a0b358158de6f9950655460777718bf485b6d0f6e6bb"
+    },
+    {
+      "bytes": 6357,
+      "git_blob_sha1": "c0d6e49a0acd701a4acac290f8f268ede27f7352",
+      "identity_scope": "reviewed_pinned_source",
+      "path": "src/lib/mathlib/math/filter/AlphaFilter.hpp",
+      "repository": "PX4/PX4-Autopilot",
+      "revision": "dd804e4b9c490aed051bb36f8d3fca1ee137be2a",
+      "sha256": "1d3c86c0adf4e581a418ccbaf0ac186fa70aa93f43cef90a08fa3fb0f1de9733"
+    },
+    {
+      "bytes": 1990,
+      "git_blob_sha1": "e8059eacb9c3e70529b767e6cf62f351898f7dc4",
+      "identity_scope": "reviewed_pinned_source",
+      "path": "src/lib/mathlib/mathlib.h",
+      "repository": "PX4/PX4-Autopilot",
+      "revision": "dd804e4b9c490aed051bb36f8d3fca1ee137be2a",
+      "sha256": "aa41303279b930fd9de83a5f4f49acd9fe56c61f1f4505afeb91d239a435cd8f"
+    },
+    {
+      "bytes": 3015,
+      "git_blob_sha1": "5cf351a3efb2dbdccaab0847b1d3731257b88fa7",
+      "identity_scope": "reviewed_pinned_source",
+      "path": "src/lib/matrix/matrix/AxisAngle.hpp",
+      "repository": "PX4/PX4-Autopilot",
+      "revision": "dd804e4b9c490aed051bb36f8d3fca1ee137be2a",
+      "sha256": "818116a17cd2710d4fa92d9c4748adfa26943fb282f08bbd84fff0ce245de6fc"
+    },
+    {
+      "bytes": 4202,
+      "git_blob_sha1": "e05da5cbf3ee255b333702a5d6147a810f34656c",
+      "identity_scope": "reviewed_pinned_source",
+      "path": "src/lib/matrix/matrix/Dcm.hpp",
+      "repository": "PX4/PX4-Autopilot",
+      "revision": "dd804e4b9c490aed051bb36f8d3fca1ee137be2a",
+      "sha256": "caa5a7d4ca2a9775dfcf14ef953ae685a0b2c98703b0bedc8202f0ba6af1c595"
+    },
+    {
+      "bytes": 3716,
+      "git_blob_sha1": "e74ea48b3e71070859b4f7e6ecb7f1774d517572",
+      "identity_scope": "reviewed_pinned_source",
+      "path": "src/lib/matrix/matrix/Dcm2.hpp",
+      "repository": "PX4/PX4-Autopilot",
+      "revision": "dd804e4b9c490aed051bb36f8d3fca1ee137be2a",
+      "sha256": "bcad8c98950af544e424675754f8496975d2b986b56f32f59276f077e6bc5f04"
+    },
+    {
+      "bytes": 8478,
+      "git_blob_sha1": "efb8f056d8eba51114fd5ad3006092f682e1b26e",
+      "identity_scope": "reviewed_pinned_source",
+      "path": "src/lib/matrix/matrix/Dual.hpp",
+      "repository": "PX4/PX4-Autopilot",
+      "revision": "dd804e4b9c490aed051bb36f8d3fca1ee137be2a",
+      "sha256": "b7954e3e2efeecf2480c6fcc7e7134aa59638a5a59bfa53313c8ab09c66c3f48"
+    },
+    {
+      "bytes": 3167,
+      "git_blob_sha1": "5a6f85122535e65a59810c71d96d63b5e86d8f03",
+      "identity_scope": "reviewed_pinned_source",
+      "path": "src/lib/matrix/matrix/Euler.hpp",
+      "repository": "PX4/PX4-Autopilot",
+      "revision": "dd804e4b9c490aed051bb36f8d3fca1ee137be2a",
+      "sha256": "346d2f1c252c9c9f0ac9d9731a7c3d2ce8f39198119ebe2ffd9602d7f2fec01a"
+    },
+    {
+      "bytes": 3200,
+      "git_blob_sha1": "80aed7cfee4e96428da21c750f1a7850d2c00834",
+      "identity_scope": "reviewed_pinned_source",
+      "path": "src/lib/matrix/matrix/LeastSquaresSolver.hpp",
+      "repository": "PX4/PX4-Autopilot",
+      "revision": "dd804e4b9c490aed051bb36f8d3fca1ee137be2a",
+      "sha256": "5d730e21d2055cfe66f0175381655999ec63f8a0948b6ea88c591812e2ec998b"
+    },
+    {
+      "bytes": 16975,
+      "git_blob_sha1": "af6991cda761b0dc0ee2d3367bf710352422b63d",
+      "identity_scope": "reviewed_pinned_source",
+      "path": "src/lib/matrix/matrix/Matrix.hpp",
+      "repository": "PX4/PX4-Autopilot",
+      "revision": "dd804e4b9c490aed051bb36f8d3fca1ee137be2a",
+      "sha256": "25fc20775feb8610513c89e768675cec3ac4b06c541093f7aede7ae9b2baeadf"
+    },
+    {
+      "bytes": 2552,
+      "git_blob_sha1": "70404aed7180cfbdbb8e6f5ca05cc56bfa7d2457",
+      "identity_scope": "reviewed_pinned_source",
+      "path": "src/lib/matrix/matrix/PseudoInverse.hpp",
+      "repository": "PX4/PX4-Autopilot",
+      "revision": "dd804e4b9c490aed051bb36f8d3fca1ee137be2a",
+      "sha256": "583ca813d21aa4e6b52c417c95d65854d4dda5683856466c7bffd8aa0662295d"
+    },
+    {
+      "bytes": 13756,
+      "git_blob_sha1": "5ce980c39b2b494081fad52cdd31bae37a8e268e",
+      "identity_scope": "reviewed_pinned_source",
+      "path": "src/lib/matrix/matrix/Quaternion.hpp",
+      "repository": "PX4/PX4-Autopilot",
+      "revision": "dd804e4b9c490aed051bb36f8d3fca1ee137be2a",
+      "sha256": "f06a8af54ffb011bd839854ddf6432803778f88a25439fe4ff9369e996b5325a"
+    },
+    {
+      "bytes": 812,
+      "git_blob_sha1": "c40b32912bc3e50daa412149f2111b6a028f4292",
+      "identity_scope": "reviewed_pinned_source",
+      "path": "src/lib/matrix/matrix/Scalar.hpp",
+      "repository": "PX4/PX4-Autopilot",
+      "revision": "dd804e4b9c490aed051bb36f8d3fca1ee137be2a",
+      "sha256": "a30551309023c797c53128982033cb24c7a08ed30300c87c6d092d6b918f8648"
+    },
+    {
+      "bytes": 8157,
+      "git_blob_sha1": "02de706b5dc9f6a020cbba4f4f0f7c48dce02c0f",
+      "identity_scope": "reviewed_pinned_source",
+      "path": "src/lib/matrix/matrix/Slice.hpp",
+      "repository": "PX4/PX4-Autopilot",
+      "revision": "dd804e4b9c490aed051bb36f8d3fca1ee137be2a",
+      "sha256": "03ea65539212cc5cc7c9dd5f10556dd0960b82df625ea12c6dd79c237e843964"
+    },
+    {
+      "bytes": 4363,
+      "git_blob_sha1": "3bb13b4465942a7db0693b1f096315fb02e420fe",
+      "identity_scope": "reviewed_pinned_source",
+      "path": "src/lib/matrix/matrix/SparseVector.hpp",
+      "repository": "PX4/PX4-Autopilot",
+      "revision": "dd804e4b9c490aed051bb36f8d3fca1ee137be2a",
+      "sha256": "634b10b986daf14b54508ef344f693835b66e317a0c73a97c9726f3b1303bba3"
+    },
+    {
+      "bytes": 14234,
+      "git_blob_sha1": "610e313d386dbc658d72cb28e9e42d8ad2402c26",
+      "identity_scope": "reviewed_pinned_source",
+      "path": "src/lib/matrix/matrix/SquareMatrix.hpp",
+      "repository": "PX4/PX4-Autopilot",
+      "revision": "dd804e4b9c490aed051bb36f8d3fca1ee137be2a",
+      "sha256": "e5db91021b60010809bb1827bf3d755246cb7131bece1600d795c437439b47a6"
+    },
+    {
+      "bytes": 2903,
+      "git_blob_sha1": "0b174818e348ec0eb754d163ab3e1f0920c23570",
+      "identity_scope": "reviewed_pinned_source",
+      "path": "src/lib/matrix/matrix/Vector.hpp",
+      "repository": "PX4/PX4-Autopilot",
+      "revision": "dd804e4b9c490aed051bb36f8d3fca1ee137be2a",
+      "sha256": "5595c689b197060a62dcf4b9b7a9099404e32734a4153af92c2f87b47eafe6ca"
+    },
+    {
+      "bytes": 1615,
+      "git_blob_sha1": "88ef40ba550574d8372e28abe985244fa78e294a",
+      "identity_scope": "reviewed_pinned_source",
+      "path": "src/lib/matrix/matrix/Vector2.hpp",
+      "repository": "PX4/PX4-Autopilot",
+      "revision": "dd804e4b9c490aed051bb36f8d3fca1ee137be2a",
+      "sha256": "f67e1de6338711d29e179fc91671c7e97246f3a0078130b6a980aca293c5ee5c"
+    },
+    {
+      "bytes": 2067,
+      "git_blob_sha1": "ccfece92f0e402463e1ede17a1ad6214ab68af9c",
+      "identity_scope": "reviewed_pinned_source",
+      "path": "src/lib/matrix/matrix/Vector3.hpp",
+      "repository": "PX4/PX4-Autopilot",
+      "revision": "dd804e4b9c490aed051bb36f8d3fca1ee137be2a",
+      "sha256": "4d70963cbfd106868fa1e40acf73b2a4ea022722a13271d019a241f3183f12ba"
+    },
+    {
+      "bytes": 3206,
+      "git_blob_sha1": "5115d420e35fb3a412e4891c67a2015e24b98de9",
+      "identity_scope": "reviewed_pinned_source",
+      "path": "src/lib/matrix/matrix/Vector4.hpp",
+      "repository": "PX4/PX4-Autopilot",
+      "revision": "dd804e4b9c490aed051bb36f8d3fca1ee137be2a",
+      "sha256": "23c0f7553e8b6138cad96964e1ba96d7931bacef43a2a325b5e4f7beb42524d6"
+    },
+    {
+      "bytes": 563,
+      "git_blob_sha1": "983af10eab2dc35773ddc5862f34db178021a9d8",
+      "identity_scope": "reviewed_pinned_source",
+      "path": "src/lib/matrix/matrix/filter.hpp",
+      "repository": "PX4/PX4-Autopilot",
+      "revision": "dd804e4b9c490aed051bb36f8d3fca1ee137be2a",
+      "sha256": "03c2a5470e0e70b7627fe0c027042de2434dda725ab8613894a2d456e5197f34"
+    },
+    {
+      "bytes": 3656,
+      "git_blob_sha1": "eb5908846b364d05f5449088f05c53c25e5d2252",
+      "identity_scope": "reviewed_pinned_source",
+      "path": "src/lib/matrix/matrix/helper_functions.hpp",
+      "repository": "PX4/PX4-Autopilot",
+      "revision": "dd804e4b9c490aed051bb36f8d3fca1ee137be2a",
+      "sha256": "b4ff0deb1700f62e8c46e4142da7570dbc2f8e40b9f657b59d02c80c208a54ff"
+    },
+    {
+      "bytes": 834,
+      "git_blob_sha1": "9ca190333e6d2267d81eb1325dd4898cc44b3469",
+      "identity_scope": "reviewed_pinned_source",
+      "path": "src/lib/matrix/matrix/integration.hpp",
+      "repository": "PX4/PX4-Autopilot",
+      "revision": "dd804e4b9c490aed051bb36f8d3fca1ee137be2a",
+      "sha256": "a01a7440260a8b5bc892ddd88b15c0cb04a4de193ff67cadcec1ecbe6fd18d55"
+    },
+    {
+      "bytes": 452,
+      "git_blob_sha1": "7f55520544ab9eee5cef6edf2670d863652af0fa",
+      "identity_scope": "reviewed_pinned_source",
+      "path": "src/lib/matrix/matrix/math.hpp",
+      "repository": "PX4/PX4-Autopilot",
+      "revision": "dd804e4b9c490aed051bb36f8d3fca1ee137be2a",
+      "sha256": "0850e5573adad6e8a0aedc9d64f7cd2136ee2856c475cc06f3cb287e429a90d3"
+    },
+    {
+      "bytes": 4485,
+      "git_blob_sha1": "64fc33d8361d0d7e96339f8fa5283037d4363c88",
+      "identity_scope": "reviewed_pinned_source",
+      "path": "src/lib/ringbuffer/Ringbuffer.cpp",
+      "repository": "PX4/PX4-Autopilot",
+      "revision": "dd804e4b9c490aed051bb36f8d3fca1ee137be2a",
+      "sha256": "9bbe5d1e316358d6f319a9e87c22d4a2966b6bb97a486b797fa3a6baa6ce30e6"
+    },
+    {
+      "bytes": 3428,
+      "git_blob_sha1": "541f322db947b26ed2c6f4b70dbf2b24bad554eb",
+      "identity_scope": "reviewed_pinned_source",
+      "path": "src/lib/ringbuffer/Ringbuffer.hpp",
+      "repository": "PX4/PX4-Autopilot",
+      "revision": "dd804e4b9c490aed051bb36f8d3fca1ee137be2a",
+      "sha256": "ce6bfda92fdb6ae7b05fa4c7799bb093130bceea4dfd131801cf258ed2a029b9"
+    },
+    {
+      "bytes": 3247,
+      "git_blob_sha1": "363f2d2cc70e7943670dc766fb958e45dac1733d",
+      "identity_scope": "reviewed_pinned_source",
+      "path": "src/lib/slew_rate/SlewRate.hpp",
+      "repository": "PX4/PX4-Autopilot",
+      "revision": "dd804e4b9c490aed051bb36f8d3fca1ee137be2a",
+      "sha256": "6135704c4eb8c98fbc62b56decbf94edf3118e7688e8e60a2f80286fd4d90c4a"
+    }
+  ],
+  "standalone_replay_bundle": false
+}
