@@ -213,6 +213,18 @@ def main(argv: list[str] | None = None) -> int:
             task = harness.load(path)
             v = judge(task, pool[tid], python.get(tid))
             v["task_sha256"] = spec_check.task_sha256(task)
+            # Emit the per-sample record loop_dataset.positive_rejection reads directly:
+            # it looks for status/draws (and the check_points columns) plus task_id and
+            # pool at the TOP level, while judge() nests the check result under
+            # "agreement". Promote them (the nested "agreement" stays for other readers)
+            # and add task_id/pool, so this file's output feeds loop_dataset's --from-samples
+            # spec gate without a separate flatten step. task_sha256/task_id/pool are what
+            # that gate matches the sample on (loop_dataset.py positive_rejection).
+            v["task_id"] = int(tid)
+            v["pool"] = a.pool
+            for _f in ("status", "draws", "points_held", "points_failed", "over_constrained"):
+                if _f in (v.get("agreement") or {}):
+                    v[_f] = v["agreement"][_f]
             out[f"{tag}/{t['name']}"] = v
             tally[v["why"] if not v["passes"] else "passes"] += 1
     print(f"spec_gate: {sum(tally.values())} answers judged: " + ", ".join(f"{v} {k}" for k, v in tally.most_common()))
