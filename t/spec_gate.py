@@ -182,6 +182,30 @@ def load_python(path: Path) -> dict[str, str]:
     return out
 
 
+# The fields loop_dataset.positive_rejection reads at the TOP level of a sample's
+# spec-check result. judge() nests the check result under "agreement"; this promotes
+# the ones the consumer reads.
+_LOOP_DATASET_FIELDS = ("status", "draws", "points_held", "points_failed", "over_constrained")
+
+
+def promote_for_loop_dataset(v: dict, task_id: int, pool: str) -> dict:
+    """Make judge()'s record consumable by loop_dataset.positive_rejection.
+
+    loop_dataset reads status/draws/points_*/over_constrained plus task_id and pool at the
+    TOP level (and matches on task_sha256), while judge() nests the check result under
+    "agreement". Promote those fields and add task_id/pool so spec_gate --json feeds
+    loop_dataset's --from-samples spec gate with no separate flatten step; the nested
+    "agreement" is left in place for the report's other readers. Mutates and returns v.
+    """
+    v["task_id"] = int(task_id)
+    v["pool"] = pool
+    agreement = v.get("agreement") or {}
+    for f in _LOOP_DATASET_FIELDS:
+        if f in agreement:
+            v[f] = agreement[f]
+    return v
+
+
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("tags", nargs="+")
@@ -213,19 +237,7 @@ def main(argv: list[str] | None = None) -> int:
             task = harness.load(path)
             v = judge(task, pool[tid], python.get(tid))
             v["task_sha256"] = spec_check.task_sha256(task)
-            # Emit the per-sample record loop_dataset.positive_rejection reads directly:
-            # it looks for status/draws (and the check_points columns) plus task_id and
-            # pool at the TOP level, while judge() nests the check result under
-            # "agreement". Promote them (the nested "agreement" stays for other readers)
-            # and add task_id/pool, so this file's output feeds loop_dataset's --from-samples
-            # spec gate without a separate flatten step. task_sha256/task_id/pool are what
-            # that gate matches the sample on (loop_dataset.py positive_rejection).
-            v["task_id"] = int(tid)
-            v["pool"] = a.pool
-            for _f in ("status", "draws", "points_held", "points_failed", "over_constrained"):
-                if _f in (v.get("agreement") or {}):
-                    v[_f] = v["agreement"][_f]
-            out[f"{tag}/{t['name']}"] = v
+            out[f"{tag}/{t['name']}"] = promote_for_loop_dataset(v, int(tid), a.pool)
             tally[v["why"] if not v["passes"] else "passes"] += 1
     print(f"spec_gate: {sum(tally.values())} answers judged: " + ", ".join(f"{v} {k}" for k, v in tally.most_common()))
     if a.json:
