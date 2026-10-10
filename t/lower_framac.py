@@ -7993,6 +7993,17 @@ def _lower_method(task: dict, m: dict, earlier: list, info: dict) -> str:
     return lower(pseudo, pseudo["body"], None, _unit=info)
 
 
+def _uses_divmod(e) -> bool:
+    """True when expression `e` contains a `div` or `mod` (t's Euclidean `/` and `%`)."""
+    if isinstance(e, dict):
+        if e.get("op") in ("div", "mod"):
+            return True
+        return any(_uses_divmod(v) for v in e.values())
+    if isinstance(e, list):
+        return any(_uses_divmod(v) for v in e)
+    return False
+
+
 def stmts(body: list, ctx: Ctx, task_name: str, indent: str,
           _prefix: dict | None = None) -> list:
     # THE FRAME-FACT GAP, framac column (2026-09-12, ROADMAP 16.2): a
@@ -8413,8 +8424,13 @@ def stmts(body: list, ctx: Ctx, task_name: str, indent: str,
             # about it would be sound to state as an invariant.
             for pn, pinit in prefix.items():
                 if pn not in hit:
-                    ann.append(f"{indent}  loop invariant {pn} == "
-                               f"{cexpr(pinit, ctx.env, ctx.funs, task_name)};")
+                    # PREDICT T70: an annotation is an ACSL term. cexpr's `%`/`div` is C's branchless Euclidean form,
+                    # which multiplies a comparison as an int and is ill-typed in ACSL (Frama-C: annot-error), so an
+                    # initializer using them is written with term(), as every other annotation is. Others keep cexpr,
+                    # byte-identical to before.
+                    rhs = (term(pinit, ctx) if _uses_divmod(pinit)
+                           else cexpr(pinit, ctx.env, ctx.funs, task_name))
+                    ann.append(f"{indent}  loop invariant {pn} == {rhs};")
             # CAPACITY mode's implicit LOWER bound (2026-09-09): `0 <=
             # r_len` is a MATHEMATICAL fact about any seq's length (never
             # negative), true by construction of the encoding itself

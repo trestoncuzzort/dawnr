@@ -9479,12 +9479,18 @@ def gen_loop(cx: Ctx, prefix: list, w: dict, suffix: list,
     # nothing; `has_return` is the exact predicate `gen_loop`'s own
     # early-exit branch (below) already uses to pick its Fixpoint shape.
     _body_assigned = loop_assigned(w["body"])
+    # PREDICT T71: a local the prefix reassigns after its declaration (`var m := 0; if c { m := n }`), or whose
+    # initialiser reads one the prefix reassigns, does not equal its initialiser at the loop; the invariant would be
+    # false at entry and fail the proof (never pass it), so it is not emitted.
+    _prefix_assigned = loop_assigned(prefix)
     _extra_invs = [] if has_return(w["body"]) else [
         {"op": "==", "args": [{"var": s["var"]["name"]}, s["var"]["init"]]}
         for s in prefix
         if "var" in s
         and s["var"].get("type") == "int"
         and s["var"]["name"] not in _body_assigned
+        and s["var"]["name"] not in _prefix_assigned
+        and not (_fv(s["var"]["init"], set()) & _prefix_assigned)
     ]
     invariants_ast = list(w.get("invariants", [])) + _extra_invs
 
@@ -10380,12 +10386,14 @@ class _LoopGen:
         # at the entry state by `t_dis` like every other one, so a wrong
         # one makes the proof FAIL, never succeed wrongly -- but there is
         # no reason to emit one known to be false.
+        prev_assigned = loop_assigned(prev_straight)         # PREDICT T71, as in gen_loop
         extra_invs = [
             {"op": "==", "args": [{"var": s["var"]["name"]}, s["var"]["init"]]}
             for s in prev_straight
             if "var" in s and s["var"].get("type") == "int"
             and s["var"]["name"] not in body_assigned
-            and not (_fv(s["var"]["init"], set()) & body_assigned)]
+            and s["var"]["name"] not in prev_assigned
+            and not (_fv(s["var"]["init"], set()) & (body_assigned | prev_assigned))]
         invariants_ast = list(w.get("invariants", [])) + extra_invs
 
         guard_b = cx.bx(w["cond"], id_env, local)

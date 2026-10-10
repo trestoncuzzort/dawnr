@@ -3248,3 +3248,107 @@ What this establishes: a buffer PX4 ships under MAVLink is proved in seven kerne
 indices exactly. Getting there found two semantic faults (Lean and F\* lowering an early `return` two `if`s deep
 to a different program) that 114 hand-written tasks never reached. Real code is a test of the toolchain as much
 as of the method.
+
+## T70 (recorded after the fact, 2026-10-08 05:15Z): three MAVLink and commander findings, refute_at, and one Frama-C fix
+
+Not registered before it was committed (3c504bf, efca4d3); recorded here so T71's comments point at an entry.
+- `t/refute_at.py` refutes a finding's own body at a named input (`real_inputs.json`), in every kernel.
+- Findings and fixes for REQUEST_EVENT (#29033), ARM_DISARM (#29036) and the stream interval (#29034).
+- Frama-C: a frame invariant whose initialiser uses `%` or `div` is written as an ACSL term. C's branchless
+  Euclidean form is ill-typed in ACSL (annot-error, fatal). No committed task's lowering changed.
+- Measured at the time: all five findings refuted at their real inputs, four in all seven kernels and SUMD's in six;
+  the arm and stream fixes verified in all seven.
+
+## T71 registered (2026-10-08 05:15Z, after hand runs and before the clean-clone run): every filed PX4 fix with a t proof, PX4's own statements against both, and three lowering gaps
+
+**What is added.**
+- Findings and fixes for SERIAL_CONTROL (#29032) and DO_JUMP (#29035). Every PX4 pull request now has a t finding
+  and a t fix (#29030 for `wrap_bin`, its finite-FOV guards not restated).
+- `t/flight/px4_stmt.py`: the handler's own lines, cut verbatim from PX4's source at the pinned commit and at the
+  fix branch's commit, compiled with stand-ins for the surrounding names, and run on every input of the t task plus
+  the real one, against the finding (original lines) and the fix (fixed lines). Four pairs, eight comparisons.
+- The SUMD fix gains `n <= len(sumd_data)` in its ensures and its loop's length fact as an invariant. The SERIAL_CONTROL
+  fix computes its loop bound before the loop (Lean, Rocq and F* do not lower a loop inside an `if`).
+
+**Lowering gaps found, each fixed and measured.**
+- **Rocq pinned a local to its initialiser across a loop when the prefix had reassigned it**
+  (`var m := 0; if c { m := count; }`). The invariant was false at entry, so the proof failed (never passed). Now a
+  local the prefix reassigns, or whose initialiser reads one, is not pinned, in both loop paths.
+- **Verus refused a heap twin's certificate** when a quantifier bound was `fst(pair(1, s))`: `_gint` tested for a
+  literal before reducing the projection. F\* shares the formula.
+- **F\* could not certify at a 64- or 70-byte real input**: the normalizer cannot unfold `Seq.length (seq_of_list
+  l)`, and the solver's fuel stops short of a long list. A long constant literal is now `Seq.create`, and a long
+  varied one is bound by `Seq.createL` first, whose postcondition carries the length.
+- Each change is byte-identical for every committed task but the PX4 fix tasks (hashes of Rocq real lowerings, and
+  of Verus and F\* twin lowerings with witness, over all 330 `.t` files before and after): Rocq changed
+  `px4_request_event_fixed` and `px4_serial_control_fixed`; Verus and F\* changed `px4_sumd_receive_fixed`.
+
+**Measured before this registration** (hand, desktop, `--jobs 4`):
+- fixes: arm, DO_JUMP, SERIAL_CONTROL, stream interval and SUMD "verified / refuted" in all seven columns;
+  REQUEST_EVENT in Verus, Rocq and F\*; `wrap_bin_fixed_72` in six (SPARK timed out under load).
+- findings: the six with a twin refuted in all seven; SUMD has none in the bounded search.
+- `refute_at.py --all`: all seven findings refuted in all seven kernels at their real inputs.
+- `px4_stmt.py`: 8 of 8 comparisons agree at every input; at the real inputs the original lines give 1 (arm),
+  3, `INT_MIN` and a read past `data`, and the fixed lines -1, -1, `INT32_MAX` and nothing handed on.
+- D8 audits: SERIAL_CONTROL fix 44 mutants, 0 survivors; DO_JUMP fix 18, 0. Suite: 812 passed and 2 failed before
+  the new tasks were registered in `px4_diff.py` and the README; `t/test_flight.py` passes after.
+
+**Bars**, for a clean clone at this registration's commit:
+(1) fixes: arm, DO_JUMP, SERIAL_CONTROL, stream interval and SUMD verified with the twin refuted in all seven columns.
+(2) `t/FLIGHT-FINDINGS-REAL.md`: 7 of 7 findings refuted in all seven kernels.
+(3) `t/PX4-STMT.md`: 8 of 8 comparisons agree at every input.
+(4) `t/FLIGHT.md` unchanged: "Verified with the twin refuted in all seven columns: 18 of 27 tasks".
+(5) No verified cell lost: the Rocq column reads 84, 15 and 1 over `t/tasks/`, `t/autonomy/` and `t/algoveri/`.
+
+### T71 read (2026-10-08 05:40Z): all five bars held
+
+Clean clone at 7a0d8ea, unit tup-t-clean45.
+- **(1) held.** Arm, DO_JUMP, SERIAL_CONTROL, stream interval and SUMD: "verified / refuted" in all seven columns.
+  REQUEST_EVENT verifies in Verus, Rocq and F\*; Dafny proves it only between 5M and 20M resource units against the
+  fixed 500k, so it stays a timeout. `wrap_bin_fixed_72` is in six, with SPARK timing out.
+- **(2) held.** All seven findings are refuted in all seven kernels at their real inputs.
+- **(3) held.** 8 of 8 comparisons agree at every input.
+- **(4) held.** "Verified with the twin refuted in all seven columns: 18 of 27 tasks".
+- **(5) held.** Rocq verifies 84, 15 and 1 over `t/tasks/`, `t/autonomy/` and `t/algoveri/`, each with the twin
+  refuted, as at clean44.
+
+Added after the registration, measured by hand (ff29bb2): DO_SET_MODE (#29036's second part) is refuted at 264 in
+all seven kernels, its fix verifies in all seven, and PX4's lines agree at all 92 inputs, for 10 of 10 comparisons.
+
+What this establishes: every pull request filed to PX4 now carries a machine-checked account of its defect, and
+every fix but two carries a seven-kernel proof. For the five MAVLink and commander defects, PX4's own compiled lines
+behave as the t finding says before the fix and as the t fix says after it, at every input tested.
+
+Added after the reading, by hand (2026-10-08 07:55Z): REQUEST_EVENT's handler joins `px4_stmt.py` (several
+integer inputs per case; the fix's lines cut to the second closing brace). PX4's original lines agree with the
+finding and the fixed lines with the fix at all 77 inputs, wrapped ranges included: 41 lookups against 20 at the real
+input before, 20 after. Twelve of twelve comparisons now agree; every filed MAVLink and commander fix is checked
+against PX4's own compiled statements.
+
+## T72 registered (2026-10-08 07:59Z, after hand runs and before a clean-clone run): Lean states the divisions an entry state passes through
+
+**What changes.** `lower_lean` adds a last alternative to each loop invariant's entry proof when the body divides:
+`0 <= a / b` for each division, by `Int.ediv_nonneg` with its hypotheses by `omega`, each `have` under `try`. `grind`
+does not E-match the lemma's hypotheses (probe, receipt b4598ab5fa2e). A task without a division lowers byte for byte
+as before.
+
+**Measured before this registration.** Lean lowerings change for 11 of 330 `.t` files. By hand, `--kernels lean`:
+- `px4_obstacle_body_fixed`: unproved before, verified now, twin refuted;
+- `count_evens_skip`, `digit_sum`, `first_even`, `is_prime`: verified, as at clean44;
+- `fast_exponential`, `reverse_in_place`: unproved, as at clean44;
+- `discrete_logarithm`: real verified, twin unproved, as recorded at T24;
+- the request-event pair and the obstacle finding: unchanged verdicts.
+Suite: 817 passed.
+
+**Bars**, for a clean clone at this registration's commit:
+(1) `px4_obstacle_body_fixed` verified with the twin refuted in all seven columns.
+(2) No Lean cell lost: Lean verifies 89, 15 and 1 over `t/tasks/`, `t/autonomy/` and `t/algoveri/`, as at clean44.
+
+### T72 read (2026-10-08 08:26Z): both bars held
+
+Clean clone at 3266831, units tup-t-clean46 and tup-t-clean46b.
+- **(1) held.** `px4_obstacle_body_fixed` is verified with the twin refuted in all seven columns.
+- **(2) held.** Lean verifies 89, 15 and 1 over `t/tasks/`, `t/autonomy/` and `t/algoveri/`, each with the twin
+  refuted, the same tasks as at clean44.
+
+(The first unit's Lean runs were refused for want of `--table` on a one-kernel run; clean46b reran them with it.)

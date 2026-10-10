@@ -213,6 +213,19 @@ diff rc=0
 timestamp line, over all 7 kernels and all 34 committed tasks. This is
 the ROADMAP 14.4 DONE WHEN bar for `verify`, measured, not assumed.
 
+For automation (T82, 2026-10-10), directory `--json` stdout contains only
+diagnostic JSON Lines; progress goes to stderr. Each verdict names the input
+file actually read, including JSON files and files whose stems differ from
+their declared task names. Explicit `--kernels` requests require every named
+kernel to be available. Empty inputs, unavailable required kernels and invalid
+worker counts fail before dispatch.
+
+A directory agreement table requires at least three repetitions. `--flake 1`
+and `--flake 2` remain available for single-file provisional results, whose
+exit status is unsuccessful until the agreement requirement is met. Tables
+replace the previous complete file atomically; an output failure returns a
+nonzero status and does not emit successful verdict records.
+
 ## twin
 
 The ladder's chosen operator and its witness, or the named refusal.

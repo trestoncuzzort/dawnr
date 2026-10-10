@@ -35,9 +35,10 @@ flake 3 -- is done separately with `python3 grade.py --tasks t/tasks
 patch/report, not restated here since a re-run can drift under
 contention); this file checks only the Python-level shape: the emitted
 source actually contains the uncontracted clone and calls it from the
-certificate, the clone carries no Pre/Post, and a task the new path
-does not apply to (no loop, or more than one) is byte-for-byte
-unaffected.
+certificate, the clone carries no Pre/Post, and the straightline fallback is
+unaffected. The 2026-09-18 extension emits one clone per loop, so two loops
+also use F_Cert. T77 adds real-kernel positive and negative controls in
+test_spark_multiloop_kernel.py for that extension.
 """
 import os
 import sys
@@ -111,7 +112,7 @@ class TestLoopCertEmission(unittest.TestCase):
 
 
 class TestLoopCertFallback(unittest.TestCase):
-    """Tasks the new path must NOT touch: no loop, or more than one."""
+    """Straightline fallback and the multiple-loop certificate path."""
 
     def test_no_loop_task_unaffected(self):
         task = {
@@ -133,8 +134,7 @@ class TestLoopCertFallback(unittest.TestCase):
         self.assertNotIn("_State_Cert", src)
         self.assertIn("(not (F (", src)
 
-    @unittest.expectedFailure  # known-failing, internal/HANDOFF-2026-09-20-antigravity.md
-    def test_two_loops_falls_back_to_plain_f_call(self):
+    def test_two_loops_use_uncontracted_clones(self):
         task = {
             "t": 1, "name": "two_loops",
             "params": [{"name": "n", "type": "int"}],
@@ -169,11 +169,18 @@ class TestLoopCertFallback(unittest.TestCase):
         w = {"n": 1, "_kind": "value", "_real": 1, "_twin": 0,
             "_ens": True}
         src = lower_spark.lower(task, task["body"], witness=w)
-        # Two loops: _cert_loops finds 2, the len(loops) == 1 guard
-        # refuses the new path and the pre-existing F(args) goal is kept
-        # -- still a legitimate (if possibly unproved) certificate, never
-        # a crash and never a silently wrong one.
-        self.assertIn("(not (F (", src)
+        clones = src[src.index("function W_1_Cert"):src.index("function F_Cert")]
+        self.assertIn("function W_2_Cert", clones)
+        self.assertNotIn("Pre ", clones)
+        self.assertNotIn("Post =>", clones)
+        self.assertIn("Subprogram_Variant", clones)
+        f_cert = src[src.index("function F_Cert"):src.index("--  Refutation certificate")]
+        self.assertIn("W_1_Cert (", f_cert)
+        self.assertIn("W_2_Cert (", f_cert)
+        self.assertNotRegex(f_cert, r"\bW_[12]\s*\(")
+        cert = src[src.index("T_Refutation_Certificate return Boolean is"):]
+        self.assertIn("(not (F_Cert (", cert)
+        self.assertNotIn("(not (F (", cert)
 
 
 class TestGaussSumInvariant(unittest.TestCase):

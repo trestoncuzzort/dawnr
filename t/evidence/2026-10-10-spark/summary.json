@@ -1,0 +1,28 @@
+{
+  "scope": "two-loop SPARK certificate controls, not a full kernel column",
+  "engine_commit": "21528a14c5f11d754410e5e35c6c74a0ed3c3e40",
+  "working_tree_clean_before_and_after": true,
+  "command": "T_SPARK_JOBS=1 python -m pytest -q t/test_lower_spark_loop_cert.py t/test_spark_multiloop_kernel.py",
+  "tests_passed": 15,
+  "kernel_subtests_passed": 3,
+  "repeats_per_case": 3,
+  "asserted_outcomes": {
+    "real": [
+      "verified"
+    ],
+    "wrong": [
+      "refuted"
+    ],
+    "fabricated": [
+      "unproved",
+      "timeout"
+    ]
+  },
+  "negative_control": "kernel audited an unproved certificate goal; zero certificate postconditions proved",
+  "sources_sha256": {
+    "fabricated.ads": "0bde28d867901eed2ad41f001574d69a41f8a7a2e938f32a0e0dd557dd298832",
+    "real.ads": "3255db50e99198cea03298edd0dba7e2aff49d7b65923559581d04428129665d",
+    "wrong.ads": "f7b734979ae66467da1c066089b5ea01408b437a385ae4d673fd7d7cdd7308f7"
+  },
+  "log_sha256": "0da9f735a5f9adffcea9851aaf416ad9dd2cdcfc7de94af61c2b5695406ccaac"
+}

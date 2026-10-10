@@ -1,0 +1,17 @@
+{
+  "px4_wrap_bin_any": {"input": {"bin": -73, "bin_count": 72},
+                       "why": "a bin one past a full turn below zero; PX4 returns -1"},
+  "px4_sumd_receive_any": {"input": {"sumd_data": {"fill": 0, "len": 64}, "length": 32},
+                           "why": "PX4's 64-byte buffer and a valid 32-channel frame"},
+  "px4_request_event_any": {"input": {"first": 0, "last": 40, "capacity": 20},
+                            "why": "a request for events 0..40 against PX4's default 20-event buffer"},
+  "px4_arm_param_any": {"input": {"p": 257}, "why": "COMPONENT_ARM_DISARM param1 = 257"},
+  "px4_stream_interval_any": {"input": {"x": 2147483648}, "why": "a requested interval of 2^31 us, about 36 minutes"},
+  "px4_serial_control_any": {"input": {"data": {"fill": 0, "len": 70}, "buf": {"fill": 0, "len": 71}, "count": 71},
+                             "why": "a SERIAL_CONTROL message whose count, 71, exceeds its 70-byte data field"},
+  "px4_do_jump_index_any": {"input": {"p": 65539}, "why": "a DO_JUMP item with param1 = 65539, stored as a jump to item 3"},
+  "px4_set_mode_field_any": {"input": {"p": 264}, "why": "a DO_SET_MODE base mode of 264, narrowed to mode 8"},
+  "px4_obstacle_body_any": {"input": {"distances": {"fill": 0, "len": 72}, "seen": {"fill": 0, "len": 360}, "inc": 1},
+                            "why": "a body-frame OBSTACLE_DISTANCE message at a 1 degree increment: 360 steps over 72 distances"},
+  "px4_fusion_source_any": {"input": {"p": 256}, "why": "ESTIMATOR_SENSOR_ENABLE with source 256, narrowed to GPS"}
+}

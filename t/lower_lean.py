@@ -8729,11 +8729,23 @@ theorem t_str_join_split_roundtrip (s : List Int) (c : Int) :
         # further down), so both prove the identical goal the identical
         # way, not two independently-written tactics that could drift.
         init_hinv_pfs = []
+        # PREDICT T72: an entry state reached through a division (`bound := 360 / inc`) needs `0 <= a / b`, which grind
+        # does not derive (Int.ediv_nonneg's hypotheses are not E-matched; receipt b4598ab5fa2e). Each division the body
+        # makes is offered as a fact, its hypotheses by omega, in a last alternative; `try` drops one that does not apply.
+        # Tasks without a division keep their text byte for byte.
+        div_alt = ""
+        dpairs = self.divmod_pairs([self.body], {}, types)
+        if dpairs:
+            facts = "; ".join(f"try have {self.fresh_hyp()} : (0 : Int) ≤ {a} / {b} := "
+                              f"Int.ediv_nonneg (by omega) (by omega)" for a, b in dpairs)
+            div_alt = f" | ({facts}; {self._gr()})"
         for iv in invs:
             if "exists" in iv:
                 lo0 = self.term(iv["exists"]["lo"], env0, types)
                 init_hinv_pfs.append(f"(by first | {self._gr()} | "
                                      f"exact ⟨{lo0}, by {self._gr()}⟩)")
+            elif div_alt:
+                init_hinv_pfs.append(f"(by first | {self._gr()}{div_alt})")
             else:
                 init_hinv_pfs.append(f"(by {self._gr()})")
         hinv_init_a = "".join(f" {p}" for p in init_hinv_pfs)

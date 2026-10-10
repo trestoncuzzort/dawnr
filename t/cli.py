@@ -59,9 +59,12 @@ allowed, and its diff against t/AGREEMENT.md.
 from __future__ import annotations
 
 import argparse
+from contextlib import nullcontext, redirect_stdout
 import json
+import os
 import sys
 from pathlib import Path
+import tempfile
 
 HERE = Path(__file__).resolve().parent
 if str(HERE) not in sys.path:
@@ -73,7 +76,6 @@ import run_par                       # noqa: E402
 import surface                       # noqa: E402
 import tasks_io                      # noqa: E402
 import tlib                          # noqa: E402
-from check_wf import check_wf        # noqa: E402
 from verifiers import Outcome        # noqa: E402
 
 KERNELS = [b for b, _, _ in tlib.BACKENDS]
@@ -102,6 +104,32 @@ def print_json_lines(records) -> None:
         print(json.dumps(r, sort_keys=True))
 
 
+def _verify_error(args, path, message, *, code=2, rule="usage") -> int:
+    if args.json:
+        print_json_lines([diag(file=str(path), rule=rule, message=message)])
+    else:
+        print(message, file=sys.stderr)
+    return code
+
+
+def _write_table(path: Path, text: str) -> None:
+    """A failed write must leave the previous complete report in place."""
+    path = path.resolve()
+    temporary = None
+    try:
+        with tempfile.NamedTemporaryFile(mode="w", encoding="utf-8", newline="\n",
+                                         dir=path.parent, prefix=f".{path.name}.",
+                                         suffix=".tmp", delete=False) as stream:
+            temporary = Path(stream.name)
+            stream.write(text)
+            stream.flush()
+            os.fsync(stream.fileno())
+        os.replace(temporary, path)
+    finally:
+        if temporary is not None:
+            temporary.unlink(missing_ok=True)
+
+
 def surface_error_diag(exc: surface.SurfaceError, fallback_file: str) -> dict:
     return diag(file=exc.file or fallback_file, line=exc.line, col=exc.col,
                rule=exc.production or "", severity="error", kernel="",
@@ -114,6 +142,32 @@ def wf_error_diag(err) -> dict:
     # {} so every element is a real WfError with .message/.rule/etc.
     return diag(file=err.file, line=err.line, col=err.col, rule=err.rule,
                severity="error", kernel="", message=err.message)
+
+
+def _read_checked(path, args):
+    """Read and validate before the CLI performs any verification work."""
+    path = str(path)
+    positions = {}
+    try:
+        task = (tasks_io.load_task(path) if Path(path).suffix == ".json"
+                else surface.parse_file(path, positions=positions))
+        errors = tlib.check_task(task, positions=positions, file=path)
+        records = [wf_error_diag(e) for e in errors]
+    except surface.SurfaceError as exc:
+        records = [surface_error_diag(exc, path)]
+    except (OSError, UnicodeError) as exc:
+        records = [diag(file=path, rule="read", message=str(exc))]
+    except (ValueError, AssertionError, AttributeError) as exc:
+        records = [diag(file=path, rule="task-shape", message=str(exc))]
+    if records:
+        if args.json:
+            print_json_lines(records)
+        else:
+            for record in records:
+                where = f"{path}:{record['line']}:{record['col']}" if record['line'] else path
+                print(f"{where}: {record['message']}")
+        return None
+    return task
 
 
 # ===========================================================================
@@ -142,25 +196,11 @@ def cmd_parse(args) -> int:
 
 def cmd_check(args) -> int:
     path = str(args.file)
-    positions: dict = {}
-    try:
-        task = surface.parse_file(path, positions=positions)
-    except surface.SurfaceError as exc:
-        d = surface_error_diag(exc, path)
-        if args.json:
-            print_json_lines([d])
-        else:
-            print(str(exc))
+    if _read_checked(path, args) is None:
         return 1
-    errors = check_wf(task, positions=positions, file=path)
-    if args.json:
-        print_json_lines(wf_error_diag(e) for e in errors)
-    elif errors:
-        for e in errors:
-            print(str(e))
-    else:
+    if not args.json:
         print(f"{path}: well-formed, no errors")
-    return 1 if errors else 0
+    return 0
 
 
 # ===========================================================================
@@ -203,14 +243,8 @@ def _lower_one(task: dict, kernel: str) -> str:
 
 def cmd_lower(args) -> int:
     path = str(args.file)
-    positions: dict = {}
-    try:
-        task = surface.parse_file(path, positions=positions)
-    except surface.SurfaceError as exc:
-        if args.json:
-            print_json_lines([surface_error_diag(exc, path)])
-        else:
-            print(str(exc))
+    task = _read_checked(path, args)
+    if task is None:
         return 1
 
     kernels = KERNELS if args.kernel == "all" else [args.kernel]
@@ -258,23 +292,16 @@ def cmd_lower(args) -> int:
 # ===========================================================================
 
 def _verify_file(args, path: Path) -> int:
-    positions: dict = {}
-    try:
-        task = surface.parse_file(str(path), positions=positions)
-    except surface.SurfaceError as exc:
-        if args.json:
-            print_json_lines([surface_error_diag(exc, str(path))])
-        else:
-            print(str(exc))
+    task = _read_checked(path, args)
+    if task is None:
         return 1
 
     kernels = args.kernels.split(",") if args.kernels else None
     if kernels is not None:
         unknown = [k for k in kernels if k not in KERNELS]
         if unknown:
-            print(f"cli.py verify: unknown kernel(s) {unknown}, known: {KERNELS}",
-                  file=sys.stderr)
-            return 2
+            return _verify_error(args, path,
+                                 f"cli.py verify: unknown kernel(s) {unknown}, known: {KERNELS}")
 
     flake = args.flake if args.flake is not None else 3
     result = tlib.verify(task, kernels=kernels, flake=flake)
@@ -288,7 +315,7 @@ def _verify_file(args, path: Path) -> int:
             msg = tlib.explain(entry)
         else:
             r, t = entry["real"], entry["twin"]
-            flip = r == Outcome.VERIFIED and t == Outcome.REFUTED
+            flip = r == Outcome.VERIFIED and t == Outcome.REFUTED and not entry.get("provisional")
             all_ok &= flip
             sev = "verdict"
             msg = tlib.explain(entry)
@@ -304,61 +331,85 @@ def _verify_file(args, path: Path) -> int:
 
 
 def _verify_dir(args, path: Path) -> int:
-    if args.out:
-        harness.OUT = Path(args.out)
-    harness.OUT.mkdir(parents=True, exist_ok=True)
     table_path = Path(args.table) if args.table else HERE / "AGREEMENT.md"
 
     tasks = tasks_io.load_dir(path)
+    if not tasks:
+        return _verify_error(args, path, "REFUSED: no tasks, nothing was verified. Table not written.")
     # A table row and every lowered file are keyed by the task's declared name (run_par.lower_and_dispatch,
     # harness.OUT/<name>.<suffix>), so two files declaring one name would overwrite each other's sources while
     # both run and leave one row for two tasks (2026-10-06: AlgoVeri's polymul_naive and polymul_karatsuba both
     # declared poly_multiply). Refused before anything is lowered.
     seen: dict = {}
+    source_paths: dict = {}
+    invalid = False
     for p in tasks:
-        seen.setdefault(tasks_io.load_task(p)["name"], []).append(Path(p).name)
+        task = _read_checked(p, args)
+        if task is None:
+            invalid = True
+        else:
+            seen.setdefault(task["name"], []).append(Path(p).name)
+            source_paths[task["name"]] = p
+    if invalid:
+        return 1
     dup = {n: fs for n, fs in seen.items() if len(fs) > 1}
     if dup:
         for n, fs in sorted(dup.items()):
-            print(f"cli.py verify: {len(fs)} files declare the task name {n} ({', '.join(fs)}); a table row and "
-                  f"the lowered files are keyed by that name", file=sys.stderr)
+            _verify_error(args, path,
+                          f"cli.py verify: {len(fs)} files declare the task name {n} ({', '.join(fs)}); a table row and "
+                          "the lowered files are keyed by that name")
         return 2
     # `t verify <dir>` writes t/AGREEMENT.md by default, the same accident as
     # a3c6f955 (a one-directory run replaced the committed matrix): the
     # committed table takes exactly the committed tasks and all seven kernels
     refusal = run_par.committed_task_refusal(table_path, tasks, False)
     if refusal:
-        print(refusal, file=sys.stderr)
-        return 2
-    cols, present = run_par.probe_backends()
-    if args.kernels:
-        wanted = set(args.kernels.split(","))
-        unknown = wanted - {b for b, _ in cols}
+        return _verify_error(args, path, refusal)
+    wanted = set(args.kernels.split(",")) if args.kernels else None
+    if wanted is not None:
+        unknown = wanted - set(KERNELS)
         if unknown:
-            print(f"cli.py verify: unknown kernel(s) {sorted(unknown)}, "
-                  f"known: {[b for b, _ in cols]}", file=sys.stderr)
-            return 2
+            return _verify_error(args, path,
+                                 f"cli.py verify: unknown kernel(s) {sorted(unknown)}, known: {KERNELS}")
+    with redirect_stdout(sys.stderr) if args.json else nullcontext():
+        cols, present = run_par.probe_backends()
+    if wanted is not None:
         cols = [c for c in cols if c[0] in wanted]
         present = [p for p in present if p[0] in wanted]
+        missing = sorted(wanted - {p[0] for p in present})
+        if missing:
+            return _verify_error(args, path, "REFUSED: requested kernel(s) unavailable: "
+                                 + ", ".join(missing) + ". Table not written.")
     refusal = run_par.committed_kernel_refusal(table_path, cols, False)
     if refusal:
-        print(refusal, file=sys.stderr)
-        return 2
-
-    flake_n = args.flake if args.flake is not None else 3
-    jobs_arg = args.jobs
-    rows, wits, all_ok = run_par.lower_and_dispatch(tasks, present, jobs_arg, flake_n)
+        return _verify_error(args, path, refusal)
 
     present_names = [b for b, v in cols if not v.startswith("ABSENT")]
-    import os
-    min_kernels = int(os.environ.get("T_MIN_KERNELS", "2"))
+    try:
+        min_kernels = int(os.environ.get("T_MIN_KERNELS", "2"))
+        if min_kernels < 1:
+            raise ValueError
+    except ValueError:
+        return _verify_error(args, path, "T_MIN_KERNELS must be a positive integer")
     if len(present_names) < min_kernels:
-        print(f"\nREFUSED: {len(present_names)} kernel(s) available, "
-              f"{min_kernels} required. AGREEMENT.md not written.")
-        return 2
-    if not tasks:
-        print("\nREFUSED: no tasks, nothing was verified. AGREEMENT.md not written.")
-        return 2
+        return _verify_error(args, path, f"REFUSED: {len(present_names)} kernel(s) available, "
+                             f"{min_kernels} required. Table not written.")
+
+    previous_out = harness.OUT
+    try:
+        if args.out:
+            harness.OUT = Path(args.out)
+        harness.OUT.mkdir(parents=True, exist_ok=True)
+        flake_n = args.flake if args.flake is not None else 3
+        with redirect_stdout(sys.stderr) if args.json else nullcontext():
+            rows, wits, all_ok = run_par.lower_and_dispatch(tasks, present, args.jobs, flake_n)
+            text = run_par.format_table(cols, rows, tasks, harness.OUT, wits)
+        _write_table(table_path, text)
+    except OSError as exc:
+        return _verify_error(args, table_path, f"verification output failed: {exc}",
+                             code=1, rule="write")
+    finally:
+        harness.OUT = previous_out
 
     if args.json:
         records = []
@@ -371,15 +422,13 @@ def _verify_dir(args, path: Path) -> int:
                 twin_text = kind if kind is not None else c[1]
                 good = c == (Outcome.VERIFIED, Outcome.REFUTED, True)
                 records.append(diag(
-                    file=str(path / f"{tname}.t"), rule="", severity="verdict",
+                    file=str(source_paths[tname]), rule="", severity="verdict",
                     kernel=bname,
                     message=f"real={c[0]} twin={twin_text}"
                             + ("" if c[2] else " (FLAKED)")
                             + ("" if good else " <-- FINDING")))
         print_json_lines(records)
 
-    text = run_par.format_table(cols, rows, tasks, harness.OUT, wits)
-    table_path.write_text(text, encoding="utf-8", newline="\n")
     if not args.json:
         print(f"\n{len(present_names)} kernels, {len(tasks)} tasks: "
               f"{'FULL AGREEMENT' if all_ok else 'DISAGREEMENT, see ' + str(table_path)}")
@@ -387,8 +436,16 @@ def _verify_dir(args, path: Path) -> int:
 
 
 def cmd_verify(args) -> int:
+    if args.flake is not None and args.flake < 1:
+        return _verify_error(args, args.target, "cli.py verify: --flake must be a positive integer")
+    if args.jobs is not None and args.jobs < 1:
+        return _verify_error(args, args.target, "cli.py verify: --jobs must be a positive integer")
     path = Path(args.target)
     if path.is_dir():
+        if args.flake is not None and args.flake < 3:
+            return _verify_error(args, path,
+                                 "REFUSED: directory tables require at least three repetitions; "
+                                 "use single-file verification for provisional results.")
         return _verify_dir(args, path)
     return _verify_file(args, path)
 
@@ -399,13 +456,8 @@ def cmd_verify(args) -> int:
 
 def cmd_twin(args) -> int:
     path = str(args.file)
-    try:
-        task = surface.parse_file(path)
-    except surface.SurfaceError as exc:
-        if args.json:
-            print_json_lines([surface_error_diag(exc, path)])
-        else:
-            print(str(exc))
+    task = _read_checked(path, args)
+    if task is None:
         return 1
 
     twin_body, op, w = tlib.twin(task)

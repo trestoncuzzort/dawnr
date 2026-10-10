@@ -6000,9 +6000,9 @@ def _gint(e) -> int:
     """Ground int value of a quantifier bound after witness substitution.
     Deliberately strict: anything unexpected raises, which refuses the
     certificate rather than emitting a wrong one."""
+    e = _proj_ground(e)              # PREDICT T71: first, so `fst(pair(1, s))` reaches the literal case below
     if isinstance(e, dict) and "int" in e:
         return e["int"]
-    e = _proj_ground(e)
     op = e.get("op") if isinstance(e, dict) else None
     args = [_proj_ground(a) for a in e.get("args", [])] if isinstance(e, dict) else []
     if op in ("fst", "snd"):

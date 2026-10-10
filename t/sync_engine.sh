@@ -16,7 +16,9 @@ eng="${1:-$here/../t-proof-engine}"
 want="${2:-}"
 
 # dawnr's own file of the same name: its pipeline (t/loop_train.py) needs `datasets`, the engine needs nothing
-OWNED=(t/requirements.txt)
+# The sandbox helper originated here and is also packaged by the standalone
+# engine. Its restored engine copy was checked byte-for-byte before this pin.
+OWNED=(t/requirements.txt t/landlock_exec.py)
 
 git -C "$eng" fetch -q origin
 [ -n "$want" ] || want=origin/main

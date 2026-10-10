@@ -1,0 +1,48 @@
+{
+  "scope": "clean-checkout collected tests; not a full seven-kernel proof matrix",
+  "engine_commit": "f3cb6a5cca5bd9cc83ddfd3a9855b735e4b4b682",
+  "python": "3.14.7",
+  "pytest": "9.1.1",
+  "command": "python -m pytest -q --junitxml=REPORT.xml . (from t/)",
+  "working_tree_clean_before_and_after": true,
+  "summary": "836 passed, 45 skipped, 1 xfailed, 5 warnings, 150 subtests passed in 81.86s (0:01:21)",
+  "passed": 836,
+  "skipped": 45,
+  "expected_failures": 1,
+  "passing_subtests": 150,
+  "warnings": 5,
+  "failures": 0,
+  "errors": 0,
+  "skip_reasons": {
+    "": 1,
+    "coqc not on PATH": 16,
+    "coqc/coqchk not on PATH": 4,
+    "frama-c is not installed": 2,
+    "lifted corpus not present here": 5,
+    "lifted corpus row not present": 11,
+    "no Landlock sandbox here: the Landlock sandbox does not run here: <home>/.local/share/t-proof-venv/bin/python: can't open file '<engine-checkout>/t/landlock_exec.py': [Errno 2] No such file or directory": 5,
+    "t/out/lifted-tasks not present in this checkout": 1,
+    "xgrammar is in the lab ML environment": 1
+  },
+  "kernels": {
+    "dafny": "4.11.0+fcb2042d6d043a2634f0854338c08feeaaaf4ae2",
+    "lean": "Lean (version 4.33.1, x86_64-unknown-linux-gnu, commit 819816b2e0a3bf405af45ae5c7af2491d8f5bee6, Release)"
+  },
+  "source_sha256": {
+    "t/cache.py": "66f0cbaee859f58e0b9489626f47b89cdb58c385238a45864f55d83fa3cdb062",
+    "t/cli.py": "86b4268be2b8e191dd7f6a969b4568892a95911ea06a8954bd5f651d29aa1002",
+    "t/run_par.py": "2493661467f49fdcab218537aedf1f6722d76feb5b88a9ce7b7d54654b0d1804",
+    "t/tlib.py": "f6d5be063f9f23a4be815a7b7483ec4093c53993484a880971dffacd820d4c0c",
+    "t/verifiers/__init__.py": "d0d0e2cca9e88cf5c268d0a408ed7e0f4b3d3f35bae235296271a53bad85ee8d",
+    "t/test_library_concurrency.py": "044f24ce2f5f8d1a651c347fcbd1a0eb0f96a108b3f301faede88d5efc41f118",
+    "t/test_validation_gate.py": "8f9b7066f85b14740b69e54cd9ad026b0d4a8ebe9af765a986cbfb50076e311e",
+    "t/test_verdict_cache.py": "a1f0a12bc3ae0470640566a64e8237fbe6334a504d03449b1e65c18210984a61"
+  },
+  "report_sha256": "32d55c8ca712580025a2266e7493d1f81637882b065fe0a31a0a5cea2a8d9d2e",
+  "expected_failure_details": [
+    {
+      "test": "test_lower_spark_loop_cert.TestLoopCertFallback::test_two_loops_falls_back_to_plain_f_call",
+      "reason": null
+    }
+  ]
+}

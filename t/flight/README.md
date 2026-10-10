@@ -88,6 +88,15 @@ PX4's own code at the refuting input.
 | t task | PX4 function | the `requires` dropped | what PX4 returns without it |
 |---|---|---|---|
 | px4_wrap_bin_any | `ObstacleMath::wrap_bin` | `bin >= -bin_count` | -1 at `bin` = -73, `bin_count` = 72 |
+| px4_sumd_receive_any | `sumd_decode`'s storing of channel bytes (src/lib/rc/sumd.cpp:196) | `2 * length <= len(sumd_data) - 2`, one byte of headroom the frame-length check does not leave | a write one past the buffer: `sumd_data[64]` for a valid 32-channel frame |
+| px4_request_event_any | `SendProtocol::handle_request_event`'s loop (src/modules/mavlink/mavlink_events.cpp:182) | a bound on the sequences handled | 41 lookups for events 0..40 against a 20-event buffer; up to 65535 for a wrapped range |
+| px4_arm_param_any | `Commander::handle_command`, COMPONENT_ARM_DISARM (src/modules/commander/Commander.cpp:1101) | narrowing only a value that fits `int8_t` | `param1` = 257 accepted as arm |
+| px4_stream_interval_any | `Mavlink::configure_stream` (src/modules/mavlink/mavlink_main.cpp:1415) | a clamp before the int conversion | a negative interval (`INT_MIN` on x86) for a requested interval of 2^31 us |
+| px4_serial_control_any | `MavlinkReceiver::handle_message_serial_control`, the passthrough branch (src/modules/mavlink/mavlink_receiver.cpp:2114) | `count <= len(data)`, which the shell branch of the same handler checks (line 2137) | 71 bytes handed on from the 70-byte `data` field for `count` = 71 |
+| px4_do_jump_index_any | `MavlinkMissionManager::parse_mavlink_mission_item`, DO_JUMP (src/modules/mavlink/mavlink_mission.cpp:1723) | an index that fits `int16_t` | `param1` = 65539 stored as a jump to item 3 |
+| px4_set_mode_field_any | `Commander::handle_command`, DO_SET_MODE (src/modules/commander/Commander.cpp:931) | a mode field that fits `uint8_t` | base mode 264 accepted as mode 8 |
+| px4_fusion_source_any | `EKF2::handleSensorFusionCommand`, ESTIMATOR_SENSOR_ENABLE (src/modules/ekf2/EKF2.cpp:1059, at df387bde) | a source that fits `uint8_t` | source 256 (and NaN, MAVLink's unused value) selects GPS |
+| px4_obstacle_body_any | `CollisionPrevention::_addObstacleSensorData`, the body-frame branch (src/lib/collision_prevention/CollisionPrevention.cpp:281) | `j < BIN_COUNT`, which the global-frame branch above it has | 360 reads from the 72-element `distances` at a 1 degree increment |
 
 `wrap_bin`'s result indexes the collision-prevention obstacle map. That map is four arrays of 72 bins:
 `_obstacle_map_body_frame.distances`, `_data_timestamps`, `_data_maxranges` and `_data_fov`.
@@ -99,6 +108,61 @@ For a forward-facing sensor, a field of view above about 12.65 rad (4π is 12.57
 negative. `px4_wrap_bin` proves the result is a valid bin, congruent to `bin`, for every `bin >= -bin_count`. The contract is
 PX4's own: its test `ObstacleMathTest.WrapBin` (src/lib/collision_prevention/ObstacleMathTest.cpp:184) expects a
 negative bin "wrapped back to the end" (-1 to 71), and checks no bin below -72.
+
+**Proposed fixes** (`fixes/`), filed upstream as PX4 PR #29030 (`wrap_bin`) and #29031 (SUMD). A task there restates the change proposed to PX4 for a finding, with the finding's
+contract and without the `requires` PX4's callers did not establish. `px4_diff.py --fixed-tree DIR` compiles the
+patched PX4 checkout's own code and runs it against the task on every domain point.
+
+| t task | the fix | PX4 call |
+|---|---|---|
+| px4_wrap_bin_fixed | `wrap_bin` shifts a negative remainder back into `[0, bin_count)` | `ObstacleMath::wrap_bin(bin, bin_count)` |
+| px4_wrap_bin_fixed_72 | the same, at `CollisionPrevention`'s `BIN_COUNT` = 72 | `ObstacleMath::wrap_bin(bin, 72)` |
+| px4_sumd_receive_fixed | channel byte k is stored at `sumd_data[k]`, not `k + 1` | `sumd_decode` (checked by sanitizer run, below) |
+| px4_request_event_fixed | sequences beyond the buffer's capacity are answered by one error, then at most `capacity` are looked up | `SendProtocol::handle_request_event` (PX4 PR #29033) |
+| px4_arm_param_fixed | only a value that fits `int8_t` is narrowed | `Commander::handle_command` (PR #29036) |
+| px4_stream_interval_fixed | the interval is clamped to `INT32_MAX` before conversion | `Mavlink::configure_stream` (PR #29034) |
+| px4_serial_control_fixed | a `count` larger than the `data` field is not handed on | `MavlinkReceiver::handle_message_serial_control` (PR #29032) |
+| px4_do_jump_index_fixed | an index outside `[0, INT16_MAX]` is rejected | `MavlinkMissionManager::parse_mavlink_mission_item` (PR #29035) |
+| px4_set_mode_field_fixed | a mode field outside `(-1, 256)` is rejected | `Commander::handle_command` (PR #29036) |
+| px4_fusion_source_fixed | a source, instance or enable flag its integer cannot hold is denied | `EKF2::handleSensorFusionCommand` (PR #29039) |
+| px4_obstacle_body_fixed | the body-frame loop stops at the 72 distances, as the global-frame loop does | `CollisionPrevention::_addObstacleSensorData` (PR #29037) |
+
+The SUMD pair states `sumd_decode`'s storing loop over a packet buffer of any even size. PX4's buffer is
+`SUMD_MAX_CHANNELS * 2` = 64 bytes and accepts `2 <= length <= 32`. The tasks take the buffer's length as given and
+store each byte's position as its value, so the contract pins where every byte lands. The interpreter finds the
+out-of-bounds store at the smallest buffer, and the kernels prove the fixed loop for every size. PX4's own
+`sumd.cpp` was compiled with UBSan and fed a valid 32-channel frame. It reports the write and the read at index 64,
+and channel 32 decodes from the CRC byte. With the fix there are no reports and channel 32 is correct, and PX4's
+recorded stream (`test_data/sumd_data.txt`, 498 frames) decodes identically before and after.
+
+The MAVLink and commander pairs state the integer the float parameter denotes (a request for 257.0 is 257).
+Each C++ conversion gets its own semantics: GCC narrows a signed integer modulo 2^8, `uint16_t` sequence arithmetic
+wraps modulo 2^16, and the float-to-`int` conversion past `INT_MAX` is undefined in C++. The stream-interval
+finding uses x86's actual result for it (`INT_MIN`), the case PR #29034 describes; ARM's FPU saturates instead. The
+stream-interval pair also leaves out the float round trip `1e6 / (1e6 / x)`.
+
+DO_JUMP's index is a float stored into an `int16_t`. GCC converts through a 32-bit integer and keeps the low 16
+bits, so 65539 becomes 3; the pair takes `param1` within 2^24, where a float carries every integer exactly. The
+SERIAL_CONTROL pair states the copy `pushFromMavlink` makes of `count` bytes from `data`. The finding reads past
+`data` exactly when `count > len(data)`, and the fix hands on nothing then.
+
+**PX4's own statements, before and after.** These handlers need a running module, so `px4_diff.py` cannot call
+them. `px4_stmt.py` cuts each handler's lines verbatim from PX4's source, twice: at the pinned commit, and at the
+fix's commit on the pull request's branch. It compiles them with stand-ins for the surrounding names only: the
+message struct with MAVLink's field types, the enum values, and a passthrough that records what it is handed. It
+then runs every input of the t task, plus the real one, read at run time so the compiler cannot fold an out-of-range
+conversion. The original lines agree with the finding, and the fixed lines with the fix, at every input, in all
+fourteen comparisons (`t/PX4-STMT.md`). At the real inputs, PX4's original lines arm on 257, set mode 8 on 264,
+select GPS for sensor source 256, look up 41 events against a 20-event buffer, jump to item 3 on 65539, give
+`INT_MIN` for 2^31 us, and read past `data` at 71. The fixed lines reject, reject, deny, look up 20, reject, clamp,
+and hand on nothing. REQUEST_EVENT's stand-in buffer holds no event, so every lookup misses, the case of a request
+for sequences long gone.
+The results are for x86-64. On ARM, a float-to-int conversion past `INT_MAX` saturates instead of giving
+`INT_MIN`, so the original stream interval reads differently there (PR #29034 describes both). The other six
+convert nothing outside the 32-bit range; the EKF2 source's ARM reading is in PR #29039.
+
+`t/refute_at.py` refutes each finding at the real input in the table. The kernels' verdicts are in
+`t/FLIGHT-FINDINGS.md`.
 
 **Checked against PX4 itself.** `px4_diff.py` fetches PX4's headers at the pinned commit (the platform header is
 replaced by a two-macro stub), compiles each function's own C++, and runs it on every domain point of its t task. It
