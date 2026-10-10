@@ -83,8 +83,8 @@ def test_other_processes_cannot_be_signalled_limited_or_read():
     try:
         v = denied(f"""
             os.kill({other.pid}, signal.SIGKILL)
-            os.kill(-1, signal.SIGKILL)
-            os.kill(0, signal.SIGKILL)
+            os.kill(-1, 0)
+            os.kill(0, 0)
             resource.prlimit({other.pid}, resource.RLIMIT_AS, (1, 1))
             os.setpriority(os.PRIO_USER, os.getuid(), 19)
             fcntl.fcntl(os.open("/dev/null", os.O_RDONLY), fcntl.F_SETOWN, {other.pid})

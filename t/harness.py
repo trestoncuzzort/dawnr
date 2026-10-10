@@ -59,6 +59,7 @@ what gets broken.
 from __future__ import annotations
 
 import json
+from contextvars import ContextVar
 from pathlib import Path
 
 import interp
@@ -416,7 +417,7 @@ def _arm_types(arms: list) -> dict:
     """The field types of the datatype whose constructors these arms name (the first datatype that declares them all),
     by constructor name; {} when no declared datatype does."""
     names = {a["ctor"] for a in arms}
-    for d in _CTX["datatypes"].values():
+    for d in _CTX.get()["datatypes"].values():
         ctors = {c["name"]: c for c in d.get("ctors", [])}
         if names <= set(ctors):
             return {n: [f["type"] for f in ctors[n].get("fields") or []] for n in ctors}
@@ -466,15 +467,17 @@ def _sub_arms(e: dict, path: tuple, arm_sc: dict):
             yield from _sub_arms(arm["body"], path + ("match", "arms", i, "body"), sc)
 
 
-_CTX: dict = {"functions": {}, "datatypes": {}}
+_CTX: ContextVar[dict] = ContextVar("witness_type_context", default={"functions": {}, "datatypes": {}})
 """The task's spec_funs and datatypes by name, set by `_set_ctx` at the start of every ladder run so the rungs'
 `_etype` can type a call or a constructor (2026-10-06; before, a spec_fun call typed as unknown and `average`'s
 real site took an int twin)."""
 
 
 def _set_ctx(task: dict) -> None:
-    _CTX["functions"] = {f["name"]: f for f in task.get("spec_funs", [])}
-    _CTX["datatypes"] = {d["name"]: d for d in task.get("datatypes", [])}
+    # Replace the context value: mutating a shared dictionary would still
+    # leak declarations into a copied context or a concurrent caller.
+    _CTX.set({"functions": {f["name"]: f for f in task.get("spec_funs", [])},
+              "datatypes": {d["name"]: d for d in task.get("datatypes", [])}})
 
 
 def _etype(expr, scope):
@@ -482,7 +485,8 @@ def _etype(expr, scope):
     (`_CTX`), or None when it cannot be told (an unbound name)."""
     try:
         import check_wf
-        t, errs = check_wf.expression_type(expr, dict(scope), functions=_CTX["functions"], datatypes=_CTX["datatypes"])
+        ctx = _CTX.get()
+        t, errs = check_wf.expression_type(expr, dict(scope), functions=ctx["functions"], datatypes=ctx["datatypes"])
         return None if errs else t
     except Exception:                                       # noqa: BLE001  (an untypeable node is "unknown", not a crash)
         return None

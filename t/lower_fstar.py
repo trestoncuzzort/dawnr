@@ -2557,6 +2557,12 @@ class Ctx:
             # below produces (a witness substituting a concrete sequence
             # into a seq-typed parameter or return) or a `fill`/`update`
             # tree that bottoms out at one.
+            # PREDICT T71: a long constant one (a real input's buffer, 64 or 70 bytes of 0) is `Seq.create`. The
+            # normalizer cannot unfold `Seq.length (seq_of_list l)`, and the SMT residual needs fuel past 8 for a long
+            # list; `create`'s length and index lemmas fire at once. Witnesses the bounded search finds (at most 5
+            # long) keep the literal, byte-identical to before.
+            if len(e["_seq"]) > 8 and len(set(e["_seq"])) == 1:
+                return f"(Seq.create {len(e['_seq'])} ({int(e['_seq'][0])}))"
             items = "; ".join(str(int(v)) for v in e["_seq"])
             return f"(Seq.createL #int [{items}])"
         if e.get("op") == "rev":
@@ -5931,6 +5937,23 @@ def _seq_rungs(cx: Ctx, task: dict, formula: dict) -> list[str]:
     return out
 
 
+def _long_literals(e, out=None) -> list:
+    """Each distinct ground int literal in `e` longer than 8 and not constant (sx writes a constant one as
+    `Seq.create`), in first-seen order."""
+    out = [] if out is None else out
+    if isinstance(e, dict):
+        v = e.get("_seq")
+        if isinstance(v, list) and len(v) > 8 and len(set(v)) > 1 and all(isinstance(x, int) for x in v):
+            if v not in out:
+                out.append(v)
+        for x in e.values():
+            _long_literals(x, out)
+    elif isinstance(e, list):
+        for x in e:
+            _long_literals(x, out)
+    return out
+
+
 def _certificate(cx: Ctx, task: dict, twin_body: list, w: dict, mapping: dict | None = None,
                  r_task: dict | None = None) -> str | None:
     """The appended t_refutation_certificate lemma for a measured twin
@@ -5965,6 +5988,12 @@ def _certificate(cx: Ctx, task: dict, twin_body: list, w: dict, mapping: dict | 
         uneq = _seq_uneq_ground_pairs(cx, formula)
         rungs = _seq_rungs(cx, task, formula)
         helpers = []
+        # PREDICT T71: a long ground literal that is not constant (a real input's buffer after 63 stores) is bound by
+        # `Seq.createL` first. Its postcondition carries the normalized length and `seq_of_list l == s`, which the SMT
+        # residual of `assert_norm` needs: the normalizer cannot unfold `Seq.length (seq_of_list l)`, and the solver's
+        # fuel does not reach a 64-element list. Literals of at most 8 (every bounded-search witness) add nothing.
+        for i, lit in enumerate(_long_literals(formula)):
+            helpers.append(f"  let t_lit_{i} = (Seq.createL #int [{'; '.join(str(int(v)) for v in lit)}]) in\n")
         for i, (a, b) in enumerate(uneq):
             sa, sb = cx.sx(a, {}, {}), cx.sx(b, {}, {})
             helpers.append(

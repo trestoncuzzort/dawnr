@@ -72,12 +72,15 @@ request's own `params.kernels`.
 
 ## The `t/verdicts` notification
 
-Sent automatically after every `didSave`, and once per `t/verify` request,
-after the kernel run finishes -- ROADMAP 15.1's `tlib.verify`, run in a
+Scheduled automatically after every `didSave` and `t/verify` request. The result
+is sent after the kernel run finishes if that request is still current for
+the open document -- ROADMAP 15.1's `tlib.verify`, run in a
 background thread so the server keeps answering every other RPC while a
 kernel is working (a real kernel run can take several seconds per side).
 
     {"uri": <document uri>,
+     "version": <document version> | null,
+     "document_sha256": <SHA-256 of the checked UTF-8 document text>,
      "kernels": {
        "<kernel>": {
          "status": "ok" | "absent" | "no_twin",
@@ -92,6 +95,15 @@ kernel is working (a real kernel run can take several seconds per side).
        }, ...
      }}
 
+- `version` and `document_sha256` identify the document that was checked.
+  `source_sha` inside a kernel entry identifies its lowered program instead.
+  Edits, closes, reopens and newer requests invalidate older workers; a worker
+  uses the kernel list captured with its request. A result already in flight
+  can still reach an edited client, so clients must match both document fields
+  before displaying it as current. The bundled VS Code client does this,
+  retains matching results when switching between open documents, and clears
+  stale displayed counts on edit or close. Older servers without these identity
+  fields must be updated for the new client to display their verdicts.
 - `status: "absent"` -- the kernel binary itself is missing on this box
   (`tlib.kernel_version` raised). `real`/`twin` are `null`. An absent
   kernel is reported as absent here; it is never given a verdict of any

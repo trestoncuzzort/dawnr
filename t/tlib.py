@@ -12,7 +12,7 @@ it needs an answer in-process, not a subprocess and a markdown table.
 
 Caching: every verdict is looked up in t/cache.py before any kernel runs,
 keyed by the lowered source's sha256, the kernel's own version string, and
-the budget, so an unchanged task, unchanged kernel, unchanged budget costs
+the budget, adapter fingerprint and repetition count, so unchanged inputs cost
 no kernel run on the second call, in this process or the next one. A cache
 entry is written only after a full flake_check agreement (n=`flake` runs
 agree) -- SPEC.md's flake discipline is not relaxed for the cache: nothing
@@ -22,22 +22,23 @@ hit reports back, because a cache hit is never provisional (see `_side`).
 Isolation from run_par.py: a table run's out/ (harness.OUT, or run_par's
 --out) is a lock-protected directory (verifiers.acquire_run_lock) that one
 suite run owns for its duration. The library never touches it. Lowered
-sources for a verify() call go under out/lib/<source_sha>/, named by the
-content that produced them, so two callers computing the same source write
-the same bytes to the same path (idempotent, not a race) and no caller
-ever needs the run lock: table runs and library calls write to disjoint
-directories by construction, which is the "run lock relaxed" ROADMAP 15.1
-asks for -- relaxed by not being shared, not by being removed.
+sources for a verify() call go in a private directory under out/lib/<source_sha>/
+(or under the caller's out_dir). Two library calls never overwrite each other's
+sources while a verifier reads them, including calls using the same task name
+and out_dir. Source directories remain available for inspection after the call.
+No library caller needs the table run lock.
 """
 from __future__ import annotations
 
 import hashlib
 import importlib
 from pathlib import Path
+import tempfile
 
 import cache
 import harness
-from verifiers import Outcome, flake_check
+from check_wf import check_wf
+from verifiers import Outcome, flake_check, validate_flake_count
 
 HERE = Path(__file__).resolve().parent
 
@@ -59,6 +60,28 @@ _LOWER_MOD = {b: (l, s) for b, l, s in BACKENDS}
 _VERSIONS: dict[str, str] = {}     # kernel -> version string, once per process
 
 
+def check_task(task: dict, positions=None, file="<string>") -> list:
+    """Semantic diagnostics, or ValueError for an invalid task structure.
+
+    Parsing alone does not establish well-formedness. In particular, an
+    assertion outside a lemma must not reach interpretation or lowering.
+    JSON callers can also supply shapes the surface parser never produces.
+    Refuse those before any witness search, output write or kernel probe.
+    """
+    if not isinstance(task, dict) or type(task.get("t")) is not int or task["t"] not in (0, 1):
+        raise ValueError("ill-formed task: expected a task with t version 0 or 1")
+    try:
+        return check_wf(task, positions=positions, file=file)
+    except (KeyError, TypeError, IndexError, AttributeError) as exc:
+        raise ValueError(f"ill-formed task structure: {type(exc).__name__}: {exc}") from exc
+
+
+def _require_wf(task: dict) -> None:
+    errors = check_task(task)
+    if errors:
+        raise ValueError("ill-formed task: " + "; ".join(map(str, errors)))
+
+
 def kernel_version(kernel: str) -> str:
     """The kernel's own --version output, read once per process (per
     ROADMAP 15.1: "kernel version read once per process from each
@@ -77,6 +100,7 @@ def twin(task: dict) -> tuple[list | None, str | None, dict | None]:
     of the ladder produced a witness. harness.twin_cached, so the ladder
     search itself still runs once per task regardless of how many kernels
     or callers ask."""
+    _require_wf(task)
     return harness.twin_cached(task)
 
 
@@ -88,6 +112,7 @@ def lower(task: dict, kernel: str, twin_body: bool = False) -> str:
     if kernel not in _LOWER_MOD:
         raise ValueError(f"tlib.lower: unknown kernel {kernel!r}, "
                          f"known: {sorted(_LOWER_MOD)}")
+    _require_wf(task)
     lmod, _suffix = _LOWER_MOD[kernel]
     lower_fn = importlib.import_module(lmod).lower
     if not twin_body:
@@ -109,14 +134,18 @@ def _side(backend, kernel: str, path: Path, key: str, version: str,
     NOT cached, so the next call tries again rather than trusting a flake.
     Returns (outcome, was_cached, provisional)."""
     hit = cache.read(kernel, key, cache_dir)
-    if hit is not None:
+    if hit is not None and hit["backend_version"] == version:
         return hit["outcome"], True, False
     verify_fn = backend.verify if budget is None else (
         lambda p, _b=budget: backend.verify(p, _b))
     result, agreed = flake_check(verify_fn, path, flake)
     if agreed:
-        cache.write(kernel, key, {"outcome": result.outcome,
-                                  "backend_version": version}, cache_dir)
+        if result.outcome in cache.CACHEABLE:
+            try:
+                cache.write(kernel, key, {"outcome": result.outcome,
+                                          "backend_version": version}, cache_dir)
+            except OSError:
+                pass  # An unavailable optimization does not invalidate a measured result.
         return result.outcome, False, False
     return result.outcome, False, True
 
@@ -171,17 +200,18 @@ def _verify_one(task: dict, kernel: str, flake: int, budget,
     real_sha = hashlib.sha256(real_src.encode("utf-8")).hexdigest()
     entry["source_sha"] = real_sha
 
-    lib_dir = Path(out_dir) if out_dir is not None else (
+    lib_root = Path(out_dir) if out_dir is not None else (
         HERE / "out" / "lib" / real_sha)
-    lib_dir.mkdir(parents=True, exist_ok=True)
+    lib_root.mkdir(parents=True, exist_ok=True)
+    lib_dir = Path(tempfile.mkdtemp(prefix=f"{task['name']}-", dir=lib_root))
     real_path = lib_dir / f"{task['name']}.{suffix}"
     twin_path = lib_dir / f"{task['name']}_twin.{suffix}"
     real_path.write_text(real_src, encoding="utf-8", newline="\n")
     twin_path.write_text(twin_src, encoding="utf-8", newline="\n")
 
     backend = importlib.import_module(f"verifiers.{kernel}")
-    real_key = cache.key_for(real_src, kernel, version, budget)
-    twin_key = cache.key_for(twin_src, kernel, version, budget)
+    real_key = cache.verdict_key(real_src, kernel, version, budget, flake)
+    twin_key = cache.verdict_key(twin_src, kernel, version, budget, flake)
     r_outcome, r_cached, r_prov = _side(
         backend, kernel, real_path, real_key, version, budget, flake, cache_dir)
     t_outcome, t_cached, t_prov = _side(
@@ -212,7 +242,12 @@ def verify(task: dict, kernels: list[str] | None = None, flake: int = 3,
     `budget` is passed through to every backend's verify(path, budget) when
     given; left at each backend's own default (None) otherwise, matching
     run_par.py and run_all.py, which never pass one either."""
+    validate_flake_count(flake)
+    _require_wf(task)
     names = kernels if kernels is not None else [b for b, _, _ in BACKENDS]
+    unknown = [k for k in names if k not in _LOWER_MOD]
+    if unknown:
+        raise ValueError(f"tlib.verify: unknown kernels {unknown}")
     return {k: _verify_one(task, k, flake, budget, out_dir, cache_dir
                            if cache_dir is not None else cache.DEFAULT_CACHE_DIR)
            for k in names}
@@ -234,7 +269,7 @@ def _sentence(entry: dict) -> str:
     if entry.get("real") is None:
         return f"no twin, {entry.get('refused', 'refused')}"
     r, t = entry["real"], entry["twin"]
-    flip = r == Outcome.VERIFIED and t == Outcome.REFUTED
+    flip = r == Outcome.VERIFIED and t == Outcome.REFUTED and not entry.get("provisional")
     verdict = "COUNTS" if flip else "REFUSED"
     tail = "; provisional, n has not yet agreed" if entry.get("provisional") else ""
     return (f"{verdict}, real is {_OUTCOME_SENTENCE.get(r, r)}; "

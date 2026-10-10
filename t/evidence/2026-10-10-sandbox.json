@@ -1,0 +1,52 @@
+{
+  "scope": "clean-checkout collected tests; not a full seven-kernel proof matrix",
+  "engine_commit": "f7384c42d7ab6ed687045be7e6a14228ce113a18",
+  "python": "3.14.7",
+  "pytest": "9.1.1",
+  "command": "python -m pytest -q --junitxml=REPORT.xml . (from t/)",
+  "working_tree_clean_before_and_after": true,
+  "summary": "842 passed, 40 skipped, 1 xfailed, 5 warnings, 150 subtests passed in 75.95s (0:01:15)",
+  "passed": 842,
+  "skipped": 40,
+  "expected_failures": 1,
+  "passing_subtests": 150,
+  "warnings": 5,
+  "failures": 0,
+  "errors": 0,
+  "skip_reasons": {
+    "xgrammar is in the lab ML environment": 1,
+    "lifted corpus not present here": 5,
+    "coqc not on PATH": 16,
+    "lifted corpus row not present": 11,
+    "coqc/coqchk not on PATH": 4,
+    "": 1,
+    "t/out/lifted-tasks not present in this checkout": 1,
+    "frama-c is not installed": 2
+  },
+  "kernels": {
+    "dafny": "4.11.0+fcb2042d6d043a2634f0854338c08feeaaaf4ae2",
+    "lean": "Lean (version 4.33.1, x86_64-unknown-linux-gnu, commit 819816b2e0a3bf405af45ae5c7af2491d8f5bee6, Release)"
+  },
+  "source_sha256": {
+    "t/cache.py": "66f0cbaee859f58e0b9489626f47b89cdb58c385238a45864f55d83fa3cdb062",
+    "t/cli.py": "86b4268be2b8e191dd7f6a969b4568892a95911ea06a8954bd5f651d29aa1002",
+    "t/run_par.py": "2493661467f49fdcab218537aedf1f6722d76feb5b88a9ce7b7d54654b0d1804",
+    "t/tlib.py": "f6d5be063f9f23a4be815a7b7483ec4093c53993484a880971dffacd820d4c0c",
+    "t/verifiers/__init__.py": "d0d0e2cca9e88cf5c268d0a408ed7e0f4b3d3f35bae235296271a53bad85ee8d",
+    "t/test_library_concurrency.py": "044f24ce2f5f8d1a651c347fcbd1a0eb0f96a108b3f301faede88d5efc41f118",
+    "t/test_validation_gate.py": "8f9b7066f85b14740b69e54cd9ad026b0d4a8ebe9af765a986cbfb50076e311e",
+    "t/test_verdict_cache.py": "a1f0a12bc3ae0470640566a64e8237fbe6334a504d03449b1e65c18210984a61",
+    "t/landlock_exec.py": "5099f8a4ec58d6099c939ae6af5019c04d9c6bef6880b342c24690c676d26e3d",
+    "t/test_py_sandbox_landlock.py": "efc889f93f9fc7af6b9e45e6b3d912452508cd0678bcf3d6a5f3aceaa6cf5605",
+    "t/test_sandbox_packaging.py": "ced7bfc2b2eb12b3a14234edfcd41035f7c02a4d51d2c5c0ca5bddf06c54ebdc"
+  },
+  "report_sha256": "2541568db5a59ab29b6d888c88c2a2fe040159628e9e9f333dca2423e8b26c66",
+  "expected_failure_details": [
+    {
+      "test": "test_lower_spark_loop_cert.TestLoopCertFallback::test_two_loops_falls_back_to_plain_f_call",
+      "reason": null
+    }
+  ],
+  "landlock_abi": 10,
+  "architecture": "x86_64"
+}

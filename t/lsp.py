@@ -43,6 +43,8 @@ Requests handled:
 
 VERDICTS NOTIFICATION. "t/verdicts", params:
     {"uri": <document uri>,
+     "version": <checked document version> | null,
+     "document_sha256": <SHA-256 of the checked UTF-8 document text>,
      "kernels": {<kernel>: {"status": "ok" | "absent" | "no_twin",
                              "provisional": bool,
                              "real": <Outcome string> | null,
@@ -52,6 +54,9 @@ VERDICTS NOTIFICATION. "t/verdicts", params:
                              "source_sha": <string> | null,
                              "kernel_version": <string> | null,
                              "cached": bool}, ...}}
+Only the latest request for an unchanged open document may publish. Clients
+also match the version and document digest before displaying a notification,
+because it can already be in flight when the client edits its document.
 `status` is "absent" exactly when the kernel binary itself is missing
 (tlib.kernel_version raised) -- an absent kernel is reported as absent,
 never as a verdict of any kind; "no_twin" when the kernel is present but
@@ -76,6 +81,7 @@ one.
 """
 from __future__ import annotations
 
+import hashlib
 import json
 import sys
 import threading
@@ -393,7 +399,10 @@ class Server:
         self.in_stream = in_stream
         self.out_stream = out_stream
         self.write_lock = threading.Lock()
+        self.state_lock = threading.RLock()
         self.docs: dict[str, str] = {}       # uri -> text
+        self.doc_versions: dict[str, int | None] = {}
+        self.pending: dict[str, object] = {}  # opaque request identity; edit/close invalidates it
         self.kernels = kernels or ["dafny"]
         self.shutdown_requested = False
 
@@ -452,7 +461,10 @@ class Server:
 
     def handle_did_open(self, msg):
         p = msg["params"]["textDocument"]
-        self.docs[p["uri"]] = p["text"]
+        with self.state_lock:
+            self.docs[p["uri"]] = p["text"]
+            self.doc_versions[p["uri"]] = p.get("version")
+            self.pending.pop(p["uri"], None)
         self._publish(p["uri"])
 
     def handle_did_change(self, msg):
@@ -462,15 +474,28 @@ class Server:
         # Full sync only (textDocumentSync: 1): each change replaces the
         # whole text; the last one in the list is authoritative.
         if changes:
-            self.docs[uri] = changes[-1]["text"]
+            with self.state_lock:
+                self.docs[uri] = changes[-1]["text"]
+                self.doc_versions[uri] = p["textDocument"].get("version")
+                self.pending.pop(uri, None)
         self._publish(uri)
 
     def handle_did_save(self, msg):
         uri = msg["params"]["textDocument"]["uri"]
         if "text" in msg["params"]:
-            self.docs[uri] = msg["params"]["text"]
+            with self.state_lock:
+                self.docs[uri] = msg["params"]["text"]
+                self.pending.pop(uri, None)
         self._publish(uri)
         self._verify_async(uri)
+
+    def handle_did_close(self, msg):
+        uri = msg["params"]["textDocument"]["uri"]
+        with self.state_lock:
+            self.docs.pop(uri, None)
+            self.doc_versions.pop(uri, None)
+            self.pending.pop(uri, None)
+        self.notify("textDocument/publishDiagnostics", {"uri": uri, "diagnostics": []})
 
     # -- hover / definition / formatting ------------------------------
 
@@ -548,16 +573,27 @@ class Server:
 
     # -- verdicts (15.1 over the wire) ------------------------------------
 
-    def _verify_async(self, uri: str) -> None:
-        text = self.docs.get(uri, "")
+    def _verify_async(self, uri: str, kernels=None) -> None:
+        with self.state_lock:
+            if uri not in self.docs:
+                return
+            text = self.docs[uri]
+            version = self.doc_versions.get(uri)
+            selected = tuple(self.kernels if kernels is None else kernels)
+            token = object()
+            self.pending[uri] = token
         try:
             task = surface.parse(text)
         except surface.SurfaceError:
             return   # nothing to verify; diagnostics already say why
+        document_sha = hashlib.sha256(text.encode("utf-8")).hexdigest()
 
         def worker():
             payload = {}
-            for kernel in self.kernels:
+            for kernel in selected:
+                with self.state_lock:
+                    if self.pending.get(uri) is not token:
+                        return
                 try:
                     entry = tlib.verify(task, kernels=[kernel]).get(kernel, {})
                 except Exception as exc:                # pragma: no cover
@@ -588,19 +624,17 @@ class Server:
                     "kernel_version": entry.get("kernel_version"),
                     "cached": entry.get("cached", False),
                 }
-            self.notify("t/verdicts", {"uri": uri, "kernels": payload})
+            with self.state_lock:
+                if self.pending.get(uri) is token:
+                    self.notify("t/verdicts", {"uri": uri, "version": version,
+                                               "document_sha256": document_sha, "kernels": payload})
+                    self.pending.pop(uri, None)
 
         threading.Thread(target=worker, daemon=True).start()
 
     def handle_verify(self, msg):
         uri = msg["params"]["uri"]
-        kernels = msg["params"].get("kernels", self.kernels)
-        old = self.kernels
-        self.kernels = kernels
-        try:
-            self._verify_async(uri)
-        finally:
-            self.kernels = old
+        self._verify_async(uri, msg["params"].get("kernels"))
         self.respond(msg["id"], {"started": True})
 
     # -- dispatch ----------------------------------------------------------
@@ -618,6 +652,7 @@ class Server:
         "textDocument/didOpen": "handle_did_open",
         "textDocument/didChange": "handle_did_change",
         "textDocument/didSave": "handle_did_save",
+        "textDocument/didClose": "handle_did_close",
     }
 
     def dispatch(self, msg: dict) -> bool:

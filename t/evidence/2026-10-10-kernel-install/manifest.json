@@ -1,0 +1,75 @@
+{
+  "scope": "installation controls; full corpus and Rocq/Frama-C still pending",
+  "smoke_engine_commit": "21528a14c5f11d754410e5e35c6c74a0ed3c3e40",
+  "smoke_command": "T_SPARK_JOBS=1 python3 t/cli.py verify SMOKE_TASKS --kernels dafny,lean,spark,verus,fstar --jobs 2 --out OUT --table TABLE",
+  "tasks": [
+    "abs",
+    "gcd",
+    "reverse"
+  ],
+  "kernels": [
+    "dafny",
+    "lean",
+    "spark",
+    "verus",
+    "fstar"
+  ],
+  "verified_refuted_cells": 15,
+  "repeats_per_side": 3,
+  "table_sha256": "298a6ca92832050e1412676efc24a1324cca8271b87b2edddfd181f02f10e8af",
+  "archives": [
+    {
+      "tool": "gnatprove",
+      "tag": "gnatprove-16.1.0-1",
+      "asset": "gnatprove-x86_64-linux-16.1.0-1.tar.gz",
+      "url": "https://github.com/alire-project/GNAT-FSF-builds/releases/download/gnatprove-16.1.0-1/gnatprove-x86_64-linux-16.1.0-1.tar.gz",
+      "sha256": "82528bef29857e239373fcc36732837d743f5a00805d502c70455422ffc97191",
+      "matched_publisher_digest": true
+    },
+    {
+      "tool": "verus",
+      "tag": "release/0.2026.08.30.b432e82",
+      "asset": "verus-0.2026.08.30.b432e82-x86-linux.zip",
+      "url": "https://github.com/verus-lang/verus/releases/download/release/0.2026.08.30.b432e82/verus-0.2026.08.30.b432e82-x86-linux.zip",
+      "sha256": "067f5f72a457fe66b77c0c10b180f2a919a9c7481a8baa024ffc716aa931a41b",
+      "matched_publisher_digest": true
+    },
+    {
+      "tool": "fstar",
+      "tag": "v2026.08.30",
+      "asset": "fstar-v2026.08.30-Linux-x86_64.tar.gz",
+      "url": "https://github.com/FStarLang/FStar/releases/download/v2026.08.30/fstar-v2026.08.30-Linux-x86_64.tar.gz",
+      "sha256": "fb8dc48fe1a5e7e8fdcd9dc841129e9b10d9ed594c12f52d8ecdb0837754b5ac",
+      "matched_publisher_digest": true
+    },
+    {
+      "tool": "opam",
+      "tag": "2.5.2",
+      "asset": "opam-2.5.2-x86_64-linux",
+      "url": "https://github.com/ocaml/opam/releases/download/2.5.2/opam-2.5.2-x86_64-linux",
+      "sha256": "edfca2630c373b44b7ee1c2f81cd8dcf67468d0db57d6c02158de553ac63dbd4",
+      "matched_publisher_digest": true
+    },
+    {
+      "asset": "graphviz-16.1.0.tar.xz",
+      "url": "https://gitlab.com/api/v4/projects/4207231/packages/generic/graphviz-releases/16.1.0/graphviz-16.1.0.tar.xz",
+      "sha256": "0f661718f3e5268dc3bad0fb53ab646605d26db70f4080799aff1dc2f61783c3",
+      "matched_publisher_digest": true,
+      "tool": "graphviz",
+      "tag": "16.1.0",
+      "native_svg_render_passed": true,
+      "opam_conf_graphviz_passed": true
+    }
+  ],
+  "rustc": "rustc 1.97.1 (8bab26f4f 2026-07-14)",
+  "rustup": "rustup 1.29.1 (d95a37b6a 2026-08-13)",
+  "ocaml_switch": "default: ocaml-base-compiler.4.14.4",
+  "additional_smoke": {
+    "rocq": "3 verified/refuted cells",
+    "framac": "2 verified/refuted cells; reverse tool_error/tool_error with Alt-Ergo-free 2.4.3"
+  },
+  "pending": [
+    "full committed-corpus matrix",
+    "Frama-C repeat after compatible Alt-Ergo installation"
+  ]
+}

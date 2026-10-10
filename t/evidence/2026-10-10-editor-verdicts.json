@@ -1,0 +1,24 @@
+{
+  "scope": "server scheduling controls, real stdio transcript and client API stand-ins; no live editor walkthrough",
+  "engine_commit": "dee973d30f7f97d2508c6b249c7dc3926d2c3175",
+  "working_tree_clean_before_and_after": true,
+  "command": "python -m pytest -q t/test_lsp.py t/test_lsp_async.py t/test_vscode.py t/test_vscode_verdicts.py",
+  "python_tests_passed": 15,
+  "javascript_cases_passed": 10,
+  "node": {
+    "asset": "node-v22.23.3-linux-x64.tar.xz",
+    "sha256": "df450af89261115ef9f9e3830c3eeb2cc9213b63c720b1af623cb5dcbe2e02de",
+    "url": "https://nodejs.org/dist/v22.23.3/node-v22.23.3-linux-x64.tar.xz",
+    "matched_publisher_digest": true
+  },
+  "source_sha256": {
+    "t/lsp.py": "3c528296bbc3e4c8337bf0c40e533e057a923dfb27dd243b177fa0ad2e0bd49f",
+    "t/LSP.md": "1165f6645f9cfbd8b7244855ae3995be60d46911238fd914193612398eb0e60f",
+    "t/lsp-transcript.jsonl": "4598e7ade99cf8b82430a1bd1971347cec7a4bc5c10a509df06dc8999b055d31",
+    "t/editors/vscode/extension.js": "b05fa9f99658faaaf8fdb642dea6ab7f8f0b4060f7f82a86cf7c10d7359dc368",
+    "t/editors/vscode/test_verdicts.js": "4168477cccee027bbb42c68ace19c5d768e59c3c0e4163f640efbade97ad81ff",
+    "t/test_lsp_async.py": "1ace91c926eed51149fe7592560991a2ca3c3a41f1c7844cf49001dc55b6e408",
+    "t/test_vscode_verdicts.py": "7424ce1622b0116872deea30bc0e6c439752d7282c751dca13b4f6d5bea48d1f"
+  },
+  "log_sha256": "2f94071a5e1a5de31863549377971164f4da85ec8e8ae42afc029a7378b06b3b"
+}

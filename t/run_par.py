@@ -257,10 +257,7 @@ def _worker_env(env: dict) -> None:
 # never evidence of anything. Remembering either would be remembering the
 # machine, not the program, so neither is ever written and both are re-run
 # on every pass.
-CACHEABLE = frozenset({Outcome.VERIFIED, Outcome.REFUTED, Outcome.VACUOUS,
-                       Outcome.MALFORMED, Outcome.UNPROVED})
-
-_ADAPTER_FP: dict[str, str] = {}
+CACHEABLE = cache.CACHEABLE
 
 
 def adapter_fingerprint(bname: str) -> str:
@@ -277,19 +274,7 @@ def adapter_fingerprint(bname: str) -> str:
     from VACUOUS. Edit t/verifiers/dafny.py and the same dafny, on the same
     bytes, can honestly return a different Outcome. An unfingerprinted key
     would hand back the old one."""
-    if bname not in _ADAPTER_FP:
-        h = hashlib.sha256()
-        for name in (f"{bname}.py", "__init__.py", "discover.py"):
-            p = HERE / "verifiers" / name
-            try:
-                h.update(p.read_bytes())
-            except OSError as e:                    # noqa: BLE001
-                # Unreadable adapter: fold the reason in, so the key is
-                # distinct from any key built from a file that was read.
-                h.update(f"UNREADABLE {name} {e}".encode("utf-8"))
-            h.update(b"\0")
-        _ADAPTER_FP[bname] = h.hexdigest()
-    return _ADAPTER_FP[bname]
+    return cache.adapter_fingerprint(bname)
 
 
 def _cached_outcome(bname: str, key: str, cache_dir) -> str | None:
@@ -346,9 +331,7 @@ def cache_key(source: str, bname: str, version: str, flake_n: int) -> str:
     """This driver's key for one lowered source. The budget component is
     None, which is what run_par passes every backend's verify() -- i.e.
     each adapter's own default, whose value is inside the fingerprint."""
-    return cache.key_for(source, bname, version, None,
-                         extra=f"adapter={adapter_fingerprint(bname)};"
-                               f"flake={flake_n}")
+    return cache.verdict_key(source, bname, version, None, flake_n)
 
 
 def _watch_event(**ev) -> None:

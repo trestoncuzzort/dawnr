@@ -17,12 +17,20 @@
 // invents no rendering of its own for it).
 
 const path = require("path");
+const crypto = require("crypto");
 const vscode = require("vscode");
 const { LanguageClient, TransportKind } = require("vscode-languageclient/node");
 
 let client;
 let verdictsProvider;
 let statusBarItem;
+const verdictsByUri = new Map();
+
+function matchesDocument(payload, document) {
+  return !!payload && !!document && document.languageId === "t" && document.uri.toString() === payload.uri
+    && document.version === payload.version
+    && crypto.createHash("sha256").update(document.getText(), "utf8").digest("hex") === payload.document_sha256;
+}
 
 function resolveServerPath(config, workspaceFolder) {
   const configured = config.get("serverPath", "t/lsp.py");
@@ -50,11 +58,17 @@ class VerdictsProvider {
     this._onDidChangeTreeData.fire();
   }
 
+  clear() {
+    this.uri = null;
+    this.kernels = {};
+    this._onDidChangeTreeData.fire();
+  }
+
   agreementCount() {
     let n = 0;
     for (const name of Object.keys(this.kernels)) {
       const e = this.kernels[name];
-      if (e.status === "ok" && e.real === "verified" && e.twin === "refuted") {
+      if (e.status === "ok" && e.real === "verified" && e.twin === "refuted" && !e.provisional) {
         n += 1;
       }
     }
@@ -125,11 +139,24 @@ function updateStatusBar() {
   }
   const n = verdictsProvider.agreementCount();
   const total = Object.keys(verdictsProvider.kernels).length;
-  statusBarItem.text = `$(check) t: ${n}/${total} agree`;
+  statusBarItem.text = verdictsProvider.uri ? `$(check) t: ${n}/${total} agree` : "$(circle-outline) t: unverified";
   statusBarItem.show();
 }
 
+function refreshActiveDocument() {
+  const editor = vscode.window.activeTextEditor;
+  const document = editor && editor.document;
+  const payload = document && verdictsByUri.get(document.uri.toString());
+  if (matchesDocument(payload, document)) {
+    verdictsProvider.setVerdicts(payload);
+  } else {
+    verdictsProvider.clear();
+  }
+  updateStatusBar();
+}
+
 function activate(context) {
+  verdictsByUri.clear();
   const config = vscode.workspace.getConfiguration("t");
   const workspaceFolder = vscode.workspace.workspaceFolders && vscode.workspace.workspaceFolders[0];
   const pythonPath = config.get("pythonPath", "python3");
@@ -162,10 +189,23 @@ function activate(context) {
     // t/LSP.md: t/verdicts is a custom notification, sent automatically
     // after every didSave and once per t/verify request.
     client.onNotification("t/verdicts", (payload) => {
-      verdictsProvider.setVerdicts(payload);
-      updateStatusBar();
+      const document = vscode.workspace.textDocuments.find(doc => doc.uri.toString() === payload.uri);
+      if (matchesDocument(payload, document)) {
+        verdictsByUri.set(payload.uri, payload);
+        refreshActiveDocument();
+      }
     });
   });
+
+  context.subscriptions.push(vscode.workspace.onDidChangeTextDocument(event => {
+    verdictsByUri.delete(event.document.uri.toString());
+    refreshActiveDocument();
+  }));
+  context.subscriptions.push(vscode.workspace.onDidCloseTextDocument(document => {
+    verdictsByUri.delete(document.uri.toString());
+    refreshActiveDocument();
+  }));
+  context.subscriptions.push(vscode.window.onDidChangeActiveTextEditor(refreshActiveDocument));
 
   const verifyCommand = vscode.commands.registerCommand("t.verify", async () => {
     const editor = vscode.window.activeTextEditor;

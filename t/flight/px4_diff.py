@@ -104,11 +104,40 @@ CALLS = {
                          "size_t n = b.pop_front(dst.data(), (size_t)buf_max_len); "
                          "return std::make_pair((long long)n, (long long)b._start); }()", "pair"),
 }
+FIXES = HERE / "fixes"
+# a task under fixes/ restates the change proposed to PX4 for a finding; with --fixed-tree, the patched PX4 checkout's
+# own code is compiled and run against it, through the call of the function it replaces
+FIX_OF = {"px4_wrap_bin_fixed": "px4_wrap_bin", "px4_wrap_bin_fixed_72": "px4_wrap_bin_72"}
+# the handler needs a running module, so its own statements are cut from PX4's source and run instead
+STMT = "the handler's own statements, before and after the fix, compiled and run on every input: px4_stmt.py, PX4-STMT.md"
+# fixes and findings checked against PX4 by another route than this harness's per-point call, with the route named
+FIX_NOT_DIFFED = {
+    "px4_request_event_fixed": STMT,
+    "px4_arm_param_fixed": STMT,
+    "px4_stream_interval_fixed": STMT,
+    "px4_do_jump_index_fixed": STMT,
+    "px4_serial_control_fixed": STMT,
+    "px4_set_mode_field_fixed": STMT,
+    "px4_fusion_source_fixed": STMT,
+    "px4_obstacle_body_fixed": "CollisionPrevention::_addObstacleSensorData needs the collision-prevention module; checked by PX4's own test, CollisionPreventionTest.addObstacleSensorData_bodyframe_fine_increment: it fails 50 assertions on the original code and passes with the fix (PR #29037)",
+    "px4_sumd_receive_fixed": "sumd_decode is a byte-at-a-time state machine; the patched sumd.cpp was "
+                  "run on a valid 32-channel frame and PX4's recorded stream under UBSan (README)"}
 FINDINGS = HERE / "findings"
 # a task under findings/ restates a PX4 function with the contract it needs and without the `requires` PX4's callers
 # do not establish; the kernels refute it, and PX4's own code is run at the refuting input and at the probes below
 FINDING_OF = {"px4_wrap_bin_any": "px4_wrap_bin"}
 PROBES = {"px4_wrap_bin_any": [{"bin": -73, "bin_count": 72}]}
+FINDING_NOT_RUN = {
+    "px4_request_event_any": STMT,
+    "px4_arm_param_any": STMT,
+    "px4_stream_interval_any": STMT,
+    "px4_do_jump_index_any": STMT,
+    "px4_serial_control_any": STMT,
+    "px4_set_mode_field_any": STMT,
+    "px4_fusion_source_any": STMT,
+    "px4_obstacle_body_any": "CollisionPrevention::_addObstacleSensorData needs the collision-prevention module; checked by PX4's own test, CollisionPreventionTest.addObstacleSensorData_bodyframe_fine_increment: it fails 50 assertions on the original code and passes with the fix (PR #29037)",
+    "px4_sumd_receive_any": "PX4's own sumd.cpp, built with UBSan, reports the out-of-bounds write "
+                   "and read at index 64 on a valid 32-channel frame (README)"}
 # parameters PX4's own signature narrows to binary32 (`float`) before use, though the template is at double
 NARROWED = {"px4_alpha_update": ["alpha"], "px4_slew_update": ["dt"]}
 
@@ -180,12 +209,13 @@ def program(task: dict, ref, call: str | None = None, pts: list | None = None) -
     return src, expect, inputs
 
 
-def _compile_run(src: str, px4: Path) -> tuple[list[str] | None, str]:
+def _compile_run(src: str, px4: Path, stub: Path | None = None) -> tuple[list[str] | None, str]:
+    stub = stub or px4 / "stub"
     with tempfile.TemporaryDirectory(prefix="t-px4-") as d:
         cpp, exe = Path(d) / "p.cpp", Path(d) / "p"
         cpp.write_text(src)
         p = subprocess.run(["g++", "-std=c++17", "-O1", "-ffp-contract=off", "-w", f"-I{px4}/src/lib",
-                            f"-I{px4}/src/lib/matrix", f"-I{px4}/stub", *ACCESS, str(cpp)]
+                            f"-I{px4}/src/lib/matrix", f"-I{stub}", *ACCESS, str(cpp)]
                            + [str(px4 / f) for f in SOURCES] + ["-o", str(exe)],
                            capture_output=True, text=True, timeout=300)
         if p.returncode != 0:
@@ -218,6 +248,26 @@ def finding(path: Path, px4: Path) -> dict:
     ok = len(got) == len(expect) and all(r["t"] == r["px4"] and r["breaks_contract"] for r in rows)
     return {"name": name, "px4_call": CALLS[call][0], "rows": rows,
             "status": "PX4 breaks the contract here, as t's body does" if ok else "NOT REPRODUCED"}
+
+
+def diff_fix(path: Path, tree: Path, stub: Path) -> dict:
+    """A fixes/ task against the patched PX4 checkout `tree`: every domain point, as diff_task does."""
+    task = tasks_io.load_task(str(path))
+    name, call = task["name"], FIX_OF[task["name"]]
+    harness._set_ctx(task)
+    ref = interp.Reference(task)
+    src, expect, inputs = program(task, ref, call, ref.points[:POINTS])
+    out, err = _compile_run(src, tree, stub)
+    if out is None:
+        return {"name": name, "status": err}
+    bad = [i for i, (e, g) in enumerate(zip(expect, out)) if e != g.strip()]
+    res = {"name": name, "points": len(expect), "px4_call": CALLS[call][0]}
+    if bad or len(out) != len(expect):
+        i = bad[0] if bad else len(out)
+        res.update(status="DIFFERS", first={"input": inputs[i] if i < len(inputs) else None})
+    else:
+        res["status"] = "agrees"
+    return res
 
 
 def diff_task(path: Path, px4: Path) -> dict:
@@ -266,10 +316,18 @@ def diff_task(path: Path, px4: Path) -> dict:
 def main(argv=None) -> int:
     ap = argparse.ArgumentParser(prog="px4_diff.py", description=__doc__.split("\n\n")[0])
     ap.add_argument("--table", metavar="PATH")
+    ap.add_argument("--fixed-tree", metavar="DIR", help="a PX4 checkout with the proposed fixes applied: run "
+                    "fixes/ against it and nothing else")
     args = ap.parse_args(argv)
     px4 = fetch_px4()
+    if args.fixed_tree:
+        fixed = [diff_fix(p, Path(args.fixed_tree), px4 / "stub") for p in sorted(FIXES.glob("*.t"))
+                 if p.stem not in FIX_NOT_DIFFED]
+        for r in fixed:
+            print(f"fix {r['name']}: {r['status']}" + (f" ({r['points']} points)" if r.get("points") else ""))
+        return 1 if any(r["status"] != "agrees" for r in fixed) else 0
     results = [diff_task(p, px4) for p in sorted(HERE.glob("*.t"))]
-    found = [finding(p, px4) for p in sorted(FINDINGS.glob("*.t"))]
+    found = [finding(p, px4) for p in sorted(FINDINGS.glob("*.t")) if p.stem not in FINDING_NOT_RUN]
     for r in results:
         print(f"{r['name']}: {r['status']}" + (f" ({r['points']} points)" if r.get("points") else "")
               + (f" first: {json.dumps(r['first'])}" if r.get("first") else ""))
