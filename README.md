@@ -1,241 +1,179 @@
 # dawnr
 
-**An assistant for your computer that runs offline and checks its own work.**
+dawnr combines local language models, program verification, and an assistant that works with code and documents.
+It generates candidate programs, tests their behavior and specifications, checks them with proof tools, and uses
+accepted results to build training data. The trained models can then propose new programs through the same checks.
 
-dawnr works in a folder on your machine. It reads your files (text, PDFs, Word, spreadsheets, slides, saved
-pages, mail), changes them only as a plan you have seen, runs commands in a sandbox that cannot touch the
-folder until you say yes, answers questions about the computer by looking at it, and acts on it with one
-command you are shown first. For code it goes further: it writes programs with a precise statement of what
-they do and has up to seven independent provers check them. Nothing leaves your machine unless you turn the
-network on. There is no account, no cloud and no telemetry.
+The repository contains both the system and its working record: programs, contracts, deliberately broken variants,
+counterexamples, datasets, model-training code, evaluation scripts, and measured results. Its applications include
+checking selected PX4 flight-software routines against compiled C++ and recording proposed fixes alongside the
+inputs that expose the original failures.
 
-## Install
+## What is implemented
 
-Linux, macOS, or Windows through WSL2 (`wsl --install` in PowerShell, then everything below inside Ubuntu).
-Python 3.10 or newer, about 9 GB of disk, and about 10 GB of free memory on the CPU. No graphics card is
-needed; with an NVIDIA card the installer picks the GPU build by itself (an 8 GB laptop card is plenty).
+| Part | What it does | Implementation |
+|---|---|---|
+| Program verification | Parses and checks `t` programs, translates them into proof-system inputs, and tests each verifier against a deliberately broken variant. | [`t/`](t/README.md), [`t/run_par.py`](t/run_par.py) |
+| Specification checks | Checks contracts against examples and reference behavior; mutates programs and outputs to find wrong results a contract still allows. | [`t/spec_gate.py`](t/spec_gate.py), [`t/spec_check.py`](t/spec_check.py), [`t/audit.py`](t/audit.py) |
+| Executable comparisons | Compiles generated C or Dafny/Python and compares it with the interpreter. Separately checks C contracts and overflow obligations at machine width. | [`t/build.py`](t/build.py), [`t/ship.py`](t/ship.py) |
+| PX4 checks | Models selected routines, records failing inputs and fixes, and compares the models with PX4's compiled functions or extracted statements. | [`t/flight/`](t/flight/README.md) |
+| Training and evaluation | Filters generated answers, assembles corpora, trains or fine-tunes models, and evaluates them with recorded splits, input hashes, and per-stage results. | [`t/student_rows.py`](t/student_rows.py), [`locallm/dawnr_pipeline.py`](locallm/dawnr_pipeline.py), [`locallm/dawnr_report.py`](locallm/dawnr_report.py) |
+| Local assistant | Reads files, proposes edits, journals changes, runs sandboxed commands, and uses retrieval, memory, and external tools. | [`locallm/dawnr_cli.py`](locallm/dawnr_cli.py), [`locallm/dawnr_agent/`](locallm/dawnr_agent/), [`locallm/dawnr_harness/`](locallm/dawnr_harness/) |
+| Documents and arithmetic | Answers with quotations from supplied files, extracts fields from source text, and compares a model's numerical answer with separately generated workings evaluated exactly. | [`locallm/cite_docs.py`](locallm/cite_docs.py), [`locallm/extract_docs.py`](locallm/extract_docs.py), [`locallm/calc.py`](locallm/calc.py) |
+
+The [`dawnr` command](bin/dawnr) exposes the assistant and its checks in a terminal. A local browser interface,
+HTTP job API, and MCP server expose them to other clients. The [command reference](docs/COMMANDS.md) describes
+the individual entry points.
+
+## How code is checked
+
+The verification language is **`t`**. A task states its inputs, preconditions (`requires`), postconditions
+(`ensures`), implementation, and any loop invariants. Its engine supports **Dafny, Verus, SPARK, Frama-C,
+Lean 4, Rocq, and F\***. Several front ends share underlying solvers; the reports identify the tools and versions
+that actually ran.
+
+For a question with examples, [`dawnr ask`](t/answer.py) runs this sequence:
+
+1. Generate candidate `t` programs and reject ones that fail parsing, well-formedness checks, or the supplied tests.
+2. Generate a separate Python solution and test it in a sandbox.
+3. Check whether the candidate's specification agrees with that solution on sampled inputs and rejects mutated outputs.
+4. Run available provers on the surviving program and a deliberately broken variant, with a concrete input that
+   distinguishes the two. Report refutations, missing tools, unsupported constructs, and timeouts.
+5. Translate an accepted program to Python and compare the translation with the `t` interpreter before returning it.
+
+Other entry points reuse these components. [`dawnr prove`](t/prove.py) starts from a supplied specification;
+[`dawnr verify`](t/verify_py.py) uses an existing Python function as the behavioral reference.
+[`dawnr check`](t/certificate.py) replays a saved certificate's hashes, tests, prover checks, and executable
+comparisons without asking a model to regenerate the answer.
+
+A proof establishes a property of the `t` program under its stated assumptions. The Python translation and PX4
+correspondence are checked on bounded inputs. Specification checks can expose a mismatch with the intended
+behavior, but they cannot establish that the specification captures everything the user meant. These distinctions
+are part of the reported result.
+
+The installed `dawnr` proof commands default to a minimum of **one** prover. An all-seven result must show seven
+successful program checks and seven refuted variants. The current engine pin is in [`t/ENGINE.md`](t/ENGINE.md);
+engine development lives in [t-proof-engine](https://github.com/trestoncuzzort/t-proof-engine).
+
+## PX4 work in this repository
+
+[`t/flight/`](t/flight/README.md) contains models of math helpers, filters, hysteresis, ring-buffer operations,
+collision-prevention indexing, and message-handler behavior. Findings include the failing contract and a concrete
+input; proposed fixes have separate tasks so the original and corrected behavior can be checked side by side.
+
+Examples from the recorded, pinned PX4 revisions:
+
+| Case | Original behavior at the recorded input | Evidence |
+|---|---|---|
+| Obstacle-bin wrapping | Bin `-73` with 72 bins returns `-1`, outside the valid index range. | [Compiled-function comparison](t/PX4-DIFF.md) |
+| SUMD channel decoding | A valid 32-channel frame reaches index 64 of a 64-byte buffer. | [Finding and concrete input](t/FLIGHT-FINDINGS-REAL.md) |
+| Arming parameter conversion | Parameter `257` narrows to the arm action. The proposed fix rejects it. | [Original and fixed statements](t/PX4-STMT.md) |
+| MAVLink serial control | A count of 71 exceeds the message's 70-byte data field. The proposed fix rejects that count. | [Original and fixed statements](t/PX4-STMT.md) |
+
+[`px4_diff.py`](t/flight/px4_diff.py) compiles PX4's own routines and compares their outputs with the `t` models.
+[`px4_stmt.py`](t/flight/px4_stmt.py) compiles selected handler statements from original and proposed-fix revisions,
+with stand-ins for surrounding types and services. Each record names its revision, inputs, and comparison scope.
+
+These checks cover the modeled routines and extracted statements. They do not establish correctness of the
+complete autopilot or behavior in flight. The numeric model also matters: many floating-point comparisons use
+binary64, while PX4 commonly uses binary32. The [flight notes](t/flight/README.md) document those boundaries.
+
+## The data and model pipeline
+
+Programs that pass checks feed corpus builders and training runs. Rejected programs, counterexamples, and verifier
+feedback are also used to construct and evaluate repair tasks. Held-out problems,
+contamination checks, and specification checks determine what a reported model result counts.
+
+The resumable [`dawnr_pipeline.py`](locallm/dawnr_pipeline.py) driver covers tokenization, base training or an
+existing checkpoint, conversation construction, mid-training, optional supervised fine-tuning, evaluation, and
+reporting. Stage records contain input hashes and parameters; changed inputs invalidate downstream work. Its
+chat reinforcement-learning stage currently records a skip. Other experiments have their own drivers and records.
+
+The installer supplies the **student-v5** fine-tuned Qwen3.5-4B for program generation and a quantized base
+Qwen3.5-4B for the assistant and reference answers, served locally through llama.cpp. The repository also contains
+training code for models initialized from random weights. These are separate experimental paths; the installed
+model is described in the [model card](release/MODEL-CARD-student-v5.md).
+
+Results and corrections are kept in [SCOREBOARD.md](SCOREBOARD.md), [docs/MEASURED.md](docs/MEASURED.md),
+[CORRECTIONS.md](CORRECTIONS.md), and the linked experiment records. They describe particular runs and populations.
+Large weights and many generated run artifacts are downloaded or produced separately from a source checkout.
+
+## Install and use
+
+The application supports Linux, macOS, and Windows through WSL2, with Python 3.10 or newer. CPU inference is
+supported. The installer downloads the model server and models, checks their published checksums, installs Dafny
+where supported, and adds `dawnr` to `~/.local/bin`. Other proof backends have separate setup instructions in
+[`t/README.md`](t/README.md).
 
 ```bash
 git clone https://github.com/trestoncuzzort/dawnr
 cd dawnr
 ./install.sh
+dawnr doctor
 ```
 
-A fresh Ubuntu first needs `sudo apt install libgomp1 unzip bubblewrap`; the installer checks and prints the
-line if anything is missing. It needs no administrator rights, downloads the model server, the models and the
-first prover into `~/.local/share/dawnr`, checks every download against its published checksum, and adds a
-`dawnr` command. `dawnr doctor` shows what is installed.
-
-## Use it
-
-### In a folder
+On a fresh Ubuntu installation, the installer may require `libgomp1`, `unzip`, and `bubblewrap`. Commands that
+execute generated Python require a working sandbox. See the [installation guide](docs/USER-GUIDE.md) for setup,
+model storage, and platform-specific requirements.
 
 ```bash
-cd ~/notes
-dawnr                                   # an assistant in this folder; type what you need
-dawnr do "Rename the photos by date and tell me how many there are."
-dawnr do "Which invoice is overdue? Answer from the PDFs here." --read-only
+# Generate a checked function and save its replayable record.
+dawnr ask "Write a function that returns the larger of two integers." \
+  --test "assert larger(3, 5) == 5" --test "assert larger(9, 2) == 9" \
+  --save-python larger.py --certificate larger.cert.json
+dawnr check larger.cert.json
+
+# Work with a folder or ask a question about a document.
+dawnr do "Describe the modules in this repository." --read-only
+dawnr cite "What assumptions does this check make?" t/flight/README.md
+dawnr calc "A logger records 12 samples per second for 15 seconds. How many samples is that?"
 ```
 
-It reads the folder and the folders you add with `--root`, changes files only after showing you the exact
-difference, journals every change so `/undo` puts it back, and runs commands in a sandbox with no network over
-a copy of the folder: a command that changed nothing is a read, one that would change something is shown to you
-with what it would change, and only your yes makes it real. The network stays off unless you pass `--online`.
+The assistant defaults to local models and offline operation. Its file tools support reviewed edit plans and a
+change journal; `/undo` restores recorded changes. Shell commands run in a sandbox over a copy of the workspace. `--online`
+enables the assistant's network tools, and `DAWNR_WRITER_URL` can select an external model for program generation.
+Those options change what stays local. See [PRIVACY.md](PRIVACY.md) and [DAWNR-AGENT.md](DAWNR-AGENT.md).
 
-### On the computer
+## Run existing verification tasks without a model
+
+The parser, interpreter, and mutation audit can run directly from the source checkout. Formal checks need the
+selected prover installed and on `PATH`; compiled comparisons also need the relevant compiler.
 
 ```bash
-dawnr do "How much disk is free, and what is using the CPU?"
-dawnr do "Turn on dark mode."
+python3 t/cli.py check t/flight/fixes/px4_wrap_bin_fixed_72.t
+python3 t/cli.py audit t/flight/fixes/px4_wrap_bin_fixed_72.t --json
+
+# A proof and its deliberately broken variant, using Dafny.
+T_MIN_KERNELS=1 python3 t/cli.py verify \
+  t/flight/fixes/px4_wrap_bin_fixed_72.t --kernels dafny --json
+
+# Refute the original contract at a recorded failing input.
+python3 t/refute_at.py t/flight/findings/px4_wrap_bin_any.t \
+  --at '{"bin": -73, "bin_count": 72}' --kernels dafny --json
+
+# Compile and compare the pinned PX4 routines; fetches source when absent.
+python3 t/flight/px4_diff.py --table /tmp/dawnr-px4-diff.md
 ```
 
-Questions about the machine are answered by running a command that can only look. Doing something takes one
-command you are shown and asked about every time. Nothing is ever run as administrator: a line that needs
-`sudo` is handed to you. Under WSL the desktop is Windows, and dawnr uses Windows's own lines for it.
+The engine CLI also exposes lowering, contract repair, compiled-output comparisons, and machine-width checks:
+`python3 t/cli.py --help`. Reports and certificates retain the scope of the checks that ran; an unavailable or
+unfinished check does not count as a pass.
 
-### Documents
+## Repository map
 
-```bash
-dawnr cite "When is payment due?" invoice.pdf
-dawnr extract invoice.pdf --field "total(number): the amount due" --field "due(date): when payment is due"
-```
-
-Both answer only from your files, quoting the sentence each value comes from, and leave a field empty when
-the files do not say.
-
-### Numbers
-
-```bash
-dawnr calc "A recipe needs 2.5 cups of flour for 12 muffins. How many cups for 30?"
-```
-
-The model reasons in words; the working is written as arithmetic and computed exactly, and the answer is shown
-only when the two agree.
-
-### Code you can prove
-
-```bash
-dawnr ask "Write a function that returns the larger of two numbers." \
-  --test "assert larger(3, 5) == 5" --test "assert larger(9, 2) == 9" --save-python larger.py
-dawnr verify largest.py                 # a proved twin of a function you already have
-dawnr prove largest.t                   # a body for a specification you wrote
-dawnr check larger.cert.json            # replay someone's certificate, no model involved
-```
-
-An answer is shown only when it passes your tests, its specification holds at an independently written
-solution's answers, and a prover proves it; otherwise dawnr says which check stopped it.
-
-### A page instead of a terminal
-
-```bash
-dawnr ui
-```
-
-opens everything above in your browser, on this machine only. `dawnr serve api` gives the same as a local
-HTTP API (`POST /v1/jobs`) and an OpenAI-compatible address for chat programs.
-
-### With the assistant you already use
-
-```bash
-claude mcp add dawnr -- dawnr mcp
-```
-
-gives an MCP client dawnr's checks as tools (prove, check a certificate, exact arithmetic, quote checking);
-its own model is trusted exactly as far as dawnr's: not at all.
-
-All commands, their options and what each one measures: [docs/COMMANDS.md](docs/COMMANDS.md). The guide to
-installing, the page and the harness settings: [docs/USER-GUIDE.md](docs/USER-GUIDE.md).
-
-## Commands
-
-| command | what it does |
+| Path | Contents |
 |---|---|
-| `dawnr` | the assistant in the folder you are in (`--read-only`, `--root DIR`, `--online`, `--yes`) |
-| `dawnr do "TASK"` | one task, then back to the shell |
-| `dawnr cite "QUESTION" FILE...` | an answer from your files, every claim quoting one of their sentences |
-| `dawnr extract FILE... --field ...` | fields from your files, each with the sentence it is in |
-| `dawnr calc "QUESTION"` | a number reasoned in words, shown when an exact working gives it too |
-| `dawnr ask "QUESTION" --test ...` | a proved function from a description and tests, as `t` and Python |
-| `dawnr spec` / `dawnr prove SPEC.t` | specifications to pick from; a proved body for one you wrote |
-| `dawnr verify FILE.py` | a proved twin of your function, or why not |
-| `dawnr check CERT.json` | replay a certificate on this machine's provers |
-| `dawnr tools TOOLS.json "REQUEST"` | a tool call handed back only when every value was said |
-| `dawnr ui` / `dawnr serve api` | the page in your browser; the local API |
-| `dawnr mcp` | the checks as Model Context Protocol tools |
-| `dawnr doctor` / `dawnr forget` | what is installed; erase what dawnr kept about your work |
+| [`bin/dawnr`](bin/dawnr), [`install.sh`](install.sh) | Application launcher, local model serving, and installation. |
+| [`t/`](t/README.md) | Pinned proof engine plus dawnr's generation, data-filtering, and evaluation scripts. |
+| [`t/flight/`](t/flight/README.md) | PX4 models, findings, proposed fixes, and source-comparison harnesses. |
+| [`locallm/`](locallm/) | Model and training code, the assistant, document tools, retrieval, memory, and evaluations. |
+| [`nl/`](nl/README.md) | Programming-problem datasets and their preparation records. |
+| [`release/`](release/) | Model cards and release documentation. |
+| [`docs/`](docs/) | Command reference, user guide, and measurements. |
+| [`internal/`](internal/) | Research notes, design records, and historical handoffs. |
 
-## How it is kept safe
-
-- **Plans, not surprises.** Every change to a file is shown as the exact difference and asked for once; every
-  change is journaled with what it replaced, and `/undo` restores it.
-- **A sandbox for commands.** Commands run with no network over a copy-on-write layer of the folder
-  (bubblewrap on Linux, Seatbelt on macOS); the rest of the disk is read-only and your keys are hidden.
-- **The computer, with your yes.** Looking is free; doing takes one command you are shown. Never `sudo`.
-- **Nothing is taken on the model's word.** Files, commands and answers are judged by what happened, not by
-  what the model said; a plan that would destroy a file goes back to the model before it reaches you.
-- **The threat model and what it has been measured against:** [DAWNR-AGENT.md](DAWNR-AGENT.md). What dawnr
-  keeps and what leaves the machine (nothing by default): [PRIVACY.md](PRIVACY.md).
-
-## What it needs, and how fast it goes
-
-| machine | the assistant | a proved answer |
-|---|---|---|
-| a 12-core CPU, no card | 27–29 tokens a second; a task about three model calls | one to two minutes a question |
-| a laptop's 8 GB card (RTX 5050, WSL2) | 65–72 tokens a second; 161 tasks in 12.5 minutes | 11 to 27 seconds |
-| a 48 GB workstation card | 273 tokens a second | |
-
-The first call of each task costs only the task's own text: the system-and-tools prefix is kept warm between
-conversations. The model drafts several tokens at a time from its own prediction layer and from runs it has
-already written, which on six CPU cores is 1.9× the tokens a second of plain decoding
-([how each number was measured](docs/MEASURED.md)).
-
-## Measured, good and bad
-
-Every number here names the run that produced it; the full account, with what went wrong, is in
-[DISCLAIMERS.md](DISCLAIMERS.md) and [docs/MEASURED.md](docs/MEASURED.md).
-
-**The assistant** is judged on 161 hand-written tasks in six sets and on 660 fresh tasks drawn from 66 task
-families, each judged by the folder's end state, the command let through, or what the machine itself says,
-never by the model's account. On the unseen halves of the hand-written sets, on a CPU: 20 of 20 files tasks,
-14 of 15 harder ones, 8 of 11 past those, 21 of 21 about the computer, 9 of 13 of longer work; the same
-laptop read 141 of 161. The untaught 4B did 415 of 530 fresh taught-family tasks and 84 of 130 held-out ones,
-with 33 judged as harm (a file lost, or a change outside what was asked): each caught by the judge, each
-restorable by `/undo`, and the reason the warnings were rewritten.
-
-**Proofs.** On 182 programming problems no training row touches, a problem counts only when the program
-passes its tests, a prover verifies it, and its specification agrees with the problem's reference solution on
-inputs larger than the examples:
-
-| | proved by at least one prover | an algorithm, not a restatement | proved by all seven |
-|---|---:|---:|---:|
-| **dawnr v5** (Qwen3.5-4B, fine-tuned here on proved answers) | **17** | **9** | **12** |
-| the same 4B before fine-tuning, prompted, 17 tries a problem | 9 | 2 | 6 |
-| Phi-4-mini (3.8B), output forced into valid `t`, 17 tries | 7 | 0 | 5 |
-| Qwen3.5-27B, six times larger, prompted, 17 tries | 32 | 17 | 22 |
-
-Plainly: much of the lead over Phi comes from the base model, chosen by measurement among openly licensed
-ones; the training adds 8 problems. These counts were corrected three times on the day they were published
-(contaminated problems removed, inputs made larger, proofs sorted by what they prove); the corrections and
-their reasons are in [CORRECTIONS.md](CORRECTIONS.md). A much larger model still does better.
-
-**The seven kernels.** Every committed `t` task is lowered into seven proof systems: independent front ends over
-four distinct proof engines. Z3 sits behind Dafny, Verus, F* and SPARK as run here, Alt-Ergo behind Frama-C, and
-Lean and Rocq are small trusted kernels, Rocq's re-checked by `coqchk`. Each must prove the program and refute a deliberately broken
-twin at a concrete input, or refuse by name. Of the 94 tasks in the installed matrix, Dafny proves 94, Verus 86,
-Lean 68, Rocq 62, F* 59, SPARK 56 and Frama-C 49. In every kernel, the twin of every proved program is refuted (100%).
-48 tasks are proved, with the twin refuted, in all seven; the rest are named refusals, mostly of the constructs added
-on 2026-10-06 and 10-07, which the other kernels are being taught now. Since 10-07 the language also has datatypes
-with fields and recursive datatypes (proved in Dafny, Verus and Lean), and quantifiers over a set's or a seq's
-elements (a seq range in all seven kernels, a set range in Dafny and Verus)
-([the matrix](t/AGREEMENT.md), regenerated from a clean clone of the engine's own repository). The engine (the
-language, its lowerings, the kernel adapters and the tasks) now has its own repository,
-[t-proof-engine](https://github.com/trestoncuzzort/t-proof-engine); `t/` here carries a pinned copy
-([t/ENGINE.md](t/ENGINE.md)). 22 of AlgoVeri's contracts are stated in t there too ([t/algoveri/](t/algoveri/)):
-Dafny verifies all 22 with the twin refuted (Verus 7, F* 5, SPARK 3, Frama-C 2, Rocq 1, Lean 0). Of the 13 cells
-the lowerings could not first express, 11 are repaired and the other two are named ([t/ALGOVERI.md](t/ALGOVERI.md)).
-
-**What went wrong**, kept on the record: a file written into a folder the request did not name; two files
-"swapped" with a command that lost one; the smaller of two files removed when the larger was asked for; a
-warning misread by the model as "try again". Each is why a check now exists, and each check is measured.
-
-## Models
-
-The model that comes with dawnr is **dawnr v5**, a fine-tuned Qwen3.5-4B (Apache-2.0) published as the
-[`student-v5` release](../../releases/tag/student-v5) with its
-[model card](release/MODEL-CARD-student-v5.md); the assistant drives the base 4B, 2.8 GB at 4 bits, and a
-machine with 24 GB for the model does longer work better with the 35B of the same family. Earlier versions
-were called "the student"; files and tags that still say so are these same dawnr models. The writing can also
-be done by a larger model behind any OpenAI-compatible address (`DAWNR_WRITER_URL`): whatever writes is never
-trusted, and the checks stay on your machine.
-
-## The projects behind it
-
-dawnr grew as one repository and is now four, each with its own history:
-
-| Repository | What it is |
-|---|---|
-| **dawnr** (this one) | the assistant: the `dawnr` command, the harness, the agent, memory, retrieval, the checks, the installer and the model releases |
-| [t-proof-engine](https://github.com/trestoncuzzort/t-proof-engine) | `t`, the specification language, and its seven-prover verifier with the sabotaged-twin check |
-| [locallm](https://github.com/trestoncuzzort/locallm) | the transformer trainer that builds models from random weights, and its research record |
-| [tup](https://github.com/trestoncuzzort/tup) | Linux From Scratch built by a driver, with a receipt on every step and two boot witnesses |
-
-`locallm/` and `tup/` here are the copies they were split from on 2026-10-08; dawnr's pipeline still imports from
-`locallm/`, the way `t/` carries a pinned copy of the engine. New work on either lands in its own repository first.
-
-## Learn more
-
-| If you want to... | Read... |
-|---|---|
-| use every command, with its options | [docs/COMMANDS.md](docs/COMMANDS.md) |
-| install, run the page, set the harness up | [docs/USER-GUIDE.md](docs/USER-GUIDE.md) |
-| know what is measured, what works and what does not | [DISCLAIMERS.md](DISCLAIMERS.md), [docs/MEASURED.md](docs/MEASURED.md) |
-| see what was corrected, and why | [CORRECTIONS.md](CORRECTIONS.md) |
-| let dawnr act on your machine, and see its threat model | [DAWNR-AGENT.md](DAWNR-AGENT.md) |
-| know what dawnr keeps on your machine, what leaves it, and how to erase it | [PRIVACY.md](PRIVACY.md) |
-| read the terms of use | [TERMS.md](TERMS.md) |
-| understand `t` and the seven provers | [t/README.md](t/README.md) |
-| see where dawnr is going | [AMBITION.md](AMBITION.md), [ROADMAP.md](ROADMAP.md) |
-| contribute, or report a wrong number | [CONTRIBUTING.md](CONTRIBUTING.md), [SECURITY.md](SECURITY.md) |
+For development, see [CONTRIBUTING.md](CONTRIBUTING.md). For recorded limitations and reporting defects, see
+[LIMITS.md](LIMITS.md), [DISCLAIMERS.md](DISCLAIMERS.md), and [SECURITY.md](SECURITY.md).
 
 ## License
 
