@@ -85,8 +85,7 @@ class Agent:
         self.files = files
         self.commands = commands
         self.shell = shell                 # shell.ShellTools: any command, over an overlay ("shell": true)
-        self.system = None                 # system.SystemTools: the computer itself; `sysinfo` reads its state unasked
-                                           # ("sysinfo": true), `pc` acts on it, asked every time ("system": true)
+        self.system = None                 # read-only diagnostics when "sysinfo": true
         self.budget = budget
         self.dry_run = dry_run
         self.plan_approver = None          # set by a front end: callable(DryRun) -> bool; never by the model
@@ -107,11 +106,6 @@ class Agent:
             return Preview(error=why) if decision == "deny" else Preview(
                 summary="reads the state of the computer; changes nothing; its output enters as untrusted data",
                 detail=[f"$ {args.get('command')}"])
-        if self.system is not None and name == "pc":
-            decision, why = self.system.decide(args)
-            return Preview(error=why) if decision == "deny" else Preview(
-                summary="runs on the computer itself, outside the sandbox; not simulated, not undone",
-                detail=[f"$ {args.get('command')}"] + ([f"why: {args['why']}"] if args.get("why") else []))
         if name == "ps_list":
             return Preview(summary="lists the processes on this machine; the listing enters as untrusted data")
         tool = self.harness.registry.get(name)
@@ -252,6 +246,11 @@ def register_agent(harness, spec: dict, *, base: Path | None = None, config: dic
         raise AgentConfigError(f"agent: unknown keys {', '.join(sorted(unknown))} "
                                f"(known: {', '.join(sorted(AGENT_KEYS))})")
 
+    if _type(spec.get("system", False), bool, "system"):
+        raise AgentConfigError("agent: host control ('system': true) has been retired; use 'sysinfo': true for diagnostics")
+    if spec.get("sandbox", "bwrap") != "bwrap":
+        raise AgentConfigError("agent: sandbox must be bwrap; unsandboxed commands are no longer supported")
+
     def resolve(p: str) -> Path:
         q = Path(os.path.expanduser(p))
         return q if q.is_absolute() else base / q
@@ -331,11 +330,8 @@ def register_agent(harness, spec: dict, *, base: Path | None = None, config: dic
     problems: list = []
     rules = _rules(spec.get("commands", []), space, exec_path, problems, command_limits)
     sandbox, sandbox_problem = None, None
-    kind = spec.get("sandbox", "none")
-    if kind not in ("none", "bwrap"):
-        raise AgentConfigError(f"agent: sandbox is none or bwrap, not {kind!r}")
-    if kind == "bwrap":
-        program = shutil.which("bwrap", path=exec_path) or shutil.which("bwrap")
+    if rules:
+        program = shutil.which("bwrap", path=exec_path)
         if not program:
             sandbox_problem = "bwrap is not installed"
         else:
@@ -351,7 +347,7 @@ def register_agent(harness, spec: dict, *, base: Path | None = None, config: dic
     shell = None
     if _type(spec.get("shell", False), bool, "shell") and ops is not None:
         from .shell import ShellTools
-        program = shutil.which("bwrap", path=exec_path) or shutil.which("bwrap")
+        program = shutil.which("bwrap", path=exec_path)
         shell = ShellTools(space, ops, program=program, state=state, exec_path=exec_path, env=env) if program else None
         if shell is None or shell.problem:
             problems.append(f"shell: {shell.problem if shell else 'bwrap is not installed'}; sh is not offered")
@@ -375,14 +371,13 @@ def register_agent(harness, spec: dict, *, base: Path | None = None, config: dic
         harness.clients.append(shell)      # closed with the harness: runs left unanswered are dropped
         if files is not None:
             files.count_hint = "with sh: grep -c, or sort | uniq -c"
-    act, looks = _type(spec.get("system", False), bool, "system"), _type(spec.get("sysinfo", False), bool, "sysinfo")
-    if act or looks:
+    if _type(spec.get("sysinfo", False), bool, "sysinfo"):
         from .system import SystemTools
-        agent.system = SystemTools(offline=lambda: harness.policy.offline, act=act,
-                                   cwd=space.roots[0].path if space.roots else None)
+        agent.system = SystemTools(offline=lambda: harness.policy.offline,
+                                   cwd=space.roots[0].path if space.roots else None, exec_path=exec_path)
         tools += agent.system.tools()
         if shell is not None:
-            shell.elsewhere = "To look at the computer call `sysinfo` with this line" + ("; to change something on it, `pc`." if act else ".")
+            shell.elsewhere = "Read-only host diagnostics use `sysinfo`; host changes are not supported."
     if spec.get("processes", True):
         tools.append(ps_tool())
     from .plan import plan_tool

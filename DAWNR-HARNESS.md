@@ -13,6 +13,13 @@ harness is standard-library Python 3.10+, runs on Windows, macOS and Linux,
 and starts offline: with no configuration it has one tool (the t checker) and
 no way to reach the network.
 
+The built-in repository agent now exposes read-only host diagnostics and sandboxed
+compile/test commands. Its former `pc` host-control tool is retired and cannot be
+restored by a permission rule. External MCP servers, command hooks and skill
+scripts remain explicitly configured trusted extensions; their execution is not
+confined by the repository command sandbox. The proof-checking MCP server exposes
+checks, not desktop or service controls.
+
 What was copied, from where (each fetched and read on 2026-09-26):
 
 | piece | copied from | what differs |

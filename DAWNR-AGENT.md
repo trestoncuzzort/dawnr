@@ -1,13 +1,22 @@
-# dawnr's agent: acting on the machine, in the owner's control
+# dawnr's repository agent
 
-`AMBITION.md` asks for dawnr to act on the machine it runs on: "a planning loop
-over tools (files, shell, processes) through the harness: every action under the
-owner's allow / ask / deny permissions, logged, reversible where possible; dawnr
-never grants itself permissions." This is that loop and those tools. The code is
-`locallm/dawnr_agent/`; it plugs into dawnr's harness (`DAWNR-HARNESS.md`) as
-more tools in the same registry, under the same policy, hooks and audit log, and
-it is switched on by an `"agent"` section in the harness configuration. Without
-that section none of it exists.
+The agent inspects source files, proposes edits, and runs compile and test commands
+inside a sandbox. File changes stay within configured roots and use the existing
+journal and approval rules. Its tools live in `locallm/dawnr_agent/` and share the
+harness policy, hooks and audit log (`DAWNR-HARNESS.md`). An `"agent"` section in
+the harness configuration enables them.
+
+As of 2026-10-10, built-in host control is retired: dawnr does not offer `pc`,
+change desktop settings, launch desktop applications, or start and stop host
+services. Old `"system": true` configurations fail with a migration message.
+Read-only `sysinfo` remains useful for diagnosing build environments.
+`run_command` now requires bubblewrap; `"sandbox": "none"` is refused and a
+missing or failed sandbox never falls back to host execution. Historical
+experiments and task fixtures below remain records of their original runs.
+
+Operator-configured MCP servers, command hooks and skill scripts are trusted
+extensions with their existing boundaries. They run independently of the built-in
+repository sandbox; this change does not claim to confine arbitrary extensions.
 
 It is standard-library Python 3.10+. The predictions were committed before the
 code (`locallm/PREDICT-agent-2026-09-27.md`); the tests that measure them are
@@ -95,11 +104,10 @@ rights; kernel bugs; a person who approves a plan whose dry run showed the harm.
 | `fs_write` | ask | trusted | yes | create a file (`overwrite` to replace; `make_dirs`; `expect_sha256`) |
 | `fs_edit` | ask | trusted, then the file's lines around the change as untrusted text | yes | replace an exact text that appears once (or `all`); a text that misses is matched where it differs only by one constant indentation, else refused with the file's closest lines |
 | `fs_undo` | ask | trusted | yes | revert one journaled change if the file is still as it left it |
-| `run_command` | deny | untrusted | yes | one argv matching an operator rule |
+| `run_command` | deny | untrusted | yes | one argv matching an operator rule, under bubblewrap |
 | `ps_list` | allow | untrusted | no | processes: id, parent, name; command lines of your own |
 | `sh` | allow, asked when it changed something | untrusted | by what it changed | any shell line, run over an overlay of the roots in the sandbox (`"shell": true`; below) |
 | `sysinfo` | allow | untrusted | no | one read-only line about the live machine, run for real (`"sysinfo": true`; below) |
-| `pc` | ask, every call | untrusted | yes | one command on the computer itself, never as administrator (`"system": true`; below) |
 | `plan` | allow | trusted summary, each step's output with its own trust | no (its steps are) | a plan from the model: dry run, approval, steps |
 
 The file tools exist only when the operator configures roots, and write tools
@@ -190,12 +198,11 @@ the rule writes), else the rule's, else the first writable root.
 
 **The network.** A rule counts as reaching the network unless it says
 `"network": false`, and while the harness is offline (its default) a network rule
-is refused. Without a sandbox, `"network": false` is the operator's claim about
-that program, exactly as it is for an MCP server. With `"sandbox": "bwrap"` it is
+is refused. `"sandbox": "bwrap"` is required and is the default. The boundary is
 enforced: the command gets its own network namespace with only a loopback
 device, a read-only file system except the writable roots, empty `/run` and
-`/tmp`, hidden secret folders, its own process ids and session. If the sandbox is
-configured and does not work on the machine, no command runs. On the desktop this
+`/tmp`, hidden secret folders, its own process ids and session. If the sandbox
+does not work on the machine, no command runs. On the desktop this
 was written on, unprivileged `unshare -rn` is refused (AppArmor restricts
 unprivileged user namespaces there) and bubblewrap, which has its own profile,
 works.
@@ -255,109 +262,27 @@ are no SSH private keys in your ~/.ssh directory". Now a hidden folder holds one
 so, a hidden file reads as one comment line that says so, and a line that names such a place (`.ssh`, `.env`,
 `*.pem`, the list of section 3) is not run at all and is answered with why.
 
-### The computer itself (`sysinfo` and `pc`, 2026-10-05)
+### Read-only host diagnostics (`sysinfo`)
 
-What is not a file in a root is reached two ways (`locallm/dawnr_agent/system.py`), both run for real, as the
-person, outside the sandbox, because what they are for is not inside it.
+`sysinfo` reads the build machine's live state: processes, memory, disk, installed
+packages and service status. It accepts only recognized read-only command shapes,
+including `df -h`, `free -m` and `systemctl status`. The parser rejects substitutions,
+background jobs and writing redirections, and reconstructs the command from quoted
+words. The shell and its utilities resolve through a PATH that excludes the
+repository roots and relative entries. File contents belong to the file tools
+and sandboxed `sh`.
 
-`sysinfo` looks: what is running, memory and disk, the network, services, sound, settings, what is installed. It
-runs without asking, so it takes only a line that cannot change anything. The shape is the Codex CLI's
-`is_known_safe_command`: plain commands (bare words and quoted strings) joined by `|`, `&&`, `||` and `;` and by
-nothing else, so no redirection, variable, substitution, subshell or background job; each command a read-only
-program used in a read-only way (`systemctl status` and not `systemctl stop`; `nmcli device status` and never
-`--show-secrets`; `journalctl` without `--follow` or `--vacuum-*`; `top` only as `-bn1`; a package manager's local
-query and nothing that refreshes from a mirror). Two things differ from Codex. The list is of what shows a
-computer's state (about a hundred programs, and some fifty more that may only be asked their version), not a
-repository's dozen. And where Codex lets `cat` and `grep` open any
-file, here a file is opened only under `/sys`, the part of `/proc` that is not a process, and a few named files of
-`/etc`: reading files is the file tools' and `sh`'s, where the secret ones are hidden. The line that runs is not
-the model's text but the words read from it, each quoted again, so the shell is left nothing to expand.
-`test_a_look_at_the_computer_runs_unasked_and_only_a_line_that_cannot_change_anything_is_one` holds 32 lines that
-pass and 74 that must not. The list is a list: a program on it with an option that writes, unknown to this file,
-would be run unasked. That is the limit of this tool, and why each entry names what it allows rather than what it
-forbids wherever the program has subcommands.
+This is an allowlist, not a sandbox: a mistaken read-only classification is still
+a defect. Its negative controls include service stops, settings changes, output
+redirection and shell substitutions. No `pc` tool is registered, even when the
+operator enables the network or supplies approval. Direct legacy `pc` calls return
+a refusal without starting a process.
 
-`pc` acts: open a program, a file or a page, change a setting, start or stop a service. Every call is put to the
-person with the exact line; the front door's `--yes` does not cover it; a session with no terminal runs none. It
-starts in the folder the session works in, as a terminal opened there would. Refused without asking, each with
-what to do instead:
-
-- a line that asks for administrator rights (`sudo`, `pkexec`, `doas`, `su`): handed to the person, word for word;
-- a package manager told to change what is installed (`apt install`, `dnf upgrade`, `pacman -Syu`, `apk add`),
-  with or without the word sudo: handed to the person with sudo in front. Before this rule a model on a described
-  Fedora sent `dnf install htop -y` bare, three machines in a row;
-- removing, moving and re-permissioning files (that is `sh`'s, where it is shown first and can be undone), a
-  download piped into a shell, changing what is mounted or loaded into the kernel, and starting dawnr itself;
-- a line that names a place where secrets are kept, whatever program it names it to (`base64 ~/.ssh/id_ed25519`);
-- offline, anything that reaches the network, and any line with an address in it: a page opened for the person
-  is also a way to send something out.
-
-**Git.** A repository is read inside the sandbox like any other files: `git status`, `diff`, `log`, `show` and
-the like run through `sh`, unasked (the index refresh that `git status` makes in the sandbox means nothing and is
-dropped). What changes the repository (stage, commit, branch, stash, tag) cannot be carried out of a sandbox,
-since the journal never writes `.git`; before this was a rule, `git commit` through `sh` was offered to the person
-as "it would change 5: new folder .git/objects/40 ..." with the objects themselves "not applied", and `git stash`
-as a change that would have reverted the working files and kept no stash. Now a sandboxed run that changed `.git`
-is refused whole, and the front door sends such lines to `pc`, where they are asked for and run on the repository
-itself; git's own reflog is what undoes them. Two kinds are never run and are handed to the person: what discards
-work that is in no commit or rewrites history (`reset --hard`, `clean -f`, `checkout -- .`, `restore`, `rebase`,
-`push --force`, `branch -D`), and, offline, what reaches a remote. Inside the sandbox git is also told that the
-secret names are binary files, so `git diff` and `git log -p` say that a `.env` differs and not how: a secret's
-text is in `.git` under no name, and would otherwise be printed from there.
-
-**The network.** Off unless the session is started with `--online`; then `web_search` and `web_fetch` are
-offered, and each call is put to the person (the harness's own rule: untrusted text is in the conversation from
-its first step, and these tools reach outside it). The search needs no account: it reads DuckDuckGo's page for
-browsers without JavaScript the way a text browser would, under this program's own name, and takes the links out
-of it (`dawnr_harness/web.py`; it is a page and not an interface with a promise, and says so when it comes back
-without results). Fetches keep the harness's bounds: no private or loopback address, the address resolved once
-and pinned, redirects re-checked, a byte cap and a deadline. Tried once end to end on the 4B: "in which Python
-version was shlex.quote added, according to the documentation?" was one search, one fetch of docs.python.org and
-the answer "3.3" with the sentence it came from, in three model calls.
-
-What it does is not journaled and not undone, and the question to the person says so. What `pc` cannot promise:
-it shows a command line, not what a script named on it contains, and a desktop session will start anything for
-the person who asks it to. The person's yes is the check here, not a sandbox. `locallm/dawnr_tasks.py`, which says
-yes to everything, therefore never runs a `pc` line: it records it and counts it as harm unless the task asked for
-it (and answers "command not found" for a program this machine does not have, as the shell would).
-
-Three things the front door (`locallm/dawnr_cli.py`) adds around these tools, each from a reading of what a 4B did
-with them:
-
-- **Routing.** Whichever of `sh`, `sysinfo` and `pc` the model named, a line goes to the one it belongs to: a line
-  that only looks to `sysinfo`, one that acts on the computer to `pc`, a file read to `sh`, and a sudo line or a
-  package manager's sent to `sh` to `pc`, which hands it over. Each tool still refuses the others' lines for any
-  other front end; through this one a wrong name no longer costs a round ("empty the trash" had ended on one
-  redirect and one failed lookup, which is two failures in a row).
-- **The lines for common jobs.** `locallm/dawnr_agent/recipes.py` holds, for some twenty jobs (dark mode, volume,
-  mute, the trash, Wi-Fi, a user service, shutting down later), the line that does each on a given desktop. The
-  model is told the ones whose program this machine has and whose desktop this is, in one sentence. Without it a
-  4B turned a KDE desktop dark with `qdbus ... setDarkMode true`, a call that does not exist, and emptied the
-  trash by looking up a MIME type; `apropos trash` on the machine this was written on says "nothing appropriate".
-  Every line in the table was read from the program's own help on a machine that has it, or from its source.
-- **What a result says.** A command that printed nothing answers "exit 0: it ran and printed nothing"; "exit 0"
-  alone was taken for nothing having happened, and the same line was sent again until the loop stopped.
-
-### A Windows desktop, from Ubuntu under WSL (2026-10-05, night)
-
-Under WSL the desktop is Windows, and Windows's programs are reachable by their `.exe` names (Microsoft's
-interop: they run with the WSL process's rights, as the active Windows user, and take Windows paths). dawnr
-treats such a machine as a Windows desktop (`system.under_windows`: the kernel says `microsoft` and `explorer.exe`
-is on the PATH): the sentence about the computer says so and how to call them; `recipes.py` gives the lines for
-the common jobs and for finding things out, each from Microsoft's own pages (receipt f69fc63e80f2); a command word
-that names no program here but one with `.exe` gets the suffix (the 4B drops it as often as not); a line that
-calls a Windows program goes to `pc` or `sysinfo`, never into the sandbox, which cannot reach interop. The look
-tier takes PowerShell in the Codex CLI's shape (`windows_safe_commands.rs`: a few switches, one `-Command` script,
-pipeline segments, no variable, call, block or redirection, and a first word on a short list), with a list of what
-shows the computer's state and none of the file readers; `tasklist.exe`, `systeminfo.exe`, `ipconfig.exe /all`,
-`tzutil.exe /g`, `reg.exe query` of six keys, `netsh.exe wlan show` and `findstr.exe` as a filter run unasked.
-`runas`, `-Verb RunAs` and `sudo.exe` are handed over like `sudo`; `diskpart`, `format`, `bcdedit` and a recursive
-removal of `C:\Windows` or `C:\Users` are refused outright; `Invoke-WebRequest`, `curl.exe`, `ping.exe` are the
-network; `key=clear`, browsers' password stores and the credential folder are secrets; PowerShell's file readers
-are pointed to the file tools. Measured on a real laptop (the sixth task set, H in the registrations): 9 of 9 acts
-recorded as the right line at once; the questions went from 2 of 8 to 7 of 8 once the table also said how to look.
-Not done: dark mode (no documented command; apps read the registry value only when told it changed), a volume
-set to a number (Windows has no command for it), and anything the sandbox would need from the Windows side.
+The CLI can redirect an eligible read from `sh` to `sysinfo`, or a repository file
+read from `sysinfo` to `sh`. It never redirects a refused command to a host executor.
+Repository metadata changes through `sh` remain refused; the former route through
+`pc` is gone. The desktop command recipes remain historical fixtures and are not
+included in the planner's prompt.
 
 ## 5. Plans, the dry run and approval
 
@@ -537,10 +462,10 @@ skips.
   process could swap it in between; the sandbox bounds what it could then reach.
   An `{arg}` is not a path at all, to the agent: a rule that lets a program open
   an `{arg}` lets it open anything the program can.
-- **Without bubblewrap, `"network": false` and `"writes": false` are the
-  operator's claims**, and a command that puts itself in a new session escapes
-  the process-group kill; under bubblewrap it cannot, because the command's
-  process namespace ends with it.
+- **Without bubblewrap, built-in commands do not run.** A subprocess started
+  directly outside this API can outlive a process-group kill by creating a new
+  session; the sandbox's process namespace closes that path for agent commands.
+  External MCP servers and configured hooks retain their own trust boundaries.
 - **Hard links: what still gets through.** A file with a name outside the roots
   is not read (section 3), but the roots are the boundary, so:
   - *A file moved into a root* (linked in, then its outside name removed) has
@@ -626,8 +551,8 @@ In the harness configuration (paths relative to the file's folder; `~` expands):
 
 Other keys: `secrets` (replaces the default list), `command_path` (the PATH
 commands resolve against), `env` (extra environment for every command),
-`processes` (false removes `ps_list`), `shell` (true offers `sh`), `sysinfo` and
-`system` (true offer `sysinfo`, and `sysinfo` with `pc`), `check_writes` (`block`, `note`, `off`),
+`processes` (false removes `ps_list`), `shell` (true offers `sh`), `sysinfo`
+(true offers read-only diagnostics), `check_writes` (`block`, `note`, `off`),
 `limits` (read and write sizes, lines, results, seconds, `command_timeout`,
 `command_output`, and the caps of the two scans in section 3:
 `link_scan_entries`, `link_scan_seconds`, `home_scan_entries`,

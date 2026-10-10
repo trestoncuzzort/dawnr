@@ -3,6 +3,10 @@
 
     python3 locallm/dawnr_tasks.py --host H:P [--name MODEL] [--split dev|test|all] [--only ID,ID] --out rows.jsonl
 
+Desktop and service-control fixtures are historical: their `pc` calls are now
+refused by the supported runtime. The fixtures and their old-record judges remain
+available for reproducing earlier measurements, not as supported capabilities.
+
 Each task is a folder of files, one request in plain words, and what must be true afterwards. The assistant is run on
 it exactly as `dawnr do --yes` runs (locallm/dawnr_cli.py: the same loop, tools, sandbox and journal), in a folder of
 its own, and four things are read off, none of them from the model's account of itself:

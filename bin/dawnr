@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# dawnr: an assistant on this machine, offline, and every check behind it as a command of its own.
+# dawnr: verified code and repository testing, offline, with each check available as a command.
 #
 #   dawnr                 the assistant, in the folder you are in: it reads your files, changes them only as a plan
 #                         you were shown, and runs a few commands in a sandbox [--read-only] [--root DIR] [--online] [--yes]

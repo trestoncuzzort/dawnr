@@ -24,18 +24,14 @@ unless you say `--online`. `dawnr do "TASK"` does one task and returns. Each
 task ends with two lines the model did not write: what the journal says was
 changed, and what the task cost in model calls, tokens and tokens a second.
 
-It also looks at the computer itself, and acts on it. A question about the
-machine as it is now (what is running, how much disk is free, whether a service
-is up, what is installed) is answered by running a command that can only look,
-without asking you, and from what that command printed. To do something (open
-a file or a program, turn on dark mode, set the volume, start a service) it
-proposes one command; you are shown the exact line and asked, every time,
-whatever `--yes` says. Nothing is ever run as administrator: a line that needs
-sudo, and any package install, is handed to you to run yourself. A command
-that names a place where keys are kept is not run, and with the network off no
-address is opened. In a repository it reads with git freely (status, diff,
-log) and commits through the same asked-for command; what would discard work
-that is in no commit is handed to you instead of run.
+Read-only machine diagnostics can inspect the build environment: running
+processes, disk space, installed tools, and service state. Their results come
+from the command output. Built-in host control has been retired: the assistant
+does not expose commands for changing desktop settings or managing host
+applications and services. Repository commands run through the sandbox;
+missing sandbox support is a refusal, never a fallback to host execution.
+Operator-configured external tools have their own trust boundaries, described
+in [DAWNR-AGENT.md](../DAWNR-AGENT.md).
 
 With `--online` it can search the web and read pages, and each search and each
 page is asked for. The search needs no account or key: it reads DuckDuckGo's

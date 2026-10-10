@@ -569,8 +569,7 @@ class ShellTools:
             elif in_git:
                 refused = ("sh: this command changes the repository itself (the .git folder), and that cannot be carried out "
                            "of the sandbox it ran in; nothing it did was kept. "
-                           + ("To stage, commit, switch branch or stash, call `pc` with the git line: it is shown to the person "
-                              "and runs on the repository itself." if "`pc`" in self.elsewhere else "It is not done from here."))
+                           "Staging, committing, switching branches and stashing are not done from here.")
             run = Run(key, command, shown, got["exit"], got["seconds"], got["timed_out"], got["stdout"], got["stderr"],
                       changes, str(scratch), refused=refused)
             self.runs[key] = run

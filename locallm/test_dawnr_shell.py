@@ -281,7 +281,7 @@ def test_the_assistant_offers_sh_by_default_and_not_the_tools_it_replaces(tmp_pa
         assert ("sh" in names) == (agent.shell is not None)
 
 
-def test_a_repository_is_read_in_the_sandbox_and_changed_only_on_itself_through_pc(tmp_path, mode):
+def test_repository_reads_work_and_metadata_changes_have_no_host_fallback(tmp_path, mode):
     import subprocess
     if shutil.which("git") is None:
         pytest.skip("git is not installed")
@@ -311,17 +311,17 @@ def test_a_repository_is_read_in_the_sandbox_and_changed_only_on_itself_through_
         # what changes the repository is not carried out of the sandbox, in whole or in part
         for line in ("git add -A && git commit -q -m second", "git stash"):
             r = harness.call("sh", {"command": line})
-            assert r.is_error and "changes the repository itself" in r.text and "call `pc` with the git line" in r.text, line
+            assert r.is_error and "changes the repository itself" in r.text and "not done from here" in r.text, line
         assert (work / "a.py").read_text() == "x = 2\n" and git("log", "--oneline").stdout.count("\n") == 1 and asked == []
-        # the front door takes each git line where it belongs
-        assert planner.route("sh", "git add -A && git commit -m second") == "pc" and planner.route("pc", "git log --oneline") == "sh"
-        assert planner.route("sh", "git diff | head") == "sh" and planner.route("sh", "git reset --hard") == "pc"
-        done = harness.call("pc", {"command": "git add a.py b.py && git -c user.email=x@example.org -c user.name=x commit -q -m second"})
-        assert not done.is_error and asked[-1][0] == "pc" and git("log", "--oneline").stdout.count("\n") == 2
-        for line in ("git reset --hard HEAD~1", "git clean -fd", "git checkout -- a.py", "git push --force"):
-            r = harness.call("pc", {"command": line})
-            assert r.is_error and "throws away work that is in no commit" in r.text and line in r.text, line
-        assert harness.call("pc", {"command": "git push"}).is_error and len(asked) == 1 and (work / "b.py").exists()
+        # A refused metadata change is never rerouted to an unsandboxed executor.
+        assert planner.route("sh", "git add -A && git commit -m second") == "sh"
+        assert planner.route("pc", "git log --oneline") == "pc"
+        assert planner.route("sh", "git diff | head") == "sh" and planner.route("sh", "git reset --hard") == "sh"
+        for line in ("git add a.py b.py && git commit -q -m second", "git reset --hard HEAD~1", "git clean -fd",
+                     "git checkout -- a.py", "git push --force", "git push"):
+            assert harness.call("pc", {"command": line}).is_error
+        assert git("log", "--oneline").stdout.count("\n") == 1
+        assert asked == [] and (work / "b.py").exists()
 
 
 def test_a_loop_of_moves_that_loses_contents_is_called_an_order_mistake_and_the_right_order_runs(tmp_path):
