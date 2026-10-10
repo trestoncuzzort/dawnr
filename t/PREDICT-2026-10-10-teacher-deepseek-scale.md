@@ -112,3 +112,14 @@ form. Until then a flatten step is required between them.
 The 9 SFT rows + 125 pairs are in `out/loop/` (gitignored run artifacts); they join the registered corpus at its
 next registration and feed the next training run (still GPU-blocked). **Net: the engine now demonstrably admits
 real verified training rows end to end on the re-provisioned lab + live AWS, for cents.**
+
+### Batch 2 (2026-10-10): fixed pipeline, 5 rows from 16 fresh random problems — production confirmation
+
+A fresh round on 16 previously-unsampled eligible problems at k=8 (128 records, $0.31), gated through the
+**fixed** `spec_gate` (its output plain-merged into `out/spec-disagree.json`, **no flatten**): `loop_dataset`
+admitted **5 SFT rows + 48 preference pairs** with **0 `spec-not-agrees`** rejections — the format fix (`a0b8aeb`)
+works in production. On random (not hand-picked) problems the admission rate is ~5/16 ≈ 31%. Session total of new
+verified data: **14 SFT rows + 173 preference pairs** across the nine-round and batch 2, all in `out/loop/`
+(`sft-deepseek-{nine,b2}.jsonl`, `pairs-deepseek-{nine,b2}.jsonl`), joining the corpus at its next registration.
+The engine manufactures verified training data end to end on the re-provisioned lab for cents; the remaining gap to
+a better student is a GPU to train on it.
