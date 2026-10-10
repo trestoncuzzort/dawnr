@@ -76,3 +76,14 @@ rows because no single sample cleared all four gates together. To actually add r
 problem (more k, so a problem gets more chances at an all-gate-clearing sample) and the problem count (to clear 20
 all-seven). Training a student stays GPU-blocked (lab GPUs closed, AWS Free refuses GPU instances, laptop
 control-node only).
+
+## Follow-up round (registered before the run): k=16 on the 9 clean-7 ∩ spec-pass problems
+
+The 0-admission came from clean-in-seven and spec-pass landing in *different* samples. 9 problems
+([234, 266, 356, 373, 458, 525, 577, 716, 789]) already have both properties across their k=4 samples. Re-running
+just those 9 at **k=16** gives each more chances at a single sample that clears every gate at once.
+
+- **D1:** at least 1 of the 9 is admitted by `loop_dataset --min-kernels 7` (a single sample well-formed +
+  tests-pass + clean-in-seven + spec-agrees). *Falsifier:* 0 admitted ⇒ the two properties rarely coincide in one
+  sample even at k=16, a model-level spec-faithfulness limit, not a sampling-count one.
+- **D2:** cost at most $3.
