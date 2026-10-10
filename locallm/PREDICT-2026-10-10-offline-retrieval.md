@@ -59,6 +59,22 @@ sandbox helper retained the registered digest. Dawnr's consumer checks passed
 62 tests and 108 subtests (CLI, tlib, validation, witness contexts, asynchronous
 editor verdicts and sandbox packaging).
 
-The fresh-account CPU installation and its native proof dependencies remain
-in progress. No model quality, GPU performance or completed lab verification
-is claimed by these local regression results.
+Fresh-account replication at clean dawnr revision 54dc675 completed: the same
+108 retrieval/harness tests passed, as did 62 engine-consumer tests and 108
+subtests. The existing CPU installer installed the published student, base
+model and llama.cpp server. A real `dawnr calc` control returned 180 with three
+matching exact workings; `dawnr cite` answered from README.md and quoted the
+sentence supporting its --online answer. These are installation controls, not
+accuracy or throughput benchmarks.
+
+All seven native proof adapters passed abs, gcd and reverse: 21
+verified/refuted cells, three repetitions per side. The original Alt-Ergo-free
+2.4.3 driver configuration from the project was reproduced. Rootless build
+dependencies needed relocation fixes before the opam transaction completed.
+
+The host denies bubblewrap namespace creation. `dawnr doctor` reports that
+limit, and `dawnr ask` exits unsuccessfully before running model-written
+Python. No system security policy or device permissions were changed. The
+complete corpus, flight, fixes, autonomy and PX4 correspondence sweep remains
+in progress and is not counted in these results. Receipts are in
+`locallm/evidence/2026-10-10-offline-runtime/`.
