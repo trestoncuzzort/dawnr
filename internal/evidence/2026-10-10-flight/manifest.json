@@ -1,0 +1,34 @@
+{
+  "columns": {
+    "lean": {
+      "file": "lean-column.md",
+      "sha256": "5a5a3f47122755a200cf022ae59840085d7c355d69ec29d69320f42dc159da95"
+    },
+    "spark": {
+      "file": "spark-column.md",
+      "sha256": "c0419bffb11cbebfb6f62dfddccdef981fcf41ea696cbc46f69eab5c4f59366a"
+    },
+    "verus": {
+      "file": "verus-column.md",
+      "sha256": "642769a80af1cb7e246b127535cb12eccccf37b728af79186d4976af3bfac01b"
+    }
+  },
+  "consumer_checks": {
+    "command": "python -m pytest -q t/test_certificate.py t/test_proof_repair.py t/test_contract_repair.py t/test_spec_gate.py t/test_flight.py t/test_flight_execution.py t/test_flight_evidence.py t/test_native_check.py t/test_lower_lean_seqcomp.py t/test_lower_spark_loop_cert.py t/test_lower_verus_ground_comps.py",
+    "passed": 167,
+    "skip_reason": "local CBMC integrations; all six ran successfully in the lab native pilot",
+    "skipped": 6,
+    "subtests": 35
+  },
+  "engine_commit": "d13d11d01f8f50687ef645d60aa08c870d664b84",
+  "flight_receipts": {
+    "px4-diff.json": "db160e6596e7d4b0b00851a70701082340e1896bc1f465633fc9766fc38a72a7",
+    "px4-stmt.json": "ba01de904500ee4d004fd130d20cad8dabf543ab6dc28cb8effbe90ac354e9ff"
+  },
+  "lowering_sha256": {
+    "lean": "f658e4fb6de5fd6bf695a5a76504bda451cad8bb96ca487627539887c507e4a3",
+    "spark": "bb21fd077e4bc711d2dbafa670f910e4b9e6679b85255d2c3790974a90f12268",
+    "verus": "897896ef5f941ace7623952c89d9517495ffc702669b0088070d65616240637c"
+  },
+  "scope": "identified bounded PX4 comparisons and separate core backend regression columns; not the canonical all-seven agreement matrix"
+}

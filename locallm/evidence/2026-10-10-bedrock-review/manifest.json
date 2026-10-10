@@ -1,0 +1,136 @@
+{
+  "authorized_total_usd": 100,
+  "date": "2026-10-10",
+  "format": "dawnr-bedrock-review-v1",
+  "limitations": "Model observations are review hypotheses. Registered token prices are an estimate; AWS billing is authoritative. Raw source prompts and responses retained locally; no response enters training.",
+  "pilot_proxy_cap_usd": 1,
+  "reported_token_cost_usd": "0.02611121",
+  "requests": [
+    {
+      "context": "flight-comparison",
+      "http_status": 200,
+      "model": "qwen.qwen3-235b-a22b-2507",
+      "name": "flight-comparison-qwen.qwen3-235b-a22b-2507",
+      "prompt_sha256": "54a84ef278d03991182ffe50f40afcc7b5724832cd4dc6e3b8318b505c2d7b43",
+      "response_sha256": "1baf7e27603902ca0408340db691c9e87a540c3a88a1a7ce217138ca00f72036",
+      "seconds": 7.44,
+      "service_tier": "default",
+      "source_sha256": {
+        "t/flight/px4_diff.py": "6fb244f85249720af02238a5526d90573138d77f96096909b940081b600332da",
+        "t/flight/px4_stmt.py": "a68c75dc83b432355bca7cafb891baa704fbe7ac1f01f275768eecfea5864ee2"
+      },
+      "usage": {
+        "completion_tokens": 705,
+        "prompt_tokens": 6764,
+        "total_tokens": 7469
+      }
+    },
+    {
+      "context": "flight-comparison",
+      "http_status": 200,
+      "model": "deepseek.v3.2",
+      "name": "flight-comparison-deepseek.v3.2",
+      "prompt_sha256": "54a84ef278d03991182ffe50f40afcc7b5724832cd4dc6e3b8318b505c2d7b43",
+      "response_sha256": "e917e163d436b56f4f3bfbfb7ee59c57ce3e020612ad5b5e7493568c223f0ac2",
+      "seconds": 13.14,
+      "service_tier": "default",
+      "source_sha256": {
+        "t/flight/px4_diff.py": "6fb244f85249720af02238a5526d90573138d77f96096909b940081b600332da",
+        "t/flight/px4_stmt.py": "a68c75dc83b432355bca7cafb891baa704fbe7ac1f01f275768eecfea5864ee2"
+      },
+      "usage": {
+        "completion_tokens": 646,
+        "prompt_tokens": 7226,
+        "total_tokens": 7872
+      }
+    },
+    {
+      "context": "kernel-certificates",
+      "http_status": 200,
+      "model": "qwen.qwen3-235b-a22b-2507",
+      "name": "kernel-certificates-qwen.qwen3-235b-a22b-2507",
+      "prompt_sha256": "89e76455f5475826f0f76fb8114b2d10bb38a544d549f59174b21a284575711e",
+      "response_sha256": "52c3b69b352872a54c8c1034bb421b5facb431c7879c401fc85bf80ac7c33c35",
+      "seconds": 26.64,
+      "service_tier": "default",
+      "source_sha256": {
+        "t/lower_lean.py": "f658e4fb6de5fd6bf695a5a76504bda451cad8bb96ca487627539887c507e4a3",
+        "t/lower_spark.py": "bb21fd077e4bc711d2dbafa670f910e4b9e6679b85255d2c3790974a90f12268",
+        "t/lower_verus.py": "897896ef5f941ace7623952c89d9517495ffc702669b0088070d65616240637c"
+      },
+      "usage": {
+        "completion_tokens": 2173,
+        "prompt_tokens": 3777,
+        "total_tokens": 5950
+      }
+    },
+    {
+      "context": "kernel-certificates",
+      "http_status": 200,
+      "model": "deepseek.v3.2",
+      "name": "kernel-certificates-deepseek.v3.2",
+      "prompt_sha256": "89e76455f5475826f0f76fb8114b2d10bb38a544d549f59174b21a284575711e",
+      "response_sha256": "bc4005b08017d17e6e679c391b5b0e3253c5ab7451626813bd702c5770c005a2",
+      "seconds": 20.61,
+      "service_tier": "default",
+      "source_sha256": {
+        "t/lower_lean.py": "f658e4fb6de5fd6bf695a5a76504bda451cad8bb96ca487627539887c507e4a3",
+        "t/lower_spark.py": "bb21fd077e4bc711d2dbafa670f910e4b9e6679b85255d2c3790974a90f12268",
+        "t/lower_verus.py": "897896ef5f941ace7623952c89d9517495ffc702669b0088070d65616240637c"
+      },
+      "usage": {
+        "completion_tokens": 1809,
+        "prompt_tokens": 3918,
+        "total_tokens": 5727
+      }
+    },
+    {
+      "context": "repository-runtime",
+      "http_status": 200,
+      "model": "qwen.qwen3-235b-a22b-2507",
+      "name": "repository-runtime-qwen.qwen3-235b-a22b-2507",
+      "prompt_sha256": "1d3df23185271e95282dd7beffdcd7a83230f0c729811ca07830edacde74cf50",
+      "response_sha256": "20aabd19e70792421325bcf92010585b76b0bd8708f9e3334b7ab731142ac2d3",
+      "seconds": 9.0,
+      "service_tier": "default",
+      "source_sha256": {
+        "locallm/dawnr_agent/commands.py": "a881fa7b65007d4484377f8e3aa001f9f469e75b0183f4afdd70f53298ce1622",
+        "locallm/dawnr_agent/config.py": "50319906257eb3ff930f3fa52647ab6918fc08c63b5318d2b5d722e579780ece",
+        "locallm/dawnr_agent/system.py": "5d50c4e7f946d213177bad6828ef4f33e13e0e6c7a5926ec4146013c99f5545d",
+        "locallm/dawnr_cli.py": "dc5691431d9e4666edb6e410bde9d6811c625363ad1d06a424f88a2848a28346"
+      },
+      "usage": {
+        "completion_tokens": 869,
+        "prompt_tokens": 8021,
+        "prompt_tokens_details": {
+          "audio_tokens": 0,
+          "cached_tokens": 128
+        },
+        "total_tokens": 8890
+      }
+    },
+    {
+      "context": "repository-runtime",
+      "http_status": 200,
+      "model": "deepseek.v3.2",
+      "name": "repository-runtime-deepseek.v3.2",
+      "prompt_sha256": "1d3df23185271e95282dd7beffdcd7a83230f0c729811ca07830edacde74cf50",
+      "response_sha256": "69c4caf801cb44c2e92632f2042c72f614f7fda5025e0913c6b32f51bbeb201c",
+      "seconds": 11.1,
+      "service_tier": "default",
+      "source_sha256": {
+        "locallm/dawnr_agent/commands.py": "a881fa7b65007d4484377f8e3aa001f9f469e75b0183f4afdd70f53298ce1622",
+        "locallm/dawnr_agent/config.py": "50319906257eb3ff930f3fa52647ab6918fc08c63b5318d2b5d722e579780ece",
+        "locallm/dawnr_agent/system.py": "5d50c4e7f946d213177bad6828ef4f33e13e0e6c7a5926ec4146013c99f5545d",
+        "locallm/dawnr_cli.py": "dc5691431d9e4666edb6e410bde9d6811c625363ad1d06a424f88a2848a28346"
+      },
+      "usage": {
+        "completion_tokens": 1140,
+        "prompt_tokens": 8339,
+        "total_tokens": 9479
+      }
+    }
+  ],
+  "uncertain_settlements": 0,
+  "unresolved_reservations": 0
+}

@@ -1,8 +1,33 @@
-# t and tup: roadmap and engineering log
+# dawnr: verification roadmap and engineering record
 
-This is the public record for t and tup: what is planned, what has been measured, what is currently blocking the project, and what is required for the 1.0 release. It merges the overview in `ROADMAP.md` with the dated engineering notes behind it, while omitting personal and machine-specific details.
+Current work strengthens the checks that connect generated programs,
+specifications, and real flight-software source. The model, datasets, and
+counterexamples remain part of the system; accepted results need evidence
+that can be replayed without trusting a model's explanation.
 
-This is not a diary of individuals or hosts. It records the work itself: the measurements, the bottlenecks, the rules, and the checks a third party can rerun.
+## Current priorities
+
+- Make compiled PX4 comparisons reject incomplete executions and identify
+  the exact source, wrapper, task, compiler, and inputs that produced a result.
+- Test native machine arithmetic and memory properties alongside the existing
+  mathematical models, with broken variants and non-vacuity controls.
+- Repair proof-backend limitations without weakening contracts, and rerun
+  each changed backend across the full core corpus.
+- Keep code-generation and review calls bounded and accounted for, and turn
+  useful model suggestions into deterministic regression checks.
+- Maintain repository tools and retire built-in desktop and host-service
+  control. Preserve the training and verification records behind the results.
+
+The research and implementation plan is in
+[the verification research note](internal/RESEARCH-2026-10-10-verification-next.md).
+Predictions and run records distinguish implemented checks, measured results,
+and remaining limitations; these priorities are not completed-results claims.
+
+## Historical engine and build roadmap
+
+The following is the earlier t and tup engineering record, retained for its
+measurements and release criteria. Its workstream statuses and 1.0 bar belong
+to that dated plan; they are not a claim that dawnr currently meets those goals.
 
 ## The project in one paragraph
 

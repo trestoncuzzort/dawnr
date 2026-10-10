@@ -16,7 +16,8 @@ inputs that expose the original failures.
 | Program verification | Parses and checks `t` programs, translates them into proof-system inputs, and tests each verifier against a deliberately broken variant. | [`t/`](t/README.md), [`t/run_par.py`](t/run_par.py) |
 | Specification checks | Checks contracts against examples and reference behavior; mutates programs and outputs to find wrong results a contract still allows. | [`t/spec_gate.py`](t/spec_gate.py), [`t/spec_check.py`](t/spec_check.py), [`t/audit.py`](t/audit.py) |
 | Executable comparisons | Compiles generated C or Dafny/Python and compares it with the interpreter. Separately checks C contracts and overflow obligations at machine width. | [`t/build.py`](t/build.py), [`t/ship.py`](t/ship.py) |
-| PX4 checks | Models selected routines, records failing inputs and fixes, and compares the models with PX4's compiled functions or extracted statements. | [`t/flight/`](t/flight/README.md) |
+| PX4 checks | Models selected routines, records failing inputs and fixes, and compares them with compiled functions or extracted statements from checksum-verified source. Optional receipts identify each bounded run. | [`t/flight/`](t/flight/README.md) |
+| Native safety pilot | Uses CBMC to check the pinned original and fixed PX4 `wrap_bin` definitions under explicit 32-bit assumptions, with compiled counterexample replay and controls for vacuity and incomplete loop unwinding. | [`t/native_check.py`](t/native_check.py), [measured scope](t/PREDICT-2026-10-10-native-cbmc.md) |
 | Training and evaluation | Filters generated answers, assembles corpora, trains or fine-tunes models, and evaluates them with recorded splits, input hashes, and per-stage results. | [`t/student_rows.py`](t/student_rows.py), [`locallm/dawnr_pipeline.py`](locallm/dawnr_pipeline.py), [`locallm/dawnr_report.py`](locallm/dawnr_report.py) |
 | Local assistant | Reads files, proposes edits, journals changes, runs sandboxed commands, and uses retrieval, memory, and external tools. | [`locallm/dawnr_cli.py`](locallm/dawnr_cli.py), [`locallm/dawnr_agent/`](locallm/dawnr_agent/), [`locallm/dawnr_harness/`](locallm/dawnr_harness/) |
 | Documents and arithmetic | Answers with quotations from supplied files, extracts fields from source text, and compares a model's numerical answer with separately generated workings evaluated exactly. | [`locallm/cite_docs.py`](locallm/cite_docs.py), [`locallm/extract_docs.py`](locallm/extract_docs.py), [`locallm/calc.py`](locallm/calc.py) |
@@ -129,8 +130,9 @@ dawnr cite "What assumptions does this check make?" t/flight/README.md
 dawnr calc "A logger records 12 samples per second for 15 seconds. How many samples is that?"
 ```
 
-The assistant defaults to local models and offline operation. Its file tools support reviewed edit plans and a
-change journal; `/undo` restores recorded changes. Shell commands run in a sandbox over a copy of the workspace. `--online`
+The repository assistant defaults to local models and offline operation. Its file tools support reviewed edit plans
+and a change journal; `/undo` restores recorded changes. Built-in desktop and host-service control is retired.
+Read-only build-environment diagnostics remain available; repository commands require a working sandbox. `--online`
 enables the assistant's network tools, and `DAWNR_WRITER_URL` can select an external model for program generation.
 Those options change what stays local. See [PRIVACY.md](PRIVACY.md) and [DAWNR-AGENT.md](DAWNR-AGENT.md).
 
@@ -151,13 +153,19 @@ T_MIN_KERNELS=1 python3 t/cli.py verify \
 python3 t/refute_at.py t/flight/findings/px4_wrap_bin_any.t \
   --at '{"bin": -73, "bin_count": 72}' --kernels dafny --json
 
-# Compile and compare the pinned PX4 routines; fetches source when absent.
-python3 t/flight/px4_diff.py --table /tmp/dawnr-px4-diff.md
+# Compile and compare checksum-verified PX4 sources; fetches source when absent.
+python3 t/flight/px4_diff.py --table /tmp/dawnr-px4-diff.md \
+  --receipt /tmp/dawnr-px4-diff.json
+
+# Experimental native safety check; requires CBMC 6.11.0 and a C preprocessor.
+python3 t/native_check.py --case fixed --out /tmp/dawnr-native-fixed
 ```
 
 The engine CLI also exposes lowering, contract repair, compiled-output comparisons, and machine-width checks:
 `python3 t/cli.py --help`. Reports and certificates retain the scope of the checks that ran; an unavailable or
-unfinished check does not count as a pass.
+unfinished check does not count as a pass. The native pilot is separate from the seven proof backends: its
+`complete` verdict covers the listed safety properties for all modeled 32-bit `bin` inputs with a bin count of 72.
+It does not establish the full modulo specification or whole-module correctness.
 
 ## Repository map
 
