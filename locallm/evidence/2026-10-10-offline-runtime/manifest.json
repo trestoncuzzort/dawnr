@@ -1,0 +1,86 @@
+{
+  "application_controls": {
+    "ask_sandbox": {
+      "exit_code": 1,
+      "model_written_python_executed": false,
+      "refusal": "bubblewrap cannot create its namespaces here"
+    },
+    "calc": {
+      "answer": 180,
+      "elapsed_seconds_including_startup": 12.6,
+      "exit_code": 0,
+      "matching_exact_workings": 3,
+      "question": "A diagnostic logger records 12 samples per second for 15 seconds. How many samples are recorded?"
+    },
+    "cite": {
+      "answer_flag": "--online",
+      "elapsed_seconds_including_startup": 12.13,
+      "exit_code": 0,
+      "question": "How do I enable network access for the folder assistant?",
+      "source": "README.md"
+    }
+  },
+  "artifact_sha256": {
+    "calc.log": "67e1db708fab0905c76b27aa88e7bbe3df544fab39f98c7e32f216d8fc86daaf",
+    "cite.log": "1a7c6bfd3137d4369ef76ee92af2377d66a8bd46cb17810979012459b75a4fcb",
+    "consumer-tests.log": "de0761ab7df7b05c10dde6863fb7d6d0c33d43641b4069e02e085aab4efbf653",
+    "dawnr-runtime-tests.log": "3e97090b3928bf97a424e50b9d8fcba68c21fa2c3b57b9a5e085116736228e00",
+    "smoke.md": "11567f3af3a2a38af9a189248034982ca6160c96111dd4f7373b49bd2ee2147b"
+  },
+  "engine_revision": "1d584f6",
+  "installation": {
+    "application": "existing install.sh --build cpu",
+    "model_server": "llama.cpp b11342 f1cee9941",
+    "models": [
+      "dawnr-student release student-v5 Q8 shards",
+      "Qwen3.5-4B-Q4_K_M-mtp.gguf"
+    ],
+    "native_proof_tools_exit": 0,
+    "opam_proof_tools_exit": 0
+  },
+  "limits": [
+    "Application controls are installation checks, not an accuracy or throughput benchmark.",
+    "The host denies bubblewrap namespace creation; commands requiring that sandbox refuse to run.",
+    "No system sandbox policy, GPU permissions, or Docker permissions were changed.",
+    "The complete corpus, flight, fixes, autonomy and PX4 correspondence sweep is still running; none of its pending cells is counted here."
+  ],
+  "platform": {
+    "cpu_threads": 120,
+    "docker_access": false,
+    "gpu_access": false,
+    "kernel": "6.8.0-142-generic",
+    "os": "Ubuntu 24.04.5 LTS",
+    "python": "3.12.3"
+  },
+  "producer_revision": "54dc675",
+  "proof_smoke": {
+    "exit_code": 0,
+    "kernels": [
+      "dafny",
+      "verus",
+      "spark",
+      "framac",
+      "lean",
+      "rocq",
+      "fstar"
+    ],
+    "repetitions_per_side": 3,
+    "tasks": [
+      "abs",
+      "gcd",
+      "reverse"
+    ],
+    "verified_refuted_cells": 21
+  },
+  "regressions": {
+    "engine_consumer": {
+      "passed": 62,
+      "seconds": 15.67,
+      "subtests_passed": 108
+    },
+    "retrieval_harness": {
+      "passed": 108,
+      "seconds": 12.57
+    }
+  }
+}
