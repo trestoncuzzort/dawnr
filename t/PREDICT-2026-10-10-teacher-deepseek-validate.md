@@ -61,12 +61,17 @@ only what proves; a wrong answer is rejected by name.
 - **B1 holds:** 4 of the 10 problems verify with the twin refuted in at least one kernel (3 in two independent
   provers). The engine produces verified-with-twin-refuted rows on the new infrastructure.
 - **B3 holds:** $0.094 against $5.
-- **B2 is re-scoped, not met as written, and the shortfall is reported plainly:** the generation produced 10
-  problems, not 24 (`bedrock_generate`'s id filter), so the "of 24" denominators do not apply; and the kernel
-  grade here is two kernels (Dafny + Verus), not all seven. The full seven-kernel assembly did **not** complete
-  this session: a detached all-seven `run_par` over the 40 tasks stalled on a cold slow kernel, and the lab VPN
-  link was dropping SSH mid-command, so the reliable measurement was the two fast kernels. The all-seven count is
-  the first thing the scale-up run owes.
+- **B2's all-seven clause holds; its "of 24" framing is re-scoped and said plainly.** The generation produced 10
+  problems, not 24 (`bedrock_generate`'s id filter accepted 10 of the sampled ids), so the "of 24" denominators do
+  not apply. The seven-kernel assembly, run on s0's 5 well-formed tasks under `run_par` (7/7 kernels present, 35
+  cells, 210 kernel runs, `--no-cache`), gives: **3 of the 5 tasks are `verified / refuted` in all seven kernels**
+  — `mbpp_176 perimeter_triangle`, `mbpp_379 surfacearea_cuboid`, `mbpp_499 diameter_circle`. A fourth,
+  `mbpp_46 test_distinct`, is verified in three (Dafny, Frama-C, Lean) with the twin refuted in all seven but the
+  real unproved by Verus/SPARK/Rocq/F* (an honest per-kernel limit, abstains 0). `mbpp_934 dealnnoy_num` stays out
+  (real unproved). Per-kernel real-verified counts: dafny 4, framac 4, lean 4, verus 3, spark 3, rocq 3, fstar 3;
+  every one refutes the twin on 100% of its verified reals. So the engine yields **3 all-seven gold rows of 10
+  problems** at $0.094. (The earlier detached all-seven attempt had stalled under a flaky VPN link; relaunched with
+  `setsid` and an absolute log it completed in ~5 min.)
 
 **What it bought.** The licensing-clean Bedrock teacher path (DeepSeek-V3.2, MIT, native `converse`) is confirmed
 on current hardware, cheap, and yields verified rows. The next increment: the full eligible id set, k=8, all seven
