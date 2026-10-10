@@ -7248,13 +7248,17 @@ def _lower(task: dict, body: list, witness: dict | None = None) -> str:
         w2 = _ensures_undef_witness(orig_task, orig_body)
         if w2 is not None:
             w_use = w2
-    # `final` (F's own already-rendered body, above) is consistent with
-    # `cert_L`'s own `loop_certs` ONLY when `cert_L is L` (no rename, the
-    # common case, `cert_L`'s own note above); handed to certificate()
-    # only then, so a renamed task's certificate keeps exactly its
-    # pre-existing F(args)-based "value" goal (spark-cert, 2026-09-14).
-    cert = certificate(orig_task, orig_body, w_use, cert_L,
-                       final=(final if cert_L is L else None))
+    # A renamed value witness must use the same populated Lower as its
+    # rendered body. A fresh cert_L has no loop clones, so it falls back to
+    # the contracted F, losing the execution replay precisely when a twin
+    # breaks a loop invariant. Rename the witness with that same mapping;
+    # other witness kinds retain their established original-AST path.
+    if renames and L.loop_certs and w_use and w_use.get("_kind") == "value":
+        cert = certificate(task, body, t_names.remap_witness(w_use, renames), L,
+                           final=final)
+    else:
+        cert = certificate(orig_task, orig_body, w_use, cert_L,
+                           final=(final if cert_L is L else None))
 
     plist = "; ".join(f"{cap(p['name'])} : {ada_type(p['type'])}"
                       for p in task["params"])

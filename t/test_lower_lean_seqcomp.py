@@ -22,6 +22,7 @@ import unittest
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 import lower_lean
+import surface
 
 
 def _task(name, params, ensures, body, requires=None, ret_type="int"):
@@ -37,6 +38,17 @@ def _task(name, params, ensures, body, requires=None, ret_type="int"):
 
 
 class MulSignPairsTest(unittest.TestCase):
+    def test_mixed_sign_products_get_only_conditional_helpers(self):
+        # A sign classification says nothing about the individual products'
+        # signs. Both can be negative on valid inputs to crosstrack_side.
+        from pathlib import Path
+        task = surface.parse_file(str(Path(__file__).parent / "autonomy/crosstrack_side.t"))
+        src = lower_lean.lower(task, task["body"])
+        self.assertEqual(src.count("intro hsign"), 2)
+        self.assertIn("))) →\n    (0 : Int) ≤", src)
+        self.assertNotIn("exfalso; omega", src)
+        self.assertIn("((repeat' split) <;> omega)", src)
+
     def test_fires_on_sign_comparison_over_affine_product(self):
         # centeredHexagonalNumber's own shape: result := 3*n*(n-1)+1,
         # ensures result >= 0 (a real sign comparison against 0).

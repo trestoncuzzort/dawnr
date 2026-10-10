@@ -183,6 +183,33 @@ class TestLoopCertFallback(unittest.TestCase):
         self.assertNotIn("(not (F (", cert)
 
 
+class TestRenamedLoopCertificate(unittest.TestCase):
+    def test_keyword_parameter_does_not_disable_loop_replay(self):
+        task = tasks_io.load_task(os.path.join(HERE, "flight", "fixes", "px4_request_event_fixed.t"))
+        body, _op, witness = harness.twin_cached(task)
+        src = lower_spark.lower(task, body, witness=witness)
+        self.assertIn("last -> t_last", src)
+        self.assertIn("function F_Cert", src)
+        clone = src[src.index("function W_1_Cert"):src.index("function F_Cert")]
+        self.assertNotIn("Pre ", clone)
+        self.assertNotIn("Post =>", clone)
+        self.assertIn("Subprogram_Variant", clone)
+        cert = src[src.index("T_Refutation_Certificate return Boolean is"):]
+        self.assertIn("F_Cert (Big_Integer'(1), Big_Integer'(0), Big_Integer'(1))", cert)
+        self.assertNotIn("(F (", cert)
+
+    def test_rename_preserves_the_alleged_counterexample_on_correct_body(self):
+        task = tasks_io.load_task(os.path.join(HERE, "flight", "fixes", "px4_request_event_fixed.t"))
+        _body, _op, witness = harness.twin_cached(task)
+        src = lower_spark.lower(task, task["body"], witness=witness)
+        self.assertIn("function F_Cert", src)
+        cert = src[src.index("T_Refutation_Certificate return Boolean is"):]
+        self.assertIn("F_Cert (Big_Integer'(1), Big_Integer'(0), Big_Integer'(1))", cert)
+        # F_Cert must execute the supplied body; the alleged value alone is
+        # not authority to state that the postcondition failed.
+        self.assertIn("> Capacity) then", src)
+
+
 class TestGaussSumInvariant(unittest.TestCase):
     """spark-sole (2026-09-14, `_gauss_sum_target`'s own docstring): a loop
     invariant `sum == div(i * (i + 1), 2)` gets the extra, ordinary

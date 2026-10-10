@@ -21,7 +21,6 @@ import json
 import subprocess
 import sys
 import tempfile
-import urllib.request
 from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
@@ -30,10 +29,12 @@ sys.path.insert(0, str(HERE.parent))
 import harness  # noqa: E402
 import interp  # noqa: E402
 import tasks_io  # noqa: E402
+import evidence  # noqa: E402
 
 PX4_COMMIT = "dd804e4b9c490aed051bb36f8d3fca1ee137be2a"
 POINTS = 400
-CACHE = HERE.parent / "out" / "px4" / PX4_COMMIT
+CACHE = HERE.parent / "out" / "px4"
+CXX_FLAGS = ["-std=c++17", "-O1", "-ffp-contract=off", "-w"]
 HEADERS = ["src/lib/mathlib/mathlib.h", "src/lib/mathlib/math/Functions.hpp", "src/lib/mathlib/math/Limits.hpp",
            "src/lib/mathlib/math/SearchMin.hpp", "src/lib/mathlib/math/TrajMath.hpp",
            "src/lib/mathlib/math/Utilities.hpp", "src/lib/mathlib/math/filter/AlphaFilter.hpp",
@@ -145,20 +146,17 @@ NOT_DIFFED = {"px4_interp_index": "the index is internal to interpolateNXY, whic
 
 
 def fetch_px4() -> Path:
-    """PX4's headers at the pinned commit, cached; the platform header replaced by STUB."""
-    root = CACHE
+    """Review-pinned PX4 source bytes; old cache entries migrate only after their digest matches."""
+    repository = "PX4/PX4-Autopilot"
+    cache = evidence.SourceCache(CACHE)
+    root = CACHE / repository / PX4_COMMIT
     files = HEADERS + [f"src/lib/matrix/matrix/{m}.hpp" for m in MATRIX] + ["LICENSE"]
     for f in files:
-        dst = root / f
-        if not dst.exists():
-            dst.parent.mkdir(parents=True, exist_ok=True)
-            url = f"https://raw.githubusercontent.com/PX4/PX4-Autopilot/{PX4_COMMIT}/{f}"
-            with urllib.request.urlopen(url, timeout=60) as r:
-                dst.write_bytes(r.read())
+        cache.get(repository, PX4_COMMIT, f, legacy=CACHE / PX4_COMMIT / f)
     for rel, text in (("px4_platform_common/defines.h", STUB), ("drivers/drv_hrt.h", HRT_STUB)):
         stub = root / "stub" / rel
-        stub.parent.mkdir(parents=True, exist_ok=True)
-        stub.write_text(text)
+        evidence.atomic_bytes(stub, text.encode("utf-8"))
+        evidence.generated_source("stub/" + rel, text.encode("utf-8"))
     return root
 
 
@@ -209,18 +207,46 @@ def program(task: dict, ref, call: str | None = None, pts: list | None = None) -
     return src, expect, inputs
 
 
+def _run_cpp_process(command: list[str], phase: str, **kwargs) -> subprocess.CompletedProcess:
+    """Keep tool failure distinct from a successfully produced comparison result."""
+    try:
+        result = subprocess.run(command, capture_output=True, text=True, **kwargs)
+    except subprocess.TimeoutExpired as error:
+        evidence.process_result(phase, command, error=error, stdin=kwargs.get("input"))
+        raise RuntimeError(f"{phase} error: timed out after {error.timeout} seconds") from error
+    except OSError as error:
+        evidence.process_result(phase, command, error=error, stdin=kwargs.get("input"))
+        raise RuntimeError(f"{phase} error: {type(error).__name__}: {error}") from error
+    evidence.process_result(phase, command, result=result, stdin=kwargs.get("input"))
+    if result.returncode != 0:
+        detail = "\n".join(result.stderr.strip().splitlines()[:5])
+        raise RuntimeError(f"{phase} error: exit {result.returncode}" + (f": {detail}" if detail else ""))
+    return result
+
+
 def _compile_run(src: str, px4: Path, stub: Path | None = None) -> tuple[list[str] | None, str]:
     stub = stub or px4 / "stub"
     with tempfile.TemporaryDirectory(prefix="t-px4-") as d:
         cpp, exe = Path(d) / "p.cpp", Path(d) / "p"
         cpp.write_text(src)
-        p = subprocess.run(["g++", "-std=c++17", "-O1", "-ffp-contract=off", "-w", f"-I{px4}/src/lib",
-                            f"-I{px4}/src/lib/matrix", f"-I{stub}", *ACCESS, str(cpp)]
-                           + [str(px4 / f) for f in SOURCES] + ["-o", str(exe)],
-                           capture_output=True, text=True, timeout=300)
-        if p.returncode != 0:
-            return None, "compile error: " + (p.stderr.strip().splitlines() or ["?"])[0][:200]
-        return subprocess.run([str(exe)], capture_output=True, text=True, timeout=60).stdout.splitlines(), ""
+        try:
+            _run_cpp_process(["g++", *CXX_FLAGS, f"-I{px4}/src/lib",
+                              f"-I{px4}/src/lib/matrix", f"-I{stub}", *ACCESS, str(cpp)]
+                             + [str(px4 / f) for f in SOURCES] + ["-o", str(exe)], "compile", timeout=300)
+            result = _run_cpp_process([str(exe)], "runtime", timeout=60)
+        except RuntimeError as error:
+            return None, str(error)
+        return result.stdout.splitlines(), ""
+
+
+def _start_case(path: Path, task: dict, inputs: list, src: str, role: str) -> None:
+    evidence.start_case(task["name"], task, inputs, src, role=role, task_bytes=path.read_bytes(),
+                        flags=CXX_FLAGS + ACCESS + ["-I<source>/src/lib", "-I<source>/src/lib/matrix", "-I<stub>"])
+
+
+def _finish(result: dict) -> dict:
+    evidence.finish_case(result)
+    return result
 
 
 def finding(path: Path, px4: Path) -> dict:
@@ -233,6 +259,9 @@ def finding(path: Path, px4: Path) -> dict:
     ref = interp.Reference(task)
     w = harness.real_witness(task)
     envs = ([{p["name"]: w[p["name"]] for p in task["params"]}] if w else []) + PROBES.get(name, [])
+    if not envs:
+        return {"name": name, "px4_call": CALLS[call][0], "rows": [], "status": "NOT REPRODUCED",
+                "reason": "no counterexample input"}
     funs = interp.funs_of(task, task["body"])
     pts, broken = [], []
     for env0 in envs:
@@ -241,13 +270,14 @@ def finding(path: Path, px4: Path) -> dict:
         pts.append((env0, env[ref.ret]))
         broken.append(not all(interp.ev(c, env, funs, interp.St()) for c in task["ensures"]))
     src, expect, inputs = program(task, ref, call, pts)
+    _start_case(path, task, inputs, src, "finding")
     got, err = _compile_run(src, px4)
     if got is None:
-        return {"name": name, "px4_call": CALLS[call][0], "status": err}
+        return _finish({"name": name, "px4_call": CALLS[call][0], "status": err})
     rows = [{"input": i, "t": e, "px4": g, "breaks_contract": b} for i, e, g, b in zip(inputs, expect, got, broken)]
     ok = len(got) == len(expect) and all(r["t"] == r["px4"] and r["breaks_contract"] for r in rows)
-    return {"name": name, "px4_call": CALLS[call][0], "rows": rows,
-            "status": "PX4 breaks the contract here, as t's body does" if ok else "NOT REPRODUCED"}
+    return _finish({"name": name, "px4_call": CALLS[call][0], "rows": rows, "returned_rows": len(got),
+                    "status": "PX4 breaks the contract here, as t's body does" if ok else "NOT REPRODUCED"})
 
 
 def diff_fix(path: Path, tree: Path, stub: Path) -> dict:
@@ -257,34 +287,48 @@ def diff_fix(path: Path, tree: Path, stub: Path) -> dict:
     harness._set_ctx(task)
     ref = interp.Reference(task)
     src, expect, inputs = program(task, ref, call, ref.points[:POINTS])
+    _start_case(path, task, inputs, src, "fixed_function")
+    if not expect:
+        return _finish({"name": name, "points": 0, "px4_call": CALLS[call][0],
+                        "status": "not compared: no admissible inputs"})
     out, err = _compile_run(src, tree, stub)
     if out is None:
-        return {"name": name, "status": err}
+        return _finish({"name": name, "status": err})
     bad = [i for i, (e, g) in enumerate(zip(expect, out)) if e != g.strip()]
-    res = {"name": name, "points": len(expect), "px4_call": CALLS[call][0]}
+    res = {"name": name, "points": len(expect), "px4_call": CALLS[call][0], "returned_rows": len(out)}
     if bad or len(out) != len(expect):
         i = bad[0] if bad else len(out)
         res.update(status="DIFFERS", first={"input": inputs[i] if i < len(inputs) else None})
     else:
         res["status"] = "agrees"
-    return res
+    return _finish(res)
 
 
 def diff_task(path: Path, px4: Path) -> dict:
     task = tasks_io.load_task(str(path))
     name = task["name"]
     if name in NOT_DIFFED:
+        if evidence.ACTIVE.get() is not None:
+            evidence.ACTIVE.get().data["skips"].append({"name": name, "reason": NOT_DIFFED[name]})
         return {"name": name, "status": f"not diffed: {NOT_DIFFED[name]}"}
     harness._set_ctx(task)
     ref = interp.Reference(task)
     src, expect, inputs = program(task, ref)
+    _start_case(path, task, inputs, src, "function")
+    if not expect:
+        return _finish({"name": name, "points": 0, "px4_call": CALLS[name][0],
+                        "status": "not compared: no admissible inputs"})
     out, err = _compile_run(src, px4)
     if out is None:
-        return {"name": name, "status": err}
+        return _finish({"name": name, "status": err})
     norm = (lambda s: float.fromhex(s).hex()) if CALLS[name][1] == "float" else (lambda s: s.strip())
-    got = [norm(x) for x in out]
+    try:
+        got = [norm(x) for x in out]
+    except (ValueError, OverflowError) as error:
+        return _finish({"name": name, "points": len(expect), "px4_call": CALLS[name][0],
+                        "status": f"output error: {error}", "returned_rows": len(out)})
     bad = [i for i, (e, g) in enumerate(zip(expect, got)) if e != g]
-    res = {"name": name, "points": len(expect), "px4_call": CALLS[name][0]}
+    res = {"name": name, "points": len(expect), "px4_call": CALLS[name][0], "returned_rows": len(out)}
     if bad and len(got) == len(expect) and task["name"] in NARROWED:
         # every difference explained by PX4's float narrowing: rerun t's interpreter with those parameters rounded to
         # binary32 (as PX4's signature does) at each differing point
@@ -302,7 +346,7 @@ def diff_task(path: Path, px4: Path) -> dict:
         if explained == len(bad):
             res.update(status=f"agrees once PX4's float narrowing of {', '.join(NARROWED[task['name']])} is applied",
                        narrowed_points=len(bad))
-            return res
+            return _finish(res)
     if len(got) != len(expect) or bad:
         i = bad[0] if bad else len(got)
         res.update(status="DIFFERS", first={"input": inputs[i] if i < len(inputs) else None,
@@ -310,23 +354,45 @@ def diff_task(path: Path, px4: Path) -> dict:
                                              "px4": got[i] if i < len(got) else None}, differing=len(bad))
     else:
         res["status"] = "agrees"
-    return res
+    return _finish(res)
+
+
+def _comparison_passed(result: dict) -> bool:
+    status = result["status"]
+    return result.get("points", 0) > 0 and (
+        status == "agrees" or status.startswith("agrees once PX4's float narrowing of "))
 
 
 def main(argv=None) -> int:
     ap = argparse.ArgumentParser(prog="px4_diff.py", description=__doc__.split("\n\n")[0])
     ap.add_argument("--table", metavar="PATH")
+    ap.add_argument("--receipt", type=Path, help="write a machine-readable identity and execution receipt")
     ap.add_argument("--fixed-tree", metavar="DIR", help="a PX4 checkout with the proposed fixes applied: run "
                     "fixes/ against it and nothing else")
     args = ap.parse_args(argv)
+    with evidence.recording(args.receipt, "px4_functions") as receipt:
+        code = _run_comparisons(args)
+        if receipt is not None:
+            receipt.data.update(exit_code=code, run_outcome="completed" if code == 0 else "failed")
+        return code
+
+
+def _run_comparisons(args) -> int:
     px4 = fetch_px4()
     if args.fixed_tree:
+        evidence.observed_tree(Path(args.fixed_tree), HEADERS + [f"src/lib/matrix/matrix/{m}.hpp" for m in MATRIX] + ["LICENSE"])
+        if evidence.ACTIVE.get() is not None:
+            evidence.ACTIVE.get().data["skips"].extend({"name": name, "reason": reason}
+                                                     for name, reason in FIX_NOT_DIFFED.items())
         fixed = [diff_fix(p, Path(args.fixed_tree), px4 / "stub") for p in sorted(FIXES.glob("*.t"))
                  if p.stem not in FIX_NOT_DIFFED]
         for r in fixed:
             print(f"fix {r['name']}: {r['status']}" + (f" ({r['points']} points)" if r.get("points") else ""))
-        return 1 if any(r["status"] != "agrees" for r in fixed) else 0
+        return 0 if fixed and all(_comparison_passed(r) for r in fixed) else 1
     results = [diff_task(p, px4) for p in sorted(HERE.glob("*.t"))]
+    if evidence.ACTIVE.get() is not None:
+        evidence.ACTIVE.get().data["skips"].extend({"name": name, "reason": reason}
+                                                 for name, reason in FINDING_NOT_RUN.items())
     found = [finding(p, px4) for p in sorted(FINDINGS.glob("*.t")) if p.stem not in FINDING_NOT_RUN]
     for r in results:
         print(f"{r['name']}: {r['status']}" + (f" ({r['points']} points)" if r.get("points") else "")
@@ -358,8 +424,10 @@ def main(argv=None) -> int:
                                  f"{x.get('t', '')} | {x.get('px4', '')} | {x.get('breaks_contract', '')} | "
                                  f"{r['status']} |")
         Path(args.table).write_text("\n".join(lines) + "\n")
-    return 1 if any(r["status"] == "DIFFERS" for r in results) or any(r["status"] == "NOT REPRODUCED" for r in found) \
-        else 0
+    compared = [r for r in results if r["name"] not in NOT_DIFFED]
+    findings_passed = all(r["status"] == "PX4 breaks the contract here, as t's body does" and r.get("rows")
+                          for r in found)
+    return 0 if compared and all(_comparison_passed(r) for r in compared) and findings_passed else 1
 
 
 if __name__ == "__main__":

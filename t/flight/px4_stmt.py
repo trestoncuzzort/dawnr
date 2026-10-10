@@ -19,10 +19,8 @@ from __future__ import annotations
 
 import argparse
 import json
-import subprocess
 import sys
 import tempfile
-import urllib.request
 from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
@@ -30,10 +28,12 @@ sys.path.insert(0, str(HERE.parent))
 
 import interp  # noqa: E402
 import tasks_io  # noqa: E402
-from px4_diff import PX4_COMMIT, fetch_px4  # noqa: E402
+import evidence  # noqa: E402
+from px4_diff import PX4_COMMIT, _run_cpp_process, fetch_px4  # noqa: E402
 
 FORK = "trestoncuzzort/PX4-Autopilot"
 CACHE = HERE.parent / "out" / "px4-stmt"
+CXX_FLAGS = ["-std=c++17", "-O1", "-w"]
 PRELUDE = ("#include <cmath>\n#include <cstdint>\n#include <cstdio>\n#include <cstring>\n#include <vector>\n"
            "#include <mathlib/mathlib.h>\n")
 
@@ -186,12 +186,8 @@ PAIRS = {
 
 
 def source(path: str, commit: str, repo: str) -> str:
-    dst = CACHE / commit / path
-    if not dst.exists():
-        dst.parent.mkdir(parents=True, exist_ok=True)
-        with urllib.request.urlopen(f"https://raw.githubusercontent.com/{repo}/{commit}/{path}", timeout=60) as r:
-            dst.write_bytes(r.read())
-    return dst.read_text()
+    cached = evidence.SourceCache(CACHE).get(repo, commit, path, legacy=CACHE / commit / path)
+    return cached.read_text(encoding="utf-8")
 
 
 def cut(text: str, start: str, end: str | None) -> str:
@@ -216,7 +212,19 @@ def cut(text: str, start: str, end: str | None) -> str:
     raise ValueError(f"end marker {end!r} not found after {start!r}")
 
 
+def _require_complete_results(rows: list[tuple], input_count: int, two: bool) -> None:
+    if input_count == 0:
+        raise RuntimeError("no comparison inputs")
+    if len(rows) != input_count:
+        raise RuntimeError(f"output error: expected {input_count} rows, got {len(rows)}")
+    width = 2 if two else 1
+    if any(len(row) != width for row in rows):
+        raise RuntimeError(f"output error: expected {width} integer fields per row")
+
+
 def run_cpp(lines: str, wrap: str, inputs: list[int], two: bool, px4: Path) -> list[tuple]:
+    if not inputs:
+        raise RuntimeError("no comparison inputs")
     body = wrap.replace("{LINES}", lines)
     if inputs and isinstance(inputs[0], tuple):
         k = len(inputs[0])
@@ -231,14 +239,20 @@ def run_cpp(lines: str, wrap: str, inputs: list[int], two: bool, px4: Path) -> l
                 " return 0; }\n")
     with tempfile.TemporaryDirectory(prefix="t-px4stmt-") as d:
         cpp, exe = Path(d) / "s.cpp", Path(d) / "s"
-        cpp.write_text("#define PX4_ISFINITE(x) std::isfinite(x)\n" + PRELUDE + body + main)
-        p = subprocess.run(["g++", "-std=c++17", "-O1", "-w", f"-I{px4}/src/lib", f"-I{px4}/src/lib/matrix",
-                            f"-I{px4}/stub", str(cpp), "-o", str(exe)], capture_output=True, text=True, timeout=300)
-        if p.returncode != 0:
-            raise RuntimeError("compile error: " + "\n".join(p.stderr.splitlines()[:5]))
-        out = subprocess.run([str(exe)], input="\n".join(" ".join(map(str, v)) if isinstance(v, tuple) else str(v) for v in inputs) + "\n", capture_output=True, text=True,
-                             timeout=120).stdout.split("\n")
-    return [tuple(int(v) for v in ln.split()) for ln in out if ln.strip()]
+        text = "#define PX4_ISFINITE(x) std::isfinite(x)\n" + PRELUDE + body + main
+        cpp.write_text(text, encoding="utf-8")
+        evidence.wrapper_source(text)
+        _run_cpp_process(["g++", *CXX_FLAGS, f"-I{px4}/src/lib", f"-I{px4}/src/lib/matrix",
+                          f"-I{px4}/stub", str(cpp), "-o", str(exe)], "compile", timeout=300)
+        out = _run_cpp_process([str(exe)], "runtime", input="\n".join(
+            " ".join(map(str, v)) if isinstance(v, tuple) else str(v) for v in inputs) + "\n",
+            timeout=120).stdout.splitlines()
+    try:
+        rows = [tuple(int(v) for v in ln.split()) for ln in out]
+    except ValueError as error:
+        raise RuntimeError(f"output error: invalid integer result: {error}") from error
+    _require_complete_results(rows, len(inputs), two)
+    return rows
 
 
 def t_result(task: dict, env0: dict):
@@ -277,13 +291,19 @@ def check(name: str, spec: dict, px4: Path) -> dict:
         dom = sorted({env0[spec["param"]] for env0, _ in interp.Reference(finding).points} | {real})
     if spec.get("param") == "p":                       # a float parameter carries these integers exactly
         dom = [v for v in dom if abs(v) <= 2 ** 24]
+    if not dom:
+        raise RuntimeError(f"{name}: no comparison inputs")
     two = name == "stream_interval"
     rows = []
     for which, task, commit, repo in (("original", finding, spec.get("pinned", PX4_COMMIT), "PX4/PX4-Autopilot"),
                                       ("fixed", fix, spec["fix_commit"], FORK)):
         lines = cut(source(spec["file"], commit, repo), *spec["orig" if which == "original" else "fixed"])
         wrap = spec.get("wrap_fixed", spec["wrap"]) if which == "fixed" else spec["wrap"]
+        evidence.start_case(task["name"], task, dom, "", role=which,
+                            task_bytes=(HERE / spec["finding" if which == "original" else "fix"]).read_bytes(),
+                            flags=CXX_FLAGS + ["-I<source>/src/lib", "-I<source>/src/lib/matrix", "-I<stub>"])
         got = run_cpp(lines, wrap, dom, two, px4)
+        _require_complete_results(got, len(dom), two)
         agree, differ, skipped = 0, [], 0
         for v, g in zip(dom, got):
             px4_val, at = (g[0], g[1]) if two else (g[0], v)
@@ -303,19 +323,41 @@ def check(name: str, spec: dict, px4: Path) -> dict:
                 agree += 1
             else:
                 differ.append({"input": at, "px4": px4_val, "t": t_val})
-        rows.append({"pair": name, "pr": spec["pr"], "code": which, "task": task["name"],
+        if len(dom) == skipped:
+            raise RuntimeError(f"{name} {which}: no admissible comparison inputs")
+        row = {"pair": name, "pr": spec["pr"], "code": which, "task": task["name"],
                      "commit": commit[:12], "lines": lines.count("\n") + 1, "inputs": len(got) - skipped,
                      "agree": agree, "first_difference": differ[0] if differ else None,
-                     "real_input": real, "px4_at_real": next((g[0] for v, g in zip(dom, got) if v == real), None)})
+                     "real_input": real, "px4_at_real": next((g[0] for v, g in zip(dom, got) if v == real), None)}
+        evidence.finish_case(dict(row, status="agrees" if agree == row["inputs"] else "DIFFERS",
+                                  returned_rows=len(got), skipped_inputs=skipped))
+        rows.append(row)
     return {"name": name, "rows": rows}
 
 
 def main(argv=None) -> int:
     ap = argparse.ArgumentParser(prog="px4_stmt.py", description=__doc__.split("\n\n")[0])
     ap.add_argument("--table", metavar="PATH")
+    ap.add_argument("--receipt", type=Path, help="write a machine-readable identity and execution receipt")
     args = ap.parse_args(argv)
+    with evidence.recording(args.receipt, "px4_statements") as receipt:
+        code = _run_comparisons(args)
+        if receipt is not None:
+            receipt.data.update(exit_code=code, run_outcome="completed" if code == 0 else "failed")
+        return code
+
+
+def _run_comparisons(args) -> int:
     px4 = fetch_px4()
-    results = [check(n, s, px4) for n, s in PAIRS.items()]
+    try:
+        results = [check(n, s, px4) for n, s in PAIRS.items()]
+    except RuntimeError as error:
+        evidence.finish_case({"status": "execution error"})
+        print(f"comparison failed: {error}", file=sys.stderr)
+        return 1
+    if not results:
+        print("comparison failed: no statement pairs", file=sys.stderr)
+        return 1
     bad = 0
     for r in results:
         for x in r["rows"]:
