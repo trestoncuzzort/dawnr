@@ -53,15 +53,26 @@ concrete witnesses).
   *rate* is **11/26 = 42%**, above the validation round's 30%. To clear 20 all-seven, generate more problems (raise
   the accepted id count), not change the gate.
 
-**Admission into training rows is one step short.** `loop_dataset.py --from-samples … --min-kernels 7` produced 0
-rows: the 11 gold rows are `spec-unchecked`. The full admission gate also requires the **spec check** (the
-generated specification agreeing with a reference solution on sampled inputs) — and this round's generator emits
-only `t` programs, no reference Python, so no spec-check result exists yet. The 11 problems are
-verified-and-twin-refuted in all seven kernels; turning them into corpus/training rows needs `spec_gate.py`
-(`--python <reference solutions JSONL>`) run over the sample tags first. Artifacts written:
-`out/loop/{pairs,sft}-deepseek-scale.jsonl` (0 rows, pending the spec check) and `out/loop/DATASET-deepseek-scale.md`.
+**Spec check ran (via Landlock, no sudo) and the full admission gate admitted 0 training rows — correctly.** The
+lab cannot create bwrap namespaces, but dawnr's own Landlock backend (`T_SANDBOX=landlock`, `t/landlock_exec.py`,
+built for exactly this lab) runs the spec check without root. With the MBPP canonical solutions as the reference
+(`spec_gate.py --python <pool rec.code>`), **44 of 66 answers pass the spec check** (11 spec-false, 7
+requires-excludes-most, 4 too-few-draws); 14 distinct problems have a spec-passing sample. Merged into
+`out/spec-disagree.json`, `loop_dataset.py --from-samples … --min-kernels 7` then admitted **0 rows**, and that is
+the gate working, not a bug:
 
-**Net:** the DeepSeek-V3.2 (MIT) Bedrock -> seven-kernel engine yields gold rows at scale on the re-provisioned
-lab, at a 42% all-seven rate for ~$0.29; the owed steps to grow the trained corpus are (a) generate more problems
-to clear 20 all-seven and (b) run the spec check to admit the rows. Training stays GPU-blocked (lab GPUs closed,
-AWS Free refuses GPU instances, laptop control-node only).
+- Per problem, best over samples, 11 are clean in all seven kernels and 14 spec-pass, overlapping on 9 problem ids.
+  But `loop_dataset` requires the **same sample** to clear every gate at once — well-formed AND tests-pass AND
+  clean in seven AND spec-agrees at the problem's own stated examples — and **no single sample does**. The 168
+  samples split cleanly: 97 not-well-formed, 5 tests-not-passing, 32 kernels-not-clean-seven, 34 spec-not-agrees.
+- The finding: DeepSeek-V3.2's answers that prove in all seven kernels tend to carry a specification that does not
+  also agree with the reference at the problem's examples — provable against its own (unfaithful) spec. The gate
+  refuses these by name, which is the whole point ("its specification agrees with the problem's own solution",
+  AMBITION.md). Zero bad rows entered the corpus.
+
+**Net:** the DeepSeek-V3.2 (MIT) Bedrock → seven-kernel → spec-check engine is proven end to end on the
+re-provisioned lab (Landlock unblocks the spec check without sudo) for ~$0.29. This batch grew the corpus by 0
+rows because no single sample cleared all four gates together. To actually add rows: raise the sample count per
+problem (more k, so a problem gets more chances at an all-gate-clearing sample) and the problem count (to clear 20
+all-seven). Training a student stays GPU-blocked (lab GPUs closed, AWS Free refuses GPU instances, laptop
+control-node only).
