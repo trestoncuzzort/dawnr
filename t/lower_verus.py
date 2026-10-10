@@ -7301,6 +7301,57 @@ def _ctor_depth(e) -> int:
     return 0
 
 
+def _ground_certificate_comps(e, budget: list):
+    """Expand unregistered ground integer comprehensions, retaining every filter
+    and mapped expression for compute_only to check. Registered shapes keep
+    their existing proof route. See PREDICT-2026-10-10-certificate-sweep.md.
+    """
+    if isinstance(e, list):
+        return [_ground_certificate_comps(v, budget) for v in e]
+    if not isinstance(e, dict):
+        return e
+    if "comp" not in e or _comp_key(e) in _COMP_INDEX:
+        return {k: _ground_certificate_comps(v, budget) for k, v in e.items()}
+    c = e["comp"]
+    import check_wf
+    body_type, errors = check_wf.expression_type(
+        c["body"], {**_SCOPE, c["var"]: "int"},
+        functions=dict(_SCOPE_FUNS), datatypes=dict(_SCOPE_DTYPES))
+    if errors or body_type != "int":
+        raise NotImplementedError("verus: a ground certificate comprehension with a non-integer body "
+                                  "is not lowered yet (SPEC.md 'Comprehensions (v1)')")
+    if "seq" in c:
+        src = c["seq"]
+        if "_seq" in src and all(type(x) is int for x in src["_seq"]):
+            elems = [{"int": x} for x in src["_seq"]]
+        elif src.get("op") == "seq" and all(set(x) == {"int"} and type(x["int"]) is int
+                                             for x in src["args"]):
+            elems = src["args"]
+        else:
+            raise NotImplementedError("verus: a ground certificate comprehension over a non-literal integer "
+                                      "sequence is not lowered yet (SPEC.md 'Comprehensions (v1)')")
+        count = len(elems)
+    else:
+        try:
+            lo, hi = _gint(c["lo"]), _gint(c["hi"])
+        except (ValueError, KeyError, TypeError):
+            raise NotImplementedError("verus: a certificate comprehension with non-ground bounds "
+                                      "is not lowered yet (SPEC.md 'Comprehensions (v1)')") from None
+        count = max(0, hi - lo)
+        elems = ({"int": x} for x in range(lo, hi))
+    budget[0] -= count
+    if budget[0] < 0:
+        raise NotImplementedError("verus: certificate comprehension expansion budget exhausted")
+    out = {"op": "seq", "args": []}
+    for x in elems:
+        sub = {c["var"]: x}
+        inst = {"ite": {"cond": subst(c["cond"], sub),
+                        "then": {"op": "seq", "args": [subst(c["body"], sub)]},
+                        "else": {"op": "seq", "args": []}}}
+        out = {"op": "+", "args": [out, _ground_certificate_comps(inst, budget)]}
+    return out
+
+
 def _certificate(task: dict, twin_body: list, w: dict) -> str | None:
     """The appended t_refutation_certificate block for a measured twin
     witness, or None when the witness is not expressible as a ground
@@ -7308,6 +7359,7 @@ def _certificate(task: dict, twin_body: list, w: dict) -> str | None:
     formula = _cert_formula(task, twin_body, w)
     if formula is None:
         return None
+    formula = _ground_certificate_comps(formula, [_UNROLL_CAP])
     global _SUFFIX_INT
     saved = _SUFFIX_INT
     _SUFFIX_INT = True

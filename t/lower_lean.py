@@ -4818,47 +4818,27 @@ class Lower:
         return out
 
     def _mul_sign_lemma(self, name: str, a_text: str, b_text: str) -> str:
-        """One generic-STRATEGY, task-hypothesis-SPECIFIC theorem:
-        `0 <= (a_text) * (b_text)` from this task's own `requires` (the
-        `pb`/`hpre` binders every other top-level theorem here already
-        uses). The case split itself never inspects a_text/b_text beyond
-        treating them as opaque `Int`s -- generic over ANY two factors --
-        but the theorem's own STATEMENT is task-specific (params, hpre),
-        because whether the mixed-sign branches are even reachable
-        depends on the task's own `requires`, not on the factors alone.
-        Zero-first ordering matters (measured, probe1/probe2 scratch
-        files, lean 4.33.1, core only): checking `a_text = 0` /
-        `b_text = 0` before the strict-sign split disposes of the
-        boundary where one factor is exactly zero via `simp` alone
-        (`Int.zero_mul`/`Int.mul_zero`, both in the default simp set),
-        so the four strict-sign leaves below are only ever reached with
-        BOTH factors nonzero, and a genuinely-infeasible mixed-sign leaf
-        (the only way the goal is true and this task's own `requires`
-        support it at all) closes on `exfalso; omega` from the ambient
-        linear hypotheses alone -- never a hand proof of the product
-        itself. `Int.mul_pos`/`Int.mul_nonneg`/
-        `Int.mul_nonneg_of_nonpos_of_nonpos` are all core Lean (measured,
-        no Mathlib import), the same discipline "THE CUBE NONLINEARITY"
-        above already established for `Int.mul_nonneg` alone."""
+        """A conditional sign fact valid for every pair of integer factors.
+
+        A product occurring inside a sign comparison need not be nonnegative:
+        crosstrack_side has two independent products of either sign. Keeping
+        the same-sign condition in the theorem avoids emitting a false helper.
+        At its use, omega must establish that condition from the actual task
+        hypotheses before its nonnegativity conclusion can contribute.
+        """
         pb = self.binders([(p["name"], p["type"])
                            for p in self.task["params"]])
         hpre = (f" (hpre : {self.pre_conj()})"
                if self.task.get("requires") else "")
         return (
             f"theorem {name} {pb}{hpre} :\n"
+            f"    (((0 : Int) ≤ ({a_text}) ∧ (0 : Int) ≤ ({b_text})) ∨\n"
+            f"     (({a_text}) ≤ (0 : Int) ∧ ({b_text}) ≤ (0 : Int))) →\n"
             f"    (0 : Int) ≤ ({a_text}) * ({b_text}) := by\n"
-            f"  by_cases hA0 : ({a_text}) = 0\n"
-            f"  · rw [hA0]; simp\n"
-            f"  · by_cases hB0 : ({b_text}) = 0\n"
-            f"    · rw [hB0]; simp\n"
-            f"    · by_cases hAp : (0 : Int) < ({a_text})\n"
-            f"      · by_cases hBp : (0 : Int) < ({b_text})\n"
-            f"        · exact Int.le_of_lt (Int.mul_pos hAp hBp)\n"
-            f"        · exfalso; omega\n"
-            f"      · by_cases hBp : (0 : Int) < ({b_text})\n"
-            f"        · exfalso; omega\n"
-            f"        · exact Int.mul_nonneg_of_nonpos_of_nonpos "
-            f"(by omega) (by omega)\n")
+            f"  intro hsign\n"
+            f"  rcases hsign with h | h\n"
+            f"  · exact Int.mul_nonneg h.1 h.2\n"
+            f"  · exact Int.mul_nonneg_of_nonpos_of_nonpos h.1 h.2\n")
 
     def _has_seq_update_chain(self) -> bool:
         """True iff some top-level local (SIMPLE-shape body, `self.body`
@@ -8027,7 +8007,10 @@ theorem t_str_join_split_roundtrip (s : List Int) (c : Int) :
             haves = "; ".join(
                 f"have _sgn{i} := {nm} {pnames}{pre_args}"
                 for i, nm in enumerate(mulsign_names))
-            return f"({haves}; omega)"
+            # Branch classification can be linear in opaque product atoms,
+            # although grind's ring normalization obscures that fact. Split
+            # the actual conditionals, then ask omega to close every branch.
+            return f"({haves}; first | omega | ((repeat' split) <;> omega))"
         ob = self._conj(obs)
         if ob is not None:
             hyps = "".join(f"{p} → " for p in self.pre_props())

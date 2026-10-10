@@ -1,0 +1,1417 @@
+{
+  "cases": [
+    {
+      "adapter_sha256": "385c53339b74a356fce97de444dcb28d3713b4953d42d43c8ee20e06bbe16c0d",
+      "assumption_goals": [
+        {
+          "description": "assert(false) before assume(bin_count == 72)",
+          "goal": "harness.coverage.1",
+          "status": "satisfied"
+        },
+        {
+          "description": "assert(false) after assume(bin_count == 72)",
+          "goal": "harness.coverage.2",
+          "status": "satisfied"
+        }
+      ],
+      "format": "dawnr-native-cbmc-v1",
+      "native_replay": null,
+      "preprocessor": {
+        "binary_sha256": "1b99826121ae6682a634e5efe09bd3e3df58ce58e0b28f849114ab5b89139c26",
+        "name": "gcc",
+        "target": "x86_64-linux-gnu",
+        "version": "gcc (Ubuntu 13.3.0-6ubuntu2~24.04.1) 13.3.0\nCopyright (C) 2023 Free Software Foundation, Inc.\nThis is free software; see the source for copying conditions.  There is NO\nwarranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE."
+      },
+      "properties": [
+        {
+          "description": "arithmetic overflow on signed to unsigned type conversion in (unsigned int)4",
+          "property": "harness.overflow.1",
+          "status": "SUCCESS"
+        },
+        {
+          "description": "arithmetic overflow on signed to unsigned type conversion in (unsigned int)4",
+          "property": "harness.overflow.2",
+          "status": "SUCCESS"
+        },
+        {
+          "description": "native.machine",
+          "property": "harness.assertion.1",
+          "status": "SUCCESS"
+        },
+        {
+          "description": "native.range",
+          "property": "harness.assertion.2",
+          "status": "SUCCESS"
+        },
+        {
+          "description": "arithmetic overflow on signed to unsigned type conversion in (unsigned char)0",
+          "property": "harness.overflow.3",
+          "status": "SUCCESS"
+        },
+        {
+          "description": "array 'bins' lower bound in bins[result]",
+          "property": "harness.array_bounds.1",
+          "status": "SUCCESS"
+        },
+        {
+          "description": "array 'bins' upper bound in bins[result]",
+          "property": "harness.array_bounds.2",
+          "status": "SUCCESS"
+        },
+        {
+          "description": "arithmetic overflow on signed to unsigned type conversion in (unsigned char)1",
+          "property": "harness.overflow.4",
+          "status": "SUCCESS"
+        },
+        {
+          "description": "array 'bins' lower bound in bins[result]",
+          "property": "harness.array_bounds.3",
+          "status": "SUCCESS"
+        },
+        {
+          "description": "array 'bins' upper bound in bins[result]",
+          "property": "harness.array_bounds.4",
+          "status": "SUCCESS"
+        },
+        {
+          "description": "native.store",
+          "property": "harness.assertion.3",
+          "status": "SUCCESS"
+        },
+        {
+          "description": "division by zero in bin % bin_count",
+          "property": "wrap_bin.division-by-zero.1",
+          "status": "SUCCESS"
+        },
+        {
+          "description": "result of signed mod is not representable in bin % bin_count",
+          "property": "wrap_bin.overflow.1",
+          "status": "SUCCESS"
+        },
+        {
+          "description": "arithmetic overflow on signed + in wrapped + bin_count",
+          "property": "wrap_bin.overflow.2",
+          "status": "SUCCESS"
+        }
+      ],
+      "reason": "all inventoried properties and required unwinding checks succeeded; assumption goals reachable",
+      "receipt_sha256": "a7b3ceb04d2595092272b77db3c676f29ba5f559f23b505df464d46f252d0a8b",
+      "scope": {
+        "case": "fixed",
+        "entry": "harness",
+        "executed_definition_sha256": "3b55249ccabfd98595b9fca1a938681b441cab9f72a83699bc31748e484368f0",
+        "expected_assertions": [
+          "native.machine",
+          "native.range",
+          "native.store"
+        ],
+        "expected_assumptions": 1,
+        "expected_loops": 0,
+        "inputs": "all int32 bin; bin_count == 72",
+        "limitations": "extracted function and stated harness only; no PX4 callers, concurrency, hardware, timing or flight certification",
+        "machine_model": "CBMC ILP32 little-endian; 32-bit signed int; 8-bit byte",
+        "source": {
+          "definition_sha256": "3b55249ccabfd98595b9fca1a938681b441cab9f72a83699bc31748e484368f0",
+          "function": "ObstacleMath::wrap_bin(int,int)",
+          "path": "src/lib/collision_prevention/ObstacleMath.cpp",
+          "repository": "PX4/PX4-Autopilot",
+          "revision": "07d30f9341dc02720eac2ed6fb9ee7524f8bd713",
+          "sha256": "d01b82d5cb76ae8449a3d0411c9a4dadf6c905ef44cce419f7d63cd9090fb8c2",
+          "transformations": [
+            "extract definition unchanged",
+            "omit surrounding namespace and includes",
+            "parse extracted definition as C"
+          ]
+        },
+        "unit_sha256": "2848ee5907798daae24159d6a60b558248bc35ec44b118f35bec52c6c660693b"
+      },
+      "stages": {
+        "checking": {
+          "arguments": [
+            "unit.c",
+            "--function",
+            "harness",
+            "--32",
+            "--little-endian",
+            "--unwind",
+            "4",
+            "--json-ui",
+            "--bounds-check",
+            "--pointer-check",
+            "--signed-overflow-check",
+            "--div-by-zero-check",
+            "--undefined-shift-check",
+            "--conversion-check",
+            "--retain-trivial-checks",
+            "--unwinding-assertions",
+            "--trace"
+          ],
+          "exit": 0,
+          "seconds": 0.0449,
+          "state": "finished",
+          "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "stdout_sha256": "9b235a06f306212020b83b5aa73b11af54623313257eaf00b27164586843deff"
+        },
+        "coverage": {
+          "arguments": [
+            "unit.c",
+            "--function",
+            "harness",
+            "--32",
+            "--little-endian",
+            "--unwind",
+            "4",
+            "--json-ui",
+            "--cover",
+            "assume"
+          ],
+          "exit": 0,
+          "seconds": 0.043,
+          "state": "finished",
+          "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "stdout_sha256": "241fc0af4cf1852dff24faee517afe3cb7d73e16a7b7db630f2b929ad8256b30"
+        },
+        "inventory": {
+          "arguments": [
+            "unit.c",
+            "--function",
+            "harness",
+            "--32",
+            "--little-endian",
+            "--unwind",
+            "4",
+            "--json-ui",
+            "--bounds-check",
+            "--pointer-check",
+            "--signed-overflow-check",
+            "--div-by-zero-check",
+            "--undefined-shift-check",
+            "--conversion-check",
+            "--retain-trivial-checks",
+            "--unwinding-assertions",
+            "--show-properties"
+          ],
+          "exit": 0,
+          "seconds": 0.0379,
+          "state": "finished",
+          "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "stdout_sha256": "96bd2988d2d7bb4f412d7e99f1544993f05e1860c3443223ba3d8862914a6a6a"
+        }
+      },
+      "tool": {
+        "binary_sha256": "a62af25d27425610608221d79c202f993efe1d5a85cece186119bec196382995",
+        "name": "CBMC",
+        "version": "6.11.0 (cbmc-6.11.0)"
+      },
+      "unwind": 4,
+      "verdict": "complete"
+    },
+    {
+      "adapter_sha256": "385c53339b74a356fce97de444dcb28d3713b4953d42d43c8ee20e06bbe16c0d",
+      "assumption_goals": [
+        {
+          "description": "assert(false) before assume(n >= 0 && n <= 3)",
+          "goal": "harness.coverage.1",
+          "status": "satisfied"
+        },
+        {
+          "description": "assert(false) after assume(n >= 0 && n <= 3)",
+          "goal": "harness.coverage.2",
+          "status": "satisfied"
+        }
+      ],
+      "format": "dawnr-native-cbmc-v1",
+      "native_replay": null,
+      "preprocessor": {
+        "binary_sha256": "1b99826121ae6682a634e5efe09bd3e3df58ce58e0b28f849114ab5b89139c26",
+        "name": "gcc",
+        "target": "x86_64-linux-gnu",
+        "version": "gcc (Ubuntu 13.3.0-6ubuntu2~24.04.1) 13.3.0\nCopyright (C) 2023 Free Software Foundation, Inc.\nThis is free software; see the source for copying conditions.  There is NO\nwarranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE."
+      },
+      "properties": [
+        {
+          "description": "arithmetic overflow on signed + in i + 1",
+          "property": "count_to.overflow.1",
+          "status": "SUCCESS"
+        },
+        {
+          "description": "arithmetic overflow on signed to unsigned type conversion in (unsigned int)4",
+          "property": "harness.overflow.1",
+          "status": "SUCCESS"
+        },
+        {
+          "description": "arithmetic overflow on signed to unsigned type conversion in (unsigned int)4",
+          "property": "harness.overflow.2",
+          "status": "SUCCESS"
+        },
+        {
+          "description": "native.machine",
+          "property": "harness.assertion.1",
+          "status": "SUCCESS"
+        },
+        {
+          "description": "native.loop_result",
+          "property": "harness.assertion.2",
+          "status": "SUCCESS"
+        },
+        {
+          "description": "unwinding assertion loop 0",
+          "property": "count_to.unwind.0",
+          "status": "FAILURE"
+        }
+      ],
+      "reason": "unwinding or another property is unresolved",
+      "receipt_sha256": "527347a3cb01a82aa82e98482fff3de63f26132c480a100df2522d373e6363a4",
+      "scope": {
+        "case": "loop",
+        "entry": "harness",
+        "executed_definition_sha256": "bacea91e2107c7b5ae54640cfbf901405a02a3737096e0faac9f06a6b27510c2",
+        "expected_assertions": [
+          "native.machine",
+          "native.loop_result"
+        ],
+        "expected_assumptions": 1,
+        "expected_loops": 1,
+        "inputs": "0 <= n <= 3",
+        "limitations": "extracted function and stated harness only; no PX4 callers, concurrency, hardware, timing or flight certification",
+        "machine_model": "CBMC ILP32 little-endian; 32-bit signed int; 8-bit byte",
+        "source": {
+          "definition_sha256": "bacea91e2107c7b5ae54640cfbf901405a02a3737096e0faac9f06a6b27510c2",
+          "fixture": "synthetic loop completeness control",
+          "function": "count_to(int)"
+        },
+        "unit_sha256": "a5b66a225c60d831fb6257a5d2056c66b4ce34322c67f1e7afd47e032aaa78dd"
+      },
+      "stages": {
+        "checking": {
+          "arguments": [
+            "unit.c",
+            "--function",
+            "harness",
+            "--32",
+            "--little-endian",
+            "--unwind",
+            "1",
+            "--json-ui",
+            "--bounds-check",
+            "--pointer-check",
+            "--signed-overflow-check",
+            "--div-by-zero-check",
+            "--undefined-shift-check",
+            "--conversion-check",
+            "--retain-trivial-checks",
+            "--unwinding-assertions",
+            "--trace"
+          ],
+          "exit": 10,
+          "seconds": 0.0441,
+          "state": "finished",
+          "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "stdout_sha256": "06fc473f96f95cb2afa41980338c93b4d6430e849b749d62107eb629c992e9df"
+        },
+        "coverage": {
+          "arguments": [
+            "unit.c",
+            "--function",
+            "harness",
+            "--32",
+            "--little-endian",
+            "--unwind",
+            "1",
+            "--json-ui",
+            "--cover",
+            "assume"
+          ],
+          "exit": 0,
+          "seconds": 0.0452,
+          "state": "finished",
+          "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "stdout_sha256": "4eca696f0ffda158b060e02bad03fbb3d37a76d0fb3e061718cb636cdbcc3022"
+        },
+        "inventory": {
+          "arguments": [
+            "unit.c",
+            "--function",
+            "harness",
+            "--32",
+            "--little-endian",
+            "--unwind",
+            "1",
+            "--json-ui",
+            "--bounds-check",
+            "--pointer-check",
+            "--signed-overflow-check",
+            "--div-by-zero-check",
+            "--undefined-shift-check",
+            "--conversion-check",
+            "--retain-trivial-checks",
+            "--unwinding-assertions",
+            "--show-properties"
+          ],
+          "exit": 0,
+          "seconds": 0.042,
+          "state": "finished",
+          "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "stdout_sha256": "3bb2c063f4544d37cbe56a27e11ea90e2d9e08d5423cbfdf6a0dca6930c5b9c5"
+        }
+      },
+      "tool": {
+        "binary_sha256": "a62af25d27425610608221d79c202f993efe1d5a85cece186119bec196382995",
+        "name": "CBMC",
+        "version": "6.11.0 (cbmc-6.11.0)"
+      },
+      "unwind": 1,
+      "verdict": "incomplete"
+    },
+    {
+      "adapter_sha256": "385c53339b74a356fce97de444dcb28d3713b4953d42d43c8ee20e06bbe16c0d",
+      "assumption_goals": [
+        {
+          "description": "assert(false) before assume(n >= 0 && n <= 3)",
+          "goal": "harness.coverage.1",
+          "status": "satisfied"
+        },
+        {
+          "description": "assert(false) after assume(n >= 0 && n <= 3)",
+          "goal": "harness.coverage.2",
+          "status": "satisfied"
+        }
+      ],
+      "format": "dawnr-native-cbmc-v1",
+      "native_replay": null,
+      "preprocessor": {
+        "binary_sha256": "1b99826121ae6682a634e5efe09bd3e3df58ce58e0b28f849114ab5b89139c26",
+        "name": "gcc",
+        "target": "x86_64-linux-gnu",
+        "version": "gcc (Ubuntu 13.3.0-6ubuntu2~24.04.1) 13.3.0\nCopyright (C) 2023 Free Software Foundation, Inc.\nThis is free software; see the source for copying conditions.  There is NO\nwarranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE."
+      },
+      "properties": [
+        {
+          "description": "arithmetic overflow on signed + in i + 1",
+          "property": "count_to.overflow.1",
+          "status": "SUCCESS"
+        },
+        {
+          "description": "arithmetic overflow on signed to unsigned type conversion in (unsigned int)4",
+          "property": "harness.overflow.1",
+          "status": "SUCCESS"
+        },
+        {
+          "description": "arithmetic overflow on signed to unsigned type conversion in (unsigned int)4",
+          "property": "harness.overflow.2",
+          "status": "SUCCESS"
+        },
+        {
+          "description": "native.machine",
+          "property": "harness.assertion.1",
+          "status": "SUCCESS"
+        },
+        {
+          "description": "native.loop_result",
+          "property": "harness.assertion.2",
+          "status": "SUCCESS"
+        },
+        {
+          "description": "unwinding assertion loop 0",
+          "property": "count_to.unwind.0",
+          "status": "SUCCESS"
+        }
+      ],
+      "reason": "all inventoried properties and required unwinding checks succeeded; assumption goals reachable",
+      "receipt_sha256": "efde058d51726943474844957294ac303877776abc8fce859934fd7f5da935e2",
+      "scope": {
+        "case": "loop",
+        "entry": "harness",
+        "executed_definition_sha256": "bacea91e2107c7b5ae54640cfbf901405a02a3737096e0faac9f06a6b27510c2",
+        "expected_assertions": [
+          "native.machine",
+          "native.loop_result"
+        ],
+        "expected_assumptions": 1,
+        "expected_loops": 1,
+        "inputs": "0 <= n <= 3",
+        "limitations": "extracted function and stated harness only; no PX4 callers, concurrency, hardware, timing or flight certification",
+        "machine_model": "CBMC ILP32 little-endian; 32-bit signed int; 8-bit byte",
+        "source": {
+          "definition_sha256": "bacea91e2107c7b5ae54640cfbf901405a02a3737096e0faac9f06a6b27510c2",
+          "fixture": "synthetic loop completeness control",
+          "function": "count_to(int)"
+        },
+        "unit_sha256": "a5b66a225c60d831fb6257a5d2056c66b4ce34322c67f1e7afd47e032aaa78dd"
+      },
+      "stages": {
+        "checking": {
+          "arguments": [
+            "unit.c",
+            "--function",
+            "harness",
+            "--32",
+            "--little-endian",
+            "--unwind",
+            "4",
+            "--json-ui",
+            "--bounds-check",
+            "--pointer-check",
+            "--signed-overflow-check",
+            "--div-by-zero-check",
+            "--undefined-shift-check",
+            "--conversion-check",
+            "--retain-trivial-checks",
+            "--unwinding-assertions",
+            "--trace"
+          ],
+          "exit": 0,
+          "seconds": 0.0431,
+          "state": "finished",
+          "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "stdout_sha256": "f9915ab80ef3edf67de69c91b69b1d9e6bbbfbd2c81803ea5523d789fd7e07cb"
+        },
+        "coverage": {
+          "arguments": [
+            "unit.c",
+            "--function",
+            "harness",
+            "--32",
+            "--little-endian",
+            "--unwind",
+            "4",
+            "--json-ui",
+            "--cover",
+            "assume"
+          ],
+          "exit": 0,
+          "seconds": 0.0475,
+          "state": "finished",
+          "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "stdout_sha256": "86c156190ef1deff0b06093c1d86fd94adc70af1fa55bae4a271a2510ab44f8f"
+        },
+        "inventory": {
+          "arguments": [
+            "unit.c",
+            "--function",
+            "harness",
+            "--32",
+            "--little-endian",
+            "--unwind",
+            "4",
+            "--json-ui",
+            "--bounds-check",
+            "--pointer-check",
+            "--signed-overflow-check",
+            "--div-by-zero-check",
+            "--undefined-shift-check",
+            "--conversion-check",
+            "--retain-trivial-checks",
+            "--unwinding-assertions",
+            "--show-properties"
+          ],
+          "exit": 0,
+          "seconds": 0.0368,
+          "state": "finished",
+          "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "stdout_sha256": "be5d9637bea0ccaa94f23b1228b6e97715f80b9591a13e0502ea62e57028f9c2"
+        }
+      },
+      "tool": {
+        "binary_sha256": "a62af25d27425610608221d79c202f993efe1d5a85cece186119bec196382995",
+        "name": "CBMC",
+        "version": "6.11.0 (cbmc-6.11.0)"
+      },
+      "unwind": 4,
+      "verdict": "complete"
+    },
+    {
+      "adapter_sha256": "385c53339b74a356fce97de444dcb28d3713b4953d42d43c8ee20e06bbe16c0d",
+      "assumption_goals": [
+        {
+          "description": "assert(false) before assume(bin_count == 72)",
+          "goal": "harness.coverage.1",
+          "status": "satisfied"
+        },
+        {
+          "description": "assert(false) after assume(bin_count == 72)",
+          "goal": "harness.coverage.2",
+          "status": "satisfied"
+        }
+      ],
+      "format": "dawnr-native-cbmc-v1",
+      "native_replay": {
+        "compile": {
+          "arguments": [
+            "-std=c11",
+            "-O0",
+            "-fsanitize=undefined",
+            "-fno-sanitize-recover=undefined",
+            "replay.c",
+            "-o",
+            "replay"
+          ],
+          "exit": 0,
+          "seconds": 0.0569,
+          "state": "finished",
+          "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        "compiler": {
+          "binary_sha256": "1b99826121ae6682a634e5efe09bd3e3df58ce58e0b28f849114ab5b89139c26",
+          "name": "gcc",
+          "target": "x86_64-linux-gnu",
+          "version": "gcc (Ubuntu 13.3.0-6ubuntu2~24.04.1) 13.3.0\nCopyright (C) 2023 Free Software Foundation, Inc.\nThis is free software; see the source for copying conditions.  There is NO\nwarranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE."
+        },
+        "source_sha256": "dbe30344e30878b4ca3fbb6aef67939ba2201e707d64447fe1f5b0cea792b14f",
+        "witnesses": [
+          {
+            "bin": -2147483584,
+            "bin_count": 72,
+            "native_result": -64,
+            "process": {
+              "arguments": [
+                "-2147483584",
+                "72"
+              ],
+              "exit": 0,
+              "seconds": 0.0041,
+              "state": "finished",
+              "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+              "stdout_sha256": "53413dc7056bf384e333a6494093522f17315ae3bc269d638da8889d5d8e6904"
+            },
+            "property": "harness.assertion.2",
+            "result": -64,
+            "status": "range_counterexample"
+          },
+          {
+            "bin": -2147483584,
+            "bin_count": 72,
+            "native_result": -64,
+            "process": {
+              "arguments": [
+                "-2147483584",
+                "72"
+              ],
+              "exit": 0,
+              "seconds": 0.0011,
+              "state": "finished",
+              "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+              "stdout_sha256": "53413dc7056bf384e333a6494093522f17315ae3bc269d638da8889d5d8e6904"
+            },
+            "property": "harness.array_bounds.1",
+            "result": -64,
+            "status": "range_counterexample"
+          },
+          {
+            "bin": -2147483584,
+            "bin_count": 72,
+            "native_result": -64,
+            "process": {
+              "arguments": [
+                "-2147483584",
+                "72"
+              ],
+              "exit": 0,
+              "seconds": 0.0032,
+              "state": "finished",
+              "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+              "stdout_sha256": "53413dc7056bf384e333a6494093522f17315ae3bc269d638da8889d5d8e6904"
+            },
+            "property": "harness.array_bounds.3",
+            "result": -64,
+            "status": "range_counterexample"
+          },
+          {
+            "bin": -2147483584,
+            "bin_count": 72,
+            "native_result": -64,
+            "process": {
+              "arguments": [
+                "-2147483584",
+                "72"
+              ],
+              "exit": 0,
+              "seconds": 0.005,
+              "state": "finished",
+              "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+              "stdout_sha256": "53413dc7056bf384e333a6494093522f17315ae3bc269d638da8889d5d8e6904"
+            },
+            "property": "harness.assertion.3",
+            "result": -64,
+            "status": "range_counterexample"
+          },
+          {
+            "bin": 2147483632,
+            "bin_count": 72,
+            "native_result": null,
+            "process": {
+              "arguments": [
+                "2147483632",
+                "72"
+              ],
+              "exit": 1,
+              "seconds": 0.0031,
+              "state": "finished",
+              "stderr_sha256": "b0ee3fd13c6ef89ae86ec0c3bc2aabdb8c0855a1501b4c92e1a8a904e5fc1241",
+              "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+            },
+            "property": "wrap_bin.overflow.1",
+            "result": 0,
+            "status": "undefined_behavior"
+          }
+        ]
+      },
+      "preprocessor": {
+        "binary_sha256": "1b99826121ae6682a634e5efe09bd3e3df58ce58e0b28f849114ab5b89139c26",
+        "name": "gcc",
+        "target": "x86_64-linux-gnu",
+        "version": "gcc (Ubuntu 13.3.0-6ubuntu2~24.04.1) 13.3.0\nCopyright (C) 2023 Free Software Foundation, Inc.\nThis is free software; see the source for copying conditions.  There is NO\nwarranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE."
+      },
+      "properties": [
+        {
+          "description": "arithmetic overflow on signed to unsigned type conversion in (unsigned int)4",
+          "property": "harness.overflow.1",
+          "status": "SUCCESS"
+        },
+        {
+          "description": "arithmetic overflow on signed to unsigned type conversion in (unsigned int)4",
+          "property": "harness.overflow.2",
+          "status": "SUCCESS"
+        },
+        {
+          "description": "native.machine",
+          "property": "harness.assertion.1",
+          "status": "SUCCESS"
+        },
+        {
+          "description": "native.range",
+          "property": "harness.assertion.2",
+          "status": "FAILURE"
+        },
+        {
+          "description": "arithmetic overflow on signed to unsigned type conversion in (unsigned char)0",
+          "property": "harness.overflow.3",
+          "status": "SUCCESS"
+        },
+        {
+          "description": "array 'bins' lower bound in bins[result]",
+          "property": "harness.array_bounds.1",
+          "status": "FAILURE"
+        },
+        {
+          "description": "array 'bins' upper bound in bins[result]",
+          "property": "harness.array_bounds.2",
+          "status": "UNKNOWN"
+        },
+        {
+          "description": "arithmetic overflow on signed to unsigned type conversion in (unsigned char)1",
+          "property": "harness.overflow.4",
+          "status": "UNKNOWN"
+        },
+        {
+          "description": "array 'bins' lower bound in bins[result]",
+          "property": "harness.array_bounds.3",
+          "status": "FAILURE"
+        },
+        {
+          "description": "array 'bins' upper bound in bins[result]",
+          "property": "harness.array_bounds.4",
+          "status": "UNKNOWN"
+        },
+        {
+          "description": "native.store",
+          "property": "harness.assertion.3",
+          "status": "FAILURE"
+        },
+        {
+          "description": "arithmetic overflow on signed + in bin + bin_count",
+          "property": "wrap_bin.overflow.1",
+          "status": "FAILURE"
+        },
+        {
+          "description": "division by zero in (bin + bin_count) % bin_count",
+          "property": "wrap_bin.division-by-zero.1",
+          "status": "SUCCESS"
+        },
+        {
+          "description": "result of signed mod is not representable in (bin + bin_count) % bin_count",
+          "property": "wrap_bin.overflow.2",
+          "status": "SUCCESS"
+        }
+      ],
+      "reason": "a checked property has a concrete failing trace",
+      "receipt_sha256": "97635d3f757d639ae8d4d41fa660b625c5d3e13b5e2dceb7a8288817360efb7a",
+      "scope": {
+        "case": "mutant",
+        "entry": "harness",
+        "executed_definition_sha256": "ef3139c62cb5b3bf967552670d6130ba2c535f573669328b9ad97fdfd72b5838",
+        "expected_assertions": [
+          "native.machine",
+          "native.range",
+          "native.store"
+        ],
+        "expected_assumptions": 1,
+        "expected_loops": 0,
+        "inputs": "all int32 bin; bin_count == 72",
+        "limitations": "extracted function and stated harness only; no PX4 callers, concurrency, hardware, timing or flight certification",
+        "machine_model": "CBMC ILP32 little-endian; 32-bit signed int; 8-bit byte",
+        "source": {
+          "definition_sha256": "3b55249ccabfd98595b9fca1a938681b441cab9f72a83699bc31748e484368f0",
+          "function": "ObstacleMath::wrap_bin(int,int)",
+          "mutation": {
+            "description": "replace fixed definition with the original expression",
+            "replacement": {
+              "definition_sha256": "ef3139c62cb5b3bf967552670d6130ba2c535f573669328b9ad97fdfd72b5838",
+              "function": "ObstacleMath::wrap_bin(int,int)",
+              "path": "src/lib/collision_prevention/ObstacleMath.cpp",
+              "repository": "PX4/PX4-Autopilot",
+              "revision": "dd804e4b9c490aed051bb36f8d3fca1ee137be2a",
+              "sha256": "90146c4c5d67ec86a97da974f92e892a0d75ad81c3e33c1d4f849830514e7ba6",
+              "transformations": [
+                "extract definition unchanged",
+                "omit surrounding namespace and includes",
+                "parse extracted definition as C"
+              ]
+            }
+          },
+          "path": "src/lib/collision_prevention/ObstacleMath.cpp",
+          "repository": "PX4/PX4-Autopilot",
+          "revision": "07d30f9341dc02720eac2ed6fb9ee7524f8bd713",
+          "sha256": "d01b82d5cb76ae8449a3d0411c9a4dadf6c905ef44cce419f7d63cd9090fb8c2",
+          "transformations": [
+            "extract definition unchanged",
+            "omit surrounding namespace and includes",
+            "parse extracted definition as C"
+          ]
+        },
+        "unit_sha256": "979ec7a102207bce3a249d0e6f844aaa392cacaed1e8733d5eb31e5e9a24caff"
+      },
+      "stages": {
+        "checking": {
+          "arguments": [
+            "unit.c",
+            "--function",
+            "harness",
+            "--32",
+            "--little-endian",
+            "--unwind",
+            "4",
+            "--json-ui",
+            "--bounds-check",
+            "--pointer-check",
+            "--signed-overflow-check",
+            "--div-by-zero-check",
+            "--undefined-shift-check",
+            "--conversion-check",
+            "--retain-trivial-checks",
+            "--unwinding-assertions",
+            "--trace"
+          ],
+          "exit": 10,
+          "seconds": 0.0557,
+          "state": "finished",
+          "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "stdout_sha256": "d23e37cd10048f231350bff60dff0bd712cfc2f9e73fe55c60a15cedcc17a9e6"
+        },
+        "coverage": {
+          "arguments": [
+            "unit.c",
+            "--function",
+            "harness",
+            "--32",
+            "--little-endian",
+            "--unwind",
+            "4",
+            "--json-ui",
+            "--cover",
+            "assume"
+          ],
+          "exit": 0,
+          "seconds": 0.0465,
+          "state": "finished",
+          "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "stdout_sha256": "b2d1068a3848b6396c7d19ac2188d6d25c0c1a74f1283494bbf1d7c3e92d6b59"
+        },
+        "inventory": {
+          "arguments": [
+            "unit.c",
+            "--function",
+            "harness",
+            "--32",
+            "--little-endian",
+            "--unwind",
+            "4",
+            "--json-ui",
+            "--bounds-check",
+            "--pointer-check",
+            "--signed-overflow-check",
+            "--div-by-zero-check",
+            "--undefined-shift-check",
+            "--conversion-check",
+            "--retain-trivial-checks",
+            "--unwinding-assertions",
+            "--show-properties"
+          ],
+          "exit": 0,
+          "seconds": 0.0372,
+          "state": "finished",
+          "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "stdout_sha256": "a6454cceebc728ca8e835191b1443487110510630ca63364c3eba2ec22db23ac"
+        }
+      },
+      "tool": {
+        "binary_sha256": "a62af25d27425610608221d79c202f993efe1d5a85cece186119bec196382995",
+        "name": "CBMC",
+        "version": "6.11.0 (cbmc-6.11.0)"
+      },
+      "unwind": 4,
+      "verdict": "counterexample"
+    },
+    {
+      "adapter_sha256": "385c53339b74a356fce97de444dcb28d3713b4953d42d43c8ee20e06bbe16c0d",
+      "assumption_goals": [
+        {
+          "description": "assert(false) before assume(bin_count == 72)",
+          "goal": "harness.coverage.1",
+          "status": "satisfied"
+        },
+        {
+          "description": "assert(false) after assume(bin_count == 72)",
+          "goal": "harness.coverage.2",
+          "status": "satisfied"
+        }
+      ],
+      "format": "dawnr-native-cbmc-v1",
+      "native_replay": {
+        "compile": {
+          "arguments": [
+            "-std=c11",
+            "-O0",
+            "-fsanitize=undefined",
+            "-fno-sanitize-recover=undefined",
+            "replay.c",
+            "-o",
+            "replay"
+          ],
+          "exit": 0,
+          "seconds": 0.0644,
+          "state": "finished",
+          "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        "compiler": {
+          "binary_sha256": "1b99826121ae6682a634e5efe09bd3e3df58ce58e0b28f849114ab5b89139c26",
+          "name": "gcc",
+          "target": "x86_64-linux-gnu",
+          "version": "gcc (Ubuntu 13.3.0-6ubuntu2~24.04.1) 13.3.0\nCopyright (C) 2023 Free Software Foundation, Inc.\nThis is free software; see the source for copying conditions.  There is NO\nwarranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE."
+        },
+        "source_sha256": "dbe30344e30878b4ca3fbb6aef67939ba2201e707d64447fe1f5b0cea792b14f",
+        "witnesses": [
+          {
+            "bin": -2147483584,
+            "bin_count": 72,
+            "native_result": -64,
+            "process": {
+              "arguments": [
+                "-2147483584",
+                "72"
+              ],
+              "exit": 0,
+              "seconds": 0.0016,
+              "state": "finished",
+              "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+              "stdout_sha256": "53413dc7056bf384e333a6494093522f17315ae3bc269d638da8889d5d8e6904"
+            },
+            "property": "harness.assertion.2",
+            "result": -64,
+            "status": "range_counterexample"
+          },
+          {
+            "bin": -2147483584,
+            "bin_count": 72,
+            "native_result": -64,
+            "process": {
+              "arguments": [
+                "-2147483584",
+                "72"
+              ],
+              "exit": 0,
+              "seconds": 0.0042,
+              "state": "finished",
+              "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+              "stdout_sha256": "53413dc7056bf384e333a6494093522f17315ae3bc269d638da8889d5d8e6904"
+            },
+            "property": "harness.array_bounds.1",
+            "result": -64,
+            "status": "range_counterexample"
+          },
+          {
+            "bin": -2147483584,
+            "bin_count": 72,
+            "native_result": -64,
+            "process": {
+              "arguments": [
+                "-2147483584",
+                "72"
+              ],
+              "exit": 0,
+              "seconds": 0.0013,
+              "state": "finished",
+              "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+              "stdout_sha256": "53413dc7056bf384e333a6494093522f17315ae3bc269d638da8889d5d8e6904"
+            },
+            "property": "harness.array_bounds.3",
+            "result": -64,
+            "status": "range_counterexample"
+          },
+          {
+            "bin": -2147483584,
+            "bin_count": 72,
+            "native_result": -64,
+            "process": {
+              "arguments": [
+                "-2147483584",
+                "72"
+              ],
+              "exit": 0,
+              "seconds": 0.0025,
+              "state": "finished",
+              "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+              "stdout_sha256": "53413dc7056bf384e333a6494093522f17315ae3bc269d638da8889d5d8e6904"
+            },
+            "property": "harness.assertion.3",
+            "result": -64,
+            "status": "range_counterexample"
+          },
+          {
+            "bin": 2147483632,
+            "bin_count": 72,
+            "native_result": null,
+            "process": {
+              "arguments": [
+                "2147483632",
+                "72"
+              ],
+              "exit": 1,
+              "seconds": 0.0014,
+              "state": "finished",
+              "stderr_sha256": "b0ee3fd13c6ef89ae86ec0c3bc2aabdb8c0855a1501b4c92e1a8a904e5fc1241",
+              "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+            },
+            "property": "wrap_bin.overflow.1",
+            "result": 0,
+            "status": "undefined_behavior"
+          }
+        ]
+      },
+      "preprocessor": {
+        "binary_sha256": "1b99826121ae6682a634e5efe09bd3e3df58ce58e0b28f849114ab5b89139c26",
+        "name": "gcc",
+        "target": "x86_64-linux-gnu",
+        "version": "gcc (Ubuntu 13.3.0-6ubuntu2~24.04.1) 13.3.0\nCopyright (C) 2023 Free Software Foundation, Inc.\nThis is free software; see the source for copying conditions.  There is NO\nwarranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE."
+      },
+      "properties": [
+        {
+          "description": "arithmetic overflow on signed to unsigned type conversion in (unsigned int)4",
+          "property": "harness.overflow.1",
+          "status": "SUCCESS"
+        },
+        {
+          "description": "arithmetic overflow on signed to unsigned type conversion in (unsigned int)4",
+          "property": "harness.overflow.2",
+          "status": "SUCCESS"
+        },
+        {
+          "description": "native.machine",
+          "property": "harness.assertion.1",
+          "status": "SUCCESS"
+        },
+        {
+          "description": "native.range",
+          "property": "harness.assertion.2",
+          "status": "FAILURE"
+        },
+        {
+          "description": "arithmetic overflow on signed to unsigned type conversion in (unsigned char)0",
+          "property": "harness.overflow.3",
+          "status": "SUCCESS"
+        },
+        {
+          "description": "array 'bins' lower bound in bins[result]",
+          "property": "harness.array_bounds.1",
+          "status": "FAILURE"
+        },
+        {
+          "description": "array 'bins' upper bound in bins[result]",
+          "property": "harness.array_bounds.2",
+          "status": "UNKNOWN"
+        },
+        {
+          "description": "arithmetic overflow on signed to unsigned type conversion in (unsigned char)1",
+          "property": "harness.overflow.4",
+          "status": "UNKNOWN"
+        },
+        {
+          "description": "array 'bins' lower bound in bins[result]",
+          "property": "harness.array_bounds.3",
+          "status": "FAILURE"
+        },
+        {
+          "description": "array 'bins' upper bound in bins[result]",
+          "property": "harness.array_bounds.4",
+          "status": "UNKNOWN"
+        },
+        {
+          "description": "native.store",
+          "property": "harness.assertion.3",
+          "status": "FAILURE"
+        },
+        {
+          "description": "arithmetic overflow on signed + in bin + bin_count",
+          "property": "wrap_bin.overflow.1",
+          "status": "FAILURE"
+        },
+        {
+          "description": "division by zero in (bin + bin_count) % bin_count",
+          "property": "wrap_bin.division-by-zero.1",
+          "status": "SUCCESS"
+        },
+        {
+          "description": "result of signed mod is not representable in (bin + bin_count) % bin_count",
+          "property": "wrap_bin.overflow.2",
+          "status": "SUCCESS"
+        }
+      ],
+      "reason": "a checked property has a concrete failing trace",
+      "receipt_sha256": "b09b6d293f632725302b0d2af69600830cfeab45457479cb84bf00c6acf338ea",
+      "scope": {
+        "case": "original",
+        "entry": "harness",
+        "executed_definition_sha256": "ef3139c62cb5b3bf967552670d6130ba2c535f573669328b9ad97fdfd72b5838",
+        "expected_assertions": [
+          "native.machine",
+          "native.range",
+          "native.store"
+        ],
+        "expected_assumptions": 1,
+        "expected_loops": 0,
+        "inputs": "all int32 bin; bin_count == 72",
+        "limitations": "extracted function and stated harness only; no PX4 callers, concurrency, hardware, timing or flight certification",
+        "machine_model": "CBMC ILP32 little-endian; 32-bit signed int; 8-bit byte",
+        "source": {
+          "definition_sha256": "ef3139c62cb5b3bf967552670d6130ba2c535f573669328b9ad97fdfd72b5838",
+          "function": "ObstacleMath::wrap_bin(int,int)",
+          "path": "src/lib/collision_prevention/ObstacleMath.cpp",
+          "repository": "PX4/PX4-Autopilot",
+          "revision": "dd804e4b9c490aed051bb36f8d3fca1ee137be2a",
+          "sha256": "90146c4c5d67ec86a97da974f92e892a0d75ad81c3e33c1d4f849830514e7ba6",
+          "transformations": [
+            "extract definition unchanged",
+            "omit surrounding namespace and includes",
+            "parse extracted definition as C"
+          ]
+        },
+        "unit_sha256": "979ec7a102207bce3a249d0e6f844aaa392cacaed1e8733d5eb31e5e9a24caff"
+      },
+      "stages": {
+        "checking": {
+          "arguments": [
+            "unit.c",
+            "--function",
+            "harness",
+            "--32",
+            "--little-endian",
+            "--unwind",
+            "4",
+            "--json-ui",
+            "--bounds-check",
+            "--pointer-check",
+            "--signed-overflow-check",
+            "--div-by-zero-check",
+            "--undefined-shift-check",
+            "--conversion-check",
+            "--retain-trivial-checks",
+            "--unwinding-assertions",
+            "--trace"
+          ],
+          "exit": 10,
+          "seconds": 0.0531,
+          "state": "finished",
+          "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "stdout_sha256": "5a11a286516ec922d6549aec474fcbd7407b0f0186c202319356bb9d9b6f2bfc"
+        },
+        "coverage": {
+          "arguments": [
+            "unit.c",
+            "--function",
+            "harness",
+            "--32",
+            "--little-endian",
+            "--unwind",
+            "4",
+            "--json-ui",
+            "--cover",
+            "assume"
+          ],
+          "exit": 0,
+          "seconds": 0.0399,
+          "state": "finished",
+          "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "stdout_sha256": "9052e2626b39324a386687ffd8b9588ed0d5bc9db41b020a899bc5a823d00d61"
+        },
+        "inventory": {
+          "arguments": [
+            "unit.c",
+            "--function",
+            "harness",
+            "--32",
+            "--little-endian",
+            "--unwind",
+            "4",
+            "--json-ui",
+            "--bounds-check",
+            "--pointer-check",
+            "--signed-overflow-check",
+            "--div-by-zero-check",
+            "--undefined-shift-check",
+            "--conversion-check",
+            "--retain-trivial-checks",
+            "--unwinding-assertions",
+            "--show-properties"
+          ],
+          "exit": 0,
+          "seconds": 0.0448,
+          "state": "finished",
+          "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "stdout_sha256": "e38819eede65ed2983235fa057ccd9121e99adf1f075ea826bc80fea31d916a6"
+        }
+      },
+      "tool": {
+        "binary_sha256": "a62af25d27425610608221d79c202f993efe1d5a85cece186119bec196382995",
+        "name": "CBMC",
+        "version": "6.11.0 (cbmc-6.11.0)"
+      },
+      "unwind": 4,
+      "verdict": "counterexample"
+    },
+    {
+      "adapter_sha256": "385c53339b74a356fce97de444dcb28d3713b4953d42d43c8ee20e06bbe16c0d",
+      "assumption_goals": [
+        {
+          "description": "assert(false) before assume(bin_count == 72)",
+          "goal": "harness.coverage.1",
+          "status": "satisfied"
+        },
+        {
+          "description": "assert(false) after assume(bin_count == 72)",
+          "goal": "harness.coverage.2",
+          "status": "satisfied"
+        },
+        {
+          "description": "assert(false) before assume(bin_count != 72)",
+          "goal": "harness.coverage.3",
+          "status": "satisfied"
+        },
+        {
+          "description": "assert(false) after assume(bin_count != 72)",
+          "goal": "harness.coverage.4",
+          "status": "failed"
+        }
+      ],
+      "format": "dawnr-native-cbmc-v1",
+      "native_replay": null,
+      "preprocessor": {
+        "binary_sha256": "1b99826121ae6682a634e5efe09bd3e3df58ce58e0b28f849114ab5b89139c26",
+        "name": "gcc",
+        "target": "x86_64-linux-gnu",
+        "version": "gcc (Ubuntu 13.3.0-6ubuntu2~24.04.1) 13.3.0\nCopyright (C) 2023 Free Software Foundation, Inc.\nThis is free software; see the source for copying conditions.  There is NO\nwarranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE."
+      },
+      "properties": [
+        {
+          "description": "arithmetic overflow on signed to unsigned type conversion in (unsigned int)4",
+          "property": "harness.overflow.1",
+          "status": "SUCCESS"
+        },
+        {
+          "description": "arithmetic overflow on signed to unsigned type conversion in (unsigned int)4",
+          "property": "harness.overflow.2",
+          "status": "SUCCESS"
+        },
+        {
+          "description": "native.machine",
+          "property": "harness.assertion.1",
+          "status": "SUCCESS"
+        },
+        {
+          "description": "native.range",
+          "property": "harness.assertion.2",
+          "status": "SUCCESS"
+        },
+        {
+          "description": "arithmetic overflow on signed to unsigned type conversion in (unsigned char)0",
+          "property": "harness.overflow.3",
+          "status": "SUCCESS"
+        },
+        {
+          "description": "array 'bins' lower bound in bins[result]",
+          "property": "harness.array_bounds.1",
+          "status": "SUCCESS"
+        },
+        {
+          "description": "array 'bins' upper bound in bins[result]",
+          "property": "harness.array_bounds.2",
+          "status": "SUCCESS"
+        },
+        {
+          "description": "arithmetic overflow on signed to unsigned type conversion in (unsigned char)1",
+          "property": "harness.overflow.4",
+          "status": "SUCCESS"
+        },
+        {
+          "description": "array 'bins' lower bound in bins[result]",
+          "property": "harness.array_bounds.3",
+          "status": "SUCCESS"
+        },
+        {
+          "description": "array 'bins' upper bound in bins[result]",
+          "property": "harness.array_bounds.4",
+          "status": "SUCCESS"
+        },
+        {
+          "description": "native.store",
+          "property": "harness.assertion.3",
+          "status": "SUCCESS"
+        },
+        {
+          "description": "division by zero in bin % bin_count",
+          "property": "wrap_bin.division-by-zero.1",
+          "status": "SUCCESS"
+        },
+        {
+          "description": "result of signed mod is not representable in bin % bin_count",
+          "property": "wrap_bin.overflow.1",
+          "status": "SUCCESS"
+        },
+        {
+          "description": "arithmetic overflow on signed + in wrapped + bin_count",
+          "property": "wrap_bin.overflow.2",
+          "status": "SUCCESS"
+        }
+      ],
+      "reason": "assumption coverage has an unreachable before/after goal",
+      "receipt_sha256": "45447a213dfb2702ce44e8e2cd089e252facc604f3e18e7d98ff6f20e07429f4",
+      "scope": {
+        "case": "vacuous",
+        "entry": "harness",
+        "executed_definition_sha256": "3b55249ccabfd98595b9fca1a938681b441cab9f72a83699bc31748e484368f0",
+        "expected_assertions": [
+          "native.machine",
+          "native.range",
+          "native.store"
+        ],
+        "expected_assumptions": 2,
+        "expected_loops": 0,
+        "inputs": "all int32 bin; bin_count == 72",
+        "limitations": "extracted function and stated harness only; no PX4 callers, concurrency, hardware, timing or flight certification",
+        "machine_model": "CBMC ILP32 little-endian; 32-bit signed int; 8-bit byte",
+        "source": {
+          "definition_sha256": "3b55249ccabfd98595b9fca1a938681b441cab9f72a83699bc31748e484368f0",
+          "function": "ObstacleMath::wrap_bin(int,int)",
+          "path": "src/lib/collision_prevention/ObstacleMath.cpp",
+          "repository": "PX4/PX4-Autopilot",
+          "revision": "07d30f9341dc02720eac2ed6fb9ee7524f8bd713",
+          "sha256": "d01b82d5cb76ae8449a3d0411c9a4dadf6c905ef44cce419f7d63cd9090fb8c2",
+          "transformations": [
+            "extract definition unchanged",
+            "omit surrounding namespace and includes",
+            "parse extracted definition as C"
+          ]
+        },
+        "unit_sha256": "a764e153e6089306106cac6d7c575ed859448ce809b76bb072a8f5af31b4eedd"
+      },
+      "stages": {
+        "checking": {
+          "arguments": [
+            "unit.c",
+            "--function",
+            "harness",
+            "--32",
+            "--little-endian",
+            "--unwind",
+            "4",
+            "--json-ui",
+            "--bounds-check",
+            "--pointer-check",
+            "--signed-overflow-check",
+            "--div-by-zero-check",
+            "--undefined-shift-check",
+            "--conversion-check",
+            "--retain-trivial-checks",
+            "--unwinding-assertions",
+            "--trace"
+          ],
+          "exit": 0,
+          "seconds": 0.0395,
+          "state": "finished",
+          "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "stdout_sha256": "135ac3d0de3f4f6a4b27e021cf7095453e60b83abcd0ca2c152a176398709bc7"
+        },
+        "coverage": {
+          "arguments": [
+            "unit.c",
+            "--function",
+            "harness",
+            "--32",
+            "--little-endian",
+            "--unwind",
+            "4",
+            "--json-ui",
+            "--cover",
+            "assume"
+          ],
+          "exit": 0,
+          "seconds": 0.0448,
+          "state": "finished",
+          "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "stdout_sha256": "bb642ff5ccd33e322d7f24e21fe3e2d429063d254705f95ccfd972ed6f183e58"
+        },
+        "inventory": {
+          "arguments": [
+            "unit.c",
+            "--function",
+            "harness",
+            "--32",
+            "--little-endian",
+            "--unwind",
+            "4",
+            "--json-ui",
+            "--bounds-check",
+            "--pointer-check",
+            "--signed-overflow-check",
+            "--div-by-zero-check",
+            "--undefined-shift-check",
+            "--conversion-check",
+            "--retain-trivial-checks",
+            "--unwinding-assertions",
+            "--show-properties"
+          ],
+          "exit": 0,
+          "seconds": 0.0376,
+          "state": "finished",
+          "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "stdout_sha256": "a34ba4b9f4f01143fd6cad05c4bf3f5fa22c08ee7e963ad7e66d644c66c66aa0"
+        }
+      },
+      "tool": {
+        "binary_sha256": "a62af25d27425610608221d79c202f993efe1d5a85cece186119bec196382995",
+        "name": "CBMC",
+        "version": "6.11.0 (cbmc-6.11.0)"
+      },
+      "unwind": 4,
+      "verdict": "vacuous"
+    }
+  ],
+  "date": "2026-10-10",
+  "format": "dawnr-native-cbmc-pilot-summary-v1",
+  "tests": {
+    "command": "CBMC=/path/to/cbmc python -m pytest -q t/test_native_check.py",
+    "passed": 36,
+    "skipped": 0
+  }
+}

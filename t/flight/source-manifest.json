@@ -1,0 +1,394 @@
+{
+  "acquisition": {
+    "cached_bytes_used_as_authority": false,
+    "date": "2026-10-10",
+    "source": "GitHub Contents API at each full pinned commit; decoded bytes also checked against the returned Git blob SHA-1"
+  },
+  "schema": 1,
+  "sources": [
+    {
+      "bytes": 1527,
+      "git_blob_sha1": "57c2b07f688250779ab411d84708b5282d6b3245",
+      "path": "LICENSE",
+      "repository": "PX4/PX4-Autopilot",
+      "revision": "dd804e4b9c490aed051bb36f8d3fca1ee137be2a",
+      "sha256": "0e31cba0e521c572e59a350286c6d1272abff7a7b6ebecb0e7d9eee6547a2106"
+    },
+    {
+      "bytes": 4092,
+      "git_blob_sha1": "e75f19d7b791e97dec3779281d47a3ae0c4f8199",
+      "path": "src/lib/collision_prevention/ObstacleMath.cpp",
+      "repository": "PX4/PX4-Autopilot",
+      "revision": "dd804e4b9c490aed051bb36f8d3fca1ee137be2a",
+      "sha256": "90146c4c5d67ec86a97da974f92e892a0d75ad81c3e33c1d4f849830514e7ba6"
+    },
+    {
+      "bytes": 4218,
+      "git_blob_sha1": "8a1db0217aa0c4c6ad30621e4a6ed3c3f9499186",
+      "path": "src/lib/collision_prevention/ObstacleMath.hpp",
+      "repository": "PX4/PX4-Autopilot",
+      "revision": "dd804e4b9c490aed051bb36f8d3fca1ee137be2a",
+      "sha256": "782e6e3fa4584954b366886973cb763a8108310f165b8b23eeb1a369186ff9e4"
+    },
+    {
+      "bytes": 2921,
+      "git_blob_sha1": "3cadc7b7ea6533ca5e910010958863cdd8f60882",
+      "path": "src/lib/hysteresis/hysteresis.cpp",
+      "repository": "PX4/PX4-Autopilot",
+      "revision": "dd804e4b9c490aed051bb36f8d3fca1ee137be2a",
+      "sha256": "130d99837bd79ae0ce9a29b4ba3d01c4b7c4091bce907761900a0a5f625a54fb"
+    },
+    {
+      "bytes": 2512,
+      "git_blob_sha1": "850d204825f30448503702497e9c1b53d545b78d",
+      "path": "src/lib/hysteresis/hysteresis.h",
+      "repository": "PX4/PX4-Autopilot",
+      "revision": "dd804e4b9c490aed051bb36f8d3fca1ee137be2a",
+      "sha256": "38666acfb04b549e3c067471fc4a5a1d8ca19bb7d07f53502430262fcaa28d23"
+    },
+    {
+      "bytes": 8147,
+      "git_blob_sha1": "4988078bb5a5c080a9d470e1705268392161c824",
+      "path": "src/lib/mathlib/math/Functions.hpp",
+      "repository": "PX4/PX4-Autopilot",
+      "revision": "dd804e4b9c490aed051bb36f8d3fca1ee137be2a",
+      "sha256": "e18d181be94ed4fc7aa0273ee459b9efaa584ea9b7be5a6e8e46e2ae6d000c8f"
+    },
+    {
+      "bytes": 4439,
+      "git_blob_sha1": "79a89c428406afdd731a5b769bde82141b262224",
+      "path": "src/lib/mathlib/math/Limits.hpp",
+      "repository": "PX4/PX4-Autopilot",
+      "revision": "dd804e4b9c490aed051bb36f8d3fca1ee137be2a",
+      "sha256": "e9a627eb54d677d1522750bd98e3fed6888ed8cdf0fc39fc311d8c3a0da3cdb9"
+    },
+    {
+      "bytes": 2519,
+      "git_blob_sha1": "71ecd806c483388d7458a9c418f701be2be52956",
+      "path": "src/lib/mathlib/math/SearchMin.hpp",
+      "repository": "PX4/PX4-Autopilot",
+      "revision": "dd804e4b9c490aed051bb36f8d3fca1ee137be2a",
+      "sha256": "9beba445ae3422f8c0c55caa712df6e0eedda8cf82f1de2be08919179bfb01d6"
+    },
+    {
+      "bytes": 6026,
+      "git_blob_sha1": "f26a3406ebfda7d1704e0065387b5f1902fd94ee",
+      "path": "src/lib/mathlib/math/TrajMath.hpp",
+      "repository": "PX4/PX4-Autopilot",
+      "revision": "dd804e4b9c490aed051bb36f8d3fca1ee137be2a",
+      "sha256": "e405c0157c7d7cfb8aa5bb52acec3719c04b667424819258e9ab2c7f7066c042"
+    },
+    {
+      "bytes": 6580,
+      "git_blob_sha1": "890346b9733c21c387c9725f8d5818fda89dffdf",
+      "path": "src/lib/mathlib/math/Utilities.hpp",
+      "repository": "PX4/PX4-Autopilot",
+      "revision": "dd804e4b9c490aed051bb36f8d3fca1ee137be2a",
+      "sha256": "68839f70c41387dc5847a0b358158de6f9950655460777718bf485b6d0f6e6bb"
+    },
+    {
+      "bytes": 6357,
+      "git_blob_sha1": "c0d6e49a0acd701a4acac290f8f268ede27f7352",
+      "path": "src/lib/mathlib/math/filter/AlphaFilter.hpp",
+      "repository": "PX4/PX4-Autopilot",
+      "revision": "dd804e4b9c490aed051bb36f8d3fca1ee137be2a",
+      "sha256": "1d3c86c0adf4e581a418ccbaf0ac186fa70aa93f43cef90a08fa3fb0f1de9733"
+    },
+    {
+      "bytes": 1990,
+      "git_blob_sha1": "e8059eacb9c3e70529b767e6cf62f351898f7dc4",
+      "path": "src/lib/mathlib/mathlib.h",
+      "repository": "PX4/PX4-Autopilot",
+      "revision": "dd804e4b9c490aed051bb36f8d3fca1ee137be2a",
+      "sha256": "aa41303279b930fd9de83a5f4f49acd9fe56c61f1f4505afeb91d239a435cd8f"
+    },
+    {
+      "bytes": 3015,
+      "git_blob_sha1": "5cf351a3efb2dbdccaab0847b1d3731257b88fa7",
+      "path": "src/lib/matrix/matrix/AxisAngle.hpp",
+      "repository": "PX4/PX4-Autopilot",
+      "revision": "dd804e4b9c490aed051bb36f8d3fca1ee137be2a",
+      "sha256": "818116a17cd2710d4fa92d9c4748adfa26943fb282f08bbd84fff0ce245de6fc"
+    },
+    {
+      "bytes": 4202,
+      "git_blob_sha1": "e05da5cbf3ee255b333702a5d6147a810f34656c",
+      "path": "src/lib/matrix/matrix/Dcm.hpp",
+      "repository": "PX4/PX4-Autopilot",
+      "revision": "dd804e4b9c490aed051bb36f8d3fca1ee137be2a",
+      "sha256": "caa5a7d4ca2a9775dfcf14ef953ae685a0b2c98703b0bedc8202f0ba6af1c595"
+    },
+    {
+      "bytes": 3716,
+      "git_blob_sha1": "e74ea48b3e71070859b4f7e6ecb7f1774d517572",
+      "path": "src/lib/matrix/matrix/Dcm2.hpp",
+      "repository": "PX4/PX4-Autopilot",
+      "revision": "dd804e4b9c490aed051bb36f8d3fca1ee137be2a",
+      "sha256": "bcad8c98950af544e424675754f8496975d2b986b56f32f59276f077e6bc5f04"
+    },
+    {
+      "bytes": 8478,
+      "git_blob_sha1": "efb8f056d8eba51114fd5ad3006092f682e1b26e",
+      "path": "src/lib/matrix/matrix/Dual.hpp",
+      "repository": "PX4/PX4-Autopilot",
+      "revision": "dd804e4b9c490aed051bb36f8d3fca1ee137be2a",
+      "sha256": "b7954e3e2efeecf2480c6fcc7e7134aa59638a5a59bfa53313c8ab09c66c3f48"
+    },
+    {
+      "bytes": 3167,
+      "git_blob_sha1": "5a6f85122535e65a59810c71d96d63b5e86d8f03",
+      "path": "src/lib/matrix/matrix/Euler.hpp",
+      "repository": "PX4/PX4-Autopilot",
+      "revision": "dd804e4b9c490aed051bb36f8d3fca1ee137be2a",
+      "sha256": "346d2f1c252c9c9f0ac9d9731a7c3d2ce8f39198119ebe2ffd9602d7f2fec01a"
+    },
+    {
+      "bytes": 3200,
+      "git_blob_sha1": "80aed7cfee4e96428da21c750f1a7850d2c00834",
+      "path": "src/lib/matrix/matrix/LeastSquaresSolver.hpp",
+      "repository": "PX4/PX4-Autopilot",
+      "revision": "dd804e4b9c490aed051bb36f8d3fca1ee137be2a",
+      "sha256": "5d730e21d2055cfe66f0175381655999ec63f8a0948b6ea88c591812e2ec998b"
+    },
+    {
+      "bytes": 16975,
+      "git_blob_sha1": "af6991cda761b0dc0ee2d3367bf710352422b63d",
+      "path": "src/lib/matrix/matrix/Matrix.hpp",
+      "repository": "PX4/PX4-Autopilot",
+      "revision": "dd804e4b9c490aed051bb36f8d3fca1ee137be2a",
+      "sha256": "25fc20775feb8610513c89e768675cec3ac4b06c541093f7aede7ae9b2baeadf"
+    },
+    {
+      "bytes": 2552,
+      "git_blob_sha1": "70404aed7180cfbdbb8e6f5ca05cc56bfa7d2457",
+      "path": "src/lib/matrix/matrix/PseudoInverse.hpp",
+      "repository": "PX4/PX4-Autopilot",
+      "revision": "dd804e4b9c490aed051bb36f8d3fca1ee137be2a",
+      "sha256": "583ca813d21aa4e6b52c417c95d65854d4dda5683856466c7bffd8aa0662295d"
+    },
+    {
+      "bytes": 13756,
+      "git_blob_sha1": "5ce980c39b2b494081fad52cdd31bae37a8e268e",
+      "path": "src/lib/matrix/matrix/Quaternion.hpp",
+      "repository": "PX4/PX4-Autopilot",
+      "revision": "dd804e4b9c490aed051bb36f8d3fca1ee137be2a",
+      "sha256": "f06a8af54ffb011bd839854ddf6432803778f88a25439fe4ff9369e996b5325a"
+    },
+    {
+      "bytes": 812,
+      "git_blob_sha1": "c40b32912bc3e50daa412149f2111b6a028f4292",
+      "path": "src/lib/matrix/matrix/Scalar.hpp",
+      "repository": "PX4/PX4-Autopilot",
+      "revision": "dd804e4b9c490aed051bb36f8d3fca1ee137be2a",
+      "sha256": "a30551309023c797c53128982033cb24c7a08ed30300c87c6d092d6b918f8648"
+    },
+    {
+      "bytes": 8157,
+      "git_blob_sha1": "02de706b5dc9f6a020cbba4f4f0f7c48dce02c0f",
+      "path": "src/lib/matrix/matrix/Slice.hpp",
+      "repository": "PX4/PX4-Autopilot",
+      "revision": "dd804e4b9c490aed051bb36f8d3fca1ee137be2a",
+      "sha256": "03ea65539212cc5cc7c9dd5f10556dd0960b82df625ea12c6dd79c237e843964"
+    },
+    {
+      "bytes": 4363,
+      "git_blob_sha1": "3bb13b4465942a7db0693b1f096315fb02e420fe",
+      "path": "src/lib/matrix/matrix/SparseVector.hpp",
+      "repository": "PX4/PX4-Autopilot",
+      "revision": "dd804e4b9c490aed051bb36f8d3fca1ee137be2a",
+      "sha256": "634b10b986daf14b54508ef344f693835b66e317a0c73a97c9726f3b1303bba3"
+    },
+    {
+      "bytes": 14234,
+      "git_blob_sha1": "610e313d386dbc658d72cb28e9e42d8ad2402c26",
+      "path": "src/lib/matrix/matrix/SquareMatrix.hpp",
+      "repository": "PX4/PX4-Autopilot",
+      "revision": "dd804e4b9c490aed051bb36f8d3fca1ee137be2a",
+      "sha256": "e5db91021b60010809bb1827bf3d755246cb7131bece1600d795c437439b47a6"
+    },
+    {
+      "bytes": 2903,
+      "git_blob_sha1": "0b174818e348ec0eb754d163ab3e1f0920c23570",
+      "path": "src/lib/matrix/matrix/Vector.hpp",
+      "repository": "PX4/PX4-Autopilot",
+      "revision": "dd804e4b9c490aed051bb36f8d3fca1ee137be2a",
+      "sha256": "5595c689b197060a62dcf4b9b7a9099404e32734a4153af92c2f87b47eafe6ca"
+    },
+    {
+      "bytes": 1615,
+      "git_blob_sha1": "88ef40ba550574d8372e28abe985244fa78e294a",
+      "path": "src/lib/matrix/matrix/Vector2.hpp",
+      "repository": "PX4/PX4-Autopilot",
+      "revision": "dd804e4b9c490aed051bb36f8d3fca1ee137be2a",
+      "sha256": "f67e1de6338711d29e179fc91671c7e97246f3a0078130b6a980aca293c5ee5c"
+    },
+    {
+      "bytes": 2067,
+      "git_blob_sha1": "ccfece92f0e402463e1ede17a1ad6214ab68af9c",
+      "path": "src/lib/matrix/matrix/Vector3.hpp",
+      "repository": "PX4/PX4-Autopilot",
+      "revision": "dd804e4b9c490aed051bb36f8d3fca1ee137be2a",
+      "sha256": "4d70963cbfd106868fa1e40acf73b2a4ea022722a13271d019a241f3183f12ba"
+    },
+    {
+      "bytes": 3206,
+      "git_blob_sha1": "5115d420e35fb3a412e4891c67a2015e24b98de9",
+      "path": "src/lib/matrix/matrix/Vector4.hpp",
+      "repository": "PX4/PX4-Autopilot",
+      "revision": "dd804e4b9c490aed051bb36f8d3fca1ee137be2a",
+      "sha256": "23c0f7553e8b6138cad96964e1ba96d7931bacef43a2a325b5e4f7beb42524d6"
+    },
+    {
+      "bytes": 563,
+      "git_blob_sha1": "983af10eab2dc35773ddc5862f34db178021a9d8",
+      "path": "src/lib/matrix/matrix/filter.hpp",
+      "repository": "PX4/PX4-Autopilot",
+      "revision": "dd804e4b9c490aed051bb36f8d3fca1ee137be2a",
+      "sha256": "03c2a5470e0e70b7627fe0c027042de2434dda725ab8613894a2d456e5197f34"
+    },
+    {
+      "bytes": 3656,
+      "git_blob_sha1": "eb5908846b364d05f5449088f05c53c25e5d2252",
+      "path": "src/lib/matrix/matrix/helper_functions.hpp",
+      "repository": "PX4/PX4-Autopilot",
+      "revision": "dd804e4b9c490aed051bb36f8d3fca1ee137be2a",
+      "sha256": "b4ff0deb1700f62e8c46e4142da7570dbc2f8e40b9f657b59d02c80c208a54ff"
+    },
+    {
+      "bytes": 834,
+      "git_blob_sha1": "9ca190333e6d2267d81eb1325dd4898cc44b3469",
+      "path": "src/lib/matrix/matrix/integration.hpp",
+      "repository": "PX4/PX4-Autopilot",
+      "revision": "dd804e4b9c490aed051bb36f8d3fca1ee137be2a",
+      "sha256": "a01a7440260a8b5bc892ddd88b15c0cb04a4de193ff67cadcec1ecbe6fd18d55"
+    },
+    {
+      "bytes": 452,
+      "git_blob_sha1": "7f55520544ab9eee5cef6edf2670d863652af0fa",
+      "path": "src/lib/matrix/matrix/math.hpp",
+      "repository": "PX4/PX4-Autopilot",
+      "revision": "dd804e4b9c490aed051bb36f8d3fca1ee137be2a",
+      "sha256": "0850e5573adad6e8a0aedc9d64f7cd2136ee2856c475cc06f3cb287e429a90d3"
+    },
+    {
+      "bytes": 4485,
+      "git_blob_sha1": "64fc33d8361d0d7e96339f8fa5283037d4363c88",
+      "path": "src/lib/ringbuffer/Ringbuffer.cpp",
+      "repository": "PX4/PX4-Autopilot",
+      "revision": "dd804e4b9c490aed051bb36f8d3fca1ee137be2a",
+      "sha256": "9bbe5d1e316358d6f319a9e87c22d4a2966b6bb97a486b797fa3a6baa6ce30e6"
+    },
+    {
+      "bytes": 3428,
+      "git_blob_sha1": "541f322db947b26ed2c6f4b70dbf2b24bad554eb",
+      "path": "src/lib/ringbuffer/Ringbuffer.hpp",
+      "repository": "PX4/PX4-Autopilot",
+      "revision": "dd804e4b9c490aed051bb36f8d3fca1ee137be2a",
+      "sha256": "ce6bfda92fdb6ae7b05fa4c7799bb093130bceea4dfd131801cf258ed2a029b9"
+    },
+    {
+      "bytes": 3247,
+      "git_blob_sha1": "363f2d2cc70e7943670dc766fb958e45dac1733d",
+      "path": "src/lib/slew_rate/SlewRate.hpp",
+      "repository": "PX4/PX4-Autopilot",
+      "revision": "dd804e4b9c490aed051bb36f8d3fca1ee137be2a",
+      "sha256": "6135704c4eb8c98fbc62b56decbf94edf3118e7688e8e60a2f80286fd4d90c4a"
+    },
+    {
+      "bytes": 119042,
+      "git_blob_sha1": "9f0c0792429ef860b8682c4bb680fb2c2eb8c35f",
+      "path": "src/modules/commander/Commander.cpp",
+      "repository": "PX4/PX4-Autopilot",
+      "revision": "dd804e4b9c490aed051bb36f8d3fca1ee137be2a",
+      "sha256": "c4cd04e5dc6bc3fcdf32377ee5e9aba7cff831de90afbbfb05508b80008cc090"
+    },
+    {
+      "bytes": 7745,
+      "git_blob_sha1": "135cf154d2e7040d29a28f129914371d1f6207ef",
+      "path": "src/modules/mavlink/mavlink_events.cpp",
+      "repository": "PX4/PX4-Autopilot",
+      "revision": "dd804e4b9c490aed051bb36f8d3fca1ee137be2a",
+      "sha256": "5c753b20c1d9b75b955dcd0b94c54a96c26ee1d21f6a3e02122d6529c2bd36e9"
+    },
+    {
+      "bytes": 111285,
+      "git_blob_sha1": "cb643444785edb3a067bb968099af52613790831",
+      "path": "src/modules/mavlink/mavlink_main.cpp",
+      "repository": "PX4/PX4-Autopilot",
+      "revision": "dd804e4b9c490aed051bb36f8d3fca1ee137be2a",
+      "sha256": "9497d4f753af9ee5349566ddda2975d7c5d6e402c5bc148e78b9ee063cb570b7"
+    },
+    {
+      "bytes": 72169,
+      "git_blob_sha1": "50c30082686f0cdf27138ed7fbc4950adc72c7b2",
+      "path": "src/modules/mavlink/mavlink_mission.cpp",
+      "repository": "PX4/PX4-Autopilot",
+      "revision": "dd804e4b9c490aed051bb36f8d3fca1ee137be2a",
+      "sha256": "30702ee9f8ad7fe4c61a8c834b4a072fad0f8956c2be2ec441f14865d4d7c528"
+    },
+    {
+      "bytes": 155628,
+      "git_blob_sha1": "9444f3ea41db42ba2aca6116861cc925f763bc7a",
+      "path": "src/modules/mavlink/mavlink_receiver.cpp",
+      "repository": "PX4/PX4-Autopilot",
+      "revision": "dd804e4b9c490aed051bb36f8d3fca1ee137be2a",
+      "sha256": "f0ed007dbb1629350c5e572b1638162f1087f589361bc27a8d67a2b8a904f45b"
+    },
+    {
+      "bytes": 117547,
+      "git_blob_sha1": "c102d73162e40a03f31c04259a3c19682e6f39d5",
+      "path": "src/modules/ekf2/EKF2.cpp",
+      "repository": "PX4/PX4-Autopilot",
+      "revision": "df387bdec263fb4190eca5f061ce63091a6a758f",
+      "sha256": "5ff6b6db27294a64f328f4df20f4590bed2cc7e7141f3a7d5f7a7048abcb811f"
+    },
+    {
+      "bytes": 8407,
+      "git_blob_sha1": "eb33310e808aa9c45fbb706dd03a28cbf4ad155f",
+      "path": "src/modules/mavlink/mavlink_events.cpp",
+      "repository": "trestoncuzzort/PX4-Autopilot",
+      "revision": "0e222f30c7f3c74c92d57d94c810f9a06c202235",
+      "sha256": "4088508b12188842cfde8f7c433c6424368764f0de3adc9421e558a54446360c"
+    },
+    {
+      "bytes": 73006,
+      "git_blob_sha1": "07a878d2c7b0d3280a1d04f4d09648ed751728ee",
+      "path": "src/modules/mavlink/mavlink_mission.cpp",
+      "repository": "trestoncuzzort/PX4-Autopilot",
+      "revision": "1ef387249e11a2525f11e17a70e69280f09994dd",
+      "sha256": "4c633226f0f38f3a374bd38504d131a1e1b6c58b57095ef7e9237a4911b60d0c"
+    },
+    {
+      "bytes": 118325,
+      "git_blob_sha1": "70c29626983cc1506b49b841981c9be18141a825",
+      "path": "src/modules/ekf2/EKF2.cpp",
+      "repository": "trestoncuzzort/PX4-Autopilot",
+      "revision": "484d183bc95934fe669ca4b64e5ffb063c958719",
+      "sha256": "d39bfc54f0f0c2e01aea62df91ec61e071f4e491c12aeac1f5d3b867efcabe4e"
+    },
+    {
+      "bytes": 155699,
+      "git_blob_sha1": "7468434e81e325f2ae468130293d6be5a4f6ca07",
+      "path": "src/modules/mavlink/mavlink_receiver.cpp",
+      "repository": "trestoncuzzort/PX4-Autopilot",
+      "revision": "9106bf6b81cbaeb65da4e0488fb5c82650eaf38d",
+      "sha256": "d5ffdf92b2bf622fad9d2f3f202c9e0cdcd103db1becb71300455ac97ed0fe28"
+    },
+    {
+      "bytes": 120387,
+      "git_blob_sha1": "0b49af45a31af802c7a4f0844e042d01f41ee3cf",
+      "path": "src/modules/commander/Commander.cpp",
+      "repository": "trestoncuzzort/PX4-Autopilot",
+      "revision": "96d9bbbb1e9a831021bf2013ff8134a5efcf0e08",
+      "sha256": "e2c68b839f41ee1ef36114829f39963520d97b42eb06405a8a5175c1673bc09e"
+    },
+    {
+      "bytes": 111592,
+      "git_blob_sha1": "34fca30a75453651e83f7aeb7db1c11e407cb709",
+      "path": "src/modules/mavlink/mavlink_main.cpp",
+      "repository": "trestoncuzzort/PX4-Autopilot",
+      "revision": "997da58b2d7b931ab89e5e0bf887c6303c1fac41",
+      "sha256": "ba6e8220224589652d82c9e6ba5b9aa518401127315ae7a98a10a54b988fff77"
+    }
+  ]
+}

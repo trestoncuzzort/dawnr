@@ -1,5 +1,26 @@
 # PX4 flight code in t
 
+The comparison runners validate every cached upstream file against
+[`source-manifest.json`](source-manifest.json), keyed by repository, full commit and source path. Its expected
+SHA-256 values were obtained independently from GitHub's pinned source responses; the returned Git blob SHA-1
+was also checked. Existing caches migrate to a repository-specific location only after matching those expected
+bytes. A mismatch is an error and leaves the cached file in place; an incomplete download is never installed.
+
+Both runners accept `--receipt PATH.json` alongside `--table`. The JSON records verified source identities,
+generated stand-ins, task/source/wrapper/input hashes, compiler version/target/flags, execution outcomes, output
+counts and skipped coverage. For example:
+
+```bash
+python3 t/flight/px4_diff.py --receipt /tmp/px4-functions.json
+python3 t/flight/px4_stmt.py --receipt /tmp/px4-statements.json
+```
+
+A receipt identifies the artifacts needed to repeat a bounded comparison; it does not embed those artifacts or
+prove equivalence outside the compared inputs. Compiler executable bytes, system headers and linked libraries
+are not captured. Fixed working trees are labelled as observed file bytes rather than authenticated upstream
+revisions. The manifest validates files before compilation; it does not protect a source tree from concurrent
+external modification during the run. Compiler diagnostics are hashed rather than embedded in JSON receipts.
+
 These tasks restate functions from [PX4-Autopilot](https://github.com/PX4/PX4-Autopilot), an open-source autopilot
 for drones and other vehicles. PX4 is licensed under the BSD 3-Clause License; a copy is in `LICENSE-PX4`. Each body
 follows PX4's code at commit `dd804e4b9c490aed051bb36f8d3fca1ee137be2a` statement by statement. PX4 ships no

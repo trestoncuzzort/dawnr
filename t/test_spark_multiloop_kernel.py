@@ -6,6 +6,7 @@ import tempfile
 import unittest
 
 import lower_spark
+import harness
 import refute_at
 import surface
 import tlib
@@ -53,10 +54,23 @@ def sources():
 @unittest.skipUnless(spark.GNATPROVE, "GNATprove is not installed")
 class SparkMultiLoopKernelTests(unittest.TestCase):
     def test_real_wrong_and_fabricated_witness(self):
+        self._check_sources(sources())
+
+    def test_reserved_parameter_preserves_replay(self):
+        task = surface.parse_file(str(Path(__file__).parent / "flight/fixes/px4_request_event_fixed.t"))
+        wrong, _op, witness = harness.twin_cached(task)
+        self.assertIsNotNone(wrong)
+        self._check_sources({
+            "real": lower_spark.lower(task, task["body"]),
+            "wrong": lower_spark.lower(task, wrong, witness=witness),
+            "fabricated": lower_spark.lower(task, task["body"], witness=witness),
+        })
+
+    def _check_sources(self, controls):
         expected = {"real": {Outcome.VERIFIED}, "wrong": {Outcome.REFUTED},
                     "fabricated": {Outcome.UNPROVED, Outcome.TIMEOUT}}
         with tempfile.TemporaryDirectory(prefix="t-spark-two-loops-") as directory:
-            for name, source in sources().items():
+            for name, source in controls.items():
                 with self.subTest(case=name):
                     path = Path(directory) / f"{name}.ads"
                     path.write_text(source)
