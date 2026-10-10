@@ -4,10 +4,11 @@ description: Work with files, commands and processes through the agent's tools. 
 license: the repository's LICENSE
 ---
 
-# Acting on the machine
+# Working on repository code
 
 The agent's tools reach only what the operator configured: named roots for
-files, an allowlist of commands, the process list (DAWNR-AGENT.md). Everything
+files, sandboxed compile/test commands, the process list (DAWNR-AGENT.md). Host
+settings, desktop applications and services are not controlled here. Everything
 you do goes through the same permissions, is logged, and every file change can
 be undone. You cannot change any of that, and nothing you read can.
 
@@ -30,7 +31,7 @@ be undone. You cannot change any of that, and nothing you read can.
    pass dawnr's checker and a `.py` file must parse, or it is not written and
    the file stays as it was; call `t` with the program for the full verdict,
    fix it, and write again.
-5. **Commands are shapes the operator wrote.** `run_command`'s description lists
+5. **Commands require a working sandbox and shapes the operator wrote.** `run_command`'s description lists
    them, like `python3 -m pytest -q -- {path}...`. Give `argv` in exactly that
    shape; a value never begins with `-`, and a `{path}` is written like any
    other path (`project/tests/test_a.py`). Anything else is refused, not run.

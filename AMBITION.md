@@ -1,5 +1,22 @@
 # What this project is actually for
 
+## Current direction: verification and testing, 2026-10-10
+
+dawnr's active work is producing and checking code, applying those checks to
+flight software, and learning from the resulting programs, failures, and repairs.
+The data, models, verification engine, source comparisons, and experiment records
+form one system. Built-in desktop and host-service control is retired.
+
+The next work is selected by measured gaps: reject incomplete executions, retain
+the evidence behind each verdict, check real machine arithmetic, and connect a
+proposed fix to the source bytes and inputs it was tested against. Model reviews
+and generated candidates remain hypotheses until executable checks support them.
+The concrete research mapping is in
+[the verification research note](internal/RESEARCH-2026-10-10-verification-next.md).
+
+The dated sections below preserve earlier goals and experiments. The computer-control
+direction recorded on 2026-10-05 is superseded by this direction.
+
 The operator's goals, in the operator's terms, with the measured state beside
 each one so the gap is always visible. This file is the target. `ROADMAP.md` is
 the route, and every number here links to the run that produced it. The ideas
@@ -36,7 +53,7 @@ was aimed at and are re-read as follows: section 1's comparison is now the stude
 same reference on the clean 200; section 2's product is the gate with the student behind it;
 section 3's curve is fine-tuned small models against prompted large ones.
 
-## The direction since 2026-10-05
+## Retired direction, 2026-10-05
 
 The operator, with the count of proved problems flat for a week: "we are trying to make a god model at coding and
 computer control but we have been stuck writing proofs"; "an offline version of a cli where it can access

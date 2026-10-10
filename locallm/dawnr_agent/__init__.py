@@ -1,4 +1,4 @@
-"""dawnr's agent: acting on the machine through the harness, in the owner's control (DAWNR-AGENT.md).
+"""dawnr's agent: inspecting, editing and testing repositories through the harness (DAWNR-AGENT.md).
 
 Files inside operator-configured roots (list, read, search; write, edit and
 undo in writable roots), commands from an operator allowlist (denied by

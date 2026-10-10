@@ -882,11 +882,15 @@ class Commands(Env):
         self.assertIn("'PATH'", r.text)
 
     def test_deadline_kills_the_whole_process_group(self):
-        pidfile = self.proj / "child.pid"
+        # PIDs inside bubblewrap are not host PIDs. A child's heartbeat is an
+        # independent observation that it stopped when the parent timed out.
+        beat = self.proj / "child-heartbeat"
+        child = ("import time\nfor _ in range(600):\n"
+                 f"    open({str(beat)!r}, 'a').write('x')\n"
+                 "    time.sleep(0.02)\n")
         body = f"""
             import subprocess, sys, time
-            child = subprocess.Popen([sys.executable, "-c", "import time; time.sleep(60)"])
-            open({str(pidfile)!r}, "w").write(str(child.pid))
+            subprocess.Popen([sys.executable, "-c", {child!r}])
             time.sleep(60)
             """
         h, a = self.build(permissions={"run_command": "allow"}, commands=[
@@ -896,18 +900,10 @@ class Commands(Env):
         r = h.call("run_command", {"argv": [PY, path]})
         self.assertLess(time.monotonic() - started, 15)
         self.assertIn("timed out", r.text)
-        pid = int(pidfile.read_text())
-        deadline = time.monotonic() + 5
-        while time.monotonic() < deadline:
-            try:
-                state = Path(f"/proc/{pid}/status").read_text() if Path(f"/proc/{pid}").exists() else ""
-            except OSError:
-                state = ""
-            if not state or "\nState:\tZ" in state or "State:\tZ" in state:
-                break
-            time.sleep(0.1)
-        else:
-            self.fail(f"the grandchild {pid} outlived the deadline")
+        self.assertTrue(beat.exists(), "the child must start for this control to be meaningful")
+        size = beat.stat().st_size
+        time.sleep(0.3)
+        self.assertEqual(beat.stat().st_size, size)
 
     def test_output_is_capped(self):
         h, _ = self.build(permissions={"run_command": "allow"}, commands=[
@@ -1014,7 +1010,9 @@ class Commands(Env):
                 self.assertTrue(r.is_error, argv)
                 continue
             accepted += 1
-            ran, kw = seen[-1]
+            wrapped, kw = seen[-1]
+            self.assertEqual(wrapped[0], a.commands.sandbox.program)
+            ran = wrapped[wrapped.index("--") + 1:]
             rule = [x for x in a.commands.rules if x.argv[0] == argv[0]][0]
             self.assertEqual(ran[0], programs[argv[0]])
 
@@ -1092,11 +1090,14 @@ class Sandbox(Env):
         self.assertTrue(got["connect"].startswith("no"), got)
         self.assertEqual((got["write_ro"], got["write_rw"], got["write_outside"]), ("no", "yes", "no"), got)
         self.assertEqual(got["run_user"], [])
-        # the control: without the sandbox the same probe reaches the server, so the test can see a connection
-        h2, _ = self.build(permissions={"run_command": "allow"}, commands=rule)
-        (self.proj / "w.txt").unlink()
-        got2 = json.loads(h2.call("run_command", {"argv": [PY, path]}).text.splitlines()[1])
-        self.assertEqual(got2["connect"], "yes")
+        # Independent positive control: the test owns this probe and invokes it
+        # directly. The supported agent no longer has an unsandboxed mode.
+        control = subprocess.run([PY, str(self.proj / "tests" / "probe.py")],
+                                 capture_output=True, text=True, check=True, timeout=10)
+        self.assertEqual(json.loads(control.stdout)["connect"], "yes")
+        h2, a2 = self.build(permissions={"run_command": "allow"}, commands=rule)
+        self.assertIsNotNone(a2.commands.sandbox)
+        self.assertTrue(json.loads(h2.call("run_command", {"argv": [PY, path]}).text.splitlines()[1])["connect"].startswith("no"))
 
     def test_a_command_that_leaves_a_new_session_behind_does_not_outlive_the_call(self):
         beat = self.proj / "beat.txt"
@@ -1134,8 +1135,15 @@ class Sandbox(Env):
         self.addCleanup(kill_escaped)
         h, _ = self.build(permissions={"run_command": "allow"}, commands=rule, sandbox="bwrap")
         self.assertFalse(grows_after_return(h))
+        # The direct subprocess control is deliberately outside the agent API.
+        class Control:
+            def call(_, name, args):
+                return commands_mod.run_argv([PY, str(self.proj / "tests" / "fork.py")],
+                                             cwd=str(self.proj), env=os.environ.copy(), timeout=5, max_output=1000)
+        self.assertTrue(grows_after_return(Control()))
+        kill_escaped()  # the independent control must not keep writing during the next observation
         h2, _ = self.build(permissions={"run_command": "allow"}, commands=rule)
-        self.assertTrue(grows_after_return(h2))          # the control: without the sandbox it does escape
+        self.assertFalse(grows_after_return(h2))  # omitted sandbox means bwrap, never host execution
 
 
 # ---------------------------------------------------------------- the harness hook --
@@ -1208,7 +1216,7 @@ class Plans(Env):
         _count("dry_run", dry_runs=3, files_changed=0, processes=0, step_audit_rows=len(h.audit) - 1)
         shown = dry.render(for_person=True)
         for needle in ('fs_edit {"path": "project/readme.txt"', "-world", "+there", "creates project/new.t",
-                       "+  y := x + x;", "exact argv: " + a.commands.rules[0].program, str(self.proj / "marker"),
+                       "+  y := x + x;", "exact argv: " + a.commands.sandbox.program, str(self.proj / "marker"),
                        "nothing has run yet", "expect_sha256"):
             self.assertIn(needle, shown)
         self.assertEqual([v.decision for v in dry.views], ["allow", "ask", "ask", "ask", "ask"])
@@ -1581,7 +1589,7 @@ class Injection(Env):
                                  Finish("said it")])
         self.assertEqual(AgentLoop(a, asked).run("say asked").stop, "done")
         self.assertEqual(len(started), 1)
-        self.assertEqual(started[0][1:], ["asked"])
+        self.assertEqual(started[0][started[0].index("--") + 2:], ["asked"])
         _count("injection_names", trials=1, fooled=1, executed=0, requested_ran=1)
 
     def test_the_approved_plan_still_runs_after_untrusted_text_and_asks_once(self):

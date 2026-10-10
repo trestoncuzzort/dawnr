@@ -1,19 +1,54 @@
 # Using dawnr
 
-This is the plain-language guide to the parts of this repository a user
-touches directly: installing it, opening the desktop app, talking to a
-trained model from a terminal, and configuring the harness around it (which
-tools it may call, what needs your approval, and whether it can reach the
-network at all). It does not cover training a model from scratch (that is
-[`../locallm/README.md`](../locallm/README.md)) or the seven-prover
-specification pipeline (that is [`../t/README.md`](../t/README.md)); both are
-linked from wherever this guide touches them.
+## Current application
 
-Every command shown below was run while writing this guide, on Python
-3.11.15, Linux. Where a step needs something this session did not have (a
-display for the desktop app's window, a trained checkpoint, `git lfs`), that
-is said plainly, not glossed over; see "What this guide could and could not
-check" at the end.
+The application combines local models, checked program generation, repository
+tools, and the verification and data pipelines in this checkout. Install from
+the repository root, then check the local environment:
+
+```bash
+./install.sh
+dawnr doctor
+```
+
+The installer supports Linux, macOS, and Windows through WSL2. It installs the
+model server, the student-v5 model, a quantized base model, and Dafny where
+supported. Python 3.10 or newer is required. On Ubuntu, the installer may ask
+for `libgomp1`, `unzip`, and `bubblewrap`. Use `./install.sh --help` for the
+available options; `--home DIR` selects model storage and `--build cpu` selects
+CPU inference. Other proof backends are installed separately as described in
+[`t/README.md`](../t/README.md).
+
+The installed student is a fine-tuned Qwen3.5-4B, described in the
+[model card](../release/MODEL-CARD-student-v5.md). Experiments with models
+initialized from random weights remain in the repository as a separate
+research path. Their historical results do not describe the installed model.
+
+```bash
+dawnr do "Describe the modules in this repository." --read-only
+dawnr cite "What assumptions does this check make?" t/flight/README.md
+python3 t/cli.py check t/flight/fixes/px4_wrap_bin_fixed_72.t
+```
+
+[COMMANDS.md](COMMANDS.md) describes generation, proofs, replayable records,
+and document questions. [The root README](../README.md) links the datasets,
+model records, and PX4 checks. No model is needed to parse or audit an existing
+`t` task; formal checks require the selected prover.
+
+Built-in desktop and host-service control is retired. Repository commands
+require a working sandbox and refuse execution when it is unavailable. The
+assistant defaults to offline operation; read-only build-environment
+diagnostics remain available. Operator-configured MCP servers, hooks, and
+skill scripts are trusted extensions with their own execution boundaries,
+described in [DAWNR-AGENT.md](../DAWNR-AGENT.md).
+
+## Historical research interfaces
+
+The remainder records the earlier harness, training UI, and `chat_cli.py`
+interfaces and the measurements made when this guide was written. Its model
+scores, environment notes, and lack of an installer describe that earlier
+state. Use the current application instructions above for `dawnr`; the
+standalone research scripts below remain useful for reproducing those runs.
 
 ## What dawnr does and does not do yet
 

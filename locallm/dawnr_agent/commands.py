@@ -36,13 +36,12 @@ its process namespace ends with the command, without it the child lives on.
 
 The network is off unless the harness is online, and a rule counts as
 reaching the network unless the operator marks it "network": false. That
-mark is the operator's claim, like an MCP server's, unless the sandbox is on:
-with "sandbox": "bwrap" every command runs under bubblewrap
+mark is enforced by the required sandbox: every command runs under bubblewrap
 (github.com/containers/bubblewrap) with its own network namespace holding only
 a loopback device, the file system read-only except the writable roots,
 /run and /tmp empty (the session bus and display sockets are not reachable),
 the secret directories hidden, a new session and its own process ids. If the
-sandbox is configured and does not work, no command runs.
+sandbox does not work, no command runs. There is no unsandboxed fallback.
 """
 from __future__ import annotations
 
@@ -470,6 +469,8 @@ class CommandTools:
     def _gate(self, rule: CommandRule) -> tuple[str, str]:
         if self.sandbox_problem:
             return "deny", f"the configured sandbox does not work here ({self.sandbox_problem}); no command runs"
+        if self.sandbox is None:
+            return "deny", "a working bubblewrap sandbox is required; no command runs on the host"
         if rule.network and self.offline():
             return "deny", ("offline: this command rule may reach the network (the operator marks a rule "
                             "\"network\": false when it does not)")
@@ -477,7 +478,7 @@ class CommandTools:
 
     def wrapped(self, inv: Invocation) -> list:
         if self.sandbox is None:
-            return list(inv.argv)
+            raise CommandRefused("a working bubblewrap sandbox is required")
         return self.sandbox.wrap(inv.argv, inv.cwd, inv.rule.network and not self.offline())
 
     # --------------------------------------------------------------- tools --
@@ -519,9 +520,7 @@ class CommandTools:
         decision, why = self._gate(inv.rule)
         if decision == "deny":
             return Preview(error=why)
-        where = ("under bubblewrap, " + ("with" if inv.rule.network and not self.offline() else "without")
-                 + " network") if self.sandbox else ("no sandbox; " + ("may reach the network" if inv.rule.network
-                                                                        else "no network (the operator's claim)"))
+        where = "under bubblewrap, " + ("with" if inv.rule.network and not self.offline() else "without") + " network"
         summary = (f"runs {' '.join(args['argv'])} in {inv.cwd_display} (rule {inv.rule.index}: {inv.rule.shape}; "
                    f"timeout {inv.rule.timeout:g} s; {where}); its output enters as untrusted data; its effects on "
                    "files are not simulated")

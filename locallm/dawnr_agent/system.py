@@ -1,34 +1,9 @@
-"""dawnr_agent/system.py: the computer itself, outside the folder: looked at freely, changed one command at a time,
-shown exactly and asked for every time (2026-10-05).
+"""Read-only host diagnostics for repository inspection and testing.
 
-`sh` (shell.py) runs in a sandbox with its own processes and no network or desktop session: it cannot say what is
-running, whether the network is up or what a setting is, and it cannot open a program, change a setting or start a
-service. Two tools are for those, and both run as the person, on the machine.
-
-`sysinfo` answers questions about the live machine: what is running, memory and disk, the network, services, sound,
-settings, what is installed. It runs without asking, and so takes only a line that cannot change anything (`look`
-below): read-only programs used in a read-only way, joined by pipes. Files are not its business; `sh` reads those,
-where the secret ones are hidden. (The tool was first named `look`; the 4B then answered "What is the door code?"
-by looking over the computer instead of the folder's three files.)
-
-`pc` does things, and everything that makes `sh` safe is replaced by rules:
-
-  asked, always   every call is put to the person with the exact line and one sentence of why; nothing here is ever
-                  approved ahead of time (the front door's --yes does not cover it), and a session with no terminal
-                  runs none
-  never root      a line that asks for administrator rights (sudo, pkexec, doas, su) is not run: it is handed to the
-                  person to run themselves, word for word. dawnr never holds a password and never takes a right it
-                  was not started with (DAWNR-AGENT.md, "dawnr never grants itself permissions")
-  never files     removing, moving, overwriting and re-permissioning files is refused here and named as `sh`'s job,
-                  where it is shown first and can be undone; so is a download piped into a shell
-  not undone      what it does is not journaled, and the reason shown to the person says so
-
-The two layers are the Codex CLI's (developers.openai.com/codex/sandbox.md, receipt b24da17bccfd): the sandbox decides
-what can happen without asking, and leaving it is asked for with the command and a justification. A forbidden line
-answers with what to do instead, as its execution-policy rules do.
-
-`facts()` is one sentence about the machine (its distribution, package manager, desktop) for the model to choose
-commands by: `apt` on one machine is `dnf`, `pacman` or `zypper` on the next.
+`sysinfo` accepts only command shapes recognized by `look`; it does not expose a
+host shell for desktop, service or settings changes. The old `pc` entry point is
+a compatibility refusal, never a registered tool. Historical command classifiers
+remain for reading older evaluation records, not as an execution policy.
 """
 from __future__ import annotations
 
@@ -603,15 +578,19 @@ def refusal(command: str, offline: bool = False) -> str | None:
 
 class SystemTools:
     def __init__(self, *, timeout: float = 60.0, max_output: int = 4000, runner=run_argv, starter=subprocess.Popen,
-                 reader=run_argv, offline=lambda: True, act: bool = True, cwd: str | None = None):
+                 reader=run_argv, offline=lambda: True, act: bool = False, cwd: str | None = None,
+                 exec_path: str | None = None):
         self.timeout, self.max_output, self.runner, self.starter, self.offline = timeout, max_output, runner, starter, offline
-        self.reader, self.act = reader, act                     # `sysinfo` runs through `reader`; without `act` there is no `pc`
+        self.reader, self.act = reader, False                   # legacy `act` cannot restore the retired host tool
         self.env = {k: v for k, v in os.environ.items() if k in SESSION}
+        # The CLI supplies safe_exec_path(space): repository programs cannot
+        # impersonate a read-only utility or the shell executing its pipeline.
+        self.env["PATH"] = os.defpath if exec_path is None else exec_path
         # where a command starts: the folder the session works in, as a terminal opened there would
         self.cwd = cwd or self.env.get("HOME") or os.path.expanduser("~")
 
     def _run(self, runner, line: str) -> ToolResult:
-        shell = shutil.which("bash") or "/bin/sh"
+        shell = shutil.which("bash", path=self.env["PATH"]) or "/bin/sh"
         got = runner([shell, "-c", line], cwd=self.cwd, env=self.env, timeout=self.timeout, max_output=self.max_output * 4)
         text = got["stdout"].rstrip("\n") + (("\n[stderr]\n" + got["stderr"].rstrip("\n")) if got["stderr"].strip() else "")
         if len(text) > self.max_output:
@@ -631,7 +610,7 @@ class SystemTools:
             return "deny", "sysinfo: reading and listing files is done with fs_list, fs_read and fs_search, or with `sh`"
         return "deny", ("sysinfo: this is not a line that is known only to look (one read-only command, or several joined "
                         "by | with no redirection, variable or substitution)."
-                        + (" To do something on the computer, call `pc` with it." if self.act else ""))
+                        + " Host changes are not supported.")
 
     def sysinfo(self, args: dict, ctx: CallContext) -> ToolResult:
         line = look(args.get("command"))
@@ -640,32 +619,11 @@ class SystemTools:
         return self._run(self.reader, line)
 
     def decide(self, args: dict) -> tuple[str, str]:
-        command = args.get("command")
-        if not isinstance(command, str) or not command.strip():
-            return "deny", "pc: give the command as one line of text"
-        if len(command) > MAX_COMMAND:
-            return "deny", f"pc: the command is over {MAX_COMMAND} characters"
-        why = refusal(command, self.offline())
-        if why:
-            return "deny", "pc: " + why
-        said = str(args.get("why") or "").strip()[:200]
-        return "ask", (f"it runs on the computer itself, not in the sandbox, and cannot be undone: `{command}`"
-                       + (f" (the model's reason: {said})" if said else ""))
+        return "deny", "pc: host control has been retired; use repository file tools and sandboxed tests"
 
     def pc(self, args: dict, ctx: CallContext) -> ToolResult:
-        decision, why = self.decide(args)
-        if decision == "deny":
-            return ToolResult(f"refused: {why}", is_error=True)
-        command = args["command"]
-        if args.get("detach"):                                  # a program to leave running: a window, a player
-            try:
-                self.starter([shutil.which("bash") or "/bin/sh", "-c", command], stdin=subprocess.DEVNULL,
-                             stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, cwd=self.cwd, env=self.env,
-                             start_new_session=True)
-            except OSError as e:
-                return ToolResult(f"it did not start: {e}", is_error=True)
-            return ToolResult("started; it was left running and its output is not read")
-        return self._run(self.runner, command)
+        """Fail closed for an old caller, even with approval or `detach` supplied."""
+        return ToolResult("refused: " + self.decide(args)[1], is_error=True)
 
     def tools(self) -> list[Tool]:
         line = {"type": "string", "minLength": 1, "maxLength": MAX_COMMAND}
@@ -677,15 +635,4 @@ class SystemTools:
                      {"type": "object", "properties": {"command": line}, "required": ["command"], "additionalProperties": False},
                      self.sysinfo, permission="allow", trust="untrusted", network=False, consequential=False,
                      origin="agent", decide_call=self.decide_sysinfo)
-        if not self.act:
-            return [looks]
-        schema = {"type": "object",
-                  "properties": {"command": line, "why": {"type": "string", "maxLength": 200},
-                                 "detach": {"type": "boolean", "description": "true for a program to leave running"}},
-                  "required": ["command"], "additionalProperties": False}
-        return [looks,
-                Tool("pc", "Do something on the computer itself, outside the folder: open a file, a program or a web page, "
-                           "change a setting, start or stop a service. One command; the person is shown it and must say "
-                           "yes. Not for files (use sh) and never with sudo.",
-                     schema, self.pc, permission="ask", trust="untrusted", network=False, consequential=True,
-                     origin="agent", decide_call=self.decide)]
+        return [looks]
