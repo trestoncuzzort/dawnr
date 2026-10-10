@@ -41,8 +41,14 @@ The scale generation did **not** produce records. Two compounding blockers, neit
    same minutes** (`OK 14`). So the SSO creds and the boto3 client are fine; the failure is specific to the script's
    run. `bedrock_generate.py` has no credential handling of its own (line 322 is a plain
    `boto3.client("bedrock-runtime", region_name=...)`), and the lab has no competing credential source (no AWS env
-   vars, no `~/.aws`). The most likely cause, to check first on the retry: its `ThreadPoolExecutor` (concurrency 4)
-   sharing one client, or the `spec_experiment` import/pool-build delaying the first call — not the creds.
+   vars, no `~/.aws`). **Narrowed, 2026-10-10:** `boto3.Session().get_credentials()` on the lab, with the same
+   sourced env, resolves a *static* `Credentials` object (method `env`, expiry `None`) — so the creds are not
+   refreshable in isolation, and a direct `converse` with them succeeds. Yet `bedrock_generate`'s own
+   `boto3.client("bedrock-runtime", …)` path (line 322) raises the refresh-of-expired error **even at
+   `--concurrency 1`**, so it is *not* the thread pool. The script's client is somehow resolving a *refreshable*
+   credential with a past expiry from a source `Session().get_credentials()` does not see. That is the exact thing
+   to debug interactively on a stable link (e.g. print `client._get_credentials()`/`._request_signer._credentials`
+   inside `main()` right after line 322); it was not resolvable remotely under a flapping VPN this session.
 
 **What it bought.** The data engine itself is already proven on this exact infrastructure by the validation round
 ([the sibling PREDICT](PREDICT-2026-10-10-teacher-deepseek-validate.md), committed): DeepSeek-V3.2 (Bedrock, MIT) →
@@ -51,8 +57,8 @@ abandoned, and resumes in one step on a stable link with fresh SSO creds:
 
 - id set: the first 96 of `rl_reward.rl_prompt_ids(split-v5, pool v5)`, seed-42 shuffled (rebuild on the lab);
 - command: `bedrock_generate.py --tag deepseek-v3.2-scale --model deepseek.v3.2 --ids-file <ids> --samples 4
-  --temperature 0.7 --prompt v5 --max-tokens 6144 --concurrency 4 --spend-cap-usd 10` (try `--concurrency 1`
-  first to isolate the threaded-client credential question);
+  --temperature 0.7 --prompt v5 --max-tokens 6144 --concurrency 4 --spend-cap-usd 10` (first resolve the
+  client-credential question above — concurrency is not the cause);
 - gate: `run_par` all seven under `setsid`, then assemble the clean rows.
 
 Training a student on the result stays GPU-blocked (lab GPUs closed, AWS Free refuses GPU instances, laptop is
