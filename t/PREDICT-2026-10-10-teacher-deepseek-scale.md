@@ -87,3 +87,28 @@ just those 9 at **k=16** gives each more chances at a single sample that clears 
   tests-pass + clean-in-seven + spec-agrees). *Falsifier:* 0 admitted ⇒ the two properties rarely coincide in one
   sample even at k=16, a model-level spec-faithfulness limit, not a sampling-count one.
 - **D2:** cost at most $3.
+
+### Follow-up read (2026-10-10): 9 rows admitted + 125 preference pairs — D1 and D2 hold
+
+Re-running the 9 at **k=16** (144 records, $0.31) and gating all 16 sample tags (seven kernels + Landlock spec
+check; `spec_gate` judged 128 of 137 answers spec-agreeing) admitted **all 9 problems**: `loop_dataset
+--from-samples` produced **9 SFT positives + 125 deduped preference pairs** (`out/loop/sft-deepseek-nine.jsonl`,
+`pairs-deepseek-nine.jsonl`, `DATASET-deepseek-nine.md`).
+
+- **D1 holds:** 9 admitted (>= 1). Each is one sample that is well-formed AND passes its tests AND reads
+  `verified / refuted` in all seven kernels AND whose spec agrees with the MBPP reference on 100 draws. Higher k was
+  exactly the fix: at k=4 no single sample cleared all four gates together; at k=16 every one of the 9 got a sample
+  that did.
+- **D2 holds:** $0.31 against $3. (Two scale rounds together: ~$0.60.)
+
+**A real dawnr pipeline gap, found and bridged.** `spec_gate.judge()` nests its spec evidence under an
+`"agreement"` key, but `loop_dataset.positive_rejection` reads `status`/`draws`/`task_id`/`pool`/`task_sha256` at
+the **top level** and otherwise returns `spec-not-agrees` — so `spec_gate`'s output is not directly consumable by
+`loop_dataset` (it rejected 121 genuinely-agreeing answers until the fields were flattened). The flatten is a
+faithful reformat of real `check_task` evidence, not a weakening. The clean fix (dawnr-local, worth doing next):
+make `spec_gate` emit the flat per-sample record `loop_dataset` reads, or teach `loop_dataset` to read the nested
+form. Until then a flatten step is required between them.
+
+The 9 SFT rows + 125 pairs are in `out/loop/` (gitignored run artifacts); they join the registered corpus at its
+next registration and feed the next training run (still GPU-blocked). **Net: the engine now demonstrably admits
+real verified training rows end to end on the re-provisioned lab + live AWS, for cents.**
