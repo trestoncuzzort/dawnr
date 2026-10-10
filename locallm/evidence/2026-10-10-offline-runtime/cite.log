@@ -1,0 +1,4 @@
+starting the base model...
+You can enable network access by passing the `--online` flag when running dawnr.
+    "The network stays off unless you pass `--online`."
+    (README.md, part 4)
