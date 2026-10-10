@@ -113,6 +113,16 @@ knowledge-folder-relative path, or the URL; `locator` is a document or chunk ind
 source. Fetched passages also carry `fetched_at` (an ISO-8601 timestamp) when the cache recorded
 one.
 
+On loading a fetched-page cache, the last valid record for each URL replaces
+the entire earlier snapshot. A shorter or empty update therefore removes old
+trailing passages. This is append order, not a claim about the remote page's
+publication time. Invalid JSON, invalid UTF-8 and malformed fields are reported
+in `problems` while surrounding complete pages remain searchable. New writes
+isolate an interrupted final record before appending the next complete page.
+Unicode line separators inside a page stay part of its text. These rules are
+covered by `locallm/test_retrieval_cache_recovery.py`, including retrieval
+through the offline harness and preservation of the untrusted-content boundary.
+
 ## Evaluation
 
 `eval_recall.py` measures recall@k: for every train-split corpus document with a `Problem:` head,
