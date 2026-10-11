@@ -1,0 +1,25 @@
+{
+  "unique_english_rows_by_first_source": {
+    "sft-r12-v5resolved": 58,
+    "sft-deepseek-nine": 8,
+    "sft-deepseek-b2": 3,
+    "sft-deepseek-b3": 6
+  },
+  "duplicates_after_normalization": [
+    {
+      "source": "sft-deepseek-nine",
+      "task_id": 373,
+      "same_as": "sft-r12-v5resolved"
+    },
+    {
+      "source": "sft-deepseek-b2",
+      "task_id": 227,
+      "same_as": "sft-r12-v5resolved"
+    },
+    {
+      "source": "sft-deepseek-b3",
+      "task_id": 924,
+      "same_as": "sft-r12-v5resolved"
+    }
+  ]
+}
