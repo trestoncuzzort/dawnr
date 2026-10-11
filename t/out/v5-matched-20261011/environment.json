@@ -10,5 +10,23 @@
   "temperature": 0,
   "problem_prompt": "s2",
   "problem_ids_sha256": "5361a91baf669abbc9fb4968d18ce3393abb4e0a001c189d07ec46ad4ce75c9b",
-  "spec_questions_sha256": "effc2f4e586e0c4f7638a5a9a2b75515aaf7019de03ca819d46e5aa3d593ab24"
+  "spec_questions_sha256": "effc2f4e586e0c4f7638a5a9a2b75515aaf7019de03ca819d46e5aa3d593ab24",
+  "models": {
+    "v5": {
+      "release": "student-v5",
+      "checksum_source": "https://github.com/trestoncuzzort/dawnr/releases/download/student-v5/dawnr-student.sha256",
+      "verified_before_generation": true,
+      "files": {
+        "dawnr-student-00001-of-00003.gguf": "ff2d858f5994b1b615369c38ac0d42010243983f9e877f1d132c9510ceef6118",
+        "dawnr-student-00002-of-00003.gguf": "85b11773df20a3a7a2dab20235293e602f49d81d41c9a4c8a312b8a90c6ff1cd",
+        "dawnr-student-00003-of-00003.gguf": "cf3365cc053f7f1d4394ec4f7b6b1c2cc3593e404b03b212e1310802b8ef5b7f"
+      }
+    },
+    "recovered": {
+      "record": "t/out/gcp-student-2026-10-11-s1/artifacts.json",
+      "files": {
+        "dawnr-gcp-20261011-Q8_0.gguf": "121b3654e74fb088f222da9a5f500a99d88b15663949a6602526d9406b0fa280"
+      }
+    }
+  }
 }

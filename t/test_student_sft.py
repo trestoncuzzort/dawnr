@@ -4,7 +4,11 @@ fit is dropped, never truncated. A stand-in tokenizer; no model, no GPU."""
 from __future__ import annotations
 
 import importlib.util
+import hashlib
+import json
+import subprocess
 import sys
+import tempfile
 import unittest
 from pathlib import Path
 
@@ -31,6 +35,73 @@ class Tok:
 
 
 ROW = {"prompt": [{"role": "system", "content": "S"}, {"role": "user", "content": "U"}], "chosen": "ans"}
+
+
+class InputSnapshot(unittest.TestCase):
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(self.tmp.cleanup)
+        self.root = Path(self.tmp.name)
+        self.source = self.root / "source.jsonl"
+        self.out = self.root / "adapter"
+        self.data = ("\n" + json.dumps(ROW) + "\n\n").encode()
+        self.source.write_bytes(self.data)
+
+    def freeze(self, **kwargs):
+        return student_sft.snapshot_rows(self.source, self.out, **kwargs)
+
+    def test_snapshot_survives_source_deletion_and_can_be_used_to_resume(self):
+        rows, receipt = self.freeze(limit=1, max_len=100)
+        self.source.unlink()
+        frozen = self.out / receipt["file"]
+        self.assertEqual(frozen.read_bytes(), self.data)
+        self.assertEqual(receipt["sha256"], hashlib.sha256(self.data).hexdigest())
+        self.assertEqual(rows, [ROW])
+        self.assertEqual(student_sft.snapshot_rows(frozen, self.out, limit=1, max_len=100), (rows, receipt))
+
+    def test_source_replacement_cannot_change_the_record_of_loaded_rows(self):
+        rows, receipt = self.freeze()
+        self.source.write_text(json.dumps({**ROW, "chosen": "changed"}) + "\n")
+        self.assertEqual(rows[0]["chosen"], "ans")
+        self.assertEqual(receipt["sha256"], hashlib.sha256(self.data).hexdigest())
+        with self.assertRaisesRegex(SystemExit, "frozen training data"):
+            self.freeze()
+        self.assertEqual((self.out / receipt["file"]).read_bytes(), self.data)
+
+    def test_changed_selection_and_corrupted_snapshot_are_refused(self):
+        self.freeze()
+        for selection in ({"limit": 1}, {"max_len": 100}):
+            with self.subTest(selection=selection), self.assertRaisesRegex(SystemExit, "selection settings"):
+                self.freeze(**selection)
+        (self.out / "training-rows.jsonl").write_bytes(b"changed")
+        with self.assertRaisesRegex(SystemExit, "frozen training data"):
+            self.freeze()
+
+    def test_a_legacy_checkpoint_without_data_identity_is_refused(self):
+        (self.out / "trainer/checkpoint-10").mkdir(parents=True)
+        with self.assertRaisesRegex(SystemExit, "no input snapshot"):
+            self.freeze()
+        self.assertFalse((self.out / "training-data.json").exists())
+
+    def test_partial_snapshot_and_empty_rows_are_refused(self):
+        self.out.mkdir()
+        (self.out / "training-rows.jsonl").write_bytes(self.data)
+        with self.assertRaisesRegex(SystemExit, "incomplete"):
+            self.freeze()
+        self.source.write_bytes(b"\n")
+        with self.assertRaisesRegex(SystemExit, "empty training data"):
+            self.freeze()
+
+    def test_cli_checks_expected_hash_before_importing_model_dependencies(self):
+        # -S removes site packages: reaching torch would fail with an ImportError.
+        result = subprocess.run([sys.executable, "-S", str(HERE / "student_sft.py"),
+                                 "--model", "unused", "--sft", str(self.source),
+                                 "--out", str(self.out), "--sft-sha256", "0" * 64],
+                                capture_output=True, text=True)
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("differs from --sft-sha256", result.stderr)
+        self.assertNotIn("ModuleNotFoundError", result.stderr)
+        self.assertFalse(self.out.exists())
 
 
 class Encoding(unittest.TestCase):

@@ -72,6 +72,12 @@ At Q8_0, the file published here, through llama-server as `dawnr` runs it: 27 of
 
 ## Limits
 
+The historical training file is identified by [DATA-student-v5.json](DATA-student-v5.json), but it is
+absent from the restored checkout, lab and published release assets. A full-history JSONL search also
+finds no matching hash. Rebuilding only the specification-given rows does not reproduce its six-kind
+mixture. New training runs preserve their exact input bytes beside the adapter and can require a
+registered hash; see [the recovery record](../t/PREDICT-2026-10-11-v5-rebuild.md).
+
 It writes a wrong specification more often than a right one, and it has only been trained and measured on short
 programming problems over integers, booleans and sequences. See [../DISCLAIMERS.md](../DISCLAIMERS.md).
 
