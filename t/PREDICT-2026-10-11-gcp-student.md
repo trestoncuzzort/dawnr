@@ -115,3 +115,26 @@ PEFT 0.21.2, bitsandbytes 0.50.2 and Accelerate 1.15.0. Two setup failures occur
 the image's TorchAudio 2.11 required a newer PyTorch ABI, and its Jinja 3.0.3 could not render the
 model's chat template. The isolated environment now uses TorchAudio 2.9.1+cu129 and Jinja 3.1.6.
 See [TorchAudio's compatibility table](https://docs.pytorch.org/audio/stable/installation.html).
+
+Tokenization keeps **405 of 406 rows** (330 specification rows, all 75 English rows), median 396 tokens,
+longest retained row 2,069. `vericoding_da0085__findMinimumTotalDistance` exceeds 2,845 tokens and is
+excluded whole. The model has 129,859,584 trainable LoRA parameters and the fixed recipe schedules 130 steps.
+
+Evaluation details fixed before any candidate answer: the
+[grading script](recipes/gcp-student-2026-10-11-grade.sh) uses 1,000 draws per task with per-task seeds,
+completeness at least 0.6, and larger-input checks. It applies MBPP+'s corrected solutions only when
+they pass the original problem's tests, the established rule of
+[the reference correction](PREDICT-2026-10-02-reference-plus.md). The 378 reference rows come from
+`evalplus/mbppplus` revision `b2d74c91837c3f2a20c1299ae98133cbe7cfa077`; the extracted task IDs and
+code have SHA-256 `f2fd5d28f85e2911b185bbc720542efdd639bbdd6e43e226afed323fce32f020`.
+The [export script](recipes/gcp-student-2026-10-11-export.sh) pins llama.cpp
+`23b0202a189c44a54625aadcb37a946dd1d6278d` and writes Q8_0 directly with its converter, without MTP.
+The held-out measurements above use the merged bf16 model; they do not establish Q8_0 equivalence.
+
+## Instrument control, registered 2026-10-11 05:54Z
+
+Before candidate generation, replay the 33 supplied correct programs through the same strict
+specification-preservation and seven-kernel path (`recipes/gcp-student-2026-10-11-ceiling.sh`).
+Prediction C1: all 33 reach grading and at least 30 prove in all seven with refuted twins.
+Fewer than 33 reaching grading or fewer than 30 proving falsifies it. This measures the current
+instrument ceiling; it changes neither the question set nor the candidate criteria above.
