@@ -1,0 +1,37 @@
+{
+  "original_rows": 5095,
+  "assembled_rows": 5275,
+  "assembled_sha256": "ba683cfdd0dd3ef880c2992f36da4256b8c8686c47a7c6c0ba608ca7dfdca3a7",
+  "audit_flagged": 1111,
+  "split_flagged": 14,
+  "family_only_removed": 812,
+  "total_removed": 1923,
+  "retained_original_rows": 3266,
+  "appended_retained": {
+    "corpus-spec": 60,
+    "new-english": 9,
+    "new-spec-first": 17
+  },
+  "final_rows": 3352,
+  "final_sha256": "443b674393f5f6a87178b74010f6901cd4cfe0f80a12423880518485aaa2e717",
+  "token_fit_rows": 3319,
+  "token_exclusions": 33,
+  "token_fit_kinds": {
+    "english": 595,
+    "python": 380,
+    "spec": 548,
+    "proof-py": 590,
+    "spec-given": 503,
+    "repair": 703
+  },
+  "prediction_D1_holds": false,
+  "prediction_D1_threshold": 4000,
+  "all_six_kinds_present": true,
+  "checks": {
+    "heldout_audit": true,
+    "heldout_audit_panels": true,
+    "spec_panel": true
+  },
+  "reference_pool_recovered": true,
+  "previous_1528_row_attempt_invalid_missing_APPS": true
+}

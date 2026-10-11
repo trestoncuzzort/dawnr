@@ -1,0 +1,3085 @@
+{
+  "sources": {
+    "t/out/desktop-recovery-20261011/sft-student-teacher3.jsonl": "848fca29d9399ef91fcb867006e4ff42f60b53e9e2e084e4f1e93dae37811110",
+    "t/out/v5-matched-20261011/v5/spec-heldout.jsonl": "effc2f4e586e0c4f7638a5a9a2b75515aaf7019de03ca819d46e5aa3d593ab24",
+    "t/out/loop/sft-deepseek-nine.jsonl": "cc4b82e28e147353275b9cbae80d2d9ffcfe69d236d7965304e1e2a3d1504ca4",
+    "t/out/loop/sft-deepseek-b2.jsonl": "c7093d70a94cb9256b059fd4bef580f4f8c8456e3f11ab832ee0c06fb95e28f9",
+    "t/out/loop/sft-deepseek-b3.jsonl": "42b84d0c7acd1239b8055e48e944cd9addf9af48f36cea4ff9ac65d38ba59c27",
+    "t/out/loop/corpus-r12-headed.txt": "12491a7f067ea0b96a6ee6217b9869c9d81e743904603f202109d8f878daf943",
+    "t/out/loop/split-v5.json": "49103716b2eddf92ecdc811eb614f71eed8fb3804ab4ac849f9640a4c7f8693e",
+    "t/out/v5-full-20261011/reference-data/apps_raw_train.jsonl.gz": "a3f4096b423aff78604b984191e4586dc6053fa18c27508d95233f19141062a0",
+    "t/out/v5-full-20261011/reference-data/humaneval.jsonl.gz": "468349f095b0a987be825c95e53a03bf482d79bc1b27835e5d12b10e904f3b1f",
+    "t/out/v5-full-20261011/reference-data/mbpp.jsonl.gz": "a258c07a12402eb088dd2ffc79beb27c2851a9215492dd1fd198e1721d734e02",
+    "t/out/v5-full-20261011/reference-data/mbpp_prompt.jsonl.gz": "95665f74188a8e7317a50467890d07eeee701b6a7ad094585f922b29e2277995",
+    "t/out/v5-full-20261011/reference-data/mbpp_test.jsonl.gz": "f29b4441958f7ba326a5d797505574c54c29ee25a8d6b8b04b9b15e4d9c41e61",
+    "t/out/v5-full-20261011/reference-data/mbpp_validation.jsonl.gz": "ff31e9dfcafd00cc5352a54e67a53f71952ead6b94e12a72765cb6f4dcb99f3e"
+  },
+  "original_rows": 5095,
+  "original_kinds": {
+    "graded": 933,
+    "python": 549,
+    "spec": 839,
+    "proof-py": 933,
+    "spec-given": 639,
+    "debug": 1202
+  },
+  "original_distinct_prompt_answer_pairs": 4892,
+  "raw_rows": 5275,
+  "raw_sha256": "ba683cfdd0dd3ef880c2992f36da4256b8c8686c47a7c6c0ba608ca7dfdca3a7",
+  "contributions": {
+    "corpus-spec": {
+      "input": 476,
+      "added": 139,
+      "duplicates": [
+        {
+          "task_id": null,
+          "name": "mbpp_8__square_nums",
+          "kind": "spec-given"
+        },
+        {
+          "task_id": null,
+          "name": "mbpp_17__square_perimeter",
+          "kind": "spec-given"
+        },
+        {
+          "task_id": null,
+          "name": "mbpp_35__find_rect_num",
+          "kind": "spec-given"
+        },
+        {
+          "task_id": null,
+          "name": "mbpp_52__parallelogram_area",
+          "kind": "spec-given"
+        },
+        {
+          "task_id": null,
+          "name": "mbpp_59__is_octagonal",
+          "kind": "spec-given"
+        },
+        {
+          "task_id": null,
+          "name": "mbpp_79__word_len",
+          "kind": "spec-given"
+        },
+        {
+          "task_id": null,
+          "name": "mbpp_89__closest_num",
+          "kind": "spec-given"
+        },
+        {
+          "task_id": null,
+          "name": "mbpp_112__perimeter",
+          "kind": "spec-given"
+        },
+        {
+          "task_id": null,
+          "name": "mbpp_135__hexagonal_num",
+          "kind": "spec-given"
+        },
+        {
+          "task_id": null,
+          "name": "mbpp_171__perimeter_pentagon",
+          "kind": "spec-given"
+        },
+        {
+          "task_id": null,
+          "name": "mbpp_176__perimeter_triangle",
+          "kind": "spec-given"
+        },
+        {
+          "task_id": null,
+          "name": "mbpp_190__count_Intgral_Points",
+          "kind": "spec-given"
+        },
+        {
+          "task_id": null,
+          "name": "mbpp_227__min_of_three",
+          "kind": "spec-given"
+        },
+        {
+          "task_id": null,
+          "name": "mbpp_230__replace_blank",
+          "kind": "spec-given"
+        },
+        {
+          "task_id": null,
+          "name": "mbpp_234__volume_cube",
+          "kind": "spec-given"
+        },
+        {
+          "task_id": null,
+          "name": "mbpp_238__number_of_substrings",
+          "kind": "spec-given"
+        },
+        {
+          "task_id": null,
+          "name": "mbpp_264__dog_age",
+          "kind": "spec-given"
+        },
+        {
+          "task_id": null,
+          "name": "mbpp_268__find_star_num",
+          "kind": "spec-given"
+        },
+        {
+          "task_id": null,
+          "name": "mbpp_279__is_num_decagonal",
+          "kind": "spec-given"
+        },
+        {
+          "task_id": null,
+          "name": "mbpp_309__maximum",
+          "kind": "spec-given"
+        },
+        {
+          "task_id": null,
+          "name": "mbpp_336__check_monthnum",
+          "kind": "spec-given"
+        },
+        {
+          "task_id": null,
+          "name": "mbpp_354__tn_ap",
+          "kind": "spec-given"
+        },
+        {
+          "task_id": null,
+          "name": "mbpp_356__find_angle",
+          "kind": "spec-given"
+        },
+        {
+          "task_id": null,
+          "name": "mbpp_373__volume_cuboid",
+          "kind": "spec-given"
+        },
+        {
+          "task_id": null,
+          "name": "mbpp_379__surfacearea_cuboid",
+          "kind": "spec-given"
+        },
+        {
+          "task_id": null,
+          "name": "mbpp_441__surfacearea_cube",
+          "kind": "spec-given"
+        },
+        {
+          "task_id": null,
+          "name": "mbpp_458__rectangle_area",
+          "kind": "spec-given"
+        },
+        {
+          "task_id": null,
+          "name": "mbpp_509__average_Odd",
+          "kind": "spec-given"
+        },
+        {
+          "task_id": null,
+          "name": "mbpp_542__fill_spaces",
+          "kind": "spec-given"
+        },
+        {
+          "task_id": null,
+          "name": "mbpp_557__toggle_string",
+          "kind": "spec-given"
+        },
+        {
+          "task_id": null,
+          "name": "mbpp_577__last_Digit_Factorial",
+          "kind": "spec-given"
+        },
+        {
+          "task_id": null,
+          "name": "mbpp_581__surface_Area",
+          "kind": "spec-given"
+        },
+        {
+          "task_id": null,
+          "name": "mbpp_625__swap_List",
+          "kind": "spec-given"
+        },
+        {
+          "task_id": null,
+          "name": "mbpp_637__noprofit_noloss",
+          "kind": "spec-given"
+        },
+        {
+          "task_id": null,
+          "name": "mbpp_646__No_of_cubes",
+          "kind": "spec-given"
+        },
+        {
+          "task_id": null,
+          "name": "mbpp_654__rectangle_perimeter",
+          "kind": "spec-given"
+        },
+        {
+          "task_id": null,
+          "name": "mbpp_716__rombus_perimeter",
+          "kind": "spec-given"
+        },
+        {
+          "task_id": null,
+          "name": "mbpp_732__replace_specialchar",
+          "kind": "spec-given"
+        },
+        {
+          "task_id": null,
+          "name": "mbpp_789__perimeter_polygon",
+          "kind": "spec-given"
+        },
+        {
+          "task_id": null,
+          "name": "mbpp_801__test_three_equal",
+          "kind": "spec-given"
+        },
+        {
+          "task_id": null,
+          "name": "mbpp_820__check_monthnum_number",
+          "kind": "spec-given"
+        },
+        {
+          "task_id": null,
+          "name": "mbpp_865__ntimes_list",
+          "kind": "spec-given"
+        },
+        {
+          "task_id": null,
+          "name": "mbpp_873__fibonacci",
+          "kind": "spec-given"
+        },
+        {
+          "task_id": null,
+          "name": "mbpp_890__find_Extra",
+          "kind": "spec-given"
+        },
+        {
+          "task_id": null,
+          "name": "mbpp_964__word_len",
+          "kind": "spec-given"
+        },
+        {
+          "task_id": null,
+          "name": "he_27__flip_case",
+          "kind": "spec-given"
+        },
+        {
+          "task_id": null,
+          "name": "he_41__car_race_collision",
+          "kind": "spec-given"
+        },
+        {
+          "task_id": null,
+          "name": "he_42__incr_list",
+          "kind": "spec-given"
+        },
+        {
+          "task_id": null,
+          "name": "clover_cal_sum__sum",
+          "kind": "spec-given"
+        },
+        {
+          "task_id": null,
+          "name": "clover_double_array_elements__double_array_elements",
+          "kind": "spec-given"
+        },
+        {
+          "task_id": null,
+          "name": "clover_double_quadruple__doubleQuadruple",
+          "kind": "spec-given"
+        },
+        {
+          "task_id": null,
+          "name": "clover_multi_return__multipleReturns",
+          "kind": "spec-given"
+        },
+        {
+          "task_id": null,
+          "name": "clover_return_seven__m",
+          "kind": "spec-given"
+        },
+        {
+          "task_id": null,
+          "name": "clover_swap__swap",
+          "kind": "spec-given"
+        },
+        {
+          "task_id": null,
+          "name": "clover_swap_arith__swapArithmetic",
+          "kind": "spec-given"
+        },
+        {
+          "task_id": null,
+          "name": "clover_swap_in_array__swap",
+          "kind": "spec-given"
+        },
+        {
+          "task_id": null,
+          "name": "clover_swap_sim__swapSimultaneous",
+          "kind": "spec-given"
+        },
+        {
+          "task_id": null,
+          "name": "clover_test_array__testArrayElements",
+          "kind": "spec-given"
+        },
+        {
+          "task_id": null,
+          "name": "clover_triple__triple",
+          "kind": "spec-given"
+        },
+        {
+          "task_id": null,
+          "name": "clover_triple3__triple",
+          "kind": "spec-given"
+        },
+        {
+          "task_id": null,
+          "name": "clover_triple4__triple",
+          "kind": "spec-given"
+        },
+        {
+          "task_id": null,
+          "name": "dafny_learning_experience_tmp_tmpuxvcet_u_week1_7_maxsum__maxSum",
+          "kind": "spec-given"
+        },
+        {
+          "task_id": null,
+          "name": "dafny_learning_experience_tmp_tmpuxvcet_u_week1_7_week5_computepower__calcPower",
+          "kind": "spec-given"
+        },
+        {
+          "task_id": null,
+          "name": "dafny_programs_tmp_tmp99966ew4_mymax__max",
+          "kind": "spec-given"
+        },
+        {
+          "task_id": null,
+          "name": "dafny_verify_tmp_tmphq7j0row_ai_agent_validation_examples__computePower",
+          "kind": "spec-given"
+        },
+        {
+          "task_id": null,
+          "name": "dafny_verify_tmp_tmphq7j0row_ai_agent_validation_examples__cube",
+          "kind": "spec-given"
+        },
+        {
+          "task_id": null,
+          "name": "dafny_verify_tmp_tmphq7j0row_ai_agent_verify_examples_computepower__computePower",
+          "kind": "spec-given"
+        },
+        {
+          "task_id": null,
+          "name": "dafny_verify_tmp_tmphq7j0row_fine_tune_examples_error_data_completion_11__main_v",
+          "kind": "spec-given"
+        },
+        {
+          "task_id": null,
+          "name": "dafny_verify_tmp_tmphq7j0row_generated_code_15__main_v",
+          "kind": "spec-given"
+        },
+        {
+          "task_id": null,
+          "name": "dafny_verify_tmp_tmphq7j0row_test_cases_function__triple_p",
+          "kind": "spec-given"
+        },
+        {
+          "task_id": null,
+          "name": "dafny_verify_tmp_tmphq7j0row_test_cases_function__tripleConditions",
+          "kind": "spec-given"
+        },
+        {
+          "task_id": null,
+          "name": "dafny_verify_tmp_tmphq7j0row_test_cases_ghost__doubleQuadruple",
+          "kind": "spec-given"
+        },
+        {
+          "task_id": null,
+          "name": "dafny_verify_tmp_tmphq7j0row_test_cases_ghost__m",
+          "kind": "spec-given"
+        },
+        {
+          "task_id": null,
+          "name": "dafny_verify_tmp_tmphq7j0row_test_cases_ghost__myMethod",
+          "kind": "spec-given"
+        },
+        {
+          "task_id": null,
+          "name": "dafny_verify_tmp_tmphq7j0row_test_cases_index__index",
+          "kind": "spec-given"
+        },
+        {
+          "task_id": null,
+          "name": "dafny_verify_tmp_tmphq7j0row_test_cases_index__maxSum",
+          "kind": "spec-given"
+        },
+        {
+          "task_id": null,
+          "name": "dafny_verify_tmp_tmphq7j0row_test_cases_index__reconstructFromMaxSum",
+          "kind": "spec-given"
+        },
+        {
+          "task_id": null,
+          "name": "dafny_verify_tmp_tmphq7j0row_test_cases_loopinvariant__downWhileNotEqual",
+          "kind": "spec-given"
+        },
+        {
+          "task_id": null,
+          "name": "dafny_verify_tmp_tmphq7j0row_test_cases_loopinvariant__upWhileLess",
+          "kind": "spec-given"
+        },
+        {
+          "task_id": null,
+          "name": "dafny_verify_tmp_tmphq7j0row_test_cases_triple__tripleConditions",
+          "kind": "spec-given"
+        },
+        {
+          "task_id": null,
+          "name": "dafny_verify_tmp_tmphq7j0row_dataset_c_convert_examples_11__main_v",
+          "kind": "spec-given"
+        },
+        {
+          "task_id": null,
+          "name": "dafny_verify_tmp_tmphq7j0row_dataset_c_convert_examples_15__main_v",
+          "kind": "spec-given"
+        },
+        {
+          "task_id": null,
+          "name": "dafny_verify_tmp_tmphq7j0row_dataset_bql_exampls_square__square",
+          "kind": "spec-given"
+        },
+        {
+          "task_id": null,
+          "name": "dafny_tmp_tmp0wu8wmfr_tests_f1a__f",
+          "kind": "spec-given"
+        },
+        {
+          "task_id": null,
+          "name": "dafny_tmp_tmp0wu8wmfr_tests_f1a__mid",
+          "kind": "spec-given"
+        },
+        {
+          "task_id": null,
+          "name": "dafny_tmp_tmp0wu8wmfr_tests_sumintsloop__sumIntsLoop",
+          "kind": "spec-given"
+        },
+        {
+          "task_id": null,
+          "name": "dafny_tmp_tmpmvs2dmry_slowmax__slow_max",
+          "kind": "spec-given"
+        },
+        {
+          "task_id": null,
+          "name": "dafny_tmp_tmpmvs2dmry_examples1__max",
+          "kind": "spec-given"
+        },
+        {
+          "task_id": null,
+          "name": "dafny_tmp_tmpmvs2dmry_examples1__multiReturn",
+          "kind": "spec-given"
+        },
+        {
+          "task_id": null,
+          "name": "dafny_tmp_tmpmvs2dmry_examples2__add_by_inc",
+          "kind": "spec-given"
+        },
+        {
+          "task_id": null,
+          "name": "final_project_dafny_tmp_tmpmcywuqox_attempts_exercise3_increment_array__incrementArray",
+          "kind": "spec-given"
+        },
+        {
+          "task_id": null,
+          "name": "formal_methods_of_software_development_tmp_tmppryvbyty_bloque_1_lab3__sqare",
+          "kind": "spec-given"
+        },
+        {
+          "task_id": null,
+          "name": "formal_methods_of_software_development_tmp_tmppryvbyty_bloque_1_lab3__sqare2",
+          "kind": "spec-given"
+        },
+        {
+          "task_id": null,
+          "name": "formalmethods_tmp_tmpvda2r3_o_dafny_invariants_ex1__mult",
+          "kind": "spec-given"
+        },
+        {
+          "task_id": null,
+          "name": "m2_tmp_tmp2laaavvl_software_verification_exercices_exo4_countandreturn__countToAndReturnN",
+          "kind": "spec-given"
+        },
+        {
+          "task_id": null,
+          "name": "m2_tmp_tmp2laaavvl_software_verification_exercices_exo7_computesum__computeSum",
+          "kind": "spec-given"
+        },
+        {
+          "task_id": null,
+          "name": "m2_tmp_tmp2laaavvl_software_verification_exercices_exo9_carre__carre",
+          "kind": "spec-given"
+        },
+        {
+          "task_id": null,
+          "name": "mfes_2021_tmp_tmpuljn8zd9_fcul_exercises_8_sum__sum",
+          "kind": "spec-given"
+        },
+        {
+          "task_id": null,
+          "name": "mieic_mfes_tmp_tmpq3ho7nve_exams_mt2_19_p4__calcR",
+          "kind": "spec-given"
+        },
+        {
+          "task_id": null,
+          "name": "metodos_formais_tmp_tmpbez22nnn_aula_2_ex1__mult",
+          "kind": "spec-given"
+        },
+        {
+          "task_id": null,
+          "name": "metodos_formais_tmp_tmpql2hwcsh_invariantes_multiplicador__mult",
+          "kind": "spec-given"
+        },
+        {
+          "task_id": null,
+          "name": "prog_fun_solutions_tmp_tmp7_gmnz5f_extra_pow__pow",
+          "kind": "spec-given"
+        },
+        {
+          "task_id": null,
+          "name": "prog_fun_solutions_tmp_tmp7_gmnz5f_extra_sum__sum",
+          "kind": "spec-given"
+        },
+        {
+          "task_id": null,
+          "name": "prog_fun_solutions_tmp_tmp7_gmnz5f_mockexam2_p2__problem2",
+          "kind": "spec-given"
+        },
+        {
+          "task_id": null,
+          "name": "prog_fun_solutions_tmp_tmp7_gmnz5f_mockexam2_p3__problem3",
+          "kind": "spec-given"
+        },
+        {
+          "task_id": null,
+          "name": "program_verification_dataset_tmp_tmpgbdrlnu__dafny_algorithms_and_leetcode_examples_simplemultiplication__foo",
+          "kind": "spec-given"
+        },
+        {
+          "task_id": null,
+          "name": "program_verification_dataset_tmp_tmpgbdrlnu__dafny_basic_examples_add_by_one__add_by_one",
+          "kind": "spec-given"
+        },
+        {
+          "task_id": null,
+          "name": "program_verification_dataset_tmp_tmpgbdrlnu__dafny_basic_examples_add_by_one_details__plus_one",
+          "kind": "spec-given"
+        },
+        {
+          "task_id": null,
+          "name": "program_verification_dataset_tmp_tmpgbdrlnu__dafny_basic_examples_sumto_sol__sumUpTo",
+          "kind": "spec-given"
+        },
+        {
+          "task_id": null,
+          "name": "programmverifikation_und_synthese_tmp_tmppurk6ime_pvs_assignment_ex_04_hoangkim_ex_04_hoangkim__sumOdds",
+          "kind": "spec-given"
+        },
+        {
+          "task_id": null,
+          "name": "programmverifikation_und_synthese_tmp_tmppurk6ime_pvs_assignment_ex_07_hoangkim_ex07_hoangkim__swap",
+          "kind": "spec-given"
+        },
+        {
+          "task_id": null,
+          "name": "programmverifikation_und_synthese_tmp_tmppurk6ime_example_dafnyintro_01_simple_loops__gauss",
+          "kind": "spec-given"
+        },
+        {
+          "task_id": null,
+          "name": "software_building_and_verification_projects_tmp_tmp5tm1srrn_cvs_projeto_aula2__m3",
+          "kind": "spec-given"
+        },
+        {
+          "task_id": null,
+          "name": "software_building_and_verification_projects_tmp_tmp5tm1srrn_cvs_projeto_aula2__max",
+          "kind": "spec-given"
+        },
+        {
+          "task_id": null,
+          "name": "tfg_tmp_tmpbvsao41w_algoritmos_dafny_div_ent_it__div_ent_it",
+          "kind": "spec-given"
+        },
+        {
+          "task_id": null,
+          "name": "workshop_tmp_tmp0cu11bdq_lecture_answers_triangle_number__triangleNumber",
+          "kind": "spec-given"
+        },
+        {
+          "task_id": null,
+          "name": "bbfny_tmp_tmpw4m0jvl0_enjoying__max",
+          "kind": "spec-given"
+        },
+        {
+          "task_id": null,
+          "name": "bbfny_tmp_tmpw4m0jvl0_enjoying__multipleReturns",
+          "kind": "spec-given"
+        },
+        {
+          "task_id": null,
+          "name": "cmsc433_tmp_tmpe3ob3a0o_dafny_project1_p1_assignment_2__plusOne",
+          "kind": "spec-given"
+        },
+        {
+          "task_id": null,
+          "name": "cmsc433_tmp_tmpe3ob3a0o_dafny_project1_p1_assignment_2__reverse",
+          "kind": "spec-given"
+        },
+        {
+          "task_id": null,
+          "name": "cs245_verification_tmp_tmp0h_nxhqp_assignments_simple__simple",
+          "kind": "spec-given"
+        },
+        {
+          "task_id": null,
+          "name": "dafl_tmp_tmp_r3_8w3y_dafny_examples_uiowa_modifying_arrays__incrementArray",
+          "kind": "spec-given"
+        },
+        {
+          "task_id": null,
+          "name": "dafny_language_server_tmp_tmpkir0kenl_test_dafny1_cubes__cubes",
+          "kind": "spec-given"
+        },
+        {
+          "task_id": null,
+          "name": "dafny_learn_tmp_tmpn94ir40q_r01_assertions__abs",
+          "kind": "spec-given"
+        },
+        {
+          "task_id": null,
+          "name": "dafny_learn_tmp_tmpn94ir40q_r01_functions__abs",
+          "kind": "spec-given"
+        },
+        {
+          "task_id": null,
+          "name": "dafny_learn_tmp_tmpn94ir40q_r01_functions__testDouble",
+          "kind": "spec-given"
+        },
+        {
+          "task_id": null,
+          "name": "dafny_programs_tmp_tmpcwodh6qh_src_factorial__factorial",
+          "kind": "spec-given"
+        },
+        {
+          "task_id": null,
+          "name": "dafny_workout_tmp_tmp0abkw6f8_starter_ex01__max",
+          "kind": "spec-given"
+        },
+        {
+          "task_id": null,
+          "name": "dafny_workout_tmp_tmp0abkw6f8_starter_ex02__abs",
+          "kind": "spec-given"
+        },
+        {
+          "task_id": null,
+          "name": "dafny_workout_tmp_tmp0abkw6f8_starter_ex03__abs",
+          "kind": "spec-given"
+        },
+        {
+          "task_id": null,
+          "name": "formal_methods_in_software_engineering_tmp_tmpe7fjnek6_labs4_gr2__divMod1",
+          "kind": "spec-given"
+        },
+        {
+          "task_id": null,
+          "name": "formal_methods_in_software_engineering_tmp_tmpe7fjnek6_labs4_gr2__hoareTripleReqEns",
+          "kind": "spec-given"
+        },
+        {
+          "task_id": null,
+          "name": "formal_verication_dafny_tmp_tmpwgl2qz28_challenges_ex2__forbid42",
+          "kind": "spec-given"
+        },
+        {
+          "task_id": null,
+          "name": "nitwit_tmp_tmplm098gxz_nit__max_nit",
+          "kind": "spec-given"
+        },
+        {
+          "task_id": null,
+          "name": "se2011_tmp_tmp71eb82zt_ass1_ex4__eval",
+          "kind": "spec-given"
+        },
+        {
+          "task_id": null,
+          "name": "se2011_tmp_tmp71eb82zt_ass1_ex6__ceiling7",
+          "kind": "spec-given"
+        },
+        {
+          "task_id": null,
+          "name": "stunning_palm_tree_tmp_tmpr84c2iwh_ch1__minUnderSpec",
+          "kind": "spec-given"
+        },
+        {
+          "task_id": null,
+          "name": "stunning_palm_tree_tmp_tmpr84c2iwh_ch1__reconstructFromMaxSum",
+          "kind": "spec-given"
+        },
+        {
+          "task_id": null,
+          "name": "stunning_palm_tree_tmp_tmpr84c2iwh_ch1__triple_p",
+          "kind": "spec-given"
+        },
+        {
+          "task_id": null,
+          "name": "stunning_palm_tree_tmp_tmpr84c2iwh_ch1__triple",
+          "kind": "spec-given"
+        },
+        {
+          "task_id": null,
+          "name": "t1_mf_tmp_tmpi_sqie4j_exemplos_introducao_ex4__fatorial",
+          "kind": "spec-given"
+        },
+        {
+          "task_id": null,
+          "name": "humaneval_dafny_042_incr_list__incr_list",
+          "kind": "spec-given"
+        },
+        {
+          "task_id": null,
+          "name": "humaneval_dafny_053_add__add",
+          "kind": "spec-given"
+        },
+        {
+          "task_id": null,
+          "name": "humaneval_dafny_060_sum_to_n__sum_to_n",
+          "kind": "spec-given"
+        },
+        {
+          "task_id": null,
+          "name": "humaneval_dafny_088_sort_array__reverse",
+          "kind": "spec-given"
+        },
+        {
+          "task_id": null,
+          "name": "humaneval_dafny_092_any_int__any_int",
+          "kind": "spec-given"
+        },
+        {
+          "task_id": null,
+          "name": "humaneval_dafny_097_multiply__multiply",
+          "kind": "spec-given"
+        },
+        {
+          "task_id": null,
+          "name": "humaneval_dafny_157_right_angle_triangle__right_angle_triangle",
+          "kind": "spec-given"
+        },
+        {
+          "task_id": null,
+          "name": "humaneval_dafny_159_eat__eat",
+          "kind": "spec-given"
+        },
+        {
+          "task_id": null,
+          "name": "humaneval_dafny_163_generate_integers__max",
+          "kind": "spec-given"
+        },
+        {
+          "task_id": null,
+          "name": "vericoding_da0049__solve",
+          "kind": "spec-given"
+        },
+        {
+          "task_id": null,
+          "name": "vericoding_da0060__computeDistanceToHouse",
+          "kind": "spec-given"
+        },
+        {
+          "task_id": null,
+          "name": "vericoding_da0119__solve",
+          "kind": "spec-given"
+        },
+        {
+          "task_id": null,
+          "name": "vericoding_da0133__solve",
+          "kind": "spec-given"
+        },
+        {
+          "task_id": null,
+          "name": "vericoding_da0190__solve",
+          "kind": "spec-given"
+        },
+        {
+          "task_id": null,
+          "name": "vericoding_da0211__solve",
+          "kind": "spec-given"
+        },
+        {
+          "task_id": null,
+          "name": "vericoding_da0234__solve",
+          "kind": "spec-given"
+        },
+        {
+          "task_id": null,
+          "name": "vericoding_da0278__solve",
+          "kind": "spec-given"
+        },
+        {
+          "task_id": null,
+          "name": "vericoding_da0347__solve",
+          "kind": "spec-given"
+        },
+        {
+          "task_id": null,
+          "name": "vericoding_da0366__solve",
+          "kind": "spec-given"
+        },
+        {
+          "task_id": null,
+          "name": "vericoding_da0475__solve",
+          "kind": "spec-given"
+        },
+        {
+          "task_id": null,
+          "name": "vericoding_da0493__solve",
+          "kind": "spec-given"
+        },
+        {
+          "task_id": null,
+          "name": "vericoding_da0522__solve",
+          "kind": "spec-given"
+        },
+        {
+          "task_id": null,
+          "name": "vericoding_da0539__calculateMaxPies",
+          "kind": "spec-given"
+        },
+        {
+          "task_id": null,
+          "name": "vericoding_da0615__calculateBlackSquares",
+          "kind": "spec-given"
+        },
+        {
+          "task_id": null,
+          "name": "vericoding_da0644__solve",
+          "kind": "spec-given"
+        },
+        {
+          "task_id": null,
+          "name": "vericoding_da0658__solve",
+          "kind": "spec-given"
+        },
+        {
+          "task_id": null,
+          "name": "vericoding_da0664__solve",
+          "kind": "spec-given"
+        },
+        {
+          "task_id": null,
+          "name": "vericoding_da0668__solve",
+          "kind": "spec-given"
+        },
+        {
+          "task_id": null,
+          "name": "vericoding_da0671__solve",
+          "kind": "spec-given"
+        },
+        {
+          "task_id": null,
+          "name": "vericoding_da0676__solve",
+          "kind": "spec-given"
+        },
+        {
+          "task_id": null,
+          "name": "vericoding_dd0053__sum",
+          "kind": "spec-given"
+        },
+        {
+          "task_id": null,
+          "name": "vericoding_dd0058__double_array_elements",
+          "kind": "spec-given"
+        },
+        {
+          "task_id": null,
+          "name": "vericoding_dd0059__doubleQuadruple",
+          "kind": "spec-given"
+        },
+        {
+          "task_id": null,
+          "name": "vericoding_dd0075__multipleReturns",
+          "kind": "spec-given"
+        },
+        {
+          "task_id": null,
+          "name": "vericoding_dd0080__m",
+          "kind": "spec-given"
+        },
+        {
+          "task_id": null,
+          "name": "vericoding_dd0085__swap",
+          "kind": "spec-given"
+        },
+        {
+          "task_id": null,
+          "name": "vericoding_dd0086__swapArithmetic",
+          "kind": "spec-given"
+        },
+        {
+          "task_id": null,
+          "name": "vericoding_dd0088__swap",
+          "kind": "spec-given"
+        },
+        {
+          "task_id": null,
+          "name": "vericoding_dd0089__swapSimultaneous",
+          "kind": "spec-given"
+        },
+        {
+          "task_id": null,
+          "name": "vericoding_dd0090__testArrayElements",
+          "kind": "spec-given"
+        },
+        {
+          "task_id": null,
+          "name": "vericoding_dd0091__triple",
+          "kind": "spec-given"
+        },
+        {
+          "task_id": null,
+          "name": "vericoding_dd0092__triple",
+          "kind": "spec-given"
+        },
+        {
+          "task_id": null,
+          "name": "vericoding_dd0093__triple",
+          "kind": "spec-given"
+        },
+        {
+          "task_id": null,
+          "name": "vericoding_dd0094__triple",
+          "kind": "spec-given"
+        },
+        {
+          "task_id": null,
+          "name": "vericoding_dd0225__computePower",
+          "kind": "spec-given"
+        },
+        {
+          "task_id": null,
+          "name": "vericoding_dd0256__max",
+          "kind": "spec-given"
+        },
+        {
+          "task_id": null,
+          "name": "vericoding_dd0271__incrementArray",
+          "kind": "spec-given"
+        },
+        {
+          "task_id": null,
+          "name": "vericoding_dd0539__reverse",
+          "kind": "spec-given"
+        },
+        {
+          "task_id": null,
+          "name": "vericoding_dd0634__expt",
+          "kind": "spec-given"
+        },
+        {
+          "task_id": null,
+          "name": "vericoding_dd0635__factorial",
+          "kind": "spec-given"
+        },
+        {
+          "task_id": null,
+          "name": "vericoding_dd0646__triangularPrismVolume",
+          "kind": "spec-given"
+        },
+        {
+          "task_id": null,
+          "name": "vericoding_dd0669__multiply",
+          "kind": "spec-given"
+        },
+        {
+          "task_id": null,
+          "name": "vericoding_dd0678__pentagonPerimeter",
+          "kind": "spec-given"
+        },
+        {
+          "task_id": null,
+          "name": "vericoding_dd0679__minOfThree",
+          "kind": "spec-given"
+        },
+        {
+          "task_id": null,
+          "name": "vericoding_dd0682__cubeVolume",
+          "kind": "spec-given"
+        },
+        {
+          "task_id": null,
+          "name": "vericoding_dd0689__elementWiseDivision",
+          "kind": "spec-given"
+        },
+        {
+          "task_id": null,
+          "name": "vericoding_dd0696__subtractSequences",
+          "kind": "spec-given"
+        },
+        {
+          "task_id": null,
+          "name": "vericoding_dd0703__elementAtIndexAfterRotation",
+          "kind": "spec-given"
+        },
+        {
+          "task_id": null,
+          "name": "vericoding_dd0722__lastDigit",
+          "kind": "spec-given"
+        },
+        {
+          "task_id": null,
+          "name": "vericoding_dd0724__cubeSurfaceArea",
+          "kind": "spec-given"
+        },
+        {
+          "task_id": null,
+          "name": "vericoding_dd0727__calculateLoss",
+          "kind": "spec-given"
+        },
+        {
+          "task_id": null,
+          "name": "vericoding_dd0740__differenceSumCubesAndSumNumbers",
+          "kind": "spec-given"
+        },
+        {
+          "task_id": null,
+          "name": "vericoding_dd0749__factorialOfLastDigit",
+          "kind": "spec-given"
+        },
+        {
+          "task_id": null,
+          "name": "vericoding_dd0767__elementWiseDivide",
+          "kind": "spec-given"
+        },
+        {
+          "task_id": null,
+          "name": "vericoding_dd0772__areaOfLargestTriangleInSemicircle",
+          "kind": "spec-given"
+        },
+        {
+          "task_id": null,
+          "name": "vericoding_dd0777__isBreakEven",
+          "kind": "spec-given"
+        },
+        {
+          "task_id": null,
+          "name": "vericoding_dd0778__nthNonagonalNumber",
+          "kind": "spec-given"
+        },
+        {
+          "task_id": null,
+          "name": "vericoding_dd0791__isMonthWith30Days",
+          "kind": "spec-given"
+        },
+        {
+          "task_id": null,
+          "name": "vericoding_dd0800__countLists",
+          "kind": "spec-given"
+        },
+        {
+          "task_id": null,
+          "name": "vericoding_dd0804__countEqualNumbers",
+          "kind": "spec-given"
+        },
+        {
+          "task_id": null,
+          "name": "vericoding_dd0847__divMod1",
+          "kind": "spec-given"
+        },
+        {
+          "task_id": null,
+          "name": "vericoding_dh0056__add",
+          "kind": "spec-given"
+        },
+        {
+          "task_id": null,
+          "name": "vericoding_dh0063__sum_to_n",
+          "kind": "spec-given"
+        },
+        {
+          "task_id": null,
+          "name": "vericoding_dh0065__fibfib",
+          "kind": "spec-given"
+        },
+        {
+          "task_id": null,
+          "name": "vericoding_dj0038__myfun",
+          "kind": "spec-given"
+        },
+        {
+          "task_id": null,
+          "name": "vericoding_dj0039__myfun",
+          "kind": "spec-given"
+        },
+        {
+          "task_id": null,
+          "name": "vericoding_dj0040__myfun",
+          "kind": "spec-given"
+        },
+        {
+          "task_id": null,
+          "name": "vericoding_dj0041__myfun",
+          "kind": "spec-given"
+        },
+        {
+          "task_id": null,
+          "name": "vericoding_dj0044__myfun",
+          "kind": "spec-given"
+        },
+        {
+          "task_id": null,
+          "name": "vericoding_dj0078__elementWiseSubtract",
+          "kind": "spec-given"
+        },
+        {
+          "task_id": null,
+          "name": "vericoding_dj0079__elementWiseSubtract",
+          "kind": "spec-given"
+        },
+        {
+          "task_id": null,
+          "name": "vericoding_dj0111__removeKthElement",
+          "kind": "spec-given"
+        },
+        {
+          "task_id": null,
+          "name": "vericoding_dj0135__arithmeticWeird",
+          "kind": "spec-given"
+        },
+        {
+          "task_id": null,
+          "name": "vericoding_dj0160__reverse",
+          "kind": "spec-given"
+        },
+        {
+          "task_id": null,
+          "name": "vericoding_ds0010__clip",
+          "kind": "spec-given"
+        },
+        {
+          "task_id": null,
+          "name": "vericoding_ds0015__cumProd",
+          "kind": "spec-given"
+        },
+        {
+          "task_id": null,
+          "name": "vericoding_ds0016__cumSum",
+          "kind": "spec-given"
+        },
+        {
+          "task_id": null,
+          "name": "vericoding_ds0029__lcmInt",
+          "kind": "spec-given"
+        },
+        {
+          "task_id": null,
+          "name": "vericoding_ds0049__sign",
+          "kind": "spec-given"
+        },
+        {
+          "task_id": null,
+          "name": "vericoding_ds0051__square",
+          "kind": "spec-given"
+        },
+        {
+          "task_id": null,
+          "name": "vericoding_ds0052__subtract",
+          "kind": "spec-given"
+        },
+        {
+          "task_id": null,
+          "name": "vericoding_dv0084__kthElementImpl",
+          "kind": "spec-given"
+        },
+        {
+          "task_id": null,
+          "name": "vericoding_dv0085__multiply",
+          "kind": "spec-given"
+        },
+        {
+          "task_id": null,
+          "name": "vericoding_dv0086__minOfThree",
+          "kind": "spec-given"
+        },
+        {
+          "task_id": null,
+          "name": "vericoding_dv0135__compare",
+          "kind": "spec-given"
+        },
+        {
+          "task_id": null,
+          "name": "vericoding_dv0152__append",
+          "kind": "spec-given"
+        },
+        {
+          "task_id": null,
+          "name": "vericoding_dv0162__removeFront",
+          "kind": "spec-given"
+        },
+        {
+          "task_id": null,
+          "name": "vericoding_dv0164__replace",
+          "kind": "spec-given"
+        },
+        {
+          "task_id": null,
+          "name": "vericoding_dv0165__reverse",
+          "kind": "spec-given"
+        },
+        {
+          "task_id": null,
+          "name": "vericoding_dv0178__triple",
+          "kind": "spec-given"
+        },
+        {
+          "task_id": null,
+          "name": "vericoding_dv0179__triple",
+          "kind": "spec-given"
+        },
+        {
+          "task_id": null,
+          "name": "vericoding_dv0180__triple",
+          "kind": "spec-given"
+        },
+        {
+          "task_id": null,
+          "name": "vericoding_da0069__solve",
+          "kind": "spec-given"
+        },
+        {
+          "task_id": null,
+          "name": "vericoding_da0070__solve",
+          "kind": "spec-given"
+        },
+        {
+          "task_id": null,
+          "name": "vericoding_da0132__solve",
+          "kind": "spec-given"
+        },
+        {
+          "task_id": null,
+          "name": "vericoding_da0203__solve",
+          "kind": "spec-given"
+        },
+        {
+          "task_id": null,
+          "name": "vericoding_da0383__checkLampArrangement",
+          "kind": "spec-given"
+        },
+        {
+          "task_id": null,
+          "name": "vericoding_da0419__solve",
+          "kind": "spec-given"
+        },
+        {
+          "task_id": null,
+          "name": "vericoding_da0621__solve",
+          "kind": "spec-given"
+        },
+        {
+          "task_id": null,
+          "name": "vericoding_da0641__solve",
+          "kind": "spec-given"
+        },
+        {
+          "task_id": null,
+          "name": "vericoding_da0661__solve",
+          "kind": "spec-given"
+        },
+        {
+          "task_id": null,
+          "name": "vericoding_db0028__computeExp",
+          "kind": "spec-given"
+        },
+        {
+          "task_id": null,
+          "name": "humaneval_dafny_138_is_equal_to_sum_even__is_equal_to_sum_even",
+          "kind": "spec-given"
+        },
+        {
+          "task_id": null,
+          "name": "vericoding_da0083__solve",
+          "kind": "spec-given"
+        },
+        {
+          "task_id": null,
+          "name": "vericoding_da0528__solve",
+          "kind": "spec-given"
+        },
+        {
+          "task_id": null,
+          "name": "vericoding_da0532__solve",
+          "kind": "spec-given"
+        },
+        {
+          "task_id": null,
+          "name": "vericoding_dd0048__computeAvg",
+          "kind": "spec-given"
+        },
+        {
+          "task_id": null,
+          "name": "vericoding_dd0720__medianLength",
+          "kind": "spec-given"
+        },
+        {
+          "task_id": null,
+          "name": "vericoding_da0488__solve",
+          "kind": "spec-given"
+        },
+        {
+          "task_id": null,
+          "name": "vericoding_da0629__solve",
+          "kind": "spec-given"
+        },
+        {
+          "task_id": null,
+          "name": "vericoding_dd0736__replaceChars",
+          "kind": "spec-given"
+        },
+        {
+          "task_id": null,
+          "name": "vericoding_dj0058__squareNums",
+          "kind": "spec-given"
+        },
+        {
+          "task_id": null,
+          "name": "vericoding_dv0073__solution",
+          "kind": "spec-given"
+        },
+        {
+          "task_id": null,
+          "name": "vericoding_da0320__createString",
+          "kind": "spec-given"
+        },
+        {
+          "task_id": null,
+          "name": "vericoding_dj0091__cubeElement",
+          "kind": "spec-given"
+        },
+        {
+          "task_id": null,
+          "name": "acsl_clamp__clamp",
+          "kind": "spec-given"
+        },
+        {
+          "task_id": null,
+          "name": "vericoding_va0074__min_repunit_sum",
+          "kind": "spec-given"
+        },
+        {
+          "task_id": null,
+          "name": "vericoding_va0085__find_minimum_total_distance",
+          "kind": "spec-given"
+        },
+        {
+          "task_id": null,
+          "name": "vericoding_va0530__solve",
+          "kind": "spec-given"
+        },
+        {
+          "task_id": null,
+          "name": "vericoding_vd0087__swap_bitvectors",
+          "kind": "spec-given"
+        },
+        {
+          "task_id": null,
+          "name": "vericoding_vd0674__count_arrays",
+          "kind": "spec-given"
+        },
+        {
+          "task_id": null,
+          "name": "vericoding_vd0729__month_has_31_days",
+          "kind": "spec-given"
+        },
+        {
+          "task_id": null,
+          "name": "vericoding_vh0107__reverse",
+          "kind": "spec-given"
+        },
+        {
+          "task_id": null,
+          "name": "vericoding_vj0058__square_nums",
+          "kind": "spec-given"
+        },
+        {
+          "task_id": null,
+          "name": "vericoding_vt0025__logspace",
+          "kind": "spec-given"
+        },
+        {
+          "task_id": null,
+          "name": "vericoding_vt0029__ones",
+          "kind": "spec-given"
+        },
+        {
+          "task_id": null,
+          "name": "vericoding_vt0095__npy_2_pi",
+          "kind": "spec-given"
+        },
+        {
+          "task_id": null,
+          "name": "vericoding_vt0099__npy_loge10",
+          "kind": "spec-given"
+        },
+        {
+          "task_id": null,
+          "name": "vericoding_vt0362__spacing",
+          "kind": "spec-given"
+        },
+        {
+          "task_id": null,
+          "name": "vericoding_vt0594__nanpercentile",
+          "kind": "spec-given"
+        },
+        {
+          "task_id": null,
+          "name": "vericoding_vv0171__swap",
+          "kind": "spec-given"
+        },
+        {
+          "task_id": null,
+          "name": "vericoding_vv0173__swap_bitvectors",
+          "kind": "spec-given"
+        },
+        {
+          "task_id": null,
+          "name": "vericoding_vv0176__swap_simultaneous",
+          "kind": "spec-given"
+        },
+        {
+          "task_id": null,
+          "name": "vericoding_la0026__solve",
+          "kind": "spec-given"
+        },
+        {
+          "task_id": null,
+          "name": "vericoding_la0046__solve",
+          "kind": "spec-given"
+        },
+        {
+          "task_id": null,
+          "name": "vericoding_la0110__solve",
+          "kind": "spec-given"
+        },
+        {
+          "task_id": null,
+          "name": "vericoding_ld0178__calcPower",
+          "kind": "spec-given"
+        },
+        {
+          "task_id": null,
+          "name": "vericoding_lj0000__chooseOdd",
+          "kind": "spec-given"
+        },
+        {
+          "task_id": null,
+          "name": "vericoding_lv0091__lastDigit",
+          "kind": "spec-given"
+        },
+        {
+          "task_id": null,
+          "name": "vericoding_lv0092__cubeSurfaceArea",
+          "kind": "spec-given"
+        },
+        {
+          "task_id": null,
+          "name": "vericoding_lv0187__computeAvg",
+          "kind": "spec-given"
+        },
+        {
+          "task_id": null,
+          "name": "verus_examples_guide_const_add_one__add_one",
+          "kind": "spec-given"
+        },
+        {
+          "task_id": null,
+          "name": "verus_examples_guide_overflow_compute_sum_limited__compute_sum_limited",
+          "kind": "spec-given"
+        },
+        {
+          "task_id": null,
+          "name": "verus_examples_guide_requires_ensures_edit_octuple__octuple",
+          "kind": "spec-given"
+        },
+        {
+          "task_id": null,
+          "name": "verus_examples_nevd_script_max__max",
+          "kind": "spec-given"
+        },
+        {
+          "task_id": null,
+          "name": "vericoding_da0046__minimumMoves",
+          "kind": "spec-given"
+        },
+        {
+          "task_id": null,
+          "name": "vericoding_da0085__findMinimumTotalDistance",
+          "kind": "spec-given"
+        },
+        {
+          "task_id": null,
+          "name": "vericoding_da0101__solve",
+          "kind": "spec-given"
+        },
+        {
+          "task_id": null,
+          "name": "vericoding_da0110__solve",
+          "kind": "spec-given"
+        },
+        {
+          "task_id": null,
+          "name": "vericoding_da0123__solve",
+          "kind": "spec-given"
+        },
+        {
+          "task_id": null,
+          "name": "vericoding_da0176__solve",
+          "kind": "spec-given"
+        },
+        {
+          "task_id": null,
+          "name": "vericoding_da0188__solve",
+          "kind": "spec-given"
+        },
+        {
+          "task_id": null,
+          "name": "vericoding_da0308__solve",
+          "kind": "spec-given"
+        },
+        {
+          "task_id": null,
+          "name": "vericoding_da0409__solveRivalDistance",
+          "kind": "spec-given"
+        },
+        {
+          "task_id": null,
+          "name": "vericoding_da0531__solve",
+          "kind": "spec-given"
+        },
+        {
+          "task_id": null,
+          "name": "vericoding_da0538__computeMaxGroups",
+          "kind": "spec-given"
+        },
+        {
+          "task_id": null,
+          "name": "vericoding_da0659__solve",
+          "kind": "spec-given"
+        },
+        {
+          "task_id": null,
+          "name": "vericoding_dd0040__query",
+          "kind": "spec-given"
+        },
+        {
+          "task_id": null,
+          "name": "vericoding_dv0158__multipleReturns",
+          "kind": "spec-given"
+        },
+        {
+          "task_id": null,
+          "name": "vericoding_dv0171__swap",
+          "kind": "spec-given"
+        },
+        {
+          "task_id": null,
+          "name": "vericoding_dv0172__swapArithmetic",
+          "kind": "spec-given"
+        },
+        {
+          "task_id": null,
+          "name": "vericoding_dv0173__swapBitvectors",
+          "kind": "spec-given"
+        },
+        {
+          "task_id": null,
+          "name": "vericoding_dv0176__swapSimultaneous",
+          "kind": "spec-given"
+        },
+        {
+          "task_id": null,
+          "name": "vericoding_da0561__solve",
+          "kind": "spec-given"
+        },
+        {
+          "task_id": null,
+          "name": "vericoding_da0564__solve",
+          "kind": "spec-given"
+        },
+        {
+          "task_id": null,
+          "name": "humaneval_dafny_050_encode_shift__decode_shift",
+          "kind": "spec-given"
+        },
+        {
+          "task_id": null,
+          "name": "humaneval_dafny_050_encode_shift__encode_shift",
+          "kind": "spec-given"
+        },
+        {
+          "task_id": null,
+          "name": "humaneval_dafny_089_encrypt__encrypt",
+          "kind": "spec-given"
+        },
+        {
+          "task_id": null,
+          "name": "vericoding_dh0052__decode_shift",
+          "kind": "spec-given"
+        },
+        {
+          "task_id": null,
+          "name": "vericoding_dh0053__encode_shift",
+          "kind": "spec-given"
+        },
+        {
+          "task_id": null,
+          "name": "abs",
+          "kind": "spec-given"
+        },
+        {
+          "task_id": null,
+          "name": "factorial",
+          "kind": "spec-given"
+        },
+        {
+          "task_id": null,
+          "name": "max",
+          "kind": "spec-given"
+        },
+        {
+          "task_id": null,
+          "name": "probe_names_dafny",
+          "kind": "spec-given"
+        },
+        {
+          "task_id": null,
+          "name": "probe_names_framac",
+          "kind": "spec-given"
+        },
+        {
+          "task_id": null,
+          "name": "probe_names_fstar",
+          "kind": "spec-given"
+        },
+        {
+          "task_id": null,
+          "name": "probe_names_lean",
+          "kind": "spec-given"
+        },
+        {
+          "task_id": null,
+          "name": "probe_names_rocq",
+          "kind": "spec-given"
+        },
+        {
+          "task_id": null,
+          "name": "probe_names_spark",
+          "kind": "spec-given"
+        },
+        {
+          "task_id": null,
+          "name": "probe_names_upper",
+          "kind": "spec-given"
+        },
+        {
+          "task_id": null,
+          "name": "probe_names_verus",
+          "kind": "spec-given"
+        },
+        {
+          "task_id": null,
+          "name": "reverse",
+          "kind": "spec-given"
+        },
+        {
+          "task_id": null,
+          "name": "sum_upto",
+          "kind": "spec-given"
+        },
+        {
+          "task_id": null,
+          "name": "swap",
+          "kind": "spec-given"
+        },
+        {
+          "task_id": null,
+          "name": "tail",
+          "kind": "spec-given"
+        },
+        {
+          "task_id": null,
+          "name": "word_count",
+          "kind": "spec-given"
+        }
+      ],
+      "added_kinds": {
+        "spec-given": 139
+      }
+    },
+    "new-english": {
+      "input": 22,
+      "added": 14,
+      "duplicates": [
+        {
+          "task_id": 234,
+          "name": "mbpp_234__volume_cube",
+          "kind": "samples"
+        },
+        {
+          "task_id": 266,
+          "name": "mbpp_266__lateralsurface_cube",
+          "kind": "samples"
+        },
+        {
+          "task_id": 373,
+          "name": "mbpp_373__volume_cuboid",
+          "kind": "samples"
+        },
+        {
+          "task_id": 227,
+          "name": "mbpp_227__min_of_three",
+          "kind": "samples"
+        },
+        {
+          "task_id": 17,
+          "name": "mbpp_17__square_perimeter",
+          "kind": "samples"
+        },
+        {
+          "task_id": 52,
+          "name": "mbpp_52__parallelogram_area",
+          "kind": "samples"
+        },
+        {
+          "task_id": 135,
+          "name": "mbpp_135__hexagonal_num",
+          "kind": "samples"
+        },
+        {
+          "task_id": 924,
+          "name": "mbpp_924__max_of_two",
+          "kind": "samples"
+        }
+      ],
+      "added_kinds": {
+        "samples": 14
+      }
+    },
+    "new-spec-first": {
+      "input": 66,
+      "added": 27,
+      "duplicates": [
+        {
+          "task_id": 234,
+          "name": "mbpp_234__volume_cube",
+          "kind": "python"
+        },
+        {
+          "task_id": 234,
+          "name": "mbpp_234__volume_cube",
+          "kind": "spec"
+        },
+        {
+          "task_id": 234,
+          "name": "mbpp_234__volume_cube",
+          "kind": "proof-py"
+        },
+        {
+          "task_id": 266,
+          "name": "mbpp_266__lateralsurface_cube",
+          "kind": "python"
+        },
+        {
+          "task_id": 266,
+          "name": "mbpp_266__lateralsurface_cube",
+          "kind": "spec"
+        },
+        {
+          "task_id": 266,
+          "name": "mbpp_266__lateralsurface_cube",
+          "kind": "proof-py"
+        },
+        {
+          "task_id": 356,
+          "name": "mbpp_356__find_angle",
+          "kind": "python"
+        },
+        {
+          "task_id": 373,
+          "name": "mbpp_373__volume_cuboid",
+          "kind": "python"
+        },
+        {
+          "task_id": 373,
+          "name": "mbpp_373__volume_cuboid",
+          "kind": "spec"
+        },
+        {
+          "task_id": 373,
+          "name": "mbpp_373__volume_cuboid",
+          "kind": "proof-py"
+        },
+        {
+          "task_id": 458,
+          "name": "mbpp_458__rectangle_area",
+          "kind": "python"
+        },
+        {
+          "task_id": 525,
+          "name": "mbpp_525__parallel_lines",
+          "kind": "python"
+        },
+        {
+          "task_id": 577,
+          "name": "mbpp_577__last_Digit_Factorial",
+          "kind": "python"
+        },
+        {
+          "task_id": 716,
+          "name": "mbpp_716__rombus_perimeter",
+          "kind": "python"
+        },
+        {
+          "task_id": 789,
+          "name": "mbpp_789__perimeter_polygon",
+          "kind": "python"
+        },
+        {
+          "task_id": 35,
+          "name": "mbpp_35__find_rect_num",
+          "kind": "python"
+        },
+        {
+          "task_id": 227,
+          "name": "mbpp_227__min_of_three",
+          "kind": "python"
+        },
+        {
+          "task_id": 227,
+          "name": "mbpp_227__min_of_three",
+          "kind": "spec"
+        },
+        {
+          "task_id": 227,
+          "name": "mbpp_227__min_of_three",
+          "kind": "proof-py"
+        },
+        {
+          "task_id": 309,
+          "name": "mbpp_309__maximum",
+          "kind": "python"
+        },
+        {
+          "task_id": 555,
+          "name": "mbpp_555__difference",
+          "kind": "python"
+        },
+        {
+          "task_id": 555,
+          "name": "mbpp_555__difference",
+          "kind": "spec"
+        },
+        {
+          "task_id": 654,
+          "name": "mbpp_654__rectangle_perimeter",
+          "kind": "python"
+        },
+        {
+          "task_id": 17,
+          "name": "mbpp_17__square_perimeter",
+          "kind": "python"
+        },
+        {
+          "task_id": 17,
+          "name": "mbpp_17__square_perimeter",
+          "kind": "spec"
+        },
+        {
+          "task_id": 17,
+          "name": "mbpp_17__square_perimeter",
+          "kind": "proof-py"
+        },
+        {
+          "task_id": 52,
+          "name": "mbpp_52__parallelogram_area",
+          "kind": "python"
+        },
+        {
+          "task_id": 52,
+          "name": "mbpp_52__parallelogram_area",
+          "kind": "spec"
+        },
+        {
+          "task_id": 52,
+          "name": "mbpp_52__parallelogram_area",
+          "kind": "proof-py"
+        },
+        {
+          "task_id": 59,
+          "name": "mbpp_59__is_octagonal",
+          "kind": "python"
+        },
+        {
+          "task_id": 135,
+          "name": "mbpp_135__hexagonal_num",
+          "kind": "python"
+        },
+        {
+          "task_id": 135,
+          "name": "mbpp_135__hexagonal_num",
+          "kind": "spec"
+        },
+        {
+          "task_id": 135,
+          "name": "mbpp_135__hexagonal_num",
+          "kind": "proof-py"
+        },
+        {
+          "task_id": 320,
+          "name": "mbpp_320__sum_difference",
+          "kind": "python"
+        },
+        {
+          "task_id": 770,
+          "name": "mbpp_770__odd_Num_Sum",
+          "kind": "python"
+        },
+        {
+          "task_id": 873,
+          "name": "mbpp_873__fibonacci",
+          "kind": "python"
+        },
+        {
+          "task_id": 924,
+          "name": "mbpp_924__max_of_two",
+          "kind": "python"
+        },
+        {
+          "task_id": 924,
+          "name": "mbpp_924__max_of_two",
+          "kind": "spec"
+        },
+        {
+          "task_id": 924,
+          "name": "mbpp_924__max_of_two",
+          "kind": "proof-py"
+        }
+      ],
+      "added_kinds": {
+        "spec": 13,
+        "proof-py": 14
+      }
+    }
+  },
+  "appended_origins": [
+    {
+      "row": 5095,
+      "source": "corpus-spec",
+      "task_id": null,
+      "kind": "spec-given"
+    },
+    {
+      "row": 5096,
+      "source": "corpus-spec",
+      "task_id": null,
+      "kind": "spec-given"
+    },
+    {
+      "row": 5097,
+      "source": "corpus-spec",
+      "task_id": null,
+      "kind": "spec-given"
+    },
+    {
+      "row": 5098,
+      "source": "corpus-spec",
+      "task_id": null,
+      "kind": "spec-given"
+    },
+    {
+      "row": 5099,
+      "source": "corpus-spec",
+      "task_id": null,
+      "kind": "spec-given"
+    },
+    {
+      "row": 5100,
+      "source": "corpus-spec",
+      "task_id": null,
+      "kind": "spec-given"
+    },
+    {
+      "row": 5101,
+      "source": "corpus-spec",
+      "task_id": null,
+      "kind": "spec-given"
+    },
+    {
+      "row": 5102,
+      "source": "corpus-spec",
+      "task_id": null,
+      "kind": "spec-given"
+    },
+    {
+      "row": 5103,
+      "source": "corpus-spec",
+      "task_id": null,
+      "kind": "spec-given"
+    },
+    {
+      "row": 5104,
+      "source": "corpus-spec",
+      "task_id": null,
+      "kind": "spec-given"
+    },
+    {
+      "row": 5105,
+      "source": "corpus-spec",
+      "task_id": null,
+      "kind": "spec-given"
+    },
+    {
+      "row": 5106,
+      "source": "corpus-spec",
+      "task_id": null,
+      "kind": "spec-given"
+    },
+    {
+      "row": 5107,
+      "source": "corpus-spec",
+      "task_id": null,
+      "kind": "spec-given"
+    },
+    {
+      "row": 5108,
+      "source": "corpus-spec",
+      "task_id": null,
+      "kind": "spec-given"
+    },
+    {
+      "row": 5109,
+      "source": "corpus-spec",
+      "task_id": null,
+      "kind": "spec-given"
+    },
+    {
+      "row": 5110,
+      "source": "corpus-spec",
+      "task_id": null,
+      "kind": "spec-given"
+    },
+    {
+      "row": 5111,
+      "source": "corpus-spec",
+      "task_id": null,
+      "kind": "spec-given"
+    },
+    {
+      "row": 5112,
+      "source": "corpus-spec",
+      "task_id": null,
+      "kind": "spec-given"
+    },
+    {
+      "row": 5113,
+      "source": "corpus-spec",
+      "task_id": null,
+      "kind": "spec-given"
+    },
+    {
+      "row": 5114,
+      "source": "corpus-spec",
+      "task_id": null,
+      "kind": "spec-given"
+    },
+    {
+      "row": 5115,
+      "source": "corpus-spec",
+      "task_id": null,
+      "kind": "spec-given"
+    },
+    {
+      "row": 5116,
+      "source": "corpus-spec",
+      "task_id": null,
+      "kind": "spec-given"
+    },
+    {
+      "row": 5117,
+      "source": "corpus-spec",
+      "task_id": null,
+      "kind": "spec-given"
+    },
+    {
+      "row": 5118,
+      "source": "corpus-spec",
+      "task_id": null,
+      "kind": "spec-given"
+    },
+    {
+      "row": 5119,
+      "source": "corpus-spec",
+      "task_id": null,
+      "kind": "spec-given"
+    },
+    {
+      "row": 5120,
+      "source": "corpus-spec",
+      "task_id": null,
+      "kind": "spec-given"
+    },
+    {
+      "row": 5121,
+      "source": "corpus-spec",
+      "task_id": null,
+      "kind": "spec-given"
+    },
+    {
+      "row": 5122,
+      "source": "corpus-spec",
+      "task_id": null,
+      "kind": "spec-given"
+    },
+    {
+      "row": 5123,
+      "source": "corpus-spec",
+      "task_id": null,
+      "kind": "spec-given"
+    },
+    {
+      "row": 5124,
+      "source": "corpus-spec",
+      "task_id": null,
+      "kind": "spec-given"
+    },
+    {
+      "row": 5125,
+      "source": "corpus-spec",
+      "task_id": null,
+      "kind": "spec-given"
+    },
+    {
+      "row": 5126,
+      "source": "corpus-spec",
+      "task_id": null,
+      "kind": "spec-given"
+    },
+    {
+      "row": 5127,
+      "source": "corpus-spec",
+      "task_id": null,
+      "kind": "spec-given"
+    },
+    {
+      "row": 5128,
+      "source": "corpus-spec",
+      "task_id": null,
+      "kind": "spec-given"
+    },
+    {
+      "row": 5129,
+      "source": "corpus-spec",
+      "task_id": null,
+      "kind": "spec-given"
+    },
+    {
+      "row": 5130,
+      "source": "corpus-spec",
+      "task_id": null,
+      "kind": "spec-given"
+    },
+    {
+      "row": 5131,
+      "source": "corpus-spec",
+      "task_id": null,
+      "kind": "spec-given"
+    },
+    {
+      "row": 5132,
+      "source": "corpus-spec",
+      "task_id": null,
+      "kind": "spec-given"
+    },
+    {
+      "row": 5133,
+      "source": "corpus-spec",
+      "task_id": null,
+      "kind": "spec-given"
+    },
+    {
+      "row": 5134,
+      "source": "corpus-spec",
+      "task_id": null,
+      "kind": "spec-given"
+    },
+    {
+      "row": 5135,
+      "source": "corpus-spec",
+      "task_id": null,
+      "kind": "spec-given"
+    },
+    {
+      "row": 5136,
+      "source": "corpus-spec",
+      "task_id": null,
+      "kind": "spec-given"
+    },
+    {
+      "row": 5137,
+      "source": "corpus-spec",
+      "task_id": null,
+      "kind": "spec-given"
+    },
+    {
+      "row": 5138,
+      "source": "corpus-spec",
+      "task_id": null,
+      "kind": "spec-given"
+    },
+    {
+      "row": 5139,
+      "source": "corpus-spec",
+      "task_id": null,
+      "kind": "spec-given"
+    },
+    {
+      "row": 5140,
+      "source": "corpus-spec",
+      "task_id": null,
+      "kind": "spec-given"
+    },
+    {
+      "row": 5141,
+      "source": "corpus-spec",
+      "task_id": null,
+      "kind": "spec-given"
+    },
+    {
+      "row": 5142,
+      "source": "corpus-spec",
+      "task_id": null,
+      "kind": "spec-given"
+    },
+    {
+      "row": 5143,
+      "source": "corpus-spec",
+      "task_id": null,
+      "kind": "spec-given"
+    },
+    {
+      "row": 5144,
+      "source": "corpus-spec",
+      "task_id": null,
+      "kind": "spec-given"
+    },
+    {
+      "row": 5145,
+      "source": "corpus-spec",
+      "task_id": null,
+      "kind": "spec-given"
+    },
+    {
+      "row": 5146,
+      "source": "corpus-spec",
+      "task_id": null,
+      "kind": "spec-given"
+    },
+    {
+      "row": 5147,
+      "source": "corpus-spec",
+      "task_id": null,
+      "kind": "spec-given"
+    },
+    {
+      "row": 5148,
+      "source": "corpus-spec",
+      "task_id": null,
+      "kind": "spec-given"
+    },
+    {
+      "row": 5149,
+      "source": "corpus-spec",
+      "task_id": null,
+      "kind": "spec-given"
+    },
+    {
+      "row": 5150,
+      "source": "corpus-spec",
+      "task_id": null,
+      "kind": "spec-given"
+    },
+    {
+      "row": 5151,
+      "source": "corpus-spec",
+      "task_id": null,
+      "kind": "spec-given"
+    },
+    {
+      "row": 5152,
+      "source": "corpus-spec",
+      "task_id": null,
+      "kind": "spec-given"
+    },
+    {
+      "row": 5153,
+      "source": "corpus-spec",
+      "task_id": null,
+      "kind": "spec-given"
+    },
+    {
+      "row": 5154,
+      "source": "corpus-spec",
+      "task_id": null,
+      "kind": "spec-given"
+    },
+    {
+      "row": 5155,
+      "source": "corpus-spec",
+      "task_id": null,
+      "kind": "spec-given"
+    },
+    {
+      "row": 5156,
+      "source": "corpus-spec",
+      "task_id": null,
+      "kind": "spec-given"
+    },
+    {
+      "row": 5157,
+      "source": "corpus-spec",
+      "task_id": null,
+      "kind": "spec-given"
+    },
+    {
+      "row": 5158,
+      "source": "corpus-spec",
+      "task_id": null,
+      "kind": "spec-given"
+    },
+    {
+      "row": 5159,
+      "source": "corpus-spec",
+      "task_id": null,
+      "kind": "spec-given"
+    },
+    {
+      "row": 5160,
+      "source": "corpus-spec",
+      "task_id": null,
+      "kind": "spec-given"
+    },
+    {
+      "row": 5161,
+      "source": "corpus-spec",
+      "task_id": null,
+      "kind": "spec-given"
+    },
+    {
+      "row": 5162,
+      "source": "corpus-spec",
+      "task_id": null,
+      "kind": "spec-given"
+    },
+    {
+      "row": 5163,
+      "source": "corpus-spec",
+      "task_id": null,
+      "kind": "spec-given"
+    },
+    {
+      "row": 5164,
+      "source": "corpus-spec",
+      "task_id": null,
+      "kind": "spec-given"
+    },
+    {
+      "row": 5165,
+      "source": "corpus-spec",
+      "task_id": null,
+      "kind": "spec-given"
+    },
+    {
+      "row": 5166,
+      "source": "corpus-spec",
+      "task_id": null,
+      "kind": "spec-given"
+    },
+    {
+      "row": 5167,
+      "source": "corpus-spec",
+      "task_id": null,
+      "kind": "spec-given"
+    },
+    {
+      "row": 5168,
+      "source": "corpus-spec",
+      "task_id": null,
+      "kind": "spec-given"
+    },
+    {
+      "row": 5169,
+      "source": "corpus-spec",
+      "task_id": null,
+      "kind": "spec-given"
+    },
+    {
+      "row": 5170,
+      "source": "corpus-spec",
+      "task_id": null,
+      "kind": "spec-given"
+    },
+    {
+      "row": 5171,
+      "source": "corpus-spec",
+      "task_id": null,
+      "kind": "spec-given"
+    },
+    {
+      "row": 5172,
+      "source": "corpus-spec",
+      "task_id": null,
+      "kind": "spec-given"
+    },
+    {
+      "row": 5173,
+      "source": "corpus-spec",
+      "task_id": null,
+      "kind": "spec-given"
+    },
+    {
+      "row": 5174,
+      "source": "corpus-spec",
+      "task_id": null,
+      "kind": "spec-given"
+    },
+    {
+      "row": 5175,
+      "source": "corpus-spec",
+      "task_id": null,
+      "kind": "spec-given"
+    },
+    {
+      "row": 5176,
+      "source": "corpus-spec",
+      "task_id": null,
+      "kind": "spec-given"
+    },
+    {
+      "row": 5177,
+      "source": "corpus-spec",
+      "task_id": null,
+      "kind": "spec-given"
+    },
+    {
+      "row": 5178,
+      "source": "corpus-spec",
+      "task_id": null,
+      "kind": "spec-given"
+    },
+    {
+      "row": 5179,
+      "source": "corpus-spec",
+      "task_id": null,
+      "kind": "spec-given"
+    },
+    {
+      "row": 5180,
+      "source": "corpus-spec",
+      "task_id": null,
+      "kind": "spec-given"
+    },
+    {
+      "row": 5181,
+      "source": "corpus-spec",
+      "task_id": null,
+      "kind": "spec-given"
+    },
+    {
+      "row": 5182,
+      "source": "corpus-spec",
+      "task_id": null,
+      "kind": "spec-given"
+    },
+    {
+      "row": 5183,
+      "source": "corpus-spec",
+      "task_id": null,
+      "kind": "spec-given"
+    },
+    {
+      "row": 5184,
+      "source": "corpus-spec",
+      "task_id": null,
+      "kind": "spec-given"
+    },
+    {
+      "row": 5185,
+      "source": "corpus-spec",
+      "task_id": null,
+      "kind": "spec-given"
+    },
+    {
+      "row": 5186,
+      "source": "corpus-spec",
+      "task_id": null,
+      "kind": "spec-given"
+    },
+    {
+      "row": 5187,
+      "source": "corpus-spec",
+      "task_id": null,
+      "kind": "spec-given"
+    },
+    {
+      "row": 5188,
+      "source": "corpus-spec",
+      "task_id": null,
+      "kind": "spec-given"
+    },
+    {
+      "row": 5189,
+      "source": "corpus-spec",
+      "task_id": null,
+      "kind": "spec-given"
+    },
+    {
+      "row": 5190,
+      "source": "corpus-spec",
+      "task_id": null,
+      "kind": "spec-given"
+    },
+    {
+      "row": 5191,
+      "source": "corpus-spec",
+      "task_id": null,
+      "kind": "spec-given"
+    },
+    {
+      "row": 5192,
+      "source": "corpus-spec",
+      "task_id": null,
+      "kind": "spec-given"
+    },
+    {
+      "row": 5193,
+      "source": "corpus-spec",
+      "task_id": null,
+      "kind": "spec-given"
+    },
+    {
+      "row": 5194,
+      "source": "corpus-spec",
+      "task_id": null,
+      "kind": "spec-given"
+    },
+    {
+      "row": 5195,
+      "source": "corpus-spec",
+      "task_id": null,
+      "kind": "spec-given"
+    },
+    {
+      "row": 5196,
+      "source": "corpus-spec",
+      "task_id": null,
+      "kind": "spec-given"
+    },
+    {
+      "row": 5197,
+      "source": "corpus-spec",
+      "task_id": null,
+      "kind": "spec-given"
+    },
+    {
+      "row": 5198,
+      "source": "corpus-spec",
+      "task_id": null,
+      "kind": "spec-given"
+    },
+    {
+      "row": 5199,
+      "source": "corpus-spec",
+      "task_id": null,
+      "kind": "spec-given"
+    },
+    {
+      "row": 5200,
+      "source": "corpus-spec",
+      "task_id": null,
+      "kind": "spec-given"
+    },
+    {
+      "row": 5201,
+      "source": "corpus-spec",
+      "task_id": null,
+      "kind": "spec-given"
+    },
+    {
+      "row": 5202,
+      "source": "corpus-spec",
+      "task_id": null,
+      "kind": "spec-given"
+    },
+    {
+      "row": 5203,
+      "source": "corpus-spec",
+      "task_id": null,
+      "kind": "spec-given"
+    },
+    {
+      "row": 5204,
+      "source": "corpus-spec",
+      "task_id": null,
+      "kind": "spec-given"
+    },
+    {
+      "row": 5205,
+      "source": "corpus-spec",
+      "task_id": null,
+      "kind": "spec-given"
+    },
+    {
+      "row": 5206,
+      "source": "corpus-spec",
+      "task_id": null,
+      "kind": "spec-given"
+    },
+    {
+      "row": 5207,
+      "source": "corpus-spec",
+      "task_id": null,
+      "kind": "spec-given"
+    },
+    {
+      "row": 5208,
+      "source": "corpus-spec",
+      "task_id": null,
+      "kind": "spec-given"
+    },
+    {
+      "row": 5209,
+      "source": "corpus-spec",
+      "task_id": null,
+      "kind": "spec-given"
+    },
+    {
+      "row": 5210,
+      "source": "corpus-spec",
+      "task_id": null,
+      "kind": "spec-given"
+    },
+    {
+      "row": 5211,
+      "source": "corpus-spec",
+      "task_id": null,
+      "kind": "spec-given"
+    },
+    {
+      "row": 5212,
+      "source": "corpus-spec",
+      "task_id": null,
+      "kind": "spec-given"
+    },
+    {
+      "row": 5213,
+      "source": "corpus-spec",
+      "task_id": null,
+      "kind": "spec-given"
+    },
+    {
+      "row": 5214,
+      "source": "corpus-spec",
+      "task_id": null,
+      "kind": "spec-given"
+    },
+    {
+      "row": 5215,
+      "source": "corpus-spec",
+      "task_id": null,
+      "kind": "spec-given"
+    },
+    {
+      "row": 5216,
+      "source": "corpus-spec",
+      "task_id": null,
+      "kind": "spec-given"
+    },
+    {
+      "row": 5217,
+      "source": "corpus-spec",
+      "task_id": null,
+      "kind": "spec-given"
+    },
+    {
+      "row": 5218,
+      "source": "corpus-spec",
+      "task_id": null,
+      "kind": "spec-given"
+    },
+    {
+      "row": 5219,
+      "source": "corpus-spec",
+      "task_id": null,
+      "kind": "spec-given"
+    },
+    {
+      "row": 5220,
+      "source": "corpus-spec",
+      "task_id": null,
+      "kind": "spec-given"
+    },
+    {
+      "row": 5221,
+      "source": "corpus-spec",
+      "task_id": null,
+      "kind": "spec-given"
+    },
+    {
+      "row": 5222,
+      "source": "corpus-spec",
+      "task_id": null,
+      "kind": "spec-given"
+    },
+    {
+      "row": 5223,
+      "source": "corpus-spec",
+      "task_id": null,
+      "kind": "spec-given"
+    },
+    {
+      "row": 5224,
+      "source": "corpus-spec",
+      "task_id": null,
+      "kind": "spec-given"
+    },
+    {
+      "row": 5225,
+      "source": "corpus-spec",
+      "task_id": null,
+      "kind": "spec-given"
+    },
+    {
+      "row": 5226,
+      "source": "corpus-spec",
+      "task_id": null,
+      "kind": "spec-given"
+    },
+    {
+      "row": 5227,
+      "source": "corpus-spec",
+      "task_id": null,
+      "kind": "spec-given"
+    },
+    {
+      "row": 5228,
+      "source": "corpus-spec",
+      "task_id": null,
+      "kind": "spec-given"
+    },
+    {
+      "row": 5229,
+      "source": "corpus-spec",
+      "task_id": null,
+      "kind": "spec-given"
+    },
+    {
+      "row": 5230,
+      "source": "corpus-spec",
+      "task_id": null,
+      "kind": "spec-given"
+    },
+    {
+      "row": 5231,
+      "source": "corpus-spec",
+      "task_id": null,
+      "kind": "spec-given"
+    },
+    {
+      "row": 5232,
+      "source": "corpus-spec",
+      "task_id": null,
+      "kind": "spec-given"
+    },
+    {
+      "row": 5233,
+      "source": "corpus-spec",
+      "task_id": null,
+      "kind": "spec-given"
+    },
+    {
+      "row": 5234,
+      "source": "new-english",
+      "task_id": 356,
+      "kind": "samples"
+    },
+    {
+      "row": 5235,
+      "source": "new-english",
+      "task_id": 458,
+      "kind": "samples"
+    },
+    {
+      "row": 5236,
+      "source": "new-english",
+      "task_id": 525,
+      "kind": "samples"
+    },
+    {
+      "row": 5237,
+      "source": "new-english",
+      "task_id": 577,
+      "kind": "samples"
+    },
+    {
+      "row": 5238,
+      "source": "new-english",
+      "task_id": 716,
+      "kind": "samples"
+    },
+    {
+      "row": 5239,
+      "source": "new-english",
+      "task_id": 789,
+      "kind": "samples"
+    },
+    {
+      "row": 5240,
+      "source": "new-english",
+      "task_id": 35,
+      "kind": "samples"
+    },
+    {
+      "row": 5241,
+      "source": "new-english",
+      "task_id": 309,
+      "kind": "samples"
+    },
+    {
+      "row": 5242,
+      "source": "new-english",
+      "task_id": 555,
+      "kind": "samples"
+    },
+    {
+      "row": 5243,
+      "source": "new-english",
+      "task_id": 654,
+      "kind": "samples"
+    },
+    {
+      "row": 5244,
+      "source": "new-english",
+      "task_id": 59,
+      "kind": "samples"
+    },
+    {
+      "row": 5245,
+      "source": "new-english",
+      "task_id": 320,
+      "kind": "samples"
+    },
+    {
+      "row": 5246,
+      "source": "new-english",
+      "task_id": 770,
+      "kind": "samples"
+    },
+    {
+      "row": 5247,
+      "source": "new-english",
+      "task_id": 873,
+      "kind": "samples"
+    },
+    {
+      "row": 5248,
+      "source": "new-spec-first",
+      "task_id": 356,
+      "kind": "spec"
+    },
+    {
+      "row": 5249,
+      "source": "new-spec-first",
+      "task_id": 356,
+      "kind": "proof-py"
+    },
+    {
+      "row": 5250,
+      "source": "new-spec-first",
+      "task_id": 458,
+      "kind": "spec"
+    },
+    {
+      "row": 5251,
+      "source": "new-spec-first",
+      "task_id": 458,
+      "kind": "proof-py"
+    },
+    {
+      "row": 5252,
+      "source": "new-spec-first",
+      "task_id": 525,
+      "kind": "spec"
+    },
+    {
+      "row": 5253,
+      "source": "new-spec-first",
+      "task_id": 525,
+      "kind": "proof-py"
+    },
+    {
+      "row": 5254,
+      "source": "new-spec-first",
+      "task_id": 577,
+      "kind": "spec"
+    },
+    {
+      "row": 5255,
+      "source": "new-spec-first",
+      "task_id": 577,
+      "kind": "proof-py"
+    },
+    {
+      "row": 5256,
+      "source": "new-spec-first",
+      "task_id": 716,
+      "kind": "spec"
+    },
+    {
+      "row": 5257,
+      "source": "new-spec-first",
+      "task_id": 716,
+      "kind": "proof-py"
+    },
+    {
+      "row": 5258,
+      "source": "new-spec-first",
+      "task_id": 789,
+      "kind": "spec"
+    },
+    {
+      "row": 5259,
+      "source": "new-spec-first",
+      "task_id": 789,
+      "kind": "proof-py"
+    },
+    {
+      "row": 5260,
+      "source": "new-spec-first",
+      "task_id": 35,
+      "kind": "spec"
+    },
+    {
+      "row": 5261,
+      "source": "new-spec-first",
+      "task_id": 35,
+      "kind": "proof-py"
+    },
+    {
+      "row": 5262,
+      "source": "new-spec-first",
+      "task_id": 309,
+      "kind": "spec"
+    },
+    {
+      "row": 5263,
+      "source": "new-spec-first",
+      "task_id": 309,
+      "kind": "proof-py"
+    },
+    {
+      "row": 5264,
+      "source": "new-spec-first",
+      "task_id": 555,
+      "kind": "proof-py"
+    },
+    {
+      "row": 5265,
+      "source": "new-spec-first",
+      "task_id": 654,
+      "kind": "spec"
+    },
+    {
+      "row": 5266,
+      "source": "new-spec-first",
+      "task_id": 654,
+      "kind": "proof-py"
+    },
+    {
+      "row": 5267,
+      "source": "new-spec-first",
+      "task_id": 59,
+      "kind": "spec"
+    },
+    {
+      "row": 5268,
+      "source": "new-spec-first",
+      "task_id": 59,
+      "kind": "proof-py"
+    },
+    {
+      "row": 5269,
+      "source": "new-spec-first",
+      "task_id": 320,
+      "kind": "spec"
+    },
+    {
+      "row": 5270,
+      "source": "new-spec-first",
+      "task_id": 320,
+      "kind": "proof-py"
+    },
+    {
+      "row": 5271,
+      "source": "new-spec-first",
+      "task_id": 770,
+      "kind": "spec"
+    },
+    {
+      "row": 5272,
+      "source": "new-spec-first",
+      "task_id": 770,
+      "kind": "proof-py"
+    },
+    {
+      "row": 5273,
+      "source": "new-spec-first",
+      "task_id": 873,
+      "kind": "spec"
+    },
+    {
+      "row": 5274,
+      "source": "new-spec-first",
+      "task_id": 873,
+      "kind": "proof-py"
+    }
+  ],
+  "student_rows_report": {
+    "corpus": "t/out/loop/corpus-r12-headed.txt",
+    "split_seed": 1338,
+    "val_frac": 0.1,
+    "train_documents": 476,
+    "heldout_documents": 55,
+    "removed": {
+      "problem answered in the other training rows": 14,
+      "same program as a training document": 6,
+      "same specification as a training document": 2
+    },
+    "training_rows": 476,
+    "heldout_questions": 33,
+    "comparison": "textual, task name normalised; not behavioural"
+  },
+  "spec_first_report": {
+    "pool_rows": 22,
+    "problems": 22,
+    "python": 22,
+    "spec": 22,
+    "proof-py": 22
+  },
+  "fixed_panel_questions": 33,
+  "generated_panel_is_diagnostic_only": true
+}
