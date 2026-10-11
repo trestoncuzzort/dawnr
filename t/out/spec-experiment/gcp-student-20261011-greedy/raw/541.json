@@ -1,0 +1,29 @@
+{
+ "task_id": "541",
+ "fn": "check_abundant",
+ "model": "t/out/gcp-student-2026-10-11-s1/merged",
+ "digest": "5539b0c56a7f",
+ "pool_version": "v5",
+ "prompt_version": "s1",
+ "options": {
+  "temperature": 0.0,
+  "seed": 1,
+  "num_predict": 1024,
+  "top_p": null,
+  "decoder": "transformers-batched",
+  "seeding": "per-problem"
+ },
+ "messages": [
+  {
+   "role": "system",
+   "content": "You write tasks in t, a small verified language. Reply with one fenced t task and nothing else: the header line, the task with the requested name and parameters, requires and ensures clauses that specify the result, and a body the provers can verify (loop invariants and decreases where there is a loop)."
+  },
+  {
+   "role": "user",
+   "content": "Problem: Write a function to find if the given number is abundant or not.\n\nTests:\nassert check_abundant(12) == True\nassert check_abundant(15) == False\nassert check_abundant(18) == True\n\nWrite the t task named `check_abundant` with 1 parameter(s) of type(s) int, in the order the tests pass them, returning bool. The tests must pass and the ensures must specify the result."
+  }
+ ],
+ "reply": "```t\nt 0\ntask check_abundant(n: int) returns (r: bool)\n  requires n >= 1\n  ensures r == (sum_divisors(n) > n)\n{\n  var sum: int := n;\n  var i: int := 2;\n  while i * i <= n\n    invariant i >= 2\n    invariant i * i <= n + 1\n    invariant sum >= n\n    decreases n - i * i\n  {\n    if n % i == 0 {\n      sum := sum + i;\n      if n / i != i {\n        sum := sum + n / i;\n      }\n    }\n    i := i + 1;\n  }\n  sum := sum + 1;\n  r := sum > n;\n}\n```",
+ "reply_tokens": 183,
+ "done_reason": "stop"
+}

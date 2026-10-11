@@ -1,0 +1,29 @@
+{
+ "task_id": "232",
+ "fn": "larg_nnum",
+ "model": "t/out/gcp-student-2026-10-11-s1/merged",
+ "digest": "5539b0c56a7f",
+ "pool_version": "v5",
+ "prompt_version": "s1",
+ "options": {
+  "temperature": 0.0,
+  "seed": 1,
+  "num_predict": 1024,
+  "top_p": null,
+  "decoder": "transformers-batched",
+  "seeding": "per-problem"
+ },
+ "messages": [
+  {
+   "role": "system",
+   "content": "You write tasks in t, a small verified language. Reply with one fenced t task and nothing else: the header line, the task with the requested name and parameters, requires and ensures clauses that specify the result, and a body the provers can verify (loop invariants and decreases where there is a loop)."
+  },
+  {
+   "role": "user",
+   "content": "Problem: Write a function to get the n largest items from a dataset.\n\nTests:\nassert larg_nnum([10, 20, 50, 70, 90, 20, 50, 40, 60, 80, 100],2)==[100,90]\nassert larg_nnum([10, 20, 50, 70, 90, 20, 50, 40, 60, 80, 100],5)==[100,90,80,70,60]\nassert larg_nnum([10, 20, 50, 70, 90, 20, 50, 40, 60, 80, 100],3)==[100,90,80]\n\nWrite the t task named `larg_nnum` with 2 parameter(s) of type(s) seq, int, in the order the tests pass them, returning seq. The tests must pass and the ensures must specify the result."
+  }
+ ],
+ "reply": "```t\nt 0\ntask larg_nnum(s: seq, n: int) returns (r: seq)\n  requires n >= 0\n  requires n <= len(s)\n  ensures len(r) == n\n  ensures forall i in [0, n) . r[i] >= r[i+1] if i+1 < n\n  ensures forall i in [0, n) . forall j in [n, len(s)) . r[i] >= s[j]\n{\n  r := [];\n  var i: int := 0;\n  while i < len(s)\n    invariant 0 <= i and i <= len(s)\n    invariant len(r) == i\n    invariant forall j in [0, i) . r[j] >= r[j+1] if j+1 < i\n    invariant forall j in [0, i) . forall k in [i, len(s)) . r[j] >= s[k]\n    decreases len(s) - i\n  {\n    if i == 0 {\n      r := [s[0]];\n    } else {\n      if s[i] > r[i-1] {\n        r := r[i-1 := s[i]];\n      }\n    }\n    i := i + 1;\n  }\n}\n```",
+ "reply_tokens": 286,
+ "done_reason": "stop"
+}

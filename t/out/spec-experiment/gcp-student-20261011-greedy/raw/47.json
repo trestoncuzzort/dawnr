@@ -1,0 +1,29 @@
+{
+ "task_id": "47",
+ "fn": "compute_Last_Digit",
+ "model": "t/out/gcp-student-2026-10-11-s1/merged",
+ "digest": "5539b0c56a7f",
+ "pool_version": "v5",
+ "prompt_version": "s1",
+ "options": {
+  "temperature": 0.0,
+  "seed": 1,
+  "num_predict": 1024,
+  "top_p": null,
+  "decoder": "transformers-batched",
+  "seeding": "per-problem"
+ },
+ "messages": [
+  {
+   "role": "system",
+   "content": "You write tasks in t, a small verified language. Reply with one fenced t task and nothing else: the header line, the task with the requested name and parameters, requires and ensures clauses that specify the result, and a body the provers can verify (loop invariants and decreases where there is a loop)."
+  },
+  {
+   "role": "user",
+   "content": "Problem: Write a python function to find the last digit when factorial of a divides factorial of b.\n\nTests:\nassert compute_Last_Digit(2,4) == 2\nassert compute_Last_Digit(6,8) == 6\nassert compute_Last_Digit(1,2) == 2\n\nWrite the t task named `compute_Last_Digit` with 2 parameter(s) of type(s) int, int, in the order the tests pass them, returning int. The tests must pass and the ensures must specify the result."
+  }
+ ],
+ "reply": "```t\nt 0\ntask compute_Last_Digit(a: int, b: int) returns (r: int)\n  requires a >= 0\n  requires b >= 0\n  requires a <= b\n  ensures r == (b! / a!) % 10\n{\n  var n: int := 0;\n  var res: int := 1;\n  while n < b - a + 1\n    invariant 0 <= n and n <= b - a + 1\n    invariant res == (b! / a! / (b - a + 1)!) % 10\n    decreases b - a + 1 - n\n  {\n    res := res * n;\n    if res >= 10 {\n      res := res % 10;\n    }\n    n := n + 1;\n  }\n  r := res;\n}\n```",
+ "reply_tokens": 201,
+ "done_reason": "stop"
+}

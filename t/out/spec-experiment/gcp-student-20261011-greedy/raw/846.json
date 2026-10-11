@@ -1,0 +1,29 @@
+{
+ "task_id": "846",
+ "fn": "find_platform",
+ "model": "t/out/gcp-student-2026-10-11-s1/merged",
+ "digest": "5539b0c56a7f",
+ "pool_version": "v5",
+ "prompt_version": "s1",
+ "options": {
+  "temperature": 0.0,
+  "seed": 1,
+  "num_predict": 1024,
+  "top_p": null,
+  "decoder": "transformers-batched",
+  "seeding": "per-problem"
+ },
+ "messages": [
+  {
+   "role": "system",
+   "content": "You write tasks in t, a small verified language. Reply with one fenced t task and nothing else: the header line, the task with the requested name and parameters, requires and ensures clauses that specify the result, and a body the provers can verify (loop invariants and decreases where there is a loop)."
+  },
+  {
+   "role": "user",
+   "content": "Problem: Write a function to find the minimum number of platforms required for a railway/bus station.\n\nTests:\nassert find_platform([900, 940, 950, 1100, 1500, 1800],[910, 1200, 1120, 1130, 1900, 2000],6)==3\nassert find_platform([100,200,300,400],[700,800,900,1000],4)==4\nassert find_platform([5,6,7,8],[4,3,2,1],4)==1\n\nWrite the t task named `find_platform` with 3 parameter(s) of type(s) seq, seq, int, in the order the tests pass them, returning int. The tests must pass and the ensures must specify the result."
+  }
+ ],
+ "reply": "```t\nt 0\ntask find_platform(arr: seq, dep: seq, n: int) returns (r: int)\n  requires n >= 0\n  requires len(arr) == n\n  requires len(dep) == n\n  ensures r >= 0\n  ensures r == 1 ==> len(arr) == 1 and len(dep) == 1 and arr[0] < dep[0] or arr[0] >= dep[0]\n  ensures r == 2 ==> len(arr) == 2 and len(dep) == 2 and (arr[0] < dep[0] and arr[1] < dep[1]) or (arr[0] < dep[0] and arr[1] >= dep[1]) or (arr[0] >= dep[0] and arr[1] < dep[1])\n  ensures r == 3 ==> len(arr) == 3 and len(dep) == 3 and (arr[0] < dep[0] and arr[1] < dep[1] and arr[2] < dep[2]) or (arr[0] < dep[0] and arr[1] < dep[1] and arr[2] >= dep[2]) or (arr[0] < dep[0] and arr[1] >= dep[1] and arr[2] < dep[2]) or (arr[0] >= dep[0] and arr[1] < dep[1] and arr[2] < dep[2])\n  ensures r == 4 ==> len(arr) == 4 and len(dep) == 4 and (arr[0] < dep[0] and arr[1] < dep[1] and arr[2] < dep[2] and arr[3] < dep[3]) or (arr[0] < dep[0] and arr[1] < dep[1] and arr[2] < dep[2] and arr[3] >= dep[3]) or (arr[0] < dep[0] and arr[1] < dep[1] and arr[2] >= dep[2] and arr[3] < dep[3]) or (arr[0] < dep[0] and arr[1] < dep[1] and arr[2] >= dep[2] and arr[3] >= dep[3]) or (arr[0] < dep[0] and arr[1] >= dep[1] and arr[2] < dep[2] and arr[3] < dep[3]) or (arr[0] < dep[0] and arr[1] >= dep[1] and arr[2] < dep[2] and arr[3] >= dep[3]) or (arr[0] < dep[0] and arr[1] >= dep[1] and arr[2] >= dep[2] and arr[3] < dep[3]) or (arr[0] < dep[0] and arr[1] >= dep[1] and arr[2] >= dep[2] and arr[3] >= dep[3]) or (arr[0] >= dep[0] and arr[1] < dep[1] and arr[2] < dep[2] and arr[3] < dep[3]) or (arr[0] >= dep[0] and arr[1] < dep[1] and arr[2] < dep[2] and arr[3] >= dep[3]) or (arr[0] >= dep[0] and arr[1] < dep[1] and arr[2] >= dep[2] and arr[3] < dep[3]) or (arr[0] >= dep[0] and arr[1] < dep[1] and arr[2] >= dep[2] and arr[3] >= dep[3]) or (arr[0] >= dep[0] and arr[1] >= dep[1] and arr[2] < dep[2] and arr[3] < dep[3]) or (arr[0] >= dep[0] and arr[1] >= dep[1] and arr[2] < dep[2] and arr[3] >= dep[3]) or (arr[0] >= dep[0] and arr[1] >= dep[1] and arr[2] >= dep[2] and arr[3] < dep[3]) or (arr[0] >= dep[0] and arr[1] >= dep[1] and arr[2] >= dep[2] and arr[3] >= dep[3])\n{\n  r := 1;\n  var i: int := 1;",
+ "reply_tokens": 1024,
+ "done_reason": "length"
+}

@@ -1,0 +1,29 @@
+{
+ "task_id": "748",
+ "fn": "capital_words_spaces",
+ "model": "t/out/gcp-student-2026-10-11-s1/merged",
+ "digest": "5539b0c56a7f",
+ "pool_version": "v5",
+ "prompt_version": "s1",
+ "options": {
+  "temperature": 0.0,
+  "seed": 1,
+  "num_predict": 1024,
+  "top_p": null,
+  "decoder": "transformers-batched",
+  "seeding": "per-problem"
+ },
+ "messages": [
+  {
+   "role": "system",
+   "content": "You write tasks in t, a small verified language. Reply with one fenced t task and nothing else: the header line, the task with the requested name and parameters, requires and ensures clauses that specify the result, and a body the provers can verify (loop invariants and decreases where there is a loop)."
+  },
+  {
+   "role": "user",
+   "content": "Problem: Write a function to put spaces between words starting with capital letters in a given string by using regex.\n\nTests:\nassert capital_words_spaces(\"Python\") == 'Python'\nassert capital_words_spaces(\"PythonProgrammingExamples\") == 'Python Programming Examples'\nassert capital_words_spaces(\"GetReadyToBeCodingFreak\") == 'Get Ready To Be Coding Freak'\n\nWrite the t task named `capital_words_spaces` with 1 parameter(s) of type(s) seq, in the order the tests pass them, returning seq. The tests must pass and the ensures must specify the result."
+  }
+ ],
+ "reply": "```t\nt 1\ngate loops\ntask capital_words_spaces(s: seq) returns (r: seq)\n  ensures len(r) == len(s)\n  ensures forall i in [0, len(s)) . r[i] == s[i]\n  ensures forall i in [0, len(r)) . r[i] == 32 ==> i > 0 and r[i-1] >= 65 and r[i-1] <= 90 and r[i+1] < 97 or i == len(r) - 1\n{\n  r := [];\n  var i: int := 0;\n  while i < len(s)\n    invariant 0 <= i and i <= len(s)\n    invariant len(r) == i\n    invariant forall j in [0, i) . r[j] == s[j]\n    decreases len(s) - i\n  {\n    if i > 0 and s[i] == 32 {\n      r := r + [s[i]];\n    } else {\n      if i > 0 and s[i-1] >= 65 and s[i-1] <= 90 {\n        r := r + [32];\n      }\n      r := r + [s[i]];\n    }\n    i := i + 1;\n  }\n}\n```",
+ "reply_tokens": 295,
+ "done_reason": "stop"
+}

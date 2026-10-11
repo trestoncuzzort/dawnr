@@ -1,0 +1,29 @@
+{
+ "task_id": "914",
+ "fn": "is_Two_Alter",
+ "model": "t/out/gcp-student-2026-10-11-s1/merged",
+ "digest": "5539b0c56a7f",
+ "pool_version": "v5",
+ "prompt_version": "s1",
+ "options": {
+  "temperature": 0.0,
+  "seed": 1,
+  "num_predict": 1024,
+  "top_p": null,
+  "decoder": "transformers-batched",
+  "seeding": "per-problem"
+ },
+ "messages": [
+  {
+   "role": "system",
+   "content": "You write tasks in t, a small verified language. Reply with one fenced t task and nothing else: the header line, the task with the requested name and parameters, requires and ensures clauses that specify the result, and a body the provers can verify (loop invariants and decreases where there is a loop)."
+  },
+  {
+   "role": "user",
+   "content": "Problem: Write a python function to check whether the given string is made up of two alternating characters or not.\n\nTests:\nassert is_Two_Alter(\"abab\") == True\nassert is_Two_Alter(\"aaaa\") == False\nassert is_Two_Alter(\"xyz\") == False\n\nWrite the t task named `is_Two_Alter` with 1 parameter(s) of type(s) seq, in the order the tests pass them, returning bool. The tests must pass and the ensures must specify the result."
+  }
+ ],
+ "reply": "```t\nt 1\ngate loops\ntask is_Two_Alter(s: seq) returns (r: bool)\n  ensures r == (len(s) >= 2 and len(s) % 2 == 0 and s[0] == s[2] and s[0] == s[4] and s[2] == s[6] and s[4] == s[6])\n{\n  if len(s) < 2 {\n    r := false;\n  } else {\n    var c1: char := s[0];\n    var c2: char := s[1];\n    if c1 == c2 {\n      r := false;\n    } else {\n      var i: int := 2;\n      while i < len(s)\n        invariant 2 <= i and i <= len(s)\n        invariant c1 == s[i - 2]\n        invariant c2 == s[i - 1]\n        decreases len(s) - i\n      {\n        if s[i] == c1 {\n          c2 := s[i + 1];\n          i := i + 2;\n        } else {\n          c1 := s[i];\n          i := i + 2;\n        }\n      }\n      if i == len(s) {\n        r := true;\n      } else {\n        r := false;\n      }\n    }\n  }\n}\n```",
+ "reply_tokens": 317,
+ "done_reason": "stop"
+}

@@ -1,0 +1,29 @@
+{
+ "task_id": "510",
+ "fn": "no_of_subsequences",
+ "model": "t/out/gcp-student-2026-10-11-s1/merged",
+ "digest": "5539b0c56a7f",
+ "pool_version": "v5",
+ "prompt_version": "s1",
+ "options": {
+  "temperature": 0.0,
+  "seed": 1,
+  "num_predict": 1024,
+  "top_p": null,
+  "decoder": "transformers-batched",
+  "seeding": "per-problem"
+ },
+ "messages": [
+  {
+   "role": "system",
+   "content": "You write tasks in t, a small verified language. Reply with one fenced t task and nothing else: the header line, the task with the requested name and parameters, requires and ensures clauses that specify the result, and a body the provers can verify (loop invariants and decreases where there is a loop)."
+  },
+  {
+   "role": "user",
+   "content": "Problem: Write a function to find the number of subsequences having product smaller than k for the given non negative array.\n\nTests:\nassert no_of_subsequences([1,2,3,4], 10) == 11\nassert no_of_subsequences([4,8,7,2], 50) == 9\nassert no_of_subsequences([5,6,7,8], 15) == 4\n\nWrite the t task named `no_of_subsequences` with 2 parameter(s) of type(s) seq, int, in the order the tests pass them, returning int. The tests must pass and the ensures must specify the result."
+  }
+ ],
+ "reply": "```t\nt 0\ntask no_of_subsequences(arr: seq, k: int) returns (r: int)\n  requires k >= 0\n  requires len(arr) >= 0\n  ensures r >= 0\n  ensures r <= 2^len(arr)\n  ensures r == count_subsequences_less_than_k(arr, k)\n{\n  r := 0;\n  var i: int := 0;\n  while i < len(arr)\n    invariant 0 <= i and i <= len(arr)\n    invariant r == count_subsequences_less_than_k(arr[0..i], k)\n    decreases len(arr) - i\n  {\n    var new_r: int := r;\n    if arr[i] < k {\n      new_r := new_r + 1;\n    }\n    var j: int := i + 1;\n    while j < len(arr)\n      invariant i + 1 <= j and j <= len(arr)\n      invariant new_r == count_subsequences_less_than_k(arr[0..j], k)\n      decreases len(arr) - j\n    {\n      var new_r_v: int := new_r;\n      if arr[i] * arr[j] < k {\n        new_r_v := new_r_v + 1;\n      }\n      var m: int := j + 1;\n      while m < len(arr)\n        invariant i + 2 <= m and m <= len(arr)\n        invariant new_r_v == count_subsequences_less_than_k(arr[0..m], k)\n        decreases len(arr) - m\n      {\n        var new_r_v_v: int := new_r_v;\n        if arr[i] * arr[j] * arr[m] < k {\n          new_r_v_v := new_r_v_v + 1;\n        }\n        r := new_r_v_v;\n        m := m + 1;\n      }\n      new_r := new_r_v;\n      j := j + 1;\n    }\n    r := new_r;\n    i := i + 1;\n  }\n}\n```",
+ "reply_tokens": 466,
+ "done_reason": "stop"
+}

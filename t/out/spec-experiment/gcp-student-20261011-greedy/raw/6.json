@@ -1,0 +1,29 @@
+{
+ "task_id": "6",
+ "fn": "differ_At_One_Bit_Pos",
+ "model": "t/out/gcp-student-2026-10-11-s1/merged",
+ "digest": "5539b0c56a7f",
+ "pool_version": "v5",
+ "prompt_version": "s1",
+ "options": {
+  "temperature": 0.0,
+  "seed": 1,
+  "num_predict": 1024,
+  "top_p": null,
+  "decoder": "transformers-batched",
+  "seeding": "per-problem"
+ },
+ "messages": [
+  {
+   "role": "system",
+   "content": "You write tasks in t, a small verified language. Reply with one fenced t task and nothing else: the header line, the task with the requested name and parameters, requires and ensures clauses that specify the result, and a body the provers can verify (loop invariants and decreases where there is a loop)."
+  },
+  {
+   "role": "user",
+   "content": "Problem: Write a python function to check whether the two numbers differ at one bit position only or not.\n\nTests:\nassert differ_At_One_Bit_Pos(13,9) == True\nassert differ_At_One_Bit_Pos(15,8) == False\nassert differ_At_One_Bit_Pos(2,4) == False\n\nWrite the t task named `differ_At_One_Bit_Pos` with 2 parameter(s) of type(s) int, int, in the order the tests pass them, returning bool. The tests must pass and the ensures must specify the result."
+  }
+ ],
+ "reply": "```t\nt 0\ntask differ_At_One_Bit_Pos(a: int, b: int) returns (r: bool)\n  ensures r == (a ^ b == 1)\n{\n  var x: int := a ^ b;\n  r := x == 1;\n}\n```",
+ "reply_tokens": 67,
+ "done_reason": "stop"
+}

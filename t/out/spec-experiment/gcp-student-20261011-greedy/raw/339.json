@@ -1,0 +1,29 @@
+{
+ "task_id": "339",
+ "fn": "find_Divisor",
+ "model": "t/out/gcp-student-2026-10-11-s1/merged",
+ "digest": "5539b0c56a7f",
+ "pool_version": "v5",
+ "prompt_version": "s1",
+ "options": {
+  "temperature": 0.0,
+  "seed": 1,
+  "num_predict": 1024,
+  "top_p": null,
+  "decoder": "transformers-batched",
+  "seeding": "per-problem"
+ },
+ "messages": [
+  {
+   "role": "system",
+   "content": "You write tasks in t, a small verified language. Reply with one fenced t task and nothing else: the header line, the task with the requested name and parameters, requires and ensures clauses that specify the result, and a body the provers can verify (loop invariants and decreases where there is a loop)."
+  },
+  {
+   "role": "user",
+   "content": "Problem: Write a python function to find the maximum occuring divisor in an interval.\n\nTests:\nassert find_Divisor(2,2) == 2\nassert find_Divisor(2,5) == 2\nassert find_Divisor(5,10) == 2\n\nWrite the t task named `find_Divisor` with 2 parameter(s) of type(s) int, int, in the order the tests pass them, returning int. The tests must pass and the ensures must specify the result."
+  }
+ ],
+ "reply": "```t\nt 0\ntask find_Divisor(a: int, b: int) returns (r: int)\n  requires a <= b\n  ensures a <= r and r <= b\n  ensures r > 1\n  ensures forall d in [a, b] . d % r == 0\n  ensures forall k in [a, b] . k % r != 0 ==> r < k\n{\n  r := a;\n  var i: int := a + 1;\n  while i <= b\n    invariant a <= r and r <= i and i <= b\n    invariant r > 1\n    invariant forall d in [a, i) . d % r == 0\n    invariant forall k in [a, i) . k % r != 0 ==> r < k\n    decreases b - i\n  {\n    if i % r == 0 {\n      if i > r {\n        r := i;\n      }\n    }\n    i := i + 1;\n  }\n}\n```",
+ "reply_tokens": 230,
+ "done_reason": "stop"
+}

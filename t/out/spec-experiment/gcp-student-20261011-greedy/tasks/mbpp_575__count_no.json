@@ -1,0 +1,182 @@
+{
+ "t": 1,
+ "name": "mbpp_575__count_no",
+ "params": [
+  {
+   "name": "n",
+   "type": "int"
+  },
+  {
+   "name": "m",
+   "type": "int"
+  },
+  {
+   "name": "start",
+   "type": "int"
+  },
+  {
+   "name": "end",
+   "type": "int"
+  }
+ ],
+ "returns": [
+  {
+   "name": "r",
+   "type": "int"
+  }
+ ],
+ "requires": [
+  {
+   "op": ">=",
+   "args": [
+    {
+     "var": "n"
+    },
+    {
+     "int": 1
+    }
+   ]
+  },
+  {
+   "op": ">=",
+   "args": [
+    {
+     "var": "m"
+    },
+    {
+     "int": 1
+    }
+   ]
+  },
+  {
+   "op": "<=",
+   "args": [
+    {
+     "var": "start"
+    },
+    {
+     "var": "end"
+    }
+   ]
+  }
+ ],
+ "ensures": [
+  {
+   "op": "==",
+   "args": [
+    {
+     "var": "r"
+    },
+    {
+     "op": "-",
+     "args": [
+      {
+       "op": "+",
+       "args": [
+        {
+         "op": "-",
+         "args": [
+          {
+           "var": "end"
+          },
+          {
+           "var": "start"
+          }
+         ]
+        },
+        {
+         "int": 1
+        }
+       ]
+      },
+      {
+       "op": "div",
+       "args": [
+        {
+         "op": "+",
+         "args": [
+          {
+           "op": "-",
+           "args": [
+            {
+             "var": "end"
+            },
+            {
+             "var": "start"
+            }
+           ]
+          },
+          {
+           "int": 1
+          }
+         ]
+        },
+        {
+         "var": "m"
+        }
+       ]
+      }
+     ]
+    }
+   ]
+  }
+ ],
+ "body": [
+  {
+   "assign": [
+    "r",
+    {
+     "op": "-",
+     "args": [
+      {
+       "op": "+",
+       "args": [
+        {
+         "op": "-",
+         "args": [
+          {
+           "var": "end"
+          },
+          {
+           "var": "start"
+          }
+         ]
+        },
+        {
+         "int": 1
+        }
+       ]
+      },
+      {
+       "op": "div",
+       "args": [
+        {
+         "op": "+",
+         "args": [
+          {
+           "op": "-",
+           "args": [
+            {
+             "var": "end"
+            },
+            {
+             "var": "start"
+            }
+           ]
+          },
+          {
+           "int": 1
+          }
+         ]
+        },
+        {
+         "var": "m"
+        }
+       ]
+      }
+     ]
+    }
+   ]
+  }
+ ]
+}

@@ -1,0 +1,29 @@
+{
+ "task_id": "108",
+ "fn": "merge_sorted_list",
+ "model": "t/out/gcp-student-2026-10-11-s1/merged",
+ "digest": "5539b0c56a7f",
+ "pool_version": "v5",
+ "prompt_version": "s1",
+ "options": {
+  "temperature": 0.0,
+  "seed": 1,
+  "num_predict": 1024,
+  "top_p": null,
+  "decoder": "transformers-batched",
+  "seeding": "per-problem"
+ },
+ "messages": [
+  {
+   "role": "system",
+   "content": "You write tasks in t, a small verified language. Reply with one fenced t task and nothing else: the header line, the task with the requested name and parameters, requires and ensures clauses that specify the result, and a body the provers can verify (loop invariants and decreases where there is a loop)."
+  },
+  {
+   "role": "user",
+   "content": "Problem: Write a function to merge multiple sorted inputs into a single sorted iterator using heap queue algorithm.\n\nTests:\nassert merge_sorted_list([25, 24, 15, 4, 5, 29, 110],[19, 20, 11, 56, 25, 233, 154],[24, 26, 54, 48])==[4, 5, 11, 15, 19, 20, 24, 24, 25, 25, 26, 29, 48, 54, 56, 110, 154, 233]\nassert merge_sorted_list([1, 3, 5, 6, 8, 9], [2, 5, 7, 11], [1, 4, 7, 8, 12])==[1, 1, 2, 3, 4, 5, 5, 6, 7, 7, 8, 8, 9, 11, 12]\nassert merge_sorted_list([18, 14, 10, 9, 8, 7, 9, 3, 2, 4, 1],[25, 35, 22, 85, 14, 65, 75, 25, 58],[12, 74, 9, 50, 61, 41])==[1, 2, 3, 4, 7, 8, 9, 9, 9, 10, 12, 14, 14, 18, 22, 25, 25, 35, 41, 50, 58, 61, 65, 74, 75, 85]\n\nWrite the t task named `merge_sorted_list` with 3 parameter(s) of type(s) seq, seq, seq, in the order the tests pass them, returning seq. The tests must pass and the ensures must specify the result."
+  }
+ ],
+ "reply": "```t\nt 0\ntask merge_sorted_list(a: seq, b: seq, c: seq) returns (r: seq)\n  requires len(a) >= 0\n  requires len(b) >= 0\n  requires len(c) >= 0\n  ensures len(r) == len(a) + len(b) + len(c)\n  ensures forall i in [0, len(r)) . r[i] <= r[i+1] if i+1 < len(r)\n{\n  var i: int := 0;\n  var j: int := 0;\n  var k: int := 0;\n  r := [];\n  while i < len(a) and j < len(b) and k < len(c)\n    invariant 0 <= i and i <= len(a)\n    invariant 0 <= j and j <= len(b)\n    invariant 0 <= k and k <= len(c)\n    invariant len(r) == i + j + k\n    invariant forall m in [0, i) . a[m] <= a[m+1] if m+1 < i\n    invariant forall m in [0, j) . b[m] <= b[m+1] if m+1 < j\n    invariant forall m in [0, k) . c[m] <= c[m+1] if m+1 < k\n    invariant forall m in [0, len(r)) . r[m] <= r[m+1] if m+1 < len(r)\n    decreases len(a) - i + len(b) - j + len(c) - k\n  {\n    var min: int := i;\n    if j < len(b) and b[j] < a[i] {\n      min := j;\n    }\n    if k < len(c) and c[k] < a[i] {\n      if min == i {\n        min := k;\n      } else {\n        if c[k] < a[i] {\n          min := k;\n        }\n      }\n    }\n    r := r + [a[i], b[j], c[k]][min];\n    if min == i {\n      i := i + 1;\n    } else {\n      if min == j {\n        j := j + 1;\n      } else {\n        k := k + 1;\n      }\n    }\n  }\n  while i < len(a)\n    invariant 0 <= i and i <= len(a)\n    invariant 0 <= j and j <= len(b)\n    invariant 0 <= k and k <= len(c)\n    invariant len(r) == i + j + k\n    invariant forall m in [0, i) . a[m] <= a[m+1] if m+1 < i\n    invariant forall m in [0, j) . b[m] <= b[m+1] if m+1 < j\n    invariant forall m in [0, k) . c[m] <= c[m+1] if m+1 < k\n    invariant forall m in [0, len(r)) . r[m] <= r[m+1] if m+1 < len(r)\n    decreases len(a) - i\n  {\n    r := r + [a[i]];\n    i := i + 1;\n  }\n  while j < len(b)\n    invariant 0 <= i and i <= len(a)\n    invariant 0 <= j and j <= len(b)\n    invariant 0 <= k and k <= len(c)\n    invariant len(r) == i + j + k\n    invariant forall m in [0, i) . a[m] <= a[m+1] if m+1 < i\n    invariant forall m in [0, j) . b[m] <= b[m+1] if m+1 < j\n    invariant forall m in [0, k) . c[m] <= c[m+1] if m+1 < k\n    invariant forall m in [0, len(r)) . r[m] <= r[m+1] if m+1 < len(r)\n    decreases len(b) - j\n  {\n    r := r + [b[j]];\n    j := j + 1;\n  }\n  while k < len(c)\n    invariant 0 <= i and i <= len(a)\n    invariant 0 <= j and j <= len(b)\n    invariant 0 <= k and k <= len(c)\n    invariant len(r) == i + j + k\n    invariant forall m in [0, i) . a[m] <= a[m+1] if m+1 < i\n    invariant forall m in [0, j) .",
+ "reply_tokens": 1024,
+ "done_reason": "length"
+}

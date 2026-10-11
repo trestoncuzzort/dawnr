@@ -1,0 +1,29 @@
+{
+ "task_id": "474",
+ "fn": "replace_char",
+ "model": "t/out/gcp-student-2026-10-11-s1/merged",
+ "digest": "5539b0c56a7f",
+ "pool_version": "v5",
+ "prompt_version": "s1",
+ "options": {
+  "temperature": 0.0,
+  "seed": 1,
+  "num_predict": 1024,
+  "top_p": null,
+  "decoder": "transformers-batched",
+  "seeding": "per-problem"
+ },
+ "messages": [
+  {
+   "role": "system",
+   "content": "You write tasks in t, a small verified language. Reply with one fenced t task and nothing else: the header line, the task with the requested name and parameters, requires and ensures clauses that specify the result, and a body the provers can verify (loop invariants and decreases where there is a loop)."
+  },
+  {
+   "role": "user",
+   "content": "Problem: Write a function to replace characters in a string.\n\nTests:\nassert replace_char(\"polygon\",'y','l')==(\"pollgon\")\nassert replace_char(\"character\",'c','a')==(\"aharaater\")\nassert replace_char(\"python\",'l','a')==(\"python\")\n\nWrite the t task named `replace_char` with 3 parameter(s) of type(s) seq, int, int, in the order the tests pass them, returning seq. The tests must pass and the ensures must specify the result."
+  }
+ ],
+ "reply": "```t\nt 0\ntask replace_char(s: seq, c: int, r: int) returns (r_v: seq)\n  ensures len(r_v) == len(s)\n  ensures forall i in [0, len(s)) . if s[i] == c then r_v[i] == r else r_v[i] == s[i]\n{\n  r_v := [];\n  var i: int := 0;\n  while i < len(s)\n    invariant 0 <= i and i <= len(s)\n    invariant len(r_v) == i\n    invariant forall j in [0, i) . if s[j] == c then r_v[j] == r else r_v[j] == s[j]\n    decreases len(s) - i\n  {\n    if s[i] == c {\n      r_v := r_v + [r];\n    } else {\n      r_v := r_v + [s[i]];\n    }\n    i := i + 1;\n  }\n}\n```",
+ "reply_tokens": 224,
+ "done_reason": "stop"
+}

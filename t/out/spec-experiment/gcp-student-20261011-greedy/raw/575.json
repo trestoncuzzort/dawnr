@@ -1,0 +1,29 @@
+{
+ "task_id": "575",
+ "fn": "count_no",
+ "model": "t/out/gcp-student-2026-10-11-s1/merged",
+ "digest": "5539b0c56a7f",
+ "pool_version": "v5",
+ "prompt_version": "s1",
+ "options": {
+  "temperature": 0.0,
+  "seed": 1,
+  "num_predict": 1024,
+  "top_p": null,
+  "decoder": "transformers-batched",
+  "seeding": "per-problem"
+ },
+ "messages": [
+  {
+   "role": "system",
+   "content": "You write tasks in t, a small verified language. Reply with one fenced t task and nothing else: the header line, the task with the requested name and parameters, requires and ensures clauses that specify the result, and a body the provers can verify (loop invariants and decreases where there is a loop)."
+  },
+  {
+   "role": "user",
+   "content": "Problem: Write a python function to find nth number in a sequence which is not a multiple of a given number.\n\nTests:\nassert count_no(2,3,1,10) == 5\nassert count_no(3,6,4,20) == 11\nassert count_no(5,10,4,20) == 16\n\nWrite the t task named `count_no` with 4 parameter(s) of type(s) int, int, int, int, in the order the tests pass them, returning int. The tests must pass and the ensures must specify the result."
+  }
+ ],
+ "reply": "```t\nt 0\ntask count_no(n: int, m: int, start: int, end: int) returns (r: int)\n  requires n >= 1\n  requires m >= 1\n  requires start <= end\n  ensures r == end - start + 1 - (end - start + 1) / m\n{\n  r := end - start + 1 - (end - start + 1) / m;\n}\n```",
+ "reply_tokens": 102,
+ "done_reason": "stop"
+}

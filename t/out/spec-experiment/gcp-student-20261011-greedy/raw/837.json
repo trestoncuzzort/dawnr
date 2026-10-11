@@ -1,0 +1,29 @@
+{
+ "task_id": "837",
+ "fn": "cube_Sum",
+ "model": "t/out/gcp-student-2026-10-11-s1/merged",
+ "digest": "5539b0c56a7f",
+ "pool_version": "v5",
+ "prompt_version": "s1",
+ "options": {
+  "temperature": 0.0,
+  "seed": 1,
+  "num_predict": 1024,
+  "top_p": null,
+  "decoder": "transformers-batched",
+  "seeding": "per-problem"
+ },
+ "messages": [
+  {
+   "role": "system",
+   "content": "You write tasks in t, a small verified language. Reply with one fenced t task and nothing else: the header line, the task with the requested name and parameters, requires and ensures clauses that specify the result, and a body the provers can verify (loop invariants and decreases where there is a loop)."
+  },
+  {
+   "role": "user",
+   "content": "Problem: Write a python function to find the cube sum of first n odd natural numbers.\n\nTests:\nassert cube_Sum(2) == 28\nassert cube_Sum(3) == 153\nassert cube_Sum(4) == 496\n\nWrite the t task named `cube_Sum` with 1 parameter(s) of type(s) int, in the order the tests pass them, returning int. The tests must pass and the ensures must specify the result."
+  }
+ ],
+ "reply": "```t\nt 0\ntask cube_Sum(n: int) returns (r: int)\n  requires n >= 0\n  ensures r == n * (2 * n - 1) * (2 * n - 1) * (2 * n - 1) / 8\n{\n  r := 0;\n  var i: int := 1;\n  while i <= n\n    invariant r == i * i * i\n    invariant i >= 1 and i <= n + 1\n    decreases n - i + 1\n  {\n    r := r + i * i * i;\n    i := i + 2;\n  }\n}\n```",
+ "reply_tokens": 153,
+ "done_reason": "stop"
+}

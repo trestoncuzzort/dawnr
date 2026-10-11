@@ -1,0 +1,29 @@
+{
+ "task_id": "151",
+ "fn": "is_coprime",
+ "model": "t/out/gcp-student-2026-10-11-s1/merged",
+ "digest": "5539b0c56a7f",
+ "pool_version": "v5",
+ "prompt_version": "s1",
+ "options": {
+  "temperature": 0.0,
+  "seed": 1,
+  "num_predict": 1024,
+  "top_p": null,
+  "decoder": "transformers-batched",
+  "seeding": "per-problem"
+ },
+ "messages": [
+  {
+   "role": "system",
+   "content": "You write tasks in t, a small verified language. Reply with one fenced t task and nothing else: the header line, the task with the requested name and parameters, requires and ensures clauses that specify the result, and a body the provers can verify (loop invariants and decreases where there is a loop)."
+  },
+  {
+   "role": "user",
+   "content": "Problem: Write a python function to check whether the given number is co-prime or not.\n\nTests:\nassert is_coprime(17,13) == True\nassert is_coprime(15,21) == False\nassert is_coprime(25,45) == False\n\nWrite the t task named `is_coprime` with 2 parameter(s) of type(s) int, int, in the order the tests pass them, returning bool. The tests must pass and the ensures must specify the result."
+  }
+ ],
+ "reply": "```t\nt 0\ntask is_coprime(a: int, b: int) returns (r: bool)\n  requires a > 0\n  requires b > 0\n  ensures r == (gcd(a, b) == 1)\n{\n  var x: int := a;\n  var y: int := b;\n  while y > 0\n    invariant x >= 0\n    invariant y >= 0\n    invariant x + y == a + b\n    invariant r == (gcd(x, y) == 1)\n    decreases y\n  {\n    var tmp: int := x;\n    x := y;\n    y := tmp % y;\n  }\n  r := x == 1;\n}\n```",
+ "reply_tokens": 167,
+ "done_reason": "stop"
+}

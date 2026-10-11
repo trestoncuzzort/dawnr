@@ -1,0 +1,29 @@
+{
+ "task_id": "515",
+ "fn": "modular_sum",
+ "model": "t/out/gcp-student-2026-10-11-s1/merged",
+ "digest": "5539b0c56a7f",
+ "pool_version": "v5",
+ "prompt_version": "s1",
+ "options": {
+  "temperature": 0.0,
+  "seed": 1,
+  "num_predict": 1024,
+  "top_p": null,
+  "decoder": "transformers-batched",
+  "seeding": "per-problem"
+ },
+ "messages": [
+  {
+   "role": "system",
+   "content": "You write tasks in t, a small verified language. Reply with one fenced t task and nothing else: the header line, the task with the requested name and parameters, requires and ensures clauses that specify the result, and a body the provers can verify (loop invariants and decreases where there is a loop)."
+  },
+  {
+   "role": "user",
+   "content": "Problem: Write a function to check if there is a subset with sum divisible by m.\n\nTests:\nassert modular_sum([3, 1, 7, 5], 4, 6) == True\nassert modular_sum([1, 7], 2, 5) == False\nassert modular_sum([1, 6], 2, 5) == False\n\nWrite the t task named `modular_sum` with 3 parameter(s) of type(s) seq, int, int, in the order the tests pass them, returning bool. The tests must pass and the ensures must specify the result."
+  }
+ ],
+ "reply": "```t\nt 0\ntask modular_sum(s: seq, m: int, target: int) returns (r: bool)\n  requires m > 0\n  requires target >= 0\n  ensures r == (exists i in [0, len(s)) . target == (s[i] % m))\n{\n  r := false;\n  var i: int := 0;\n  while i < len(s)\n    invariant 0 <= i and i <= len(s)\n    invariant r == (exists j in [0, i) . target == (s[j] % m))\n    decreases len(s) - i\n  {\n    if target == (s[i] % m) {\n      r := true;\n    }\n    i := i + 1;\n  }\n}\n```",
+ "reply_tokens": 179,
+ "done_reason": "stop"
+}

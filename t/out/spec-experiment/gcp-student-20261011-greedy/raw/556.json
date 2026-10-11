@@ -1,0 +1,29 @@
+{
+ "task_id": "556",
+ "fn": "find_Odd_Pair",
+ "model": "t/out/gcp-student-2026-10-11-s1/merged",
+ "digest": "5539b0c56a7f",
+ "pool_version": "v5",
+ "prompt_version": "s1",
+ "options": {
+  "temperature": 0.0,
+  "seed": 1,
+  "num_predict": 1024,
+  "top_p": null,
+  "decoder": "transformers-batched",
+  "seeding": "per-problem"
+ },
+ "messages": [
+  {
+   "role": "system",
+   "content": "You write tasks in t, a small verified language. Reply with one fenced t task and nothing else: the header line, the task with the requested name and parameters, requires and ensures clauses that specify the result, and a body the provers can verify (loop invariants and decreases where there is a loop)."
+  },
+  {
+   "role": "user",
+   "content": "Problem: Write a python function to count the pairs with xor as an odd number.\n\nTests:\nassert find_Odd_Pair([5,4,7,2,1],5) == 6\nassert find_Odd_Pair([7,2,8,1,0,5,11],7) == 12\nassert find_Odd_Pair([1,2,3],3) == 2\n\nWrite the t task named `find_Odd_Pair` with 2 parameter(s) of type(s) seq, int, in the order the tests pass them, returning int. The tests must pass and the ensures must specify the result."
+  }
+ ],
+ "reply": "```t\nt 0\ntask find_Odd_Pair(s: seq, n: int) returns (r: int)\n  requires n >= 0\n  requires len(s) == n\n  ensures r == 0\n    or r == n * (n - 1) / 2\n{\n  r := 0;\n  var i: int := 0;\n  while i < n\n    invariant 0 <= i and i <= n\n    invariant r == i * (i - 1) / 2\n    decreases n - i\n  {\n    var j: int := i + 1;\n    while j < n\n      invariant i < j and j <= n\n      invariant r == i * (i - 1) / 2\n      decreases n - j\n    {\n      if (s[i] + s[j]) % 2 == 1 {\n        r := r + 1;\n      }\n      j := j + 1;\n    }\n    i := i + 1;\n  }\n}\n```",
+ "reply_tokens": 237,
+ "done_reason": "stop"
+}

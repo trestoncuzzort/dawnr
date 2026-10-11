@@ -1,0 +1,29 @@
+{
+ "task_id": "552",
+ "fn": "Seq_Linear",
+ "model": "t/out/gcp-student-2026-10-11-s1/merged",
+ "digest": "5539b0c56a7f",
+ "pool_version": "v5",
+ "prompt_version": "s1",
+ "options": {
+  "temperature": 0.0,
+  "seed": 1,
+  "num_predict": 1024,
+  "top_p": null,
+  "decoder": "transformers-batched",
+  "seeding": "per-problem"
+ },
+ "messages": [
+  {
+   "role": "system",
+   "content": "You write tasks in t, a small verified language. Reply with one fenced t task and nothing else: the header line, the task with the requested name and parameters, requires and ensures clauses that specify the result, and a body the provers can verify (loop invariants and decreases where there is a loop)."
+  },
+  {
+   "role": "user",
+   "content": "Problem: Write a python function to check whether a given sequence is linear or not.\n\nTests:\nassert Seq_Linear([0,2,4,6,8,10]) == \"Linear Sequence\"\nassert Seq_Linear([1,2,3]) == \"Linear Sequence\"\nassert Seq_Linear([1,5,2]) == \"Non Linear Sequence\"\n\nWrite the t task named `Seq_Linear` with 1 parameter(s) of type(s) seq, in the order the tests pass them, returning seq. The tests must pass and the ensures must specify the result."
+  }
+ ],
+ "reply": "```t\nt 1\ngate loops\ntask Seq_Linear(s: seq) returns (r: seq)\n  ensures r == \"Linear Sequence\" or r == \"Non Linear Sequence\"\n{\n  if len(s) <= 2 {\n    r := \"Linear Sequence\";\n  } else {\n    var diff: int := s[1] - s[0];\n    var i: int := 2;\n    while i < len(s)\n      invariant 2 <= i and i <= len(s)\n      invariant diff != 0\n      invariant r == \"Linear Sequence\"\n      decreases len(s) - i\n    {\n      if s[i] - s[i - 1] != diff {\n        r := \"Non Linear Sequence\";\n        return;\n      }\n      i := i + 1;\n    }\n    r := \"Linear Sequence\";\n  }\n}\n```",
+ "reply_tokens": 199,
+ "done_reason": "stop"
+}

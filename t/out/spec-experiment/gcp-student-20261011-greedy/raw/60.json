@@ -1,0 +1,29 @@
+{
+ "task_id": "60",
+ "fn": "max_len_sub",
+ "model": "t/out/gcp-student-2026-10-11-s1/merged",
+ "digest": "5539b0c56a7f",
+ "pool_version": "v5",
+ "prompt_version": "s1",
+ "options": {
+  "temperature": 0.0,
+  "seed": 1,
+  "num_predict": 1024,
+  "top_p": null,
+  "decoder": "transformers-batched",
+  "seeding": "per-problem"
+ },
+ "messages": [
+  {
+   "role": "system",
+   "content": "You write tasks in t, a small verified language. Reply with one fenced t task and nothing else: the header line, the task with the requested name and parameters, requires and ensures clauses that specify the result, and a body the provers can verify (loop invariants and decreases where there is a loop)."
+  },
+  {
+   "role": "user",
+   "content": "Problem: Write a function to find the maximum length of the subsequence with difference between adjacent elements for the given array.\n\nTests:\nassert max_len_sub([2, 5, 6, 3, 7, 6, 5, 8], 8) == 5\nassert max_len_sub([-2, -1, 5, -1, 4, 0, 3], 7) == 4\nassert max_len_sub([9, 11, 13, 15, 18], 5) == 1\n\nWrite the t task named `max_len_sub` with 2 parameter(s) of type(s) seq, int, in the order the tests pass them, returning int. The tests must pass and the ensures must specify the result."
+  }
+ ],
+ "reply": "```t\nt 0\ntask max_len_sub(s: seq, k: int) returns (r: int)\n  requires k >= 0\n  ensures r >= 0\n  ensures r <= len(s)\n  ensures forall i in [0, r) . i < len(s) ==> s[i] - s[i-1] == k or r == 0\n  ensures r == 0 ==> len(s) == 0 or (forall i in [0, len(s)) . s[i] - s[i-1] != k)\n{\n  if len(s) == 0 {\n    r := 0;\n  } else {\n    r := 1;\n    var i: int := 1;\n    while i < len(s) and r < i\n      invariant 0 <= r and r <= i and i <= len(s)\n      invariant r == 1 ==> i == 1\n      invariant r > 1 ==> i >= r and forall j in [0, r) . j < len(s) ==> s[j] - s[j-1] == k\n      decreases len(s) - i\n    {\n      if s[i] - s[i-1] == k {\n        r := r + 1;\n      }\n      i := i + 1;\n    }\n  }\n}\n```",
+ "reply_tokens": 296,
+ "done_reason": "stop"
+}

@@ -1,0 +1,29 @@
+{
+ "task_id": "247",
+ "fn": "lps",
+ "model": "t/out/gcp-student-2026-10-11-s1/merged",
+ "digest": "5539b0c56a7f",
+ "pool_version": "v5",
+ "prompt_version": "s1",
+ "options": {
+  "temperature": 0.0,
+  "seed": 1,
+  "num_predict": 1024,
+  "top_p": null,
+  "decoder": "transformers-batched",
+  "seeding": "per-problem"
+ },
+ "messages": [
+  {
+   "role": "system",
+   "content": "You write tasks in t, a small verified language. Reply with one fenced t task and nothing else: the header line, the task with the requested name and parameters, requires and ensures clauses that specify the result, and a body the provers can verify (loop invariants and decreases where there is a loop)."
+  },
+  {
+   "role": "user",
+   "content": "Problem: Write a function to find the longest palindromic subsequence in the given string.\n\nTests:\nassert lps(\"TENS FOR TENS\") == 5 \nassert lps(\"CARDIO FOR CARDS\") == 7\nassert lps(\"PART OF THE JOURNEY IS PART\") == 9 \n\nWrite the t task named `lps` with 1 parameter(s) of type(s) seq, in the order the tests pass them, returning int. The tests must pass and the ensures must specify the result."
+  }
+ ],
+ "reply": "```t\nt 0\ntask lps(s: seq) returns (r: int)\n  ensures r >= 0\n  ensures r <= len(s)\n  ensures r == 2 * r_v - len(s)\n{\n  var n: int := len(s);\n  if n == 0 {\n    r := 0;\n  } else {\n    var dp: seq of int := seq(len(s), 0);\n    var r_v: int := 0;\n    var i: int := 1;\n    while i < n\n      invariant 1 <= i and i <= n\n      invariant r_v == 2 * dp[i - 1] - i\n      decreases n - i\n    {\n      var j: int := i - 1;\n      while j >= 0\n        invariant 0 <= j and j < i\n        invariant r_v == 2 * dp[j] - i\n        decreases i - j\n      {\n        if s[i] == s[j] {\n          dp[i] := dp[j] + 2;\n          r_v := r_v + 2;\n        } else {\n          dp[i] := max(dp[i], dp[j + 1]);\n          if dp[j + 1] > r_v {\n            r_v := dp[j + 1];\n          }\n        }\n        j := j - 1;\n      }\n      i := i + 1;\n    }\n    r := r_v;\n  }\n}\n```",
+ "reply_tokens": 338,
+ "done_reason": "stop"
+}

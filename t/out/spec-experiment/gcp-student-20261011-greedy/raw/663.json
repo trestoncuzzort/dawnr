@@ -1,0 +1,29 @@
+{
+ "task_id": "663",
+ "fn": "find_max_val",
+ "model": "t/out/gcp-student-2026-10-11-s1/merged",
+ "digest": "5539b0c56a7f",
+ "pool_version": "v5",
+ "prompt_version": "s1",
+ "options": {
+  "temperature": 0.0,
+  "seed": 1,
+  "num_predict": 1024,
+  "top_p": null,
+  "decoder": "transformers-batched",
+  "seeding": "per-problem"
+ },
+ "messages": [
+  {
+   "role": "system",
+   "content": "You write tasks in t, a small verified language. Reply with one fenced t task and nothing else: the header line, the task with the requested name and parameters, requires and ensures clauses that specify the result, and a body the provers can verify (loop invariants and decreases where there is a loop)."
+  },
+  {
+   "role": "user",
+   "content": "Problem: Write a function to find the largest possible value of k such that k modulo x is y.\n\nTests:\nassert find_max_val(15, 10, 5) == 15\nassert find_max_val(187, 10, 5) == 185\nassert find_max_val(16, 11, 1) == 12\n\nWrite the t task named `find_max_val` with 3 parameter(s) of type(s) int, int, int, in the order the tests pass them, returning int. The tests must pass and the ensures must specify the result."
+  }
+ ],
+ "reply": "```t\nt 0\ntask find_max_val(x: int, y: int, k: int) returns (r: int)\n  requires x > 0\n  requires k >= y\n  ensures r >= y\n  ensures r % x == y\n  ensures forall k_v: int, k_v >= y -> k_v % x == y -> r >= k_v\n{\n  r := k;\n  while r > y\n    invariant r >= y\n    invariant r % x == y\n    decreases r - y\n  {}\n}\n```",
+ "reply_tokens": 122,
+ "done_reason": "stop"
+}

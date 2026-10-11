@@ -1,0 +1,29 @@
+{
+ "task_id": "822",
+ "fn": "pass_validity",
+ "model": "t/out/gcp-student-2026-10-11-s1/merged",
+ "digest": "5539b0c56a7f",
+ "pool_version": "v5",
+ "prompt_version": "s1",
+ "options": {
+  "temperature": 0.0,
+  "seed": 1,
+  "num_predict": 1024,
+  "top_p": null,
+  "decoder": "transformers-batched",
+  "seeding": "per-problem"
+ },
+ "messages": [
+  {
+   "role": "system",
+   "content": "You write tasks in t, a small verified language. Reply with one fenced t task and nothing else: the header line, the task with the requested name and parameters, requires and ensures clauses that specify the result, and a body the provers can verify (loop invariants and decreases where there is a loop)."
+  },
+  {
+   "role": "user",
+   "content": "Problem: Write a function to return true if the password is valid.\n\nTests:\nassert pass_validity(\"password\")==False\nassert pass_validity(\"Password@10\")==True\nassert pass_validity(\"password@10\")==False\n\nWrite the t task named `pass_validity` with 1 parameter(s) of type(s) seq, in the order the tests pass them, returning bool. The tests must pass and the ensures must specify the result."
+  }
+ ],
+ "reply": "```t\nt 0\ntask pass_validity(password: seq) returns (r: bool)\n  ensures r == (len(password) >= 8 and exists i in [0, len(password)) . password[i] >= 65 and password[i] <= 90 or password[i] >= 97 and password[i] <= 122 or password[i] >= 48 and password[i] <= 57 or password[i] >= 33 and password[i] <= 47 or password[i] >= 58 and password[i] <= 64 or password[i] == 34 or password[i] == 35 or password[i] == 36 or password[i] == 37 or password[i] == 38 or password[i] == 39 or password[i] == 41 or password[i] == 42 or password[i] == 43 or password[i] == 44 or password[i] == 45 or password[i] == 46 or password[i] == 47 or password[i] == 63 or password[i] == 91 or password[i] == 92 or password[i] == 93 or password[i] == 94 or password[i] == 95 or password[i] == 96)\n{\n  r := len(password) >= 8 and exists i in [0, len(password)) . password[i] >= 65 and password[i] <= 90 or password[i] >= 97 and password[i] <= 122 or password[i] >= 48 and password[i] <= 57 or password[i] >= 33 and password[i] <= 47 or password[i] >= 58 and password[i] <= 64 or password[i] == 34 or password[i] == 35 or password[i] == 36 or password[i] == 37 or password[i] == 38 or password[i] == 39 or password[i] == 41 or password[i] == 42 or password[i] == 43 or password[i] == 44 or password[i] == 45 or password[i] == 46 or password[i] == 47 or password[i] == 63 or password[i] == 91 or password[i] == 92 or password[i] == 93 or password[i] == 94 or password[i] == 95 or password[i] == 96;\n}\n```",
+ "reply_tokens": 553,
+ "done_reason": "stop"
+}

@@ -1,0 +1,29 @@
+{
+ "task_id": "3",
+ "fn": "is_not_prime",
+ "model": "t/out/gcp-student-2026-10-11-s1/merged",
+ "digest": "5539b0c56a7f",
+ "pool_version": "v5",
+ "prompt_version": "s1",
+ "options": {
+  "temperature": 0.0,
+  "seed": 1,
+  "num_predict": 1024,
+  "top_p": null,
+  "decoder": "transformers-batched",
+  "seeding": "per-problem"
+ },
+ "messages": [
+  {
+   "role": "system",
+   "content": "You write tasks in t, a small verified language. Reply with one fenced t task and nothing else: the header line, the task with the requested name and parameters, requires and ensures clauses that specify the result, and a body the provers can verify (loop invariants and decreases where there is a loop)."
+  },
+  {
+   "role": "user",
+   "content": "Problem: Write a python function to identify non-prime numbers.\n\nTests:\nassert is_not_prime(2) == False\nassert is_not_prime(10) == True\nassert is_not_prime(35) == True\n\nWrite the t task named `is_not_prime` with 1 parameter(s) of type(s) int, in the order the tests pass them, returning bool. The tests must pass and the ensures must specify the result."
+  }
+ ],
+ "reply": "```t\nt 0\ntask is_not_prime(n: int) returns (r: bool)\n  requires n >= 0\n  ensures r == (n < 2) or (exists d: d >= 2 and d <= n / 2 and n % d == 0)\n{\n  if n < 2 {\n    r := true;\n  } else {\n    var i: int := 2;\n    while i <= n / 2\n      invariant i >= 2 and i <= n / 2 + 1\n      invariant n < 2 ==> r == true\n      invariant n >= 2 ==> r == false\n      invariant exists d: d >= 2 and d <= i and n % d == 0 ==> r == true\n      invariant forall d_v: d_v >= 2 and d_v < i, d_v <= n / 2 ==> n % d_v != 0 ==> r == false\n      decreases n / 2 - i + 1\n    {\n      if n % i == 0 {\n        r := true;\n      }\n      i := i + 1;\n    }\n    r := false;\n  }\n}\n```",
+ "reply_tokens": 263,
+ "done_reason": "stop"
+}

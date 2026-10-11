@@ -1,0 +1,76 @@
+{
+ "t": 1,
+ "name": "mbpp_479__first_Digit",
+ "params": [
+  {
+   "name": "n",
+   "type": "int"
+  }
+ ],
+ "returns": [
+  {
+   "name": "r",
+   "type": "int"
+  }
+ ],
+ "requires": [
+  {
+   "op": ">",
+   "args": [
+    {
+     "var": "n"
+    },
+    {
+     "int": 0
+    }
+   ]
+  }
+ ],
+ "ensures": [
+  {
+   "op": "and",
+   "args": [
+    {
+     "op": "==",
+     "args": [
+      {
+       "var": "r"
+      },
+      {
+       "var": "n"
+      }
+     ]
+    },
+    {
+     "op": "<",
+     "args": [
+      {
+       "var": "r"
+      },
+      {
+       "int": 10
+      }
+     ]
+    }
+   ]
+  }
+ ],
+ "body": [
+  {
+   "assign": [
+    "r",
+    {
+     "op": "mod",
+     "args": [
+      {
+       "var": "n"
+      },
+      {
+       "int": 10
+      }
+     ]
+    }
+   ]
+  }
+ ]
+}

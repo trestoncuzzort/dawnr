@@ -1,0 +1,29 @@
+{
+ "task_id": "866",
+ "fn": "check_monthnumb",
+ "model": "t/out/gcp-student-2026-10-11-s1/merged",
+ "digest": "5539b0c56a7f",
+ "pool_version": "v5",
+ "prompt_version": "s1",
+ "options": {
+  "temperature": 0.0,
+  "seed": 1,
+  "num_predict": 1024,
+  "top_p": null,
+  "decoder": "transformers-batched",
+  "seeding": "per-problem"
+ },
+ "messages": [
+  {
+   "role": "system",
+   "content": "You write tasks in t, a small verified language. Reply with one fenced t task and nothing else: the header line, the task with the requested name and parameters, requires and ensures clauses that specify the result, and a body the provers can verify (loop invariants and decreases where there is a loop)."
+  },
+  {
+   "role": "user",
+   "content": "Problem: Write a function to check whether the given month name contains 31 days or not.\n\nTests:\nassert check_monthnumb(\"February\")==False\nassert check_monthnumb(\"January\")==True\nassert check_monthnumb(\"March\")==True\n\nWrite the t task named `check_monthnumb` with 1 parameter(s) of type(s) seq, in the order the tests pass them, returning bool. The tests must pass and the ensures must specify the result."
+  }
+ ],
+ "reply": "```t\nt 0\ntask check_monthnumb(month: seq) returns (r: bool)\n  ensures r == (month == [73, 97, 110, 117, 97, 114, 121]) or r == (month == [77, 97, 114, 99, 104]) or r == (month == [77, 97, 121])\n{\n  if month == [73, 97, 110, 117, 97, 114, 121] or month == [77, 97, 114, 99, 104] or month == [77, 97, 121] {\n    r := true;\n  } else {\n    r := false;\n  }\n}\n```",
+ "reply_tokens": 214,
+ "done_reason": "stop"
+}

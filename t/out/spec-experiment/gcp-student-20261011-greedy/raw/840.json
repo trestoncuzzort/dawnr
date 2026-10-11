@@ -1,0 +1,29 @@
+{
+ "task_id": "840",
+ "fn": "Check_Solution",
+ "model": "t/out/gcp-student-2026-10-11-s1/merged",
+ "digest": "5539b0c56a7f",
+ "pool_version": "v5",
+ "prompt_version": "s1",
+ "options": {
+  "temperature": 0.0,
+  "seed": 1,
+  "num_predict": 1024,
+  "top_p": null,
+  "decoder": "transformers-batched",
+  "seeding": "per-problem"
+ },
+ "messages": [
+  {
+   "role": "system",
+   "content": "You write tasks in t, a small verified language. Reply with one fenced t task and nothing else: the header line, the task with the requested name and parameters, requires and ensures clauses that specify the result, and a body the provers can verify (loop invariants and decreases where there is a loop)."
+  },
+  {
+   "role": "user",
+   "content": "Problem: Write a python function to check whether the roots of a quadratic equation are numerically equal but opposite in sign or not.\n\nTests:\nassert Check_Solution(2,0,-1) == \"Yes\"\nassert Check_Solution(1,-5,6) == \"No\"\nassert Check_Solution(2,0,2) == \"Yes\"\n\nWrite the t task named `Check_Solution` with 3 parameter(s) of type(s) int, int, int, in the order the tests pass them, returning seq. The tests must pass and the ensures must specify the result."
+  }
+ ],
+ "reply": "```t\nt 0\ntask Check_Solution(a: int, b: int, c: int) returns (r: seq)\n  requires a != 0\n  ensures len(r) == 1\n  ensures r[0] == \"Yes\" iff b == 0 and a == -c\n{\n  if b == 0 and a == -c {\n    r := [\"Yes\"];\n  } else {\n    r := [\"No\"];\n  }\n}\n```",
+ "reply_tokens": 107,
+ "done_reason": "stop"
+}

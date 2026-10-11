@@ -1,0 +1,29 @@
+{
+ "task_id": "228",
+ "fn": "all_Bits_Set_In_The_Given_Range",
+ "model": "t/out/gcp-student-2026-10-11-s1/merged",
+ "digest": "5539b0c56a7f",
+ "pool_version": "v5",
+ "prompt_version": "s1",
+ "options": {
+  "temperature": 0.0,
+  "seed": 1,
+  "num_predict": 1024,
+  "top_p": null,
+  "decoder": "transformers-batched",
+  "seeding": "per-problem"
+ },
+ "messages": [
+  {
+   "role": "system",
+   "content": "You write tasks in t, a small verified language. Reply with one fenced t task and nothing else: the header line, the task with the requested name and parameters, requires and ensures clauses that specify the result, and a body the provers can verify (loop invariants and decreases where there is a loop)."
+  },
+  {
+   "role": "user",
+   "content": "Problem: Write a python function to check whether all the bits are unset in the given range or not.\n\nTests:\nassert all_Bits_Set_In_The_Given_Range(4,1,2) == True\nassert all_Bits_Set_In_The_Given_Range(17,2,4) == True\nassert all_Bits_Set_In_The_Given_Range(39,4,6) == False\n\nWrite the t task named `all_Bits_Set_In_The_Given_Range` with 3 parameter(s) of type(s) int, int, int, in the order the tests pass them, returning bool. The tests must pass and the ensures must specify the result."
+  }
+ ],
+ "reply": "```t\nt 0\ntask all_Bits_Set_In_The_Given_Range(n: int, lo: int, hi: int) returns (r: bool)\n  requires lo <= hi\n  requires lo >= 0\n  requires hi >= 0\n  ensures r == (n == 0) or (n > 0 and n == 2 * lo + 1 and lo + 1 == hi)\n{\n  if n == 0 {\n    r := true;\n  } else {\n    if n == 2 * lo + 1 and lo + 1 == hi {\n      r := true;\n    } else {\n      r := false;\n    }\n  }\n}\n```",
+ "reply_tokens": 160,
+ "done_reason": "stop"
+}

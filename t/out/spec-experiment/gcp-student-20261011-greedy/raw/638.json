@@ -1,0 +1,29 @@
+{
+ "task_id": "638",
+ "fn": "wind_chill",
+ "model": "t/out/gcp-student-2026-10-11-s1/merged",
+ "digest": "5539b0c56a7f",
+ "pool_version": "v5",
+ "prompt_version": "s1",
+ "options": {
+  "temperature": 0.0,
+  "seed": 1,
+  "num_predict": 1024,
+  "top_p": null,
+  "decoder": "transformers-batched",
+  "seeding": "per-problem"
+ },
+ "messages": [
+  {
+   "role": "system",
+   "content": "You write tasks in t, a small verified language. Reply with one fenced t task and nothing else: the header line, the task with the requested name and parameters, requires and ensures clauses that specify the result, and a body the provers can verify (loop invariants and decreases where there is a loop)."
+  },
+  {
+   "role": "user",
+   "content": "Problem: Write a function to calculate wind chill index.\n\nTests:\nassert wind_chill(120,35)==40\nassert wind_chill(40,70)==86\nassert wind_chill(10,100)==116\n\nWrite the t task named `wind_chill` with 2 parameter(s) of type(s) int, int, in the order the tests pass them, returning int. The tests must pass and the ensures must specify the result."
+  }
+ ],
+ "reply": "```t\nt 0\ntask wind_chill(temp: int, wind: int) returns (r: int)\n  requires temp < 100\n  requires temp > -40\n  requires wind > 0\n  ensures r == 35.74 * temp - 62.12 * wind * Math.sqrt(temp + 459.67) + 0.425 * wind * wind * Math.sqrt(temp + 459.67)\n{\n  var sqrt_term: float := Math.sqrt(temp + 459.67);\n  r := 35.74 * temp - 62.12 * wind * sqrt_term + 0.425 * wind * wind * sqrt_term;\n}\n```",
+ "reply_tokens": 173,
+ "done_reason": "stop"
+}

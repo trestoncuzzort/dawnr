@@ -1,0 +1,29 @@
+{
+ "task_id": "882",
+ "fn": "parallelogram_perimeter",
+ "model": "t/out/gcp-student-2026-10-11-s1/merged",
+ "digest": "5539b0c56a7f",
+ "pool_version": "v5",
+ "prompt_version": "s1",
+ "options": {
+  "temperature": 0.0,
+  "seed": 1,
+  "num_predict": 1024,
+  "top_p": null,
+  "decoder": "transformers-batched",
+  "seeding": "per-problem"
+ },
+ "messages": [
+  {
+   "role": "system",
+   "content": "You write tasks in t, a small verified language. Reply with one fenced t task and nothing else: the header line, the task with the requested name and parameters, requires and ensures clauses that specify the result, and a body the provers can verify (loop invariants and decreases where there is a loop)."
+  },
+  {
+   "role": "user",
+   "content": "Problem: Write a function to caluclate perimeter of a parallelogram.\n\nTests:\nassert parallelogram_perimeter(10,20)==400\nassert parallelogram_perimeter(15,20)==600\nassert parallelogram_perimeter(8,9)==144\n\nWrite the t task named `parallelogram_perimeter` with 2 parameter(s) of type(s) int, int, in the order the tests pass them, returning int. The tests must pass and the ensures must specify the result."
+  }
+ ],
+ "reply": "```t\nt 0\ntask parallelogram_perimeter(a: int, b: int) returns (r: int)\n  ensures r == 4 * a * b\n{\n  r := 4 * a * b;\n}\n```",
+ "reply_tokens": 55,
+ "done_reason": "stop"
+}

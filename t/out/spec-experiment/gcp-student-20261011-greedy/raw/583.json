@@ -1,0 +1,29 @@
+{
+ "task_id": "583",
+ "fn": "catalan_number",
+ "model": "t/out/gcp-student-2026-10-11-s1/merged",
+ "digest": "5539b0c56a7f",
+ "pool_version": "v5",
+ "prompt_version": "s1",
+ "options": {
+  "temperature": 0.0,
+  "seed": 1,
+  "num_predict": 1024,
+  "top_p": null,
+  "decoder": "transformers-batched",
+  "seeding": "per-problem"
+ },
+ "messages": [
+  {
+   "role": "system",
+   "content": "You write tasks in t, a small verified language. Reply with one fenced t task and nothing else: the header line, the task with the requested name and parameters, requires and ensures clauses that specify the result, and a body the provers can verify (loop invariants and decreases where there is a loop)."
+  },
+  {
+   "role": "user",
+   "content": "Problem: Write a function for nth catalan number.\n\nTests:\nassert catalan_number(10)==16796\nassert catalan_number(9)==4862\nassert catalan_number(7)==429\n\nWrite the t task named `catalan_number` with 1 parameter(s) of type(s) int, in the order the tests pass them, returning int. The tests must pass and the ensures must specify the result."
+  }
+ ],
+ "reply": "```t\nt 0\ntask catalan_number(n: int) returns (r: int)\n  requires n >= 0\n  ensures r == binomial(2*n, n)\n{\n  r := 1;\n  var i: int := 1;\n  while i < n + 1\n    invariant 0 <= i and i <= n + 1\n    invariant r == binomial(2*(i-1), i-1)\n    decreases n + 1 - i\n  {\n    r := r * (4 * i - 2) / i;\n    i := i + 1;\n  }\n}\n```",
+ "reply_tokens": 146,
+ "done_reason": "stop"
+}

@@ -1,0 +1,29 @@
+{
+ "task_id": "826",
+ "fn": "check_Type_Of_Triangle",
+ "model": "t/out/gcp-student-2026-10-11-s1/merged",
+ "digest": "5539b0c56a7f",
+ "pool_version": "v5",
+ "prompt_version": "s1",
+ "options": {
+  "temperature": 0.0,
+  "seed": 1,
+  "num_predict": 1024,
+  "top_p": null,
+  "decoder": "transformers-batched",
+  "seeding": "per-problem"
+ },
+ "messages": [
+  {
+   "role": "system",
+   "content": "You write tasks in t, a small verified language. Reply with one fenced t task and nothing else: the header line, the task with the requested name and parameters, requires and ensures clauses that specify the result, and a body the provers can verify (loop invariants and decreases where there is a loop)."
+  },
+  {
+   "role": "user",
+   "content": "Problem: Write a python function to find the type of triangle from the given sides.\n\nTests:\nassert check_Type_Of_Triangle(1,2,3) == \"Obtuse-angled Triangle\"\nassert check_Type_Of_Triangle(2,2,2) == \"Acute-angled Triangle\"\nassert check_Type_Of_Triangle(1,0,1) == \"Right-angled Triangle\"\n\nWrite the t task named `check_Type_Of_Triangle` with 3 parameter(s) of type(s) int, int, int, in the order the tests pass them, returning seq. The tests must pass and the ensures must specify the result."
+  }
+ ],
+ "reply": "```t\nt 0\ntask check_Type_Of_Triangle(a: int, b: int, c: int) returns (r: seq)\n  requires a > 0 and b > 0 and c > 0\n  requires a + b > c and a + c > b and b + c > a\n  ensures r == \"Obtuse-angled Triangle\" or r == \"Right-angled Triangle\" or r == \"Acute-angled Triangle\"\n{\n  var x: int := a * a;\n  var y: int := b * b;\n  var z: int := c * c;\n  if x + y < z or x + z < y or y + z < x {\n    r := \"Obtuse-angled Triangle\";\n  } else {\n    if x + y == z or x + z == y or y + z == x {\n      r := \"Right-angled Triangle\";\n    } else {\n      r := \"Acute-angled Triangle\";\n    }\n  }\n}\n```",
+ "reply_tokens": 230,
+ "done_reason": "stop"
+}

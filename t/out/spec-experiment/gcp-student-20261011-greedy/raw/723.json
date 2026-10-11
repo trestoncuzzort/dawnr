@@ -1,0 +1,29 @@
+{
+ "task_id": "723",
+ "fn": "count_same_pair",
+ "model": "t/out/gcp-student-2026-10-11-s1/merged",
+ "digest": "5539b0c56a7f",
+ "pool_version": "v5",
+ "prompt_version": "s1",
+ "options": {
+  "temperature": 0.0,
+  "seed": 1,
+  "num_predict": 1024,
+  "top_p": null,
+  "decoder": "transformers-batched",
+  "seeding": "per-problem"
+ },
+ "messages": [
+  {
+   "role": "system",
+   "content": "You write tasks in t, a small verified language. Reply with one fenced t task and nothing else: the header line, the task with the requested name and parameters, requires and ensures clauses that specify the result, and a body the provers can verify (loop invariants and decreases where there is a loop)."
+  },
+  {
+   "role": "user",
+   "content": "Problem: Write a function to count the same pair in two given lists using map function.\n\nTests:\nassert count_same_pair([1, 2, 3, 4, 5, 6, 7, 8],[2, 2, 3, 1, 2, 6, 7, 9])==4\nassert count_same_pair([0, 1, 2, -1, -5, 6, 0, -3, -2, 3, 4, 6, 8],[2, 1, 2, -1, -5, 6, 4, -3, -2, 3, 4, 6, 8])==11\nassert count_same_pair([2, 4, -6, -9, 11, -12, 14, -5, 17],[2, 1, 2, -1, -5, 6, 4, -3, -2, 3, 4, 6, 8])==1\n\nWrite the t task named `count_same_pair` with 2 parameter(s) of type(s) seq, seq, in the order the tests pass them, returning int. The tests must pass and the ensures must specify the result."
+  }
+ ],
+ "reply": "```t\nt 0\ntask count_same_pair(a: seq, b: seq) returns (r: int)\n  ensures r == 0 ==> len(a) == 0 or len(b) == 0\n  ensures r == 1 ==> len(a) >= 1 and len(b) >= 1\n  ensures r == 2 ==> len(a) >= 2 and len(b) >= 2\n{\n  r := 0;\n  var i: int := 0;\n  while i < len(a)\n    invariant 0 <= i and i <= len(a)\n    invariant r == 0 ==> i == 0\n    invariant r == 1 ==> i == 1\n    invariant r == 2 ==> i == 2\n    invariant r >= 0\n    decreases len(a) - i\n  {\n    var j: int := 0;\n    while j < len(b)\n      invariant 0 <= j and j <= len(b)\n      invariant r == 0 ==> j == 0\n      invariant r == 1 ==> j == 1\n      invariant r == 2 ==> j == 2\n      invariant r >= 0\n      decreases len(b) - j\n    {\n      if a[i] == b[j] {\n        r := r + 1;\n      }\n      j := j + 1;\n    }\n    i := i + 1;\n  }\n}\n```",
+ "reply_tokens": 318,
+ "done_reason": "stop"
+}

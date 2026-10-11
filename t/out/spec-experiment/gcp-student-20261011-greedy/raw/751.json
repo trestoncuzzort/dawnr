@@ -1,0 +1,29 @@
+{
+ "task_id": "751",
+ "fn": "check_min_heap",
+ "model": "t/out/gcp-student-2026-10-11-s1/merged",
+ "digest": "5539b0c56a7f",
+ "pool_version": "v5",
+ "prompt_version": "s1",
+ "options": {
+  "temperature": 0.0,
+  "seed": 1,
+  "num_predict": 1024,
+  "top_p": null,
+  "decoder": "transformers-batched",
+  "seeding": "per-problem"
+ },
+ "messages": [
+  {
+   "role": "system",
+   "content": "You write tasks in t, a small verified language. Reply with one fenced t task and nothing else: the header line, the task with the requested name and parameters, requires and ensures clauses that specify the result, and a body the provers can verify (loop invariants and decreases where there is a loop)."
+  },
+  {
+   "role": "user",
+   "content": "Problem: Write a function to check if the given array represents min heap or not.\n\nTests:\nassert check_min_heap([1, 2, 3, 4, 5, 6], 0) == True\nassert check_min_heap([2, 3, 4, 5, 10, 15], 0) == True\nassert check_min_heap([2, 10, 4, 5, 3, 15], 0) == False\n\nWrite the t task named `check_min_heap` with 2 parameter(s) of type(s) seq, int, in the order the tests pass them, returning bool. The tests must pass and the ensures must specify the result."
+  }
+ ],
+ "reply": "```t\nt 0\ntask check_min_heap(arr: seq, i: int) returns (r: bool)\n  requires i >= 0\n  requires i < len(arr)\n  ensures r == true ==> forall j in [2 * i + 1, 2 * i + 2] where j < len(arr), arr[i] <= arr[j]\n  ensures r == false ==> exists j in [2 * i + 1, 2 * i + 2] where j < len(arr) and arr[i] > arr[j]\n{\n  var r_v: bool := true;\n  var j1: int := 2 * i + 1;\n  var j2: int := 2 * i + 2;\n  if j1 < len(arr) and arr[i] > arr[j1] {\n    r_v := false;\n  }\n  if j2 < len(arr) and arr[i] > arr[j2] {\n    r_v := false;\n  }\n  r := r_v;\n}\n```",
+ "reply_tokens": 232,
+ "done_reason": "stop"
+}

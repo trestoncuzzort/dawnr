@@ -1,0 +1,29 @@
+{
+ "task_id": "492",
+ "fn": "binary_search",
+ "model": "t/out/gcp-student-2026-10-11-s1/merged",
+ "digest": "5539b0c56a7f",
+ "pool_version": "v5",
+ "prompt_version": "s1",
+ "options": {
+  "temperature": 0.0,
+  "seed": 1,
+  "num_predict": 1024,
+  "top_p": null,
+  "decoder": "transformers-batched",
+  "seeding": "per-problem"
+ },
+ "messages": [
+  {
+   "role": "system",
+   "content": "You write tasks in t, a small verified language. Reply with one fenced t task and nothing else: the header line, the task with the requested name and parameters, requires and ensures clauses that specify the result, and a body the provers can verify (loop invariants and decreases where there is a loop)."
+  },
+  {
+   "role": "user",
+   "content": "Problem: Write a function to search an element in the given array by using binary search.\n\nTests:\nassert binary_search([1,2,3,5,8], 6) == False\nassert binary_search([7, 8, 9, 10, 13], 10) == True\nassert binary_search([11, 13, 14, 19, 22, 36], 23) == False\n\nWrite the t task named `binary_search` with 2 parameter(s) of type(s) seq, int, in the order the tests pass them, returning bool. The tests must pass and the ensures must specify the result."
+  }
+ ],
+ "reply": "```t\nt 0\ntask binary_search(arr: seq, x: int) returns (r: bool)\n  requires len(arr) >= 0\n  ensures r == (x in arr)\n{\n  var lo: int := 0;\n  var hi: int := len(arr) - 1;\n  while lo <= hi\n    invariant 0 <= lo and lo <= hi and hi < len(arr)\n    invariant forall i in [lo, hi) . arr[i] <= arr[i + 1]\n    decreases hi - lo\n  {\n    var mid: int := (lo + hi) / 2;\n    if arr[mid] == x {\n      r := true;\n      return;\n    }\n    if arr[mid] < x {\n      lo := mid + 1;\n    } else {\n      hi := mid - 1;\n    }\n  }\n  r := false;\n}\n```",
+ "reply_tokens": 209,
+ "done_reason": "stop"
+}
