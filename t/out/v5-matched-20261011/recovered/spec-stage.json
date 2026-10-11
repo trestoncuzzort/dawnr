@@ -1,0 +1,9 @@
+{
+  "spec-heldout.jsonl": "effc2f4e586e0c4f7638a5a9a2b75515aaf7019de03ca819d46e5aa3d593ab24",
+  "spec-answers.jsonl": "fd8c1aa87c8ab6500aec0c8159cec06d0924fba4856be5d4654863103d2301e0",
+  "evaluator.json": "665efe4ef1817523e878e79ab13c2ea2d48d79c117ce383da133d99573ebbe5e",
+  "spec-report.json": "d11020a8a1d77c984c8639f29336dbd12b0015ffb11ae10c3893e2e69527a0be",
+  "spec-kernels.md": "00240376f536e98f7d257a6d89f668671411b92bd4576ca7a10eaffe8ca902d5",
+  "spec-levels.json": "a4556756c0064967501c1bda9ccd1dd6051d02cba7acaf9ca375a354cf445e56",
+  "grading_script_sha256": "4487c03165c536e870b72bc44e60f15134b3718753b35afab396b03e5d403f92"
+}

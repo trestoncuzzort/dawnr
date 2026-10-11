@@ -1,0 +1,16 @@
+{
+ "questions": 33,
+ "stages": {
+  "ready": 32,
+  "wf": 1
+ },
+ "ready": 32,
+ "no twin could be built (not graded)": 0,
+ "a kernel refutes it": 6,
+ "no row in the table": 0,
+ "proved by at least 1": 25,
+ "proved by at least 3": 25,
+ "proved by at least 5": 23,
+ "proved by at least 6": 23,
+ "proved by all seven": 21
+}

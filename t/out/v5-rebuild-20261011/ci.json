@@ -1,0 +1,62 @@
+{
+  "commit": "0683081ca82584a14c290032e903315ff52b153c",
+  "run_url": "https://github.com/trestoncuzzort/dawnr/actions/runs/38124127730",
+  "jobs": [
+    {
+      "name": "standard-library (ubuntu-latest, py3.10)",
+      "conclusion": "success",
+      "started_at": "2026-10-11T08:14:54Z",
+      "completed_at": "2026-10-11T08:21:15Z",
+      "html_url": "https://github.com/trestoncuzzort/dawnr/actions/runs/38124127730/job/114424813893"
+    },
+    {
+      "name": "cpu-torch (py3.12)",
+      "conclusion": "success",
+      "started_at": "2026-10-11T08:14:55Z",
+      "completed_at": "2026-10-11T08:15:55Z",
+      "html_url": "https://github.com/trestoncuzzort/dawnr/actions/runs/38124127730/job/114424813932"
+    },
+    {
+      "name": "standard-library (ubuntu-latest, py3.12)",
+      "conclusion": "success",
+      "started_at": "2026-10-11T08:14:55Z",
+      "completed_at": "2026-10-11T08:21:23Z",
+      "html_url": "https://github.com/trestoncuzzort/dawnr/actions/runs/38124127730/job/114424813946"
+    },
+    {
+      "name": "cpu-torch (py3.10)",
+      "conclusion": "success",
+      "started_at": "2026-10-11T08:14:55Z",
+      "completed_at": "2026-10-11T08:16:10Z",
+      "html_url": "https://github.com/trestoncuzzort/dawnr/actions/runs/38124127730/job/114424813963"
+    },
+    {
+      "name": "standard-library (windows-latest, py3.10)",
+      "conclusion": "success",
+      "started_at": "2026-10-11T08:14:54Z",
+      "completed_at": "2026-10-11T08:16:29Z",
+      "html_url": "https://github.com/trestoncuzzort/dawnr/actions/runs/38124127730/job/114424813976"
+    },
+    {
+      "name": "standard-library (windows-latest, py3.12)",
+      "conclusion": "success",
+      "started_at": "2026-10-11T08:14:55Z",
+      "completed_at": "2026-10-11T08:16:20Z",
+      "html_url": "https://github.com/trestoncuzzort/dawnr/actions/runs/38124127730/job/114424814007"
+    },
+    {
+      "name": "standard-library (macos-latest, py3.12)",
+      "conclusion": "success",
+      "started_at": "2026-10-11T08:15:00Z",
+      "completed_at": "2026-10-11T08:20:37Z",
+      "html_url": "https://github.com/trestoncuzzort/dawnr/actions/runs/38124127730/job/114424814031"
+    },
+    {
+      "name": "standard-library (macos-latest, py3.10)",
+      "conclusion": "success",
+      "started_at": "2026-10-11T08:15:00Z",
+      "completed_at": "2026-10-11T08:22:51Z",
+      "html_url": "https://github.com/trestoncuzzort/dawnr/actions/runs/38124127730/job/114424814141"
+    }
+  ]
+}

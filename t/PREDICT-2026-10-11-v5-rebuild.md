@@ -81,3 +81,21 @@ legacy-checkpoint refusals. No GPU is used for these checks.
 The [full-history content search](out/v5-rebuild-20261011/history-data-search.json) hashes 1,088
 reachable JSONL blobs, decompressing `.jsonl.gz` files first, and finds zero matches for the v5 hash.
 This is stronger evidence than the initial filename search; it does not rule out an external backup.
+
+## Matched specification result
+
+The released v5 proves **28/33** by all seven; the recovered-data candidate proves **21/33**.
+Both use Q8_0, the same server, identical chat templates, and the same questions. There are no
+missing matrix rows or missing twins. The candidate has one well-formedness failure; v5 has none.
+The [v5 counts](out/v5-matched-20261011/v5/spec-levels.json) and
+[candidate counts](out/v5-matched-20261011/recovered/spec-levels.json) retain the other proof levels.
+This is the current matched reading; it does not rewrite v5's historical 27/33 measurement.
+
+The seven-question deficit already fails the registered no-regression condition. The programming
+panel continues to completion so the remaining difference is measured too. The 19 known v5
+training-overlap functions still qualify the full-33 result; the exact old clean-14 membership has
+not been recovered.
+
+All eight [CI jobs](out/v5-rebuild-20261011/ci.json) pass on the input-preservation commit
+`0683081c`. The [live server receipt](out/v5-matched-20261011/server-parity.json) also confirms
+matching chat-template hashes, one slot each and 8,192-token contexts.
