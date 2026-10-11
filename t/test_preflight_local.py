@@ -3,9 +3,11 @@ runs the same inspection here instead of over ssh to oneself, and the
 environment's T_LAB wins over t/lab-workstation.conf, as the launcher
 documents. No kernel, no network."""
 import os
+import shlex
 import tempfile
 import unittest
 from pathlib import Path
+from unittest import mock
 
 import preflight
 
@@ -25,6 +27,28 @@ class GraderRunTests(unittest.TestCase):
 
     def test_local_exit_code_is_the_commands(self):
         self.assertEqual(preflight.grader_run("local", "exit 9", 10).returncode, 9)
+
+    @unittest.skipIf(os.name == "nt", "POSIX executable PATH probe")
+    def test_local_keeps_the_kernel_path_already_checked_by_preflight(self):
+        with tempfile.TemporaryDirectory() as directory:
+            probe = Path(directory) / "dawnr-preflight-path-probe"
+            probe.write_text("#!/bin/sh\nprintf 'inherited-path\\n'\n")
+            probe.chmod(0o755)
+            with mock.patch.dict(os.environ, {"PATH": directory + os.pathsep + os.environ["PATH"]}):
+                result = preflight.grader_run("local", probe.name, 10)
+            self.assertEqual(result.returncode, 0, result.stderr)
+            self.assertEqual(result.stdout, "inherited-path\n")
+
+    @unittest.skipIf(os.name == "nt", "POSIX checkout-path probe")
+    def test_local_inspects_the_current_checkout_in_a_path_with_spaces(self):
+        with tempfile.TemporaryDirectory(prefix="preflight checkout ") as directory:
+            root = Path(directory)
+            (root / "sentinel").write_text("this checkout\n")
+            with mock.patch.object(preflight, "ROOT", root):
+                command = f"cd {shlex.quote(preflight.grading_directory('local'))} && cat sentinel"
+                result = preflight.grader_run("local", command, 10)
+            self.assertEqual(result.returncode, 0, result.stderr)
+            self.assertEqual(result.stdout, "this checkout\n")
 
 
 class GradingMachineTests(unittest.TestCase):
