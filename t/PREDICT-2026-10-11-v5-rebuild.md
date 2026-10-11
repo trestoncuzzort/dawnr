@@ -122,3 +122,19 @@ that actual answer in 3.11 seconds, preserves a normal Rocq lowering byte for by
 that normal returns, exceptions and memory refusals all restore the previous limits
 ([receipt](out/v5-matched-20261011/lowering-control.json)). Both programming graders restarted
 through [the same retry recipe](recipes/v5-matched-2026-10-11-retry.sh).
+
+The bounded v5 retry then suffered a second service OOM at 09:31Z during Verus execution.
+The lowering guard had worked: its log names the memory refusal and continues into kernel calls.
+The status monitor initially read a stale progress log and missed the failed service; subsequent
+polls inspect service state as well. Neither programming matrix was complete.
+
+Both programming arms restarted again with identical **64 GiB service limits**, ten CPU cores
+each, an eight-hour service deadline and `OOMPolicy=continue`. The 4 GiB lowering bound stays in
+place. This service policy lets surviving processes continue when an individual process is killed
+for memory exhaustion; it does not turn a failed tool call into a proof
+([systemd documentation](https://github.com/systemd/systemd/blob/main/man/systemd.service.xml#L1244)).
+The [operating receipt](out/v5-matched-20261011/service-memory-adjustment.json) records the change.
+The candidate had no memory-limit events and peaked at 2.48 GiB, but was restarted too because
+the service manager cannot change this OOM policy in place. No partial matrix results are reused.
+
+All eight [CI jobs](out/v5-matched-20261011/ci.json) pass for the bounded-grading change `f3ed6a39`.

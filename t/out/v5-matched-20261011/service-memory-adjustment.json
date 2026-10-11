@@ -1,0 +1,15 @@
+{
+  "changed_utc": "2026-10-11T09:37:44.071975+00:00",
+  "reason": "second v5 service OOM during Verus proof execution, despite successful bounded lowering; no completed programming matrix",
+  "memory_max_bytes": 68719476736,
+  "oom_policy": "continue",
+  "cpu_quota_percent": 1000,
+  "runtime_max_seconds": 28800,
+  "lowering_limit_mib": 4096,
+  "applies_to_both_arms": true,
+  "both_restarted_from_saved_answers": true,
+  "partial_results_reused": false,
+  "prior_candidate_peak_bytes": 2658738176,
+  "prior_candidate_memory_limit_events": 0,
+  "note": "Runtime OOMPolicy adjustment was unsupported, so both arms restarted with the same new service settings. An individual proof-tool failure remains a non-pass."
+}
