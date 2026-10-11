@@ -1,0 +1,12 @@
+{
+  "method": "student_sft.snapshot_rows; student_sft CLI with -S and --sft-sha256",
+  "actual_rows": 406,
+  "actual_sha256": "0248cf93e57092d91d0f8b6471a22ffae0a5f7aeff337f24bc8604155094fb39",
+  "required_v5_rows": 5095,
+  "required_v5_sha256": "848fca29d9399ef91fcb867006e4ff42f60b53e9e2e084e4f1e93dae37811110",
+  "snapshot_byte_identical": true,
+  "mismatched_input_refused": true,
+  "model_dependencies_unavailable_during_refusal": true,
+  "training_output_not_created": true,
+  "rejection": "student_sft: training data SHA-256 differs from --sft-sha256 (0248cf93e57092d91d0f8b6471a22ffae0a5f7aeff337f24bc8604155094fb39)"
+}

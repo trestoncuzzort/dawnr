@@ -28,6 +28,11 @@ thinking off (a template without that switch ignores it); the response is the ro
 followed by the tokenizer's end token. A row longer than --max-len is dropped and counted, never
 truncated: half an answer teaches the wrong thing.
 
+Before loading the model, the exact input bytes and selection settings are saved
+as training-rows.jsonl and training-data.json beside the adapter. --sft-sha256
+can require a registered dataset. Reusing --out with different data or selection
+settings is refused, including when trainer checkpoints are present.
+
 This is separate from t/loop_train.py (DPO over preference pairs at 5e-6), which is kept as it is.
 """
 from __future__ import annotations
@@ -37,6 +42,7 @@ import hashlib
 import json
 import os
 import sys
+import tempfile
 import time
 from pathlib import Path
 
@@ -105,14 +111,68 @@ def response_loss(base, batch: dict, num_items_in_batch=None):
     return total / num_items_in_batch
 
 
-def load_rows(path: Path) -> list[dict]:
-    rows = [json.loads(line) for line in path.read_text(encoding="utf-8").splitlines() if line.strip()]
+def _rows_from_bytes(data: bytes, label: Path) -> list[dict]:
+    rows = [json.loads(line) for line in data.decode("utf-8").splitlines() if line.strip()]
     for n, r in enumerate(rows):
+        if not isinstance(r, dict):
+            raise SystemExit(f"{label}: row {n} is not an object")
         if isinstance(r.get("pieces"), list) and any(trained for _text, trained in r["pieces"]):
             continue
         if not isinstance(r.get("prompt"), list) or not isinstance(r.get("chosen"), str) or not r["chosen"].strip():
-            raise SystemExit(f"{path}: row {n} has no prompt messages or no answer")
+            raise SystemExit(f"{label}: row {n} has no prompt messages or no answer")
     return rows
+
+
+def load_rows(path: Path) -> list[dict]:
+    return _rows_from_bytes(path.read_bytes(), path)
+
+
+def snapshot_rows(path: Path, out: Path, *, expected_sha256: str | None = None,
+                  limit: int = 0, max_len: int = 4096) -> tuple[list[dict], dict]:
+    """Freeze and identify the bytes actually read, before model loading.
+
+    The v5 rows were lost while its weights survived. Keep input bytes beside the
+    adapter, following dawnr_pipeline.py's input fingerprints. A resume must use
+    the same data and selection settings; a legacy checkpoint without that evidence
+    cannot establish this and is refused. No model or tensor library is needed.
+    """
+    if limit < 0 or max_len < 1:
+        raise SystemExit("student_sft: --limit must be nonnegative and --max-len positive")
+    data = path.read_bytes()
+    digest = hashlib.sha256(data).hexdigest()
+    if expected_sha256 is not None and digest != expected_sha256.lower():
+        raise SystemExit(f"student_sft: training data SHA-256 differs from --sft-sha256 ({digest})")
+    rows = _rows_from_bytes(data, path)
+    if not rows:
+        raise SystemExit("student_sft: empty training data")
+    snapshot, receipt = out / "training-rows.jsonl", out / "training-data.json"
+    record = {"schema": 1, "file": snapshot.name, "sha256": digest, "bytes": len(data),
+              "rows": len(rows), "selection": {"limit": limit, "max_len": max_len}}
+    if snapshot.exists() or receipt.exists():
+        if not (snapshot.is_file() and receipt.is_file()):
+            raise SystemExit("student_sft: incomplete training-data snapshot; use a fresh --out")
+        if (json.loads(receipt.read_text(encoding="utf-8")) != record
+                or snapshot.read_bytes() != data):
+            raise SystemExit("student_sft: frozen training data or selection settings changed; use a fresh --out")
+    else:
+        if any(out.glob("trainer/checkpoint-*")) or any((out / n).exists() for n in
+                ("run.json", "adapter_config.json", "adapter_model.safetensors", "adapter_model.bin")):
+            raise SystemExit("student_sft: existing training output has no input snapshot; use a fresh --out")
+        out.mkdir(parents=True, exist_ok=True)
+        for dest, contents in ((snapshot, data),
+                               (receipt, (json.dumps(record, indent=2) + "\n").encode("utf-8"))):
+            tmp = None
+            try:
+                with tempfile.NamedTemporaryFile(dir=out, prefix=".training-", delete=False) as f:
+                    tmp = Path(f.name)
+                    f.write(contents)
+                    f.flush()
+                    os.fsync(f.fileno())
+                os.replace(tmp, dest)
+            finally:
+                if tmp is not None:
+                    tmp.unlink(missing_ok=True)
+    return rows, record
 
 
 def pad_batch(features: list[dict], pad_id: int) -> dict:
@@ -156,6 +216,7 @@ def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--model", help="the base's hub id or a local directory")
     ap.add_argument("--sft", type=Path, help="t/graded_pool.py rows (prompt, chosen)")
+    ap.add_argument("--sft-sha256", help="require this exact training-file hash before loading a model")
     ap.add_argument("--merge", type=Path, metavar="ADAPTER",
                     help="instead of training: fold this adapter into its base and save the model to --out")
     ap.add_argument("--cpu", action="store_true", help="with --merge: fold on the CPU (a machine with memory and no card)")
@@ -191,6 +252,10 @@ def main(argv: list[str] | None = None) -> int:
     if not a.model or not a.sft:
         ap.error("--model and --sft are required to train")
 
+    rows, training_data = snapshot_rows(a.sft, a.out, expected_sha256=a.sft_sha256,
+                                        limit=a.limit, max_len=a.max_len)
+    if a.limit:
+        rows = rows[: a.limit]
     os.environ.setdefault("PYTORCH_CUDA_ALLOC_CONF", "expandable_segments:True")
     import torch
     from transformers import (AutoModelForCausalLM, AutoTokenizer, BitsAndBytesConfig, Trainer,
@@ -198,9 +263,6 @@ def main(argv: list[str] | None = None) -> int:
     from peft import LoraConfig, get_peft_model, prepare_model_for_kbit_training
 
     set_seed(a.seed)                                            # before anything random, the adapter included
-    rows = load_rows(a.sft)
-    if a.limit:
-        rows = rows[: a.limit]
     tokenizer = AutoTokenizer.from_pretrained(a.model)
     if tokenizer.pad_token_id is None:
         tokenizer.pad_token = tokenizer.eos_token
@@ -307,7 +369,8 @@ def main(argv: list[str] | None = None) -> int:
     model.save_pretrained(str(a.out))
     tokenizer.save_pretrained(str(a.out))
     record = {"schema": 1, "base": a.model, "sft": str(a.sft),
-              "sft_sha256": hashlib.sha256(a.sft.read_bytes()).hexdigest(),
+              "sft_sha256": training_data["sha256"], "training_data": training_data,
+              "rows_selected": len(rows),
               "rows_used": len(encoded), "rows_dropped_too_long": dropped,
               "recipe": {"quantisation": "nf4, double, bf16 compute", "lora": {"r": a.rank, "alpha": a.alpha,
                          "dropout": a.dropout, "target_modules": "all-linear"},

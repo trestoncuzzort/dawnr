@@ -63,3 +63,21 @@ not independent confirmation or a reproduction of v5's historical 17-call Python
 This comparison adds no cloud spend. CPU services have memory, core and wall-time limits and exit
 after saving their answers. Another GPU training run waits for an explicit, audited dataset identity
 and its own bounded run registration.
+
+## Input preservation measured
+
+`student_sft.py` now saves `training-rows.jsonl` and `training-data.json` before model imports,
+and accepts `--sft-sha256`. The final receipt uses that frozen identity. Previously it reopened
+the source after training to calculate the hash: changing the source during training could label
+the trained model with bytes it had never read. Reuse checks the snapshot bytes, receipt, row limit
+and token limit; legacy checkpoints without input evidence are refused by name.
+
+The [real-data control](out/v5-rebuild-20261011/input-identity-control.json) freezes the prior
+406-row input byte for byte and refuses it against v5's registered hash before model dependencies
+can load. Thirty row, trainer and generation tests plus two subtests pass on the lab, including
+source deletion, changed input, corrupted snapshot, changed selection, incomplete snapshot and
+legacy-checkpoint refusals. No GPU is used for these checks.
+
+The [full-history content search](out/v5-rebuild-20261011/history-data-search.json) hashes 1,088
+reachable JSONL blobs, decompressing `.jsonl.gz` files first, and finds zero matches for the v5 hash.
+This is stronger evidence than the initial filename search; it does not rule out an external backup.

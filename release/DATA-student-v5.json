@@ -1,0 +1,27 @@
+{
+  "schema": 1,
+  "release": "student-v5",
+  "source_record": "t/decontamination-rows-2026-10-05.json",
+  "dataset": {
+    "filename": "sft-student-teacher3.jsonl",
+    "sha256": "848fca29d9399ef91fcb867006e4ff42f60b53e9e2e084e4f1e93dae37811110",
+    "rows": 5095,
+    "published_row_kinds": {
+      "english": 933,
+      "proof-py": 933,
+      "spec": 839,
+      "python": 549,
+      "spec-given": 639,
+      "debug": 1202
+    }
+  },
+  "purpose": "Identify the historical input; this is not approval to train on it unchanged.",
+  "required_new_build_checks": [
+    "heldout_audit.py --panels --refuse-gpl",
+    "spec_panel.py check against the frozen specification questions"
+  ],
+  "known_overlap": {
+    "clean_200_problems": 18,
+    "specification_questions_of_33": 19
+  }
+}
