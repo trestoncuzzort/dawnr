@@ -101,8 +101,9 @@ Large weights and many generated run artifacts are downloaded or produced separa
 
 The [next GPU retrain](t/PREDICT-2026-10-11-gcp-student.md) uses 406 audited rows from the recovered corpus,
 including 18 of 22 newly verified answers. Four new answers overlap held-out specification functions and were
-excluded. All 33 supplied reference programs pass the seven-system control; candidate results are pending.
-This smaller dataset does not reproduce v5's training set.
+excluded. The candidate proves 21 of 33 supplied specifications in all seven systems; the reference-program
+control passes all 33. The programming-problem result is pending. This smaller dataset does not reproduce
+v5's training set.
 
 ## Install and use
 

@@ -145,3 +145,40 @@ missing twins ([counts](out/gcp-student-2026-10-11-s1/ceiling-levels.json)). It 
 1,386 kernel invocations with the cache disabled. Each question therefore has a solution admitted
 by the current toolchain. These are supplied reference programs, not model-generated answers;
 the candidate predictions remain unmeasured.
+
+## Training completed
+
+Prediction 1 holds: five epochs, **130 steps in 2,462.9 seconds**, using 405 rows. Final mean training
+loss is 0.03635; this is not an accuracy measurement. The completed adapter is saved on the lab and
+the control node. Its weights have SHA-256
+`50a51ca0f54c1c7986828a08206eae31be8e2900c8656c6ffd345d48d2a2fcf2`.
+
+The final source reconciliation distinguishes representation from additions: 18 of the 22 new
+answers are represented, but MBPP 373 duplicates an existing row. Thus **17 distinct new answers**
+join 58 retained older English rows and 331 specification rows before the token-length filter.
+MBPP 227 and 924 were duplicates too, and both leave with the four held-out overlaps.
+
+The two evaluation panels can run independently: after all 33 specification answers were generated,
+their proof checks started while the VM continued the 232 programming answers. A lock serializes
+the grading phases. Completed specification results are reused only when the inputs, evaluator,
+grading script and output hashes match; the first pass still runs every kernel without the verdict
+cache. The initial specification pass was stopped before it wrote a matrix to add this coordination,
+then restarted. No model answers or scoring criteria were changed or selected from those partial checks.
+
+## Specification-panel result
+
+Prediction 2 holds: **21 of 33 proved by all seven**, with their twins refuted. In total, 23 proved
+by at least one (all 23 also reached three); one failed well-formedness, seven were refuted by at
+least one kernel, and two reached no proof. No matrix row or twin is missing. There are no
+cross-kernel contradictions (a program verified by one kernel and refuted by another).
+
+The `fib` answer retained a task-level `decreases` clause but supplied an iterative body, which the
+language rejects. The strict instrument leaves it rejected. The other failures remain recorded in
+the [matrix](out/gcp-student-2026-10-11-s1/spec-kernels.md), with the
+[counts](out/gcp-student-2026-10-11-s1/spec-levels.json) and
+[stage report](out/gcp-student-2026-10-11-s1/spec-report.json).
+
+The resume guard was exercised on this completed stage: a changed input was refused, restoring the
+original input reused the result, and the table stayed byte-identical. Its
+[receipt](out/gcp-student-2026-10-11-s1/spec-stage-guard-check.json) records those checks.
+The programming-problem result is still pending; no claim of improvement over v5 follows from this panel.

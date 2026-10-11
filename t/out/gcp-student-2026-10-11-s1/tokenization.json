@@ -1,0 +1,17 @@
+{
+  "rows": 406,
+  "used": 405,
+  "used_by_kind": {
+    "spec-given": 330,
+    "sft": 75
+  },
+  "dropped": [
+    {
+      "index": 294,
+      "kind": "spec-given",
+      "task_id": null,
+      "name": "vericoding_da0085__findMinimumTotalDistance"
+    }
+  ],
+  "base_revision": "851bf6e806efd8d0a36b00ddf55e13ccb7b8cd0a"
+}
