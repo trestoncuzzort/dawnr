@@ -182,3 +182,15 @@ The resume guard was exercised on this completed stage: a changed input was refu
 original input reused the result, and the table stayed byte-identical. Its
 [receipt](out/gcp-student-2026-10-11-s1/spec-stage-guard-check.json) records those checks.
 The programming-problem result is still pending; no claim of improvement over v5 follows from this panel.
+
+Post-hoc interpretation confirms a concrete contract violation for each of the seven refuted answers.
+The [witnesses](out/gcp-student-2026-10-11-s1/spec-counterexamples.json) record admitted inputs, returned
+values, failed postconditions and task/interpreter hashes, using `interp.exec_body` and `interp.ev`.
+For example, the absolute-value answer returns -1 for -1; both first-match searches return index 1 for
+`[1, 1]` and key 1; and `divmod_pair(-1, 2)` returns `(0, -1)`, violating the remainder's lower bound.
+These are functional failures. They identify negative inputs and repeated matches as concrete weaknesses
+to address with separate training examples; these held-out witnesses remain evaluation evidence.
+
+All eight [CI jobs](out/gcp-student-2026-10-11-s1/ci.json) pass on `f321a718`: the standard-library
+suites on Linux, macOS and Windows with Python 3.10 and 3.12, and both CPU PyTorch jobs. The Python
+3.10 context-manager compatibility fix lives in dawnr's pytest plugin; the pinned engine tests stay intact.

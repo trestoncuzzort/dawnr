@@ -1,0 +1,140 @@
+{
+  "purpose": "Post-hoc concrete diagnostics; answers, scores and gates unchanged.",
+  "method": "harness.load; interp.funs_of; interp.ev(requires); interp.exec_body; interp.ev(ensures)",
+  "interpreter_sha256": "2bf9619c689fb0e90eae6f9d9749d66679d3caa1097722341c2b6ac16bfc05a5",
+  "cases": [
+    {
+      "task": "clover_abs__abs",
+      "task_sha256": "dda971c5880d742a6a27bfdae380c85aaf6bc92c23c0886c4b2a46f2823f2f55",
+      "input": {
+        "x": -1
+      },
+      "requires_admits": true,
+      "returned": {
+        "y": -1
+      },
+      "ensures": [
+        true,
+        false
+      ]
+    },
+    {
+      "task": "clover_find__find",
+      "task_sha256": "4d7c3edb3566529a75393d7c327f970b52809d7fe9ba25cdc44e6378faf0a308",
+      "input": {
+        "a": [
+          1,
+          1
+        ],
+        "key": 1
+      },
+      "requires_admits": true,
+      "returned": {
+        "index": 1
+      },
+      "ensures": [
+        true,
+        true,
+        false,
+        true
+      ]
+    },
+    {
+      "task": "divmod_pair",
+      "task_sha256": "36626a117a31bc996bbb22fc1f71ea4256ba427cfcb739c9c0ed733c8ed27f3a",
+      "input": {
+        "x": -1,
+        "y": 2
+      },
+      "requires_admits": true,
+      "returned": {
+        "r": [
+          0,
+          -1
+        ]
+      },
+      "ensures": [
+        true,
+        false,
+        true
+      ]
+    },
+    {
+      "task": "vericoding_dd0077__quotient",
+      "task_sha256": "dc16415770bc437e27a93d8a8d8f63d6a3cef07e6b0f1f5b29dd06d9052eb2a4",
+      "input": {
+        "x": 2,
+        "y": 1
+      },
+      "requires_admits": true,
+      "returned": {
+        "r": [
+          2,
+          2
+        ]
+      },
+      "ensures": [
+        false,
+        false,
+        true
+      ]
+    },
+    {
+      "task": "vericoding_da0075__solve",
+      "task_sha256": "68b0adf8fa380f9006345e63e34192c19a505713de63f3dac58dc0a4223fe8cc",
+      "input": {
+        "k2": 2,
+        "k3": 1,
+        "k5": 2,
+        "k6": 1
+      },
+      "requires_admits": true,
+      "returned": {
+        "result": 256
+      },
+      "ensures": [
+        true,
+        false
+      ]
+    },
+    {
+      "task": "vericoding_dd0061__find",
+      "task_sha256": "fac54e6f484def890a4012299c6154a00b0c9ea5581c34c10960271905283f48",
+      "input": {
+        "a": [
+          1,
+          1
+        ],
+        "key": 1
+      },
+      "requires_admits": true,
+      "returned": {
+        "index": 1
+      },
+      "ensures": [
+        true,
+        true,
+        false,
+        true
+      ]
+    },
+    {
+      "task": "vericoding_la0099__solve",
+      "task_sha256": "381584239a202438187112cdfadbabffbe23410d54a032a919083c4daeb34085",
+      "input": {
+        "a": 1,
+        "b": 2,
+        "c": 3,
+        "d": 2
+      },
+      "requires_admits": true,
+      "returned": {
+        "result": 1
+      },
+      "ensures": [
+        true,
+        false
+      ]
+    }
+  ]
+}
