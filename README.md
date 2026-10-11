@@ -99,11 +99,13 @@ Results and corrections are kept in [SCOREBOARD.md](SCOREBOARD.md), [docs/MEASUR
 [CORRECTIONS.md](CORRECTIONS.md), and the linked experiment records. They describe particular runs and populations.
 Large weights and many generated run artifacts are downloaded or produced separately from a source checkout.
 
-The [next GPU retrain](t/PREDICT-2026-10-11-gcp-student.md) uses 406 audited rows from the recovered corpus,
-including 18 of 22 newly verified answers. Four new answers overlap held-out specification functions and were
-excluded. The candidate proves 21 of 33 supplied specifications in all seven systems; the reference-program
-control passes all 33. The programming-problem result is pending. This smaller dataset does not reproduce
-v5's training set.
+The [October 11 GPU retrain](t/PREDICT-2026-10-11-gcp-student.md) trained on 405 rows from the recovered corpus,
+with 18 of 22 new verified answers represented (17 distinct additions). Four new answers overlap held-out
+specification functions and were excluded. The candidate proves **21/33 supplied specifications** in all seven
+systems; the reference-program control passes all 33. On clean-182 programming problems, **4/182 pass the
+tests, specification gates and all seven kernels** from one greedy answer; five reach at least six kernels.
+The VM and boot disk were deleted after the artifacts were saved. This smaller, single-answer experiment
+does not reproduce v5's training set or evaluation budget; the installed release remains student-v5.
 
 ## Install and use
 

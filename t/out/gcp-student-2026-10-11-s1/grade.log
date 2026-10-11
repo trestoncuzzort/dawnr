@@ -1,0 +1,74 @@
+specification panel already graded; input, evaluator and output hashes match
+extract: 232 replies; parse 103, task 99, wf 30
+tests: 99 tasks; fail 49, pass 41, requires-excluded 6, undefined 3
+spec_check: MBPP+ references in place of the original for 200 problems
+DISAGREES gcp-student-20261011-greedy/mbpp_122__smartNumber: ensures[0] is false at args=[438], the problem's solution answers 1353
+DISAGREES gcp-student-20261011-greedy/mbpp_149__longest_subseq_with_diff_one: ensures[0] is false at args=[[8, 0, 0, 5, 3, 7], 4], the problem's solution answers 1
+DISAGREES gcp-student-20261011-greedy/mbpp_175__is_valid_parenthese: ensures[0] is false at args=[[88]], the problem's solution answers False
+DISAGREES gcp-student-20261011-greedy/mbpp_184__greater_specificnum: ensures[0] is false at args=[[], 6], the problem's solution answers True
+DISAGREES gcp-student-20261011-greedy/mbpp_194__octal_To_Decimal: ensures[0] is false at args=[17], the problem's solution answers 15
+DISAGREES gcp-student-20261011-greedy/mbpp_203__hamming_Distance: ensures[0] is false at args=[1, 4], the problem's solution answers 2
+DISAGREES gcp-student-20261011-greedy/mbpp_20__is_woodall: ensures[0] is false at args=[1], the problem's solution answers True
+DISAGREES gcp-student-20261011-greedy/mbpp_228__all_Bits_Set_In_The_Given_Range: ensures[0] is false at args=[19, 4, 4], the problem's solution answers True
+DISAGREES gcp-student-20261011-greedy/mbpp_271__even_Power_Sum: ensures[0] is false at args=[1], the problem's solution answers 32
+DISAGREES gcp-student-20261011-greedy/mbpp_275__get_Position: ensures[1] is false at args=[[1, 1, 2, 3, 3], 0, 1], the problem's solution answers 0
+DISAGREES gcp-student-20261011-greedy/mbpp_289__odd_Days: ensures[0] is false at args=[147], the problem's solution answers 0
+DISAGREES gcp-student-20261011-greedy/mbpp_313__pos_nos: ensures[0] is false at args=[[-5, -3, 2, 3, -1]], the problem's solution answers 2
+DISAGREES gcp-student-20261011-greedy/mbpp_318__max_volume: ensures[1] is false at args=[15], the problem's solution answers 125
+DISAGREES gcp-student-20261011-greedy/mbpp_322__position_min: ensures[2] is false at args=[[-1, 0, 0, 1, 1, 1, 1, 2, 3, 4, 4, 7]], the problem's solution answers [0]
+DISAGREES gcp-student-20261011-greedy/mbpp_32__max_Prime_Factors: ensures[3] is false at args=[21], the problem's solution answers 7
+DISAGREES gcp-student-20261011-greedy/mbpp_344__count_Odd_Squares: ensures[0] is false at args=[1, 8], the problem's solution answers 2
+DISAGREES gcp-student-20261011-greedy/mbpp_347__count_Squares: ensures[0] is false at args=[2, 4], the problem's solution answers 10
+DISAGREES gcp-student-20261011-greedy/mbpp_351__first_Element: ensures[0] is false at args=[[5, 0, 1, 0, -1, 6, 4], 3, 3], the problem's solution answers -1
+DISAGREES gcp-student-20261011-greedy/mbpp_375__round_num: ensures[1] is false at args=[4303, 13], the problem's solution answers 4303
+DISAGREES gcp-student-20261011-greedy/mbpp_38__div_even_odd: ensures[0] is false at args=[[0, 1, 3, 4, 8, 12]], the problem's solution answers 0.0
+DISAGREES gcp-student-20261011-greedy/mbpp_411__snake_to_camel: ensures[1] is false at args=[[112, 116, 104, 118, 122, 117, 103, 95]], the problem's solution answers 'Pthvzug_'
+DISAGREES gcp-student-20261011-greedy/mbpp_420__cube_Sum: ensures[0] is false at args=[1], the problem's solution answers 8
+DISAGREES gcp-student-20261011-greedy/mbpp_443__largest_neg: ensures[0] is false at args=[[-7, 1, -2, -3, -4, -6, -6]], the problem's solution answers -7
+DISAGREES gcp-student-20261011-greedy/mbpp_472__check_Consecutive: ensures[1] is false at args=[[1, 7]], the problem's solution answers False
+DISAGREES gcp-student-20261011-greedy/mbpp_479__first_Digit: ensures[0] is false at args=[736], the problem's solution answers 7
+DISAGREES gcp-student-20261011-greedy/mbpp_483__first_Factorial_Divisible_Number: ensures[1] is false at args=[30], the problem's solution answers 5
+DISAGREES gcp-student-20261011-greedy/mbpp_502__find: ensures[0] is false at args=[18, 6], the problem's solution answers 0
+DISAGREES gcp-student-20261011-greedy/mbpp_515__modular_sum: ensures[0] is false at args=[[8, 5, 2, -1, 4, 5], 8, 11], the problem's solution answers True
+DISAGREES gcp-student-20261011-greedy/mbpp_521__check_isosceles: ensures[0] is false at args=[10, 15, 6], the problem's solution answers True
+DISAGREES gcp-student-20261011-greedy/mbpp_527__get_pairs_count: ensures[0] is false at args=[[3, 7, -3, 0], 4, 1], the problem's solution answers 0
+DISAGREES gcp-student-20261011-greedy/mbpp_536__nth_items: ensures[0] is false at args=[[0, 1, 2, 4, 4, 7, 9, 11], 4], the problem's solution answers [0, 4]
+DISAGREES gcp-student-20261011-greedy/mbpp_550__find_Max: ensures[0] is false at args=[[6, 5, 0, 3, 2, 0, -1], 0, 4], the problem's solution answers 5
+DISAGREES gcp-student-20261011-greedy/mbpp_556__find_Odd_Pair: ensures[0] is false at args=[[2, 2, 2, 2, 4, -1, 7], 7], the problem's solution answers 10
+DISAGREES gcp-student-20261011-greedy/mbpp_575__count_no: ensures[0] is false at args=[5, 11, 4, 28], the problem's solution answers 17
+DISAGREES gcp-student-20261011-greedy/mbpp_593__removezero_ip: ensures[1] is false at args=[[58, 59, 59, 48, 49, 51, 55, 50, 44]], the problem's solution answers ':;;01372,'
+DISAGREES gcp-student-20261011-greedy/mbpp_597__find_kth: ensures[0] is false at args=[[0, 1, 2, 4, 4, 8], [-1, 0, 6, 10], 4, 4, 0], the problem's solution answers 10
+DISAGREES gcp-student-20261011-greedy/mbpp_604__reverse_words: ensures[1] is false at args=[[105, 30, 111, 40, 45, 30, 108, 38, 61, 54]], the problem's solution answers 'l&=6 o(- i'
+DISAGREES gcp-student-20261011-greedy/mbpp_609__floor_Min: ensures[0] is false at args=[9, 10, 15], the problem's solution answers 13
+DISAGREES gcp-student-20261011-greedy/mbpp_626__triangle_area: ensures[2] is false at args=[1], the problem's solution answers 1
+DISAGREES gcp-student-20261011-greedy/mbpp_629__Split: ensures[2] is false at args=[[8, 9, 12, 16, 19, 20]], the problem's solution answers [8, 12, 16, 20]
+DISAGREES gcp-student-20261011-greedy/mbpp_633__pair_OR_Sum: ensures[0] is false at args=[[6, 3, 8, 9], 3], the problem's solution answers 30
+DISAGREES gcp-student-20261011-greedy/mbpp_644__reverse_Array_Upto_K: ensures[0] is false at args=[[8, 3, 9, 9], 0], the problem's solution answers [9, 9, 3, 8, 8, 3, 9, 9]
+DISAGREES gcp-student-20261011-greedy/mbpp_665__move_last: ensures[1] is false at args=[[1, 1, 2, 3, 5, 5]], the problem's solution answers [2, 3, 5, 5, 1, 1]
+DISAGREES gcp-student-20261011-greedy/mbpp_670__decreasing_trend: ensures[0] is false at args=[[3, 0]], the problem's solution answers False
+DISAGREES gcp-student-20261011-greedy/mbpp_675__sum_nums: ensures[1] is false at args=[6, 27, 6, 19], the problem's solution answers 33
+DISAGREES gcp-student-20261011-greedy/mbpp_680__increasing_trend: ensures[0] is false at args=[[3, 3, 7, 11]], the problem's solution answers True
+DISAGREES gcp-student-20261011-greedy/mbpp_723__count_same_pair: ensures[0] is false at args=[[16, 13, 13, -10, 1], [0, 4, 2, 9, 4, 5, 2, -4, 1]], the problem's solution answers 0
+DISAGREES gcp-student-20261011-greedy/mbpp_72__dif_Square: ensures[0] is false at args=[7], the problem's solution answers True
+DISAGREES gcp-student-20261011-greedy/mbpp_748__capital_words_spaces: ensures[0] is false at args=[[102, 78, 92, 100, 89, 90, 122]], the problem's solution answers 'f N\\d YZz'
+DISAGREES gcp-student-20261011-greedy/mbpp_765__is_polite: ensures[0] is false at args=[8], the problem's solution answers 12
+DISAGREES gcp-student-20261011-greedy/mbpp_768__check_Odd_Parity: ensures[0] is false at args=[8], the problem's solution answers True
+DISAGREES gcp-student-20261011-greedy/mbpp_793__last: ensures[1] is false at args=[[6, 0, 8, 6, 3, 1, 5, 1, 10], 5, 7], the problem's solution answers -1
+DISAGREES gcp-student-20261011-greedy/mbpp_800__remove_all_spaces: ensures[1] is false at args=[[34, 54, 37, 111, 41, 65, 49, 60]], the problem's solution answers '"6%o)A1<'
+DISAGREES gcp-student-20261011-greedy/mbpp_814__rombus_area: ensures[0] is false at args=[4, 4], the problem's solution answers 8.0
+DISAGREES gcp-student-20261011-greedy/mbpp_831__count_Pairs: ensures[0] is false at args=[[7, -1, 8, 1], 3], the problem's solution answers 0
+DISAGREES gcp-student-20261011-greedy/mbpp_837__cube_Sum: ensures[0] is false at args=[2], the problem's solution answers 28
+DISAGREES gcp-student-20261011-greedy/mbpp_844__get_Number: ensures[0] is false at args=[11, 4], the problem's solution answers 7
+DISAGREES gcp-student-20261011-greedy/mbpp_882__parallelogram_perimeter: ensures[0] is false at args=[14, 11], the problem's solution answers 308
+DISAGREES gcp-student-20261011-greedy/mbpp_891__same_Length: ensures[0] is false at args=[2, 1], the problem's solution answers True
+DISAGREES gcp-student-20261011-greedy/mbpp_899__check: ensures[0] is false at args=[[2, 1, -1, 1, 1], 5], the problem's solution answers True
+DISAGREES gcp-student-20261011-greedy/mbpp_900__match_num: ensures[0] is false at args=[[53, 46, 55, 50, 47, 52]], the problem's solution answers True
+DISAGREES gcp-student-20261011-greedy/mbpp_908__find_fixed_point: ensures[0] is false at args=[[0, 4, 7, 13, 13], 1], the problem's solution answers 0
+DISAGREES gcp-student-20261011-greedy/mbpp_931__sum_series: ensures[0] is false at args=[3], the problem's solution answers 36.0
+DISAGREES gcp-student-20261011-greedy/mbpp_961__roman_to_int: ensures[12] is false at args=[[77]], the problem's solution answers 1000
+
+99 tasks checked against their problem's own solution, 1000 draws each: 34 agree, 64 disagree, 1 could not be checked
+written to t/out/gcp-student-2026-10-11-s1/spec-check.md
+| answer set | problems | reach a task | tests pass | at least 1 | at least 3 | at least 5 | at least 6 | all seven |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|
+| gcp-student-20261011-greedy | 182 | 68 | 22 | 5 | 5 | 5 | 5 | 4 |

@@ -1,0 +1,240 @@
+{
+  "method": [
+    "score_levels.panel_ids",
+    "score_levels.tag_levels",
+    "spec_check.task_sha256",
+    "spec_check.complete",
+    "spec_check.larger_reason"
+  ],
+  "panel": "clean-182",
+  "clean_extraction": {
+    "parse": 87,
+    "task": 68,
+    "wf": 27
+  },
+  "matrix_tasks": 99,
+  "matrix_columns": [
+    "dafny",
+    "verus",
+    "spark",
+    "framac",
+    "lean",
+    "rocq",
+    "fstar"
+  ],
+  "verdicts_bound_to_exact_tasks": 99,
+  "cross_kernel_contradictions": [],
+  "minimum_larger_draws": 5,
+  "admitted": [
+    {
+      "task_id": 51,
+      "name": "mbpp_51__check_equilateral",
+      "kernels_before_specification_check": 7,
+      "kernels_after_specification_check": 7,
+      "ordinary": {
+        "status": "agrees",
+        "draws": 1000,
+        "completeness": 1.0,
+        "cross_completeness": 1.0,
+        "outside_requires": null
+      },
+      "larger": {
+        "status": "agrees",
+        "draws": 200,
+        "completeness": 1.0,
+        "mutants_rejected": 200,
+        "mutants_accepted": 0,
+        "requires_caps_size": false
+      },
+      "ordinary_complete": true,
+      "larger_failure": null,
+      "larger_agrees_with_sufficient_draws": true,
+      "larger_complete": true
+    },
+    {
+      "task_id": 287,
+      "name": "mbpp_287__square_Sum",
+      "kernels_before_specification_check": 6,
+      "kernels_after_specification_check": 6,
+      "ordinary": {
+        "status": "agrees",
+        "draws": 1000,
+        "completeness": 1.0,
+        "cross_completeness": 1.0,
+        "outside_requires": null
+      },
+      "larger": {
+        "status": "agrees",
+        "draws": 200,
+        "completeness": 1.0,
+        "cross_completeness": 1.0,
+        "mutants_rejected": 2800,
+        "mutants_accepted": 0,
+        "cross_rejected": 574,
+        "cross_accepted": 0,
+        "requires_caps_size": false
+      },
+      "ordinary_complete": true,
+      "larger_failure": null,
+      "larger_agrees_with_sufficient_draws": true,
+      "larger_complete": true
+    },
+    {
+      "task_id": 345,
+      "name": "mbpp_345__diff_consecutivenums",
+      "kernels_before_specification_check": 7,
+      "kernels_after_specification_check": 7,
+      "ordinary": {
+        "status": "agrees",
+        "draws": 909,
+        "completeness": 0.954,
+        "cross_completeness": 0.988,
+        "outside_requires": 91
+      },
+      "larger": {
+        "status": "agrees",
+        "draws": 200,
+        "completeness": 1.0,
+        "cross_completeness": 1.0,
+        "mutants_rejected": 1384,
+        "mutants_accepted": 0,
+        "cross_rejected": 594,
+        "cross_accepted": 0,
+        "requires_caps_size": false
+      },
+      "ordinary_complete": true,
+      "larger_failure": null,
+      "larger_agrees_with_sufficient_draws": true,
+      "larger_complete": true
+    },
+    {
+      "task_id": 672,
+      "name": "mbpp_672__max_of_three",
+      "kernels_before_specification_check": 7,
+      "kernels_after_specification_check": 7,
+      "ordinary": {
+        "status": "agrees",
+        "draws": 1000,
+        "completeness": 1.0,
+        "cross_completeness": 1.0,
+        "outside_requires": null
+      },
+      "larger": {
+        "status": "agrees",
+        "draws": 200,
+        "completeness": 1.0,
+        "cross_completeness": 1.0,
+        "mutants_rejected": 2800,
+        "mutants_accepted": 0,
+        "cross_rejected": 592,
+        "cross_accepted": 0,
+        "requires_caps_size": false
+      },
+      "ordinary_complete": true,
+      "larger_failure": null,
+      "larger_agrees_with_sufficient_draws": true,
+      "larger_complete": true
+    },
+    {
+      "task_id": 973,
+      "name": "mbpp_973__left_rotate",
+      "kernels_before_specification_check": 7,
+      "kernels_after_specification_check": 7,
+      "ordinary": {
+        "status": "agrees",
+        "draws": 791,
+        "completeness": 1.0,
+        "cross_completeness": 1.0,
+        "outside_requires": 209
+      },
+      "larger": {
+        "status": "agrees",
+        "draws": 145,
+        "outside_requires": 55,
+        "completeness": 1.0,
+        "cross_completeness": 1.0,
+        "mutants_rejected": 1144,
+        "mutants_accepted": 0,
+        "cross_rejected": 429,
+        "cross_accepted": 0,
+        "requires_caps_size": false
+      },
+      "ordinary_complete": true,
+      "larger_failure": null,
+      "larger_agrees_with_sufficient_draws": true,
+      "larger_complete": true
+    }
+  ],
+  "removed_by_specification_gates": [
+    {
+      "task_id": 20,
+      "name": "mbpp_20__is_woodall",
+      "kernels_before_specification_check": 7,
+      "kernels_after_specification_check": 0,
+      "ordinary": {
+        "status": "disagrees",
+        "draws": null,
+        "completeness": null,
+        "cross_completeness": null,
+        "outside_requires": null
+      },
+      "larger": null,
+      "ordinary_complete": null,
+      "larger_failure": null
+    },
+    {
+      "task_id": 550,
+      "name": "mbpp_550__find_Max",
+      "kernels_before_specification_check": 7,
+      "kernels_after_specification_check": 0,
+      "ordinary": {
+        "status": "disagrees",
+        "draws": null,
+        "completeness": null,
+        "cross_completeness": null,
+        "outside_requires": null
+      },
+      "larger": null,
+      "ordinary_complete": null,
+      "larger_failure": null
+    },
+    {
+      "task_id": 768,
+      "name": "mbpp_768__check_Odd_Parity",
+      "kernels_before_specification_check": 7,
+      "kernels_after_specification_check": 0,
+      "ordinary": {
+        "status": "disagrees",
+        "draws": null,
+        "completeness": null,
+        "cross_completeness": null,
+        "outside_requires": null
+      },
+      "larger": null,
+      "ordinary_complete": null,
+      "larger_failure": null
+    },
+    {
+      "task_id": 900,
+      "name": "mbpp_900__match_num",
+      "kernels_before_specification_check": 7,
+      "kernels_after_specification_check": 0,
+      "ordinary": {
+        "status": "disagrees",
+        "draws": null,
+        "completeness": null,
+        "cross_completeness": null,
+        "outside_requires": null
+      },
+      "larger": null,
+      "ordinary_complete": null,
+      "larger_failure": null
+    }
+  ],
+  "evidence_sha256": {
+    "t/out/spec-experiment/gcp-student-20261011-greedy/kernels.md": "634105051041b122de927e01a589d955db74ba7993d06e350b519267baddf260",
+    "t/out/gcp-student-2026-10-11-s1/verdicts.json": "cbd6db2801037b87e06a319aaeda877efa86848d1f2294a4b74f28fafc4309ad",
+    "t/out/gcp-student-2026-10-11-s1/problem-levels.json": "d3a6b0246542b82bd9d8c42fcbeec54ad1880a68761fe4dcbe9fd515f79c7823",
+    "t/out/gcp-student-2026-10-11-s1/evaluator.json": "3936ea17c33965babf61513df80a8f38dd2a73dd2a00df72bb0777d9c14e8cf1"
+  }
+}
