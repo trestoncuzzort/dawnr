@@ -1,0 +1,1724 @@
+{
+ "rule": "a training row is flagged for a gated problem (held-out or dev) when it names that problem's own formalisation (lineage), or holds a t program, in its answer or its prompt, that passes at least one of the problem's test points, fails none, and on 100 drawn inputs answers fewer than 10% of the inputs both answer differently from the problem's reference (twin; t/twin_draws.py), the problem's length argument left out where it has one",
+ "sources": [
+  "https://arxiv.org/abs/2311.04850",
+  "https://ar5iv.labs.arxiv.org/html/2305.01210",
+  "https://raw.githubusercontent.com/microsoft/verus-proof-synthesis/main/benchmarks/Verus-Bench/README.md"
+ ],
+ "findings": [],
+ "flagged": [],
+ "rows": 406,
+ "programs": 736,
+ "unparsed": 0,
+ "out_of_the_panels": [
+  {
+   "row": 201,
+   "problem": 273,
+   "gate": "wider",
+   "why": "twin",
+   "detail": {
+    "verdict": "agrees",
+    "agreed": 10,
+    "answered_by_both": 10,
+    "program_silent": 90,
+    "points": [
+     "pass",
+     "pass",
+     "pass"
+    ],
+    "program": "01358de4974b307c"
+   },
+   "file": "train-rows.jsonl",
+   "line": 201,
+   "name": "vericoding_ds0052__subtract",
+   "kind": "spec-given"
+  },
+  {
+   "row": 10,
+   "problem": 132,
+   "gate": "wider",
+   "why": "twin",
+   "detail": {
+    "verdict": "agrees",
+    "agreed": 100,
+    "answered_by_both": 100,
+    "program_silent": 0,
+    "points": [
+     "pass",
+     "pass",
+     "pass"
+    ],
+    "program": "0d5d780342263396"
+   },
+   "file": "train-rows.jsonl",
+   "line": 10,
+   "name": "mbpp_173__remove_splchar",
+   "kind": "spec-given"
+  },
+  {
+   "row": 10,
+   "problem": 727,
+   "gate": "dev",
+   "why": "twin",
+   "detail": {
+    "verdict": "agrees",
+    "agreed": 100,
+    "answered_by_both": 100,
+    "program_silent": 0,
+    "points": [
+     "pass",
+     "pass",
+     "pass"
+    ],
+    "program": "0d5d780342263396"
+   },
+   "file": "train-rows.jsonl",
+   "line": 10,
+   "name": "mbpp_173__remove_splchar",
+   "kind": "spec-given"
+  },
+  {
+   "row": 10,
+   "problem": 816,
+   "gate": "wider",
+   "why": "twin",
+   "detail": {
+    "verdict": "agrees",
+    "agreed": 100,
+    "answered_by_both": 100,
+    "program_silent": 0,
+    "points": [
+     "pass",
+     "pass",
+     "pass"
+    ],
+    "program": "0d5d780342263396"
+   },
+   "file": "train-rows.jsonl",
+   "line": 10,
+   "name": "mbpp_173__remove_splchar",
+   "kind": "spec-given"
+  },
+  {
+   "row": 247,
+   "problem": 224,
+   "gate": "held-out",
+   "why": "twin",
+   "detail": {
+    "verdict": "agrees",
+    "agreed": 81,
+    "answered_by_both": 81,
+    "program_silent": 19,
+    "points": [
+     "pass",
+     "pass",
+     "pass"
+    ],
+    "program": "0ddd4ee2d0675c33"
+   },
+   "file": "train-rows.jsonl",
+   "line": 247,
+   "name": "vericoding_da0140__minBacteria",
+   "kind": "spec-given"
+  },
+  {
+   "row": 252,
+   "problem": 269,
+   "gate": "held-out",
+   "why": "twin",
+   "detail": {
+    "verdict": "no draw answered by both",
+    "agreed": 0,
+    "answered_by_both": 0,
+    "program_silent": 100,
+    "why": "reference was never called",
+    "points": [
+     "pass",
+     "pass",
+     "pass"
+    ],
+    "program": "1e25394c79984165"
+   },
+   "file": "train-rows.jsonl",
+   "line": 252,
+   "name": "vericoding_dv0073__solution",
+   "kind": "spec-given"
+  },
+  {
+   "row": 252,
+   "problem": 514,
+   "gate": "wider",
+   "why": "twin",
+   "detail": {
+    "verdict": "agrees",
+    "agreed": 52,
+    "answered_by_both": 52,
+    "program_silent": 48,
+    "points": [
+     "pass",
+     "pass",
+     "pass"
+    ],
+    "program": "1e25394c79984165"
+   },
+   "file": "train-rows.jsonl",
+   "line": 252,
+   "name": "vericoding_dv0073__solution",
+   "kind": "spec-given"
+  },
+  {
+   "row": 252,
+   "problem": 798,
+   "gate": "held-out",
+   "why": "twin",
+   "detail": {
+    "verdict": "agrees",
+    "agreed": 36,
+    "answered_by_both": 36,
+    "program_silent": 64,
+    "points": [
+     "pass",
+     "pass",
+     "requires-excluded"
+    ],
+    "program": "1e25394c79984165"
+   },
+   "file": "train-rows.jsonl",
+   "line": 252,
+   "name": "vericoding_dv0073__solution",
+   "kind": "spec-given"
+  },
+  {
+   "row": 354,
+   "problem": 273,
+   "gate": "wider",
+   "why": "twin",
+   "detail": {
+    "verdict": "agrees",
+    "agreed": 10,
+    "answered_by_both": 10,
+    "program_silent": 90,
+    "points": [
+     "pass",
+     "pass",
+     "pass"
+    ],
+    "program": "33ac4a1384d4fbba"
+   },
+   "file": "train-rows.jsonl",
+   "line": 354,
+   "name": "mbpp_282__sub_list",
+   "kind": null
+  },
+  {
+   "row": 365,
+   "problem": 78,
+   "gate": "held-out",
+   "why": "twin",
+   "detail": {
+    "verdict": "agrees",
+    "agreed": 50,
+    "answered_by_both": 50,
+    "program_silent": 50,
+    "points": [
+     "pass",
+     "requires-excluded",
+     "pass"
+    ],
+    "program": "3ef9b91fda62ee54"
+   },
+   "file": "train-rows.jsonl",
+   "line": 365,
+   "name": "mbpp_509__average_Odd",
+   "kind": null
+  },
+  {
+   "row": 186,
+   "problem": 269,
+   "gate": "held-out",
+   "why": "twin",
+   "detail": {
+    "verdict": "no draw answered by both",
+    "agreed": 0,
+    "answered_by_both": 0,
+    "program_silent": 100,
+    "why": "reference was never called",
+    "points": [
+     "pass",
+     "pass",
+     "pass"
+    ],
+    "program": "405be6f394ce8c30"
+   },
+   "file": "train-rows.jsonl",
+   "line": 186,
+   "name": "vericoding_dj0020__findMax",
+   "kind": "spec-given"
+  },
+  {
+   "row": 186,
+   "problem": 418,
+   "gate": "wider",
+   "why": "twin",
+   "detail": {
+    "verdict": "agrees",
+    "agreed": 18,
+    "answered_by_both": 18,
+    "program_silent": 36,
+    "points": [
+     "pass",
+     "pass",
+     "pass"
+    ],
+    "program": "405be6f394ce8c30"
+   },
+   "file": "train-rows.jsonl",
+   "line": 186,
+   "name": "vericoding_dj0020__findMax",
+   "kind": "spec-given"
+  },
+  {
+   "row": 203,
+   "problem": 269,
+   "gate": "held-out",
+   "why": "twin",
+   "detail": {
+    "verdict": "no draw answered by both",
+    "agreed": 0,
+    "answered_by_both": 0,
+    "program_silent": 100,
+    "why": "reference was never called",
+    "points": [
+     "pass",
+     "pass",
+     "pass"
+    ],
+    "program": "453d5fc90b25e1f9"
+   },
+   "file": "train-rows.jsonl",
+   "line": 203,
+   "name": "vericoding_dv0042__maxStrength",
+   "kind": "spec-given"
+  },
+  {
+   "row": 203,
+   "problem": 418,
+   "gate": "wider",
+   "why": "twin",
+   "detail": {
+    "verdict": "agrees",
+    "agreed": 18,
+    "answered_by_both": 18,
+    "program_silent": 36,
+    "points": [
+     "pass",
+     "pass",
+     "pass"
+    ],
+    "program": "453d5fc90b25e1f9"
+   },
+   "file": "train-rows.jsonl",
+   "line": 203,
+   "name": "vericoding_dv0042__maxStrength",
+   "kind": "spec-given"
+  },
+  {
+   "row": 102,
+   "problem": 132,
+   "gate": "wider",
+   "why": "twin",
+   "detail": {
+    "verdict": "agrees",
+    "agreed": 100,
+    "answered_by_both": 100,
+    "program_silent": 0,
+    "points": [
+     "pass",
+     "pass",
+     "pass"
+    ],
+    "program": "49a233cdcae5a006"
+   },
+   "file": "train-rows.jsonl",
+   "line": 102,
+   "name": "seng2011_tmp_tmpgk5jq85q_p2__absIt",
+   "kind": "spec-given"
+  },
+  {
+   "row": 102,
+   "problem": 565,
+   "gate": "held-out",
+   "why": "twin",
+   "detail": {
+    "verdict": "agrees",
+    "agreed": 100,
+    "answered_by_both": 100,
+    "program_silent": 0,
+    "points": [
+     "pass",
+     "pass",
+     "pass"
+    ],
+    "program": "49a233cdcae5a006"
+   },
+   "file": "train-rows.jsonl",
+   "line": 102,
+   "name": "seng2011_tmp_tmpgk5jq85q_p2__absIt",
+   "kind": "spec-given"
+  },
+  {
+   "row": 102,
+   "problem": 587,
+   "gate": "wider",
+   "why": "twin",
+   "detail": {
+    "verdict": "agrees",
+    "agreed": 100,
+    "answered_by_both": 100,
+    "program_silent": 0,
+    "points": [
+     "pass",
+     "pass",
+     "pass"
+    ],
+    "program": "49a233cdcae5a006"
+   },
+   "file": "train-rows.jsonl",
+   "line": 102,
+   "name": "seng2011_tmp_tmpgk5jq85q_p2__absIt",
+   "kind": "spec-given"
+  },
+  {
+   "row": 326,
+   "problem": 562,
+   "gate": "wider",
+   "why": "twin",
+   "detail": {
+    "verdict": "agrees",
+    "agreed": 77,
+    "answered_by_both": 77,
+    "program_silent": 23,
+    "points": [
+     "pass",
+     "pass",
+     "pass"
+    ],
+    "program": "615c4599a43f3f4e"
+   },
+   "file": "train-rows.jsonl",
+   "line": 326,
+   "name": "row_max_len",
+   "kind": "spec-given"
+  },
+  {
+   "row": 366,
+   "problem": 132,
+   "gate": "wider",
+   "why": "twin",
+   "detail": {
+    "verdict": "agrees",
+    "agreed": 100,
+    "answered_by_both": 100,
+    "program_silent": 0,
+    "points": [
+     "pass",
+     "pass",
+     "pass"
+    ],
+    "program": "6eea36ef62658da7"
+   },
+   "file": "train-rows.jsonl",
+   "line": 366,
+   "name": "mbpp_542__fill_spaces",
+   "kind": null
+  },
+  {
+   "row": 366,
+   "problem": 565,
+   "gate": "held-out",
+   "why": "twin",
+   "detail": {
+    "verdict": "agrees",
+    "agreed": 100,
+    "answered_by_both": 100,
+    "program_silent": 0,
+    "points": [
+     "pass",
+     "pass",
+     "pass"
+    ],
+    "program": "6eea36ef62658da7"
+   },
+   "file": "train-rows.jsonl",
+   "line": 366,
+   "name": "mbpp_542__fill_spaces",
+   "kind": null
+  },
+  {
+   "row": 366,
+   "problem": 857,
+   "gate": "wider",
+   "why": "twin",
+   "detail": {
+    "verdict": "agrees",
+    "agreed": 54,
+    "answered_by_both": 54,
+    "program_silent": 0,
+    "points": [
+     "pass",
+     "pass",
+     "pass"
+    ],
+    "program": "6eea36ef62658da7"
+   },
+   "file": "train-rows.jsonl",
+   "line": 366,
+   "name": "mbpp_542__fill_spaces",
+   "kind": null
+  },
+  {
+   "row": 291,
+   "problem": 269,
+   "gate": "held-out",
+   "why": "twin",
+   "detail": {
+    "verdict": "no draw answered by both",
+    "agreed": 0,
+    "answered_by_both": 0,
+    "program_silent": 100,
+    "why": "reference was never called",
+    "points": [
+     "pass",
+     "pass",
+     "pass"
+    ],
+    "program": "77f024ba7f7fa392"
+   },
+   "file": "train-rows.jsonl",
+   "line": 291,
+   "name": "humaneval_dafny_035_max_element__max_element",
+   "kind": "spec-given"
+  },
+  {
+   "row": 291,
+   "problem": 418,
+   "gate": "wider",
+   "why": "twin",
+   "detail": {
+    "verdict": "agrees",
+    "agreed": 18,
+    "answered_by_both": 18,
+    "program_silent": 36,
+    "points": [
+     "pass",
+     "pass",
+     "pass"
+    ],
+    "program": "77f024ba7f7fa392"
+   },
+   "file": "train-rows.jsonl",
+   "line": 291,
+   "name": "humaneval_dafny_035_max_element__max_element",
+   "kind": "spec-given"
+  },
+  {
+   "row": 266,
+   "problem": 269,
+   "gate": "held-out",
+   "why": "twin",
+   "detail": {
+    "verdict": "no draw answered by both",
+    "agreed": 0,
+    "answered_by_both": 0,
+    "program_silent": 100,
+    "why": "reference was never called",
+    "points": [
+     "pass",
+     "pass",
+     "pass"
+    ],
+    "program": "80dbcff59f453545"
+   },
+   "file": "train-rows.jsonl",
+   "line": 266,
+   "name": "vericoding_vd0483__maxArrayReverse",
+   "kind": "spec-given"
+  },
+  {
+   "row": 266,
+   "problem": 418,
+   "gate": "wider",
+   "why": "twin",
+   "detail": {
+    "verdict": "agrees",
+    "agreed": 18,
+    "answered_by_both": 18,
+    "program_silent": 36,
+    "points": [
+     "pass",
+     "pass",
+     "pass"
+    ],
+    "program": "80dbcff59f453545"
+   },
+   "file": "train-rows.jsonl",
+   "line": 266,
+   "name": "vericoding_vd0483__maxArrayReverse",
+   "kind": "spec-given"
+  },
+  {
+   "row": 108,
+   "problem": 269,
+   "gate": "held-out",
+   "why": "twin",
+   "detail": {
+    "verdict": "no draw answered by both",
+    "agreed": 0,
+    "answered_by_both": 0,
+    "program_silent": 100,
+    "why": "reference was never called",
+    "points": [
+     "pass",
+     "pass",
+     "pass"
+    ],
+    "program": "84c1ba9ef68888ee"
+   },
+   "file": "train-rows.jsonl",
+   "line": 108,
+   "name": "dafny_exercise_tmp_tmpouftptir_maxarray__maxArray",
+   "kind": "spec-given"
+  },
+  {
+   "row": 108,
+   "problem": 418,
+   "gate": "wider",
+   "why": "twin",
+   "detail": {
+    "verdict": "agrees",
+    "agreed": 18,
+    "answered_by_both": 18,
+    "program_silent": 36,
+    "points": [
+     "pass",
+     "pass",
+     "pass"
+    ],
+    "program": "84c1ba9ef68888ee"
+   },
+   "file": "train-rows.jsonl",
+   "line": 108,
+   "name": "dafny_exercise_tmp_tmpouftptir_maxarray__maxArray",
+   "kind": "spec-given"
+  },
+  {
+   "row": 37,
+   "problem": 132,
+   "gate": "wider",
+   "why": "twin",
+   "detail": {
+    "verdict": "agrees",
+    "agreed": 100,
+    "answered_by_both": 100,
+    "program_silent": 0,
+    "points": [
+     "pass",
+     "pass",
+     "pass"
+    ],
+    "program": "867aff78f9189405"
+   },
+   "file": "train-rows.jsonl",
+   "line": 37,
+   "name": "mbpp_676__remove_extra_char",
+   "kind": "spec-given"
+  },
+  {
+   "row": 37,
+   "problem": 727,
+   "gate": "dev",
+   "why": "twin",
+   "detail": {
+    "verdict": "agrees",
+    "agreed": 100,
+    "answered_by_both": 100,
+    "program_silent": 0,
+    "points": [
+     "pass",
+     "pass",
+     "pass"
+    ],
+    "program": "867aff78f9189405"
+   },
+   "file": "train-rows.jsonl",
+   "line": 37,
+   "name": "mbpp_676__remove_extra_char",
+   "kind": "spec-given"
+  },
+  {
+   "row": 37,
+   "problem": 816,
+   "gate": "wider",
+   "why": "twin",
+   "detail": {
+    "verdict": "agrees",
+    "agreed": 100,
+    "answered_by_both": 100,
+    "program_silent": 0,
+    "points": [
+     "pass",
+     "pass",
+     "pass"
+    ],
+    "program": "867aff78f9189405"
+   },
+   "file": "train-rows.jsonl",
+   "line": 37,
+   "name": "mbpp_676__remove_extra_char",
+   "kind": "spec-given"
+  },
+  {
+   "row": 31,
+   "problem": 587,
+   "gate": "wider",
+   "why": "twin",
+   "detail": {
+    "verdict": "agrees",
+    "agreed": 100,
+    "answered_by_both": 100,
+    "program_silent": 0,
+    "points": [
+     "pass",
+     "pass",
+     "pass"
+    ],
+    "program": "87edf740ec81bd38"
+   },
+   "file": "train-rows.jsonl",
+   "line": 31,
+   "name": "mbpp_557__toggle_string",
+   "kind": "spec-given"
+  },
+  {
+   "row": 47,
+   "problem": 269,
+   "gate": "held-out",
+   "why": "twin",
+   "detail": {
+    "verdict": "no draw answered by both",
+    "agreed": 0,
+    "answered_by_both": 0,
+    "program_silent": 100,
+    "why": "reference was never called",
+    "points": [
+     "pass",
+     "pass",
+     "pass"
+    ],
+    "program": "95859469cea5eeb2"
+   },
+   "file": "train-rows.jsonl",
+   "line": 47,
+   "name": "he_35__max_element",
+   "kind": "spec-given"
+  },
+  {
+   "row": 47,
+   "problem": 418,
+   "gate": "wider",
+   "why": "twin",
+   "detail": {
+    "verdict": "agrees",
+    "agreed": 18,
+    "answered_by_both": 18,
+    "program_silent": 36,
+    "points": [
+     "pass",
+     "pass",
+     "pass"
+    ],
+    "program": "95859469cea5eeb2"
+   },
+   "file": "train-rows.jsonl",
+   "line": 47,
+   "name": "he_35__max_element",
+   "kind": "spec-given"
+  },
+  {
+   "row": 367,
+   "problem": 587,
+   "gate": "wider",
+   "why": "twin",
+   "detail": {
+    "verdict": "agrees",
+    "agreed": 100,
+    "answered_by_both": 100,
+    "program_silent": 0,
+    "points": [
+     "pass",
+     "pass",
+     "pass"
+    ],
+    "program": "9d300beb1a992774"
+   },
+   "file": "train-rows.jsonl",
+   "line": 367,
+   "name": "mbpp_557__toggle_string",
+   "kind": null
+  },
+  {
+   "row": 371,
+   "problem": 132,
+   "gate": "wider",
+   "why": "twin",
+   "detail": {
+    "verdict": "agrees",
+    "agreed": 100,
+    "answered_by_both": 100,
+    "program_silent": 0,
+    "points": [
+     "pass",
+     "pass",
+     "pass"
+    ],
+    "program": "a2fc9c4c51e6c7fc"
+   },
+   "file": "train-rows.jsonl",
+   "line": 371,
+   "name": "mbpp_631__replace_spaces",
+   "kind": null
+  },
+  {
+   "row": 371,
+   "problem": 565,
+   "gate": "held-out",
+   "why": "twin",
+   "detail": {
+    "verdict": "agrees",
+    "agreed": 100,
+    "answered_by_both": 100,
+    "program_silent": 0,
+    "points": [
+     "pass",
+     "pass",
+     "pass"
+    ],
+    "program": "a2fc9c4c51e6c7fc"
+   },
+   "file": "train-rows.jsonl",
+   "line": 371,
+   "name": "mbpp_631__replace_spaces",
+   "kind": null
+  },
+  {
+   "row": 371,
+   "problem": 587,
+   "gate": "wider",
+   "why": "twin",
+   "detail": {
+    "verdict": "agrees",
+    "agreed": 100,
+    "answered_by_both": 100,
+    "program_silent": 0,
+    "points": [
+     "pass",
+     "pass",
+     "pass"
+    ],
+    "program": "a2fc9c4c51e6c7fc"
+   },
+   "file": "train-rows.jsonl",
+   "line": 371,
+   "name": "mbpp_631__replace_spaces",
+   "kind": null
+  },
+  {
+   "row": 371,
+   "problem": 857,
+   "gate": "wider",
+   "why": "twin",
+   "detail": {
+    "verdict": "agrees",
+    "agreed": 54,
+    "answered_by_both": 54,
+    "program_silent": 0,
+    "points": [
+     "pass",
+     "pass",
+     "pass"
+    ],
+    "program": "a2fc9c4c51e6c7fc"
+   },
+   "file": "train-rows.jsonl",
+   "line": 371,
+   "name": "mbpp_631__replace_spaces",
+   "kind": null
+  },
+  {
+   "row": 327,
+   "problem": 269,
+   "gate": "held-out",
+   "why": "twin",
+   "detail": {
+    "verdict": "no draw answered by both",
+    "agreed": 0,
+    "answered_by_both": 0,
+    "program_silent": 100,
+    "why": "reference was never called",
+    "points": [
+     "pass",
+     "pass",
+     "pass"
+    ],
+    "program": "a30780ff94b633ca"
+   },
+   "file": "train-rows.jsonl",
+   "line": 327,
+   "name": "seq_max",
+   "kind": "spec-given"
+  },
+  {
+   "row": 327,
+   "problem": 418,
+   "gate": "wider",
+   "why": "twin",
+   "detail": {
+    "verdict": "agrees",
+    "agreed": 18,
+    "answered_by_both": 18,
+    "program_silent": 36,
+    "points": [
+     "pass",
+     "pass",
+     "pass"
+    ],
+    "program": "a30780ff94b633ca"
+   },
+   "file": "train-rows.jsonl",
+   "line": 327,
+   "name": "seq_max",
+   "kind": "spec-given"
+  },
+  {
+   "row": 276,
+   "problem": 269,
+   "gate": "held-out",
+   "why": "twin",
+   "detail": {
+    "verdict": "no draw answered by both",
+    "agreed": 0,
+    "answered_by_both": 0,
+    "program_silent": 100,
+    "why": "reference was never called",
+    "points": [
+     "pass",
+     "pass",
+     "pass"
+    ],
+    "program": "b2dcdd664cc8844b"
+   },
+   "file": "train-rows.jsonl",
+   "line": 276,
+   "name": "vericoding_vt0590__nanmax",
+   "kind": "spec-given"
+  },
+  {
+   "row": 276,
+   "problem": 418,
+   "gate": "wider",
+   "why": "twin",
+   "detail": {
+    "verdict": "agrees",
+    "agreed": 18,
+    "answered_by_both": 18,
+    "program_silent": 36,
+    "points": [
+     "pass",
+     "pass",
+     "pass"
+    ],
+    "program": "b2dcdd664cc8844b"
+   },
+   "file": "train-rows.jsonl",
+   "line": 276,
+   "name": "vericoding_vt0590__nanmax",
+   "kind": "spec-given"
+  },
+  {
+   "row": 377,
+   "problem": 132,
+   "gate": "wider",
+   "why": "twin",
+   "detail": {
+    "verdict": "agrees",
+    "agreed": 100,
+    "answered_by_both": 100,
+    "program_silent": 0,
+    "points": [
+     "pass",
+     "pass",
+     "pass"
+    ],
+    "program": "b2ecf739ef7af014"
+   },
+   "file": "train-rows.jsonl",
+   "line": 377,
+   "name": "mbpp_732__replace_specialchar",
+   "kind": null
+  },
+  {
+   "row": 377,
+   "problem": 565,
+   "gate": "held-out",
+   "why": "twin",
+   "detail": {
+    "verdict": "agrees",
+    "agreed": 100,
+    "answered_by_both": 100,
+    "program_silent": 0,
+    "points": [
+     "pass",
+     "pass",
+     "pass"
+    ],
+    "program": "b2ecf739ef7af014"
+   },
+   "file": "train-rows.jsonl",
+   "line": 377,
+   "name": "mbpp_732__replace_specialchar",
+   "kind": null
+  },
+  {
+   "row": 377,
+   "problem": 857,
+   "gate": "wider",
+   "why": "twin",
+   "detail": {
+    "verdict": "agrees",
+    "agreed": 54,
+    "answered_by_both": 54,
+    "program_silent": 0,
+    "points": [
+     "pass",
+     "pass",
+     "pass"
+    ],
+    "program": "b2ecf739ef7af014"
+   },
+   "file": "train-rows.jsonl",
+   "line": 377,
+   "name": "mbpp_732__replace_specialchar",
+   "kind": null
+  },
+  {
+   "row": 342,
+   "problem": 132,
+   "gate": "wider",
+   "why": "twin",
+   "detail": {
+    "verdict": "agrees",
+    "agreed": 100,
+    "answered_by_both": 100,
+    "program_silent": 0,
+    "points": [
+     "pass",
+     "pass",
+     "pass"
+    ],
+    "program": "b4053787aa142eb4"
+   },
+   "file": "train-rows.jsonl",
+   "line": 342,
+   "name": "mbpp_173__remove_splchar",
+   "kind": null
+  },
+  {
+   "row": 342,
+   "problem": 727,
+   "gate": "dev",
+   "why": "twin",
+   "detail": {
+    "verdict": "agrees",
+    "agreed": 100,
+    "answered_by_both": 100,
+    "program_silent": 0,
+    "points": [
+     "pass",
+     "pass",
+     "pass"
+    ],
+    "program": "b4053787aa142eb4"
+   },
+   "file": "train-rows.jsonl",
+   "line": 342,
+   "name": "mbpp_173__remove_splchar",
+   "kind": null
+  },
+  {
+   "row": 342,
+   "problem": 816,
+   "gate": "wider",
+   "why": "twin",
+   "detail": {
+    "verdict": "agrees",
+    "agreed": 100,
+    "answered_by_both": 100,
+    "program_silent": 0,
+    "points": [
+     "pass",
+     "pass",
+     "pass"
+    ],
+    "program": "b4053787aa142eb4"
+   },
+   "file": "train-rows.jsonl",
+   "line": 342,
+   "name": "mbpp_173__remove_splchar",
+   "kind": null
+  },
+  {
+   "row": 158,
+   "problem": 269,
+   "gate": "held-out",
+   "why": "twin",
+   "detail": {
+    "verdict": "no draw answered by both",
+    "agreed": 0,
+    "answered_by_both": 0,
+    "program_silent": 100,
+    "why": "reference was never called",
+    "points": [
+     "pass",
+     "pass",
+     "pass"
+    ],
+    "program": "b47c6c0bd6eb2fe8"
+   },
+   "file": "train-rows.jsonl",
+   "line": 158,
+   "name": "vericoding_dd0071__maxArray",
+   "kind": "spec-given"
+  },
+  {
+   "row": 158,
+   "problem": 418,
+   "gate": "wider",
+   "why": "twin",
+   "detail": {
+    "verdict": "agrees",
+    "agreed": 18,
+    "answered_by_both": 18,
+    "program_silent": 36,
+    "points": [
+     "pass",
+     "pass",
+     "pass"
+    ],
+    "program": "b47c6c0bd6eb2fe8"
+   },
+   "file": "train-rows.jsonl",
+   "line": 158,
+   "name": "vericoding_dd0071__maxArray",
+   "kind": "spec-given"
+  },
+  {
+   "row": 202,
+   "problem": 269,
+   "gate": "held-out",
+   "why": "twin",
+   "detail": {
+    "verdict": "no draw answered by both",
+    "agreed": 0,
+    "answered_by_both": 0,
+    "program_silent": 100,
+    "why": "reference was never called",
+    "points": [
+     "pass",
+     "pass",
+     "pass"
+    ],
+    "program": "b78ebdbf8478efc8"
+   },
+   "file": "train-rows.jsonl",
+   "line": 202,
+   "name": "vericoding_dv0039__maxOfList",
+   "kind": "spec-given"
+  },
+  {
+   "row": 202,
+   "problem": 418,
+   "gate": "wider",
+   "why": "twin",
+   "detail": {
+    "verdict": "agrees",
+    "agreed": 18,
+    "answered_by_both": 18,
+    "program_silent": 36,
+    "points": [
+     "pass",
+     "pass",
+     "pass"
+    ],
+    "program": "b78ebdbf8478efc8"
+   },
+   "file": "train-rows.jsonl",
+   "line": 202,
+   "name": "vericoding_dv0039__maxOfList",
+   "kind": "spec-given"
+  },
+  {
+   "row": 385,
+   "problem": 587,
+   "gate": "wider",
+   "why": "twin",
+   "detail": {
+    "verdict": "agrees",
+    "agreed": 100,
+    "answered_by_both": 100,
+    "program_silent": 0,
+    "points": [
+     "pass",
+     "pass",
+     "pass"
+    ],
+    "program": "b7aa9016d77e1c07"
+   },
+   "file": "train-rows.jsonl",
+   "line": 385,
+   "name": "he_27__flip_case",
+   "kind": null
+  },
+  {
+   "row": 229,
+   "problem": 269,
+   "gate": "held-out",
+   "why": "twin",
+   "detail": {
+    "verdict": "no draw answered by both",
+    "agreed": 0,
+    "answered_by_both": 0,
+    "program_silent": 100,
+    "why": "reference was never called",
+    "points": [
+     "pass",
+     "pass",
+     "pass"
+    ],
+    "program": "b85bd24dcaa3d79b"
+   },
+   "file": "train-rows.jsonl",
+   "line": 229,
+   "name": "vericoding_dv0154__maxArray",
+   "kind": "spec-given"
+  },
+  {
+   "row": 229,
+   "problem": 418,
+   "gate": "wider",
+   "why": "twin",
+   "detail": {
+    "verdict": "agrees",
+    "agreed": 18,
+    "answered_by_both": 18,
+    "program_silent": 36,
+    "points": [
+     "pass",
+     "pass",
+     "pass"
+    ],
+    "program": "b85bd24dcaa3d79b"
+   },
+   "file": "train-rows.jsonl",
+   "line": 229,
+   "name": "vericoding_dv0154__maxArray",
+   "kind": "spec-given"
+  },
+  {
+   "row": 375,
+   "problem": 132,
+   "gate": "wider",
+   "why": "twin",
+   "detail": {
+    "verdict": "agrees",
+    "agreed": 100,
+    "answered_by_both": 100,
+    "program_silent": 0,
+    "points": [
+     "pass",
+     "pass",
+     "pass"
+    ],
+    "program": "bb449f05a14bacf3"
+   },
+   "file": "train-rows.jsonl",
+   "line": 375,
+   "name": "mbpp_676__remove_extra_char",
+   "kind": null
+  },
+  {
+   "row": 375,
+   "problem": 727,
+   "gate": "dev",
+   "why": "twin",
+   "detail": {
+    "verdict": "agrees",
+    "agreed": 100,
+    "answered_by_both": 100,
+    "program_silent": 0,
+    "points": [
+     "pass",
+     "pass",
+     "pass"
+    ],
+    "program": "bb449f05a14bacf3"
+   },
+   "file": "train-rows.jsonl",
+   "line": 375,
+   "name": "mbpp_676__remove_extra_char",
+   "kind": null
+  },
+  {
+   "row": 375,
+   "problem": 816,
+   "gate": "wider",
+   "why": "twin",
+   "detail": {
+    "verdict": "agrees",
+    "agreed": 100,
+    "answered_by_both": 100,
+    "program_silent": 0,
+    "points": [
+     "pass",
+     "pass",
+     "pass"
+    ],
+    "program": "bb449f05a14bacf3"
+   },
+   "file": "train-rows.jsonl",
+   "line": 375,
+   "name": "mbpp_676__remove_extra_char",
+   "kind": null
+  },
+  {
+   "row": 386,
+   "problem": 269,
+   "gate": "held-out",
+   "why": "twin",
+   "detail": {
+    "verdict": "no draw answered by both",
+    "agreed": 0,
+    "answered_by_both": 0,
+    "program_silent": 100,
+    "why": "reference was never called",
+    "points": [
+     "pass",
+     "pass",
+     "pass"
+    ],
+    "program": "bdd25a38236b56d9"
+   },
+   "file": "train-rows.jsonl",
+   "line": 386,
+   "name": "he_35__max_element",
+   "kind": null
+  },
+  {
+   "row": 386,
+   "problem": 418,
+   "gate": "wider",
+   "why": "twin",
+   "detail": {
+    "verdict": "agrees",
+    "agreed": 18,
+    "answered_by_both": 18,
+    "program_silent": 36,
+    "points": [
+     "pass",
+     "pass",
+     "pass"
+    ],
+    "program": "bdd25a38236b56d9"
+   },
+   "file": "train-rows.jsonl",
+   "line": 386,
+   "name": "he_35__max_element",
+   "kind": null
+  },
+  {
+   "row": 363,
+   "problem": 587,
+   "gate": "wider",
+   "why": "twin",
+   "detail": {
+    "verdict": "agrees",
+    "agreed": 100,
+    "answered_by_both": 100,
+    "program_silent": 0,
+    "points": [
+     "pass",
+     "pass",
+     "pass"
+    ],
+    "program": "c175ff446a6b3df7"
+   },
+   "file": "train-rows.jsonl",
+   "line": 363,
+   "name": "mbpp_495__remove_lowercase",
+   "kind": null
+  },
+  {
+   "row": 267,
+   "problem": 269,
+   "gate": "held-out",
+   "why": "twin",
+   "detail": {
+    "verdict": "no draw answered by both",
+    "agreed": 0,
+    "answered_by_both": 0,
+    "program_silent": 100,
+    "why": "reference was never called",
+    "points": [
+     "pass",
+     "pass",
+     "pass"
+    ],
+    "program": "c82f3a44ddf8d538"
+   },
+   "file": "train-rows.jsonl",
+   "line": 267,
+   "name": "vericoding_vd0509__max",
+   "kind": "spec-given"
+  },
+  {
+   "row": 267,
+   "problem": 418,
+   "gate": "wider",
+   "why": "twin",
+   "detail": {
+    "verdict": "agrees",
+    "agreed": 18,
+    "answered_by_both": 18,
+    "program_silent": 36,
+    "points": [
+     "pass",
+     "pass",
+     "pass"
+    ],
+    "program": "c82f3a44ddf8d538"
+   },
+   "file": "train-rows.jsonl",
+   "line": 267,
+   "name": "vericoding_vd0509__max",
+   "kind": "spec-given"
+  },
+  {
+   "row": 46,
+   "problem": 587,
+   "gate": "wider",
+   "why": "twin",
+   "detail": {
+    "verdict": "agrees",
+    "agreed": 100,
+    "answered_by_both": 100,
+    "program_silent": 0,
+    "points": [
+     "pass",
+     "pass",
+     "pass"
+    ],
+    "program": "d10d3a84f70e445d"
+   },
+   "file": "train-rows.jsonl",
+   "line": 46,
+   "name": "he_27__flip_case",
+   "kind": "spec-given"
+  },
+  {
+   "row": 28,
+   "problem": 587,
+   "gate": "wider",
+   "why": "twin",
+   "detail": {
+    "verdict": "agrees",
+    "agreed": 100,
+    "answered_by_both": 100,
+    "program_silent": 0,
+    "points": [
+     "pass",
+     "pass",
+     "pass"
+    ],
+    "program": "e231f4318e72dac4"
+   },
+   "file": "train-rows.jsonl",
+   "line": 28,
+   "name": "mbpp_495__remove_lowercase",
+   "kind": "spec-given"
+  },
+  {
+   "row": 320,
+   "problem": 132,
+   "gate": "wider",
+   "why": "twin",
+   "detail": {
+    "verdict": "agrees",
+    "agreed": 100,
+    "answered_by_both": 100,
+    "program_silent": 0,
+    "points": [
+     "pass",
+     "pass",
+     "pass"
+    ],
+    "program": "e3d9fdeb86221835"
+   },
+   "file": "train-rows.jsonl",
+   "line": 320,
+   "name": "filter_pos",
+   "kind": "spec-given"
+  },
+  {
+   "row": 320,
+   "problem": 565,
+   "gate": "held-out",
+   "why": "twin",
+   "detail": {
+    "verdict": "agrees",
+    "agreed": 100,
+    "answered_by_both": 100,
+    "program_silent": 0,
+    "points": [
+     "pass",
+     "pass",
+     "pass"
+    ],
+    "program": "e3d9fdeb86221835"
+   },
+   "file": "train-rows.jsonl",
+   "line": 320,
+   "name": "filter_pos",
+   "kind": "spec-given"
+  },
+  {
+   "row": 320,
+   "problem": 587,
+   "gate": "wider",
+   "why": "twin",
+   "detail": {
+    "verdict": "agrees",
+    "agreed": 100,
+    "answered_by_both": 100,
+    "program_silent": 0,
+    "points": [
+     "pass",
+     "pass",
+     "pass"
+    ],
+    "program": "e3d9fdeb86221835"
+   },
+   "file": "train-rows.jsonl",
+   "line": 320,
+   "name": "filter_pos",
+   "kind": "spec-given"
+  },
+  {
+   "row": 30,
+   "problem": 132,
+   "gate": "wider",
+   "why": "twin",
+   "detail": {
+    "verdict": "agrees",
+    "agreed": 100,
+    "answered_by_both": 100,
+    "program_silent": 0,
+    "points": [
+     "pass",
+     "pass",
+     "pass"
+    ],
+    "program": "e554553ba78e2e47"
+   },
+   "file": "train-rows.jsonl",
+   "line": 30,
+   "name": "mbpp_542__fill_spaces",
+   "kind": "spec-given"
+  },
+  {
+   "row": 30,
+   "problem": 565,
+   "gate": "held-out",
+   "why": "twin",
+   "detail": {
+    "verdict": "agrees",
+    "agreed": 100,
+    "answered_by_both": 100,
+    "program_silent": 0,
+    "points": [
+     "pass",
+     "pass",
+     "pass"
+    ],
+    "program": "e554553ba78e2e47"
+   },
+   "file": "train-rows.jsonl",
+   "line": 30,
+   "name": "mbpp_542__fill_spaces",
+   "kind": "spec-given"
+  },
+  {
+   "row": 30,
+   "problem": 857,
+   "gate": "wider",
+   "why": "twin",
+   "detail": {
+    "verdict": "agrees",
+    "agreed": 54,
+    "answered_by_both": 54,
+    "program_silent": 0,
+    "points": [
+     "pass",
+     "pass",
+     "pass"
+    ],
+    "program": "e554553ba78e2e47"
+   },
+   "file": "train-rows.jsonl",
+   "line": 30,
+   "name": "mbpp_542__fill_spaces",
+   "kind": "spec-given"
+  },
+  {
+   "row": 29,
+   "problem": 78,
+   "gate": "held-out",
+   "why": "twin",
+   "detail": {
+    "verdict": "agrees",
+    "agreed": 50,
+    "answered_by_both": 50,
+    "program_silent": 50,
+    "points": [
+     "pass",
+     "requires-excluded",
+     "pass"
+    ],
+    "program": "f25b5b887fdd6f2b"
+   },
+   "file": "train-rows.jsonl",
+   "line": 29,
+   "name": "mbpp_509__average_Odd",
+   "kind": "spec-given"
+  },
+  {
+   "row": 198,
+   "problem": 269,
+   "gate": "held-out",
+   "why": "twin",
+   "detail": {
+    "verdict": "no draw answered by both",
+    "agreed": 0,
+    "answered_by_both": 0,
+    "program_silent": 100,
+    "why": "reference was never called",
+    "points": [
+     "pass",
+     "pass",
+     "pass"
+    ],
+    "program": "f76103815127f573"
+   },
+   "file": "train-rows.jsonl",
+   "line": 198,
+   "name": "vericoding_ds0033__max",
+   "kind": "spec-given"
+  },
+  {
+   "row": 198,
+   "problem": 418,
+   "gate": "wider",
+   "why": "twin",
+   "detail": {
+    "verdict": "agrees",
+    "agreed": 18,
+    "answered_by_both": 18,
+    "program_silent": 36,
+    "points": [
+     "pass",
+     "pass",
+     "pass"
+    ],
+    "program": "f76103815127f573"
+   },
+   "file": "train-rows.jsonl",
+   "line": 198,
+   "name": "vericoding_ds0033__max",
+   "kind": "spec-given"
+  },
+  {
+   "row": 39,
+   "problem": 132,
+   "gate": "wider",
+   "why": "twin",
+   "detail": {
+    "verdict": "agrees",
+    "agreed": 100,
+    "answered_by_both": 100,
+    "program_silent": 0,
+    "points": [
+     "pass",
+     "pass",
+     "pass"
+    ],
+    "program": "ff0f84fca744917a"
+   },
+   "file": "train-rows.jsonl",
+   "line": 39,
+   "name": "mbpp_732__replace_specialchar",
+   "kind": "spec-given"
+  },
+  {
+   "row": 39,
+   "problem": 565,
+   "gate": "held-out",
+   "why": "twin",
+   "detail": {
+    "verdict": "agrees",
+    "agreed": 100,
+    "answered_by_both": 100,
+    "program_silent": 0,
+    "points": [
+     "pass",
+     "pass",
+     "pass"
+    ],
+    "program": "ff0f84fca744917a"
+   },
+   "file": "train-rows.jsonl",
+   "line": 39,
+   "name": "mbpp_732__replace_specialchar",
+   "kind": "spec-given"
+  },
+  {
+   "row": 39,
+   "problem": 857,
+   "gate": "wider",
+   "why": "twin",
+   "detail": {
+    "verdict": "agrees",
+    "agreed": 54,
+    "answered_by_both": 54,
+    "program_silent": 0,
+    "points": [
+     "pass",
+     "pass",
+     "pass"
+    ],
+    "program": "ff0f84fca744917a"
+   },
+   "file": "train-rows.jsonl",
+   "line": 39,
+   "name": "mbpp_732__replace_specialchar",
+   "kind": "spec-given"
+  }
+ ]
+}

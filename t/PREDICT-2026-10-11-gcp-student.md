@@ -1,0 +1,100 @@
+# A capped GPU retrain from the recovered corpus
+
+Registered 2026-10-11 05:39Z, before training or reading any candidate answers.
+
+The complete 5,095-row v5 training file is absent from the restored lab checkout. This run uses the
+recoverable proved corpus and new verified answers; it is a new, smaller-data experiment, not a
+reproduction of v5. The installed release stays v5 until a candidate passes its release checks.
+
+## Data and gates
+
+[`recipes/gcp-student-2026-10-11-rows.sh`](recipes/gcp-student-2026-10-11-rows.sh) is the build command.
+It uses `student_rows.py` to split the 531-document `corpus-r12-headed.txt` at seed 1338: 476 training
+documents and 33 specification questions after the established textual exclusions. It offers the
+74 recovered English rows and the 22 new DeepSeek rows (nine: 9, b2: 5, b3: 8) alongside them.
+Rows outside the current training split are removed and named in `build-inputs.json`.
+
+English rows use `graded_pool.answer_text` and `spec_experiment.build_prompt(..., 's1')`, the existing
+student preparation path. The first assembly copied the teacher prompts verbatim: their worked
+examples matched held-out specification questions, so `spec_panel.py` rejected every English row.
+The corrected preparation keeps the verified answer, renames its task as the question requests,
+and removes the teacher's language tutorial and worked examples. Both row audits run afterwards:
+
+- `heldout_audit.py --panels --refuse-gpl`: lineage and behavioural overlap with the fixed problem panels;
+- `spec_panel.py check`: overlap with all 33 specification questions, including programs in prompts.
+
+The gates remove training rows, never questions to rescue a score. Both must exit zero on the final
+file. The build records input hashes; final row count, hash and retained new rows are recorded before
+training. References for all 232 held-out and 100 development IDs must be present. The optional fourth
+DeepSeek batch is excluded: there is no finished admitted SFT file for it at registration.
+
+## Training and evaluation
+
+Base: `Qwen/Qwen3.5-4B`, revision `851bf6e806efd8d0a36b00ddf55e13ccb7b8cd0a`.
+Use the [v5 recipe](../release/MODEL-CARD-student-v5.md) in `student_sft.py`: NF4 with double
+quantisation, bf16 compute, all-linear LoRA rank 64 / alpha 16 / dropout 0.1, learning rate 2e-4,
+five epochs, seed 1, batch 1 with 16 accumulated, maximum 2,845 tokens, response-only loss.
+Count overlength rows rather than truncate them. Use the reference PyTorch linear-attention kernels.
+Merge the completed adapter into the unquantised base in bf16.
+
+Generate one greedy answer to each of the 33 specification questions (`score_spec_given.py`, strict
+specification preservation), then one greedy `s1` answer to every one of the 232 problem IDs
+(`student_generate.py`, maximum 1,024 new tokens). Grade on the lab with all seven kernels and
+`T_SANDBOX=landlock`. Report the fixed clean-182 problem panel with larger-input specification
+checks; report parsing, tests and each gate separately. A partial set is incomplete, not a whole-panel
+score. This single-answer run cannot be compared as if it used v5's 17 answers per problem.
+
+Predictions, falsified at the stated boundaries:
+
+1. Five training epochs complete within the VM's five-hour lifetime; an incomplete adapter falsifies this.
+2. At least 10 of 33 specification questions prove in all seven kernels; 9 or fewer falsifies this.
+3. At least one clean-182 problem passes tests, the larger-input specification check and all seven
+   kernels from its single answer; zero falsifies this.
+
+One seed cannot establish a better training recipe. Do not replace release weights on these results
+alone. Save the adapter and evidence even if the predictions fail.
+
+## Compute and cost bound
+
+The selected existing project has open billing attached. A global GPU quota request from 0 to 1 was
+approved, and Compute Engine reports 1 available; the selected region also permits one L4.
+No production project or account plan was changed.
+
+One `g2-standard-8` in `us-central1` (L4, 8 vCPUs, 32 GiB), 100 GiB balanced boot disk with
+`autoDelete: true`, no attached service account, no automatic restart. Set an absolute provider
+termination time five hours from launch and `instanceTerminationAction: DELETE`, plus a guest
+shutdown timer. Retrieve results and explicitly delete the VM as soon as work ends; verify the VM
+and disk are gone. The absolute deadline also survives a disconnected controller.
+
+Run budget: **$10 maximum planned exposure**. Google's fetched price table lists the instance at
+$0.853624312/hour in Iowa, or $4.27 for five hours; the remainder covers disk, IP and bounded artifact
+transfer. This is a runtime-and-resource bound, not a claim that a billing alert stops charges.
+No automatic relaunches or fleet. Save only the adapter, small evidence files and, if needed, one
+merged/quantised model export; do not repeatedly transfer base weights.
+
+Sources read before preparing this run: the existing v5 card and row-audit registrations;
+[SAFE](https://arxiv.org/abs/2410.15756), [QLoRA](https://arxiv.org/abs/2305.14314),
+[Google's GPU quota rules](https://docs.cloud.google.com/compute/resource-usage),
+[VM runtime limits](https://docs.cloud.google.com/compute/docs/instances/limit-vm-runtime),
+[quota-project attribution](https://docs.cloud.google.com/docs/quotas/set-quota-project), and
+[accelerator pricing](https://cloud.google.com/products/compute/pricing/accelerator-optimized).
+The local research mirror was absent on the control node; repository research was searched first.
+
+## Inputs frozen before training, 2026-10-11 05:42Z
+
+The final file contains **406 rows: 331 specification-given and 75 English answers**. Six recovered
+English rows are excluded by the current split; three normalized answers are duplicates. Of 563
+remaining candidates, 81 are removed by the lineage/problem audit and 76 by the specification-panel
+audit. Both final audits exit zero. Eighteen of the 22 new answers remain; MBPP 227, 309, 873 and 924
+overlap held-out specification functions and are excluded. Every one of the nine-round rows remains.
+
+- Training SHA-256: `0248cf93e57092d91d0f8b6471a22ffae0a5f7aeff337f24bc8604155094fb39`.
+- Questions SHA-256: `effc2f4e586e0c4f7638a5a9a2b75515aaf7019de03ca819d46e5aa3d593ab24`.
+- [Training and generation script](recipes/gcp-student-2026-10-11-train.sh).
+- The lab's row/trainer/audit unit tests: **60 passed**. Its seven kernel version probes pass after
+  setting the installed Lean executable explicitly. The legacy whole `preflight.py` still fails on
+  its hard-coded remote `~/tup` layout and controller assumptions; it is not reported as passing.
+  Its old-v3-prompt warning does not apply to this registered `s1` run.
+
+The VM is live, with a provider-enforced deletion time of **2026-10-11 10:40:06 UTC**, an auto-delete
+boot disk and a guest shutdown scheduled five minutes earlier. Training has not started at this entry.

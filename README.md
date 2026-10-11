@@ -99,6 +99,10 @@ Results and corrections are kept in [SCOREBOARD.md](SCOREBOARD.md), [docs/MEASUR
 [CORRECTIONS.md](CORRECTIONS.md), and the linked experiment records. They describe particular runs and populations.
 Large weights and many generated run artifacts are downloaded or produced separately from a source checkout.
 
+The [next GPU retrain](t/PREDICT-2026-10-11-gcp-student.md) uses 406 audited rows from the recovered corpus,
+including 18 of 22 newly verified answers. Four new answers overlap held-out specification functions and were
+excluded. Training and evaluation are pending; this smaller dataset does not reproduce v5's training set.
+
 ## Install and use
 
 The application supports Linux, macOS, and Windows through WSL2, with Python 3.10 or newer. CPU inference is
