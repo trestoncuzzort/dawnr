@@ -1,0 +1,1434 @@
+{
+  "counts": {
+    "train_answers": 3927,
+    "train_tasks": 1099,
+    "task_json_missing": 1099,
+    "tests_plus_some_proof": 203,
+    "tests_plus_all_seven": 110
+  },
+  "candidate_problems": 88,
+  "candidates": [
+    {
+      "tag": "deepseek-coder-v2-16b-v4-s1",
+      "task_id": 17,
+      "name": "mbpp_17__square_perimeter",
+      "level": 7,
+      "task_json_present": false
+    },
+    {
+      "tag": "deepseek-coder-v2-16b-v4-s1",
+      "task_id": 112,
+      "name": "mbpp_112__perimeter",
+      "level": 7,
+      "task_json_present": false
+    },
+    {
+      "tag": "deepseek-coder-v2-16b-v4-s1",
+      "task_id": 135,
+      "name": "mbpp_135__hexagonal_num",
+      "level": 7,
+      "task_json_present": false
+    },
+    {
+      "tag": "deepseek-coder-v2-16b-v4-s1",
+      "task_id": 171,
+      "name": "mbpp_171__perimeter_pentagon",
+      "level": 7,
+      "task_json_present": false
+    },
+    {
+      "tag": "deepseek-coder-v2-16b-v4-s1",
+      "task_id": 173,
+      "name": "mbpp_173__remove_splchar",
+      "level": 7,
+      "task_json_present": false
+    },
+    {
+      "tag": "deepseek-coder-v2-16b-v4-s1",
+      "task_id": 227,
+      "name": "mbpp_227__min_of_three",
+      "level": 7,
+      "task_json_present": false
+    },
+    {
+      "tag": "deepseek-coder-v2-16b-v4-s1",
+      "task_id": 234,
+      "name": "mbpp_234__volume_cube",
+      "level": 7,
+      "task_json_present": false
+    },
+    {
+      "tag": "deepseek-coder-v2-16b-v4-s1",
+      "task_id": 238,
+      "name": "mbpp_238__number_of_substrings",
+      "level": 7,
+      "task_json_present": false
+    },
+    {
+      "tag": "deepseek-coder-v2-16b-v4-s1",
+      "task_id": 266,
+      "name": "mbpp_266__lateralsurface_cube",
+      "level": 7,
+      "task_json_present": false
+    },
+    {
+      "tag": "deepseek-coder-v2-16b-v4-s1",
+      "task_id": 268,
+      "name": "mbpp_268__find_star_num",
+      "level": 7,
+      "task_json_present": false
+    },
+    {
+      "tag": "deepseek-coder-v2-16b-v4-s1",
+      "task_id": 279,
+      "name": "mbpp_279__is_num_decagonal",
+      "level": 7,
+      "task_json_present": false
+    },
+    {
+      "tag": "deepseek-coder-v2-16b-v4-s1",
+      "task_id": 356,
+      "name": "mbpp_356__find_angle",
+      "level": 7,
+      "task_json_present": false
+    },
+    {
+      "tag": "deepseek-coder-v2-16b-v4-s1",
+      "task_id": 441,
+      "name": "mbpp_441__surfacearea_cube",
+      "level": 7,
+      "task_json_present": false
+    },
+    {
+      "tag": "deepseek-coder-v2-16b-v4-s1",
+      "task_id": 458,
+      "name": "mbpp_458__rectangle_area",
+      "level": 7,
+      "task_json_present": false
+    },
+    {
+      "tag": "deepseek-coder-v2-16b-v4-s1",
+      "task_id": 586,
+      "name": "mbpp_586__split_Arr",
+      "level": 6,
+      "task_json_present": false
+    },
+    {
+      "tag": "deepseek-coder-v2-16b-v4-s1",
+      "task_id": 654,
+      "name": "mbpp_654__rectangle_perimeter",
+      "level": 7,
+      "task_json_present": false
+    },
+    {
+      "tag": "deepseek-coder-v2-16b-v4-s1",
+      "task_id": 676,
+      "name": "mbpp_676__remove_extra_char",
+      "level": 6,
+      "task_json_present": false
+    },
+    {
+      "tag": "deepseek-coder-v2-16b-v4-s1",
+      "task_id": 789,
+      "name": "mbpp_789__perimeter_polygon",
+      "level": 7,
+      "task_json_present": false
+    },
+    {
+      "tag": "deepseek-coder-v2-16b-v4-s1",
+      "task_id": 823,
+      "name": "mbpp_823__check_substring",
+      "level": 4,
+      "task_json_present": false
+    },
+    {
+      "tag": "deepseek-coder-v2-16b-v4-s2",
+      "task_id": 356,
+      "name": "mbpp_356__find_angle",
+      "level": 7,
+      "task_json_present": false
+    },
+    {
+      "tag": "deepseek-coder-v2-16b-v4-s2",
+      "task_id": 369,
+      "name": "mbpp_369__lateralsurface_cuboid",
+      "level": 7,
+      "task_json_present": false
+    },
+    {
+      "tag": "deepseek-coder-v2-16b-v4-s2",
+      "task_id": 643,
+      "name": "mbpp_643__text_match_wordz_middle",
+      "level": 6,
+      "task_json_present": false
+    },
+    {
+      "tag": "deepseek-coder-v2-16b-v4-s2",
+      "task_id": 676,
+      "name": "mbpp_676__remove_extra_char",
+      "level": 7,
+      "task_json_present": false
+    },
+    {
+      "tag": "qwen2.5-coder-14b-he-s1",
+      "task_id": 100041,
+      "name": "he_41__car_race_collision",
+      "level": 7,
+      "task_json_present": false
+    },
+    {
+      "tag": "qwen2.5-coder-14b-he-s1",
+      "task_id": 100042,
+      "name": "he_42__incr_list",
+      "level": 7,
+      "task_json_present": false
+    },
+    {
+      "tag": "qwen2.5-coder-14b-he-s1",
+      "task_id": 100048,
+      "name": "he_48__is_palindrome",
+      "level": 1,
+      "task_json_present": false
+    },
+    {
+      "tag": "qwen2.5-coder-14b-he-s1",
+      "task_id": 100060,
+      "name": "he_60__sum_to_n",
+      "level": 3,
+      "task_json_present": false
+    },
+    {
+      "tag": "qwen2.5-coder-14b-he-s2",
+      "task_id": 100140,
+      "name": "he_140__fix_spaces",
+      "level": 5,
+      "task_json_present": false
+    },
+    {
+      "tag": "qwen2.5-coder-14b-he-s3",
+      "task_id": 100030,
+      "name": "he_30__get_positive",
+      "level": 4,
+      "task_json_present": false
+    },
+    {
+      "tag": "qwen2.5-coder-14b-he-s3",
+      "task_id": 100051,
+      "name": "he_51__remove_vowels",
+      "level": 4,
+      "task_json_present": false
+    },
+    {
+      "tag": "qwen2.5-coder-14b-he-s3",
+      "task_id": 100060,
+      "name": "he_60__sum_to_n",
+      "level": 6,
+      "task_json_present": false
+    },
+    {
+      "tag": "qwen2.5-coder-14b-he-s4",
+      "task_id": 100041,
+      "name": "he_41__car_race_collision",
+      "level": 7,
+      "task_json_present": false
+    },
+    {
+      "tag": "qwen2.5-coder-14b-he-s4",
+      "task_id": 100042,
+      "name": "he_42__incr_list",
+      "level": 6,
+      "task_json_present": false
+    },
+    {
+      "tag": "qwen2.5-coder-14b-he-s4",
+      "task_id": 100048,
+      "name": "he_48__is_palindrome",
+      "level": 1,
+      "task_json_present": false
+    },
+    {
+      "tag": "qwen2.5-coder-14b-he-s4",
+      "task_id": 100060,
+      "name": "he_60__sum_to_n",
+      "level": 3,
+      "task_json_present": false
+    },
+    {
+      "tag": "qwen2.5-coder-14b-he-s7",
+      "task_id": 100062,
+      "name": "he_62__derivative",
+      "level": 1,
+      "task_json_present": false
+    },
+    {
+      "tag": "qwen2.5-coder-14b-v3-s1",
+      "task_id": 8,
+      "name": "mbpp_8__square_nums",
+      "level": 7,
+      "task_json_present": false
+    },
+    {
+      "tag": "qwen2.5-coder-14b-v3-s1",
+      "task_id": 9,
+      "name": "mbpp_9__find_Rotations",
+      "level": 1,
+      "task_json_present": false
+    },
+    {
+      "tag": "qwen2.5-coder-14b-v3-s1",
+      "task_id": 35,
+      "name": "mbpp_35__find_rect_num",
+      "level": 7,
+      "task_json_present": false
+    },
+    {
+      "tag": "qwen2.5-coder-14b-v3-s1",
+      "task_id": 52,
+      "name": "mbpp_52__parallelogram_area",
+      "level": 7,
+      "task_json_present": false
+    },
+    {
+      "tag": "qwen2.5-coder-14b-v3-s1",
+      "task_id": 59,
+      "name": "mbpp_59__is_octagonal",
+      "level": 7,
+      "task_json_present": false
+    },
+    {
+      "tag": "qwen2.5-coder-14b-v3-s1",
+      "task_id": 69,
+      "name": "mbpp_69__is_sublist",
+      "level": 2,
+      "task_json_present": false
+    },
+    {
+      "tag": "qwen2.5-coder-14b-v3-s1",
+      "task_id": 112,
+      "name": "mbpp_112__perimeter",
+      "level": 7,
+      "task_json_present": false
+    },
+    {
+      "tag": "qwen2.5-coder-14b-v3-s1",
+      "task_id": 135,
+      "name": "mbpp_135__hexagonal_num",
+      "level": 7,
+      "task_json_present": false
+    },
+    {
+      "tag": "qwen2.5-coder-14b-v3-s1",
+      "task_id": 171,
+      "name": "mbpp_171__perimeter_pentagon",
+      "level": 7,
+      "task_json_present": false
+    },
+    {
+      "tag": "qwen2.5-coder-14b-v3-s1",
+      "task_id": 195,
+      "name": "mbpp_195__first",
+      "level": 7,
+      "task_json_present": false
+    },
+    {
+      "tag": "qwen2.5-coder-14b-v3-s1",
+      "task_id": 210,
+      "name": "mbpp_210__is_allowed_specific_char",
+      "level": 7,
+      "task_json_present": false
+    },
+    {
+      "tag": "qwen2.5-coder-14b-v3-s1",
+      "task_id": 227,
+      "name": "mbpp_227__min_of_three",
+      "level": 7,
+      "task_json_present": false
+    },
+    {
+      "tag": "qwen2.5-coder-14b-v3-s1",
+      "task_id": 230,
+      "name": "mbpp_230__replace_blank",
+      "level": 4,
+      "task_json_present": false
+    },
+    {
+      "tag": "qwen2.5-coder-14b-v3-s1",
+      "task_id": 234,
+      "name": "mbpp_234__volume_cube",
+      "level": 7,
+      "task_json_present": false
+    },
+    {
+      "tag": "qwen2.5-coder-14b-v3-s1",
+      "task_id": 238,
+      "name": "mbpp_238__number_of_substrings",
+      "level": 7,
+      "task_json_present": false
+    },
+    {
+      "tag": "qwen2.5-coder-14b-v3-s1",
+      "task_id": 266,
+      "name": "mbpp_266__lateralsurface_cube",
+      "level": 7,
+      "task_json_present": false
+    },
+    {
+      "tag": "qwen2.5-coder-14b-v3-s1",
+      "task_id": 279,
+      "name": "mbpp_279__is_num_decagonal",
+      "level": 7,
+      "task_json_present": false
+    },
+    {
+      "tag": "qwen2.5-coder-14b-v3-s1",
+      "task_id": 349,
+      "name": "mbpp_349__check",
+      "level": 3,
+      "task_json_present": false
+    },
+    {
+      "tag": "qwen2.5-coder-14b-v3-s1",
+      "task_id": 356,
+      "name": "mbpp_356__find_angle",
+      "level": 7,
+      "task_json_present": false
+    },
+    {
+      "tag": "qwen2.5-coder-14b-v3-s1",
+      "task_id": 369,
+      "name": "mbpp_369__lateralsurface_cuboid",
+      "level": 7,
+      "task_json_present": false
+    },
+    {
+      "tag": "qwen2.5-coder-14b-v3-s1",
+      "task_id": 379,
+      "name": "mbpp_379__surfacearea_cuboid",
+      "level": 7,
+      "task_json_present": false
+    },
+    {
+      "tag": "qwen2.5-coder-14b-v3-s1",
+      "task_id": 441,
+      "name": "mbpp_441__surfacearea_cube",
+      "level": 7,
+      "task_json_present": false
+    },
+    {
+      "tag": "qwen2.5-coder-14b-v3-s1",
+      "task_id": 458,
+      "name": "mbpp_458__rectangle_area",
+      "level": 7,
+      "task_json_present": false
+    },
+    {
+      "tag": "qwen2.5-coder-14b-v3-s1",
+      "task_id": 542,
+      "name": "mbpp_542__fill_spaces",
+      "level": 4,
+      "task_json_present": false
+    },
+    {
+      "tag": "qwen2.5-coder-14b-v3-s1",
+      "task_id": 557,
+      "name": "mbpp_557__toggle_string",
+      "level": 6,
+      "task_json_present": false
+    },
+    {
+      "tag": "qwen2.5-coder-14b-v3-s1",
+      "task_id": 578,
+      "name": "mbpp_578__interleave_lists",
+      "level": 6,
+      "task_json_present": false
+    },
+    {
+      "tag": "qwen2.5-coder-14b-v3-s1",
+      "task_id": 581,
+      "name": "mbpp_581__surface_Area",
+      "level": 7,
+      "task_json_present": false
+    },
+    {
+      "tag": "qwen2.5-coder-14b-v3-s1",
+      "task_id": 586,
+      "name": "mbpp_586__split_Arr",
+      "level": 6,
+      "task_json_present": false
+    },
+    {
+      "tag": "qwen2.5-coder-14b-v3-s1",
+      "task_id": 646,
+      "name": "mbpp_646__No_of_cubes",
+      "level": 7,
+      "task_json_present": false
+    },
+    {
+      "tag": "qwen2.5-coder-14b-v3-s1",
+      "task_id": 654,
+      "name": "mbpp_654__rectangle_perimeter",
+      "level": 7,
+      "task_json_present": false
+    },
+    {
+      "tag": "qwen2.5-coder-14b-v3-s1",
+      "task_id": 666,
+      "name": "mbpp_666__count_char",
+      "level": 1,
+      "task_json_present": false
+    },
+    {
+      "tag": "qwen2.5-coder-14b-v3-s1",
+      "task_id": 677,
+      "name": "mbpp_677__validity_triangle",
+      "level": 5,
+      "task_json_present": false
+    },
+    {
+      "tag": "qwen2.5-coder-14b-v3-s1",
+      "task_id": 678,
+      "name": "mbpp_678__remove_spaces",
+      "level": 4,
+      "task_json_present": false
+    },
+    {
+      "tag": "qwen2.5-coder-14b-v3-s1",
+      "task_id": 690,
+      "name": "mbpp_690__mul_consecutive_nums",
+      "level": 6,
+      "task_json_present": false
+    },
+    {
+      "tag": "qwen2.5-coder-14b-v3-s1",
+      "task_id": 716,
+      "name": "mbpp_716__rombus_perimeter",
+      "level": 7,
+      "task_json_present": false
+    },
+    {
+      "tag": "qwen2.5-coder-14b-v3-s1",
+      "task_id": 733,
+      "name": "mbpp_733__find_first_occurrence",
+      "level": 7,
+      "task_json_present": false
+    },
+    {
+      "tag": "qwen2.5-coder-14b-v3-s1",
+      "task_id": 789,
+      "name": "mbpp_789__perimeter_polygon",
+      "level": 7,
+      "task_json_present": false
+    },
+    {
+      "tag": "qwen2.5-coder-14b-v3-s1",
+      "task_id": 801,
+      "name": "mbpp_801__test_three_equal",
+      "level": 7,
+      "task_json_present": false
+    },
+    {
+      "tag": "qwen2.5-coder-14b-v3-s1",
+      "task_id": 820,
+      "name": "mbpp_820__check_monthnum_number",
+      "level": 5,
+      "task_json_present": false
+    },
+    {
+      "tag": "qwen2.5-coder-14b-v3-s1",
+      "task_id": 823,
+      "name": "mbpp_823__check_substring",
+      "level": 3,
+      "task_json_present": false
+    },
+    {
+      "tag": "qwen2.5-coder-14b-v3-s1",
+      "task_id": 850,
+      "name": "mbpp_850__is_triangleexists",
+      "level": 5,
+      "task_json_present": false
+    },
+    {
+      "tag": "qwen2.5-coder-14b-v3-s1",
+      "task_id": 852,
+      "name": "mbpp_852__remove_negs",
+      "level": 6,
+      "task_json_present": false
+    },
+    {
+      "tag": "qwen2.5-coder-14b-v3-s1",
+      "task_id": 865,
+      "name": "mbpp_865__ntimes_list",
+      "level": 6,
+      "task_json_present": false
+    },
+    {
+      "tag": "qwen2.5-coder-14b-v3-s1",
+      "task_id": 871,
+      "name": "mbpp_871__are_Rotations",
+      "level": 2,
+      "task_json_present": false
+    },
+    {
+      "tag": "qwen2.5-coder-14b-v3-s1",
+      "task_id": 897,
+      "name": "mbpp_897__is_Word_Present",
+      "level": 6,
+      "task_json_present": false
+    },
+    {
+      "tag": "qwen2.5-coder-14b-v3-s1",
+      "task_id": 913,
+      "name": "mbpp_913__end_num",
+      "level": 6,
+      "task_json_present": false
+    },
+    {
+      "tag": "qwen2.5-coder-14b-v3-s1",
+      "task_id": 924,
+      "name": "mbpp_924__max_of_two",
+      "level": 7,
+      "task_json_present": false
+    },
+    {
+      "tag": "qwen2.5-coder-14b-v3-s1-fix1",
+      "task_id": 69,
+      "name": "mbpp_69__is_sublist",
+      "level": 2,
+      "task_json_present": false
+    },
+    {
+      "tag": "qwen2.5-coder-14b-v3-s1-fix1",
+      "task_id": 554,
+      "name": "mbpp_554__Split",
+      "level": 2,
+      "task_json_present": false
+    },
+    {
+      "tag": "qwen2.5-coder-14b-v3-s1-fix1",
+      "task_id": 824,
+      "name": "mbpp_824__remove_even",
+      "level": 1,
+      "task_json_present": false
+    },
+    {
+      "tag": "qwen2.5-coder-14b-v3-s1-fix1",
+      "task_id": 852,
+      "name": "mbpp_852__remove_negs",
+      "level": 4,
+      "task_json_present": false
+    },
+    {
+      "tag": "qwen2.5-coder-14b-v3-s2",
+      "task_id": 52,
+      "name": "mbpp_52__parallelogram_area",
+      "level": 7,
+      "task_json_present": false
+    },
+    {
+      "tag": "qwen2.5-coder-14b-v3-s2",
+      "task_id": 171,
+      "name": "mbpp_171__perimeter_pentagon",
+      "level": 7,
+      "task_json_present": false
+    },
+    {
+      "tag": "qwen2.5-coder-14b-v3-s2",
+      "task_id": 227,
+      "name": "mbpp_227__min_of_three",
+      "level": 7,
+      "task_json_present": false
+    },
+    {
+      "tag": "qwen2.5-coder-14b-v3-s2",
+      "task_id": 266,
+      "name": "mbpp_266__lateralsurface_cube",
+      "level": 7,
+      "task_json_present": false
+    },
+    {
+      "tag": "qwen2.5-coder-14b-v3-s2",
+      "task_id": 369,
+      "name": "mbpp_369__lateralsurface_cuboid",
+      "level": 7,
+      "task_json_present": false
+    },
+    {
+      "tag": "qwen2.5-coder-14b-v3-s2",
+      "task_id": 458,
+      "name": "mbpp_458__rectangle_area",
+      "level": 7,
+      "task_json_present": false
+    },
+    {
+      "tag": "qwen2.5-coder-14b-v3-s2",
+      "task_id": 499,
+      "name": "mbpp_499__diameter_circle",
+      "level": 7,
+      "task_json_present": false
+    },
+    {
+      "tag": "qwen2.5-coder-14b-v3-s2",
+      "task_id": 581,
+      "name": "mbpp_581__surface_Area",
+      "level": 7,
+      "task_json_present": false
+    },
+    {
+      "tag": "qwen2.5-coder-14b-v3-s2",
+      "task_id": 646,
+      "name": "mbpp_646__No_of_cubes",
+      "level": 7,
+      "task_json_present": false
+    },
+    {
+      "tag": "qwen2.5-coder-14b-v3-s2",
+      "task_id": 690,
+      "name": "mbpp_690__mul_consecutive_nums",
+      "level": 6,
+      "task_json_present": false
+    },
+    {
+      "tag": "qwen2.5-coder-14b-v3-s2",
+      "task_id": 789,
+      "name": "mbpp_789__perimeter_polygon",
+      "level": 7,
+      "task_json_present": false
+    },
+    {
+      "tag": "qwen2.5-coder-14b-v3-s2",
+      "task_id": 824,
+      "name": "mbpp_824__remove_even",
+      "level": 6,
+      "task_json_present": false
+    },
+    {
+      "tag": "qwen2.5-coder-14b-v3-s2",
+      "task_id": 873,
+      "name": "mbpp_873__fibonacci",
+      "level": 7,
+      "task_json_present": false
+    },
+    {
+      "tag": "qwen2.5-coder-14b-v3-s2-fix1",
+      "task_id": 824,
+      "name": "mbpp_824__remove_even",
+      "level": 5,
+      "task_json_present": false
+    },
+    {
+      "tag": "qwen2.5-coder-14b-v3-s2-fix1",
+      "task_id": 852,
+      "name": "mbpp_852__remove_negs",
+      "level": 3,
+      "task_json_present": false
+    },
+    {
+      "tag": "qwen2.5-coder-14b-v3-s2-fix1",
+      "task_id": 865,
+      "name": "mbpp_865__ntimes_list",
+      "level": 5,
+      "task_json_present": false
+    },
+    {
+      "tag": "qwen2.5-coder-14b-v3-s3",
+      "task_id": 8,
+      "name": "mbpp_8__square_nums",
+      "level": 7,
+      "task_json_present": false
+    },
+    {
+      "tag": "qwen2.5-coder-14b-v3-s3",
+      "task_id": 112,
+      "name": "mbpp_112__perimeter",
+      "level": 7,
+      "task_json_present": false
+    },
+    {
+      "tag": "qwen2.5-coder-14b-v3-s3",
+      "task_id": 227,
+      "name": "mbpp_227__min_of_three",
+      "level": 7,
+      "task_json_present": false
+    },
+    {
+      "tag": "qwen2.5-coder-14b-v3-s3",
+      "task_id": 268,
+      "name": "mbpp_268__find_star_num",
+      "level": 7,
+      "task_json_present": false
+    },
+    {
+      "tag": "qwen2.5-coder-14b-v3-s3",
+      "task_id": 369,
+      "name": "mbpp_369__lateralsurface_cuboid",
+      "level": 7,
+      "task_json_present": false
+    },
+    {
+      "tag": "qwen2.5-coder-14b-v3-s3",
+      "task_id": 378,
+      "name": "mbpp_378__move_first",
+      "level": 6,
+      "task_json_present": false
+    },
+    {
+      "tag": "qwen2.5-coder-14b-v3-s3",
+      "task_id": 379,
+      "name": "mbpp_379__surfacearea_cuboid",
+      "level": 7,
+      "task_json_present": false
+    },
+    {
+      "tag": "qwen2.5-coder-14b-v3-s3",
+      "task_id": 412,
+      "name": "mbpp_412__remove_odd",
+      "level": 4,
+      "task_json_present": false
+    },
+    {
+      "tag": "qwen2.5-coder-14b-v3-s3",
+      "task_id": 441,
+      "name": "mbpp_441__surfacearea_cube",
+      "level": 7,
+      "task_json_present": false
+    },
+    {
+      "tag": "qwen2.5-coder-14b-v3-s3",
+      "task_id": 499,
+      "name": "mbpp_499__diameter_circle",
+      "level": 7,
+      "task_json_present": false
+    },
+    {
+      "tag": "qwen2.5-coder-14b-v3-s3",
+      "task_id": 557,
+      "name": "mbpp_557__toggle_string",
+      "level": 6,
+      "task_json_present": false
+    },
+    {
+      "tag": "qwen2.5-coder-14b-v3-s3",
+      "task_id": 581,
+      "name": "mbpp_581__surface_Area",
+      "level": 7,
+      "task_json_present": false
+    },
+    {
+      "tag": "qwen2.5-coder-14b-v3-s3",
+      "task_id": 586,
+      "name": "mbpp_586__split_Arr",
+      "level": 6,
+      "task_json_present": false
+    },
+    {
+      "tag": "qwen2.5-coder-14b-v3-s3",
+      "task_id": 690,
+      "name": "mbpp_690__mul_consecutive_nums",
+      "level": 6,
+      "task_json_present": false
+    },
+    {
+      "tag": "qwen2.5-coder-14b-v3-s3",
+      "task_id": 733,
+      "name": "mbpp_733__find_first_occurrence",
+      "level": 7,
+      "task_json_present": false
+    },
+    {
+      "tag": "qwen2.5-coder-14b-v3-s3",
+      "task_id": 817,
+      "name": "mbpp_817__div_of_nums",
+      "level": 1,
+      "task_json_present": false
+    },
+    {
+      "tag": "qwen2.5-coder-14b-v3-s3",
+      "task_id": 824,
+      "name": "mbpp_824__remove_even",
+      "level": 4,
+      "task_json_present": false
+    },
+    {
+      "tag": "qwen2.5-coder-14b-v3-s3",
+      "task_id": 897,
+      "name": "mbpp_897__is_Word_Present",
+      "level": 6,
+      "task_json_present": false
+    },
+    {
+      "tag": "qwen2.5-coder-14b-v3-s3",
+      "task_id": 960,
+      "name": "mbpp_960__get_noOfways",
+      "level": 7,
+      "task_json_present": false
+    },
+    {
+      "tag": "qwen2.5-coder-14b-v3-s3-fix1",
+      "task_id": 378,
+      "name": "mbpp_378__move_first",
+      "level": 6,
+      "task_json_present": false
+    },
+    {
+      "tag": "qwen2.5-coder-14b-v3-s4",
+      "task_id": 35,
+      "name": "mbpp_35__find_rect_num",
+      "level": 7,
+      "task_json_present": false
+    },
+    {
+      "tag": "qwen2.5-coder-14b-v3-s4",
+      "task_id": 52,
+      "name": "mbpp_52__parallelogram_area",
+      "level": 7,
+      "task_json_present": false
+    },
+    {
+      "tag": "qwen2.5-coder-14b-v3-s4",
+      "task_id": 59,
+      "name": "mbpp_59__is_octagonal",
+      "level": 7,
+      "task_json_present": false
+    },
+    {
+      "tag": "qwen2.5-coder-14b-v3-s4",
+      "task_id": 176,
+      "name": "mbpp_176__perimeter_triangle",
+      "level": 7,
+      "task_json_present": false
+    },
+    {
+      "tag": "qwen2.5-coder-14b-v3-s4",
+      "task_id": 192,
+      "name": "mbpp_192__check_String",
+      "level": 1,
+      "task_json_present": false
+    },
+    {
+      "tag": "qwen2.5-coder-14b-v3-s4",
+      "task_id": 195,
+      "name": "mbpp_195__first",
+      "level": 7,
+      "task_json_present": false
+    },
+    {
+      "tag": "qwen2.5-coder-14b-v3-s4",
+      "task_id": 204,
+      "name": "mbpp_204__count",
+      "level": 1,
+      "task_json_present": false
+    },
+    {
+      "tag": "qwen2.5-coder-14b-v3-s4",
+      "task_id": 227,
+      "name": "mbpp_227__min_of_three",
+      "level": 7,
+      "task_json_present": false
+    },
+    {
+      "tag": "qwen2.5-coder-14b-v3-s4",
+      "task_id": 356,
+      "name": "mbpp_356__find_angle",
+      "level": 7,
+      "task_json_present": false
+    },
+    {
+      "tag": "qwen2.5-coder-14b-v3-s4",
+      "task_id": 373,
+      "name": "mbpp_373__volume_cuboid",
+      "level": 7,
+      "task_json_present": false
+    },
+    {
+      "tag": "qwen2.5-coder-14b-v3-s4",
+      "task_id": 378,
+      "name": "mbpp_378__move_first",
+      "level": 1,
+      "task_json_present": false
+    },
+    {
+      "tag": "qwen2.5-coder-14b-v3-s4",
+      "task_id": 412,
+      "name": "mbpp_412__remove_odd",
+      "level": 6,
+      "task_json_present": false
+    },
+    {
+      "tag": "qwen2.5-coder-14b-v3-s4",
+      "task_id": 441,
+      "name": "mbpp_441__surfacearea_cube",
+      "level": 7,
+      "task_json_present": false
+    },
+    {
+      "tag": "qwen2.5-coder-14b-v3-s4",
+      "task_id": 554,
+      "name": "mbpp_554__Split",
+      "level": 2,
+      "task_json_present": false
+    },
+    {
+      "tag": "qwen2.5-coder-14b-v3-s4",
+      "task_id": 586,
+      "name": "mbpp_586__split_Arr",
+      "level": 6,
+      "task_json_present": false
+    },
+    {
+      "tag": "qwen2.5-coder-14b-v3-s4",
+      "task_id": 690,
+      "name": "mbpp_690__mul_consecutive_nums",
+      "level": 6,
+      "task_json_present": false
+    },
+    {
+      "tag": "qwen2.5-coder-14b-v3-s4",
+      "task_id": 789,
+      "name": "mbpp_789__perimeter_polygon",
+      "level": 7,
+      "task_json_present": false
+    },
+    {
+      "tag": "qwen2.5-coder-14b-v3-s4",
+      "task_id": 801,
+      "name": "mbpp_801__test_three_equal",
+      "level": 7,
+      "task_json_present": false
+    },
+    {
+      "tag": "qwen2.5-coder-14b-v3-s4",
+      "task_id": 824,
+      "name": "mbpp_824__remove_even",
+      "level": 6,
+      "task_json_present": false
+    },
+    {
+      "tag": "qwen2.5-coder-14b-v3-s4",
+      "task_id": 865,
+      "name": "mbpp_865__ntimes_list",
+      "level": 7,
+      "task_json_present": false
+    },
+    {
+      "tag": "qwen2.5-coder-14b-v3-s4-fix1",
+      "task_id": 412,
+      "name": "mbpp_412__remove_odd",
+      "level": 4,
+      "task_json_present": false
+    },
+    {
+      "tag": "qwen2.5-coder-14b-v3-s4-fix1",
+      "task_id": 718,
+      "name": "mbpp_718__alternate_elements",
+      "level": 4,
+      "task_json_present": false
+    },
+    {
+      "tag": "qwen2.5-coder-14b-v3-s5",
+      "task_id": 8,
+      "name": "mbpp_8__square_nums",
+      "level": 7,
+      "task_json_present": false
+    },
+    {
+      "tag": "qwen2.5-coder-14b-v3-s5",
+      "task_id": 44,
+      "name": "mbpp_44__text_match_string",
+      "level": 4,
+      "task_json_present": false
+    },
+    {
+      "tag": "qwen2.5-coder-14b-v3-s5",
+      "task_id": 89,
+      "name": "mbpp_89__closest_num",
+      "level": 7,
+      "task_json_present": false
+    },
+    {
+      "tag": "qwen2.5-coder-14b-v3-s5",
+      "task_id": 127,
+      "name": "mbpp_127__multiply_int",
+      "level": 7,
+      "task_json_present": false
+    },
+    {
+      "tag": "qwen2.5-coder-14b-v3-s5",
+      "task_id": 173,
+      "name": "mbpp_173__remove_splchar",
+      "level": 7,
+      "task_json_present": false
+    },
+    {
+      "tag": "qwen2.5-coder-14b-v3-s5",
+      "task_id": 227,
+      "name": "mbpp_227__min_of_three",
+      "level": 7,
+      "task_json_present": false
+    },
+    {
+      "tag": "qwen2.5-coder-14b-v3-s5",
+      "task_id": 240,
+      "name": "mbpp_240__replace_list",
+      "level": 6,
+      "task_json_present": false
+    },
+    {
+      "tag": "qwen2.5-coder-14b-v3-s5",
+      "task_id": 266,
+      "name": "mbpp_266__lateralsurface_cube",
+      "level": 7,
+      "task_json_present": false
+    },
+    {
+      "tag": "qwen2.5-coder-14b-v3-s5",
+      "task_id": 309,
+      "name": "mbpp_309__maximum",
+      "level": 7,
+      "task_json_present": false
+    },
+    {
+      "tag": "qwen2.5-coder-14b-v3-s5",
+      "task_id": 373,
+      "name": "mbpp_373__volume_cuboid",
+      "level": 7,
+      "task_json_present": false
+    },
+    {
+      "tag": "qwen2.5-coder-14b-v3-s5",
+      "task_id": 412,
+      "name": "mbpp_412__remove_odd",
+      "level": 6,
+      "task_json_present": false
+    },
+    {
+      "tag": "qwen2.5-coder-14b-v3-s5",
+      "task_id": 532,
+      "name": "mbpp_532__check_permutation",
+      "level": 5,
+      "task_json_present": false
+    },
+    {
+      "tag": "qwen2.5-coder-14b-v3-s5",
+      "task_id": 557,
+      "name": "mbpp_557__toggle_string",
+      "level": 6,
+      "task_json_present": false
+    },
+    {
+      "tag": "qwen2.5-coder-14b-v3-s5",
+      "task_id": 631,
+      "name": "mbpp_631__replace_spaces",
+      "level": 7,
+      "task_json_present": false
+    },
+    {
+      "tag": "qwen2.5-coder-14b-v3-s5",
+      "task_id": 654,
+      "name": "mbpp_654__rectangle_perimeter",
+      "level": 7,
+      "task_json_present": false
+    },
+    {
+      "tag": "qwen2.5-coder-14b-v3-s5",
+      "task_id": 676,
+      "name": "mbpp_676__remove_extra_char",
+      "level": 7,
+      "task_json_present": false
+    },
+    {
+      "tag": "qwen2.5-coder-14b-v3-s5",
+      "task_id": 873,
+      "name": "mbpp_873__fibonacci",
+      "level": 7,
+      "task_json_present": false
+    },
+    {
+      "tag": "qwen2.5-coder-14b-v3-s5",
+      "task_id": 913,
+      "name": "mbpp_913__end_num",
+      "level": 6,
+      "task_json_present": false
+    },
+    {
+      "tag": "qwen2.5-coder-14b-v3-s5-fix1",
+      "task_id": 240,
+      "name": "mbpp_240__replace_list",
+      "level": 3,
+      "task_json_present": false
+    },
+    {
+      "tag": "qwen2.5-coder-14b-v3-s5-fix1",
+      "task_id": 412,
+      "name": "mbpp_412__remove_odd",
+      "level": 4,
+      "task_json_present": false
+    },
+    {
+      "tag": "qwen2.5-coder-14b-v3-s5-fix1",
+      "task_id": 913,
+      "name": "mbpp_913__end_num",
+      "level": 6,
+      "task_json_present": false
+    },
+    {
+      "tag": "qwen2.5-coder-14b-v3-s6",
+      "task_id": 127,
+      "name": "mbpp_127__multiply_int",
+      "level": 7,
+      "task_json_present": false
+    },
+    {
+      "tag": "qwen2.5-coder-14b-v3-s6",
+      "task_id": 210,
+      "name": "mbpp_210__is_allowed_specific_char",
+      "level": 1,
+      "task_json_present": false
+    },
+    {
+      "tag": "qwen2.5-coder-14b-v3-s6",
+      "task_id": 227,
+      "name": "mbpp_227__min_of_three",
+      "level": 7,
+      "task_json_present": false
+    },
+    {
+      "tag": "qwen2.5-coder-14b-v3-s6",
+      "task_id": 238,
+      "name": "mbpp_238__number_of_substrings",
+      "level": 6,
+      "task_json_present": false
+    },
+    {
+      "tag": "qwen2.5-coder-14b-v3-s6",
+      "task_id": 426,
+      "name": "mbpp_426__filter_oddnumbers",
+      "level": 4,
+      "task_json_present": false
+    },
+    {
+      "tag": "qwen2.5-coder-14b-v3-s6",
+      "task_id": 554,
+      "name": "mbpp_554__Split",
+      "level": 4,
+      "task_json_present": false
+    },
+    {
+      "tag": "qwen2.5-coder-14b-v3-s6",
+      "task_id": 578,
+      "name": "mbpp_578__interleave_lists",
+      "level": 6,
+      "task_json_present": false
+    },
+    {
+      "tag": "qwen2.5-coder-14b-v3-s6",
+      "task_id": 581,
+      "name": "mbpp_581__surface_Area",
+      "level": 7,
+      "task_json_present": false
+    },
+    {
+      "tag": "qwen2.5-coder-14b-v3-s6",
+      "task_id": 646,
+      "name": "mbpp_646__No_of_cubes",
+      "level": 7,
+      "task_json_present": false
+    },
+    {
+      "tag": "qwen2.5-coder-14b-v3-s6",
+      "task_id": 732,
+      "name": "mbpp_732__replace_specialchar",
+      "level": 4,
+      "task_json_present": false
+    },
+    {
+      "tag": "qwen2.5-coder-14b-v3-s6",
+      "task_id": 789,
+      "name": "mbpp_789__perimeter_polygon",
+      "level": 7,
+      "task_json_present": false
+    },
+    {
+      "tag": "qwen2.5-coder-14b-v3-s6",
+      "task_id": 824,
+      "name": "mbpp_824__remove_even",
+      "level": 4,
+      "task_json_present": false
+    },
+    {
+      "tag": "qwen2.5-coder-14b-v3-s6",
+      "task_id": 825,
+      "name": "mbpp_825__access_elements",
+      "level": 6,
+      "task_json_present": false
+    },
+    {
+      "tag": "qwen2.5-coder-14b-v3-s6",
+      "task_id": 865,
+      "name": "mbpp_865__ntimes_list",
+      "level": 7,
+      "task_json_present": false
+    },
+    {
+      "tag": "qwen2.5-coder-14b-v3-s6",
+      "task_id": 913,
+      "name": "mbpp_913__end_num",
+      "level": 6,
+      "task_json_present": false
+    },
+    {
+      "tag": "qwen2.5-coder-14b-v3-s6-fix1",
+      "task_id": 238,
+      "name": "mbpp_238__number_of_substrings",
+      "level": 7,
+      "task_json_present": false
+    },
+    {
+      "tag": "qwen2.5-coder-14b-v3-s7",
+      "task_id": 69,
+      "name": "mbpp_69__is_sublist",
+      "level": 2,
+      "task_json_present": false
+    },
+    {
+      "tag": "qwen2.5-coder-14b-v3-s7",
+      "task_id": 112,
+      "name": "mbpp_112__perimeter",
+      "level": 7,
+      "task_json_present": false
+    },
+    {
+      "tag": "qwen2.5-coder-14b-v3-s7",
+      "task_id": 171,
+      "name": "mbpp_171__perimeter_pentagon",
+      "level": 7,
+      "task_json_present": false
+    },
+    {
+      "tag": "qwen2.5-coder-14b-v3-s7",
+      "task_id": 210,
+      "name": "mbpp_210__is_allowed_specific_char",
+      "level": 7,
+      "task_json_present": false
+    },
+    {
+      "tag": "qwen2.5-coder-14b-v3-s7",
+      "task_id": 234,
+      "name": "mbpp_234__volume_cube",
+      "level": 7,
+      "task_json_present": false
+    },
+    {
+      "tag": "qwen2.5-coder-14b-v3-s7",
+      "task_id": 238,
+      "name": "mbpp_238__number_of_substrings",
+      "level": 7,
+      "task_json_present": false
+    },
+    {
+      "tag": "qwen2.5-coder-14b-v3-s7",
+      "task_id": 349,
+      "name": "mbpp_349__check",
+      "level": 3,
+      "task_json_present": false
+    },
+    {
+      "tag": "qwen2.5-coder-14b-v3-s7",
+      "task_id": 369,
+      "name": "mbpp_369__lateralsurface_cuboid",
+      "level": 7,
+      "task_json_present": false
+    },
+    {
+      "tag": "qwen2.5-coder-14b-v3-s7",
+      "task_id": 426,
+      "name": "mbpp_426__filter_oddnumbers",
+      "level": 1,
+      "task_json_present": false
+    },
+    {
+      "tag": "qwen2.5-coder-14b-v3-s7",
+      "task_id": 478,
+      "name": "mbpp_478__remove_lowercase",
+      "level": 2,
+      "task_json_present": false
+    },
+    {
+      "tag": "qwen2.5-coder-14b-v3-s7",
+      "task_id": 557,
+      "name": "mbpp_557__toggle_string",
+      "level": 6,
+      "task_json_present": false
+    },
+    {
+      "tag": "qwen2.5-coder-14b-v3-s7",
+      "task_id": 578,
+      "name": "mbpp_578__interleave_lists",
+      "level": 5,
+      "task_json_present": false
+    },
+    {
+      "tag": "qwen2.5-coder-14b-v3-s7",
+      "task_id": 586,
+      "name": "mbpp_586__split_Arr",
+      "level": 6,
+      "task_json_present": false
+    },
+    {
+      "tag": "qwen2.5-coder-14b-v3-s7",
+      "task_id": 637,
+      "name": "mbpp_637__noprofit_noloss",
+      "level": 5,
+      "task_json_present": false
+    },
+    {
+      "tag": "qwen2.5-coder-14b-v3-s7",
+      "task_id": 733,
+      "name": "mbpp_733__find_first_occurrence",
+      "level": 7,
+      "task_json_present": false
+    },
+    {
+      "tag": "qwen2.5-coder-14b-v3-s7",
+      "task_id": 794,
+      "name": "mbpp_794__text_starta_endb",
+      "level": 4,
+      "task_json_present": false
+    },
+    {
+      "tag": "qwen2.5-coder-14b-v3-s7",
+      "task_id": 852,
+      "name": "mbpp_852__remove_negs",
+      "level": 4,
+      "task_json_present": false
+    },
+    {
+      "tag": "qwen2.5-coder-14b-v3-s8",
+      "task_id": 191,
+      "name": "mbpp_191__check_monthnumber",
+      "level": 5,
+      "task_json_present": false
+    },
+    {
+      "tag": "qwen2.5-coder-14b-v3-s8",
+      "task_id": 282,
+      "name": "mbpp_282__sub_list",
+      "level": 7,
+      "task_json_present": false
+    },
+    {
+      "tag": "qwen2.5-coder-14b-v3-s8",
+      "task_id": 378,
+      "name": "mbpp_378__move_first",
+      "level": 1,
+      "task_json_present": false
+    },
+    {
+      "tag": "qwen2.5-coder-14b-v3-s8",
+      "task_id": 825,
+      "name": "mbpp_825__access_elements",
+      "level": 6,
+      "task_json_present": false
+    }
+  ],
+  "note": "Historical evidence only; current tests, hash-bound specification checks and row audits still required before training."
+}

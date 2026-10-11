@@ -1,0 +1,138 @@
+{
+  "method": "restore_run.restore_set(force=False)",
+  "source": "t/runs/2026-09-17/home-4080/answers",
+  "sets": [
+    {
+      "tag": "deepseek-coder-v2-16b-v4-s1",
+      "replies_restored": 737
+    },
+    {
+      "tag": "deepseek-coder-v2-16b-v4-s2",
+      "replies_restored": 737
+    },
+    {
+      "tag": "locallm-r0",
+      "replies_restored": 232
+    },
+    {
+      "tag": "locallm-r4",
+      "replies_restored": 232
+    },
+    {
+      "tag": "phi4-mini-v3",
+      "replies_restored": 232
+    },
+    {
+      "tag": "qwen15b-base-v3",
+      "replies_restored": 232
+    },
+    {
+      "tag": "qwen2.5-coder-14b-he-s1",
+      "replies_restored": 88
+    },
+    {
+      "tag": "qwen2.5-coder-14b-he-s2",
+      "replies_restored": 88
+    },
+    {
+      "tag": "qwen2.5-coder-14b-he-s3",
+      "replies_restored": 88
+    },
+    {
+      "tag": "qwen2.5-coder-14b-he-s4",
+      "replies_restored": 88
+    },
+    {
+      "tag": "qwen2.5-coder-14b-he-s5",
+      "replies_restored": 88
+    },
+    {
+      "tag": "qwen2.5-coder-14b-he-s6",
+      "replies_restored": 88
+    },
+    {
+      "tag": "qwen2.5-coder-14b-he-s7",
+      "replies_restored": 88
+    },
+    {
+      "tag": "qwen2.5-coder-14b-he-s8",
+      "replies_restored": 88
+    },
+    {
+      "tag": "qwen2.5-coder-14b-v3-s1",
+      "replies_restored": 649
+    },
+    {
+      "tag": "qwen2.5-coder-14b-v3-s1-fix1",
+      "replies_restored": 76
+    },
+    {
+      "tag": "qwen2.5-coder-14b-v3-s2",
+      "replies_restored": 649
+    },
+    {
+      "tag": "qwen2.5-coder-14b-v3-s2-fix1",
+      "replies_restored": 48
+    },
+    {
+      "tag": "qwen2.5-coder-14b-v3-s3",
+      "replies_restored": 649
+    },
+    {
+      "tag": "qwen2.5-coder-14b-v3-s3-fix1",
+      "replies_restored": 47
+    },
+    {
+      "tag": "qwen2.5-coder-14b-v3-s4",
+      "replies_restored": 649
+    },
+    {
+      "tag": "qwen2.5-coder-14b-v3-s4-fix1",
+      "replies_restored": 52
+    },
+    {
+      "tag": "qwen2.5-coder-14b-v3-s5",
+      "replies_restored": 649
+    },
+    {
+      "tag": "qwen2.5-coder-14b-v3-s5-fix1",
+      "replies_restored": 51
+    },
+    {
+      "tag": "qwen2.5-coder-14b-v3-s6",
+      "replies_restored": 649
+    },
+    {
+      "tag": "qwen2.5-coder-14b-v3-s6-fix1",
+      "replies_restored": 52
+    },
+    {
+      "tag": "qwen2.5-coder-14b-v3-s7",
+      "replies_restored": 649
+    },
+    {
+      "tag": "qwen2.5-coder-14b-v3-s8",
+      "replies_restored": 649
+    },
+    {
+      "tag": "qwen2.5-coder-14b-v3-s8-fix1",
+      "replies_restored": 41
+    },
+    {
+      "tag": "qwen3.8-27b-fp8",
+      "replies_restored": 368
+    },
+    {
+      "tag": "qwen3.8-27b-fp8-v3",
+      "replies_restored": 649
+    },
+    {
+      "tag": "qwen3.8-27b-fp8-v3-s2",
+      "replies_restored": 649
+    },
+    {
+      "tag": "student-r4-v3",
+      "replies_restored": 232
+    }
+  ]
+}

@@ -1,0 +1,14 @@
+{
+  "server_version": "version: 0.5.0-dev (build 11342, commit f1cee9941)\nbuilt with GNU 11.4.0 for Linux x86_64",
+  "server_sha256": "939b85b5c43813a446cf2ae9464827c3f34a5430fcbdaba0f78640e5e0e90266",
+  "model_format": "Q8_0",
+  "gpu_layers": 0,
+  "threads": 16,
+  "slots": 1,
+  "context_tokens": 8192,
+  "max_new_tokens": 1024,
+  "temperature": 0,
+  "problem_prompt": "s2",
+  "problem_ids_sha256": "5361a91baf669abbc9fb4968d18ce3393abb4e0a001c189d07ec46ad4ce75c9b",
+  "spec_questions_sha256": "effc2f4e586e0c4f7638a5a9a2b75515aaf7019de03ca819d46e5aa3d593ab24"
+}
