@@ -1,0 +1,13 @@
+{
+ "rule": "a training row is flagged for a gated problem (held-out or dev) when it names that problem's own formalisation (lineage), or holds a t program, in its answer or its prompt, that passes at least one of the problem's test points, fails none, and on 100 drawn inputs answers fewer than 10% of the inputs both answer differently from the problem's reference (twin; t/twin_draws.py), the problem's length argument left out where it has one",
+ "sources": [
+  "https://arxiv.org/abs/2311.04850",
+  "https://ar5iv.labs.arxiv.org/html/2305.01210",
+  "https://raw.githubusercontent.com/microsoft/verus-proof-synthesis/main/benchmarks/Verus-Bench/README.md"
+ ],
+ "findings": [],
+ "flagged": [],
+ "rows": 3352,
+ "programs": 2738,
+ "unparsed": 186
+}

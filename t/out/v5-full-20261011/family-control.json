@@ -1,0 +1,18 @@
+{
+  "task_id": 227,
+  "audit_direct_indices": [
+    0
+  ],
+  "removed_indices": [
+    0,
+    1
+  ],
+  "python_sibling_removed": true,
+  "control_tests": 7,
+  "sandbox": "landlock",
+  "missing_reference_dataset_control": true,
+  "test_source_sha256": {
+    "t/recipes/test_student_row_families.py": "bdd74b7da5bb80c5def86215c423be023be78c9444c16e6d899bdc513d2466db",
+    "t/recipes/student_row_families.py": "4983ab619c37bc7d2a77620043f86cae1b10b4de96b713037a11e6795396630e"
+  }
+}
