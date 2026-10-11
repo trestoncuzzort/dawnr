@@ -1,0 +1,31 @@
+{
+ "rows": [
+  {
+   "tag": "gcp-student-20261011-greedy",
+   "problems": 182,
+   "task": 68,
+   "tests pass": 22,
+   ">=1": 5,
+   ">=3": 5,
+   ">=5": 5,
+   ">=6": 5,
+   ">=7": 4
+  }
+ ],
+ "pooled": {
+  "problems": 182,
+  "task": 68,
+  "tests pass": 22,
+  ">=1": 5,
+  ">=1 before the specification check": 9,
+  ">=3": 5,
+  ">=3 before the specification check": 9,
+  ">=5": 5,
+  ">=5 before the specification check": 9,
+  ">=6": 5,
+  ">=6 before the specification check": 9,
+  ">=7": 4,
+  ">=7 before the specification check": 8
+ },
+ "ids": 182
+}

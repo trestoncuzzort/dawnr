@@ -144,7 +144,7 @@ measured 33 ready questions and 33 proved by all seven, with refuted twins, no m
 missing twins ([counts](out/gcp-student-2026-10-11-s1/ceiling-levels.json)). It ran 231 cells and
 1,386 kernel invocations with the cache disabled. Each question therefore has a solution admitted
 by the current toolchain. These are supplied reference programs, not model-generated answers;
-the candidate predictions remain unmeasured.
+this control makes no measurement of candidate performance.
 
 ## Training completed
 
@@ -181,7 +181,7 @@ the [matrix](out/gcp-student-2026-10-11-s1/spec-kernels.md), with the
 The resume guard was exercised on this completed stage: a changed input was refused, restoring the
 original input reused the result, and the table stayed byte-identical. Its
 [receipt](out/gcp-student-2026-10-11-s1/spec-stage-guard-check.json) records those checks.
-The programming-problem result is still pending; no claim of improvement over v5 follows from this panel.
+The programming-problem result appears below; no claim of improvement over v5 follows from this panel.
 
 Post-hoc interpretation confirms a concrete contract violation for each of the seven refuted answers.
 The [witnesses](out/gcp-student-2026-10-11-s1/spec-counterexamples.json) record admitted inputs, returned
@@ -201,8 +201,8 @@ All 232 registered questions have one answer, generated in 2,103 seconds. The
 [generation summary](out/gcp-student-2026-10-11-s1/generation-summary.json) records the stages and
 each raw answer's hash. There are 103 parse failures, 30 well-formedness failures and 99 tasks.
 Of those tasks, 41 pass the original tests, 49 fail, six exclude a test through their preconditions,
-and three produce an undefined result. These are full-232 counts; the clean-182 gated score awaits
-the proof matrix and specification checks.
+and three produce an undefined result. These are full-232 counts; the clean-182 gated score below
+uses the completed proof matrix and specification checks.
 
 Ten answers reach the 1,024-token cap and all ten fail parsing. The other 93 parse failures stop
 naturally. Increasing the token cap alone would leave those 93 failures unresolved. No answer is
@@ -222,5 +222,49 @@ The [teardown receipt](out/gcp-student-2026-10-11-s1/cloud-teardown.json) confir
 and its boot disk return 404 after deletion, observed at **07:45:44 UTC**. The dedicated temporary
 VM keys were removed on both machines. Wall time from creation to confirmed deletion was 7,535.5
 seconds, well inside the five-hour bound. At the posted VM rate this gives a **$1.7868 compute
-estimate**, excluding disk, IP and egress; it is not an invoice. The remaining grading runs on lab
-CPUs after cloud teardown.
+estimate**, excluding disk, IP and egress; it is not an invoice. The lab completed the remaining
+CPU grading after cloud teardown.
+
+## Final programming result
+
+**178 of 182 clean held-out problems fail at least one gate. Four pass all gates and all seven
+kernels; five pass the same gates with at least six kernels.** Prediction 3 holds against its
+registered minimum of one. All three candidate predictions hold, as does the reference control.
+
+The [levels](out/gcp-student-2026-10-11-s1/problem-levels.json), produced by `score_levels.py`, separate
+the gates. Each problem has one greedy answer; the denominator stays 182.
+
+| Clean-182 stage | Problems |
+|---|---:|
+| Answer generated | 182 |
+| Well-formed task | 68 |
+| Original tests pass | 22 |
+| Tests and all seven kernels pass, before the specification check | 8 |
+| Tests, specification gates and at least six kernels pass | 5 |
+| Tests, specification gates and all seven kernels pass | **4** |
+
+The four all-seven answers are MBPP **51, 345, 672 and 973**: equilateral-triangle checking,
+consecutive differences, maximum of three, and left rotation. MBPP **287**, square sum, passes
+the other six kernels and the specification gates; SPARK times out. It stays outside the all-seven count.
+
+The [complete matrix](out/spec-experiment/gcp-student-20261011-greedy/kernels.md) has all 99 tasks
+and seven columns. The cache was disabled: 688 executed cells and 4,128 kernel invocations;
+named abstentions and lowering failures remain recorded. No cross-kernel contradiction was found.
+All 99 specification verdicts are bound to the exact task hashes. Across the full panel's 99 tasks,
+34 specifications agree with the reference, 64 disagree, and one is refused by the interpreter.
+The [specification report](out/gcp-student-2026-10-11-s1/spec-check.md) retains those outcomes.
+
+Four clean-panel answers that pass their tests and all seven kernels—MBPP 20, 550, 768 and 900—have
+specifications contradicted by the reference solution and are removed. The
+[evidence audit](out/gcp-student-2026-10-11-s1/evaluation-audit.json) confirms that every admitted
+answer has a measured, agreeing larger-input check, with 145–200 admitted larger draws, and meets
+the 0.6 completeness floor. None of these five depends on an unmeasured larger-input result.
+
+The largest measured loss is before proof checking: **87 parse failures and 27 well-formedness
+failures** on clean-182. The run preserves those failures and establishes a working, bounded cloud
+training path. It gives concrete evidence for improving English-to-t validity and for keeping the
+reference-solution check: half of the eight test-passing, all-seven answers fail that check.
+
+This one-seed, 405-row run cannot establish an improvement over v5's different training set and
+17-answer evaluation. The missing 5,095-row training file remains a reproducibility gap to close before a
+matched comparison. The candidate is retained for research; the installed release stays student-v5.
