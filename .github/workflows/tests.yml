@@ -158,7 +158,9 @@ jobs:
             --deselect "test_tlib.py::test_second_call_same_process_runs_no_kernel"
             --deselect "test_tlib.py::test_second_process_reads_the_same_cache"
           )
-          python -m pytest -v "${IGNORE[@]}" "${DESELECT[@]}" .
+          # The pinned engine tests use unittest.enterContext (Python 3.11).
+          # Keep every test active on dawnr's supported Python 3.10 as well.
+          python -m pytest -p dawnr_pytest_compat -v "${IGNORE[@]}" "${DESELECT[@]}" .
 
   # ubuntu-only: installs CPU torch and runs the five locallm suites whose
   # own docstrings say they need it (CPU, seconds each).
