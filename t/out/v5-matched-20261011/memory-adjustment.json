@@ -1,0 +1,42 @@
+{
+  "observed_utc": "2026-10-11T08:43:51.608363+00:00",
+  "reason": "One server reached its 16 GiB ceiling and began swapping while 433 GiB remained available. Raise both caps symmetrically without restart.",
+  "before": {
+    "dawnr-match-v5-20261011": {
+      "MainPID": "3459453",
+      "MemoryCurrent": "14229688320",
+      "MemoryPeak": "14296109056",
+      "MemorySwapCurrent": "0",
+      "MemoryMax": "17179869184",
+      "ActiveState": "active"
+    },
+    "dawnr-match-recovered-20261011": {
+      "MainPID": "3459458",
+      "MemoryCurrent": "17177735168",
+      "MemoryPeak": "17179869184",
+      "MemorySwapCurrent": "398929920",
+      "MemoryMax": "17179869184",
+      "ActiveState": "active"
+    }
+  },
+  "after": {
+    "dawnr-match-v5-20261011": {
+      "MainPID": "3459453",
+      "MemoryCurrent": "14229688320",
+      "MemoryPeak": "14296109056",
+      "MemorySwapCurrent": "0",
+      "MemoryMax": "25769803776",
+      "ActiveState": "active"
+    },
+    "dawnr-match-recovered-20261011": {
+      "MainPID": "3459458",
+      "MemoryCurrent": "17177735168",
+      "MemoryPeak": "17179869184",
+      "MemorySwapCurrent": "398929920",
+      "MemoryMax": "25769803776",
+      "ActiveState": "active"
+    }
+  },
+  "answers_regenerated": false,
+  "sampling_or_context_settings_changed": false
+}

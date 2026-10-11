@@ -1,0 +1,17 @@
+{
+  "v5_unbounded_failure": [
+    {
+      "timestamp_us": "1791710146044024",
+      "message": "dawnr-match-grade-v5-20261011.service: A process of this unit has been killed by the OOM killer."
+    },
+    {
+      "timestamp_us": "1791710147463119",
+      "message": "dawnr-match-grade-v5-20261011.service: Failed with result 'oom-kill'."
+    }
+  ],
+  "candidate_unbounded_run": "stopped before matrix completion to restart both under identical lowering limits",
+  "answers_regenerated": false,
+  "partial_kernel_results_reused": false,
+  "lowering_address_space_mib": 4096,
+  "programming_stage_only": true
+}

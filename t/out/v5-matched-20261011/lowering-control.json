@@ -1,0 +1,10 @@
+{
+  "allocation_refused": true,
+  "normal_return_unchanged": true,
+  "exception_preserved": true,
+  "limits_restored": true,
+  "real_task_refused": "mbpp_748__capital_words_spaces",
+  "normal_lowering_byte_identical": "mbpp_672__max_of_three",
+  "limit_mib": 4096,
+  "elapsed_seconds": 3.1134817900601774
+}

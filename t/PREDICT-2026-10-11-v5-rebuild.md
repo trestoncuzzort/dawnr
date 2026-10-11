@@ -9,7 +9,7 @@ Its recorded identity is 5,095 rows, SHA-256
 933 proofs beside Python, 839 specifications beside Python, 549 Python solutions, 639
 specification-given proofs and 1,202 repairs. `student_rows.py` only builds the specification-given kind.
 
-The restored lab, this checkout, release assets and the full Git history contain no copy of that
+Searches of the restored lab, this checkout, release assets and the full Git history found no copy of that
 file or the scratch builders named in the registrations. The checkout was shallow; the history
 search was repeated after fetching all 2,085 commits. The published weights are available and
 their three checksums pass. An archive location has been requested while recovery continues.
@@ -79,8 +79,9 @@ source deletion, changed input, corrupted snapshot, changed selection, incomplet
 legacy-checkpoint refusals. No GPU is used for these checks.
 
 The [full-history content search](out/v5-rebuild-20261011/history-data-search.json) hashes 1,088
-reachable JSONL blobs, decompressing `.jsonl.gz` files first, and finds zero matches for the v5 hash.
-This is stronger evidence than the initial filename search; it does not rule out an external backup.
+reachable JSONL blobs and finds zero matches for the v5 hash. Directly stored `.jsonl.gz` files
+were decompressed where readable; compressed LFS pointers were skipped. The LFS filename and
+object-identity inventory also has no matching source. These searches do not rule out an external backup.
 
 ## Matched specification result
 
@@ -99,3 +100,25 @@ not been recovered.
 All eight [CI jobs](out/v5-rebuild-20261011/ci.json) pass on the input-preservation commit
 `0683081c`. The [live server receipt](out/v5-matched-20261011/server-parity.json) also confirms
 matching chat-template hashes, one slot each and 8,192-token contexts.
+
+## Grading amendment after the memory failure
+
+At 09:15Z the v5 programming grader was [killed for exceeding its service memory limit](out/v5-matched-20261011/grading-restart.json),
+before writing a matrix. The last completed Rocq source precedes `mbpp_748__capital_words_spaces`,
+whose answer chains 26 string replacements. This is the source-expansion failure already described
+in `run_par.py` and the September 17 run notes: the source-size check occurs after allocation.
+No programming score had been produced. The other arm was stopped before completion as well.
+
+Both programming panels will restart from the saved answers with a **4 GiB address-space limit
+during lowering only**, through [the grading launcher](recipes/bounded-grading-python.py).
+It restores the prior limit before kernel dispatch; proof budgets and acceptance rules do not change.
+The existing runner records `MemoryError` as `lower-error`, never as a proof. The pinned engine
+files stay unchanged. Earlier incomplete logs are retained, and neither arm reuses partial kernel
+results. The completed specification panels remain the identical, earlier paired measurement.
+The wrapper and its bound become part of the comparison's evaluator evidence.
+
+The [control](recipes/v5-matched-2026-10-11-lowering-control.py) reproduces the refusal on
+that actual answer in 3.11 seconds, preserves a normal Rocq lowering byte for byte, and verifies
+that normal returns, exceptions and memory refusals all restore the previous limits
+([receipt](out/v5-matched-20261011/lowering-control.json)). Both programming graders restarted
+through [the same retry recipe](recipes/v5-matched-2026-10-11-retry.sh).
