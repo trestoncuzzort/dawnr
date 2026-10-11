@@ -448,15 +448,25 @@ def grader_run(lab: str, cmd: str, timeout: float) -> subprocess.CompletedProces
     t/r12_data_queue.sh already accept for "this machine grades" (2026-09-28:
     the lab's own conf names its own address, so the checklist's step 2 run
     there died on host-key verification of an ssh to itself). The local
-    branch runs a login shell from $HOME, the cwd an ssh login starts in, so
-    `cd ~/tup` and `cd tup` resolve exactly as they do over ssh. Ansible's
+    branch inherits the checked process's environment and starts in $HOME,
+    the cwd an ssh login starts in. Re-reading a login profile can replace
+    the kernel PATH and print a banner into machine-readable output. Ansible's
     builtin `local` connection plugin is the same reading: execute on the
     controller instead of a remote host, chosen by configuration."""
     if lab == "local":
-        return subprocess.run(["bash", "-lc", cmd], capture_output=True, text=True,
+        return subprocess.run(["bash", "-c", cmd], capture_output=True, text=True,
                               timeout=timeout, cwd=str(Path.home()))
     return subprocess.run(["ssh", "-o", "BatchMode=yes", "-o", "ConnectTimeout=10", lab, cmd],
                           capture_output=True, text=True, timeout=timeout)
+
+
+def grading_directory(lab: str) -> str:
+    """Local checks inspect this checkout, as lab_mode.sh's localize does.
+
+    Remote checks retain their home-relative directory. Local execution follows
+    https://docs.ansible.com/projects/ansible/latest/collections/ansible/builtin/local_connection.html.
+    """
+    return str(ROOT) if lab == "local" else LAB_DIR
 
 
 def grading_machine(env=None, conf: Path | None = None) -> str | None:
@@ -509,7 +519,7 @@ def check_evaluator(lab: str | None) -> bool:
         # that catches a genuinely stale evaluator.
         out = grader_run(
             lab,
-            "cd ~/tup && git rev-parse --short HEAD"
+            f"cd {shlex.quote(grading_directory(lab))} && git rev-parse --short HEAD"
             " && git status --porcelain --untracked-files=no | wc -l"
             " && git ls-files --others --exclude-standard | wc -l",
             45)
@@ -737,12 +747,13 @@ def check_data(split_path: Path, lab: str | None, pool_files: list[Path] = (),
         say(True, f"every data file the run opens is tracked, so a clone has it "
                   f"({len([p for p in need if (ROOT / p).is_file()])} files)")
     if lab:
+        directory = grading_directory(lab)
         names = [p for p in sorted(need) if p not in later]      # nothing has written the others yet
         script = "; ".join(f"[ -e {shlex.quote(n)} ] || printf '%s\\n' {shlex.quote(n)}" for n in names)
         try:
-            r = grader_run(lab, f"cd {shlex.quote(LAB_DIR)} 2>/dev/null || exit 9; {script}", 30)
+            r = grader_run(lab, f"cd {shlex.quote(directory)} 2>/dev/null || exit 9; {script}", 30)
             if r.returncode == 9:
-                ok = say(False, f"the grading machine has a clone at ~/{LAB_DIR}") and ok
+                ok = say(False, f"the grading machine has a clone at {directory}") and ok
             else:
                 absent = [x for x in r.stdout.splitlines() if x]
                 # an id list, a split or the grammar is read by every round, so its absence there stops the
@@ -753,8 +764,8 @@ def check_data(split_path: Path, lab: str | None, pool_files: list[Path] = (),
                 hard = [x for x in absent if need.get(x) != "adapter" or x == current]
                 soft = [x for x in absent if x not in hard]
                 ok = say(not hard, f"the grading machine has the {len(names) - len(soft)} file(s) every round "
-                                   f"reads, under ~/{LAB_DIR}",
-                         "" if not hard else f"{hard[:4]}: rsync -a <file> {lab}:{LAB_DIR}/<dir>/ "
+                                   f"reads, under {directory}",
+                         "" if not hard else f"{hard[:4]}: rsync -a <file> {lab}:{directory}/<dir>/ "
                                              f"(or git pull there, for the tracked ones)") and ok
                 if soft:
                     print(f"  [note] {len(soft)} earlier round's adapter(s) are not on the grading machine "
@@ -934,7 +945,7 @@ def check_lab_quiet(lab: str | None) -> bool:
     if not lab:
         return ok
     try:
-        out = grader_run(lab, "cd ~/tup && python3 t/stall_check.py", 90)
+        out = grader_run(lab, f"cd {shlex.quote(grading_directory(lab))} && python3 t/stall_check.py", 90)
         detail = " ".join((out.stdout + out.stderr).split())[:160]
         ok = say(out.returncode == 0, "the grading machine quiet: nothing of ours stopped, frozen or orphaned",
                  detail) and ok

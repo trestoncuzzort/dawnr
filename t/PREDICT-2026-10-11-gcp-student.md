@@ -98,3 +98,20 @@ overlap held-out specification functions and are excluded. Every one of the nine
 
 The VM is live, with a provider-enforced deletion time of **2026-10-11 10:40:06 UTC**, an auto-delete
 boot disk and a guest shutdown scheduled five minutes earlier. Training has not started at this entry.
+
+## Preparation checks
+
+Local preflight now follows this checkout, as `lab_mode.sh` already does, and inherits the environment
+whose kernel binaries were checked instead of reopening a login profile. The old path and a login
+banner had caused false failures. Its full run on the selected audited rows exits zero, with three
+named warnings: the old v3 prompt elsewhere in the legacy run scripts, the lab checkout not yet
+tracking the newly committed dataset, and its existing tracked edits. This run uses `s1`; the dataset
+is committed; evaluator file hashes will accompany the result. The preflight suites pass **27 tests
+and 8 subtests** on the lab.
+
+VM environment: the pinned Google image
+`pytorch-2-9-cu129-ubuntu-2204-nvidia-580-v20261001`, PyTorch 2.9.1+cu129, Transformers 5.17.0,
+PEFT 0.21.2, bitsandbytes 0.50.2 and Accelerate 1.15.0. Two setup failures occurred before training:
+the image's TorchAudio 2.11 required a newer PyTorch ABI, and its Jinja 3.0.3 could not render the
+model's chat template. The isolated environment now uses TorchAudio 2.9.1+cu129 and Jinja 3.1.6.
+See [TorchAudio's compatibility table](https://docs.pytorch.org/audio/stable/installation.html).
