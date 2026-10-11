@@ -2,6 +2,12 @@
 
 Registered 2026-10-11 08:03Z, before generating any new comparison answer.
 
+**Recovery update, 10:20Z:** the operator's offline archive supplied the exact 5,095-row file,
+verified against its registered hash on both the control node and lab
+([receipt](out/v5-rebuild-20261011/desktop-source-recovered.json)). The earlier failed searches below
+describe the copies available at registration. The full-data rebuild now proceeds under
+[a separate registration](PREDICT-2026-10-11-v5-full.md), while the matched comparison continues.
+
 The requested next run needs the released v5 dataset, not just its specification-given subset.
 Its recorded identity is 5,095 rows, SHA-256
 `848fca29d9399ef91fcb867006e4ff42f60b53e9e2e084e4f1e93dae37811110`

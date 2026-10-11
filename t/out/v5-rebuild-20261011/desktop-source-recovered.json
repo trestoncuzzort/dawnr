@@ -1,0 +1,14 @@
+{
+  "recovered_utc": "2026-10-11T10:20:46.300654+00:00",
+  "source": "operator-held desktop archive",
+  "filename": "sft-student-teacher3.jsonl",
+  "bytes": 9835794,
+  "rows": 5095,
+  "sha256": "848fca29d9399ef91fcb867006e4ff42f60b53e9e2e084e4f1e93dae37811110",
+  "matches_registered_v5_identity": true,
+  "copies_verified": [
+    "control-node recovery directory",
+    "lab recovery directory"
+  ],
+  "training_admission": "pending current held-out, specification-overlap and GPL-lineage audit"
+}
