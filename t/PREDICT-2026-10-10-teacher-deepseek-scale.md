@@ -123,3 +123,16 @@ verified data: **14 SFT rows + 173 preference pairs** across the nine-round and 
 (`sft-deepseek-{nine,b2}.jsonl`, `pairs-deepseek-{nine,b2}.jsonl`), joining the corpus at its next registration.
 The engine manufactures verified training data end to end on the re-provisioned lab for cents; the remaining gap to
 a better student is a GPU to train on it.
+
+### Batch 3 (2026-10-10): 8 more rows; session total 22 SFT + 238 pairs
+
+A third fresh round (64 problems requested, 33 accepted, k=8 → 264 records, $0.62) gated through the fixed
+pipeline (plain merge, no flatten) admitted **8 SFT rows + 65 preference pairs** (93 of 128 answers spec-agreed;
+only 11 spec-not-agrees, all genuine disagreements). Admission on random problems ~8/33 ≈ 24%.
+
+**Session total new verified data: 22 SFT rows + 238 preference pairs** (nine 9+125, b2 5+48, b3 8+65), each a
+DeepSeek-V3.2 (MIT) answer verified / twin-refuted in all seven kernels with its spec agreeing with the MBPP
+reference. All in `out/loop/sft-deepseek-{nine,b2,b3}.jsonl` + `pairs-deepseek-{nine,b2,b3}.jsonl`; they join the
+registered corpus at its next registration and feed the next training run. Total Bedrock spend ~$1.25. The data
+engine (generate → seven-kernel gate → Landlock spec check → admission) is proven, cheap, and reproducible on the
+re-provisioned lab; the remaining gap to a better *model* is a GPU to train on these rows.
