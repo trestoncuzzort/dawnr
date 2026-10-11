@@ -1,0 +1,29 @@
+{
+ "task_id": "903",
+ "fn": "count_Unset_Bits",
+ "model": "t/out/gcp-student-2026-10-11-s1/merged",
+ "digest": "5539b0c56a7f",
+ "pool_version": "v5",
+ "prompt_version": "s1",
+ "options": {
+  "temperature": 0.0,
+  "seed": 1,
+  "num_predict": 1024,
+  "top_p": null,
+  "decoder": "transformers-batched",
+  "seeding": "per-problem"
+ },
+ "messages": [
+  {
+   "role": "system",
+   "content": "You write tasks in t, a small verified language. Reply with one fenced t task and nothing else: the header line, the task with the requested name and parameters, requires and ensures clauses that specify the result, and a body the provers can verify (loop invariants and decreases where there is a loop)."
+  },
+  {
+   "role": "user",
+   "content": "Problem: Write a python function to count the total unset bits from 1 to n.\n\nTests:\nassert count_Unset_Bits(2) == 1\nassert count_Unset_Bits(5) == 4\nassert count_Unset_Bits(14) == 17\n\nWrite the t task named `count_Unset_Bits` with 1 parameter(s) of type(s) int, in the order the tests pass them, returning int. The tests must pass and the ensures must specify the result."
+  }
+ ],
+ "reply": "```t\nt 0\ntask count_Unset_Bits(n: int) returns (r: int)\n  requires n >= 0\n  ensures r == sum(i in [1, n] . count_unset_bits(i))\n{\n  r := 0;\n  var i: int := 1;\n  while i <= n\n    invariant 1 <= i and i <= n + 1\n    invariant r == sum(j in [1, i - 1] . count_unset_bits(j))\n    decreases n + 1 - i\n  {\n    var c: int := count_unset_bits(i);\n    r := r + c;\n    i := i + 1;\n  }\n}\n\nfunc count_unset_bits(k: int) returns (c: int)\n{\n  c := 0;\n  var j: int := k;\n  while j > 0\n    invariant c + j == k + 1\n    invariant c >= 0\n    decreases j\n  {\n    if j % 2 == 0 {\n      c := c + 1;\n    }\n    j := j / 2;\n  }\n}\n```",
+ "reply_tokens": 260,
+ "done_reason": "stop"
+}

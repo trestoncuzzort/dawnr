@@ -1,0 +1,29 @@
+{
+ "task_id": "469",
+ "fn": "max_profit",
+ "model": "t/out/gcp-student-2026-10-11-s1/merged",
+ "digest": "5539b0c56a7f",
+ "pool_version": "v5",
+ "prompt_version": "s1",
+ "options": {
+  "temperature": 0.0,
+  "seed": 1,
+  "num_predict": 1024,
+  "top_p": null,
+  "decoder": "transformers-batched",
+  "seeding": "per-problem"
+ },
+ "messages": [
+  {
+   "role": "system",
+   "content": "You write tasks in t, a small verified language. Reply with one fenced t task and nothing else: the header line, the task with the requested name and parameters, requires and ensures clauses that specify the result, and a body the provers can verify (loop invariants and decreases where there is a loop)."
+  },
+  {
+   "role": "user",
+   "content": "Problem: Write a function to find the maximum profit earned from a maximum of k stock transactions\n\nTests:\nassert max_profit([1, 5, 2, 3, 7, 6, 4, 5], 3) == 10\nassert max_profit([2, 4, 7, 5, 4, 3, 5], 2) == 7\nassert max_profit([10, 6, 8, 4, 2], 2) == 2\n\nWrite the t task named `max_profit` with 2 parameter(s) of type(s) seq, int, in the order the tests pass them, returning int. The tests must pass and the ensures must specify the result."
+  }
+ ],
+ "reply": "```t\nt 0\ntask max_profit(prices: seq, k: int) returns (r: int)\n  requires k >= 0\n  requires len(prices) >= 0\n  ensures r >= 0\n  ensures r == max_profit_value(prices, k)\n{\n  var n := len(prices);\n  if n <= 1 {\n    r := 0;\n    return;\n  }\n  if k == 0 {\n    r := 0;\n    return;\n  }\n  if k >= n / 2 {\n    var profit := 0;\n    var i := 1;\n    while i < n {\n      if prices[i] > prices[i - 1] {\n        profit := profit + prices[i] - prices[i - 1];\n      }\n      i := i + 1;\n    }\n    r := profit;\n    return;\n  }\n  var dp: seq := seq(len(prices), 0);\n  var dp_v: seq := seq(len(prices), 0);\n  var j: int := 1;\n  while j < n {\n    var buy: int := dp_v[j - 1] - prices[j];\n    var sell: int := dp[j - 1] + prices[j];\n    dp_v := dp_v[j := max(buy, dp_v[j])];\n    dp := dp[j := max(sell, dp[j])];\n    j := j + 1;\n  }\n  r := dp[n - 1];\n}\n\nlemma max_profit_value(prices: seq, k: int)\n  requires k >= 0\n  requires len(prices) >= 0\n  ensures r >= 0\n  ensures r == max_profit_value(prices, k)\n{\n  var n := len(prices);\n  if n <= 1 {\n    return 0;\n  }\n  if k == 0 {\n    return 0;\n  }\n  if k >= n / 2 {\n    var profit := 0;\n    var i := 1;\n    while i < n {\n      if prices[i] > prices[i - 1] {\n        profit := profit + prices[i] - prices[i - 1];\n      }\n      i := i + 1;\n    }\n    return profit;\n  }\n  var dp: seq := seq(n, 0);\n  var dp_v: seq := seq(n, 0);\n  var j: int := 1;\n  while j < n {\n    var buy: int := dp_v[j - 1] - prices[j];\n    var sell: int := dp[j - 1] + prices[j];\n    dp_v := dp_v[j := max(buy, dp_v[j])];\n    dp := dp[j := max(sell, dp[j])];\n    j := j + 1;\n  }\n  return dp[n - 1];\n}\n```",
+ "reply_tokens": 667,
+ "done_reason": "stop"
+}

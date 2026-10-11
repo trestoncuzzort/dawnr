@@ -194,3 +194,18 @@ to address with separate training examples; these held-out witnesses remain eval
 All eight [CI jobs](out/gcp-student-2026-10-11-s1/ci.json) pass on `f321a718`: the standard-library
 suites on Linux, macOS and Windows with Python 3.10 and 3.12, and both CPU PyTorch jobs. The Python
 3.10 context-manager compatibility fix lives in dawnr's pytest plugin; the pinned engine tests stay intact.
+
+## Programming answers generated
+
+All 232 registered questions have one answer, generated in 2,103 seconds. The
+[generation summary](out/gcp-student-2026-10-11-s1/generation-summary.json) records the stages and
+each raw answer's hash. There are 103 parse failures, 30 well-formedness failures and 99 tasks.
+Of those tasks, 41 pass the original tests, 49 fail, six exclude a test through their preconditions,
+and three produce an undefined result. These are full-232 counts; the clean-182 gated score awaits
+the proof matrix and specification checks.
+
+Ten answers reach the 1,024-token cap and all ten fail parsing. The other 93 parse failures stop
+naturally. Increasing the token cap alone would leave those 93 failures unresolved. No answer is
+repaired or regenerated in this single-answer reading. The final training
+[receipt](out/gcp-student-2026-10-11-s1/adapter-run.json) and
+[log](out/gcp-student-2026-10-11-s1/run.log) retain the recipe and generation progress.

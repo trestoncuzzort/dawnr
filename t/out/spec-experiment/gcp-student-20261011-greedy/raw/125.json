@@ -1,0 +1,29 @@
+{
+ "task_id": "125",
+ "fn": "find_length",
+ "model": "t/out/gcp-student-2026-10-11-s1/merged",
+ "digest": "5539b0c56a7f",
+ "pool_version": "v5",
+ "prompt_version": "s1",
+ "options": {
+  "temperature": 0.0,
+  "seed": 1,
+  "num_predict": 1024,
+  "top_p": null,
+  "decoder": "transformers-batched",
+  "seeding": "per-problem"
+ },
+ "messages": [
+  {
+   "role": "system",
+   "content": "You write tasks in t, a small verified language. Reply with one fenced t task and nothing else: the header line, the task with the requested name and parameters, requires and ensures clauses that specify the result, and a body the provers can verify (loop invariants and decreases where there is a loop)."
+  },
+  {
+   "role": "user",
+   "content": "Problem: Write a function to find the maximum difference between the number of 0s and number of 1s in any sub-string of the given binary string.\n\nTests:\nassert find_length(\"11000010001\", 11) == 6\nassert find_length(\"10111\", 5) == 1\nassert find_length(\"11011101100101\", 14) == 2 \n\nWrite the t task named `find_length` with 2 parameter(s) of type(s) seq, int, in the order the tests pass them, returning int. The tests must pass and the ensures must specify the result."
+  }
+ ],
+ "reply": "```t\nt 0\ntask find_length(s: seq, n: int) returns (r: int)\n  requires n >= 0\n  requires n <= len(s)\n  ensures r >= 0\n  ensures r == max(0, max_ones - max_zeros)\n  ensures r == max(0, max_zeros - max_ones)\n{\n  var max_ones: int := 0;\n  var max_zeros: int := 0;\n  var current_ones: int := 0;\n  var current_zeros: int := 0;\n  var max_diff: int := 0;\n  var min_diff: int := 0;\n  \n  current_ones := 0;\n  current_zeros := 0;\n  min_diff := 0;\n  max_diff := 0;\n  \n  var i: int := 0;\n  while i < n\n    invariant 0 <= i and i <= n\n    invariant current_ones == count_ones(s, 0, i)\n    invariant current_zeros == count_zeros(s, 0, i)\n    invariant max_diff >= 0\n    invariant min_diff <= 0\n    decreases n - i\n  {\n    if s[i] == 1 {\n      current_ones := current_ones + 1;\n    } else {\n      current_zeros := current_zeros + 1;\n    }\n    var diff_ones: int := current_ones - current_zeros;\n    var diff_zeros: int := current_zeros - current_ones;\n    if diff_ones > max_diff {\n      max_diff := diff_ones;\n    }\n    if diff_zeros > min_diff {\n      min_diff := diff_zeros;\n    }\n    i := i + 1;\n  }\n  \n  r := max(max_diff, -min_diff);\n}\n```",
+ "reply_tokens": 411,
+ "done_reason": "stop"
+}

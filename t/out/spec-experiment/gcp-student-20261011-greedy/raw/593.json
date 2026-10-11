@@ -1,0 +1,29 @@
+{
+ "task_id": "593",
+ "fn": "removezero_ip",
+ "model": "t/out/gcp-student-2026-10-11-s1/merged",
+ "digest": "5539b0c56a7f",
+ "pool_version": "v5",
+ "prompt_version": "s1",
+ "options": {
+  "temperature": 0.0,
+  "seed": 1,
+  "num_predict": 1024,
+  "top_p": null,
+  "decoder": "transformers-batched",
+  "seeding": "per-problem"
+ },
+ "messages": [
+  {
+   "role": "system",
+   "content": "You write tasks in t, a small verified language. Reply with one fenced t task and nothing else: the header line, the task with the requested name and parameters, requires and ensures clauses that specify the result, and a body the provers can verify (loop invariants and decreases where there is a loop)."
+  },
+  {
+   "role": "user",
+   "content": "Problem: Write a function to remove leading zeroes from an ip address.\n\nTests:\nassert removezero_ip(\"216.08.094.196\")==('216.8.94.196') \nassert removezero_ip(\"12.01.024\")==('12.1.24') \nassert removezero_ip(\"216.08.094.0196\")==('216.8.94.196') \n\nWrite the t task named `removezero_ip` with 1 parameter(s) of type(s) seq, in the order the tests pass them, returning seq. The tests must pass and the ensures must specify the result."
+  }
+ ],
+ "reply": "```t\nt 0\ntask removezero_ip(s: seq) returns (r: seq)\n  ensures len(r) == len(s)\n  ensures forall i in [0, len(s)) . r[i] == s[i] and s[i] >= 48 and s[i] <= 57\n  ensures forall i in [0, len(r)) . r[i] != 48 or i == 0\n{\n  r := [];\n  var i: int := 0;\n  while i < len(s)\n    invariant 0 <= i and i <= len(s)\n    invariant len(r) == i\n    invariant forall j in [0, i) . r[j] == s[j] and s[j] >= 48 and s[j] <= 57\n    invariant forall j in [0, len(r)) . r[j] != 48 or j == 0\n    decreases len(s) - i\n  {\n    if i == 0 {\n      r := r + [s[i]];\n    } else {\n      if s[i] == 48 {\n        i := i + 1;\n      } else {\n        r := r + [s[i]];\n        i := i + 1;\n      }\n    }\n  }\n}\n```",
+ "reply_tokens": 289,
+ "done_reason": "stop"
+}

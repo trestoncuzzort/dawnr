@@ -1,0 +1,29 @@
+{
+ "task_id": "776",
+ "fn": "count_vowels",
+ "model": "t/out/gcp-student-2026-10-11-s1/merged",
+ "digest": "5539b0c56a7f",
+ "pool_version": "v5",
+ "prompt_version": "s1",
+ "options": {
+  "temperature": 0.0,
+  "seed": 1,
+  "num_predict": 1024,
+  "top_p": null,
+  "decoder": "transformers-batched",
+  "seeding": "per-problem"
+ },
+ "messages": [
+  {
+   "role": "system",
+   "content": "You write tasks in t, a small verified language. Reply with one fenced t task and nothing else: the header line, the task with the requested name and parameters, requires and ensures clauses that specify the result, and a body the provers can verify (loop invariants and decreases where there is a loop)."
+  },
+  {
+   "role": "user",
+   "content": "Problem: Write a function to count those characters which have vowels as their neighbors in the given string.\n\nTests:\nassert count_vowels('bestinstareels') == 7\nassert count_vowels('partofthejourneyistheend') == 12\nassert count_vowels('amazonprime') == 5\n\nWrite the t task named `count_vowels` with 1 parameter(s) of type(s) seq, in the order the tests pass them, returning int. The tests must pass and the ensures must specify the result."
+  }
+ ],
+ "reply": "```t\nt 0\ntask count_vowels(s: seq) returns (r: int)\n  ensures r == 0 ==> len(s) <= 2\n  ensures r == len(s) ==> len(s) <= 2\n  ensures r == 1 ==> len(s) == 2 and s[0] == 'a' or s[0] == 'e' or s[0] == 'i' or s[0] == 'o' or s[0] == 'u'\n  ensures r == len(s) - 1 ==> len(s) >= 2 and s[len(s) - 1] == 'a' or s[len(s) - 1] == 'e' or s[len(s) - 1] == 'i' or s[len(s) - 1] == 'o' or s[len(s) - 1] == 'u'\n  ensures r == len(s) - 2 ==> len(s) >= 3 and s[len(s) - 2] == 'a' or s[len(s) - 2] == 'e' or s[len(s) - 2] == 'i' or s[len(s) - 2] == 'o' or s[len(s) - 2] == 'u'\n  ensures r == len(s) - 3 ==> len(s) >= 4 and s[len(s) - 3] == 'a' or s[len(s) - 3] == 'e' or s[len(s) - 3] == 'i' or s[len(s) - 3] == 'o' or s[len(s) - 3] == 'u'\n  ensures r == len(s) - 4 ==> len(s) >= 5 and s[len(s) - 4] == 'a' or s[len(s) - 4] == 'e' or s[len(s) - 4] == 'i' or s[len(s) - 4] == 'o' or s[len(s) - 4] == 'u'\n  ensures r == len(s) - 5 ==> len(s) >= 6 and s[len(s) - 5] == 'a' or s[len(s) - 5] == 'e' or s[len(s) - 5] == 'i' or s[len(s) - 5] == 'o' or s[len(s) - 5] == 'u'\n  ensures r == len(s) - 6 ==> len(s) >= 7 and s[len(s) - 6] == 'a' or s[len(s) - 6] == 'e' or s[len(s) - 6] == 'i' or s[len(s) - 6] == 'o' or s[len(s) - 6] == 'u'\n  ensures r == len(s) - 7 ==> len(s) >= 8 and s[len(s) - 7] == 'a' or s[len(s) - 7] == 'e' or s[len(s) - 7] == 'i' or s[len(s) - 7] == 'o' or s[len(s) - 7] == 'u'\n  ensures r == len(s) - 8 ==> len(s) >= 9 and s[len(s) - 8] == 'a' or s[len(s) - 8] == 'e' or s[len(s) - 8] == 'i' or s[len(s) - 8] == 'o' or s[len(s) - 8] == 'u'\n  ensures r == len(s) - 9 ==> len(s) >= 10 and s[len(s) - 9] == 'a' or s[len(s) - 9] == 'e' or s[len(s) - 9] == 'i' or s[len(s) - 9] == 'o' or s[len(s) - 9] == 'u'\n  ensures r == len(s) - 10 ==> len(s) >= 11 and s[len(s) - 10] == 'a' or s[len(s) - 10] == 'e' or s[len(s) - 10] == 'i' or s[len(s) - 10] == 'o' or s[len(s) - 10] == 'u'\n  ensures r == len(s) - 11 ==> len(s) >= 12 and s[len(s) - 11] == 'a' or s[len(s) - 11] == 'e' or s[len(s) - 11] == 'i' or s[len(s) - 11] == 'o'",
+ "reply_tokens": 1024,
+ "done_reason": "length"
+}

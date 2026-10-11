@@ -1,0 +1,29 @@
+{
+ "task_id": "701",
+ "fn": "equilibrium_index",
+ "model": "t/out/gcp-student-2026-10-11-s1/merged",
+ "digest": "5539b0c56a7f",
+ "pool_version": "v5",
+ "prompt_version": "s1",
+ "options": {
+  "temperature": 0.0,
+  "seed": 1,
+  "num_predict": 1024,
+  "top_p": null,
+  "decoder": "transformers-batched",
+  "seeding": "per-problem"
+ },
+ "messages": [
+  {
+   "role": "system",
+   "content": "You write tasks in t, a small verified language. Reply with one fenced t task and nothing else: the header line, the task with the requested name and parameters, requires and ensures clauses that specify the result, and a body the provers can verify (loop invariants and decreases where there is a loop)."
+  },
+  {
+   "role": "user",
+   "content": "Problem: Write a function to find the equilibrium index of the given array.\n\nTests:\nassert equilibrium_index([1, 2, 3, 4, 1, 2, 3]) == 3\nassert equilibrium_index([-7, 1, 5, 2, -4, 3, 0]) == 3\nassert equilibrium_index([1, 2, 3]) == -1\n\nWrite the t task named `equilibrium_index` with 1 parameter(s) of type(s) seq, in the order the tests pass them, returning int. The tests must pass and the ensures must specify the result."
+  }
+ ],
+ "reply": "```t\nt 0\ntask equilibrium_index(arr: seq) returns (r: int)\n  requires len(arr) >= 0\n  ensures r == -1 ==> forall i in [0, len(arr)) . sum(arr[0..i]) != sum(arr[i+1..len(arr)))\n  ensures r != -1 ==> r >= 0 and r < len(arr) and sum(arr[0..r]) == sum(arr[r+1..len(arr)))\n{\n  var left_sum: int := 0;\n  var right_sum: int := 0;\n  for i in [0, len(arr)) {\n    right_sum := right_sum + arr[i];\n  }\n  r := -1;\n  left_sum := 0;\n  var i: int := 0;\n  while i < len(arr)\n    invariant 0 <= i and i <= len(arr)\n    invariant left_sum == sum(arr[0..i])\n    invariant right_sum == sum(arr[i..len(arr)))\n    invariant r == -1 ==> forall j in [0, i) . sum(arr[0..j]) != sum(arr[j+1..len(arr)))\n    invariant r != -1 ==> r >= 0 and r < i and sum(arr[0..r]) == sum(arr[r+1..len(arr)))\n    decreases len(arr) - i\n  {\n    left_sum := left_sum + arr[i];\n    right_sum := right_sum - arr[i];\n    if left_sum == right_sum {\n      r := i;\n    }\n    i := i + 1;\n  }\n}\n```",
+ "reply_tokens": 357,
+ "done_reason": "stop"
+}

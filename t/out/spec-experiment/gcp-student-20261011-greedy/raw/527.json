@@ -1,0 +1,29 @@
+{
+ "task_id": "527",
+ "fn": "get_pairs_count",
+ "model": "t/out/gcp-student-2026-10-11-s1/merged",
+ "digest": "5539b0c56a7f",
+ "pool_version": "v5",
+ "prompt_version": "s1",
+ "options": {
+  "temperature": 0.0,
+  "seed": 1,
+  "num_predict": 1024,
+  "top_p": null,
+  "decoder": "transformers-batched",
+  "seeding": "per-problem"
+ },
+ "messages": [
+  {
+   "role": "system",
+   "content": "You write tasks in t, a small verified language. Reply with one fenced t task and nothing else: the header line, the task with the requested name and parameters, requires and ensures clauses that specify the result, and a body the provers can verify (loop invariants and decreases where there is a loop)."
+  },
+  {
+   "role": "user",
+   "content": "Problem: Write a function to find all pairs in an integer array whose sum is equal to a given number.\n\nTests:\nassert get_pairs_count([1, 5, 7, -1, 5], 5, 6) == 3\nassert get_pairs_count([1, 5, 7, -1], 4, 6) == 2\nassert get_pairs_count([1, 1, 1, 1], 4, 2) == 6\n\nWrite the t task named `get_pairs_count` with 3 parameter(s) of type(s) seq, int, int, in the order the tests pass them, returning int. The tests must pass and the ensures must specify the result."
+  }
+ ],
+ "reply": "```t\nt 0\ntask get_pairs_count(arr: seq, target: int, count: int) returns (r: int)\n  requires len(arr) >= 0\n  ensures r == count\n{\n  r := 0;\n  var i: int := 0;\n  var j: int := 1;\n  while i < len(arr) and j < len(arr)\n    invariant 0 <= i and i < j and j <= len(arr)\n    invariant r == count\n    decreases j - i\n  {\n    var sum: int := arr[i] + arr[j];\n    if sum == target {\n      r := r + 1;\n    }\n    j := j + 1;\n  }\n}\n```",
+ "reply_tokens": 168,
+ "done_reason": "stop"
+}

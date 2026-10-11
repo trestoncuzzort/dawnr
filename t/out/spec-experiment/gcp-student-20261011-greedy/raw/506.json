@@ -1,0 +1,29 @@
+{
+ "task_id": "506",
+ "fn": "permutation_coefficient",
+ "model": "t/out/gcp-student-2026-10-11-s1/merged",
+ "digest": "5539b0c56a7f",
+ "pool_version": "v5",
+ "prompt_version": "s1",
+ "options": {
+  "temperature": 0.0,
+  "seed": 1,
+  "num_predict": 1024,
+  "top_p": null,
+  "decoder": "transformers-batched",
+  "seeding": "per-problem"
+ },
+ "messages": [
+  {
+   "role": "system",
+   "content": "You write tasks in t, a small verified language. Reply with one fenced t task and nothing else: the header line, the task with the requested name and parameters, requires and ensures clauses that specify the result, and a body the provers can verify (loop invariants and decreases where there is a loop)."
+  },
+  {
+   "role": "user",
+   "content": "Problem: Write a function to calculate the permutation coefficient of given p(n, k).\n\nTests:\nassert permutation_coefficient(10, 2) == 90\nassert permutation_coefficient(10, 3) == 720\nassert permutation_coefficient(10, 1) == 10\n\nWrite the t task named `permutation_coefficient` with 2 parameter(s) of type(s) int, int, in the order the tests pass them, returning int. The tests must pass and the ensures must specify the result."
+  }
+ ],
+ "reply": "```t\nt 0\ntask permutation_coefficient(n: int, k: int) returns (r: int)\n  requires n >= 0\n  requires k >= 0\n  requires k <= n\n  ensures r == n * (n - 1) * (n - 2) * ... * (n - k + 1)\n{\n  r := 1;\n  var i: int := 0;\n  while i < k\n    invariant 0 <= i and i <= k\n    invariant r == n * (n - 1) * (n - 2) * ... * (n - i + 1)\n    decreases k - i\n  {\n    r := r * (n - i);\n    i := i + 1;\n  }\n}\n```",
+ "reply_tokens": 179,
+ "done_reason": "stop"
+}

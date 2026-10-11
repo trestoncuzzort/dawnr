@@ -1,0 +1,29 @@
+{
+ "task_id": "957",
+ "fn": "get_First_Set_Bit_Pos",
+ "model": "t/out/gcp-student-2026-10-11-s1/merged",
+ "digest": "5539b0c56a7f",
+ "pool_version": "v5",
+ "prompt_version": "s1",
+ "options": {
+  "temperature": 0.0,
+  "seed": 1,
+  "num_predict": 1024,
+  "top_p": null,
+  "decoder": "transformers-batched",
+  "seeding": "per-problem"
+ },
+ "messages": [
+  {
+   "role": "system",
+   "content": "You write tasks in t, a small verified language. Reply with one fenced t task and nothing else: the header line, the task with the requested name and parameters, requires and ensures clauses that specify the result, and a body the provers can verify (loop invariants and decreases where there is a loop)."
+  },
+  {
+   "role": "user",
+   "content": "Problem: Write a python function to get the position of rightmost set bit.\n\nTests:\nassert get_First_Set_Bit_Pos(12) == 3\nassert get_First_Set_Bit_Pos(18) == 2\nassert get_First_Set_Bit_Pos(16) == 5\n\nWrite the t task named `get_First_Set_Bit_Pos` with 1 parameter(s) of type(s) int, in the order the tests pass them, returning int. The tests must pass and the ensures must specify the result."
+  }
+ ],
+ "reply": "```t\nt 0\ntask get_First_Set_Bit_Pos(n: int) returns (r: int)\n  requires n > 0\n  ensures r >= 0\n  ensures (n & (1 << r)) != 0\n  ensures forall i in [0, r) . (n & (1 << i)) == 0\n{\n  r := 0;\n  var i: int := 0;\n  while i < 32\n    invariant r >= 0\n    invariant i >= 0\n    invariant i <= 32\n    invariant forall j in [0, r) . (n & (1 << j)) == 0\n    invariant (n & (1 << i)) == 0\n    decreases 32 - i\n  {\n    if n & (1 << i) != 0 {\n      r := i;\n      return r;\n    }\n    i := i + 1;\n  }\n}\n```",
+ "reply_tokens": 216,
+ "done_reason": "stop"
+}

@@ -1,0 +1,29 @@
+{
+ "task_id": "699",
+ "fn": "min_Swaps",
+ "model": "t/out/gcp-student-2026-10-11-s1/merged",
+ "digest": "5539b0c56a7f",
+ "pool_version": "v5",
+ "prompt_version": "s1",
+ "options": {
+  "temperature": 0.0,
+  "seed": 1,
+  "num_predict": 1024,
+  "top_p": null,
+  "decoder": "transformers-batched",
+  "seeding": "per-problem"
+ },
+ "messages": [
+  {
+   "role": "system",
+   "content": "You write tasks in t, a small verified language. Reply with one fenced t task and nothing else: the header line, the task with the requested name and parameters, requires and ensures clauses that specify the result, and a body the provers can verify (loop invariants and decreases where there is a loop)."
+  },
+  {
+   "role": "user",
+   "content": "Problem: Write a python function to find the minimum number of swaps required to convert one binary string to another.\n\nTests:\nassert min_Swaps(\"1101\",\"1110\") == 1\nassert min_Swaps(\"1111\",\"0100\") == \"Not Possible\"\nassert min_Swaps(\"1110000\",\"0001101\") == 3\n\nWrite the t task named `min_Swaps` with 2 parameter(s) of type(s) seq, seq, in the order the tests pass them, returning int. The tests must pass and the ensures must specify the result."
+  }
+ ],
+ "reply": "```t\nt 0\ntask min_Swaps(s: seq, t: seq) returns (r: int)\n  requires len(s) == len(t)\n  requires all(b in s ==> b == 0 or b == 1)\n  requires all(b in t ==> b == 0 or b == 1)\n  ensures r == \"Not Possible\" or r >= 0\n  ensures r == \"Not Possible\" ==> len(s) != len(t) or not all(b in s ==> b == 0 or b == 1) or not all(b in t ==> b == 1)\n  ensures r != \"Not Possible\" ==> r == len(s) - 2 * count_ones(s) + 2 * count_ones(t)\n{\n  if len(s) != len(t) {\n    r := \"Not Possible\";\n    return;\n  }\n  var ones_s: int := 0;\n  var ones_t: int := 0;\n  var i: int := 0;\n  while i < len(s)\n    invariant 0 <= i and i <= len(s)\n    invariant ones_s == count_ones(s[0..i])\n    invariant ones_t == count_ones(t[0..i])\n    invariant r == \"Not Possible\" or r == i - 2 * ones_s + 2 * ones_t\n    decreases len(s) - i\n  {\n    if s[i] == 1 {\n      ones_s := ones_s + 1;\n    }\n    if t[i] == 1 {\n      ones_t := ones_t + 1;\n    }\n    i := i + 1;\n  }\n  if ones_s != ones_t {\n    r := \"Not Possible\";\n  } else {\n    var mismatches: int := 0;\n    i := 0;\n    while i < len(s)\n      invariant 0 <= i and i <= len(s)\n      invariant mismatches == count_mismatches(s[0..i], t[0..i])\n      decreases len(s) - i\n    {\n      if s[i] != t[i] {\n        mismatches := mismatches + 1;\n      }\n      i := i + 1;\n    }\n    r := mismatches / 2;\n  }\n}\n```",
+ "reply_tokens": 520,
+ "done_reason": "stop"
+}

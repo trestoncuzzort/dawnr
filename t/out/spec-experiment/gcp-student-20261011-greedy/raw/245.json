@@ -1,0 +1,29 @@
+{
+ "task_id": "245",
+ "fn": "max_sum",
+ "model": "t/out/gcp-student-2026-10-11-s1/merged",
+ "digest": "5539b0c56a7f",
+ "pool_version": "v5",
+ "prompt_version": "s1",
+ "options": {
+  "temperature": 0.0,
+  "seed": 1,
+  "num_predict": 1024,
+  "top_p": null,
+  "decoder": "transformers-batched",
+  "seeding": "per-problem"
+ },
+ "messages": [
+  {
+   "role": "system",
+   "content": "You write tasks in t, a small verified language. Reply with one fenced t task and nothing else: the header line, the task with the requested name and parameters, requires and ensures clauses that specify the result, and a body the provers can verify (loop invariants and decreases where there is a loop)."
+  },
+  {
+   "role": "user",
+   "content": "Problem: Write a function to find the maximum sum of bi-tonic sub-sequence for the given array.\n\nTests:\nassert max_sum([1, 15, 51, 45, 33, 100, 12, 18, 9], 9) == 194\nassert max_sum([80, 60, 30, 40, 20, 10], 6) == 210\nassert max_sum([2, 3 ,14, 16, 21, 23, 29, 30], 8) == 138\n\nWrite the t task named `max_sum` with 2 parameter(s) of type(s) seq, int, in the order the tests pass them, returning int. The tests must pass and the ensures must specify the result."
+  }
+ ],
+ "reply": "```t\nt 0\ntask max_sum(arr: seq, n: int) returns (r: int)\n  requires n >= 0\n  requires len(arr) == n\n  ensures r == 0 or exists i in [0, n) such that r == sum(arr[0..i+1]) and i < n and (i == 0 or arr[i] > arr[i-1]) and (i == n-1 or arr[i+1] < arr[i])\n{\n  if n == 0 {\n    r := 0;\n  } else {\n    var max_sum_ending_here: int := arr[0];\n    var max_sum_so_far: int := arr[0];\n    var i: int := 1;\n    while i < n\n      invariant 1 <= i and i <= n\n      invariant max_sum_ending_here == max(arr[0..i])\n      invariant max_sum_so_far >= max_sum_ending_here\n      decreases n - i\n    {\n      if arr[i] > max_sum_ending_here {\n        max_sum_ending_here := arr[i];\n      }\n      if max_sum_ending_here > max_sum_so_far {\n        max_sum_so_far := max_sum_ending_here;\n      }\n      i := i + 1;\n    }\n    r := max_sum_so_far;\n  }\n}\n```",
+ "reply_tokens": 306,
+ "done_reason": "stop"
+}

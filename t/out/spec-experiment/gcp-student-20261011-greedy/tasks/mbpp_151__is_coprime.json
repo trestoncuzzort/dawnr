@@ -1,0 +1,240 @@
+{
+ "t": 1,
+ "name": "mbpp_151__is_coprime",
+ "params": [
+  {
+   "name": "a",
+   "type": "int"
+  },
+  {
+   "name": "b",
+   "type": "int"
+  }
+ ],
+ "returns": [
+  {
+   "name": "r",
+   "type": "bool"
+  }
+ ],
+ "requires": [
+  {
+   "op": ">",
+   "args": [
+    {
+     "var": "a"
+    },
+    {
+     "int": 0
+    }
+   ]
+  },
+  {
+   "op": ">",
+   "args": [
+    {
+     "var": "b"
+    },
+    {
+     "int": 0
+    }
+   ]
+  }
+ ],
+ "ensures": [
+  {
+   "op": "==",
+   "args": [
+    {
+     "var": "r"
+    },
+    {
+     "op": "==",
+     "args": [
+      {
+       "op": "gcd",
+       "args": [
+        {
+         "var": "a"
+        },
+        {
+         "var": "b"
+        }
+       ]
+      },
+      {
+       "int": 1
+      }
+     ]
+    }
+   ]
+  }
+ ],
+ "body": [
+  {
+   "var": {
+    "name": "x",
+    "type": "int",
+    "init": {
+     "var": "a"
+    }
+   }
+  },
+  {
+   "var": {
+    "name": "y",
+    "type": "int",
+    "init": {
+     "var": "b"
+    }
+   }
+  },
+  {
+   "while": {
+    "cond": {
+     "op": ">",
+     "args": [
+      {
+       "var": "y"
+      },
+      {
+       "int": 0
+      }
+     ]
+    },
+    "invariants": [
+     {
+      "op": ">=",
+      "args": [
+       {
+        "var": "x"
+       },
+       {
+        "int": 0
+       }
+      ]
+     },
+     {
+      "op": ">=",
+      "args": [
+       {
+        "var": "y"
+       },
+       {
+        "int": 0
+       }
+      ]
+     },
+     {
+      "op": "==",
+      "args": [
+       {
+        "op": "+",
+        "args": [
+         {
+          "var": "x"
+         },
+         {
+          "var": "y"
+         }
+        ]
+       },
+       {
+        "op": "+",
+        "args": [
+         {
+          "var": "a"
+         },
+         {
+          "var": "b"
+         }
+        ]
+       }
+      ]
+     },
+     {
+      "op": "==",
+      "args": [
+       {
+        "var": "r"
+       },
+       {
+        "op": "==",
+        "args": [
+         {
+          "op": "gcd",
+          "args": [
+           {
+            "var": "x"
+           },
+           {
+            "var": "y"
+           }
+          ]
+         },
+         {
+          "int": 1
+         }
+        ]
+       }
+      ]
+     }
+    ],
+    "decreases": {
+     "var": "y"
+    },
+    "body": [
+     {
+      "var": {
+       "name": "tmp",
+       "type": "int",
+       "init": {
+        "var": "x"
+       }
+      }
+     },
+     {
+      "assign": [
+       "x",
+       {
+        "var": "y"
+       }
+      ]
+     },
+     {
+      "assign": [
+       "y",
+       {
+        "op": "mod",
+        "args": [
+         {
+          "var": "tmp"
+         },
+         {
+          "var": "y"
+         }
+        ]
+       }
+      ]
+     }
+    ]
+   }
+  },
+  {
+   "assign": [
+    "r",
+    {
+     "op": "==",
+     "args": [
+      {
+       "var": "x"
+      },
+      {
+       "int": 1
+      }
+     ]
+    }
+   ]
+  }
+ ]
+}

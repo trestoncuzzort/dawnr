@@ -1,0 +1,29 @@
+{
+ "task_id": "141",
+ "fn": "pancake_sort",
+ "model": "t/out/gcp-student-2026-10-11-s1/merged",
+ "digest": "5539b0c56a7f",
+ "pool_version": "v5",
+ "prompt_version": "s1",
+ "options": {
+  "temperature": 0.0,
+  "seed": 1,
+  "num_predict": 1024,
+  "top_p": null,
+  "decoder": "transformers-batched",
+  "seeding": "per-problem"
+ },
+ "messages": [
+  {
+   "role": "system",
+   "content": "You write tasks in t, a small verified language. Reply with one fenced t task and nothing else: the header line, the task with the requested name and parameters, requires and ensures clauses that specify the result, and a body the provers can verify (loop invariants and decreases where there is a loop)."
+  },
+  {
+   "role": "user",
+   "content": "Problem: Write a function to sort a list of elements using pancake sort.\n\nTests:\nassert pancake_sort([15, 79, 25, 38, 69]) == [15, 25, 38, 69, 79]\nassert pancake_sort([98, 12, 54, 36, 85]) == [12, 36, 54, 85, 98]\nassert pancake_sort([41, 42, 32, 12, 23]) == [12, 23, 32, 41, 42]\n\nWrite the t task named `pancake_sort` with 1 parameter(s) of type(s) seq, in the order the tests pass them, returning seq. The tests must pass and the ensures must specify the result."
+  }
+ ],
+ "reply": "```t\nt 0\ntask pancake_sort(s: seq) returns (r: seq)\n  requires len(s) >= 0\n  ensures len(r) == len(s)\n  ensures forall i in [0, len(s)) . r[i] <= r[i + 1]\n{\n  r := s;\n  var i: int := len(r) - 1;\n  while i > 0\n    invariant 0 <= i and i <= len(r)\n    invariant len(r) == len(s)\n    invariant forall j in [0, i) . r[j] <= r[j + 1]\n    decreases i\n  {\n    var max_idx: int := i;\n    var j: int := i - 1;\n    while j >= 0 and r[j] > r[max_idx]\n      invariant 0 <= j and j <= i\n      invariant j <= max_idx\n      decreases i - j\n    {\n      max_idx := j;\n      j := j - 1;\n    }\n    if max_idx != i {\n      r := r[0..max_idx + 1] + r[max_idx + 1..i + 1] + r[i + 1..len(r)];\n      r := r[0..i] + r[i + 1..len(r)];\n    }\n    i := i - 1;\n  }\n}\n```",
+ "reply_tokens": 312,
+ "done_reason": "stop"
+}

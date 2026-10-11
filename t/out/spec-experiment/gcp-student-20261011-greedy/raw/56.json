@@ -1,0 +1,29 @@
+{
+ "task_id": "56",
+ "fn": "check",
+ "model": "t/out/gcp-student-2026-10-11-s1/merged",
+ "digest": "5539b0c56a7f",
+ "pool_version": "v5",
+ "prompt_version": "s1",
+ "options": {
+  "temperature": 0.0,
+  "seed": 1,
+  "num_predict": 1024,
+  "top_p": null,
+  "decoder": "transformers-batched",
+  "seeding": "per-problem"
+ },
+ "messages": [
+  {
+   "role": "system",
+   "content": "You write tasks in t, a small verified language. Reply with one fenced t task and nothing else: the header line, the task with the requested name and parameters, requires and ensures clauses that specify the result, and a body the provers can verify (loop invariants and decreases where there is a loop)."
+  },
+  {
+   "role": "user",
+   "content": "Problem: Write a python function to check if a given number is one less than twice its reverse.\n\nTests:\nassert check(70) == False\nassert check(23) == False\nassert check(73) == True\n\nWrite the t task named `check` with 1 parameter(s) of type(s) int, in the order the tests pass them, returning bool. The tests must pass and the ensures must specify the result."
+  }
+ ],
+ "reply": "```t\nt 1\ngate loops\ntask check(n: int) returns (r: bool)\n  requires n >= 0\n  ensures r == (n == 2 * reverse(n) - 1)\n{\n  var rev: int := 0;\n  var tmp: int := n;\n  while tmp > 0\n    invariant rev * 10 + tmp % 10 == reverse(tmp)\n    invariant rev >= 0\n    decreases tmp\n  {\n    rev := rev * 10 + tmp % 10;\n    tmp := tmp / 10;\n  }\n  r := n == 2 * rev - 1;\n}\n```",
+ "reply_tokens": 154,
+ "done_reason": "stop"
+}

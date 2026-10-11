@@ -1,0 +1,29 @@
+{
+ "task_id": "24",
+ "fn": "binary_to_decimal",
+ "model": "t/out/gcp-student-2026-10-11-s1/merged",
+ "digest": "5539b0c56a7f",
+ "pool_version": "v5",
+ "prompt_version": "s1",
+ "options": {
+  "temperature": 0.0,
+  "seed": 1,
+  "num_predict": 1024,
+  "top_p": null,
+  "decoder": "transformers-batched",
+  "seeding": "per-problem"
+ },
+ "messages": [
+  {
+   "role": "system",
+   "content": "You write tasks in t, a small verified language. Reply with one fenced t task and nothing else: the header line, the task with the requested name and parameters, requires and ensures clauses that specify the result, and a body the provers can verify (loop invariants and decreases where there is a loop)."
+  },
+  {
+   "role": "user",
+   "content": "Problem: Write a function to convert the given binary number to its decimal equivalent.\n\nTests:\nassert binary_to_decimal(100) == 4\nassert binary_to_decimal(1011) == 11\nassert binary_to_decimal(1101101) == 109\n\nWrite the t task named `binary_to_decimal` with 1 parameter(s) of type(s) int, in the order the tests pass them, returning int. The tests must pass and the ensures must specify the result."
+  }
+ ],
+ "reply": "```t\nt 0\ntask binary_to_decimal(bin: int) returns (dec: int)\n  requires bin >= 0\n  requires bin <= 1023\n  ensures dec == bin\n{\n  dec := 0;\n  var i: int := 0;\n  while i < 32\n    invariant dec == bin\n    invariant i >= 0 and i <= 32\n    decreases 32 - i\n  {\n    if bin == 0 {\n      return dec;\n    }\n    dec := dec + bin;\n    bin := bin - dec;\n    i := i + 1;\n  }\n}\n```",
+ "reply_tokens": 149,
+ "done_reason": "stop"
+}

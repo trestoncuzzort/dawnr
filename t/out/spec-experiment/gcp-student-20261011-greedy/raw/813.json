@@ -1,0 +1,29 @@
+{
+ "task_id": "813",
+ "fn": "string_length",
+ "model": "t/out/gcp-student-2026-10-11-s1/merged",
+ "digest": "5539b0c56a7f",
+ "pool_version": "v5",
+ "prompt_version": "s1",
+ "options": {
+  "temperature": 0.0,
+  "seed": 1,
+  "num_predict": 1024,
+  "top_p": null,
+  "decoder": "transformers-batched",
+  "seeding": "per-problem"
+ },
+ "messages": [
+  {
+   "role": "system",
+   "content": "You write tasks in t, a small verified language. Reply with one fenced t task and nothing else: the header line, the task with the requested name and parameters, requires and ensures clauses that specify the result, and a body the provers can verify (loop invariants and decreases where there is a loop)."
+  },
+  {
+   "role": "user",
+   "content": "Problem: Write a function to find length of the string.\n\nTests:\nassert string_length('python')==6\nassert string_length('program')==7\nassert string_length('language')==8\n\nWrite the t task named `string_length` with 1 parameter(s) of type(s) seq, in the order the tests pass them, returning int. The tests must pass and the ensures must specify the result."
+  }
+ ],
+ "reply": "```t\nt 0\ntask string_length(s: seq) returns (r: int)\n  ensures r == len(s)\n{\n  r := 0;\n  var i: int := 0;\n  while i < len(s)\n    invariant r == i\n    invariant i >= 0 and i <= len(s)\n    decreases len(s) - i\n  {\n    r := r + 1;\n    i := i + 1;\n  }\n}\n```",
+ "reply_tokens": 110,
+ "done_reason": "stop"
+}

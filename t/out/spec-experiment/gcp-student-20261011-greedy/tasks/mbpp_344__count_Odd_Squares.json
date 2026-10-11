@@ -1,0 +1,144 @@
+{
+ "t": 1,
+ "name": "mbpp_344__count_Odd_Squares",
+ "params": [
+  {
+   "name": "a",
+   "type": "int"
+  },
+  {
+   "name": "b",
+   "type": "int"
+  }
+ ],
+ "returns": [
+  {
+   "name": "r",
+   "type": "int"
+  }
+ ],
+ "requires": [
+  {
+   "op": "<=",
+   "args": [
+    {
+     "var": "a"
+    },
+    {
+     "var": "b"
+    }
+   ]
+  }
+ ],
+ "ensures": [
+  {
+   "op": "==",
+   "args": [
+    {
+     "var": "r"
+    },
+    {
+     "op": "-",
+     "args": [
+      {
+       "op": "+",
+       "args": [
+        {
+         "op": "-",
+         "args": [
+          {
+           "var": "b"
+          },
+          {
+           "var": "a"
+          }
+         ]
+        },
+        {
+         "int": 1
+        }
+       ]
+      },
+      {
+       "op": "div",
+       "args": [
+        {
+         "op": "+",
+         "args": [
+          {
+           "op": "-",
+           "args": [
+            {
+             "var": "b"
+            },
+            {
+             "var": "a"
+            }
+           ]
+          },
+          {
+           "int": 1
+          }
+         ]
+        },
+        {
+         "int": 2
+        }
+       ]
+      }
+     ]
+    }
+   ]
+  }
+ ],
+ "body": [
+  {
+   "assign": [
+    "r",
+    {
+     "op": "+",
+     "args": [
+      {
+       "op": "-",
+       "args": [
+        {
+         "var": "b"
+        },
+        {
+         "var": "a"
+        }
+       ]
+      },
+      {
+       "int": 1
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "assign": [
+    "r",
+    {
+     "op": "-",
+     "args": [
+      {
+       "var": "r"
+      },
+      {
+       "op": "div",
+       "args": [
+        {
+         "var": "r"
+        },
+        {
+         "int": 2
+        }
+       ]
+      }
+     ]
+    }
+   ]
+  }
+ ]
+}

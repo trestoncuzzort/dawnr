@@ -1,0 +1,29 @@
+{
+ "task_id": "597",
+ "fn": "find_kth",
+ "model": "t/out/gcp-student-2026-10-11-s1/merged",
+ "digest": "5539b0c56a7f",
+ "pool_version": "v5",
+ "prompt_version": "s1",
+ "options": {
+  "temperature": 0.0,
+  "seed": 1,
+  "num_predict": 1024,
+  "top_p": null,
+  "decoder": "transformers-batched",
+  "seeding": "per-problem"
+ },
+ "messages": [
+  {
+   "role": "system",
+   "content": "You write tasks in t, a small verified language. Reply with one fenced t task and nothing else: the header line, the task with the requested name and parameters, requires and ensures clauses that specify the result, and a body the provers can verify (loop invariants and decreases where there is a loop)."
+  },
+  {
+   "role": "user",
+   "content": "Problem: Write a function to find kth element from the given two sorted arrays.\n\nTests:\nassert find_kth([2, 3, 6, 7, 9], [1, 4, 8, 10], 5, 4, 5) == 6\nassert find_kth([100, 112, 256, 349, 770], [72, 86, 113, 119, 265, 445, 892], 5, 7, 7) == 256\nassert find_kth([3, 4, 7, 8, 10], [2, 5, 9, 11], 5, 4, 6) == 8\n\nWrite the t task named `find_kth` with 5 parameter(s) of type(s) seq, seq, int, int, int, in the order the tests pass them, returning int. The tests must pass and the ensures must specify the result."
+  }
+ ],
+ "reply": "```t\nt 0\ntask find_kth(a: seq, b: seq, k: int, i: int, j: int) returns (r: int)\n  requires k >= 0\n  requires k <= len(a) + len(b)\n  requires i >= 0 and i <= len(a)\n  requires j >= 0 and j <= len(b)\n  requires i + j == k\n  ensures r == a[i] or r == b[j]\n  ensures i == 0 ==> r == a[0]\n  ensures j == 0 ==> r == b[0]\n  ensures i == len(a) ==> r == b[j]\n  ensures j == len(b) ==> r == a[i]\n  ensures i == 0 and j == 0 ==> false\n{\n  if i == 0 {\n    r := b[j];\n  } else {\n    if j == 0 {\n      r := a[i];\n    } else {\n      if a[i] < b[j] {\n        r := a[i];\n      } else {\n        r := b[j];\n      }\n    }\n  }\n}\n```",
+ "reply_tokens": 259,
+ "done_reason": "stop"
+}

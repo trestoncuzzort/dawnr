@@ -1,0 +1,29 @@
+{
+ "task_id": "609",
+ "fn": "floor_Min",
+ "model": "t/out/gcp-student-2026-10-11-s1/merged",
+ "digest": "5539b0c56a7f",
+ "pool_version": "v5",
+ "prompt_version": "s1",
+ "options": {
+  "temperature": 0.0,
+  "seed": 1,
+  "num_predict": 1024,
+  "top_p": null,
+  "decoder": "transformers-batched",
+  "seeding": "per-problem"
+ },
+ "messages": [
+  {
+   "role": "system",
+   "content": "You write tasks in t, a small verified language. Reply with one fenced t task and nothing else: the header line, the task with the requested name and parameters, requires and ensures clauses that specify the result, and a body the provers can verify (loop invariants and decreases where there is a loop)."
+  },
+  {
+   "role": "user",
+   "content": "Problem: Write a python function to find minimum possible value for the given periodic function.\n\nTests:\nassert floor_Min(10,20,30) == 15\nassert floor_Min(1,2,1) == 0\nassert floor_Min(11,10,9) == 9\n\nWrite the t task named `floor_Min` with 3 parameter(s) of type(s) int, int, int, in the order the tests pass them, returning int. The tests must pass and the ensures must specify the result."
+  }
+ ],
+ "reply": "```t\nt 0\ntask floor_Min(a: int, b: int, c: int) returns (r: int)\n  ensures r == a or r == b or r == c\n  ensures r <= a and r <= b and r <= c\n{\n  if a <= b and a <= c {\n    r := a;\n  } else {\n    if b <= c {\n      r := b;\n    } else {\n      r := c;\n    }\n  }\n}\n```",
+ "reply_tokens": 114,
+ "done_reason": "stop"
+}

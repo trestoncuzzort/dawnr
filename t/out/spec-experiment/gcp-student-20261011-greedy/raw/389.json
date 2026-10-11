@@ -1,0 +1,29 @@
+{
+ "task_id": "389",
+ "fn": "find_lucas",
+ "model": "t/out/gcp-student-2026-10-11-s1/merged",
+ "digest": "5539b0c56a7f",
+ "pool_version": "v5",
+ "prompt_version": "s1",
+ "options": {
+  "temperature": 0.0,
+  "seed": 1,
+  "num_predict": 1024,
+  "top_p": null,
+  "decoder": "transformers-batched",
+  "seeding": "per-problem"
+ },
+ "messages": [
+  {
+   "role": "system",
+   "content": "You write tasks in t, a small verified language. Reply with one fenced t task and nothing else: the header line, the task with the requested name and parameters, requires and ensures clauses that specify the result, and a body the provers can verify (loop invariants and decreases where there is a loop)."
+  },
+  {
+   "role": "user",
+   "content": "Problem: Write a function to find the n'th lucas number.\n\nTests:\nassert find_lucas(9) == 76\nassert find_lucas(4) == 7\nassert find_lucas(3) == 4\n\nWrite the t task named `find_lucas` with 1 parameter(s) of type(s) int, in the order the tests pass them, returning int. The tests must pass and the ensures must specify the result."
+  }
+ ],
+ "reply": "```t\nt 0\ntask find_lucas(n: int) returns (r: int)\n  requires n >= 0\n  ensures r == lucas(n)\n{\n  if n == 0 {\n    r := 2;\n  } else {\n    if n == 1 {\n      r := 1;\n    } else {\n      var a: int := 2;\n      var b: int := 1;\n      var i: int := 2;\n      while i < n\n        invariant 2 <= i and i <= n\n        invariant a == lucas(i - 2)\n        invariant b == lucas(i - 1)\n        decreases n - i\n      {\n        var c: int := a + b;\n        a := b;\n        b := c;\n        i := i + 1;\n      }\n      r := b;\n    }\n  }\n}\n```",
+ "reply_tokens": 210,
+ "done_reason": "stop"
+}

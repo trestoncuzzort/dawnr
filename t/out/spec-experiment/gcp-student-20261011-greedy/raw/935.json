@@ -1,0 +1,29 @@
+{
+ "task_id": "935",
+ "fn": "series_sum",
+ "model": "t/out/gcp-student-2026-10-11-s1/merged",
+ "digest": "5539b0c56a7f",
+ "pool_version": "v5",
+ "prompt_version": "s1",
+ "options": {
+  "temperature": 0.0,
+  "seed": 1,
+  "num_predict": 1024,
+  "top_p": null,
+  "decoder": "transformers-batched",
+  "seeding": "per-problem"
+ },
+ "messages": [
+  {
+   "role": "system",
+   "content": "You write tasks in t, a small verified language. Reply with one fenced t task and nothing else: the header line, the task with the requested name and parameters, requires and ensures clauses that specify the result, and a body the provers can verify (loop invariants and decreases where there is a loop)."
+  },
+  {
+   "role": "user",
+   "content": "Problem: Write a function to calculate the sum of series 1\u00b2+2\u00b2+3\u00b2+\u2026.+n\u00b2.\n\nTests:\nassert series_sum(6)==91\nassert series_sum(7)==140\nassert series_sum(12)==650\n\nWrite the t task named `series_sum` with 1 parameter(s) of type(s) int, in the order the tests pass them, returning int. The tests must pass and the ensures must specify the result."
+  }
+ ],
+ "reply": "```t\nt 0\ntask series_sum(n: int) returns (r: int)\n  requires n >= 0\n  ensures r == n * (n + 1) * (2 * n + 1) / 6\n{\n  r := 0;\n  var i: int := 1;\n  while i <= n\n    invariant r == i * i - 1\n    invariant i >= 1 and i <= n + 1\n    decreases n - i + 1\n  {\n    r := r + i * i;\n    i := i + 1;\n  }\n}\n```",
+ "reply_tokens": 140,
+ "done_reason": "stop"
+}

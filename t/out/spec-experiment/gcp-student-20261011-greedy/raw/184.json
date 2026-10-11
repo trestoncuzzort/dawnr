@@ -1,0 +1,29 @@
+{
+ "task_id": "184",
+ "fn": "greater_specificnum",
+ "model": "t/out/gcp-student-2026-10-11-s1/merged",
+ "digest": "5539b0c56a7f",
+ "pool_version": "v5",
+ "prompt_version": "s1",
+ "options": {
+  "temperature": 0.0,
+  "seed": 1,
+  "num_predict": 1024,
+  "top_p": null,
+  "decoder": "transformers-batched",
+  "seeding": "per-problem"
+ },
+ "messages": [
+  {
+   "role": "system",
+   "content": "You write tasks in t, a small verified language. Reply with one fenced t task and nothing else: the header line, the task with the requested name and parameters, requires and ensures clauses that specify the result, and a body the provers can verify (loop invariants and decreases where there is a loop)."
+  },
+  {
+   "role": "user",
+   "content": "Problem: Write a function to find all the values in a list that are greater than a specified number.\n\nTests:\nassert greater_specificnum([220, 330, 500],200)==True\nassert greater_specificnum([12, 17, 21],20)==False\nassert greater_specificnum([1,2,3,4],10)==False\n\nWrite the t task named `greater_specificnum` with 2 parameter(s) of type(s) seq, int, in the order the tests pass them, returning bool. The tests must pass and the ensures must specify the result."
+  }
+ ],
+ "reply": "```t\nt 0\ntask greater_specificnum(s: seq, n: int) returns (r: bool)\n  ensures r == (exists i in [0, len(s)) . s[i] > n)\n{\n  r := false;\n  var i: int := 0;\n  while i < len(s)\n    invariant 0 <= i and i <= len(s)\n    invariant r == (exists j in [0, i) . s[j] > n)\n    decreases len(s) - i\n  {\n    if s[i] > n {\n      r := true;\n    }\n    i := i + 1;\n  }\n}\n```",
+ "reply_tokens": 152,
+ "done_reason": "stop"
+}

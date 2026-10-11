@@ -1,0 +1,392 @@
+t/out/gcp-student-2026-10-11-s1/train-rows.jsonl: OK
+t/out/gcp-student-2026-10-11-s1/spec-heldout.jsonl: OK
+Fetching 12 files:   0%|          | 0/12 [00:00<?, ?it/s]Fetching 12 files: 100%|██████████| 12/12 [00:00<00:00, 601.28it/s]
+{"rows": 406, "used": 405, "used_by_kind": {"spec-given": 330, "sft": 75}, "dropped": [{"index": 294, "kind": "spec-given", "task_id": null, "name": "vericoding_da0085__findMinimumTotalDistance"}], "base_revision": "851bf6e806efd8d0a36b00ddf55e13ccb7b8cd0a"}
+No prebuilt binary for CUDA 12.9, loading CUDA 12.8 instead. Set BNB_CUDA_VERSION to override.
+rows: 405 used, 1 dropped as longer than 2845 tokens; tokens per row median 396, longest 2069
+Loading weights:   0%|          | 0/426 [00:00<?, ?it/s]Loading weights:   0%|          | 1/426 [00:00<02:21,  2.99it/s]Loading weights:   1%|▏         | 6/426 [00:00<00:26, 15.81it/s]Loading weights:   6%|▌         | 26/426 [00:00<00:06, 66.36it/s]Loading weights:  11%|█         | 45/426 [00:00<00:03, 98.55it/s]Loading weights:  15%|█▌        | 66/426 [00:00<00:02, 126.42it/s]Loading weights:  21%|██        | 90/426 [00:00<00:02, 156.31it/s]Loading weights:  25%|██▌       | 108/426 [00:01<00:02, 157.13it/s]Loading weights:  31%|███       | 132/426 [00:01<00:01, 175.74it/s]Loading weights:  35%|███▌      | 151/426 [00:01<00:01, 172.95it/s]Loading weights:  40%|████      | 172/426 [00:01<00:01, 177.16it/s]Loading weights:  46%|████▌     | 195/426 [00:01<00:01, 191.11it/s]Loading weights:  50%|█████     | 215/426 [00:01<00:01, 183.60it/s]Loading weights:  56%|█████▌    | 238/426 [00:01<00:00, 191.41it/s]Loading weights:  61%|██████    | 258/426 [00:01<00:00, 181.82it/s]Loading weights:  65%|██████▌   | 279/426 [00:01<00:00, 186.49it/s]Loading weights:  72%|███████▏  | 305/426 [00:02<00:00, 201.35it/s]Loading weights:  77%|███████▋  | 326/426 [00:02<00:00, 199.12it/s]Loading weights:  81%|████████▏ | 347/426 [00:02<00:00, 188.70it/s]Loading weights:  86%|████████▌ | 367/426 [00:02<00:00, 182.31it/s]Loading weights:  92%|█████████▏| 393/426 [00:02<00:00, 200.20it/s]Loading weights:  97%|█████████▋| 414/426 [00:02<00:00, 191.28it/s]Loading weights: 100%|██████████| 426/426 [00:02<00:00, 160.17it/s]
+trainable parameters: 129,859,584
+  0%|          | 0/130 [00:00<?, ?it/s]/usr/local/lib/python3.10/dist-packages/torch/_dynamo/eval_frame.py:1044: UserWarning: torch.utils.checkpoint: the use_reentrant parameter should be passed explicitly. Starting in PyTorch 2.9, calling checkpoint without use_reentrant will raise an exception. use_reentrant=False is recommended, but if you need to preserve the current default behavior, you can pass use_reentrant=True. Refer to docs for more details on the differences between the two variants.
+  return fn(*args, **kwargs)
+[transformers] `causal_conv1d_fn` is falling back to its reference PyTorch implementation because `causal_conv1d` is not installed. This is correct but much slower; install `causal_conv1d` for the optimized kernel.
+[transformers] `chunk_gated_delta_rule` is falling back to its reference PyTorch implementation because `flash-linear-attention` is not installed. This is correct but much slower; install `flash-linear-attention` for the optimized kernel.
+  1%|          | 1/130 [00:18<39:52, 18.55s/it]step 1: loss 0.2860
+                                               {'loss': '0.286', 'grad_norm': '0.2038', 'learning_rate': '0.0002', 'epoch': '0.03951'}
+  1%|          | 1/130 [00:18<39:52, 18.55s/it]  2%|▏         | 2/130 [00:36<38:36, 18.10s/it]step 2: loss 0.2235
+                                               {'loss': '0.2235', 'grad_norm': '0.139', 'learning_rate': '0.0002', 'epoch': '0.07901'}
+  2%|▏         | 2/130 [00:36<38:36, 18.10s/it]  2%|▏         | 3/130 [00:57<41:34, 19.64s/it]step 3: loss 0.1523
+                                               {'loss': '0.1523', 'grad_norm': '0.2022', 'learning_rate': '0.0002', 'epoch': '0.1185'}
+  2%|▏         | 3/130 [00:57<41:34, 19.64s/it]  3%|▎         | 4/130 [01:14<38:35, 18.38s/it]step 4: loss 0.1568
+                                               {'loss': '0.1568', 'grad_norm': '0.2001', 'learning_rate': '0.0002', 'epoch': '0.158'}
+  3%|▎         | 4/130 [01:14<38:35, 18.38s/it]  4%|▍         | 5/130 [01:34<39:55, 19.16s/it]step 5: loss 0.1060
+                                               {'loss': '0.106', 'grad_norm': '0.1166', 'learning_rate': '0.0002', 'epoch': '0.1975'}
+  4%|▍         | 5/130 [01:34<39:55, 19.16s/it]  5%|▍         | 6/130 [01:57<41:54, 20.28s/it]step 6: loss 0.0941
+                                               {'loss': '0.09413', 'grad_norm': '0.09139', 'learning_rate': '0.0002', 'epoch': '0.237'}
+  5%|▍         | 6/130 [01:57<41:54, 20.28s/it]  5%|▌         | 7/130 [02:14<39:13, 19.13s/it]step 7: loss 0.1320
+                                               {'loss': '0.132', 'grad_norm': '0.119', 'learning_rate': '0.0002', 'epoch': '0.2765'}
+  5%|▌         | 7/130 [02:14<39:13, 19.13s/it]  6%|▌         | 8/130 [02:31<37:30, 18.45s/it]step 8: loss 0.1063
+                                               {'loss': '0.1063', 'grad_norm': '0.1348', 'learning_rate': '0.0002', 'epoch': '0.316'}
+  6%|▌         | 8/130 [02:31<37:30, 18.45s/it]  7%|▋         | 9/130 [02:48<36:31, 18.11s/it]step 9: loss 0.1287
+                                               {'loss': '0.1287', 'grad_norm': '0.2127', 'learning_rate': '0.0002', 'epoch': '0.3556'}
+  7%|▋         | 9/130 [02:48<36:31, 18.11s/it]  8%|▊         | 10/130 [03:08<37:45, 18.88s/it]step 10: loss 0.0662
+                                                {'loss': '0.06623', 'grad_norm': '0.08341', 'learning_rate': '0.0002', 'epoch': '0.3951'}
+  8%|▊         | 10/130 [03:08<37:45, 18.88s/it]  8%|▊         | 11/130 [03:30<38:47, 19.56s/it]step 11: loss 0.0748
+                                                {'loss': '0.07483', 'grad_norm': '0.09039', 'learning_rate': '0.0002', 'epoch': '0.4346'}
+  8%|▊         | 11/130 [03:30<38:47, 19.56s/it]  9%|▉         | 12/130 [03:47<37:26, 19.04s/it]step 12: loss 0.0623
+                                                {'loss': '0.06231', 'grad_norm': '0.08665', 'learning_rate': '0.0002', 'epoch': '0.4741'}
+  9%|▉         | 12/130 [03:47<37:26, 19.04s/it] 10%|█         | 13/130 [04:05<36:07, 18.53s/it]step 13: loss 0.0883
+                                                {'loss': '0.08831', 'grad_norm': '0.09753', 'learning_rate': '0.0002', 'epoch': '0.5136'}
+ 10%|█         | 13/130 [04:05<36:07, 18.53s/it] 11%|█         | 14/130 [04:24<36:19, 18.79s/it]step 14: loss 0.0407
+                                                {'loss': '0.04073', 'grad_norm': '0.08561', 'learning_rate': '0.0002', 'epoch': '0.5531'}
+ 11%|█         | 14/130 [04:24<36:19, 18.79s/it] 12%|█▏        | 15/130 [04:44<36:41, 19.15s/it]step 15: loss 0.0927
+                                                {'loss': '0.09269', 'grad_norm': '0.1039', 'learning_rate': '0.0002', 'epoch': '0.5926'}
+ 12%|█▏        | 15/130 [04:44<36:41, 19.15s/it] 12%|█▏        | 16/130 [05:03<35:57, 18.92s/it]step 16: loss 0.0741
+                                                {'loss': '0.07408', 'grad_norm': '0.1002', 'learning_rate': '0.0002', 'epoch': '0.6321'}
+ 12%|█▏        | 16/130 [05:03<35:57, 18.92s/it] 13%|█▎        | 17/130 [05:21<35:22, 18.78s/it]step 17: loss 0.0301
+                                                {'loss': '0.03007', 'grad_norm': '0.05539', 'learning_rate': '0.0002', 'epoch': '0.6716'}
+ 13%|█▎        | 17/130 [05:21<35:22, 18.78s/it] 14%|█▍        | 18/130 [05:39<34:29, 18.47s/it]step 18: loss 0.0928
+                                                {'loss': '0.09279', 'grad_norm': '0.1539', 'learning_rate': '0.0002', 'epoch': '0.7111'}
+ 14%|█▍        | 18/130 [05:39<34:29, 18.47s/it] 15%|█▍        | 19/130 [05:56<33:40, 18.20s/it]step 19: loss 0.0646
+                                                {'loss': '0.06456', 'grad_norm': '0.0943', 'learning_rate': '0.0002', 'epoch': '0.7506'}
+ 15%|█▍        | 19/130 [05:56<33:40, 18.20s/it] 15%|█▌        | 20/130 [06:16<33:57, 18.52s/it]step 20: loss 0.0797
+                                                {'loss': '0.07972', 'grad_norm': '0.0979', 'learning_rate': '0.0002', 'epoch': '0.7901'}
+ 15%|█▌        | 20/130 [06:16<33:57, 18.52s/it] 16%|█▌        | 21/130 [06:34<33:45, 18.58s/it]step 21: loss 0.0508
+                                                {'loss': '0.05085', 'grad_norm': '0.07456', 'learning_rate': '0.0002', 'epoch': '0.8296'}
+ 16%|█▌        | 21/130 [06:34<33:45, 18.58s/it] 17%|█▋        | 22/130 [06:57<35:51, 19.93s/it]step 22: loss 0.0394
+                                                {'loss': '0.03943', 'grad_norm': '0.06159', 'learning_rate': '0.0002', 'epoch': '0.8691'}
+ 17%|█▋        | 22/130 [06:57<35:51, 19.93s/it] 18%|█▊        | 23/130 [07:15<34:22, 19.28s/it]step 23: loss 0.0716
+                                                {'loss': '0.07164', 'grad_norm': '0.1029', 'learning_rate': '0.0002', 'epoch': '0.9086'}
+ 18%|█▊        | 23/130 [07:15<34:22, 19.28s/it] 18%|█▊        | 24/130 [07:35<34:25, 19.49s/it]step 24: loss 0.0263
+                                                {'loss': '0.02628', 'grad_norm': '0.05951', 'learning_rate': '0.0002', 'epoch': '0.9481'}
+ 18%|█▊        | 24/130 [07:35<34:25, 19.49s/it] 19%|█▉        | 25/130 [07:58<36:07, 20.64s/it]step 25: loss 0.0447
+                                                {'loss': '0.04471', 'grad_norm': '0.06695', 'learning_rate': '0.0002', 'epoch': '0.9877'}
+ 19%|█▉        | 25/130 [07:58<36:07, 20.64s/it]/usr/local/lib/python3.10/dist-packages/torch/_dynamo/eval_frame.py:1044: UserWarning: torch.utils.checkpoint: the use_reentrant parameter should be passed explicitly. Starting in PyTorch 2.9, calling checkpoint without use_reentrant will raise an exception. use_reentrant=False is recommended, but if you need to preserve the current default behavior, you can pass use_reentrant=True. Refer to docs for more details on the differences between the two variants.
+  return fn(*args, **kwargs)
+ 20%|██        | 26/130 [08:12<32:14, 18.60s/it]step 26: loss 0.0568
+                                                {'loss': '0.05677', 'grad_norm': '0.07997', 'learning_rate': '0.0002', 'epoch': '1'}
+ 20%|██        | 26/130 [08:12<32:14, 18.60s/it] 21%|██        | 27/130 [08:34<33:34, 19.56s/it]step 27: loss 0.0511
+                                                {'loss': '0.05115', 'grad_norm': '0.07318', 'learning_rate': '0.0002', 'epoch': '1.04'}
+ 21%|██        | 27/130 [08:34<33:34, 19.56s/it] 22%|██▏       | 28/130 [08:57<34:49, 20.49s/it]step 28: loss 0.0275
+                                                {'loss': '0.02753', 'grad_norm': '0.04385', 'learning_rate': '0.0002', 'epoch': '1.079'}
+ 22%|██▏       | 28/130 [08:57<34:49, 20.49s/it] 22%|██▏       | 29/130 [09:15<33:16, 19.77s/it]step 29: loss 0.0502
+                                                {'loss': '0.05023', 'grad_norm': '0.05886', 'learning_rate': '0.0002', 'epoch': '1.119'}
+ 22%|██▏       | 29/130 [09:15<33:16, 19.77s/it] 23%|██▎       | 30/130 [09:32<31:48, 19.08s/it]step 30: loss 0.0413
+                                                {'loss': '0.04128', 'grad_norm': '0.05737', 'learning_rate': '0.0002', 'epoch': '1.158'}
+ 23%|██▎       | 30/130 [09:32<31:48, 19.08s/it] 24%|██▍       | 31/130 [09:52<31:33, 19.12s/it]step 31: loss 0.0346
+                                                {'loss': '0.03462', 'grad_norm': '0.05622', 'learning_rate': '0.0002', 'epoch': '1.198'}
+ 24%|██▍       | 31/130 [09:52<31:33, 19.12s/it] 25%|██▍       | 32/130 [10:09<30:35, 18.73s/it]step 32: loss 0.0286
+                                                {'loss': '0.0286', 'grad_norm': '0.05364', 'learning_rate': '0.0002', 'epoch': '1.237'}
+ 25%|██▍       | 32/130 [10:09<30:35, 18.73s/it] 25%|██▌       | 33/130 [10:26<29:05, 18.00s/it]step 33: loss 0.0403
+                                                {'loss': '0.04034', 'grad_norm': '0.06022', 'learning_rate': '0.0002', 'epoch': '1.277'}
+ 25%|██▌       | 33/130 [10:26<29:05, 18.00s/it] 26%|██▌       | 34/130 [10:45<29:16, 18.29s/it]step 34: loss 0.0472
+                                                {'loss': '0.04716', 'grad_norm': '0.07359', 'learning_rate': '0.0002', 'epoch': '1.316'}
+ 26%|██▌       | 34/130 [10:45<29:16, 18.29s/it] 27%|██▋       | 35/130 [11:03<28:57, 18.29s/it]step 35: loss 0.0543
+                                                {'loss': '0.05432', 'grad_norm': '0.08586', 'learning_rate': '0.0002', 'epoch': '1.356'}
+ 27%|██▋       | 35/130 [11:03<28:57, 18.29s/it] 28%|██▊       | 36/130 [11:28<31:43, 20.25s/it]step 36: loss 0.0232
+                                                {'loss': '0.02321', 'grad_norm': '0.0945', 'learning_rate': '0.0002', 'epoch': '1.395'}
+ 28%|██▊       | 36/130 [11:28<31:43, 20.25s/it] 28%|██▊       | 37/130 [11:50<32:13, 20.79s/it]step 37: loss 0.0204
+                                                {'loss': '0.02041', 'grad_norm': '0.05779', 'learning_rate': '0.0002', 'epoch': '1.435'}
+ 28%|██▊       | 37/130 [11:50<32:13, 20.79s/it] 29%|██▉       | 38/130 [12:10<31:50, 20.77s/it]step 38: loss 0.0423
+                                                {'loss': '0.04229', 'grad_norm': '0.06608', 'learning_rate': '0.0002', 'epoch': '1.474'}
+ 29%|██▉       | 38/130 [12:10<31:50, 20.77s/it] 30%|███       | 39/130 [12:28<29:47, 19.64s/it]step 39: loss 0.0398
+                                                {'loss': '0.03978', 'grad_norm': '0.08886', 'learning_rate': '0.0002', 'epoch': '1.514'}
+ 30%|███       | 39/130 [12:28<29:47, 19.64s/it] 31%|███       | 40/130 [12:46<29:00, 19.34s/it]step 40: loss 0.0550
+                                                {'loss': '0.05504', 'grad_norm': '0.08652', 'learning_rate': '0.0002', 'epoch': '1.553'}
+ 31%|███       | 40/130 [12:46<29:00, 19.34s/it] 32%|███▏      | 41/130 [13:08<29:38, 19.99s/it]step 41: loss 0.0417
+                                                {'loss': '0.0417', 'grad_norm': '0.07236', 'learning_rate': '0.0002', 'epoch': '1.593'}
+ 32%|███▏      | 41/130 [13:08<29:38, 19.99s/it] 32%|███▏      | 42/130 [13:26<28:25, 19.38s/it]step 42: loss 0.0345
+                                                {'loss': '0.0345', 'grad_norm': '0.07047', 'learning_rate': '0.0002', 'epoch': '1.632'}
+ 32%|███▏      | 42/130 [13:26<28:25, 19.38s/it] 33%|███▎      | 43/130 [13:42<26:43, 18.43s/it]step 43: loss 0.0456
+                                                {'loss': '0.04564', 'grad_norm': '0.08512', 'learning_rate': '0.0002', 'epoch': '1.672'}
+ 33%|███▎      | 43/130 [13:42<26:43, 18.43s/it] 34%|███▍      | 44/130 [14:00<26:29, 18.48s/it]step 44: loss 0.0373
+                                                {'loss': '0.0373', 'grad_norm': '0.06534', 'learning_rate': '0.0002', 'epoch': '1.711'}
+ 34%|███▍      | 44/130 [14:00<26:29, 18.48s/it] 35%|███▍      | 45/130 [14:20<26:45, 18.89s/it]step 45: loss 0.0148
+                                                {'loss': '0.01485', 'grad_norm': '0.03874', 'learning_rate': '0.0002', 'epoch': '1.751'}
+ 35%|███▍      | 45/130 [14:20<26:45, 18.89s/it] 35%|███▌      | 46/130 [14:41<27:00, 19.29s/it]step 46: loss 0.0308
+                                                {'loss': '0.03079', 'grad_norm': '0.1556', 'learning_rate': '0.0002', 'epoch': '1.79'}
+ 35%|███▌      | 46/130 [14:41<27:00, 19.29s/it] 36%|███▌      | 47/130 [14:59<26:32, 19.19s/it]step 47: loss 0.0287
+                                                {'loss': '0.02868', 'grad_norm': '0.06023', 'learning_rate': '0.0002', 'epoch': '1.83'}
+ 36%|███▌      | 47/130 [14:59<26:32, 19.19s/it] 37%|███▋      | 48/130 [15:18<25:55, 18.97s/it]step 48: loss 0.0513
+                                                {'loss': '0.05134', 'grad_norm': '0.07746', 'learning_rate': '0.0002', 'epoch': '1.869'}
+ 37%|███▋      | 48/130 [15:18<25:55, 18.97s/it] 38%|███▊      | 49/130 [15:35<24:58, 18.51s/it]step 49: loss 0.0216
+                                                {'loss': '0.02161', 'grad_norm': '0.05521', 'learning_rate': '0.0002', 'epoch': '1.909'}
+ 38%|███▊      | 49/130 [15:35<24:58, 18.51s/it] 38%|███▊      | 50/130 [15:55<25:05, 18.82s/it]step 50: loss 0.0295
+                                                {'loss': '0.02948', 'grad_norm': '0.06367', 'learning_rate': '0.0002', 'epoch': '1.948'}
+ 38%|███▊      | 50/130 [15:55<25:05, 18.82s/it]/usr/local/lib/python3.10/dist-packages/torch/_dynamo/eval_frame.py:1044: UserWarning: torch.utils.checkpoint: the use_reentrant parameter should be passed explicitly. Starting in PyTorch 2.9, calling checkpoint without use_reentrant will raise an exception. use_reentrant=False is recommended, but if you need to preserve the current default behavior, you can pass use_reentrant=True. Refer to docs for more details on the differences between the two variants.
+  return fn(*args, **kwargs)
+ 39%|███▉      | 51/130 [16:18<26:30, 20.14s/it]step 51: loss 0.0331
+                                                {'loss': '0.0331', 'grad_norm': '0.06026', 'learning_rate': '0.0002', 'epoch': '1.988'}
+ 39%|███▉      | 51/130 [16:18<26:30, 20.14s/it] 40%|████      | 52/130 [16:24<20:42, 15.93s/it]step 52: loss 0.0266
+                                                {'loss': '0.02658', 'grad_norm': '0.09495', 'learning_rate': '0.0002', 'epoch': '2'}
+ 40%|████      | 52/130 [16:24<20:42, 15.93s/it] 41%|████      | 53/130 [16:40<20:29, 15.96s/it]step 53: loss 0.0232
+                                                {'loss': '0.0232', 'grad_norm': '0.05834', 'learning_rate': '0.0002', 'epoch': '2.04'}
+ 41%|████      | 53/130 [16:40<20:29, 15.96s/it] 42%|████▏     | 54/130 [16:58<21:03, 16.62s/it]step 54: loss 0.0233
+                                                {'loss': '0.02334', 'grad_norm': '0.05228', 'learning_rate': '0.0002', 'epoch': '2.079'}
+ 42%|████▏     | 54/130 [16:58<21:03, 16.62s/it] 42%|████▏     | 55/130 [17:16<21:05, 16.87s/it]step 55: loss 0.0280
+                                                {'loss': '0.02795', 'grad_norm': '0.05348', 'learning_rate': '0.0002', 'epoch': '2.119'}
+ 42%|████▏     | 55/130 [17:16<21:05, 16.87s/it] 43%|████▎     | 56/130 [17:38<22:35, 18.32s/it]step 56: loss 0.0193
+                                                {'loss': '0.01927', 'grad_norm': '0.04474', 'learning_rate': '0.0002', 'epoch': '2.158'}
+ 43%|████▎     | 56/130 [17:38<22:35, 18.32s/it] 44%|████▍     | 57/130 [17:59<23:29, 19.31s/it]step 57: loss 0.0223
+                                                {'loss': '0.0223', 'grad_norm': '0.06543', 'learning_rate': '0.0002', 'epoch': '2.198'}
+ 44%|████▍     | 57/130 [17:59<23:29, 19.31s/it] 45%|████▍     | 58/130 [18:16<22:27, 18.71s/it]step 58: loss 0.0198
+                                                {'loss': '0.01984', 'grad_norm': '0.06474', 'learning_rate': '0.0002', 'epoch': '2.237'}
+ 45%|████▍     | 58/130 [18:16<22:27, 18.71s/it] 45%|████▌     | 59/130 [18:34<21:43, 18.36s/it]step 59: loss 0.0321
+                                                {'loss': '0.03211', 'grad_norm': '0.0769', 'learning_rate': '0.0002', 'epoch': '2.277'}
+ 45%|████▌     | 59/130 [18:34<21:43, 18.36s/it] 46%|████▌     | 60/130 [18:54<21:52, 18.75s/it]step 60: loss 0.0196
+                                                {'loss': '0.01959', 'grad_norm': '0.0713', 'learning_rate': '0.0002', 'epoch': '2.316'}
+ 46%|████▌     | 60/130 [18:54<21:52, 18.75s/it] 47%|████▋     | 61/130 [19:17<23:09, 20.14s/it]step 61: loss 0.0095
+                                                {'loss': '0.00948', 'grad_norm': '0.039', 'learning_rate': '0.0002', 'epoch': '2.356'}
+ 47%|████▋     | 61/130 [19:17<23:09, 20.14s/it] 48%|████▊     | 62/130 [19:41<24:02, 21.21s/it]step 62: loss 0.0181
+                                                {'loss': '0.01814', 'grad_norm': '0.06174', 'learning_rate': '0.0002', 'epoch': '2.395'}
+ 48%|████▊     | 62/130 [19:41<24:02, 21.21s/it] 48%|████▊     | 63/130 [19:59<22:34, 20.22s/it]step 63: loss 0.0336
+                                                {'loss': '0.03363', 'grad_norm': '0.07015', 'learning_rate': '0.0002', 'epoch': '2.435'}
+ 48%|████▊     | 63/130 [19:59<22:34, 20.22s/it] 49%|████▉     | 64/130 [20:16<21:25, 19.47s/it]step 64: loss 0.0200
+                                                {'loss': '0.01999', 'grad_norm': '0.09749', 'learning_rate': '0.0002', 'epoch': '2.474'}
+ 49%|████▉     | 64/130 [20:16<21:25, 19.47s/it] 50%|█████     | 65/130 [20:37<21:18, 19.66s/it]step 65: loss 0.0225
+                                                {'loss': '0.02246', 'grad_norm': '0.1431', 'learning_rate': '0.0002', 'epoch': '2.514'}
+ 50%|█████     | 65/130 [20:37<21:18, 19.66s/it] 51%|█████     | 66/130 [20:59<21:42, 20.36s/it]step 66: loss 0.0160
+                                                {'loss': '0.01604', 'grad_norm': '0.0477', 'learning_rate': '0.0002', 'epoch': '2.553'}
+ 51%|█████     | 66/130 [20:59<21:42, 20.36s/it] 52%|█████▏    | 67/130 [21:17<20:37, 19.65s/it]step 67: loss 0.0180
+                                                {'loss': '0.01804', 'grad_norm': '0.05796', 'learning_rate': '0.0002', 'epoch': '2.593'}
+ 52%|█████▏    | 67/130 [21:17<20:37, 19.65s/it] 52%|█████▏    | 68/130 [21:36<20:19, 19.67s/it]step 68: loss 0.0180
+                                                {'loss': '0.01803', 'grad_norm': '0.06638', 'learning_rate': '0.0002', 'epoch': '2.632'}
+ 52%|█████▏    | 68/130 [21:36<20:19, 19.67s/it] 53%|█████▎    | 69/130 [21:54<19:27, 19.14s/it]step 69: loss 0.0276
+                                                {'loss': '0.02758', 'grad_norm': '0.1018', 'learning_rate': '0.0002', 'epoch': '2.672'}
+ 53%|█████▎    | 69/130 [21:54<19:27, 19.14s/it] 54%|█████▍    | 70/130 [22:16<20:03, 20.06s/it]step 70: loss 0.0228
+                                                {'loss': '0.02283', 'grad_norm': '0.05657', 'learning_rate': '0.0002', 'epoch': '2.711'}
+ 54%|█████▍    | 70/130 [22:16<20:03, 20.06s/it] 55%|█████▍    | 71/130 [22:36<19:31, 19.86s/it]step 71: loss 0.0218
+                                                {'loss': '0.02184', 'grad_norm': '0.05398', 'learning_rate': '0.0002', 'epoch': '2.751'}
+ 55%|█████▍    | 71/130 [22:36<19:31, 19.86s/it] 55%|█████▌    | 72/130 [22:54<18:47, 19.43s/it]step 72: loss 0.0223
+                                                {'loss': '0.02231', 'grad_norm': '0.05663', 'learning_rate': '0.0002', 'epoch': '2.79'}
+ 55%|█████▌    | 72/130 [22:54<18:47, 19.43s/it] 56%|█████▌    | 73/130 [23:14<18:29, 19.46s/it]step 73: loss 0.0202
+                                                {'loss': '0.02017', 'grad_norm': '0.06521', 'learning_rate': '0.0002', 'epoch': '2.83'}
+ 56%|█████▌    | 73/130 [23:14<18:29, 19.46s/it] 57%|█████▋    | 74/130 [23:33<18:02, 19.33s/it]step 74: loss 0.0307
+                                                {'loss': '0.03066', 'grad_norm': '0.1036', 'learning_rate': '0.0002', 'epoch': '2.869'}
+ 57%|█████▋    | 74/130 [23:33<18:02, 19.33s/it] 58%|█████▊    | 75/130 [23:50<17:15, 18.82s/it]step 75: loss 0.0282
+                                                {'loss': '0.02817', 'grad_norm': '0.06592', 'learning_rate': '0.0002', 'epoch': '2.909'}
+ 58%|█████▊    | 75/130 [23:50<17:15, 18.82s/it]/usr/local/lib/python3.10/dist-packages/torch/_dynamo/eval_frame.py:1044: UserWarning: torch.utils.checkpoint: the use_reentrant parameter should be passed explicitly. Starting in PyTorch 2.9, calling checkpoint without use_reentrant will raise an exception. use_reentrant=False is recommended, but if you need to preserve the current default behavior, you can pass use_reentrant=True. Refer to docs for more details on the differences between the two variants.
+  return fn(*args, **kwargs)
+ 58%|█████▊    | 76/130 [24:17<18:57, 21.06s/it]step 76: loss 0.0092
+                                                {'loss': '0.009219', 'grad_norm': '0.0476', 'learning_rate': '0.0002', 'epoch': '2.948'}
+ 58%|█████▊    | 76/130 [24:17<18:57, 21.06s/it] 59%|█████▉    | 77/130 [24:34<17:41, 20.02s/it]step 77: loss 0.0277
+                                                {'loss': '0.02773', 'grad_norm': '0.07032', 'learning_rate': '0.0002', 'epoch': '2.988'}
+ 59%|█████▉    | 77/130 [24:34<17:41, 20.02s/it] 60%|██████    | 78/130 [24:40<13:41, 15.80s/it]step 78: loss 0.0169
+                                                {'loss': '0.01692', 'grad_norm': '0.1083', 'learning_rate': '0.0002', 'epoch': '3'}
+ 60%|██████    | 78/130 [24:40<13:41, 15.80s/it] 61%|██████    | 79/130 [24:59<14:15, 16.78s/it]step 79: loss 0.0118
+                                                {'loss': '0.0118', 'grad_norm': '0.04482', 'learning_rate': '0.0002', 'epoch': '3.04'}
+ 61%|██████    | 79/130 [24:59<14:15, 16.78s/it] 62%|██████▏   | 80/130 [25:19<14:43, 17.67s/it]step 80: loss 0.0128
+                                                {'loss': '0.0128', 'grad_norm': '0.04051', 'learning_rate': '0.0002', 'epoch': '3.079'}
+ 62%|██████▏   | 80/130 [25:19<14:43, 17.67s/it] 62%|██████▏   | 81/130 [25:35<14:05, 17.25s/it]step 81: loss 0.0179
+                                                {'loss': '0.01787', 'grad_norm': '0.06726', 'learning_rate': '0.0002', 'epoch': '3.119'}
+ 62%|██████▏   | 81/130 [25:35<14:05, 17.25s/it] 63%|██████▎   | 82/130 [25:57<14:48, 18.51s/it]step 82: loss 0.0196
+                                                {'loss': '0.01964', 'grad_norm': '0.08042', 'learning_rate': '0.0002', 'epoch': '3.158'}
+ 63%|██████▎   | 82/130 [25:57<14:48, 18.51s/it] 64%|██████▍   | 83/130 [26:14<14:06, 18.00s/it]step 83: loss 0.0113
+                                                {'loss': '0.01128', 'grad_norm': '0.1129', 'learning_rate': '0.0002', 'epoch': '3.198'}
+ 64%|██████▍   | 83/130 [26:14<14:06, 18.00s/it] 65%|██████▍   | 84/130 [26:30<13:23, 17.48s/it]step 84: loss 0.0156
+                                                {'loss': '0.01559', 'grad_norm': '0.08917', 'learning_rate': '0.0002', 'epoch': '3.237'}
+ 65%|██████▍   | 84/130 [26:30<13:23, 17.48s/it] 65%|██████▌   | 85/130 [26:51<13:52, 18.49s/it]step 85: loss 0.0117
+                                                {'loss': '0.01174', 'grad_norm': '0.04545', 'learning_rate': '0.0002', 'epoch': '3.277'}
+ 65%|██████▌   | 85/130 [26:51<13:52, 18.49s/it] 66%|██████▌   | 86/130 [27:08<13:17, 18.12s/it]step 86: loss 0.0194
+                                                {'loss': '0.01943', 'grad_norm': '0.1385', 'learning_rate': '0.0002', 'epoch': '3.316'}
+ 66%|██████▌   | 86/130 [27:08<13:17, 18.12s/it] 67%|██████▋   | 87/130 [27:27<13:13, 18.46s/it]step 87: loss 0.0111
+                                                {'loss': '0.01107', 'grad_norm': '0.09032', 'learning_rate': '0.0002', 'epoch': '3.356'}
+ 67%|██████▋   | 87/130 [27:27<13:13, 18.46s/it] 68%|██████▊   | 88/130 [27:43<12:21, 17.64s/it]step 88: loss 0.0189
+                                                {'loss': '0.0189', 'grad_norm': '0.08636', 'learning_rate': '0.0002', 'epoch': '3.395'}
+ 68%|██████▊   | 88/130 [27:43<12:21, 17.64s/it] 68%|██████▊   | 89/130 [28:05<12:56, 18.95s/it]step 89: loss 0.0129
+                                                {'loss': '0.0129', 'grad_norm': '0.09465', 'learning_rate': '0.0002', 'epoch': '3.435'}
+ 68%|██████▊   | 89/130 [28:05<12:56, 18.95s/it] 69%|██████▉   | 90/130 [28:25<12:46, 19.15s/it]step 90: loss 0.0121
+                                                {'loss': '0.01209', 'grad_norm': '0.0509', 'learning_rate': '0.0002', 'epoch': '3.474'}
+ 69%|██████▉   | 90/130 [28:25<12:46, 19.15s/it] 70%|███████   | 91/130 [28:48<13:21, 20.56s/it]step 91: loss 0.0084
+                                                {'loss': '0.00844', 'grad_norm': '0.04324', 'learning_rate': '0.0002', 'epoch': '3.514'}
+ 70%|███████   | 91/130 [28:48<13:21, 20.56s/it] 71%|███████   | 92/130 [29:08<12:49, 20.26s/it]step 92: loss 0.0268
+                                                {'loss': '0.02678', 'grad_norm': '0.1314', 'learning_rate': '0.0002', 'epoch': '3.553'}
+ 71%|███████   | 92/130 [29:08<12:49, 20.26s/it] 72%|███████▏  | 93/130 [29:25<11:57, 19.39s/it]step 93: loss 0.0210
+                                                {'loss': '0.021', 'grad_norm': '0.0621', 'learning_rate': '0.0002', 'epoch': '3.593'}
+ 72%|███████▏  | 93/130 [29:25<11:57, 19.39s/it] 72%|███████▏  | 94/130 [29:44<11:31, 19.22s/it]step 94: loss 0.0142
+                                                {'loss': '0.01425', 'grad_norm': '0.06656', 'learning_rate': '0.0002', 'epoch': '3.632'}
+ 72%|███████▏  | 94/130 [29:44<11:31, 19.22s/it] 73%|███████▎  | 95/130 [30:02<10:58, 18.80s/it]step 95: loss 0.0122
+                                                {'loss': '0.01222', 'grad_norm': '0.05093', 'learning_rate': '0.0002', 'epoch': '3.672'}
+ 73%|███████▎  | 95/130 [30:02<10:58, 18.80s/it] 74%|███████▍  | 96/130 [30:20<10:33, 18.63s/it]step 96: loss 0.0136
+                                                {'loss': '0.0136', 'grad_norm': '0.05498', 'learning_rate': '0.0002', 'epoch': '3.711'}
+ 74%|███████▍  | 96/130 [30:20<10:33, 18.63s/it] 75%|███████▍  | 97/130 [30:37<09:52, 17.95s/it]step 97: loss 0.0302
+                                                {'loss': '0.03019', 'grad_norm': '0.1491', 'learning_rate': '0.0002', 'epoch': '3.751'}
+ 75%|███████▍  | 97/130 [30:37<09:52, 17.95s/it] 75%|███████▌  | 98/130 [30:56<09:51, 18.50s/it]step 98: loss 0.0240
+                                                {'loss': '0.02397', 'grad_norm': '0.06245', 'learning_rate': '0.0002', 'epoch': '3.79'}
+ 75%|███████▌  | 98/130 [30:56<09:51, 18.50s/it] 76%|███████▌  | 99/130 [31:16<09:44, 18.84s/it]step 99: loss 0.0120
+                                                {'loss': '0.01199', 'grad_norm': '0.0491', 'learning_rate': '0.0002', 'epoch': '3.83'}
+ 76%|███████▌  | 99/130 [31:16<09:44, 18.84s/it] 77%|███████▋  | 100/130 [31:37<09:49, 19.64s/it]step 100: loss 0.0114
+                                                 {'loss': '0.0114', 'grad_norm': '0.052', 'learning_rate': '0.0002', 'epoch': '3.869'}
+ 77%|███████▋  | 100/130 [31:37<09:49, 19.64s/it]/usr/local/lib/python3.10/dist-packages/torch/_dynamo/eval_frame.py:1044: UserWarning: torch.utils.checkpoint: the use_reentrant parameter should be passed explicitly. Starting in PyTorch 2.9, calling checkpoint without use_reentrant will raise an exception. use_reentrant=False is recommended, but if you need to preserve the current default behavior, you can pass use_reentrant=True. Refer to docs for more details on the differences between the two variants.
+  return fn(*args, **kwargs)
+ 78%|███████▊  | 101/130 [32:02<10:09, 21.01s/it]step 101: loss 0.0167
+                                                 {'loss': '0.01665', 'grad_norm': '0.06511', 'learning_rate': '0.0002', 'epoch': '3.909'}
+ 78%|███████▊  | 101/130 [32:02<10:09, 21.01s/it] 78%|███████▊  | 102/130 [32:22<09:41, 20.77s/it]step 102: loss 0.0139
+                                                 {'loss': '0.01392', 'grad_norm': '0.05104', 'learning_rate': '0.0002', 'epoch': '3.948'}
+ 78%|███████▊  | 102/130 [32:22<09:41, 20.77s/it] 79%|███████▉  | 103/130 [32:42<09:17, 20.66s/it]step 103: loss 0.0148
+                                                 {'loss': '0.01479', 'grad_norm': '0.08437', 'learning_rate': '0.0002', 'epoch': '3.988'}
+ 79%|███████▉  | 103/130 [32:42<09:17, 20.66s/it] 80%|████████  | 104/130 [32:49<07:07, 16.43s/it]step 104: loss 0.0256
+                                                 {'loss': '0.02558', 'grad_norm': '0.1943', 'learning_rate': '0.0002', 'epoch': '4'}
+ 80%|████████  | 104/130 [32:49<07:07, 16.43s/it] 81%|████████  | 105/130 [33:07<07:04, 17.00s/it]step 105: loss 0.0082
+                                                 {'loss': '0.008165', 'grad_norm': '0.03899', 'learning_rate': '0.0002', 'epoch': '4.04'}
+ 81%|████████  | 105/130 [33:07<07:04, 17.00s/it] 82%|████████▏ | 106/130 [33:26<07:02, 17.59s/it]step 106: loss 0.0095
+                                                 {'loss': '0.00954', 'grad_norm': '0.03219', 'learning_rate': '0.0002', 'epoch': '4.079'}
+ 82%|████████▏ | 106/130 [33:26<07:02, 17.59s/it] 82%|████████▏ | 107/130 [33:45<06:56, 18.12s/it]step 107: loss 0.0140
+                                                 {'loss': '0.01398', 'grad_norm': '0.05291', 'learning_rate': '0.0002', 'epoch': '4.119'}
+ 82%|████████▏ | 107/130 [33:45<06:56, 18.12s/it] 83%|████████▎ | 108/130 [34:05<06:44, 18.40s/it]step 108: loss 0.0091
+                                                 {'loss': '0.009055', 'grad_norm': '0.08614', 'learning_rate': '0.0002', 'epoch': '4.158'}
+ 83%|████████▎ | 108/130 [34:05<06:44, 18.40s/it] 84%|████████▍ | 109/130 [34:22<06:21, 18.17s/it]step 109: loss 0.0145
+                                                 {'loss': '0.0145', 'grad_norm': '0.06787', 'learning_rate': '0.0002', 'epoch': '4.198'}
+ 84%|████████▍ | 109/130 [34:22<06:21, 18.17s/it] 85%|████████▍ | 110/130 [34:44<06:22, 19.14s/it]step 110: loss 0.0048
+                                                 {'loss': '0.004849', 'grad_norm': '0.03554', 'learning_rate': '0.0002', 'epoch': '4.237'}
+ 85%|████████▍ | 110/130 [34:44<06:22, 19.14s/it] 85%|████████▌ | 111/130 [35:02<06:00, 18.98s/it]step 111: loss 0.0221
+                                                 {'loss': '0.02209', 'grad_norm': '0.09361', 'learning_rate': '0.0002', 'epoch': '4.277'}
+ 85%|████████▌ | 111/130 [35:02<06:00, 18.98s/it] 86%|████████▌ | 112/130 [35:19<05:30, 18.36s/it]step 112: loss 0.0136
+                                                 {'loss': '0.01359', 'grad_norm': '0.1652', 'learning_rate': '0.0002', 'epoch': '4.316'}
+ 86%|████████▌ | 112/130 [35:19<05:30, 18.36s/it] 87%|████████▋ | 113/130 [35:45<05:48, 20.53s/it]step 113: loss 0.0076
+                                                 {'loss': '0.007648', 'grad_norm': '0.08197', 'learning_rate': '0.0002', 'epoch': '4.356'}
+ 87%|████████▋ | 113/130 [35:45<05:48, 20.53s/it] 88%|████████▊ | 114/130 [36:02<05:11, 19.46s/it]step 114: loss 0.0047
+                                                 {'loss': '0.004656', 'grad_norm': '0.04662', 'learning_rate': '0.0002', 'epoch': '4.395'}
+ 88%|████████▊ | 114/130 [36:02<05:11, 19.46s/it] 88%|████████▊ | 115/130 [36:23<05:01, 20.08s/it]step 115: loss 0.0135
+                                                 {'loss': '0.01354', 'grad_norm': '0.1058', 'learning_rate': '0.0002', 'epoch': '4.435'}
+ 88%|████████▊ | 115/130 [36:23<05:01, 20.08s/it] 89%|████████▉ | 116/130 [36:42<04:34, 19.58s/it]step 116: loss 0.0224
+                                                 {'loss': '0.02239', 'grad_norm': '0.1158', 'learning_rate': '0.0002', 'epoch': '4.474'}
+ 89%|████████▉ | 116/130 [36:42<04:34, 19.58s/it] 90%|█████████ | 117/130 [36:59<04:05, 18.90s/it]step 117: loss 0.0153
+                                                 {'loss': '0.01527', 'grad_norm': '0.057', 'learning_rate': '0.0002', 'epoch': '4.514'}
+ 90%|█████████ | 117/130 [36:59<04:05, 18.90s/it] 91%|█████████ | 118/130 [37:16<03:38, 18.25s/it]step 118: loss 0.0099
+                                                 {'loss': '0.009877', 'grad_norm': '0.05469', 'learning_rate': '0.0002', 'epoch': '4.553'}
+ 91%|█████████ | 118/130 [37:16<03:38, 18.25s/it] 92%|█████████▏| 119/130 [37:33<03:17, 17.94s/it]step 119: loss 0.0212
+                                                 {'loss': '0.02123', 'grad_norm': '0.08284', 'learning_rate': '0.0002', 'epoch': '4.593'}
+ 92%|█████████▏| 119/130 [37:33<03:17, 17.94s/it] 92%|█████████▏| 120/130 [37:50<02:58, 17.80s/it]step 120: loss 0.0178
+                                                 {'loss': '0.01781', 'grad_norm': '0.08277', 'learning_rate': '0.0002', 'epoch': '4.632'}
+ 92%|█████████▏| 120/130 [37:50<02:58, 17.80s/it] 93%|█████████▎| 121/130 [38:14<02:55, 19.46s/it]step 121: loss 0.0087
+                                                 {'loss': '0.008703', 'grad_norm': '0.04686', 'learning_rate': '0.0002', 'epoch': '4.672'}
+ 93%|█████████▎| 121/130 [38:14<02:55, 19.46s/it] 94%|█████████▍| 122/130 [38:36<02:41, 20.18s/it]step 122: loss 0.0089
+                                                 {'loss': '0.008895', 'grad_norm': '0.09762', 'learning_rate': '0.0002', 'epoch': '4.711'}
+ 94%|█████████▍| 122/130 [38:36<02:41, 20.18s/it] 95%|█████████▍| 123/130 [38:58<02:26, 20.89s/it]step 123: loss 0.0078
+                                                 {'loss': '0.007771', 'grad_norm': '0.04359', 'learning_rate': '0.0002', 'epoch': '4.751'}
+ 95%|█████████▍| 123/130 [38:58<02:26, 20.89s/it] 95%|█████████▌| 124/130 [39:17<02:02, 20.37s/it]step 124: loss 0.0112
+                                                 {'loss': '0.01118', 'grad_norm': '0.05375', 'learning_rate': '0.0002', 'epoch': '4.79'}
+ 95%|█████████▌| 124/130 [39:17<02:02, 20.37s/it] 96%|█████████▌| 125/130 [39:35<01:37, 19.50s/it]step 125: loss 0.0199
+                                                 {'loss': '0.01989', 'grad_norm': '0.06876', 'learning_rate': '0.0002', 'epoch': '4.83'}
+ 96%|█████████▌| 125/130 [39:35<01:37, 19.50s/it]/usr/local/lib/python3.10/dist-packages/torch/_dynamo/eval_frame.py:1044: UserWarning: torch.utils.checkpoint: the use_reentrant parameter should be passed explicitly. Starting in PyTorch 2.9, calling checkpoint without use_reentrant will raise an exception. use_reentrant=False is recommended, but if you need to preserve the current default behavior, you can pass use_reentrant=True. Refer to docs for more details on the differences between the two variants.
+  return fn(*args, **kwargs)
+ 97%|█████████▋| 126/130 [39:55<01:19, 19.79s/it]step 126: loss 0.0215
+                                                 {'loss': '0.02151', 'grad_norm': '0.05652', 'learning_rate': '0.0002', 'epoch': '4.869'}
+ 97%|█████████▋| 126/130 [39:55<01:19, 19.79s/it] 98%|█████████▊| 127/130 [40:18<01:02, 20.75s/it]step 127: loss 0.0121
+                                                 {'loss': '0.01206', 'grad_norm': '0.05569', 'learning_rate': '0.0002', 'epoch': '4.909'}
+ 98%|█████████▊| 127/130 [40:18<01:02, 20.75s/it] 98%|█████████▊| 128/130 [40:38<00:40, 20.39s/it]step 128: loss 0.0056
+                                                 {'loss': '0.005621', 'grad_norm': '0.02665', 'learning_rate': '0.0002', 'epoch': '4.948'}
+ 98%|█████████▊| 128/130 [40:38<00:40, 20.39s/it] 99%|█████████▉| 129/130 [40:55<00:19, 19.35s/it]step 129: loss 0.0155
+                                                 {'loss': '0.01554', 'grad_norm': '0.05444', 'learning_rate': '0.0002', 'epoch': '4.988'}
+ 99%|█████████▉| 129/130 [40:55<00:19, 19.35s/it]100%|██████████| 130/130 [41:00<00:00, 15.08s/it]step 130: loss 0.0227
+                                                 {'loss': '0.02273', 'grad_norm': '0.1069', 'learning_rate': '0.0002', 'epoch': '5'}
+100%|██████████| 130/130 [41:00<00:00, 15.08s/it]                                                 {'train_runtime': '2463', 'train_samples_per_second': '0.822', 'train_steps_per_second': '0.053', 'train_loss': '0.03635', 'epoch': '5'}
+100%|██████████| 130/130 [41:02<00:00, 15.08s/it]100%|██████████| 130/130 [41:02<00:00, 18.94s/it]
+done: 130 steps, train loss 0.0364, 2462.9 s; adapter in t/out/gcp-student-2026-10-11-s1/adapter
+[W1011 06:27:48.102285674 AllocatorConfig.cpp:28] Warning: PYTORCH_CUDA_ALLOC_CONF is deprecated, use PYTORCH_ALLOC_CONF instead (function operator())
+No prebuilt binary for CUDA 12.9, loading CUDA 12.8 instead. Set BNB_CUDA_VERSION to override.
+Loading weights:   0%|          | 0/426 [00:00<?, ?it/s]Loading weights:   0%|          | 1/426 [00:00<01:43,  4.09it/s]Loading weights:   6%|▋         | 27/426 [00:00<00:04, 95.19it/s]Loading weights:  11%|█         | 47/426 [00:00<00:03, 126.27it/s]Loading weights:  18%|█▊        | 78/426 [00:00<00:01, 181.54it/s]Loading weights:  23%|██▎       | 100/426 [00:00<00:01, 173.35it/s]Loading weights:  30%|███       | 129/426 [00:00<00:01, 203.82it/s]Loading weights:  36%|███▌      | 152/426 [00:00<00:01, 191.09it/s]Loading weights:  43%|████▎     | 182/426 [00:01<00:01, 219.19it/s]Loading weights:  48%|████▊     | 206/426 [00:01<00:01, 199.34it/s]Loading weights:  55%|█████▌    | 235/426 [00:01<00:00, 222.86it/s]Loading weights:  61%|██████    | 259/426 [00:01<00:00, 204.21it/s]Loading weights:  68%|██████▊   | 290/426 [00:01<00:00, 230.06it/s]Loading weights:  74%|███████▍  | 315/426 [00:01<00:00, 213.26it/s]Loading weights:  81%|████████  | 343/426 [00:01<00:00, 228.11it/s]Loading weights:  86%|████████▌ | 367/426 [00:01<00:00, 209.80it/s]Loading weights:  92%|█████████▏| 394/426 [00:02<00:00, 224.35it/s]Loading weights:  98%|█████████▊| 418/426 [00:02<00:00, 205.71it/s]Loading weights: 100%|██████████| 426/426 [00:02<00:00, 194.98it/s]
+Writing model shards:   0%|          | 0/1 [00:00<?, ?it/s]Writing model shards: 100%|██████████| 1/1 [00:38<00:00, 38.29s/it]Writing model shards: 100%|██████████| 1/1 [00:38<00:00, 38.29s/it]
+merged t/out/gcp-student-2026-10-11-s1/adapter into t/out/gcp-base: t/out/gcp-student-2026-10-11-s1/merged
+Loading weights:   0%|          | 0/426 [00:00<?, ?it/s]Loading weights:   0%|          | 1/426 [00:00<00:50,  8.41it/s]Loading weights:   6%|▋         | 27/426 [00:00<00:02, 136.63it/s]Loading weights:  11%|█         | 46/426 [00:00<00:02, 155.92it/s]Loading weights:  18%|█▊        | 75/426 [00:00<00:01, 196.91it/s]Loading weights:  22%|██▏       | 95/426 [00:00<00:01, 195.22it/s]Loading weights:  28%|██▊       | 119/426 [00:00<00:01, 206.54it/s]Loading weights:  34%|███▍      | 146/426 [00:00<00:01, 218.05it/s]Loading weights:  39%|███▉      | 168/426 [00:00<00:01, 216.42it/s]Loading weights:  45%|████▍     | 190/426 [00:00<00:01, 211.84it/s]Loading weights:  50%|████▉     | 212/426 [00:01<00:01, 201.70it/s]Loading weights:  56%|█████▌    | 238/426 [00:01<00:00, 217.89it/s]Loading weights:  61%|██████    | 260/426 [00:01<00:00, 202.58it/s]Loading weights:  67%|██████▋   | 287/426 [00:01<00:00, 219.73it/s]Loading weights:  73%|███████▎  | 310/426 [00:01<00:00, 205.12it/s]Loading weights:  78%|███████▊  | 332/426 [00:01<00:00, 202.03it/s]Loading weights:  84%|████████▍ | 359/426 [00:01<00:00, 215.48it/s]Loading weights:  90%|████████▉ | 383/426 [00:01<00:00, 214.82it/s]Loading weights:  96%|█████████▌| 407/426 [00:02<00:00, 216.77it/s]Loading weights: 100%|██████████| 426/426 [00:02<00:00, 201.79it/s]
+[transformers] `causal_conv1d_fn` is falling back to its reference PyTorch implementation because `causal_conv1d` is not installed. This is correct but much slower; install `causal_conv1d` for the optimized kernel.
+[transformers] `chunk_gated_delta_rule` is falling back to its reference PyTorch implementation because `flash-linear-attention` is not installed. This is correct but much slower; install `flash-linear-attention` for the optimized kernel.
+[transformers] `causal_conv1d_update` is falling back to its reference PyTorch implementation because `causal_conv1d` is not installed. This is correct but much slower; install `causal_conv1d` for the optimized kernel.
+[transformers] `fused_recurrent_gated_delta_rule` is falling back to its reference PyTorch implementation because `flash-linear-attention` is not installed. This is correct but much slower; install `flash-linear-attention` for the optimized kernel.
+ask: 1/33 clover_abs__abs: 60 tokens, stopped
+ask: 2/33 clover_find__find: 280 tokens, stopped
+ask: 3/33 dafny_tmp_tmpmvs2dmry_examples1__abs: 135 tokens, stopped
+ask: 4/33 final_project_dafny_tmp_tmpmcywuqox_fina: 75 tokens, stopped
+ask: 5/33 cs245_verification_tmp_tmp0h_nxhqp_a8_q2: 114 tokens, stopped
+ask: 6/33 cs357_tmp_tmpn4fsvwzs_lab7_question2__tw: 60 tokens, stopped
+ask: 7/33 dafny_programs_tmp_tmpcwodh6qh_src_max__: 77 tokens, stopped
+ask: 8/33 humaneval_dafny_041_car_race_collision__: 132 tokens, stopped
+ask: 9/33 vericoding_da0001__solve: 819 tokens, stopped
+ask: 10/33 vericoding_da0662__solve: 98 tokens, stopped
+ask: 11/33 vericoding_dd0052__calDiv: 194 tokens, stopped
+ask: 12/33 vericoding_dd0077__quotient: 231 tokens, stopped
+ask: 13/33 vericoding_dd0684__replaceLastElement: 445 tokens, stopped
+ask: 14/33 vericoding_dd0752__squarePyramidSurfaceA: 94 tokens, stopped
+ask: 15/33 vericoding_dj0048__myfun: 125 tokens, stopped
+ask: 16/33 vericoding_dj0113__elementWiseDivide: 343 tokens, stopped
+ask: 17/33 vericoding_dv0138__doubleArrayElements: 174 tokens, stopped
+ask: 18/33 vericoding_da0075__solve: 503 tokens, stopped
+ask: 19/33 vericoding_da0455__solveCookieDistributi: 379 tokens, stopped
+ask: 20/33 humaneval_dafny_049_modp__modp: 222 tokens, stopped
+ask: 21/33 vericoding_da0152__computeMinimalSteps: 158 tokens, stopped
+ask: 22/33 vericoding_dd0061__find: 285 tokens, stopped
+ask: 23/33 vericoding_dd0680__replaceBlanksWithChar: 299 tokens, stopped
+ask: 24/33 vericoding_dv0008__countSumDivisibleBy: 275 tokens, stopped
+ask: 25/33 acsl_count__count: 272 tokens, stopped
+ask: 26/33 vericoding_la0099__solve: 708 tokens, stopped
+ask: 27/33 verus_examples_recursion_compute_arith_s: 197 tokens, stopped
+ask: 28/33 vericoding_da0399__solve: 657 tokens, stopped
+ask: 29/33 vericoding_da0484__solve: 506 tokens, stopped
+ask: 30/33 vericoding_da0580__solve: 294 tokens, stopped
+ask: 31/33 all_nonneg: 155 tokens, stopped
+ask: 32/33 divmod_pair: 160 tokens, stopped
+ask: 33/33 fib: 264 tokens, stopped
+Loading weights:   0%|          | 0/426 [00:00<?, ?it/s]Loading weights:   0%|          | 1/426 [00:00<01:45,  4.03it/s]Loading weights:   6%|▋         | 27/426 [00:00<00:04, 93.73it/s]Loading weights:  11%|█         | 46/426 [00:00<00:03, 125.66it/s]Loading weights:  17%|█▋        | 72/426 [00:00<00:02, 163.29it/s]Loading weights:  22%|██▏       | 94/426 [00:00<00:01, 175.30it/s]Loading weights:  28%|██▊       | 119/426 [00:00<00:01, 192.99it/s]Loading weights:  34%|███▍      | 145/426 [00:00<00:01, 211.76it/s]Loading weights:  39%|███▉      | 168/426 [00:01<00:01, 210.43it/s]Loading weights:  45%|████▍     | 190/426 [00:01<00:01, 210.99it/s]Loading weights:  50%|████▉     | 212/426 [00:01<00:01, 205.14it/s]Loading weights:  56%|█████▌    | 239/426 [00:01<00:00, 217.14it/s]Loading weights:  61%|██████▏   | 261/426 [00:01<00:00, 211.21it/s]Loading weights:  67%|██████▋   | 286/426 [00:01<00:00, 217.37it/s]Loading weights:  72%|███████▏  | 308/426 [00:01<00:00, 214.57it/s]Loading weights:  78%|███████▊  | 331/426 [00:01<00:00, 215.58it/s]Loading weights:  84%|████████▍ | 358/426 [00:01<00:00, 224.98it/s]Loading weights:  89%|████████▉ | 381/426 [00:01<00:00, 225.13it/s]Loading weights:  95%|█████████▍| 404/426 [00:02<00:00, 221.35it/s]Loading weights: 100%|██████████| 426/426 [00:02<00:00, 193.46it/s]
+[transformers] `causal_conv1d_fn` is falling back to its reference PyTorch implementation because `causal_conv1d` is not installed. This is correct but much slower; install `causal_conv1d` for the optimized kernel.
+[transformers] `chunk_gated_delta_rule` is falling back to its reference PyTorch implementation because `flash-linear-attention` is not installed. This is correct but much slower; install `flash-linear-attention` for the optimized kernel.
+[transformers] `causal_conv1d_update` is falling back to its reference PyTorch implementation because `causal_conv1d` is not installed. This is correct but much slower; install `causal_conv1d` for the optimized kernel.
+[transformers] `fused_recurrent_gated_delta_rule` is falling back to its reference PyTorch implementation because `flash-linear-attention` is not installed. This is correct but much slower; install `flash-linear-attention` for the optimized kernel.
+student_generate: gcp-student-20261011-greedy: 4/232 (24 s)
+student_generate: gcp-student-20261011-greedy: 8/232 (40 s)
+student_generate: gcp-student-20261011-greedy: 12/232 (116 s)
+student_generate: gcp-student-20261011-greedy: 16/232 (135 s)
+student_generate: gcp-student-20261011-greedy: 20/232 (158 s)
+student_generate: gcp-student-20261011-greedy: 24/232 (186 s)
+student_generate: gcp-student-20261011-greedy: 28/232 (264 s)
+student_generate: gcp-student-20261011-greedy: 32/232 (340 s)
+student_generate: gcp-student-20261011-greedy: 36/232 (364 s)
+student_generate: gcp-student-20261011-greedy: 40/232 (394 s)
+student_generate: gcp-student-20261011-greedy: 44/232 (433 s)
+student_generate: gcp-student-20261011-greedy: 48/232 (503 s)
+student_generate: gcp-student-20261011-greedy: 52/232 (536 s)
+student_generate: gcp-student-20261011-greedy: 56/232 (563 s)
+student_generate: gcp-student-20261011-greedy: 60/232 (639 s)
+student_generate: gcp-student-20261011-greedy: 64/232 (665 s)
+student_generate: gcp-student-20261011-greedy: 68/232 (686 s)
+student_generate: gcp-student-20261011-greedy: 72/232 (707 s)
+student_generate: gcp-student-20261011-greedy: 76/232 (735 s)
+student_generate: gcp-student-20261011-greedy: 80/232 (811 s)
+student_generate: gcp-student-20261011-greedy: 84/232 (829 s)
+student_generate: gcp-student-20261011-greedy: 88/232 (848 s)
+student_generate: gcp-student-20261011-greedy: 92/232 (886 s)
+student_generate: gcp-student-20261011-greedy: 96/232 (913 s)
+student_generate: gcp-student-20261011-greedy: 100/232 (948 s)
+student_generate: gcp-student-20261011-greedy: 104/232 (967 s)
+student_generate: gcp-student-20261011-greedy: 108/232 (1017 s)
+student_generate: gcp-student-20261011-greedy: 112/232 (1037 s)
+student_generate: gcp-student-20261011-greedy: 116/232 (1059 s)
+student_generate: gcp-student-20261011-greedy: 120/232 (1094 s)
+student_generate: gcp-student-20261011-greedy: 124/232 (1124 s)
+student_generate: gcp-student-20261011-greedy: 128/232 (1151 s)
+student_generate: gcp-student-20261011-greedy: 132/232 (1179 s)
+student_generate: gcp-student-20261011-greedy: 136/232 (1200 s)
+student_generate: gcp-student-20261011-greedy: 140/232 (1277 s)
+student_generate: gcp-student-20261011-greedy: 144/232 (1317 s)
+student_generate: gcp-student-20261011-greedy: 148/232 (1331 s)
+student_generate: gcp-student-20261011-greedy: 152/232 (1346 s)
+student_generate: gcp-student-20261011-greedy: 156/232 (1370 s)
+student_generate: gcp-student-20261011-greedy: 160/232 (1384 s)
+student_generate: gcp-student-20261011-greedy: 164/232 (1401 s)
+student_generate: gcp-student-20261011-greedy: 168/232 (1440 s)
+student_generate: gcp-student-20261011-greedy: 172/232 (1467 s)
+student_generate: gcp-student-20261011-greedy: 176/232 (1492 s)
+student_generate: gcp-student-20261011-greedy: 180/232 (1524 s)
+student_generate: gcp-student-20261011-greedy: 184/232 (1550 s)
+student_generate: gcp-student-20261011-greedy: 188/232 (1626 s)
+student_generate: gcp-student-20261011-greedy: 192/232 (1645 s)
+student_generate: gcp-student-20261011-greedy: 196/232 (1686 s)
+student_generate: gcp-student-20261011-greedy: 200/232 (1762 s)
+student_generate: gcp-student-20261011-greedy: 204/232 (1838 s)
+student_generate: gcp-student-20261011-greedy: 208/232 (1874 s)
+student_generate: gcp-student-20261011-greedy: 212/232 (1904 s)
+student_generate: gcp-student-20261011-greedy: 216/232 (1920 s)
+student_generate: gcp-student-20261011-greedy: 220/232 (1996 s)
+student_generate: gcp-student-20261011-greedy: 224/232 (2023 s)
+student_generate: gcp-student-20261011-greedy: 228/232 (2040 s)
+student_generate: gcp-student-20261011-greedy: 232/232 (2103 s)
+student_generate: gcp-student-20261011-greedy: 232 problems have a reply on disk

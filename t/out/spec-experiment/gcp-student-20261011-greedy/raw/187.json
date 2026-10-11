@@ -1,0 +1,29 @@
+{
+ "task_id": "187",
+ "fn": "longest_common_subsequence",
+ "model": "t/out/gcp-student-2026-10-11-s1/merged",
+ "digest": "5539b0c56a7f",
+ "pool_version": "v5",
+ "prompt_version": "s1",
+ "options": {
+  "temperature": 0.0,
+  "seed": 1,
+  "num_predict": 1024,
+  "top_p": null,
+  "decoder": "transformers-batched",
+  "seeding": "per-problem"
+ },
+ "messages": [
+  {
+   "role": "system",
+   "content": "You write tasks in t, a small verified language. Reply with one fenced t task and nothing else: the header line, the task with the requested name and parameters, requires and ensures clauses that specify the result, and a body the provers can verify (loop invariants and decreases where there is a loop)."
+  },
+  {
+   "role": "user",
+   "content": "Problem: Write a function to find the longest common subsequence for the given two sequences.\n\nTests:\nassert longest_common_subsequence(\"AGGTAB\" , \"GXTXAYB\", 6, 7) == 4\nassert longest_common_subsequence(\"ABCDGH\" , \"AEDFHR\", 6, 6) == 3\nassert longest_common_subsequence(\"AXYT\" , \"AYZX\", 4, 4) == 2\n\nWrite the t task named `longest_common_subsequence` with 4 parameter(s) of type(s) seq, seq, int, int, in the order the tests pass them, returning int. The tests must pass and the ensures must specify the result."
+  }
+ ],
+ "reply": "```t\nt 0\ntask longest_common_subsequence(s: seq, t: seq, m: int, n: int) returns (r: int)\n  requires m >= 0\n  requires n >= 0\n  requires m <= len(s)\n  requires n <= len(t)\n  ensures r == 0 ==> m == 0 or n == 0\n  ensures r == 1 ==> (m == 1 and n == 1 and s[0] == t[0]) or (m == 0 and n == 1) or (m == 1 and n == 0)\n  ensures r == 2 ==> (m == 2 and n == 2 and s[0] == t[0] and s[1] == t[1]) or (m == 2 and n == 1) or (m == 1 and n == 2) or (m == 1 and n == 1 and s[0] == t[0] and s[1] == t[1]) or (m == 0 and n == 2) or (m == 2 and n == 0)\n  ensures r == 3 ==> (m == 3 and n == 3 and s[0] == t[0] and s[1] == t[1] and s[2] == t[2]) or (m == 3 and n == 2) or (m == 2 and n == 3) or (m == 3 and n == 1) or (m == 1 and n == 3) or (m == 3 and n == 0) or (m == 0 and n == 3) or (m == 2 and n == 1) or (m == 1 and n == 2) or (m == 1 and n == 1 and s[0] == t[0] and s[1] == t[1] and s[2] == t[2])\n  ensures r == 4 ==> (m == 4 and n == 4 and s[0] == t[0] and s[1] == t[1] and s[2] == t[2] and s[3] == t[3]) or (m == 4 and n == 3) or (m == 3 and n == 4) or (m == 4 and n == 2) or (m == 2 and n == 4) or (m == 4 and n == 1) or (m == 1 and n == 4) or (m == 4 and n == 0) or (m == 0 and n == 4) or (m == 3 and n == 1) or (m == 1 and n == 3) or (m == 3 and n == 2) or (m == 2 and n == 3) or (m == 3 and n == 0) or (m == 0 and n == 3) or (m == 2 and n == 1) or (m == 1 and n == 2) or (m == 1 and n == 1 and s[0] == t[0] and s[1] == t[1] and s[2] == t[2] and s[3] == t[3])\n  ensures r <= m\n  ensures r <= n\n  ensures r >= 0\n{\n  if m == 0 {\n    r := 0;\n  } else {\n    if n == 0 {\n      r := 0;\n    } else {\n      if s[m - 1] == t[n - 1] {\n        r := longest_common_subsequence(s, t, m - 1, n - 1) + 1;\n      } else {\n        var r1: int := longest_common_subsequence(s, t, m, n - 1);\n        var r2: int := longest_common_subsequence(s, t, m - 1, n);\n        if r1 >= r2 {\n          r := r1;\n        } else {\n          r := r2;\n        }\n      }\n    }\n  }\n}\n```",
+ "reply_tokens": 935,
+ "done_reason": "stop"
+}

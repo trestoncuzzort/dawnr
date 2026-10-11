@@ -1,0 +1,29 @@
+{
+ "task_id": "860",
+ "fn": "check_alphanumeric",
+ "model": "t/out/gcp-student-2026-10-11-s1/merged",
+ "digest": "5539b0c56a7f",
+ "pool_version": "v5",
+ "prompt_version": "s1",
+ "options": {
+  "temperature": 0.0,
+  "seed": 1,
+  "num_predict": 1024,
+  "top_p": null,
+  "decoder": "transformers-batched",
+  "seeding": "per-problem"
+ },
+ "messages": [
+  {
+   "role": "system",
+   "content": "You write tasks in t, a small verified language. Reply with one fenced t task and nothing else: the header line, the task with the requested name and parameters, requires and ensures clauses that specify the result, and a body the provers can verify (loop invariants and decreases where there is a loop)."
+  },
+  {
+   "role": "user",
+   "content": "Problem: Write a function to check whether the given string is ending with only alphanumeric characters or not using regex.\n\nTests:\nassert check_alphanumeric(\"dawood@\") == 'Discard'\nassert check_alphanumeric(\"skdmsam326\") == 'Accept'\nassert check_alphanumeric(\"cooltricks@\") == 'Discard'\n\nWrite the t task named `check_alphanumeric` with 1 parameter(s) of type(s) seq, in the order the tests pass them, returning seq. The tests must pass and the ensures must specify the result."
+  }
+ ],
+ "reply": "```t\nt 0\ntask check_alphanumeric(s: seq) returns (r: seq)\n  ensures r == 'Accept' ==> forall i in [0, len(s)) . s[i] >= 65 and s[i] <= 90 or s[i] >= 97 and s[i] <= 122 or s[i] >= 48 and s[i] <= 57\n  ensures r == 'Discard' ==> exists i in [0, len(s)) . s[i] >= 33 and s[i] <= 47 or s[i] >= 58 and s[i] <= 64 or s[i] >= 91 and s[i] <= 96 or s[i] >= 123 and s[i] <= 126\n{\n  r := 'Accept';\n  var i: int := 0;\n  while i < len(s)\n    invariant 0 <= i and i <= len(s)\n    invariant r == 'Accept' ==> forall j in [0, i) . s[j] >= 65 and s[j] <= 90 or s[j] >= 97 and s[j] <= 122 or s[j] >= 48 and s[j] <= 57\n    invariant r == 'Discard' ==> exists j in [0, i) . s[j] >= 33 and s[j] <= 47 or s[j] >= 58 and s[j] <= 64 or s[j] >= 91 and s[j] <= 96 or s[j] >= 123 and s[j] <= 126\n    decreases len(s) - i\n  {\n    if s[i] >= 33 and s[i] <= 47 or s[i] >= 58 and s[i] <= 64 or s[i] >= 91 and s[i] <= 96 or s[i] >= 123 and s[i] <= 126 {\n      r := 'Discard';\n    }\n    i := i + 1;\n  }\n}\n```",
+ "reply_tokens": 470,
+ "done_reason": "stop"
+}

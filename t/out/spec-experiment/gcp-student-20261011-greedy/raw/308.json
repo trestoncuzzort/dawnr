@@ -1,0 +1,29 @@
+{
+ "task_id": "308",
+ "fn": "large_product",
+ "model": "t/out/gcp-student-2026-10-11-s1/merged",
+ "digest": "5539b0c56a7f",
+ "pool_version": "v5",
+ "prompt_version": "s1",
+ "options": {
+  "temperature": 0.0,
+  "seed": 1,
+  "num_predict": 1024,
+  "top_p": null,
+  "decoder": "transformers-batched",
+  "seeding": "per-problem"
+ },
+ "messages": [
+  {
+   "role": "system",
+   "content": "You write tasks in t, a small verified language. Reply with one fenced t task and nothing else: the header line, the task with the requested name and parameters, requires and ensures clauses that specify the result, and a body the provers can verify (loop invariants and decreases where there is a loop)."
+  },
+  {
+   "role": "user",
+   "content": "Problem: Write a function to find the specified number of largest products from two given lists.\n\nTests:\nassert large_product([1, 2, 3, 4, 5, 6],[3, 6, 8, 9, 10, 6],3)==[60, 54, 50]\nassert large_product([1, 2, 3, 4, 5, 6],[3, 6, 8, 9, 10, 6],4)==[60, 54, 50, 48]\nassert large_product([1, 2, 3, 4, 5, 6],[3, 6, 8, 9, 10, 6],5)==[60, 54, 50, 48, 45]\n\nWrite the t task named `large_product` with 3 parameter(s) of type(s) seq, seq, int, in the order the tests pass them, returning seq. The tests must pass and the ensures must specify the result."
+  }
+ ],
+ "reply": "```t\nt 0\ntask large_product(a: seq, b: seq, n: int) returns (r: seq)\n  requires n >= 0\n  requires n <= len(a)\n  requires n <= len(b)\n  ensures len(r) == n\n  ensures forall i in [0, n) . r[i] == max_product(i)\n  ensures forall i in [0, n) . j in [i+1, n) . r[i] >= r[j]\n  ensures forall i in [0, n) . exists j in [0, len(a)) . exists k in [0, len(b)) . r[i] == a[j] * b[k]\n{\n  var products: seq := [];\n  var i: int := 0;\n  var j: int := 0;\n  while i < n and j < len(a) and j < len(b)\n    invariant i <= n\n    invariant j >= 0\n    invariant len(products) == i\n    invariant forall k in [0, i) . products[k] == max_product(k)\n    invariant forall k in [0, i) . m in [k+1, i) . products[k] >= products[m]\n    decreases n - i + j\n  {\n    var p1: int := a[i] * b[j];\n    var p2: int := a[i] * b[j + 1];\n    if p1 > p2 {\n      products := products + [p1];\n      i := i + 1;\n    } else {\n      j := j + 1;\n    }\n  }\n  r := products;\n}\n```",
+ "reply_tokens": 371,
+ "done_reason": "stop"
+}

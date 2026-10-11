@@ -1,0 +1,29 @@
+{
+ "task_id": "885",
+ "fn": "is_Isomorphic",
+ "model": "t/out/gcp-student-2026-10-11-s1/merged",
+ "digest": "5539b0c56a7f",
+ "pool_version": "v5",
+ "prompt_version": "s1",
+ "options": {
+  "temperature": 0.0,
+  "seed": 1,
+  "num_predict": 1024,
+  "top_p": null,
+  "decoder": "transformers-batched",
+  "seeding": "per-problem"
+ },
+ "messages": [
+  {
+   "role": "system",
+   "content": "You write tasks in t, a small verified language. Reply with one fenced t task and nothing else: the header line, the task with the requested name and parameters, requires and ensures clauses that specify the result, and a body the provers can verify (loop invariants and decreases where there is a loop)."
+  },
+  {
+   "role": "user",
+   "content": "Problem: Write a python function to check whether the two given strings are isomorphic to each other or not.\n\nTests:\nassert is_Isomorphic(\"paper\",\"title\") == True\nassert is_Isomorphic(\"ab\",\"ba\") == True\nassert is_Isomorphic(\"ab\",\"aa\") == False\n\nWrite the t task named `is_Isomorphic` with 2 parameter(s) of type(s) seq, seq, in the order the tests pass them, returning bool. The tests must pass and the ensures must specify the result."
+  }
+ ],
+ "reply": "```t\nt 0\ntask is_Isomorphic(s: seq, t: seq) returns (r: bool)\n  ensures r == (len(s) == len(t) and forall i in [0, len(s)) . s[i] == t[i] ==> exists j in [0, len(t)) . t[j] == s[i] and forall j_v in [0, len(t)) . j_v != i ==> s[i] != t[j_v])\n{\n  if len(s) != len(t) {\n    r := false;\n  } else {\n    var map_s_to_t: map[s, t] := {};\n    var map_t_to_s: map[t, s] := {};\n    r := true;\n    var i: int := 0;\n    while i < len(s)\n      invariant 0 <= i and i <= len(s)\n      invariant r == (i == 0 or (forall j in [0, i) . s[j] == t[j] ==> exists k in [0, i) . t[k] == s[j] and forall k_v in [0, i) . k_v != j ==> s[j] != t[k_v]))\n      decreases len(s) - i\n    {\n      if s[i] in map_s_to_t and map_s_to_t[s[i]] != t[i] {\n        r := false;\n      } else {\n        if t[i] in map_t_to_s and map_t_to_s[t[i]] != s[i] {\n          r := false;\n        } else {\n          map_s_to_t := map_s_to_t + {s[i] := t[i]};\n          map_t_to_s := map_t_to_s + {t[i] := s[i]};\n        }\n      }\n      i := i + 1;\n    }\n  }\n}\n```",
+ "reply_tokens": 407,
+ "done_reason": "stop"
+}

@@ -1,0 +1,29 @@
+{
+ "task_id": "203",
+ "fn": "hamming_Distance",
+ "model": "t/out/gcp-student-2026-10-11-s1/merged",
+ "digest": "5539b0c56a7f",
+ "pool_version": "v5",
+ "prompt_version": "s1",
+ "options": {
+  "temperature": 0.0,
+  "seed": 1,
+  "num_predict": 1024,
+  "top_p": null,
+  "decoder": "transformers-batched",
+  "seeding": "per-problem"
+ },
+ "messages": [
+  {
+   "role": "system",
+   "content": "You write tasks in t, a small verified language. Reply with one fenced t task and nothing else: the header line, the task with the requested name and parameters, requires and ensures clauses that specify the result, and a body the provers can verify (loop invariants and decreases where there is a loop)."
+  },
+  {
+   "role": "user",
+   "content": "Problem: Write a python function to find the hamming distance between given two integers.\n\nTests:\nassert hamming_Distance(4,8) == 2\nassert hamming_Distance(2,4) == 2\nassert hamming_Distance(1,2) == 2\n\nWrite the t task named `hamming_Distance` with 2 parameter(s) of type(s) int, int, in the order the tests pass them, returning int. The tests must pass and the ensures must specify the result."
+  }
+ ],
+ "reply": "```t\nt 0\ntask hamming_Distance(a: int, b: int) returns (r: int)\n  ensures r == 0\n  ensures r == 1\n  ensures r == 2\n{\n  var x: int := a;\n  var y: int := b;\n  r := 0;\n  while x > 0 and y > 0\n    invariant r >= 0\n    invariant r <= 2\n    invariant x >= 0\n    invariant y >= 0\n    invariant r == (x % 2) + (y % 2)\n    decreases x + y\n  {\n    if x % 2 == 1 and y % 2 == 1 {\n      r := r + 0;\n    } else {\n      r := r + 1;\n    }\n    x := x / 2;\n    y := y / 2;\n  }\n  while x > 0\n    invariant r >= 0\n    invariant r <= 2\n    invariant x >= 0\n    invariant y == 0\n    invariant r == (x % 2) + (y % 2)\n    decreases x\n  {\n    if x % 2 == 1 {\n      r := r + 1;\n    }\n    x := x / 2;\n  }\n  while y > 0\n    invariant r >= 0\n    invariant r <= 2\n    invariant x == 0\n    invariant y >= 0\n    invariant r == (x % 2) + (y % 2)\n    decreases y\n  {\n    if y % 2 == 1 {\n      r := r + 1;\n    }\n    y := y / 2;\n  }\n}\n```",
+ "reply_tokens": 401,
+ "done_reason": "stop"
+}

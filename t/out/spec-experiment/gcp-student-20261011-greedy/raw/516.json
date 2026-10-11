@@ -1,0 +1,29 @@
+{
+ "task_id": "516",
+ "fn": "radix_sort",
+ "model": "t/out/gcp-student-2026-10-11-s1/merged",
+ "digest": "5539b0c56a7f",
+ "pool_version": "v5",
+ "prompt_version": "s1",
+ "options": {
+  "temperature": 0.0,
+  "seed": 1,
+  "num_predict": 1024,
+  "top_p": null,
+  "decoder": "transformers-batched",
+  "seeding": "per-problem"
+ },
+ "messages": [
+  {
+   "role": "system",
+   "content": "You write tasks in t, a small verified language. Reply with one fenced t task and nothing else: the header line, the task with the requested name and parameters, requires and ensures clauses that specify the result, and a body the provers can verify (loop invariants and decreases where there is a loop)."
+  },
+  {
+   "role": "user",
+   "content": "Problem: Write a function to sort a list of elements using radix sort.\n\nTests:\nassert radix_sort([15, 79, 25, 68, 37]) == [15, 25, 37, 68, 79]\nassert radix_sort([9, 11, 8, 7, 3, 2]) == [2, 3, 7, 8, 9, 11]\nassert radix_sort([36, 12, 24, 26, 29]) == [12, 24, 26, 29, 36]\n\nWrite the t task named `radix_sort` with 1 parameter(s) of type(s) seq, in the order the tests pass them, returning seq. The tests must pass and the ensures must specify the result."
+  }
+ ],
+ "reply": "```t\nt 1\ngate loops\ntask radix_sort(s: seq) returns (r: seq)\n  requires len(s) >= 0\n  ensures len(r) == len(s)\n  ensures forall i in [0, len(s)) . r[i] <= r[i + 1] or i == len(s) - 1\n{\n  if len(s) <= 1 {\n    r := s;\n  } else {\n    var buckets: seq := [];\n    var max: int := s[0];\n    var i: int := 1;\n    while i < len(s)\n      invariant 0 <= i and i <= len(s)\n      invariant len(buckets) == i\n      invariant forall j in [0, i) . max >= s[j]\n      decreases len(s) - i\n    {\n      if s[i] > max {\n        max := s[i];\n      }\n      buckets := buckets + [s[i]];\n      i := i + 1;\n    }\n    r := [];\n    var j: int := 0;\n    while j < len(buckets)\n      invariant 0 <= j and j <= len(buckets)\n      invariant len(r) == j\n      decreases len(buckets) - j\n    {\n      var bucket: seq := buckets[j];\n      var k: int := 0;\n      while k < len(bucket)\n        invariant 0 <= k and k <= len(bucket)\n        decreases len(bucket) - k\n      {\n        r := r + [bucket[k]];\n        k := k + 1;\n      }\n      buckets := buckets[j + 1..len(buckets)];\n      j := j + 1;\n    }\n  }\n}\n```",
+ "reply_tokens": 390,
+ "done_reason": "stop"
+}

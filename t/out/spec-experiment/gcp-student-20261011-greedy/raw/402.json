@@ -1,0 +1,29 @@
+{
+ "task_id": "402",
+ "fn": "ncr_modp",
+ "model": "t/out/gcp-student-2026-10-11-s1/merged",
+ "digest": "5539b0c56a7f",
+ "pool_version": "v5",
+ "prompt_version": "s1",
+ "options": {
+  "temperature": 0.0,
+  "seed": 1,
+  "num_predict": 1024,
+  "top_p": null,
+  "decoder": "transformers-batched",
+  "seeding": "per-problem"
+ },
+ "messages": [
+  {
+   "role": "system",
+   "content": "You write tasks in t, a small verified language. Reply with one fenced t task and nothing else: the header line, the task with the requested name and parameters, requires and ensures clauses that specify the result, and a body the provers can verify (loop invariants and decreases where there is a loop)."
+  },
+  {
+   "role": "user",
+   "content": "Problem: Write a function to compute the value of ncr%p.\n\nTests:\nassert ncr_modp(10,2,13)==6\nassert ncr_modp(15,12,43)==25\nassert ncr_modp(17,9,18)==10\n\nWrite the t task named `ncr_modp` with 3 parameter(s) of type(s) int, int, int, in the order the tests pass them, returning int. The tests must pass and the ensures must specify the result."
+  }
+ ],
+ "reply": "```t\nt 0\ntask ncr_modp(n: int, r: int, p: int) returns (res: int)\n  requires n >= r and r >= 0\n  requires p > 1\n  ensures res >= 0 and res < p\n  ensures n * (n - 1) * ... * (n - r + 1) == res * (r!) [mod p]\n{\n  res := 1;\n  var i: int := 0;\n  while i < r\n    invariant 0 <= i and i <= r\n    invariant res >= 0 and res < p\n    invariant n * (n - 1) * ... * (n - i) == res * i! [mod p]\n    decreases r - i\n  {\n    var numerator: int := n - i;\n    var denominator: int := i + 1;\n    var g: int := 1;\n    while g < p\n      invariant g >= 1 and g <= p\n      decreases p - g\n    {\n      if numerator % g == 0 {\n        res := res * (numerator / g) % p;\n        numerator := numerator / g;\n      } else {\n        if denominator % g == 0 {\n          denominator := denominator / g;\n        } else {\n          g := g + 1;\n        }\n      }\n    }\n    res := res * numerator % p;\n    res := res * denominator % p;\n    i := i + 1;\n  }\n}\n```",
+ "reply_tokens": 349,
+ "done_reason": "stop"
+}

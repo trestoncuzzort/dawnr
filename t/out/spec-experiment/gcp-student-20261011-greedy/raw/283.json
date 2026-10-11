@@ -1,0 +1,29 @@
+{
+ "task_id": "283",
+ "fn": "validate",
+ "model": "t/out/gcp-student-2026-10-11-s1/merged",
+ "digest": "5539b0c56a7f",
+ "pool_version": "v5",
+ "prompt_version": "s1",
+ "options": {
+  "temperature": 0.0,
+  "seed": 1,
+  "num_predict": 1024,
+  "top_p": null,
+  "decoder": "transformers-batched",
+  "seeding": "per-problem"
+ },
+ "messages": [
+  {
+   "role": "system",
+   "content": "You write tasks in t, a small verified language. Reply with one fenced t task and nothing else: the header line, the task with the requested name and parameters, requires and ensures clauses that specify the result, and a body the provers can verify (loop invariants and decreases where there is a loop)."
+  },
+  {
+   "role": "user",
+   "content": "Problem: Write a python function to check whether the frequency of each digit is less than or equal to the digit itself.\n\nTests:\nassert validate(1234) == True\nassert validate(51241) == False\nassert validate(321) == True\n\nWrite the t task named `validate` with 1 parameter(s) of type(s) int, in the order the tests pass them, returning bool. The tests must pass and the ensures must specify the result."
+  }
+ ],
+ "reply": "```t\nt 1\ngate loops\ngate quantifiers\ngate arithmetic\ntask validate(n: int) returns (r: bool)\n  requires n >= 0\n  ensures r == (forall d in digits(n), count(d, n) <= d)\n{\n  var s: string := str(n);\n  var counts: array[0, 9] of int := 0;\n  var i: int := 0;\n  while i < len(s)\n    invariant 0 <= i and i <= len(s)\n    invariant forall j in [0, i) . counts[j] == count(s[j], s[0..i])\n    decreases len(s) - i\n  {\n    var digit: int := s[i] - 48;\n    counts[digit] := counts[digit] + 1;\n    i := i + 1;\n  }\n  r := true;\n  i := 0;\n  while i < 10\n    invariant 0 <= i and i <= 10\n    decreases 10 - i\n  {\n    if counts[i] > i {\n      r := false;\n    }\n    i := i + 1;\n  }\n}\n```",
+ "reply_tokens": 275,
+ "done_reason": "stop"
+}

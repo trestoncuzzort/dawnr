@@ -1,0 +1,124 @@
+{
+ "t": 1,
+ "name": "mbpp_275__get_Position",
+ "params": [
+  {
+   "name": "arr",
+   "type": "seq"
+  },
+  {
+   "name": "i",
+   "type": "int"
+  },
+  {
+   "name": "j",
+   "type": "int"
+  }
+ ],
+ "returns": [
+  {
+   "name": "r",
+   "type": "int"
+  }
+ ],
+ "requires": [
+  {
+   "op": "and",
+   "args": [
+    {
+     "op": ">=",
+     "args": [
+      {
+       "var": "i"
+      },
+      {
+       "int": 0
+      }
+     ]
+    },
+    {
+     "op": "<",
+     "args": [
+      {
+       "var": "i"
+      },
+      {
+       "op": "len",
+       "args": [
+        {
+         "var": "arr"
+        }
+       ]
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "op": "and",
+   "args": [
+    {
+     "op": ">=",
+     "args": [
+      {
+       "var": "j"
+      },
+      {
+       "int": 0
+      }
+     ]
+    },
+    {
+     "op": "<",
+     "args": [
+      {
+       "var": "j"
+      },
+      {
+       "op": "len",
+       "args": [
+        {
+         "var": "arr"
+        }
+       ]
+      }
+     ]
+    }
+   ]
+  }
+ ],
+ "ensures": [
+  {
+   "op": "==",
+   "args": [
+    {
+     "var": "r"
+    },
+    {
+     "var": "i"
+    }
+   ]
+  },
+  {
+   "op": "==",
+   "args": [
+    {
+     "var": "r"
+    },
+    {
+     "var": "j"
+    }
+   ]
+  }
+ ],
+ "body": [
+  {
+   "assign": [
+    "r",
+    {
+     "var": "i"
+    }
+   ]
+  }
+ ]
+}

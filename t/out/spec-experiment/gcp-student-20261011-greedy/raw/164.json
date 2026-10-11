@@ -1,0 +1,29 @@
+{
+ "task_id": "164",
+ "fn": "areEquivalent",
+ "model": "t/out/gcp-student-2026-10-11-s1/merged",
+ "digest": "5539b0c56a7f",
+ "pool_version": "v5",
+ "prompt_version": "s1",
+ "options": {
+  "temperature": 0.0,
+  "seed": 1,
+  "num_predict": 1024,
+  "top_p": null,
+  "decoder": "transformers-batched",
+  "seeding": "per-problem"
+ },
+ "messages": [
+  {
+   "role": "system",
+   "content": "You write tasks in t, a small verified language. Reply with one fenced t task and nothing else: the header line, the task with the requested name and parameters, requires and ensures clauses that specify the result, and a body the provers can verify (loop invariants and decreases where there is a loop)."
+  },
+  {
+   "role": "user",
+   "content": "Problem: Write a python function to check whether the sum of divisors are same or not.\n\nTests:\nassert areEquivalent(36,57) == False\nassert areEquivalent(2,4) == False\nassert areEquivalent(23,47) == True\n\nWrite the t task named `areEquivalent` with 2 parameter(s) of type(s) int, int, in the order the tests pass them, returning bool. The tests must pass and the ensures must specify the result."
+  }
+ ],
+ "reply": "```t\nt 0\ntask areEquivalent(a: int, b: int) returns (r: bool)\n  requires a > 0\n  requires b > 0\n  ensures r == (sum_divisors(a) == sum_divisors(b))\n{\n  var sum_a: int := 1;\n  var sum_b: int := 1;\n  var i: int := 2;\n  while i <= a\n    invariant 2 <= i and i <= a + 1\n    invariant sum_a == sum_divisors(a, i)\n    decreases a - i + 1\n  {\n    if a % i == 0 {\n      sum_a := sum_a + i;\n    }\n    i := i + 1;\n  }\n  i := 2;\n  while i <= b\n    invariant 2 <= i and i <= b + 1\n    invariant sum_b == sum_divisors(b, i)\n    decreases b - i + 1\n  {\n    if b % i == 0 {\n      sum_b := sum_b + i;\n    }\n    i := i + 1;\n  }\n  r := sum_a == sum_b;\n}\n\nfun sum_divisors(n: int, i: int): int {\n  var s: int := 1;\n  var j: int := 2;\n  while j <= i\n    invariant 2 <= j and j <= i + 1\n    invariant s == sum_divisors(n, j)\n    decreases i - j + 1\n  {\n    if n % j == 0 {\n      s := s + j;\n    }\n    j := j + 1;\n  }\n  return s;\n}\n```",
+ "reply_tokens": 389,
+ "done_reason": "stop"
+}

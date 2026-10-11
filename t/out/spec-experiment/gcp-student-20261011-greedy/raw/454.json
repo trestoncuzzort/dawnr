@@ -1,0 +1,29 @@
+{
+ "task_id": "454",
+ "fn": "text_match_wordz",
+ "model": "t/out/gcp-student-2026-10-11-s1/merged",
+ "digest": "5539b0c56a7f",
+ "pool_version": "v5",
+ "prompt_version": "s1",
+ "options": {
+  "temperature": 0.0,
+  "seed": 1,
+  "num_predict": 1024,
+  "top_p": null,
+  "decoder": "transformers-batched",
+  "seeding": "per-problem"
+ },
+ "messages": [
+  {
+   "role": "system",
+   "content": "You write tasks in t, a small verified language. Reply with one fenced t task and nothing else: the header line, the task with the requested name and parameters, requires and ensures clauses that specify the result, and a body the provers can verify (loop invariants and decreases where there is a loop)."
+  },
+  {
+   "role": "user",
+   "content": "Problem: Write a function that matches a word containing 'z'.\n\nTests:\nassert text_match_wordz(\"pythonz.\")==('Found a match!')\nassert text_match_wordz(\"xyz.\")==('Found a match!')\nassert text_match_wordz(\"  lang  .\")==('Not matched!')\n\nWrite the t task named `text_match_wordz` with 1 parameter(s) of type(s) seq, in the order the tests pass them, returning seq. The tests must pass and the ensures must specify the result."
+  }
+ ],
+ "reply": "```t\nt 0\ntask text_match_wordz(s: seq) returns (r: seq)\n  ensures len(r) == 10\n  ensures r == ('Found a match!') or r == ('Not matched!')\n{\n  var i: int := 0;\n  while i < len(s)\n    invariant 0 <= i and i <= len(s)\n    invariant len(r) == 10\n    invariant r == ('Found a match!') or r == ('Not matched!')\n    decreases len(s) - i\n  {\n    if s[i] == 'z' {\n      r := ('Found a match!');\n      return r;\n    }\n    i := i + 1;\n  }\n  r := ('Not matched!');\n}\n```",
+ "reply_tokens": 178,
+ "done_reason": "stop"
+}
