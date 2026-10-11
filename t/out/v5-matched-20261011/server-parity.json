@@ -1,0 +1,21 @@
+{
+  "v5": {
+    "models": [
+      "v5-matched-20261011-v5"
+    ],
+    "total_slots": 1,
+    "chat_template_sha256": "a4aee8afcf2e0711942cf848899be66016f8d14a889ff9ede07bca099c28f715",
+    "chat_template_present": true,
+    "context_tokens": 8192
+  },
+  "recovered": {
+    "models": [
+      "v5-matched-20261011-recovered"
+    ],
+    "total_slots": 1,
+    "chat_template_sha256": "a4aee8afcf2e0711942cf848899be66016f8d14a889ff9ede07bca099c28f715",
+    "chat_template_present": true,
+    "context_tokens": 8192
+  },
+  "same_chat_template": true
+}

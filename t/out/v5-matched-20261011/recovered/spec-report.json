@@ -1,0 +1,142 @@
+{
+ "questions": 33,
+ "name_normalised": false,
+ "stages": {
+  "ready": 32,
+  "wf": 1
+ },
+ "entries": {
+  "clover_abs__abs": {
+   "stage": "ready",
+   "why": null
+  },
+  "clover_find__find": {
+   "stage": "ready",
+   "why": null
+  },
+  "dafny_tmp_tmpmvs2dmry_examples1__abs": {
+   "stage": "ready",
+   "why": null
+  },
+  "final_project_dafny_tmp_tmpmcywuqox_final_project_3__nonZeroReturn": {
+   "stage": "ready",
+   "why": null
+  },
+  "cs245_verification_tmp_tmp0h_nxhqp_a8_q2__a8Q1": {
+   "stage": "ready",
+   "why": null
+  },
+  "cs357_tmp_tmpn4fsvwzs_lab7_question2__two": {
+   "stage": "ready",
+   "why": null
+  },
+  "dafny_programs_tmp_tmpcwodh6qh_src_max__max": {
+   "stage": "ready",
+   "why": null
+  },
+  "humaneval_dafny_041_car_race_collision__car_race_collision": {
+   "stage": "ready",
+   "why": null
+  },
+  "vericoding_da0001__solve": {
+   "stage": "ready",
+   "why": null
+  },
+  "vericoding_da0662__solve": {
+   "stage": "ready",
+   "why": null
+  },
+  "vericoding_dd0052__calDiv": {
+   "stage": "ready",
+   "why": null
+  },
+  "vericoding_dd0077__quotient": {
+   "stage": "ready",
+   "why": null
+  },
+  "vericoding_dd0684__replaceLastElement": {
+   "stage": "ready",
+   "why": null
+  },
+  "vericoding_dd0752__squarePyramidSurfaceArea": {
+   "stage": "ready",
+   "why": null
+  },
+  "vericoding_dj0048__myfun": {
+   "stage": "ready",
+   "why": null
+  },
+  "vericoding_dj0113__elementWiseDivide": {
+   "stage": "ready",
+   "why": null
+  },
+  "vericoding_dv0138__doubleArrayElements": {
+   "stage": "ready",
+   "why": null
+  },
+  "vericoding_da0075__solve": {
+   "stage": "ready",
+   "why": null
+  },
+  "vericoding_da0455__solveCookieDistribution": {
+   "stage": "ready",
+   "why": null
+  },
+  "humaneval_dafny_049_modp__modp": {
+   "stage": "ready",
+   "why": null
+  },
+  "vericoding_da0152__computeMinimalSteps": {
+   "stage": "ready",
+   "why": null
+  },
+  "vericoding_dd0061__find": {
+   "stage": "ready",
+   "why": null
+  },
+  "vericoding_dd0680__replaceBlanksWithChar": {
+   "stage": "ready",
+   "why": null
+  },
+  "vericoding_dv0008__countSumDivisibleBy": {
+   "stage": "ready",
+   "why": null
+  },
+  "acsl_count__count": {
+   "stage": "ready",
+   "why": null
+  },
+  "vericoding_la0099__solve": {
+   "stage": "ready",
+   "why": null
+  },
+  "verus_examples_recursion_compute_arith_sum__compute_arith_sum": {
+   "stage": "ready",
+   "why": null
+  },
+  "vericoding_da0399__solve": {
+   "stage": "ready",
+   "why": null
+  },
+  "vericoding_da0484__solve": {
+   "stage": "ready",
+   "why": null
+  },
+  "vericoding_da0580__solve": {
+   "stage": "ready",
+   "why": null
+  },
+  "all_nonneg": {
+   "stage": "ready",
+   "why": null
+  },
+  "divmod_pair": {
+   "stage": "ready",
+   "why": null
+  },
+  "fib": {
+   "stage": "wf",
+   "why": "task decreases without a self-call [SPEC: a task decreases requires a self-recursive body, and vice versa (Gate 3)]"
+  }
+ }
+}
