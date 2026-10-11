@@ -138,3 +138,10 @@ specification-preservation and seven-kernel path (`recipes/gcp-student-2026-10-1
 Prediction C1: all 33 reach grading and at least 30 prove in all seven with refuted twins.
 Fewer than 33 reaching grading or fewer than 30 proving falsifies it. This measures the current
 instrument ceiling; it changes neither the question set nor the candidate criteria above.
+
+**C1 holds.** The [reference-program control](out/gcp-student-2026-10-11-s1/ceiling-kernels.md)
+measured 33 ready questions and 33 proved by all seven, with refuted twins, no missing rows and no
+missing twins ([counts](out/gcp-student-2026-10-11-s1/ceiling-levels.json)). It ran 231 cells and
+1,386 kernel invocations with the cache disabled. Each question therefore has a solution admitted
+by the current toolchain. These are supplied reference programs, not model-generated answers;
+the candidate predictions remain unmeasured.
