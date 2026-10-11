@@ -209,3 +209,18 @@ naturally. Increasing the token cap alone would leave those 93 failures unresolv
 repaired or regenerated in this single-answer reading. The final training
 [receipt](out/gcp-student-2026-10-11-s1/adapter-run.json) and
 [log](out/gcp-student-2026-10-11-s1/run.log) retain the recipe and generation progress.
+
+## Export saved and cloud resources deleted
+
+The lab saved the Q8_0 export and verified its checksum at 07:44:24 UTC. It is 4,482,402,752 bytes,
+with SHA-256 `121b3654e74fb088f222da9a5f500a99d88b15663949a6602526d9406b0fa280`.
+The [artifact record](out/gcp-student-2026-10-11-s1/artifacts.json) names the base revision, adapter,
+export and storage locations. The final adapter has matching checksums on both the lab and control
+node. The GGUF is retained on the lab; weights are not added to the source repository.
+
+The [teardown receipt](out/gcp-student-2026-10-11-s1/cloud-teardown.json) confirms that both the VM
+and its boot disk return 404 after deletion, observed at **07:45:44 UTC**. The dedicated temporary
+VM keys were removed on both machines. Wall time from creation to confirmed deletion was 7,535.5
+seconds, well inside the five-hour bound. At the posted VM rate this gives a **$1.7868 compute
+estimate**, excluding disk, IP and egress; it is not an invoice. The remaining grading runs on lab
+CPUs after cloud teardown.

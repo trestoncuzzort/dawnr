@@ -1,0 +1,25 @@
+{
+  "status": "research candidate; installed release remains student-v5",
+  "base": "Qwen/Qwen3.5-4B",
+  "base_revision": "851bf6e806efd8d0a36b00ddf55e13ccb7b8cd0a",
+  "evaluation_format": "merged bf16; Q8_0 equivalence not measured",
+  "adapter": {
+    "path": "adapter/adapter_model.safetensors",
+    "bytes": 519506392,
+    "sha256": "50a51ca0f54c1c7986828a08206eae31be8e2900c8656c6ffd345d48d2a2fcf2",
+    "copies_verified": [
+      "lab",
+      "control-node final-adapter.tar"
+    ]
+  },
+  "export": {
+    "path": "export/dawnr-gcp-20261011-Q8_0.gguf",
+    "bytes": 4482402752,
+    "sha256": "121b3654e74fb088f222da9a5f500a99d88b15663949a6602526d9406b0fa280",
+    "format": "Q8_0",
+    "converter_commit": "23b0202a189c44a54625aadcb37a946dd1d6278d",
+    "lab_copy_verified": true,
+    "storage": "lab checkout; no GGUF weights committed to git",
+    "saved_utc": "2026-10-11T07:44:24Z"
+  }
+}

@@ -1,0 +1,12 @@
+{
+  "observed_utc": "2026-10-11T07:45:44.842349+00:00",
+  "reason": "results saved",
+  "results_saved_on_lab": true,
+  "vm_get_status": 404,
+  "boot_disk_get_status": 404,
+  "created_utc": "2026-10-11T05:40:09.366000+00:00",
+  "wall_seconds_to_confirmed_deletion": 7535.5,
+  "compute_cost_upper_estimate_usd": 1.7868,
+  "price_usd_per_hour": 0.853624312,
+  "cost_note": "Elapsed wall time times the posted VM price; excludes disk, IP and egress. Not an invoice."
+}
