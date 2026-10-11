@@ -1,0 +1,60 @@
+{
+  "sources": [
+    {
+      "path": "t/out/gcp-student-2026-10-11-s1/spec-rows.jsonl",
+      "sha256": "8f8d478e644ae9e63d6e7cf7298d706b7eb12d9a082802ac73aab1d90661ff5c",
+      "rows": 476
+    },
+    {
+      "path": "t/out/loop/sft-r12-v5resolved.jsonl",
+      "sha256": "fede669ce7b2036d2ff17ab4db0c203679f14b63df4ca05a920ef14d7a5cc5ca",
+      "rows": 74
+    },
+    {
+      "path": "t/out/loop/sft-deepseek-nine.jsonl",
+      "sha256": "cc4b82e28e147353275b9cbae80d2d9ffcfe69d236d7965304e1e2a3d1504ca4",
+      "rows": 9
+    },
+    {
+      "path": "t/out/loop/sft-deepseek-b2.jsonl",
+      "sha256": "c7093d70a94cb9256b059fd4bef580f4f8c8456e3f11ab832ee0c06fb95e28f9",
+      "rows": 5
+    },
+    {
+      "path": "t/out/loop/sft-deepseek-b3.jsonl",
+      "sha256": "42b84d0c7acd1239b8055e48e944cd9addf9af48f36cea4ff9ac65d38ba59c27",
+      "rows": 8
+    }
+  ],
+  "raw_rows": 563,
+  "blocked_by_current_split": [
+    {
+      "path": "t/out/loop/sft-r12-v5resolved.jsonl",
+      "task_id": 242
+    },
+    {
+      "path": "t/out/loop/sft-r12-v5resolved.jsonl",
+      "task_id": 404
+    },
+    {
+      "path": "t/out/loop/sft-r12-v5resolved.jsonl",
+      "task_id": 451
+    },
+    {
+      "path": "t/out/loop/sft-r12-v5resolved.jsonl",
+      "task_id": 498
+    },
+    {
+      "path": "t/out/loop/sft-r12-v5resolved.jsonl",
+      "task_id": 504
+    },
+    {
+      "path": "t/out/loop/sft-r12-v5resolved.jsonl",
+      "task_id": 728
+    }
+  ],
+  "exact_duplicates_removed": 3,
+  "pool_size": 882,
+  "required_eval_dev": 332,
+  "missing_eval_dev": []
+}
