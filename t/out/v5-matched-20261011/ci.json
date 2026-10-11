@@ -1,0 +1,49 @@
+{
+  "commit": "f3ed6a3943edad73673aa8e58f8acb4943369e1c",
+  "run_id": 38128091368,
+  "url": "https://github.com/trestoncuzzort/dawnr/actions/runs/38128091368",
+  "status": "completed",
+  "conclusion": "success",
+  "jobs": [
+    {
+      "name": "cpu-torch (py3.10)",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "name": "cpu-torch (py3.12)",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "name": "standard-library (ubuntu-latest, py3.12)",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "name": "standard-library (macos-latest, py3.10)",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "name": "standard-library (windows-latest, py3.12)",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "name": "standard-library (windows-latest, py3.10)",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "name": "standard-library (macos-latest, py3.12)",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "name": "standard-library (ubuntu-latest, py3.10)",
+      "status": "completed",
+      "conclusion": "success"
+    }
+  ]
+}
