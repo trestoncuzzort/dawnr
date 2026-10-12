@@ -42,6 +42,25 @@ LOC = re.compile(r":(\d+):(\d+): (.*)")
 
 def refusal_text(res: dict, task_path: Path) -> str | None:
     parse = res.get("parse") or ""
+    lift = res.get("lift") or {}
+    if parse.startswith("lift-"):
+        if lift.get("status") == "refused":
+            reason = lift.get("reason", "")
+            try:                                   # the lifter's record: {'stage', 'reason', 'token', 'line'}
+                import ast
+                d = ast.literal_eval(reason)
+                tok = str(d.get("token", ""))
+                if d.get("stage") == "resolve":
+                    return f"Dafny refused the program: {tok}"
+                if d.get("stage") == "check":
+                    return (f"Dafny could not verify the program after lifting: the proof of `{tok}` fails. "
+                            f"Strengthen the invariants or add the lemma the ensures needs.")
+                return (f"The lifter to the verified language refused the program at stage {d.get('stage')}: "
+                        f"{d.get('reason')} ({tok}). Stay in the subset: int, bool, seq<int>; one return; no "
+                        f"quantifier over an unbounded range; no mutual recursion; no sequences of pairs.")
+            except (ValueError, SyntaxError):
+                return f"The lifter refused the program: {reason}"
+        return f"The lifter did not accept the program: {lift.get('status')} {lift.get('tail', '')[-300:]}"
     if parse.startswith("error"):
         m = LOC.search(parse)
         if m:
@@ -64,7 +83,7 @@ def refusal_text(res: dict, task_path: Path) -> str | None:
 
 
 def wants_repair(res: dict, include_judge_fail: bool) -> bool:
-    if (res.get("parse") or "").startswith("error"):
+    if (res.get("parse") or "").startswith(("error", "lift-")):
         return True
     status = (res.get("judge") or {}).get("status")
     return status == "ill-formed" or (include_judge_fail and status in ("fail", "error"))
@@ -103,7 +122,8 @@ def main(argv=None) -> int:
         if (target / "record.json").is_file():
             continue
         rec = json.loads((d / "record.json").read_text(encoding="utf-8"))
-        refusal = refusal_text(res, d / f"p{rec['id']}.t")
+        target = rec.get("target", "t")
+        refusal = refusal_text(res, d / f"p{rec['id']}{'.dfy' if target == 'dafny' else '.t'}")
         if refusal is None:
             continue
         jobs.append((d, target, rec, res, refusal))
@@ -139,11 +159,13 @@ def main(argv=None) -> int:
     ledger = {"in": 0, "out": 0, "calls": 0, "usd": 0.0, "stop": False, "fences": 0}
 
     def one(job):
-        d, target, rec, res, refusal = job
+        d, target_dir, rec, res, refusal = job
         if ledger["stop"]:
             return
-        ask = (refusal + "\n\nRewrite the whole t task (and the io module if it must change) so that it is accepted, "
-               "keeping the problem's meaning. Reply with exactly two fenced blocks again: ```t then ```python.")
+        lang = rec.get("target", "t")                # the language the sample answered in: t or dafny
+        what = "Dafny program" if lang == "dafny" else "t task"
+        ask = (refusal + f"\n\nRewrite the whole {what} (and the io module if it must change) so that it is accepted, "
+               f"keeping the problem's meaning. Reply with exactly two fenced blocks again: ```{lang} then ```python.")
         messages = rec["messages"] + [{"role": "assistant", "content": rec["reply"]}, {"role": "user", "content": ask}]
         t0 = time.monotonic()
         try:
@@ -153,21 +175,22 @@ def main(argv=None) -> int:
                 ledger["stop"] = True
             print(f"ABORT {d}: {e}", file=sys.stderr, flush=True)
             return
-        t_src, io_src = ut.extract(reply)
-        target.mkdir(parents=True, exist_ok=True)
+        t_src, io_src = ut.extract(reply, lang)
+        suffix = ".dfy" if lang == "dafny" else ".t"
+        target_dir.mkdir(parents=True, exist_ok=True)
         if t_src is not None:
-            (target / f"p{rec['id']}.t").write_text(t_src.rstrip() + "\n", encoding="utf-8")
+            (target_dir / f"p{rec['id']}{suffix}").write_text(t_src.rstrip() + "\n", encoding="utf-8")
         io_text = io_src if io_src is not None else (
             (d / f"p{rec['id']}_io.py").read_text(encoding="utf-8") if (d / f"p{rec['id']}_io.py").is_file() else None)
         if io_text is not None:
-            (target / f"p{rec['id']}_io.py").write_text(io_text.rstrip() + "\n", encoding="utf-8")
+            (target_dir / f"p{rec['id']}_io.py").write_text(io_text.rstrip() + "\n", encoding="utf-8")
         k = rec["sample_index"]
         record = dict(rec, model=model, provider=a.provider, endpoint=endpoint, sample_index=100 * a.round + k,
                       repair_of=k, repair_round=a.round, refusal=refusal, messages=messages, reply=reply,
                       prompt_tokens=in_tok, reply_tokens=out_tok, wall_s=round(time.monotonic() - t0, 3),
                       done_reason=stop, fences={"t": t_src is not None, "python": io_src is not None},
                       options=dict(rec.get("options", {}), temperature=a.temperature))
-        (target / "record.json").write_text(json.dumps(record, ensure_ascii=False, indent=1), encoding="utf-8")
+        (target_dir / "record.json").write_text(json.dumps(record, ensure_ascii=False, indent=1), encoding="utf-8")
         with lock:
             ledger["in"] += in_tok
             ledger["out"] += out_tok
@@ -177,7 +200,7 @@ def main(argv=None) -> int:
             if ledger["usd"] >= a.spend_cap_usd:
                 ledger["stop"] = True
                 print(f"SPEND CAP: ${ledger['usd']:.3f}", file=sys.stderr, flush=True)
-            print(f"{ledger['calls']}/{len(jobs)} {target.relative_to(samples)}: {in_tok}+{out_tok} tok, "
+            print(f"{ledger['calls']}/{len(jobs)} {target_dir.relative_to(samples)}: {in_tok}+{out_tok} tok, "
                   f"t-fence={t_src is not None}, ${ledger['usd']:.3f}", flush=True)
 
     with concurrent.futures.ThreadPoolExecutor(max_workers=max(1, min(a.jobs, 4))) as ex:

@@ -164,6 +164,9 @@ Solving a judge problem in Dafny has two parts, and you write both.
     ghost state, no `modifies`; proof steps belong in lemmas; quantifiers only over int ranges written
     `0 <= i < n`. The method sees one case at a time: its parameters are the numbers (or sequences of
     ints) of one case.
+    Dafny, not C: there is no `? :` (write `if c then a else b`); inside a function `if` is that expression
+    form, never a statement; `abs`, `max`, `min`, `pow` do not exist unless you define them as functions;
+    every `while` carries `invariant`s and a `decreases`; `//` comments are fine, string literals are not.
 
 (2) The io module, plain Python, which is NOT verified and does the reading and printing:
       cases(text) -> list of argument tuples, one per call of the method, in input order;

@@ -181,3 +181,31 @@ errors, 1 judge timeout, **0 problems accepted** (Smith Numbers, Composite Prime
 LCM, ... all refused at the parser). **S2 held in the letter** (11% is within 10 points of 20%) and says the
 opposite of the hope: harder statements draw longer programs with more of the constructs the parser refuses.
 S3 and S4 held. Shape selection does not beat the syntax wall; the Dafny-lift run decides the next step.
+
+### Read of the Dafny-target run (2026-10-12 16:03Z)
+
+80 calls, 80 replies with both fences, $0.29 (the Dafny prompt is 2.8k tokens against 5.7k). **D1 failed:** 10
+of 80 lift. The lifter's refusals by stage: Dafny's own parser 34 (C-style `? :`, a statement `if` inside a
+function, a stray `{`), Dafny's resolver 11 (`abs` undefined, int compared with bool, a loop without
+`decreases`), the lifter's check 13 (the lifted task does not verify: `L_fun_rev`, `L_fun_is_palindrome`,
+`L_fun_countOnes`), the classifier 12 (unbounded quantifiers 5, mutual recursion, seq of pairs, nested
+returns). **D2 failed:** 3 problems accepted (10019, 10055, 10079), the same three as in t. D3, D4 held.
+
+What it bought: the refusals moved from a language the model cannot write to a language it can, and 45 of
+the 70 are ordinary Dafny syntax and type errors with a line and a message, the Self-Debugging setting
+proper. The repair pass now carries lift refusals back (Dafny's message, the lifter's stage and reason).
+
+## Scale run and Dafny repair, registered (2026-10-12 16:03Z, before the first call)
+
+- **Scale (tag `deepseek-udebug-dafny-scale`):** every UVa int-shaped train problem with a statement and
+  stored inputs under 200 kB (662 by the bank), Dafny target with the contract extended by the measured
+  mistakes above, k = 2, T = 0.7, concurrency 3, cap $8 at the listed rate. Graded on this laptop with
+  Dafny as it runs; the seven-kernel pass waits for the lab.
+- **Dafny repair, round 1 on `deepseek-udebug-dafny-1` (70 refused):** one round, T = 0.3, cap $1.
+
+Predictions:
+- **E1 (repair):** at least 25 of the 70 repairs lift (against 10 of 80 first-pass). *Falsifier:* fewer.
+- **E2 (repair):** at least one new problem accepted beyond 10019/10055/10079. *Falsifier:* none.
+- **E3 (scale):** accepted problems between 5% and 20% of 662, i.e. 33 to 132, read when the run and its
+  grading finish; below 33 ⇒ the pilot's three were the easy end of the sample; above 132 reported as such.
+- **E4:** refusals named at every stage; **E5:** scale run at most $8, repair at most $1.
