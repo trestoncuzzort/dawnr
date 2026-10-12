@@ -32,6 +32,7 @@ import argparse
 import concurrent.futures
 import json
 import re
+import shutil
 import subprocess
 import sys
 from pathlib import Path
@@ -51,10 +52,23 @@ STUDENT_ASK = ("Write the t task `p{id}` for this judge problem: its requires an
                "are the numbers (or sequences of ints) of one case and its result is one int, bool or seq.\n\n")
 
 
+MEM_MAX = "3G"      # per judge or verify process; the v2 gate was OOM-killed at 4.5 G + 8.6 G swap by one sample
+
+
 def run(cmd: list[str], timeout: float, cwd: Path) -> tuple[int | None, str]:
+    """One subprocess inside its own memory-capped transient scope (systemd-run --user --scope, cgroup v2), so a
+    sample whose translated program allocates without bound is killed alone instead of taking the gate, the
+    terminal and every other sample with it (the 2026-10-06 lesson of the desktop, repeated here on 10-12).
+    Without a user manager (a plain container) the command runs uncapped."""
+    if shutil.which("systemd-run"):
+        cmd = ["systemd-run", "--user", "--scope", "--quiet", "-p", f"MemoryMax={MEM_MAX}",
+               "-p", "MemorySwapMax=0"] + cmd
     try:
         p = subprocess.run(cmd, cwd=cwd, capture_output=True, text=True, timeout=timeout)
-        return p.returncode, p.stdout + p.stderr
+        out = p.stdout + p.stderr
+        if p.returncode in (137, -9) or "Killed" in out[-400:]:
+            out += "\n[memory cap: killed]"
+        return p.returncode, out
     except subprocess.TimeoutExpired as e:
         return None, (e.stdout or "" if isinstance(e.stdout, str) else "") + "\n[timeout]"
 

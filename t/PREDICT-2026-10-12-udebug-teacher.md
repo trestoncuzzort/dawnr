@@ -98,3 +98,26 @@ helper declared above as a spec fun; keep it small). Ledger at the listed rate, 
   a repair pass (parse error back to the teacher), not more prose.
 - **P2':** at least 4 of 20 problems accepted (judge pass AND Dafny COUNTS). *Falsifier:* fewer than 4.
 - **P3':** every refusal named, as in v1. **P4':** at most $0.60.
+
+## v2 read and the repair pass, registered (2026-10-12 15:15Z, before the first repair call)
+
+**v2 read (DeepSeek-V3.2, prompt v2, 80 calls, $0.43).** The rules in prose did not reach the parser: the same
+messages lead (`expected '=', found '{'` 9, `'var' does not start an expression` 5, `expected '{', found 'n'` 4,
+`let ... in` and `seq<seq>` now appear as well), about 12 of 80 parse, and the gate was OOM-killed once
+(10049's `f(k - f(k-1)) + 1` and 10025's search; now every judge and verify runs in a 3 GB scope) and the
+three survivors ran to the judge timeout. Accepted: **3 problems of 20** (10019, 10055, 10079; 5 samples
+counted in Dafny). P1' failed, P2' failed by one, P3' and P4' held. Exact counts land in that run's
+`report.json` when its last timeout ends.
+
+**Repair pass registered.** `t/udebug_repair.py`, round 1, on the v1 samples (the fully graded run): every
+sample the parser or the gate refused gets its refusal back as a user turn in its own conversation
+(Self-Debugging, arXiv:2304.05128, receipt `udebug-repair-pass`), temperature 0.3, one round, DeepSeek-V3.2
+on Vertex, cap $2. The repairs are graded by the same gate and deduplicated by printed text.
+
+- **R1, the message reaches the model:** at least half of the repaired samples parse (v1 had 61 parse
+  refusals + 10 gate refusals). *Falsifier:* fewer than half ⇒ the model cannot write t from a message
+  either, and the next lever is a deterministic rewrite of the recurring shapes or a different teacher.
+- **R2, yield:** the accepted problem count of v1 rises from 2 to at least 4 of 20 after the repairs are
+  graded. *Falsifier:* fewer than 4 ⇒ parse repair buys parsing, not judge-and-proof acceptance, the
+  September finding again.
+- **R3:** every refusal still named; **R4:** at most $0.60 for the round.
