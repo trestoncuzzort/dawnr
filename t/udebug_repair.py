@@ -122,8 +122,8 @@ def main(argv=None) -> int:
         if (target / "record.json").is_file():
             continue
         rec = json.loads((d / "record.json").read_text(encoding="utf-8"))
-        target = rec.get("target", "t")
-        refusal = refusal_text(res, d / f"p{rec['id']}{'.dfy' if target == 'dafny' else '.t'}")
+        lang = rec.get("target", "t")
+        refusal = refusal_text(res, d / f"p{rec['id']}{'.dfy' if lang == 'dafny' else '.t'}")
         if refusal is None:
             continue
         jobs.append((d, target, rec, res, refusal))
