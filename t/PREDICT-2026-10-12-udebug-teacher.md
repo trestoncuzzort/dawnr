@@ -63,3 +63,38 @@ name, `rows_skipped.hand-solved: 3`); with the mark lifted, 6 rows and 3 pairs.
 ## Read
 
 (filled in after the run, from `t/out/udebug/teacher-deepseek-udebug-1/report.json`)
+
+## Read of the v1 pilot (2026-10-12 14:37Z, this laptop, Dafny only)
+
+80 calls (62 before the Sonnet-priced ledger tripped the $2 cap, 18 resumed at DeepSeek's listed rate),
+466,956 input and 95,511 output tokens, **$0.42** at $0.56/$1.68 per million. Every reply carried both fences.
+
+- **P1 failed.** 19 of 80 parse (`report.json`: judge pass 5, fail 1, ill-formed 10, error 2, timeout 1, not run 61). The parser's own words, by count: `expected '=', found '{'` 10 (a spec
+  fun given a braced body), `'var' does not start an expression` 6, `expected 'id', found 't'` 5 (`t` is
+  reserved), `expected 'decreases', found 'requires'` 5 (a spec fun given a contract), `';' does not start an
+  expression` 4. The teacher writes spec funs as Dafny functions. Of the parsed, 10 are refused by the
+  well-formedness gate (calls to helpers never declared: `pow10`, `seq_to_int`, `popcount_hex_digit`; a
+  spec fun whose body type differs from its result).
+- **P2 failed.** 5 samples reproduce every stored output; 3 of them count in Dafny, on **2 problems of 20**:
+  10055 (`|a - b|`, t 0) and 10079 (`n(n+1)/2 + 1`). The other two judge-passers are Dafny refusals: 10019 s1
+  "the solver gave up" (a loop over hex digits with `/ 16`), 10025 s1 "real is refuted" (the judge's cases
+  agree with the body but the ensures is wrong: the judge tests the spec, as judge.py says).
+- **P3 held.** Every non-accepted sample carries the parser's message, the gate's refusal, the judge's first
+  differing line (10050 s3), or the named runtime error (10079 s1 recursion depth, s4 an empty int literal
+  from the io module); no accepted row has a verdict other than COUNTS.
+- **P4 held.** $0.42 against $1.
+
+What it bought: the failure is almost entirely syntax the reference text does not forbid explicitly, which a
+prompt can state in a few lines; the oracle did its job on everything that got through it.
+
+## v2 registered (2026-10-12 14:40Z, before the first call)
+
+Same 20 problems, k = 4, temperature 0.7, the same teacher and transport; prompt v2 = v1 plus `PARSER_RULES_V2`
+in `t/udebug_teacher.py`, written from the five parser messages and the gate refusals above (a spec fun is one
+expression, no braces/var/;/requires on it; `t` is reserved; no let-in, comments or literals; every called
+helper declared above as a spec fun; keep it small). Ledger at the listed rate, cap $2.
+
+- **P1':** at least 48 of 80 parse. *Falsifier:* fewer ⇒ the rules do not reach the model and the next lever is
+  a repair pass (parse error back to the teacher), not more prose.
+- **P2':** at least 4 of 20 problems accepted (judge pass AND Dafny COUNTS). *Falsifier:* fewer than 4.
+- **P3':** every refusal named, as in v1. **P4':** at most $0.60.

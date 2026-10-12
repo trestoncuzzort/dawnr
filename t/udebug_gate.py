@@ -66,6 +66,10 @@ def judge(task: Path, io: Path, tests: Path, timeout: float) -> dict:
         return {"status": "timeout", "rc": None}
     m = next((JUDGE_LINE.match(line) for line in out.splitlines() if JUDGE_LINE.match(line)), None)
     if m is None:
+        ills = [line for line in out.splitlines() if "ill-formed task:" in line and 'join(' not in line]
+        if ills:                                             # the engine's own refusal, by name, not a crash
+            ill = ills[-1]                                   # the exception message, not judge.py's raise line
+            return {"status": "ill-formed", "rc": rc, "reason": ill[ill.find("ill-formed task"):][:400]}
         return {"status": "error", "rc": rc, "tail": out[-1500:]}
     passed, total, skipped = int(m.group(1)), int(m.group(2)), int(m.group(3) or 0)
     first = next((line.strip() for line in out.splitlines() if line.strip().startswith("line ")), None)

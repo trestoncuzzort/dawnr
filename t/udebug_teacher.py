@@ -151,6 +151,23 @@ Reply with exactly two fenced blocks and nothing else: first ```t with the task,
 with the io module.
 """.strip()
 
+PARSER_RULES_V2 = """
+Rules the t parser and its well-formedness gate enforce (each refused a reply in the first run):
+- `t` is a reserved word: never name a variable, parameter or function `t`.
+- No `let ... in`, no comments, no string or character literals anywhere; only int, bool and seq.
+- A spec fun is ONE expression: `spec fun f(a: int): int`, then `  decreases a`, then `= EXPR`.
+  No `{ }` body, no `var`, no `;`, no `requires` or `ensures` on a spec fun; recursion through
+  `if C then A else B` inside the expression. `if C { } else { }` is the statement form, body only.
+- Every function a task, spec fun or lemma calls must be declared above it as a spec fun with a
+  `decreases` line and its `= EXPR` body on the very next line. Nothing is imported and there is no
+  library: write pow10, digit sums, popcounts and the like as spec funs of your own.
+- A spec fun's body has its declared result type; `+ - *` take all ints (no mixing with seq or bool).
+- Keep it small: one task, the spec funs it needs, at most one lemma, and loop invariants that prove
+  the ensures at exit.
+""".strip()
+
+PROMPT_VERSIONS = ("v1", "v2")
+
 FENCE = re.compile(r"```(\w*)[ \t]*\n(.*?)```", re.S)
 
 
@@ -163,9 +180,10 @@ def exemplar_text(directory: Path, names: tuple[str, ...]) -> str:
     return "\n\n".join(parts)
 
 
-def system_text(exemplars: str) -> str:
+def system_text(exemplars: str, version: str = "v1") -> str:
+    rules = ("\n\n" + PARSER_RULES_V2) if version == "v2" else ""
     return (se.GRAMMAR_V5 + "\nExamples of complete t tasks:\n\n" + se.fewshot_text("v5")
-            + "\n\n" + IO_CONTRACT + "\n\nExamples of judge problems solved this way:\n\n" + exemplars)
+            + rules + "\n\n" + IO_CONTRACT + "\n\nExamples of judge problems solved this way:\n\n" + exemplars)
 
 
 def user_text(rec: dict) -> str:
@@ -218,6 +236,8 @@ def main(argv=None) -> int:
     ap.add_argument("--exemplars", required=True, help="directory of hand-written p<id>.t and p<id>_io.py")
     ap.add_argument("--exemplar-names", default=",".join(DEFAULT_EXEMPLARS))
     ap.add_argument("--tag", required=True)
+    ap.add_argument("--prompt-version", choices=PROMPT_VERSIONS, default="v1",
+                    help="v2 adds the parser rules measured on the v1 pilot's refusals")
     ap.add_argument("--out", default="", help="default t/out/udebug/teacher-<tag>")
     ap.add_argument("--provider", choices=("bedrock", "vertex"), default="bedrock")
     ap.add_argument("--model", default="", help=f"default {DEFAULT_MODEL} on Bedrock, {VERTEX_MODEL} on Vertex")
@@ -247,7 +267,7 @@ def main(argv=None) -> int:
     out = Path(a.out) if a.out else HERE / "out" / "udebug" / f"teacher-{a.tag}"
     out.mkdir(parents=True, exist_ok=True)
     exemplars = exemplar_text(Path(a.exemplars), tuple(n for n in a.exemplar_names.split(",") if n))
-    system = system_text(exemplars)
+    system = system_text(exemplars, a.prompt_version)
     ids = {k.strip() for k in a.ids.split(",") if k.strip()}
     judges = {j.strip() for j in a.judges.split(",") if j.strip()}
     problems = select(Path(a.bank), judges, a.shape, a.split, ids, a.limit, a.max_in_bytes)
@@ -317,7 +337,7 @@ def main(argv=None) -> int:
             (d / f"p{rec['id']}_io.py").write_text(io_src.rstrip() + "\n", encoding="utf-8")
         record = {"judge": rec["judge"], "id": rec["id"], "title": rec.get("title"), "tests_dir": rec["tests_dir"],
                   "model": model, "provider": a.provider, "endpoint": endpoint, "tag": a.tag,
-                  "sample_index": k, "num_samples": a.samples,
+                  "prompt_version": a.prompt_version, "sample_index": k, "num_samples": a.samples,
                   "options": {"temperature": a.temperature, "max_tokens": a.max_tokens,
                               "note": "no seed on either provider; this reply is not reproducible"},
                   "messages": messages, "reply": reply, "prompt_tokens": in_tok, "reply_tokens": out_tok,
