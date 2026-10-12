@@ -42,9 +42,38 @@ if str(HERE) not in sys.path:
     sys.path.insert(0, str(HERE))
 
 import loop_dataset      # noqa: E402  (fence)
-import spec_experiment   # noqa: E402  (STUDENT_SYSTEM)
+import spec_experiment   # noqa: E402  (STUDENT_SYSTEM, rename_task)
 import student_rows      # noqa: E402  (row_for)
 import surface           # noqa: E402  (parse_file, print_task)
+
+
+def lift_dafny(d: Path, ident: str, timeout: float) -> dict:
+    """A sample that answered in Dafny (`p<id>.dfy`) is lifted to t by the repository's own lifter
+    (t/lifter.py: resolve, parse, classify, rewrite, check, one task per gradable method, every refusal
+    named) in a subprocess under the memory cap; the method named p<id> becomes `p<id>.t` beside it."""
+    out = d / "lift"
+    rc, text = run([sys.executable, str(HERE / "lifter.py"), str(d / f"p{ident}.dfy"), "--out", str(out),
+                    "--timeout", "120", "--force"], timeout, HERE.parent)
+    if rc is None:
+        return {"status": "timeout"}
+    marker = out / f"p{ident}.outcome.json"
+    if not marker.is_file():
+        return {"status": "error", "tail": text[-800:]}
+    o = json.loads(marker.read_text(encoding="utf-8"))
+    if o.get("resolve_refusal") or o.get("parse_refusal"):
+        return {"status": "refused", "stage": "resolve" if o.get("resolve_refusal") else "parse",
+                "reason": str(o.get("resolve_refusal") or o.get("parse_refusal"))[:400]}
+    methods = {m["method"]: m for m in o.get("methods", [])}
+    m = methods.get(f"p{ident}")
+    if m is None:
+        return {"status": "refused", "stage": "classify", "reason": f"no gradable method p{ident}; "
+                f"methods seen: {sorted(methods)}"}
+    if m.get("refusal"):
+        return {"status": "refused", "stage": "method", "reason": str(m["refusal"])[:400]}
+    task = json.loads((out / m["task_file"]).read_text(encoding="utf-8"))
+    task = spec_experiment.rename_task(task, f"p{ident}")
+    (d / f"p{ident}.t").write_text(surface.print_task(task).rstrip() + "\n", encoding="utf-8")
+    return {"status": "lifted", "checked": m.get("checked"), "task_file": m["task_file"]}
 
 JUDGE_LINE = re.compile(r"^(\d+)/(\d+) test files match the judge's output(?: \((\d+) without a stored output\))?")
 STUDENT_ASK = ("Write the t task `p{id}` for this judge problem: its requires and ensures state the problem as "
@@ -120,8 +149,14 @@ def grade_one(d: Path, corpus: Path, kernels: str, judge_timeout: float, verify_
     rec = json.loads((d / "record.json").read_text(encoding="utf-8"))
     ident = rec["id"]
     res = {"judge_name": rec["judge"], "id": ident, "k": rec["sample_index"], "dir": str(d),
-           "fences": rec.get("fences", {}), "parse": None, "judge": None, "verify": None, "accepted": False}
+           "fences": rec.get("fences", {}), "parse": None, "judge": None, "verify": None, "accepted": False,
+           "lift": None}
     task_path, io_path = d / f"p{ident}.t", d / f"p{ident}_io.py"
+    if (d / f"p{ident}.dfy").is_file() and not task_path.is_file():
+        res["lift"] = lift_dafny(d, ident, verify_timeout)
+        if res["lift"]["status"] != "lifted":
+            res["parse"] = f"lift-{res['lift']['status']}"
+            return finish(d, res)
     if not (task_path.is_file() and io_path.is_file()):
         res["parse"] = "no-fences"
         return finish(d, res)
