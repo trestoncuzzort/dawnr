@@ -257,3 +257,12 @@ cap $15, tag `deepseek-udebug-py-scale`; graded on this laptop as it runs. The D
   on int-shaped problems; text-shaped problems are in this set). *Falsifier:* below 50% ⇒ text-shaped
   problems are much harder for the teacher, reported by shape; above 80% reported as such.
 - **PS2:** at most $15 by the ledger; **PS3:** every refusal named (line, exception or timeout).
+- **Second lane (registered 2026-10-12 16:57Z):** the DeepSeek lane is throttled to ~10 calls a minute
+  (8 hours for 4,914 calls), so the same 2,457 problems also go to Qwen3-235B-A22B-Instruct-2507 (Apache-2.0,
+  its own quota, 5-9 s a call), k = 1, tag `qwen235-udebug-py-scale`, cap $4. **QS1:** its problem yield is
+  within 15 points of DeepSeek's on the problems both finish. *Falsifier:* a gap above 15 points, reported
+  by teacher; the rows of the two lanes stay in their own directories either way.
+- **Third lane (registered 2026-10-12 17:02Z):** Qwen3-Next-80B-A3B-Instruct (Apache-2.0, 0.5 s a call,
+  $0.15/$1.20 per million), the same 2,457 problems, k = 1, tag `qwen3next-udebug-py-scale`, cap $3. **QN1:** its
+  problem yield is within 20 points of DeepSeek's on the problems both finish. The three lanes' rows merge
+  under the per-problem cap with identical programs kept once (`t/udebug_rows.py`).
