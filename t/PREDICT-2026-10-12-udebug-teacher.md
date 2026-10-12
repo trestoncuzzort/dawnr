@@ -121,3 +121,55 @@ on Vertex, cap $2. The repairs are graded by the same gate and deduplicated by p
   graded. *Falsifier:* fewer than 4 ⇒ parse repair buys parsing, not judge-and-proof acceptance, the
   September finding again.
 - **R3:** every refusal still named; **R4:** at most $0.60 for the round.
+
+### Read of the repair round and of a second teacher (2026-10-12 15:32Z)
+
+- **Repair round 1 on v1 (71 calls, 71 replies with a t fence, $0.44).** **R1 failed:** 16 of 71 repairs parse
+  (55 still refused by the parser; of the 16, 9 are gate-refused, 4 pass the judge, 2 time out, 1 fails).
+  **R2 failed:** the accepted problem count stays at 2 (the one new acceptance, 10055, was already accepted).
+  R3 and R4 held. So the model cannot write t from the parser's message either: the exact line and expected
+  token do not change what it writes next.
+- **Qwen3-235B-A22B-Instruct-2507 (Apache-2.0) on prompt v2, same 20 problems (80 calls, $0.20, 66 replies
+  with both fences).** 20 of 80 parse, 4 pass the judge, and **0 count in Dafny**: 0 problems accepted.
+  Cheaper and faster (5-9 s a call), worse on proof.
+- **v2 final:** 16 of 80 parse, 5 judge passes, 4 counted in Dafny, **3 problems of 20** (10019, 10055,
+  10079), 8 rows and 2 judge-pairs.
+
+What the three runs say together: a frontier model that has never seen t writes Dafny-shaped code by reflex
+(braced function bodies, `requires` on functions, `let ... in`, `seq<seq>`, `forall ... ::`), prose rules and
+parser messages do not move it, and the problems that get through are the one-line ones. The two levers the
+falsifiers name: (1) let the teacher write Dafny, which it does write, and lift it to t with the repository's
+own lifter (the MBPP-DFY lift of `t/COVERAGE-lifted-785.md`); (2) choose problems by shape, since bank order
+(10018..10092) put a segment-cover and a Hofstadter recursion in front of a model that proves one-liners.
+Both are registered below before they run.
+
+## Selection by shape, registered (2026-10-12 15:40Z, before the first call)
+
+Same teacher, prompt and k as v2 (DeepSeek-V3.2, prompt v2, k = 4, T = 0.7), but the 20 problems are the top 20
+of the UVa int-shaped train set by a statement score (`+1` per number-theory word such as prime, divisor,
+digit, sum, gcd; `-2` per string/grid/graph/geometry word; minus length/1500), the list in
+`t/out/udebug/math-shaped-top20.txt` (Smith Numbers, Composite Prime, Largest Prime Divisor, GCD LCM, ...).
+The 21 hand-solved problems score -0.8 to 15.5 on it, the bank-order pilot -23 to 38 (median ~7); these
+twenty score 20 to 38. Tag `deepseek-udebug-3`.
+
+- **S1:** at least 5 of 20 problems accepted (judge pass AND Dafny COUNTS), against 3 of 20 in bank order.
+  *Falsifier:* 4 or fewer ⇒ shape selection does not beat the syntax wall; the Dafny-lift path is the lever.
+- **S2:** the parse rate stays within 10 points of v2's 20% (the score selects problems, not syntax).
+  *Falsifier:* a parse rate above 30% would mean these statements elicit simpler programs, worth knowing.
+- **S3:** refusals named; **S4:** at most $0.60.
+
+## Dafny as the teacher's language, registered (2026-10-12 15:55Z, before the first call)
+
+The teacher writes a Dafny method `p<id>` (functions, lemmas, `requires`/`ensures`, the int/bool/seq<int>
+subset) plus the io module; the gate lifts it to t with `t/lifter.py` (resolve, parse, classify, rewrite,
+check; every refusal named; measured on the hand Fibonacci: lifted and checked in 2.4 s), then judges and
+verifies the lifted task exactly as before. Exemplars are the engine's own Dafny lowerings of p495, p10302
+and p343 (`cli.py lower --kernel dafny`). Same 20 bank-order problems as v1/v2, DeepSeek-V3.2, k = 4,
+T = 0.7, concurrency 2 (the endpoint is throttling), tag `deepseek-udebug-dafny-1`.
+
+- **D1, the model can write the language it is asked for:** at least 48 of 80 replies lift to a t task
+  (resolve + parse + classify + rewrite pass; the lifter's check may still refuse). *Falsifier:* fewer than
+  48 ⇒ the lifter's subset, not the language, is the wall, and its refusal reasons say which construct.
+- **D2, yield:** at least 5 of 20 problems accepted (judge pass AND Dafny COUNTS on the lifted task), against
+  3 of 20 for the same problems written in t. *Falsifier:* 4 or fewer.
+- **D3:** every refusal named (lifter stage and reason, judge line, kernel verdict). **D4:** at most $0.50.

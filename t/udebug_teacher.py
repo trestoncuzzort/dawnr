@@ -101,9 +101,10 @@ class VertexToken:
 
 
 def vertex_call(url: str, token: VertexToken, model: str, messages: list[dict], max_tokens: int,
-                temperature: float, max_attempts: int = 6) -> tuple[str, int, int, str | None]:
-    """One chat completion; the same backoff schedule as bedrock_generate.call_with_backoff (1, 2, 4, 8, 16 s,
-    +/-20%), retried only on the transient statuses; any other 4xx is a NonRetryable with the body."""
+                temperature: float, max_attempts: int = 8) -> tuple[str, int, int, str | None]:
+    """One chat completion; bedrock_generate.call_with_backoff's schedule (1, 2, 4, 8, 16 s, +/-20%) extended by
+    two steps (32, 64 s) because the global endpoint's 429s outlasted the five-step schedule on 2026-10-12 when
+    three runs overlapped; retried only on the transient statuses; any other 4xx is a NonRetryable with the body."""
     import random
     import urllib.error
     import urllib.request
@@ -151,6 +152,31 @@ Reply with exactly two fenced blocks and nothing else: first ```t with the task,
 with the io module.
 """.strip()
 
+DAFNY_CONTRACT = """
+Solving a judge problem in Dafny has two parts, and you write both.
+
+(1) A Dafny program with ONE method named p<ID>: its `requires`/`ensures` state the problem as the
+    statement defines it (or a standard model of it, such as the recurrence the statement implies) and
+    its body solves it so Dafny verifies it, with the `function`s (each with `decreases`) and `lemma`s it
+    needs declared before the method. Stay in this subset, which is what the lifter to the verified
+    language accepts: types int, bool and seq<int> only (no nat, arrays, classes, strings, tuples, sets,
+    maps or generics); exactly one return value; functions are single expressions over those types; no
+    ghost state, no `modifies`; proof steps belong in lemmas; quantifiers only over int ranges written
+    `0 <= i < n`. The method sees one case at a time: its parameters are the numbers (or sequences of
+    ints) of one case.
+
+(2) The io module, plain Python, which is NOT verified and does the reading and printing:
+      cases(text) -> list of argument tuples, one per call of the method, in input order;
+      render(text, calls) -> the complete output text, given the input text and
+                             [(args, result), ...] with result a Python int, bool or list.
+    Follow the statement's output format exactly (wording, spacing, blank lines, trailing newline).
+
+Reply with exactly two fenced blocks and nothing else: first ```dafny with the program, then ```python
+with the io module.
+""".strip()
+
+TARGETS = ("t", "dafny")
+
 PARSER_RULES_V2 = """
 Rules the t parser and its well-formedness gate enforce (each refused a reply in the first run):
 - `t` is a reserved word: never name a variable, parameter or function `t`.
@@ -171,36 +197,49 @@ PROMPT_VERSIONS = ("v1", "v2")
 FENCE = re.compile(r"```(\w*)[ \t]*\n(.*?)```", re.S)
 
 
-def exemplar_text(directory: Path, names: tuple[str, ...]) -> str:
+def dafny_of(t_path: Path) -> str:
+    """The engine's own Dafny lowering of a hand-written t task (`cli.py lower --kernel dafny`), with the
+    method's name in the lower case the lifter is asked for; the exemplar a Dafny-writing teacher sees."""
+    import subprocess
+    text = subprocess.run([sys.executable, str(HERE / "cli.py"), "lower", "--kernel", "dafny", str(t_path)],
+                          capture_output=True, text=True, check=True).stdout.strip()
+    return re.sub(r"\bmethod P(\d+)\b", r"method p\1", text)
+
+
+def exemplar_text(directory: Path, names: tuple[str, ...], target: str = "t") -> str:
     parts = []
     for n in names:
-        t_src = (directory / f"{n}.t").read_text(encoding="utf-8").strip()
+        src = dafny_of(directory / f"{n}.t") if target == "dafny" else \
+            (directory / f"{n}.t").read_text(encoding="utf-8").strip()
         io_src = (directory / f"{n}_io.py").read_text(encoding="utf-8").strip()
-        parts.append(f"Example {n}:\n```t\n{t_src}\n```\n```python\n{io_src}\n```")
+        parts.append(f"Example {n}:\n```{target}\n{src}\n```\n```python\n{io_src}\n```")
     return "\n\n".join(parts)
 
 
-def system_text(exemplars: str, version: str = "v1") -> str:
+def system_text(exemplars: str, version: str = "v1", target: str = "t") -> str:
+    if target == "dafny":
+        return DAFNY_CONTRACT + "\n\nExamples of judge problems solved this way:\n\n" + exemplars
     rules = ("\n\n" + PARSER_RULES_V2) if version == "v2" else ""
     return (se.GRAMMAR_V5 + "\nExamples of complete t tasks:\n\n" + se.fewshot_text("v5")
             + rules + "\n\n" + IO_CONTRACT + "\n\nExamples of judge problems solved this way:\n\n" + exemplars)
 
 
-def user_text(rec: dict) -> str:
+def user_text(rec: dict, target: str = "t") -> str:
     title = rec.get("title") or ""
+    what = f"the Dafny method `p{rec['id']}`" if target == "dafny" else f"the t task `p{rec['id']}`"
     return (f"Judge problem {rec['judge']} {rec['id']}: {title}\n\n{rec['statement'].strip()}\n\n"
             f"A stored case of the judge -- input:\n{rec['sample_in']}\nexpected output:\n{rec['sample_out']}\n\n"
-            f"Write the t task `p{rec['id']}` and its io module.")
+            f"Write {what} and its io module.")
 
 
-def extract(reply: str) -> tuple[str | None, str | None]:
-    t_src = io_src = None
+def extract(reply: str, target: str = "t") -> tuple[str | None, str | None]:
+    src = io_src = None
     for lang, body in FENCE.findall(reply):
-        if lang == "t" and t_src is None:
-            t_src = body
+        if lang == target and src is None:
+            src = body
         elif lang in ("python", "py") and io_src is None:
             io_src = body
-    return t_src, io_src
+    return src, io_src
 
 
 def select(bank: Path, judges: set[str], shape: str, split: str, ids: set[str], limit: int,
@@ -238,6 +277,8 @@ def main(argv=None) -> int:
     ap.add_argument("--tag", required=True)
     ap.add_argument("--prompt-version", choices=PROMPT_VERSIONS, default="v1",
                     help="v2 adds the parser rules measured on the v1 pilot's refusals")
+    ap.add_argument("--target", choices=TARGETS, default="t",
+                    help="dafny: the teacher writes a Dafny method the gate lifts to t (t/lifter.py)")
     ap.add_argument("--out", default="", help="default t/out/udebug/teacher-<tag>")
     ap.add_argument("--provider", choices=("bedrock", "vertex"), default="bedrock")
     ap.add_argument("--model", default="", help=f"default {DEFAULT_MODEL} on Bedrock, {VERTEX_MODEL} on Vertex")
@@ -266,8 +307,9 @@ def main(argv=None) -> int:
 
     out = Path(a.out) if a.out else HERE / "out" / "udebug" / f"teacher-{a.tag}"
     out.mkdir(parents=True, exist_ok=True)
-    exemplars = exemplar_text(Path(a.exemplars), tuple(n for n in a.exemplar_names.split(",") if n))
-    system = system_text(exemplars, a.prompt_version)
+    exemplars = exemplar_text(Path(a.exemplars), tuple(n for n in a.exemplar_names.split(",") if n), a.target)
+    system = system_text(exemplars, a.prompt_version, a.target)
+    suffix = ".dfy" if a.target == "dafny" else ".t"
     ids = {k.strip() for k in a.ids.split(",") if k.strip()}
     judges = {j.strip() for j in a.judges.split(",") if j.strip()}
     problems = select(Path(a.bank), judges, a.shape, a.split, ids, a.limit, a.max_in_bytes)
@@ -285,7 +327,8 @@ def main(argv=None) -> int:
         for rec, k, d in jobs[:1]:
             d.mkdir(parents=True, exist_ok=True)
             (d / "prompt.json").write_text(json.dumps(
-                [{"role": "system", "content": system}, {"role": "user", "content": user_text(rec)}], indent=1))
+                [{"role": "system", "content": system}, {"role": "user", "content": user_text(rec, a.target)}],
+                indent=1))
             print(f"dry run: prompt written to {d / 'prompt.json'}")
         return 0
 
@@ -320,7 +363,7 @@ def main(argv=None) -> int:
     def one(rec: dict, k: int, d: Path):
         if ledger["stop"]:
             return "stopped"
-        messages = [{"role": "system", "content": system}, {"role": "user", "content": user_text(rec)}]
+        messages = [{"role": "system", "content": system}, {"role": "user", "content": user_text(rec, a.target)}]
         t0 = time.monotonic()
         try:
             reply, in_tok, out_tok, stop_reason = call(messages)
@@ -330,19 +373,20 @@ def main(argv=None) -> int:
             print(f"ABORT {rec['judge']}/{rec['id']} s{k}: {e}", file=sys.stderr, flush=True)
             return "aborted"
         wall = time.monotonic() - t0
-        t_src, io_src = extract(reply)
+        t_src, io_src = extract(reply, a.target)
         d.mkdir(parents=True, exist_ok=True)
         if t_src is not None and io_src is not None:
-            (d / f"p{rec['id']}.t").write_text(t_src.rstrip() + "\n", encoding="utf-8")
+            (d / f"p{rec['id']}{suffix}").write_text(t_src.rstrip() + "\n", encoding="utf-8")
             (d / f"p{rec['id']}_io.py").write_text(io_src.rstrip() + "\n", encoding="utf-8")
         record = {"judge": rec["judge"], "id": rec["id"], "title": rec.get("title"), "tests_dir": rec["tests_dir"],
                   "model": model, "provider": a.provider, "endpoint": endpoint, "tag": a.tag,
-                  "prompt_version": a.prompt_version, "sample_index": k, "num_samples": a.samples,
+                  "prompt_version": a.prompt_version, "target": a.target,
+                  "sample_index": k, "num_samples": a.samples,
                   "options": {"temperature": a.temperature, "max_tokens": a.max_tokens,
                               "note": "no seed on either provider; this reply is not reproducible"},
                   "messages": messages, "reply": reply, "prompt_tokens": in_tok, "reply_tokens": out_tok,
                   "wall_s": round(wall, 3), "done_reason": stop_reason,
-                  "fences": {"t": t_src is not None, "python": io_src is not None}}
+                  "fences": {a.target: t_src is not None, "python": io_src is not None}}
         (d / "record.json").write_text(json.dumps(record, ensure_ascii=False, indent=1), encoding="utf-8")
         with lock:
             ledger["in"] += in_tok
