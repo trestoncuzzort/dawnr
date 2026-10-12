@@ -209,3 +209,29 @@ Predictions:
 - **E3 (scale):** accepted problems between 5% and 20% of 662, i.e. 33 to 132, read when the run and its
   grading finish; below 33 ⇒ the pilot's three were the easy end of the sample; above 132 reported as such.
 - **E4:** refusals named at every stage; **E5:** scale run at most $8, repair at most $1.
+
+### Read of the Dafny repair round (2026-10-12 16:35Z)
+
+70 calls, 70 replies with a Dafny fence, $0.31. **E1 failed:** 3 of 70 repairs lift (27 are still refused by
+Dafny's parser, 18 by the lifter's check, 6 by the resolver, the rest by the classifier). **E2 failed:** no
+new problem accepted. E4, E5 held. A compiler message that names the line did not get the model past
+Dafny's parser on the second try either; the error context is being read before the next decision.
+
+## Python as a third target, registered (2026-10-12 16:36Z, before the first call)
+
+Why: the Dafny repairs that still fail Dafny's parser put `while` loops inside `function`s (an expression
+context: "invalid UnaryExpression" at the `while`), and the originals behind every "lift-check-failed" do
+not verify in Dafny on their own ("2 verified, 6 errors"): the model's proofs are wrong, not the lifter. The
+proof-gated yield of this teacher on these problems is therefore the few percent the scale run is showing
+(4 accepted of the first ~80 problems graded), and it is one-liners. The judge alone is still an oracle:
+a program that reproduces every stored output is execution-verified, which is the APPS setting of ReST-EM
+(arXiv:2312.06585) exactly, and dawnr's assistant layer hands back Python already. So the teacher gets
+`--target python` (one program, stdin to stdout, no io module, a 1k-token prompt) and the gate runs it on
+every stored case under the memory cap; rows of kind `judge-python` are kept apart from the proof rows,
+with `proof: none` on every one. Pilot: the same 20 bank-order problems, k = 2, T = 0.7.
+
+- **PY1:** at least 30 of 40 programs run to completion on every stored case (no crash, no timeout).
+  *Falsifier:* fewer.
+- **PY2:** at least 10 of 20 problems judged correct on every stored case. *Falsifier:* 9 or fewer ⇒ the
+  problems, not the languages, are the hard part, and the proof yields above were not about t.
+- **PY3:** refusals named (first differing line, crash text, timeout). **PY4:** at most $0.10.

@@ -178,7 +178,15 @@ Reply with exactly two fenced blocks and nothing else: first ```dafny with the p
 with the io module.
 """.strip()
 
-TARGETS = ("t", "dafny")
+PYTHON_CONTRACT = """
+Solve the judge problem with ONE complete Python 3 program that reads the whole input from standard input
+and writes the whole output to standard output, in exactly the format the statement specifies (wording,
+spacing, blank lines, trailing newline). Standard library only; no input prompts; read with
+sys.stdin.read() or sys.stdin.buffer; handle every case in the input, in order. Integers may be large.
+Reply with exactly one fenced block: ```python with the program, and nothing else.
+""".strip()
+
+TARGETS = ("t", "dafny", "python")
 
 PARSER_RULES_V2 = """
 Rules the t parser and its well-formedness gate enforce (each refused a reply in the first run):
@@ -211,6 +219,8 @@ def dafny_of(t_path: Path) -> str:
 
 def exemplar_text(directory: Path, names: tuple[str, ...], target: str = "t") -> str:
     parts = []
+    if target == "python":
+        return ""                                   # the model knows stdin-to-stdout Python; nothing to show
     for n in names:
         src = dafny_of(directory / f"{n}.t") if target == "dafny" else \
             (directory / f"{n}.t").read_text(encoding="utf-8").strip()
@@ -220,6 +230,8 @@ def exemplar_text(directory: Path, names: tuple[str, ...], target: str = "t") ->
 
 
 def system_text(exemplars: str, version: str = "v1", target: str = "t") -> str:
+    if target == "python":
+        return PYTHON_CONTRACT
     if target == "dafny":
         return DAFNY_CONTRACT + "\n\nExamples of judge problems solved this way:\n\n" + exemplars
     rules = ("\n\n" + PARSER_RULES_V2) if version == "v2" else ""
@@ -229,15 +241,20 @@ def system_text(exemplars: str, version: str = "v1", target: str = "t") -> str:
 
 def user_text(rec: dict, target: str = "t") -> str:
     title = rec.get("title") or ""
-    what = f"the Dafny method `p{rec['id']}`" if target == "dafny" else f"the t task `p{rec['id']}`"
+    what = (f"the Dafny method `p{rec['id']}` and its io module" if target == "dafny"
+            else "the Python program" if target == "python" else f"the t task `p{rec['id']}` and its io module")
     return (f"Judge problem {rec['judge']} {rec['id']}: {title}\n\n{rec['statement'].strip()}\n\n"
             f"A stored case of the judge -- input:\n{rec['sample_in']}\nexpected output:\n{rec['sample_out']}\n\n"
-            f"Write {what} and its io module.")
+            f"Write {what}.")
 
 
 def extract(reply: str, target: str = "t") -> tuple[str | None, str | None]:
+    """(program, io module); for the python target the program is the first python fence and the io module
+    is the program itself, so the two-fence tests downstream read the same way."""
     src = io_src = None
     for lang, body in FENCE.findall(reply):
+        if target == "python" and lang in ("python", "py"):
+            return body, body
         if lang == target and src is None:
             src = body
         elif lang in ("python", "py") and io_src is None:
@@ -312,7 +329,7 @@ def main(argv=None) -> int:
     out.mkdir(parents=True, exist_ok=True)
     exemplars = exemplar_text(Path(a.exemplars), tuple(n for n in a.exemplar_names.split(",") if n), a.target)
     system = system_text(exemplars, a.prompt_version, a.target)
-    suffix = ".dfy" if a.target == "dafny" else ".t"
+    suffix = {"dafny": ".dfy", "python": ".py", "t": ".t"}[a.target]
     ids = {k.strip() for k in a.ids.split(",") if k.strip()}
     judges = {j.strip() for j in a.judges.split(",") if j.strip()}
     problems = select(Path(a.bank), judges, a.shape, a.split, ids, a.limit, a.max_in_bytes)
@@ -380,7 +397,8 @@ def main(argv=None) -> int:
         d.mkdir(parents=True, exist_ok=True)
         if t_src is not None and io_src is not None:
             (d / f"p{rec['id']}{suffix}").write_text(t_src.rstrip() + "\n", encoding="utf-8")
-            (d / f"p{rec['id']}_io.py").write_text(io_src.rstrip() + "\n", encoding="utf-8")
+            if a.target != "python":
+                (d / f"p{rec['id']}_io.py").write_text(io_src.rstrip() + "\n", encoding="utf-8")
         record = {"judge": rec["judge"], "id": rec["id"], "title": rec.get("title"), "tests_dir": rec["tests_dir"],
                   "model": model, "provider": a.provider, "endpoint": endpoint, "tag": a.tag,
                   "prompt_version": a.prompt_version, "target": a.target,

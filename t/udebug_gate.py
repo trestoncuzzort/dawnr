@@ -84,22 +84,67 @@ STUDENT_ASK = ("Write the t task `p{id}` for this judge problem: its requires an
 MEM_MAX = "3G"      # per judge or verify process; the v2 gate was OOM-killed at 4.5 G + 8.6 G swap by one sample
 
 
-def run(cmd: list[str], timeout: float, cwd: Path) -> tuple[int | None, str]:
+def run(cmd: list[str], timeout: float, cwd: Path, stdin_path: Path | None = None,
+        split: bool = False) -> tuple[int | None, str] | tuple[int | None, str, str]:
     """One subprocess inside its own memory-capped transient scope (systemd-run --user --scope, cgroup v2), so a
     sample whose translated program allocates without bound is killed alone instead of taking the gate, the
     terminal and every other sample with it (the 2026-10-06 lesson of the desktop, repeated here on 10-12).
-    Without a user manager (a plain container) the command runs uncapped."""
+    Without a user manager (a plain container) the command runs uncapped. `split` returns stdout and stderr
+    apart (a judged program's output must not be mixed with its warnings)."""
     if shutil.which("systemd-run"):
         cmd = ["systemd-run", "--user", "--scope", "--quiet", "-p", f"MemoryMax={MEM_MAX}",
                "-p", "MemorySwapMax=0"] + cmd
+    stdin = open(stdin_path, "rb") if stdin_path else None
     try:
-        p = subprocess.run(cmd, cwd=cwd, capture_output=True, text=True, timeout=timeout)
-        out = p.stdout + p.stderr
-        if p.returncode in (137, -9) or "Killed" in out[-400:]:
-            out += "\n[memory cap: killed]"
-        return p.returncode, out
+        p = subprocess.run(cmd, cwd=cwd, capture_output=True, text=True, timeout=timeout, stdin=stdin,
+                           errors="replace")
+        err = p.stderr
+        if p.returncode in (137, -9) or "Killed" in err[-400:]:
+            err += "\n[memory cap: killed]"
+        return (p.returncode, p.stdout, err) if split else (p.returncode, p.stdout + err)
     except subprocess.TimeoutExpired as e:
-        return None, (e.stdout or "" if isinstance(e.stdout, str) else "") + "\n[timeout]"
+        out = e.stdout if isinstance(e.stdout, str) else (e.stdout or b"").decode("utf-8", "replace")
+        return (None, out, "[timeout]") if split else (None, out + "\n[timeout]")
+    finally:
+        if stdin:
+            stdin.close()
+
+
+def judge_python(prog: Path, tests: Path, timeout: float) -> dict:
+    """The judge for a stdin-to-stdout program: every stored case with a stored output must be reproduced,
+    compared with judge.py's own normalization (trailing blank lines and trailing spaces ignored). No proof
+    is involved; the result carries `proof: none` so no reader mistakes it for a verified row."""
+    import judge
+    ins = sorted(tests.glob("*.in.txt"))
+    per_case = max(5.0, min(120.0, timeout / max(1, len(ins))))
+    passed = skipped = 0
+    for i in ins:
+        o = i.with_name(i.name.replace(".in.txt", ".out.txt"))
+        if not o.is_file():
+            continue
+        want = o.read_text(encoding="utf-8", errors="replace")
+        if judge._norm(want) == ["Sorry! Output limit exceeded!"]:   # uDebug's placeholder, as judge.py skips it
+            skipped += 1
+            continue
+        rc, out, err = run([sys.executable, "-I", str(prog)], per_case, prog.parent, stdin_path=i, split=True)
+        if rc is None:
+            return {"status": "timeout", "passed": passed, "total": len(ins) - skipped, "skipped": skipped,
+                    "case": i.name, "proof": "none"}
+        if rc != 0:
+            tail = err.strip().splitlines()
+            return {"status": "error", "passed": passed, "total": len(ins) - skipped, "skipped": skipped,
+                    "case": i.name, "first_difference": (tail[-1] if tail else f"exit {rc}")[:240], "proof": "none"}
+        g, w = judge._norm(out), judge._norm(want)
+        if g != w:
+            k = next((k for k in range(max(len(g), len(w))) if k >= len(g) or k >= len(w) or g[k] != w[k]), 0)
+            got = g[k] if k < len(g) else "<none>"
+            exp = w[k] if k < len(w) else "<none>"
+            return {"status": "fail", "passed": passed, "total": len(ins) - skipped, "skipped": skipped,
+                    "case": i.name, "first_difference": f"line {k + 1}: got {got[:100]!r} want {exp[:100]!r}",
+                    "proof": "none"}
+        passed += 1
+    return {"status": "pass" if passed else "fail", "passed": passed, "total": len(ins) - skipped,
+            "skipped": skipped, "proof": "none"}
 
 
 def judge(task: Path, io: Path, tests: Path, timeout: float) -> dict:
@@ -152,6 +197,16 @@ def grade_one(d: Path, corpus: Path, kernels: str, judge_timeout: float, verify_
            "fences": rec.get("fences", {}), "parse": None, "judge": None, "verify": None, "accepted": False,
            "lift": None}
     task_path, io_path = d / f"p{ident}.t", d / f"p{ident}_io.py"
+    if rec.get("target") == "python":
+        prog = d / f"p{ident}.py"
+        if not prog.is_file():
+            res["parse"] = "no-fences"
+            return finish(d, res)
+        res["parse"] = "python"
+        res["judge"] = judge_python(prog, corpus / rec["tests_dir"], judge_timeout)
+        res["accepted"] = res["judge"]["status"] == "pass"       # execution-verified only; proof: none
+        res["proof"] = "none"
+        return finish(d, res)
     if (d / f"p{ident}.dfy").is_file() and not task_path.is_file():
         res["lift"] = lift_dafny(d, ident, verify_timeout)
         if res["lift"]["status"] != "lifted":
@@ -202,6 +257,9 @@ def build_rows(results: list[dict], bank: dict[str, dict], cap: int, pair_cap: i
         if b.get("split") != "train":
             skipped["not-train"] += sum(r["accepted"] for r in rs)
             continue
+        if any(r.get("proof") == "none" for r in rs):
+            python_rows(key, rs, rows, pairs, cap, pair_cap, skipped)
+            continue
         chosen_texts, chosen = set(), []
         for r in rs:
             if not r["accepted"]:
@@ -245,6 +303,41 @@ def build_rows(results: list[dict], bank: dict[str, dict], cap: int, pair_cap: i
     return rows, pairs, skipped
 
 
+def python_rows(key: str, rs: list[dict], rows: list[dict], pairs: list[dict], cap: int, pair_cap: int,
+                skipped: dict) -> None:
+    """Execution-verified program rows (kind judge-python, proof none): chosen = a program that reproduced every
+    stored output, rejected = a same-problem program the judge refuted at a stored case. Deduplicated by text."""
+    chosen_texts, chosen, rejected = set(), [], []
+    for r in rs:
+        d = Path(r["dir"])
+        prog = d / f"p{r['id']}.py"
+        if not prog.is_file() or not r.get("judge"):
+            continue
+        text = prog.read_text(encoding="utf-8").strip()
+        if r["accepted"]:
+            if text in chosen_texts:
+                skipped["duplicate-chosen"] += 1
+            elif len(chosen) >= cap:
+                skipped["over-cap"] += 1
+            else:
+                chosen_texts.add(text)
+                chosen.append((r, text))
+        elif r["judge"]["status"] in ("fail", "error") and text not in chosen_texts:
+            rejected.append((r, text))
+    for r, text in chosen:
+        rec = json.loads((Path(r["dir"]) / "record.json").read_text(encoding="utf-8"))
+        prompt = [{"role": "system", "content": rec["messages"][0]["content"]},
+                  {"role": "user", "content": rec["messages"][-1]["content"]}]
+        base = {"name": f"p{r['id']}", "source": "udebug-teacher", "problem": key, "sample": r["k"],
+                "proof": "none", "judge_files": r["judge"]["total"]}
+        rows.append(dict(base, kind="judge-python", prompt=prompt, chosen=f"```python\n{text}\n```"))
+        for rr, rtext in rejected[:pair_cap]:
+            pairs.append(dict(base, kind="judge-python-pair", prompt=prompt, chosen=f"```python\n{text}\n```",
+                              rejected=f"```python\n{rtext}\n```", rejected_sample=rr["k"],
+                              rejected_reason=f"judge {rr['judge']['status']} {rr['judge'].get('passed')}/"
+                                              f"{rr['judge'].get('total')}: {rr['judge'].get('first_difference')}"))
+
+
 def report(results: list[dict], rows: list[dict], pairs: list[dict], skipped: dict, out: Path, kernels: str):
     n = len(results)
     problems = {f"{r['judge_name']}/{r['id']}" for r in results}
@@ -262,7 +355,10 @@ def report(results: list[dict], rows: list[dict], pairs: list[dict], skipped: di
                "accepted_samples": sum(1 for r in results if r["accepted"]),
                "accepted_problems": len(accepted_problems),
                "rows": {"statement-given": sum(1 for x in rows if x["kind"] == "statement-given"),
-                        "spec-given": sum(1 for x in rows if x["kind"] == "spec-given"), "judge-pair": len(pairs)},
+                        "spec-given": sum(1 for x in rows if x["kind"] == "spec-given"),
+                        "judge-python": sum(1 for x in rows if x["kind"] == "judge-python"),
+                        "judge-pair": sum(1 for x in pairs if x["kind"] == "judge-pair"),
+                        "judge-python-pair": sum(1 for x in pairs if x["kind"] == "judge-python-pair")},
                "rows_skipped": skipped}
     (out / "report.json").write_text(json.dumps(summary, indent=2) + "\n")
     lines = ["# uDebug gate report", "", "```", json.dumps(summary, indent=1), "```", "",
