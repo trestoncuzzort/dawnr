@@ -37,7 +37,10 @@ name, `rows_skipped.hand-solved: 3`); with the mark lifted, 6 rows and 3 pairs.
 
 ## The pilot run (registered before the first call)
 
-- Teacher `deepseek.v3.2`, us-east-1, temperature 0.7, k = 4, 4,096-token budget, concurrency 4.
+- Teacher DeepSeek-V3.2 (MIT), temperature 0.7, k = 4, 4,096-token budget, concurrency 4. Registered on Bedrock
+  (`deepseek.v3.2`, us-east-1); run on Vertex AI instead (`deepseek-ai/deepseek-v3.2-maas`, location `global`,
+  `--provider vertex`) because the AWS session had expired and the operator chose Google Cloud at 13:5xZ; the same
+  weights behind a different API, and the record names provider, endpoint and model. Launched 2026-10-12 14:11:24Z.
 - Problems: the first 20 bank records with `judge = UVa`, `io_shape = int`, `split = train`, not hand-solved,
   stored inputs under 200 kB, in bank order (`--limit 20 --max-in-bytes 200000`).
 - Gate on this laptop: Dafny only (`--kernels dafny`), `--min-kernels 1`, cap 4 rows per problem.

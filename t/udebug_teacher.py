@@ -42,6 +42,97 @@ import spec_experiment as se    # noqa: E402  (GRAMMAR_V5, fewshot_text)
 DEFAULT_MODEL = "deepseek.v3.2"
 DEFAULT_EXEMPLARS = ("p495", "p10302", "p343")
 
+# Vertex AI's managed open models (MaaS) answer on an OpenAI-compatible route (docs.cloud.google.com,
+# vertex-ai/generative-ai/docs/maas/deepseek and .../maas/qwen, read 2026-10-12): deepseek-v3.2-maas in
+# `global`, deepseek-v3.1-maas in us-central1, qwen3-235b-a22b-instruct-2507-maas in global/us-south1.
+# Every one is deprecated there, retiring 2026-10-21, so the record names model and date.
+VERTEX_MODEL = "deepseek-ai/deepseek-v3.2-maas"
+VERTEX_RETRYABLE = (408, 429, 500, 502, 503, 504)
+
+
+def force_ipv4() -> None:
+    """Resolve to IPv4 only. Measured 2026-10-12 on the control laptop: `curl -6 https://aiplatform.googleapis.com/`
+    times out while `-4` answers in 0.08 s; curl falls back on its own, urllib's create_connection walks every
+    IPv6 address with the full timeout first (docs.python.org/3/library/socket.html#socket.create_connection)."""
+    import socket
+    original = socket.getaddrinfo
+
+    def ipv4_first(*args, **kwargs):
+        results = original(*args, **kwargs)
+        return [r for r in results if r[0] == socket.AF_INET] or results
+
+    socket.getaddrinfo = ipv4_first
+
+
+def vertex_url(project: str, location: str) -> str:
+    host = "aiplatform.googleapis.com" if location == "global" else f"{location}-aiplatform.googleapis.com"
+    return f"https://{host}/v1/projects/{project}/locations/{location}/endpoints/openapi/chat/completions"
+
+
+class VertexToken:
+    """A bearer token from the application-default credentials file (`gcloud auth login --update-adc`),
+    refreshed through oauth2.googleapis.com directly: the gcloud binary takes minutes per call here.
+    GOOGLE_OAUTH_ACCESS_TOKEN, when set, is used as is."""
+
+    def __init__(self, adc_path: str):
+        self.adc_path = Path(adc_path).expanduser()
+        self.token, self.expires = None, 0.0
+        self.lock = threading.Lock()
+
+    def get(self) -> str:
+        import os
+        import urllib.parse
+        import urllib.request
+        fixed = os.environ.get("GOOGLE_OAUTH_ACCESS_TOKEN")
+        if fixed:
+            return fixed
+        with self.lock:
+            if self.token and time.time() < self.expires - 120:
+                return self.token
+            adc = json.loads(self.adc_path.read_text(encoding="utf-8"))
+            body = urllib.parse.urlencode({"client_id": adc["client_id"], "client_secret": adc["client_secret"],
+                                           "refresh_token": adc["refresh_token"],
+                                           "grant_type": "refresh_token"}).encode()
+            with urllib.request.urlopen(urllib.request.Request("https://oauth2.googleapis.com/token", data=body),
+                                        timeout=30) as r:
+                j = json.load(r)
+            self.token, self.expires = j["access_token"], time.time() + float(j.get("expires_in", 3600))
+            return self.token
+
+
+def vertex_call(url: str, token: VertexToken, model: str, messages: list[dict], max_tokens: int,
+                temperature: float, max_attempts: int = 6) -> tuple[str, int, int, str | None]:
+    """One chat completion; the same backoff schedule as bedrock_generate.call_with_backoff (1, 2, 4, 8, 16 s,
+    +/-20%), retried only on the transient statuses; any other 4xx is a NonRetryable with the body."""
+    import random
+    import urllib.error
+    import urllib.request
+    body = json.dumps({"model": model, "messages": messages, "max_tokens": max_tokens,
+                       "temperature": temperature, "stream": False}).encode()
+    delay = 1.0
+    for attempt in range(1, max_attempts + 1):
+        req = urllib.request.Request(url, data=body, headers={"Authorization": f"Bearer {token.get()}",
+                                                              "Content-Type": "application/json"})
+        try:
+            with urllib.request.urlopen(req, timeout=600) as r:
+                j = json.load(r)
+            choice = (j.get("choices") or [{}])[0]
+            text = (choice.get("message") or {}).get("content") or ""
+            usage = j.get("usage") or {}
+            return text, usage.get("prompt_tokens", 0) or 0, usage.get("completion_tokens", 0) or 0, choice.get("finish_reason")
+        except urllib.error.HTTPError as e:
+            detail = e.read().decode("utf-8", errors="replace")[:600]
+            if e.code not in VERTEX_RETRYABLE or attempt == max_attempts:
+                raise bg.NonRetryable(f"HTTP {e.code}: {detail}") from e
+        except (urllib.error.URLError, TimeoutError) as e:
+            if attempt == max_attempts:
+                raise bg.NonRetryable(f"connection error, exhausted {max_attempts} attempts: {e}") from e
+        sleep_s = delay * (1 + random.uniform(-0.2, 0.2))
+        print(f"  transient error, retry {attempt}/{max_attempts} in {sleep_s:.1f}s", file=sys.stderr, flush=True)
+        time.sleep(sleep_s)
+        delay *= 2
+    raise bg.NonRetryable("unreachable: retry loop exited without returning or raising")
+
 IO_CONTRACT = """
 Solving a judge problem in t has two parts, and you write both.
 
@@ -128,8 +219,13 @@ def main(argv=None) -> int:
     ap.add_argument("--exemplar-names", default=",".join(DEFAULT_EXEMPLARS))
     ap.add_argument("--tag", required=True)
     ap.add_argument("--out", default="", help="default t/out/udebug/teacher-<tag>")
-    ap.add_argument("--model", default=DEFAULT_MODEL)
-    ap.add_argument("--region", default=bg.DEFAULT_REGION)
+    ap.add_argument("--provider", choices=("bedrock", "vertex"), default="bedrock")
+    ap.add_argument("--model", default="", help=f"default {DEFAULT_MODEL} on Bedrock, {VERTEX_MODEL} on Vertex")
+    ap.add_argument("--region", default=bg.DEFAULT_REGION, help="Bedrock region")
+    ap.add_argument("--project", default="", help="Vertex: the Google Cloud project id")
+    ap.add_argument("--location", default="global", help="Vertex: global, us-central1, ...")
+    ap.add_argument("--adc", default="~/.config/gcloud/application_default_credentials.json",
+                    help="Vertex: application-default credentials file for the bearer token")
     ap.add_argument("--judges", default="UVa")
     ap.add_argument("--shape", choices=("int", "text", "any"), default="int")
     ap.add_argument("--split", choices=("train", "heldout", "any"), default="train")
@@ -173,8 +269,27 @@ def main(argv=None) -> int:
             print(f"dry run: prompt written to {d / 'prompt.json'}")
         return 0
 
-    import boto3
-    client = boto3.client("bedrock-runtime", region_name=a.region)
+    if a.provider == "bedrock":
+        import boto3
+        client = boto3.client("bedrock-runtime", region_name=a.region)
+        model, endpoint = a.model or DEFAULT_MODEL, f"bedrock:{a.region}"
+
+        def call(messages: list[dict]) -> tuple[str, int, int, str | None]:
+            system_blocks, conv = bg.to_bedrock_messages(messages)
+            resp = bg.call_with_backoff(client, model, system_blocks, conv, a.max_tokens, a.temperature)
+            msg = resp.get("output", {}).get("message", {})
+            reply = "".join(b.get("text", "") for b in msg.get("content", []) if "text" in b)
+            usage = resp.get("usage", {})
+            return reply, usage.get("inputTokens", 0) or 0, usage.get("outputTokens", 0) or 0, resp.get("stopReason")
+    else:
+        if not a.project:
+            raise SystemExit("udebug_teacher: --project is required with --provider vertex")
+        model, endpoint = a.model or VERTEX_MODEL, vertex_url(a.project, a.location)
+        token = VertexToken(a.adc)
+        force_ipv4()
+
+        def call(messages: list[dict]) -> tuple[str, int, int, str | None]:
+            return vertex_call(endpoint, token, model, messages, a.max_tokens, a.temperature)
     lock = threading.Lock()
     ledger = {"in": 0, "out": 0, "calls": 0, "usd": 0.0, "stop": False, "with_fences": 0}
     ledger_path = out / "ledger.jsonl"
@@ -186,31 +301,27 @@ def main(argv=None) -> int:
         if ledger["stop"]:
             return "stopped"
         messages = [{"role": "system", "content": system}, {"role": "user", "content": user_text(rec)}]
-        system_blocks, conv = bg.to_bedrock_messages(messages)
         t0 = time.monotonic()
         try:
-            resp = bg.call_with_backoff(client, a.model, system_blocks, conv, a.max_tokens, a.temperature)
+            reply, in_tok, out_tok, stop_reason = call(messages)
         except bg.NonRetryable as e:
             with lock:
                 ledger["stop"] = True
             print(f"ABORT {rec['judge']}/{rec['id']} s{k}: {e}", file=sys.stderr, flush=True)
             return "aborted"
         wall = time.monotonic() - t0
-        msg = resp.get("output", {}).get("message", {})
-        reply = "".join(b.get("text", "") for b in msg.get("content", []) if "text" in b)
-        usage = resp.get("usage", {})
-        in_tok, out_tok = usage.get("inputTokens", 0) or 0, usage.get("outputTokens", 0) or 0
         t_src, io_src = extract(reply)
         d.mkdir(parents=True, exist_ok=True)
         if t_src is not None and io_src is not None:
             (d / f"p{rec['id']}.t").write_text(t_src.rstrip() + "\n", encoding="utf-8")
             (d / f"p{rec['id']}_io.py").write_text(io_src.rstrip() + "\n", encoding="utf-8")
         record = {"judge": rec["judge"], "id": rec["id"], "title": rec.get("title"), "tests_dir": rec["tests_dir"],
-                  "model": a.model, "tag": a.tag, "sample_index": k, "num_samples": a.samples,
+                  "model": model, "provider": a.provider, "endpoint": endpoint, "tag": a.tag,
+                  "sample_index": k, "num_samples": a.samples,
                   "options": {"temperature": a.temperature, "max_tokens": a.max_tokens,
-                              "note": "Bedrock converse has no seed; this reply is not reproducible"},
+                              "note": "no seed on either provider; this reply is not reproducible"},
                   "messages": messages, "reply": reply, "prompt_tokens": in_tok, "reply_tokens": out_tok,
-                  "wall_s": round(wall, 3), "done_reason": resp.get("stopReason"),
+                  "wall_s": round(wall, 3), "done_reason": stop_reason,
                   "fences": {"t": t_src is not None, "python": io_src is not None}}
         (d / "record.json").write_text(json.dumps(record, ensure_ascii=False, indent=1), encoding="utf-8")
         with lock:
@@ -234,7 +345,8 @@ def main(argv=None) -> int:
     workers = max(1, min(a.concurrency, bg.HARD_MAX_CONCURRENCY))
     with concurrent.futures.ThreadPoolExecutor(max_workers=workers) as ex:
         list(ex.map(lambda j: one(*j), jobs))
-    summary = {"tag": a.tag, "model": a.model, "problems": len(problems), "calls_made": ledger["calls"],
+    summary = {"tag": a.tag, "model": model, "provider": a.provider, "endpoint": endpoint,
+               "problems": len(problems), "calls_made": ledger["calls"],
                "replies_with_both_fences": ledger["with_fences"], "input_tokens": ledger["in"],
                "output_tokens": ledger["out"], "usd_estimate": round(ledger["usd"], 4),
                "stopped_early": ledger["stop"]}
