@@ -266,3 +266,14 @@ cap $15, tag `deepseek-udebug-py-scale`; graded on this laptop as it runs. The D
   $0.15/$1.20 per million), the same 2,457 problems, k = 1, tag `qwen3next-udebug-py-scale`, cap $3. **QN1:** its
   problem yield is within 20 points of DeepSeek's on the problems both finish. The three lanes' rows merge
   under the per-problem cap with identical programs kept once (`t/udebug_rows.py`).
+
+### Lanes, first hour (2026-10-12 17:12Z, partial; the final read comes when the lanes end)
+
+All three lanes aborted at 17:09Z on HTTP 429 "Resource exhausted" after the eight-step backoff, 60 calls into the
+DeepSeek lane: run together they spiked the same capacity (13 calls a minute in aggregate, 98-110 retries each
+in five minutes). The teacher now waits a 429 out (forty tries, two-minute cap) and lanes run one at a time
+at concurrency 2: Qwen3-235B first (resumed at record 115), DeepSeek after it, Qwen3-Next last.
+Yields on what each lane graded before the abort: DeepSeek **32 of 60 samples (53%)**, Qwen3-235B **45 of 88
+(51%)**, Qwen3-Next **12 of 36 (33%)**. QS1 holds so far (2 points apart); QN1 sits at its falsifier (20 points).
+Merged so far (`t/udebug_rows.py`, cap 4): **88 execution-verified rows on 38 problems, 4 pairs**; 377
+held-out questions written for the student's later measurement.
