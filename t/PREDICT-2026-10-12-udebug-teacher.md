@@ -235,3 +235,25 @@ with `proof: none` on every one. Pilot: the same 20 bank-order problems, k = 2, 
 - **PY2:** at least 10 of 20 problems judged correct on every stored case. *Falsifier:* 9 or fewer ⇒ the
   problems, not the languages, are the hard part, and the proof yields above were not about t.
 - **PY3:** refusals named (first differing line, crash text, timeout). **PY4:** at most $0.10.
+
+### Read of the Python pilot (2026-10-12 16:53Z)
+
+40 calls, $0.07. **PY1 held:** 36 of 40 programs ran to completion on every stored case (24 pass, 12 fail at a
+named line, 2 crash: an OverflowError on int-to-float, an IndexError; 2 replies without a fence). **PY2
+held:** **14 of 20 problems** judged correct on every stored case (10019, 10020, 10023, 10025, 10031, 10032,
+10041, 10042, 10049, 10050, 10055, 10061, 10079, 10088); the refused six fail at a named line (10018 `got '0 2'
+want '1 4'`, 10037 line 79, 10067 both samples disagree with each other and the judge). PY3, PY4 held.
+Rows: 23 `judge-python`, 3 `judge-python-pair`. What it says: the problems are not the hard part; the
+proof languages were. Execution-verified rows come at ~70% of problems for a third of a cent each.
+
+## Python scale run, registered (2026-10-12 16:53Z, before the first call)
+
+Every UVa train problem with a statement, at least one scored case and stored inputs under 200 kB (the
+bank's count is printed in the log beside this registration), Python target, k = 2, T = 0.7, concurrency 4,
+cap $15, tag `deepseek-udebug-py-scale`; graded on this laptop as it runs. The Dafny scale run is paused
+(stopped at its current record; it resumes from there) so the endpoint's quota goes to this run first.
+
+- **PS1:** between 50% and 80% of the selected problems judged correct on every stored case (the pilot's 70%
+  on int-shaped problems; text-shaped problems are in this set). *Falsifier:* below 50% ⇒ text-shaped
+  problems are much harder for the teacher, reported by shape; above 80% reported as such.
+- **PS2:** at most $15 by the ledger; **PS3:** every refusal named (line, exception or timeout).
