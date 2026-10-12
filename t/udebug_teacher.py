@@ -48,6 +48,8 @@ DEFAULT_EXEMPLARS = ("p495", "p10302", "p343")
 # Every one is deprecated there, retiring 2026-10-21, so the record names model and date.
 VERTEX_MODEL = "deepseek-ai/deepseek-v3.2-maas"
 VERTEX_RETRYABLE = (408, 429, 500, 502, 503, 504)
+RATE_LIMIT_MAX_ATTEMPTS = 40      # 429 is waited out: ~40 tries at up to RATE_LIMIT_MAX_DELAY s each
+RATE_LIMIT_MAX_DELAY = 120.0
 
 
 def force_ipv4() -> None:
@@ -111,7 +113,9 @@ def vertex_call(url: str, token: VertexToken, model: str, messages: list[dict], 
     body = json.dumps({"model": model, "messages": messages, "max_tokens": max_tokens,
                        "temperature": temperature, "stream": False}).encode()
     delay = 1.0
-    for attempt in range(1, max_attempts + 1):
+    attempt = 0
+    while True:
+        attempt += 1
         req = urllib.request.Request(url, data=body, headers={"Authorization": f"Bearer {token.get()}",
                                                               "Content-Type": "application/json"})
         try:
@@ -123,16 +127,23 @@ def vertex_call(url: str, token: VertexToken, model: str, messages: list[dict], 
             return text, usage.get("prompt_tokens", 0) or 0, usage.get("completion_tokens", 0) or 0, choice.get("finish_reason")
         except urllib.error.HTTPError as e:
             detail = e.read().decode("utf-8", errors="replace")[:600]
-            if e.code not in VERTEX_RETRYABLE or attempt == max_attempts:
+            # 429 "Resource exhausted": "if the number of your requests exceeds the capacity allocated to
+            # process requests" (docs.cloud.google.com/vertex-ai/generative-ai/docs/error-code-429, read
+            # 2026-10-12: "implement a retry strategy by using truncated exponential backoff", smooth traffic,
+            # ramp up gradually), so it is waited out, never fatal: three lanes aborted on it at 17:09Z after
+            # the eight-step schedule, 60 calls in, because they were spiking the same capacity together.
+            if e.code == 429:
+                if attempt >= RATE_LIMIT_MAX_ATTEMPTS:
+                    raise bg.NonRetryable(f"HTTP 429 after {attempt} attempts: {detail}") from e
+            elif e.code not in VERTEX_RETRYABLE or attempt >= max_attempts:
                 raise bg.NonRetryable(f"HTTP {e.code}: {detail}") from e
         except (urllib.error.URLError, TimeoutError) as e:
-            if attempt == max_attempts:
+            if attempt >= max_attempts:
                 raise bg.NonRetryable(f"connection error, exhausted {max_attempts} attempts: {e}") from e
-        sleep_s = delay * (1 + random.uniform(-0.2, 0.2))
-        print(f"  transient error, retry {attempt}/{max_attempts} in {sleep_s:.1f}s", file=sys.stderr, flush=True)
+        sleep_s = min(delay, RATE_LIMIT_MAX_DELAY) * (1 + random.uniform(-0.2, 0.2))
+        print(f"  transient error, retry {attempt} in {sleep_s:.1f}s", file=sys.stderr, flush=True)
         time.sleep(sleep_s)
         delay *= 2
-    raise bg.NonRetryable("unreachable: retry loop exited without returning or raising")
 
 IO_CONTRACT = """
 Solving a judge problem in t has two parts, and you write both.
