@@ -3235,3 +3235,9 @@ is queued, and the ones running are read as they finish.
 - **Next:** AlgoVeri's BST family (search, rotations, splay, insert, delete) over the collection quantifiers, which
   needs a deeper witness ladder and proof steps in the programs; then datatypes in Rocq and F*.
 
+- **uDebug bank + teacher + gate (10-12 ~14:30Z):** the judge corpus (13,531 problems collected 10/11-10/12 with
+  permission, private) joined into `t/out/udebug/bank.jsonl` by `t/udebug_bank.py` (7,682 with stored cases, 3,407
+  UVa with statements, 2,279 int-shaped, 21 hand-solved marked measured, 804 held out). `t/udebug_teacher.py`
+  (DeepSeek-V3.2, t task + io module per problem) and `t/udebug_gate.py` (judge first, provers second, rows and
+  judge-refuted pairs) built and self-tested on the hand solutions (21/21 reproduce the judge; broken twins refused
+  with the differing line). Pilot registered in `t/PREDICT-2026-10-12-udebug-teacher.md`; waits on AWS credentials.
