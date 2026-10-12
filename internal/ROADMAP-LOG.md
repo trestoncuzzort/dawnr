@@ -3241,3 +3241,10 @@ is queued, and the ones running are read as they finish.
   (DeepSeek-V3.2, t task + io module per problem) and `t/udebug_gate.py` (judge first, provers second, rows and
   judge-refuted pairs) built and self-tested on the hand solutions (21/21 reproduce the judge; broken twins refused
   with the differing line). Pilot registered in `t/PREDICT-2026-10-12-udebug-teacher.md`; waits on AWS credentials.
+- **uDebug teacher pilots (10-12 17:22Z):** eight registered runs in `t/PREDICT-2026-10-12-udebug-teacher.md`.
+  Proof targets (t direct, t + parser rules, parser-message repair, Qwen3-235B in t, math-shaped selection,
+  Dafny + the lifter, Dafny repair) accept 0-3 one-line problems of 20 each: the teacher cannot write t or
+  verified Dafny for judge problems, and the oracle refuses the rest by name. The Python target judged on every
+  stored case accepts 14 of 20 ($0.07); at scale the lanes run 43-55% per sample. Rows of kind `judge-python`
+  carry `proof: none` and merge under a per-problem cap (`t/udebug_rows.py`); 377 held-out questions wait for
+  a student. Training blocked: no GPU (GCP quotas 0, appeals filed and auto-denied; AWS Free; lab GPUs closed).
