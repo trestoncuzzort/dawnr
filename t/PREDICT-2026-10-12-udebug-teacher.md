@@ -143,7 +143,7 @@ own lifter (the MBPP-DFY lift of `t/COVERAGE-lifted-785.md`); (2) choose problem
 (10018..10092) put a segment-cover and a Hofstadter recursion in front of a model that proves one-liners.
 Both are registered below before they run.
 
-## Selection by shape, registered (2026-10-12 15:40Z, before the first call)
+## Selection by shape, registered (2026-10-12 15:33Z, before the first call; label corrected from an estimated 15:40Z to the unit's start time)
 
 Same teacher, prompt and k as v2 (DeepSeek-V3.2, prompt v2, k = 4, T = 0.7), but the 20 problems are the top 20
 of the UVa int-shaped train set by a statement score (`+1` per number-theory word such as prime, divisor,
@@ -158,7 +158,7 @@ twenty score 20 to 38. Tag `deepseek-udebug-3`.
   *Falsifier:* a parse rate above 30% would mean these statements elicit simpler programs, worth knowing.
 - **S3:** refusals named; **S4:** at most $0.60.
 
-## Dafny as the teacher's language, registered (2026-10-12 15:55Z, before the first call)
+## Dafny as the teacher's language, registered (2026-10-12 15:36Z, before the first call; label corrected from an estimated 15:55Z to the unit's start time)
 
 The teacher writes a Dafny method `p<id>` (functions, lemmas, `requires`/`ensures`, the int/bool/seq<int>
 subset) plus the io module; the gate lifts it to t with `t/lifter.py` (resolve, parse, classify, rewrite,
@@ -173,3 +173,11 @@ T = 0.7, concurrency 2 (the endpoint is throttling), tag `deepseek-udebug-dafny-
 - **D2, yield:** at least 5 of 20 problems accepted (judge pass AND Dafny COUNTS on the lifted task), against
   3 of 20 for the same problems written in t. *Falsifier:* 4 or fewer.
 - **D3:** every refusal named (lifter stage and reason, judge line, kernel verdict). **D4:** at most $0.50.
+
+### Read of the shape selection (2026-10-12 15:50Z)
+
+80 calls, every reply with both fences. **S1 failed:** 9 of 80 parse, 5 of those gate-refused, 3 runtime
+errors, 1 judge timeout, **0 problems accepted** (Smith Numbers, Composite Prime, Largest Prime Divisor, GCD
+LCM, ... all refused at the parser). **S2 held in the letter** (11% is within 10 points of 20%) and says the
+opposite of the hope: harder statements draw longer programs with more of the constructs the parser refuses.
+S3 and S4 held. Shape selection does not beat the syntax wall; the Dafny-lift run decides the next step.
