@@ -333,6 +333,23 @@ def repair_text(rec: dict, prior: dict, corpus: Path) -> str:
     return "\n\n".join(lines)
 
 
+def speed_text(rec: dict, entry: dict, program: str) -> str:
+    """A confirmed program that is too slow for a judge, handed back for a faster one. The export's evidence gives
+    the slowest stored case; CPython at an online judge gets one to a few seconds."""
+    return "\n\n".join([
+        f"A previous program (below) is correct: it reproduces every one of the judge's {entry.get('cases')} stored "
+        f"cases. But its slowest case takes {entry.get('max_case_s')} s, and an online judge allows CPython about one "
+        f"to three seconds, so it would be refused for time.",
+        "The previous program:",
+        "```python\n" + program.rstrip() + "\n```",
+        "Write a faster program with the same output. Look first for a better algorithm (precomputation across "
+        "cases, a sieve or table built once, a closed form, memoization, binary search, prefix sums, a better data "
+        "structure); then at Python costs: read all input at once with sys.stdin.buffer.read().split(), build the "
+        "output in a list and write it once, avoid per-element function calls and deep recursion, use integers over "
+        "floats and local variables inside functions. Keep the reasoning under 300 words, then one complete "
+        "```python fence reading stdin and writing stdout; nothing after it."])
+
+
 def user_text(rec: dict, target: str = "t", repair: str | None = None) -> str:
     title = rec.get("title") or ""
     what = (f"the Dafny method `p{rec['id']}` and its io module" if target == "dafny"
@@ -408,6 +425,9 @@ def main(argv=None) -> int:
     ap.add_argument("--repair-from", default="", help="comma-separated lane directories: prompt only the problems "
                     "refused there (and accepted nowhere among them), with the refusal and the program quoted")
     ap.add_argument("--corpus", default="t/out/udebug-bulk-20261011", help="where the stored cases are (repair)")
+    ap.add_argument("--slow-index", default="", help="the export's INDEX.jsonl: prompt the solved problems whose "
+                    "slowest stored case exceeds --slow-above seconds for a faster program (quoting the solution)")
+    ap.add_argument("--slow-above", type=float, default=2.0)
     ap.add_argument("--limit", type=int, default=0)
     ap.add_argument("--max-in-bytes", type=int, default=0, help="skip problems whose stored inputs exceed this")
     ap.add_argument("--samples", type=int, default=1)
@@ -432,9 +452,26 @@ def main(argv=None) -> int:
     problems = select(Path(a.bank), judges, a.shape, a.split, ids, a.limit, a.max_in_bytes)
     print(f"{len(problems)} problems selected; system prompt {len(system)} chars", flush=True)
     repair_dirs = [Path(p) for p in a.repair_from.split(",") if p]
-    if repair_dirs:
+    slow = {}
+    if a.slow_index:
+        with open(a.slow_index, encoding="utf-8") as f:
+            for line in f:
+                e = json.loads(line)
+                if e.get("status") == "solved" and (e.get("max_case_s") or 0) > a.slow_above:
+                    slow[(e["judge"], e["id"])] = e
+    if repair_dirs or slow:
         kept = []
         for rec in problems:
+            e = slow.get((rec["judge"], rec["id"]))
+            if e is not None:
+                prog = Path(e["sample_dir"]) / f"p{rec['id']}.py"
+                if prog.is_file():
+                    rec["_repair"] = speed_text(rec, e, prog.read_text(encoding="utf-8"))
+                    rec["_repair_from"] = e["sample_dir"]
+                    kept.append(rec)
+                continue
+            if not repair_dirs:
+                continue
             attempts = prior_attempts(rec, repair_dirs)
             if any(o.get("accepted") for o in attempts):
                 continue                                  # solved in one of those lanes already
@@ -445,7 +482,7 @@ def main(argv=None) -> int:
             rec["_repair_from"] = prior["sample_dir"]
             kept.append(rec)
         problems = kept
-        print(f"{len(problems)} problems carry a refused attempt to repair", flush=True)
+        print(f"{len(problems)} problems carry a refused attempt to repair or a slow solution to speed up", flush=True)
 
     jobs = []
     for rec in problems:
