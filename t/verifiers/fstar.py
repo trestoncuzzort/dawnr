@@ -188,6 +188,7 @@ linear_search +88 ms). With captions left on it was +11%, which is why
 """
 from __future__ import annotations
 
+import hashlib
 import json
 import re
 import subprocess
@@ -300,6 +301,52 @@ _FN_RE = re.compile(
     r"    \(ensures",
     re.MULTILINE)
 _VACUITY_CANARY = "t_vacuity_canary"
+_FN_RE_ONELINE = re.compile(                # the same shape on one line: `let f (x:int) : Pure int (requires R) (ensures`
+    r"^let (?:rec )?([A-Za-z_][A-Za-z0-9_']*) (\([^\n]*?\))\s*:\s*Pure\b[^\n]*?\(requires\s+(.+?)\)\s*\(ensures",
+    re.MULTILINE)
+_LEMMA_DECL = re.compile(r"^\s*let\s+(?:rec\s+)?([A-Za-z_][A-Za-z0-9_']*)\b[^\n]*:\s*Lemma\b", re.M)
+
+
+def _strip_comments(text: str) -> str:
+    """F* comments removed: nested `(* ... *)` blocks and `//` lines, each replaced by spaces so positions survive."""
+    out: list[str] = []
+    i, n, depth = 0, len(text), 0
+    while i < n:
+        if text.startswith("(*", i):
+            depth += 1
+            out.append("  ")
+            i += 2
+        elif depth and text.startswith("*)", i):
+            depth -= 1
+            out.append("  ")
+            i += 2
+        elif depth:
+            out.append("\n" if text[i] == "\n" else " ")
+            i += 1
+        elif text.startswith("//", i):
+            j = text.find("\n", i)
+            j = n if j < 0 else j
+            out.append(" " * (j - i))
+            i = j
+        else:
+            out.append(text[i])
+            i += 1
+    return "".join(out)
+
+
+def _cert_rests_on_a_lemma(stripped: str) -> str | None:
+    """The name of another lemma of the file the certificate's body mentions, or None. The targeted run admits
+    every other declaration, so a certificate that calls one proves nothing the kernel checked."""
+    m = _CERT_DECL.search(stripped)
+    if m is None:
+        return None
+    nxt = re.compile(r"^let\b", re.M).search(stripped, m.end())
+    body = stripped[m.end():nxt.start() if nxt else len(stripped)]
+    for lm in _LEMMA_DECL.finditer(stripped):
+        name = lm.group(1)
+        if name != CERT_NAME and re.search(r"(?<![\w'])" + re.escape(name) + r"(?![\w'])", body):
+            return name
+    return None
 
 
 def _run_vacuity_file(src: str, td: str, module: str, budget: int,
@@ -343,6 +390,8 @@ def _run_vacuity_file(src: str, td: str, module: str, budget: int,
             continue
         if d.get("level") == "Error":
             msgs.append(" ".join(d.get("msg") or []))
+    if p.returncode != 0 and not msgs:
+        return None                     # a crash with no diagnostics is no reading, never a discharge
     return msgs
 
 
@@ -353,8 +402,12 @@ def _probe_vacuity(src_text: str, module: str, budget: int) -> tuple[str, dict]:
     function's own requires discharged `ensures False` with no assist),
     or "unusable" (the instrument gave no reading; the caller must refuse
     rather than trust the file's own VERIFIED)."""
-    targets = [(nm, params, req) for nm, params, req in _FN_RE.findall(src_text)
-              if not nm.endswith("_loop")]
+    seen: set = set()
+    targets = []
+    for nm, params, req in _FN_RE.findall(src_text) + _FN_RE_ONELINE.findall(src_text):
+        if not nm.endswith("_loop") and nm not in seen:
+            seen.add(nm)
+            targets.append((nm, params, req))
     if not targets:
         return "clean", {"probed": 0, "probe_ms": 0}
     t0 = time.monotonic()
@@ -392,6 +445,8 @@ def _probe_vacuity(src_text: str, module: str, budget: int) -> tuple[str, dict]:
             continue
         if not msgs:
             proved.append(nm)                   # `ensures False` DISCHARGED
+        elif any(_rlimit_timeout(m) for m in msgs):
+            undecided.append(nm)                # the solver gave no answer within its budget
         elif not any("Failed to prove: Prims.l_False" in m for m in msgs):
             undecided.append(nm)
     if undecided:
@@ -453,13 +508,18 @@ def _check_certificate(fname: str, cwd: str, module: str,
 def verify(path: Path, budget: int = DEFAULT_RLIMIT) -> Result:
     if not FSTAR:
         raise SystemExit(_FSTAR_WHY)
-    src_hash = sha256_file(path)
-    raw = path.read_bytes()
-    src_text = safe_text(path)
+    if not path.is_file():
+        return Result("fstar", version(), "", Outcome.TOOL_ERROR, budget=f"z3rlimit={budget}",
+                      error=f"input not found: {path}")
+    sha256_file(path)                       # readable; the verdict's hash is of the bytes read once below
+    raw = path.read_bytes()                 # one read: hashed, scanned and checked as the same bytes
+    src_hash = hashlib.sha256(raw).hexdigest()
+    src_text = raw.decode("utf-8", errors="replace")
     banned = sorted(set(BANNED.findall(src_text))
                     | set(BANNED.findall(unicodedata.normalize("NFKC",
                                                                src_text))))
-    m = _MODULE.search(src_text)
+    stripped = _strip_comments(src_text)
+    m = _MODULE.search(stripped)            # the declaration, never a commented-out one
     fname = (m.group(1) + ".fst") if m else "T_unit.fst"
     bud = f"z3rlimit={budget} z3seed={Z3_SEED} z3={Z3_VERSION}"
     t0 = time.monotonic()
@@ -489,10 +549,13 @@ def verify(path: Path, budget: int = DEFAULT_RLIMIT) -> Result:
         # directory still exists, so it runs here and the gate below reads
         # the answer. Only when the file actually declares the lemma, so a
         # file without one costs no second kernel run.
-        _cert_result = ((False, "no certificate")
-                        if not _CERT_DECL.search(src_text)
-                        else _check_certificate(fname, td,
-                                                fname[:-len(".fst")], budget))
+        if not _CERT_DECL.search(stripped):
+            _cert_result = (False, "no certificate")
+        elif _cert_rests_on_a_lemma(stripped):
+            _cert_result = (False, f"the certificate rests on another lemma of the file "
+                                   f"({_cert_rests_on_a_lemma(stripped)}), which the targeted run admits")
+        else:
+            _cert_result = _check_certificate(fname, td, fname[:-len(".fst")], budget)
     wall = int((time.monotonic() - t0) * 1000)
 
     errs: list[tuple[int, str]] = []

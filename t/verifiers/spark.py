@@ -497,7 +497,8 @@ ESCALATED_STEPS = 100_000
 BANNED = re.compile(
     r"pragma\s+Assume\b"
     r"|SPARK_Mode\s*(?:=>|\()\s*Off\b"
-    r"|\bImport(?:_\w+)?\b"
+    r"|pragma\s+Import(?:_\w+)?\b|\bwith\s+Import(?:_\w+)?\b|\bImport(?:_\w+)?\s*=>"
+    r"|,\s*Import(?:_\w+)?\s*(?=[,;]|=>)"
     r"|pragma\s+Interface(?:_Name)?\b"
     r"|GNATprove\s*,\s*(?:False_Positive|Intentional|Skip_Proof"
     r"|Skip_Flow_And_Proof)\b",
@@ -535,7 +536,7 @@ end SPARKlib;
 """
 # A source that reaches for the library says so by withing it; everything
 # else keeps the bare project and pays nothing for the library's presence.
-_USES_SPARKLIB = re.compile(r"^\s*with\s+SPARK\.", re.MULTILINE | re.IGNORECASE)
+_USES_SPARKLIB = re.compile(r"^\s*with\b[^;]*\bSPARK\.", re.MULTILINE | re.IGNORECASE)   # anywhere in a with clause
 
 
 def _env() -> dict:
@@ -880,10 +881,10 @@ def _classify_audit(a: dict) -> tuple[str, str]:
         return Outcome.MALFORMED, (
             f"body not fully analyzed: entities {a['entities']} "
             f"(an entity below \"all\" has code outside the proof's scope)")
-    if a["post_proved"] == 0:
+    if a["post_proved"] == 0 or not any(e.startswith("info/") for e in a["f_post"]):
         return Outcome.MALFORMED, (
-            "no VC_POSTCONDITION proved; the artifact's theorem (the Post "
-            "on F) was never discharged")
+            "no VC_POSTCONDITION proved for F; the artifact's theorem (the Post "
+            "on F) was never discharged (a helper's postcondition is not it)")
     return Outcome.VERIFIED, ""
 
 
@@ -971,6 +972,9 @@ def _havoc_verdict(src_text: str, unit: str, budget: int) -> tuple[str, str]:
     return Outcome.VERIFIED, ""
 
 
+_COMPILE_ERROR = re.compile(r"(?m)^(?:[^\n:]+:\d+:\d+: )?(?:error|fatal error):")   # a diagnostic, not a unit name
+
+
 def _escalate_variant_timeout(src_text: str, unit: str, audit: dict,
                               outcome: str, why: str) -> tuple[str, str]:
     """2026-09-11 (ROADMAP 13.4, fz_p_badrec2): a file whose own
@@ -1022,9 +1026,14 @@ def _escalate_variant_timeout(src_text: str, unit: str, audit: dict,
                              cntexmp=False)
     if p2 is None or audit2 is None:
         return outcome, why           # inconclusive: keep the original
+    if p2.returncode != 0 or _COMPILE_ERROR.search((p2.stdout or "") + (p2.stderr or "")):
+        return outcome, why           # a run that failed or reported errors decides nothing
     outcome2, why2 = _classify_audit(audit2)
     if outcome2 in (Outcome.TIMEOUT, Outcome.TOOL_ERROR):
         return outcome, why           # no improvement: keep the original
+    audit.clear()                     # the decisive run's evidence replaces the original's, for the record
+    audit.update(audit2)
+    audit["_escalated_steps"] = ESCALATED_STEPS
     return outcome2, (
         f"escalated to --steps={ESCALATED_STEPS} (no counterexamples) "
         "after a VC_SUBPROGRAM_VARIANT gave_up reading was blocked by an "
@@ -1064,7 +1073,7 @@ def verify(path: Path, budget: int | None = None) -> Result:
     banned = [m.group(0) for m in BANNED.finditer(active)]
     cert_named = CERT_ENTITY in active.lower()
     t0 = time.monotonic()
-    m = re.search(r"package\s+(\w+)", src_text)
+    m = re.search(r"\bpackage\s+(\w+)", active, re.IGNORECASE)     # the declaration, not a comment's words
     unit = (m.group(1).lower() if m else "t_unit") + ".ads"
     fingerprint = f"steps={budget} " + " ".join(_ce_flags(budget))
     p, audit, audit_why = _run(src_text, unit, budget, warnings=True,
@@ -1077,7 +1086,7 @@ def verify(path: Path, budget: int | None = None) -> Result:
     why = ""
     if banned:
         outcome = Outcome.VACUOUS
-    elif re.search(r"^.*\berror\b", out, re.MULTILINE):
+    elif _COMPILE_ERROR.search(out):
         outcome = Outcome.MALFORMED
     elif audit is None:
         outcome, why = Outcome.TOOL_ERROR, audit_why
@@ -1128,6 +1137,8 @@ def verify(path: Path, budget: int | None = None) -> Result:
         havoc_outcome, havoc_why = _havoc_verdict(src_text, unit, budget)
         havoc_wall = int((time.monotonic() - h0) * 1000)
     wall = int((time.monotonic() - t0) * 1000)
+    if audit is not None and audit.get("_escalated_steps"):
+        fingerprint = f"steps={audit['_escalated_steps']} (escalated, no counterexamples)"
     extras = {"banned_tokens": banned[:5], "havoc_ms": havoc_wall,
               # The scheduling knob that explains wall_ms, kept out of
               # `budget` on purpose: see JOBS_CAP's comment above.
