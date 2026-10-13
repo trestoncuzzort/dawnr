@@ -403,13 +403,14 @@ class Parser:
         if self.at("(") or self.at("⟨"):
             raise LeanRefusal("tuple", f"let pattern at line {t.line}")
         name = self.take().text
-        if self.accept(":"):
-            self.parse_type()
+        declared = self.parse_type() if self.accept(":") else None
         self.expect(":=")
         saved = (self.stop_col, self.stop_line)
         self.stop_col, self.stop_line = t.col, t.line
         val = self.parse_expr(0)
         self.stop_col, self.stop_line = saved
+        if declared is not None:
+            val = ("ascribe", val, declared)     # `let m : Int := n` reads n at Int, whatever n's own type
         self.accept(";")
         body = self.parse_expr(0)
         return ("let", name, val, body)
@@ -440,7 +441,8 @@ class Parser:
         t = self.peek()
         if t.kind == "num":
             self.take()
-            e = ("int", int(t.text.replace("_", ""), 0))
+            digits = t.text.replace("_", "")
+            e = ("int", int(digits, 0) if re.match(r"0[xXbBoO]", digits) else int(digits, 10))
         elif t.kind == "float":
             raise LeanRefusal("float", t.text)
         elif t.kind == "str":
@@ -552,6 +554,12 @@ class Parser:
         body_start = self.i
         try:
             body = self.parse_expr(0)
+            nxt = self.peek()
+            if not (nxt.kind == "eof" or nxt.text in ("termination_by", "decreasing_by", "where")
+                    or (nxt.col == 0 and (nxt.text in ITEM_WORDS or nxt.text == "@[")
+                        and self.toks[self.i - 1].line < nxt.line)):
+                # a prefix parsed and a tail (`|> f`, an argument on the next line) did not: not this body
+                raise LeanRefusal("unparsed-tail", f"{nxt.text!r} at line {nxt.line}")
         except LeanRefusal as r:
             body = ("refused", r.reason, r.detail)
             self.i = body_start
@@ -626,6 +634,8 @@ def classify_type(text: str, src: str) -> LType:
         return LType("refuse", src, reason="hoare-triple")
     if "→" in t or "->" in t:
         return LType("refuse", src, reason="higher-order")
+    if re.fullmatch(r"[A-Za-z_][\w.']*", t.strip()):
+        return LType("refuse", src, reason="datatype")     # a bare name is a type (a structure, an inductive)
     # an application of a definition, or a relation: a proposition (a proof binder)
     if re.match(r"[A-Za-z_][\w.]*(\s|$)", t) and t.split()[0] not in ("List", "Array", "Type"):
         return LType("proof", src)
@@ -642,6 +652,7 @@ class LeanFile:
     theorems: dict[str, Def]
     holes: list[str]
     sections: dict[str, str]
+    dups: set = field(default_factory=set)      # names defined more than once (namespaces this parser does not track)
 
 
 def sections(text: str) -> dict[str, str]:
@@ -652,7 +663,8 @@ def sections(text: str) -> dict[str, str]:
 
 
 HOLES = [(re.compile(r"\bsorry\b"), "sorry"), (re.compile(r"\badmit\b"), "admit"),
-         (re.compile(r"^\s*axiom\b", re.M), "axiom"), (re.compile(r"\binstance\b"), "instance"),
+         (re.compile(r"^\s*(?:(?:private|protected|noncomputable|unsafe)\s+)*axiom\b", re.M), "axiom"),
+         (re.compile(r"\binstance\b"), "instance"),
          (re.compile(r"^\s*(?:local\s+)?(?:notation|infix[lr]?|prefix|postfix|macro|macro_rules|syntax)\b", re.M),
           "notation"),
          (re.compile(r"implemented_by|extern\b|unsafe\b"), "implemented_by"),
@@ -661,6 +673,7 @@ HOLES = [(re.compile(r"\bsorry\b"), "sorry"), (re.compile(r"\badmit\b"), "admit"
 
 def trust_holes(text: str) -> list[str]:
     code = re.sub(r"/-.*?-/", "", text, flags=re.S)
+    code = re.sub(r'"(?:[^"\\]|\\.)*"', '""', code)      # a `--` inside a string is not a comment
     code = re.sub(r"--[^\n]*", "", code)
     return [name for pat, name in HOLES if pat.search(code)]
 
@@ -670,6 +683,7 @@ def parse_file(text: str) -> LeanFile:
     p = Parser(toks, text)
     defs: dict[str, Def] = {}
     thms: dict[str, Def] = {}
+    dups: set = set()
     while p.peek().kind != "eof":
         t = p.peek()
         if t.col == 0 and (t.text in ("def", "theorem", "lemma", "abbrev", "@[", "noncomputable", "private",
@@ -681,11 +695,15 @@ def parse_file(text: str) -> LeanFile:
                 continue
             if d is None:
                 continue
-            (thms if d.kind == "theorem" else defs)[d.name] = d
+            table = thms if d.kind == "theorem" else defs
+            if d.name in table:
+                dups.add(d.name)              # the first stays; a reference to the name is refused as ambiguous
+            else:
+                table[d.name] = d
             continue
         p.take()
         p.skip_to_item()
-    return LeanFile(defs, thms, [], sections(text))
+    return LeanFile(defs, thms, [], sections(text), dups)
 
 
 # ---------------------------------------------------------------- render --
@@ -823,6 +841,13 @@ class Renderer:
             return "(" + self.ex(e[1]) + ")"
         if tag == "ascribe":
             if e[2].kind in ("int", "nat", "bool", "prop", "seq"):
+                inner = e[1]
+                while inner[0] == "paren":
+                    inner = inner[1]
+                if e[2].kind == "nat" and inner[0] == "bin" and inner[1] == "-":
+                    A, B = self.ex(inner[2]), self.ex(inner[3])     # `(a - b : Nat)` is Nat's own subtraction
+                    self.rewrites.append("nat-sub-truncated")
+                    return f"(if {A} >= {B} then {A} - {B} else 0)"
                 return self.ex(e[1])
             raise LeanRefusal(e[2].reason or "datatype", e[2].text)
         if tag == "coe":
@@ -929,7 +954,12 @@ class Renderer:
                 # make are an array index (Nat) and arithmetic against Int. Read it the
                 # same way; a wrong reading changes the contract, which the Lean
                 # equivalence harness then refuses.
-                k = "nat" if bound is not None or _indexes_with(body, b.name) else "int"
+                bx = (bound[1] if isinstance(bound, tuple) and len(bound) == 2 and isinstance(bound[0], str)
+                      and bound[0] in ("<", "<=", ">", ">=", "≤", "≥", "≠", "!=") else bound)   # (op, expr) or expr
+                if bound is not None and self.type_of(bx) == "int":
+                    k = "int"
+                else:
+                    k = "nat" if bound is not None or _indexes_with(body, b.name) else "int"
             if k not in ("int", "nat"):
                 if k == "unknown":
                     raise LeanRefusal("quantifier-type", f"untyped binder {b.name}")
@@ -1241,6 +1271,10 @@ def _replace_calls(e, fname: str, params: list[str], result: str):
             raise LeanRefusal("spec-applies-program", f"{fname} unapplied")
         return ("name", result)
     if e[0] == "quant":
+        bound_names = [b if isinstance(b, str) else (b[0] if isinstance(b, tuple) else getattr(b, "name", None))
+                       for b in e[2]]
+        if any(n in params for n in bound_names):
+            raise LeanRefusal("spec-applies-program", "a quantifier binds a parameter's name over the program's call")
         return (e[0], e[1], e[2], e[3], _replace_calls(e[4], fname, params, result))
     return tuple([e[0]] + [_replace_calls(x, fname, params, result) for x in e[1:]])
 
@@ -1329,7 +1363,9 @@ def _render(lf: LeanFile, fn: Def) -> Rendering:
         stmt = thm.body
         while stmt[0] == "paren":
             stmt = stmt[1]
-        hyps = []
+        # a proposition-valued binder `(h : x > 0)` is a hypothesis of the statement, as `x > 0 →` would be
+        hyps = [Parser(tokenize(b.type.text), b.type.text).parse_expr(0)
+                for b in thm.binders if b.type.kind == "proof"]
         while stmt[0] == "bin" and stmt[1] in ("→", "->") and not _mentions(stmt[2], fn.name):
             hyps.append(stmt[2])
             stmt = stmt[3]
@@ -1392,6 +1428,11 @@ def _render(lf: LeanFile, fn: Def) -> Rendering:
             if c != n:
                 visit(c, stack + (n,))
         done.add(n)
+        if n in lf.dups:
+            raise LeanRefusal("ambiguous-name", f"{n} is defined more than once in the file")
+        pnames_d = [dn(b.name) for b in d.binders if b.type.kind != "proof"]
+        if len(set(pnames_d)) != len(pnames_d):
+            raise LeanRefusal("name-clash", f"{n}: two binders spell the same Dafny name")
         ps = ", ".join(f"{dn(b.name)}: {b.type.dafny()}" for b in d.binders if b.type.kind != "proof")
         kind = "predicate" if d.ret.kind in ("prop", "bool") else "function"
         ret = "" if kind == "predicate" else f": {d.ret.dafny()}"
@@ -1400,6 +1441,8 @@ def _render(lf: LeanFile, fn: Def) -> Rendering:
     for c in sorted(rd.called):
         visit(c)
     ret_t = fn.ret.dafny()
+    if len({dn(b.name) for b in params}) != len(params):
+        raise LeanRefusal("name-clash", "two parameters spell the same Dafny name")
     ps = ", ".join(f"{dn(b.name)}: {b.type.dafny()}" for b in params)
     out = [f"// rendered from Lean 4 by t/lift_lean.py: def {fn.name} ({shape})", ""] + fn_lines
     out.append(f"method {dn(fn.name)}({ps}) returns ({dn(result)}: {ret_t})")

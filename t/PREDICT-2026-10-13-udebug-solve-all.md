@@ -88,3 +88,31 @@ against the open-weight repair rounds on the same set (DeepSeek 42 of 272 across
 267, GLM-5 7 of 93, Qwen3-Next 109 of 589). X2 (DeepSeek repair 25 to 45% on wrong answers) reads BELOW its floor
 at 15%; the frontier models clear it by a wide margin. Spend per problem: Astra about $0.48, Sol $0.08, gpt-5.5
 $1.10, gpt-5.4 $0.53, Luna under $0.01; gpt-5.5 and gpt-5.4 were stopped as dominated. Bundle 1,622 solved.
+
+## 2026-10-13 12:36Z — the bundle is dawnr's own; the proof lane measured the grammar fix
+
+The user's rule (12:20Z): the uDebug work never touches OpenAI; the credit is solely for making dawnr better.
+`udebug_export.py` now excludes any lane whose records name provider openai (and `udebug_rows.py` already refused
+them for training). Export 4 rebuilt `t/out/udebug-solutions` without the seven OpenAI lanes and removed 1,242
+stale files:
+
+| status | count |
+|---|---|
+| solved (every stored case, three runs) | 2,135 |
+| unsolved | 1,204 |
+| untried | 61 |
+| no stored output | 6 |
+| accepted but not confirmed | 1 |
+
+Solved by model: Qwen3-Next 80B 754, DeepSeek V3.2 (Bedrock) 558, Qwen3-235B 505, DeepSeek V3.2 (Vertex) 214,
+GLM-5 80, Qwen3-coder 24. The 686 OpenAI-written solutions are out of the bundle (they stay in their lane
+directories as a record, never as data).
+
+The OpenAI proof lane (GPT-6.1 Sol writing t programs for 175 problems, stopped at $31) served one measurement:
+of its first 38 graded programs 22 failed to parse only because a non-recursive `spec fun` had no `decreases`.
+After a3f4b500 (the measure is required only when the body calls itself) the regrade on the prove box reads, at
+41 graded: 15 accepted (parsed, judged on every stored case, verified by at least one kernel), 1 parse error,
+28 judge passes. That lane's programs are OpenAI's and enter nothing of dawnr's; the grammar fix is what stays.
+
+AWS (Bedrock) sessions expire after roughly 30 minutes of `aws login`; the DeepSeek lanes D1-D4 and the fresh
+shard D4b stopped on expiry twice today and need the user's `aws login` to resume.
