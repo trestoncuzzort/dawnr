@@ -39,7 +39,7 @@ print(f"shard {spec}: {len(refused)} refused, {len(untried)} untried", flush=Tru
 PY
   LANES=$(ls -d t/out/udebug/teacher-*/ | sed 's|/$||' | grep -v "dry\|probe" | tr '\n' ',' | sed 's/,$//')
   PROV="--provider vertex --project $PROJECT --location global --adc $ADC"; [ "${PROVIDER:-}" = bedrock-cli ] && PROV="--provider bedrock-cli --region ${REGION:-us-east-1}"
-  [ "${PROVIDER:-}" = openai ] && PROV="--provider openai${EFFORT:+ --reasoning-effort $EFFORT}"
+  [ "${PROVIDER:-}" = openai ] && PROV="--provider openai${EFFORT:+ --reasoning-effort $EFFORT}${SERVICE_TIER:+ --service-tier $SERVICE_TIER}"
   COMMON="--bank $BANK --exemplars $EX --target python $PROV --judges UVa --shape any --split any --max-in-bytes 0 --samples 1 --temperature ${TEMP:-0.7} --max-tokens ${MAXTOK:-8192} --concurrency ${CONC:-4} --price-in-per-mtok ${PRICE_IN:-0.56} --price-out-per-mtok ${PRICE_OUT:-1.68} --spend-cap-usd ${CAP:-25}${MODEL:+ --model $MODEL}"
   for kind in ${KINDS:-repair fresh}; do
     IDS=$(cat t/out/udebug/solve-ids-$([ $kind = repair ] && echo refused || echo untried)-$NAME.txt)
