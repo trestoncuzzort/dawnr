@@ -32,6 +32,7 @@ import argparse
 import concurrent.futures
 import json
 import re
+import os
 import shutil
 import subprocess
 import time
@@ -82,7 +83,7 @@ STUDENT_ASK = ("Write the t task `p{id}` for this judge problem: its requires an
                "are the numbers (or sequences of ints) of one case and its result is one int, bool or seq.\n\n")
 
 
-MEM_MAX = "3G"      # per judge or verify process; the v2 gate was OOM-killed at 4.5 G + 8.6 G swap by one sample
+MEM_MAX = "1536M"      # per judge or verify process; the v2 gate was OOM-killed at 4.5 G + 8.6 G swap by one sample
 
 
 def run(cmd: list[str], timeout: float, cwd: Path, stdin_path: Path | None = None,
@@ -96,6 +97,7 @@ def run(cmd: list[str], timeout: float, cwd: Path, stdin_path: Path | None = Non
         cmd = ["systemd-run", "--user", "--scope", "--quiet", "-p", f"MemoryMax={MEM_MAX}",
                "-p", "MemorySwapMax=0"] + cmd
     stdin = open(stdin_path, "rb") if stdin_path else None
+    slot = _judge_slot()
     try:
         p = subprocess.run(cmd, cwd=cwd, capture_output=True, text=True, timeout=timeout, stdin=stdin,
                            errors="replace", env=env)
@@ -109,6 +111,36 @@ def run(cmd: list[str], timeout: float, cwd: Path, stdin_path: Path | None = Non
     finally:
         if stdin:
             stdin.close()
+        _release_slot(slot)
+
+
+JUDGE_SLOTS = int(os.environ.get("T_JUDGE_SLOTS", "4"))
+_SLOT_DIR = Path(os.environ.get("XDG_RUNTIME_DIR", "/tmp")) / "t-judge-slots"
+
+
+def _judge_slot():
+    """One of JUDGE_SLOTS machine-wide slots for a judged program (flock on a slot file), so a dozen graders on one
+    laptop never run more judged programs at once than memory allows: on 2026-10-13 fifteen of them at the 3 GB
+    cap pushed the laptop into swap and the desktop session was killed."""
+    import fcntl
+    _SLOT_DIR.mkdir(parents=True, exist_ok=True)
+    while True:
+        for i in range(JUDGE_SLOTS):
+            f = open(_SLOT_DIR / f"slot-{i}", "w")
+            try:
+                fcntl.flock(f, fcntl.LOCK_EX | fcntl.LOCK_NB)
+                return f
+            except OSError:
+                f.close()
+        time.sleep(0.5)
+
+
+def _release_slot(f) -> None:
+    import fcntl
+    try:
+        fcntl.flock(f, fcntl.LOCK_UN)
+    finally:
+        f.close()
 
 
 def judge_python(prog: Path, tests: Path, timeout: float, env: dict | None = None) -> dict:
