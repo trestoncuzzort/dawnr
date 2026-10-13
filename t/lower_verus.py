@@ -3311,6 +3311,9 @@ def _real_under(env_py: dict, funs: dict, st) -> "callable":
     return isr
 
 
+_SPEC_FUN_DOMAIN: dict[str, tuple[list[str], dict]] = {}   # spec fn -> (param names, the obligation its calls owe)
+
+
 def defined(e: dict, is_real=None) -> dict:
     if "int" in e or "var" in e or "bool" in e or "rat" in e:
         return TRUE
@@ -3321,7 +3324,12 @@ def defined(e: dict, is_real=None) -> dict:
                   else {"ite": {"cond": c["cond"], "then": dt, "else": de}})
         return _conj([defined(c["cond"], is_real), branch])
     if "call" in e:
-        return _conj([defined(a, is_real) for a in e["call"]["args"]])
+        parts = [defined(a, is_real) for a in e["call"]["args"]]
+        dom = _SPEC_FUN_DOMAIN.get(e["call"]["fun"])
+        if dom is not None:         # the callee's body is defined only on the domain its own lemma assumes
+            params, ob = dom
+            parts.append(subst(ob, dict(zip(params, e["call"]["args"]))))
+        return _conj(parts)
     if "ctor" in e:
         # SPEC.md "Datatypes (v1)" (2026-09-27): defined iff every field
         # argument is (v1's constructors are nullary, so this is TRUE for
@@ -4061,40 +4069,60 @@ def _prenex(e: dict, fresh) -> tuple[list[str], dict]:
     return [], e
 
 
-def _div_mod_pairs(e: dict) -> list[tuple[dict, dict]]:
-    """Every distinct (x, y) operand pair fed to a `div` or `mod`
-    application anywhere in e, first-seen order, deduplicated by rendered
-    Verus text (so `div(m, 10)` and a later `mod(m, 10)` in the same
-    statement share one bridging fact, see _div_mod_law)."""
-    seen: dict[tuple[str, str], tuple[dict, dict]] = {}
+def _div_mod_pairs(e: dict) -> list[tuple[dict, dict, dict | None]]:
+    """Every distinct (x, y, guard) triple for a `div` or `mod` application
+    anywhere in e, first-seen order, deduplicated by rendered Verus text (so
+    `div(m, 10)` and a later `mod(m, 10)` in the same statement share one
+    bridging fact, see _div_mod_law). `guard` is the path condition the
+    application sits under (an `ite` branch, a later conjunct, a disjunct's
+    negated predecessors, an implication's consequent) or None at the top: a
+    bridge emitted outside its guard would demand `y != 0` where the source
+    never divides, and fail a correct program; a quantifier's binders put the
+    pair out of reach, so a pair under a binder is left to Verus alone."""
+    seen: dict[tuple[str, str, str], tuple[dict, dict, dict | None]] = {}
 
-    def walk(n: dict) -> None:
+    def under(path: list) -> dict | None:
+        return _conj(path) if path else None
+
+    def walk(n: dict, path: list) -> None:
         if "ite" in n:
             c = n["ite"]
-            walk(c["cond"]); walk(c["then"]); walk(c["else"])
+            walk(c["cond"], path)
+            walk(c["then"], path + [c["cond"]])
+            walk(c["else"], path + [{"op": "not", "args": [c["cond"]]}])
             return
         if "call" in n:
             for a in n["call"]["args"]:
-                walk(a)
+                walk(a, path)
             return
         if "forall" in n or "exists" in n:
-            q = n.get("forall") or n.get("exists")
-            for k in ("lo", "hi", "in", "body"):
-                if k in q:
-                    walk(q[k])
             return
         if "op" in n:
             if n["op"] in ("div", "mod"):
                 x, y = n["args"]
-                seen.setdefault((expr(x), expr(y)), (x, y))
-            for a in n.get("args", []):
-                walk(a)
+                g = under(path)
+                seen.setdefault((expr(x), expr(y), expr(g) if g is not None else ""), (x, y, g))
+            args = n.get("args", [])
+            if n["op"] == "and":
+                for i, a in enumerate(args):
+                    walk(a, path + args[:i])
+                return
+            if n["op"] == "or":
+                for i, a in enumerate(args):
+                    walk(a, path + [{"op": "not", "args": [b]} for b in args[:i]])
+                return
+            if n["op"] == "implies" and len(args) == 2:
+                walk(args[0], path)
+                walk(args[1], path + [args[0]])
+                return
+            for a in args:
+                walk(a, path)
 
-    walk(e)
+    walk(e, [])
     return list(seen.values())
 
 
-def _div_mod_law(x: dict, y: dict, ind: str) -> str:
+def _div_mod_law(x: dict, y: dict, ind: str, guard: dict | None = None) -> str:
     """The Euclidean defining identity `x == (x div y) * y + (x mod y)`,
     established by nonlinear_arith. Measured 2026-09-08: Verus's default
     solver profile (nonlinear arithmetic off) cannot discharge this
@@ -4116,6 +4144,13 @@ def _div_mod_law(x: dict, y: dict, ind: str) -> str:
         {"op": "*", "args": [{"op": "div", "args": [x, y]}, y]},
         {"op": "mod", "args": [x, y]}]}]}
     nz = {"op": "!=", "args": [y, {"int": 0}]}
+    if guard is not None:           # the bridge, and its `y != 0` premise, only where the source divides
+        inner = ind + "    "
+        return (f"{ind}if {expr(guard)} {{\n"
+                f"{inner}assert({expr(ident)}) by (nonlinear_arith)\n"
+                f"{inner}    requires\n{inner}        {expr(nz)},\n"
+                f"{inner};\n"
+                f"{ind}}}")
     return (f"{ind}assert({expr(ident)}) by (nonlinear_arith)\n"
             f"{ind}    requires\n{ind}        {expr(nz)},\n"
             f"{ind};")
@@ -4148,6 +4183,13 @@ def _dummy(ty) -> str:
             return f"Seq::<{_vty(ty['seq'])}>::empty()"
         if "set" in ty:
             return f"Set::<{_vty(ty['set'])}>::empty()"
+        if "map" in ty:
+            k, v = ty["map"]
+            return f"Map::<{_vty(k)}, {_vty(v)}>::empty()"
+        if "datatype" in ty:
+            raise NotImplementedError(
+                f"verus: no throwaway literal for the datatype {ty['datatype']!r} (an early return inside a "
+                "loop whose result is a datatype), not lowered")
         if "tuple" in ty:
             return "(%s)" % ", ".join(_dummy(c) for c in ty["tuple"])
         t1, t2 = ty["pair"]
@@ -4659,8 +4701,8 @@ class _V1:
         ob = defined(e)
         if ob != TRUE:
             lines.append(f"{ind}assert({expr(ob)});")
-        for x, y in _div_mod_pairs(e):
-            lines.append(_div_mod_law(x, y, ind))
+        for x, y, g in _div_mod_pairs(e):
+            lines.append(_div_mod_law(x, y, ind, g))
 
     def _assert_nested_eq(self, e: dict, scope: dict, lines: list[str],
                            ind: str) -> None:
@@ -4958,10 +5000,10 @@ class _V1:
             guard_lines.append(f"    assert({expr(guard_ob)});")
         gd_pairs: dict[tuple[str, str], tuple[dict, dict]] = {}
         for e in (cond, dec):
-            for x, y in _div_mod_pairs(e):
-                gd_pairs.setdefault((expr(x), expr(y)), (x, y))
-        for x, y in gd_pairs.values():
-            guard_lines.append(_div_mod_law(x, y, "    "))
+            for x, y, g in _div_mod_pairs(e):
+                gd_pairs.setdefault((expr(x), expr(y), expr(g) if g is not None else ""), (x, y, g))
+        for x, y, g in gd_pairs.values():
+            guard_lines.append(_div_mod_law(x, y, "    ", g))
         guard_pre = "".join(line + "\n" for line in guard_lines)
 
         # 2026-09-11 (ROADMAP 16.2, appendArrayToSeq/arrayToSeq/addLists/
@@ -5259,6 +5301,7 @@ class _V1:
             + "".join(ln + "\n" for ln in _comp_lemma_lines("    ", loop=True))   # PREDICT T45
             + f"{old_lets}{carry_pre}{shadows}{guard_pre}"
             f"    if {expr(cond)} {{\n"
+            f"        assert(({expr(dec)}) >= 0);   // the source measure, before the +2 shift below\n"
             + "\n".join(inner) + "\n"
             f"        {hname}({args})\n"
             "    } else {\n"
@@ -5396,10 +5439,16 @@ class _V1:
                 "{\n"
                 f"    {expr(f['body'])}\n"
                 "}\n")
+            body_ob = defined(f["body"])
             self._wf_lemma(f"t_wf_{self.name}_fn_{f['name']}",
                            [(p["name"], _vty(p["type"]))
                             for p in f["params"]],
-                           _spec_fn_domain_context(f), defined(f["body"]))
+                           _spec_fn_domain_context(f), body_ob)
+            # what a call must establish: the lemma's own hypotheses (the invented domain) and the body's
+            # definedness at the arguments; recorded after the lemma so the body's self-calls stay one level deep
+            dom_ob = _conj(_spec_fn_domain_context(f) + [body_ob])
+            if dom_ob != TRUE:
+                _SPEC_FUN_DOMAIN[f["name"]] = ([p["name"] for p in f["params"]], dom_ob)
 
         lemma_blocks = self._lemmas()
         method_blocks, pseudos = self._methods()
@@ -5492,6 +5541,7 @@ class _V1:
                 out.append(f"{ind}{c['name']}({args});")
             elif "assert" in s:
                 e = expr(s["assert"])
+                self._assert_defined(s["assert"], out, ind)     # Verus totalises [] and /; the source does not
                 if _has_nonlinear(s["assert"]) and facts:
                     req = "".join(f"{ind}        {x},\n" for x in facts)
                     out.append(f"{ind}assert({e}) by (nonlinear_arith)\n"
@@ -5730,6 +5780,8 @@ class _V1:
             main_lines = ([f"    t_lemma_count_nonneg({expr(s_e)}, {expr(t_e)});"]
                           + main_lines)
         for s_e, c_e in _param_restricted_witnesses(task, "split", 2):
+            if _ty_of(c_e) == "seq":        # t_lemma_split_len_law speaks of a one-element separator
+                continue
             main_lines = ([f"    t_lemma_split_len_law({expr(s_e)}, {expr(c_e)});"]
                           + main_lines)
 
@@ -6476,6 +6528,45 @@ def _undef_obligation(task: dict, twin_body: list, m: dict, names: dict,
         return None
 
 
+def spec_reaches_undef(task: dict, names: dict, tmap: dict, funs: dict) -> bool:
+    """Whether evaluating the task's `ensures` at the witness's values (inputs and result) raises Undef, with
+    the interpreter's own short-circuit order: an ensures-level undefined witness names a subexpression, and
+    a certificate for it refutes the task only if the specification evaluates that subexpression there. A
+    `true || s[0] == 0` never reaches `s[0]`; certifying its undefinedness would refute a correct task."""
+    try:
+        env = {n: _to_py(v, tmap.get(n)) for n, v in names.items()}
+        arrays = interp.heap_arrays(task)
+        if arrays:
+            env[interp.OLD_KEY] = {a: env[a] for a in arrays if a in env}
+        st = interp.St()
+        for c in task["ensures"]:
+            try:
+                interp.ev(c, env, funs, st)
+            except interp.Undef:
+                return True
+        return False
+    except Exception:               # noqa: BLE001 -- a replay that cannot run certifies nothing
+        return False
+
+
+def _body_computes(task: dict, body: list, names: dict, tmap: dict, claimed) -> bool:
+    """Run `body` with the interpreter at the witness's inputs and compare its return with the witness's
+    claimed value: the certificate instantiates the specification at that value, so the value must be
+    the body's own, never a number handed in from outside. A run that raises, or disagrees, withholds
+    the certificate (the cell reads unproved, never refuted)."""
+    try:
+        ret = task["returns"][0]["name"]
+        env = {n: _to_py(v, tmap.get(n)) for n, v in names.items()}
+        env[ret] = None
+        arrays = interp.heap_arrays(task)
+        if arrays:
+            env[interp.OLD_KEY] = {a: env[a] for a in arrays}
+        interp.exec_body(body, env, interp.funs_of(task, body), interp.St())
+        return interp._j(env.get(ret)) == claimed
+    except Exception:               # noqa: BLE001 -- any failure to replay withholds the certificate
+        return False
+
+
 def _cert_formula(task: dict, twin_body: list, w: dict) -> dict | None:
     kind = w.get("_kind")
     names = {k: v for k, v in w.items() if not k.startswith("_")}
@@ -6506,6 +6597,8 @@ def _cert_formula(task: dict, twin_body: list, w: dict) -> dict | None:
                 return None
             m2 = dict(m)
             m2[task["returns"][0]["name"]] = _tlit(tw, ret_type)
+            if not _body_computes(task, twin_body, names, tmap, tw):
+                return None      # the witness's claimed twin value is not what the body returns here
             # ENSURES-LEVEL undefined (2026-09-12, see
             # `_ensures_undef_obligation`'s own docstring): tried first,
             # since a witness in this shape whose ensures has NO VALUE at
@@ -6544,6 +6637,8 @@ def _cert_formula(task: dict, twin_body: list, w: dict) -> dict | None:
                 _conj([subst(en, m2) for en in task["ensures"]])]})
         elif kind == "undefined":
             if w.get("_site") == "ensures" and isinstance(w.get("_expr"), dict):
+                if not spec_reaches_undef(task, names, tmap, interp.funs_of(task, twin_body)):
+                    return None      # the specification never evaluates the named subexpression at the witness
                 # harness.real_witness's ensures-level shape (2026-09-12): the
                 # postcondition's own definedness obligation fails at the
                 # witness, so the certificate is its negation, ground; the
@@ -7453,6 +7548,11 @@ def lower(task: dict, body: list, witness: dict | None = None) -> str:
     # object from task["body"] (2026-09-11, names.rename_body's note)
     body = names.rename_body(twin_body, renames) if twin_body is not None else task["body"]
     witness = names.remap_witness(witness, renames)
+    _SCOPE.clear()           # the operand types expr reads, keyed by the names it will now see
+    _SCOPE.update(tshape._scope_of(task, body))
+    _SCOPE_FUNS.clear()
+    _SCOPE_FUNS.update({f["name"]: f for f in task.get("spec_funs", [])})
+    _SPEC_FUN_DOMAIN.clear()
     _SCOPE_DTYPES.clear()   # again, with the renamed fields e.f now reads (SPEC.md "Datatypes (v2): fields")
     _SCOPE_DTYPES.update({d["name"]: d for d in task.get("datatypes", [])})
     _hof_register(task, body)   # SPEC.md "Higher-order calls (v1)" (2026-10-06), on the renamed nodes expr will see

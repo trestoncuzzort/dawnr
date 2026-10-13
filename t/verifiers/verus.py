@@ -424,6 +424,7 @@ def _fns(text: str) -> list[dict]:
         # expression inside that clause (`requires ({ let b = false; b })`
         # and its unparenthesized form), not the body.
         k, expect_expr, body = j, False, -1
+        after_kw = False                        # the last token was a clause keyword (not a comma)
         clauses: dict[str, str] = {}
         cur, cur_start = None, -1
         while k < len(m):
@@ -432,7 +433,7 @@ def _fns(text: str) -> list[dict]:
                 k = _match_bracket(m, k, c, ")" if c == "(" else "]")
                 if k < 0:
                     break
-                expect_expr = False
+                expect_expr = after_kw = False
                 continue
             if c == "{":
                 if not expect_expr:
@@ -441,12 +442,13 @@ def _fns(text: str) -> list[dict]:
                 k = _match_bracket(m, k, "{", "}")
                 if k < 0:
                     break
-                expect_expr = False
+                expect_expr = after_kw = False
                 continue
             if c == ";":
                 break                           # declaration without a body
             if c == ",":
                 expect_expr = cur is not None
+                after_kw = False
                 k += 1
                 continue
             cw = _CLAUSE_RE.match(m, k)
@@ -454,13 +456,17 @@ def _fns(text: str) -> list[dict]:
                 if cur:
                     clauses[cur] = text[cur_start:k]
                 cur, cur_start = cw.group(0), cw.end()
-                expect_expr = True
+                expect_expr = after_kw = True
                 k = cw.end()
                 continue
             if c.isspace():
-                k += 1                          # whitespace decides nothing: a `{` after `requires ` is its expression
+                # a `{` after `requires ` (whitespace, no comma) is the clause's own expression; a `{` after a
+                # clause list's trailing comma and a newline is the body, so there whitespace ends the expectation
+                if not after_kw:
+                    expect_expr = False
+                k += 1
                 continue
-            expect_expr = False
+            expect_expr = after_kw = False
             k += 1
         if body < 0:
             continue

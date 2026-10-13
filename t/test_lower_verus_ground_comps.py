@@ -67,13 +67,14 @@ class GroundComprehensionCertificateTests(unittest.TestCase):
         body, _op, witness = harness.twin_cached(task)
         lv.lower(task, body, witness=witness)
         bad_witness = {**witness, "_twin": 0}
-        cert = lv._certificate(task, body, bad_witness)
+        # 2026-10-13 (review, lower_verus finding 3): a value the twin body does not compute at the witness's
+        # inputs gets NO certificate at all (the interpreter replays the body and disagrees), where it used to
+        # get a certificate instantiated at the handed-in value; the genuine witness still gets its own.
+        self.assertIsNone(lv._certificate(task, body, bad_witness))
+        cert = lv._certificate(task, body, witness)
         self.assertIsNotNone(cert)
-        # The incorrect output remains inside the actual negated postcondition;
-        # only the kernel can accept or reject that proposition.
         self.assertIn("by (compute_only)", cert)
         self.assertNotIn("assert(true)", cert)
-        self.assertNotEqual(cert, lv._certificate(task, body, witness))
 
 
 if __name__ == "__main__":
