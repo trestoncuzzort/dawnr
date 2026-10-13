@@ -125,6 +125,7 @@ committed task's `.v` source moves either.
 """
 from __future__ import annotations
 
+import hashlib
 import re
 import shutil
 import subprocess
@@ -155,16 +156,50 @@ CLOSED = "Closed under the global context"
 
 # Case-sensitive: Coq vernacular keywords are; lowercase `context` is Ltac.
 BANNED = re.compile(
-    r"\bAdmitted\b|\badmit\b|\bAdmit\b|\bgive_up\b"
+    r"(?:\bAdmitted\b|\badmit\b|\bAdmit\b|\bgive_up\b"
     r"|\bAxioms?\b|\bParameters?\b|\bConjectures?\b"
     r"|\bHypothes[ie]s\b|\bVariables?\b|\bContext\b"
     r"|\bDeclare\s+ML\s+Module\b"
     r"|\bbypass_check\b"
-    r"|\bUnset\s+(?:Universe|Guard|Positivity)\s+Checking\b")
+    r"|\bUnset\s+(?:Universe|Guard|Positivity)\s+Checking\b)(?!')")   # `admit'` is a name, not the tactic
 
 THM = re.compile(
     r"\b(?:Theorem|Lemma|Corollary|Fact|Remark|Proposition|Property)"
     r"\s+([A-Za-z_][A-Za-z0-9_']*)")
+_MODULE = re.compile(r"\b(Module|End)\s+([A-Za-z_][A-Za-z0-9_']*)\s*\.")
+_CERT_STMT = re.compile(
+    r"\b(?:Theorem|Lemma|Corollary|Fact|Remark|Proposition|Property)\s+" + re.escape("t_refutation_certificate")
+    + r"\b(?:\s*\([^)]*\))*\s*:\s*(.*?)\s*\.\s*(?:Proof\b|$)", re.S)
+
+
+def qualified_theorems(code: str) -> list[str]:
+    """Every declared obligation by its qualified name: `Module M.` ... `End M.` nests the names it declares, so
+    two theorems that share a basename in different modules are two obligations, each audited."""
+    out: list[str] = []
+    stack: list[str] = []
+    events = sorted([(m.start(), "mod", m) for m in _MODULE.finditer(code)]
+                    + [(m.start(), "thm", m) for m in THM.finditer(code)], key=lambda t: t[0])
+    for _, kind, m in events:
+        if kind == "mod":
+            if m.group(1) == "Module":
+                stack.append(m.group(2))
+            elif stack and stack[-1] == m.group(2):
+                stack.pop()
+        else:
+            name = ".".join(stack + [m.group(1)])
+            if name not in out:
+                out.append(name)
+    return out
+
+
+def _states_refutation(code: str) -> bool:
+    """Does the certificate theorem's statement negate something (`~ ...`, `... -> False`, `<>`)? A certificate
+    whose statement is `True` or any other plain proposition is a name, not a refutation."""
+    m = _CERT_STMT.search(code)
+    if m is None:
+        return False
+    prop = m.group(1)
+    return bool(re.search(r"~|\bFalse\b|<>|\bnot\b", prop))
 
 # The ONE door to REFUTED: a goal with exactly this name, accepted by the
 # kernel under the full audit discipline (bans, per-theorem closedness
@@ -182,7 +217,7 @@ CERT_RE = re.compile(r"\bt_refutation_certificate\b")
 # These mint UNPROVED, never REFUTED (ROADMAP 10.7, fixed 2026-09-02;
 # the old REFUTED_MARKS minted REFUTED from exactly these strings).
 UNPROVED_MARKS = ("Tactic failure", "Cannot find witness", "Unable to unify",
-                  "unsolved", "No applicable tactic")
+                  "unsolved", "No applicable tactic", "Attempt to save an incomplete proof")
 
 MALFORMED_MARKS = ("Syntax error", "was not found", "Illegal", "Unknown")
 
@@ -385,14 +420,15 @@ def version() -> str:
 def verify(path: Path, budget: int = 0) -> Result:
     if not COQC or not shutil.which(COQC):
         raise SystemExit("t.verifiers.rocq: no coqc on PATH")
-    src_hash = sha256_file(path)
-    src_bytes = path.read_bytes()
-    src_text = safe_text(path)                    # never crashes on non-UTF8
+    sha256_file(path)                             # readable; the verdict's hash is of the bytes compiled below
+    src_bytes = path.read_bytes()                 # one read: hashed, scanned and compiled as the same bytes
+    src_hash = hashlib.sha256(src_bytes).hexdigest()
+    src_text = src_bytes.decode("utf-8", errors="replace")
     code = _strip(src_text)
     banned = sorted(set(BANNED.findall(code))
                     | set(BANNED.findall(unicodedata.normalize("NFKC", code))))
-    thms = list(dict.fromkeys(THM.findall(code)))
-    cert_declared = CERT_NAME in thms
+    thms = qualified_theorems(code)
+    cert_declared = any(t == CERT_NAME or t.endswith("." + CERT_NAME) for t in thms)
     cert_carried = bool(
         CERT_RE.search(code)
         or CERT_RE.search(unicodedata.normalize("NFKC", code)))
@@ -502,6 +538,10 @@ def verify(path: Path, budget: int = 0) -> Result:
                                  or c_out[-300:]),
                         extras={"audit_closed": closed_n,
                                 "coqchk_assumed": local_assumed[:5]})
+        if cert_declared and not _states_refutation(code):
+            return done(Outcome.MALFORMED, exit_code=0,
+                        error="a theorem carries the certificate's name but states no refutation (its "
+                              "proposition is not a negation): proved or not, it refutes nothing")
         if cert_declared:
             # All four positive checks passed and the declared goals include
             # the refutation certificate: the kernel accepted a proof that
