@@ -13,7 +13,8 @@ codex-rs/linux-sandbox/src/landlock.rs); this one is narrower on files, since a 
 read nothing of the user's.
 
 What the program can do afterwards, mirroring the bubblewrap backend (t/py_sandbox.py `_command`):
-  read and execute beneath /usr, /lib, /lib64, /bin and /etc/alternatives; read JOB; read and write JOB/tmp
+  read and execute beneath /usr, /lib, /lib64, /bin and /etc/alternatives, and beneath the program's own install
+  root when it lies elsewhere (a toolcache or venv interpreter); read JOB; read and write JOB/tmp
   (its working folder, HOME and TMPDIR); /dev/null, /dev/zero, /dev/full, /dev/random, /dev/urandom; its own
   /proc entry. Nothing else on any filesystem: not /home, not /tmp, not other processes' /proc.
 What the seccomp filter refuses (EPERM), where bubblewrap's namespaces would have hidden the target instead:
@@ -176,7 +177,21 @@ def fs_rights(abi: int, names) -> int:
     return sum(FS[n] for n in names if FS_SINCE.get(n, 1) <= abi)
 
 
-def landlock(nr: dict, abi: int, job: str) -> None:
+def program_prefix(program: str) -> str | None:
+    """The install root of PROGRAM, to be readable and executable beneath: an interpreter outside /usr (a
+    pyenv or GitHub-hosted toolcache python under /opt, a conda or venv tree under a home directory) needs
+    its own binary, shared objects and standard library, which live beside its bin/ directory. The rule is
+    read+execute only, the same right /usr already has; writes stay confined to JOB/tmp. None when the
+    program already lies beneath one of the fixed roots."""
+    real = os.path.realpath(program)
+    for root in ("/usr", "/lib", "/lib64", "/bin"):
+        if real == root or real.startswith(root + "/"):
+            return None
+    here = os.path.dirname(real)
+    return os.path.dirname(here) if os.path.basename(here) == "bin" else here
+
+
+def landlock(nr: dict, abi: int, job: str, program: str | None = None) -> None:
     handled = fs_rights(abi, FS)
     net = (NET_BIND_TCP | NET_CONNECT_TCP if abi >= 4 else 0) | (NET_BIND_UDP | NET_CONNECT_SEND_UDP if abi >= 10 else 0)
     scoped = SCOPE_ABSTRACT_UNIX_SOCKET | SCOPE_SIGNAL if abi >= 6 else 0
@@ -190,6 +205,9 @@ def landlock(nr: dict, abi: int, job: str) -> None:
                             "MAKE_DIR", "MAKE_REG", "MAKE_SYM", "REFER"))
     dev_rw = fs_rights(abi, ("READ_FILE", "WRITE_FILE", "TRUNCATE"))
     rules = [(d, read_x) for d in ("/usr", "/lib", "/lib64", "/bin", "/etc/alternatives")]
+    prefix = program_prefix(program) if program else None
+    if prefix:
+        rules.append((prefix, read_x))
     rules += [(job, read), (os.path.join(job, "tmp"), write), (f"/proc/{os.getpid()}", read)]
     rules += [(d, dev_rw) for d in ("/dev/null", "/dev/zero", "/dev/full")]
     rules += [(d, fs_rights(abi, ("READ_FILE",))) for d in ("/dev/random", "/dev/urandom")]
@@ -291,7 +309,7 @@ def main(argv: list[str]) -> None:
             die("could not tie this process to its parent")
         if prctl(PR_SET_NO_NEW_PRIVS, 1) != 0:
             die("could not set no_new_privs")
-        landlock(nr, abi, job)
+        landlock(nr, abi, job, program)
         seccomp(arch, me, abi)
     except Exception as e:                                  # noqa: BLE001 -- any failure: do not run the program
         die(f"the sandbox could not be applied ({type(e).__name__}: {e}); the program was not run")

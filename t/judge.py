@@ -73,6 +73,8 @@ def compile_task(task: dict, work: Path):
     The inputs never enter Dafny source: an earlier version wrote them into a generated Main, and Dafny's front end
     took more than ten minutes on 5,000 calls (UVa 495, uDebug file 0006) and on long sequence literals (UVa
     10302). `dafny translate py --include-runtime` emits the same code `dafny run` executes, as a module."""
+    if not DAFNY:
+        raise SystemExit("judge: dafny not found (install it or set T_DAFNY_BIN); the task was not compiled")
     src = tlib.lower(task, "dafny")
     names = re.findall(r"^method\s+(\w+)\(", src, re.M)      # helper methods come first; the task's is named after it
     name = next((x for x in names if x.lower() == task["name"].lower()), None)

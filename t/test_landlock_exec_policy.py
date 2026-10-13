@@ -120,3 +120,12 @@ def test_invalid_job_is_a_named_sandbox_refusal():
              mock.patch.object(m, 'die', side_effect=Refused):
             with unittest.TestCase().assertRaises(Refused):
                 m.main([str(job), '/usr/bin/true'])
+
+
+def test_program_prefix_names_the_install_root_outside_usr():
+    import landlock_exec as le
+    assert le.program_prefix("/usr/bin/python3") is None
+    assert le.program_prefix("/bin/sh") is None
+    assert le.program_prefix("/opt/hostedtoolcache/Python/3.10.22/x64/bin/python3.10") == "/opt/hostedtoolcache/Python/3.10.22/x64"
+    assert le.program_prefix("/home/x/venv/bin/python") == "/home/x/venv"
+    assert le.program_prefix("/opt/tool/python") == "/opt/tool"
