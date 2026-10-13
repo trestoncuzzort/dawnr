@@ -76,6 +76,18 @@ survives a lost controller.
 One seed cannot establish a recipe; the installed release stays v5 whatever the read says. Every refusal
 carries its reason (differing line, exception, timeout, no fence, token cap).
 
+## Inputs frozen and audited (2026-10-13T05:19Z)
+
+- `heldout_audit.py --panels --refuse-gpl` on the final file: 1,315 rows, 736 distinct t programs (0 did not
+  parse), **0 rows flagged**; 38 rows match problems already outside the panels
+  (`decontamination-rows-2026-10-05.json`), not refused. Exit 0 (`audit-final.json`, `audit-final.log`).
+- `spec_panel.py check` against the 33 specification questions: **0 rows match a question**. Exit 0
+  (`spec-audit-final.json`, `spec-audit-final.log`).
+- The judge rows are Python programs, not t tasks, so the lineage audit's program checks apply to the 406
+  proof rows and the panel checks to every prompt; no row was removed by either audit.
+- The VM is created with a provider termination time of **2026-10-13T11:18:05Z** (`vm-termination-time.txt`),
+  six hours after the launch request.
+
 ## Read
 
 (filled in after the run)
