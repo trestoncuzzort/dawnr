@@ -59,6 +59,10 @@ ones are stated over t's `float`, IEEE binary64, and compared at `double`; PX4 f
 | px4_rb_space_available | `Ringbuffer::space_available` | src/lib/ringbuffer/Ringbuffer.cpp:65 | the class, `size_t` |
 | px4_rb_push_back | `Ringbuffer::push_back`: its result and `_end` | src/lib/ringbuffer/Ringbuffer.cpp:87 | the class, `size_t` |
 | px4_rb_pop_front | `Ringbuffer::pop_front`: its result and `_start` | src/lib/ringbuffer/Ringbuffer.cpp:134 | the class, `size_t` |
+| px4_rc_map_index | the RC_MAP_* channel index `map - 1` of `RCUpdate::update_rc_functions`, bounded to `1 <= map <= 18` | src/modules/rc_update/rc_update.cpp:195 | not compared (a restatement; PX4's `RCUpdateTest` case in PR #29135 checks it) |
+| px4_geofence_wrap | the neighbour vertices of a fence polygon, the index wrapped with `% n` | src/modules/navigator/geofence.cpp:556 | not compared (a restatement over the vertex index) |
+| px4_geofence_wrap_4 | the same at a fixed vertex count of 4 | src/modules/navigator/geofence.cpp:556 | not compared (the twin for the kernels a symbolic modulus stops) |
+| px4_dm_offset | `calculate_offset`: `key_offset + index * item_size` under the callers' index bound | src/modules/dataman/dataman.cpp:199 | not compared (a restatement) |
 
 **Transcription notes.**
 - `matrix::wrap`'s local `range` is named `rng` here; `range` is an Ada keyword, and the renamed form collides with
@@ -110,6 +114,7 @@ PX4's own code at the refuting input.
 |---|---|---|---|
 | px4_wrap_bin_any | `ObstacleMath::wrap_bin` | `bin >= -bin_count` | -1 at `bin` = -73, `bin_count` = 72 |
 | px4_sumd_receive_any | `sumd_decode`'s storing of channel bytes (src/lib/rc/sumd.cpp:196) | `2 * length <= len(sumd_data) - 2`, one byte of headroom the frame-length check does not leave | a write one past the buffer: `sumd_data[64]` for a valid 32-channel frame |
+| px4_rc_map_index_any | the RC_MAP_* channel index `map - 1` of `RCUpdate` (src/modules/rc_update/rc_update.cpp:195) | `map <= 18`; only `map - 1 >= 0` is checked | index 18, one past the 18 channels, for `RC_MAP_FLTMODE` = 19; PX4's `RCUpdateTest` case in PR #29135 fails on main (refuted by all seven kernels, `t/FLIGHT-FINDINGS-REAL.md`) |
 | px4_request_event_any | `SendProtocol::handle_request_event`'s loop (src/modules/mavlink/mavlink_events.cpp:182) | a bound on the sequences handled | 41 lookups for events 0..40 against a 20-event buffer; up to 65535 for a wrapped range |
 | px4_arm_param_any | `Commander::handle_command`, COMPONENT_ARM_DISARM (src/modules/commander/Commander.cpp:1101) | narrowing only a value that fits `int8_t` | `param1` = 257 accepted as arm |
 | px4_stream_interval_any | `Mavlink::configure_stream` (src/modules/mavlink/mavlink_main.cpp:1415) | a clamp before the int conversion | a negative interval (`INT_MIN` on x86) for a requested interval of 2^31 us |
