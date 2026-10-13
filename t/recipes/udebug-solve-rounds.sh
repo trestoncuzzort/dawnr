@@ -37,7 +37,7 @@ PY
   mv t/out/udebug/solve-ids-refused.txt t/out/udebug/solve-ids-refused-$NAME.txt
   mv t/out/udebug/solve-ids-untried.txt t/out/udebug/solve-ids-untried-$NAME.txt
   LANES=$(ls -d t/out/udebug/teacher-*/ | sed 's|/$||' | grep -v "dry\|probe" | tr '\n' ',' | sed 's/,$//')
-  COMMON="--bank $BANK --exemplars $EX --target python --provider vertex --project $PROJECT --location global --adc $ADC --judges UVa --shape any --split any --max-in-bytes 0 --samples 1 --temperature 0.7 --max-tokens 8192 --concurrency 2 --price-in-per-mtok 0.56 --price-out-per-mtok 1.68 --spend-cap-usd 25${MODEL:+ --model $MODEL}"
+  COMMON="--bank $BANK --exemplars $EX --target python --provider vertex --project $PROJECT --location global --adc $ADC --judges UVa --shape any --split any --max-in-bytes 0 --samples 1 --temperature 0.7 --max-tokens 8192 --concurrency 4 --price-in-per-mtok 0.56 --price-out-per-mtok 1.68 --spend-cap-usd 25${MODEL:+ --model $MODEL}"
   for kind in repair fresh; do
     IDS=$(cat t/out/udebug/solve-ids-$([ $kind = repair ] && echo refused || echo untried)-$NAME.txt)
     [ -n "$IDS" ] || { log "round $round $kind: nothing to do"; continue; }
