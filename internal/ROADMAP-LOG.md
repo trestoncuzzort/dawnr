@@ -3257,3 +3257,9 @@ is queued, and the ones running are read as they finish.
   stops the rest) and `px4_dm_offset` (SPARK, Rocq, F*; the nonlinear product stops the rest); a fixed-size
   `px4_geofence_wrap_4` twin registered for all seven. Lab note: Verus needs `~/.cargo/bin` on PATH in ssh shells.
   Ten PX4 PRs filed 10-13 and re-filed after the fork deletion as 29126-29135, the older batch as 29116-29125; #29070 merged 10-12.
+- **uDebug Python lanes read (2026-10-13T05:04Z):** Qwen3-235B finished all 2,457 UVa train problems at $3.04: 888 (36.1%)
+  execution-verified; DeepSeek-V3.2 60 of 97 (61.9%) on its graded prefix and now retargeted (k = 1) at the 1,574
+  problems Qwen did not accept; Qwen3-Next 35 of 88. QS1 holds (gap 11.3), QN1 fails (gap 22.7). Merged:
+  1,048 rows on 909 problems, 11 pairs, 377 held-out questions (`t/PREDICT-2026-10-12-udebug-teacher.md`).
+  Training still blocked on a GPU. Flight table: the PX4 restatement tasks and the RC_MAP finding registered
+  (CI green again at c2191734).
