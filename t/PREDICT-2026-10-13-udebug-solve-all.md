@@ -69,3 +69,9 @@ every stored case again under both seeds: X1 holds at 100%. 870 of 965 (90.2%) r
 X4 holds, barely. 95 are slower, 46 of them over 10 s (the slowest 116 s): correct by the judge, refused for time
 by any online judge. A speed round hands each slow solution back for a faster one (`--slow-index`, `speed_text`);
 the export keeps the fastest confirmed sample per problem.
+
+**Speed round read, 07:12Z (Qwen3-Next, 95 slow solutions, 12,288-token replies):** 60 of 95 rewrites still
+reproduce every stored case; 48 of those are faster than the program on record and 27 now run every case within
+2 s. The export now sorts a problem's accepted samples fastest first and re-confirms a solved problem whenever a
+faster accepted sample appears, so the bundle keeps the fastest confirmed program. 68 remain over 2 s for a
+DeepSeek speed round later.
