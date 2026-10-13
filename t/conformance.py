@@ -248,10 +248,14 @@ def metamorphic_manifest() -> tuple[list[dict], list[str], list]:
 def build_manifest() -> tuple[list[dict], list[str], list]:
     probes = probe_manifest()
     meta, not_applicable, bugs = metamorphic_manifest()
-    names = [it["name"] for it in probes + meta]
+    # a tripwire mismatch in metamorphic.py is an unsound rewrite caught in the act: it is a hard-FAIL item of the
+    # manifest (grade() reads the kind), never a note that a passing suite could carry
+    bug_items = [{"name": f"metamorphic_bug_{i}", "kind": "metamorphic-bug", "expected": "no-tripwire-bug",
+                  "why": str(b), "adversarial": False, "task": None} for i, b in enumerate(bugs)]
+    names = [it["name"] for it in probes + meta + bug_items]
     dupes = {n for n in names if names.count(n) > 1}
     assert not dupes, f"conformance manifest has duplicate task names: {dupes}"
-    return probes + meta, not_applicable, bugs
+    return probes + meta + bug_items, not_applicable, bugs
 
 
 # ===========================================================================
@@ -369,8 +373,8 @@ def run_items(items: list[dict], present, outdir: Path, jobs, flake_n: int):
             for bname, lower, suffix in present:
                 try:
                     real_src = lower_real(lower)
-                except NotImplementedError:
-                    rows[name][bname] = ("abstain", twin_label, True)
+                except NotImplementedError as e:
+                    rows[name][bname] = ("abstain", f"{twin_label}; abstain: {e}"[:120], True)
                     continue
                 except Exception as e:                          # noqa: BLE001
                     rows[name][bname] = (
@@ -383,13 +387,18 @@ def run_items(items: list[dict], present, outdir: Path, jobs, flake_n: int):
         for bname, lower, suffix in present:
             try:
                 real_src = lower_real(lower)
-                twin_src = lower(clean, twin_body, witness=w)
-            except NotImplementedError:
-                rows[name][bname] = ("abstain", "abstain", True)
+            except NotImplementedError as e:
+                rows[name][bname] = ("abstain", f"abstain: {e}"[:120], True)
                 continue
             except Exception as e:                              # noqa: BLE001
                 rows[name][bname] = (
                     "lower-error", f"{type(e).__name__}: {e}"[:120], True)
+                continue
+            try:
+                twin_src = lower(clean, twin_body, witness=w)
+            except Exception as e:                              # noqa: BLE001
+                # the real program lowered; a twin that does not is its own outcome, never the real's rejection
+                rows[name][bname] = ("twin-lower-error", f"{type(e).__name__}: {e}"[:120], True)
                 continue
             rp = outdir / f"{name}.{suffix}"
             tp = outdir / f"{name}_twin.{suffix}"
@@ -462,12 +471,19 @@ def grade(items: list[dict], rows: dict, cols: list) -> dict:
             if c[0] == "abstain" and exp != "lower-error":
                 per_col[b] = "N/A"        # named abstain: the opt-out
                 continue
+            if len(c) > 2 and c[2] is False:
+                per_col[b] = "FAIL"       # the kernel's repeated calls disagreed: no verdict to grade
+                continue
             if exp == "rejected":
                 per_col[b] = "PASS" if c[0] in REJECTED_OK else "FAIL"
             elif exp == "decorative":
                 per_col[b] = ("PASS"
                               if harness.decorative_kind(c[0], c[1], w)
                               == "decorative" else "FAIL")
+            elif exp == "verified":
+                # the proof contract: a verified real counts only with its twin refuted (a verified twin is a
+                # decorative specification, an abstaining or failing twin is no proof of teeth)
+                per_col[b] = "PASS" if c[0] == "verified" and c[1] == "refuted" else "FAIL"
             else:
                 per_col[b] = "PASS" if c[0] == exp else "FAIL"
         verdicts[name] = per_col
@@ -516,7 +532,7 @@ def format_table(cols, items, rows, verdicts, not_applicable, bugs,
             if v == "FAIL":
                 n_fail += 1
             cell = "," if c is None else f"{c[0]} / {c[1]}"
-            row.append(f"{cell} [{v}]")
+            row.append(f"{cell} [{v}]".replace("|", "\\|"))      # a pipe in a diagnostic is text, not a column
         lines.append("| " + " | ".join(row) + " |")
     present_names = [b for b, v in cols if not v.startswith("ABSENT")]
     lines += ["", f"Kernels present: {len(present_names)} of {len(cols)} "
