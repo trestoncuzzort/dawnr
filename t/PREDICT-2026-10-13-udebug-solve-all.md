@@ -116,3 +116,7 @@ After a3f4b500 (the measure is required only when the body calls itself) the reg
 
 AWS (Bedrock) sessions expire after roughly 30 minutes of `aws login`; the DeepSeek lanes D1-D4 and the fresh
 shard D4b stopped on expiry twice today and need the user's `aws login` to resume.
+
+## PAUSED by the user, 2026-10-13 13:26Z
+
+Stopped at the user's word: the Qwen solve-rounds driver (Q), the DeepSeek Python scale lane (ds6), the student VM driver (no v2 VM ever came up: L4 STOCKOUT in us-central1-b, c and f), the milestone monitor, and the prove-box regrade of the proof lane. The regrade stood at 91 graded, 31 accepted of 175 when the container was stopped; its log and lane directory are pulled to t/out/udebug/box-regrade-20261013/. The OpenAI budget watchdog stays up (ceiling tripped at $986.75; no OpenAI lane runs). Nothing resumes until the user says so.
