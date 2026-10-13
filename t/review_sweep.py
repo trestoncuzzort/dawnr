@@ -65,6 +65,12 @@ def main(argv=None) -> int:
     ap.add_argument("--price-out-per-mtok", type=float, default=50.0)
     ap.add_argument("--cap-usd", type=float, default=300.0)
     ap.add_argument("--openai-key-file", default="~/.config/openai/api_key")
+    ap.add_argument("--provider", choices=("openai", "vertex"), default="openai",
+                    help="vertex: a Model-as-a-Service model on Vertex AI through udebug_teacher.vertex_call")
+    ap.add_argument("--project", default="", help="vertex: the GCP project")
+    ap.add_argument("--location", default="global", help="vertex: the endpoint location")
+    ap.add_argument("--adc", default="~/.config/gcloud/application_default_credentials.json",
+                    help="vertex: the application-default credentials file (a refresh token)")
     ap.add_argument("--limit", type=int, default=0)
     a = ap.parse_args(argv)
 
@@ -79,7 +85,20 @@ def main(argv=None) -> int:
         files = files[:a.limit]
     out = Path(a.out)
     out.mkdir(parents=True, exist_ok=True)
-    key = ut.openai_key(a.openai_key_file)
+    if a.provider == "vertex":
+        if not a.project:
+            raise SystemExit("review_sweep: --project is required with --provider vertex")
+        ut.force_ipv4()
+        vtoken, vurl = ut.VertexToken(a.adc), ut.vertex_url(a.project, a.location)
+
+        def call(messages: list[dict]) -> tuple[str, int, int, str | None]:
+            return ut.vertex_call(vurl, vtoken, a.model, messages, a.max_tokens, 1.0)
+    else:
+        key = ut.openai_key(a.openai_key_file)
+
+        def call(messages: list[dict]) -> tuple[str, int, int, str | None]:
+            return ut.openai_call(key, a.model, messages, a.max_tokens, 1.0, a.reasoning_effort,
+                                  service_tier=a.service_tier)
     ledger = {"in": 0, "out": 0, "usd": 0.0, "calls": 0, "stop": False}
     lock = threading.Lock()
     todo = [p for p in files if not (out / (p.as_posix().replace("/", "__") + ".json")).is_file()]
@@ -111,8 +130,7 @@ def main(argv=None) -> int:
                     + "Review it under the contract. JSON only.")
             messages = [{"role": "system", "content": CONTRACT}, {"role": "user", "content": user}]
             try:
-                reply, tin, tout, stop = ut.openai_call(key, a.model, messages, a.max_tokens, 1.0, a.reasoning_effort,
-                                                        service_tier=a.service_tier)
+                reply, tin, tout, stop = call(messages)
             except Exception as e:  # noqa: BLE001 -- the sweep records the failure and goes on
                 findings.append({"error": f"{type(e).__name__}: {str(e)[:300]}", "chunk": i})
                 continue

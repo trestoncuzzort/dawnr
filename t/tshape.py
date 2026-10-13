@@ -63,6 +63,8 @@ def declared_types(task: dict, body: list) -> list:
                 walk(s["if"]["else"])
             elif "while" in s:
                 walk(s["while"]["body"])
+            elif "par" in s:
+                walk(s["par"]["body"])
     walk(body)
     for m in task.get("methods", []):
         walk(m.get("body", []))
@@ -85,6 +87,10 @@ def uses_ops(body: list, task: dict, ops: set) -> set:
     walk(task.get("requires", []))
     walk(task.get("ensures", []))
     walk([f.get("body") for f in task.get("spec_funs", [])])
+    for m in task.get("methods", []) + task.get("lemmas", []):     # their bodies and contracts are lowered too
+        walk(m.get("requires", []))
+        walk(m.get("ensures", []))
+        walk(m.get("body", []))
     walk(body)
     return found
 
@@ -98,6 +104,7 @@ def abstain_unless_carried(task: dict, body: list, kernel: str, carried: set = f
     if "*" in carried:
         if "real" not in carried:
             abstain_on_reals(task, body, kernel)
+        abstain_on_library(task, body, kernel, lib)      # the library is carried by name, never by the wildcard
         return
     for t in declared_types(task, body):
         s = beyond_v1(t)
@@ -154,6 +161,25 @@ def desugar_seq_quants(task: dict, body: list) -> tuple[dict, list]:
                 taken.add(n)
                 return n
 
+    def free_vars(x, out: set) -> set:
+        if isinstance(x, dict):
+            if "var" in x and isinstance(x["var"], str) and len(x) == 1:
+                out.add(x["var"])
+            for v in x.values():
+                free_vars(v, out)
+        elif isinstance(x, list):
+            for v in x:
+                free_vars(v, out)
+        return out
+
+    def renamed(bound: list, inner: dict) -> dict:
+        """Binders that occur free in a replacement value are renamed before the substitution goes under them:
+        `forall x in seq(j) . exists j . x == r` must not become `exists j . seq(j)[i] == r`."""
+        fv: set = set()
+        for v in inner.values():
+            free_vars(v, fv)
+        return {b: fresh() for b in bound if b in fv}
+
     def sub(x, m: dict):
         if isinstance(x, list):
             return [sub(v, m) for v in x]
@@ -165,22 +191,41 @@ def desugar_seq_quants(task: dict, body: list) -> tuple[dict, list]:
             if isinstance(x.get(k), dict):
                 q = x[k]
                 inner = {a: b for a, b in m.items() if a != q["var"]}
+                rn = renamed([q["var"]], inner)
+                if rn:
+                    q = {**q, "var": rn[q["var"]], "body": sub(q["body"], {q["var"]: {"var": rn[q["var"]]}})}
                 return {k: {kk: (sub(vv, inner) if kk == "body" else sub(vv, m) if kk != "var" else vv)
                             for kk, vv in q.items()}}
         if "comp" in x:
             c = x["comp"]
             inner = {a: b for a, b in m.items() if a != c["var"]}
+            rn = renamed([c["var"]], inner)
+            if rn:
+                r1 = {c["var"]: {"var": rn[c["var"]]}}
+                c = {**c, "var": rn[c["var"]], **{kk: sub(c[kk], r1) for kk in ("cond", "body") if kk in c}}
             return {"comp": {kk: (sub(vv, inner) if kk in ("cond", "body") else sub(vv, m) if kk != "var" else vv)
                              for kk, vv in c.items()}}
         if "lam" in x:
             inner = {a: b for a, b in m.items() if a not in x["lam"]["vars"]}
-            return {"lam": {"vars": x["lam"]["vars"], "body": sub(x["lam"]["body"], inner)}}
+            rn = renamed(list(x["lam"]["vars"]), inner)
+            lam = x["lam"]
+            if rn:
+                lam = {"vars": [rn.get(v, v) for v in lam["vars"]],
+                       "body": sub(lam["body"], {b: {"var": n} for b, n in rn.items()})}
+            return {"lam": {"vars": lam["vars"], "body": sub(lam["body"], inner)}}
         if "match" in x:
             mm = x["match"]
-            return {"match": {"scrutinee": sub(mm["scrutinee"], m),
-                              "arms": [{**a, "body": sub(a["body"], {k: v for k, v in m.items()
-                                                                        if k not in (a.get("binders") or [])})}
-                                       for a in mm["arms"]]}}
+            arms = []
+            for a in mm["arms"]:
+                binders = list(a.get("binders") or [])
+                inner = {k: v for k, v in m.items() if k not in binders}
+                rn = renamed(binders, inner)
+                body = a["body"]
+                if rn:
+                    body = sub(body, {b: {"var": n} for b, n in rn.items()})
+                    binders = [rn.get(b, b) for b in binders]
+                arms.append({**a, **({"binders": binders} if a.get("binders") else {}), "body": sub(body, inner)})
+            return {"match": {"scrutinee": sub(mm["scrutinee"], m), "arms": arms}}
         return {k: sub(v, m) for k, v in x.items()}
 
     def walk(x, env: dict):
@@ -293,24 +338,25 @@ def seq_membership_used(task: dict, body: list) -> bool:
     funs = {f["name"]: f for f in task.get("spec_funs", [])}
     found = []
 
-    def walk(e):
+    def walk(e, sc):
         if isinstance(e, dict):
             if e.get("op") == "in" and len(e.get("args", [])) == 2:
                 try:
-                    t, errs = check_wf.expression_type(e["args"][1], dict(scope), functions=funs)
+                    t, errs = check_wf.expression_type(e["args"][1], dict(sc), functions=funs)
                 except Exception:                           # noqa: BLE001
                     t = None
                 if t == "seq" or (isinstance(t, dict) and "seq" in t):
                     found.append(e)
             for v in e.values():
-                walk(v)
+                walk(v, sc)
         elif isinstance(e, list):
             for v in e:
-                walk(v)
-    walk(task.get("requires", []))
-    walk(task.get("ensures", []))
-    walk([f.get("body") for f in task.get("spec_funs", [])])
-    walk(body or [])
+                walk(v, sc)
+    walk(task.get("requires", []), scope)
+    walk(task.get("ensures", []), scope)
+    for f in task.get("spec_funs", []):          # a parameter name reused across spec functions keeps each one's type
+        walk(f.get("body"), {**scope, **{p["name"]: p["type"] for p in f.get("params", [])}})
+    walk(body or [], scope)
     return bool(found)
 
 
@@ -416,6 +462,7 @@ def desugar_par(task: dict, body: list) -> tuple:
             for v in x:
                 declared(v)
     counter = [0]
+    taken: set = set(json_names(task)) | set(json_names(body or []))
 
     def one(stmts: list) -> list:
         out = []
@@ -425,9 +472,11 @@ def desugar_par(task: dict, body: list) -> tuple:
                 counter[0] += 1
                 i = w["var"]
                 if i in seen:
-                    i2 = f"{i}_p{counter[0]}"
-                    w = _rename_var(w, i, i2)
-                    w["var"] = i2
+                    i2 = _fresh(f"{i}_p{counter[0]}", taken)      # no clash with a parameter or any declaration
+                    taken.add(i2)
+                    # the par node itself carries `var`: rename inside its parts, not the node
+                    w = {**w, "var": i2, "body": _rename_var(w["body"], i, i2),
+                         "invariants": _rename_var(w.get("invariants", []), i, i2)}
                     i = i2
                 seen.add(i)
                 iv = {"var": i}
@@ -521,6 +570,9 @@ def desugar_heap(task: dict, body: list, witness: dict | None = None) -> tuple:
         new["body"] = nb if body is task.get("body") else unold(task.get("body"))
         return new, nb, witness
     m = mods[0]
+    if len(task.get("returns", [])) != 1:
+        raise NotImplementedError("a heap task with more than one result is not lowered yet by copy-in/copy-out "
+                                  "(SPEC.md 'Heap (v1)', PREDICT T53)")
     ret = task["returns"][0]
     r, rt = ret["name"], ret["type"]
     if not isinstance(rt, str) or rt not in _HEAP_DEFAULT:
@@ -581,6 +633,17 @@ def desugar_heap(task: dict, body: list, witness: dict | None = None) -> tuple:
             return {"op": "fst", "args": [{"var": out}]}
         if x.get("var") == m and set(x) == {"var"}:
             return {"op": "snd", "args": [{"var": out}]}
+        for k in ("forall", "exists", "comp"):
+            if isinstance(x.get(k), dict) and x[k].get("var") in (r, m):
+                q = x[k]                        # a bound variable of that name is its own, not the result
+                return {k: {kk: (vv if kk in ("var", "body", "cond") else post(vv)) for kk, vv in q.items()}}
+        if isinstance(x.get("lam"), dict) and any(v in (r, m) for v in x["lam"].get("vars", [])):
+            return x
+        if isinstance(x.get("match"), dict):
+            mm = x["match"]
+            return {"match": {"scrutinee": post(mm["scrutinee"]),
+                              "arms": [a if any(b in (r, m) for b in (a.get("binders") or []))
+                                       else {**a, "body": post(a["body"])} for a in mm["arms"]]}}
         return {k: post(v) for k, v in x.items()}
     new = {k: v for k, v in task.items() if k != "modifies"}
     new["params"] = params
@@ -755,11 +818,11 @@ def desugar_exits(task: dict, body: list) -> tuple:
         if isinstance(x, dict):
             return _is_exit(x, "break") or _is_exit(x, "continue") or any(any_exit(v) for v in x.values())
         return isinstance(x, list) and any(any_exit(v) for v in x)
-    if not any_exit(body or []) and not any_exit(task.get("body") or []):
-        return task, body
     if any_exit(task.get("methods", [])):
         raise NotImplementedError("a `break` or `continue` in a method body is not lowered yet "
                                   "(SPEC.md 'Early exits (v1)', PREDICT T44)")
+    if not any_exit(body or []) and not any_exit(task.get("body") or []):
+        return task, body
     if len(task["returns"]) != 1:
         raise NotImplementedError("a `break` in a task with several returns: `return` names one "
                                   "(SPEC.md 'Early exits (v1)', PREDICT T44)")
@@ -833,7 +896,8 @@ def empty_display_types(task: dict, body: list) -> dict:
     inference will not (Dafny's `{}` under `|..|`, Verus's `Seq::empty()`/`Set::empty()`)."""
     body = body or []
     scope = {p["name"]: p["type"] for p in task["params"]}
-    scope[task["returns"][0]["name"]] = task["returns"][0]["type"]
+    for ret in task["returns"]:
+        scope[ret["name"]] = ret["type"]
     out: dict = {}
 
     def is_set(t):

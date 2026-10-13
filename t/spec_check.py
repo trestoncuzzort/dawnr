@@ -28,9 +28,11 @@ import hashlib
 import json
 import re
 import random
+import copy
 import signal
 import sys
 import threading
+import time
 from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
@@ -82,12 +84,18 @@ def _deadline_alarm(seconds: float, exc=Timeout):
     signal.alarm rang before 2026-09-30 and score_synthesis rang on its own; float seconds allowed."""
     def _raise(_sig, _frm):
         raise exc()
+    prev_handler = signal.getsignal(signal.SIGALRM)
+    prev_left, _prev_interval = signal.getitimer(signal.ITIMER_REAL)
+    started = time.monotonic()
     signal.signal(signal.SIGALRM, _raise)
     signal.setitimer(signal.ITIMER_REAL, seconds)
     try:
         yield
     finally:
         signal.setitimer(signal.ITIMER_REAL, 0)
+        signal.signal(signal.SIGALRM, prev_handler)
+        if prev_left > 0:            # an enclosing deadline keeps what it had left (floored so it still fires)
+            signal.setitimer(signal.ITIMER_REAL, max(prev_left - (time.monotonic() - started), 0.001))
 
 
 @contextlib.contextmanager
@@ -117,7 +125,9 @@ def deadline(seconds: float, exc=Timeout):
     (2026-09-30: the evaluation path runs on Windows too). Unix keeps the real-time signal, so
     nothing measured there changes. `exc` lets a caller keep its own class: score_synthesis's
     Timeout is a BaseException on purpose, so an interpreter's `except Exception` cannot absorb it."""
-    return (_deadline_alarm(seconds, exc) if hasattr(signal, "SIGALRM")
+    # the signal path works only in the main thread (signal.signal raises elsewhere); a worker thread gets the watchdog
+    return (_deadline_alarm(seconds, exc)
+            if hasattr(signal, "SIGALRM") and threading.current_thread() is threading.main_thread()
             else _deadline_thread(seconds, exc))
 
 
@@ -228,7 +238,7 @@ def draw_beyond(kind: str, rnd: random.Random, like=None, strings: bool = False,
     if kind == "seq":
         ex = list(like) if isinstance(like, (list, tuple)) else []
         top = max(3, len(ex) + 2)
-        n = rnd.randint(28, 40) if far else rnd.randint(top + 1, max(top * 3, 12))
+        n = rnd.randint(max(28, top + 1), max(40, top + 12)) if far else rnd.randint(top + 1, max(top * 3, 12))
         if ex and all(isinstance(x, int) for x in ex):
             lo, hi = min(ex), max(ex)
             lo, hi = (lo - 2, hi + 2) if lo != hi else (lo - 2, lo + 2)
@@ -240,7 +250,8 @@ def draw_beyond(kind: str, rnd: random.Random, like=None, strings: bool = False,
     if kind == "seq-of-seq":
         rows = [list(r) for r in like if isinstance(r, (list, tuple))] if isinstance(like, (list, tuple)) else []
         points = [x for r in rows for x in r if isinstance(x, int) and not isinstance(x, bool)]
-        count = rnd.randint(16, 24) if far else rnd.randint(max(4, len(rows) + 3), max(8, 3 * (len(rows) + 2)))
+        count = (rnd.randint(max(16, len(rows) + 3), max(24, len(rows) + 12)) if far
+                 else rnd.randint(max(4, len(rows) + 3), max(8, 3 * (len(rows) + 2))))
         if strings and points:
             lo, hi = max(0, min(points) - 2), max(points) + 2
             longest = max(len(r) for r in rows)
@@ -296,6 +307,9 @@ def larger_reason(larger: dict | None, floor: float = 0.6, ordinary: dict | None
         return None
     if larger.get("status") == "disagrees":
         return "the specification is false at the solution's answer on an input larger than the examples"
+    if (larger.get("status") == "no valid draws" and larger.get("requires_caps_size")
+            and (larger.get("outside_requires") or 0) >= MIN_LARGER):
+        return "the requires closes off inputs larger than the examples"      # it admitted none of them
     if larger.get("status") != "agrees":
         return None
     inside, outside = larger.get("draws", 0) or 0, larger.get("outside_requires", 0) or 0
@@ -645,6 +659,42 @@ def exploit(task: dict, entry: dict) -> dict:
     return {"exploited_by": None, "lazy_programs_tried": tried}
 
 
+def _seq_like(ty) -> bool:
+    return ty == "seq" or (isinstance(ty, dict) and set(ty) == {"seq"})
+
+
+def as_param(v, ty):
+    """A pool value read at a parameter's declared type: the extractor reads a one-character string as its code
+    point (`'x'` is 120), which for a seq parameter is the one-element sequence, not an int."""
+    if _seq_like(ty) and isinstance(v, int) and not isinstance(v, bool):
+        return (v,)
+    return v
+
+
+def fits_type(v, ty) -> bool:
+    """Whether an interpreter value has the shape the declared t type names (int, bool, real, seq, set, map,
+    pair, tuple); a shape this does not know passes. A reference answer of another shape is no t value for
+    the declared return, and must not be compared as one."""
+    from fractions import Fraction
+    if ty == "int":
+        return isinstance(v, int) and not isinstance(v, bool)
+    if ty == "bool":
+        return isinstance(v, bool)
+    if ty == "real":
+        return isinstance(v, (int, Fraction)) and not isinstance(v, bool)
+    if _seq_like(ty):
+        return isinstance(v, (list, tuple))
+    if ty == "set" or (isinstance(ty, dict) and set(ty) == {"set"}):
+        return isinstance(v, (set, frozenset))
+    if isinstance(ty, dict) and set(ty) == {"map"}:
+        return isinstance(v, dict)
+    if isinstance(ty, dict) and set(ty) == {"pair"}:
+        return isinstance(v, (list, tuple)) and len(v) == 2
+    if isinstance(ty, dict) and set(ty) == {"tuple"}:
+        return isinstance(v, (list, tuple)) and len(v) == len(ty["tuple"])
+    return True
+
+
 def check_points(task: dict, entry: dict) -> dict:
     """Does the specification hold at the problem's OWN examples?
 
@@ -675,8 +725,9 @@ def check_points(task: dict, entry: dict) -> dict:
             # point it does not fit, which is a verdict about nothing.
             continue                       # arity differs; check_task reports that separately
         try:
-            env = {p["name"]: to_t(v) for p, (_k, v) in zip(task["params"], point["args"])}
-            env[name] = to_t(point["expected"][1])
+            env = {p["name"]: as_param(to_t(v, p.get("type")), p.get("type"))
+                   for p, (_k, v) in zip(task["params"], point["args"])}
+            env[name] = to_t(point["expected"][1], task["returns"][0].get("type"))
         except (TypeError, KeyError, IndexError, ValueError):
             continue                       # a point this task cannot even be asked about
         if len(env) != len(task["params"]) + 1:
@@ -726,6 +777,8 @@ def check_task(task: dict, entry: dict, n: int, rnd: random.Random, oracle=None,
     fn = oracle if oracle is not None else reference(entry["rec"], entry["fn"])
     if fn is None:
         return {"status": "no reference"}
+    if not entry.get("points"):
+        return {"status": "no examples extracted"}
     kinds = [k for k, _v in entry["points"][0]["args"]]
     if len(kinds) != len(task["params"]):
         return {"status": "arity differs from the problem"}
@@ -801,7 +854,7 @@ def check_task(task: dict, entry: dict, n: int, rnd: random.Random, oracle=None,
             return {"status": f"cannot draw {kinds}"}
         try:
             with deadline(5):
-                out = fn(*python_arguments(args, positions, nested))
+                out = fn(*python_arguments(copy.deepcopy(args), positions, nested))   # a mutating reference keeps its hands off the draw
         except Timeout:
             skipped["reference did not finish"] += 1
             continue
@@ -836,6 +889,9 @@ def check_task(task: dict, entry: dict, n: int, rnd: random.Random, oracle=None,
         except TypeError:
             skipped["reference result has no t value"] += 1
             continue
+        if not fits_type(env[task["returns"][0]["name"]], task["returns"][0].get("type")):
+            skipped["reference result has no t value"] += 1     # a seq where the task declares an int, and so on
+            continue
         st = interp.St()
         try:
             if not all(interp.ev(c, env, funs, st) for c in task.get("requires", [])):
@@ -862,7 +918,8 @@ def check_task(task: dict, entry: dict, n: int, rnd: random.Random, oracle=None,
                 holds = all(interp.ev(e, probe, funs, st2) is True
                             for e in task.get("ensures", []))
             except (interp.Undef, interp.Budget, RecursionError, ZeroDivisionError):
-                continue                 # undefined on a wrong answer is a rejection by refusal
+                rejected += 1            # undefined on a wrong answer is a rejection by refusal, and counts as one
+                continue
             except Exception:            # noqa: BLE001
                 continue
             if holds:
@@ -1106,6 +1163,10 @@ def main() -> int:
         prev = {}
     checked_tags = sorted(set(prev.get("tags", [])) | ({tag for tag, _n, _r in rows} & set(tags)))
     results = {f"{tag}/{name}": result for tag, name, result in rows}
+    results = keep_witnesses(prev.get("results") or {}, results)     # an earlier counterexample on the same task stands
+    kept = [k for k, r in results.items() if r.get("kept_from_an_earlier_check")]
+    disagree = sorted(set(disagree) | set(kept))
+    texts.update({k: v for k, v in (prev.get("programs") or {}).items() if k in kept and k not in texts})
     keep = [x for x in prev.get("disagree", []) if x not in results]
     keep_texts = {k: v for k, v in (prev.get("programs") or {}).items()
                   if k not in results}

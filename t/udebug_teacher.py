@@ -290,9 +290,9 @@ def vertex_call(url: str, token: VertexToken, model: str, messages: list[dict], 
     attempt = 0
     while True:
         attempt += 1
-        req = urllib.request.Request(url, data=body, headers={"Authorization": f"Bearer {token.get()}",
-                                                              "Content-Type": "application/json"})
         try:
+            req = urllib.request.Request(url, data=body, headers={"Authorization": f"Bearer {token.get()}",
+                                                                  "Content-Type": "application/json"})
             with urllib.request.urlopen(req, timeout=600) as r:
                 j = json.load(r)
             choice = (j.get("choices") or [{}])[0]
@@ -390,7 +390,8 @@ Rules the t parser and its well-formedness gate enforce (each refused a reply in
 
 PROMPT_VERSIONS = ("v1", "v2")
 
-FENCE = re.compile(r"```(\w*)[ \t]*\n(.*?)```", re.S)
+HINT_MAX = 60_000          # characters of an accepted Python program quoted whole as a hint
+FENCE = re.compile(r"```(\w*)[ \t]*\n(.*?)^```[ \t]*$", re.S | re.M)   # the closing fence is a line of its own
 
 
 def dafny_of(t_path: Path) -> str:
@@ -639,7 +640,12 @@ def main(argv=None) -> int:
         for rec in problems:
             hp = Path(a.python_hint_from) / rec["judge"] / f"{rec['id']}.py"
             if hp.is_file():
-                rec["_hint"] = hp.read_text(encoding="utf-8")[:12000]
+                text = hp.read_text(encoding="utf-8")
+                if len(text) > HINT_MAX:
+                    print(f"  {hp}: {len(text)} characters, over the {HINT_MAX} hint cap; no hint for this problem "
+                          "(a truncated program is not the accepted one)", file=sys.stderr, flush=True)
+                    continue
+                rec["_hint"] = text
                 hints += 1
         print(f"{hints} of {len(problems)} problems carry an accepted Python program as a hint", flush=True)
     repair_dirs = [Path(p) for p in a.repair_from.split(",") if p]
@@ -650,7 +656,7 @@ def main(argv=None) -> int:
                 e = json.loads(line)
                 if e.get("status") == "solved" and (e.get("max_case_s") or 0) > a.slow_above:
                     slow[(e["judge"], e["id"])] = e
-    if repair_dirs or slow:
+    if repair_dirs or slow or a.slow_index:     # a slow index that qualifies nothing selects nothing
         kept = []
         for rec in problems:
             e = slow.get((rec["judge"], rec["id"]))
@@ -680,7 +686,14 @@ def main(argv=None) -> int:
         for k in range(1, a.samples + 1):
             d = out / f"{rec['judge']}-{rec['id']}" / f"s{k}"
             if (d / "record.json").is_file():
-                continue
+                try:
+                    done = json.loads((d / "record.json").read_text(encoding="utf-8"))
+                except (OSError, ValueError):
+                    done = None
+                if isinstance(done, dict) and "reply" in done:
+                    continue
+                print(f"  {d}: record.json is truncated or malformed (an interrupted write); the sample is redone",
+                      file=sys.stderr, flush=True)
             jobs.append((rec, k, d))
     print(f"{len(jobs)} calls to make ({a.samples} per problem, resumed ones skipped)", flush=True)
     if a.dry_run:
