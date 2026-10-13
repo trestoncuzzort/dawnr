@@ -30,9 +30,12 @@ def stages_by_task(dataset):
 
 
 def collapsible(stages, inputs):
-    """The shortest proper sub-sequence that matches on every input, or None."""
+    """The shortest proper sub-sequence that matches on every input, or None. The empty sub-sequence counts:
+    stages that cancel out pass the input through unchanged, and a model that writes nothing passes them.
+    `inputs` may be any iterable; it is read once."""
+    inputs = list(inputs)
     expected = [ref.final_value(stages, x) for x in inputs]
-    for size in range(1, len(stages)):
+    for size in range(0, len(stages)):
         for chosen in combinations(range(len(stages)), size):
             candidate = [stages[index] for index in chosen]
             if [ref.final_value(candidate, x) for x in inputs] == expected:
@@ -59,14 +62,21 @@ def audit(dataset, scores=None):
               "unknown": unknown, "rows": rows}
     if scores:
         names = {row["task_name"] for row in rows if row["collapsible"]}
-        tally = {"correct": 0, "correct_collapsible": 0, "correct_composed": 0, "arms": 0}
+        checked = {row["task_name"] for row in rows}
+        # a correct answer to a task whose stages were never audited is neither composed nor collapsible
+        tally = {"correct": 0, "correct_collapsible": 0, "correct_composed": 0, "correct_unaudited": 0, "arms": 0}
         for path in sorted(scores):
             tally["arms"] += 1
             for row in json.loads(Path(path).read_text())["rows"]:
                 if row["verdict"] != "correct":
                     continue
                 tally["correct"] += 1
-                key = "correct_collapsible" if row["task_name"] in names else "correct_composed"
+                if row["task_name"] not in checked:
+                    key = "correct_unaudited"
+                elif row["task_name"] in names:
+                    key = "correct_collapsible"
+                else:
+                    key = "correct_composed"
                 tally[key] += 1
         report["scored"] = tally
     return report
