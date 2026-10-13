@@ -102,6 +102,57 @@ class VertexToken:
             return self.token
 
 
+BEDROCK_CLI_TRANSIENT = ("ThrottlingException", "ServiceUnavailableException", "ModelNotReadyException",
+                         "InternalServerException", "timed out", "Connection", "EndpointConnectionError",
+                         "ReadTimeoutError")
+BEDROCK_CLI_MAX_CONCURRENCY = 8
+
+
+def bedrock_cli_call(region: str, model: str, messages: list[dict], max_tokens: int, temperature: float,
+                     max_attempts: int = 8) -> tuple[str, int, int, str | None]:
+    """One `aws bedrock-runtime converse` (docs.aws.amazon.com/cli/latest/reference/bedrock-runtime/converse.html:
+    --cli-input-json carries modelId, system, messages and inferenceConfig; the reply is output.message.content[].text
+    with usage.inputTokens/outputTokens and stopReason). The laptop has no boto3; the CLI is signed in. Throttling
+    and service errors are retried on vertex_call's schedule; a validation error or anything else is NonRetryable."""
+    import os
+    import random
+    import subprocess
+    import tempfile
+    system = [{"text": m["content"]} for m in messages if m["role"] == "system"]
+    conv = [{"role": m["role"], "content": [{"text": m["content"]}]} for m in messages if m["role"] != "system"]
+    req = {"modelId": model, "messages": conv, "inferenceConfig": {"maxTokens": max_tokens, "temperature": temperature}}
+    if system:
+        req["system"] = system
+    delay = 1.0
+    attempt = 0
+    while True:
+        attempt += 1
+        with tempfile.NamedTemporaryFile("w", suffix=".json", delete=False, encoding="utf-8") as f:
+            json.dump(req, f)
+            path = f.name
+        try:
+            p = subprocess.run(["aws", "bedrock-runtime", "converse", "--region", region, "--cli-input-json",
+                                f"file://{path}", "--output", "json"], capture_output=True, text=True, timeout=900)
+            err = p.stderr.strip()
+        except subprocess.TimeoutExpired:
+            p, err = None, "timed out"
+        finally:
+            os.unlink(path)
+        if p is not None and p.returncode == 0:
+            d = json.loads(p.stdout)
+            reply = "".join(c.get("text", "") for c in d.get("output", {}).get("message", {}).get("content", []))
+            u = d.get("usage", {})
+            return reply, u.get("inputTokens", 0) or 0, u.get("outputTokens", 0) or 0, d.get("stopReason")
+        if not any(k in err for k in BEDROCK_CLI_TRANSIENT):
+            raise bg.NonRetryable(f"bedrock cli: {err[:400]}")
+        if attempt >= (RATE_LIMIT_MAX_ATTEMPTS if "Throttling" in err else max_attempts):
+            raise bg.NonRetryable(f"bedrock cli after {attempt} attempts: {err[:300]}")
+        sleep_s = min(delay, RATE_LIMIT_MAX_DELAY) * (1 + random.uniform(-0.2, 0.2))
+        print(f"  transient error, retry {attempt} in {sleep_s:.1f}s", file=sys.stderr, flush=True)
+        time.sleep(sleep_s)
+        delay *= 2
+
+
 def vertex_call(url: str, token: VertexToken, model: str, messages: list[dict], max_tokens: int,
                 temperature: float, max_attempts: int = 8) -> tuple[str, int, int, str | None]:
     """One chat completion; bedrock_generate.call_with_backoff's schedule (1, 2, 4, 8, 16 s, +/-20%) extended by
@@ -411,7 +462,7 @@ def main(argv=None) -> int:
     ap.add_argument("--target", choices=TARGETS, default="t",
                     help="dafny: the teacher writes a Dafny method the gate lifts to t (t/lifter.py)")
     ap.add_argument("--out", default="", help="default t/out/udebug/teacher-<tag>")
-    ap.add_argument("--provider", choices=("bedrock", "vertex"), default="bedrock")
+    ap.add_argument("--provider", choices=("bedrock", "vertex", "bedrock-cli"), default="bedrock")
     ap.add_argument("--model", default="", help=f"default {DEFAULT_MODEL} on Bedrock, {VERTEX_MODEL} on Vertex")
     ap.add_argument("--region", default=bg.DEFAULT_REGION, help="Bedrock region")
     ap.add_argument("--project", default="", help="Vertex: the Google Cloud project id")
@@ -514,6 +565,11 @@ def main(argv=None) -> int:
             reply = "".join(b.get("text", "") for b in msg.get("content", []) if "text" in b)
             usage = resp.get("usage", {})
             return reply, usage.get("inputTokens", 0) or 0, usage.get("outputTokens", 0) or 0, resp.get("stopReason")
+    elif a.provider == "bedrock-cli":
+        model, endpoint = a.model or DEFAULT_MODEL, f"bedrock-cli:{a.region}"
+
+        def call(messages: list[dict]) -> tuple[str, int, int, str | None]:
+            return bedrock_cli_call(a.region, model, messages, a.max_tokens, a.temperature)
     else:
         if not a.project:
             raise SystemExit("udebug_teacher: --project is required with --provider vertex")
@@ -578,7 +634,8 @@ def main(argv=None) -> int:
                   flush=True)
         return "ok"
 
-    workers = max(1, min(a.concurrency, bg.HARD_MAX_CONCURRENCY))
+    cap = BEDROCK_CLI_MAX_CONCURRENCY if a.provider == "bedrock-cli" else bg.HARD_MAX_CONCURRENCY
+    workers = max(1, min(a.concurrency, cap))
     with concurrent.futures.ThreadPoolExecutor(max_workers=workers) as ex:
         list(ex.map(lambda j: one(*j), jobs))
     summary = {"tag": a.tag, "model": model, "provider": a.provider, "endpoint": endpoint,
