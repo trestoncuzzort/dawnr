@@ -62,6 +62,15 @@ def _word(n: int) -> str:
     return _WORDS.get(n, str(n))
 
 
+def _cells(line: str) -> list[str]:
+    """The cells of one table row: one leading and one trailing pipe removed (so an empty last cell `||` survives),
+    split at every pipe that is not escaped (`\\|` is content, as in GitHub-flavoured Markdown tables)."""
+    s = line.strip()
+    s = s[1:] if s.startswith("|") else s
+    s = s[:-1] if s.endswith("|") else s
+    return [c.strip() for c in re.split(r"(?<!\\)\|", s)]
+
+
 def parse_table(path: Path) -> tuple[list[str], dict[str, dict[str, str]]]:
     """Parse a `| task | k1 | k2 | ... |` table out of a committed .md
     file: the header line (literally starting `| task |`), its `|---|...`
@@ -73,13 +82,13 @@ def parse_table(path: Path) -> tuple[list[str], dict[str, dict[str, str]]]:
     header_idx = next((i for i, l in enumerate(lines) if l.startswith("| task |")), None)
     if header_idx is None:
         raise SystemExit(f"blockers.py: no '| task |' header found in {path}")
-    header_cells = [c.strip() for c in lines[header_idx].strip().strip("|").split("|")]
+    header_cells = _cells(lines[header_idx])
     col_names = header_cells[1:]
     cell_rows: dict[str, dict[str, str]] = {}
     for line in lines[header_idx + 2:]:
         if not line.startswith("|"):
             break
-        cells = [c.strip() for c in line.strip().strip("|").split("|")]
+        cells = _cells(line)
         if len(cells) != len(header_cells):
             break
         cell_rows[cells[0]] = dict(zip(col_names, cells[1:]))
@@ -99,7 +108,7 @@ def analyze(col_names: list[str], cell_rows: dict[str, dict[str, str]]) -> dict:
         counting = [k for k in col_names if cells.get(k, "").strip() == COUNTS]
         blocking = [k for k in col_names if k not in counting]
         n_count = len(counting)
-        if n_count == n - 1:
+        if 1 <= n_count == n - 1:           # a one-column table has nothing left to block when its only cell is out
             total_almost += 1
             (only,) = blocking
             sole[only] += 1
@@ -181,7 +190,7 @@ def _replace_or_append(text: str, section: str, replace: bool) -> str:
                       if l.rstrip("\n") == "## Sole blockers"), None)
         if start is not None:
             end = next((j for j in range(start + 1, len(lines))
-                        if lines[j].startswith("## ")), len(lines))
+                        if re.match(r"#{1,2} ", lines[j])), len(lines))   # the next heading of level one or two
             return "".join(lines[:start]) + section + "".join(lines[end:])
     if text and not text.endswith("\n\n"):
         text = text.rstrip("\n") + "\n\n"
