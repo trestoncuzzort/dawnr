@@ -524,13 +524,17 @@ def speed_text(rec: dict, entry: dict, program: str) -> str:
         "```python fence reading stdin and writing stdout; nothing after it."])
 
 
-def user_text(rec: dict, target: str = "t", repair: str | None = None) -> str:
+def user_text(rec: dict, target: str = "t", repair: str | None = None, hint: str | None = None) -> str:
     title = rec.get("title") or ""
     what = (f"the Dafny method `p{rec['id']}` and its io module" if target == "dafny"
             else "the Python program" if target == "python" else f"the t task `p{rec['id']}` and its io module")
     return (f"Judge problem {rec['judge']} {rec['id']}: {title}\n\n{rec['statement'].strip()}\n\n"
             f"A stored case of the judge -- input:\n{rec['sample_in']}\nexpected output:\n{rec['sample_out']}\n\n"
-            f"Write {what}." + (f"\n\n{repair}" if repair else ""))
+            f"Write {what}."
+            + (f"\n\nA Python program that reproduces every stored case of this problem (it shows the function the judge "
+               f"wants; the t task must compute the same function, and its contract must say what that function is, "
+               f"not restate the code):\n```python\n{hint.rstrip()}\n```" if hint else "")
+            + (f"\n\n{repair}" if repair else ""))
 
 
 def extract(reply: str, target: str = "t") -> tuple[str | None, str | None]:
@@ -605,6 +609,8 @@ def main(argv=None) -> int:
     ap.add_argument("--slow-index", default="", help="the export's INDEX.jsonl: prompt the solved problems whose "
                     "slowest stored case exceeds --slow-above seconds for a faster program (quoting the solution)")
     ap.add_argument("--slow-above", type=float, default=2.0)
+    ap.add_argument("--python-hint-from", default="", help="a solutions bundle (<judge>/<id>.py): the accepted Python "
+                    "program is quoted in the prompt as the function to specify and prove (t and dafny targets)")
     ap.add_argument("--limit", type=int, default=0)
     ap.add_argument("--max-in-bytes", type=int, default=0, help="skip problems whose stored inputs exceed this")
     ap.add_argument("--samples", type=int, default=1)
@@ -628,6 +634,14 @@ def main(argv=None) -> int:
     judges = {j.strip() for j in a.judges.split(",") if j.strip()}
     problems = select(Path(a.bank), judges, a.shape, a.split, ids, a.limit, a.max_in_bytes)
     print(f"{len(problems)} problems selected; system prompt {len(system)} chars", flush=True)
+    if a.python_hint_from:
+        hints = 0
+        for rec in problems:
+            hp = Path(a.python_hint_from) / rec["judge"] / f"{rec['id']}.py"
+            if hp.is_file():
+                rec["_hint"] = hp.read_text(encoding="utf-8")[:12000]
+                hints += 1
+        print(f"{hints} of {len(problems)} problems carry an accepted Python program as a hint", flush=True)
     repair_dirs = [Path(p) for p in a.repair_from.split(",") if p]
     slow = {}
     if a.slow_index:
@@ -674,7 +688,7 @@ def main(argv=None) -> int:
             d.mkdir(parents=True, exist_ok=True)
             (d / "prompt.json").write_text(json.dumps(
                 [{"role": "system", "content": system},
-                 {"role": "user", "content": user_text(rec, a.target, rec.get("_repair"))}],
+                 {"role": "user", "content": user_text(rec, a.target, rec.get("_repair"), rec.get("_hint"))}],
                 indent=1))
             print(f"dry run: prompt written to {d / 'prompt.json'}")
         return 0
@@ -725,7 +739,7 @@ def main(argv=None) -> int:
         if ledger["stop"]:
             return "stopped"
         messages = [{"role": "system", "content": system},
-                    {"role": "user", "content": user_text(rec, a.target, rec.get("_repair"))}]
+                    {"role": "user", "content": user_text(rec, a.target, rec.get("_repair"), rec.get("_hint"))}]
         t0 = time.monotonic()
         try:
             reply, in_tok, out_tok, stop_reason = call(messages)
