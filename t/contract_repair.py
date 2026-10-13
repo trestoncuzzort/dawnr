@@ -127,8 +127,8 @@ def _arg_choices(task: dict, ptypes: list) -> list:
     pool["int"] += [op("len", s) for s in pool["seq"]]
     out = [[]]
     for t in ptypes:
-        if t not in pool or not pool[t]:
-            return []
+        if not isinstance(t, str) or t not in pool or not pool[t]:
+            return []                             # a pair, set or map parameter has no choices here
         out = [a + [x] for a in out for x in pool[t]][:SPEC_FUN_ARGS]
     return out
 
@@ -254,8 +254,18 @@ def _affine(terms, c0):
     return e if e is not None else I(0)
 
 
+def _fresh_name(base: str, taken: set) -> str:
+    """`base`, or `base` with a digit suffix, that no parameter or return of the task is called."""
+    name, k = base, 1
+    while name in taken:
+        name, k = f"{base}{k}", k + 1
+    return name
+
+
 def candidates(task: dict, ref=None) -> list:
     """The grammar's clauses for this task, deduplicated, each one an `ensures` expression."""
+    taken = {p["name"] for p in task.get("params", [])} | {r["name"] for r in task.get("returns", [])}
+    rj, rm, rx = (_fresh_name(n, taken) for n in ("t_rj", "t_rm", "t_rx"))
     out = _fitted(task, ref)
     seqs = [V(p["name"]) for p in task["params"] if p["type"] == "seq"]
     ints = [V(p["name"]) for p in task["params"] if p["type"] == "int"]
@@ -298,7 +308,7 @@ def candidates(task: dict, ref=None) -> list:
             for c in task.get("ensures", []):
                 q = c.get("forall") if isinstance(c, dict) else None
                 if q and q.get("lo") == I(0) and q.get("hi") == op("len", term):
-                    body = _replace(q["body"], op("at", term, V(q["var"])), V("t_rx"))
+                    body = _replace(q["body"], op("at", term, V(q["var"])), V(rx))
                     if not _mentions(body, q["var"]) and not _mentions(body, _root(term)):
                         preds.append(body)
             if len(preds) >= 2:
@@ -308,10 +318,10 @@ def candidates(task: dict, ref=None) -> list:
                 for s in seqs:
                     if s == term:
                         continue
-                    body = _replace(both, V("t_rx"), op("at", s, V("t_rj")))
-                    member = quant("exists", "t_rm", I(0), op("len", term),
-                                   op("==", op("at", term, V("t_rm")), op("at", s, V("t_rj"))))
-                    out.append(quant("forall", "t_rj", I(0), op("len", s), op("implies", body, member)))
+                    body = _replace(both, V(rx), op("at", s, V(rj)))
+                    member = quant("exists", rm, I(0), op("len", term),
+                                   op("==", op("at", term, V(rm)), op("at", s, V(rj))))
+                    out.append(quant("forall", rj, I(0), op("len", s), op("implies", body, member)))
             for c in task.get("ensures", []):
                 q = c.get("forall") if isinstance(c, dict) else None
                 if not q or q.get("lo") != I(0) or q.get("hi") != op("len", term):
@@ -320,12 +330,12 @@ def candidates(task: dict, ref=None) -> list:
                 for s in seqs:
                     if s == term:
                         continue
-                    body = _replace(q["body"], op("at", term, V(k)), op("at", s, V("t_rj")))
+                    body = _replace(q["body"], op("at", term, V(k)), op("at", s, V(rj)))
                     if _mentions(body, k) or _mentions(body, _root(term)):
                         continue     # the clause reads its index or other elements: no converse of this shape
-                    member = quant("exists", "t_rm", I(0), op("len", term),
-                                   op("==", op("at", term, V("t_rm")), op("at", s, V("t_rj"))))
-                    out.append(quant("forall", "t_rj", I(0), op("len", s), op("implies", body, member)))
+                    member = quant("exists", rm, I(0), op("len", term),
+                                   op("==", op("at", term, V(rm)), op("at", s, V(rj))))
+                    out.append(quant("forall", rj, I(0), op("len", s), op("implies", body, member)))
     # attainment: an `ensures` bounding a term by every E over quantified indices, `forall i . forall j . E <= T`, is
     # answered by the bound being reached, `exists i . exists j . E == T` (maxDifference's missing half)
     for term, t in _result_terms(task):
@@ -350,6 +360,8 @@ def _holds(ref, clause, env0, val) -> bool:
     env[ref.ret] = val
     try:
         return bool(interp.ev(clause, env, ref.funs, interp.St()))
+    except _Out:
+        raise                                   # the task's time budget, never a false clause
     except Exception:                           # noqa: BLE001 (an ill-typed candidate is no candidate)
         return False
 
@@ -410,7 +422,11 @@ def repair_task(task: dict) -> dict:
     repaired = dict(task, ensures=list(task["ensures"]) + chosen)
     res["task"] = repaired
     after = audit.classify(repaired) if chosen else before
-    res["after"] = len(after.get("survivors", [])) if after["status"] == "ok" else res["before"]
+    if after["status"] != "ok":
+        res["status"] = f"re-audit {after['status']}"     # the repaired contract was not audited: no count to report
+        res["after"] = None
+        return res
+    res["after"] = len(after.get("survivors", []))
     return res
 
 
@@ -617,8 +633,8 @@ def patches(results: list[dict], kernel: str) -> str:
            "lifter may have renamed from the source (a loop index `i` can read `i_v2`).", ""]
     for r in sorted(results, key=lambda r: r["name"]):
         if not (r.get("after") == 0 and r.get("clauses") and r.get("real") == "verified"
-                and r.get("twin") == "refuted"):
-            continue
+                and r.get("twin") == "refuted" and r.get("kernel") == kernel):
+            continue                                  # another kernel's verdicts are never printed as this one's
         out.append(f"## {Path(r['file']).name}")
         out.append("")
         out.append("```")
@@ -673,16 +689,23 @@ def main(argv=None) -> int:
             results = list(ex.map(repair_file, files, [args.kernel] * len(files)))
     else:
         results = [repair_file(f, args.kernel) for f in files]
+    written: set = set()
     for r in results:
         if args.write and r.get("task") and r.get("clauses"):
             out = Path(args.write)
             out.mkdir(parents=True, exist_ok=True)
-            (out / (Path(r["file"]).stem + ".json")).write_text(json.dumps(r["task"], indent=1, sort_keys=True))
+            dest = out / (Path(r["file"]).stem + ".json")
+            if dest in written:
+                dest = out / (Path(r["file"]).name + ".json")    # same.t and same.json both keep their repair
+            written.add(dest)
+            dest.write_text(json.dumps(r["task"], indent=1, sort_keys=True))
         line = dict(r)
         line.pop("task", None)
         line.pop("clauses", None)
         if args.json:
             print(json.dumps(line, sort_keys=True))
+        elif r.get("status") not in (None, "ok"):
+            print(f"{r.get('name', Path(r.get('file', '?')).stem)}: {r['status']}")
         elif r.get("before"):
             print(f"{r['name']}: {r['before']} -> {r.get('after')} survivors"
                   + (f"; {r.get('kernel')}: {r.get('real')} / {r.get('twin')}" if r.get("kernel") else "")
