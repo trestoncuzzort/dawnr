@@ -81,3 +81,10 @@ fence), 50 wrong answer, 12 crash, 7 timeout, 5 no fence. Consistent with X3 (Qw
 DeepSeek) only if DeepSeek's round lands above 21%; X2's read waits for the DeepSeek drivers. Scheduling note: the
 Qwen sweep and the Qwen repair lane shared one request limit and both collapsed under backoff; the repair driver
 now waits for the sweep.
+
+**OpenAI read, 10:44Z (repair prompts over the 934 problems every open-weight lane had refused; priority tier):**
+gpt-6-astra 35 of 48 accepted, gpt-6.1-sol 33 of 47, gpt-5.5 19 of 31, gpt-5.4 15 of 36, gpt-6-luna 12 of 48,
+against the open-weight repair rounds on the same set (DeepSeek 42 of 272 across its shards, Qwen3-Coder 18 of
+267, GLM-5 7 of 93, Qwen3-Next 109 of 589). X2 (DeepSeek repair 25 to 45% on wrong answers) reads BELOW its floor
+at 15%; the frontier models clear it by a wide margin. Spend per problem: Astra about $0.48, Sol $0.08, gpt-5.5
+$1.10, gpt-5.4 $0.53, Luna under $0.01; gpt-5.5 and gpt-5.4 were stopped as dominated. Bundle 1,622 solved.
