@@ -105,7 +105,7 @@ class VertexToken:
 BEDROCK_CLI_TRANSIENT = ("ThrottlingException", "ServiceUnavailableException", "ModelNotReadyException",
                          "InternalServerException", "timed out", "timeout", "Timeout", "Connection",
                          "EndpointConnectionError", "ReadTimeoutError", "Rate exceeded", "(429)",
-                         "TooManyRequests", "CreateOAuth2Token")
+                         "TooManyRequests", "CreateOAuth2Token", "being verified")
 _AWS_ENV: dict = {"env": None, "at": 0.0}
 _AWS_ENV_LOCK = threading.Lock()
 
