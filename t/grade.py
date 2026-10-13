@@ -85,6 +85,7 @@ from __future__ import annotations
 import argparse
 import json
 import re
+import hashlib
 import sys
 import time
 from datetime import datetime, timezone
@@ -113,6 +114,9 @@ def _safe_name(prefix: str, tid, hint: str | None) -> str:
     to any prefix/id so a JSONL id that is not a bare integer still names a
     legal, readable task."""
     tid_s = re.sub(r"[^A-Za-z0-9_]", "_", str(tid))
+    if tid_s != str(tid):
+        # `case-1` and `case_1` sanitize alike: the id's own digest keeps distinct records on distinct tasks
+        tid_s += "_" + hashlib.sha1(str(tid).encode("utf-8")).hexdigest()[:6]
     if hint:
         cand = f"{prefix}_{tid_s}__{re.sub(r'[^A-Za-z0-9_]', '_', hint)}"
         if fuzz_lower.NAME_RE.match(cand):
@@ -229,7 +233,10 @@ def cmd_replies(args) -> dict:
         if points:
             pts = [se.run_point(task, p) for p in points]
             overall = _overall([p["verdict"] for p in pts])
-            tests_results[str(tid)] = {"name": name, "overall": overall, "points": pts}
+            refused = entry.get("tests_refused", 0)
+            if refused and overall == "pass":
+                overall = "incomplete"      # a suite with an unreadable assertion was not fully checked
+            tests_results[str(tid)] = {"name": name, "overall": overall, "points": pts, "refused": refused}
 
     (args.out / "extract.json").write_text(
         json.dumps(extract_results, indent=1), encoding="utf-8")
@@ -279,6 +286,7 @@ def build_verdicts(cols, rows, wits, tasks: list[Path], flake_n, wall_s) -> dict
     detail: dict[str, dict] = {}
     hist: dict[int, int] = {}
     n_gate = 0
+    present = [b for b, v in cols if not v.startswith("ABSENT")]
     for tpath in tasks:
         task = harness.load(tpath)
         name = task["name"]
@@ -299,7 +307,9 @@ def build_verdicts(cols, rows, wits, tasks: list[Path], flake_n, wall_s) -> dict
                 "certificate_accepted": bool(twin == Outcome.REFUTED),
                 "kind": harness.decorative_kind(real, twin, w),
             }
-        gate = bool(columns) and n_counting == len(columns)
+        # AGREEMENT.md: agreed in EVERY present column; a kernel with no cell for this task is a missing verdict,
+        # not an absent kernel, so it keeps the gate closed
+        gate = bool(present) and n_counting == len(present)
         if gate:
             n_gate += 1
         hist[n_counting] = hist.get(n_counting, 0) + 1
@@ -408,11 +418,14 @@ def cmd_replies_main(args) -> int:
     harness.OUT = args.out
     harness.OUT.mkdir(parents=True, exist_ok=True)
     extra = cmd_replies(args)
-    tasks = sorted((args.out / "tasks").glob("*.json"))
+    # only the tasks this reply set extracted: an output directory reused across sets keeps older tasks on disk
+    extracted = {e["name"] for e in extra["extract"].values() if e.get("stage") == "task" and e.get("name")}
+    tasks = sorted(p for p in (args.out / "tasks").glob("*.json") if p.stem in extracted)
     n_records = sum(1 for _ in _load_records(args.replies))
     stage_counts: dict[str, int] = {}
     for e in extra["extract"].values():
         stage_counts[e["stage"]] = stage_counts.get(e["stage"], 0) + 1
+    refused = n_records - stage_counts.get("task", 0)
     print(f"extract: {n_records} replies; " +
           ", ".join(f"{k} {v}" for k, v in sorted(stage_counts.items())))
     cols, present_names, rows, wits, wall_s, all_ok = run_kernels(
@@ -428,8 +441,9 @@ def cmd_replies_main(args) -> int:
     write_outputs(args.out, cols, rows, wits, tasks, args.flake, wall_s, all_ok, extra=extra)
     print(f"\n{len(present_names)} kernels, {len(tasks)} well-formed tasks of "
           f"{n_records} replies: "
-          f"{'FULL AGREEMENT' if all_ok else 'DISAGREEMENT, see ' + str(args.out / 'table.md')}")
-    return 0 if all_ok else 1
+          f"{'FULL AGREEMENT' if all_ok else 'DISAGREEMENT, see ' + str(args.out / 'table.md')}"
+          + (f"; {refused} replies refused at extraction" if refused else ""))
+    return 0 if all_ok and not refused else 1      # a reply the extractor refused is not a graded success
 
 
 def main(argv=None) -> int:

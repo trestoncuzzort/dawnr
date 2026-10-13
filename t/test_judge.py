@@ -67,3 +67,57 @@ class JudgeCompilationTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+# Two findings of the GPT-6 Astra review of 2026-10-13: a task named by a Python keyword, an IO module with postponed annotations.
+
+
+def test_python_keyword_task_name():
+    import tempfile
+    from pathlib import Path
+    import judge
+    import surface
+
+    task = surface.parse(
+        't 1 task none(x: int) returns (r: int) '
+        'ensures r == x { r := x; }'
+    )
+    with tempfile.TemporaryDirectory() as tmp:
+        call = judge.compile_task(task, Path(tmp))
+        assert call((7,)) == 7
+
+
+def test_io_dataclass_with_postponed_annotations():
+    import contextlib
+    import io
+    import sys
+    import tempfile
+    from pathlib import Path
+    from unittest.mock import patch
+    import judge
+
+    with tempfile.TemporaryDirectory() as tmp:
+        root = Path(tmp)
+        io_path = root / 'echo_io.py'
+        io_path.write_text(
+            'from __future__ import annotations\n'
+            'from dataclasses import dataclass\n'
+            '@dataclass\n'
+            'class Case:\n'
+            '    n: int\n'
+            'def cases(text):\n'
+            '    return [(Case(int(text)).n,)]\n'
+            'def render(text, calls):\n'
+            '    return str(calls[0][1])\n',
+            encoding='utf-8',
+        )
+        (root / '0001.in.txt').write_text('7\n', encoding='utf-8')
+        (root / '0001.out.txt').write_text('7\n', encoding='utf-8')
+        argv = ['judge', str(root / 'echo.t'), '--tests', str(root), '--io', str(io_path)]
+        with patch.dict(sys.modules):
+            sys.modules.pop('problem_io', None)
+            with patch.object(sys, 'argv', argv), \
+                 patch.object(judge.surface, 'parse_file', return_value={}), \
+                 patch.object(judge, 'compile_task', return_value=lambda args: args[0]), \
+                 contextlib.redirect_stdout(io.StringIO()):
+                assert judge.main() == 0
