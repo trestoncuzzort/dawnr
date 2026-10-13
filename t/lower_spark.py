@@ -2840,6 +2840,31 @@ def _has_nested_seq_op(node) -> bool:
     return False
 
 
+def _contains_node(tree, node) -> bool:
+    """Is `node` (structurally) a sub-expression of `tree`?"""
+    if tree == node:
+        return True
+    if isinstance(tree, list):
+        return any(_contains_node(x, node) for x in tree)
+    if isinstance(tree, dict):
+        return any(_contains_node(v, node) for v in tree.values())
+    return False
+
+
+def _reads_name(node, name: str) -> bool:
+    """Does any expression under `node` read the variable `name`?"""
+    if isinstance(node, list):
+        return any(_reads_name(x, name) for x in node)
+    if not isinstance(node, dict):
+        return False
+    if isinstance(node.get("var"), str) and node["var"] == name:     # a read, whatever else the node carries
+        return True
+    return any(_reads_name(v, name) for v in node.values())
+
+
+_SEQ_MAKING_OPS = ("seq", "fill", "update", "slice", "rev", "concat", "sort", "tail", "take", "drop", "split", "join")
+
+
 def _has_seq_op(node) -> bool:
     """FLAT SEQ LITERAL RESIDUAL, CLOSED (2026-09-11): True iff a literal
     `{"op": "seq", "args": [...]}` node (flat OR nested; `_has_nested_seq_
@@ -2862,7 +2887,7 @@ def _has_seq_op(node) -> bool:
     that this literal-shape scan does not also cover, the same
     reasoning NESTED_SEQ_PREAMBLE's own fold-in used."""
     if isinstance(node, dict):
-        if node.get("op") == "seq":
+        if node.get("op") in _SEQ_MAKING_OPS:     # a transient seq (`len(fill(n, 0))`) needs the package too
             return True
         return any(_has_seq_op(v) for v in node.values())
     if isinstance(node, list):
@@ -3684,6 +3709,9 @@ def _dead_lit(t) -> str:
     `pair` case is; v1 has no pair of pairs, so this never recurses twice."""
     if _is_nested_seq(t):
         return "Rows.Empty_Sequence"
+    if isinstance(t, dict) and "pair" not in t:
+        raise NotImplementedError("spark: a datatype-typed state var unassigned before a loop has no placeholder "
+                                  "literal (SPEC.md 'Datatypes')")
     if isinstance(t, dict):
         t1, t2 = t["pair"]
         return (f"{_pair_ada_name(t)}'(P_A => {_dead_lit(t1)}, "
@@ -4586,8 +4614,8 @@ class Lower:
         if "ite" in e:
             c = e["ite"]
             return (f"(if {self.expr(c['cond'], sub, types)} "
-                    f"then {self.expr(c['then'], sub, types)} "
-                    f"else {self.expr(c['else'], sub, types)})")
+                    f"then {self.expr(c['then'], sub, types, expect)} "
+                    f"else {self.expr(c['else'], sub, types, expect)})")
         if "ctor" in e:
             # PREDICT T36: a constructor is the qualified aggregate of its variant
             c = e["ctor"]
@@ -4859,8 +4887,9 @@ class Lower:
             self.needs_lib.add("T_Maxs")
             self.needs_range = True
             return f"T_{'Maxs' if op == 'max' else 'Mins'} ({args[0]}, Len ({args[0]}))"
-        if op in ("min", "max"):
-            # SPEC.md "The library (v1)" (2026-10-06): Big_Integers' and Big_Reals' own Min/Max (A.5.6, A.5.7)
+        if op in ("min", "max") and self._ty(e["args"][0], types) != "float":
+            # SPEC.md "The library (v1)" (2026-10-06): Big_Integers' and Big_Reals' own Min/Max (A.5.6, A.5.7);
+            # a float pair takes Long_Float's own attributes below
             return f"{op.capitalize()} ({args[0]}, {args[1]})"
         if op == "abs":
             return f"abs ({args[0]})"
@@ -4948,6 +4977,7 @@ class Lower:
             self.needs_str_join = True
             self.needs_range = True
             self.needs_slice2 = True
+            self.needs_eq = True               # the nested slice helper compares flat seqs with T_Eq
             self.needs_concat = True
             return f"T_Join ({args[0]}, {args[1]})"
         if op == "tostr":
@@ -5030,6 +5060,11 @@ class Lower:
                 env[d["name"]] = self.expr(
                     d["init"], {**psub, **env}, types, d["type"])
                 types[d["name"]] = d["type"]
+                if defined(d["init"]) != TRUE and d["type"] in ("int", "bool", "real"):
+                    # the expression function keeps only what the result reads; an initialiser that may be
+                    # undefined is evaluated here regardless (t runs it), so its obligation joins the value-neutral
+                    # wrapper where the lemma calls' Pre checks already live
+                    self.obls.append(f"({env[d['name']]} = {env[d['name']]})")
                 if self._is_method_call(d["init"]):
                     self._owe_call(env[d["name"]], d["type"])
             elif "if" in s:
@@ -5134,10 +5169,10 @@ class Lower:
             # carry compile()'s path condition, so a call obligation could
             # not be guarded by "nothing escaped yet"; refused by name.
             if "lemma" in s:
-                # SPEC.md "Lemmas (v1)": the escape threading here carries
-                # no path condition to guard the call's Pre with, so the
-                # call is left out (a no-op at run time: the program
-                # proved is the same) and the proof goes without its hint.
+                # SPEC.md "Lemmas (v1)": the call's Pre is an obligation where the call executes, which here is
+                # every path that has not escaped yet: guarded by the running escape condition
+                call = self._lemma_call(s["lemma"], env, types, psub)
+                self.obls.append(f"(if {esc} then True else {call})" if esc is not None else call)
                 continue
             if ("assign" in s and self._is_method_call(s["assign"][1])) \
                     or ("var" in s and self._is_method_call(s["var"]["init"])):
@@ -5984,6 +6019,9 @@ def defined(e: dict, is_real=None) -> dict:
     return _t_conj([defined(a, is_real) for a in args])
 
 
+_WALK_STOP = object()            # the replay met a `return`: nothing after it ran
+
+
 def _undef_obligation(task: dict, twin_body: list, sub: dict, vals: dict,
                       L: Lower) -> str | None:
     """SPEC.md "Sequences as values" (2026-09-09): the twin's "undefined"
@@ -6116,12 +6154,16 @@ def _undef_obligation(task: dict, twin_body: list, sub: dict, vals: dict,
         except ValueError:
             return False
 
-    def _walk(stmts: list) -> str | None:
+    def _walk(stmts: list):
+        stop_after = False
         for s in stmts:
             if "var" in s:
                 name, e = s["var"]["name"], s["var"]["init"]
             elif "assign" in s:
                 name, e = s["assign"]
+            elif "return" in s:
+                name, e = s["return"]      # evaluated, then nothing after it runs (SPEC.md "Early exit")
+                stop_after = True
             elif "if" in s:
                 cond = s["if"]["cond"]
                 cob = defined(cond, isr)
@@ -6196,10 +6238,13 @@ def _undef_obligation(task: dict, twin_body: list, sub: dict, vals: dict,
                                "bool" if isinstance(val, bool) else "int")
             sub[name] = _cert_lit(list(val) if isinstance(val, tuple)
                                   else val)
+            if stop_after:
+                return _WALK_STOP
         return None
 
     try:
-        return _walk(twin_body)
+        found = _walk(twin_body)
+        return None if found is _WALK_STOP else found
     except (interp.Undef, interp.Budget, RecursionError):
         return None
 
@@ -6499,6 +6544,8 @@ def certificate(task: dict, body: list, w: dict | None, L: Lower,
             expr_node = w.get("_expr")
             if expr_node is None:
                 return ""
+            if not any(_contains_node(e, expr_node) for e in task.get("ensures", [])):
+                return ""              # a foreign expression says nothing about this task's ensures
             ob_t = defined(expr_node, lambda x: L._ty(x, types) == "real")
             if ob_t == TRUE:
                 return ""
