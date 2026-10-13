@@ -14,3 +14,4 @@ Each finding's own body, at the input a real PX4 message or buffer carries (t/fl
 | px4_set_mode_field_any | a DO_SET_MODE base mode of 264, narrowed to mode 8 | value | refuted | refuted | refuted | refuted | refuted | refuted | refuted | 7/7 |
 | px4_obstacle_body_any | a body-frame OBSTACLE_DISTANCE message at a 1 degree increment: 360 steps over 72 distances | undefined | timeout | refuted | refuted | refuted | unproved | refuted | refuted | 5/7 |
 | px4_fusion_source_any | ESTIMATOR_SENSOR_ENABLE with source 256, narrowed to GPS | value | refuted | refuted | refuted | refuted | refuted | refuted | refuted | 7/7 |
+| px4_rc_map_index_any | RC_MAP_FLTMODE = 19, one past the 18 RC channels; PX4 indexes channel 18 (PR #29115) | value | refuted | tool_error | refuted | refuted | refuted | refuted | refuted | 6/7 |
