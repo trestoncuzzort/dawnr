@@ -2929,12 +2929,16 @@ class Ctx:
         c = e["call"]
         info = self.funs[c["fun"]]
         parts = [c["fun"]]
+        if not info["params"]:
+            parts.append("()")          # param_binders gives a parameterless method a unit binder
         for formal, a in zip(info["params"], c["args"], strict=True):
             ft = formal["type"]
             if ft == "seq":
                 parts.append(self.sx(a, env, local))
             elif ft == "bool":
                 parts.append(self.bx(a, env, local))
+            elif ft == "real":
+                parts.append(self.rx(a, env, local))
             elif isinstance(ft, dict) and "seq" in ft:
                 # SPEC.md "Nested sequences" (2026-09-10): a seq<seq>
                 # formal, threaded through exactly like a plain seq one,
@@ -3294,7 +3298,7 @@ class Ctx:
         raise ValueError(f"t -> fstar: not a bool expression: {op!r}")
 
     def _quant_at_obligations(self, e, bound_var: str, local: dict,
-                               hivar: str) -> list[str]:
+                               hivar: str, kvar: str = "0") -> list[str]:
         """Domain-safety `requires` conjuncts `_quant_helper` needs so its
         own STANDALONE function (unlike an inline occurrence, which sits
         inside a loop's own `requires (reqs + invs)` and so already has
@@ -3344,6 +3348,17 @@ class Ctx:
                         if key not in seen:
                             seen.add(key)
                             out.append(f"({hivar} <= (Seq.length {seq_r}))")
+                    elif bound_var in _expr_free_vars(idx_e, frozenset()):
+                        # an index built from the bound variable (`s[i + 1]`): the helper reaches it at
+                        # every index from its own kvar up to hi, so the domain fact ranges over those
+                        jv = self.fresh_named("qj")
+                        idx_j = self.zx(idx_e, {bound_var: jv}, dict(local, **{bound_var: "int"}))
+                        seq_j = self.sx(seq_e, {bound_var: jv}, dict(local, **{bound_var: "int"}))
+                        key = ("range", idx_j, seq_j)
+                        if key not in seen:
+                            seen.add(key)
+                            out.append(f"(forall ({jv}:int). (({kvar} <= {jv}) /\\ ({jv} < {hivar})) ==> "
+                                       f"((0 <= {idx_j}) /\\ ({idx_j} < (Seq.length {seq_j}))))")
                     else:
                         idx_r = self.zx(idx_e, {}, local)
                         key = ("idx", idx_r, seq_r)
@@ -3424,7 +3439,7 @@ class Ctx:
         # which case a fresh one: `j` captured the inner binder in binary_search's `forall i . forall j . ...`
         jn = "j" if "j" not in _all_names(q["body"]) else self.fresh_named("qj")
         logical_body = self.prop(q["body"], {var: jn}, local2)
-        obligations = self._quant_at_obligations(q["body"], var, local2, hivar)
+        obligations = self._quant_at_obligations(q["body"], var, local2, hivar, kvar)
         req = _conj([f"(0 <= {kvar})"] + obligations)
         if kind == "exists":
             ens_formula = (f"(r <==> (exists ({jn}:int). "
@@ -3722,8 +3737,31 @@ def _proj_pair(op: str, arg: dict) -> dict | None:
     rule), so a literal pair immediately projected is a shape only the
     certificate's ground-witness substitution produces today."""
     if isinstance(arg, dict) and arg.get("op") == "pair":
-        return arg["args"][0 if op == "fst" else 1]
+        picked, other = arg["args"][0 if op == "fst" else 1], arg["args"][1 if op == "fst" else 0]
+        if _total_expr(other):      # the identity drops `other`; a partial `other` carries obligations that must stay
+            return picked
     return None
+
+
+_TOTAL_OPS = frozenset((
+    "+", "-", "*", "neg", "and", "or", "not", "==", "!=", "<", "<=", ">", ">=", "implies", "iff",
+    "pair", "seq", "len", "fst", "snd", "min", "max", "abs", "concat", "in", "notin", "union", "inter",
+    "diff", "card", "keys", "has", "set", "map", "ite"))
+
+
+def _total_expr(e) -> bool:
+    """True only when every operation in `e` is total: no division, modulo, index, slice, power, update,
+    call or anything this list does not name. Unknown shapes count as partial, the safe direction."""
+    if isinstance(e, dict):
+        if "ite" in e:
+            return all(_total_expr(e["ite"][k]) for k in ("cond", "then", "else"))
+        if "op" in e:
+            return e["op"] in _TOTAL_OPS and all(_total_expr(a) for a in e.get("args", []))
+        if any(k in e for k in ("forall", "exists")):
+            q = e.get("forall") or e.get("exists")
+            return all(_total_expr(q[k]) for k in ("lo", "hi", "body") if k in q)
+        return set(e) <= {"int", "bool", "var", "rat", "str"}
+    return not isinstance(e, list) or all(_total_expr(a) for a in e)
 
 
 def _render(cx: "Ctx", e: dict, t, env: dict, local: dict) -> str:
@@ -3983,6 +4021,84 @@ def _method_calls_kept(cx: Ctx, src: str) -> None:
                 "call), not lowered")
 
 
+class _Ob:
+    """One evaluated partial expression (a division, an index, a call with a requires) and whether the
+    generated text has read its value where F* will check it unconditionally. Symbolic execution inlines
+    values, so a value that is never read, is overwritten, or is read only under a condition would leave
+    the generated function with no trace of the division, index or call the source evaluated, and F*
+    would prove a task whose body is undefined at some input. A group stands for an arm's obligations
+    under the arm's own guard; it is discharged when every member is."""
+    __slots__ = ("text", "_done", "members")
+
+    def __init__(self, text: str, members: tuple = ()):
+        self.text, self._done, self.members = text, False, members
+
+    @property
+    def done(self) -> bool:
+        return all(m.done for m in self.members) if self.members else self._done
+
+    def mark(self) -> None:
+        self._done = True
+
+
+class _Env(dict):
+    """The symbolic state: name -> rendered F* term. `obs` is every obligation recorded on this path, in
+    order; `pend` maps a name to the obligations of its current value; `depth` is the number of enclosing
+    conditions, and a read at depth 0 discharges the value's obligations (F* checks what it reads)."""
+
+    def __init__(self, other=None):
+        super().__init__(other or {})
+        if isinstance(other, _Env):
+            self.obs = list(other.obs)
+            self.pend = {k: list(v) for k, v in other.pend.items()}
+            self.depth = other.depth
+        else:
+            self.obs, self.pend, self.depth = [], {}, 0
+
+    def _consume(self, key) -> None:
+        if self.depth == 0:
+            for ob in self.pend.get(key, ()):
+                ob.mark()
+
+    def __getitem__(self, key):
+        v = super().__getitem__(key)
+        self._consume(key)
+        return v
+
+    def get(self, key, default=None):
+        if key in self:
+            return self[key]
+        return default
+
+    def record(self, name: str, rendered: str) -> None:
+        ob = _Ob(rendered)
+        self.obs.append(ob)
+        self.pend[name] = [ob]
+
+
+def _force(env: "_Env", name: str, rendered: str) -> None:
+    env.record(name, rendered)
+
+
+def _unit_seq(items) -> str:
+    """A unit-typed expression that type-checks every item (an arm's obligations, under the arm's guard)."""
+    return "(" + "".join(f"let _ = {o.text} in " for o in items) + "())" if items else "()"
+
+
+def _forced_lets(env: dict) -> list[str]:
+    """The `let _ = ... in` lines that check every recorded obligation the generated text does not already
+    read unconditionally, consuming them from env."""
+    if not isinstance(env, _Env):
+        return []
+    out = [f"let _ = {o.text} in" for o in env.obs if not o.done]
+    env.obs = []
+    return out
+
+
+def _forced_prefix(env: dict, sep: str = "\n  ") -> str:
+    return "".join(f"{line}{sep}" for line in _forced_lets(env))
+
+
 def exec_flow(cx: Ctx, stmts: list, env: dict, local: dict, dummy: str,
               wctx: dict | None = None, known: tuple = (),
               lb: "None | _NestedLoops" = None):
@@ -3997,7 +4113,8 @@ def exec_flow(cx: Ctx, stmts: list, env: dict, local: dict, dummy: str,
     loop's prefix and suffix, `gen_fun`'s straight-line body), where
     `find_whiles` has already split every top-level while out, so the
     refusal below is unreachable on those paths and costs nothing."""
-    env = dict(env)
+    env = _Env(env)
+    env.depth = len(known)
     for idx, s in enumerate(stmts):
         if "return" in s:
             name, e = s["return"]
@@ -4015,15 +4132,23 @@ def exec_flow(cx: Ctx, stmts: list, env: dict, local: dict, dummy: str,
         elif "assign" in s:
             v, e = s["assign"]
             t = local.get(v) or cx.tys[v]
-            env[v] = _method_call(cx, e, env, local) or \
+            rendered = _method_call(cx, e, env, local) or \
                 _render(cx, e, t, env, local)
+            dict.__setitem__(env, v, rendered)
+            env.pend.pop(v, None)
+            if not _total_expr(e):
+                _force(env, v, rendered)
         elif "var" in s:
             d = s["var"]
             v = _ck(d["name"])
             assert v not in cx.tys and v not in local, f"redeclared {v}"
             local[v] = d["type"]
-            env[v] = _method_call(cx, d["init"], env, local) or \
+            rendered = _method_call(cx, d["init"], env, local) or \
                 _render(cx, d["init"], d["type"], env, local)
+            dict.__setitem__(env, v, rendered)
+            env.pend.pop(v, None)
+            if not _total_expr(d["init"]):
+                _force(env, v, rendered)
         elif "if" in s:
             c = s["if"]
             cb = cx.bx(c["cond"], env, local)
@@ -4033,10 +4158,17 @@ def exec_flow(cx: Ctx, stmts: list, env: dict, local: dict, dummy: str,
                 cx, c["else"], env, dict(local), dummy, wctx,
                 known + ({"args": [c["cond"]], "op": "not"},))
             drop = _decls(c["then"]) | _decls(c["else"])
-            merged = {}
+            merged = _Env(env)
+            merged.clear()
+            new_t = env_t.obs[len(env.obs):]
+            new_e = env_e.obs[len(env.obs):]
             for v in sorted((set(env_t) | set(env_e) | set(env)) - drop):
-                tv, ev = env_t.get(v, v), env_e.get(v, v)
-                merged[v] = tv if tv == ev else f"(if {cb} then {tv} else {ev})"
+                tv, ev = dict.get(env_t, v, v), dict.get(env_e, v, v)
+                dict.__setitem__(merged, v, tv if tv == ev else f"(if {cb} then {tv} else {ev})")
+                merged.pend[v] = env_t.pend.get(v, []) + env_e.pend.get(v, [])
+            if new_t or new_e:      # an arm's obligations hold under that arm's condition only
+                merged.obs = list(env.obs) + [_Ob(f"(if {cb} then {_unit_seq(new_t)} else {_unit_seq(new_e)})",
+                                                  tuple(new_t) + tuple(new_e))]
             if rc_t == "false" and rc_e == "false":
                 env = merged
                 continue
@@ -4068,6 +4200,9 @@ def exec_flow(cx: Ctx, stmts: list, env: dict, local: dict, dummy: str,
                 cx, stmts[idx + 1:], merged, local, dummy, wctx, known)
             if rc_if == "false":
                 return rest_env, rc_rest, rv_rest
+            after = rest_env.obs[len(merged.obs):]
+            if after:               # what follows runs only when no arm returned
+                rest_env.obs = list(merged.obs) + [_Ob(f"(if {rc_if} then () else {_unit_seq(after)})", tuple(after))]
             if rc_rest == "false":
                 return rest_env, rc_if, rv_if
             overall_rc = "true" if rc_if == "true" \
@@ -4686,6 +4821,7 @@ def gen_fun(cx: Ctx, task: dict, body: list) -> str:
         expr = retval
     else:
         expr = f"(if {retcond} then {retval} else {env[ret]})"
+    expr = _forced_prefix(env) + expr
     # _reflexive_ensures is kept as a record of the measurement below but no
     # longer gates emission (2026-09-10, the tenth sweep): as an abstain it
     # fired on eleven lifted tasks F* verified with obligations (isOdd,
@@ -5165,7 +5301,9 @@ def _plain_loop(cx: "Ctx", task: dict, w: dict, env: dict, local: dict,
         if init_expr is not None and init_expr != v:
             invs.append(f"({v} == {init_expr})")
     dec_shift = 2 if _has_ite(w["decreases"]) else 1
-    dec = f"(({cx.zx(w['decreases'], {}, local)}) + {dec_shift})"
+    m_src = cx.zx(w['decreases'], {}, local)
+    dec = f"(({m_src}) + {dec_shift})"
+    m_assert = f"assert (0 <= ({m_src})); "        # SPEC.md: the source measure is non-negative under the guard
     nest = _NestedLoops(cx, task, pb, pargs, reqs, dummy0)
     step_env, body_rc, _body_rv = exec_flow(cx, w["body"], {}, dict(local),
                                             dummy0, lb=nest)
@@ -5190,7 +5328,8 @@ def _plain_loop(cx: "Ctx", task: dict, w: dict, env: dict, local: dict,
         bind_pat = f"let ({', '.join(svars)})"
     init = " ".join(env.get(v, v) for v in svars)
     fbind = _fbind(fvars, env)
-    then = nest.wrap(f"{lname} {pargs}{fargs} {step}", "       ")
+    # parenthesised: `if g then assert p; e else ...` would end the conditional at the `;`
+    then = "(" + nest.wrap(m_assert + _forced_prefix(step_env, " ") + f"{lname} {pargs}{fargs} {step}", "       ") + ")"
     defs = list(nest.defs)
     defs.append(f"let rec {lname} {pb}{fb} {sb}\n"
                 f"  : {_EFFECT} {state_ty}\n"
@@ -5443,7 +5582,9 @@ def gen_loop(cx: Ctx, task: dict, prefix: list, w: dict,
     # 34 committed tasks and the conformance suite's fstar column
     # unaffected (none has an `ite` in its own `decreases`).
     dec_shift = 2 if _has_ite(w["decreases"]) else 1
-    dec = f"(({cx.zx(w['decreases'], {}, local)}) + {dec_shift})"
+    m_src = cx.zx(w['decreases'], {}, local)
+    dec = f"(({m_src}) + {dec_shift})"
+    m_assert = f"assert (0 <= ({m_src})); "        # SPEC.md: the source measure is non-negative under the guard
     reqs = [cx.prop(e, {}, {}) for e in task.get("requires", [])]
 
     dummy = _dummy(ret_t)
@@ -5477,8 +5618,10 @@ def gen_loop(cx: Ctx, task: dict, prefix: list, w: dict,
                                            dummy, loop_wctx, lb=nest)
     nest_defs = "".join(f"{d}\n" for d in nest.defs)
     step = " ".join(step_env.get(v, v) for v in svars)
+    step_forced = _forced_prefix(step_env, " ")     # the body's obligations, ahead of the recursive call
     env_post = exec_straight(cx, suffix, {}, dict(local))
     result = env_post.get(ret, ret)
+    result = _forced_prefix(env_post) + result
 
     post = _conj(invs + [f"(~ {guard_p})"])
     if len(svars) == 1:
@@ -5511,7 +5654,7 @@ def gen_loop(cx: Ctx, task: dict, prefix: list, w: dict,
             loop_ens = (f"(fun {ob} -> let ({', '.join(svars)}) = {ob} in "
                         f"{post})")
             bind = f"let ({', '.join(svars)})"
-        entry_body = f"{fbind}{bind} = {lname} {pargs}{fargs} {init} in\n  {result}"
+        entry_body = f"{_forced_prefix(env_pre)}{fbind}{bind} = {lname} {pargs}{fargs} {init} in\n  {result}"
         if pre_rc != "false":
             entry_body = f"if {pre_rc} then {pre_rv} else (\n  {entry_body})"
         return (f"{nest_defs}"
@@ -5521,7 +5664,7 @@ def gen_loop(cx: Ctx, task: dict, prefix: list, w: dict,
                 f"    (ensures {loop_ens})\n"
                 f"    (decreases {dec})\n"
                 f"= if {guard_b}\n"
-                f"  then {nest.wrap(f'{lname} {pargs}{fargs} {step}', '       ')}\n"
+                f"  then ({nest.wrap(f'{m_assert}{step_forced}{lname} {pargs}{fargs} {step}', '       ')})\n"
                 f"  else {state_out}\n"
                 f"\n"
                 f"let {name} {pb}\n"
@@ -5565,9 +5708,9 @@ def gen_loop(cx: Ctx, task: dict, prefix: list, w: dict,
     # are themselves computed from the environment the inner loop produced,
     # so they must be inside its bindings. `nest.wrap` is the identity when
     # this body has no nested loop, so the text is unchanged there.
-    then_branch = nest.wrap(
-        f"(if {body_rc} then Inl {body_rv} else {lname} {pargs}{fargs} {step})",
-        "       ")
+    then_branch = "(" + nest.wrap(
+        f"{m_assert}{step_forced}(if {body_rc} then Inl {body_rv} else {lname} {pargs}{fargs} {step})",
+        "       ") + ")"
     else_branch = f"Inr {state_out}"
     wvar = cx.fresh()
     divisor_defs = ""
@@ -5578,7 +5721,7 @@ def gen_loop(cx: Ctx, task: dict, prefix: list, w: dict,
         bound = f"t_divisor_bound_{task['name']}"
         exit_expr = (f"({bound} {n_render} {plan['i_name']} {plan['result']}; "
                      f"{result})")
-    entry_body = (f"{fbind}match {lname} {pargs}{fargs} {init} with\n"
+    entry_body = (f"{_forced_prefix(env_pre)}{fbind}match {lname} {pargs}{fargs} {init} with\n"
                   f"  | Inl {wvar} -> {wvar}\n"
                   f"  | Inr {state_out} -> {exit_expr}")
     if pre_rc != "false":
@@ -5689,6 +5832,17 @@ def gen_loop_chain(cx: Ctx, task: dict, segs: list, suffix: list) -> str:
             "fstar lowering: a `return` inside a loop of a multi-loop "
             "body is not lowered yet")
         defs.extend(seg_defs)
+        import re as _re
+        for key, text in list(env.items()):
+            # `saved := s` leaves env[saved] == "s", a NAME the loop's own let pattern below rebinds:
+            # bind the value ahead of the call so the alias keeps the value it had
+            if key in svars or key.startswith("_") or not isinstance(text, str):
+                continue
+            if text != key and any(_re.search(rf"\b{_re.escape(v)}\b", text) for v in svars):
+                frozen = cx.fresh_named(f"{key}_pre{seg_idx}")
+                calls.append(f"let {frozen} = {text} in")
+                env[key] = frozen
+        calls.extend(_forced_lets(env))
         calls.append(call)
         # Threading the loop's own final state into what follows (the next
         # segment's prefix, or the suffix below): every state variable now
@@ -5903,6 +6057,9 @@ def _ensures_undef_formula(task: dict, w: dict) -> dict | None:
     ret_type = task["returns"][0]["type"]
     tmap[task["returns"][0]["name"]] = ret_type
     try:
+        import interp as _interp
+        if not lower_verus.spec_reaches_undef(task, names, tmap, _interp.funs_of(task, task["body"])):
+            return None          # the specification never evaluates the named subexpression at the witness
         m = {n: lower_verus._tlit(v, tmap.get(n)) for n, v in names.items()}
         parts = [lower_verus.subst(rq, m) for rq in task.get("requires", [])]
         ob = lower_verus.defined(expr)
