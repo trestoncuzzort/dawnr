@@ -316,8 +316,9 @@ def repair_text(rec: dict, prior: dict, corpus: Path) -> str:
     lines.append("```python\n" + prior["program"].rstrip() + "\n```")
     lines.append("Find the cause before writing: re-read the statement's input and output format (blank lines between "
                  "cases, trailing spaces, the end-of-input rule, exact wording and rounding), the edge cases (empty "
-                 "input, one element, the largest values, negative numbers, duplicates) and the running time. Then "
-                 "write the corrected complete program: one ```python fence, reading stdin and writing stdout.")
+                 "input, one element, the largest values, negative numbers, duplicates) and the running time. Keep "
+                 "that reasoning under 300 words, then write the corrected complete program: one ```python fence, "
+                 "reading stdin and writing stdout. The fence must be complete; nothing after it.")
     return "\n\n".join(lines)
 
 

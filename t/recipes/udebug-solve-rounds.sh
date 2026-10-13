@@ -41,7 +41,7 @@ PY
     IDS=$(cat t/out/udebug/solve-ids-$([ $kind = repair ] && echo refused || echo untried)-$NAME.txt)
     [ -n "$IDS" ] || { log "round $round $kind: nothing to do"; continue; }
     TAG=solve-r$round-$NAME-$kind
-    EXTRA=""; [ $kind = repair ] && EXTRA="--repair-from $LANES --corpus $CORPUS"
+    EXTRA=""; [ $kind = repair ] && EXTRA="--repair-from $LANES --corpus $CORPUS --max-tokens 16384"
     log "round $round $kind: $(echo $IDS | tr ',' '\n' | wc -l) problems -> $TAG"
     python3 t/udebug_teacher.py $COMMON --tag $TAG --ids "$IDS" $EXTRA >> t/out/udebug/teacher-$TAG.log 2>&1
     log "round $round $kind: teacher exit $?"
