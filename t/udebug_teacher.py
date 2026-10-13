@@ -293,6 +293,17 @@ def repair_text(rec: dict, prior: dict, corpus: Path) -> str:
                      f"matched before this one.")
     elif j["status"] == "error":
         lines.append(f"Case {case}: the program crashed: {j.get('first_difference')}")
+        fd = j.get("first_difference") or ""
+        if "RecursionError" in fd:
+            lines.append("A RecursionError means the recursion is deeper than Python allows: use an explicit stack "
+                         "or an iterative formulation, or raise the limit with sys.setrecursionlimit and run the "
+                         "solver inside a threading.Thread with threading.stack_size(1 << 27).")
+        elif "memory cap" in fd or "Killed" in fd:
+            lines.append("The program was killed at a 3 GB memory cap: the stored inputs are large, so avoid "
+                         "materializing per-case structures of the input's full size more than once.")
+        elif "SyntaxError" in fd:
+            lines.append("A SyntaxError usually means the previous reply was cut off before the program ended: "
+                         "write the whole program compactly and close the fence.")
     else:
         lines.append(f"Case {case}: the program did not finish within {j.get('per_case_s') or 'the allowed'} seconds. "
                      "The stored inputs can be large: read all of stdin at once, keep the algorithm near-linear or "
