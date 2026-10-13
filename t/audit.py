@@ -146,8 +146,9 @@ def _kernel_verdict(task: dict, body: list, kernel: str, path: Path) -> str:
     lmod, _suffix = tlib._LOWER_MOD[kernel]
     try:
         src = importlib.import_module(lmod).lower({**task, "body": body}, body)
-    except NotImplementedError:
-        return "abstain"
+    except NotImplementedError as e:                    # the refusal keeps the construct's name, as the lowering gave it
+        why = str(e).strip().replace("|", "\\|")[:120]
+        return f"abstain: {why}" if why else "abstain"
     except Exception:                                   # noqa: BLE001
         return "lower-error"
     path.write_text(src, encoding="utf-8", newline="\n")
@@ -203,7 +204,8 @@ def _row(r: dict) -> str:
         ex = f"{s['op']}: {s['change']} at {s['witness']}".replace("|", "\\|")
     proved = str(r["proved_survivors"]) if "kernel" in r and r.get("real_verdict") == "verified" else (
         f"(real {r['real_verdict']})" if "kernel" in r else "")
-    return (f"| {r['name']} | {r['mutants']} | {r['killed']} | {r['same']} | {r['diverges']} | {len(sv)} | {proved} "
+    mutants = f"{r['mutants']} (capped)" if r.get("capped") else str(r["mutants"])
+    return (f"| {r['name']} | {mutants} | {r['killed']} | {r['same']} | {r['diverges']} | {len(sv)} | {proved} "
             f"| {ex} |")
 
 
@@ -222,6 +224,10 @@ def table(results: list[dict], kernel: str | None) -> str:
              f"- behaviour-changing mutants the specs kill: {killed} of {changing}"
              + (f" ({100 * killed / changing:.1f}%)" if changing else ""),
              f"- tasks whose spec admits a survivor: {len(with_sv)} of {len(ok)}"]
+    capped = [r for r in ok if r.get("capped")]
+    if capped:
+        lines.append(f"- tasks whose mutant search was capped at {harness.MAX_CANDIDATES} candidates, so not every "
+                     f"one-edit mutant was classed (an incomplete audit, marked `(capped)` in the table): {len(capped)} of {len(ok)}")
     if kernel:
         real_ok = [r for r in ok if r.get("real_verdict") == "verified"]
         proved = [r for r in real_ok if r["proved_survivors"]]

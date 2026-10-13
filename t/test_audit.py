@@ -115,3 +115,33 @@ def test_kernel_source_paths_do_not_collide(tmp_path):
             (tmp_path / name).write_text(text, encoding="utf-8")
             audit.audit_file(str(tmp_path / name), kernel="dafny", out_dir=str(tmp_path / "out"))
     assert len(paths) == 2 and len(set(paths)) == 2, paths
+
+
+# Two more from the same review: a capped search is disclosed as incomplete; a lowering refusal keeps the construct name.
+
+
+def test_table_discloses_capped_search():
+    import audit
+
+    result = {
+        'name': 'f', 'status': 'ok', 'mutants': 1,
+        'same': 0, 'killed': 1, 'diverges': 0,
+        'survivors': [], 'ill_formed': 0,
+        'capped': True, 'proved_survivors': 0,
+    }
+    report = audit.table([result], None).lower()
+    assert any(word in report for word in ('capped', 'truncat', 'incomplete', 'partial')), report
+
+
+def test_lowering_refusal_preserves_construct_name():
+    from pathlib import Path
+    from types import SimpleNamespace
+    from unittest.mock import patch
+    import audit
+
+    def lower(task, body):
+        raise NotImplementedError('unsupported construct: choice_expression')
+
+    with patch.dict(audit.tlib._LOWER_MOD, {'audit_test': ('audit_test_lower', 'txt')}), patch.object(audit.importlib, 'import_module', return_value=SimpleNamespace(lower=lower)):
+        result = audit._kernel_verdict({'body': []}, [], 'audit_test', Path('unused.txt'))
+    assert 'choice_expression' in str(result), result
