@@ -106,6 +106,20 @@ BEDROCK_CLI_TRANSIENT = ("ThrottlingException", "ServiceUnavailableException", "
                          "InternalServerException", "timed out", "Connection", "EndpointConnectionError",
                          "ReadTimeoutError")
 BEDROCK_CLI_MAX_CONCURRENCY = 8
+AWS_CLI_FALLBACKS = ("/home/t/.local/bin/aws", "/usr/local/bin/aws", "/usr/bin/aws")
+
+
+def aws_cli() -> str:
+    """The AWS CLI binary: PATH first, then the places it is installed here (a user service's PATH lacks ~/.local/bin)."""
+    import os
+    import shutil
+    found = shutil.which("aws")
+    if found:
+        return found
+    for cand in AWS_CLI_FALLBACKS:
+        if os.path.isfile(cand):
+            return cand
+    raise bg.NonRetryable("the aws CLI is not installed or not on PATH")
 
 
 def bedrock_cli_call(region: str, model: str, messages: list[dict], max_tokens: int, temperature: float,
@@ -131,7 +145,7 @@ def bedrock_cli_call(region: str, model: str, messages: list[dict], max_tokens: 
             json.dump(req, f)
             path = f.name
         try:
-            p = subprocess.run(["aws", "bedrock-runtime", "converse", "--region", region, "--cli-input-json",
+            p = subprocess.run([aws_cli(), "bedrock-runtime", "converse", "--region", region, "--cli-input-json",
                                 f"file://{path}", "--output", "json"], capture_output=True, text=True, timeout=900)
             err = p.stderr.strip()
         except subprocess.TimeoutExpired:
