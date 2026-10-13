@@ -308,4 +308,8 @@ held-out questions written for the student's later measurement.
   summary beside them).
 - Training on these rows stays blocked on a GPU (GCP quota 0 after two denied appeals, AWS Free blocks GPU
   instances, the lab's GPUs are closed to the account, the laptop is a control node).
+- **By shape (2026-10-13T05:05Z):** Qwen3-235B accepts 272 of 662 int-shaped problems (41.1%) and 616 of 1,795 text-shaped
+  (34.3%); DeepSeek 18 of 24 (75.0%) and 42 of 73 (57.5%); Qwen3-Next 11 of 28 and 33 of 93. Text-shaped
+  problems cost every teacher 4-17 points, not the factor PS1's floor allowed for, so the 36.1% is the teacher's
+  level on this set rather than a shape effect.
 
