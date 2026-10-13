@@ -18,7 +18,12 @@ log "waiting for $WAIT to end"
 while systemctl --user is-active --quiet "$WAIT"; do sleep 300; done
 log "$WAIT ended; rounds begin"
 for round in 1 2 3; do
-  flock $OUT/.export.lock python3 t/udebug_export.py --bank $BANK --corpus $CORPUS --lanes 't/out/udebug/teacher-*' --out $OUT --judges UVa --jobs 2 --only-new >> "$LOG" 2>&1
+  # refresh the bundle index unless another driver is doing it now or did it in the last ten minutes
+  if [ -z "$(find $OUT/INDEX.jsonl -mmin -10 2>/dev/null)" ]; then
+    flock -n $OUT/.export.lock python3 t/udebug_export.py --bank $BANK --corpus $CORPUS --lanes 't/out/udebug/teacher-*' --out $OUT --judges UVa --jobs 2 --only-new >> "$LOG" 2>&1 || log "export busy or failed; using the current index"
+  else
+    log "index is fresh; export skipped"
+  fi
   python3 - "$PAR" "$NAME" <<'PY'
 import json, sys
 spec, name = sys.argv[1], sys.argv[2]
