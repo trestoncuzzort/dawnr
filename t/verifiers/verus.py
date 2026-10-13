@@ -313,6 +313,10 @@ def _mask_inert(s: str) -> str:
                     j += 1
             blank(s[i:j])
             i = j
+        elif c == "'" and _CHAR_LIT.match(s, i):
+            j = _CHAR_LIT.match(s, i).end()      # a char literal (`'"'`), never the start of a string
+            blank(s[i:j])
+            i = j
         elif c == '"':
             j = i + 1
             while j < n and s[j] != '"':
@@ -321,7 +325,8 @@ def _mask_inert(s: str) -> str:
             blank(s[i:j])
             i = j
         elif (c == "r" and nxt in ('"', "#")
-              and (i == 0 or not (s[i - 1].isalnum() or s[i - 1] == "_"))):
+              and (i == 0 or not (s[i - 1].isalnum() or s[i - 1] == "_")
+                   or (s[i - 1] == "b" and (i < 2 or not (s[i - 2].isalnum() or s[i - 2] == "_"))))):
             j = i + 1
             hashes = 0
             while j < n and s[j] == "#":
@@ -347,11 +352,12 @@ def _mask_inert(s: str) -> str:
 # things per function: the parameter list and the requires clauses, so it
 # reads signatures only and stops at the body brace.
 
+_CHAR_LIT = re.compile(r"'(?:\\.|[^\\'])'")                 # `'x'`, `'\n'`, `'"'`; a lifetime has no close
 _CLAUSE_KWS = ("requires", "recommends", "ensures", "default_ensures",
                "returns", "decreases", "opens_invariants", "no_unwind",
                "where", "via", "when")
 _CLAUSE_RE = re.compile(r"(?:" + "|".join(_CLAUSE_KWS) + r")\b")
-_FN_HEAD = re.compile(r"\bfn\s+([A-Za-z_]\w*)")
+_FN_HEAD = re.compile(r"\bfn\s+(?:r#)?([A-Za-z_]\w*)")      # a raw identifier (r#name) is a function too
 _MODE_RE = re.compile(r"\b(spec|proof|exec)\s*(?:\([^)]*\)\s*)?$")
 _SELF = re.compile(r"\bself\b")
 
@@ -451,6 +457,9 @@ def _fns(text: str) -> list[dict]:
                 expect_expr = True
                 k = cw.end()
                 continue
+            if c.isspace():
+                k += 1                          # whitespace decides nothing: a `{` after `requires ` is its expression
+                continue
             expect_expr = False
             k += 1
         if body < 0:
@@ -491,14 +500,25 @@ def _build_probe(text: str, targets: list[dict]) -> tuple[str, dict[int, str]]:
         req = f["clauses"]["requires"].rstrip().rstrip(",")
         blocks.append(f"proof fn {pfx}_{n}({f['params']})\n"
                       f"    requires\n{req},\n{{\n    assert(false);\n}}\n")
+    # a body that derives facts with a stronger tactic (`by (nonlinear_arith)`, `by (bit_vector)`) could reach
+    # `false` from a contradictory requires where the plain probe cannot: the probe states `false` under the same
+    # tactic power, one block per tactic the source uses
+    tactics = [t for t in ("nonlinear_arith", "bit_vector") if re.search(r"\bby\s*\(\s*" + t + r"\b", text)]
+    owners: list[str] = [t["name"] for t in targets]
+    for t in tactics:
+        for n, f in enumerate(targets):
+            req = f["clauses"]["requires"].rstrip().rstrip(",")
+            blocks.append(f"proof fn {pfx}_{t}_{n}({f['params']})\n"
+                          f"    requires\n{req},\n{{\n    assert(false) by ({t});\n}}\n")
+            owners.append(f["name"])
     blocks.append(f"proof fn {pfx}_canary()\n{{\n    assert(false);\n}}\n")
     blocks.append("}\n")
     lines, off = {}, head.count("\n")
     for j, blk in enumerate(blocks):
         for rel, line in enumerate(blk.splitlines()):
-            if line.strip() == "assert(false);":
+            if line.strip().startswith("assert(false)"):
                 lines[off + rel + 1] = (f"{pfx}_canary" if j == len(blocks) - 2
-                                        else targets[j - 1]["name"])
+                                        else owners[j - 1])
         off += blk.count("\n")
     return head + "".join(blocks), lines
 
@@ -557,7 +577,10 @@ def _probe_vacuity(text: str, budget: int) -> tuple[str, dict]:
     for ln, sev, msg in _diags(p.stderr):
         if sev == "error" and ln in lines:
             errs.setdefault(ln, []).append(msg)
-    canary = [ln for ln, nm in lines.items() if nm.endswith("_canary")]
+    pfx = "t_vac"
+    while pfx in text:
+        pfx += "_"
+    canary = [ln for ln, nm in lines.items() if nm == f"{pfx}_canary"]     # the probe's own canary, by its exact name
     if not canary or not any("assertion failed" in m
                              for m in errs.get(canary[0], [])):
         # The canary asserts false under NO precondition, so the solver must
@@ -568,7 +591,7 @@ def _probe_vacuity(text: str, budget: int) -> tuple[str, dict]:
         return "unusable", detail
     proved, undecided = [], []
     for ln, nm in sorted(lines.items()):
-        if nm.endswith("_canary"):
+        if nm == f"{pfx}_canary":
             continue
         msgs = errs.get(ln, [])
         if not msgs:
@@ -584,7 +607,11 @@ def _probe_vacuity(text: str, budget: int) -> tuple[str, dict]:
     if proved:
         detail["vacuous_fns"] = proved[:5]
         return "vacuous", detail
-    return "clean", detail
+    # every `assert(false)` was refuted: the kernel found no contradiction in any requires, which is not a model
+    # of it (a contradiction a stronger tactic could reach stays possible), so the reading is "unrefuted", never
+    # "clean"; the caller keeps VERIFIED (vacuity only ever downgrades) and records the reading
+    detail["reading"] = "unrefuted"
+    return "unrefuted", detail
 
 
 def _cert_error_lines(text: str, err: str) -> bool:
