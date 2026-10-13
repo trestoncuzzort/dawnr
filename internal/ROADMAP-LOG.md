@@ -3248,3 +3248,12 @@ is queued, and the ones running are read as they finish.
   stored case accepts 14 of 20 ($0.07); at scale the lanes run 43-55% per sample. Rows of kind `judge-python`
   carry `proof: none` and merge under a per-problem cap (`t/udebug_rows.py`); 377 held-out questions wait for
   a student. Training blocked: no GPU (GCP quotas 0, appeals filed and auto-denied; AWS Free; lab GPUs closed).
+- **PX4 restatements as a bug finder (10-13, registered 10-13 02:31Z):** the operator asked for dawnr on the PX4 hunt.
+  Method: restate a routine's index or wrap arithmetic with exactly the guards PX4 applies, let the seven kernels
+  refute it at the real input, confirm by reading, fix with the bounded twin. First result: rc_update's RC_MAP_*
+  index (`map - 1` with only a `>= 0` guard) refuted at channel 19 by 7/7 (`t/flight/findings/px4_rc_map_index_any.t`,
+  row in t/FLIGHT-FINDINGS-REAL.md), the bounded twin `px4_rc_map_index` proved by 7/7, filed as PX4 PR #29115 with
+  an RCUpdateTest case that fails on main. Two rows that hold: `px4_geofence_wrap` (SPARK, F*; symbolic modulus
+  stops the rest) and `px4_dm_offset` (SPARK, Rocq, F*; the nonlinear product stops the rest); a fixed-size
+  `px4_geofence_wrap_4` twin registered for all seven. Lab note: Verus needs `~/.cargo/bin` on PATH in ssh shells.
+  Ten PX4 PRs filed 10-13 (29105-29113, 29115); #29070 merged 10-12.
