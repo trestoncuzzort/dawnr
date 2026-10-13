@@ -388,6 +388,33 @@ _FOLD = str.maketrans({
     "і": "i", "ѕ": "s", "ԁ": "d", "ɑ": "a", "α": "a", "ο": "o", "τ": "t",
     "ι": "i", "А": "A", "Е": "E", "О": "O", "С": "C", "Р": "P", "Х": "X"})
 
+_C_STRING = re.compile(r'"(?:[^"\\\n]|\\.)*"')
+_PLAIN_COMMENT = re.compile(r"/\*(?!@).*?\*/|//(?!@)[^\n]*", re.S)   # a `/*@ ... */` annotation is not a comment
+
+
+def _no_strings(text: str) -> str:
+    """The text with every C string literal emptied: a word inside one is no ACSL clause."""
+    return _C_STRING.sub('""', text)
+
+
+def _no_plain_comments(text: str) -> str:
+    """The text without its plain C comments; ACSL annotations stay."""
+    return _PLAIN_COMMENT.sub(" ", text)
+
+
+_CERT_ASSERT = re.compile(r"\bassert\s+t_refutation_certificate\s*:\s*(.*?)\s*;", re.S)
+
+
+def _cert_states_negation(text: str) -> bool:
+    """Does the certificate assertion negate something (`!(...)` or `\false`)? lower_framac states the witness
+    as the negation of the instantiated clauses; an assertion like `1 == 1` under the name refutes nothing."""
+    m = _CERT_ASSERT.search(text)
+    if m is None:
+        return False
+    body = m.group(1).strip()
+    return body.startswith("!") or body.startswith("\\false")
+
+
 _PROVED = re.compile(r"^\[wp\] Proved goals:\s*(\d+)\s*/\s*(\d+)\s*$", re.M)
 _STATUS = re.compile(r"^\s+(Qed|Alt-Ergo|Timeout|Stepout|Unknown|Failed)"
                      r":?\s+\d+", re.M)
@@ -407,7 +434,7 @@ _DOOMED_GOAL = re.compile(r"\(Doomed\)\s+(\S+)")
 # No \b after the class: WP suffixes the goal with its statement id, as in
 # ..._wp_smoke_dead_code_s8, and `_` is a word character.
 _UNREACHABLE_SMOKE = re.compile(r"_wp_smoke_(?:dead_code|dead_loop|"
-                                r"dead_local_init|dead_call|dead_assumes)")
+                                r"dead_local_init|dead_call|dead_assumes)(?:_\d+)?$")   # the class, at the end
 
 
 def _all_obligations_proved(m, smoke) -> bool:
@@ -591,8 +618,12 @@ def _wf_obligation(flat: str, name: str) -> bool:
     """A kernel-emitted well-foundedness goal for recursive symbol `name`.
     Frama-C 33 rejects `decreases` inside a logic definition (measured), so
     the lemma form lower_framac.py emits is the only one that exists."""
-    return re.search(r"\blemma\s+" + re.escape(name) + r"_(?:terminates|decreases)",
-                     flat) is not None
+    m = re.search(r"\blemma\s+" + re.escape(name) + r"_(?:terminates|decreases)\w*\s*:\s*(.*?);", flat, re.S)
+    if m is None:
+        return False
+    body = m.group(1)
+    # the lemma states the measure strictly decreases across a call of `name`: a bare `\true` states nothing
+    return (re.search(r"(?<![\w.])" + re.escape(name) + r"\s*\(", body) is not None) and "<" in body
 
 
 def _restype(kind: str, ret: str | None) -> str | None:
@@ -730,8 +761,8 @@ def _doomed_fn(out: str, fn: str) -> bool:
 def _consistency_probe(raw: str, defs: list, budget: int) -> tuple[list, str]:
     """Ask the kernel whether the file's logic environment is inconsistent.
     Returns (symbols proved inconsistent, why-the-probe-was-inconclusive)."""
-    if _PROBE_TAG in raw:
-        return [], f"source already defines {_PROBE_TAG}*"
+    if _PROBE_TAG in _no_strings(_no_plain_comments(raw)):
+        return [], f"source already defines {_PROBE_TAG}*"      # in code, not in a comment or a string
     src, pairs = _probe_source(raw, defs)
     if not pairs:
         return [], "no probe expressible for the parameter types"
@@ -835,11 +866,11 @@ def verify(path: Path, budget: int | None = None) -> Result:
     except (subprocess.TimeoutExpired, OSError):
         pass
     if print_ok:
-        banned = BANNED.findall(norm.split(_PRINT_MARK, 1)[1])
+        banned = BANNED.findall(_no_strings(norm.split(_PRINT_MARK, 1)[1]))
         ban_audit = "kernel-normalized (-print)"
     else:
         raw = safe_text(path)
-        banned = BANNED.findall(raw) or BANNED.findall(raw.translate(_FOLD))
+        banned = BANNED.findall(_no_strings(raw)) or BANNED.findall(_no_strings(raw).translate(_FOLD))
         ban_audit = "raw fallback (unparseable source)"
     if banned:
         return Result("framac", _ver(), src_hash, Outcome.VACUOUS,
@@ -915,6 +946,9 @@ def verify(path: Path, budget: int | None = None) -> Result:
     is_vacuity, doomed_names = _vacuity_smoke(out, report)
     unproved = _unproved_goals(report, out)
     declared, accepted, cert_note = _cert_status(report)
+    if declared and accepted and not _cert_states_negation(norm if print_ok else safe_text(path)):
+        # a proved assertion under the certificate's name that negates nothing is a name, not a refutation
+        accepted, cert_note = False, "the certificate assertion states no negation of a clause"
     # The demotion gate: a file carrying the certificate name anywhere in
     # the kernel's normalized view (raw fallback if unparseable) can never
     # mint VERIFIED, whether or not a certificate goal was declared.

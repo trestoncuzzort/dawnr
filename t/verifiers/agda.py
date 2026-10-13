@@ -26,6 +26,7 @@ counter exists at the CLI.
 """
 from __future__ import annotations
 
+import hashlib
 import os
 import re
 import subprocess
@@ -40,6 +41,13 @@ AGDA = find("T_AGDA", ['agda'], [".local/agda/**/agda", ".cabal/bin/agda"])
 _AGDA_WHY = missing("agda", "T_AGDA", ['agda'], [".local/agda/**/agda", ".cabal/bin/agda"])
 WALL_S = 180
 BANNED = re.compile(r"\bpostulate\b|\{-#\s*TERMINATING", re.IGNORECASE)
+_LINE_COMMENT = re.compile(r"--[^\n]*")
+_BLOCK_COMMENT = re.compile(r"\{-(?!#).*?-\}", re.S)       # a `{-# ... #-}` pragma is not a comment
+
+
+def _code_only(src: str) -> str:
+    """The source without its comments (pragmas kept), so a word in a comment bans nothing."""
+    return _LINE_COMMENT.sub("", _BLOCK_COMMENT.sub(" ", src))
 MALFORMED_MARKS = ("[ParseError]", "[ModuleNameDoesntMatchFileName]",
                    "[ScopeError", "[NotInScope")
 VACUOUS_MARKS = ("[SafeFlag",)
@@ -53,16 +61,19 @@ def version() -> str:
 
 
 def verify(path: Path, budget: int = 0) -> Result:
-    src_hash = sha256_file(path)
-    src = path.read_text(encoding="utf-8")
-    banned = BANNED.findall(src)
+    if not AGDA:
+        raise SystemExit(_AGDA_WHY)             # the named refusal, never a launch of "None"
+    sha256_file(path)                           # readable; the verdict's hash is of the bytes read once below
+    data = path.read_bytes()                    # one read: hashed, scanned and checked as the same bytes
+    src_hash = hashlib.sha256(data).hexdigest()
+    src = data.decode("utf-8", errors="replace")
+    banned = BANNED.findall(_code_only(src))
     t0 = time.monotonic()
     with tempfile.TemporaryDirectory(prefix="t-agda-", ignore_cleanup_errors=True) as td:
         unit = Path(td) / "T_Unit.agda"
-        unit.write_text(re.sub(r"^module\s+\S+", "module T_Unit", src,
-                               count=1, flags=re.MULTILINE)
-                        if src.lstrip().startswith("module")
-                        else src, encoding="utf-8")
+        # the module line is renamed wherever it sits (a leading comment or pragma may precede it)
+        unit.write_text(re.sub(r"^module\s+\S+", "module T_Unit", src, count=1, flags=re.MULTILINE),
+                        encoding="utf-8")
         try:
             p = run_tree([str(AGDA), "--safe", "T_Unit.agda"],
                                capture_output=True, text=True,
@@ -82,6 +93,8 @@ def verify(path: Path, budget: int = 0) -> Result:
         outcome = Outcome.VERIFIED
     elif any(m in out for m in MALFORMED_MARKS):
         outcome = Outcome.MALFORMED
+    elif p.returncode < 0 or not out.strip():
+        outcome = Outcome.TOOL_ERROR  # killed, or ended without a verdict: no evidence of anything
     else:
         outcome = Outcome.REFUTED   # type-check failure: [UnequalTerms] etc.
     return Result("agda", version(), src_hash, outcome,

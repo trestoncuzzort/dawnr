@@ -92,15 +92,27 @@ def sha256_file(p: Path) -> str:
 # every live group at interpreter exit and on SIGTERM or SIGHUP, then takes
 # the signal's default action. SIGKILL of the driver still cannot be caught.
 _LIVE_GROUPS: set[int] = set()
+_REGISTRY_OWNER = os.getpid()      # the process that registered the groups; a forked child inherits a copy it does not own
+
+
+def _own_groups() -> list[int]:
+    """The live groups this very process started. A forked worker inherits
+    the parent's set but owns none of it: killing them from the child would
+    end the parent's provers mid-proof."""
+    if os.getpid() != _REGISTRY_OWNER:
+        return []
+    return list(_LIVE_GROUPS)
 
 
 def _kill_live_groups() -> None:
     import signal
-    for pg in list(_LIVE_GROUPS):
-        try:
-            os.killpg(pg, signal.SIGKILL)
-        except OSError:
-            pass
+    for pg in _own_groups():
+        if hasattr(os, "killpg"):
+            try:
+                os.killpg(pg, signal.SIGKILL)
+            except OSError:
+                pass
+        _kill_session(pg)          # a descendant that moved to its own group is still in the cell's session
 
 
 def _kill_live_groups_and_die(signum, frame) -> None:
@@ -141,17 +153,18 @@ def run_tree(cmd, *, timeout, cwd=None, env=None, capture_output=True,
     return type as subprocess.run, so call sites read as before."""
     import signal
     import subprocess
+    streams = {"stdout": subprocess.PIPE, "stderr": subprocess.PIPE} if capture_output else {}
+    streams.update({k: kw.pop(k) for k in ("stdout", "stderr") if k in kw})   # an explicit redirection stands
     proc = subprocess.Popen(
-        cmd, cwd=cwd, env=env, start_new_session=True,
-        stdout=subprocess.PIPE if capture_output else None,
-        stderr=subprocess.PIPE if capture_output else None,
-        text=text, **kw)
+        cmd, cwd=cwd, env=env, start_new_session=(os.name != "nt"),
+        text=text, **streams, **kw)
     _LIVE_GROUPS.add(proc.pid)
     try:
         try:
             out, err = proc.communicate(timeout=timeout)
         except subprocess.TimeoutExpired:
             _kill_group(proc.pid)
+            _kill_session(proc.pid)          # a descendant in another group could hold the pipes open
             proc.communicate()
             raise
     finally:
@@ -206,7 +219,7 @@ def _kill_session(sid: int) -> None:
     read and the signal, or one we may not signal, is left alone."""
     import signal
     proc_dir = "/proc"
-    if not os.path.isdir(proc_dir):
+    if not hasattr(os, "getuid") or not os.path.isdir(proc_dir):
         return
     me = os.getuid()
     for name in os.listdir(proc_dir):
@@ -233,6 +246,8 @@ def _kill_group(pgid: int) -> None:
     error, and one we may not signal (a stranger's, after pid reuse) is
     left alone rather than raised over."""
     import signal
+    if not hasattr(os, "killpg"):            # Windows: communicate()'s own kill ends the leader; no groups
+        return
     try:
         os.killpg(pgid, signal.SIGKILL)
     except (ProcessLookupError, PermissionError):
@@ -283,7 +298,7 @@ def flake_check(verify_fn, path: Path, n: int = 3):
     else:
         with ThreadPoolExecutor(max_workers=n) as ex:
             results = list(ex.map(lambda _i: verify_fn(path), range(n)))
-    outcomes = {r.outcome for r in results}
+    outcomes = {(r.outcome, r.source_sha256) for r in results}     # the same verdict on the same bytes
     return results[-1], len(outcomes) == 1
 
 
@@ -321,6 +336,49 @@ def mp_context():
     method = os.environ.get("T_MP_START") or (
         "fork" if "fork" in multiprocessing.get_all_start_methods() else "spawn")
     return multiprocessing.get_context(method)
+
+
+def _take_over_stale_lock(lock, dead_pid: int) -> None:
+    """Remove `lock` only if it still names `dead_pid`, under a takeover file
+    taken with O_EXCL so that two contenders who both found the holder dead
+    cannot both unlink: the second to arrive re-reads the lock and finds the
+    first winner's live pid there instead. A takeover file left by a crash
+    (its writer gone, or older than a minute) is cleared the same way."""
+    import os
+    import time
+    takeover = lock.with_name(lock.name + ".takeover")
+    try:
+        fd = os.open(str(takeover), os.O_CREAT | os.O_EXCL | os.O_WRONLY)
+    except FileExistsError:
+        try:
+            age = time.time() - takeover.stat().st_mtime
+        except OSError:
+            return
+        if age > 60:
+            try:
+                os.unlink(str(takeover))
+            except OSError:
+                pass
+        return                      # another contender is mid-takeover; the caller loops and re-reads
+    except OSError:
+        return
+    try:
+        os.write(fd, ("%d\n" % os.getpid()).encode())
+        os.close(fd)
+        try:
+            head = lock.read_text().split()
+        except (OSError, UnicodeDecodeError):
+            return
+        if head and head[0].isdigit() and int(head[0]) == dead_pid:
+            try:
+                os.unlink(str(lock))
+            except OSError:
+                pass
+    finally:
+        try:
+            os.unlink(str(takeover))
+        except OSError:
+            pass
 
 
 def acquire_run_lock(out_dir):
@@ -361,7 +419,7 @@ def acquire_run_lock(out_dir):
             if h:
                 ctypes.windll.kernel32.CloseHandle(h)
                 return True
-            return ctypes.windll.kernel32.GetLastError() == 5
+            return ctypes.windll.kernel32.GetLastError() != 87   # only ERROR_INVALID_PARAMETER means no such process
         except Exception:
             return True
 
@@ -381,12 +439,11 @@ def acquire_run_lock(out_dir):
                 head = lock.read_text().split()
             except OSError:
                 head = []
+            except UnicodeDecodeError:
+                return ("%s holds bytes that are not a pid; delete the lock file if no run is live" % lock)
             pid = int(head[0]) if head and head[0].isdigit() else None
             if pid is not None and not alive(pid):
-                try:
-                    os.unlink(str(lock))
-                except OSError:
-                    pass
+                _take_over_stale_lock(lock, pid)
                 continue
             return ("another t run holds %s (pid %s). Two concurrent runs "
                     "write the same out/ filenames; let it finish, or delete "
