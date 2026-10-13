@@ -71,6 +71,10 @@ def _c_lit(v):
     if isinstance(v, bool):
         return "1" if v else "0"
     if isinstance(v, float):
+        if v != v:
+            return "NAN"
+        if v in (float("inf"), float("-inf")):
+            return "INFINITY" if v > 0 else "(-INFINITY)"
         return v.hex()
     return str(int(v))
 
@@ -86,10 +90,14 @@ def _c_expect(task, val, heap) -> str:
 
 
 def _capacity(src: str, name: str, env: dict) -> int | None:
-    """The size a buffer's own `requires` gives it (`X_n == E` or `X_n >= E`), evaluated at the call's values."""
-    for m in re.finditer(rf"requires\s+\(?{name}_n\s*(==|>=)\s*([^;]+);", src):
+    """The size a buffer's own `requires` gives it (`X_n == E` or `X_n >= E`), evaluated at the call's values.
+    A parenthesized clause (`requires (out_n == n);`) is read with its closing parenthesis dropped."""
+    for m in re.finditer(rf"requires\s+(\(?)\s*{name}_n\s*(==|>=)\s*([^;]+);", src):
+        expr = m.group(3).strip()
+        if m.group(1) == "(" and expr.endswith(")"):
+            expr = expr[:-1]
         try:
-            return int(eval(m.group(2).replace("\\length", "len"), {"__builtins__": {}}, dict(env)))
+            return int(eval(expr.replace("\\length", "len"), {"__builtins__": {}}, dict(env)))
         except Exception:                              # noqa: BLE001
             continue
     return None
@@ -139,10 +147,13 @@ def c_program(task: dict, ref, pts, wide: bool = False) -> tuple[str, list]:
                 args.append(str(len(env[base])))
             elif cp.endswith("_n"):
                 args.append(str(lens[f"{base}_cap"]))
+            elif cp == "void":
+                continue                               # `f(void)`: no parameter at all
             else:
                 cap = _capacity(src, cp, lens)
                 if cap is None:
-                    cap = len(real) if cp == rname and rt == "seq" else 4096
+                    # a guessed capacity could break the lowering's own precondition and write past the buffer
+                    raise Unsupported(f"the size of buffer {cp!r} is not stated by an evaluable `requires`")
                 if cp == rname and rt == "seq":
                     cap = max(cap, len(real))
                 lens[f"{cp}_cap"] = cap
@@ -165,7 +176,7 @@ def c_program(task: dict, ref, pts, wide: bool = False) -> tuple[str, list]:
         if ref.mods:
             heap.update(ref.heaps[idx])
         expect.append(_c_expect(task, real, heap))
-    head = "#include <stdio.h>\n#include <stdlib.h>\n"
+    head = "#include <stdio.h>\n#include <stdlib.h>\n#include <math.h>\n"
     if wide:
         head += "typedef long t_int;\n#define int long\n" + src + "\n#undef int\n"
     else:
@@ -174,9 +185,11 @@ def c_program(task: dict, ref, pts, wide: bool = False) -> tuple[str, list]:
 
 
 def _norm_float(line: str) -> str:
-    """gcc prints `%a` its own way; compare floats by value."""
+    """gcc prints `%a` its own way; compare floats by value. Only the result is a float: a modified array heap
+    follows it after ` |` and is compared as printed."""
+    head, sep, tail = line.partition(" |")
     try:
-        return float.fromhex(line).hex()
+        return float.fromhex(head.strip()).hex() + (sep + tail if sep else "")
     except ValueError:
         return line
 
@@ -276,7 +289,7 @@ def build_file(path: str, target: str) -> dict:
         res["status"] = f"not built: {e}"
         return res
     except NotImplementedError as e:
-        res["status"] = "not built: the lowering refuses it"
+        res["status"] = f"not built: the lowering refuses it: {str(e)[:160]}" if str(e) else "not built: the lowering refuses it"
         return res
     except Exception as e:                              # noqa: BLE001
         res["status"] = f"error: {type(e).__name__}: {e}"[:240]
@@ -287,36 +300,53 @@ def build_file(path: str, target: str) -> dict:
     res["points"] = len(expect)
     res["status"] = "agrees" if len(got) == len(expect) and not bad else "DISAGREES"
     if target in ("c", "c64") and len(got) == len(expect) and bad:
-        # C's int is 32 bits; the Frama-C proof's integers are mathematical (WP's Typed+nat, pinned because t's are).
-        # A point whose inputs or expected outputs leave int32 is the width gap, not a lowering bug.
-        wide = {i for i, (idx, (env0, real)) in enumerate(pts) if not _fits32(env0) or not _fits32(real)}
+        # C's int is 32 bits (64 under c64); the Frama-C proof's integers are mathematical (WP's Typed+nat, pinned
+        # because t's are). A point whose inputs, expected output or expected heap leave that width is the width
+        # gap, not a lowering bug.
+        fits = _fits32 if target == "c" else _fits64
+        heaps = getattr(ref, "heaps", None) if getattr(ref, "mods", False) else None
+        wide = {i for i, (idx, (env0, real)) in enumerate(pts)
+                if not fits(env0) or not fits(real) or (heaps is not None and not fits(heaps[idx]))}
         res["beyond_int32"] = len(wide)
         if all(i in wide for i, _e, _g in bad):
-            res["status"] = "agrees within int32"
+            res["status"] = "agrees within int32" if target == "c" else "agrees within int64"
             res["first"] = None
     if res["status"] != "agrees":
-        i, e, g = (bad[0] if bad else (len(got), "(a line)", "(none)"))
+        if bad:
+            i, e, g = bad[0]
+        elif len(got) > len(expect):
+            i, e, g = len(expect), "(none)", got[len(expect)]
+        else:
+            i, e, g = len(got), expect[len(got)] if len(got) < len(expect) else "(a line)", "(none)"
         env0 = pts[i][1][0] if i < len(pts) else {}
         res["first"] = {"input": {k: interp._j(v) for k, v in env0.items()}, "expected": e, "got": g}
     return res
 
 
-def _fits32(v) -> bool:
+def _fits_bits(v, bits: int) -> bool:
     if isinstance(v, bool) or isinstance(v, float):
         return True
     if isinstance(v, int):
-        return -2 ** 31 <= v < 2 ** 31
+        return -2 ** (bits - 1) <= v < 2 ** (bits - 1)
     if isinstance(v, (tuple, list)):
-        return all(_fits32(x) for x in v) and len(v) < 2 ** 31
+        return all(_fits_bits(x, bits) for x in v) and len(v) < 2 ** (bits - 1)
     if isinstance(v, dict):
-        return all(_fits32(x) for x in v.values())
+        return all(_fits_bits(x, bits) for x in v.values())
     if isinstance(v, interp.Pair):
-        return _fits32(v.a) and _fits32(v.b)
+        return _fits_bits(v.a, bits) and _fits_bits(v.b, bits)
     return True
 
 
+def _fits32(v) -> bool:
+    return _fits_bits(v, 32)
+
+
+def _fits64(v) -> bool:
+    return _fits_bits(v, 64)
+
+
 def table(results: list, target: str) -> str:
-    built = [r for r in results if r.get("status") in ("agrees", "agrees within int32", "DISAGREES")]
+    built = [r for r in results if r.get("status") in ("agrees", "agrees within int32", "agrees within int64", "DISAGREES")]
     agree = [r for r in built if r["status"] == "agrees"]
     agree32 = [r for r in built if r["status"] == "agrees within int32"]
     lines = [f"# Built and run: {target}", "",
