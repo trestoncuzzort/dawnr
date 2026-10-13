@@ -3263,3 +3263,21 @@ is queued, and the ones running are read as they finish.
   1,048 rows on 909 problems, 11 pairs, 377 held-out questions (`t/PREDICT-2026-10-12-udebug-teacher.md`).
   Training still blocked on a GPU. Flight table: the PX4 restatement tasks and the RC_MAP finding registered
   (CI green again at c2191734).
+
+## 2026-10-13 10:30Z: the goal, expanded (user)
+
+The standing goal "solve every uDebug problem definitively so the answers can be submitted" now also carries, in the
+user's words: "use the $1,000 [OpenAI Researcher Access credit] to improve dawnr to the max. every single point and
+every single line of code needs to be perfect so i can start definitively spamming the proofs and results", at
+"maximum efficiency without worry of the cost". Standing parts:
+
+1. uDebug: every UVa problem with a stored output solved and confirmed three times (`t/out/udebug-solutions`);
+   seven open-weight lanes (DeepSeek across four Bedrock regions, Qwen3-Coder-480B, GLM-5, Qwen3-Next on Vertex) and
+   five OpenAI lanes (gpt-6-astra, gpt-6.1-sol, gpt-5.5, gpt-5.3-codex, gpt-6-luna) over the refused set.
+2. The code: a GPT-6 Astra defect review of all 306 engine and model-training modules (`t/review_sweep.py`), every
+   finding reproduced before it is fixed, every fix with its test and source.
+3. Proofs at scale: a kernel host (the lab over the VPN, or a cloud box running the seven-kernel container), then
+   teacher lanes writing t tasks for proof-shaped problems, verified by the kernels.
+4. The student run on judge rows when the GPU VM gets stock.
+
+Rule kept: OpenAI outputs serve the bundle, the review and the proofs; they never enter training rows.
