@@ -6035,7 +6035,7 @@ class Ctx:
         arms = []
         for arm in m["arms"]:
             bs = [_ck(b) for b in arm["binders"]]
-            env2 = {k: v for k, v in env.items() if k not in bs and k[:-4] not in bs}
+            env2 = {k: v for k, v in env.items() if k not in bs and not (k.endswith("_len") and k[:-4] in bs)}
             types = self._arm_types(d, arm)
             for b in bs:
                 if types.get(b) == "seq":
@@ -6477,13 +6477,22 @@ class Ctx:
             lo = self.zx(q["lo"], env, local)
             hi = self.zx(q["hi"], env, local)
             # the bound variable shadows anything outside it: strip it from
-            # the substitution env so no outer term leaks under the binder
-            env2 = {k: t for k, t in env.items() if k != v}
-            local2 = dict(local, **{v: "int"})
-            body = self.prop(q["body"], env2, local2)
+            # the substitution env so no outer term leaks under the binder;
+            # and when its spelling is an outer name's (`forall n in [0, n)`),
+            # the Rocq binder is renamed so the bounds keep reading the outer one
+            v_r = v
+            taken = set(self.tys) | set(local or {}) | set(env)
+            if v in taken:
+                k = 1
+                while f"{v}_q{k}" in taken:
+                    k += 1
+                v_r = f"{v}_q{k}"
+            env2 = {k2: t for k2, t in env.items() if k2 != v}
+            local2 = dict(local, **{v_r: "int"})
+            body = self.prop(_rename_var(q["body"], v, v_r) if v_r != v else q["body"], env2, local2)
             if "forall" in e:
-                return f"(forall {v} : Z, {lo} <= {v} < {hi} -> {body})"
-            return f"(exists {v} : Z, {lo} <= {v} < {hi} /\\ {body})"
+                return f"(forall {v_r} : Z, {lo} <= {v_r} < {hi} -> {body})"
+            return f"(exists {v_r} : Z, {lo} <= {v_r} < {hi} /\\ {body})"
         if "ite" in e:
             c = e["ite"]
             cp = self.prop(c["cond"], env, local)
@@ -6492,6 +6501,24 @@ class Ctx:
         if "call" in e:
             return f"({self.call(e, env, local)} = true)"
         op = e["op"]
+        if op in ("any", "all") and len(e.get("args", [])) == 1 and "comp" in e["args"][0]:
+            # SPEC.md "Reductions (v1)": all/any of a comprehension is a bounded quantifier over its source
+            c = e["args"][0]["comp"]
+            tv = "t_q"
+            while tv in self.tys or tv in (local or {}) or tv in env:
+                tv += "_"
+            if "seq" in c:
+                elem = {"op": "at", "args": [c["seq"], {"var": tv}]}
+                lo_t, hi_t = "0", self.zx({"op": "len", "args": [c["seq"]]}, env, local or {})
+            else:
+                elem = {"var": tv}
+                lo_t, hi_t = self.zx(c["lo"], env, local or {}), self.zx(c["hi"], env, local or {})
+            local2 = dict(local or {}, **{tv: "int"})
+            cond_p = self.prop(_subst_expr(c.get("cond", {"bool": True}), {c["var"]: elem}), env, local2)
+            body_p = self.prop(_subst_expr(c["body"], {c["var"]: elem}), env, local2)
+            if op == "all":
+                return f"(forall {tv} : Z, {lo_t} <= {tv} < {hi_t} -> ({cond_p} -> {body_p}))"
+            return f"(exists {tv} : Z, {lo_t} <= {tv} < {hi_t} /\\ {cond_p} /\\ {body_p})"
         if op == "not":
             return f"(~ {self.prop(e['args'][0], env, local)})"
         if op == "and":
@@ -6531,9 +6558,14 @@ class Ctx:
                 a, b = e["args"]
                 pa, pb = self.px(a, env, local), self.px(b, env, local)
 
-                def ceq(ct: str, x: str, y: str) -> str:
+                def ceq(ct, x: str, y: str) -> str:
                     if ct == "bool":
                         return f"(({x} = true) <-> ({y} = true))"
+                    if ct == "seq":              # the lengths and every element, never Leibniz on the function
+                        return (f"((snd {x} = snd {y}) /\\ (forall t_j : Z, 0 <= t_j < snd {x} -> "
+                                f"fst {x} t_j = fst {y} t_j))")
+                    if isinstance(ct, dict):
+                        raise NotImplementedError("rocq lowering: equality on a pair with a compound component")
                     return f"({x} = {y})"
 
                 core = (f"({ceq(t1, f'(fst {pa})', f'(fst {pb})')} /\\ "
@@ -6665,7 +6697,11 @@ class Ctx:
             for arm in m["arms"]:
                 bs = [_ck(b) for b in arm["binders"]]
                 types = self._arm_types(d, arm)
-                env2 = {k: v for k, v in env.items() if k not in bs and k[:-4] not in bs}
+                env2 = {k: v for k, v in env.items() if k not in bs and not (k.endswith("_len") and k[:-4] in bs)}
+                for b in bs:
+                    if types.get(b) == "seq":          # a seq-typed pattern binder is a (function, length) pair
+                        env2[b] = f"(fst {b})"
+                        env2[b + "_len"] = f"(snd {b})"
                 eq = f"({scr} = {' '.join([_rctor(d, arm['ctor'])] + bs)})" if bs else f"({scr} = {_rctor(d, arm['ctor'])})"
                 self.defs(arm["body"], ctx + [eq], binders + [f"({b} : {rty(types[b])})" for b in bs], acc, env2,
                           dict(local, **types))
@@ -7055,10 +7091,17 @@ def exec_straight(cx: Ctx, stmts: list, env: dict, local: dict,
             # the symbolic state is unchanged; when a generator has armed
             # the collector, the call is recorded with its arguments
             # rendered in the state at this point (the LEMMAS section).
+            c = s["lemma"]
             if cx.lemma_sites is not None:
-                c = s["lemma"]
                 cx.lemma_sites.append(
                     (c["name"], _lemma_args(cx, cx.lemmas[c["name"]], c["args"], env, local)))
+            if cur_ctx is not None:
+                # and a call is well-formed only where the lemma's requires holds at the arguments (Dafny's
+                # call rule): each clause is one obligation on this path
+                lem = cx.lemmas[c["name"]]
+                m = {pm["name"]: a for pm, a in zip(lem.get("params", []), c.get("args", []))}
+                for rq in lem.get("requires", []):
+                    acc.append((list(defs_binders), list(cur_ctx), cx.prop(_subst_expr(rq, m), env, local)))
         elif "while" in s:
             raise AssertionError("while must be split out before exec")
         else:
@@ -9509,6 +9552,7 @@ def gen_loop(cx: Ctx, prefix: list, w: dict, suffix: list,
         and s["var"]["name"] not in _body_assigned
         and s["var"]["name"] not in _prefix_assigned
         and not (_fv(s["var"]["init"], set()) & _prefix_assigned)
+        and not (_fv(s["var"]["init"], set()) & _body_assigned)      # `h := i` is no invariant when the loop moves i
     ]
     invariants_ast = list(w.get("invariants", [])) + _extra_invs
 
@@ -9765,10 +9809,15 @@ def gen_loop(cx: Ctx, prefix: list, w: dict, suffix: list,
                 f"{init_terms}\n  in {env_post[ret + '_len']}.\n")
             unfold_line = f"unfold {name}_t, {name}_t_len."
         else:
+            core = (f"let '{tup} := {name}_loop (S (Z.to_nat {dec0})) {pargs} "
+                    f"{init_terms}\n  in {result_term}")
+            done_pre = env_pre.get(_DONE, "false")
+            if done_pre != "false":
+                # SPEC.md "Early exit": a return taken in the prefix ends the task before the loop runs
+                core = f"if {done_pre} then {env_pre[ret]} else ({core})"
             def_lines = (
                 f"Definition {name}_t {pb} : {rty(ret_t)} :=\n"
-                f"  let '{tup} := {name}_loop (S (Z.to_nat {dec0})) {pargs} "
-                f"{init_terms}\n  in {result_term}.\n")
+                f"  {core}.\n")
             unfold_line = f"unfold {name}_t."
 
         # 2026-09-10, upWhileLess: `destruct t as <bare name> eqn:Heq`
@@ -10884,6 +10933,14 @@ Qed.
 
 
 def gen_rec(cx: Ctx, body: list) -> str:
+    """The recursive task's definitions and lemmas, with every definedness obligation its body collects stated as
+    a `<name>_def_k` lemma (a reachable `1 / 0` in a branch is one, and an unprovable one refuses the task)."""
+    obls: list = []
+    src = _gen_rec_core(cx, body, obls)
+    return src + (("\n" + emit_def_lemmas(cx, cx.task["name"], obls, counter=[0])) if obls else "")
+
+
+def _gen_rec_core(cx: Ctx, body: list, obls: list) -> str:
     task = cx.task
     name = task["name"]
     ret = task["returns"][0]["name"]
@@ -10895,7 +10952,7 @@ def gen_rec(cx: Ctx, body: list) -> str:
 
     reqs = [cx.prop(e, {}) for e in task.get("requires", [])]
     local: dict[str, str] = {}
-    obls: list = []
+    del obls[:]
 
     # fuel body: self-calls become {name}_fuel fu
     cx.callpre[name] = f"{name}_fuel fu"
@@ -11120,6 +11177,55 @@ def _nested_lambda(row_terms: list) -> str:
         fn, rlen = row_terms[k]
         expr = f"if t_k =? {k} then ({fn}, {_zlit(rlen)}) else ({expr})"
     return f"fun t_k : Z => {expr}"
+
+
+def _rename_var(e, old: str, new: str):
+    """`e` with every free read of `old` renamed `new`; a nested binder of `old` shadows it."""
+    if isinstance(e, list):
+        return [_rename_var(x, old, new) for x in e]
+    if not isinstance(e, dict):
+        return e
+    if set(e) == {"var"}:
+        return {"var": new} if e["var"] == old else e
+    for q in ("forall", "exists"):
+        if q in e and e[q].get("var") == old:
+            return {q: {k: (_rename_var(v, old, new) if k in ("lo", "hi") else v) for k, v in e[q].items()}}
+    if "comp" in e and e["comp"].get("var") == old:
+        return {"comp": {k: (_rename_var(v, old, new) if k in ("seq", "lo", "hi") else v) for k, v in e["comp"].items()}}
+    return {k: _rename_var(v, old, new) for k, v in e.items()}
+
+
+def _subst_expr(e, m: dict):
+    """`e` with every free read of a name in `m` replaced by its expression; a nested binder shadows it."""
+    if isinstance(e, list):
+        return [_subst_expr(x, m) for x in e]
+    if not isinstance(e, dict):
+        return e
+    if set(e) == {"var"}:
+        return m.get(e["var"], e)
+    for q in ("forall", "exists"):
+        if q in e and e[q].get("var") in m:
+            m2 = {k: v for k, v in m.items() if k != e[q]["var"]}
+            return {q: {k: (_subst_expr(v, m2) if k != "var" else v) for k, v in e[q].items()}}
+    if "comp" in e and e["comp"].get("var") in m:
+        m2 = {k: v for k, v in m.items() if k != e["comp"]["var"]}
+        return {"comp": {k: (_subst_expr(v, m2) if k != "var" else v) for k, v in e["comp"].items()}}
+    return {k: _subst_expr(v, m) for k, v in e.items()}
+
+
+def _contains_node(tree, node) -> bool:
+    """Is `node` (structurally) a sub-expression of `tree`?"""
+    if tree == node:
+        return True
+    if isinstance(tree, list):
+        return any(_contains_node(x, node) for x in tree)
+    if isinstance(tree, dict):
+        return any(_contains_node(v, node) for v in tree.values())
+    return False
+
+
+class _UndefBudget(Exception):
+    """The undefinedness replay ran past its unrolling cap: nothing after that point is known."""
 
 
 def _fv(e, bound: set) -> set:
@@ -12352,6 +12458,25 @@ def _loop_cert(cx, task, prefix, w, suffix, witness):
             env_py[v] = witness[v]
             env_g[v] = _glit(witness[v], stys[v])
             spec_args.append(env_g[v])
+    try:
+        funs_w = interp.funs_of(task, task["body"])
+        if kind == "preservation":
+            # an iteration that returns never reaches the header again: its obligation is ensures, not the invariants
+            st_w = dict(env_py)
+            if interp.exec_body(w["body"], st_w, funs_w, interp.St()):
+                return None
+        if kind == "exit":
+            # the frame rule: a state variable the loop never assigns holds the value the prefix computed
+            st_p = {p["name"]: env_py[p["name"]] for p in task["params"]}
+            st_p[ret] = None
+            interp.exec_body(prefix, st_p, funs_w, interp.St())
+            moved = interp.assigned(w["body"])
+            for v in svars:
+                if v not in moved and v in st_p and st_p[v] is not None \
+                        and interp._j(st_p[v]) != interp._j(env_py[v]):
+                    return None
+    except Exception:                                     # noqa: BLE001 - no replay, no certificate
+        return None
     lines = []
     if kind == "exit" and not suffix:
         # ground the spec_fun applications of the instantiated conclusion,
@@ -12759,7 +12884,10 @@ def _first_undef_body(stmts, env: dict, funs: dict):
     iterations. Anything else this does not recognize returns None, which
     `_undef_cert` reads as "cannot ground this one," the same honest
     abstention as every other opportunistic certificate builder here."""
-    fact, _stopped = _undef_walk(stmts, env, funs, [0])
+    try:
+        fact, _stopped = _undef_walk(stmts, env, funs, [0])
+    except _UndefBudget:
+        return None                    # past the cap nothing later is known: no fact, honestly
     return fact
 
 
@@ -12804,7 +12932,7 @@ def _undef_walk(stmts, env: dict, funs: dict, count: list):
                     break
                 count[0] += 1
                 if count[0] > _MAX_UNDEF_UNROLL:
-                    return None, False   # named abstain: past the cap
+                    raise _UndefBudget()  # past the cap: the whole walk stops, not just this loop
                 fact, stopped = _undef_walk(wl["body"], env, funs, count)
                 if fact is not None or stopped:
                     return fact, stopped
@@ -12928,6 +13056,8 @@ def _undef_cert(cx, task, body, witness):
         expr = witness.get("_expr")
         if expr is None:
             return None
+        if not any(_contains_node(e, expr) for e in task.get("ensures", [])):
+            return None                # a foreign expression says nothing about this task's ensures
         fact = _first_undef(expr, env_py, funs)
         if fact is None:
             return None
@@ -13071,6 +13201,9 @@ def _v0_cert(task: dict, body: list, witness: dict):
         if not isinstance(tv, int) or isinstance(tv, bool):
             return None
         env_py = {p["name"]: witness[p["name"]] for p in task["params"]}
+        funs0 = interp.funs_of(task, body)
+        if not all(interp.ev(rq, dict(env_py), funs0, interp.St()) for rq in task.get("requires", [])):
+            return None                # an input the contract excludes refutes nothing
         env_py[ret] = tv
         if not _falsified_conjunct(task, body, env_py):
             return None
