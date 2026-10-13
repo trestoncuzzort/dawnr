@@ -228,6 +228,9 @@ def cmd_format(args) -> int:
         return 1
     if args.write:
         path.write_text(text, encoding="utf-8", newline="\n")
+    elif args.json:
+        print_json_lines([diag(file=str(path), rule="", severity="info",
+                               message="formatted; the canonical text is written with --write or printed without --json")])
     else:
         sys.stdout.write(text)
     return 0
@@ -250,15 +253,23 @@ def cmd_lower(args) -> int:
     kernels = KERNELS if args.kernel == "all" else [args.kernel]
     unknown = [k for k in kernels if k not in KERNELS]
     if unknown:
-        print(f"cli.py lower: unknown kernel(s) {unknown}, known: {KERNELS}",
-              file=sys.stderr)
+        _usage_error(args, path, f"unknown kernel(s) {unknown}, known: {KERNELS}", "lower")
         return 2
 
     out_dir = Path(args.out) if args.out else None
-    if out_dir:
-        out_dir.mkdir(parents=True, exist_ok=True)
-
     problems = []
+    if out_dir:
+        try:
+            out_dir.mkdir(parents=True, exist_ok=True)
+        except OSError as e:
+            # an output path that cannot be a directory is a diagnostic, never a traceback, and nothing is written
+            problems.append(diag(file=path, rule="output", severity="error", message=f"cannot write to {out_dir}: {e}"))
+            if args.json:
+                print_json_lines(problems)
+            else:
+                print(problems[0]["message"], file=sys.stderr)
+            return 1
+
     for kernel in kernels:
         try:
             src = _lower_one(task, kernel)
@@ -268,7 +279,12 @@ def cmd_lower(args) -> int:
             continue
         if out_dir:
             dest = out_dir / f"{task['name']}.{SUFFIX_FOR[kernel]}"
-            dest.write_text(src, encoding="utf-8", newline="\n")
+            try:
+                dest.write_text(src, encoding="utf-8", newline="\n")
+            except OSError as e:
+                problems.append(diag(file=path, rule="output", severity="error", kernel=kernel,
+                                     message=f"cannot write {dest}: {e}"))
+                continue
             if not args.json:
                 print(f"{kernel}: wrote {dest}")
         else:
@@ -484,17 +500,24 @@ def cmd_twin(args) -> int:
 # explain
 # ===========================================================================
 
+def _usage_error(args, path, message: str, cmd: str) -> None:
+    """A usage error in whichever form was asked for: one JSON diagnostic with no source location, or a line on stderr."""
+    if getattr(args, "json", False):
+        print(json.dumps({"file": str(path) if path is not None else "", "line": None, "col": None, "rule": "usage",
+                          "severity": "error", "kernel": "", "message": message}))
+    else:
+        print(f"cli.py {cmd}: {message}", file=sys.stderr)
+
+
 def cmd_explain(args) -> int:
     word = args.verdict.lower()
     if word not in _OUTCOME_WORDS:
-        print(f"cli.py explain: unknown verdict word {args.verdict!r}, "
-              f"known: {sorted(_OUTCOME_WORDS)}", file=sys.stderr)
+        _usage_error(args, None, f"unknown verdict word {args.verdict!r}, known: {sorted(_OUTCOME_WORDS)}", "explain")
         return 2
     kernels = [args.kernel] if args.kernel else KERNELS
     unknown = [k for k in kernels if k not in KERNELS]
     if unknown:
-        print(f"cli.py explain: unknown kernel(s) {unknown}, known: {KERNELS}",
-              file=sys.stderr)
+        _usage_error(args, None, f"unknown kernel(s) {unknown}, known: {KERNELS}", "explain")
         return 2
 
     sentence = tlib._OUTCOME_SENTENCE.get(word, word)
@@ -648,9 +671,9 @@ def main(argv=None) -> int:
     target = getattr(args, "file", None) or getattr(args, "target", None)
     if target is not None and not Path(target).exists():
         if getattr(args, "json", False):
-            print(json.dumps({"file": str(target), "line": 0, "col": 0, "rule": "usage",
+            print(json.dumps({"file": str(target), "line": None, "col": None, "rule": "usage",
                               "severity": "error", "kernel": "",
-                              "message": f"no such file or directory: {target}"}))
+                              "message": f"no such file or directory: {target}"}))     # no source location exists
         else:
             print(f"cli.py {args.cmd if hasattr(args, 'cmd') else ''}: no such file or directory: {target}".replace("  ", " "), file=sys.stderr)
         return 2
