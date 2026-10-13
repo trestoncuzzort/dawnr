@@ -250,13 +250,84 @@ def system_text(exemplars: str, version: str = "v1", target: str = "t") -> str:
             + rules + "\n\n" + IO_CONTRACT + "\n\nExamples of judge problems solved this way:\n\n" + exemplars)
 
 
-def user_text(rec: dict, target: str = "t") -> str:
+FAIL_RANK = {"fail": 0, "error": 1, "timeout": 2}
+
+
+def prior_attempts(rec: dict, dirs: list[Path]) -> list[dict]:
+    """Every graded sample of this problem under the given lane directories, with its program text."""
+    key = f"{rec['judge']}-{rec['id']}"
+    out = []
+    for d in dirs:
+        for r in sorted((d / key).glob("s*/result.json")):
+            try:
+                o = json.loads(r.read_text(encoding="utf-8"))
+            except (OSError, ValueError):
+                continue
+            prog = r.parent / f"p{rec['id']}.py"
+            o["program"] = prog.read_text(encoding="utf-8") if prog.is_file() else None
+            o["sample_dir"] = str(r.parent)
+            out.append(o)
+    return out
+
+
+def best_failed(attempts: list[dict]) -> dict | None:
+    """The most informative refused attempt: a wrong answer over a crash over a timeout, then the most cases passed."""
+    cands = [o for o in attempts if o.get("program") and (o.get("judge") or {}).get("status") in FAIL_RANK]
+    if not cands:
+        return None
+    return min(cands, key=lambda o: (FAIL_RANK[o["judge"]["status"]], -(o["judge"].get("passed") or 0)))
+
+
+def repair_text(rec: dict, prior: dict, corpus: Path) -> str:
+    """The judge's refusal handed back to the model with the previous program (Chen et al., Teaching Large Language
+    Models to Self-Debug, arXiv:2304.05128: execution feedback on a failed attempt raises accuracy more than fresh
+    samples do). The failing case's input head and the expected output around the first difference are quoted
+    from the stored files, so the model sees the format it missed rather than a description of it."""
+    j = prior["judge"]
+    case = j.get("case")
+    tests = corpus / rec["tests_dir"]
+    lines = ["A previous program (below) was run on the judge's stored cases and refused."]
+    if j["status"] == "fail":
+        lines.append(f"Case {case}: the output differs at {j.get('first_difference')} (compared with trailing spaces "
+                     f"and trailing blank lines ignored); {j.get('passed') or 0} of {j.get('total')} stored cases "
+                     f"matched before this one.")
+    elif j["status"] == "error":
+        lines.append(f"Case {case}: the program crashed: {j.get('first_difference')}")
+    else:
+        lines.append(f"Case {case}: the program did not finish within {j.get('per_case_s') or 'the allowed'} seconds. "
+                     "The stored inputs can be large: read all of stdin at once, keep the algorithm near-linear or "
+                     "n log n, and build the output in one join.")
+    if case:
+        inp = tests / case
+        if inp.is_file():
+            text = inp.read_text(encoding="utf-8", errors="replace")
+            head = text.splitlines()
+            lines.append(f"The first lines of that case's input ({len(head)} lines, {inp.stat().st_size} bytes):")
+            lines.append("\n".join(head[:30])[:1500])
+            m = re.match(r"line (\d+):", j.get("first_difference") or "") if j["status"] == "fail" else None
+            outp = tests / case.replace(".in.txt", ".out.txt")
+            if m and outp.is_file():
+                want = outp.read_text(encoding="utf-8", errors="replace").splitlines()
+                k = int(m.group(1))
+                lo, hi = max(0, k - 4), min(len(want), k + 3)
+                lines.append(f"The expected output, lines {lo + 1} to {hi} of {len(want)}:")
+                lines.append("\n".join(want[lo:hi])[:1200])
+    lines.append("The previous program:")
+    lines.append("```python\n" + prior["program"].rstrip() + "\n```")
+    lines.append("Find the cause before writing: re-read the statement's input and output format (blank lines between "
+                 "cases, trailing spaces, the end-of-input rule, exact wording and rounding), the edge cases (empty "
+                 "input, one element, the largest values, negative numbers, duplicates) and the running time. Then "
+                 "write the corrected complete program: one ```python fence, reading stdin and writing stdout.")
+    return "\n\n".join(lines)
+
+
+def user_text(rec: dict, target: str = "t", repair: str | None = None) -> str:
     title = rec.get("title") or ""
     what = (f"the Dafny method `p{rec['id']}` and its io module" if target == "dafny"
             else "the Python program" if target == "python" else f"the t task `p{rec['id']}` and its io module")
     return (f"Judge problem {rec['judge']} {rec['id']}: {title}\n\n{rec['statement'].strip()}\n\n"
             f"A stored case of the judge -- input:\n{rec['sample_in']}\nexpected output:\n{rec['sample_out']}\n\n"
-            f"Write {what}.")
+            f"Write {what}." + (f"\n\n{repair}" if repair else ""))
 
 
 def extract(reply: str, target: str = "t") -> tuple[str | None, str | None]:
@@ -322,6 +393,9 @@ def main(argv=None) -> int:
     ap.add_argument("--shape", choices=("int", "text", "any"), default="int")
     ap.add_argument("--split", choices=("train", "heldout", "any"), default="train")
     ap.add_argument("--ids", default="", help="comma-separated judge/id keys; overrides the filters")
+    ap.add_argument("--repair-from", default="", help="comma-separated lane directories: prompt only the problems "
+                    "refused there (and accepted nowhere among them), with the refusal and the program quoted")
+    ap.add_argument("--corpus", default="t/out/udebug-bulk-20261011", help="where the stored cases are (repair)")
     ap.add_argument("--limit", type=int, default=0)
     ap.add_argument("--max-in-bytes", type=int, default=0, help="skip problems whose stored inputs exceed this")
     ap.add_argument("--samples", type=int, default=1)
@@ -345,6 +419,21 @@ def main(argv=None) -> int:
     judges = {j.strip() for j in a.judges.split(",") if j.strip()}
     problems = select(Path(a.bank), judges, a.shape, a.split, ids, a.limit, a.max_in_bytes)
     print(f"{len(problems)} problems selected; system prompt {len(system)} chars", flush=True)
+    repair_dirs = [Path(p) for p in a.repair_from.split(",") if p]
+    if repair_dirs:
+        kept = []
+        for rec in problems:
+            attempts = prior_attempts(rec, repair_dirs)
+            if any(o.get("accepted") for o in attempts):
+                continue                                  # solved in one of those lanes already
+            prior = best_failed(attempts)
+            if prior is None:
+                continue                                  # nothing to repair: never tried, or no program to quote
+            rec["_repair"] = repair_text(rec, prior, Path(a.corpus))
+            rec["_repair_from"] = prior["sample_dir"]
+            kept.append(rec)
+        problems = kept
+        print(f"{len(problems)} problems carry a refused attempt to repair", flush=True)
 
     jobs = []
     for rec in problems:
@@ -358,7 +447,8 @@ def main(argv=None) -> int:
         for rec, k, d in jobs[:1]:
             d.mkdir(parents=True, exist_ok=True)
             (d / "prompt.json").write_text(json.dumps(
-                [{"role": "system", "content": system}, {"role": "user", "content": user_text(rec, a.target)}],
+                [{"role": "system", "content": system},
+                 {"role": "user", "content": user_text(rec, a.target, rec.get("_repair"))}],
                 indent=1))
             print(f"dry run: prompt written to {d / 'prompt.json'}")
         return 0
@@ -394,7 +484,8 @@ def main(argv=None) -> int:
     def one(rec: dict, k: int, d: Path):
         if ledger["stop"]:
             return "stopped"
-        messages = [{"role": "system", "content": system}, {"role": "user", "content": user_text(rec, a.target)}]
+        messages = [{"role": "system", "content": system},
+                    {"role": "user", "content": user_text(rec, a.target, rec.get("_repair"))}]
         t0 = time.monotonic()
         try:
             reply, in_tok, out_tok, stop_reason = call(messages)
@@ -412,7 +503,7 @@ def main(argv=None) -> int:
                 (d / f"p{rec['id']}_io.py").write_text(io_src.rstrip() + "\n", encoding="utf-8")
         record = {"judge": rec["judge"], "id": rec["id"], "title": rec.get("title"), "tests_dir": rec["tests_dir"],
                   "model": model, "provider": a.provider, "endpoint": endpoint, "tag": a.tag,
-                  "prompt_version": a.prompt_version, "target": a.target,
+                  "prompt_version": a.prompt_version, "target": a.target, "repair_from": rec.get("_repair_from"),
                   "sample_index": k, "num_samples": a.samples,
                   "options": {"temperature": a.temperature, "max_tokens": a.max_tokens,
                               "note": "no seed on either provider; this reply is not reproducible"},
