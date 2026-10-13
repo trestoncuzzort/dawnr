@@ -38,6 +38,10 @@ import lifter
 from lift_ast import Refusal
 
 CORPUS_DIR = corpora.CORPUS_DIR
+
+import pytest
+
+pytestmark = pytest.mark.skipif(not CORPUS_DIR.exists(), reason=f"the lifter corpus is not checked out at {CORPUS_DIR}")
 CENSUS_JSON = corpora.CENSUS_JSON
 INFRAGMENT_TXT = corpora.INFRAGMENT_TXT
 

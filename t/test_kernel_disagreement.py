@@ -68,7 +68,19 @@ class DetectorTests(unittest.TestCase):
         if not tables:
             self.skipTest("no graded sets present")
         r = kd.scan(tables)
-        self.assertGreater(r["rows"], 1000, "the parser should see thousands of graded rows")
+        expected = 0
+        for t in tables:          # every data row of the agreement table (the one headed `| task |`), counted without the parser
+            inside = False
+            for line in t.read_text(encoding="utf-8").splitlines():
+                if line.startswith("#"):
+                    inside = False
+                    continue
+                cells = [c.strip() for c in line.strip().strip("|").split("|")] if line.startswith("|") else []
+                if cells and cells[0] == "task":
+                    inside = True
+                elif inside and cells and cells[0] and not set(cells[0]) <= set("-: "):
+                    expected += 1
+        self.assertEqual(r["rows"], expected, "the parser should see every graded row the files hold")
         self.assertGreater(sum(r["gap_majority"].values()), 0,
                            "some kernel somewhere failed to decide; zero means nothing parsed")
 
