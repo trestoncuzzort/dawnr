@@ -280,3 +280,32 @@ held-out questions written for the student's later measurement.
 - **Capacity measured (2026-10-12 17:33Z):** ten minutes with both lanes up: Qwen3-235B 104 records at concurrency
   2 (88 alone earlier), DeepSeek-V3.2 10 records at concurrency 1 with 61 throttles per 120 log lines. The two
   models' capacities are independent; DeepSeek's is the scarce one right now. Qwen moves to concurrency 4.
+
+### Read of the Python scale lanes (2026-10-13T05:04Z, tpc; the DeepSeek lane continues)
+
+- **Qwen3-235B lane, complete:** all 2,457 UVa train problems, k = 1, $3.04. **888 of 2,457 problems (36.1%)**
+  reproduce every stored case. Refusals, all named: 918 differ at a recorded line, 293 crash (SyntaxError 56,
+  IndexError 44, NameError 41, ValueError 26, 24 killed at the 3 GB cap, 15 TypeError, 10 RecursionError, ...),
+  170 time out (per-case budget 5-120 s; 63 of them are single-case problems that exceeded 120 s), 188 replies
+  carry no fence. The gate was checked against its own failure modes: every error carries the exception, every
+  timeout exceeded the per-case budget, so the refusals are the programs' own.
+- **DeepSeek-V3.2 lane:** stopped by hand at 20:39Z on 10-12 after 115 calls (88 problems), resumed 04:42Z.
+  Graded so far: **60 of 97 problems (61.9%)**. Its endpoint allows about two calls a minute, so a full k = 2 pass
+  (4,739 calls) would outlast the endpoints (Vertex MaaS retires them 2026-10-21): from 05:02Z the lane runs
+  k = 1 on the **1,574 train problems Qwen3-235B did not accept** (`t/out/udebug/deepseek-targets.txt`), where
+  its higher yield buys coverage instead of duplicates. Records already sampled are skipped, tag unchanged.
+- **Qwen3-Next lane:** aborted at the 429 storm on 10-12 (36 problems), resumed 04:45Z at concurrency 2;
+  35 of 88 graded problems (39.8%) so far.
+- **PS1** (DeepSeek between 50% and 80%): 61.9% on the graded prefix, holds so far; the final read comes with
+  the retargeted lane. The Qwen3-235B lane sits at 36.1%, below the floor PS1 set for DeepSeek, and the shape
+  split is the next read. **QS1** (Qwen3-235B within 15 points of DeepSeek on common problems): 97 common,
+  DeepSeek 60, Qwen 49, a gap of 11.3 points: holds. **QN1** (Qwen3-Next within 20 points): 88 common, 55
+  against 35, a gap of 22.7 points: fails; reported by teacher as registered. PS2 and PS3 hold ($3.04, $0.09,
+  $0.16 by the ledgers; every refusal named).
+- **Rows:** 904 problems carry an accepted program in some lane. `t/udebug_rows.py` (cap 4, identical programs
+  kept once) over the four Python lanes: **1,048 execution-verified rows on 909 problems**, 11 judge pairs, 377
+  held-out questions, all `kind: judge-python`, `proof: none` (`t/out/udebug/rows-judge-python*.jsonl`,
+  summary beside them).
+- Training on these rows stays blocked on a GPU (GCP quota 0 after two denied appeals, AWS Free blocks GPU
+  instances, the lab's GPUs are closed to the account, the laptop is a control node).
+
