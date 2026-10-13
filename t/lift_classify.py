@@ -439,6 +439,10 @@ def _tuple_issue(t: Type) -> Optional[str]:
         return "tuple-arity"
     if any(_pair_component_issue(a) is not None for a in t.args):
         return "tuple-component"
+    for a in t.args:                      # a component's own issue (a seq<nat>'s implicit element precondition) is the pair's
+        issue = _type_issue(a)
+        if issue is not None:
+            return issue
     return None
 
 
@@ -1110,15 +1114,22 @@ def _cast_bounds_env(root, char_names: set) -> dict:
                 if isinstance(a, Ident) and lit(b) is not None:
                     lo = lit(b) + (1 if op == ">" else 0)
                     cur = env.setdefault(a.name, [None, None]); cur[0] = lo if cur[0] is None else max(cur[0], lo)
+    def conjuncts(e):
+        # only what the clause states unconditionally: a comparison under `||`, `==>`, `!` or a quantifier is no bound
+        if isinstance(e, NaryBool) and e.op == "&&":
+            for a in e.args:
+                yield from conjuncts(a)
+        else:
+            yield e
     for sp in getattr(root, "specs", ()) or ():
         if isinstance(sp, RequiresClause):
-            for n in walk(sp.expr):
+            for n in conjuncts(sp.expr):
                 bound(n)
     for n in walk(root):
         if isinstance(n, WhileStmt):
             for sp in n.specs:
                 if isinstance(sp, InvariantClause):
-                    for m in walk(sp.expr):
+                    for m in conjuncts(sp.expr):
                         bound(m)
         elif isinstance(n, VarDeclStmt) and n.init and len(n.names) == 1 and len(n.init) == 1 and isinstance(n.init[0], Expr):
             assigned.setdefault(n.names[0].name, []).append(n.init[0])
@@ -1324,6 +1335,7 @@ def _closure_incl_methods(module: Module, method: MethodDecl) -> tuple[Decl, ...
 _AXIOM_ATTR_RE = re.compile(r"\{\s*:\s*axiom\b")
 _VERIFY_FALSE_ATTR_RE = re.compile(r"\{\s*:\s*verify\s+false\b")
 _ASSUME_WORD_RE = re.compile(r"(?<![A-Za-z0-9_])assume(?![A-Za-z0-9_])")
+_STRING_LIT_RE = re.compile(r'"(?:[^"\\]|\\.)*"')
 
 
 def _has_axiom_attr(attrs: tuple) -> bool:
@@ -1350,8 +1362,25 @@ def _lemma_signature_text(d: "LemmaDecl") -> str:
     unrelated `{:axiom}`/`{:verify false}`-shaped fragment inside the body
     (a nested `assert ... by`, a quoted string) is never mistaken for the
     lemma's own attribute."""
-    idx = d.text.find("(")
-    return d.text if idx < 0 else d.text[:idx]
+    text = d.text
+    depth = 0                              # inside `{:...}` attributes a `(` is not the parameter list's
+    i = 0
+    while i < len(text):
+        c = text[i]
+        if c == '"':                       # a string literal, wherever it sits
+            j = i + 1
+            while j < len(text) and text[j] != '"':
+                j += 2 if text[j] == "\\" else 1
+            i = j + 1
+            continue
+        if c == "{":
+            depth += 1
+        elif c == "}":
+            depth = max(0, depth - 1)
+        elif c == "(" and depth == 0:
+            return text[:i]
+        i += 1
+    return text
 
 
 def _lemma_is_axiomatised(d: "LemmaDecl") -> bool:
@@ -1369,7 +1398,7 @@ def _lemma_has_assume(d: "LemmaDecl") -> bool:
     user takes responsibility for being absolutely sure that the
     proposition is indeed true") is exactly as real whether or not the rest
     of the proof happened to parse."""
-    return bool(_ASSUME_WORD_RE.search(d.text))
+    return bool(_ASSUME_WORD_RE.search(_STRING_LIT_RE.sub('""', d.text)))   # a string's contents are not a statement
 
 
 def _axiomatised_names(module: Module) -> dict[str, int]:
@@ -1557,6 +1586,7 @@ def _chain_bounds(unbound: set, c: Chain, nat_names: set):
     if not pos:
         return None
     bounds: dict = {}
+    nat_floor: list = []
     for name, i in pos.items():
         if i == 0:
             if name not in nat_names:
@@ -1564,6 +1594,14 @@ def _chain_bounds(unbound: set, c: Chain, nat_names: set):
             lo = IntLit(c.line, 0)
         else:
             lo = xs[i - 1] if ops[i - 1] == "<=" else _plus1(xs[i - 1])
+            if name in nat_names:
+                # a nat is never negative: a literal below 0 reads 0, and any other explicit lower bound keeps
+                # `0 <= name` beside it in the body
+                if isinstance(lo, IntLit):
+                    if lo.value < 0:
+                        lo = IntLit(c.line, 0)
+                else:
+                    nat_floor.append(Chain(c.line, ("<=",), (IntLit(c.line, 0), Ident(c.line, name))))
         j = i + 1
         while j < len(xs) and is_binder(xs[j]):
             j += 1
@@ -1573,7 +1611,7 @@ def _chain_bounds(unbound: set, c: Chain, nat_names: set):
         hi = xs[j] if strict else _plus1(xs[j])
         bounds[name] = (lo, hi)
     extras = [Chain(c.line, (ops[k],), (xs[k], xs[k + 1]))
-              for k in range(len(ops)) if not (is_binder(xs[k]) or is_binder(xs[k + 1]))]
+              for k in range(len(ops)) if not (is_binder(xs[k]) or is_binder(xs[k + 1]))] + nat_floor
     return bounds, extras
 
 
@@ -1643,8 +1681,7 @@ def _bind_binders(names: list, conjuncts: list, predicates: Optional[dict], nat_
     for i, c in enumerate(norm):
         if isinstance(c, Chain) and len(c.ops) == 1 and c.ops[0] == "in":
             a, b = c.operands
-            is_set = (isinstance(b, SetDisplay) and not b.multiset) or (
-                set_lookup is not None and isinstance(b, Ident) and set_lookup(b.name))
+            is_set = _set_valued(b, set_lookup)
             if (isinstance(a, Ident) and a.name in unbound and not _mentions_ident(b, a.name)
                     and not is_set):
                 bound[a.name] = (None, None, b)
@@ -1728,6 +1765,18 @@ def _bind_binders(names: list, conjuncts: list, predicates: Optional[dict], nat_
     return bound, used, extras, rules
 
 
+def _set_valued(e, set_lookup) -> bool:
+    """Is `e` a set: a set display, a name the lookup knows as a set, or a union, intersection or difference
+    of such (a membership in one is no sequence range)."""
+    if isinstance(e, SetDisplay):
+        return not e.multiset
+    if isinstance(e, Ident):
+        return bool(set_lookup is not None and set_lookup(e.name))
+    if isinstance(e, Binary) and e.op in ("+", "*", "-"):
+        return _set_valued(e.left, set_lookup) or _set_valued(e.right, set_lookup)
+    return False
+
+
 def _order_binders(binders: tuple, bound: dict) -> Optional[list]:
     """Nest the binders so that each one's bounds mention only binders
     nested outside it (`0 <= j < i < n` nests `i` inside `j`): the declared
@@ -1736,6 +1785,8 @@ def _order_binders(binders: tuple, bound: dict) -> Optional[list]:
     deps = {}
     for n in names:
         lo, hi, mem = bound[n]
+        if any(e is not None and _mentions_ident(e, n) for e in (lo, hi, mem)):
+            return None                    # a bound in terms of the binder it introduces bounds nothing
         deps[n] = {m for m in names if m != n and any(
             e is not None and _mentions_ident(e, m) for e in (lo, hi, mem))}
     out: list = []
@@ -1783,6 +1834,11 @@ def _eliminate_defined_binders(q: Quantifier) -> Optional[Quantifier]:
         if where == "range":
             new_body = _subst_ast(q.body, name, repl)
             new_range = _subst_ast(remaining, name, repl) if remaining is not None else None
+            if not new_binders and new_range is not None:
+                # no binder is left to guard: the residual range is a condition on the body itself
+                new_body = (NaryBool(q.line, "&&", (new_range, new_body)) if q.kind == "exists"
+                            else Implies(q.line, new_range, new_body))
+                new_range = None
             q = dataclasses.replace(q, binders=new_binders, range=new_range, body=new_body)
         elif where == "body":
             rest = (_subst_ast(remaining, name, repl) if remaining is not None
@@ -1994,6 +2050,22 @@ def _subst_ast(e: Expr, name: str, repl: Expr) -> Expr:
     rules ever see it."""
     if isinstance(e, Ident):
         return repl if e.name == name else e
+    if isinstance(e, Quantifier):
+        bound_names = [b.name for b in e.binders]
+        if name in bound_names:
+            return e                       # shadowed: nothing inside refers to the outer name
+        free = _idents_in(repl)
+        for b in e.binders:
+            if b.name in free:             # a binder that would capture the replacement is renamed first
+                taken = _idents_in(e) | free | {name}
+                k = 1
+                while f"{b.name}_{k}" in taken:
+                    k += 1
+                fresh = f"{b.name}_{k}"
+                e = dataclasses.replace(
+                    e, binders=tuple(dataclasses.replace(x, name=fresh) if x.name == b.name else x for x in e.binders),
+                    range=_subst_ast(e.range, b.name, Ident(e.line, fresh)) if e.range is not None else None,
+                    body=_subst_ast(e.body, b.name, Ident(e.line, fresh)))
     if dataclasses.is_dataclass(e):
         changes = {}
         for f in dataclasses.fields(e):
@@ -2003,6 +2075,20 @@ def _subst_ast(e: Expr, name: str, repl: Expr) -> Expr:
                 changes[f.name] = newval
         return dataclasses.replace(e, **changes) if changes else e
     return e
+
+
+def _idents_in(e) -> set:
+    """Every identifier name mentioned anywhere under `e`."""
+    out: set = set()
+    if isinstance(e, Ident):
+        out.add(e.name)
+    elif dataclasses.is_dataclass(e):
+        for f in dataclasses.fields(e):
+            out |= _idents_in(getattr(e, f.name))
+    elif isinstance(e, (tuple, list)):
+        for v in e:
+            out |= _idents_in(v)
+    return out
 
 
 def _subst_ast_any(val, name: str, repl: Expr):
