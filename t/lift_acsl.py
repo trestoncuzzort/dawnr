@@ -206,7 +206,37 @@ def scan(text: str, file: str = "", line0: int = 1, annot_mode: bool = False) ->
 def num_value(text: str) -> int:
     m = NUM_RE.fullmatch(text)
     digits = m.group(1)
-    return int(digits, 16) if digits[:2].lower() == "0x" else int(digits, 10)
+    if digits[:2].lower() == "0x":
+        return int(digits, 16)
+    if len(digits) > 1 and digits[0] == "0":
+        try:
+            return int(digits, 8)             # ISO C 6.4.4.1: a leading zero is an octal literal
+        except ValueError:
+            raise AcslRefusal("source-unparseable", f"literal {text}") from None
+    return int(digits, 10)
+
+
+def num_ctype(text: str) -> Optional["CType"]:
+    """The C type a literal's suffix gives it: `u` makes it unsigned, `l`/`ll` a long; None without a suffix."""
+    m = NUM_RE.fullmatch(text)
+    suf = (m.group(2) or "").lower()
+    if not suf:
+        return None
+    return CType("int", "u" not in suf, "long" if "l" in suf else "int")
+
+
+WIDTH_BITS = {"char": 8, "short": 16, "int": 32, "long": 64}
+
+
+def c_convert(v: int, ty: "CType") -> int:
+    """A constant converted to a C integer type (ISO C 6.3.1.3): modulo 2^width for an unsigned type, the
+    two's-complement wrap for a signed one (the implementation-defined case every compiler the corpus targets
+    shares)."""
+    w = WIDTH_BITS.get(ty.width, 32)
+    v %= 1 << w
+    if ty.signed is not False and v >= 1 << (w - 1):
+        v -= 1 << w
+    return v
 
 
 # ------------------------------------------------------------- preprocessor --
@@ -253,8 +283,8 @@ class Preprocessor:
         raise AcslRefusal("include-missing", name, str(near))
 
     def run(self, path: Path) -> Unit:
-        out = self._file(Path(path).resolve())
-        return Unit(self.expand(out), self.macros, self.files)
+        out = self._file(Path(path).resolve())          # expanded as it was read, each token under the macros then live
+        return Unit(out, self.macros, self.files)
 
     def expand(self, toks: list[Tok], depth: int = 0) -> list[Tok]:
         if depth > 20:
@@ -287,15 +317,21 @@ class Preprocessor:
         self.files.append(str(path))
         toks = scan(path.read_text(encoding="utf-8", errors="replace"), str(path))
         out: list[Tok] = []
+        buf: list[Tok] = []            # tokens not yet expanded: expanded under the macro table live at their position
         stack: list[list[bool]] = []   # [taking, some branch taken]
 
         def live() -> bool:
             return all(s[0] for s in stack)
 
+        def flush() -> None:
+            if buf:
+                out.extend(self.expand(buf))
+                buf.clear()
+
         for t in toks:
             if t.kind != "dir":
                 if live():
-                    out.append(t)
+                    buf.append(t)
                 continue
             d = t.text.lstrip("#").strip()
             word, _, rest = d.partition(" ")
@@ -323,6 +359,7 @@ class Preprocessor:
             elif not live():
                 continue
             elif word == "include":
+                flush()
                 if rest.startswith('"'):
                     name = rest.strip('"')
                     if name in STD_HEADERS and not any((d / name).is_file() for d in [path.parent] + self.search):
@@ -330,6 +367,7 @@ class Preprocessor:
                     out.extend(self._file(self.find(name, path)))
                 # <system> headers: limits.h's macros are built in; nothing else is used
             elif word == "define":
+                flush()
                 m = re.match(r"(\w+)(\()?", rest)
                 if not m:
                     raise AcslRefusal("preprocessor", d, t.at())
@@ -339,12 +377,14 @@ class Preprocessor:
                 else:
                     self.macros[name] = scan(rest[len(name):], str(path), t.line)
             elif word in ("undef",):
+                flush()
                 self.macros.pop(rest, None)
             elif word in ("pragma", "error", "warning", ""):
                 if word == "error":
                     raise AcslRefusal("preprocessor", d, t.at())
             else:
                 raise AcslRefusal("preprocessor", d, t.at())
+        flush()
         if stack:
             raise AcslRefusal("preprocessor", "unterminated #if", str(path))
         return out
@@ -535,7 +575,7 @@ class Parser:
                            "extern")
                 or t.text in self.typedefs)
 
-    def ctype(self, stars: bool = True) -> CType:
+    def ctype(self, stars: bool = True, allow_static: bool = True) -> CType:
         const = False
         words: list[str] = []
         named: Optional[CType] = None
@@ -544,6 +584,9 @@ class Parser:
             if t.kind != "id":
                 break
             if t.text in ("const", "volatile", "static", "inline", "extern"):
+                if t.text == "static" and not allow_static:
+                    # a static local keeps its value across calls: not the fresh variable a method body declares
+                    raise AcslRefusal("static-local", "static storage in a local declaration", t.at())
                 const = const or t.text == "const"
                 self.next()
             elif t.text in ("unsigned", "signed", "int", "short", "long", "char", "void"):
@@ -744,7 +787,10 @@ class Parser:
         if t.kind == "str":
             raise AcslRefusal("string-literal", t.text[:20], t.at())
         if t.kind == "num":
-            return E("int", (num_value(t.text),), t.line)
+            lit = E("int", (num_value(t.text),), t.line)
+            ty = num_ctype(t.text)
+            # an unsigned suffix is a cast: `x < 1u` converts x to unsigned, which the mixed-sign rule then sees
+            return E("cast", (ty, lit), t.line) if ty is not None and ty.signed is False else lit
         if t.kind == "op" and t.text == "(":
             if self.logic_mode and self.is_(".."):
                 raise AcslRefusal("source-unparseable", "(..)", t.at())
@@ -836,6 +882,17 @@ CONTRACT_WORDS = {"requires", "ensures", "assigns", "behavior", "assumes", "term
                   "decreases", "complete", "disjoint", "allocates", "frees", "check", "admit"}
 GLOBAL_WORDS = {"logic", "predicate", "lemma", "axiomatic", "inductive", "axiom", "type", "ghost", "global",
                 "check", "admit"}
+
+
+def merge_contracts(a: Contract, b: Contract) -> Contract:
+    """Two annotation blocks before one function are one contract: their clauses accumulate (ACSL 2.x, function
+    contracts: the clauses of a contract, however many comments carry them)."""
+    a.requires += b.requires
+    a.ensures += b.ensures
+    a.assigns += b.assigns
+    a.behaviors += b.behaviors
+    a.other += b.other
+    return a
 
 
 def parse_contract(p: Parser, where: str) -> Contract:
@@ -1017,7 +1074,8 @@ class Program:
                         # (an unknown logic name is then its own refusal)
                         self.global_errors.append(r)
                 elif first in CONTRACT_WORDS:
-                    pending = parse_contract(ap, t.at())
+                    parsed = parse_contract(ap, t.at())
+                    pending = merge_contracts(pending, parsed) if pending is not None else parsed
                 elif ap.peek().kind == "eof":
                     continue
                 else:
@@ -1048,6 +1106,9 @@ class Program:
                 alias = p.ident().text
                 p.expect(";")
                 if alias == "bool" and ty.kind == "int":
+                    # the corpus's `typedef int bool`: a boolean RESULT (C's own truth values are 0 and 1, and a
+                    # body returning anything else fails Dafny's typing); as a PARAMETER type it is refused below,
+                    # since a C int admits more than two values
                     ty = CType("bool", name="bool")
                 self.typedefs[alias] = CType(ty.kind, ty.signed, ty.width, ty.elem, ty.const, alias) \
                     if ty.kind != "bool" else ty
@@ -1264,7 +1325,7 @@ class Program:
 
     def _decl(self, p: Parser) -> list:
         line = p.peek().line
-        ty = p.ctype()
+        ty = p.ctype(allow_static=False)
         out = []
         while True:
             stars = 0
@@ -1529,6 +1590,44 @@ class Translator:
         self.rec_dafny: list[str] = []
         self.spec_division = False
         self._ptrs: set = set()
+        self._bound: list[str] = []       # the quantifier binders in scope while a clause is rendered
+
+    @staticmethod
+    def _requires_nonneg(c: Contract, name: str) -> bool:
+        """Does a requires clause state `name >= 0` (or `0 <= name`, `name > k` for k >= -1, ...) by itself?"""
+        def says(e: E) -> bool:
+            if e.k == "bin" and e.a[0] == "&&":
+                return says(e.a[1]) or says(e.a[2])
+            if e.k != "bin":
+                return False
+            op, l, r = e.a
+            var_l = l.k == "var" and l.a[0] == name
+            var_r = r.k == "var" and r.a[0] == name
+            if var_l and r.k == "int":
+                return (op == ">=" and r.a[0] >= 0) or (op == ">" and r.a[0] >= -1)
+            if var_r and l.k == "int":
+                return (op == "<=" and l.a[0] >= 0) or (op == "<" and l.a[0] >= -1)
+            return False
+        return any(says(e) for e in c.requires)
+
+    @staticmethod
+    def _binders(c: Contract) -> set:
+        """Every name a quantifier binds anywhere in the contract."""
+        out: set = set()
+
+        def walk(x) -> None:
+            if isinstance(x, E):
+                if x.k == "quant":
+                    out.update(nm for _, nm in x.a[1])
+                for y in x.a:
+                    walk(y)
+            elif isinstance(x, (list, tuple)):
+                for y in x:
+                    walk(y)
+            elif isinstance(x, Behavior):
+                walk([x.assumes, x.requires, x.ensures, x.assigns])
+        walk([c.requires, c.ensures, c.assigns, c.behaviors, [o[1] for o in c.other]])
+        return out
 
     def drop(self, rule: str) -> None:
         self.dropped[rule] = self.dropped.get(rule, 0) + 1
@@ -1574,11 +1673,18 @@ class Translator:
                 self.len_of.setdefault(ln, nm)
             elif ty.kind == "struct":
                 raise AcslRefusal("struct", f"{nm}: {ty.show()}", f.where)
+            elif ty.kind == "bool" and ty.name == "bool":
+                # `typedef int bool` names an int: a parameter of that type takes any value, not two
+                raise AcslRefusal("bool-typedef-param", f"{nm}: a typedef over int admits more than two values", f.where)
             elif ty.kind not in ("int", "bool"):
                 raise AcslRefusal("c-type", f"{nm}: {ty.show()}", f.where)
         for ln in self.len_of:
             if ln not in dict((nm, 1) for _, nm in f.params) or not self.env[ln].is_int():
                 raise AcslRefusal("valid-range-shape", f"length {ln} is not an integer parameter", f.where)
+            if self.env[ln].signed is not False and not self._requires_nonneg(c, ln):
+                # |a| is never negative: a signed length the contract leaves free would lose its negative states
+                raise AcslRefusal("valid-range-shape",
+                                  f"length {ln} is signed and no requires keeps it non-negative", f.where)
         if f.ret.kind == "void":
             raise AcslRefusal("void-result", self.fname, f.where)
         if f.ret.kind == "struct":
@@ -1596,7 +1702,7 @@ class Translator:
         for ln in self.len_of:
             if ln in assigned:
                 raise AcslRefusal("length-assigned", ln, f.where)
-        self.mutated = {nm: fresh(nm + "0", {p for _, p in f.params} | self._all_names(f.body))
+        self.mutated = {nm: fresh(nm + "0", {p for _, p in f.params} | self._all_names(f.body) | self._binders(c))
                         for _, nm in f.params if nm in assigned}
         if self.mutated:
             self.rewrites.append("mutated-param-copied")
@@ -1989,6 +2095,8 @@ class Translator:
             return "true" if e.a[0] else "false"
         if k == "var":
             nm = e.a[0]
+            if nm in self._bound:
+                return nm                 # a quantifier's variable, whatever parameter it shadows
             if pos != "fun" and nm in self.len_of:
                 return f"|{ren.get(self.len_of[nm], self.len_of[nm])}|"
             if nm == "\\nothing":
@@ -2028,6 +2136,8 @@ class Translator:
             if op in ("&&", "||", "==>", "<==>"):
                 return f"({D(l)} {op} {D(r)})"
             if op in REL_OPS:
+                if op in ("==", "!=") and any(x.k == "var" and x.a[0] in (seqs | self._ptrs) for x in (l, r)):
+                    raise AcslRefusal("pointer-identity", acsl_or(e), self.where)   # addresses, not contents
                 return f"({D(l)} {op} {D(r)})"
             if op in ("+", "-", "*"):
                 if l.k == "var" and l.a[0] in (seqs | set(self.seq_len)) or \
@@ -2103,7 +2213,12 @@ class Translator:
                     raise AcslRefusal("typed-quantifier", f"{ty.show()} {nm}", self.where)
                 inner[nm] = nm
                 bs.append(f"{nm}: int")
-            b = self.dx(body, inner, pos, seqs, guard, fun)
+            names = [nm for _, nm in binders]
+            self._bound.extend(names)
+            try:
+                b = self.dx(body, inner, pos, seqs, guard, fun)
+            finally:
+                del self._bound[len(self._bound) - len(names):]
             return f"({kind} {', '.join(bs)} :: {b})"
         if k == "cast":
             ty, x = e.a
@@ -2130,6 +2245,8 @@ class Translator:
         if x.k == "int":
             return x.a[0] >= 0
         if x.k == "var":
+            if x.a[0] in self._bound:
+                return False              # an ACSL integer variable, whatever unsigned parameter it shadows
             ty = self.env.get(x.a[0]) or self.local_types.get(x.a[0])
             return ty is not None and ty.kind == "int" and ty.signed is False
         if x.k == "bin" and x.a[0] in ("+", "*", "/", "%"):
@@ -2164,7 +2281,7 @@ class Translator:
 
     @property
     def local_types(self) -> dict:
-        return {d["c_name"]: d["_ty"] for d in self.locals if "_ty" in d}
+        return {d["c_name"]: d["_ty"] for d in getattr(self, "locals", []) if "_ty" in d}
 
     def ctyp(self, e: E) -> CType:
         """The C type of a body expression (int promotions ignored: only the
@@ -2211,6 +2328,8 @@ class Translator:
         text = self._cx(e)
         if want_bool and ty.kind != "bool":
             return f"({text} != 0)"
+        if not want_bool and ty.kind == "bool" and k in ("bin", "un", "not"):
+            return f"(if {text} then 1 else 0)"       # ISO C 6.5.8/6.5.9/6.5.13: a comparison or logical result is int 0 or 1
         return text
 
     def _cx(self, e: E) -> str:
@@ -2253,8 +2372,7 @@ class Translator:
             if op in REL_OPS:
                 if (lt.kind == "bool") != (rt.kind == "bool"):
                     raise AcslRefusal("bool-int-mix", acsl_or(e), self.where)
-                if (lt.is_unsigned() != rt.is_unsigned()) and op not in ("==", "!=") \
-                        and lt.kind == "int" and rt.kind == "int":
+                if (lt.is_unsigned() != rt.is_unsigned()) and lt.kind == "int" and rt.kind == "int":
                     # C converts the signed operand to unsigned: a negative one compares huge
                     if not (self._lit_nonneg(l) or self._lit_nonneg(r)):
                         raise AcslRefusal("mixed-sign-comparison", acsl_or(e), self.where)
@@ -2276,7 +2394,10 @@ class Translator:
         if k == "cast":
             ty, x = e.a
             if x.k == "int" and ty.kind in ("int", "bool"):
-                return str(x.a[0]) if ty.kind == "int" else ("true" if x.a[0] else "false")
+                if ty.kind == "bool":
+                    return "true" if x.a[0] else "false"
+                v = c_convert(x.a[0], ty)
+                return str(v) if v >= 0 else f"({v})"
             raise AcslRefusal("cast", f"({ty.show()})", self.where)
         if k == "member":
             raise AcslRefusal("struct", acsl_or(e), self.where)
@@ -2532,7 +2653,7 @@ def translate(c_file: Path, root: Path, function: Optional[str] = None) -> Lifte
     fname = function or c_file.stem
     if fname not in prog.funcs:
         defined = [f for f, g in prog.funcs.items() if g.body is not None and f != "<globals>"]
-        if len(defined) == 1:
+        if function is None and len(defined) == 1:    # only the file's own name may fall back to its sole function
             fname = defined[0]
         else:
             raise AcslRefusal("no-function", f"{c_file.stem} not defined in {c_file.name}")
