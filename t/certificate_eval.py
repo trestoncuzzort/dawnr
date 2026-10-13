@@ -20,6 +20,7 @@ project's own (t/SPEC.md, "The twins"). No model is asked anything. Research rec
 from __future__ import annotations
 
 import argparse
+import ast
 import copy
 import functools
 import json
@@ -59,11 +60,39 @@ def redigest(cert: dict) -> dict:
     return cert
 
 
+def _parsed(predicate: dict) -> tuple[dict | None, str]:
+    """(the program parsed, "") or (None, why it does not parse). A certificate under evaluation may carry anything,
+    and a program the parser rejects is a forgery that cannot be made, reported beside the replay, not an abort."""
+    try:
+        return surface.parse(predicate["program"]), ""
+    except Exception as e:  # noqa: BLE001 - whatever the parser raises on a rejected program is the note
+        return None, f"the program does not parse: {str(e)[:200]}"
+
+
+def _core_call(source: str) -> tuple[ast.Assign | None, str]:
+    """The first `_t_result = _t_core(...)` statement of the recorded Python, found by parsing it, so that a string
+    literal or a comment merely containing the text is never the place changed."""
+    try:
+        tree = ast.parse(source)
+    except SyntaxError as e:
+        return None, f"the recorded Python does not parse: {e.msg} (line {e.lineno})"
+    found = [n for n in ast.walk(tree)
+             if isinstance(n, ast.Assign) and len(n.targets) == 1
+             and isinstance(n.targets[0], ast.Name) and n.targets[0].id == "_t_result"
+             and isinstance(n.value, ast.Call) and isinstance(n.value.func, ast.Name) and n.value.func.id == "_t_core"]
+    if not found:
+        return None, "the recorded Python has no `_t_result = _t_core(...)` statement"
+    return min(found, key=lambda n: (n.lineno, n.col_offset)), ""
+
+
 def forge(cert: dict, how: str) -> tuple[dict | None, str]:
     """(the forged certificate, what was changed), or (None, why this one cannot be forged that way)."""
     out = copy.deepcopy(cert)
     predicate = out["predicate"]
-    task = surface.parse(predicate["program"])
+    if how in ("twin", "spec"):
+        task, why = _parsed(predicate)
+        if task is None:
+            return None, why
     if how == "twin":
         body, operator, _witness = harness.twin_for(task)
         if body is None:
@@ -79,12 +108,23 @@ def forge(cert: dict, how: str) -> tuple[dict | None, str]:
     if how == "python":
         python = predicate.get("python") or {}
         source = python.get("source") or ""
-        marker = "    _t_result = _t_core("
-        if marker not in source:
+        if not source.strip():
             return None, "the certificate carries no Python"
-        head, tail = source.split(marker, 1)
-        line, rest = tail.split("\n", 1)
-        python["source"] = head + marker + line + "\n    _t_result = _t_one_off(_t_result)\n" + rest + BUMP
+        node, why = _core_call(source)
+        if node is None:
+            return None, why
+        lines = source.splitlines(keepends=True)
+        indent = lines[node.lineno - 1][:node.col_offset]
+        if indent.strip():
+            return None, "the recorded Python's core call shares its line with another statement"
+        helper = "_t_one_off"                       # a name the recorded Python does not already use, so nothing of
+        while helper in source:                     # its own is redefined by the forgery
+            helper += "_"
+        head, tail = lines[:node.end_lineno], lines[node.end_lineno:]
+        if not head[-1].endswith("\n"):
+            head[-1] += "\n"
+        body = "".join(head) + f"{indent}_t_result = {helper}(_t_result)\n" + "".join(tail)
+        python["source"] = body + ("" if body.endswith("\n") else "\n") + BUMP.replace("_t_one_off", helper)
         return redigest(out), "the recorded Python answers one off"
     raise ValueError(how)
 
@@ -128,9 +168,12 @@ def main(argv: list[str] | None = None) -> int:
     unknown = [k for k in a.kernels.split(",") if k and k not in spec_check.KERNELS]
     if unknown:
         raise SystemExit(f"certificate_eval: no prover is called {unknown[0]}")
+    if any(f.resolve() == a.out.resolve() for f in a.files):
+        raise SystemExit(f"certificate_eval: --out {a.out} is also an input; nothing was written")
+    certs = [(f, json.loads(f.read_text(encoding="utf-8"))) for f in a.files]   # every input read before any write
     rows = []
-    for f in a.files:
-        row = dict(evaluate(json.loads(f.read_text(encoding="utf-8")), a.kernels, a.jobs), file=f.name)
+    for f, cert in certs:
+        row = dict(evaluate(cert, a.kernels, a.jobs), file=f.name)
         rows.append(row)
         print(f"{f.name}: as written {row['as written']['verdict']}; " + "; ".join(
             f"{how} {row['forged'][how].get('verdict', 'not forged')}" for how in FORGERIES), flush=True)
