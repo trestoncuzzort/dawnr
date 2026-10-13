@@ -4366,7 +4366,7 @@ def acsl_call(c: dict, ctx: Ctx) -> str:
     for p, a in zip(info["params"], c["args"], strict=True):
         if p["type"] == "seq":
             s = seq_var(a, ctx.env)
-            parts += [s, f"{s}_n"]
+            parts += [s, ctx.seq_len.get(s, f"{s}_n")]    # the value's length, not the buffer's capacity
         else:
             parts.append(term(a, ctx))
     lab = f"{{{ctx.label}}}" if info["labeled"] else ""
@@ -4552,6 +4552,9 @@ def term(e: dict, ctx: Ctx) -> str:
         return f"({base} != 0)" if ctx.env[n] == "bool" else base
     if "ite" in e:
         i = e["ite"]
+        if _contains_seq_eq(i["cond"], ctx):
+            raise NotImplementedError("framac: a sequence equality under a conditional TERM has no ACSL term "
+                                      "rendering (its extensional form is a predicate)")
         return (f"(({term(i['cond'], ctx)}) ? ({term(i['then'], ctx)}) "
                 f": ({term(i['else'], ctx)}))")
     if "call" in e:
@@ -4702,6 +4705,9 @@ def _conj(parts):
     return parts[0] if len(parts) == 1 else "(" + " && ".join(parts) + ")"
 
 
+_DEFS_OPEN: set = set()          # spec_funs whose bodies are being expanded for definedness (no regress on recursion)
+
+
 def defs(e: dict, ctx: Ctx):
     """SPEC.md definedness of a spec expression, as an ACSL predicate that
     must be PROVEN, or None when trivially defined.
@@ -4760,7 +4766,19 @@ def defs(e: dict, ctx: Ctx):
                       None if db is None else
                       f"(\\forall integer {fresh}; ({rng}) ==> {db})"])
     if "call" in e:
-        return _conj([defs(a, ctx) for a in e["call"].get("args", [])])
+        c = e["call"]
+        parts = [defs(a, ctx) for a in c.get("args", [])]
+        info = ctx.funs.get(c["fun"]) if isinstance(ctx.funs, dict) else None
+        if (info and not info.get("is_task") and isinstance(info.get("body"), dict)
+                and c["fun"] not in _DEFS_OPEN and len(info.get("params", [])) == len(c.get("args", []))):
+            # the callee's body must be defined at these arguments too (a `1 / x` inside it is a `1 / 0` here)
+            _DEFS_OPEN.add(c["fun"])
+            try:
+                m = {pm["name"]: a for pm, a in zip(info["params"], c["args"])}
+                parts.append(defs(subst(info["body"], m), ctx))
+            finally:
+                _DEFS_OPEN.discard(c["fun"])
+        return _conj(parts)
     if "ctor" in e:
         return _conj([defs(a, ctx) for a in e["ctor"]["args"]])   # PREDICT T37
     if "field" in e:
@@ -5384,7 +5402,7 @@ def cexpr(e: dict, env: dict, funs: dict, task_name: str,
         return (f"({cexpr(e['args'][0], env, funs, task_name, _div_style)} / "
                 f"{cexpr(e['args'][1], env, funs, task_name, _div_style)})")
     if "int" in e:
-        return str(e["int"])
+        return _int_lit(e["int"])        # THE INT-LITERAL GATE: a literal past int's range is decomposed
     if "bool" in e:
         return "1" if e["bool"] else "0"
     if "var" in e:
@@ -5957,9 +5975,18 @@ def code_ats(e: dict, env: dict, guard: tuple = ()) -> list:
     if "op" not in e:
         return out
     op, args = e["op"], e.get("args", [])
+    if op == "slice":
+        s_e, lo, hi = args
+        out += code_ats(s_e, env, guard)
+        out += code_ats(lo, env, guard)
+        out += code_ats(hi, env, guard)
+        out.append(("sl", seq_var(s_e, env), lo, hi, guard))       # SPEC.md "Slices": 0 <= lo <= hi <= len
+        return out
     if op == "at":
         out += code_ats(args[1], env, guard)
         base = args[0]
+        if "var" not in base:
+            out += code_ats(base, env, guard)        # a computed sequence: its own elements first
         if "var" in base:
             out.append(("at", seq_var(base, env), args[1], guard))
         elif base.get("op") == "seq":
@@ -6041,8 +6068,14 @@ def at_asserts(e: dict, ctx: Ctx, indent: str, funs=None,
         body = None
         if tag == "at":
             s, ix = rest
+            n_s = ctx.seq_len.get(s, f"{s}_n")         # the logical length, not the buffer's capacity
             body = (f"0 <= ({term(ix, ctx)}) "
-                    f"&& ({term(ix, ctx)}) < {s}_n")
+                    f"&& ({term(ix, ctx)}) < {n_s}")
+        elif tag == "sl":
+            s, lo, hi = rest
+            n_s = ctx.seq_len.get(s, f"{s}_n")
+            body = (f"0 <= ({term(lo, ctx)}) && ({term(lo, ctx)}) <= ({term(hi, ctx)}) "
+                    f"&& ({term(hi, ctx)}) <= {n_s}")
         elif tag == "atn":
             # SEQ VALUE, executable position, item 1 (literal), 2026-09-11
             # (framac-seq): a literal base's bound is its own element
@@ -6949,9 +6982,16 @@ def seq_assign_lines(target: str, e: dict, ctx: Ctx, indent: str,
         n = len(args)
         if cap is not None:
             out.append(f"{indent}/*@ assert {n} <= {xn}; */")
-        for k, a in enumerate(args):
-            vc = cexpr(a, ctx.env, funs, task_name)
-            out.append(f"{indent}{target}[{k}] = {vc};")
+        if any(_mentions_var(a, target) for a in args):
+            # `r := [r[1], r[0]]`: every element is read before any is written
+            for k, a in enumerate(args):
+                out.append(f"{indent}int __lit{k} = {cexpr(a, ctx.env, funs, task_name)};")
+            for k in range(n):
+                out.append(f"{indent}{target}[{k}] = __lit{k};")
+        else:
+            for k, a in enumerate(args):
+                vc = cexpr(a, ctx.env, funs, task_name)
+                out.append(f"{indent}{target}[{k}] = {vc};")
         if cap is not None:
             out.append(f"{indent}{cap} = {n};")
         return out
@@ -8060,7 +8100,7 @@ def stmts(body: list, ctx: Ctx, task_name: str, indent: str,
         if "assign" in s:
             name, e = s["assign"]
             assert name in ctx.env, f"assign to undeclared {name}"
-            prefix.pop(name, None)
+            _drop_prefix(prefix, name)
             if _is_method_call(e, ctx.funs):
                 out += _method_call_lines(name, e, ctx, indent, task_name,
                                           declare=False)
@@ -8370,7 +8410,7 @@ def stmts(body: list, ctx: Ctx, task_name: str, indent: str,
             # a fact must hold on EVERY path to the loop head.
             for br in (c["then"], c["else"]):
                 for n in assigned_names(br, ctx.seq_len)[0]:
-                    prefix.pop(n, None)
+                    _drop_prefix(prefix, n)
         elif "while" in s:
             w = s["while"]
             # WHILE-GUARD DEFINEDNESS, added 2026-09-09 (the eighth sweep's
@@ -8408,8 +8448,12 @@ def stmts(body: list, ctx: Ctx, task_name: str, indent: str,
                                        task_name)
             guard_ats_body = at_asserts(w["cond"], ctx, indent + "  ",
                                         ctx.funs, task_name)
-            ann = [f"{indent}  loop invariant {pred(i, ctx)};"
-                   for i in w.get("invariants", [])]
+            ann = []
+            for i in w.get("invariants", []):
+                d_i = defs(i, ctx)
+                if d_i is not None:
+                    ann.append(f"{indent}  loop invariant {d_i};")   # the invariant is defined at every header
+                ann.append(f"{indent}  loop invariant {pred(i, ctx)};")
             hit, dec = assigned_names(w["body"], ctx.seq_len)
             frame = [n for n in dict.fromkeys(hit) if n not in dec]
             # THE FRAME-FACT GAP, framac column (2026-09-12, ROADMAP
@@ -8520,6 +8564,7 @@ def stmts(body: list, ctx: Ctx, task_name: str, indent: str,
             # reverse.
             out += stmts(w["body"], ctx, task_name, indent + "  ",
                         {k: v for k, v in prefix.items() if k not in hit})
+            out += at_asserts(w["cond"], ctx, indent + "  ", ctx.funs, task_name)   # the guard runs once more
             out.append(f"{indent}}}")
             for n in hit:
                 prefix.pop(n, None)
@@ -10290,6 +10335,15 @@ def _value_certificate(task: dict, twin_body: list, w: dict,
             if arr in used or f"{ret}_n" in used:
                 return None
             r_vals = [int(x) for x in twin_val]
+            try:                        # the witness's value must be what the body computes at these inputs
+                import interp as _ip
+                env_i = {k: (tuple(v) if isinstance(v, list) else v) for k, v in st.items()}
+                env_i[ret] = None
+                _ip.exec_body(twin_body, env_i, _ip.funs_of(task, twin_body), _ip.St())
+                if _ip._j(env_i.get(ret)) != twin_val:
+                    return None
+            except Exception:           # noqa: BLE001 - no replay, no certificate
+                return None
             init = ", ".join(_int_lit(x) for x in r_vals) or "0"
             decls.append(f"  int {arr}[{max(len(r_vals), 1)}] = "
                          f"{{{init}}};")
@@ -10962,8 +11016,9 @@ def _int_lit(n: int) -> str:
     if _INT32_MIN <= n <= _INT32_MAX:
         return str(n)
     if n > _INT32_MAX:
-        return f"({_INT32_MAX} + ({_int_lit(n - _INT32_MAX)}))"
-    return f"({_INT32_MIN} - ({_int_lit(_INT32_MIN - n)}))"
+        q, r = divmod(n, _INT32_MAX)      # n = q * MAX + r, each factor itself in range or decomposed again
+        return f"(({_INT32_MAX} * ({_int_lit(q)})) + ({_int_lit(r)}))"
+    return f"(-({_int_lit(-n)}))"
 
 
 def _cert_ground_len(e: dict, w: dict):
@@ -11181,6 +11236,62 @@ def _exit_certificate(task: dict, twin_body: list, w: dict,
     return "\n".join(lines)
 
 
+def _has_loop_measure(body) -> bool:
+    """Does any loop under `body` carry a decreases?"""
+    if isinstance(body, list):
+        return any(_has_loop_measure(x) for x in body)
+    if not isinstance(body, dict):
+        return False
+    if "while" in body and body["while"].get("decreases") is not None:
+        return True
+    return any(_has_loop_measure(v) for v in body.values())
+
+
+def _mentions_var(e, name: str) -> bool:
+    """Does `e` read the variable `name` anywhere?"""
+    if isinstance(e, list):
+        return any(_mentions_var(x, name) for x in e)
+    if not isinstance(e, dict):
+        return False
+    if e.get("var") == name and set(e) == {"var"}:
+        return True
+    return any(_mentions_var(v, name) for v in e.values())
+
+
+def _drop_prefix(prefix: dict, name: str) -> None:
+    """A write to `name` ends every prefix fact about it or defined through it."""
+    prefix.pop(name, None)
+    for k in [k for k, init in prefix.items() if _mentions_var(init, name)]:
+        prefix.pop(k, None)
+
+
+def _writes_to(body, name: str) -> int:
+    """How many statements assign or declare `name` under `body`."""
+    if isinstance(body, list):
+        return sum(_writes_to(x, name) for x in body)
+    if not isinstance(body, dict):
+        return 0
+    n = 0
+    if "assign" in body and body["assign"][0] == name:
+        n += 1
+    if "var" in body and isinstance(body["var"], dict) and body["var"].get("name") == name:
+        n += 1
+    if "return" in body and body["return"][0] == name:
+        n += 1
+    return n + sum(_writes_to(v, name) for k, v in body.items() if k in ("if", "while", "then", "else", "body"))
+
+
+def _reads_len_of(body, name: str) -> bool:
+    """Does any expression under `body` read `len(name)`?"""
+    if isinstance(body, list):
+        return any(_reads_len_of(x, name) for x in body)
+    if not isinstance(body, dict):
+        return False
+    if body.get("op") == "len" and body.get("args") and body["args"][0] == {"var": name}:
+        return True
+    return any(_reads_len_of(v, name) for v in body.values())
+
+
 def _measure_certificate(task: dict, twin_body: list, w: dict,
                          env: dict, funs: dict, used: set) -> str | None:
     """ROADMAP 13.4, framac-measure, 2026-09-11: the certificate for a
@@ -11218,6 +11329,8 @@ def _measure_certificate(task: dict, twin_body: list, w: dict,
         return None
     if CERT_FN in used or CERT_GOAL in used:
         return None
+    if task.get("decreases") is None and not _has_loop_measure(twin_body):
+        return None                    # no measure anywhere: two numbers certify nothing about this task
     caller_m, callee_m = w.get("_caller_measure"), w.get("_callee_measure")
     if (not isinstance(caller_m, int) or isinstance(caller_m, bool)
            or not isinstance(callee_m, int) or isinstance(callee_m, bool)):
@@ -12018,7 +12131,9 @@ def _lower(task: dict, body: list, witness: dict | None = None,
         _seq_len_track(body, lens)
         if ret in lens:
             ret_len_expr = lens[ret]
-            if _ret_written_in_loop(body, ret):
+            if _ret_written_in_loop(body, ret) or (_writes_to(body, ret) > 1 and _reads_len_of(body, ret)):
+                # EXACT mode pins len(ret) to its FINAL length; a read of it between two writes would see the
+                # wrong one, so the length is tracked through the body instead
                 capacity_mode = True
                 tracked_exact = True
         else:
