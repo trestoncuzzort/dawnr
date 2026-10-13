@@ -106,7 +106,7 @@ BEDROCK_CLI_TRANSIENT = ("ThrottlingException", "ServiceUnavailableException", "
                          "InternalServerException", "timed out", "timeout", "Timeout", "Connection",
                          "EndpointConnectionError", "ReadTimeoutError")
 BEDROCK_CLI_READ_TIMEOUT_S = 900     # the CLI's default read timeout is 60 s; a long reply takes minutes
-BEDROCK_CLI_MAX_CONCURRENCY = 8
+BEDROCK_CLI_MAX_CONCURRENCY = 16
 AWS_CLI_FALLBACKS = ("/home/t/.local/bin/aws", "/usr/local/bin/aws", "/usr/bin/aws")
 
 
