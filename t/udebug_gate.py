@@ -54,11 +54,13 @@ def lift_dafny(d: Path, ident: str, timeout: float) -> dict:
     (t/lifter.py: resolve, parse, classify, rewrite, check, one task per gradable method, every refusal
     named) in a subprocess under the memory cap; the method named p<id> becomes `p<id>.t` beside it."""
     out = d / "lift"
+    marker = out / f"p{ident}.outcome.json"
+    if marker.is_file():
+        marker.unlink()            # an earlier run's outcome must not stand in for this run's
     rc, text = run([sys.executable, str(HERE / "lifter.py"), str(d / f"p{ident}.dfy"), "--out", str(out),
                     "--timeout", "120", "--force"], timeout, HERE.parent)
     if rc is None:
         return {"status": "timeout"}
-    marker = out / f"p{ident}.outcome.json"
     if not marker.is_file():
         return {"status": "error", "tail": text[-800:]}
     o = json.loads(marker.read_text(encoding="utf-8"))
@@ -77,6 +79,7 @@ def lift_dafny(d: Path, ident: str, timeout: float) -> dict:
     (d / f"p{ident}.t").write_text(surface.print_task(task).rstrip() + "\n", encoding="utf-8")
     return {"status": "lifted", "checked": m.get("checked"), "task_file": m["task_file"]}
 
+_ISOLATION = ["-s", "-P"] if sys.version_info >= (3, 11) else ["-s"]
 JUDGE_LINE = re.compile(r"^(\d+)/(\d+) test files match the judge's output(?: \((\d+) without a stored output\))?")
 STUDENT_ASK = ("Write the t task `p{id}` for this judge problem: its requires and ensures state the problem as "
                "the statement defines it and its body solves it. The task sees one case at a time; its parameters "
@@ -93,7 +96,8 @@ def run(cmd: list[str], timeout: float, cwd: Path, stdin_path: Path | None = Non
     terminal and every other sample with it (the 2026-10-06 lesson of the desktop, repeated here on 10-12).
     Without a user manager (a plain container) the command runs uncapped. `split` returns stdout and stderr
     apart (a judged program's output must not be mixed with its warnings)."""
-    if shutil.which("systemd-run"):
+    plain = list(cmd)
+    if shutil.which("systemd-run") and _SYSTEMD_OK[0] is not False:
         cmd = ["systemd-run", "--user", "--scope", "--quiet", "-p", f"MemoryMax={MEM_MAX}",
                "-p", "MemorySwapMax=0"] + cmd
     stdin = open(stdin_path, "rb") if stdin_path else None
@@ -101,6 +105,15 @@ def run(cmd: list[str], timeout: float, cwd: Path, stdin_path: Path | None = Non
     try:
         p = subprocess.run(cmd, cwd=cwd, capture_output=True, text=True, timeout=timeout, stdin=stdin,
                            errors="replace", env=env)
+        if cmd is not plain and p.returncode != 0 and _no_user_manager(p.stderr):
+            # the executable exists but no user manager answers (a plain container): run uncapped, and remember
+            _SYSTEMD_OK[0] = False
+            if stdin:
+                stdin.seek(0)
+            p = subprocess.run(plain, cwd=cwd, capture_output=True, text=True, timeout=timeout, stdin=stdin,
+                               errors="replace", env=env)
+        elif cmd is not plain:
+            _SYSTEMD_OK[0] = True
         err = p.stderr
         if p.returncode in (137, -9) or "Killed" in err[-400:]:
             err += "\n[memory cap: killed]"
@@ -112,6 +125,15 @@ def run(cmd: list[str], timeout: float, cwd: Path, stdin_path: Path | None = Non
         if stdin:
             stdin.close()
         _release_slot(slot)
+
+
+_SYSTEMD_OK: list = [None]        # None: untried; True: the user manager answers; False: run uncapped
+
+
+def _no_user_manager(stderr: str) -> bool:
+    tail = (stderr or "")[-600:]
+    return ("Failed to connect to bus" in tail or "Failed to start transient scope" in tail
+            or "No medium found" in tail or "Connection refused" in tail)
 
 
 JUDGE_SLOTS = int(os.environ.get("T_JUDGE_SLOTS", "4"))
@@ -158,13 +180,16 @@ def judge_python(prog: Path, tests: Path, timeout: float, env: dict | None = Non
     for i in ins:
         o = i.with_name(i.name.replace(".in.txt", ".out.txt"))
         if not o.is_file():
+            skipped += 1           # no stored output: nothing to compare, and not a judged case
             continue
         want = o.read_text(encoding="utf-8", errors="replace")
         if judge._norm(want) == ["Sorry! Output limit exceeded!"]:   # uDebug's placeholder, as judge.py skips it
             skipped += 1
             continue
         t0 = time.monotonic()
-        rc, out, err = run([sys.executable, "-I", str(prog.resolve())], per_case, prog.resolve().parent,
+        # -s -P (no user site, no script-directory import path) instead of -I: -I implies -E, which ignores
+        # PYTHONHASHSEED, the one variable the export relies on (docs.python.org/3/using/cmdline.html)
+        rc, out, err = run([sys.executable, *_ISOLATION, str(prog.resolve())], per_case, prog.resolve().parent,
                            stdin_path=i, split=True, env=env)
         max_s = max(max_s, round(time.monotonic() - t0, 3))
         if rc is None:
@@ -189,8 +214,8 @@ def judge_python(prog: Path, tests: Path, timeout: float, env: dict | None = Non
 
 
 def judge(task: Path, io: Path, tests: Path, timeout: float) -> dict:
-    rc, out = run([sys.executable, str(HERE / "judge.py"), str(task), "--tests", str(tests), "--io", str(io),
-                   "--show"], timeout, HERE.parent)
+    rc, out = run([sys.executable, str(HERE / "judge.py"), str(Path(task).resolve()), "--tests",
+                   str(Path(tests).resolve()), "--io", str(Path(io).resolve()), "--show"], timeout, HERE.parent)
     if rc is None:
         return {"status": "timeout", "rc": None}
     m = next((JUDGE_LINE.match(line) for line in out.splitlines() if JUDGE_LINE.match(line)), None)
@@ -270,7 +295,20 @@ def grade_one(d: Path, corpus: Path, kernels: str, judge_timeout: float, verify_
     return finish(d, res)
 
 
+def source_sha256(d: Path, ident: str) -> str:
+    """One hash over the sample's program files (the Python program, the t task, its IO module, the Dafny
+    source), so a cached verdict is tied to what was graded and a replaced program is graded again."""
+    import hashlib
+    h = hashlib.sha256()
+    for name in (f"p{ident}.py", f"p{ident}.t", f"p{ident}_io.py", f"p{ident}.dfy"):
+        f = d / name
+        if f.is_file():
+            h.update(name.encode()); h.update(b"\0"); h.update(f.read_bytes()); h.update(b"\0")
+    return h.hexdigest()
+
+
 def finish(d: Path, res: dict) -> dict:
+    res["source_sha256"] = source_sha256(d, str(res.get("id", "")))
     (d / "result.json").write_text(json.dumps(res, indent=1) + "\n", encoding="utf-8")
     return res
 
@@ -298,8 +336,11 @@ def build_rows(results: list[dict], bank: dict[str, dict], cap: int, pair_cap: i
         if b.get("split") != "train":
             skipped["not-train"] += sum(r["accepted"] for r in rs)
             continue
-        if any(r.get("proof") == "none" for r in rs):
-            python_rows(key, rs, rows, pairs, cap, pair_cap, skipped)
+        py_rs = [r for r in rs if r.get("proof") == "none"]
+        if py_rs:
+            python_rows(key, py_rs, rows, pairs, cap, pair_cap, skipped)
+        rs = [r for r in rs if r.get("proof") != "none"]
+        if not rs:
             continue
         chosen_texts, chosen = set(), []
         for r in rs:
@@ -349,12 +390,14 @@ def python_rows(key: str, rs: list[dict], rows: list[dict], pairs: list[dict], c
     """Execution-verified program rows (kind judge-python, proof none): chosen = a program that reproduced every
     stored output, rejected = a same-problem program the judge refuted at a stored case. Deduplicated by text."""
     chosen_texts, chosen, rejected = set(), [], []
+    texts = []
     for r in rs:
         d = Path(r["dir"])
         prog = d / f"p{r['id']}.py"
         if not prog.is_file() or not r.get("judge"):
             continue
-        text = prog.read_text(encoding="utf-8").strip()
+        texts.append((r, prog.read_text(encoding="utf-8").strip()))
+    for r, text in texts:
         if r["accepted"]:
             if text in chosen_texts:
                 skipped["duplicate-chosen"] += 1
@@ -363,7 +406,9 @@ def python_rows(key: str, rs: list[dict], rows: list[dict], pairs: list[dict], c
             else:
                 chosen_texts.add(text)
                 chosen.append((r, text))
-        elif r["judge"]["status"] in ("fail", "error") and text not in chosen_texts:
+    accepted_texts = {text for r, text in texts if r["accepted"]}      # an accepted text is never a rejected one
+    for r, text in texts:
+        if not r["accepted"] and r["judge"]["status"] in ("fail", "error") and text not in accepted_texts:
             rejected.append((r, text))
     for r, text in chosen:
         rec = json.loads((Path(r["dir"]) / "record.json").read_text(encoding="utf-8"))
@@ -432,7 +477,15 @@ def main(argv=None) -> int:
     a = ap.parse_args(argv)
     samples, corpus = Path(a.samples), Path(a.corpus)
     dirs = sorted(p.parent for p in samples.glob("*/s*/record.json"))
-    todo = [d for d in dirs if a.regrade or not (d / "result.json").is_file()]
+    def stale(d: Path) -> bool:
+        """A result.json whose source hash is missing or no longer matches the sample's files is not a verdict
+        about these files."""
+        try:
+            r = json.loads((d / "result.json").read_text(encoding="utf-8"))
+            return r.get("source_sha256") != source_sha256(d, str(r.get("id", "")))
+        except (OSError, ValueError):
+            return True
+    todo = [d for d in dirs if a.regrade or not (d / "result.json").is_file() or stale(d)]
     print(f"{len(dirs)} samples, {len(todo)} to grade", flush=True)
 
     def one(d: Path) -> dict:

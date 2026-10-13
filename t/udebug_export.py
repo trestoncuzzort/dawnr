@@ -52,13 +52,12 @@ EXCLUDED_PROVIDERS = ("openai",)
 
 def lane_provider(lane_p: Path) -> str | None:
     """The provider one record of the lane names (every sample of a lane shares it)."""
-    probe = next(iter(lane_p.glob("*/s*/record.json")), None)
-    if probe is None:
-        return None
-    try:
-        return json.loads(probe.read_text(encoding="utf-8")).get("provider")
-    except (OSError, ValueError):
-        return None
+    for probe in sorted(lane_p.glob("*/s*/record.json")):
+        try:
+            return json.loads(probe.read_text(encoding="utf-8")).get("provider")
+        except (OSError, ValueError):
+            continue                      # a truncated record says nothing; the next one may
+    return None
 
 
 def scan_lanes(patterns: list[str], excluded: set[str] | None = None) -> dict[tuple[str, str], list[dict]]:
@@ -121,9 +120,12 @@ def est_time(o: dict, prev: dict | None) -> float:
 def confirm(key: tuple[str, str], rec: dict, accepted: list[dict], corpus: Path, out: Path, seeds: list[int],
             timeout: float, prev: dict | None = None) -> dict:
     judge, ident = key
+    if not seeds:
+        raise ValueError("confirm needs at least one hash seed; nothing is exported unconfirmed")
     tests = corpus / rec["tests_dir"]
     runs = []
     chosen = None
+    src_before = None
     # the accepted samples fastest first; the first that passes both seeds is the solution
     for o in sorted(accepted, key=lambda r: (est_time(r, prev), r["sample_dir"])):
         prog = Path(o["sample_dir"]) / f"p{ident}.py"
@@ -131,6 +133,7 @@ def confirm(key: tuple[str, str], rec: dict, accepted: list[dict], corpus: Path,
             continue
         ok = True
         these = []
+        src_before = prog.read_bytes()
         for seed in seeds:
             env = dict(os.environ, PYTHONHASHSEED=str(seed))
             j = ug.judge_python(prog, tests, timeout, env=env)
@@ -139,6 +142,9 @@ def confirm(key: tuple[str, str], rec: dict, accepted: list[dict], corpus: Path,
             if j["status"] != "pass":
                 ok = False
                 break
+        if ok and prog.read_bytes() != src_before:
+            ok = False                    # the program changed under the check: what was judged is not what is here
+            these.append({"seed": None, "status": "source-changed-during-confirmation"})
         runs.append({"sample_dir": o["sample_dir"], "lane": o["lane"], "runs": these, "confirmed": ok})
         if ok:
             chosen = o
@@ -149,12 +155,11 @@ def confirm(key: tuple[str, str], rec: dict, accepted: list[dict], corpus: Path,
     if chosen is None:
         entry["status"] = "accepted-but-not-confirmed"
         return entry
-    prog = Path(chosen["sample_dir"]) / f"p{ident}.py"
-    src = prog.read_bytes()
+    src = src_before                      # the bytes every seed run judged
+    max_s = max((r.get("max_case_s") or 0.0) for r in runs[-1]["runs"] if r.get("seed") is not None)
     dest_dir = out / judge
     dest_dir.mkdir(parents=True, exist_ok=True)
     (dest_dir / f"{ident}.py").write_bytes(src)
-    max_s = max(r["max_case_s"] or 0.0 for r in runs[-1]["runs"])
     entry.update({"status": "solved", "lane": chosen["lane"], "sample_dir": chosen["sample_dir"],
                   "model": model_of(chosen["sample_dir"]), "sha256": hashlib.sha256(src).hexdigest(),
                   "cases": runs[-1]["runs"][0]["total"], "max_case_s": max_s,
@@ -192,15 +197,21 @@ def main(argv=None) -> int:
         with index_path.open(encoding="utf-8") as f:
             for line in f:
                 e = json.loads(line)
-                if e.get("status") == "solved" and e.get("lane") not in excluded:
-                    prev[(e["judge"], e["id"])] = e      # a solution from an excluded lane is not kept on record
+                if e.get("status") != "solved" or e.get("lane") in excluded:
+                    continue
+                lane_dir = Path(e["sample_dir"]).parent.parent if e.get("sample_dir") else None
+                if lane_dir is not None and lane_provider(lane_dir) in EXCLUDED_PROVIDERS:
+                    excluded.add(e.get("lane") or lane_dir.name)
+                    continue                             # a solution from an excluded provider is not kept on record
+                prev[(e["judge"], e["id"])] = e
 
     todo = []
     for key, rec in bank.items():
         rs = results.get(key, [])
         accepted = [r for r in rs if r.get("accepted")]
-        if a.only_new and key in prev:
-            # keep a solved entry unless a new accepted sample is measured faster than the one on record
+        if a.only_new and key in prev and Path(prev[key].get("solution") or "").is_file():
+            # keep a solved entry (whose program is still there) unless a new accepted sample is measured faster
+            # than the one on record
             faster = [r for r in accepted if r["sample_dir"] != prev[key].get("sample_dir")
                       and est_time(r, None) < (prev[key].get("max_case_s") or 0) - 0.001]
             if not faster:
@@ -225,8 +236,11 @@ def main(argv=None) -> int:
                           "split": rec.get("split"), "in_bytes": rec.get("in_bytes")}
     if a.limit:
         for key, rec, _ in todo[a.limit:]:
-            index[key] = {"judge": key[0], "id": key[1], "title": rec.get("title"), "status": "accepted-unconfirmed",
-                          "split": rec.get("split")}
+            if key in prev and Path(prev[key].get("solution") or "").is_file():
+                index[key] = prev[key]          # not reached this run: the confirmed solution stands
+            else:
+                index[key] = {"judge": key[0], "id": key[1], "title": rec.get("title"),
+                              "status": "accepted-unconfirmed", "split": rec.get("split")}
         todo = todo[:a.limit]
     print(f"{len(bank)} problems in the bank; {len(todo)} accepted to confirm; "
           f"{sum(1 for e in index.values() if e['status'] == 'unsolved')} unsolved; "

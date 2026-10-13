@@ -1325,7 +1325,7 @@ class Parser:
                     pos = (self.positions or {}).get(id(st)) if self.positions is not None else None
                     var_node, while_node, index = self._one_for(st, scope, funs, dtypes, walk, pos)
                     scope[index] = "int"
-                    out += [var_node, while_node]
+                    out += (var_node if isinstance(var_node, list) else [var_node]) + [while_node]
                 elif "var" in st:
                     scope[st["var"]["name"]] = st["var"]["type"]
                     out.append(st)
@@ -1385,12 +1385,26 @@ class Parser:
             body = self._continue_steps(walk(f["body"], inner), index, pos)
             var_node = self._mk(pos, {"var": {"name": index, "type": "int", "init": a}})
             iv = lambda: {"var": index}   # noqa: E731
+            lo_inv = lambda: copy.deepcopy(a)   # noqa: E731
+            pre = []
+            if _free_names(a) & assigned:
+                # the lower bound is evaluated once, at entry (SPEC.md "Loops as sugar"); a body that assigns a
+                # name it mentions must not re-evaluate it in the invariant, so the entry value is kept in a local
+                lo_name = index + "_lo"
+                while lo_name in scope or lo_name in assigned or lo_name in declared:
+                    lo_name += "_"
+                pre.append(self._mk(pos, {"var": {"name": lo_name, "type": "int", "init": copy.deepcopy(a)}}))
+                scope[lo_name] = "int"
+                lo_inv = lambda: {"var": lo_name}   # noqa: E731
+                var_node = self._mk(pos, {"var": {"name": index, "type": "int", "init": {"var": lo_name}}})
             while_node = self._mk(pos, {"while": {
                 "cond": self._mk(pos, {"op": "<", "args": [iv(), copy.deepcopy(b)]}),
-                "invariants": [self._mk(pos, {"op": "<=", "args": [copy.deepcopy(a), iv()]}),
+                "invariants": [self._mk(pos, {"op": "<=", "args": [lo_inv(), iv()]}),
                                self._mk(pos, {"op": "<=", "args": [iv(), copy.deepcopy(b)]})] + f["invariants"],
                 "decreases": self._mk(pos, {"op": "-", "args": [copy.deepcopy(b), iv()]}),
                 "body": body + [self._mk(pos, {"assign": [index, {"op": "+", "args": [iv(), {"int": 1}]}]})]}})
+            if pre:
+                return pre + [var_node], while_node, index
             return var_node, while_node, index
         seq = f["seq"]
         try:
@@ -1832,9 +1846,11 @@ class Parser:
             ident = self.name()
             if (self.at("sym", ".") and self.i + 1 < len(self.toks)
                     and self.toks[self.i + 1].kind == "id"
-                    and self.toks[self.i + 1].text not in STR_METHODS
-                    and (ident in self.datatypes or not self.datatypes
-                         or (self.i + 2 < len(self.toks) and self.toks[self.i + 2].text == "("))):
+                    and ((ident in self.datatypes and self.toks[self.i + 1].text in self.datatypes[ident])
+                         # a declared constructor wins over a string member of the same name (`Case.lower`)
+                         or (self.toks[self.i + 1].text not in STR_METHODS
+                             and (ident in self.datatypes or not self.datatypes
+                                  or (self.i + 2 < len(self.toks) and self.toks[self.i + 2].text == "("))))):
                 # (SPEC.md "Datatypes (v2): fields", 2026-10-07: once a program declares a datatype, `x.f` on a
                 # name that is not one of them is field access, read by p_postfix; a program declaring none
                 # keeps reading any `Name.Name` as a constructor, as before. `X.c(...)` is always a
@@ -1880,11 +1896,14 @@ class Parser:
 
 
 def _assigned_names(stmts: list) -> set:
-    """Every `assign` target in a statement list, at any depth (an interim `for` body included)."""
+    """Every `assign` target in a statement list, at any depth (an interim `for` body included), and the array
+    of an `a[i] := e` write (SPEC.md "Heap (v1)"): a bound that mentions the array is not fixed either."""
     out = set()
     for st in stmts or []:
         if "assign" in st:
             out.add(st["assign"][0])
+        elif "aset" in st:
+            out.add(st["aset"][0])
         elif "if" in st:
             out |= _assigned_names(st["if"]["then"]) | _assigned_names(st["if"].get("else") or [])
         elif "while" in st:
@@ -2107,6 +2126,7 @@ _ARITY = {"neg": 1, "not": 1, "len": 1, "at": 2, "update": 3, "fill": 2, "slice"
           "+": 2, "-": 2, "*": 2, "div": 2, "mod": 2,
           "==": 2, "!=": 2, "<": 2, "<=": 2, ">": 2, ">=": 2,
           "pair": 2, "fst": 1, "snd": 1,
+          "toreal": 1, "floor": 1, "ceil": 1,     # SPEC.md "Exact rationals (v1)": surplus arguments are refused, not dropped
           # SPEC.md "Finite sets" (2026-09-27); `set` (the display) is
           # excluded here for its variable arity, exactly as `seq` is.
           "in": 2, "card": 1, "union": 2, "inter": 2, "diff": 2,
@@ -2157,13 +2177,22 @@ def pexpr(e, floor: int = P_QUANT) -> str:
     if kind == "comp":
         # SPEC.md "Comprehensions (v1)" (2026-10-06): a display of its own, so no floor; `if true` is omitted
         c = e["comp"]
-        src = ("[%s, %s)" % (pexpr(c["lo"]), pexpr(c["hi"])) if "lo" in c else pexpr(c["seq"]))
+        if "lo" in c:
+            src = "[%s, %s)" % (pexpr(c["lo"]), pexpr(c["hi"]))
+        else:
+            src = pexpr(c["seq"])
+            if c["seq"].get("op") == "seq" or "comp" in c["seq"]:    # `in [` would read as a range; `in [x for` likewise
+                src = "(%s)" % src
         cond = "" if c["cond"] == {"bool": True} else " if %s" % pexpr(c["cond"])
         return "[%s for %s in %s%s]" % (pexpr(c["body"]), c["var"], src, cond)
     if kind == "rat":
         # SPEC.md "Exact rationals (v1)": the shortest finite decimal (the denominator is 2^a 5^b, or check_wf
         # refused the literal); a negative one is the literal with its sign, binding like a unary minus.
         n, d = e["rat"]
+        if not isinstance(n, int) or not isinstance(d, int) or isinstance(n, bool) or isinstance(d, bool) or d == 0:
+            raise SurfaceError("rational literal needs integer parts and a nonzero denominator: %r" % (e["rat"],))
+        if d < 0:
+            n, d = -n, -d
         return _wrap(_decimal_of(n, d), P_UNARY if n < 0 else P_POSTFIX, floor)
     if kind == "bool":
         if e["bool"] not in (True, False):
@@ -2272,16 +2301,21 @@ def pexpr(e, floor: int = P_QUANT) -> str:
         # `seq`'s `[...]` or `call`'s `f(...)`, so no `_wrap` floor applies.
         return "(%s, %s)" % (pexpr(args[0]), pexpr(args[1]))
     if op in ("fst", "snd"):
-        # p.0 / p.1: the projections, postfix like `at`.
-        return _wrap("%s.%s" % (pexpr(args[0], P_POSTFIX),
-                                "0" if op == "fst" else "1"),
-                     P_POSTFIX, floor)
+        # p.0 / p.1: the projections, postfix like `at`. An integer literal receiver keeps its parentheses:
+        # `1.0` would read as a decimal.
+        recv = pexpr(args[0], P_POSTFIX)
+        if "int" in args[0]:
+            recv = "(%s)" % recv
+        return _wrap("%s.%s" % (recv, "0" if op == "fst" else "1"), P_POSTFIX, floor)
     if op == "tuple":
         # (e1, ..., en), n >= 3 (SPEC.md "Compositional types (v1)"): its own delimiters, like the pair's.
         return "(%s)" % ", ".join(pexpr(a) for a in args)
     if op == "proj":
         # e.k for k >= 2: the tuple projection, postfix like `.0`/`.1`.
-        return _wrap("%s.%d" % (pexpr(args[0], P_POSTFIX), args[1]["int"]), P_POSTFIX, floor)
+        recv = pexpr(args[0], P_POSTFIX)
+        if "int" in args[0]:
+            recv = "(%s)" % recv
+        return _wrap("%s.%d" % (recv, args[1]["int"]), P_POSTFIX, floor)
     if op == "split":
         # SPEC.md "The string library" (2026-09-11): s.split() / s.split(c),
         # postfix so it composes with indexing (`s.split()[0]`).
@@ -2493,6 +2527,20 @@ def pstmts(body: list, ind: str) -> list:
     return out
 
 
+_SYNTAX_NOTATION = frozenset({"old", "assert"})          # forms the parser reads before any declaration
+_CALL_NOTATION = frozenset(LIB_NAMES) | frozenset({
+    "len", "seq", "real", "floor", "ceil", "setminus", "union", "inter", "card", "tostr"})
+
+
+def _uses_op(x, name: str) -> bool:
+    """Whether a `{"op": name}` node occurs anywhere in x."""
+    if isinstance(x, dict):
+        if x.get("op") == name:
+            return True
+        return any(_uses_op(v, name) for v in x.values())
+    return isinstance(x, list) and any(_uses_op(v, name) for v in x)
+
+
 def print_task(task: dict) -> str:
     """The AST to surface text. Raises SurfaceError on anything the notation
     cannot say, rather than emitting text that reads as a different tree."""
@@ -2506,6 +2554,16 @@ def print_task(task: dict) -> str:
     if unknown:
         raise SurfaceError("task carries fields t does not define: %s"
                            % " ".join(sorted(unknown)))
+    for kind_name in ("spec_funs", "methods", "lemmas"):
+        for f in t.get(kind_name) or []:
+            nm = f.get("name")
+            # `old(e)` is the entry state and `assert e;` an assertion whatever is declared: a function or lemma
+            # of that name can never be called by the printed text. A library name (abs, rev, ...) is only a
+            # problem when the task also USES that library operator: the declared function wins at the call
+            # `abs(x)`, so the operator's own occurrences would reparse as calls to it.
+            if nm in _SYNTAX_NOTATION or (nm in _CALL_NOTATION and _uses_op(t, nm)):
+                raise SurfaceError("%s %r shadows a notation of the language; it cannot be printed faithfully"
+                                   % (kind_name[:-1].replace("_", " "), nm))
     if t["t"] not in (0, 1):
         raise SurfaceError("format version must be 0 or 1, found %r" % t["t"])
     if len(t["returns"]) != 1:

@@ -267,11 +267,14 @@ _OUTCOME_SENTENCE = {
 
 def _sentence(entry: dict) -> str:
     if entry.get("real") is None:
-        return f"no twin, {entry.get('refused', 'refused')}"
+        # nothing ran: the refusal names why (a missing kernel, a task with no twin, ...); say that, not "no twin"
+        return f"refused, {entry.get('refused', 'refused')}"
     r, t = entry["real"], entry["twin"]
     flip = r == Outcome.VERIFIED and t == Outcome.REFUTED and not entry.get("provisional")
     verdict = "COUNTS" if flip else "REFUSED"
     tail = "; provisional, n has not yet agreed" if entry.get("provisional") else ""
+    if entry.get("refused") and not flip:
+        tail += f"; {entry['refused']}"          # an unsupported construct is refused by name, and the name is kept
     return (f"{verdict}, real is {_OUTCOME_SENTENCE.get(r, r)}; "
            f"{entry.get('twin_op')} twin is {_OUTCOME_SENTENCE.get(t, t)}{tail}")
 
