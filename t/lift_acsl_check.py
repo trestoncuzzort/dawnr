@@ -224,6 +224,16 @@ class Printer:
             if self.is_bool(args[0]) or self.is_bool(args[1]):
                 s = f"({self.pred(args[0])} <==> {self.pred(args[1])})"
                 return s if op == "==" else f"(!{s})"
+            seqs = [a.get("var") for a in args if isinstance(a, dict) and self.types.get(a.get("var")) == "seq"]
+            if seqs:
+                if len(seqs) != 2:
+                    raise ValueError("a sequence compared with a non-sequence")
+                a, b = seqs
+                la, lb = self.seq_len[a], self.seq_len[b]
+                pa, pb = self.names[a], self.names[b]
+                # the contents, element by element: the pointers' addresses are not what the t clause compares
+                s = (f"({la} == {lb} && (\\forall integer tq; 0 <= tq < {la} ==> {pa}[tq] == {pb}[tq]))")
+                return s if op == "==" else f"(!{s})"
             return f"({self.term(args[0])} {op} {self.term(args[1])})"
         if op in ("<", "<=", ">", ">="):
             return f"({self.term(args[0])} {op} {self.term(args[1])})"
@@ -286,17 +296,40 @@ def pc_formula(pr: Printer, ctx: list[str], pc: list, goal) -> str:
     """ctx && pc ==> goal, with quantifier-bound names of pc universally closed."""
     binders = []
     hyps = list(ctx)
-    for p in pc:
-        if isinstance(p, tuple) and p[0] == "bind":
-            v = p[1]
-            pr.fresh += 1
-            nv = f"tb{pr.fresh}_{v}"
-            pr.names[v] = nv
-            pr.types[v] = "int"
-            binders.append(nv)
-        else:
+    saved: list = []                                # (name, old name, old type) to restore: the binders are local
+    pending_bind = None
+    try:
+        for p in pc:
+            if isinstance(p, tuple) and p[0] == "bind":
+                pending_bind = p[1]
+                continue
+            if pending_bind is not None:
+                # the range `lo <= v < hi` that follows a bind: lo and hi belong to the OUTER scope (v may shadow
+                # a name they use), so they are printed before v is renamed
+                v = pending_bind
+                pending_bind = None
+                lo_t = pr.term(p["args"][0]["args"][0])
+                hi_t = pr.term(p["args"][1]["args"][1])
+                pr.fresh += 1
+                nv = f"tb{pr.fresh}_{v}"
+                saved.append((v, pr.names.get(v), pr.types.get(v)))
+                pr.names[v] = nv
+                pr.types[v] = "int"
+                binders.append(nv)
+                hyps.append(f"({lo_t} <= {nv} && {nv} < {hi_t})")
+                continue
             hyps.append(pr.pred(p))
-    goal = goal() if callable(goal) else goal       # printed after the binders are named
+        goal = goal() if callable(goal) else goal       # printed after the binders are named
+    finally:
+        for v, old_n, old_t in reversed(saved):
+            if old_n is None:
+                pr.names.pop(v, None)
+            else:
+                pr.names[v] = old_n
+            if old_t is None:
+                pr.types.pop(v, None)
+            else:
+                pr.types[v] = old_t
     body = f"{conj(hyps)} ==> {goal}"
     for nv in reversed(binders):
         body = f"\\forall integer {nv}; {body}"
@@ -440,10 +473,15 @@ def build(task: dict, record: dict, side: dict) -> dict:
         else:
             eq = f"({head} == {fpr.term(f['body'])})"
         lemmas.append((f"tlift_eqn_{src['dafny_name']}", forall(qdecl, f"{dname}({dargs}) ==> {eq}")))
+        if isinstance(pr.divmod, set):
+            pr.divmod |= fpr.divmod
+        else:
+            pr.divmod = pr.divmod or fpr.divmod      # a `/` or `%` inside this body needs the helpers too
         sites: list = []
-        calls_with_context(f["body"], [], sites, {fname})
+        calls_with_context(f["body"], [], sites, set(recs))
         for j, (c, pc) in enumerate(sites):
-            goal = (lambda c=c: call_domain(fpr, dname, c, recs))
+            # the callee's own domain at the arguments, whichever lifted function is called (itself included)
+            goal = (lambda c=c: call_domain(fpr, f"tlift_D_{recs[c['fun']][1]['dafny_name']}", c, recs))
             lemmas.append((f"tlift_close_{src['dafny_name']}_{j}",
                            forall(qdecl, pc_formula(fpr, [f"{dname}({dargs})"], pc, goal))))
     if recs:
@@ -609,7 +647,8 @@ def c_harness(side: dict, task: dict, inputs: list[dict]) -> str:
             if p["role"] == "seq":
                 arr = f"a{k}_{p['c_name']}"
                 vals = ", ".join(str(x) for x in v) or "0"
-                lines.append(f"  static const value_type {arr}[] = {{{vals}}};")
+                qual = "const " if "const" in p["c_type"] else ""     # a writable parameter may write
+                lines.append(f"  static {qual}value_type {arr}[] = {{{vals}}};")
                 arrays[p["c_name"]] = (arr, len(v))
         for p in side["params"]:
             if p["role"] == "seq":
@@ -621,8 +660,10 @@ def c_harness(side: dict, task: dict, inputs: list[dict]) -> str:
                 v = env[tname]
                 args.append(str(int(v)) + ("u" if "unsigned" in p["c_type"] or "size_type" in p["c_type"] else ""))
         ret_c = side["ret"]["c_type"]
-        fmt = "%u" if ("size_type" in ret_c or "unsigned" in ret_c) else "%d"
-        lines.append(f'  printf("{fmt}\\n", {side["function"]}({", ".join(args)}));')
+        unsigned = "size_type" in ret_c or "unsigned" in ret_c
+        # printed at full width whatever the C return type: a 64-bit value through %d would fold
+        cast, fmt = ("(unsigned long long)", "%llu") if unsigned else ("(long long)", "%lld")
+        lines.append(f'  printf("{fmt}\\n", {cast}{side["function"]}({", ".join(args)}));')
     lines.append("  return 0;\n}")
     return "\n".join(lines) + "\n"
 
@@ -650,7 +691,10 @@ def run_differential(task: dict, side: dict, root: Path, work: Path, n: int = 12
     p = subprocess.run(cc, capture_output=True, text=True)
     if p.returncode != 0:
         return {"inputs": len(inputs), "agree": 0, "verdict": "compile-error", "detail": p.stderr[-800:]}
-    p = subprocess.run([str(exe)], capture_output=True, text=True, timeout=60)
+    try:
+        p = subprocess.run([str(exe)], capture_output=True, text=True, timeout=60)
+    except subprocess.TimeoutExpired:
+        return {"inputs": len(inputs), "agree": 0, "verdict": "c-timeout", "detail": "the source ran past 60 s"}
     got = p.stdout.split()
     if p.returncode != 0 or len(got) != len(inputs):
         k = len(got)
@@ -691,6 +735,7 @@ def check(task: dict, record: dict, side: dict, root: Path, work: Path, par: int
         res["refusal"] = f"lift-diff-{diff['verdict']}"
         return res
     all_proved = False
+    wp_error = False
     if wp:
         try:
             built = build(task, record, side)
@@ -699,9 +744,12 @@ def check(task: dict, record: dict, side: dict, root: Path, work: Path, par: int
             all_proved = res["wp"]["total"] > 0 and res["wp"]["proved"] == res["wp"]["total"]
         except ValueError as e:
             res["wp"] = {"error": str(e), "proved": 0, "total": 0, "lemmas": {}}
+            wp_error = True
     agreed = diff["verdict"] == "agree"
     if all_proved:
         res["trust"] = "wp-equivalent+differential" if agreed else "wp-equivalent"
+    elif wp_error:
+        res["refusal"] = "lowering-unsupported"       # a clause the checker could not state was not checked
     elif side.get("spec_division"):
         res["refusal"] = "spec-division-unproved"
     elif agreed:
