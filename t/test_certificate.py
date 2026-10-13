@@ -291,3 +291,34 @@ def test_with_the_real_provers_a_true_certificate_reproduces_and_one_whose_proof
     gone = resealed(c, program=c["predicate"]["program"].replace("    invariant forall j in [0, i) . r >= s[j]\n", ""))
     report = certificate.check(gone, prover=only_dafny)
     assert report["verdict"] == certificate.UNDECIDED and report["proved here"] == []
+
+
+# Three defects the GPT-6 Astra review of 2026-10-13 named, each reproduced here before the fix.
+
+def test_conflicting_subject_digests_fail_before_any_prover_runs():
+    c = copy.deepcopy(proved())
+    c["subject"].insert(0, {"name": "program.t", "digest": {"sha256": "0" * 64}})
+    called = []
+
+    def recording(tasks, jobs):
+        called.append(tasks)
+        return {t["name"]: ALL for t in tasks}
+    report = certificate.check(c, prover=recording)
+    assert report["verdict"] == certificate.FAILED and results(report)["digests"] == certificate.BAD
+    assert not called
+
+
+def test_a_malformed_subject_digest_fails_without_crashing():
+    c = copy.deepcopy(proved())
+    c["subject"][0]["digest"] = "abc"
+    report = certificate.check(c, prover=prover(lambda t: ALL))
+    assert report["verdict"] == certificate.FAILED and results(report)["digests"] == certificate.BAD
+
+
+def test_an_undecided_report_does_not_claim_the_specification_is_established():
+    report = {"verdict": certificate.UNDECIDED, "proved here": [], "function": "total",
+              "specification": ["ensures r == sum_to(a, len(a))"],
+              "steps": [{"what": "proof", "result": certificate.SKIPPED, "detail": "no prover here proved it"}]}
+    text = certificate.render(report)
+    assert text.startswith("UNDECIDED HERE") and "What it establishes:" not in text
+    assert "not established here" in text and "ensures r == sum_to(a, len(a))" in text

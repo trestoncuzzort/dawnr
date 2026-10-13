@@ -237,9 +237,22 @@ def check(certificate: dict, prover=None, jobs: int = 2, spec: dict | None = Non
         step("certificate", BAD, f"not a dawnr certificate of version {VERSION}")
         return out
     out["function"], out["specification"] = predicate.get("function"), spec_lines(predicate["program"])
-    recorded = {s.get("name"): (s.get("digest") or {}).get("sha256") for s in certificate.get("subject") or [] if isinstance(s, dict)}
+    # every subject entry is read: a malformed digest or two digests for one name fails the certificate, so a
+    # wrong digest cannot hide behind a correct one listed after it
+    recorded, twice, malformed = {}, [], []
+    for s in certificate.get("subject") or []:
+        d = s.get("digest") if isinstance(s, dict) else None
+        if not isinstance(s, dict) or not isinstance(d, dict) or not isinstance(d.get("sha256"), str):
+            malformed.append(str(s.get("name", "?"))[:60] if isinstance(s, dict) else "?")
+            continue
+        if s.get("name") in recorded and recorded[s.get("name")] != d["sha256"]:
+            twice.append(str(s.get("name")))
+        recorded[s.get("name")] = d["sha256"]
     wrong = [name for name, text in _artifacts(predicate) if recorded.get(name) != digest(text)]
-    if not step("digests", BAD if wrong else OK, f"{', '.join(wrong)} is not the text its digest was taken of" if wrong else ""):
+    detail = (f"malformed subject digest for {', '.join(malformed)}" if malformed
+              else f"two digests recorded for {', '.join(twice)}" if twice
+              else f"{', '.join(wrong)} is not the text its digest was taken of" if wrong else "")
+    if not step("digests", BAD if (malformed or twice or wrong) else OK, detail):
         return out
     task, why = _well_formed(predicate["program"])
     if not step("program", OK if task else BAD, why):
@@ -350,9 +363,13 @@ def render(report: dict) -> str:
     lines = [head, ""]
     for s in steps:
         lines.append(f"  {s['result']:<16} {_WHAT.get(s['what'], s['what'])}" + (f": {s['detail']}" if s["detail"] else ""))
-    if report.get("function") and report.get("specification") and report["verdict"] != FAILED:
+    if report.get("function") and report.get("specification") and report["verdict"] == REPRODUCED:
         lines += ["", f"What it establishes: `{report['function']}` meets"] + ["  " + l for l in report["specification"]]
         lines += ["It does not establish that this specification is what was meant; that is the reader's to judge."]
+    elif report.get("function") and report.get("specification") and report["verdict"] == UNDECIDED:
+        # nothing here proved it: the specification is shown as the claim it is, not as something established
+        lines += ["", f"Claimed, not established here: `{report['function']}` meets"] + ["  " + l for l in report["specification"]]
+        lines += ["No prover on this machine finished a proof of it, so the claim stands unverified here."]
     return "\n".join(lines)
 
 
