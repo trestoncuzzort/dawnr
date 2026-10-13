@@ -7964,6 +7964,24 @@ def emit_spec_funs(cx: Ctx) -> str:
             if _dt_of(sf["result"]) is not None:
                 return cx.px(sf["body"], {}, {})            # PREDICT T34
             return cx.zx(sf["body"], {}, {})
+        if "decreases" not in sf:
+            if has_self_call(sf["body"], f):
+                raise NotImplementedError(f"rocq: self-recursive spec_fun {f} without a decreases")
+            # a definition that never calls itself (2026-10-13): a plain Definition, no fuel, no lemma; its
+            # definedness obligations are stated as the fuel path states them
+            cx.callpre[f] = f"sf_{f}"
+            body_plain = _sf_body()
+            sf_lens = [f"(0 <= {p['name']}_len)" for p in sf["params"] if p["type"] == "seq"]
+            obls_nr: list = []
+            cx.defs(sf["body"], [], [], obls_nr, {}, {})
+            cx._sf_obls = getattr(cx, "_sf_obls", [])
+            for binders, hyps, concl in obls_nr:
+                cx._sf_obls.append((f, btxt, sf_lens, binders, hyps, concl))
+            chunks.append(f"Definition sf_{f} {btxt} : {res} :=\n  {body_plain}.\n")
+            cx.tys = saved_tys
+            cx.callpre = saved_pre
+            cx.callpre[f] = f"sf_{f}"
+            continue
         q = _dt_struct_param(sf.get("decreases"), sf["params"])
         if q is not None:
             # PREDICT T34: a measure that is a datatype parameter is structural recursion, Rocq's own Fixpoint

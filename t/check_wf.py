@@ -199,6 +199,8 @@ RULES: dict[str, str] = {
     "spec-fun-result": "a spec_fun's result is any t type (Gate 3; Compositional types)",
     "quant-range": "a quantifier ranges over [lo, hi) or over a set or seq's elements (Gate 1; Quantifiers over "
                    "a collection)",
+    "spec-fun-decreases-selfcall": "a spec_fun that calls itself requires a decreases measure; one that does not "
+                                   "needs none (2026-10-13)",
     "spec-fun-decreases-int": "a spec_fun's decreases must be int, or a datatype value whose recursive calls "
                               "take its fields (Gate 3; Datatypes (v3): recursion)",
     "strlib-arity": "each string-library member has a fixed arity (The string library)",
@@ -1273,10 +1275,15 @@ def check_wf(task: dict, positions: dict | None = None,
             # SPEC.md "Compositional types (v1)" (2026-10-06): any t type; an invalid one is refused here by name,
             # where before an unlisted result only failed the body-type check below under a misleading message.
             _e(errs, f, f"spec_fun {f['name']} result is not a t type: {f['result']!r}", "spec-fun-result")
-        dty = _ty(f["decreases"], fenv, earlier, dtypes, ver, errs, set())
-        if dty != "int" and not (isinstance(dty, dict) and set(dty) == {"datatype"}):
-            # an int, or (SPEC.md "Datatypes (v3): recursion") a datatype value, ordered by structure
-            _e(errs, f, f"spec_fun {f['name']} decreases is not int or a datatype value", "spec-fun-decreases-int")
+        if "decreases" in f:
+            dty = _ty(f["decreases"], fenv, earlier, dtypes, ver, errs, set())
+            if dty != "int" and not (isinstance(dty, dict) and set(dty) == {"datatype"}):
+                # an int, or (SPEC.md "Datatypes (v3): recursion") a datatype value, ordered by structure
+                _e(errs, f, f"spec_fun {f['name']} decreases is not int or a datatype value", "spec-fun-decreases-int")
+        elif _self_calls(f["body"], f["name"]):
+            # the measure is what makes a self-recursive definition a function (Dafny asks one of every possibly
+            # recursive function); a definition that never calls itself needs none (2026-10-13)
+            _e(errs, f, f"spec_fun {f['name']} calls itself without a decreases", "spec-fun-decreases-selfcall")
         if _ty(f["body"], fenv, earlier, dtypes, ver, errs, set(), f["result"]) != f["result"]:
             _e(errs, f, f"spec_fun {f['name']} body type != result", "spec-fun-body-type")
     for e in task.get("requires", []):
@@ -1332,7 +1339,8 @@ def check_wf(task: dict, positions: dict | None = None,
         _no_method_calls(task["decreases"], all_methods, errs)
     for f in task.get("spec_funs", []):
         _no_method_calls(f["body"], all_methods, errs)
-        _no_method_calls(f["decreases"], all_methods, errs)
+        if "decreases" in f:
+            _no_method_calls(f["decreases"], all_methods, errs)
     bfuns = dict(funs)
     bfuns.update(msigs)
     if selfrec:

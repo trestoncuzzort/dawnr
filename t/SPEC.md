@@ -349,7 +349,7 @@ usable in `requires`, `ensures`, `invariants`, and bodies:
 {"name": ID,
  "params": [{"name": ID, "type": "int"|"seq"}, ...],
  "result": "int"|"bool",
- "decreases": Expr,          // int-valued over the params
+ "decreases"?: Expr,         // int-valued over the params; required iff the body calls itself (2026-10-13)
  "body": Expr}               // may call itself and earlier spec_funs
 ```
 

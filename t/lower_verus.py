@@ -3651,8 +3651,10 @@ def _spec_fn_domain_context(f: dict) -> list[dict]:
     itself already sufficient -- the base-case ite arm already gives
     `k>0` for free in the recursive branch, so only the UPPER bound was
     ever missing)."""
-    dec = f["decreases"]
+    dec = f.get("decreases")
     ctx = []
+    if dec is None:                     # a definition that never calls itself carries no measure to bound by
+        return ctx
     seq_params = {p["name"] for p in f["params"] if p["type"] == "seq"}
     seen: set = set()
     _walk_at_seq_params(f["body"], seq_params, seen)
@@ -5383,13 +5385,14 @@ class _V1:
         for f in task.get("spec_funs", []):
             fps = ", ".join(f"{p['name']}: {_vty(p['type'])}"
                             for p in f["params"])
-            if defined(f["decreases"]) != TRUE:
+            if "decreases" in f and defined(f["decreases"]) != TRUE:
                 raise NotImplementedError(
                     "verus: definedness obligation on spec_fun decreases "
                     "not implemented")
+            measure = f"    decreases {expr(f['decreases'])},\n" if "decreases" in f else ""
             spec_blocks.append(
                 f"spec fn {f['name']}({fps}) -> {_vty(f['result'])}\n"
-                f"    decreases {expr(f['decreases'])},\n"
+                f"{measure}"
                 "{\n"
                 f"    {expr(f['body'])}\n"
                 "}\n")

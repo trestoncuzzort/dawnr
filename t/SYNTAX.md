@@ -174,7 +174,7 @@ Stmt     ::= {"assign": [Id, Expr]}
 SpecFun  ::= {"name": Id,
               "params": [ {"name": Id, "type": Type}* ],       (* any type since 2026-10-06 *)
               "result": Type,                   (* any type since 2026-10-06 ("seq" since 2026-09-27) *)
-              "decreases": Expr,                (* int-valued, over the params *)
+              "decreases"?: Expr,               (* int-valued over the params; required iff the body self-calls (2026-10-13) *)
               "body": Expr}                     (* may call itself and EARLIER spec_funs *)
 
 Method   ::= {"name": Id, "params": [ {"name": Id, "type": Type}* ],

@@ -124,7 +124,7 @@ Grammar, in the same EBNF dialect SYNTAX.md uses:
                | "(" Type ("," Type)+ ")" | Id          (* any depth since 2026-10-06 (SPEC.md "Compositional
                                                            types"); seq<int>, set<int> are spelled seq, set *)
     SpecFun  ::= "spec" "fun" Id "(" Params ")" ":" Type   (* any type since 2026-10-06 *)
-                 "decreases" Expr "=" Expr
+                 ("decreases" Expr)? "=" Expr          (* the measure iff the body self-calls, since 2026-10-13 *)
     InlineFun ::= "inline" "fun" Id "(" Params ")" ":" Type "=" Expr ";"?
     Block    ::= "{" Stmt* "}"
     Stmt     ::= Id ":=" Expr ";"?
@@ -895,9 +895,9 @@ class Parser:
         # result is any t type (2026-09-27 had added the seq of ints).
         fn["result"] = self.ptype()
         self.production = "SpecFun"        # ptype() left it on "Type"
-        self.eat("kw", "decreases")
-        fn["decreases"] = self.expr()
-        self.production = "SpecFun"        # expr() left it on "Expr"
+        if self.opt("kw", "decreases"):    # required iff the body self-calls (check_wf's rule, 2026-10-13), as a
+            fn["decreases"] = self.expr()  # method's is; Dafny asks a measure of possibly recursive functions only
+            self.production = "SpecFun"    # expr() left it on "Expr"
         self.eat("sym", "=")
         fn["body"] = self.expr()
         self.production = "SpecFun"
@@ -2540,7 +2540,8 @@ def print_task(task: dict) -> str:
                         for p in fn["params"])
         lines.append("spec fun %s(%s): %s" % (_ident(fn["name"]), fps,
                                               _print_type(fn["result"])))
-        lines.append("  decreases %s" % pexpr(fn["decreases"]))
+        if "decreases" in fn:
+            lines.append("  decreases %s" % pexpr(fn["decreases"]))
         lines.append("= %s" % pexpr(fn["body"]))
     for lm in t.get("lemmas", []):
         lps = ", ".join("%s: %s" % (_ident(p["name"]), _print_type(p["type"]))
