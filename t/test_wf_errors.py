@@ -53,6 +53,10 @@ import tasks_io                                                # noqa: E402
 UNREACHABLE = {
     "name": "the lexer's identifier regex (_ID) is exactly NAME_RE; no "
             "token the lexer can produce for a task name ever fails it.",
+    "int-literal": "the lexer builds an int literal from a digit run, so its "
+                   "payload is always an int; the rule guards hand-written JSON.",
+    "bool-literal": "the lexer builds a bool literal from `true`/`false`, so its "
+                    "payload is always a bool; the rule guards hand-written JSON.",
     "one-return": "SYNTAX.md's `returns` production has notation for "
                   "exactly one `(name: Type)`; there is no way to write a "
                   "second return in the surface syntax (program() eats "
