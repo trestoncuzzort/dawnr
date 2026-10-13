@@ -125,6 +125,7 @@ probes needed no change here, only in lower_lean.py.
 """
 from __future__ import annotations
 
+import hashlib
 import os
 import re
 import secrets
@@ -164,14 +165,16 @@ UNPROVED_MARKS = ("omega could not prove", "unsolved goals", "failed")
 # the measured witness. The name is the contract with lower_lean.py.
 CERT_NAME = "t_refutation_certificate"
 
-THEOREM_RE = re.compile(r"\btheorem\s+([A-Za-z_][A-Za-z0-9_']*)")
+THEOREM_RE = re.compile(r"\btheorem\s+([^\s:({\[]+)")      # any Lean name, Unicode and primes included
+_NAMESPACE = re.compile(r"^\s*(namespace|end)\s+([^\s]+)\s*$", re.M)
 # '<name>' depends on axioms: [a, b] | '<name>' does not depend on any axioms
 # (both forms measured verbatim, lean 4.33.1, 2026-08-31)
 AUDIT_LINE = re.compile(
-    r"'([^']+)' (?:depends on axioms: \[([^\]]*)\]"
+    r"'((?:[^'\s]|'(?!\s))+)' (?:depends on axioms: \[([^\]]*)\]"     # a prime inside a name is not its end
     r"|does not depend on any axioms)")
 
-_CODE_TOK = re.compile(r'--|/-|"')
+_CHAR_LIT = r"'(?:\\.|[^\\'])'(?=[^'])"
+_CODE_TOK = re.compile("--|/-|\"|" + _CHAR_LIT)        # a char literal (a quote inside it) opens no string
 _BLOCK_TOK = re.compile(r"/-|-/")
 _STR_TOK = re.compile(r'\\.|"', re.DOTALL)
 
@@ -191,6 +194,14 @@ def _strip_comments_strings(text: str) -> str:
             break
         out.append(text[i:m.start()])
         tok = m.group()
+        if tok.startswith("'"):
+            out.append(" ")             # a char literal, whatever it holds
+            i = m.end()
+            continue
+        if tok.startswith("'"):
+            out.append(" ")             # a char literal, whatever it holds
+            i = m.end()
+            continue
         if tok == "--":
             j = text.find("\n", m.end())
             if j == -1:
@@ -224,6 +235,21 @@ def _strip_comments_strings(text: str) -> str:
     return "".join(out)
 
 
+_CERT_STMT = re.compile(r"\btheorem\s+(?:[\w.']*\.)?" + re.escape("t_refutation_certificate")
+                        + r"\b(?:\s*\([^)]*\))*\s*:\s*(.*?)\s*:=", re.S)
+
+
+def _states_refutation(stripped: str) -> bool:
+    """Does the certificate theorem's proposition negate something? lower_lean states the witness as a negation
+    (`¬ ...`, `... → False`), so a certificate whose statement is `True` or any other plain proposition is a
+    name, not a refutation."""
+    m = _CERT_STMT.search(stripped)
+    if m is None:
+        return False
+    prop = m.group(1).strip()
+    return bool(re.search(r"¬|\bFalse\b|≠|\bNot\b", prop))
+
+
 def version() -> str:
     if not LEAN:
         raise SystemExit(_LEAN_WHY)
@@ -232,8 +258,10 @@ def version() -> str:
 
 
 def verify(path: Path, budget: int = DEFAULT_HEARTBEATS) -> Result:
-    src_hash = sha256_file(path)
-    raw = safe_text(path)
+    sha256_file(path)                       # the file is readable; the verdict's hash is of the bytes read below
+    data = path.read_bytes()                # one read: hashed, scanned and checked as the same bytes
+    src_hash = hashlib.sha256(data).hexdigest()
+    raw = data.decode("utf-8", errors="replace")
     stripped = _strip_comments_strings(raw)
     # NFKC for the ban scan only: fullwidth/compatibility homoglyphs of the
     # ASCII tokens normalize onto them. Names are extracted from the
@@ -242,9 +270,19 @@ def verify(path: Path, budget: int = DEFAULT_HEARTBEATS) -> Result:
     banned = [m.group(0) for m in
               BANNED.finditer(_ALLOWED_IMPORT_LINE.sub("", unicodedata.normalize("NFKC", stripped)))]
     theorems: list[str] = []
-    for m in THEOREM_RE.finditer(stripped):
-        if m.group(1) not in theorems:
-            theorems.append(m.group(1))
+    stack: list[str] = []                   # namespaces: a theorem is audited by its qualified name
+    events = sorted([(m.start(), "ns", m) for m in _NAMESPACE.finditer(stripped)]
+                    + [(m.start(), "thm", m) for m in THEOREM_RE.finditer(stripped)], key=lambda t: t[0])
+    for _, kind, m in events:
+        if kind == "ns":
+            if m.group(1) == "namespace":
+                stack.append(m.group(2))
+            elif stack and stack[-1] == m.group(2):
+                stack.pop()
+        else:
+            name = ".".join(stack + [m.group(1)]) if stack and "." not in m.group(1) else m.group(1)
+            if name not in theorems:
+                theorems.append(name)
 
     if banned:
         # scan verdict precedes the kernel: in-file set_option overrides the
@@ -270,7 +308,7 @@ def verify(path: Path, budget: int = DEFAULT_HEARTBEATS) -> Result:
     fd, tmp = tempfile.mkstemp(suffix=".lean", prefix="t_lean_audit_")
     try:
         with os.fdopen(fd, "wb") as f:
-            f.write(path.read_bytes() + b"\n" + audit.encode("utf-8"))
+            f.write(data + b"\n" + audit.encode("utf-8"))
         t0 = time.monotonic()
         try:
             p = run_tree([str(LEAN), f"-DmaxHeartbeats={budget}", tmp],
@@ -339,14 +377,14 @@ def verify(path: Path, budget: int = DEFAULT_HEARTBEATS) -> Result:
     smoke_vacuous = any(_clean_audit(n) for n in smoke_names)
 
     error = ""
-    if "maxHeartbeats" in out or "deterministic timeout" in out:
+    if re.search(r"maximum number of heartbeats|\(deterministic\) timeout|deterministic timeout", out):
         outcome = Outcome.TIMEOUT
     elif smoke_vacuous:
         outcome = Outcome.VACUOUS
         error = ("vacuity smoke: `requires` implies False, kernel-checked "
                  "(" + ", ".join(n for n in smoke_names
                                  if _clean_audit(n)) + " audits clean)")
-    elif CERT_NAME in theorems:
+    elif any(t == CERT_NAME or t.endswith("." + CERT_NAME) for t in theorems):
         # The only door to REFUTED. A file declaring the certificate name
         # can never mint VERIFIED, so this branch precedes the exit-0 path
         # on purpose: planting the name in a real program only demotes it.
@@ -355,6 +393,10 @@ def verify(path: Path, budget: int = DEFAULT_HEARTBEATS) -> Result:
             error = ("adapter audit sentinel missing from tool output "
                      "(empty or suppressed); kernel evidence absent; "
                      f"output tail: {out[-200:]!r}")
+        elif not _states_refutation(stripped):
+            outcome = Outcome.MALFORMED
+            error = ("a theorem carries the certificate's name but states no refutation (its proposition is "
+                     "not a negation): proved or not, it refutes nothing")
         else:
             cert_lines = [
                 axs for nm, axs in AUDIT_LINE.findall(out[idx:])
@@ -372,7 +414,7 @@ def verify(path: Path, budget: int = DEFAULT_HEARTBEATS) -> Result:
             # cells on the 159 lifted tasks; dafny, verus and spark were
             # measured to need the gate (ROADMAP 12.5), and one rule for
             # every certificate column is the point.
-            others = [t for t in theorems if t != CERT_NAME]
+            others = [t for t in real_names if t != CERT_NAME]      # the smokes fail by design: not "the others"
             others_ok = bool(others) and all(
                 any((nm == t or nm.endswith("." + t))
                     and {a.strip() for a in (axs or "").split(",")
