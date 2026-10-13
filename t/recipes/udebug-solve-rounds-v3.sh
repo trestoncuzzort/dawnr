@@ -55,11 +55,11 @@ PY
     python3 t/udebug_teacher.py $COMMON --tag $TAG --ids "$IDS" $EXTRA >> t/out/udebug/teacher-$TAG.log 2>&1 &
     TPID=$!
     # grade while the teacher is still answering, then once more for the tail
-    ( sleep 120; while kill -0 $TPID 2>/dev/null; do python3 t/udebug_gate.py --samples t/out/udebug/teacher-$TAG --corpus $CORPUS --bank $BANK --kernels dafny --jobs 3 --judge-timeout 150 >> t/out/udebug/teacher-$TAG-gate.log 2>&1; sleep 120; done ) &
+    ( sleep 120; while kill -0 $TPID 2>/dev/null; do python3 t/udebug_gate.py --samples t/out/udebug/teacher-$TAG --corpus $CORPUS --bank $BANK --kernels dafny --jobs 2 --judge-timeout 150 >> t/out/udebug/teacher-$TAG-gate.log 2>&1; sleep 120; done ) &
     GPID=$!
     wait $TPID; log "round $round $kind: teacher exit $?"
     wait $GPID
-    python3 t/udebug_gate.py --samples t/out/udebug/teacher-$TAG --corpus $CORPUS --bank $BANK --kernels dafny --jobs 3 --judge-timeout 150 >> t/out/udebug/teacher-$TAG-gate.log 2>&1
+    python3 t/udebug_gate.py --samples t/out/udebug/teacher-$TAG --corpus $CORPUS --bank $BANK --kernels dafny --jobs 2 --judge-timeout 150 >> t/out/udebug/teacher-$TAG-gate.log 2>&1
     acc=$(grep -c 'accepted=True' t/out/udebug/teacher-$TAG-gate.log); tot=$(grep -c 'accepted=' t/out/udebug/teacher-$TAG-gate.log)
     log "round $round $kind: gate exit $?; accepted $acc of $tot"
     if [ $kind = repair ] && [ "$tot" -gt 20 ] && [ $((acc * 10)) -lt "$tot" ]; then log "stop rule: repair accepted under 10%; no further rounds"; break 2; fi
