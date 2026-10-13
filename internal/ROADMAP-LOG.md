@@ -3252,8 +3252,8 @@ is queued, and the ones running are read as they finish.
   Method: restate a routine's index or wrap arithmetic with exactly the guards PX4 applies, let the seven kernels
   refute it at the real input, confirm by reading, fix with the bounded twin. First result: rc_update's RC_MAP_*
   index (`map - 1` with only a `>= 0` guard) refuted at channel 19 by 7/7 (`t/flight/findings/px4_rc_map_index_any.t`,
-  row in t/FLIGHT-FINDINGS-REAL.md), the bounded twin `px4_rc_map_index` proved by 7/7, filed as PX4 PR #29115 with
+  row in t/FLIGHT-FINDINGS-REAL.md), the bounded twin `px4_rc_map_index` proved by 7/7, filed as PX4 PR #29135 (first filed as #29115; the fork was deleted and every PR re-filed, 29105-29115 → 29126-29135) with
   an RCUpdateTest case that fails on main. Two rows that hold: `px4_geofence_wrap` (SPARK, F*; symbolic modulus
   stops the rest) and `px4_dm_offset` (SPARK, Rocq, F*; the nonlinear product stops the rest); a fixed-size
   `px4_geofence_wrap_4` twin registered for all seven. Lab note: Verus needs `~/.cargo/bin` on PATH in ssh shells.
-  Ten PX4 PRs filed 10-13 (29105-29113, 29115); #29070 merged 10-12.
+  Ten PX4 PRs filed 10-13 and re-filed after the fork deletion as 29126-29135, the older batch as 29116-29125; #29070 merged 10-12.
