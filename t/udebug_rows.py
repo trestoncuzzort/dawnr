@@ -61,6 +61,13 @@ def main(argv=None) -> int:
     per_lane = collections.Counter()
     for lane in a.lanes:
         lane_path = Path(lane)
+        # OpenAI's usage terms forbid training competing models on its outputs: a lane whose records name
+        # that provider is refused here by name, whatever its rows say (the submission bundle may still use them).
+        probe = next(iter(lane_path.glob("*/s*/record.json")), None)
+        if probe is not None and json.loads(probe.read_text(encoding="utf-8")).get("provider") == "openai":
+            refused["openai-lane"] += 1
+            print(f"refused lane {lane}: provider openai (its outputs may not train a model)", file=sys.stderr)
+            continue
         for row in load_jsonl(lane_path / "rows.jsonl"):
             if kinds and row.get("kind") not in kinds:
                 continue
