@@ -126,7 +126,8 @@ def judge_python(prog: Path, tests: Path, timeout: float) -> dict:
         if judge._norm(want) == ["Sorry! Output limit exceeded!"]:   # uDebug's placeholder, as judge.py skips it
             skipped += 1
             continue
-        rc, out, err = run([sys.executable, "-I", str(prog)], per_case, prog.parent, stdin_path=i, split=True)
+        rc, out, err = run([sys.executable, "-I", str(prog.resolve())], per_case, prog.resolve().parent,
+                           stdin_path=i, split=True)
         if rc is None:
             return {"status": "timeout", "passed": passed, "total": len(ins) - skipped, "skipped": skipped,
                     "case": i.name, "proof": "none"}
