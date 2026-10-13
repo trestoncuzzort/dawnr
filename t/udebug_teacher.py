@@ -728,7 +728,7 @@ def main(argv=None) -> int:
                   flush=True)
         return "ok"
 
-    cap = BEDROCK_CLI_MAX_CONCURRENCY if a.provider == "bedrock-cli" else bg.HARD_MAX_CONCURRENCY
+    cap = BEDROCK_CLI_MAX_CONCURRENCY if a.provider in ("bedrock-cli", "openai") else bg.HARD_MAX_CONCURRENCY
     workers = max(1, min(a.concurrency, cap))
     with concurrent.futures.ThreadPoolExecutor(max_workers=workers) as ex:
         list(ex.map(lambda j: one(*j), jobs))
