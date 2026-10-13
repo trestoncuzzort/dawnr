@@ -45,7 +45,10 @@ def test_unknown_stages_do_not_count_as_composed(tmp_path):
 
 def test_cancelling_stages_collapse_to_empty():
     import audit_collapsible as audit
-    assert audit.collapsible([("shift", 3), ("shift", -3)], [-5, 0, 8]) == []
+    # affine +5 then affine -5 is the identity; shift is not plain addition here (it reflects negatives), so the
+    # reviewer's shift example does not cancel and must stay non-collapsible
+    assert audit.collapsible([("affine", 1, 5), ("affine", 1, -5)], [-5, 0, 8]) == []
+    assert audit.collapsible([("shift", 3), ("shift", -3)], [-5, 0, 8]) is None
 
 
 def test_collapsible_accepts_input_iterator():
