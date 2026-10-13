@@ -122,7 +122,8 @@ def _scan(ref, task: dict, mut: list) -> str:
         if got is None:
             return "killed"
         gh = ref._heap(env)
-        if interp._tv(got) != interp._tv(real) or ref._heap_differs(gh, k):
+        rty = task["returns"][0]["type"]
+        if interp._tv(interp.as_declared(got, rty)) != interp._tv(interp.as_declared(real, rty)) or ref._heap_differs(gh, k):
             if ref._breaks_ensures(env0, got, gh):
                 return "killed"
             differs = True
