@@ -453,7 +453,7 @@ t is a tiny verified language. A t task is written like this:
       ensures EXPR                 (one or more; conjoined; the contract)
       decreases EXPR               (only when the task calls itself)
     spec fun F(a: int): int         (optional helper for the spec, t 1 only)
-      decreases a
+      decreases a                   (only when F calls itself; leave it out otherwise)
     = EXPR
     {
       STATEMENTS

@@ -372,7 +372,8 @@ def _collect_hovers(task, positions) -> list[dict]:
                for p in f["params"]}
         for p in f["params"]:
             emit(p, p["name"], "param", p["type"], positions.get(id(p)))
-        walk_expr(f["decreases"], fenv)
+        if "decreases" in f:
+            walk_expr(f["decreases"], fenv)
         walk_expr(f["body"], fenv)
 
     walk_stmts(task.get("body", []), dict(eenv))

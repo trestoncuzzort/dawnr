@@ -5689,14 +5689,15 @@ class Lower:
     def lower_spec_fun(self, sf: dict) -> str:
         sub = {p["name"]: cap(p["name"]) for p in sf["params"]}
         types = {p["name"]: p["type"] for p in sf["params"]}
-        d = self.expr(sf["decreases"], sub, types)
         plist = "; ".join(f"{cap(p['name'])} : {ada_type(p['type'])}"
                           for p in sf["params"])
         sig = f"function {cap(sf['name'])} ({plist}) return " \
               f"{ada_type(sf['result'])}"
-        return (f"   {sig}\n"
-                f"   with Subprogram_Variant => "
-                f"(Decreases => (if {d} >= 0 then {d} else 0));\n"
+        head = f"   {sig}"
+        if "decreases" in sf:               # a definition that never calls itself has no variant to state
+            d = self.expr(sf["decreases"], sub, types)
+            head += f"\n   with Subprogram_Variant => (Decreases => (if {d} >= 0 then {d} else 0))"
+        return (f"{head};\n"
                 f"\n"
                 f"   {sig} is\n"
                 f"     ({self.expr(sf['body'], sub, types)});\n")

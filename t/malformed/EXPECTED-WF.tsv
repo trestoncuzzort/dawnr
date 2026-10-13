@@ -89,3 +89,4 @@ wf-rat-lit-v1.t	3	22	rat-lit-v1
 wf-task-decreases-int.t	1	1	task-decreases-int
 wf-field-type-clash.t	4	9	field-type-clash
 wf-field-type-clash-decl.t	1	1	field-type-clash
+wf-spec-fun-decreases-selfcall.t	2	1	spec-fun-decreases-selfcall

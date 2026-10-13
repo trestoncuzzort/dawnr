@@ -4318,7 +4318,8 @@ def lower(task: dict, body: list, witness: dict | None = None) -> str:
         # a result that is not a flat type (SPEC.md "Datatypes (v3): recursion": a Tree) is spelled as a parameter is
         lines.append(f"function {f['name']}({ps}): "
                      f"{TYPES[res] if isinstance(res, str) and res in TYPES else dafny_type(res)}")
-        lines.append(f"  decreases {expr(f['decreases'], self_name)}")
+        if "decreases" in f:            # a definition that never calls itself carries none (2026-10-13)
+            lines.append(f"  decreases {expr(f['decreases'], self_name)}")
         lines.append("{")
         lines.append(f"  {expr(f['body'], self_name)}")
         lines.append("}")
