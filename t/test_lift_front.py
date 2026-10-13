@@ -34,6 +34,10 @@ RPRINT_DIR = corpora.CORPUS_RPRINT
 INFRAGMENT_FILE = corpora.INFRAGMENT_TXT
 CORPUS_DIR = corpora.CORPUS_DIR
 
+import pytest
+
+pytestmark = pytest.mark.skipif(not CORPUS_DIR.exists(), reason=f"the lifter corpus is not checked out at {CORPUS_DIR}")
+
 
 def infragment_names() -> list[str]:
     """The in-fragment file names, read on demand.
