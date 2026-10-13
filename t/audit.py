@@ -34,6 +34,7 @@ finding independent of loop invariants. Bounded domain only: a difference outsid
 from __future__ import annotations
 
 import argparse
+import hashlib
 import importlib
 import json
 import re
@@ -174,7 +175,9 @@ def audit_file(path: str, kernel: str | None = None, seconds: int = TASK_SECONDS
         work = Path(out_dir or tempfile.mkdtemp(prefix="t-audit-"))
         work.mkdir(parents=True, exist_ok=True)
         _lmod, suffix = tlib._LOWER_MOD[kernel]
-        stem = re.sub(r"[^A-Za-z0-9_]", "_", Path(path).stem)
+        # the sanitized stem plus a hash of the path: `a-b.t` and `a_b.t` sanitize alike, and a parallel audit with a
+        # shared --out would otherwise write one source path for both and read the other task's verdict
+        stem = re.sub(r"[^A-Za-z0-9_]", "_", Path(path).stem) + "_" + hashlib.sha1(str(Path(path).resolve()).encode()).hexdigest()[:8]
         res["kernel"] = kernel
         res["real_verdict"] = _kernel_verdict(task, task["body"], kernel, work / f"{stem}.{suffix}")
         if res["real_verdict"] == "verified":

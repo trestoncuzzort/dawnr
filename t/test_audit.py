@@ -96,3 +96,22 @@ if __name__ == "__main__":
         if name.startswith("test_") and callable(fn):
             fn()
             print(f"{name}: ok")
+
+
+# Named by the GPT-6 Astra review of 2026-10-13 and reproduced here before the fix: two task files whose stems
+# sanitize to the same name wrote the same kernel source path, so a parallel audit with a shared --out could read
+# the other task's verdict.
+
+def test_kernel_source_paths_do_not_collide(tmp_path):
+    from unittest.mock import patch
+    text = "t 1\ntask next_up(x: int) returns (r: int)\n  requires x >= 0\n  ensures r > x\n{\n  r := x + 1;\n}\n"
+    paths = []
+
+    def verdict(task, body, kernel, path):
+        paths.append(path)
+        return "abstain"
+    with patch.object(audit, "_kernel_verdict", side_effect=verdict):
+        for name in ("a-b.t", "a_b.t"):
+            (tmp_path / name).write_text(text, encoding="utf-8")
+            audit.audit_file(str(tmp_path / name), kernel="dafny", out_dir=str(tmp_path / "out"))
+    assert len(paths) == 2 and len(set(paths)) == 2, paths
