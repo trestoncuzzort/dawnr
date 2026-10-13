@@ -814,6 +814,7 @@ def ladder_rungs(task: dict) -> list[tuple[str, list, dict | None]]:
     adds no new mutation logic."""
     rungs: list[tuple[str, list, dict | None]] = []
     n = 0
+    base_ok = not _ill_formed(task, task["body"])     # the filter twin_for applies: an ill-typed candidate is no rung
     _set_ctx(task)
     ref = interp.Reference(task)
     if ref.points:
@@ -822,6 +823,8 @@ def ladder_rungs(task: dict) -> list[tuple[str, list, dict | None]]:
                 n += 1
                 if n > MAX_CANDIDATES:
                     return rungs
+                if base_ok and _ill_formed(task, twin):
+                    continue
                 try:
                     w = ref.witness(twin)
                 except TypeError:
@@ -1102,11 +1105,16 @@ def run_task(task_path: Path, lower, backend, suffix: str) -> bool:
         return False
 
     real = OUT / f"{name}.{suffix}"
-    real.write_text(lower(task, task["body"]), encoding="utf-8",
-                    newline="\n")
     twin = OUT / f"{name}_twin.{suffix}"
-    twin.write_text(lower(task, twin_body, witness=w), encoding="utf-8",
-                    newline="\n")
+    try:
+        real_src = lower(task, task["body"])
+        twin_src = lower(task, twin_body, witness=w)
+    except NotImplementedError as e:
+        # a lowering's refusal is a named refusal of the task, as the twin's is, never a traceback
+        print(f"  {name}: REFUSED, the lowering abstains: {e}")
+        return False
+    real.write_text(real_src, encoding="utf-8", newline="\n")
+    twin.write_text(twin_src, encoding="utf-8", newline="\n")
 
     (r_real, agree_r), (r_twin, agree_t) = cell_pair(backend.verify, real, twin)
     if not (agree_r and agree_t):
@@ -1149,5 +1157,5 @@ def run_all(argv: list[str], lower, backend, suffix: str) -> int:
     files = ([Path(a) if Path(a).exists() else tasks_io.find(HERE / "tasks", Path(a).stem) for a in argv]
              if argv else sorted(tasks_io.load_dir(HERE / "tasks")))
     print(f"t -> {backend.version()}")
-    ok = all(run_task(f, lower, backend, suffix) for f in files)
-    return 0 if ok else 1
+    results = [run_task(f, lower, backend, suffix) for f in files]   # every task runs and reports; all() would stop at the first refusal
+    return 0 if all(results) else 1

@@ -84,9 +84,12 @@ def compile_task(task: dict, work: Path):
     if p.returncode != 0:
         raise SystemExit("judge: dafny translate failed: " + ((p.stdout + p.stderr).strip().splitlines() or ["?"])[-1][:300])
     module, _dafny = _load_translation(work / "prog-py")
-    # Dafny's Python backend escapes each underscore in a source identifier.
-    # Task methods start with a capital, so Python keyword escaping is irrelevant.
-    fn = getattr(module.default__, name.replace("_", "__"))
+    # Dafny's Python backend escapes each underscore in a source identifier, and a name that is a Python keyword
+    # (`None`, `True`, ...) gets a trailing underscore
+    py = name.replace("_", "__")
+    fn = getattr(module.default__, py, None) or getattr(module.default__, py + "_", None)
+    if fn is None:
+        raise SystemExit(f"judge: the translated module has no {py!r} (or {py + '_'!r}) for task {task['name']!r}")
 
     def to_dafny(v):
         return _dafny.SeqWithoutIsStrInference([to_dafny(x) for x in v]) if isinstance(v, (list, tuple)) else v
@@ -120,6 +123,7 @@ def main() -> int:
     io_path = Path(a.io) if a.io else Path(a.task).with_name(Path(a.task).stem + "_io.py")
     spec = importlib.util.spec_from_file_location("problem_io", io_path)
     io = importlib.util.module_from_spec(spec)
+    sys.modules["problem_io"] = io        # registered before it runs: a dataclass with postponed annotations looks itself up
     spec.loader.exec_module(io)
     ins = sorted(Path(a.tests).glob("*.in.txt"))
     if not ins:
