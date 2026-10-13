@@ -3318,6 +3318,26 @@ class Lower:
                 return d["ctors"]
         raise KeyError(dname)
 
+    def _arm_fresh(self, arm: dict, env: dict) -> dict:
+        """The arm with any binder that occurs in an outer substitution's rendered value renamed fresh (and
+        the body renamed with it): `var saved := x` leaves env[saved] = "x", and an arm binding `x` would
+        otherwise make that `x` the arm's own, changing the function being verified."""
+        import re as _re
+        import lower_verus as _lv
+        binders = arm.get("binders") or []
+        if not binders:
+            return arm
+        used = set()
+        for v in env.values():
+            if isinstance(v, str):
+                used.update(_re.findall(r"[A-Za-z_][A-Za-z0-9_']*", v))
+        clashes = [b for b in binders if b in used]
+        if not clashes:
+            return arm
+        ren = {b: self.fresh(b) for b in clashes}
+        body = _lv.subst(arm["body"], {b: {"var": n} for b, n in ren.items()})
+        return {**arm, "binders": [ren.get(b, b) for b in binders], "body": body}
+
     def _arm_scope(self, scrut: dict, arm: dict, env: dict,
                    types: dict) -> tuple[dict, dict]:
         """A match arm's own scope: its binders typed by the constructor's
@@ -3680,7 +3700,7 @@ class Lower:
                     self.term(a["body"],
                               *self._arm_scope(m["scrutinee"], a, env, types),
                               dep, expect))
-                for a in m["arms"])
+                for a in (self._arm_fresh(a0, env) for a0 in m["arms"]))
             return f"(match {scrut} with {arms})"
         if "call" in e:
             c = e["call"]
@@ -3993,7 +4013,7 @@ class Lower:
                         " " + " ".join(a["binders"]) if a.get("binders") else "",
                         self.prop(a["body"],
                                   *self._arm_scope(m["scrutinee"], a, env, types)))
-                    for a in m["arms"])
+                    for a in (self._arm_fresh(a0, env) for a0 in m["arms"]))
                 return f"(match {scrut} with {arms})"
             return f"({self.term(e, env, types)} = true)"
         if "field" in e:
@@ -4159,7 +4179,7 @@ class Lower:
             ds = self.dcond(m["scrutinee"], env, types)
             arm_ds = [self.dcond(a["body"],
                                  *self._arm_scope(m["scrutinee"], a, env, types))
-                      for a in m["arms"]]
+                      for a in (self._arm_fresh(a0, env) for a0 in m["arms"])]
             if all(d is None for d in arm_ds):
                 branch = None
             else:
@@ -7621,13 +7641,10 @@ theorem t_str_join_split_roundtrip (s : List Int) (c : Int) :
         # SPEC.md "The library (v1)" in Lean (PREDICT T9)
         lib_src, lib_names = _lib_prelude(self.lib_used)
         hof_src, hof_names = self.emit_hof_helpers()       # SPEC.md "Higher-order calls (v1)" (PREDICT T9)
-        if hof_src:
-            lib_src = (lib_src + "\n" + hof_src) if lib_src else hof_src
-            lib_names = lib_names + hof_names
         comp_src, comp_names = self.emit_comp_helpers()    # SPEC.md "Comprehensions (v1)" (PREDICT T12)
-        if comp_src:
-            lib_src = (lib_src + "\n" + comp_src) if lib_src else comp_src
-            lib_names = lib_names + comp_names
+        # the helpers' bodies may call the task's spec functions, so they are placed after sf_src below
+        lib_names = lib_names + hof_names + comp_names
+        helper_src = "\n".join(x for x in (hof_src, comp_src) if x)
         strlib_src = (strlib_src + "\n" + lib_src) if strlib_src.strip() and lib_src else (strlib_src or lib_src)
         strlib_thms += [(n, "library lemma") for n in lib_names]
         sf_src, sf_thms = self.emit_sfuns()
@@ -7685,6 +7702,8 @@ theorem t_str_join_split_roundtrip (s : List Int) (c : Int) :
             parts.append(strlib_src)
         if sf_src.strip():
             parts.append(sf_src)
+        if helper_src.strip():
+            parts.append(helper_src)
         if l_src.strip():
             parts.append(l_src)
         if m_src.strip():
@@ -8218,6 +8237,9 @@ theorem t_str_join_split_roundtrip (s : List Int) (c : Int) :
         if self._structural(self.task["decreases"], dict(self.types)):
             return self.lower_rec_structural()
         expr, obs = self.to_expr(self.body, {}, dict(self.types))
+        dec_ob = self.dcond(self.task["decreases"], {}, dict(self.types))   # the measure is evaluated at every call
+        if dec_ob is not None:
+            obs = list(obs) + [dec_ob]
         params_nt = [(p["name"], p["type"]) for p in self.task["params"]]
         pb = self.binders(params_nt)
         pnames = " ".join(n for n, _ in params_nt)
@@ -8599,7 +8621,11 @@ theorem t_str_join_split_roundtrip (s : List Int) (c : Int) :
 
         # state = return var + every local declared before the loop
         state = [self.ret] + [s["var"]["name"] for s in prefix if "var" in s]
-        env0, obs_pre, _ = self.sym(prefix, {}, types, state)
+        env0, obs_pre, pre_returned = self.sym(prefix, {}, types, state)
+        if pre_returned != "False":
+            raise NotImplementedError(
+                "lean lowering: a `return` before the loop is not lowered yet (the loop and the suffix "
+                "would run after it)")
         for v in state:
             if v not in env0:
                 # SPEC.md "Early exit" (2026-09-08): the return name need
@@ -8974,6 +9000,16 @@ theorem t_str_join_split_roundtrip (s : List Int) (c : Int) :
                 else:
                     dite_else_tac = (f"(({split_tac}); "
                                      f"(all_goals {self._gr()}))")
+                # the else branch stands for "the invariant did not survive the step": a correct program never
+                # reaches it, and the kernel must prove exactly that (preservation) rather than prove the
+                # specification of the placeholder value
+                # bounded E-matching (`_gr_bounded`): a twin whose invariant does not survive must FAIL this
+                # branch quickly rather than run grind into the heartbeat limit (sum_tail's twin timed out on
+                # the plain tactic; the certificate then never ran)
+                dite_else_tac = (f"(exfalso; (first | (({split_tac}); (all_goals {self._gr_bounded()})) "
+                                 f"| (({nonneg_inline}); ({split_tac}); (all_goals {self._gr_bounded()}))))"
+                                 if nonneg_lines else
+                                 f"(exfalso; (({split_tac}); (all_goals {self._gr_bounded()})))")
             else:
                 rec_call = (f"{hinv_haves}{self.name}_t_loop {pnames} "
                            f"{rec_args}{hpre_a}{hinv_call}")
@@ -10520,6 +10556,15 @@ theorem t_str_join_split_roundtrip (s : List Int) (c : Int) :
         return parts
 
     def _cert_undefined_ensures(self, w: dict) -> list | None:
+        import lower_verus as _lv
+        names = {k: v for k, v in w.items() if not k.startswith("_")}
+        tmap = {p["name"]: p["type"] for p in self.task["params"]}
+        tmap[self.ret] = self.rett
+        if not _lv.spec_reaches_undef(self.task, names, tmap, interp.funs_of(self.task, self.body)):
+            return None          # the specification never evaluates the named subexpression at the witness
+        return self._cert_undefined_ensures_core(w)
+
+    def _cert_undefined_ensures_core(self, w: dict) -> list | None:
         """2026-09-12 (t/ROADMAP.md's ensures-level undefined-witness item,
         "lean" column): the ensures-level twin (`_site == "ensures"`) --
         the REAL body computes a value at this input just fine, but the
@@ -11008,6 +11053,15 @@ theorem t_str_join_split_roundtrip (s : List Int) (c : Int) :
         if any(n not in w for n in names):
             return None
         tenv = {n: self._gterm(w[n], types[n]) for n in names}
+        assigned = loop_assigned(wh["body"])
+        frame = [v for v in state if v not in assigned]
+        if frame:                    # the witness's frame values must be the prefix's own, or the state is unreachable
+            venv_pre = {p: self._unshow(w[p], types[p]) for p in params}
+            venv_pre[self.ret] = None
+            interp.exec_body(prefix, venv_pre, interp.funs_of(self.task, body), interp.St())
+            for v in frame:
+                if interp._j(venv_pre.get(v)) != interp._j(self._unshow(w[v], types[v])):
+                    return None
         # SPEC.md "Pairs" (2026-09-10): a pair-typed state var (a loop
         # local, or the return before its `loop_zero` placeholder is
         # overwritten) has the same `_unshow` need as `_cert_value`'s own
