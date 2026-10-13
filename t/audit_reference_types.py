@@ -130,7 +130,11 @@ def classify(entry: dict, draws: int = 200, seed: int = 0) -> dict | None:
         else:
             same += 1
     ran = differs + same
-    kind = "differs" if differs else "raises" if raised and not ran else "same" if ran else "unclassified"
+    # "same" means the same on every draw: a reference that agrees on some draws and raises on others is "mixed"
+    kind = ("differs" if differs else "raises" if raised and not ran else "same" if ran and not raised
+            else "mixed" if ran else "unclassified")
+    if witness is not None:
+        witness = json.loads(json.dumps(witness, default=repr))        # a set or other non-JSON value is kept as text
     return {"class": kind, "raised": raised, "differs": differs, "same": same,
             "string_refused": string_refused, "witness": witness}
 
@@ -156,7 +160,7 @@ def main(argv=None) -> int:
                 r = classify(entry, a.draws, seed=tid)
                 if r is not None:
                     rows[tid] = {"fn": entry["fn"], **r}
-        by = {k: sorted(t for t, r in rows.items() if r["class"] == k) for k in ("raises", "differs", "same", "unclassified")}
+        by = {k: sorted(t for t, r in rows.items() if r["class"] == k) for k in ("raises", "differs", "same", "mixed", "unclassified")}
         summary = {"problems": len(ids), "take_a_string": len(rows), **{k: len(v) for k, v in by.items()},
                    "differs_ids": by["differs"]}
         if name == "held-out":
