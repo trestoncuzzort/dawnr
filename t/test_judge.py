@@ -72,6 +72,7 @@ if __name__ == "__main__":
 # Two findings of the GPT-6 Astra review of 2026-10-13: a task named by a Python keyword, an IO module with postponed annotations.
 
 
+@unittest.skipUnless(judge.DAFNY, "Dafny is not installed")
 def test_python_keyword_task_name():
     import tempfile
     from pathlib import Path
