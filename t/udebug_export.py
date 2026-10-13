@@ -88,14 +88,23 @@ def model_of(sample_dir: str) -> str:
         return ""
 
 
+def est_time(o: dict, prev: dict | None) -> float:
+    """The sample's slowest case as the lane's grading measured it, or as the previous export measured this same
+    sample; unknown sorts last, so a sample with a measurement is tried first."""
+    t = (o.get("judge") or {}).get("max_case_s")
+    if t is None and prev and prev.get("sample_dir") == o["sample_dir"]:
+        t = prev.get("max_case_s")
+    return t if t is not None else 1e9
+
+
 def confirm(key: tuple[str, str], rec: dict, accepted: list[dict], corpus: Path, out: Path, seeds: list[int],
-            timeout: float) -> dict:
+            timeout: float, prev: dict | None = None) -> dict:
     judge, ident = key
     tests = corpus / rec["tests_dir"]
     runs = []
     chosen = None
-    # the accepted samples in lane order; the first that passes both seeds is the solution
-    for o in sorted(accepted, key=lambda r: ((r.get("judge") or {}).get("max_case_s", 1e9), r["sample_dir"])):
+    # the accepted samples fastest first; the first that passes both seeds is the solution
+    for o in sorted(accepted, key=lambda r: (est_time(r, prev), r["sample_dir"])):
         prog = Path(o["sample_dir"]) / f"p{ident}.py"
         if not prog.is_file():
             continue
@@ -155,18 +164,26 @@ def main(argv=None) -> int:
     corpus = Path(a.corpus)
 
     index = {}
+    prev = {}
     index_path = out / "INDEX.jsonl"
-    if a.only_new and index_path.is_file():
+    if index_path.is_file():
         with index_path.open(encoding="utf-8") as f:
             for line in f:
                 e = json.loads(line)
                 if e.get("status") == "solved":
-                    index[(e["judge"], e["id"])] = e
+                    prev[(e["judge"], e["id"])] = e
 
     todo = []
     for key, rec in bank.items():
-        if key in index:
-            continue
+        rs = results.get(key, [])
+        accepted = [r for r in rs if r.get("accepted")]
+        if a.only_new and key in prev:
+            # keep a solved entry unless a new accepted sample is measured faster than the one on record
+            faster = [r for r in accepted if r["sample_dir"] != prev[key].get("sample_dir")
+                      and est_time(r, None) < (prev[key].get("max_case_s") or 0) - 0.001]
+            if not faster:
+                index[key] = prev[key]
+                continue
         if not rec.get("statement"):
             index[key] = {"judge": key[0], "id": key[1], "title": rec.get("title"), "status": "no-statement",
                           "split": rec.get("split")}
@@ -175,8 +192,6 @@ def main(argv=None) -> int:
             index[key] = {"judge": key[0], "id": key[1], "title": rec.get("title"), "status": "no-stored-output",
                           "split": rec.get("split")}
             continue
-        rs = results.get(key, [])
-        accepted = [r for r in rs if r.get("accepted")]
         if accepted:
             todo.append((key, rec, accepted))
         elif rs:
@@ -197,7 +212,7 @@ def main(argv=None) -> int:
 
     def one(item):
         key, rec, accepted = item
-        e = confirm(key, rec, accepted, corpus, out, seeds, a.judge_timeout)
+        e = confirm(key, rec, accepted, corpus, out, seeds, a.judge_timeout, prev.get(key))
         print(f"{key[0]}/{key[1]}: {e['status']}" + (f" max_case_s={e['max_case_s']}" if e["status"] == "solved" else ""),
               flush=True)
         return key, e
