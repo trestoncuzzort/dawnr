@@ -7,6 +7,10 @@ nothing here needs torch). test_chat_pane_window.py is the other half: a real
 window, skipped cleanly without a display.
 """
 from __future__ import annotations
+import pytest
+
+pytest.importorskip("tkinter", exc_type=ImportError)   # the GUI needs Tk; a machine without it skips these by name
+
 
 import pathlib
 import queue

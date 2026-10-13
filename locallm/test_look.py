@@ -76,6 +76,10 @@ RED WITNESS, each mutation applied to a copy of look.py and the output quoted:
         false alarm, reached the other way
 """
 from __future__ import annotations
+import pytest
+
+pytest.importorskip("tkinter", exc_type=ImportError)   # the GUI needs Tk; a machine without it skips these by name
+
 
 import math
 import pathlib

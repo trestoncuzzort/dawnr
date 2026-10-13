@@ -12,6 +12,10 @@ plain Python test doubles, the same trick test_home_window.py plays on
 home._ENGINE to make studio look absent.
 """
 from __future__ import annotations
+import pytest
+
+pytest.importorskip("tkinter", exc_type=ImportError)   # the GUI needs Tk; a machine without it skips these by name
+
 
 import json
 import os

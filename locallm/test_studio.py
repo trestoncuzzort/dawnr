@@ -22,6 +22,10 @@ RED WITNESS, against the previous version of studio.py (git 7c7959c):
 These run against a real Tk window, withdrawn so nothing appears on screen.
 """
 from __future__ import annotations
+import pytest
+
+pytest.importorskip("tkinter", exc_type=ImportError)   # the GUI needs Tk; a machine without it skips these by name
+
 
 import math
 import pathlib

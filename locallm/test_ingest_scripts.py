@@ -33,6 +33,10 @@ function exercised here is the off-thread reader, called as an unbound method
 against a stand-in the way test_home.py already does it.
 """
 from __future__ import annotations
+import pytest
+
+pytest.importorskip("tkinter", exc_type=ImportError)   # the GUI needs Tk; a machine without it skips these by name
+
 
 import codecs
 import pathlib
