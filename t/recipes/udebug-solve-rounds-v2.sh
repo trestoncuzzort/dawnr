@@ -19,9 +19,9 @@ while systemctl --user is-active --quiet "$WAIT"; do sleep 300; done
 log "$WAIT ended; rounds begin"
 for round in 1 2 3; do
   flock $OUT/.export.lock python3 t/udebug_export.py --bank $BANK --corpus $CORPUS --lanes 't/out/udebug/teacher-*' --out $OUT --judges UVa --jobs 2 --only-new >> "$LOG" 2>&1
-  python3 - "$PAR" <<'PY'
+  python3 - "$PAR" "$NAME" <<'PY'
 import json, sys
-spec = sys.argv[1]
+spec, name = sys.argv[1], sys.argv[2]
 k, n = (int(spec.split("/")[0]), int(spec.split("/")[1])) if "/" in spec else (0, 1)
 refused, untried = [], []
 for line in open("t/out/udebug-solutions/INDEX.jsonl", encoding="utf-8"):
@@ -33,15 +33,13 @@ for line in open("t/out/udebug-solutions/INDEX.jsonl", encoding="utf-8"):
         refused.append(f"{e['judge']}/{e['id']}")           # a program to quote and a refusal to answer
     elif e["status"] == "untried" or best == "no-fences":
         untried.append(f"{e['judge']}/{e['id']}")           # nothing to quote: a fresh prompt, longer reply budget
-open("t/out/udebug/solve-ids-refused.txt", "w").write(",".join(refused) + "\n")
-open("t/out/udebug/solve-ids-untried.txt", "w").write(",".join(untried) + "\n")
+open(f"t/out/udebug/solve-ids-refused-{name}.txt", "w").write(",".join(refused) + "\n")
+open(f"t/out/udebug/solve-ids-untried-{name}.txt", "w").write(",".join(untried) + "\n")
 print(f"shard {spec}: {len(refused)} refused, {len(untried)} untried", flush=True)
 PY
-  mv t/out/udebug/solve-ids-refused.txt t/out/udebug/solve-ids-refused-$NAME.txt
-  mv t/out/udebug/solve-ids-untried.txt t/out/udebug/solve-ids-untried-$NAME.txt
   LANES=$(ls -d t/out/udebug/teacher-*/ | sed 's|/$||' | grep -v "dry\|probe" | tr '\n' ',' | sed 's/,$//')
   PROV="--provider vertex --project $PROJECT --location global --adc $ADC"; [ "${PROVIDER:-}" = bedrock-cli ] && PROV="--provider bedrock-cli --region ${REGION:-us-east-1}"
-  COMMON="--bank $BANK --exemplars $EX --target python $PROV --judges UVa --shape any --split any --max-in-bytes 0 --samples 1 --temperature 0.7 --max-tokens 8192 --concurrency ${CONC:-4} --price-in-per-mtok 0.56 --price-out-per-mtok 1.68 --spend-cap-usd 25${MODEL:+ --model $MODEL}"
+  COMMON="--bank $BANK --exemplars $EX --target python $PROV --judges UVa --shape any --split any --max-in-bytes 0 --samples 1 --temperature 0.7 --max-tokens 8192 --concurrency ${CONC:-4} --price-in-per-mtok ${PRICE_IN:-0.56} --price-out-per-mtok ${PRICE_OUT:-1.68} --spend-cap-usd ${CAP:-25}${MODEL:+ --model $MODEL}"
   for kind in repair fresh; do
     IDS=$(cat t/out/udebug/solve-ids-$([ $kind = repair ] && echo refused || echo untried)-$NAME.txt)
     [ -n "$IDS" ] || { log "round $round $kind: nothing to do"; continue; }
