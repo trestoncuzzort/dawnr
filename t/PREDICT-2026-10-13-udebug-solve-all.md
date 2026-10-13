@@ -75,3 +75,9 @@ reproduce every stored case; 48 of those are faster than the program on record a
 2 s. The export now sorts a problem's accepted samples fastest first and re-confirms a solved problem whenever a
 faster accepted sample appears, so the bundle keeps the fastest confirmed program. 68 remain over 2 s for a
 DeepSeek speed round later.
+
+**Early repair read, 07:50Z (Qwen3-Next, first 83 of round 1):** 9 accepted (10.8%; 11.5% of the 78 with a
+fence), 50 wrong answer, 12 crash, 7 timeout, 5 no fence. Consistent with X3 (Qwen3-Next at least 10 points under
+DeepSeek) only if DeepSeek's round lands above 21%; X2's read waits for the DeepSeek drivers. Scheduling note: the
+Qwen sweep and the Qwen repair lane shared one request limit and both collapsed under backoff; the repair driver
+now waits for the sweep.
