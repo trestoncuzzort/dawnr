@@ -18,6 +18,12 @@ import string
 import sys
 import tempfile
 import unittest
+
+try:
+    import tkinter as _tk_probe  # noqa: F401  (the window tests need Tk; a machine without it skips them by name)
+    _HAS_TK = True
+except ImportError:
+    _HAS_TK = False
 from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
@@ -1629,6 +1635,7 @@ class HarnessSessionEvents(Temp):
 
 # -------------------------------------------------------------- the pane --
 
+@unittest.skipUnless(_HAS_TK, "tkinter is not available on this machine")
 class ChatPaneShowsMemory(Temp):
     def test_the_memory_mark_opens_a_labelled_block_and_is_not_text(self):
         import chat

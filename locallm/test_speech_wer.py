@@ -16,6 +16,8 @@ def test_edit_distance_counts_substitutions_insertions_and_deletions():
 
 
 def test_the_normaliser_makes_case_punctuation_and_spelt_numbers_agree():
+    import pytest
+    pytest.importorskip("regex")      # the normaliser's own dependency
     refs = {"u1": "HE SAID TWENTY FIVE DOLLARS", "u2": "COLOUR IT RED"}
     hyps = {"u1": "He said $25.", "u2": "Color it red!"}
     out = wer.corpus_wer(refs, hyps)
