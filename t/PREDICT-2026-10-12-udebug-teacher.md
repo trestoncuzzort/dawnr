@@ -277,3 +277,6 @@ Yields on what each lane graded before the abort: DeepSeek **32 of 60 samples (5
 (51%)**, Qwen3-Next **12 of 36 (33%)**. QS1 holds so far (2 points apart); QN1 sits at its falsifier (20 points).
 Merged so far (`t/udebug_rows.py`, cap 4): **88 execution-verified rows on 38 problems, 4 pairs**; 377
 held-out questions written for the student's later measurement.
+- **Capacity measured (2026-10-12 17:33Z):** ten minutes with both lanes up: Qwen3-235B 104 records at concurrency
+  2 (88 alone earlier), DeepSeek-V3.2 10 records at concurrency 1 with 61 throttles per 120 log lines. The two
+  models' capacities are independent; DeepSeek's is the scarce one right now. Qwen moves to concurrency 4.
