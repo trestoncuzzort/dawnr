@@ -63,3 +63,9 @@ refreshing (`invalid_grant`, `invalid_rapt`) and both scale lanes on it crashed.
 dawnr-core-2026 with the jonhh credential, which also carries Qwen3-Next. Also found: 36% of Qwen3-Next replies
 and 17% of DeepSeek replies were cut at 4,096 tokens before their fence (the "no fence" refusals); the lanes were
 relaunched with 8,192, and the no-fence problems are prompted afresh by the rounds rather than repaired.
+
+**X1 and X4 read, 06:44Z (first confirmation pass, `udebug-export-1`):** 965 of 965 accepted programs reproduce
+every stored case again under both seeds: X1 holds at 100%. 870 of 965 (90.2%) run every stored case under 2 s:
+X4 holds, barely. 95 are slower, 46 of them over 10 s (the slowest 116 s): correct by the judge, refused for time
+by any online judge. A speed round hands each slow solution back for a faster one (`--slow-index`, `speed_text`);
+the export keeps the fastest confirmed sample per problem.
