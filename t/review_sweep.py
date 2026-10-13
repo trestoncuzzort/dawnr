@@ -58,6 +58,7 @@ def main(argv=None) -> int:
     ap.add_argument("--exclude", nargs="*", default=["test_*", "conftest.py"], help="basename patterns to skip")
     ap.add_argument("--concurrency", type=int, default=6)
     ap.add_argument("--reasoning-effort", default="high")
+    ap.add_argument("--service-tier", default="", help="openai: priority for faster processing (costs more)")
     ap.add_argument("--max-tokens", type=int, default=32768)
     ap.add_argument("--max-source-chars", type=int, default=700_000, help="larger files are split by top-level chunks")
     ap.add_argument("--price-in-per-mtok", type=float, default=10.0)
@@ -110,7 +111,8 @@ def main(argv=None) -> int:
                     + "Review it under the contract. JSON only.")
             messages = [{"role": "system", "content": CONTRACT}, {"role": "user", "content": user}]
             try:
-                reply, tin, tout, stop = ut.openai_call(key, a.model, messages, a.max_tokens, 1.0, a.reasoning_effort)
+                reply, tin, tout, stop = ut.openai_call(key, a.model, messages, a.max_tokens, 1.0, a.reasoning_effort,
+                                                        service_tier=a.service_tier)
             except Exception as e:  # noqa: BLE001 -- the sweep records the failure and goes on
                 findings.append({"error": f"{type(e).__name__}: {str(e)[:300]}", "chunk": i})
                 continue
