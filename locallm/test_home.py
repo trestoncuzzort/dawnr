@@ -76,6 +76,10 @@ RED WITNESS, each mutation applied to a copy of home.py and the output quoted:
         test_a_utf8_bom_is_not_silently_lumped_in_with_plain_utf8
 """
 from __future__ import annotations
+import pytest
+
+pytest.importorskip("tkinter", exc_type=ImportError)   # the GUI needs Tk; a machine without it skips these by name
+
 
 import ast
 import os

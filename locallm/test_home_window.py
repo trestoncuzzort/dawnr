@@ -14,6 +14,10 @@ appearing at the end; Stop ends it early and says so; and a run left alone
 writes exactly what plain_generate.sample writes for the same prompt.
 """
 from __future__ import annotations
+import pytest
+
+pytest.importorskip("tkinter", exc_type=ImportError)   # the GUI needs Tk; a machine without it skips these by name
+
 
 import os
 import pathlib
