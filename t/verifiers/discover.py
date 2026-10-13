@@ -31,7 +31,10 @@ def find(env_var: str, names: list[str], globs: list[str] | None = None) -> str 
     """Resolve a kernel binary, or None. See module docstring for the order."""
     explicit = os.environ.get(env_var)
     if explicit:
-        return explicit if Path(explicit).exists() else None
+        # The override names a binary: a directory or a file nobody may run
+        # would only fail later, inside the kernel call, as a confusing error.
+        cand = Path(explicit)
+        return explicit if cand.is_file() and os.access(cand, os.X_OK) else None
     for n in names:
         found = shutil.which(n)
         if found:
