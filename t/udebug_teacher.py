@@ -104,7 +104,36 @@ class VertexToken:
 
 BEDROCK_CLI_TRANSIENT = ("ThrottlingException", "ServiceUnavailableException", "ModelNotReadyException",
                          "InternalServerException", "timed out", "timeout", "Timeout", "Connection",
-                         "EndpointConnectionError", "ReadTimeoutError")
+                         "EndpointConnectionError", "ReadTimeoutError", "Rate exceeded", "(429)",
+                         "TooManyRequests", "CreateOAuth2Token")
+_AWS_ENV: dict = {"env": None, "at": 0.0}
+_AWS_ENV_LOCK = threading.Lock()
+
+
+def aws_static_env() -> dict | None:
+    """Static session credentials for the CLI subprocesses. A signed-in CLI (`aws login`) refreshes an OAuth2 token
+    on every invocation, and a hundred concurrent invocations get 429 `CreateOAuth2Token ... Rate exceeded`; one
+    `aws configure export-credentials --format env` every 30 minutes hands the lane fixed keys instead."""
+    import os
+    import subprocess
+    with _AWS_ENV_LOCK:
+        if _AWS_ENV["env"] is not None and time.time() - _AWS_ENV["at"] < 1800:
+            return _AWS_ENV["env"]
+        try:
+            p = subprocess.run([aws_cli(), "configure", "export-credentials", "--format", "env"],
+                               capture_output=True, text=True, timeout=120)
+        except Exception:  # noqa: BLE001 -- the ambient environment is the fallback
+            return _AWS_ENV["env"]
+        if p.returncode != 0:
+            return _AWS_ENV["env"]
+        env = dict(os.environ)
+        for line in p.stdout.splitlines():
+            line = line.strip()
+            if line.startswith("export ") and "=" in line:
+                k, v = line[len("export "):].split("=", 1)
+                env[k] = v.strip().strip('"')
+        _AWS_ENV["env"], _AWS_ENV["at"] = env, time.time()
+        return env
 BEDROCK_CLI_READ_TIMEOUT_S = 900     # the CLI's default read timeout is 60 s; a long reply takes minutes
 BEDROCK_CLI_MAX_CONCURRENCY = 16
 AWS_CLI_FALLBACKS = ("/home/t/.local/bin/aws", "/usr/local/bin/aws", "/usr/bin/aws")
@@ -149,7 +178,8 @@ def bedrock_cli_call(region: str, model: str, messages: list[dict], max_tokens: 
             p = subprocess.run([aws_cli(), "bedrock-runtime", "converse", "--region", region, "--cli-input-json",
                                 f"file://{path}", "--output", "json", "--cli-read-timeout",
                                 str(BEDROCK_CLI_READ_TIMEOUT_S), "--cli-connect-timeout", "60"],
-                               capture_output=True, text=True, timeout=BEDROCK_CLI_READ_TIMEOUT_S + 60)
+                               capture_output=True, text=True, timeout=BEDROCK_CLI_READ_TIMEOUT_S + 60,
+                               env=aws_static_env())
             err = p.stderr.strip()
         except subprocess.TimeoutExpired:
             p, err = None, "timed out"
