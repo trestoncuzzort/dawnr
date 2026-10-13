@@ -45,6 +45,8 @@ CLI:
 """
 from __future__ import annotations
 
+import re
+
 import argparse
 from pathlib import Path
 
@@ -152,7 +154,8 @@ def render_kernels(col_names: list[str], cell_rows: dict[str, dict[str, str]]) -
     proves a spec that cannot tell right from wrong), and its refusals by name; then the all-columns count. Cells are
     read by the same plain string test as the blocker count, a "(FLAKED)" suffix stripped."""
     def cell(t: str, k: str) -> str:
-        return cell_rows[t].get(k, "").replace(" (FLAKED)", "").strip()
+        # only the documented trailing marker is stripped: a marker inside a verdict word must stay unrecognized
+        return re.sub(r"\s*\(FLAKED\)\s*$", "", cell_rows[t].get(k, "")).strip()
     n = len(col_names)
     lines = ["## Per kernel", "",
              "| kernel | carried | real verified | twin refuted where the real is verified | abstains by name |",
