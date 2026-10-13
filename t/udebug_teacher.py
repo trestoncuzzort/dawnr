@@ -215,8 +215,12 @@ def openai_key(path: str) -> str:
     return p.read_text(encoding="utf-8").strip()
 
 
+OPENAI_MAX_CONCURRENCY = 48
+
+
 def openai_call(key: str, model: str, messages: list[dict], max_tokens: int, temperature: float,
-                reasoning_effort: str = "", max_attempts: int = 8) -> tuple[str, int, int, str | None]:
+                reasoning_effort: str = "", max_attempts: int = 8,
+                service_tier: str = "") -> tuple[str, int, int, str | None]:
     """POST /chat/completions (github.com/openai/openai-openapi: Bearer auth; model, messages; the reply in
     choices[0].message.content with finish_reason and usage.prompt_tokens/completion_tokens). Newer models take
     max_completion_tokens and refuse a non-default temperature: a 400 naming either field is answered by resending
@@ -229,6 +233,8 @@ def openai_call(key: str, model: str, messages: list[dict], max_tokens: int, tem
         body["temperature"] = temperature
     if reasoning_effort:
         body["reasoning_effort"] = reasoning_effort
+    if service_tier:
+        body["service_tier"] = service_tier          # "priority": faster processing at a higher price
     delay = 1.0
     attempt = 0
     while True:
@@ -252,6 +258,9 @@ def openai_call(key: str, model: str, messages: list[dict], max_tokens: int, tem
                 continue
             if e.code == 400 and "reasoning_effort" in detail and "reasoning_effort" in body:
                 body.pop("reasoning_effort")
+                continue
+            if e.code == 400 and "service_tier" in detail and "service_tier" in body:
+                body.pop("service_tier")
                 continue
             if e.code == 429:
                 if attempt >= RATE_LIMIT_MAX_ATTEMPTS:
@@ -579,6 +588,7 @@ def main(argv=None) -> int:
     ap.add_argument("--provider", choices=("bedrock", "vertex", "bedrock-cli", "openai"), default="bedrock")
     ap.add_argument("--openai-key-file", default="~/.config/openai/api_key")
     ap.add_argument("--reasoning-effort", default="", help="openai: low, medium or high (omitted by default)")
+    ap.add_argument("--service-tier", default="", help="openai: priority for faster processing (costs more)")
     ap.add_argument("--model", default="", help=f"default {DEFAULT_MODEL} on Bedrock, {VERTEX_MODEL} on Vertex")
     ap.add_argument("--region", default=bg.DEFAULT_REGION, help="Bedrock region")
     ap.add_argument("--project", default="", help="Vertex: the Google Cloud project id")
@@ -688,7 +698,8 @@ def main(argv=None) -> int:
         key = openai_key(a.openai_key_file)
 
         def call(messages: list[dict]) -> tuple[str, int, int, str | None]:
-            return openai_call(key, model, messages, a.max_tokens, a.temperature, a.reasoning_effort)
+            return openai_call(key, model, messages, a.max_tokens, a.temperature, a.reasoning_effort,
+                               service_tier=a.service_tier)
     elif a.provider == "bedrock-cli":
         model, endpoint = a.model or DEFAULT_MODEL, f"bedrock-cli:{a.region}"
 
@@ -758,7 +769,8 @@ def main(argv=None) -> int:
                   flush=True)
         return "ok"
 
-    cap = BEDROCK_CLI_MAX_CONCURRENCY if a.provider in ("bedrock-cli", "openai") else bg.HARD_MAX_CONCURRENCY
+    cap = (OPENAI_MAX_CONCURRENCY if a.provider == "openai"
+           else BEDROCK_CLI_MAX_CONCURRENCY if a.provider == "bedrock-cli" else bg.HARD_MAX_CONCURRENCY)
     workers = max(1, min(a.concurrency, cap))
     with concurrent.futures.ThreadPoolExecutor(max_workers=workers) as ex:
         list(ex.map(lambda j: one(*j), jobs))
