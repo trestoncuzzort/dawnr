@@ -50,3 +50,16 @@ missed, Qwen3-Next over all 2,421. Best status among the tried-and-unsolved: 909
 ## Reads
 
 (appended as they land)
+
+**Pilot read, 06:06Z (six wrong-answer problems, DeepSeek-V3.2 on dawnr-core-2026, repair prompt, 6,144-token
+replies):** 1 of 6 accepted (UVa 116). Of the five refused: two replies ran to the token limit while deliberating
+(one of them with no fence at all); three answered with a different wrong program, two of them failing at a
+later case or line than before and one at an earlier case that the previous program had passed. The feedback is
+read, not ignored, and deliberation is the cost: repair rounds now ask for reasoning under 300 words and allow
+16,384 reply tokens. Six is too few to read X2; the rounds read it.
+
+**Infrastructure read, 05:56Z:** the school-account credential behind the cs-project endpoints stopped
+refreshing (`invalid_grant`, `invalid_rapt`) and both scale lanes on it crashed. All lanes moved to
+dawnr-core-2026 with the jonhh credential, which also carries Qwen3-Next. Also found: 36% of Qwen3-Next replies
+and 17% of DeepSeek replies were cut at 4,096 tokens before their fence (the "no fence" refusals); the lanes were
+relaunched with 8,192, and the no-fence problems are prompted afresh by the rounds rather than repaired.
