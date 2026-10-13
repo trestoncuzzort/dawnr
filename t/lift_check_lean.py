@@ -95,17 +95,34 @@ def _reach_defs(lf: lift_lean.LeanFile, roots: set[str]) -> list[str]:
     return [n for n in names if n in seen]
 
 
+_STRING = re.compile(r'"(?:[^"\\]|\\.)*"')
+
+
 def _substitute_program(stmt_text: str, fname: str, params: list[str], result: str) -> str:
-    """`fname p1 .. pn` -> `result` in token text; any other mention of fname refuses."""
+    """`fname p1 .. pn` -> `result` in token text; any other mention of fname refuses. A string literal is left as
+    it is, an argument that only begins with a parameter (`x.succ`) is another argument, and a statement that binds
+    the result's own name would capture it, so it refuses."""
+    if re.search(r"(?:∀|∃|λ|fun|forall|exists)[^,]*?(?<![\w.])" + re.escape(result) + r"(?![\w'])", stmt_text):
+        raise NoHarness(f"the statement binds {result}, the name the program's value takes")
     pat = re.compile(r"\(\s*" + re.escape(fname) + r"\s+" + r"\s+".join(map(re.escape, params)) + r"\s*\)"
                      if params else r"(?<![\w.])" + re.escape(fname) + r"(?![\w'])")
-    out = pat.sub(result, stmt_text)
-    if params:
-        out = re.sub(r"(?<![\w.])" + re.escape(fname) + r"\s+" + r"\s+".join(map(re.escape, params))
-                     + r"(?![\w'])", result, out)
-    if re.search(r"(?<![\w.])" + re.escape(fname) + r"(?![\w'_])", out):
-        raise NoHarness(f"{fname} mentioned other than applied to its own parameters")
-    return out
+    bare = (re.compile(r"(?<![\w.])" + re.escape(fname) + r"\s+" + r"\s+".join(map(re.escape, params)) + r"(?![\w'.])")
+            if params else None)
+
+    def outside(seg: str) -> str:
+        seg = pat.sub(result, seg)
+        if bare is not None:
+            seg = bare.sub(result, seg)
+        if re.search(r"(?<![\w.])" + re.escape(fname) + r"(?![\w'_])", seg):
+            raise NoHarness(f"{fname} mentioned other than applied to its own parameters")
+        return seg
+    pieces, last = [], 0
+    for m in _STRING.finditer(stmt_text):
+        pieces.append(outside(stmt_text[last:m.start()]))
+        pieces.append(m.group(0))
+        last = m.end()
+    pieces.append(outside(stmt_text[last:]))
+    return "".join(pieces)
 
 
 def build(source_text: str, task: dict) -> tuple[str, list[str]]:
@@ -179,7 +196,8 @@ def build(source_text: str, task: dict) -> tuple[str, list[str]]:
            f"  | (simp [{simp_set}] <;> omega)\n"
            f"  | (unfold {' '.join(unfold)}; constructor <;> intro h <;> omega)\n"
            f"  | (grind [{grind_set}])\n")
-    hyp = f" (h : {pre_text})"
+    hname = next(n for n in ("h", "hpre", "h_pre", "h_precond") if n not in pnames and n != result)
+    hyp = f" ({hname} : {pre_text})"       # a binder no source parameter shadows
     text = ("-- equivalence harness, t/lift_check_lean.py\n\n"
             "-- ---- the source's own definitions, as written\n" + "\n\n".join(src_defs) + "\n\n"
             "-- ---- the lifted contract, lowered by t/lower_lean.py\n" + lifted + "\n"
@@ -245,7 +263,9 @@ def run(text: str, workdir: Path, stem: str, timeout_s: float = 180.0) -> dict:
     errors = [ln for ln in out.splitlines() if ": error" in ln]
     audit = re.findall(r"'(t_eq_requires|t_eq_ensures)' (?:depends on axioms: \[([^\]]*)\]|does not depend on any axioms)",
                        out)
-    clean = len(audit) == 2 and all("sorryAx" not in (ax or "") for _n, ax in audit)
+    # both theorems audited, each once: a line printed twice for one of them proves nothing about the other
+    clean = sorted(n for n, _ in audit) == ["t_eq_ensures", "t_eq_requires"] \
+        and all("sorryAx" not in (ax or "") for _n, ax in audit)
     if p.returncode == 0 and not errors and clean:
         return {"verdict": "proved", "seconds": secs, "message": ""}
     first = errors[0] if errors else (out.strip().splitlines() or [""])[0]
