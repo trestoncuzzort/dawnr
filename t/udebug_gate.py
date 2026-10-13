@@ -34,6 +34,7 @@ import json
 import re
 import shutil
 import subprocess
+import time
 import sys
 from pathlib import Path
 
@@ -85,7 +86,7 @@ MEM_MAX = "3G"      # per judge or verify process; the v2 gate was OOM-killed at
 
 
 def run(cmd: list[str], timeout: float, cwd: Path, stdin_path: Path | None = None,
-        split: bool = False) -> tuple[int | None, str] | tuple[int | None, str, str]:
+        split: bool = False, env: dict | None = None) -> tuple[int | None, str] | tuple[int | None, str, str]:
     """One subprocess inside its own memory-capped transient scope (systemd-run --user --scope, cgroup v2), so a
     sample whose translated program allocates without bound is killed alone instead of taking the gate, the
     terminal and every other sample with it (the 2026-10-06 lesson of the desktop, repeated here on 10-12).
@@ -97,7 +98,7 @@ def run(cmd: list[str], timeout: float, cwd: Path, stdin_path: Path | None = Non
     stdin = open(stdin_path, "rb") if stdin_path else None
     try:
         p = subprocess.run(cmd, cwd=cwd, capture_output=True, text=True, timeout=timeout, stdin=stdin,
-                           errors="replace")
+                           errors="replace", env=env)
         err = p.stderr
         if p.returncode in (137, -9) or "Killed" in err[-400:]:
             err += "\n[memory cap: killed]"
@@ -110,14 +111,18 @@ def run(cmd: list[str], timeout: float, cwd: Path, stdin_path: Path | None = Non
             stdin.close()
 
 
-def judge_python(prog: Path, tests: Path, timeout: float) -> dict:
+def judge_python(prog: Path, tests: Path, timeout: float, env: dict | None = None) -> dict:
     """The judge for a stdin-to-stdout program: every stored case with a stored output must be reproduced,
     compared with judge.py's own normalization (trailing blank lines and trailing spaces ignored). No proof
-    is involved; the result carries `proof: none` so no reader mistakes it for a verified row."""
+    is involved; the result carries `proof: none` so no reader mistakes it for a verified row. `env` is the
+    program's environment (the export runs it again under a fixed PYTHONHASHSEED, docs.python.org/3/using/cmdline.html:
+    str hashing is randomized per process by default, so set/dict order of strings can differ between runs);
+    `max_case_s` is the slowest case's wall time, the reading a judge's time limit is compared with."""
     import judge
     ins = sorted(tests.glob("*.in.txt"))
     per_case = max(5.0, min(120.0, timeout / max(1, len(ins))))
     passed = skipped = 0
+    max_s = 0.0
     for i in ins:
         o = i.with_name(i.name.replace(".in.txt", ".out.txt"))
         if not o.is_file():
@@ -126,15 +131,18 @@ def judge_python(prog: Path, tests: Path, timeout: float) -> dict:
         if judge._norm(want) == ["Sorry! Output limit exceeded!"]:   # uDebug's placeholder, as judge.py skips it
             skipped += 1
             continue
+        t0 = time.monotonic()
         rc, out, err = run([sys.executable, "-I", str(prog.resolve())], per_case, prog.resolve().parent,
-                           stdin_path=i, split=True)
+                           stdin_path=i, split=True, env=env)
+        max_s = max(max_s, round(time.monotonic() - t0, 3))
         if rc is None:
             return {"status": "timeout", "passed": passed, "total": len(ins) - skipped, "skipped": skipped,
-                    "case": i.name, "proof": "none"}
+                    "case": i.name, "per_case_s": per_case, "max_case_s": max_s, "proof": "none"}
         if rc != 0:
             tail = err.strip().splitlines()
             return {"status": "error", "passed": passed, "total": len(ins) - skipped, "skipped": skipped,
-                    "case": i.name, "first_difference": (tail[-1] if tail else f"exit {rc}")[:240], "proof": "none"}
+                    "case": i.name, "first_difference": (tail[-1] if tail else f"exit {rc}")[:240],
+                    "max_case_s": max_s, "proof": "none"}
         g, w = judge._norm(out), judge._norm(want)
         if g != w:
             k = next((k for k in range(max(len(g), len(w))) if k >= len(g) or k >= len(w) or g[k] != w[k]), 0)
@@ -142,10 +150,10 @@ def judge_python(prog: Path, tests: Path, timeout: float) -> dict:
             exp = w[k] if k < len(w) else "<none>"
             return {"status": "fail", "passed": passed, "total": len(ins) - skipped, "skipped": skipped,
                     "case": i.name, "first_difference": f"line {k + 1}: got {got[:100]!r} want {exp[:100]!r}",
-                    "proof": "none"}
+                    "max_case_s": max_s, "proof": "none"}
         passed += 1
     return {"status": "pass" if passed else "fail", "passed": passed, "total": len(ins) - skipped,
-            "skipped": skipped, "proof": "none"}
+            "skipped": skipped, "max_case_s": max_s, "proof": "none"}
 
 
 def judge(task: Path, io: Path, tests: Path, timeout: float) -> dict:
