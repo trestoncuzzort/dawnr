@@ -81,7 +81,9 @@ NR = {
                "mq_getsetattr": 245, "socket": 41,
                "kill": 62, "tkill": 200, "tgkill": 234, "rt_sigqueueinfo": 129, "rt_tgsigqueueinfo": 297,
                "prlimit64": 302, "sched_setaffinity": 203, "sched_setscheduler": 144, "sched_setparam": 142,
-               "sched_setattr": 314, "setpriority": 141, "socketpair": 53, "fcntl": 72, "ioctl": 16},
+               "sched_setattr": 314, "setpriority": 141, "socketpair": 53, "fcntl": 72, "ioctl": 16,
+               "sendmsg": 46, "fchmod": 91, "fchown": 93, "fsetxattr": 190, "fremovexattr": 199,
+               "truncate": 76, "ftruncate": 77},
     "aarch64": {"landlock_create_ruleset": 444, "landlock_add_rule": 445, "landlock_restrict_self": 446,
                 "ptrace": 117, "process_vm_readv": 270, "process_vm_writev": 271, "io_uring_setup": 425,
                 "io_uring_enter": 426, "io_uring_register": 427, "connect": 203, "accept": 202, "accept4": 242,
@@ -107,7 +109,9 @@ NR = {
                 "mq_getsetattr": 185, "socket": 198,
                 "kill": 129, "tkill": 130, "tgkill": 131, "rt_sigqueueinfo": 138, "rt_tgsigqueueinfo": 240,
                 "prlimit64": 261, "sched_setaffinity": 122, "sched_setscheduler": 119, "sched_setparam": 118,
-                "sched_setattr": 274, "setpriority": 140, "socketpair": 199, "fcntl": 25, "ioctl": 29},
+                "sched_setattr": 274, "setpriority": 140, "socketpair": 199, "fcntl": 25, "ioctl": 29,
+                "sendmsg": 211, "fchmod": 52, "fchown": 55, "fsetxattr": 7, "fremovexattr": 16,
+                "truncate": 45, "ftruncate": 46},
 }
 DENY = ("ptrace process_vm_readv process_vm_writev io_uring_setup io_uring_enter io_uring_register connect accept "
         "accept4 bind listen getpeername getsockname shutdown sendto sendmmsg recvmmsg getsockopt setsockopt "
@@ -119,7 +123,11 @@ DENY = ("ptrace process_vm_readv process_vm_writev io_uring_setup io_uring_enter
         "open_by_handle_at acct swapon swapoff reboot kexec_load kexec_file_load init_module finit_module "
         "delete_module iopl ioperm syslog sethostname setdomainname settimeofday clock_settime adjtimex "
         "clock_adjtime lookup_dcookie vhangup shmget shmat shmctl shmdt semget semop semctl semtimedop msgget "
-        "msgsnd msgrcv msgctl mq_open mq_unlink mq_timedsend mq_timedreceive mq_notify mq_getsetattr socket").split()
+        "msgsnd msgrcv msgctl mq_open mq_unlink mq_timedsend mq_timedreceive mq_notify mq_getsetattr socket "
+        "sendmsg fchmod fchown fsetxattr fremovexattr").split()
+# sendmsg carries an address too (a socketpair datagram to a pathname socket outside); fchmod, fchown and the
+# fd xattr calls change metadata through a descriptor, which Landlock does not restrict any more than it does by path
+PRE_TRUNCATE_ABI = 3            # Landlock restricts truncation from ABI 3 (Linux 6.2); before that seccomp refuses the calls
 SELF_ONLY = "kill tkill tgkill rt_sigqueueinfo rt_tgsigqueueinfo".split()       # first argument must be this pid
 SELF_OR_ZERO = "prlimit64 sched_setaffinity sched_setscheduler sched_setparam sched_setattr".split()
 AF_UNIX, PRIO_PROCESS = 1, 0
@@ -204,13 +212,18 @@ def bpf(code: int, jt: int, jf: int, k: int) -> bytes:
     return struct.pack("=HBBI", code, jt, jf, k & 0xFFFFFFFF)
 
 
-def seccomp_program(arch: str, me: int) -> bytes:
+def seccomp_program(arch: str, me: int, abi: int = 99) -> bytes:
     nr = NR[arch]
     out = [bpf(LD_ABS_W, 0, 0, OFF_ARCH), bpf(JEQ_K, 1, 0, ARCH[arch]), bpf(RET_K, 0, 0, RET_KILL_PROCESS),
            bpf(LD_ABS_W, 0, 0, OFF_NR)]
     if arch == "x86_64":                                    # the x32 ABI's numbers carry bit 30: refuse them all
         out += [bpf(JGE_K, 0, 1, 0x40000000), bpf(RET_K, 0, 0, RET_ERRNO_EPERM)]
-    for name in DENY:
+    deny = list(DENY)
+    if abi < PRE_TRUNCATE_ABI:
+        # a kernel whose Landlock cannot restrict truncation: the explicit calls are refused everywhere (the sandbox
+        # cannot tell a path inside from one outside here); O_TRUNC on open stays as Landlock leaves it, a named limit
+        deny += ["truncate", "ftruncate"]
+    for name in deny:
         if name in nr:
             out += [bpf(JEQ_K, 0, 1, nr[name]), bpf(RET_K, 0, 0, RET_ERRNO_EPERM)]
 
@@ -243,8 +256,8 @@ def seccomp_program(arch: str, me: int) -> bytes:
     return b"".join(out)
 
 
-def seccomp(arch: str, me: int) -> None:
-    prog = seccomp_program(arch, me)
+def seccomp(arch: str, me: int, abi: int = 99) -> None:
+    prog = seccomp_program(arch, me, abi)
     n = len(prog) // 8
     if n > 4096:                                            # BPF_MAXINSNS
         die(f"seccomp program too long ({n})")
@@ -269,14 +282,17 @@ def main(argv: list[str]) -> None:
     abi = abi_version(nr)
     if abi < 1:
         die("this kernel has no Landlock (or it is disabled); the program was not run")
-    os.makedirs(os.path.join(job, "tmp"), exist_ok=True)
+    try:
+        os.makedirs(os.path.join(job, "tmp"), exist_ok=True)
+    except OSError as e:
+        die(f"could not create {job}/tmp ({e}); the program was not run")
     try:
         if prctl(PR_SET_PDEATHSIG, signal.SIGKILL) != 0 or os.getppid() != parent:
             die("could not tie this process to its parent")
         if prctl(PR_SET_NO_NEW_PRIVS, 1) != 0:
             die("could not set no_new_privs")
         landlock(nr, abi, job)
-        seccomp(arch, me)
+        seccomp(arch, me, abi)
     except Exception as e:                                  # noqa: BLE001 -- any failure: do not run the program
         die(f"the sandbox could not be applied ({type(e).__name__}: {e}); the program was not run")
     resource.setrlimit(resource.RLIMIT_NPROC, (0, 0))
@@ -284,6 +300,7 @@ def main(argv: list[str]) -> None:
     os.chdir(tmp)
     env = {"HOME": tmp, "TMPDIR": tmp, "PATH": "/usr/bin:/bin"}
     env.update({k: v for k, v in os.environ.items() if k in ("LANG", "LC_ALL", "LC_CTYPE")})
+    os.closerange(3, os.sysconf("SC_OPEN_MAX"))             # an inherited descriptor would reach past the policy
     try:
         os.execve(program, args, env)
     except OSError as e:

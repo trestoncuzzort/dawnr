@@ -57,8 +57,11 @@ def split_cell(cell: str) -> tuple[str, str] | None:
     return FLAKE.sub("", real.strip()), FLAKE.sub("", twin.strip())
 
 
-def read_table(path: Path) -> tuple[list[str], list[tuple[str, list[str]]]]:
-    """(kernel names, [(task, [cell, ...]), ...]) from a kernels.md."""
+def read_tables(path: Path) -> list[tuple[list[str], list[tuple[str, list[str]]]]]:
+    """Every `| task | ... |` table in a kernels.md, each with its own header: [(kernel names, [(task, [cell, ...]),
+    ...]), ...]. A file may hold several tables whose columns differ or are ordered differently, so a row is read
+    under the header of the table it sits in, never the first."""
+    out: list[tuple[list[str], list[tuple[str, list[str]]]]] = []
     names: list[str] = []
     rows: list[tuple[str, list[str]]] = []
     for line in path.read_text(encoding="utf-8", errors="replace").splitlines():
@@ -67,14 +70,33 @@ def read_table(path: Path) -> tuple[list[str], list[tuple[str, list[str]]]]:
         cells = [c.strip() for c in line.strip().strip("|").split("|")]
         if len(cells) < 3:
             continue
-        if cells[0] == "task" and not names:
-            names = cells[1:]
+        if cells[0] == "task":
+            if names:
+                out.append((names, rows))
+            names, rows = cells[1:], []
             continue
         if set(cells[0]) <= set("-: ") or not cells[0]:
             continue
         if names and len(cells) == len(names) + 1:
             rows.append((cells[0], cells[1:]))
-    return names, rows
+    if names:
+        out.append((names, rows))
+    return out
+
+
+def read_table(path: Path) -> tuple[list[str], list[tuple[str, list[str]]]]:
+    """(kernel names, [(task, [cell, ...]), ...]) of the first table in a kernels.md."""
+    tables = read_tables(path)
+    return tables[0] if tables else ([], [])
+
+
+def _minority(a: list[str], b: list[str]) -> list[str]:
+    """The smaller side of a disagreement; a tie stands alone on neither side, so both count."""
+    if len(a) < len(b):
+        return a
+    if len(b) < len(a):
+        return b
+    return a + b
 
 
 def scan(tables: list[Path]) -> dict:
@@ -84,12 +106,22 @@ def scan(tables: list[Path]) -> dict:
         "minority": Counter(), "gap_majority": Counter(),
         "pairs": Counter(),
     }
+    out["kernels"] = []
     for path in tables:
-        names, rows = read_table(path)
-        if not names:
+        segments = read_tables(path)
+        if not segments:
             continue
         out["tables"] += 1
         tag = path.parent.name
+        for names, rows in segments:
+            for n in names:
+                if n not in out["kernels"]:
+                    out["kernels"].append(n)
+            _scan_rows(out, tag, names, rows)
+    return out
+
+
+def _scan_rows(out: dict, tag: str, names: list[str], rows: list) -> None:
         for task, cells in rows:
             out["rows"] += 1
             parsed = {n: split_cell(c) for n, c in zip(names, cells)}
@@ -105,8 +137,7 @@ def scan(tables: list[Path]) -> dict:
                 v, r = sorted(says["verified"]), sorted(says["refuted"])
                 out["real_contradictions"].append(
                     {"tag": tag, "task": task, "verified": v, "refuted": r})
-                minority = v if len(v) <= len(r) else r
-                for kernel in minority:
+                for kernel in _minority(v, r):
                     out["minority"][kernel] += 1
                 for a in v:
                     for b in r:
@@ -118,7 +149,7 @@ def scan(tables: list[Path]) -> dict:
             if tv and tr:
                 out["twin_unsound"].append(
                     {"tag": tag, "task": task, "twin_verified": tv, "twin_refuted": tr})
-                for kernel in tv:
+                for kernel in _minority(tv, tr):     # the side that stands alone, as on the real side
                     out["minority"][kernel] += 1
 
             # --- gaps, counted apart: decided against could-not-decide
@@ -127,10 +158,9 @@ def scan(tables: list[Path]) -> dict:
             if decided and undecided:
                 for kernel in undecided:
                     out["gap_majority"][kernel] += 1
-    return out
 
 
-def render(res: dict, kernels: list[str]) -> str:
+def render(res: dict, kernels: list[str], every_set: bool = True) -> str:
     n_contra = len(res["real_contradictions"])
     n_twin = len(res["twin_unsound"])
     lines = [
@@ -151,8 +181,10 @@ def render(res: dict, kernels: list[str]) -> str:
         "",
     ]
     if not n_contra and not n_twin:
+        scope = ("Across every graded answer set" if every_set
+                 else f"Across the {res['tables']} answer set(s) selected (not every graded one)")
         lines += [
-            "**No contradictions anywhere.** Across every graded answer set, no two kernels "
+            f"**No contradictions {'anywhere' if every_set else 'in the selection'}.** {scope}, no two kernels "
             "ever reached opposite decided verdicts on the same program, and no twin verified "
             "in one kernel while being refuted in another.",
             "",
@@ -209,8 +241,7 @@ def main() -> int:
         print("no graded answer sets found")
         return 1
     res = scan(tables)
-    names, _ = read_table(tables[0])
-    text = render(res, names)
+    text = render(res, res["kernels"], every_set=not a.tag)   # every kernel any table names, in first-seen order
     print(text)
     if a.out:
         a.out.parent.mkdir(parents=True, exist_ok=True)
