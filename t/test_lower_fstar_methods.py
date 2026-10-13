@@ -84,7 +84,7 @@ def test_clamp_sum_method_calls_an_earlier_method() -> None:
 def test_count_pos_call_inside_a_loop() -> None:
     t = _load("methods/count_pos.t")
     src = lower(t, t["body"])
-    assert "then count_pos_loop s (step r (Seq.index s i)) (i + 1)" in src
+    assert "count_pos_loop s (step r (Seq.index s i)) (i + 1)" in src
     assert "(requires ((k >= 0)))" in src
 
 
@@ -137,16 +137,20 @@ def test_self_recursive_method_is_an_opaque_let_rec() -> None:
     src = lower(t, t["body"])
     assert f"{OPAQUE}let rec tri (k:int)" in src
     assert "(decreases k)" in src
-    assert "= (if (k = 0) then 0 else ((tri (k - 1)) + k))" in src
-    assert "= (if (x > 0) then (tri n) else 0)" in src
+    assert "(if (k = 0) then 0 else ((tri (k - 1)) + k))" in src
+    assert "(if (x > 0) then (tri n) else 0)" in src
 
 
-def test_dead_method_call_abstains() -> None:
+def test_dead_method_call_keeps_its_obligation() -> None:
+    """A method call whose result is overwritten before any read used to abstain (its requires would have
+    vanished with the value); the lowering now forces the obligation with a `let _ = call in`, so the
+    callee's requires is still checked where the source evaluated it."""
     t = _load("methods/max3.t")
     t = copy.deepcopy(t)
     # the first call's result is overwritten before it is read
     t["body"] = [t["body"][0], {"assign": ["m1", {"int": 0}]}, t["body"][1]]
-    _raises(t, "dead method call")
+    src = lower(t, t["body"])
+    assert "let _ = (max2 a b) in" in src, src      # the overwritten call keeps its obligation
 
 
 def test_pair_typed_method_abstains() -> None:
