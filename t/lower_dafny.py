@@ -3645,8 +3645,18 @@ def _ev_undef(e: dict, env: dict, funs: dict, st):
         if f is None or len(c["args"]) != len(f["params"]):
             raise ValueError(f"undefined-kind certificate: call {c['fun']!r} unknown or mis-arity")
         vals = [_ev_undef(a, env, funs, st) for a in c["args"]]
-        ground = {"call": {"fun": c["fun"],
-                           "args": [_tlit(v, prm.get("type")) for v, prm in zip(vals, f["params"])]}}
+        lits = [_tlit(v, prm.get("type")) for v, prm in zip(vals, f["params"])]
+        ground = {"call": {"fun": c["fun"], "args": lits}}
+        # a method's or the task's own `requires` at the ground arguments is the call's obligation (Dafny's call
+        # rule: the callee's precondition must hold where it is called); the first one that fails is the guard
+        for rq in f.get("_requires", ()):
+            at_args = subst(rq, {prm["name"]: lit for prm, lit in zip(f["params"], lits)})
+            try:
+                holds = interp.ev(at_args, {}, funs, st)
+            except interp.Undef as u:
+                raise ValueError(f"undefined-kind certificate: requires of {c['fun']!r} undefined on replay: {u}")
+            if not holds:
+                raise _DefViol(at_args)
         try:
             return interp.ev(ground, {}, funs, st)
         except interp.Undef as u:
@@ -3860,6 +3870,10 @@ def _witness_env(names: dict, types: dict | None = None) -> dict:
         if isinstance(v, str) and _RAT_TEXT.match(v):
             n, d = v.split("/")
             return interp.Fraction(int(n), int(d))
+        if isinstance(v, str) and isinstance(ty, dict) and "datatype" in ty:
+            # SPEC.md "Datatypes": shown as `Dtype.Ctor(field, ...)` in t's own notation, read back as the value
+            import surface                                      # noqa: PLC0415 (surface imports the lowerings' names)
+            return interp.ev(surface.parse_expr(v), {}, {}, interp.St())
         if isinstance(ty, dict) and "map" in ty and isinstance(v, list):
             kt, vt = ty["map"]
             return interp.MapV.of([(conv(kv[0], kt), conv(kv[1], vt)) for kv in v])
