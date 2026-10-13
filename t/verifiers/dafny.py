@@ -228,6 +228,7 @@ more. The suite of 11 tasks ran in about 2 minutes on the same box.
 """
 from __future__ import annotations
 
+import hashlib
 import os
 import re
 import subprocess
@@ -262,6 +263,7 @@ BANNED_RE = re.compile(
     r"\{\s*:\s*(?!trigger\b)\w+"    # every {:attr} pragma EXCEPT {:trigger ...} ({:axiom}, {:verify false}, {:extern}, {:only}, ...)
     r"|@\s*[A-Za-z_]\w*"            # every 4.10+ @Attribute form (@Axiom, @Verify(false), ...)
     r"|\binclude\b"                 # imports source this scan never sees (e6: exit 0, "2 verified")
+    r"|\bexpect\b"                  # `expect E` is verified as `assume E` (Dafny reference, expect statements)
     r"|\bassume\w*"                 # assume statement, assume {:axiom}, {:assume_concurrent}
     r"|\b(?:axiom|opaque|reveal|extern)\b",
     re.IGNORECASE)
@@ -594,6 +596,8 @@ def _check_certificate(path: Path, budget: int, banned: list,
     why = ""
     if shape_why:
         why = shape_why
+    elif FINISH_RE.search(main_out) is None:
+        why = "main run printed no 'N verified, M errors' line: an incomplete main run authorizes no refutation"
     elif outside:
         why = "main run has a failure outside a plain method: " + outside[0]
     elif p.returncode != 0:
@@ -623,11 +627,16 @@ def _check_certificate(path: Path, budget: int, banned: list,
 def verify(path: Path, budget: int = DEFAULT_RLIMIT) -> Result:
     if not DAFNY:
         raise SystemExit(_DAFNY_WHY)
-    src_hash = sha256_file(path)
-    # safe_text, not read_text: Wave-1's non-UTF8 probes crashed the scan.
-    # NFKC folds homoglyph spellings; sha256 above still binds raw bytes.
-    src = unicodedata.normalize("NFKC", safe_text(path))
+    sha256_file(path)                       # readable; the verdict's hash is of the bytes read once below
+    data = path.read_bytes()                # one read: hashed, screened and handed to the kernel as the same bytes
+    src_hash = hashlib.sha256(data).hexdigest()
+    # NFKC folds homoglyph spellings; the hash above binds the raw bytes.
+    src = unicodedata.normalize("NFKC", data.decode("utf-8", errors="replace"))
     banned = sorted({m.group(0) for m in BANNED_RE.finditer(src)})
+    fd2, src_copy = tempfile.mkstemp(prefix="t_src_", suffix=".dfy")
+    with os.fdopen(fd2, "wb") as f:
+        f.write(data)                       # the kernel reads this private copy, never the editable path
+    kernel_path = Path(src_copy)
     cert_present = _CERT.search(src) is not None
     # The resolver's own print of the program, the declaration evidence
     # for the certificate door (module docstring); a temp file because
@@ -640,7 +649,7 @@ def verify(path: Path, budget: int = DEFAULT_RLIMIT) -> Result:
         p = run_tree(
             [DAFNY, "verify", *_solver_args(), "--resource-limit", str(budget),
              "--warn-contradictory-assumptions",
-             "--rprint", rp_name, "--log-format", "text", str(path)],
+             "--rprint", rp_name, "--log-format", "text", str(kernel_path)],
             capture_output=True, text=True, timeout=WALL_S)
         try:
             rprint = Path(rp_name).read_text(encoding="utf-8",
@@ -719,7 +728,7 @@ def verify(path: Path, budget: int = DEFAULT_RLIMIT) -> Result:
         # Certificate discipline (module docstring): never VERIFIED; the
         # kernel's acceptance of the one declared lemma, in its own isolated
         # run, is the only thing that mints REFUTED.
-        accepted, cert = _check_certificate(path, budget, banned, out,
+        accepted, cert = _check_certificate(kernel_path, budget, banned, out,
                                             max(n_errors, 0), rprint)
         if accepted:
             outcome = Outcome.REFUTED
