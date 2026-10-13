@@ -103,8 +103,9 @@ class VertexToken:
 
 
 BEDROCK_CLI_TRANSIENT = ("ThrottlingException", "ServiceUnavailableException", "ModelNotReadyException",
-                         "InternalServerException", "timed out", "Connection", "EndpointConnectionError",
-                         "ReadTimeoutError")
+                         "InternalServerException", "timed out", "timeout", "Timeout", "Connection",
+                         "EndpointConnectionError", "ReadTimeoutError")
+BEDROCK_CLI_READ_TIMEOUT_S = 900     # the CLI's default read timeout is 60 s; a long reply takes minutes
 BEDROCK_CLI_MAX_CONCURRENCY = 8
 AWS_CLI_FALLBACKS = ("/home/t/.local/bin/aws", "/usr/local/bin/aws", "/usr/bin/aws")
 
@@ -146,7 +147,9 @@ def bedrock_cli_call(region: str, model: str, messages: list[dict], max_tokens: 
             path = f.name
         try:
             p = subprocess.run([aws_cli(), "bedrock-runtime", "converse", "--region", region, "--cli-input-json",
-                                f"file://{path}", "--output", "json"], capture_output=True, text=True, timeout=900)
+                                f"file://{path}", "--output", "json", "--cli-read-timeout",
+                                str(BEDROCK_CLI_READ_TIMEOUT_S), "--cli-connect-timeout", "60"],
+                               capture_output=True, text=True, timeout=BEDROCK_CLI_READ_TIMEOUT_S + 60)
             err = p.stderr.strip()
         except subprocess.TimeoutExpired:
             p, err = None, "timed out"
