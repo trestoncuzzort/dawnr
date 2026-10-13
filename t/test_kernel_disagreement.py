@@ -75,3 +75,107 @@ class DetectorTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+# Five findings of the GPT-6 Astra review of 2026-10-13: each table under its own header, ties and twin-side
+# minorities counted fairly, the no-contradiction claim scoped to the selection, every kernel in the gap report.
+
+
+def test_reordered_second_table_does_not_misattribute_verdicts():
+    import tempfile
+    from pathlib import Path
+    import kernel_disagreement as kd
+
+    names = ['dafny', 'verus', 'spark', 'framac', 'lean', 'rocq', 'fstar']
+    def header(ns):
+        return '| task | ' + ' | '.join(ns) + ' |\n' + '|---' * (len(ns) + 1) + '|\n'
+    def row(task, cells):
+        return '| ' + task + ' | ' + ' | '.join(cells) + ' |\n'
+    ok = 'verified / refuted'
+    with tempfile.TemporaryDirectory() as d:
+        p = Path(d) / 'kernels.md'
+        p.write_text(header(names) + row('p', [ok] * 7) + '\n' + header(names[::-1]) + row('q', ['refuted / refuted'] + [ok] * 6), encoding='utf-8')
+        try:
+            result = kd.scan([p])
+        except ValueError:
+            return  # Explicit refusal is preferable to fabricated attribution.
+        assert result['rows'] == 2
+        assert result['real_contradictions'][0]['refuted'] == ['fstar']
+
+
+def test_tied_votes_are_not_biased_toward_verified():
+    import tempfile
+    from pathlib import Path
+    import kernel_disagreement as kd
+
+    head = '| task | dafny | verus | spark | framac | lean | rocq | fstar |\n|---|---|---|---|---|---|---|---|\n'
+    cells = ['verified / refuted', 'refuted / refuted'] + ['unproved / refuted'] * 5
+    with tempfile.TemporaryDirectory() as d:
+        p = Path(d) / 'kernels.md'
+        p.write_text(head + '| p | ' + ' | '.join(cells) + ' |\n', encoding='utf-8')
+        result = kd.scan([p])
+    assert result['minority']['dafny'] == result['minority']['verus']
+
+
+def test_twin_majority_is_not_reported_as_minority():
+    import tempfile
+    from pathlib import Path
+    import kernel_disagreement as kd
+
+    names = ['dafny', 'verus', 'spark', 'framac', 'lean', 'rocq', 'fstar']
+    head = '| task | ' + ' | '.join(names) + ' |\n' + '|---' * 8 + '|\n'
+    cells = ['verified / verified'] * 6 + ['verified / refuted']
+    with tempfile.TemporaryDirectory() as d:
+        p = Path(d) / 'kernels.md'
+        p.write_text(head + '| p | ' + ' | '.join(cells) + ' |\n', encoding='utf-8')
+        result = kd.scan([p])
+    assert len(result['twin_unsound']) == 1
+    assert all(result['minority'][k] == 0 for k in names[:-1]), result['minority']
+
+
+def test_filtered_report_does_not_claim_all_sets_agree():
+    import tempfile
+    from pathlib import Path
+    from io import StringIO
+    from contextlib import redirect_stdout
+    from unittest.mock import patch
+    import kernel_disagreement as kd
+
+    head = '| task | dafny | verus | spark | framac | lean | rocq | fstar |\n|---|---|---|---|---|---|---|---|\n'
+    ok = 'verified / refuted'
+    with tempfile.TemporaryDirectory() as d:
+        root = Path(d)
+        for tag, last in [('selected', ok), ('excluded', 'refuted / refuted')]:
+            directory = root / tag
+            directory.mkdir()
+            cells = [ok] * 6 + [last]
+            (directory / 'kernels.md').write_text(head + '| p | ' + ' | '.join(cells) + ' |\n', encoding='utf-8')
+        output = StringIO()
+        with patch.object(kd, 'SE', root), patch('sys.argv', ['kernel_disagreement.py', '--tag', 'selected']), redirect_stdout(output):
+            assert kd.main() == 0
+        assert 'Across every graded answer set' not in output.getvalue()
+
+
+def test_gap_report_includes_kernels_from_later_tables():
+    import tempfile
+    from pathlib import Path
+    from io import StringIO
+    from contextlib import redirect_stdout
+    from unittest.mock import patch
+    import kernel_disagreement as kd
+
+    names = ['dafny', 'verus', 'spark', 'framac', 'lean', 'rocq', 'fstar']
+    with tempfile.TemporaryDirectory() as d:
+        root = Path(d)
+        for tag, ns in [('a', names[:-1]), ('b', names)]:
+            directory = root / tag
+            directory.mkdir()
+            head = '| task | ' + ' | '.join(ns) + ' |\n' + '|---' * (len(ns) + 1) + '|\n'
+            cells = ['verified / refuted'] * len(ns)
+            if tag == 'b':
+                cells[-1] = 'unproved / refuted'
+            (directory / 'kernels.md').write_text(head + '| p | ' + ' | '.join(cells) + ' |\n', encoding='utf-8')
+        output = StringIO()
+        with patch.object(kd, 'SE', root), patch('sys.argv', ['kernel_disagreement.py']), redirect_stdout(output):
+            assert kd.main() == 0
+        assert '| fstar | 1 |' in output.getvalue()
