@@ -156,3 +156,22 @@ def test_block_precondition_is_not_the_function_body():
     requires = function['clauses']['requires'].strip().rstrip(',').strip()
     assert requires == '{ let b = true; b }', function
     assert 'ensures' in function['clauses'], function
+
+
+def test_clause_list_with_trailing_comma_ends_at_the_body():
+    """2026-10-13 regression (grade of the Verus column on the box, 31 real cells to tool_error): after the
+    whitespace fix a trailing comma, a newline and the body's `{` read as a block EXPRESSION, the scan ran past
+    the function and the next function's `requires` was attributed to this one; the probe then named `i` in a
+    function without that parameter and could not compile."""
+    from verifiers import verus as V
+    text = (
+        "verus!{\n"
+        "proof fn first(s: Seq<int>)\n    ensures\n        s.len() >= 0,\n{\n    assert(true);\n}\n"
+        "proof fn second(s: Seq<int>, i: int)\n    requires\n        0 <= i,\n        i <= s.len(),\n"
+        "    ensures\n        true,\n{\n    assert(true);\n}\n"
+        "}\n")
+    fns = {f["name"]: f for f in V._fns(text)}
+    assert "requires" not in fns["first"]["clauses"], fns["first"]["clauses"]
+    assert "ensures" in fns["first"]["clauses"] and "s.len() >= 0" in fns["first"]["clauses"]["ensures"]
+    assert "0 <= i" in fns["second"]["clauses"]["requires"] and "i <= s.len()" in fns["second"]["clauses"]["requires"]
+    assert "0 <= i" not in fns["first"]["clauses"].get("ensures", "")
