@@ -22,6 +22,12 @@ import string
 import sys
 import tempfile
 import unittest
+
+try:
+    import tkinter as _tk_probe  # noqa: F401  (the window tests need Tk; a machine without it skips them by name)
+    _HAS_TK = True
+except ImportError:
+    _HAS_TK = False
 import unittest.mock
 from pathlib import Path
 
@@ -910,6 +916,7 @@ def _display() -> bool:
 
 
 @unittest.skipIf(not _display(), "no display; run under xvfb-run -a")
+@unittest.skipUnless(_HAS_TK, "tkinter is not available on this machine")
 class LearningWindow(unittest.TestCase):
     """The chat window's hooks with test doubles (test_chat_pane_window's): the buttons exist, learning is off
     by default, and a model that cannot be identified records nothing and says so."""

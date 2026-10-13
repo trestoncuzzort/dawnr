@@ -23,6 +23,12 @@ import sys
 import tempfile
 import unittest
 
+try:
+    import tkinter as _tk_probe  # noqa: F401  (the window tests need Tk; a machine without it skips them by name)
+    _HAS_TK = True
+except ImportError:
+    _HAS_TK = False
+
 os.environ["CUDA_VISIBLE_DEVICES"] = ""
 os.environ.setdefault("OMP_NUM_THREADS", "4")
 
@@ -214,6 +220,7 @@ def _load_and_score(out: pathlib.Path, corpus, batch_size, block_size):
         torch.load(out / "ckpt.pt", map_location="cpu", weights_only=True)
 
 
+@unittest.skipUnless(_HAS_TK, "tkinter is not available on this machine")
 def test_a_real_studio_run_stops_and_saves_the_best_weights():
     import queue
     import threading
