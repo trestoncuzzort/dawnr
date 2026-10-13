@@ -78,7 +78,7 @@ def main(argv=None) -> int:
         body = normalize(f["test"])
         test_file.write_text(HEADER + "\n" + body + "\n", encoding="utf-8")
         try:
-            p = subprocess.run([a.pytest, "-q", "-p", "no:cacheprovider", "-x", str(test_file)], cwd=str(ROOT / "t"),
+            p = subprocess.run([a.pytest, "-q", "-p", "no:cacheprovider", "-x", str(test_file.resolve())], cwd=str(ROOT / "t"),
                                capture_output=True, text=True, timeout=a.timeout)
             tail = (p.stdout + p.stderr)[-1500:]
             if p.returncode == 0:
