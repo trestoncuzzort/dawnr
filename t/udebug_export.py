@@ -47,12 +47,33 @@ def load_bank(path: Path, judges: set[str]) -> dict[tuple[str, str], dict]:
     return out
 
 
-def scan_lanes(patterns: list[str]) -> dict[tuple[str, str], list[dict]]:
-    """Every result.json under the lanes, keyed by (judge, id); each carries its lane name and sample dir."""
+EXCLUDED_PROVIDERS = ("openai",)
+
+
+def lane_provider(lane_p: Path) -> str | None:
+    """The provider one record of the lane names (every sample of a lane shares it)."""
+    probe = next(iter(lane_p.glob("*/s*/record.json")), None)
+    if probe is None:
+        return None
+    try:
+        return json.loads(probe.read_text(encoding="utf-8")).get("provider")
+    except (OSError, ValueError):
+        return None
+
+
+def scan_lanes(patterns: list[str], excluded: set[str] | None = None) -> dict[tuple[str, str], list[dict]]:
+    """Every result.json under the lanes, keyed by (judge, id); each carries its lane name and sample dir. A lane
+    written by an excluded provider (OpenAI: the uDebug work is dawnr's own and never touches it, by the user's
+    rule of 2026-10-13) is left out and its name recorded in `excluded`."""
     found = collections.defaultdict(list)
     for pat in patterns:
         for lane in sorted(glob.glob(pat)):
             lane_p = Path(lane)
+            if lane_provider(lane_p) in EXCLUDED_PROVIDERS:
+                if excluded is not None:
+                    excluded.add(lane_p.name)
+                print(f"excluded lane {lane_p.name}: provider {lane_provider(lane_p)}", file=sys.stderr)
+                continue
             for r in lane_p.glob("*/s*/result.json"):
                 try:
                     o = json.loads(r.read_text(encoding="utf-8"))
@@ -157,7 +178,8 @@ def main(argv=None) -> int:
     a = ap.parse_args(argv)
     judges = {j for j in a.judges.split(",") if j}
     bank = load_bank(Path(a.bank), judges)
-    results = scan_lanes([p for p in a.lanes.split(",") if p])
+    excluded: set[str] = set()
+    results = scan_lanes([p for p in a.lanes.split(",") if p], excluded)
     out = Path(a.out)
     out.mkdir(parents=True, exist_ok=True)
     seeds = [int(s) for s in a.seeds.split(",") if s]
@@ -170,8 +192,8 @@ def main(argv=None) -> int:
         with index_path.open(encoding="utf-8") as f:
             for line in f:
                 e = json.loads(line)
-                if e.get("status") == "solved":
-                    prev[(e["judge"], e["id"])] = e
+                if e.get("status") == "solved" and e.get("lane") not in excluded:
+                    prev[(e["judge"], e["id"])] = e      # a solution from an excluded lane is not kept on record
 
     todo = []
     for key, rec in bank.items():
@@ -222,6 +244,16 @@ def main(argv=None) -> int:
             index[key] = e
 
     entries = sorted(index.values(), key=lambda e: (e["judge"], int(e["id"]) if e["id"].isdigit() else 0, e["id"]))
+    stale = 0
+    for e in entries:                                    # a problem no longer solved leaves no program behind
+        if e["status"] != "solved":
+            for suffix in (".py", ".json"):
+                f = out / e["judge"] / f"{e['id']}{suffix}"
+                if f.is_file():
+                    f.unlink()
+                    stale += 1
+    if stale:
+        print(f"removed {stale} stale solution files", flush=True)
     with index_path.open("w", encoding="utf-8") as f:
         for e in entries:
             f.write(json.dumps(e, ensure_ascii=False) + "\n")

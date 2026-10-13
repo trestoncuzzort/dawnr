@@ -451,3 +451,163 @@ class EndToEnd(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+# Sixteen findings of the GPT-6 Astra review of 2026-10-13, each reproduced before its fix (see the commit).
+
+
+def test_octal_literal():
+    import lift_acsl as L
+    assert L.num_value('010') == 8
+
+
+def test_macro_expansion_uses_source_position():
+    import tempfile
+    from pathlib import Path
+    import lift_acsl as L
+    with tempfile.TemporaryDirectory() as d:
+        p = Path(d) / 'f.c'
+        p.write_text('#define VALUE 1\nint f(void) { return VALUE; }\n#undef VALUE\n#define VALUE 2\n')
+        toks = L.Preprocessor([]).run(p).toks
+        i = next(i for i, t in enumerate(toks) if t.text == 'return')
+        assert toks[i + 1].text == '1'
+
+
+def test_static_local_is_refused():
+    import unittest
+    import lift_acsl as L
+    src = r'/*@ assigns \nothing; ensures \result == 1; */ int f(void) { static int n = 0; n++; return n; }'
+    prog = L.Program(L.Unit(L.scan(src), {}, []))
+    with unittest.TestCase().assertRaises(L.AcslRefusal):
+        L.Translator(prog, 'f').run()
+
+
+def test_unsigned_literal_comparison_is_not_silently_signed():
+    import unittest
+    import lift_acsl as L
+    src = r'/*@ requires x == -1; assigns \nothing; ensures \result == 1; */ int f(int x) { return x < 1u ? 1 : 0; }'
+    prog = L.Program(L.Unit(L.scan(src), {}, []))
+    with unittest.TestCase().assertRaises(L.AcslRefusal):
+        L.Translator(prog, 'f').run()
+
+
+def test_successive_contract_annotations_are_not_dropped():
+    import lift_acsl as L
+    src = r'''//@ ensures \result == 1;
+//@ assigns \nothing; ensures \result == 0;
+int f(void) { return 0; }
+'''
+    try:
+        out = L.Translator(L.Program(L.Unit(L.scan(src), {}, [])), 'f').run()
+    except L.AcslRefusal:
+        return
+    assert '(result == 1)' in out.dafny
+
+
+def test_int_typedef_named_bool_keeps_integer_semantics():
+    import lift_acsl as L
+    src = r'typedef int bool; /*@ requires x != y; assigns \nothing; ensures \result == x; */ bool f(bool x, bool y) { return !y; }'
+    try:
+        out = L.Translator(L.Program(L.Unit(L.scan(src), {}, [])), 'f').run()
+    except L.AcslRefusal:
+        return
+    assert 'x: bool' not in out.dafny
+    assert 'y: bool' not in out.dafny
+
+
+def test_signed_valid_range_does_not_discard_negative_states():
+    import unittest
+    import lift_acsl as L
+    src = r'/*@ requires \valid_read(a + (0..n-1)); requires n <= 0; assigns \nothing; ensures \result == 0; */ int f(const int *a, int n) { return n < 0 ? 1 : 0; }'
+    prog = L.Program(L.Unit(L.scan(src), {}, []))
+    with unittest.TestCase().assertRaises(L.AcslRefusal):
+        L.Translator(prog, 'f').run()
+
+
+def test_quantifier_shadows_length_parameter():
+    import lift_acsl as L
+    src = r'/*@ requires \valid_read(a + (0..n-1)); assigns \nothing; ensures \forall integer n; n >= 0; */ int f(const int *a, unsigned n) { return 0; }'
+    try:
+        out = L.Translator(L.Program(L.Unit(L.scan(src), {}, [])), 'f').run()
+    except L.AcslRefusal:
+        return
+    assert '(forall n: int :: (|a| >= 0))' not in out.dafny
+
+
+def test_pointer_identity_is_not_sequence_equality():
+    import unittest
+    import lift_acsl as L
+    src = r'/*@ requires \valid_read(a + (0..n-1)); requires \valid_read(b + (0..n-1)); requires n == 0; assigns \nothing; ensures a == b; */ int f(const int *a, const int *b, unsigned n) { return 0; }'
+    prog = L.Program(L.Unit(L.scan(src), {}, []))
+    with unittest.TestCase().assertRaises(L.AcslRefusal):
+        L.Translator(prog, 'f').run()
+
+
+def test_prestate_rename_does_not_capture_quantifier():
+    import lift_acsl as L
+    src = r'/*@ assigns \nothing; ensures \forall integer x0; x0 == x; */ int f(int x) { x++; return 0; }'
+    try:
+        out = L.Translator(L.Program(L.Unit(L.scan(src), {}, [])), 'f').run()
+    except L.AcslRefusal:
+        return
+    assert '(forall x0: int :: (x0 == x0))' not in out.dafny
+
+
+def test_division_of_quantified_variable_does_not_crash():
+    import lift_acsl as L
+    src = r'/*@ assigns \nothing; ensures \forall integer k; k >= 0 ==> k / 2 >= 0; */ int f(void) { return 0; }'
+    out = L.Translator(L.Program(L.Unit(L.scan(src), {}, [])), 'f').run()
+    assert out.spec_division
+
+
+def test_shadowed_unsigned_parameter_does_not_hide_signed_division():
+    import lift_acsl as L
+    src = r'/*@ assigns \nothing; ensures \forall integer k; k == -1 ==> k / 2 == -1; */ int f(unsigned k) { return 0; }'
+    try:
+        out = L.Translator(L.Program(L.Unit(L.scan(src), {}, [])), 'f').run()
+    except L.AcslRefusal:
+        return
+    assert out.spec_division
+
+
+def test_mixed_sign_equality_is_not_mathematical_equality():
+    import unittest
+    import lift_acsl as L
+    src = r'/*@ requires x == -1; requires y == 4294967295; assigns \nothing; ensures \result == 0; */ int f(int x, unsigned y) { return x == y ? 1 : 0; }'
+    prog = L.Program(L.Unit(L.scan(src), {}, []))
+    with unittest.TestCase().assertRaises(L.AcslRefusal):
+        L.Translator(prog, 'f').run()
+
+
+def test_narrowing_constant_cast_preserves_value_or_refuses():
+    import lift_acsl as L
+    src = r'/*@ assigns \nothing; ensures \result == 256; */ int f(void) { return (unsigned char)256; }'
+    try:
+        out = L.Translator(L.Program(L.Unit(L.scan(src), {}, [])), 'f').run()
+    except L.AcslRefusal:
+        return
+    assert 'return 0;' in out.dafny
+
+
+def test_integer_comparison_result_is_not_returned_as_bool():
+    import lift_acsl as L
+    src = r'/*@ assigns \nothing; ensures 0 <= \result <= 1; */ int f(int x) { return x > 0; }'
+    try:
+        out = L.Translator(L.Program(L.Unit(L.scan(src), {}, [])), 'f').run()
+    except L.AcslRefusal:
+        return
+    assert 'return (x > 0);' not in out.dafny
+
+
+def test_explicit_function_selection_is_not_replaced():
+    import tempfile
+    import unittest
+    from pathlib import Path
+    import lift_acsl as L
+    with tempfile.TemporaryDirectory() as d:
+        root = Path(d)
+        p = root / 'f.c'
+        p.write_text(r'/*@ assigns \nothing; ensures \result == 0; */ int f(void) { return 0; }')
+        with unittest.TestCase().assertRaises(L.AcslRefusal) as cm:
+            L.translate(p, root, function='missing')
+        assert cm.exception.reason == 'no-function'
