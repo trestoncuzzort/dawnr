@@ -3,7 +3,8 @@
 # One instance per DeepSeek project; it waits for that project's scale lane to end, then runs three rounds:
 #   refresh the bundle index -> refused problems of this parity get a repair prompt (--repair-from every lane),
 #   untried problems of this parity get a fresh prompt -> grade both lanes.
-# usage: udebug-solve-rounds.sh <name> <project> <adc-file> <parity 0|1> <scale-unit-to-wait-for>
+# usage: udebug-solve-rounds.sh <name> <project> <adc-file> <parity 0|1|2=all> <scale-unit-to-wait-for|none>
+# MODEL=<vertex model id> in the environment overrides the teacher's default (DeepSeek-V3.2).
 set -u
 cd ~/Projects/dawnr
 NAME=$1; PROJECT=$2; ADC=$3; PAR=$4; WAIT=$5
@@ -22,7 +23,7 @@ par = int(sys.argv[1])
 refused, untried = [], []
 for line in open("t/out/udebug-solutions/INDEX.jsonl", encoding="utf-8"):
     e = json.loads(line)
-    if not e["id"].isdigit() or int(e["id"]) % 2 != par:
+    if not e["id"].isdigit() or (par in (0, 1) and int(e["id"]) % 2 != par):
         continue
     best = (e.get("best") or {}).get("status")
     if e["status"] in ("unsolved", "accepted-but-not-confirmed") and best != "no-fences":
@@ -36,7 +37,7 @@ PY
   mv t/out/udebug/solve-ids-refused.txt t/out/udebug/solve-ids-refused-$NAME.txt
   mv t/out/udebug/solve-ids-untried.txt t/out/udebug/solve-ids-untried-$NAME.txt
   LANES=$(ls -d t/out/udebug/teacher-*/ | sed 's|/$||' | grep -v "dry\|probe" | tr '\n' ',' | sed 's/,$//')
-  COMMON="--bank $BANK --exemplars $EX --target python --provider vertex --project $PROJECT --location global --adc $ADC --judges UVa --shape any --split any --max-in-bytes 0 --samples 1 --temperature 0.7 --max-tokens 8192 --concurrency 2 --price-in-per-mtok 0.56 --price-out-per-mtok 1.68 --spend-cap-usd 25"
+  COMMON="--bank $BANK --exemplars $EX --target python --provider vertex --project $PROJECT --location global --adc $ADC --judges UVa --shape any --split any --max-in-bytes 0 --samples 1 --temperature 0.7 --max-tokens 8192 --concurrency 2 --price-in-per-mtok 0.56 --price-out-per-mtok 1.68 --spend-cap-usd 25${MODEL:+ --model $MODEL}"
   for kind in repair fresh; do
     IDS=$(cat t/out/udebug/solve-ids-$([ $kind = repair ] && echo refused || echo untried)-$NAME.txt)
     [ -n "$IDS" ] || { log "round $round $kind: nothing to do"; continue; }
