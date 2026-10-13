@@ -26,3 +26,28 @@ class CollapsibleTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+# Three defects the GPT-6 Astra review of 2026-10-13 named, each reproduced here before the fix.
+
+def test_unknown_stages_do_not_count_as_composed(tmp_path):
+    import json
+    import audit_collapsible as audit
+    entry = {"task_name": "unknown", "split": "held_out", "pattern": "shift_then_shift", "tests": {"test": [{"x": 0}]}}
+    (tmp_path / "eval_synthesis.jsonl").write_text(json.dumps(entry) + "\n")
+    score = tmp_path / "score.json"
+    score.write_text(json.dumps({"rows": [{"task_name": "unknown", "verdict": "correct"}]}))
+    report = audit.audit(tmp_path, [score])
+    assert report["tasks_unknown_stages"] == 1
+    assert report["scored"]["correct_composed"] == 0
+    assert report["scored"]["correct_unaudited"] == 1
+
+
+def test_cancelling_stages_collapse_to_empty():
+    import audit_collapsible as audit
+    assert audit.collapsible([("shift", 3), ("shift", -3)], [-5, 0, 8]) == []
+
+
+def test_collapsible_accepts_input_iterator():
+    import audit_collapsible as audit
+    assert audit.collapsible([("cap", 12), ("cap", 12)], iter(range(-5, 20))) == [0]
