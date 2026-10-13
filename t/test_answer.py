@@ -237,3 +237,45 @@ def test_a_writer_that_has_never_seen_t_is_given_the_languages_reference_before_
     assert system["role"] == "system" and system["content"].startswith(se.GRAMMAR_V5[:200])
     assert "Examples of complete t tasks:" in system["content"] and system["content"].endswith("Reply with one fenced t task.")
     assert user == question[1] and len(asked[0]) == 2
+
+
+# Three defects the GPT-6 Astra review of 2026-10-13 named, each reproduced here before the fix.
+
+def test_a_prover_timeout_is_a_refusal_not_a_crash(monkeypatch):
+    import subprocess
+    monkeypatch.setattr(answer.subprocess, "run", lambda *a, **k: (_ for _ in ()).throw(subprocess.TimeoutExpired("run_par.py", 1800)))
+    monkeypatch.setattr(answer.spec_first, "written_python", lambda *a, **k: ({"q": "def double(n):\n    return 2 * n\n"}, {}))
+    monkeypatch.setattr(answer.spec_gate, "judge_all", lambda *a, **k: {"passes": True, "agreement": {"draws": 20, "completeness": 0.8}})
+    r = answer.answer(ENTRY, student(RIGHT), python(), answers=1, prover=answer.prove)
+    assert r["shown"] is None
+    assert "did not finish" in r["why"]
+    assert r["refused"] == ["answer 1: the provers did not finish within the time budget"]
+    assert answer.render(r).startswith("REFUSED: the provers did not finish")
+
+
+def test_an_ambiguity_is_not_hidden_by_a_broader_candidate(monkeypatch):
+    broad = task("(r - 2 * n) * (r - (n * n - n)) == 0")
+    verdicts = iter([
+        {"passes": False, "why": "the Python solutions read the question differently",
+         "ambiguous": {"args": [2], "another_solution_said": 2}},
+        {"passes": True, "agreement": {"draws": 20, "completeness": 0.8}},
+    ])
+    monkeypatch.setattr(answer.spec_first, "written_python", lambda *a, **k: ({"q": "def double(n):\n    return 2 * n\n"}, {}))
+    monkeypatch.setattr(answer.spec_first, "sampled_python", lambda *a, **k: {"q": ["def double(n):\n    return n * n - n\n"]})
+    monkeypatch.setattr(answer.spec_gate, "judge_all", lambda *a, **k: next(verdicts))
+    r = answer.answer(ENTRY, student(RIGHT, broad), python(), answers=2, consistency=1, prover=prover(lambda t: ALL))
+    assert r["shown"] is None
+    assert r["why"] == "the question can be read more than one way"
+    assert r["ambiguous"]["args"] == [2]
+    assert any("read the question differently" in x for x in r["refused"])
+
+
+def test_a_nonpositive_answer_count_is_refused_before_the_model_is_asked():
+    calls = []
+
+    def decode(conversations, temperature, salt, first, max_new):
+        calls.append(1)
+        return [(RIGHT, True, 0)]
+    with pytest.raises(ValueError):
+        answer.answer(ENTRY, decode, decode, answers=0)
+    assert not calls

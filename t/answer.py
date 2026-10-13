@@ -161,19 +161,27 @@ def python_of(task: dict, entry: dict) -> dict:
     return {"source": source, "function": fn, "inputs": report["inputs"], "refused": report.get("refused", 0)}
 
 
+class ProverTimeout(Exception):
+    """The provers did not finish within the budget: no verdict, so nothing is proved and nothing is refuted."""
+
+
 def prove(tasks: list[dict], jobs: int = 2, timeout: float = 1800.0, kernels: str = "") -> dict[str, dict]:
     """name -> the seven kernels' cells for it (t/run_par.py: each program and its sabotaged twin). `kernels`, a
-    comma-separated list, asks only those; the others read as not installed."""
+    comma-separated list, asks only those; the others read as not installed. Raises ProverTimeout when the batch
+    outruns `timeout`; the caller turns that into a refusal rather than a claim either way."""
     with tempfile.TemporaryDirectory(prefix="t-answer-") as tmp:
         d = Path(tmp)
         (d / "tasks").mkdir()
         for task in tasks:
             (d / "tasks" / f"{task['name']}.json").write_text(json.dumps(task), encoding="utf-8")
         env = dict(os.environ, T_SPARK_JOBS="1", CUDA_VISIBLE_DEVICES="")
-        subprocess.run([sys.executable, str(HERE / "run_par.py"), "--tasks", str(d / "tasks"), "--out", str(d / "out"),
-                        "--table", str(d / "table.md"), "--jobs", str(jobs), "--no-cache"]
-                       + (["--kernels", kernels] if kernels else []),
-                       capture_output=True, text=True, timeout=timeout, env=env)
+        try:
+            subprocess.run([sys.executable, str(HERE / "run_par.py"), "--tasks", str(d / "tasks"), "--out", str(d / "out"),
+                            "--table", str(d / "table.md"), "--jobs", str(jobs), "--no-cache"]
+                           + (["--kernels", kernels] if kernels else []),
+                           capture_output=True, text=True, timeout=timeout, env=env)
+        except subprocess.TimeoutExpired as e:
+            raise ProverTimeout(f"the provers did not finish within {timeout:.0f} s") from e
         _cols, cells = se.parse_kernel_table(d / "table.md")
     if kernels:
         cells = {name: {**{k: "\u2014" for k in spec_check.KERNELS}, **row} for name, row in cells.items()}
@@ -184,6 +192,8 @@ def answer(entry: dict, student, python, prompt_version: str = "s2", answers: in
            prover=prove, jobs: int = 2, consistency: int = 0) -> dict:
     """The whole gate for one question. `student` and `python` are `decode`s
     (python_beside.api_decode's shape). Returns {"shown": {...} | None, "refused": [...], ...}."""
+    if answers < 1:
+        raise ValueError(f"answers must be at least 1, not {answers}")
     question = se.build_prompt(entry, prompt_version)
     replies = [student([question], 0.0, 0, "q", max_new)[0][0]]
     for seed in range(1, answers):
@@ -205,12 +215,22 @@ def answer(entry: dict, student, python, prompt_version: str = "s2", answers: in
             out["ambiguous"] = v["ambiguous"]
         c["stage"] = v
         (judged if v["passes"] else refused).append(c if v["passes"] else f"answer {c['n']}: {v['why']}")
+    if out.get("ambiguous"):
+        # a question two solutions read differently is refused even when a broader candidate's specification
+        # admits both readings: such a specification decides nothing, and showing it would hide the ambiguity
+        for c in judged:
+            refused.append(f"answer {c['n']}: the Python solutions read the question differently")
+        return dict(out, why="the question can be read more than one way")
     if not judged:
-        return dict(out, why="the question can be read more than one way" if out.get("ambiguous")
-                    else "no answer's specification could be supported without a reference")
+        return dict(out, why="no answer's specification could be supported without a reference")
     for i, c in enumerate(judged):                              # distinct names: one table row each
         c["task"] = se.rename_task(c["task"], f"answer_{c['n']}__{entry['fn']}")
-    cells = prover([c["task"] for c in judged], jobs)
+    try:
+        cells = prover([c["task"] for c in judged], jobs)
+    except ProverTimeout as e:
+        for c in judged:
+            refused.append(f"answer {c['n']}: the provers did not finish within the time budget")
+        return dict(out, why=str(e))
     best, best_task = None, None
     for c in judged:
         row = cells.get(c["task"]["name"])
@@ -284,7 +304,7 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--text", required=True, help="the question, in words")
     ap.add_argument("--test", action="append", default=[], help="an `assert f(arguments) == value` line; repeat")
     ap.add_argument("--prompt", choices=se.PROMPT_VERSIONS, default="s2")
-    ap.add_argument("--answers", type=int, default=5)
+    ap.add_argument("--answers", type=lambda v: int(v) if int(v) >= 1 else ap.error("--answers must be at least 1"), default=5)
     ap.add_argument("--consistency", type=int, default=0,
                     help="further Python solutions sampled at 0.8 that must not find the specification false (0: off)")
     ap.add_argument("--jobs", type=int, default=2, help="provers at once")
