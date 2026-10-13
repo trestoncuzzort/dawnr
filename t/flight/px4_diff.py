@@ -130,6 +130,8 @@ FINDING_OF = {"px4_wrap_bin_any": "px4_wrap_bin"}
 PROBES = {"px4_wrap_bin_any": [{"bin": -73, "bin_count": 72}]}
 FINDING_NOT_RUN = {
     "px4_request_event_any": STMT,
+    "px4_rc_map_index_any": "the RC_MAP_* index statements of RCUpdate (rc_update.cpp:195) are not a function the "
+                            "runner can call; PX4's own RCUpdateTest case in PR #29135 fails on main at RC_MAP_FLTMODE = 19",
     "px4_arm_param_any": STMT,
     "px4_stream_interval_any": STMT,
     "px4_do_jump_index_any": STMT,
@@ -142,7 +144,15 @@ FINDING_NOT_RUN = {
 # parameters PX4's own signature narrows to binary32 (`float`) before use, though the template is at double
 NARROWED = {"px4_alpha_update": ["alpha"], "px4_slew_update": ["dt"]}
 
-NOT_DIFFED = {"px4_interp_index": "the index is internal to interpolateNXY, which returns only the interpolated value"}
+NOT_DIFFED = {"px4_interp_index": "the index is internal to interpolateNXY, which returns only the interpolated value",
+              "px4_rc_map_index": "a restatement of the RC_MAP_* index statements of RCUpdate::update_rc_functions "
+                                  "(rc_update.cpp:195), bounded; PX4's RCUpdateTest case in PR #29135 checks it",
+              "px4_geofence_wrap": "a restatement of the vertex index wrap v % vertex_count that closes a fence "
+                                   "polygon (geofence.cpp:556), not a function the runner can call",
+              "px4_geofence_wrap_4": "the same wrap at a fixed vertex count of 4, for the kernels the symbolic "
+                                     "modulus stops",
+              "px4_dm_offset": "a restatement of dataman's calculate_offset (dataman.cpp:199) with the index bound "
+                               "its callers check, not a function the runner can call"}
 
 
 def fetch_px4() -> Path:
