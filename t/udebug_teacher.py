@@ -170,6 +170,73 @@ def bedrock_cli_call(region: str, model: str, messages: list[dict], max_tokens: 
         delay *= 2
 
 
+OPENAI_URL = "https://api.openai.com/v1/chat/completions"
+
+
+def openai_key(path: str) -> str:
+    """The API key from --openai-key-file (or OPENAI_API_KEY); read, never printed."""
+    import os
+    env = os.environ.get("OPENAI_API_KEY")
+    if env:
+        return env.strip()
+    p = Path(path).expanduser()
+    if not p.is_file():
+        raise SystemExit(f"udebug_teacher: no OpenAI key at {p} and OPENAI_API_KEY is unset")
+    return p.read_text(encoding="utf-8").strip()
+
+
+def openai_call(key: str, model: str, messages: list[dict], max_tokens: int, temperature: float,
+                reasoning_effort: str = "", max_attempts: int = 8) -> tuple[str, int, int, str | None]:
+    """POST /chat/completions (github.com/openai/openai-openapi: Bearer auth; model, messages; the reply in
+    choices[0].message.content with finish_reason and usage.prompt_tokens/completion_tokens). Newer models take
+    max_completion_tokens and refuse a non-default temperature: a 400 naming either field is answered by resending
+    without it. 429 and 5xx wait on vertex_call's schedule; any other error stops the lane."""
+    import random
+    import urllib.error
+    import urllib.request
+    body = {"model": model, "messages": messages, "max_completion_tokens": max_tokens, "stream": False}
+    if abs(temperature - 1.0) > 1e-9:
+        body["temperature"] = temperature
+    if reasoning_effort:
+        body["reasoning_effort"] = reasoning_effort
+    delay = 1.0
+    attempt = 0
+    while True:
+        attempt += 1
+        req = urllib.request.Request(OPENAI_URL, data=json.dumps(body).encode(),
+                                     headers={"Authorization": f"Bearer {key}", "Content-Type": "application/json"})
+        try:
+            with urllib.request.urlopen(req, timeout=900) as r:
+                j = json.load(r)
+            choice = (j.get("choices") or [{}])[0]
+            text = (choice.get("message") or {}).get("content") or ""
+            usage = j.get("usage") or {}
+            return text, usage.get("prompt_tokens", 0) or 0, usage.get("completion_tokens", 0) or 0, choice.get("finish_reason")
+        except urllib.error.HTTPError as e:
+            detail = e.read().decode("utf-8", errors="replace")[:600]
+            if e.code == 400 and "max_completion_tokens" in detail and "max_completion_tokens" in body:
+                body["max_tokens"] = body.pop("max_completion_tokens")
+                continue
+            if e.code == 400 and "temperature" in detail and "temperature" in body:
+                body.pop("temperature")
+                continue
+            if e.code == 400 and "reasoning_effort" in detail and "reasoning_effort" in body:
+                body.pop("reasoning_effort")
+                continue
+            if e.code == 429:
+                if attempt >= RATE_LIMIT_MAX_ATTEMPTS:
+                    raise bg.NonRetryable(f"HTTP 429 after {attempt} attempts: {detail}") from e
+            elif e.code not in VERTEX_RETRYABLE or attempt >= max_attempts:
+                raise bg.NonRetryable(f"HTTP {e.code}: {detail}") from e
+        except (urllib.error.URLError, TimeoutError) as e:
+            if attempt >= max_attempts:
+                raise bg.NonRetryable(f"connection error, exhausted {max_attempts} attempts: {e}") from e
+        sleep_s = min(delay, RATE_LIMIT_MAX_DELAY) * (1 + random.uniform(-0.2, 0.2))
+        print(f"  transient error, retry {attempt} in {sleep_s:.1f}s", file=sys.stderr, flush=True)
+        time.sleep(sleep_s)
+        delay *= 2
+
+
 def vertex_call(url: str, token: VertexToken, model: str, messages: list[dict], max_tokens: int,
                 temperature: float, max_attempts: int = 8) -> tuple[str, int, int, str | None]:
     """One chat completion; bedrock_generate.call_with_backoff's schedule (1, 2, 4, 8, 16 s, +/-20%) extended by
@@ -479,7 +546,9 @@ def main(argv=None) -> int:
     ap.add_argument("--target", choices=TARGETS, default="t",
                     help="dafny: the teacher writes a Dafny method the gate lifts to t (t/lifter.py)")
     ap.add_argument("--out", default="", help="default t/out/udebug/teacher-<tag>")
-    ap.add_argument("--provider", choices=("bedrock", "vertex", "bedrock-cli"), default="bedrock")
+    ap.add_argument("--provider", choices=("bedrock", "vertex", "bedrock-cli", "openai"), default="bedrock")
+    ap.add_argument("--openai-key-file", default="~/.config/openai/api_key")
+    ap.add_argument("--reasoning-effort", default="", help="openai: low, medium or high (omitted by default)")
     ap.add_argument("--model", default="", help=f"default {DEFAULT_MODEL} on Bedrock, {VERTEX_MODEL} on Vertex")
     ap.add_argument("--region", default=bg.DEFAULT_REGION, help="Bedrock region")
     ap.add_argument("--project", default="", help="Vertex: the Google Cloud project id")
@@ -582,6 +651,14 @@ def main(argv=None) -> int:
             reply = "".join(b.get("text", "") for b in msg.get("content", []) if "text" in b)
             usage = resp.get("usage", {})
             return reply, usage.get("inputTokens", 0) or 0, usage.get("outputTokens", 0) or 0, resp.get("stopReason")
+    elif a.provider == "openai":
+        if not a.model:
+            raise SystemExit("udebug_teacher: --model is required with --provider openai")
+        model, endpoint = a.model, OPENAI_URL
+        key = openai_key(a.openai_key_file)
+
+        def call(messages: list[dict]) -> tuple[str, int, int, str | None]:
+            return openai_call(key, model, messages, a.max_tokens, a.temperature, a.reasoning_effort)
     elif a.provider == "bedrock-cli":
         model, endpoint = a.model or DEFAULT_MODEL, f"bedrock-cli:{a.region}"
 
