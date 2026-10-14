@@ -1,0 +1,9282 @@
+{
+  "tag": "vcdvec",
+  "corpus": "vericoding/dafny",
+  "n_tasks": 511,
+  "spec_level": {
+    "behaviour_changing": 15125,
+    "killed": 14411,
+    "survivors_total": 714,
+    "tasks": 487,
+    "tasks_audited": 487,
+    "tasks_with_survivor": 53,
+    "mutant_survival_rate": 0.0472,
+    "kill_rate": 0.9528
+  },
+  "kernel_adjudicated_survivors": 80,
+  "per_kernel": {
+    "dafny": {
+      "survivors_proved": 38,
+      "survivors_seen": 75,
+      "real_verified": 424,
+      "real_decided": 424
+    },
+    "verus": {
+      "survivors_proved": 36,
+      "survivors_seen": 52,
+      "real_verified": 374,
+      "real_decided": 374
+    },
+    "spark": {
+      "survivors_proved": 39,
+      "survivors_seen": 54,
+      "real_verified": 388,
+      "real_decided": 388
+    },
+    "framac": {
+      "survivors_proved": 17,
+      "survivors_seen": 27,
+      "real_verified": 230,
+      "real_decided": 230
+    },
+    "lean": {
+      "survivors_proved": 21,
+      "survivors_seen": 21,
+      "real_verified": 264,
+      "real_decided": 264
+    },
+    "rocq": {
+      "survivors_proved": 19,
+      "survivors_seen": 27,
+      "real_verified": 256,
+      "real_decided": 256
+    },
+    "fstar": {
+      "survivors_proved": 36,
+      "survivors_seen": 45,
+      "real_verified": 379,
+      "real_decided": 379
+    }
+  },
+  "curve": [
+    {
+      "k": 1,
+      "coverage": 0.9261,
+      "false_accept": 0.6625,
+      "false_accept_n": 53,
+      "surv_n": 80
+    },
+    {
+      "k": 2,
+      "coverage": 0.8809,
+      "false_accept": 0.5875,
+      "false_accept_n": 47,
+      "surv_n": 80
+    },
+    {
+      "k": 3,
+      "coverage": 0.8152,
+      "false_accept": 0.4875,
+      "false_accept_n": 39,
+      "surv_n": 80
+    },
+    {
+      "k": 4,
+      "coverage": 0.729,
+      "false_accept": 0.4,
+      "false_accept_n": 32,
+      "surv_n": 80
+    },
+    {
+      "k": 5,
+      "coverage": 0.5975,
+      "false_accept": 0.2,
+      "false_accept_n": 16,
+      "surv_n": 80
+    },
+    {
+      "k": 6,
+      "coverage": 0.4805,
+      "false_accept": 0.1375,
+      "false_accept_n": 11,
+      "surv_n": 80
+    },
+    {
+      "k": 7,
+      "coverage": 0.3244,
+      "false_accept": 0.1,
+      "false_accept_n": 8,
+      "surv_n": 80
+    }
+  ],
+  "survivor_vectors": [
+    {
+      "task": "vericoding_da0003__solve",
+      "op": "wrong-var",
+      "proved": [
+        "dafny",
+        "fstar",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "saw": [
+        "dafny",
+        "fstar",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "witness": "n=1, a=2, b=2, p=2, q=2 -> real 2, twin 1"
+    },
+    {
+      "task": "vericoding_da0010__solve",
+      "op": "collapse-if#1",
+      "proved": [
+        "dafny",
+        "fstar",
+        "rocq",
+        "spark"
+      ],
+      "saw": [
+        "dafny",
+        "fstar",
+        "rocq",
+        "spark"
+      ],
+      "witness": "n=2, t_v=2 -> real 2, twin 1"
+    },
+    {
+      "task": "vericoding_da0014__solve",
+      "op": "off-by-one#4",
+      "proved": [
+        "dafny",
+        "fstar",
+        "rocq",
+        "spark"
+      ],
+      "saw": [
+        "dafny",
+        "fstar",
+        "rocq",
+        "spark"
+      ],
+      "witness": "t_v=1, w=1, b=1 -> real [0, 1], twin [1, 1]"
+    },
+    {
+      "task": "vericoding_da0057__solve",
+      "op": "collapse-if#5",
+      "proved": [
+        "dafny",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "saw": [
+        "dafny",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "witness": "a=2, b=3, f=1, k=2 -> real 1, twin 2"
+    },
+    {
+      "task": "vericoding_da0063__shellGame",
+      "op": "collapse-if",
+      "proved": [
+        "dafny",
+        "fstar",
+        "lean",
+        "spark",
+        "verus"
+      ],
+      "saw": [
+        "dafny",
+        "fstar",
+        "lean",
+        "spark",
+        "verus"
+      ],
+      "witness": "n=1, x=0 -> real 1, twin 0"
+    },
+    {
+      "task": "vericoding_da0157__solve",
+      "op": "off-by-one",
+      "proved": [
+        "fstar",
+        "spark"
+      ],
+      "saw": [
+        "fstar",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "witness": "n=1, a=1, b=1 -> real [6, 2, 3], twin [9, 3, 3]"
+    },
+    {
+      "task": "vericoding_da0157__solve",
+      "op": "off-by-one#2",
+      "proved": [],
+      "saw": [
+        "rocq",
+        "verus"
+      ],
+      "witness": "n=1, a=1, b=1 -> real [6, 2, 3], twin [8, 2, 4]"
+    },
+    {
+      "task": "vericoding_da0157__solve",
+      "op": "wrong-var",
+      "proved": [],
+      "saw": [
+        "rocq",
+        "verus"
+      ],
+      "witness": "n=1, a=2, b=1 -> real [6, 2, 3], twin [12, 4, 3]"
+    },
+    {
+      "task": "vericoding_da0161__solve",
+      "op": "off-by-one",
+      "proved": [
+        "dafny",
+        "fstar",
+        "spark",
+        "verus"
+      ],
+      "saw": [
+        "dafny",
+        "fstar",
+        "spark",
+        "verus"
+      ],
+      "witness": "n=1, d=1, transactions=[0] -> real 0, twin 1"
+    },
+    {
+      "task": "vericoding_da0200__solve",
+      "op": "off-by-one",
+      "proved": [
+        "dafny",
+        "fstar",
+        "spark",
+        "verus"
+      ],
+      "saw": [
+        "dafny",
+        "fstar",
+        "spark",
+        "verus"
+      ],
+      "witness": "n=1, k=1, requests=[1] -> real 0, twin 1"
+    },
+    {
+      "task": "vericoding_da0278__solve",
+      "op": "off-by-one",
+      "proved": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "saw": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "witness": "n=1 -> real 0, twin 1"
+    },
+    {
+      "task": "vericoding_da0296__solveGraph",
+      "op": "wrong-var#4",
+      "proved": [],
+      "saw": [
+        "dafny",
+        "fstar",
+        "spark",
+        "verus"
+      ],
+      "witness": "n=1, k=1, f=[0], w=[1] -> real [[1], [1]], twin [[0], [1]]"
+    },
+    {
+      "task": "vericoding_da0296__solveGraph",
+      "op": "wrong-var#5",
+      "proved": [],
+      "saw": [
+        "dafny",
+        "fstar",
+        "spark",
+        "verus"
+      ],
+      "witness": "n=1, k=1, f=[0], w=[1] -> real [[1], [1]], twin [[0], [1]]"
+    },
+    {
+      "task": "vericoding_da0296__solveGraph",
+      "op": "wrong-var#6",
+      "proved": [],
+      "saw": [
+        "dafny",
+        "fstar",
+        "spark",
+        "verus"
+      ],
+      "witness": "n=1, k=2, f=[0], w=[1] -> real [[2], [1]], twin [[1], [1]]"
+    },
+    {
+      "task": "vericoding_da0353__intToString",
+      "op": "collapse-if",
+      "proved": [
+        "dafny",
+        "verus"
+      ],
+      "saw": [
+        "dafny",
+        "verus"
+      ],
+      "witness": "n=1 -> real [49], twin [48]"
+    },
+    {
+      "task": "vericoding_da0417__solve",
+      "op": "off-by-one#50",
+      "proved": [
+        "dafny"
+      ],
+      "saw": [
+        "dafny"
+      ],
+      "witness": "input=[0] -> real [48], twin [49]"
+    },
+    {
+      "task": "vericoding_da0423__solve",
+      "op": "wrong-var",
+      "proved": [
+        "fstar"
+      ],
+      "saw": [
+        "dafny",
+        "fstar",
+        "spark",
+        "verus"
+      ],
+      "witness": "n=1, h=1, a=[1], b=[2] -> real 3, twin 2"
+    },
+    {
+      "task": "vericoding_da0423__solve",
+      "op": "wrong-var#1",
+      "proved": [
+        "dafny",
+        "spark",
+        "verus"
+      ],
+      "saw": [
+        "dafny",
+        "spark",
+        "verus"
+      ],
+      "witness": "n=1, h=2, a=[1], b=[1] -> real 3, twin 2"
+    },
+    {
+      "task": "vericoding_da0426__solve",
+      "op": "compare-flip",
+      "proved": [],
+      "saw": [
+        "dafny",
+        "fstar",
+        "spark",
+        "verus"
+      ],
+      "witness": "input=[0] -> real [1], twin [1, 2]"
+    },
+    {
+      "task": "vericoding_da0426__solve",
+      "op": "boundary-swap",
+      "proved": [
+        "fstar",
+        "spark",
+        "verus"
+      ],
+      "saw": [
+        "dafny",
+        "fstar",
+        "spark",
+        "verus"
+      ],
+      "witness": "input=[0] -> real [1], twin []"
+    },
+    {
+      "task": "vericoding_da0426__solve",
+      "op": "off-by-one#2",
+      "proved": [],
+      "saw": [
+        "dafny"
+      ],
+      "witness": "input=[0] -> real [1], twin [1, 2]"
+    },
+    {
+      "task": "vericoding_da0466__solve",
+      "op": "off-by-one#50",
+      "proved": [
+        "dafny",
+        "fstar",
+        "spark",
+        "verus"
+      ],
+      "saw": [
+        "dafny",
+        "fstar",
+        "spark",
+        "verus"
+      ],
+      "witness": "k=11 -> real [1, 2, 3, 4, 5, 6, 7, 8, 9, 19, 29], twin [1, 2, 3, 4, 5, 6, 7, 8, 9, 19, 30]"
+    },
+    {
+      "task": "vericoding_da0476__solve",
+      "op": "off-by-one#7",
+      "proved": [],
+      "saw": [
+        "dafny",
+        "rocq",
+        "spark"
+      ],
+      "witness": "x=1000000 -> real 983, twin 973"
+    },
+    {
+      "task": "vericoding_da0476__solve",
+      "op": "wrong-var#5",
+      "proved": [],
+      "saw": [
+        "dafny",
+        "rocq",
+        "spark"
+      ],
+      "witness": "x=1000000 -> real 983, twin 100"
+    },
+    {
+      "task": "vericoding_da0483__solve",
+      "op": "off-by-one#16",
+      "proved": [
+        "dafny",
+        "spark",
+        "verus"
+      ],
+      "saw": [
+        "dafny",
+        "spark",
+        "verus"
+      ],
+      "witness": "n=2, heights=[78, 1] -> real [78, 111], twin [79, 111]"
+    },
+    {
+      "task": "vericoding_da0623__solve",
+      "op": "off-by-one#6",
+      "proved": [
+        "dafny",
+        "framac",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "saw": [
+        "dafny",
+        "framac",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "witness": "a=1, b=1, x=78 -> real [78, 79], twin [79, 79]"
+    },
+    {
+      "task": "vericoding_da0654__solve",
+      "op": "off-by-one",
+      "proved": [
+        "dafny",
+        "fstar",
+        "spark",
+        "verus"
+      ],
+      "saw": [
+        "dafny",
+        "fstar",
+        "spark",
+        "verus"
+      ],
+      "witness": "a=[], b=[], c=[] -> real 65, twin 66"
+    },
+    {
+      "task": "vericoding_da0662__solve",
+      "op": "wrong-var",
+      "proved": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "saw": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "witness": "n=1, k=2 -> real 1, twin 2"
+    },
+    {
+      "task": "vericoding_dd0124__mfirstNegative",
+      "op": "off-by-one#14",
+      "proved": [
+        "dafny",
+        "fstar",
+        "spark",
+        "verus"
+      ],
+      "saw": [
+        "dafny",
+        "fstar",
+        "spark",
+        "verus"
+      ],
+      "witness": "v=[] -> real [False, 0], twin [False, 1]"
+    },
+    {
+      "task": "vericoding_dd0187__findPositionOfElement",
+      "op": "negate-cond#1",
+      "proved": [],
+      "saw": [
+        "dafny"
+      ],
+      "witness": "a=[0], element=0, n1=1, s1=[0] -> real [1, 1], twin [-1, 1]"
+    },
+    {
+      "task": "vericoding_dd0187__findPositionOfElement",
+      "op": "boundary-swap",
+      "proved": [],
+      "saw": [
+        "dafny"
+      ],
+      "witness": "a=[0], element=0, n1=1, s1=[0] -> real [1, 1], twin [-1, 0]"
+    },
+    {
+      "task": "vericoding_dd0187__findPositionOfElement",
+      "op": "off-by-one#6",
+      "proved": [
+        "dafny"
+      ],
+      "saw": [
+        "dafny"
+      ],
+      "witness": "a=[], element=0, n1=0, s1=[] -> real [-1, 0], twin [-1, 1]"
+    },
+    {
+      "task": "vericoding_dd0275__lookForMin",
+      "op": "compare-flip#1",
+      "proved": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "saw": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "witness": "a=[0, 0], i=0 -> real 0, twin 1"
+    },
+    {
+      "task": "vericoding_dd0464__counting_bits",
+      "op": "off-by-one#12",
+      "proved": [
+        "framac"
+      ],
+      "saw": [
+        "framac"
+      ],
+      "witness": "n=0 -> real [0], twin [1]"
+    },
+    {
+      "task": "vericoding_dd0508__mergeSimple",
+      "op": "collapse-if",
+      "proved": [],
+      "saw": [
+        "dafny",
+        "spark",
+        "verus"
+      ],
+      "witness": "a1=[0], a2=[0], start=0, end=1, b=[1] -> real [0], twin [1]"
+    },
+    {
+      "task": "vericoding_dd0508__mergeSimple",
+      "op": "collapse-if#1",
+      "proved": [],
+      "saw": [
+        "dafny",
+        "spark",
+        "verus"
+      ],
+      "witness": "a1=[1], a2=[0], start=0, end=1, b=[0] -> real [0], twin [1]"
+    },
+    {
+      "task": "vericoding_dd0508__mergeSimple",
+      "op": "negate-cond",
+      "proved": [],
+      "saw": [
+        "dafny",
+        "spark",
+        "verus"
+      ],
+      "witness": "a1=[0], a2=[0], start=0, end=1, b=[1] -> real [0], twin [1]"
+    },
+    {
+      "task": "vericoding_dd0643__sharedElements",
+      "op": "boundary-swap",
+      "proved": [
+        "fstar",
+        "spark",
+        "verus"
+      ],
+      "saw": [
+        "dafny",
+        "fstar",
+        "spark",
+        "verus"
+      ],
+      "witness": "a=[0], b=[0] -> real [0], twin []"
+    },
+    {
+      "task": "vericoding_dd0643__sharedElements",
+      "op": "off-by-one",
+      "proved": [],
+      "saw": [
+        "dafny"
+      ],
+      "witness": "a=[0], b=[0] -> real [0], twin []"
+    },
+    {
+      "task": "vericoding_dd0643__sharedElements",
+      "op": "off-by-one#3",
+      "proved": [
+        "dafny"
+      ],
+      "saw": [
+        "dafny"
+      ],
+      "witness": "a=[0], b=[0] -> real [0], twin []"
+    },
+    {
+      "task": "vericoding_dd0701__maxLengthList",
+      "op": "compare-flip#1",
+      "proved": [
+        "dafny",
+        "fstar",
+        "lean",
+        "spark"
+      ],
+      "saw": [
+        "dafny",
+        "fstar",
+        "lean",
+        "spark"
+      ],
+      "witness": "lists=[[0], [1]] -> real [0], twin [1]"
+    },
+    {
+      "task": "vericoding_dd0730__minLengthSublist",
+      "op": "compare-flip#1",
+      "proved": [
+        "dafny",
+        "fstar",
+        "lean",
+        "spark"
+      ],
+      "saw": [
+        "dafny",
+        "fstar",
+        "lean",
+        "spark"
+      ],
+      "witness": "s=[[0], [1]] -> real [0], twin [1]"
+    },
+    {
+      "task": "vericoding_dd0762__lucidNumbers",
+      "op": "compare-flip",
+      "proved": [
+        "dafny",
+        "fstar",
+        "lean",
+        "rocq",
+        "verus"
+      ],
+      "saw": [
+        "dafny",
+        "fstar",
+        "lean",
+        "rocq",
+        "verus"
+      ],
+      "witness": "n=0 -> real [0], twin []"
+    },
+    {
+      "task": "vericoding_dd0839__findMin",
+      "op": "compare-flip#1",
+      "proved": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "saw": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "witness": "a=[0, 0], start=0 -> real 0, twin 1"
+    },
+    {
+      "task": "vericoding_dd0923__longestZero",
+      "op": "compare-flip#1",
+      "proved": [
+        "framac",
+        "spark"
+      ],
+      "saw": [
+        "framac",
+        "spark"
+      ],
+      "witness": "a=[0, 1, 0] -> real [1, 0], twin [1, 2]"
+    },
+    {
+      "task": "vericoding_dh0040__decode_cyclic",
+      "op": "collapse-if#2",
+      "proved": [],
+      "saw": [
+        "dafny",
+        "framac",
+        "fstar",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "witness": "s=[0, 1, 0] -> real [0, 0, 0], twin [0, 0, 1]"
+    },
+    {
+      "task": "vericoding_dh0040__decode_cyclic",
+      "op": "off-by-one#22",
+      "proved": [],
+      "saw": [
+        "dafny",
+        "framac",
+        "fstar",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "witness": "s=[0, 1, 0] -> real [0, 0, 0], twin [0, 0, 1]"
+    },
+    {
+      "task": "vericoding_dh0040__decode_cyclic",
+      "op": "off-by-one#25",
+      "proved": [],
+      "saw": [
+        "dafny",
+        "framac",
+        "fstar",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "witness": "s=[0, 1, 0] -> real [0, 0, 0], twin [0, 0, 1]"
+    },
+    {
+      "task": "vericoding_dj0004__myfun",
+      "op": "boundary-swap",
+      "proved": [
+        "fstar",
+        "lean",
+        "spark",
+        "verus"
+      ],
+      "saw": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "spark",
+        "verus"
+      ],
+      "witness": "a=[1], sum=[0], n=1 -> real [1], twin [0]"
+    },
+    {
+      "task": "vericoding_dj0004__myfun",
+      "op": "off-by-one#1",
+      "proved": [
+        "dafny",
+        "framac"
+      ],
+      "saw": [
+        "dafny",
+        "framac"
+      ],
+      "witness": "a=[0], sum=[0], n=1 -> real [0], twin [-1]"
+    },
+    {
+      "task": "vericoding_dj0010__chooseOdd",
+      "op": "collapse-if",
+      "proved": [
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "saw": [
+        "dafny",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "witness": "v=[0, 1] -> real 1, twin 0"
+    },
+    {
+      "task": "vericoding_dj0010__chooseOdd",
+      "op": "negate-cond",
+      "proved": [],
+      "saw": [
+        "dafny"
+      ],
+      "witness": "v=[0, 1] -> real 1, twin 0"
+    },
+    {
+      "task": "vericoding_dj0010__chooseOdd",
+      "op": "boundary-swap",
+      "proved": [],
+      "saw": [
+        "dafny"
+      ],
+      "witness": "v=[0, 1] -> real 1, twin 0"
+    },
+    {
+      "task": "vericoding_dj0014__myfun",
+      "op": "wrong-operator#2",
+      "proved": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "saw": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "witness": "a=[0, 1], n=2 -> real [0, 2], twin [0, 0]"
+    },
+    {
+      "task": "vericoding_dj0015__myfun",
+      "op": "collapse-if",
+      "proved": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "saw": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "witness": "a=[0], n=1, m=0 -> real [0], twin [1]"
+    },
+    {
+      "task": "vericoding_dj0026__myfun",
+      "op": "boundary-swap",
+      "proved": [
+        "fstar",
+        "lean",
+        "spark",
+        "verus"
+      ],
+      "saw": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "spark",
+        "verus"
+      ],
+      "witness": "a=[1], sum=[0], n=1 -> real [1], twin [0]"
+    },
+    {
+      "task": "vericoding_dj0026__myfun",
+      "op": "off-by-one#1",
+      "proved": [
+        "dafny",
+        "framac"
+      ],
+      "saw": [
+        "dafny",
+        "framac"
+      ],
+      "witness": "a=[0], sum=[0], n=1 -> real [0], twin [-1]"
+    },
+    {
+      "task": "vericoding_dj0027__myfun",
+      "op": "boundary-swap",
+      "proved": [
+        "fstar",
+        "lean",
+        "spark",
+        "verus"
+      ],
+      "saw": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "spark",
+        "verus"
+      ],
+      "witness": "a=[1], sum=[0], n=1 -> real [1], twin [0]"
+    },
+    {
+      "task": "vericoding_dj0027__myfun",
+      "op": "off-by-one#1",
+      "proved": [
+        "dafny",
+        "framac"
+      ],
+      "saw": [
+        "dafny",
+        "framac"
+      ],
+      "witness": "a=[0], sum=[0], n=1 -> real [0], twin [-1]"
+    },
+    {
+      "task": "vericoding_dj0028__myfun",
+      "op": "boundary-swap",
+      "proved": [
+        "fstar",
+        "lean",
+        "spark",
+        "verus"
+      ],
+      "saw": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "spark",
+        "verus"
+      ],
+      "witness": "a=[1], sum=[0], n=1 -> real [1], twin [0]"
+    },
+    {
+      "task": "vericoding_dj0028__myfun",
+      "op": "off-by-one#1",
+      "proved": [
+        "dafny",
+        "framac"
+      ],
+      "saw": [
+        "dafny",
+        "framac"
+      ],
+      "witness": "a=[0], sum=[0], n=1 -> real [0], twin [-1]"
+    },
+    {
+      "task": "vericoding_dj0130__findFirstOdd",
+      "op": "off-by-one#12",
+      "proved": [
+        "dafny",
+        "fstar",
+        "spark",
+        "verus"
+      ],
+      "saw": [
+        "dafny",
+        "fstar",
+        "spark",
+        "verus"
+      ],
+      "witness": "arr=[] -> real -1, twin -2"
+    },
+    {
+      "task": "vericoding_dj0135__arithmeticWeird",
+      "op": "off-by-one#1",
+      "proved": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "saw": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "witness": " -> real 9, twin 8"
+    },
+    {
+      "task": "vericoding_dj0170__binarySearchExists",
+      "op": "off-by-one#14",
+      "proved": [
+        "dafny",
+        "spark",
+        "verus"
+      ],
+      "saw": [
+        "dafny",
+        "spark",
+        "verus"
+      ],
+      "witness": "w=[], m=0, target=0 -> real [False, 0], twin [False, 1]"
+    },
+    {
+      "task": "vericoding_dv0008__countSumDivisibleBy",
+      "op": "collapse-if",
+      "proved": [
+        "dafny",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "saw": [
+        "dafny",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "witness": "n=1, d=2 -> real 0, twin 1"
+    },
+    {
+      "task": "vericoding_dv0042__maxStrength",
+      "op": "collapse-if",
+      "proved": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "saw": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "witness": "nums=[1, 0] -> real 1, twin 0"
+    },
+    {
+      "task": "vericoding_dv0061__rain",
+      "op": "collapse-if",
+      "proved": [
+        "fstar",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "saw": [
+        "dafny",
+        "fstar",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "witness": "heights=[1, 0, 1] -> real 1, twin 0"
+    },
+    {
+      "task": "vericoding_dv0061__rain",
+      "op": "negate-cond",
+      "proved": [],
+      "saw": [
+        "dafny"
+      ],
+      "witness": "heights=[1, 0, 1] -> real 1, twin 0"
+    },
+    {
+      "task": "vericoding_dv0061__rain",
+      "op": "negate-cond#1",
+      "proved": [
+        "dafny"
+      ],
+      "saw": [
+        "dafny"
+      ],
+      "witness": "heights=[1, 0, 1] -> real 1, twin 0"
+    },
+    {
+      "task": "vericoding_dv0062__removeDuplicates",
+      "op": "collapse-if",
+      "proved": [
+        "dafny",
+        "framac",
+        "verus"
+      ],
+      "saw": [
+        "dafny",
+        "framac",
+        "verus"
+      ],
+      "witness": "nums=[0] -> real 1, twin 0"
+    },
+    {
+      "task": "vericoding_dv0069__semiOrderedPermutation",
+      "op": "collapse-if",
+      "proved": [
+        "fstar",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "saw": [
+        "dafny",
+        "framac",
+        "fstar",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "witness": "nums=[0, 1] -> real 1, twin 0"
+    },
+    {
+      "task": "vericoding_dv0069__semiOrderedPermutation",
+      "op": "collapse-if#1",
+      "proved": [
+        "dafny",
+        "framac"
+      ],
+      "saw": [
+        "dafny",
+        "framac"
+      ],
+      "witness": "nums=[0, 0] -> real 0, twin 1"
+    },
+    {
+      "task": "vericoding_dv0073__solution",
+      "op": "boundary-swap",
+      "proved": [
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "saw": [
+        "dafny",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "witness": "nums=[1] -> real 1, twin 0"
+    },
+    {
+      "task": "vericoding_dv0073__solution",
+      "op": "off-by-one",
+      "proved": [],
+      "saw": [
+        "dafny"
+      ],
+      "witness": "nums=[1] -> real 1, twin 2"
+    },
+    {
+      "task": "vericoding_dv0073__solution",
+      "op": "off-by-one#1",
+      "proved": [],
+      "saw": [
+        "dafny"
+      ],
+      "witness": "nums=[1] -> real 1, twin 0"
+    },
+    {
+      "task": "vericoding_dv0076__trapRainWater",
+      "op": "collapse-if",
+      "proved": [
+        "fstar",
+        "spark",
+        "verus"
+      ],
+      "saw": [
+        "dafny",
+        "fstar",
+        "spark",
+        "verus"
+      ],
+      "witness": "height=[1, 0, 1] -> real 1, twin 0"
+    },
+    {
+      "task": "vericoding_dv0076__trapRainWater",
+      "op": "negate-cond",
+      "proved": [],
+      "saw": [
+        "dafny"
+      ],
+      "witness": "height=[1, 0, 1] -> real 1, twin 0"
+    },
+    {
+      "task": "vericoding_dv0076__trapRainWater",
+      "op": "boundary-swap",
+      "proved": [],
+      "saw": [
+        "dafny"
+      ],
+      "witness": "height=[1, 0, 1] -> real 1, twin 0"
+    },
+    {
+      "task": "vericoding_dv0117__findFirstOccurrence",
+      "op": "off-by-one#2",
+      "proved": [],
+      "saw": [
+        "dafny",
+        "framac",
+        "fstar",
+        "spark",
+        "verus"
+      ],
+      "witness": "arr=[], target=0 -> real -1, twin -2"
+    },
+    {
+      "task": "vericoding_dv0117__findFirstOccurrence",
+      "op": "wrong-constant#5",
+      "proved": [],
+      "saw": [
+        "dafny",
+        "framac",
+        "fstar",
+        "spark",
+        "verus"
+      ],
+      "witness": "arr=[], target=0 -> real -1, twin -2"
+    }
+  ],
+  "real_vectors": [
+    {
+      "task": "vericoding_da0000__solve",
+      "verified": [
+        "dafny",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "verus"
+      ]
+    },
+    {
+      "task": "vericoding_da0001__solve",
+      "verified": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "vericoding_da0003__solve",
+      "verified": [
+        "dafny",
+        "fstar",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "fstar",
+        "rocq",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "vericoding_da0010__solve",
+      "verified": [
+        "dafny",
+        "fstar",
+        "rocq",
+        "spark"
+      ],
+      "decided": [
+        "dafny",
+        "fstar",
+        "rocq",
+        "spark"
+      ]
+    },
+    {
+      "task": "vericoding_da0014__solve",
+      "verified": [
+        "dafny",
+        "fstar",
+        "rocq",
+        "spark"
+      ],
+      "decided": [
+        "dafny",
+        "fstar",
+        "rocq",
+        "spark"
+      ]
+    },
+    {
+      "task": "vericoding_da0017__solve",
+      "verified": [
+        "dafny",
+        "fstar",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "fstar",
+        "verus"
+      ]
+    },
+    {
+      "task": "vericoding_da0018__solve",
+      "verified": [
+        "dafny",
+        "fstar",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "fstar",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "vericoding_da0022__solve",
+      "verified": [
+        "dafny",
+        "fstar",
+        "spark"
+      ],
+      "decided": [
+        "dafny",
+        "fstar",
+        "spark"
+      ]
+    },
+    {
+      "task": "vericoding_da0026__solve",
+      "verified": [
+        "dafny",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "vericoding_da0029__solve",
+      "verified": [
+        "dafny"
+      ],
+      "decided": [
+        "dafny"
+      ]
+    },
+    {
+      "task": "vericoding_da0031__solve",
+      "verified": [
+        "dafny",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "verus"
+      ]
+    },
+    {
+      "task": "vericoding_da0035__solve",
+      "verified": [
+        "fstar"
+      ],
+      "decided": [
+        "fstar"
+      ]
+    },
+    {
+      "task": "vericoding_da0036__solve",
+      "verified": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "vericoding_da0043__solve",
+      "verified": [
+        "fstar"
+      ],
+      "decided": [
+        "fstar"
+      ]
+    },
+    {
+      "task": "vericoding_da0046__minimumMoves",
+      "verified": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "vericoding_da0047__findOptimalT",
+      "verified": [],
+      "decided": []
+    },
+    {
+      "task": "vericoding_da0049__solve",
+      "verified": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "vericoding_da0054__solve",
+      "verified": [
+        "dafny",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "vericoding_da0055__solve",
+      "verified": [
+        "dafny",
+        "fstar",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "fstar",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "vericoding_da0057__solve",
+      "verified": [
+        "dafny",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "vericoding_da0059__solve",
+      "verified": [
+        "dafny",
+        "fstar",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "fstar",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "vericoding_da0060__computeDistanceToHouse",
+      "verified": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "vericoding_da0062__solve",
+      "verified": [
+        "dafny",
+        "fstar",
+        "lean"
+      ],
+      "decided": [
+        "dafny",
+        "fstar",
+        "lean"
+      ]
+    },
+    {
+      "task": "vericoding_da0063__shellGame",
+      "verified": [
+        "dafny",
+        "fstar",
+        "lean",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "fstar",
+        "lean",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "vericoding_da0071__solve",
+      "verified": [
+        "dafny",
+        "fstar",
+        "spark"
+      ],
+      "decided": [
+        "dafny",
+        "fstar",
+        "spark"
+      ]
+    },
+    {
+      "task": "vericoding_da0072__solve",
+      "verified": [
+        "dafny",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "vericoding_da0078__solve",
+      "verified": [
+        "dafny",
+        "fstar",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "fstar",
+        "rocq",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "vericoding_da0080__solve",
+      "verified": [
+        "dafny",
+        "framac",
+        "fstar",
+        "rocq",
+        "spark"
+      ],
+      "decided": [
+        "dafny",
+        "framac",
+        "fstar",
+        "rocq",
+        "spark"
+      ]
+    },
+    {
+      "task": "vericoding_da0084__solve",
+      "verified": [
+        "framac",
+        "fstar",
+        "spark"
+      ],
+      "decided": [
+        "framac",
+        "fstar",
+        "spark"
+      ]
+    },
+    {
+      "task": "vericoding_da0085__findMinimumTotalDistance",
+      "verified": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "vericoding_da0090__solve",
+      "verified": [
+        "dafny",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "vericoding_da0101__solve",
+      "verified": [
+        "dafny",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "vericoding_da0105__solve",
+      "verified": [
+        "dafny",
+        "fstar"
+      ],
+      "decided": [
+        "dafny",
+        "fstar"
+      ]
+    },
+    {
+      "task": "vericoding_da0108__solve",
+      "verified": [
+        "dafny",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "vericoding_da0110__solve",
+      "verified": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "vericoding_da0113__solve",
+      "verified": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "vericoding_da0119__solve",
+      "verified": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "vericoding_da0120__solve",
+      "verified": [
+        "dafny",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "vericoding_da0121__solve",
+      "verified": [
+        "fstar"
+      ],
+      "decided": [
+        "fstar"
+      ]
+    },
+    {
+      "task": "vericoding_da0123__solve",
+      "verified": [
+        "dafny",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "vericoding_da0131__solve",
+      "verified": [],
+      "decided": []
+    },
+    {
+      "task": "vericoding_da0133__solve",
+      "verified": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "vericoding_da0140__minBacteria",
+      "verified": [
+        "dafny",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "vericoding_da0144__solve",
+      "verified": [
+        "dafny"
+      ],
+      "decided": [
+        "dafny"
+      ]
+    },
+    {
+      "task": "vericoding_da0145__solve",
+      "verified": [],
+      "decided": []
+    },
+    {
+      "task": "vericoding_da0148__solve",
+      "verified": [
+        "fstar"
+      ],
+      "decided": [
+        "fstar"
+      ]
+    },
+    {
+      "task": "vericoding_da0151__solve",
+      "verified": [
+        "dafny",
+        "fstar",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "fstar",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "vericoding_da0153__solve",
+      "verified": [
+        "dafny",
+        "fstar",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "fstar",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "vericoding_da0157__solve",
+      "verified": [
+        "fstar",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "fstar",
+        "rocq",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "vericoding_da0161__solve",
+      "verified": [
+        "dafny",
+        "fstar",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "fstar",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "vericoding_da0162__convertIntToString",
+      "verified": [
+        "dafny",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "vericoding_da0167__solve",
+      "verified": [
+        "dafny",
+        "fstar",
+        "lean",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "fstar",
+        "lean",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "vericoding_da0168__solve",
+      "verified": [
+        "dafny",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "vericoding_da0172__solve",
+      "verified": [],
+      "decided": []
+    },
+    {
+      "task": "vericoding_da0173__solve",
+      "verified": [
+        "dafny"
+      ],
+      "decided": [
+        "dafny"
+      ]
+    },
+    {
+      "task": "vericoding_da0174__solve",
+      "verified": [
+        "dafny",
+        "spark"
+      ],
+      "decided": [
+        "dafny",
+        "spark"
+      ]
+    },
+    {
+      "task": "vericoding_da0176__solve",
+      "verified": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "vericoding_da0178__solve",
+      "verified": [
+        "dafny",
+        "fstar",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "fstar",
+        "verus"
+      ]
+    },
+    {
+      "task": "vericoding_da0180__solve",
+      "verified": [
+        "dafny",
+        "fstar",
+        "spark"
+      ],
+      "decided": [
+        "dafny",
+        "fstar",
+        "spark"
+      ]
+    },
+    {
+      "task": "vericoding_da0183__solve",
+      "verified": [
+        "dafny",
+        "fstar"
+      ],
+      "decided": [
+        "dafny",
+        "fstar"
+      ]
+    },
+    {
+      "task": "vericoding_da0187__solve",
+      "verified": [
+        "dafny",
+        "fstar",
+        "lean",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "fstar",
+        "lean",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "vericoding_da0188__solve",
+      "verified": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "vericoding_da0190__solve",
+      "verified": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "vericoding_da0200__solve",
+      "verified": [
+        "dafny",
+        "fstar",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "fstar",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "vericoding_da0204__solve",
+      "verified": [
+        "dafny",
+        "fstar",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "fstar",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "vericoding_da0205__solve",
+      "verified": [],
+      "decided": []
+    },
+    {
+      "task": "vericoding_da0210__solve",
+      "verified": [
+        "dafny",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "vericoding_da0211__solve",
+      "verified": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "vericoding_da0212__gildCells",
+      "verified": [
+        "fstar",
+        "lean",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "fstar",
+        "lean",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "vericoding_da0216__solve",
+      "verified": [
+        "dafny",
+        "fstar",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "fstar",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "vericoding_da0217__solve",
+      "verified": [],
+      "decided": []
+    },
+    {
+      "task": "vericoding_da0224__solve",
+      "verified": [
+        "dafny",
+        "fstar",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "fstar",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "vericoding_da0229__solve",
+      "verified": [
+        "dafny",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "vericoding_da0230__solve",
+      "verified": [
+        "dafny",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "vericoding_da0234__solve",
+      "verified": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "vericoding_da0239__solve",
+      "verified": [
+        "dafny",
+        "framac",
+        "fstar",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "framac",
+        "fstar",
+        "rocq",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "vericoding_da0246__solve",
+      "verified": [],
+      "decided": []
+    },
+    {
+      "task": "vericoding_da0263__solve",
+      "verified": [
+        "dafny",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "vericoding_da0264__solve",
+      "verified": [
+        "dafny",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "vericoding_da0278__solve",
+      "verified": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "vericoding_da0282__solve",
+      "verified": [
+        "fstar",
+        "verus"
+      ],
+      "decided": [
+        "fstar",
+        "verus"
+      ]
+    },
+    {
+      "task": "vericoding_da0285__solve",
+      "verified": [
+        "dafny",
+        "fstar"
+      ],
+      "decided": [
+        "dafny",
+        "fstar"
+      ]
+    },
+    {
+      "task": "vericoding_da0287__solve",
+      "verified": [
+        "fstar"
+      ],
+      "decided": [
+        "fstar"
+      ]
+    },
+    {
+      "task": "vericoding_da0292__canFormat",
+      "verified": [
+        "dafny",
+        "fstar",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "fstar",
+        "verus"
+      ]
+    },
+    {
+      "task": "vericoding_da0292__checkFormattingHelper",
+      "verified": [
+        "dafny",
+        "fstar",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "fstar",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "vericoding_da0292__solve",
+      "verified": [],
+      "decided": []
+    },
+    {
+      "task": "vericoding_da0296__solveGraph",
+      "verified": [
+        "dafny",
+        "fstar",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "fstar",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "vericoding_da0297__calculateDistances",
+      "verified": [
+        "dafny",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "verus"
+      ]
+    },
+    {
+      "task": "vericoding_da0305__solve",
+      "verified": [],
+      "decided": []
+    },
+    {
+      "task": "vericoding_da0308__solve",
+      "verified": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "vericoding_da0326__solve",
+      "verified": [
+        "dafny",
+        "fstar",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "fstar",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "vericoding_da0328__solve",
+      "verified": [],
+      "decided": []
+    },
+    {
+      "task": "vericoding_da0333__solve",
+      "verified": [
+        "dafny",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "vericoding_da0334__computeCombination",
+      "verified": [],
+      "decided": []
+    },
+    {
+      "task": "vericoding_da0334__computeModInverse",
+      "verified": [
+        "dafny",
+        "fstar",
+        "rocq",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "fstar",
+        "rocq",
+        "verus"
+      ]
+    },
+    {
+      "task": "vericoding_da0334__solve",
+      "verified": [],
+      "decided": []
+    },
+    {
+      "task": "vericoding_da0345__solve",
+      "verified": [],
+      "decided": []
+    },
+    {
+      "task": "vericoding_da0347__solve",
+      "verified": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "vericoding_da0353__intToString",
+      "verified": [
+        "dafny",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "verus"
+      ]
+    },
+    {
+      "task": "vericoding_da0360__solve",
+      "verified": [
+        "dafny",
+        "fstar",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "fstar",
+        "verus"
+      ]
+    },
+    {
+      "task": "vericoding_da0366__solve",
+      "verified": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "vericoding_da0368__solve",
+      "verified": [
+        "dafny",
+        "framac",
+        "fstar",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "framac",
+        "fstar",
+        "rocq",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "vericoding_da0377__solve",
+      "verified": [
+        "dafny",
+        "spark"
+      ],
+      "decided": [
+        "dafny",
+        "spark"
+      ]
+    },
+    {
+      "task": "vericoding_da0386__solve",
+      "verified": [
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "vericoding_da0396__solve",
+      "verified": [],
+      "decided": []
+    },
+    {
+      "task": "vericoding_da0399__solve",
+      "verified": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "vericoding_da0409__solveRivalDistance",
+      "verified": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "vericoding_da0417__solve",
+      "verified": [
+        "dafny"
+      ],
+      "decided": [
+        "dafny"
+      ]
+    },
+    {
+      "task": "vericoding_da0422__determineWinner",
+      "verified": [
+        "dafny",
+        "framac",
+        "lean",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "framac",
+        "lean",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "vericoding_da0423__solve",
+      "verified": [
+        "dafny",
+        "fstar",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "fstar",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "vericoding_da0426__solve",
+      "verified": [
+        "dafny",
+        "fstar",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "fstar",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "vericoding_da0429__solve",
+      "verified": [
+        "dafny",
+        "framac",
+        "fstar",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "framac",
+        "fstar",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "vericoding_da0453__solve",
+      "verified": [
+        "dafny",
+        "fstar"
+      ],
+      "decided": [
+        "dafny",
+        "fstar"
+      ]
+    },
+    {
+      "task": "vericoding_da0466__solve",
+      "verified": [
+        "dafny",
+        "fstar",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "fstar",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "vericoding_da0469__solve",
+      "verified": [
+        "fstar",
+        "verus"
+      ],
+      "decided": [
+        "fstar",
+        "verus"
+      ]
+    },
+    {
+      "task": "vericoding_da0470__solve",
+      "verified": [],
+      "decided": []
+    },
+    {
+      "task": "vericoding_da0472__solve",
+      "verified": [
+        "dafny",
+        "fstar"
+      ],
+      "decided": [
+        "dafny",
+        "fstar"
+      ]
+    },
+    {
+      "task": "vericoding_da0475__solve",
+      "verified": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "vericoding_da0476__solve",
+      "verified": [
+        "dafny",
+        "rocq",
+        "spark"
+      ],
+      "decided": [
+        "dafny",
+        "rocq",
+        "spark"
+      ]
+    },
+    {
+      "task": "vericoding_da0478__solve",
+      "verified": [
+        "dafny",
+        "fstar",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "fstar",
+        "verus"
+      ]
+    },
+    {
+      "task": "vericoding_da0482__solve",
+      "verified": [
+        "dafny",
+        "fstar",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "fstar",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "vericoding_da0483__solve",
+      "verified": [
+        "dafny",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "vericoding_da0484__solve",
+      "verified": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "vericoding_da0488__solve",
+      "verified": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "vericoding_da0489__solve",
+      "verified": [],
+      "decided": []
+    },
+    {
+      "task": "vericoding_da0493__solve",
+      "verified": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "vericoding_da0496__solve",
+      "verified": [
+        "dafny",
+        "fstar",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "fstar",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "vericoding_da0497__solve",
+      "verified": [
+        "dafny",
+        "fstar",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "fstar",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "vericoding_da0499__solve",
+      "verified": [
+        "fstar",
+        "lean",
+        "rocq",
+        "spark"
+      ],
+      "decided": [
+        "fstar",
+        "lean",
+        "rocq",
+        "spark"
+      ]
+    },
+    {
+      "task": "vericoding_da0500__solve",
+      "verified": [
+        "dafny",
+        "framac",
+        "fstar",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "framac",
+        "fstar",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "vericoding_da0505__solve",
+      "verified": [
+        "dafny",
+        "fstar",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "fstar",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "vericoding_da0515__solve",
+      "verified": [
+        "dafny",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "vericoding_da0516__solve",
+      "verified": [
+        "dafny",
+        "framac",
+        "lean",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "framac",
+        "lean",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "vericoding_da0517__solve",
+      "verified": [
+        "dafny",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "vericoding_da0522__solve",
+      "verified": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "vericoding_da0523__solve",
+      "verified": [
+        "dafny",
+        "framac",
+        "fstar",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "framac",
+        "fstar",
+        "rocq",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "vericoding_da0524__solve",
+      "verified": [
+        "dafny"
+      ],
+      "decided": [
+        "dafny"
+      ]
+    },
+    {
+      "task": "vericoding_da0526__solve",
+      "verified": [
+        "dafny",
+        "fstar",
+        "lean",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "fstar",
+        "lean",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "vericoding_da0527__solve",
+      "verified": [
+        "dafny",
+        "fstar",
+        "lean",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "fstar",
+        "lean",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "vericoding_da0529__solve",
+      "verified": [
+        "dafny",
+        "framac",
+        "fstar",
+        "rocq",
+        "spark"
+      ],
+      "decided": [
+        "dafny",
+        "framac",
+        "fstar",
+        "rocq",
+        "spark"
+      ]
+    },
+    {
+      "task": "vericoding_da0530__solve",
+      "verified": [
+        "dafny",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "vericoding_da0531__solve",
+      "verified": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "vericoding_da0533__solve",
+      "verified": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "vericoding_da0538__computeMaxGroups",
+      "verified": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "vericoding_da0539__calculateMaxPies",
+      "verified": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "vericoding_da0540__solve",
+      "verified": [
+        "dafny",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "vericoding_da0543__solve",
+      "verified": [
+        "dafny",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "vericoding_da0545__solve",
+      "verified": [
+        "dafny",
+        "fstar",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "fstar",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "vericoding_da0551__solve",
+      "verified": [
+        "dafny",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "vericoding_da0554__countEvenOddPairs",
+      "verified": [
+        "dafny",
+        "framac",
+        "fstar",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "framac",
+        "fstar",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "vericoding_da0556__solveCakeProblem",
+      "verified": [
+        "dafny",
+        "framac",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "framac",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "vericoding_da0558__solve",
+      "verified": [
+        "dafny",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "vericoding_da0561__solve",
+      "verified": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "vericoding_da0564__solve",
+      "verified": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "vericoding_da0576__intToStringMethod",
+      "verified": [
+        "dafny",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "vericoding_da0576__parseInput",
+      "verified": [
+        "dafny",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "vericoding_da0576__solve",
+      "verified": [
+        "dafny",
+        "fstar",
+        "lean",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "fstar",
+        "lean",
+        "verus"
+      ]
+    },
+    {
+      "task": "vericoding_da0577__solve",
+      "verified": [
+        "fstar",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "fstar",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "vericoding_da0580__solve",
+      "verified": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "vericoding_da0584__solve",
+      "verified": [],
+      "decided": []
+    },
+    {
+      "task": "vericoding_da0585__solve",
+      "verified": [
+        "dafny",
+        "framac",
+        "fstar",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "framac",
+        "fstar",
+        "rocq",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "vericoding_da0586__solve",
+      "verified": [
+        "dafny",
+        "framac",
+        "fstar",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "framac",
+        "fstar",
+        "rocq",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "vericoding_da0588__solve",
+      "verified": [],
+      "decided": []
+    },
+    {
+      "task": "vericoding_da0601__solve",
+      "verified": [
+        "dafny",
+        "fstar",
+        "lean",
+        "spark"
+      ],
+      "decided": [
+        "dafny",
+        "fstar",
+        "lean",
+        "spark"
+      ]
+    },
+    {
+      "task": "vericoding_da0602__solve",
+      "verified": [
+        "dafny",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "vericoding_da0609__getRow",
+      "verified": [
+        "dafny"
+      ],
+      "decided": [
+        "dafny"
+      ]
+    },
+    {
+      "task": "vericoding_da0612__solve",
+      "verified": [
+        "dafny",
+        "fstar",
+        "lean",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "fstar",
+        "lean",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "vericoding_da0615__calculateBlackSquares",
+      "verified": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "vericoding_da0623__solve",
+      "verified": [
+        "dafny",
+        "framac",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "framac",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "vericoding_da0624__solve",
+      "verified": [
+        "dafny",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "vericoding_da0627__solve",
+      "verified": [
+        "dafny",
+        "fstar",
+        "lean",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "fstar",
+        "lean",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "vericoding_da0629__solve",
+      "verified": [
+        "dafny",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "vericoding_da0642__solve",
+      "verified": [
+        "dafny",
+        "fstar",
+        "lean",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "fstar",
+        "lean",
+        "verus"
+      ]
+    },
+    {
+      "task": "vericoding_da0644__solve",
+      "verified": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "vericoding_da0654__solve",
+      "verified": [
+        "dafny",
+        "fstar",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "fstar",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "vericoding_da0657__solve",
+      "verified": [],
+      "decided": []
+    },
+    {
+      "task": "vericoding_da0658__solve",
+      "verified": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "vericoding_da0659__solve",
+      "verified": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "vericoding_da0662__solve",
+      "verified": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "vericoding_da0663__solve",
+      "verified": [
+        "dafny",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "vericoding_da0664__solve",
+      "verified": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "vericoding_da0667__solve",
+      "verified": [
+        "dafny",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "vericoding_da0668__solve",
+      "verified": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "vericoding_da0671__solve",
+      "verified": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "vericoding_da0672__solve",
+      "verified": [
+        "dafny",
+        "lean",
+        "rocq",
+        "spark"
+      ],
+      "decided": [
+        "dafny",
+        "lean",
+        "rocq",
+        "spark"
+      ]
+    },
+    {
+      "task": "vericoding_da0674__solve",
+      "verified": [
+        "dafny",
+        "framac",
+        "fstar",
+        "spark"
+      ],
+      "decided": [
+        "dafny",
+        "framac",
+        "fstar",
+        "spark"
+      ]
+    },
+    {
+      "task": "vericoding_da0675__solve",
+      "verified": [
+        "dafny",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "vericoding_da0676__solve",
+      "verified": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "vericoding_db0006__lexicographicCompare",
+      "verified": [
+        "dafny",
+        "spark"
+      ],
+      "decided": [
+        "dafny",
+        "spark"
+      ]
+    },
+    {
+      "task": "vericoding_db0020__computeExp",
+      "verified": [
+        "dafny",
+        "fstar",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "fstar",
+        "rocq",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "vericoding_db0020__modExpPow2_int",
+      "verified": [
+        "dafny",
+        "fstar",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "fstar",
+        "rocq",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "vericoding_db0034__modPowExec",
+      "verified": [
+        "dafny",
+        "fstar",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "fstar",
+        "rocq",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "vericoding_db0052__modExp_int",
+      "verified": [
+        "dafny",
+        "fstar",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "fstar",
+        "rocq",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "vericoding_db0052__pow",
+      "verified": [
+        "dafny",
+        "fstar",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "fstar",
+        "rocq",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "vericoding_db0053__modExp_int",
+      "verified": [
+        "dafny",
+        "fstar",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "fstar",
+        "rocq",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "vericoding_dd0008__getInsertIndex",
+      "verified": [
+        "dafny",
+        "fstar",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "fstar",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "vericoding_dd0040__query",
+      "verified": [
+        "dafny",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "vericoding_dd0041__queryFast",
+      "verified": [
+        "dafny",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "vericoding_dd0045__concat",
+      "verified": [
+        "dafny",
+        "framac",
+        "fstar",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "framac",
+        "fstar",
+        "rocq",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "vericoding_dd0050__binarySearch",
+      "verified": [
+        "dafny",
+        "framac",
+        "fstar",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "framac",
+        "fstar",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "vericoding_dd0052__calDiv",
+      "verified": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "vericoding_dd0053__sum",
+      "verified": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "vericoding_dd0054__canyonSearch",
+      "verified": [
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "vericoding_dd0058__double_array_elements",
+      "verified": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "vericoding_dd0059__doubleQuadruple",
+      "verified": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "vericoding_dd0066__isPalindrome",
+      "verified": [
+        "dafny",
+        "framac",
+        "fstar",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "framac",
+        "fstar",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "vericoding_dd0068__linearSearch",
+      "verified": [
+        "dafny",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "vericoding_dd0069__longestCommonPrefix",
+      "verified": [
+        "dafny",
+        "fstar",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "fstar",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "vericoding_dd0070__match",
+      "verified": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "vericoding_dd0071__maxArray",
+      "verified": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "vericoding_dd0075__multipleReturns",
+      "verified": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "vericoding_dd0077__quotient",
+      "verified": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "vericoding_dd0079__replace",
+      "verified": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "vericoding_dd0080__m",
+      "verified": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "vericoding_dd0081__reverse",
+      "verified": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "vericoding_dd0085__swap",
+      "verified": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "vericoding_dd0086__swapArithmetic",
+      "verified": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "vericoding_dd0088__swap",
+      "verified": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "vericoding_dd0089__swapSimultaneous",
+      "verified": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "vericoding_dd0090__testArrayElements",
+      "verified": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "vericoding_dd0091__triple",
+      "verified": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "vericoding_dd0092__triple",
+      "verified": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "vericoding_dd0093__triple",
+      "verified": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "vericoding_dd0094__triple",
+      "verified": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "vericoding_dd0100__binarySearch",
+      "verified": [
+        "dafny",
+        "framac",
+        "fstar",
+        "spark"
+      ],
+      "decided": [
+        "dafny",
+        "framac",
+        "fstar",
+        "spark"
+      ]
+    },
+    {
+      "task": "vericoding_dd0102__fibonacci1",
+      "verified": [
+        "dafny",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "vericoding_dd0105__mpositive",
+      "verified": [
+        "fstar",
+        "spark"
+      ],
+      "decided": [
+        "fstar",
+        "spark"
+      ]
+    },
+    {
+      "task": "vericoding_dd0124__mfirstNegative",
+      "verified": [
+        "dafny",
+        "fstar",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "fstar",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "vericoding_dd0130__mCountMin",
+      "verified": [],
+      "decided": []
+    },
+    {
+      "task": "vericoding_dd0131__mPeekSum",
+      "verified": [
+        "dafny",
+        "fstar",
+        "spark"
+      ],
+      "decided": [
+        "dafny",
+        "fstar",
+        "spark"
+      ]
+    },
+    {
+      "task": "vericoding_dd0133__binarySearchRec",
+      "verified": [
+        "dafny"
+      ],
+      "decided": [
+        "dafny"
+      ]
+    },
+    {
+      "task": "vericoding_dd0144__barrier",
+      "verified": [],
+      "decided": []
+    },
+    {
+      "task": "vericoding_dd0155__invertArray",
+      "verified": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "vericoding_dd0167__longestPrefix",
+      "verified": [
+        "dafny",
+        "framac",
+        "spark"
+      ],
+      "decided": [
+        "dafny",
+        "framac",
+        "spark"
+      ]
+    },
+    {
+      "task": "vericoding_dd0187__findPositionOfElement",
+      "verified": [
+        "dafny"
+      ],
+      "decided": [
+        "dafny"
+      ]
+    },
+    {
+      "task": "vericoding_dd0225__computePower",
+      "verified": [
+        "dafny",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "vericoding_dd0256__max",
+      "verified": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "vericoding_dd0271__incrementArray",
+      "verified": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "vericoding_dd0275__lookForMin",
+      "verified": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "vericoding_dd0342__calcR",
+      "verified": [
+        "dafny",
+        "fstar",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "fstar",
+        "rocq",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "vericoding_dd0355__mod2",
+      "verified": [
+        "fstar",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "fstar",
+        "rocq",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "vericoding_dd0356__mod",
+      "verified": [],
+      "decided": []
+    },
+    {
+      "task": "vericoding_dd0454__getmini",
+      "verified": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "vericoding_dd0464__counting_bits",
+      "verified": [
+        "framac"
+      ],
+      "decided": [
+        "framac"
+      ]
+    },
+    {
+      "task": "vericoding_dd0493__queryFast",
+      "verified": [
+        "dafny",
+        "fstar",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "fstar",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "vericoding_dd0508__mergeSimple",
+      "verified": [
+        "dafny",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "vericoding_dd0517__prodAndCount",
+      "verified": [],
+      "decided": []
+    },
+    {
+      "task": "vericoding_dd0518__findAddends",
+      "verified": [],
+      "decided": []
+    },
+    {
+      "task": "vericoding_dd0533__euclid",
+      "verified": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "vericoding_dd0534__intDiv",
+      "verified": [
+        "dafny",
+        "framac",
+        "fstar",
+        "rocq",
+        "spark"
+      ],
+      "decided": [
+        "dafny",
+        "framac",
+        "fstar",
+        "rocq",
+        "spark"
+      ]
+    },
+    {
+      "task": "vericoding_dd0537__noDups",
+      "verified": [
+        "dafny",
+        "framac",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "framac",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "vericoding_dd0539__reverse",
+      "verified": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "vericoding_dd0580__appendArray",
+      "verified": [
+        "dafny",
+        "framac",
+        "fstar",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "framac",
+        "fstar",
+        "rocq",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "vericoding_dd0586__getEven",
+      "verified": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "vericoding_dd0587__getTriple",
+      "verified": [
+        "dafny",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "vericoding_dd0611__maximum",
+      "verified": [
+        "dafny",
+        "framac",
+        "fstar",
+        "spark"
+      ],
+      "decided": [
+        "dafny",
+        "framac",
+        "fstar",
+        "spark"
+      ]
+    },
+    {
+      "task": "vericoding_dd0634__expt",
+      "verified": [
+        "dafny",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "vericoding_dd0635__factorial",
+      "verified": [
+        "dafny",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "vericoding_dd0643__sharedElements",
+      "verified": [
+        "dafny",
+        "fstar",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "fstar",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "vericoding_dd0646__triangularPrismVolume",
+      "verified": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "vericoding_dd0653__containsSequence",
+      "verified": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "vericoding_dd0654__allSequencesEqualLength",
+      "verified": [
+        "dafny",
+        "framac",
+        "fstar",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "framac",
+        "fstar",
+        "verus"
+      ]
+    },
+    {
+      "task": "vericoding_dd0663__smallestListLength",
+      "verified": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "vericoding_dd0667__isInteger",
+      "verified": [
+        "dafny",
+        "framac",
+        "fstar",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "framac",
+        "fstar",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "vericoding_dd0668__sumOfCommonDivisors",
+      "verified": [],
+      "decided": []
+    },
+    {
+      "task": "vericoding_dd0669__multiply",
+      "verified": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "vericoding_dd0678__pentagonPerimeter",
+      "verified": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "vericoding_dd0679__minOfThree",
+      "verified": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "vericoding_dd0680__replaceBlanksWithChar",
+      "verified": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "vericoding_dd0682__cubeVolume",
+      "verified": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "vericoding_dd0684__replaceLastElement",
+      "verified": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "vericoding_dd0687__insertBeforeEach",
+      "verified": [
+        "dafny",
+        "fstar",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "fstar",
+        "verus"
+      ]
+    },
+    {
+      "task": "vericoding_dd0689__elementWiseDivision",
+      "verified": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "vericoding_dd0690__splitArray",
+      "verified": [
+        "dafny",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "vericoding_dd0696__subtractSequences",
+      "verified": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "vericoding_dd0701__maxLengthList",
+      "verified": [
+        "dafny",
+        "fstar",
+        "lean",
+        "spark"
+      ],
+      "decided": [
+        "dafny",
+        "fstar",
+        "lean",
+        "spark"
+      ]
+    },
+    {
+      "task": "vericoding_dd0703__elementAtIndexAfterRotation",
+      "verified": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "vericoding_dd0714__removeOddNumbers",
+      "verified": [
+        "dafny",
+        "spark"
+      ],
+      "decided": [
+        "dafny",
+        "spark"
+      ]
+    },
+    {
+      "task": "vericoding_dd0716__extractRearChars",
+      "verified": [
+        "dafny",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "vericoding_dd0717__filterOddNumbers",
+      "verified": [
+        "dafny",
+        "spark"
+      ],
+      "decided": [
+        "dafny",
+        "spark"
+      ]
+    },
+    {
+      "task": "vericoding_dd0722__lastDigit",
+      "verified": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "vericoding_dd0723__findNegativeNumbers",
+      "verified": [
+        "dafny",
+        "spark"
+      ],
+      "decided": [
+        "dafny",
+        "spark"
+      ]
+    },
+    {
+      "task": "vericoding_dd0724__cubeSurfaceArea",
+      "verified": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "vericoding_dd0727__calculateLoss",
+      "verified": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "vericoding_dd0729__monthHas31Days",
+      "verified": [
+        "dafny",
+        "fstar",
+        "lean",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "fstar",
+        "lean",
+        "verus"
+      ]
+    },
+    {
+      "task": "vericoding_dd0730__minLengthSublist",
+      "verified": [
+        "dafny",
+        "fstar",
+        "lean",
+        "spark"
+      ],
+      "decided": [
+        "dafny",
+        "fstar",
+        "lean",
+        "spark"
+      ]
+    },
+    {
+      "task": "vericoding_dd0732__getFirstElements",
+      "verified": [
+        "dafny",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "vericoding_dd0736__replaceChars",
+      "verified": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "vericoding_dd0738__toLowercase",
+      "verified": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "vericoding_dd0739__findOddNumbers",
+      "verified": [
+        "dafny",
+        "spark"
+      ],
+      "decided": [
+        "dafny",
+        "spark"
+      ]
+    },
+    {
+      "task": "vericoding_dd0740__differenceSumCubesAndSumNumbers",
+      "verified": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "vericoding_dd0741__toggleCase",
+      "verified": [
+        "dafny",
+        "framac",
+        "lean",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "framac",
+        "lean",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "vericoding_dd0742__splitStringIntoChars",
+      "verified": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "vericoding_dd0749__factorialOfLastDigit",
+      "verified": [
+        "dafny",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "vericoding_dd0750__interleave",
+      "verified": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "vericoding_dd0752__squarePyramidSurfaceArea",
+      "verified": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "vericoding_dd0758__isArmstrong",
+      "verified": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "vericoding_dd0762__lucidNumbers",
+      "verified": [
+        "dafny",
+        "fstar",
+        "lean",
+        "rocq",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "fstar",
+        "lean",
+        "rocq",
+        "verus"
+      ]
+    },
+    {
+      "task": "vericoding_dd0765__removeElement",
+      "verified": [
+        "dafny",
+        "framac",
+        "fstar",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "framac",
+        "fstar",
+        "rocq",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "vericoding_dd0767__elementWiseDivide",
+      "verified": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "vericoding_dd0769__powerOfListElements",
+      "verified": [
+        "dafny",
+        "lean",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "lean",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "vericoding_dd0771__swapFirstAndLast",
+      "verified": [
+        "dafny",
+        "framac",
+        "fstar",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "framac",
+        "fstar",
+        "rocq",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "vericoding_dd0772__areaOfLargestTriangleInSemicircle",
+      "verified": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "vericoding_dd0777__isBreakEven",
+      "verified": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "vericoding_dd0778__nthNonagonalNumber",
+      "verified": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "vericoding_dd0782__replaceWithColon",
+      "verified": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "vericoding_dd0784__allCharactersSame",
+      "verified": [
+        "dafny",
+        "framac",
+        "fstar",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "framac",
+        "fstar",
+        "verus"
+      ]
+    },
+    {
+      "task": "vericoding_dd0785__rotateRight",
+      "verified": [
+        "dafny",
+        "fstar",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "fstar",
+        "rocq",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "vericoding_dd0789__isDecimalWithTwoPrecision",
+      "verified": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "vericoding_dd0791__isMonthWith30Days",
+      "verified": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "vericoding_dd0794__sumOfFourthPowerOfOddNumbers",
+      "verified": [
+        "dafny",
+        "lean"
+      ],
+      "decided": [
+        "dafny",
+        "lean"
+      ]
+    },
+    {
+      "task": "vericoding_dd0797__firstEvenOddIndices",
+      "verified": [
+        "dafny",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "vericoding_dd0799__isEvenAtIndexEven",
+      "verified": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "vericoding_dd0800__countLists",
+      "verified": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "vericoding_dd0804__countEqualNumbers",
+      "verified": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "vericoding_dd0809__isSmaller",
+      "verified": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "vericoding_dd0826__climbStairs",
+      "verified": [
+        "dafny"
+      ],
+      "decided": [
+        "dafny"
+      ]
+    },
+    {
+      "task": "vericoding_dd0830__iterativeFactorial",
+      "verified": [
+        "dafny",
+        "fstar",
+        "lean",
+        "rocq",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "fstar",
+        "lean",
+        "rocq",
+        "verus"
+      ]
+    },
+    {
+      "task": "vericoding_dd0831__fibonacciIterative",
+      "verified": [
+        "dafny"
+      ],
+      "decided": [
+        "dafny"
+      ]
+    },
+    {
+      "task": "vericoding_dd0839__findMin",
+      "verified": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "vericoding_dd0847__divMod1",
+      "verified": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "vericoding_dd0848__hoareTripleReqEns",
+      "verified": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "vericoding_dd0873__intersperse",
+      "verified": [
+        "dafny",
+        "framac",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "framac",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "vericoding_dd0875__rolling_max",
+      "verified": [
+        "dafny",
+        "fstar",
+        "spark"
+      ],
+      "decided": [
+        "dafny",
+        "fstar",
+        "spark"
+      ]
+    },
+    {
+      "task": "vericoding_dd0897__find_min_index",
+      "verified": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "vericoding_dd0923__longestZero",
+      "verified": [
+        "framac",
+        "spark"
+      ],
+      "decided": [
+        "framac",
+        "spark"
+      ]
+    },
+    {
+      "task": "vericoding_dh0005__insertDelimiter",
+      "verified": [
+        "dafny",
+        "spark"
+      ],
+      "decided": [
+        "dafny",
+        "spark"
+      ]
+    },
+    {
+      "task": "vericoding_dh0008__sum_product",
+      "verified": [],
+      "decided": []
+    },
+    {
+      "task": "vericoding_dh0011__string_xor",
+      "verified": [
+        "dafny",
+        "fstar",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "fstar",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "vericoding_dh0021__largest_divisor",
+      "verified": [
+        "dafny",
+        "fstar",
+        "lean",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "fstar",
+        "lean",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "vericoding_dh0024__remove_duplicates",
+      "verified": [
+        "dafny",
+        "fstar"
+      ],
+      "decided": [
+        "dafny",
+        "fstar"
+      ]
+    },
+    {
+      "task": "vericoding_dh0026__concatenate",
+      "verified": [
+        "dafny",
+        "fstar",
+        "lean",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "fstar",
+        "lean",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "vericoding_dh0035__findMaxElement",
+      "verified": [],
+      "decided": []
+    },
+    {
+      "task": "vericoding_dh0040__decode_cyclic",
+      "verified": [
+        "dafny",
+        "framac",
+        "fstar",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "framac",
+        "fstar",
+        "rocq",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "vericoding_dh0043__car_race_collision",
+      "verified": [
+        "dafny",
+        "framac",
+        "fstar",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "framac",
+        "fstar",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "vericoding_dh0044__incr_list",
+      "verified": [
+        "dafny",
+        "fstar",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "fstar",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "vericoding_dh0048__fib4",
+      "verified": [
+        "fstar",
+        "lean",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "fstar",
+        "lean",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "vericoding_dh0051__modp",
+      "verified": [],
+      "decided": []
+    },
+    {
+      "task": "vericoding_dh0052__decode_shift",
+      "verified": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "vericoding_dh0053__encode_shift",
+      "verified": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "vericoding_dh0055__checkBelowThreshold",
+      "verified": [
+        "dafny",
+        "fstar",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "fstar",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "vericoding_dh0056__add",
+      "verified": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "vericoding_dh0058__fib",
+      "verified": [
+        "dafny",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "verus"
+      ]
+    },
+    {
+      "task": "vericoding_dh0063__sum_to_n",
+      "verified": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "vericoding_dh0064__derivative",
+      "verified": [
+        "dafny",
+        "spark"
+      ],
+      "decided": [
+        "dafny",
+        "spark"
+      ]
+    },
+    {
+      "task": "vericoding_dh0065__fibfib",
+      "verified": [
+        "dafny",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "vericoding_dh0069__extract_numbers_from_string_imperative",
+      "verified": [
+        "dafny",
+        "fstar",
+        "lean",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "fstar",
+        "lean",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "vericoding_dh0069__fruit_distribution",
+      "verified": [
+        "dafny",
+        "fstar",
+        "lean",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "fstar",
+        "lean",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "vericoding_dh0073__will_it_fly",
+      "verified": [
+        "dafny",
+        "fstar",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "fstar",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "vericoding_dh0074__smallest_change",
+      "verified": [],
+      "decided": []
+    },
+    {
+      "task": "vericoding_dh0078__cube_root",
+      "verified": [
+        "dafny",
+        "framac",
+        "rocq"
+      ],
+      "decided": [
+        "dafny",
+        "framac",
+        "rocq"
+      ]
+    },
+    {
+      "task": "vericoding_dh0079__is_cube",
+      "verified": [
+        "fstar",
+        "spark"
+      ],
+      "decided": [
+        "fstar",
+        "spark"
+      ]
+    },
+    {
+      "task": "vericoding_dh0085__starts_one_ends",
+      "verified": [],
+      "decided": []
+    },
+    {
+      "task": "vericoding_dh0091__encrypt",
+      "verified": [
+        "dafny",
+        "fstar",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "fstar",
+        "rocq",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "vericoding_dh0096__skjkasdkd",
+      "verified": [],
+      "decided": []
+    },
+    {
+      "task": "vericoding_dh0101__make_a_pile",
+      "verified": [
+        "dafny",
+        "fstar",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "fstar",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "vericoding_dh0102__chooseNum",
+      "verified": [
+        "dafny",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "vericoding_dh0103__rounded_avg",
+      "verified": [
+        "dafny",
+        "fstar",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "fstar",
+        "verus"
+      ]
+    },
+    {
+      "task": "vericoding_dh0108__f",
+      "verified": [
+        "dafny",
+        "fstar",
+        "spark"
+      ],
+      "decided": [
+        "dafny",
+        "fstar",
+        "spark"
+      ]
+    },
+    {
+      "task": "vericoding_dh0110__digitSum",
+      "verified": [],
+      "decided": []
+    },
+    {
+      "task": "vericoding_dh0112__exchange",
+      "verified": [
+        "dafny",
+        "lean",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "lean",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "vericoding_dh0122__maximum",
+      "verified": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark"
+      ],
+      "decided": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark"
+      ]
+    },
+    {
+      "task": "vericoding_dh0123__solution",
+      "verified": [
+        "dafny",
+        "lean",
+        "rocq",
+        "spark"
+      ],
+      "decided": [
+        "dafny",
+        "lean",
+        "rocq",
+        "spark"
+      ]
+    },
+    {
+      "task": "vericoding_dh0125__get_odd_collatz",
+      "verified": [],
+      "decided": []
+    },
+    {
+      "task": "vericoding_dh0127__next_odd_collatz_iter",
+      "verified": [
+        "dafny",
+        "fstar",
+        "lean",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "fstar",
+        "lean",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "vericoding_dh0133__tribonacci",
+      "verified": [
+        "lean"
+      ],
+      "decided": [
+        "lean"
+      ]
+    },
+    {
+      "task": "vericoding_dh0141__factorial",
+      "verified": [
+        "dafny",
+        "fstar"
+      ],
+      "decided": [
+        "dafny",
+        "fstar"
+      ]
+    },
+    {
+      "task": "vericoding_dh0141__special_factorial",
+      "verified": [
+        "dafny",
+        "fstar"
+      ],
+      "decided": [
+        "dafny",
+        "fstar"
+      ]
+    },
+    {
+      "task": "vericoding_dh0143__sum_squares",
+      "verified": [
+        "dafny",
+        "fstar",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "fstar",
+        "rocq",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "vericoding_dh0152__x_or_y",
+      "verified": [
+        "dafny",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "vericoding_dh0154__compare",
+      "verified": [
+        "dafny",
+        "fstar",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "fstar",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "vericoding_dh0157__even_odd_count",
+      "verified": [],
+      "decided": []
+    },
+    {
+      "task": "vericoding_dj0004__myfun",
+      "verified": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "vericoding_dj0010__chooseOdd",
+      "verified": [
+        "dafny",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "vericoding_dj0014__myfun",
+      "verified": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "vericoding_dj0015__myfun",
+      "verified": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "vericoding_dj0016__fibonacci",
+      "verified": [
+        "fstar",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "fstar",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "vericoding_dj0020__findMax",
+      "verified": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "vericoding_dj0026__myfun",
+      "verified": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "vericoding_dj0027__myfun",
+      "verified": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "vericoding_dj0028__myfun",
+      "verified": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "vericoding_dj0037__myfun",
+      "verified": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "vericoding_dj0038__myfun",
+      "verified": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "vericoding_dj0039__myfun",
+      "verified": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "vericoding_dj0040__myfun",
+      "verified": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "vericoding_dj0041__myfun",
+      "verified": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "vericoding_dj0044__myfun",
+      "verified": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "vericoding_dj0045__myfun",
+      "verified": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "vericoding_dj0048__myfun",
+      "verified": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "vericoding_dj0057__isNonPrime",
+      "verified": [
+        "fstar"
+      ],
+      "decided": [
+        "fstar"
+      ]
+    },
+    {
+      "task": "vericoding_dj0058__squareNums",
+      "verified": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "vericoding_dj0068__countIdenticalPosition",
+      "verified": [
+        "fstar"
+      ],
+      "decided": [
+        "fstar"
+      ]
+    },
+    {
+      "task": "vericoding_dj0072__replaceBlanksWithChars",
+      "verified": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "vericoding_dj0073__replaceLastElement",
+      "verified": [
+        "dafny",
+        "framac",
+        "fstar",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "framac",
+        "fstar",
+        "rocq",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "vericoding_dj0075__insertBeforeEach",
+      "verified": [
+        "dafny",
+        "framac",
+        "fstar",
+        "rocq",
+        "spark"
+      ],
+      "decided": [
+        "dafny",
+        "framac",
+        "fstar",
+        "rocq",
+        "spark"
+      ]
+    },
+    {
+      "task": "vericoding_dj0076__elementWiseDivision",
+      "verified": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "vericoding_dj0077__splitArray",
+      "verified": [
+        "dafny",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "vericoding_dj0078__elementWiseSubtract",
+      "verified": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "vericoding_dj0079__elementWiseSubtract",
+      "verified": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "vericoding_dj0080__allElementsEquals",
+      "verified": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "vericoding_dj0088__isGreater",
+      "verified": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "vericoding_dj0089__findNegativeNumbers",
+      "verified": [
+        "dafny",
+        "fstar",
+        "spark"
+      ],
+      "decided": [
+        "dafny",
+        "fstar",
+        "spark"
+      ]
+    },
+    {
+      "task": "vericoding_dj0099__findOddNumbers",
+      "verified": [
+        "dafny",
+        "fstar",
+        "spark"
+      ],
+      "decided": [
+        "dafny",
+        "fstar",
+        "spark"
+      ]
+    },
+    {
+      "task": "vericoding_dj0105__interleave",
+      "verified": [
+        "dafny",
+        "framac",
+        "fstar",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "framac",
+        "fstar",
+        "rocq",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "vericoding_dj0110__primeNum",
+      "verified": [
+        "fstar",
+        "lean"
+      ],
+      "decided": [
+        "fstar",
+        "lean"
+      ]
+    },
+    {
+      "task": "vericoding_dj0111__removeKthElement",
+      "verified": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "vericoding_dj0113__elementWiseDivide",
+      "verified": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "vericoding_dj0116__reverseToK",
+      "verified": [
+        "dafny",
+        "fstar",
+        "lean",
+        "rocq",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "fstar",
+        "lean",
+        "rocq",
+        "verus"
+      ]
+    },
+    {
+      "task": "vericoding_dj0128__sum",
+      "verified": [
+        "fstar"
+      ],
+      "decided": [
+        "fstar"
+      ]
+    },
+    {
+      "task": "vericoding_dj0130__findFirstOdd",
+      "verified": [
+        "dafny",
+        "fstar",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "fstar",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "vericoding_dj0132__isSmaller",
+      "verified": [
+        "dafny",
+        "framac",
+        "fstar",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "framac",
+        "fstar",
+        "rocq",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "vericoding_dj0133__getElementCheckProperty",
+      "verified": [
+        "fstar",
+        "lean",
+        "spark"
+      ],
+      "decided": [
+        "fstar",
+        "lean",
+        "spark"
+      ]
+    },
+    {
+      "task": "vericoding_dj0135__arithmeticWeird",
+      "verified": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "vericoding_dj0136__arrayAppend",
+      "verified": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "vericoding_dj0137__arrayConcat",
+      "verified": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "vericoding_dj0142__binarySearchRecursive",
+      "verified": [
+        "dafny",
+        "framac",
+        "fstar",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "framac",
+        "fstar",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "vericoding_dj0143__cubes",
+      "verified": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark"
+      ],
+      "decided": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark"
+      ]
+    },
+    {
+      "task": "vericoding_dj0148__intersperse",
+      "verified": [
+        "dafny",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "vericoding_dj0156__removeElement",
+      "verified": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "verus"
+      ]
+    },
+    {
+      "task": "vericoding_dj0158__replace",
+      "verified": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "vericoding_dj0160__reverse",
+      "verified": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "vericoding_dj0161__rollingMax",
+      "verified": [
+        "dafny",
+        "fstar",
+        "lean",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "fstar",
+        "lean",
+        "verus"
+      ]
+    },
+    {
+      "task": "vericoding_dj0170__binarySearchExists",
+      "verified": [
+        "dafny",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "vericoding_ds0010__clip",
+      "verified": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "vericoding_ds0015__cumProd",
+      "verified": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "vericoding_ds0016__cumSum",
+      "verified": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "vericoding_ds0020__floorDivide",
+      "verified": [
+        "dafny",
+        "fstar",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "fstar",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "vericoding_ds0026__invert",
+      "verified": [
+        "dafny",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "vericoding_ds0029__lcmInt",
+      "verified": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "vericoding_ds0033__max",
+      "verified": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "vericoding_ds0041__power",
+      "verified": [
+        "dafny",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "vericoding_ds0046__right_shift",
+      "verified": [
+        "dafny",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "vericoding_ds0049__sign",
+      "verified": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "vericoding_ds0051__square",
+      "verified": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "vericoding_ds0052__subtract",
+      "verified": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "vericoding_ds0053__sumArray",
+      "verified": [
+        "dafny"
+      ],
+      "decided": [
+        "dafny"
+      ]
+    },
+    {
+      "task": "vericoding_dt0088__leftShift",
+      "verified": [
+        "dafny",
+        "fstar"
+      ],
+      "decided": [
+        "dafny",
+        "fstar"
+      ]
+    },
+    {
+      "task": "vericoding_dt0257__bitwiseNot",
+      "verified": [
+        "dafny",
+        "framac",
+        "lean",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "framac",
+        "lean",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "vericoding_dt0555__insertSorted",
+      "verified": [
+        "dafny"
+      ],
+      "decided": [
+        "dafny"
+      ]
+    },
+    {
+      "task": "vericoding_dt0630__stringsMod",
+      "verified": [
+        "dafny",
+        "fstar",
+        "spark"
+      ],
+      "decided": [
+        "dafny",
+        "fstar",
+        "spark"
+      ]
+    },
+    {
+      "task": "vericoding_dt0631__multiply",
+      "verified": [],
+      "decided": []
+    },
+    {
+      "task": "vericoding_dt0662__ntypes",
+      "verified": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "vericoding_dv0008__countSumDivisibleBy",
+      "verified": [
+        "dafny",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "vericoding_dv0015__insertionSort",
+      "verified": [
+        "dafny",
+        "fstar",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "fstar",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "vericoding_dv0017__isArmstrong",
+      "verified": [
+        "dafny",
+        "fstar",
+        "lean",
+        "rocq",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "fstar",
+        "lean",
+        "rocq",
+        "verus"
+      ]
+    },
+    {
+      "task": "vericoding_dv0038__maxOfList",
+      "verified": [
+        "dafny",
+        "framac",
+        "fstar",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "framac",
+        "fstar",
+        "rocq",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "vericoding_dv0039__maxOfList",
+      "verified": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "vericoding_dv0042__maxStrength",
+      "verified": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "vericoding_dv0061__rain",
+      "verified": [
+        "dafny",
+        "fstar",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "fstar",
+        "rocq",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "vericoding_dv0062__removeDuplicates",
+      "verified": [
+        "dafny",
+        "framac",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "framac",
+        "verus"
+      ]
+    },
+    {
+      "task": "vericoding_dv0068__searchInsert",
+      "verified": [
+        "dafny",
+        "framac",
+        "fstar",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "framac",
+        "fstar",
+        "rocq",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "vericoding_dv0069__semiOrderedPermutation",
+      "verified": [
+        "dafny",
+        "framac",
+        "fstar",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "framac",
+        "fstar",
+        "rocq",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "vericoding_dv0073__solution",
+      "verified": [
+        "dafny",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "vericoding_dv0076__trapRainWater",
+      "verified": [
+        "dafny",
+        "fstar",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "fstar",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "vericoding_dv0079__twoSum",
+      "verified": [
+        "dafny",
+        "framac",
+        "lean",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "framac",
+        "lean",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "vericoding_dv0084__kthElementImpl",
+      "verified": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "vericoding_dv0085__multiply",
+      "verified": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "vericoding_dv0086__minOfThree",
+      "verified": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "vericoding_dv0090__isGreater",
+      "verified": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "vericoding_dv0094__containsZ",
+      "verified": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "vericoding_dv0097__toLowercase",
+      "verified": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "vericoding_dv0104__firstEvenOddDifference",
+      "verified": [
+        "dafny",
+        "framac",
+        "fstar",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "framac",
+        "fstar",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "vericoding_dv0111__toUppercase",
+      "verified": [
+        "dafny",
+        "framac",
+        "lean",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "framac",
+        "lean",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "vericoding_dv0112__swapFirstAndLast",
+      "verified": [
+        "dafny",
+        "fstar",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "fstar",
+        "rocq",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "vericoding_dv0117__findFirstOccurrence",
+      "verified": [
+        "dafny",
+        "framac",
+        "fstar",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "framac",
+        "fstar",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "vericoding_dv0118__allCharactersSame",
+      "verified": [
+        "dafny",
+        "framac",
+        "fstar",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "framac",
+        "fstar",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "vericoding_dv0131__binarySearchLoop",
+      "verified": [
+        "dafny",
+        "fstar",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "fstar",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "vericoding_dv0135__compare",
+      "verified": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "vericoding_dv0138__doubleArrayElements",
+      "verified": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "vericoding_dv0139__doubleQuadruple",
+      "verified": [
+        "dafny",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "vericoding_dv0149__linearSearch",
+      "verified": [],
+      "decided": []
+    },
+    {
+      "task": "vericoding_dv0152__append",
+      "verified": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "vericoding_dv0153__matchStrings",
+      "verified": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "vericoding_dv0158__multipleReturns",
+      "verified": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "vericoding_dv0162__removeFront",
+      "verified": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "vericoding_dv0163__concat",
+      "verified": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "vericoding_dv0164__replace",
+      "verified": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "vericoding_dv0165__reverse",
+      "verified": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "vericoding_dv0171__swap",
+      "verified": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "vericoding_dv0172__swapArithmetic",
+      "verified": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "vericoding_dv0173__swapBitvectors",
+      "verified": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "vericoding_dv0176__swapSimultaneous",
+      "verified": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "vericoding_dv0177__testArrayElements",
+      "verified": [
+        "dafny",
+        "framac",
+        "fstar",
+        "rocq",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "framac",
+        "fstar",
+        "rocq",
+        "verus"
+      ]
+    },
+    {
+      "task": "vericoding_dv0178__triple",
+      "verified": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "vericoding_dv0179__triple",
+      "verified": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "vericoding_dv0180__triple",
+      "verified": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "vericoding_dv0181__triple",
+      "verified": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ]
+    }
+  ]
+}
