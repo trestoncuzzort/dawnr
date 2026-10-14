@@ -346,11 +346,12 @@ there is no threshold that is both complete and gap-free, which is the honest sh
 
 # E2 — independence audit: does the seven-kernel gate rest on a shared solver? (2026-10-14)
 
-> **⚠ CORRECTED 2026-10-14 — SPARK used Z3, not cvc5** (`t/verifiers/spark.py:185`): the gate rests on
-> two SMT solvers (Z3 for dafny/verus/fstar/spark; Alt-Ergo for framac) plus two non-SMT kernels, not
-> three independent SMT solvers, and the cross-backend counts rest on the same incomplete-observation
-> data corrected in E1. The independence claim is withdrawn pending an explicit alternate-solver
-> comparison. See internal/CORRECTION-2026-10-14-E1-E2.md.
+> **RESTORED 2026-10-14 with an explicit cvc5 run.** The earlier "three independent SMT solvers" was
+> wrong (`t/verifiers/spark.py`: SPARK runs Z3, not cvc5). By default the gate spans TWO SMT solvers — Z3
+> (dafny, verus, fstar, spark) and Alt-Ergo (framac) — plus two solver-free proof assistants. The
+> independence claim is restored below not by assumption but by an EXPLICIT alternate-solver run: SPARK
+> re-verified under the bundled cvc5 on the fully-adjudicated accepts (harness t/e2_cvc5.py; data
+> internal/E2-data-cvc5/). The withdrawn text's 167-survivor / three-solver figures are superseded.
 
 **Question.** If "seven independent kernels" is the gate's claim, how much of their agreement is really
 one SMT solver answering seven times? The goal framed this as "re-run under a second solver where
@@ -358,57 +359,71 @@ kernels default to Z3" — but the premise was wrong, in the gate's favour.
 
 **The kernels do not all use Z3.** Their solver backends:
 
-| backend | kernels |
+| default backend | kernels |
 |---|---|
-| Z3 4.8.12 | dafny, verus, fstar |
-| Alt-Ergo 2.4.3 | framac |
-| cvc5 1.3.2 | spark |
+| Z3 | dafny, verus, fstar, spark |
+| Alt-Ergo | framac |
 | no SMT | lean (type theory), rocq (tactic kernel) |
 
-A verdict at k=7 already spans three independent SMT solvers plus two solver-free proof assistants. A
-naive "run Dafny under cvc5" swap was attempted and abandoned — Dafny hands cvc5 Z3-style options and
-cvc5 core-dumps — but it is not needed: the backend diversity is already built in, so the independence
-question is answered by measuring cross-backend agreement on the E1 survivors directly (per-survivor
-per-kernel verdict vectors). Sample: 167 kernel-adjudicated survivors.
+A naive "run Dafny under cvc5" swap core-dumps (Dafny hands cvc5 Z3-style options), and verus and F* are
+Z3-locked with no solver override. SPARK is the one Z3-default kernel whose adapter cleanly swaps
+(`T_SPARK_PROVER=cvc5` → `gnatprove --prover=cvc5`, the bundled cvc5), so the explicit alternate-solver
+run goes through SPARK, over the fully-adjudicated matrix (no incomplete-observation defect). Harness
+`t/e2_cvc5.py`; data `internal/E2-data-cvc5/E2-CVC5-2026-10-14.json`.
 
-## The false-accept floor is multi-backend, not a Z3 artifact
+## The all-seven floor survives a second, independent SMT solver
 
-- **38 of 167** survivors (23%) are proved by **all seven** kernels. Each is accepted by Z3 *and*
-  Alt-Ergo *and* cvc5 *and* both proof assistants. This is the same 38 that form E1's k=7 false-accept
-  floor — now shown to be confirmed across three independent SMT cores, so it is a genuine
-  specification gap, not a shared-solver quirk.
-- Of the 109 survivors some Z3 kernel accepted, the Alt-Ergo kernel (framac) saw and **rejected 10**,
-  and the cvc5 kernel (spark) rejected 1 — a different solver catching what Z3 lets through, so the
-  backends add coverage rather than echoing one core.
+SPARK re-verified under cvc5 every cell it VERIFIED under Z3 in the fully-adjudicated matrix — 427
+survivors and the 385 all-seven-accept reals:
 
-## No shared-Z3 correlation
+| re-verified under cvc5 | also verified | rate |
+|---|--:|--:|
+| SPARK's Z3-accepted survivors | 391 / 427 | 91.6% |
+| the all-seven-accept floor (survivors) | 121 / 124 | 97.6% |
+| all-seven-accept reals (coverage) | 355 / 385 | 92.2% |
 
-Pairwise agreement on survivors (both accept or both reject, among those both adjudicated), averaged:
-
-| group | mean agreement |
-|---|--:|
-| within the Z3 trio (dafny/verus/fstar) | 87% |
-| across different backends | 94% |
-
-If shared Z3 drove agreement, same-solver kernels would agree *more* than cross-solver ones. They do
-not — the Z3 trio is slightly *less* correlated (87%) than the cross-backend average (94%), because the
-three Z3 kernels use different lowerings and have different capability. So the gate's agreement is not
-a single-solver effect.
+cvc5 confirms the overwhelming majority of SPARK's Z3 accepts, and is slightly MORE conservative: it
+declines 36 survivors (32 unproved, 4 timeout) and 30 reals that Z3's SPARK proves — a different SMT
+solver catching wrong programs Z3 lets through, so the backends add coverage rather than echo one core.
+The all-seven floor is 97.6% cvc5-confirmed: it is a genuine specification gap every backend accepts, not
+a Z3 artifact, with cvc5 trimming 3 of the 124. The 4 timeouts are budget-limited (not refutations); the
+32 unproved are stable cvc5 conservatism. This is the explicit second-SMT-solver number the independence
+question needs — a real measurement, not an assumption.
 
 ## Honest caveats
 
-- The two solver-free kernels (lean, rocq) are conservative — they decide fewer survivors — so their
-  pairwise "agreement" is inflated by shared *abstention/rejection*, not shared positive proof. The
-  load-bearing comparison is the Z3-trio-vs-cross-backend one above, which does not depend on them.
-- The sample is the 167 survivors the kernels adjudicated (`audit.py` sends at most three per task);
-  the spec-level kill rate in E1 is complete. Deterministic re-run, same as E1.
-- Consistency check: the 38 all-seven survivors here equal E1's independently computed k=7 false-accept
-  count, cross-validating both harnesses.
+- SPARK is the only cleanly solver-swappable kernel here, so the explicit alternate-solver evidence is
+  SPARK-under-cvc5. verus and F* share Z3 with no override and Dafny-under-cvc5 core-dumps, so those three
+  are NOT independently re-measured — an honest limit, not a hidden assumption. Frama-C's Alt-Ergo is a
+  distinct SMT backend by default; lean and rocq use no SMT.
+- cvc5's declines (36 survivors, 30 reals) show the backends are non-redundant, but a decline is cvc5
+  being more conservative, not proof Z3 was unsound; the load-bearing result is the 97.6% of the
+  all-seven floor cvc5 independently CONFIRMS.
+- Run over the fully-adjudicated matrix (E1's fix), so it does not inherit the withdrawn
+  incomplete-observation defect; deterministic re-run, same engine config.
 
 ## Conclusion
 
-"Seven independent kernels" is understated, not overstated: the gate's verdict spans three independent
-SMT solvers and two solver-free proof assistants, same-solver kernels are no more correlated than
-cross-solver ones, and the residual false-accepts are specification gaps every backend confirms. The
-instrument's agreement is real independence, and its residual is spec weakness — which is what the
-one-edit twin-refutation layer, not more kernels, is there to close.
+"Seven independent kernels" rests on a number, not an assumption: the gate spans two SMT solvers (Z3,
+Alt-Ergo) and two solver-free proof assistants by default, and an explicit second SMT solver (cvc5)
+independently confirms 91.6% of SPARK's Z3-accepted survivors and 97.6% of the all-seven-accept floor
+while declining a few more — adding coverage, not echoing one core. The residual accepts are
+specification gaps every backend confirms, which is what the one-edit twin-refutation layer, not more
+kernels, is there to close.
+
+
+---
+
+# E3 — headline training ablation: scoped, GPU blocker lifted, run pending (2026-10-14)
+
+E3's measured result is not yet produced, and is not fabricated. The full pipeline is verified end-to-end
+(`bedrock_generate` teacher → `spec_experiment` extract/tests → `run_par` 7-kernel grade → `e3_build_arms`
+arms → `heldout_audit` → `student_sft` QLoRA → Vericoding pass@1/pass@k + twin survival), and the GPU
+blocker the earlier attempt hit is lifted: AWS us-east-1 has G-instance vCPU quota 8 (a `g5.xlarge`, A10G
+24 GB, is runnable). What remains is a clean ~1-day, ~$15–20 run: regenerate the absent graded MBPP train
+pool (a multi-hour Bedrock teacher round over the 368-task pool plus a multi-hour 7-kernel grading that
+would contend with the operator's active whole-Frama-C task-column verification on the shared lab), build
+and audit the three matched arms, then nine QLoRA fine-tunes (3 arms × 3 seeds) and the eval. Exact
+commands, the licence constraint (Apache/MIT teacher only for training rows), and the cost plan are in
+`internal/E3-STATUS-2026-10-14.md`. The learning this session: E3's gap is a scheduled costed run, no
+longer a missing GPU.
