@@ -304,9 +304,11 @@ a genuine REFUTED, not a body-only UNPROVED. Run through `verifiers.cell_pair` a
 independent, hash-bound runs (`internal/E1-paired/pass1`, `pass2`; identical manifest bytes), the
 same-kernel conjunction curve — that kernel both verifies the real and refutes the twin, stably — is
 426, 426, 426, 426, 426, 424, 409 for k=1..7, and **zero twins are stably VERIFIED by any kernel on
-either run**: no kernel accepts a provably-wrong twin. The residual 17 below k=7 are 16 Frama-C
-structural abstentions on recursive definitions ∪ 1 Rocq unsolved VC (Lean's 2 unproved overlap the 16);
-reported per reason, never relabelled.
+either run**: no kernel accepts a provably-wrong twin. The residual 17 below k=7 are Frama-C abstentions
+(vacuous) ∪ 1 Rocq unsolved VC (Lean's 2 unproved overlap the Frama-C set); reported per reason, never
+relabelled. CORRECTION: an earlier draft attributed all the Frama-C vacuous cells to recursive
+definitions — the whole-column comparison below shows the adapter fix also regresses some simple reals to
+vacuous, so the Frama-C-dependent k=7 figure is PROVISIONAL (see "The Frama-C adapter fix is not clean").
 
 Every paired verdict carries a run-backed in-toto certificate that `dawnr check` replays with no model:
 it recomputes the pair identity from the embedded real/twin/witness, re-lowers and re-runs the kernel,
@@ -315,11 +317,22 @@ the hash-bound flake and per-cell SPARK policy, and fails or goes undecided on a
 certificates were minted and FULL-SET structurally validated by an independent validator
 (`internal/e1_structural_validator.py`, both runs PASS — eff-filtered, byte-re-hashing the retained
 sources, re-hashing the archived payloads and parsed contracts) plus representative native replays — NOT
-2,982 executed replays. The engine-first Frama-C adapter fix behind the all-seven refutation figure is
-under a separate baseline-vs-patched whole-column verification and syncs after it passes; the
-zero-stable-verified-twins result does not depend on it, since no kernel verified a twin under either the
-pre- or post-fix adapter. Tooling: `t/obs_certificate.py`, `t/e1_batch_cert.py`, `t/e1_pairs_gate2.py`;
+2,982 executed replays. Tooling: `t/obs_certificate.py`, `t/e1_batch_cert.py`, `t/e1_pairs_gate2.py`;
 full write-up `internal/E1-FINDINGS-2026-10-14.md`.
+
+### The Frama-C adapter fix is not clean (whole-column comparison)
+
+The engine-first Frama-C adapter fix behind the all-seven *refutation* figure was checked by a registered
+baseline-vs-patched comparison over the whole committed task column (114 tasks, clean isolated checkouts of
+upstream `18d79ef` vs patched `7271e2e`, same install/policy). It is NOT a clean win: Frama-C's
+verified/refuted cells fall 71→58 while 14 go vacuous — **13 cells regress from `verified / refuted` to
+`vacuous / vacuous`** (cube, factorial, fib, gcd, largest, word_count, …, not all recursive), i.e. the
+smoke/negation changes make Frama-C abstain on reals it previously verified. So **the fix is NOT synced
+(it needs rework) and the all-seven Frama-C coverage figure is provisional.** What survives cleanly: **0
+new verified twins** — the fix introduces no soundness regression, independently confirming the
+zero-stable-verified-twins result on the whole column, not just the archived pairs. The fully-adjudicated
+direct-body curve above does not depend on this adapter. Full account:
+`internal/E1-FRAMAC-COLUMN-2026-10-14.md`.
 
 ## Yield bottleneck
 
