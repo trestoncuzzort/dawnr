@@ -414,18 +414,41 @@ kernels, is there to close.
 
 ---
 
-# E3 — headline training ablation: scoped, GPU blocker lifted, run pending (2026-10-14)
+# E3 — headline training ablation: data + audit stage done, training pending one `aws login` (2026-10-14)
 
-E3's measured result is not yet produced, and is not fabricated. The full pipeline is verified end-to-end
-(`bedrock_generate` teacher → `spec_experiment` extract/tests → `run_par` 7-kernel grade → `e3_build_arms`
-arms → `heldout_audit` → `student_sft` QLoRA → Vericoding pass@1/pass@k + twin survival), and the GPU
-blocker the earlier attempt hit is lifted: AWS us-east-1 has G-instance vCPU quota 8 (a `g5.xlarge`, A10G
-24 GB, is runnable). What remains is a clean ~1-day, ~$15–20 run: regenerate the absent graded MBPP train
-pool (a multi-hour Bedrock teacher round over the 368-task pool plus a multi-hour 7-kernel grading that
-would contend with the operator's active whole-Frama-C task-column verification on the shared lab), build
-and audit the three matched arms, then nine QLoRA fine-tunes (3 arms × 3 seeds) and the eval. Exact
-commands, the licence constraint (Apache/MIT teacher only for training rows), and the cost plan are in
-`internal/E3-STATUS-2026-10-14.md`. The one remaining blocker is a one-time interactive operator `aws login` (both the Bedrock teacher and the
-GPU route through AWS, whose session expired mid-session); after it, the run above completes E3
-autonomously. The learning this session: E3's gap is a credential refresh and a scheduled run, no longer a
-missing GPU.
+E3 splits into a data stage and a training stage. **The data + held-out/contamination/licence audit stage
+is DONE, autonomously, and committed** (`internal/E3-data/`). The training headline (nine QLoRA fine-tunes
++ Vericoding pass@1/pass@k + twin survival) is **not yet produced, and not fabricated** — it needs a GPU,
+and the only reachable GPU (AWS us-east-1, g5.xlarge) is behind a one-time interactive `aws login` that
+only the operator can run (the session expired mid-session; both CLI and boto3 demand it; lab GPUs are
+closed and the desktop is unreachable).
+
+## The three arms, built and audited (no cloud)
+
+Existing graded DeepSeek-V3.2 MBPP seed runs (already extracted/tested/7-kernel-graded) feed
+`e3_build_arms.py out/spec-experiment` directly — the teacher half needed no fresh run. For each
+(answer, task): `raw` = tests pass and well-formed; `graded-k4` = raw and ≥4 of 7 kernels accept
+(`verified / refuted`); `all7` = raw and all seven accept.
+
+| arm | rows | distinct tasks | kernels-accepting (kacc) distribution |
+|---|--:|--:|---|
+| raw | 287 | 76 | {0:132, 1:8, 2:6, 3:9, 4:5, 5:4, 6:6, 7:117} |
+| graded-k4 | 132 | 32 | {4:5, 5:4, 6:6, 7:117} |
+| all7 | 117 | 30 | {7:117} |
+
+The row build ends with the audit the bar requires — `heldout_audit.py --rows … --panels --refuse-gpl`
+(`internal/E3-data/AUDIT.json`): 536 rows, 296 distinct t programs, 0 parse failures, **0 GPL refusals**,
+and the only contamination matches are against problems already removed from the eval panels (not refused).
+Matched budget = the smallest arm (all7: 117 rows / 30 tasks); raw and graded-k4 subsample to it at train
+time, matched on rows and distinct tasks. Honest scope: this graded pool covers 76 tasks (the seed runs
+sampled a subset of the 368-task MBPP pool); a fuller pool would use the Bedrock teacher, which is why the
+`aws login` also unlocks a larger data stage — but the arms + the permissive/held-out audit are complete
+here with no cloud.
+
+## What remains (blocked on `aws login`)
+
+Nine QLoRA fine-tunes (raw / graded-k4 / all7 × 3 seeds, matched budget, Qwen2.5-Coder-0.5B-Instruct
+Apache-2.0 base) on a g5.xlarge, then Vericoding pass@1/pass@k + twin survival, then two iteration passes
+(re-grade + hand-audit a sample). Exact commands and the credential situation are in
+`internal/E3-STATUS-2026-10-14.md`. The learning this session: E3's remaining gap is one interactive
+credential refresh for a GPU — the data stage and its audit are already measured and landed.
