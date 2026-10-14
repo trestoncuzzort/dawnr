@@ -511,6 +511,20 @@ def _source_find_method_header(tokens: list, name: str) -> Optional[int]:
     return None
 
 
+def _count_source_method_headers(tokens: list, name: str) -> int:
+    """How many `method`/`function`/`predicate`/`lemma` declarations in
+    `tokens` carry `name` as their own name token. More than one means the
+    name is declared in more than one scope (a class member and a top-level
+    method, both legal in Dafny), so an unqualified first-match lookup cannot
+    be corresponded to one specific rprint-derived declaration -- DafnyRef
+    4.4/4.8 (dafny.org/latest/DafnyRef/DafnyRef): a name visible in two
+    scopes, used unqualified, is itself ambiguous and must be qualified."""
+    return sum(1 for i, tok in enumerate(tokens)
+               if tok.kind == "id" and tok.text in _METHOD_LIKE_BASE_WORDS
+               and i + 1 < len(tokens) and tokens[i + 1].kind == "id"
+               and tokens[i + 1].text == name)
+
+
 def _source_skip_angle_generic(parser: "_Parser") -> None:
     """Skip a `"<" ... ">"` type-parameter list at `parser.pos`, if one is
     there; a no-op otherwise. Depth-counted (not content-parsed) since
@@ -628,6 +642,17 @@ def _align_and_correct(rprint_specs: tuple, raw_specs: list, label: str,
         raw_by_kind.setdefault(type(s), []).append(s)
 
     new_specs = list(rprint_specs)
+    for kind, raws in raw_by_kind.items():
+        # a strict-count kind the source spells out and rprint's text lost entirely (a postcondition that
+        # vanished) is the same mismatch as a wrong count, not a kind this loop never visits
+        if kind in _STRICT_COUNT_SPEC_KINDS and raws and kind not in rp_by_kind:
+            name = _SPEC_KIND_NAME.get(kind, kind.__name__)
+            return tuple(new_specs), Refusal(
+                reason="source-unparseable",
+                token=f"{label}: 0 rprint {name} clause(s) but {len(raws)} parsed from the source text",
+                line=getattr(raws[0], "line", 0) or 0,
+                stage="resolve",
+            )
     for kind, idxs in rp_by_kind.items():
         raws = raw_by_kind.get(kind, [])
         name = _SPEC_KIND_NAME.get(kind, kind.__name__)
@@ -711,8 +736,8 @@ def check_against_source(dfy_path: Path, method: MethodDecl) -> tuple[list[str],
     is returned, so this is safe, never observed."""
     try:
         text = Path(dfy_path).read_text(encoding="utf-8")
-    except OSError as e:
-        return [], Refusal(reason="source-unparseable", token=str(e), line=0, stage="resolve")
+    except (OSError, UnicodeDecodeError) as e:     # a source in another encoding is unparseable, not a crash
+        return [], Refusal(reason="source-unparseable", token=str(e)[:200], line=0, stage="resolve")
     try:
         line_starts = _compute_line_starts(text)
         tokens = _lex(text, 0, line_starts)
@@ -741,6 +766,22 @@ def check_against_source(dfy_path: Path, method: MethodDecl) -> tuple[list[str],
         return [], Refusal(
             reason="source-unparseable",
             token=f"method {method.name!r} not found in the source text",
+            line=method.line, stage="resolve")
+
+    # A name declared in more than one scope (e.g. a class member and a
+    # top-level method, both legal in Dafny) cannot be corresponded to THIS
+    # rprint-derived declaration by the unqualified first match alone: taking
+    # the first would let one declaration's clauses overwrite another's
+    # (measured: GPT-6 Astra review of 2026-10-13, t__lift_resolve.py finding,
+    # `class C { method M() ensures true {} }` then top-level `method M()
+    # ensures false {}` corrected `ensures false` into `ensures true`).
+    # DafnyRef 4.4 (dafny.org/latest/DafnyRef/DafnyRef): an unqualified name
+    # visible in two scopes is itself ambiguous. Refuse by name instead.
+    if _count_source_method_headers(tokens, method.name) > 1:
+        return [], Refusal(
+            reason="source-unparseable",
+            token=(f"method {method.name!r} is declared in more than one scope "
+                   f"in the source text; correspondence is ambiguous"),
             line=method.line, stage="resolve")
 
     parser = _Parser(tokens, text)
@@ -776,6 +817,26 @@ def check_against_source(dfy_path: Path, method: MethodDecl) -> tuple[list[str],
         raw_loop_positions = [i for i in range(body_start, body_end)
                                if tokens[i].kind == "id" and tokens[i].text in ("while", "for")]
         if len(raw_loop_positions) != len(loop_nodes):
+            # When the counts disagree we cannot line parsed loops up with
+            # the source's own `while`/`for`, so no invariant/decreases can be
+            # cross-checked. A loop that carries specs must not keep a
+            # possibly-changed one on a warning (measured: GPT-6 Astra review
+            # of 2026-10-13, t__lift_resolve.py finding -- a `while` inside an
+            # `assert ... by { }` block the structural walker skips but a
+            # lexical scan counts made the fallback retain `n / 100 * n / 100
+            # == 5` where the source had `(n / 100) * (n / 100) == 5`, true at
+            # n = 299 where the source invariant is false). A loop invariant is
+            # as load-bearing as the method's own ensures (DafnyRef 8.15), so
+            # refuse by name, exactly as a method-level mismatch does above.
+            if any(getattr(node, "specs", ()) for node in loop_nodes):
+                return warnings, Refusal(
+                    reason="source-unparseable",
+                    token=(f"{method.name}: {len(loop_nodes)} parsed loop(s) "
+                           f"vs {len(raw_loop_positions)} 'while'/'for' "
+                           f"token(s) in the source text; loop "
+                           f"invariant/decreases clauses carry specifications "
+                           f"that could not be cross-checked"),
+                    line=method.line, stage="resolve")
             if loop_nodes:
                 warnings.append(
                     f"rprint-source-disagreement: {method.name}: "

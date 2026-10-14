@@ -243,6 +243,13 @@ def _write_outcome(outcome: FileOutcome, out_dir: Path, stem: str) -> None:
     resumability marker, all under `out_dir`. Windows-safe: UTF-8,
     explicit `newline="\\n"`."""
     out_dir.mkdir(parents=True, exist_ok=True)
+    marker_path = _marker_path(out_dir, stem)
+    # The previous marker goes first: an interrupted write below must not leave a marker that pairs the
+    # previous checked verdicts with a replacement task. Until the new marker lands, there is no cache.
+    try:
+        marker_path.unlink()
+    except FileNotFoundError:
+        pass
     method_entries = []
     for mo in outcome.methods:
         safe_method = mo.method if mo.method else "_"
@@ -250,6 +257,8 @@ def _write_outcome(outcome: FileOutcome, out_dir: Path, stem: str) -> None:
         record_file = None
         if mo.task is not None:
             task_file = f"{stem}.{safe_method}.json"
+            if task_file == marker_path.name:          # a method named "outcome" would overwrite the marker
+                task_file = f"{stem}.{safe_method}.task.json"
             with (out_dir / task_file).open("w", encoding="utf-8", newline="\n") as f:
                 json.dump(mo.task, f, indent=2, sort_keys=True)
                 f.write("\n")
@@ -284,9 +293,22 @@ def _write_outcome(outcome: FileOutcome, out_dir: Path, stem: str) -> None:
         "parse_refusal": _refusal_to_dict(outcome.parse_refusal),
         "methods": method_entries,
     }
-    with _marker_path(out_dir, stem).open("w", encoding="utf-8", newline="\n") as f:
+    tmp_path = marker_path.with_name(marker_path.name + ".tmp")
+    with tmp_path.open("w", encoding="utf-8", newline="\n") as f:
         json.dump(marker, f, indent=2, sort_keys=True)
         f.write("\n")
+    os.replace(tmp_path, marker_path)                  # the marker appears whole or not at all
+
+
+def _same_source(a: Path, b: Path) -> bool:
+    """The marker's recorded source and the one asked for are the same file: equal as written, or equal once
+    both resolve (a relative path recorded from another working directory still names its file)."""
+    if str(a) == str(b):
+        return True
+    try:
+        return a.resolve() == b.resolve()
+    except OSError:
+        return False
 
 
 def _load_outcome(out_dir: Path, stem: str, source_path: Path) -> Optional[FileOutcome]:
@@ -301,6 +323,11 @@ def _load_outcome(out_dir: Path, stem: str, source_path: Path) -> Optional[FileO
         marker = json.loads(marker_path.read_text(encoding="utf-8"))
     except (OSError, json.JSONDecodeError):
         return None
+    if not isinstance(marker, dict):
+        return None
+    recorded = marker.get("source_path")
+    if not recorded or not _same_source(Path(recorded), Path(source_path)):
+        return None                                    # the stem is shared; the outcome is another file's
     outcome = FileOutcome(
         source_path=source_path,
         resolve_refusal=_refusal_from_dict(marker.get("resolve_refusal")),
@@ -309,14 +336,13 @@ def _load_outcome(out_dir: Path, stem: str, source_path: Path) -> Optional[FileO
     for entry in marker.get("methods", []):
         task = None
         record = None
-        if entry.get("task_file"):
-            tp = out_dir / entry["task_file"]
-            if tp.is_file():
-                task = json.loads(tp.read_text(encoding="utf-8"))
-        if entry.get("record_file"):
-            rp = out_dir / entry["record_file"]
-            if rp.is_file():
-                record = _record_from_dict(json.loads(rp.read_text(encoding="utf-8")))
+        try:
+            if entry.get("task_file"):
+                task = json.loads((out_dir / entry["task_file"]).read_text(encoding="utf-8"))
+            if entry.get("record_file"):
+                record = _record_from_dict(json.loads((out_dir / entry["record_file"]).read_text(encoding="utf-8")))
+        except (OSError, ValueError, TypeError, KeyError):
+            return None                                # a missing or damaged artifact is no cache entry
         outcome.methods.append(MethodOutcome(
             method=entry["method"],
             refusal=_refusal_from_dict(entry.get("refusal")),
