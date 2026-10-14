@@ -425,5 +425,7 @@ pool (a multi-hour Bedrock teacher round over the 368-task pool plus a multi-hou
 would contend with the operator's active whole-Frama-C task-column verification on the shared lab), build
 and audit the three matched arms, then nine QLoRA fine-tunes (3 arms × 3 seeds) and the eval. Exact
 commands, the licence constraint (Apache/MIT teacher only for training rows), and the cost plan are in
-`internal/E3-STATUS-2026-10-14.md`. The learning this session: E3's gap is a scheduled costed run, no
-longer a missing GPU.
+`internal/E3-STATUS-2026-10-14.md`. The one remaining blocker is a one-time interactive operator `aws login` (both the Bedrock teacher and the
+GPU route through AWS, whose session expired mid-session); after it, the run above completes E3
+autonomously. The learning this session: E3's gap is a credential refresh and a scheduled run, no longer a
+missing GPU.
