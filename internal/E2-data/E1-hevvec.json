@@ -1,0 +1,900 @@
+{
+  "tag": "hevvec",
+  "corpus": "humanevaldafny",
+  "n_tasks": 45,
+  "spec_level": {
+    "behaviour_changing": 1377,
+    "killed": 1287,
+    "survivors_total": 90,
+    "tasks": 45,
+    "tasks_audited": 45,
+    "tasks_with_survivor": 6,
+    "mutant_survival_rate": 0.0654,
+    "kill_rate": 0.9346
+  },
+  "kernel_adjudicated_survivors": 10,
+  "per_kernel": {
+    "dafny": {
+      "survivors_proved": 5,
+      "survivors_seen": 9,
+      "real_verified": 39,
+      "real_decided": 39
+    },
+    "verus": {
+      "survivors_proved": 0,
+      "survivors_seen": 1,
+      "real_verified": 28,
+      "real_decided": 28
+    },
+    "spark": {
+      "survivors_proved": 2,
+      "survivors_seen": 3,
+      "real_verified": 29,
+      "real_decided": 29
+    },
+    "framac": {
+      "survivors_proved": 1,
+      "survivors_seen": 2,
+      "real_verified": 23,
+      "real_decided": 23
+    },
+    "lean": {
+      "survivors_proved": 2,
+      "survivors_seen": 2,
+      "real_verified": 21,
+      "real_decided": 21
+    },
+    "rocq": {
+      "survivors_proved": 0,
+      "survivors_seen": 0,
+      "real_verified": 19,
+      "real_decided": 19
+    },
+    "fstar": {
+      "survivors_proved": 1,
+      "survivors_seen": 2,
+      "real_verified": 23,
+      "real_decided": 23
+    }
+  },
+  "curve": [
+    {
+      "k": 1,
+      "coverage": 0.8889,
+      "false_accept": 0.6,
+      "false_accept_n": 6,
+      "surv_n": 10
+    },
+    {
+      "k": 2,
+      "coverage": 0.7111,
+      "false_accept": 0.2,
+      "false_accept_n": 2,
+      "surv_n": 10
+    },
+    {
+      "k": 3,
+      "coverage": 0.6444,
+      "false_accept": 0.1,
+      "false_accept_n": 1,
+      "surv_n": 10
+    },
+    {
+      "k": 4,
+      "coverage": 0.5556,
+      "false_accept": 0.1,
+      "false_accept_n": 1,
+      "surv_n": 10
+    },
+    {
+      "k": 5,
+      "coverage": 0.4667,
+      "false_accept": 0.1,
+      "false_accept_n": 1,
+      "surv_n": 10
+    },
+    {
+      "k": 6,
+      "coverage": 0.4222,
+      "false_accept": 0.0,
+      "false_accept_n": 0,
+      "surv_n": 10
+    },
+    {
+      "k": 7,
+      "coverage": 0.3556,
+      "false_accept": 0.0,
+      "false_accept_n": 0,
+      "surv_n": 10
+    }
+  ],
+  "survivor_vectors": [
+    {
+      "task": "humaneval_dafny_006_parse_nested_parens__parse_paren_group",
+      "op": "collapse-if",
+      "proved": [
+        "dafny"
+      ],
+      "saw": [
+        "dafny"
+      ],
+      "witness": "s=[41] -> real 0, twin 1"
+    },
+    {
+      "task": "humaneval_dafny_010_is_palindrome__make_palindrome",
+      "op": "off-by-one#2",
+      "proved": [],
+      "saw": [
+        "dafny"
+      ],
+      "witness": "s=[0] -> real [0], twin [0, 0]"
+    },
+    {
+      "task": "humaneval_dafny_010_is_palindrome__make_palindrome",
+      "op": "off-by-one#8",
+      "proved": [],
+      "saw": [
+        "dafny"
+      ],
+      "witness": "s=[0, 1] -> real [0, 1, 0], twin [0, 1, 1, 0]"
+    },
+    {
+      "task": "humaneval_dafny_010_is_palindrome__make_palindrome",
+      "op": "wrong-var#5",
+      "proved": [
+        "dafny"
+      ],
+      "saw": [
+        "dafny"
+      ],
+      "witness": "s=[0] -> real [0], twin [0, 0]"
+    },
+    {
+      "task": "humaneval_dafny_031_is_prime__is_prime",
+      "op": "off-by-one#1",
+      "proved": [],
+      "saw": [
+        "framac",
+        "fstar",
+        "spark",
+        "verus"
+      ],
+      "witness": "k=1 -> real False, twin True"
+    },
+    {
+      "task": "humaneval_dafny_135_can_arrange__can_arrange",
+      "op": "off-by-one#2",
+      "proved": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "spark"
+      ],
+      "saw": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "spark"
+      ],
+      "witness": "arr=[0] -> real -1, twin -2"
+    },
+    {
+      "task": "humaneval_dafny_146_specialfilter__specialFilter",
+      "op": "boundary-swap",
+      "proved": [
+        "lean",
+        "spark"
+      ],
+      "saw": [
+        "dafny",
+        "lean",
+        "spark"
+      ],
+      "witness": "s=[11] -> real [11], twin []"
+    },
+    {
+      "task": "humaneval_dafny_146_specialfilter__specialFilter",
+      "op": "off-by-one",
+      "proved": [],
+      "saw": [
+        "dafny"
+      ],
+      "witness": "s=[11] -> real [11], twin []"
+    },
+    {
+      "task": "humaneval_dafny_146_specialfilter__specialFilter",
+      "op": "off-by-one#3",
+      "proved": [
+        "dafny"
+      ],
+      "saw": [
+        "dafny"
+      ],
+      "witness": "s=[11] -> real [11], twin []"
+    },
+    {
+      "task": "humaneval_dafny_163_generate_integers__generate_integers",
+      "op": "compare-flip",
+      "proved": [
+        "dafny"
+      ],
+      "saw": [
+        "dafny"
+      ],
+      "witness": "a=0, b=2 -> real [2], twin []"
+    }
+  ],
+  "real_vectors": [
+    {
+      "task": "humaneval_dafny_005_intersperse__intersperse",
+      "verified": [
+        "dafny",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "humaneval_dafny_006_parse_nested_parens__parse_paren_group",
+      "verified": [
+        "dafny"
+      ],
+      "decided": [
+        "dafny"
+      ]
+    },
+    {
+      "task": "humaneval_dafny_010_is_palindrome__make_palindrome",
+      "verified": [
+        "dafny"
+      ],
+      "decided": [
+        "dafny"
+      ]
+    },
+    {
+      "task": "humaneval_dafny_010_is_palindrome__reverse",
+      "verified": [
+        "dafny",
+        "framac",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "framac",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "humaneval_dafny_011_string_xor__string_xor",
+      "verified": [
+        "dafny",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "humaneval_dafny_024_largest_divisor__largest_divisor",
+      "verified": [
+        "dafny",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "humaneval_dafny_031_is_prime__is_prime",
+      "verified": [
+        "framac",
+        "fstar",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "framac",
+        "fstar",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "humaneval_dafny_034_unique__uniqueSorted",
+      "verified": [
+        "dafny",
+        "spark"
+      ],
+      "decided": [
+        "dafny",
+        "spark"
+      ]
+    },
+    {
+      "task": "humaneval_dafny_035_max_element__max_element",
+      "verified": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "humaneval_dafny_038_encode_cyclic__decode_cyclic",
+      "verified": [
+        "dafny",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "verus"
+      ]
+    },
+    {
+      "task": "humaneval_dafny_038_encode_cyclic__encode_cyclic",
+      "verified": [
+        "dafny",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "verus"
+      ]
+    },
+    {
+      "task": "humaneval_dafny_041_car_race_collision__car_race_collision",
+      "verified": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "humaneval_dafny_042_incr_list__incr_list",
+      "verified": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "humaneval_dafny_046_fib4__fib4",
+      "verified": [
+        "dafny"
+      ],
+      "decided": [
+        "dafny"
+      ]
+    },
+    {
+      "task": "humaneval_dafny_050_encode_shift__decode_shift",
+      "verified": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "humaneval_dafny_050_encode_shift__encode_shift",
+      "verified": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "humaneval_dafny_052_below_threshold__below_threshold",
+      "verified": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "humaneval_dafny_053_add__add",
+      "verified": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "humaneval_dafny_055_fib__computeFib",
+      "verified": [
+        "dafny"
+      ],
+      "decided": [
+        "dafny"
+      ]
+    },
+    {
+      "task": "humaneval_dafny_060_sum_to_n__sum_to_n",
+      "verified": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "humaneval_dafny_062_derivative__derivative",
+      "verified": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark"
+      ],
+      "decided": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark"
+      ]
+    },
+    {
+      "task": "humaneval_dafny_063_fibfib__computeFibFib",
+      "verified": [
+        "dafny"
+      ],
+      "decided": [
+        "dafny"
+      ]
+    },
+    {
+      "task": "humaneval_dafny_068_pluck__pluck",
+      "verified": [
+        "dafny",
+        "framac",
+        "fstar",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "framac",
+        "fstar",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "humaneval_dafny_072_will_it_fly__will_it_fly",
+      "verified": [],
+      "decided": []
+    },
+    {
+      "task": "humaneval_dafny_077_iscube__cube_root",
+      "verified": [
+        "dafny"
+      ],
+      "decided": [
+        "dafny"
+      ]
+    },
+    {
+      "task": "humaneval_dafny_077_iscube__iscube",
+      "verified": [],
+      "decided": []
+    },
+    {
+      "task": "humaneval_dafny_083_starts_one_ends__starts_one_ends",
+      "verified": [],
+      "decided": []
+    },
+    {
+      "task": "humaneval_dafny_088_sort_array__reverse",
+      "verified": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "humaneval_dafny_089_encrypt__encrypt",
+      "verified": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "humaneval_dafny_092_any_int__any_int",
+      "verified": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "humaneval_dafny_097_multiply__multiply",
+      "verified": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "humaneval_dafny_102_choose_num__choose_num",
+      "verified": [
+        "dafny",
+        "framac",
+        "fstar",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "framac",
+        "fstar",
+        "verus"
+      ]
+    },
+    {
+      "task": "humaneval_dafny_110_exchange__exchange",
+      "verified": [
+        "dafny",
+        "lean",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "lean",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "humaneval_dafny_112_reverse_delete__check_palindrome",
+      "verified": [
+        "dafny"
+      ],
+      "decided": [
+        "dafny"
+      ]
+    },
+    {
+      "task": "humaneval_dafny_130_tri__tri",
+      "verified": [],
+      "decided": []
+    },
+    {
+      "task": "humaneval_dafny_135_can_arrange__can_arrange",
+      "verified": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "spark"
+      ],
+      "decided": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "spark"
+      ]
+    },
+    {
+      "task": "humaneval_dafny_139_special_factorial__special_factorial",
+      "verified": [],
+      "decided": []
+    },
+    {
+      "task": "humaneval_dafny_146_specialfilter__specialFilter",
+      "verified": [
+        "dafny",
+        "lean",
+        "spark"
+      ],
+      "decided": [
+        "dafny",
+        "lean",
+        "spark"
+      ]
+    },
+    {
+      "task": "humaneval_dafny_150_x_or_y__x_or_y",
+      "verified": [
+        "dafny",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "humaneval_dafny_152_compare__compare",
+      "verified": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "humaneval_dafny_157_right_angle_triangle__right_angle_triangle",
+      "verified": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "humaneval_dafny_159_eat__eat",
+      "verified": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "humaneval_dafny_161_solve__reverse",
+      "verified": [
+        "dafny",
+        "framac",
+        "fstar",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "framac",
+        "fstar",
+        "rocq",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "humaneval_dafny_163_generate_integers__generate_integers",
+      "verified": [
+        "dafny"
+      ],
+      "decided": [
+        "dafny"
+      ]
+    },
+    {
+      "task": "humaneval_dafny_163_generate_integers__max",
+      "verified": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ]
+    }
+  ]
+}

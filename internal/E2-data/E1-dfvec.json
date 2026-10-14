@@ -1,0 +1,7353 @@
+{
+  "tag": "dfvec",
+  "corpus": "dafnybench",
+  "n_tasks": 326,
+  "spec_level": {
+    "behaviour_changing": 7255,
+    "killed": 6837,
+    "survivors_total": 418,
+    "tasks": 320,
+    "tasks_audited": 320,
+    "tasks_with_survivor": 53,
+    "mutant_survival_rate": 0.0576,
+    "kill_rate": 0.9424
+  },
+  "kernel_adjudicated_survivors": 76,
+  "per_kernel": {
+    "dafny": {
+      "survivors_proved": 44,
+      "survivors_seen": 70,
+      "real_verified": 316,
+      "real_decided": 316
+    },
+    "verus": {
+      "survivors_proved": 40,
+      "survivors_seen": 50,
+      "real_verified": 267,
+      "real_decided": 267
+    },
+    "spark": {
+      "survivors_proved": 40,
+      "survivors_seen": 50,
+      "real_verified": 266,
+      "real_decided": 266
+    },
+    "framac": {
+      "survivors_proved": 34,
+      "survivors_seen": 54,
+      "real_verified": 240,
+      "real_decided": 240
+    },
+    "lean": {
+      "survivors_proved": 35,
+      "survivors_seen": 45,
+      "real_verified": 241,
+      "real_decided": 241
+    },
+    "rocq": {
+      "survivors_proved": 34,
+      "survivors_seen": 44,
+      "real_verified": 245,
+      "real_decided": 245
+    },
+    "fstar": {
+      "survivors_proved": 43,
+      "survivors_seen": 53,
+      "real_verified": 277,
+      "real_decided": 277
+    }
+  },
+  "curve": [
+    {
+      "k": 1,
+      "coverage": 0.9969,
+      "false_accept": 0.6842,
+      "false_accept_n": 52,
+      "surv_n": 76
+    },
+    {
+      "k": 2,
+      "coverage": 0.9062,
+      "false_accept": 0.5921,
+      "false_accept_n": 45,
+      "surv_n": 76
+    },
+    {
+      "k": 3,
+      "coverage": 0.8906,
+      "false_accept": 0.5658,
+      "false_accept_n": 43,
+      "surv_n": 76
+    },
+    {
+      "k": 4,
+      "coverage": 0.8719,
+      "false_accept": 0.4868,
+      "false_accept_n": 37,
+      "surv_n": 76
+    },
+    {
+      "k": 5,
+      "coverage": 0.7844,
+      "false_accept": 0.4474,
+      "false_accept_n": 34,
+      "surv_n": 76
+    },
+    {
+      "k": 6,
+      "coverage": 0.725,
+      "false_accept": 0.3947,
+      "false_accept_n": 30,
+      "surv_n": 76
+    },
+    {
+      "k": 7,
+      "coverage": 0.6125,
+      "false_accept": 0.3816,
+      "false_accept_n": 29,
+      "surv_n": 76
+    }
+  ],
+  "survivor_vectors": [
+    {
+      "task": "dafny_exercises_tmp_tmpjm75muf__session3exercises_exercisemaximum__mmaximum1",
+      "op": "compare-flip#1",
+      "proved": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "saw": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "witness": "v=[0, 0] -> real 0, twin 1"
+    },
+    {
+      "task": "dafny_experiences_tmp_tmp150sm9qy_dafny_started_tutorial_dafny_tutorial_array__findMax",
+      "op": "compare-flip#1",
+      "proved": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "saw": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "witness": "a=[0, 0] -> real 0, twin 1"
+    },
+    {
+      "task": "dafny_learning_experience_tmp_tmpuxvcet_u_week8_12_week9_lemma__assignmentsToMarkOne",
+      "op": "wrong-constant#1",
+      "proved": [
+        "fstar",
+        "spark"
+      ],
+      "saw": [
+        "fstar",
+        "spark"
+      ],
+      "witness": "students=1, tutors=2 -> real 0, twin -1"
+    },
+    {
+      "task": "dafny_programs_tmp_tmp99966ew4_mymax__max",
+      "op": "wrong-constant",
+      "proved": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "saw": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "witness": "a=0, b=1 -> real 1, twin 2"
+    },
+    {
+      "task": "dafny_verify_tmp_tmphq7j0row_fine_tune_examples_50_examples_41__main_v",
+      "op": "compare-flip",
+      "proved": [],
+      "saw": [
+        "dafny",
+        "fstar",
+        "spark"
+      ],
+      "witness": "n=0, k=0 -> real [0, 0], twin [1, 1]"
+    },
+    {
+      "task": "dafny_verify_tmp_tmphq7j0row_fine_tune_examples_50_examples_41__main_v",
+      "op": "off-by-one#6",
+      "proved": [],
+      "saw": [
+        "dafny",
+        "fstar",
+        "spark"
+      ],
+      "witness": "n=0, k=0 -> real [0, 0], twin [0, 1]"
+    },
+    {
+      "task": "dafny_verify_tmp_tmphq7j0row_fine_tune_examples_50_examples_41__main_v",
+      "op": "off-by-one#8",
+      "proved": [],
+      "saw": [
+        "dafny",
+        "fstar",
+        "spark"
+      ],
+      "witness": "n=0, k=0 -> real [0, 0], twin [1, 1]"
+    },
+    {
+      "task": "dafny_verify_tmp_tmphq7j0row_fine_tune_examples_error_data_completion_11__main_v",
+      "op": "wrong-var#12",
+      "proved": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "saw": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "witness": "x=1 -> real [2, 1], twin [2, 2]"
+    },
+    {
+      "task": "dafny_verify_tmp_tmphq7j0row_generated_code_15__main_v",
+      "op": "compare-flip",
+      "proved": [],
+      "saw": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "witness": "n=1, k=2 -> real 1, twin 0"
+    },
+    {
+      "task": "dafny_verify_tmp_tmphq7j0row_generated_code_15__main_v",
+      "op": "boundary-swap",
+      "proved": [
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "saw": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "witness": "n=1, k=2 -> real 1, twin 2"
+    },
+    {
+      "task": "dafny_verify_tmp_tmphq7j0row_generated_code_15__main_v",
+      "op": "off-by-one",
+      "proved": [],
+      "saw": [
+        "dafny",
+        "framac"
+      ],
+      "witness": "n=1, k=2 -> real 1, twin 2"
+    },
+    {
+      "task": "dafny_verify_tmp_tmphq7j0row_test_cases_ghost__myMethod",
+      "op": "collapse-if",
+      "proved": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "saw": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "witness": "x=20 -> real 39, twin 35"
+    },
+    {
+      "task": "dafny_verify_tmp_tmphq7j0row_test_cases_index__index",
+      "op": "off-by-one",
+      "proved": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "saw": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "witness": "n=2 -> real 1, twin 0"
+    },
+    {
+      "task": "dafny_verify_tmp_tmphq7j0row_test_cases_index__reconstructFromMaxSum",
+      "op": "wrong-var#9",
+      "proved": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "saw": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "witness": "s=0, m=1 -> real [1, -1], twin [-1, 1]"
+    },
+    {
+      "task": "dafny_verify_tmp_tmphq7j0row_dataset_c_convert_examples_11__main_v",
+      "op": "wrong-var#12",
+      "proved": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "saw": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "witness": "x=1 -> real [2, 1], twin [2, 2]"
+    },
+    {
+      "task": "dafny_verify_tmp_tmphq7j0row_dataset_c_convert_examples_15__main_v",
+      "op": "compare-flip",
+      "proved": [],
+      "saw": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "witness": "n=1, k=2 -> real 1, twin 0"
+    },
+    {
+      "task": "dafny_verify_tmp_tmphq7j0row_dataset_c_convert_examples_15__main_v",
+      "op": "boundary-swap",
+      "proved": [
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "saw": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "witness": "n=1, k=2 -> real 1, twin 2"
+    },
+    {
+      "task": "dafny_verify_tmp_tmphq7j0row_dataset_c_convert_examples_15__main_v",
+      "op": "off-by-one",
+      "proved": [],
+      "saw": [
+        "dafny",
+        "framac"
+      ],
+      "witness": "n=1, k=2 -> real 1, twin 2"
+    },
+    {
+      "task": "dafny_verify_tmp_tmphq7j0row_dataset_bql_exampls_smallnum__add_small_numbers",
+      "op": "off-by-one#5",
+      "proved": [
+        "dafny"
+      ],
+      "saw": [
+        "dafny"
+      ],
+      "witness": "a=[0], n=1, max=0 -> real 0, twin -1"
+    },
+    {
+      "task": "dafny_tmp_tmp0wu8wmfr_heimaverkefni_3_insertionsortmultiset__search",
+      "op": "off-by-one#2",
+      "proved": [
+        "dafny",
+        "framac",
+        "fstar",
+        "verus"
+      ],
+      "saw": [
+        "dafny",
+        "framac",
+        "fstar",
+        "verus"
+      ],
+      "witness": "s=[0, 0], x=0 -> real 1, twin 0"
+    },
+    {
+      "task": "dafny_tmp_tmp0wu8wmfr_tests_f1a__f",
+      "op": "off-by-one#1",
+      "proved": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "saw": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "witness": " -> real 0, twin -1"
+    },
+    {
+      "task": "dafny_tmp_tmpmvs2dmry_examples1__multiReturn",
+      "op": "wrong-var#4",
+      "proved": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "saw": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "witness": "x=0, y=1 -> real [1, -1], twin [0, -1]"
+    },
+    {
+      "task": "final_project_dafny_tmp_tmpmcywuqox_attempts_exercise4_find_max__findMax",
+      "op": "compare-flip#1",
+      "proved": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "saw": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "witness": "a=[0, 0] -> real [0, 0], twin [1, 0]"
+    },
+    {
+      "task": "final_project_dafny_tmp_tmpmcywuqox_attempts_exercise6_binary_search__binarySearch",
+      "op": "off-by-one#8",
+      "proved": [
+        "dafny",
+        "framac",
+        "fstar",
+        "verus"
+      ],
+      "saw": [
+        "dafny",
+        "framac",
+        "fstar",
+        "verus"
+      ],
+      "witness": "a=[0], val=1 -> real -1, twin -2"
+    },
+    {
+      "task": "final_project_dafny_tmp_tmpmcywuqox_attempts_insertion_sort_normal__lookForMin",
+      "op": "compare-flip#1",
+      "proved": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "saw": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "witness": "a=[0, 0], i=0 -> real 0, twin 1"
+    },
+    {
+      "task": "final_project_dafny_tmp_tmpmcywuqox_final_project_3__nonZeroReturn",
+      "op": "off-by-one#2",
+      "proved": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "saw": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "witness": "x=0 -> real 1, twin 2"
+    },
+    {
+      "task": "mfes_2021_tmp_tmpuljn8zd9_fcul_exercises_10_find__find",
+      "op": "off-by-one",
+      "proved": [],
+      "saw": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "witness": "a=[0], key=0 -> real 0, twin 1"
+    },
+    {
+      "task": "mfes_2021_tmp_tmpuljn8zd9_fcul_exercises_10_find__find",
+      "op": "drop-guard#1",
+      "proved": [],
+      "saw": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "witness": "a=[0], key=0 -> real 0, twin 1"
+    },
+    {
+      "task": "mfes_2021_tmp_tmpuljn8zd9_fcul_exercises_10_find__find",
+      "op": "wrong-constant",
+      "proved": [],
+      "saw": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "witness": "a=[0], key=0 -> real 0, twin 1"
+    },
+    {
+      "task": "program_verification_dataset_tmp_tmpgbdrlnu__dafny_basic_examples_find_max__findMax",
+      "op": "compare-flip#1",
+      "proved": [
+        "dafny"
+      ],
+      "saw": [
+        "dafny"
+      ],
+      "witness": "a=[0, 0] -> real 0, twin 1"
+    },
+    {
+      "task": "programmverifikation_und_synthese_tmp_tmppurk6ime_pvs_assignment_ex_07_hoangkim_ex07_hoangkim__findMin",
+      "op": "compare-flip#1",
+      "proved": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "saw": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "witness": "a=[0, 0], lo=0 -> real 0, twin 1"
+    },
+    {
+      "task": "projectoscvs_tmp_tmp_02_gmcw_handout_1_cvs_handout1_55754_55780__euclidianDiv",
+      "op": "compare-flip",
+      "proved": [
+        "dafny",
+        "framac",
+        "lean",
+        "rocq"
+      ],
+      "saw": [
+        "dafny",
+        "framac",
+        "lean",
+        "rocq"
+      ],
+      "witness": "a=1, b=1 -> real [1, 0], twin [0, 1]"
+    },
+    {
+      "task": "seng2011_tmp_tmpgk5jq85q_ass1_ex8__getEven",
+      "op": "wrong-operator#1",
+      "proved": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "saw": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "witness": "a=[1] -> real [2], twin [0]"
+    },
+    {
+      "task": "software_verification_tmp_tmpv4ueky2d_best_time_to_buy_and_sell_stock_best_time_to_buy_and_sell_stock__best_time_to_buy_and_sell_stock",
+      "op": "off-by-one#2",
+      "proved": [
+        "dafny",
+        "framac",
+        "lean",
+        "spark",
+        "verus"
+      ],
+      "saw": [
+        "dafny",
+        "framac",
+        "lean",
+        "spark",
+        "verus"
+      ],
+      "witness": "prices=[0] -> real 0, twin 1"
+    },
+    {
+      "task": "software_building_and_verification_projects_tmp_tmp5tm1srrn_cvs_projeto_aula2__m4",
+      "op": "collapse-if",
+      "proved": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "saw": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "witness": "x=0, y=1 -> real False, twin True"
+    },
+    {
+      "task": "software_building_and_verification_projects_tmp_tmp5tm1srrn_cvs_projeto_aula2__max",
+      "op": "collapse-if",
+      "proved": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "saw": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "witness": "a=0, b=1 -> real 1, twin 0"
+    },
+    {
+      "task": "workshop_tmp_tmp0cu11bdq_workshop_answers_question6__arrayUpToN",
+      "op": "boundary-swap",
+      "proved": [
+        "fstar",
+        "spark"
+      ],
+      "saw": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "witness": "n=2 -> real [0, 1], twin [0, 0]"
+    },
+    {
+      "task": "workshop_tmp_tmp0cu11bdq_workshop_answers_question6__arrayUpToN",
+      "op": "wrong-var#1",
+      "proved": [],
+      "saw": [
+        "dafny",
+        "framac",
+        "lean",
+        "rocq",
+        "verus"
+      ],
+      "witness": "n=2 -> real [0, 1], twin [0, 0]"
+    },
+    {
+      "task": "workshop_tmp_tmp0cu11bdq_workshop_answers_question6__arrayUpToN",
+      "op": "wrong-var#2",
+      "proved": [],
+      "saw": [
+        "dafny",
+        "framac",
+        "lean",
+        "rocq",
+        "verus"
+      ],
+      "witness": "n=2 -> real [0, 1], twin [0, 0]"
+    },
+    {
+      "task": "bbfny_tmp_tmpw4m0jvl0_enjoying__multipleReturns",
+      "op": "wrong-constant#5",
+      "proved": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "saw": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "witness": "x=0, y=1 -> real [1, -1], twin [1, -2]"
+    },
+    {
+      "task": "cmsc433_tmp_tmpe3ob3a0o_dafny_project1_p1_assignment_2__plusOne",
+      "op": "off-by-one",
+      "proved": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "saw": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "witness": "x=0 -> real 1, twin 2"
+    },
+    {
+      "task": "cs245_verification_tmp_tmp0h_nxhqp_a8_q2__a8Q1",
+      "op": "wrong-constant#1",
+      "proved": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "saw": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "witness": "x=1, y=1, z=0 -> real 0, twin -1"
+    },
+    {
+      "task": "cs245_verification_tmp_tmp0h_nxhqp_sortingissues_firstattempt__sort",
+      "op": "wrong-var#3",
+      "proved": [],
+      "saw": [
+        "dafny"
+      ],
+      "witness": "a=[0], n=1 -> real [0], twin [1]"
+    },
+    {
+      "task": "dafny_language_server_tmp_tmpkir0kenl_test_vscomp2010_problem1_summax__m",
+      "op": "boundary-swap",
+      "proved": [],
+      "saw": [
+        "dafny"
+      ],
+      "witness": "n=1, a=[1] -> real [1, 1], twin [0, 0]"
+    },
+    {
+      "task": "dafny_language_server_tmp_tmpkir0kenl_test_vscomp2010_problem1_summax__m",
+      "op": "off-by-one#5",
+      "proved": [
+        "dafny"
+      ],
+      "saw": [
+        "dafny"
+      ],
+      "witness": "n=0, a=[] -> real [0, 0], twin [-1, 0]"
+    },
+    {
+      "task": "dafny_learn_tmp_tmpn94ir40q_r01_assertions__max",
+      "op": "wrong-constant",
+      "proved": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "saw": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "witness": "a=0, b=0 -> real 0, twin 1"
+    },
+    {
+      "task": "dafny_synthesis_task_id_126__sumOfCommonDivisors",
+      "op": "collapse-if",
+      "proved": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "verus"
+      ],
+      "saw": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "verus"
+      ],
+      "witness": "a=2, b=2147483647 -> real 1, twin 3"
+    },
+    {
+      "task": "dafny_synthesis_task_id_145__maxDifference",
+      "op": "wrong-var#28",
+      "proved": [],
+      "saw": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "witness": "a=[0, 0] -> real 0, twin 2"
+    },
+    {
+      "task": "dafny_synthesis_task_id_145__maxDifference",
+      "op": "wrong-var#29",
+      "proved": [],
+      "saw": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "witness": "a=[0, 0] -> real 0, twin 2"
+    },
+    {
+      "task": "dafny_synthesis_task_id_145__maxDifference",
+      "op": "wrong-constant#4",
+      "proved": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "saw": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "witness": "a=[0, 0] -> real 0, twin 1"
+    },
+    {
+      "task": "dafny_synthesis_task_id_161__removeElements",
+      "op": "boundary-swap",
+      "proved": [
+        "fstar",
+        "spark",
+        "verus"
+      ],
+      "saw": [
+        "dafny",
+        "fstar",
+        "spark",
+        "verus"
+      ],
+      "witness": "a=[0], b=[] -> real [0], twin []"
+    },
+    {
+      "task": "dafny_synthesis_task_id_161__removeElements",
+      "op": "off-by-one",
+      "proved": [],
+      "saw": [
+        "dafny"
+      ],
+      "witness": "a=[0], b=[] -> real [0], twin []"
+    },
+    {
+      "task": "dafny_synthesis_task_id_161__removeElements",
+      "op": "off-by-one#3",
+      "proved": [
+        "dafny"
+      ],
+      "saw": [
+        "dafny"
+      ],
+      "witness": "a=[0], b=[] -> real [0], twin []"
+    },
+    {
+      "task": "dafny_synthesis_task_id_2__sharedElements",
+      "op": "boundary-swap",
+      "proved": [
+        "fstar",
+        "spark",
+        "verus"
+      ],
+      "saw": [
+        "dafny",
+        "fstar",
+        "spark",
+        "verus"
+      ],
+      "witness": "a=[0], b=[0] -> real [0], twin []"
+    },
+    {
+      "task": "dafny_synthesis_task_id_2__sharedElements",
+      "op": "off-by-one",
+      "proved": [],
+      "saw": [
+        "dafny"
+      ],
+      "witness": "a=[0], b=[0] -> real [0], twin []"
+    },
+    {
+      "task": "dafny_synthesis_task_id_2__sharedElements",
+      "op": "off-by-one#3",
+      "proved": [
+        "dafny"
+      ],
+      "saw": [
+        "dafny"
+      ],
+      "witness": "a=[0], b=[0] -> real [0], twin []"
+    },
+    {
+      "task": "dafny_synthesis_task_id_249__intersection",
+      "op": "boundary-swap",
+      "proved": [
+        "fstar",
+        "spark",
+        "verus"
+      ],
+      "saw": [
+        "dafny",
+        "fstar",
+        "spark",
+        "verus"
+      ],
+      "witness": "a=[0], b=[0] -> real [0], twin []"
+    },
+    {
+      "task": "dafny_synthesis_task_id_249__intersection",
+      "op": "off-by-one",
+      "proved": [],
+      "saw": [
+        "dafny"
+      ],
+      "witness": "a=[0], b=[0] -> real [0], twin []"
+    },
+    {
+      "task": "dafny_synthesis_task_id_249__intersection",
+      "op": "off-by-one#3",
+      "proved": [
+        "dafny"
+      ],
+      "saw": [
+        "dafny"
+      ],
+      "witness": "a=[0], b=[0] -> real [0], twin []"
+    },
+    {
+      "task": "dafny_synthesis_task_id_397__medianOfThree",
+      "op": "collapse-if",
+      "proved": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "saw": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "witness": "a=0, b=1, c=0 -> real 0, twin 1"
+    },
+    {
+      "task": "dafny_synthesis_task_id_567__isSorted",
+      "op": "boundary-swap",
+      "proved": [
+        "fstar",
+        "spark",
+        "verus"
+      ],
+      "saw": [
+        "framac",
+        "fstar",
+        "spark",
+        "verus"
+      ],
+      "witness": "a=[1, 0] -> real False, twin True"
+    },
+    {
+      "task": "dafny_synthesis_task_id_567__isSorted",
+      "op": "off-by-one",
+      "proved": [],
+      "saw": [
+        "framac"
+      ],
+      "witness": "a=[1, 0] -> real False, twin True"
+    },
+    {
+      "task": "dafny_synthesis_task_id_567__isSorted",
+      "op": "off-by-one#2",
+      "proved": [],
+      "saw": [
+        "framac"
+      ],
+      "witness": "a=[1, 0] -> real False, twin True"
+    },
+    {
+      "task": "dafny_synthesis_task_id_603__lucidNumbers",
+      "op": "compare-flip",
+      "proved": [
+        "dafny",
+        "fstar",
+        "lean",
+        "rocq",
+        "verus"
+      ],
+      "saw": [
+        "dafny",
+        "fstar",
+        "lean",
+        "rocq",
+        "verus"
+      ],
+      "witness": "n=0 -> real [0], twin []"
+    },
+    {
+      "task": "dafny_training_tmp_tmp_n2kixni_session1_training1__abs",
+      "op": "collapse-if",
+      "proved": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "saw": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "witness": "x=1 -> real 1, twin -1"
+    },
+    {
+      "task": "dafny_training_tmp_tmp_n2kixni_session1_training1__find",
+      "op": "collapse-if",
+      "proved": [],
+      "saw": [
+        "dafny"
+      ],
+      "witness": "a=[0], key=1 -> real -10, twin 0"
+    },
+    {
+      "task": "dafny_training_tmp_tmp_n2kixni_session1_training1__find",
+      "op": "negate-cond",
+      "proved": [
+        "dafny"
+      ],
+      "saw": [
+        "dafny"
+      ],
+      "witness": "a=[0], key=0 -> real 0, twin -10"
+    },
+    {
+      "task": "dafny_training_tmp_tmp_n2kixni_session1_training1__max",
+      "op": "collapse-if",
+      "proved": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "saw": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "witness": "x=0, y=0 -> real 1, twin 0"
+    },
+    {
+      "task": "dafny_workout_tmp_tmp0abkw6f8_starter_ex12__findMax",
+      "op": "compare-flip#1",
+      "proved": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "saw": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "witness": "a=[0, 0] -> real 0, twin 1"
+    },
+    {
+      "task": "laboratory_tmp_tmps8ws6mu2_dafny_tutorial_exercise12__findMax",
+      "op": "compare-flip#1",
+      "proved": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "saw": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "witness": "a=[0, 0] -> real 0, twin 1"
+    },
+    {
+      "task": "nitwit_tmp_tmplm098gxz_nit__nit_add",
+      "op": "wrong-var",
+      "proved": [
+        "dafny",
+        "fstar",
+        "spark"
+      ],
+      "saw": [
+        "dafny",
+        "fstar",
+        "spark"
+      ],
+      "witness": "b=2, x=1, y=0 -> real [1, 0], twin [0, 0]"
+    },
+    {
+      "task": "nitwit_tmp_tmplm098gxz_nit__nit_increment",
+      "op": "off-by-one#4",
+      "proved": [
+        "dafny",
+        "fstar",
+        "spark"
+      ],
+      "saw": [
+        "dafny",
+        "framac",
+        "fstar",
+        "spark"
+      ],
+      "witness": "b=2, n=0 -> real [1, 0], twin [0, 0]"
+    },
+    {
+      "task": "nitwit_tmp_tmplm098gxz_nit__nit_increment",
+      "op": "off-by-one#5",
+      "proved": [],
+      "saw": [
+        "framac"
+      ],
+      "witness": "b=2, n=0 -> real [1, 0], twin [0, 0]"
+    },
+    {
+      "task": "nitwit_tmp_tmplm098gxz_nit__nit_increment",
+      "op": "off-by-one#6",
+      "proved": [],
+      "saw": [
+        "framac"
+      ],
+      "witness": "b=2, n=0 -> real [1, 0], twin [1, 1]"
+    },
+    {
+      "task": "stunning_palm_tree_tmp_tmpr84c2iwh_ch1__minUnderSpec",
+      "op": "off-by-one",
+      "proved": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "saw": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "witness": "x=0, y=0 -> real -1, twin -2"
+    },
+    {
+      "task": "stunning_palm_tree_tmp_tmpr84c2iwh_ch1__reconstructFromMaxSum",
+      "op": "wrong-var#9",
+      "proved": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "saw": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "witness": "s=0, m=1 -> real [1, -1], twin [-1, 1]"
+    }
+  ],
+  "real_vectors": [
+    {
+      "task": "clover_abs__abs",
+      "verified": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "clover_array_product__arrayProduct",
+      "verified": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "clover_array_sum__arraySum",
+      "verified": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "clover_avg__computeAvg",
+      "verified": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "clover_cal_ans__calDiv",
+      "verified": [
+        "dafny",
+        "framac",
+        "spark"
+      ],
+      "decided": [
+        "dafny",
+        "framac",
+        "spark"
+      ]
+    },
+    {
+      "task": "clover_cal_sum__sum",
+      "verified": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "clover_double_array_elements__double_array_elements",
+      "verified": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "clover_double_quadruple__doubleQuadruple",
+      "verified": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "clover_find__find",
+      "verified": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "clover_integer_square_root__squareRoot",
+      "verified": [
+        "dafny",
+        "framac",
+        "rocq"
+      ],
+      "decided": [
+        "dafny",
+        "framac",
+        "rocq"
+      ]
+    },
+    {
+      "task": "clover_is_even__computeIsEven",
+      "verified": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "clover_linear_search1__linearSearch",
+      "verified": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "clover_min_array__minArray",
+      "verified": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "clover_min_of_two__min",
+      "verified": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "clover_multi_return__multipleReturns",
+      "verified": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "clover_quotient__quotient",
+      "verified": [
+        "dafny",
+        "fstar",
+        "rocq",
+        "spark"
+      ],
+      "decided": [
+        "dafny",
+        "fstar",
+        "rocq",
+        "spark"
+      ]
+    },
+    {
+      "task": "clover_replace__replace",
+      "verified": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "clover_return_seven__m",
+      "verified": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "clover_rotate__rotate",
+      "verified": [
+        "dafny",
+        "fstar",
+        "lean",
+        "rocq"
+      ],
+      "decided": [
+        "dafny",
+        "fstar",
+        "lean",
+        "rocq"
+      ]
+    },
+    {
+      "task": "clover_swap__swap",
+      "verified": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "clover_swap_arith__swapArithmetic",
+      "verified": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "clover_swap_in_array__swap",
+      "verified": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "clover_swap_sim__swapSimultaneous",
+      "verified": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "clover_test_array__testArrayElements",
+      "verified": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "clover_triple__triple",
+      "verified": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "clover_triple3__triple",
+      "verified": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "clover_triple4__triple",
+      "verified": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "dafny_exercises_tmp_tmpjm75muf__session2exercises_exercisefibonacci__fibonacci1",
+      "verified": [
+        "dafny"
+      ],
+      "decided": [
+        "dafny"
+      ]
+    },
+    {
+      "task": "dafny_exercises_tmp_tmpjm75muf__session2exercises_exercisefibonacci__fibonacci2",
+      "verified": [
+        "dafny"
+      ],
+      "decided": [
+        "dafny"
+      ]
+    },
+    {
+      "task": "dafny_exercises_tmp_tmpjm75muf__session2exercises_exercisefibonacci__fibonacci3",
+      "verified": [
+        "dafny"
+      ],
+      "decided": [
+        "dafny"
+      ]
+    },
+    {
+      "task": "dafny_exercises_tmp_tmpjm75muf__session2exercises_exercisesquare_root__mroot1",
+      "verified": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "dafny_exercises_tmp_tmpjm75muf__session2exercises_exercisesquare_root__mroot2",
+      "verified": [
+        "dafny",
+        "framac",
+        "fstar",
+        "rocq",
+        "spark"
+      ],
+      "decided": [
+        "dafny",
+        "framac",
+        "fstar",
+        "rocq",
+        "spark"
+      ]
+    },
+    {
+      "task": "dafny_exercises_tmp_tmpjm75muf__session2exercises_exercisesquare_root__mroot3",
+      "verified": [
+        "dafny",
+        "fstar",
+        "rocq"
+      ],
+      "decided": [
+        "dafny",
+        "fstar",
+        "rocq"
+      ]
+    },
+    {
+      "task": "dafny_exercises_tmp_tmpjm75muf__session3exercises_exercisemaximum__mfirstMaximum",
+      "verified": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "dafny_exercises_tmp_tmpjm75muf__session3exercises_exercisemaximum__mmaximum1",
+      "verified": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "dafny_exercises_tmp_tmpjm75muf__session4exercises_exercisefirstzero__mfirstCero",
+      "verified": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "dafny_experiences_tmp_tmp150sm9qy_dafny_started_tutorial_dafny_tutorial_array__findMax",
+      "verified": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "dafnyexercises_tmp_tmpd6qyevja_part1_q1__addArrays",
+      "verified": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "dafnyprograms_tmp_tmp74_f9k_c_invertarray__invertArray",
+      "verified": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "dafnyprojects_tmp_tmp2acw_s4s_longestprefix__longestPrefix",
+      "verified": [
+        "dafny",
+        "framac"
+      ],
+      "decided": [
+        "dafny",
+        "framac"
+      ]
+    },
+    {
+      "task": "dafny_learning_experience_tmp_tmpuxvcet_u_week1_7_a2_q1_trimmed_copy_______mult",
+      "verified": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark"
+      ],
+      "decided": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark"
+      ]
+    },
+    {
+      "task": "dafny_learning_experience_tmp_tmpuxvcet_u_week1_7_maxsum__maxSum",
+      "verified": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "dafny_learning_experience_tmp_tmpuxvcet_u_week1_7_week5_computepower__calcPower",
+      "verified": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "dafny_learning_experience_tmp_tmpuxvcet_u_week8_12_a3_search_findpositionofindex__findPositionOfElement",
+      "verified": [],
+      "decided": []
+    },
+    {
+      "task": "dafny_learning_experience_tmp_tmpuxvcet_u_week8_12_week9_lemma__assignmentsToMarkOne",
+      "verified": [
+        "fstar",
+        "spark"
+      ],
+      "decided": [
+        "fstar",
+        "spark"
+      ]
+    },
+    {
+      "task": "dafny_programs_tmp_tmp99966ew4_mymax__max",
+      "verified": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "dafny_verify_tmp_tmphq7j0row_ai_agent_validation_examples__computePower",
+      "verified": [
+        "dafny",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "dafny_verify_tmp_tmphq7j0row_ai_agent_validation_examples__cube",
+      "verified": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "dafny_verify_tmp_tmphq7j0row_ai_agent_verify_examples_computepower__computePower",
+      "verified": [
+        "dafny",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "dafny_verify_tmp_tmphq7j0row_ai_agent_verify_examples_cube__cube",
+      "verified": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "dafny_verify_tmp_tmphq7j0row_fine_tune_examples_50_examples_41__main_v",
+      "verified": [
+        "dafny",
+        "fstar",
+        "spark"
+      ],
+      "decided": [
+        "dafny",
+        "fstar",
+        "spark"
+      ]
+    },
+    {
+      "task": "dafny_verify_tmp_tmphq7j0row_fine_tune_examples_error_data_completion_11__main_v",
+      "verified": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "dafny_verify_tmp_tmphq7j0row_generated_code_15__main_v",
+      "verified": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "dafny_verify_tmp_tmphq7j0row_generated_code_computepower__computePower",
+      "verified": [
+        "dafny",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "dafny_verify_tmp_tmphq7j0row_generated_code_minimum__minimum",
+      "verified": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "dafny_verify_tmp_tmphq7j0row_generated_code_mult__mult",
+      "verified": [
+        "dafny"
+      ],
+      "decided": [
+        "dafny"
+      ]
+    },
+    {
+      "task": "dafny_verify_tmp_tmphq7j0row_test_cases_function__triple_p",
+      "verified": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "dafny_verify_tmp_tmphq7j0row_test_cases_function__tripleConditions",
+      "verified": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "dafny_verify_tmp_tmphq7j0row_test_cases_ghost__doubleQuadruple",
+      "verified": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "dafny_verify_tmp_tmphq7j0row_test_cases_ghost__m",
+      "verified": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "dafny_verify_tmp_tmphq7j0row_test_cases_ghost__myMethod",
+      "verified": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "dafny_verify_tmp_tmphq7j0row_test_cases_ghost__triple",
+      "verified": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "dafny_verify_tmp_tmphq7j0row_test_cases_index__index",
+      "verified": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "dafny_verify_tmp_tmphq7j0row_test_cases_index__maxSum",
+      "verified": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "dafny_verify_tmp_tmphq7j0row_test_cases_index__min",
+      "verified": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "dafny_verify_tmp_tmphq7j0row_test_cases_index__reconstructFromMaxSum",
+      "verified": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "dafny_verify_tmp_tmphq7j0row_test_cases_loopinvariant__downWhileGreater",
+      "verified": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "dafny_verify_tmp_tmphq7j0row_test_cases_loopinvariant__downWhileNotEqual",
+      "verified": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "dafny_verify_tmp_tmphq7j0row_test_cases_loopinvariant__upWhileLess",
+      "verified": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "dafny_verify_tmp_tmphq7j0row_test_cases_loopinvariant__upWhileNotEqual",
+      "verified": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "dafny_verify_tmp_tmphq7j0row_test_cases_triple__tripleConditions",
+      "verified": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "dafny_verify_tmp_tmphq7j0row_dataset_c_convert_examples_11__main_v",
+      "verified": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "dafny_verify_tmp_tmphq7j0row_dataset_c_convert_examples_15__main_v",
+      "verified": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "dafny_verify_tmp_tmphq7j0row_dataset_bql_exampls_min__min",
+      "verified": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "dafny_verify_tmp_tmphq7j0row_dataset_bql_exampls_smallnum__add_small_numbers",
+      "verified": [
+        "dafny"
+      ],
+      "decided": [
+        "dafny"
+      ]
+    },
+    {
+      "task": "dafny_verify_tmp_tmphq7j0row_dataset_bql_exampls_square__square",
+      "verified": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "dafny_verify_tmp_tmphq7j0row_dataset_error_data_real_error_iseven_success_1__is_even",
+      "verified": [
+        "dafny",
+        "fstar",
+        "lean",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "fstar",
+        "lean",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "dafny_tmp_tmp0wu8wmfr_heimaverkefni_1_linearsearch__searchRecursive",
+      "verified": [
+        "dafny",
+        "framac",
+        "fstar",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "framac",
+        "fstar",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "dafny_tmp_tmp0wu8wmfr_heimaverkefni_3_insertionsortmultiset__search",
+      "verified": [
+        "dafny",
+        "framac",
+        "fstar",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "framac",
+        "fstar",
+        "verus"
+      ]
+    },
+    {
+      "task": "dafny_tmp_tmp0wu8wmfr_tests_f1a__f",
+      "verified": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "dafny_tmp_tmp0wu8wmfr_tests_f1a__mid",
+      "verified": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "dafny_tmp_tmp0wu8wmfr_tests_sumintsloop__sumIntsLoop",
+      "verified": [
+        "dafny",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "dafny_tmp_tmpj88zq5zt_2_kontrakte_max__max",
+      "verified": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "dafny_tmp_tmpmvs2dmry_slowmax__slow_max",
+      "verified": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "dafny_tmp_tmpmvs2dmry_examples1__abs",
+      "verified": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "dafny_tmp_tmpmvs2dmry_examples1__max",
+      "verified": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "dafny_tmp_tmpmvs2dmry_examples1__multiReturn",
+      "verified": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "dafny_tmp_tmpmvs2dmry_examples2__product",
+      "verified": [
+        "dafny",
+        "framac",
+        "fstar",
+        "rocq"
+      ],
+      "decided": [
+        "dafny",
+        "framac",
+        "fstar",
+        "rocq"
+      ]
+    },
+    {
+      "task": "dafny_tmp_tmpmvs2dmry_examples2__add_by_inc",
+      "verified": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "dafny_tmp_tmpmvs2dmry_examples2__gcdCalc",
+      "verified": [
+        "dafny",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "dafny_tmp_tmpmvs2dmry_pancakesort_flip__flip",
+      "verified": [
+        "dafny",
+        "framac",
+        "fstar",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "framac",
+        "fstar",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "dafny_tmp_tmpv_d3qi10_2_min__minArray",
+      "verified": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "dafny_tmp_tmpv_d3qi10_2_min__minMethod",
+      "verified": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "final_project_dafny_tmp_tmpmcywuqox_attempts_exercise3_increment_array__incrementArray",
+      "verified": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "final_project_dafny_tmp_tmpmcywuqox_attempts_exercise4_find_max__findMax",
+      "verified": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "final_project_dafny_tmp_tmpmcywuqox_attempts_exercise6_binary_search__binarySearch",
+      "verified": [
+        "dafny",
+        "framac",
+        "fstar",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "framac",
+        "fstar",
+        "verus"
+      ]
+    },
+    {
+      "task": "final_project_dafny_tmp_tmpmcywuqox_attempts_insertion_sort_normal__lookForMin",
+      "verified": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "final_project_dafny_tmp_tmpmcywuqox_final_project_3__nonZeroReturn",
+      "verified": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "flexweek_tmp_tmpc_tfdj_3_ex3__max",
+      "verified": [
+        "dafny",
+        "framac",
+        "fstar",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "framac",
+        "fstar",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "formal_methods_of_software_development_tmp_tmppryvbyty_bloque_1_lab3__computeFact",
+      "verified": [
+        "dafny",
+        "fstar",
+        "lean",
+        "rocq",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "fstar",
+        "lean",
+        "rocq",
+        "verus"
+      ]
+    },
+    {
+      "task": "formal_methods_of_software_development_tmp_tmppryvbyty_bloque_1_lab3__computeFact2",
+      "verified": [
+        "dafny",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "formal_methods_of_software_development_tmp_tmppryvbyty_bloque_1_lab3__sqare",
+      "verified": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "formal_methods_of_software_development_tmp_tmppryvbyty_bloque_1_lab3__sqare2",
+      "verified": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "formalmethods_tmp_tmpvda2r3_o_dafny_invariants_ex1__mult",
+      "verified": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "formalmethods_tmp_tmpvda2r3_o_dafny_invariants_ex2__pot",
+      "verified": [
+        "dafny",
+        "fstar",
+        "lean",
+        "rocq",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "fstar",
+        "lean",
+        "rocq",
+        "verus"
+      ]
+    },
+    {
+      "task": "m2_tmp_tmp2laaavvl_software_verification_exercices_exo4_countandreturn__countToAndReturnN",
+      "verified": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "m2_tmp_tmp2laaavvl_software_verification_exercices_exo7_computesum__computeSum",
+      "verified": [
+        "dafny",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "m2_tmp_tmp2laaavvl_software_verification_exercices_exo9_carre__carre",
+      "verified": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "mfes_2021_tmp_tmpuljn8zd9_fcul_exercises_10_find__find",
+      "verified": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "mfes_2021_tmp_tmpuljn8zd9_fcul_exercises_8_sum__sum",
+      "verified": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "mfs_tmp_tmpmmnu354t_testes_anteriores_t2_ex5_2020_2__leq",
+      "verified": [
+        "dafny",
+        "framac"
+      ],
+      "decided": [
+        "dafny",
+        "framac"
+      ]
+    },
+    {
+      "task": "mieic_mfes_tmp_tmpq3ho7nve_exams_appeal_20_p4__calcF",
+      "verified": [
+        "dafny"
+      ],
+      "decided": [
+        "dafny"
+      ]
+    },
+    {
+      "task": "mieic_mfes_tmp_tmpq3ho7nve_exams_mt2_19_p4__calcR",
+      "verified": [
+        "dafny",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "metodos_formais_tmp_tmpbez22nnn_aula_2_ex1__mult",
+      "verified": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "metodos_formais_tmp_tmpbez22nnn_aula_2_ex2__pot",
+      "verified": [
+        "dafny",
+        "fstar",
+        "lean",
+        "rocq",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "fstar",
+        "lean",
+        "rocq",
+        "verus"
+      ]
+    },
+    {
+      "task": "metodos_formais_tmp_tmpbez22nnn_aula_4_ex3__computeFib",
+      "verified": [
+        "dafny"
+      ],
+      "decided": [
+        "dafny"
+      ]
+    },
+    {
+      "task": "metodos_formais_tmp_tmpql2hwcsh_invariantes_fatorial2__fatorial",
+      "verified": [
+        "dafny",
+        "fstar",
+        "lean",
+        "rocq",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "fstar",
+        "lean",
+        "rocq",
+        "verus"
+      ]
+    },
+    {
+      "task": "metodos_formais_tmp_tmpql2hwcsh_invariantes_fibonacci__computeFib",
+      "verified": [
+        "dafny"
+      ],
+      "decided": [
+        "dafny"
+      ]
+    },
+    {
+      "task": "metodos_formais_tmp_tmpql2hwcsh_invariantes_multiplicador__mult",
+      "verified": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "metodos_formais_tmp_tmpql2hwcsh_invariantes_potencia__pot",
+      "verified": [
+        "dafny",
+        "fstar",
+        "lean",
+        "rocq",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "fstar",
+        "lean",
+        "rocq",
+        "verus"
+      ]
+    },
+    {
+      "task": "prog_fun_solutions_tmp_tmp7_gmnz5f_extra_mod__mod",
+      "verified": [
+        "dafny",
+        "fstar",
+        "lean",
+        "rocq",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "fstar",
+        "lean",
+        "rocq",
+        "verus"
+      ]
+    },
+    {
+      "task": "prog_fun_solutions_tmp_tmp7_gmnz5f_extra_pow__pow",
+      "verified": [
+        "dafny",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "prog_fun_solutions_tmp_tmp7_gmnz5f_extra_sum__sum",
+      "verified": [
+        "dafny",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "prog_fun_solutions_tmp_tmp7_gmnz5f_mockexam2_p2__problem2",
+      "verified": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "prog_fun_solutions_tmp_tmp7_gmnz5f_mockexam2_p3__problem3",
+      "verified": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "prog_fun_solutions_tmp_tmp7_gmnz5f_mockexam2_p5__problem5",
+      "verified": [
+        "dafny"
+      ],
+      "decided": [
+        "dafny"
+      ]
+    },
+    {
+      "task": "program_verification_dataset_tmp_tmpgbdrlnu__dafny_algorithms_and_leetcode_examples_simplemultiplication__foo",
+      "verified": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "program_verification_dataset_tmp_tmpgbdrlnu__dafny_basic_examples_add_by_one__add_by_one",
+      "verified": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "program_verification_dataset_tmp_tmpgbdrlnu__dafny_basic_examples_add_by_one_details__plus_one",
+      "verified": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "program_verification_dataset_tmp_tmpgbdrlnu__dafny_basic_examples_find_max__findMax",
+      "verified": [
+        "dafny"
+      ],
+      "decided": [
+        "dafny"
+      ]
+    },
+    {
+      "task": "program_verification_dataset_tmp_tmpgbdrlnu__dafny_basic_examples_sumto_sol__sumUpTo",
+      "verified": [
+        "dafny",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "program_verification_dataset_tmp_tmpgbdrlnu__dafny_from_dafny_main_repo_dafny2_classics__additiveFactorial",
+      "verified": [
+        "dafny"
+      ],
+      "decided": [
+        "dafny"
+      ]
+    },
+    {
+      "task": "program_verification_dataset_tmp_tmpgbdrlnu__dafny_variant_examples_katzmanna__ninetyOne",
+      "verified": [
+        "dafny"
+      ],
+      "decided": [
+        "dafny"
+      ]
+    },
+    {
+      "task": "programmverifikation_und_synthese_tmp_tmppurk6ime_pvs_assignment_ex_04_hoangkim_ex_04_hoangkim__sumOdds",
+      "verified": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "programmverifikation_und_synthese_tmp_tmppurk6ime_pvs_assignment_ex_05_hoangkim_ex_05_hoangkim__factIter",
+      "verified": [
+        "dafny",
+        "fstar",
+        "lean",
+        "rocq",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "fstar",
+        "lean",
+        "rocq",
+        "verus"
+      ]
+    },
+    {
+      "task": "programmverifikation_und_synthese_tmp_tmppurk6ime_pvs_assignment_ex_05_hoangkim_ex_05_hoangkim__fibIter",
+      "verified": [
+        "dafny"
+      ],
+      "decided": [
+        "dafny"
+      ]
+    },
+    {
+      "task": "programmverifikation_und_synthese_tmp_tmppurk6ime_pvs_assignment_ex_05_hoangkim_ex_05_hoangkim__gcdI",
+      "verified": [
+        "dafny",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "programmverifikation_und_synthese_tmp_tmppurk6ime_pvs_assignment_ex_06_hoangkim_ex06_solution__gcdI",
+      "verified": [
+        "dafny",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "programmverifikation_und_synthese_tmp_tmppurk6ime_pvs_assignment_ex_06_hoangkim_ex_06_hoangkim__gcdI",
+      "verified": [
+        "dafny",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "programmverifikation_und_synthese_tmp_tmppurk6ime_pvs_assignment_ex_07_hoangkim_ex07_hoangkim__findMin",
+      "verified": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "programmverifikation_und_synthese_tmp_tmppurk6ime_pvs_assignment_ex_07_hoangkim_ex07_hoangkim__swap",
+      "verified": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "programmverifikation_und_synthese_tmp_tmppurk6ime_pvs_assignment_ex_10_hoangkim_ex10_hoangkim__square0",
+      "verified": [
+        "dafny",
+        "framac",
+        "fstar",
+        "spark"
+      ],
+      "decided": [
+        "dafny",
+        "framac",
+        "fstar",
+        "spark"
+      ]
+    },
+    {
+      "task": "programmverifikation_und_synthese_tmp_tmppurk6ime_pvs_assignment_ex_10_hoangkim_ex10_hoangkim__square1",
+      "verified": [
+        "dafny",
+        "framac",
+        "fstar",
+        "spark"
+      ],
+      "decided": [
+        "dafny",
+        "framac",
+        "fstar",
+        "spark"
+      ]
+    },
+    {
+      "task": "programmverifikation_und_synthese_tmp_tmppurk6ime_example_dafnyintro_01_simple_loops__gauss",
+      "verified": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "programmverifikation_und_synthese_tmp_tmppurk6ime_example_dafnyintro_01_simple_loops__sumOdds",
+      "verified": [
+        "dafny",
+        "framac",
+        "fstar",
+        "spark"
+      ],
+      "decided": [
+        "dafny",
+        "framac",
+        "fstar",
+        "spark"
+      ]
+    },
+    {
+      "task": "projectoscvs_tmp_tmp_02_gmcw_handout_1_cvs_handout1_55754_55780__euclidianDiv",
+      "verified": [
+        "dafny",
+        "framac",
+        "lean",
+        "rocq"
+      ],
+      "decided": [
+        "dafny",
+        "framac",
+        "lean",
+        "rocq"
+      ]
+    },
+    {
+      "task": "projectoscvs_tmp_tmp_02_gmcw_handout_1_cvs_handout1_55754_55780__peasantMult",
+      "verified": [
+        "dafny",
+        "framac",
+        "fstar",
+        "spark"
+      ],
+      "decided": [
+        "dafny",
+        "framac",
+        "fstar",
+        "spark"
+      ]
+    },
+    {
+      "task": "seng2011_tmp_tmpgk5jq85q_ass1_ex8__getEven",
+      "verified": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "seng2011_tmp_tmpgk5jq85q_flex_ex2__max",
+      "verified": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "seng2011_tmp_tmpgk5jq85q_p2__absIt",
+      "verified": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "software_verification_tmp_tmpv4ueky2d_best_time_to_buy_and_sell_stock_best_time_to_buy_and_sell_stock__best_time_to_buy_and_sell_stock",
+      "verified": [
+        "dafny",
+        "framac",
+        "lean",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "framac",
+        "lean",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "software_building_and_verification_projects_tmp_tmp5tm1srrn_cvs_projeto_aula2__m3",
+      "verified": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "software_building_and_verification_projects_tmp_tmp5tm1srrn_cvs_projeto_aula2__m4",
+      "verified": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "software_building_and_verification_projects_tmp_tmp5tm1srrn_cvs_projeto_aula2__max",
+      "verified": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "software_building_and_verification_projects_tmp_tmp5tm1srrn_cvs_projeto_aula2__mystery1",
+      "verified": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "tfg_tmp_tmpbvsao41w_algoritmos_dafny_div_ent_it__div_ent_it",
+      "verified": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "workshop_tmp_tmp0cu11bdq_lecture_answers_triangle_number__triangleNumber",
+      "verified": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "workshop_tmp_tmp0cu11bdq_workshop_answers_question6__arrayUpToN",
+      "verified": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "bbfny_tmp_tmpw4m0jvl0_enjoying__abs",
+      "verified": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "bbfny_tmp_tmpw4m0jvl0_enjoying__max",
+      "verified": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "bbfny_tmp_tmpw4m0jvl0_enjoying__multipleReturns",
+      "verified": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "cmsc433_tmp_tmpe3ob3a0o_dafny_project1_p1_assignment_2__arraySum",
+      "verified": [
+        "dafny"
+      ],
+      "decided": [
+        "dafny"
+      ]
+    },
+    {
+      "task": "cmsc433_tmp_tmpe3ob3a0o_dafny_project1_p1_assignment_2__intDiv",
+      "verified": [
+        "dafny",
+        "framac",
+        "fstar",
+        "rocq",
+        "spark"
+      ],
+      "decided": [
+        "dafny",
+        "framac",
+        "fstar",
+        "rocq",
+        "spark"
+      ]
+    },
+    {
+      "task": "cmsc433_tmp_tmpe3ob3a0o_dafny_project1_p1_assignment_2__isPrime",
+      "verified": [
+        "dafny"
+      ],
+      "decided": [
+        "dafny"
+      ]
+    },
+    {
+      "task": "cmsc433_tmp_tmpe3ob3a0o_dafny_project1_p1_assignment_2__plusOne",
+      "verified": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "cmsc433_tmp_tmpe3ob3a0o_dafny_project1_p1_assignment_2__reverse",
+      "verified": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "cs245_verification_tmp_tmp0h_nxhqp_a8_q1__a8Q1",
+      "verified": [
+        "dafny"
+      ],
+      "decided": [
+        "dafny"
+      ]
+    },
+    {
+      "task": "cs245_verification_tmp_tmp0h_nxhqp_a8_q2__a8Q1",
+      "verified": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "cs245_verification_tmp_tmp0h_nxhqp_assignments_simple__simple",
+      "verified": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "cs245_verification_tmp_tmp0h_nxhqp_sortingissues_firstattempt__sort",
+      "verified": [
+        "dafny"
+      ],
+      "decided": [
+        "dafny"
+      ]
+    },
+    {
+      "task": "cs245_verification_tmp_tmp0h_nxhqp_power__compute_power",
+      "verified": [
+        "dafny"
+      ],
+      "decided": [
+        "dafny"
+      ]
+    },
+    {
+      "task": "cs357_tmp_tmpn4fsvwzs_lab7_question2__two",
+      "verified": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "cs357_tmp_tmpn4fsvwzs_lab7_question5__a1",
+      "verified": [
+        "dafny",
+        "framac",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "framac",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "dafl_tmp_tmp_r3_8w3y_dafny_examples_uiowa_fibonacci__computeFib",
+      "verified": [
+        "dafny"
+      ],
+      "decided": [
+        "dafny"
+      ]
+    },
+    {
+      "task": "dafl_tmp_tmp_r3_8w3y_dafny_examples_uiowa_modifying_arrays__incrementArray",
+      "verified": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "dafny_duck_tmp_tmplawbgxjo_p3__max",
+      "verified": [
+        "dafny",
+        "framac",
+        "fstar",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "framac",
+        "fstar",
+        "rocq",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "dafny_exercise_tmp_tmpouftptir_appendarray__appendArray",
+      "verified": [
+        "dafny",
+        "framac",
+        "fstar",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "framac",
+        "fstar",
+        "rocq",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "dafny_exercise_tmp_tmpouftptir_maxarray__maxArray",
+      "verified": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "dafny_exercise_tmp_tmpouftptir_prac3_ex2__getEven",
+      "verified": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "dafny_language_server_tmp_tmpkir0kenl_test_vscomp2010_problem1_summax__m",
+      "verified": [
+        "dafny"
+      ],
+      "decided": [
+        "dafny"
+      ]
+    },
+    {
+      "task": "dafny_language_server_tmp_tmpkir0kenl_test_vsi_benchmarks_b1__add",
+      "verified": [
+        "dafny",
+        "framac",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "framac",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "dafny_language_server_tmp_tmpkir0kenl_test_dafny1_cubes__cubes",
+      "verified": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "dafny_language_server_tmp_tmpkir0kenl_test_dafny2_turingfactorial__computeFactorial",
+      "verified": [
+        "dafny"
+      ],
+      "decided": [
+        "dafny"
+      ]
+    },
+    {
+      "task": "dafny_language_server_tmp_tmpkir0kenl_test_tutorial_maximum__maximum",
+      "verified": [
+        "dafny"
+      ],
+      "decided": [
+        "dafny"
+      ]
+    },
+    {
+      "task": "dafny_learn_tmp_tmpn94ir40q_r01_assertions__abs",
+      "verified": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "dafny_learn_tmp_tmpn94ir40q_r01_assertions__max",
+      "verified": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "dafny_learn_tmp_tmpn94ir40q_r01_functions__abs",
+      "verified": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "dafny_learn_tmp_tmpn94ir40q_r01_functions__testDouble",
+      "verified": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "dafny_programs_tmp_tmpcwodh6qh_src_expt__expt",
+      "verified": [
+        "dafny",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "dafny_programs_tmp_tmpcwodh6qh_src_factorial__factorial",
+      "verified": [
+        "dafny",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "dafny_programs_tmp_tmpcwodh6qh_src_max__max",
+      "verified": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "dafny_synthesis_task_id_101__kthElement",
+      "verified": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "dafny_synthesis_task_id_106__appendArrayToSeq",
+      "verified": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "dafny_synthesis_task_id_126__sumOfCommonDivisors",
+      "verified": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "verus"
+      ]
+    },
+    {
+      "task": "dafny_synthesis_task_id_127__multiply",
+      "verified": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "dafny_synthesis_task_id_135__nthHexagonalNumber",
+      "verified": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "dafny_synthesis_task_id_14__triangularPrismVolume",
+      "verified": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "dafny_synthesis_task_id_145__maxDifference",
+      "verified": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "dafny_synthesis_task_id_161__removeElements",
+      "verified": [
+        "dafny",
+        "fstar",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "fstar",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "dafny_synthesis_task_id_17__squarePerimeter",
+      "verified": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "dafny_synthesis_task_id_171__pentagonPerimeter",
+      "verified": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "dafny_synthesis_task_id_2__sharedElements",
+      "verified": [
+        "dafny",
+        "fstar",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "fstar",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "dafny_synthesis_task_id_227__minOfThree",
+      "verified": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "dafny_synthesis_task_id_234__cubeVolume",
+      "verified": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "dafny_synthesis_task_id_238__countNonEmptySubstrings",
+      "verified": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "dafny_synthesis_task_id_240__replaceLastElement",
+      "verified": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "dafny_synthesis_task_id_242__countCharacters",
+      "verified": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "dafny_synthesis_task_id_249__intersection",
+      "verified": [
+        "dafny",
+        "fstar",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "fstar",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "dafny_synthesis_task_id_257__swap",
+      "verified": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "dafny_synthesis_task_id_261__elementWiseDivision",
+      "verified": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "dafny_synthesis_task_id_262__splitArray",
+      "verified": [
+        "dafny",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "dafny_synthesis_task_id_264__dogYears",
+      "verified": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "dafny_synthesis_task_id_266__lateralSurfaceArea",
+      "verified": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "dafny_synthesis_task_id_267__sumOfSquaresOfFirstNOddNumbers",
+      "verified": [
+        "dafny",
+        "framac",
+        "fstar",
+        "rocq",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "framac",
+        "fstar",
+        "rocq",
+        "verus"
+      ]
+    },
+    {
+      "task": "dafny_synthesis_task_id_268__starNumber",
+      "verified": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "dafny_synthesis_task_id_269__asciiValue",
+      "verified": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "dafny_synthesis_task_id_273__subtractSequences",
+      "verified": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "dafny_synthesis_task_id_279__nthDecagonalNumber",
+      "verified": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "dafny_synthesis_task_id_282__elementWiseSubtraction",
+      "verified": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "dafny_synthesis_task_id_284__allElementsEqual",
+      "verified": [
+        "dafny",
+        "fstar"
+      ],
+      "decided": [
+        "dafny",
+        "fstar"
+      ]
+    },
+    {
+      "task": "dafny_synthesis_task_id_292__quotient",
+      "verified": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "dafny_synthesis_task_id_3__isNonPrime",
+      "verified": [
+        "dafny",
+        "fstar",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "fstar",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "dafny_synthesis_task_id_304__elementAtIndexAfterRotation",
+      "verified": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "dafny_synthesis_task_id_307__deepCopySeq",
+      "verified": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "dafny_synthesis_task_id_309__max",
+      "verified": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "dafny_synthesis_task_id_396__startAndEndWithSameChar",
+      "verified": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "dafny_synthesis_task_id_397__medianOfThree",
+      "verified": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "dafny_synthesis_task_id_404__min",
+      "verified": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "dafny_synthesis_task_id_406__isOdd",
+      "verified": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "dafny_synthesis_task_id_412__removeOddNumbers",
+      "verified": [
+        "dafny",
+        "framac",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "framac",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "dafny_synthesis_task_id_414__anyValueExists",
+      "verified": [
+        "dafny",
+        "fstar",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "fstar",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "dafny_synthesis_task_id_426__filterOddNumbers",
+      "verified": [
+        "dafny",
+        "framac",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "framac",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "dafny_synthesis_task_id_432__medianLength",
+      "verified": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "dafny_synthesis_task_id_433__isGreater",
+      "verified": [
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "dafny_synthesis_task_id_435__lastDigit",
+      "verified": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "dafny_synthesis_task_id_436__findNegativeNumbers",
+      "verified": [
+        "dafny",
+        "framac",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "framac",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "dafny_synthesis_task_id_441__cubeSurfaceArea",
+      "verified": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "dafny_synthesis_task_id_445__multiplyElements",
+      "verified": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "dafny_synthesis_task_id_447__cubeElements",
+      "verified": [
+        "dafny",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "dafny_synthesis_task_id_452__calculateLoss",
+      "verified": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "dafny_synthesis_task_id_458__rectangleArea",
+      "verified": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "dafny_synthesis_task_id_460__getFirstElements",
+      "verified": [
+        "dafny",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "dafny_synthesis_task_id_470__pairwiseAddition",
+      "verified": [
+        "dafny",
+        "fstar",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "fstar",
+        "rocq",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "dafny_synthesis_task_id_472__containsConsecutiveNumbers",
+      "verified": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "dafny_synthesis_task_id_554__findOddNumbers",
+      "verified": [
+        "dafny",
+        "framac",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "framac",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "dafny_synthesis_task_id_567__isSorted",
+      "verified": [
+        "framac",
+        "fstar",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "framac",
+        "fstar",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "dafny_synthesis_task_id_576__isSublist",
+      "verified": [
+        "dafny",
+        "framac",
+        "fstar",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "framac",
+        "fstar",
+        "verus"
+      ]
+    },
+    {
+      "task": "dafny_synthesis_task_id_577__factorialOfLastDigit",
+      "verified": [
+        "dafny",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "dafny_synthesis_task_id_578__interleave",
+      "verified": [
+        "dafny",
+        "framac",
+        "fstar",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "framac",
+        "fstar",
+        "rocq",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "dafny_synthesis_task_id_58__hasOppositeSign",
+      "verified": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "dafny_synthesis_task_id_581__squarePyramidSurfaceArea",
+      "verified": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "dafny_synthesis_task_id_586__splitAndAppend",
+      "verified": [
+        "dafny",
+        "fstar",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "fstar",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "dafny_synthesis_task_id_587__arrayToSeq",
+      "verified": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "dafny_synthesis_task_id_59__nthOctagonalNumber",
+      "verified": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "dafny_synthesis_task_id_591__swapFirstAndLast",
+      "verified": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "dafny_synthesis_task_id_594__firstEvenOddDifference",
+      "verified": [
+        "dafny",
+        "fstar",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "fstar",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "dafny_synthesis_task_id_598__isArmstrong",
+      "verified": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "dafny_synthesis_task_id_600__isEven",
+      "verified": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "dafny_synthesis_task_id_603__lucidNumbers",
+      "verified": [
+        "dafny",
+        "fstar",
+        "lean",
+        "rocq",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "fstar",
+        "lean",
+        "rocq",
+        "verus"
+      ]
+    },
+    {
+      "task": "dafny_synthesis_task_id_605__isPrime",
+      "verified": [
+        "dafny",
+        "fstar",
+        "lean",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "fstar",
+        "lean",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "dafny_synthesis_task_id_610__removeElement",
+      "verified": [
+        "dafny",
+        "framac",
+        "fstar",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "framac",
+        "fstar",
+        "rocq",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "dafny_synthesis_task_id_616__elementWiseModulo",
+      "verified": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "dafny_synthesis_task_id_618__elementWiseDivide",
+      "verified": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "dafny_synthesis_task_id_62__findSmallest",
+      "verified": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "dafny_synthesis_task_id_622__findMedian",
+      "verified": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "dafny_synthesis_task_id_625__swapFirstAndLast",
+      "verified": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "dafny_synthesis_task_id_626__areaOfLargestTriangleInSemicircle",
+      "verified": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "dafny_synthesis_task_id_629__findEvenNumbers",
+      "verified": [
+        "dafny",
+        "framac",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "framac",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "dafny_synthesis_task_id_637__isBreakEven",
+      "verified": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "dafny_synthesis_task_id_641__nthNonagonalNumber",
+      "verified": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "dafny_synthesis_task_id_69__containsSequence",
+      "verified": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "dafny_synthesis_task_id_70__allSequencesEqualLength",
+      "verified": [
+        "dafny",
+        "framac",
+        "fstar",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "framac",
+        "fstar",
+        "verus"
+      ]
+    },
+    {
+      "task": "dafny_synthesis_task_id_728__addLists",
+      "verified": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "dafny_synthesis_task_id_743__rotateRight",
+      "verified": [
+        "dafny",
+        "fstar",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "fstar",
+        "rocq",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "dafny_synthesis_task_id_760__hasOnlyOneDistinctElement",
+      "verified": [
+        "dafny",
+        "fstar"
+      ],
+      "decided": [
+        "dafny",
+        "fstar"
+      ]
+    },
+    {
+      "task": "dafny_synthesis_task_id_762__isMonthWith30Days",
+      "verified": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "dafny_synthesis_task_id_77__isDivisibleBy11",
+      "verified": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "dafny_synthesis_task_id_770__sumOfFourthPowerOfOddNumbers",
+      "verified": [
+        "dafny",
+        "fstar",
+        "rocq"
+      ],
+      "decided": [
+        "dafny",
+        "fstar",
+        "rocq"
+      ]
+    },
+    {
+      "task": "dafny_synthesis_task_id_775__isOddAtIndexOdd",
+      "verified": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "dafny_synthesis_task_id_79__isLengthOdd",
+      "verified": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "dafny_synthesis_task_id_792__countLists",
+      "verified": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "dafny_synthesis_task_id_8__squareElements",
+      "verified": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "dafny_synthesis_task_id_80__tetrahedralNumber",
+      "verified": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "dafny_synthesis_task_id_801__countEqualNumbers",
+      "verified": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "dafny_synthesis_task_id_804__isProductEven",
+      "verified": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "dafny_synthesis_task_id_808__containsK",
+      "verified": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "dafny_synthesis_task_id_809__isSmaller",
+      "verified": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "dafny_synthesis_task_id_86__centeredHexagonalNumber",
+      "verified": [
+        "dafny",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "dafny_synthesis_task_id_89__closestSmaller",
+      "verified": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "dafny_synthesis_task_id_95__smallestListLength",
+      "verified": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "dafny_training_tmp_tmp_n2kixni_session1_training1__abs",
+      "verified": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "dafny_training_tmp_tmp_n2kixni_session1_training1__find",
+      "verified": [
+        "dafny"
+      ],
+      "decided": [
+        "dafny"
+      ]
+    },
+    {
+      "task": "dafny_training_tmp_tmp_n2kixni_session1_training1__max",
+      "verified": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "dafny_workout_tmp_tmp0abkw6f8_starter_ex01__max",
+      "verified": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "dafny_workout_tmp_tmp0abkw6f8_starter_ex02__abs",
+      "verified": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "dafny_workout_tmp_tmp0abkw6f8_starter_ex03__abs",
+      "verified": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "dafny_workout_tmp_tmp0abkw6f8_starter_ex09__computeFib",
+      "verified": [
+        "dafny"
+      ],
+      "decided": [
+        "dafny"
+      ]
+    },
+    {
+      "task": "dafny_workout_tmp_tmp0abkw6f8_starter_ex12__findMax",
+      "verified": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "dafny_examples_tmp_tmp8qotd4ez_leetcode_0070_climbing_stairs__climbStairs",
+      "verified": [
+        "dafny"
+      ],
+      "decided": [
+        "dafny"
+      ]
+    },
+    {
+      "task": "dafny_misc_tmp_tmpg4vzlnm1_rosetta_code_factorial__iterativeFactorial",
+      "verified": [
+        "dafny"
+      ],
+      "decided": [
+        "dafny"
+      ]
+    },
+    {
+      "task": "dafny_projects_tmp_tmpjutqwjv4_tutorial_tutorial__computeFib",
+      "verified": [
+        "dafny"
+      ],
+      "decided": [
+        "dafny"
+      ]
+    },
+    {
+      "task": "formal_methods_in_software_engineering_tmp_tmpe7fjnek6_labs4_gr2__divMod1",
+      "verified": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "formal_methods_in_software_engineering_tmp_tmpe7fjnek6_labs4_gr2__hoareTripleReqEns",
+      "verified": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "formal_methods_in_software_engineering_tmp_tmpe7fjnek6_labs4_gr2__sqrSum1",
+      "verified": [
+        "dafny"
+      ],
+      "decided": [
+        "dafny"
+      ]
+    },
+    {
+      "task": "formal_verication_dafny_tmp_tmpwgl2qz28_challenges_ex2__allow42",
+      "verified": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "formal_verication_dafny_tmp_tmpwgl2qz28_challenges_ex2__forbid42",
+      "verified": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "laboratory_tmp_tmps8ws6mu2_dafny_tutorial_exercise12__findMax",
+      "verified": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "laboratory_tmp_tmps8ws6mu2_dafny_tutorial_exercise9__computeFib",
+      "verified": [
+        "dafny"
+      ],
+      "decided": [
+        "dafny"
+      ]
+    },
+    {
+      "task": "nitwit_tmp_tmplm098gxz_nit__max_nit",
+      "verified": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "nitwit_tmp_tmplm098gxz_nit__nit_add",
+      "verified": [
+        "dafny",
+        "fstar",
+        "spark"
+      ],
+      "decided": [
+        "dafny",
+        "fstar",
+        "spark"
+      ]
+    },
+    {
+      "task": "nitwit_tmp_tmplm098gxz_nit__nit_increment",
+      "verified": [
+        "dafny",
+        "framac",
+        "fstar",
+        "spark"
+      ],
+      "decided": [
+        "dafny",
+        "framac",
+        "fstar",
+        "spark"
+      ]
+    },
+    {
+      "task": "se2011_tmp_tmp71eb82zt_ass1_ex4__eval",
+      "verified": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "se2011_tmp_tmp71eb82zt_ass1_ex6__ceiling7",
+      "verified": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "software_analysis_tmp_tmpmt6bo9sf_ss__find_min_index",
+      "verified": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "stunning_palm_tree_tmp_tmpr84c2iwh_ch1__min",
+      "verified": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "stunning_palm_tree_tmp_tmpr84c2iwh_ch1__minUnderSpec",
+      "verified": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "stunning_palm_tree_tmp_tmpr84c2iwh_ch1__reconstructFromMaxSum",
+      "verified": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "stunning_palm_tree_tmp_tmpr84c2iwh_ch1__triple_p",
+      "verified": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "stunning_palm_tree_tmp_tmpr84c2iwh_ch1__triple",
+      "verified": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "framac",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ]
+    },
+    {
+      "task": "t1_mf_tmp_tmpi_sqie4j_exemplos_introducao_ex4__fatorial",
+      "verified": [
+        "dafny",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ],
+      "decided": [
+        "dafny",
+        "fstar",
+        "lean",
+        "rocq",
+        "spark",
+        "verus"
+      ]
+    }
+  ]
+}
