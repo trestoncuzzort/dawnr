@@ -234,6 +234,13 @@ postcondition gaps where the spec admits a wrong program.
 
 ## Coverage vs false-accept over the agreement threshold k
 
+> **⚠ CORRECTED 2026-10-14 — this curve is withdrawn.** It counted kernels that never *observed* a
+> survivor as rejections: only 48 of 167 survivors were adjudicated by all seven kernels, and 71 of the
+> 74 between "accepted by ≥1" and "accepted by all 7" are unobserved, not refuted. The "67%→23% removal"
+> is not established, and "threshold k" is an experimental vote I defined, not the `T_MIN_KERNELS`
+> availability floor. The spec-level 95.1% kill rate is unaffected. Full account + fixed re-run:
+> internal/CORRECTION-2026-10-14-E1-E2.md.
+
 `coverage(k)` = correct programs verified by ≥ k kernels (yield). `false-accept(k)` = survivors
 (wrong programs) proved by ≥ k kernels. Pooled over 167 kernel-adjudicated survivors:
 
@@ -301,6 +308,12 @@ there is no threshold that is both complete and gap-free, which is the honest sh
 ---
 
 # E2 — independence audit: does the seven-kernel gate rest on a shared solver? (2026-10-14)
+
+> **⚠ CORRECTED 2026-10-14 — SPARK used Z3, not cvc5** (`t/verifiers/spark.py:185`): the gate rests on
+> two SMT solvers (Z3 for dafny/verus/fstar/spark; Alt-Ergo for framac) plus two non-SMT kernels, not
+> three independent SMT solvers, and the cross-backend counts rest on the same incomplete-observation
+> data corrected in E1. The independence claim is withdrawn pending an explicit alternate-solver
+> comparison. See internal/CORRECTION-2026-10-14-E1-E2.md.
 
 **Question.** If "seven independent kernels" is the gate's claim, how much of their agreement is really
 one SMT solver answering seven times? The goal framed this as "re-run under a second solver where
