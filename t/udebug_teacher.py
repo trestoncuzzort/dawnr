@@ -83,11 +83,15 @@ class VertexToken:
 
     def get(self) -> str:
         import os
+        import pathlib
         import urllib.parse
         import urllib.request
         fixed = os.environ.get("GOOGLE_OAUTH_ACCESS_TOKEN")
         if fixed:
             return fixed
+        token_file = os.environ.get("GOOGLE_OAUTH_ACCESS_TOKEN_FILE")
+        if token_file:                      # re-read on every call: a host without the refresh token gets a
+            return pathlib.Path(token_file).read_text(encoding="utf-8").strip()  # fresh one-hour token copied in
         with self.lock:
             if self.token and time.time() < self.expires - 120:
                 return self.token

@@ -475,10 +475,12 @@ class VarDeclStmt(Stmt):
 
 @dataclass
 class AssignSuchThat(Stmt):
+    """`var x :| P;` (declares) or `x :| P;` (assigns an existing variable); `declares` tells them apart."""
     """`"var" VarDecl ("," VarDecl)* ":|" Expr ";"`. Always `such-that-exec`
     (refused): t has no nondeterministic-choice statement."""
     names: tuple[Param, ...]
     cond: Expr
+    declares: bool = True
 
 
 @dataclass
@@ -601,6 +603,7 @@ class ForallStmt(Stmt):
     attrs: tuple[Attr, ...]
     range: Optional[Expr]
     body: tuple[Stmt, ...]
+    ensures: tuple[Expr, ...] = ()           # the statement's own conclusion, kept so printing says it
 
 
 @dataclass
@@ -677,6 +680,7 @@ class FunctionDecl(Decl):
     specs: tuple[FSpec, ...] = ()
     body: Optional[Expr] = None
     attrs: tuple[Attr, ...] = ()
+    ret_name: Optional[str] = None          # `function F(x: int): (r: int)`: the name the postconditions use
 
 
 @dataclass

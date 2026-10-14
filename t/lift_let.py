@@ -134,6 +134,9 @@ def _binding(node) -> Optional[tuple[tuple[str, ...], tuple[str, ...], tuple[str
             return names, ("body",), ("range",)
         return names, ("range", "body", "value"), ()
     if isinstance(node, LetExpr):
+        if node.op == ":|":
+            # `var k :| P(k); body`: the predicate names the binder, so it is inside the binder's scope
+            return tuple(b.name for b in node.binders), ("rhs", "body"), ()
         # A let is not recursive: its right-hand sides are read outside its binders.
         return tuple(b.name for b in node.binders), ("body",), ("rhs",)
     return None
@@ -373,12 +376,32 @@ def let_issue(let: LetExpr, method_names: Iterable[str] = ()) -> Optional[tuple[
     methods = frozenset(method_names)
     for r in let.rhs:
         for n in _walk(r):
-            if isinstance(n, Call) and isinstance(n.fn, Ident) and n.fn.name in methods:
-                return "let-impure-rhs", n.fn.name
+            if isinstance(n, Call):
+                callee = n.fn.name if isinstance(n.fn, Ident) else getattr(n.fn, "name", None)   # `o.Helper(a)` too
+                if callee in methods:
+                    return "let-impure-rhs", callee
     for b, r in zip(let.binders, let.rhs):
         if _reads_heap(r) and _free_under_two_state(let.body, b.name, False):
             return "let-impure-rhs", b.name
+        if _count_free(let.body, b.name) == 0 and _has_obligation(r):
+            # Dafny evaluates the right-hand side (its well-definedness is an obligation) even when the
+            # binder is never read; substitution would erase that obligation with the binding
+            return "let-unread-partial-rhs", b.name
+        if b.type is not None and b.type.kind in ("nat",) or (b.type is not None and b.type.kind == "id"):
+            # a typed binder carries a subset-type obligation (`var k: nat := -1` is an error in Dafny)
+            return "let-typed-binder", b.name
     return None
+
+
+def _has_obligation(node) -> bool:
+    """Whether an expression can be undefined: division, modulo, indexing, slicing, a call (its requires)."""
+    for n in _walk(node):
+        cls = n.__class__.__name__
+        if cls == "Binary" and getattr(n, "op", None) in ("/", "%"):
+            return True
+        if cls in ("Index", "Slice", "Call", "SeqUpdate"):
+            return True
+    return False
 
 
 def _reads_heap(node) -> bool:
@@ -452,7 +475,8 @@ def expand_scope(method: MethodDecl, closure: tuple, method_names: Iterable[str]
     for r in roots:
         used |= names_in(r)
     acc = Expansion()
-    new_roots = [_expand(r, frozenset(method_names), used, acc) for r in roots]
+    method_names = frozenset(method_names)        # an iterator would be exhausted on the first root
+    new_roots = [_expand(r, method_names, used, acc) for r in roots]
     out = ScopeExpansion(method=new_roots[0], closure=tuple(new_roots[1:]), lets=acc.lets,
                          max_uses=acc.max_uses, lines=list(acc.lines), issues=list(acc.issues))
     if acc.lets:

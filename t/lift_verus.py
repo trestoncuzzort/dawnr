@@ -181,7 +181,10 @@ class VType:
         if self.kind == "seq":
             inner = self.elem.dafny()
             return "seq<int>" if inner == "nat" else f"seq<{inner}>"
-        return {"int": "int", "nat": "nat", "bool": "bool", "char": "char"}[self.kind]
+        try:
+            return {"int": "int", "nat": "nat", "bool": "bool", "char": "char"}[self.kind]
+        except KeyError:
+            raise VerusRefusal("verus-unparsed", f"no Dafny type for {self.text!r} ({self.kind})") from None
 
     @property
     def unsigned_elems(self) -> bool:
@@ -760,9 +763,10 @@ class Parser:
                 self.accept(";")
                 return ("return", e)
             if w == "proof" and self.peek(1).text == "{":
+                start = self.i
                 self.take()
                 self.skip_balanced()
-                return ("proof",)
+                return ("proof", self.text(start, self.i))
             if w in ("assert", "assume", "admit") and self.peek(1).text == "(":
                 self.take()
                 self.skip_balanced()
@@ -1000,7 +1004,12 @@ class Parser:
             elif w == "decreases":
                 self.take()
                 decreases += self.parse_clause_list()
-            elif w in ("via", "when", "opens_invariants", "no_unwind", "returns"):
+            elif w == "returns":
+                self.take()
+                for c in self.parse_clause_list():        # `returns e` is `ensures result == e`
+                    ensures.append(("chain", ["=="], [("var", ret_name or "result"), c]))
+                    ensures_src.append("returns " + str(self.last_texts[-1]) if self.last_texts else "returns")
+            elif w in ("via", "when", "opens_invariants", "no_unwind"):
                 self.take()
                 self.parse_clause_list()
             elif w == "by" and self.peek(1).text == "(":
@@ -1108,12 +1117,75 @@ DAFNY_RESERVED = {
 }
 
 
+_BITS = {"i8": 8, "u8": 8, "i16": 16, "u16": 16, "i32": 32, "u32": 32, "i64": 64, "u64": 64,
+         "i128": 128, "u128": 128, "isize": 64, "usize": 64}
+_RANGE = {"u8": (0, 255), "u16": (0, 65535), "u32": (0, 4294967295), "u64": (0, 18446744073709551615),
+          "usize": (0, 18446744073709551615), "u128": (0, (1 << 128) - 1),
+          "i8": (-128, 127), "i16": (-32768, 32767), "i32": (-2147483648, 2147483647),
+          "i64": (-9223372036854775808, 9223372036854775807), "isize": (-9223372036854775808, 9223372036854775807),
+          "i128": (-(1 << 127), (1 << 127) - 1)}
+
+
+def _names_in(e, out: set | None = None) -> set:
+    """Every variable name an expression tuple mentions."""
+    out = set() if out is None else out
+    if isinstance(e, tuple):
+        if e and e[0] == "var" and len(e) == 2 and isinstance(e[1], str):
+            out.add(e[1])
+        for x in e[1:]:
+            _names_in(x, out)
+    elif isinstance(e, list):
+        for x in e:
+            _names_in(x, out)
+    return out
+
+
+def _assigned_in(stmts: list, out: set | None = None) -> set:
+    """Every variable a statement list writes: assignments, let shadows, and push/pop/set on a Vec."""
+    out = set() if out is None else out
+    for s in stmts:
+        if not isinstance(s, tuple) or not s:
+            continue
+        if s[0] == "assign":
+            lhs = _strip(s[1])
+            if lhs[0] == "var":
+                out.add(lhs[1])
+            elif lhs[0] == "index" and _strip(lhs[1])[0] == "var":
+                out.add(_strip(lhs[1])[1])
+        elif s[0] == "let":
+            out.add(s[1])
+        elif s[0] in ("exprstmt", "expr"):
+            e = _strip(s[1])
+            if e[0] == "method" and e[2] in ("push", "pop", "set", "insert", "remove", "clear", "truncate") \
+                    and _strip(e[1])[0] == "var":
+                out.add(_strip(e[1])[1])
+            if e[0] == "if":
+                _assigned_in(e[2] or [], out)
+                _assigned_in(e[3] or [], out)
+            if e[0] == "block":
+                _assigned_in(e[1], out)
+        elif s[0] == "while":
+            _assigned_in(s[3], out)
+        elif s[0] == "for":
+            _assigned_in(s[5], out)
+    return out
+
+
+def _bits(text: str) -> float:
+    return _BITS.get(text, float("inf"))      # int and nat are unbounded
+
+
 def dn(name: str) -> str:
     """The Dafny spelling of a Verus identifier."""
     if name.startswith("_"):
         name = "u" + name
     if name in DAFNY_RESERVED:
-        name = name + "_v"
+        return name + "_v"
+    stem = name
+    while stem.endswith("_v"):          # `seq_v` in the source must not collide with the translation of `seq`
+        stem = stem[:-2]
+        if stem in DAFNY_RESERVED:
+            return name + "_v"
     return name
 
 
@@ -1176,7 +1248,7 @@ class Renderer:
             return e[1]
         if tag == "var":
             if e[1] in self.vf.consts and e[1] not in self.types:
-                return self.expr(self.vf.consts[e[1]], ghost, prec)
+                return self.expr(self.vf.consts[e[1]], False, prec)     # a const is evaluated as code, whatever quotes it
             return dn(self.renames.get(e[1], e[1]))
         if tag == "path":
             return self.path_const(e[1])
@@ -1192,6 +1264,9 @@ class Renderer:
                     return "(" + self.expr(e[1], ghost) + " as int)"
                 if target.kind == "nat" and target.text not in ("nat",) and src == "int":
                     raise VerusRefusal("as-cast", f"signed to {target.text}")
+                src_text = self._machine_text(e[1])
+                if src_text is not None and _bits(target.text) < _bits(src_text):
+                    raise VerusRefusal("as-cast", f"narrowing {src_text} as {target.text}")   # truncates, not widens
                 self.rewrites.append("machine-int-widened")
                 return self.expr(e[1], ghost, prec)
             if target.kind == "char":
@@ -1236,17 +1311,24 @@ class Renderer:
         if tag == "quant":
             kind, binders, body = e[1], e[2], e[3]
             saved = dict(self.types)
+            saved_renames = dict(self.renames)
             bs = []
             for p in binders:
                 if p.type.kind not in ("int", "nat"):
                     raise VerusRefusal("unbounded-quantifier", f"quantifier over {p.type.text}")
                 self.types[p.name] = VType("int", "int")
+                self.renames.pop(p.name, None)          # the binder is its own name, never an outer local's rename
                 bs.append(f"{dn(p.name)}: int")
-                if p.type.kind == "nat":
+                if p.type.text in _RANGE:               # a machine type is a finite domain: both bounds
+                    lo, hi = _RANGE[p.type.text]
+                    dom = ("chain", ["<=", "<="], [("int", lo), ("var", p.name), ("int", hi)])
+                    body = ("bin", "==>" if kind == "forall" else "&&", dom, body)
+                elif p.type.kind == "nat":
                     body = ("bin", "==>" if kind == "forall" else "&&",
                             ("chain", ["<="], [("int", 0), ("var", p.name)]), body)
             text = f"({kind} {', '.join(bs)} :: {self.expr(body, True)})"
             self.types = saved
+            self.renames = saved_renames
             return text
         if tag == "index":
             return self.expr(e[1], ghost, 99) + "[" + self.expr(e[2], ghost) + "]"
@@ -1271,7 +1353,7 @@ class Renderer:
         if tag == "block":
             return "(" + self.expr(_block_to_expr(e[1]), ghost) + ")"
         if tag == "letin":
-            return f"(var {e[1]} := {self.expr(e[2], ghost)}; {self.expr(e[3], ghost)})"
+            return f"(var {dn(e[1])} := {self.expr(e[2], ghost)}; {self.expr(e[3], ghost)})"
         if tag == "seqlit":
             return "[" + ", ".join(self.expr(x, ghost) for x in e[1]) + "]"
         if tag == "fill":
@@ -1283,6 +1365,15 @@ class Renderer:
         if tag == "unit":
             raise VerusRefusal("verus-unparsed", "unit value")
         raise VerusRefusal("verus-unparsed", f"expression {tag}")
+
+    def _machine_text(self, e) -> Optional[str]:
+        """The machine type's text of a variable or a cast, when known; None for a literal or an expression."""
+        e = _strip(e)
+        if e[0] == "var" and e[1] in self.types:
+            return self.types[e[1]].text if self.types[e[1]].text in _BITS else None
+        if e[0] == "cast":
+            return e[2].text if e[2].text in _BITS else None
+        return None
 
     def _nonneg_literal_or_nat(self, b) -> bool:
         b = _strip(b)
@@ -1346,7 +1437,7 @@ class Renderer:
                     return self.expr(recv, ghost, prec=99)
             raise VerusRefusal("higher-order", f".{name}(closure)")
         if name == "get" and len(args) == 1:
-            return f"{r()}[{a(0)}]"
+            raise VerusRefusal("datatype", ".get() returns an Option (None outside the range)")
         if name in ("abs",) and not args:
             x = self.expr(recv, ghost)
             return f"(if {x} < 0 then -{x} else {x})"
@@ -1366,11 +1457,13 @@ class Renderer:
             return "[]"
         if name in ("Seq::new",):
             raise VerusRefusal("higher-order", "Seq::new(n, closure)")
-        if name in ("min", "max", "std::cmp::min", "std::cmp::max", "cmp::min", "cmp::max"):
+        if name in self.vf.spec_fns or name in self.vf.exec_fns:
+            pass                                        # a user definition of min/max/abs is that definition
+        elif name in ("min", "max", "std::cmp::min", "std::cmp::max", "cmp::min", "cmp::max"):
             x, y = (self.expr(args[0], ghost), self.expr(args[1], ghost))
             op = "<=" if name.endswith("min") else ">="
             return f"(if {x} {op} {y} then {x} else {y})"
-        if name in ("abs",) and len(args) == 1:
+        elif name in ("abs",) and len(args) == 1:
             x = self.expr(args[0], ghost)
             return f"(if {x} < 0 then -{x} else {x})"
         if name in self.vf.spec_fns:
@@ -1393,7 +1486,11 @@ class Renderer:
 
     def stmt(self, s, ind: str, ret_name: str, lines: list[str], is_tail: bool) -> None:
         tag = s[0]
-        if tag in ("proof", "attr"):
+        if tag == "proof":
+            if len(s) > 1 and re.search(r"\b(assume|admit)\s*\(", s[1]):
+                raise VerusRefusal("trust-hole", "assume/admit inside a proof block")
+            return
+        if tag == "attr":
             return
         if tag == "refused":
             raise VerusRefusal(s[1], s[2])
@@ -1446,7 +1543,7 @@ class Renderer:
                 return
             if e[0] == "method" and e[2] == "pop" and not e[3] and _strip(e[1])[0] == "var" and tag == "exprstmt":
                 v = dn(self.renames.get(_strip(e[1])[1], _strip(e[1])[1]))
-                lines.append(f"{ind}{v} := {v}[..|{v}| - 1];")
+                lines.append(f"{ind}if |{v}| > 0 {{ {v} := {v}[..|{v}| - 1]; }}")   # pop on an empty Vec is a no-op (None)
                 return
             if e[0] == "call" and e[1] in self.vf.proof_fns:
                 return                                     # a lemma call: a hint, dropped
@@ -1490,6 +1587,14 @@ class Renderer:
             self.renames[var] = dvar
             var = dn(dvar)
             lines.append(f"{ind}var {var} := {lo_t};")
+            if _names_in(hi) & _assigned_in(body):       # the body writes a name the end mentions: read the end once
+                hname = f"{dvar}_end"
+                while hname in self.declared:
+                    hname += "_"
+                self.declared.add(hname)
+                self.types[hname] = VType("int", "int")
+                lines.append(f"{ind}var {dn(hname)} := {hi_t};")
+                hi, hi_t = ("var", hname), dn(hname)
             spec = dict(spec)
             # Verus's `for i in lo..hi` states `lo <= i <= hi` at the loop head itself
             spec["invariant"] = [("chain", ["<=", "<="], [lo, ("var", var), hi])] + list(spec["invariant"])
@@ -1529,10 +1634,13 @@ class Renderer:
     def if_stmt(self, e, ind: str, ret_name: str, lines: list[str], is_tail: bool) -> None:
         _, cond, then, other = e
         lines.append(f"{ind}if {self.expr(cond, self.body_ghost)} {{")
+        outer = (dict(self.renames), dict(self.types))
         self.stmts(then, ind + "  ", ret_name, lines, is_tail)
+        self.renames, self.types = dict(outer[0]), dict(outer[1])      # a branch-local let ends with its branch
         if other is not None:
             lines.append(f"{ind}}} else {{")
             self.stmts(other, ind + "  ", ret_name, lines, is_tail)
+            self.renames, self.types = dict(outer[0]), dict(outer[1])
         lines.append(f"{ind}}}")
 
     def rhs(self, e) -> str:
@@ -1737,6 +1845,7 @@ def _render_file(vf: VerusFile, target: str) -> Rendering:
     if rd.called_execs:
         raise VerusRefusal("calls-other-method", ", ".join(sorted(rd.called_execs)))
     # spec fns in the closure, rendered in dependency order
+    dec_texts = [rd.expr(d, True) for d in fn.decreases]      # before the dependency walk: its spec fns count
     fn_lines: list[str] = []
     done: set[str] = set()
     pending = set(rd.called_specs)
@@ -1783,7 +1892,7 @@ def _render_file(vf: VerusFile, target: str) -> Rendering:
     for e in enss:
         out.append(f"  ensures {e}")
     if fn.decreases:
-        out.append("  decreases " + ", ".join(rd.expr(d, True) for d in fn.decreases))
+        out.append("  decreases " + ", ".join(dec_texts))
     out.append("{")
     out += body_lines
     out.append("}")

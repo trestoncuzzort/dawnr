@@ -309,9 +309,25 @@ def wrong_but_proven(tag: str, d: Path) -> tuple[list[dict], dict]:
             info["no_task_file"].append(name)
             continue
         task = harness.load(path)
+        recorded = (tests.get(tid_s) or {}).get("task_sha256") if tid_s else None
+        if recorded and recorded != spec_check.task_sha256(task):
+            info.setdefault("stale_task_file", []).append(name)     # the verdicts are an earlier program's
+            continue
+        if not recorded and not _grading_predates_task(d, path):
+            info.setdefault("task_newer_than_grading", []).append(name)
+            continue
         source_id = int(tid_s) if tid_s.isdigit() else loop_filter.problem_id(name)
         programs.append({"tag": tag, "name": name, "task": task, "source_id": source_id, "tests": overall})
     return programs, info
+
+
+def _grading_predates_task(d: Path, task_path: Path) -> bool:
+    """Without a recorded hash, the kernel table must be at least as new as the task file: a task written
+    after the grading was not what the kernels read."""
+    try:
+        return (d / "kernels.md").stat().st_mtime >= task_path.stat().st_mtime
+    except OSError:
+        return False
 
 
 def distinct_programs(programs: list[dict]) -> list[dict]:
@@ -435,7 +451,7 @@ def execute_against_reference(renamed: dict, entry: dict, tid: int, n: int, seed
                 return {"status": f"exec-cannot draw {kinds}", "shape": shape}
             try:
                 with spec_check.deadline(5):                    # portable since 2026-09-30 (SIGALRM is Unix-only)
-                    out = fn(*[list(a) if isinstance(a, list) else a for a in args])
+                    out = fn(*copy.deepcopy(args))              # a mutating reference keeps its hands off the draw
             except spec_check.Timeout:
                 return {"status": "exec-reference did not finish", "shape": shape}
             except Exception:                                   # noqa: BLE001 -- the reference refused the input
@@ -496,7 +512,7 @@ def pool_row(outcome: dict, pool: dict, pool_name: str, n: int, seed: int, promp
             "from_tests": program["tests"], "copies": len(program["copies"]), "tags": tags,
             "targets_tried": outcome["targets_tried"],
             "targets_passed_tests": sum(v for k, v in outcome["tally"].items()
-                                        if k == QUALIFIES or k.startswith("spec-")),
+                                        if k == QUALIFIES or k.startswith("spec-") or k.startswith("exec-")),
             "points": hit["points"], "draws": hit["draws"], "shapes": hit["shapes"], "weak": hit["weak"],
             "executed": hit["executed"], "executed_excluded": hit["executed_excluded"],
             "executed_reference_raised": hit["executed_reference_raised"],
@@ -639,7 +655,7 @@ def write_report(path: Path, args, split_path: Path, pool_name: str, pool_size: 
     L.append(f"| pairs whose specification agreed with the reference (draws and examples) | "
              f"{sum(v for k, v in pair_tally.items() if k == QUALIFIES or k.startswith('exec-'))} |")
     L.append(f"| pairs whose program disagreed with the reference when executed | "
-             f"{sum(v for k, v in pair_tally.items() if k.startswith('exec-'))} |")
+             f"{sum(v for k, v in pair_tally.items() if k.startswith('exec-') and k in DECIDED_AGAINST)} |")
     L.append(f"| pairs that qualified (points, specification, execution) | {pair_tally.get(QUALIFIES, 0)} |")
     L.append(f"| **programs admitted (exactly one target)** | **{len(admitted)}** |")
     L.append(f"| programs with two or more targets (duplicate pairs, not admitted) | {len(ambiguous)} |")
@@ -900,7 +916,8 @@ def graded_sets(roots: list[Path]) -> dict[str, Path]:
             tests = json.loads((d / "tests.json").read_text(encoding="utf-8"))
         except (OSError, ValueError) as error:
             raise SystemExit(f"{d.name}: tests.json is not readable ({error})")
-        return cols, cells, tests
+        tasks = {p.name: hashlib.sha256(p.read_bytes()).hexdigest() for p in sorted((d / "tasks").glob("*.json"))}
+        return cols, cells, tests, tasks            # the programs themselves, not only their verdicts
 
     for root in roots:
         if not root.is_dir():
@@ -925,7 +942,7 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--split", type=Path, required=True, help="the split whose train ids are candidates and "
                     "whose eval ids are refused; its pool version is the pool")
     ap.add_argument("--out", type=Path, required=True, help="the relabel pool file (JSONL) to write")
-    ap.add_argument("--root", type=Path, nargs="+", default=[HERE / "out" / "spec-experiment"],
+    ap.add_argument("--root", type=Path, nargs="+", action="extend", default=None,
                     help="directories of graded answer sets, read only (repeatable: the sets are graded "
                          "on two machines)")
     ap.add_argument("--tags", nargs="*", default=None, help="answer sets to read (default: every graded one)")

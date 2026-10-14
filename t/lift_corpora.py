@@ -153,8 +153,13 @@ def stage_humaneval_dafny(src: Path, staged: Path) -> dict[str, str]:
     """Copy NNN-name.dfy to staged/humaneval_dafny_NNN_name.dfy; return stem -> description
     (the sentence after "function `name`:" in text-descriptions/NNN-name.txt)."""
     staged.mkdir(parents=True, exist_ok=True)
+    seen: dict[str, Path] = {}
     for f in sorted(src.glob("*.dfy")):
-        shutil.copyfile(f, staged / f"{humaneval_stem(f)}.dfy")
+        stem = humaneval_stem(f)
+        if stem in seen:
+            raise SystemExit(f"REFUSED: {f.name} and {seen[stem].name} both stage as {stem}.dfy; rename one")
+        seen[stem] = f
+        shutil.copyfile(f, staged / f"{stem}.dfy")
     return read_humaneval_texts(src)
 
 
@@ -194,16 +199,25 @@ def restrict_staged(staged: Path, stems_file: Path) -> int:
 
 # ----------------------------------------------------------------- lifting --
 
+def _collapse_outside_literals(text: str) -> str:
+    """Whitespace collapsed to single spaces outside double-quoted literals, which keep theirs: a
+    specification that says `"a  b"` means two spaces."""
+    parts = re.split(r'("(?:[^"\\]|\\.)*")', text)
+    return "".join(p if k % 2 else re.sub(r"\s+", " ", p) for k, p in enumerate(parts)).strip()
+
+
 def run_lifter(staged: Path, out: Path, jobs: int, with_check: bool) -> dict:
     """t/lifter.py --dir over the staged files; returns its run_summary.json."""
     cmd = [sys.executable, str(HERE / "lifter.py"), "--dir", str(staged), "--out", str(out),
            "--jobs", str(jobs)]
     if not with_check:
         cmd.append("--skip-check")
-    subprocess.run(cmd, check=False)
     summary = out / "run_summary.json"
+    if summary.exists():
+        summary.unlink()                     # an earlier run's summary must not stand in for this one
+    p = subprocess.run(cmd, check=False)
     if not summary.exists():
-        raise SystemExit(f"the lifter wrote no {summary}")
+        raise SystemExit(f"the lifter wrote no {summary} (exit {p.returncode})")
     return json.loads(summary.read_text(encoding="utf-8"))
 
 
@@ -262,7 +276,7 @@ def head_for(stem: str, task: dict, vericoding_rows: dict, humaneval_texts: dict
         row = vericoding_rows.get(vid)
         if row is None:
             return None, "no task row in dafny_tasks.jsonl", named
-        problem = " ".join((row.get("vc-description") or "").split())
+        problem = _collapse_outside_literals(row.get("vc-description") or "")
         if not problem:
             return None, "no vc-description", named
         index = humaneval_index(row.get("source-id"), stem)
@@ -356,6 +370,8 @@ def screen(stem: str, task: dict, vericoding_rows: dict, humaneval_texts: dict, 
     head, reason, named = head_for(stem, task, vericoding_rows, humaneval_texts, pool, gates)
     if head is None and reason.startswith("names HumanEval"):
         return {**verdict, "refused": reason.split(", ")[1], "reason": reason}
+    if head is None:                         # no head means refused (a failed test, no description, ...)
+        return {**verdict, "refused": "head", "reason": reason}
     try:
         document = surface.print_task(task).strip() + "\n"
     except surface.SurfaceError as error:
@@ -592,7 +608,10 @@ def publish(recovered: Path, rmeta: Path, keep: list, meta: Path, heads: list, d
     only beside a complete set: Luigi's atomic writes, https://luigi.readthedocs.io/en/stable/luigi_patterns.html
     (its completion check is an existence check, and so is the queue step's)."""
     tag = f".partial-{os.getpid()}"
+    protected = {meta.resolve(), meta.with_name(meta.name[:-len(".meta")]).resolve() if meta.name.endswith(".meta") else meta.resolve()}
     for stale in [*recovered.parent.glob(recovered.name + ".partial-*"), *rmeta.parent.glob(rmeta.name + ".partial-*")]:
+        if stale.resolve() in protected:
+            continue                          # the lift this recovery reads from is never a leftover
         shutil.rmtree(stale)                  # a temporary a dead run never moved
     tmp_d, tmp_m = recovered.with_name(recovered.name + tag), rmeta.with_name(rmeta.name + tag)
     tmp_d.mkdir(parents=True)

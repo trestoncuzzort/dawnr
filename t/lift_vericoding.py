@@ -145,13 +145,33 @@ def lifted_keys(dirs: list[Path], rows: dict[str, dict]) -> dict[tuple, str]:
 # ------------------------------------------------- specification unchanged --
 
 def _norm(text: str, lang: str) -> str:
-    if lang == "verus":
-        text = re.sub(r"/\*.*?\*/", "", text, flags=re.S)
-        text = re.sub(r"//[^\n]*", "", text)
-    else:
-        text = re.sub(r"/-.*?-/", "", text, flags=re.S)
-        text = re.sub(r"--[^\n]*", "", text)
-    return re.sub(r"\s+", " ", text).strip()
+    """Comments removed and whitespace collapsed OUTSIDE string literals: the text inside a literal is part
+    of the specification (`"a  b"` and `"a b"` are different strings), as is a `--` or `//` inside one."""
+    parts = re.split(r'("(?:[^"\\]|\\.)*")', text)
+    out = []
+    for k, part in enumerate(parts):
+        if k % 2 == 1:
+            out.append(part)                                 # a literal, kept as written
+            continue
+        if lang == "verus":
+            part = re.sub(r"/\*.*?\*/", "", part, flags=re.S)
+            part = re.sub(r"//[^\n]*", "", part)
+        else:
+            part = re.sub(r"/-.*?-/", "", part, flags=re.S)
+            part = re.sub(r"--[^\n]*", "", part)
+        out.append(re.sub(r"\s+", " ", part))
+    return "".join(out).strip()
+
+
+def _verus_helper_defs(text: str) -> dict:
+    """name -> the text of each `fn`/`spec fn`/`proof fn` item in a helpers section, up to the next item."""
+    out = {}
+    heads = list(re.finditer(r"^\s*(?:pub\s+)?(?:open\s+|closed\s+)?(?:spec\s+|proof\s+|exec\s+)?fn\s+([A-Za-z_]\w*)",
+                              text, re.M))
+    for k, m in enumerate(heads):
+        end = heads[k + 1].start() if k + 1 < len(heads) else len(text)
+        out[m.group(1)] = text[m.start():end]
+    return out
 
 
 def _with_preamble(secs: dict, text: str, comment: str) -> dict:
@@ -177,6 +197,12 @@ def spec_changed(solution: str, spec: str, lang: str) -> Optional[str]:
         for sec in ("vc-preamble", "vc-spec"):
             if _norm(a.get(sec, ""), lang) != _norm(b.get(sec, ""), lang):
                 return sec
+        # a helper the contract refers to is part of the contract: its definition must be the reference's
+        helpers_a, helpers_b = _verus_helper_defs(a.get("vc-helpers", "")), _verus_helper_defs(b.get("vc-helpers", ""))
+        spec_names = set(re.findall(r"\b([A-Za-z_]\w*)\s*\(", b.get("vc-spec", "")))
+        for name, text in helpers_b.items():
+            if name in spec_names and _norm(helpers_a.get(name, ""), lang) != _norm(text, lang):
+                return f"vc-helpers:{name}"
         return None
     a, b = _with_preamble(lift_lean.sections(solution), solution, "--"), \
         _with_preamble(lift_lean.sections(spec), spec, "--")
@@ -184,8 +210,8 @@ def spec_changed(solution: str, spec: str, lang: str) -> Optional[str]:
         return "vc-preamble"
     try:
         fa, fb = lift_lean.parse_file(solution), lift_lean.parse_file(spec)
-    except lift_lean.LeanRefusal:
-        return None
+    except lift_lean.LeanRefusal as r:
+        return f"lean-parse-refusal: {r}"        # unreadable is not "unchanged"
     for n, d in fb.defs.items():
         if n.endswith(("_postcond", "_precond")):
             if n not in fa.defs or _norm(fa.defs[n].text, lang) != _norm(d.text, lang):
@@ -362,7 +388,9 @@ def build(args) -> dict:
             if m.get("refusal"):
                 refused.append({"id": vid, "stage": "lift", "reason": f"classify:{m['refusal'].get('reason')}",
                                 "detail": str(m["refusal"].get("token"))[:200]})
-    lifted = lift_corpora.lifted_tasks(meta / "lift")
+    refused_ids = {r["id"] for r in refused}
+    lifted = [(tf, task, sc) for tf, task, sc in lift_corpora.lifted_tasks(meta / "lift")
+              if tf.name.split(".", 1)[0][len("vericoding_"):] not in refused_ids]   # a resumed lift of a now-refused id
     tally["lifted"] = len(lifted)
 
     native = native_all(lang, lifted, rendered, meta / "native", args.native_jobs)
@@ -450,6 +478,8 @@ def trows_for_heads(trows: dict, rows: dict) -> dict:
     """The task rows lift_corpora.head_for reads, with Clever's `clever_N` source ids read
     as the HumanEval index they are, so the HumanEval gate sees every alias."""
     key = id(trows)
+    if key in _HEADS_CACHE and _HEADS_CACHE[key][0] is not trows:
+        del _HEADS_CACHE[key]                     # the id was reused by another dict
     if key not in _HEADS_CACHE:
         fixed = {}
         for k, r in trows.items():
@@ -459,8 +489,8 @@ def trows_for_heads(trows: dict, rows: dict) -> dict:
                 if m:
                     r2["source-id"] = f"humaneval_{int(m.group(1)):03d} (clever_{m.group(1)})"
             fixed[k] = r2
-        _HEADS_CACHE[key] = fixed
-    return _HEADS_CACHE[key]
+        _HEADS_CACHE[key] = (trows, fixed)        # the input is kept so its id cannot be reused while cached
+    return _HEADS_CACHE[key][1]
 
 
 KERNELS = ["dafny", "verus", "spark", "framac", "lean", "rocq", "fstar"]
@@ -481,9 +511,12 @@ def record_grades(out: Path, table: Path, check_failed: Optional[Path] = None) -
         if r["task_file"] in failed:
             r["lifter_check"] = "failed (the lifter's own Dafny lemmas or differential run)"
             r["kernels"] = "not graded"
+            for k in ("clean_in", "not_clean"):       # an earlier grading's counts do not survive a failure
+                r.pop(k, None)
             counts["lifter check failed"] += 1
             continue
-        r["lifter_check"] = "passed"
+        if check_failed is not None:
+            r["lifter_check"] = "passed"               # the check stage ran and did not move this task aside
         cells = rows.get(r["name"])
         if cells is None:
             r["kernels"] = "no row in the table"

@@ -383,6 +383,10 @@ def _map_bridges(fn: lift_verus.ExecFn, views: "Views", with_result: bool) -> st
         for m in _MAP.finditer(clause):
             recv = m.group(1)
             name = recv.replace(" @", "")
+            closure_body = re.sub(r"\s+", "", m.group(4))
+            binder = m.group(3).split(",")[-1].split(":")[0].strip()
+            if closure_body not in (binder, f"{binder}asint", f"({binder}asint)", f"{binder}asnat"):
+                continue            # not the identity view: the closure computes something else
             vt = types.get(name)
             if vt is None or vt.kind != "seq" or vt.elem.kind not in ("int", "nat", "char"):
                 continue
@@ -402,7 +406,7 @@ def build(source_text: str, task: dict, rename_map: dict, target: Optional[str] 
     `rename_map` is the lifter sidecar's (dafny name -> {"t_name": ...})."""
     r = lift_verus.render(source_text, target=target, lemma=lemma)
     if r.file is None or r.target is None or r.refusal is not None:
-        raise NoHarness("the source does not render")
+        raise NoHarness(f"the source does not render: {r.refusal}" if r.refusal else "the source does not render")
     vf, fn = r.file, r.file.exec_fns[r.target]
     tparams = task["params"]
     if len(tparams) != len(fn.params):
@@ -453,6 +457,9 @@ def build(source_text: str, task: dict, rename_map: dict, target: Optional[str] 
     sps = ", ".join(f"{p.name}: {p.type_src}" for p in fn.params)
     pviews = ", ".join(views.view(p.name, p.type) for p in fn.params)
     src_ret = fn.ret_name or "result"
+    taken = {p.name for p in fn.params}
+    while src_ret in taken:              # an unnamed result beside a parameter called `result`
+        src_ret += "_"
     rview = views.view(src_ret, fn.ret)
     lemma_task = "lemma" in fn.attrs
     if lemma_task:
@@ -486,6 +493,19 @@ def build(source_text: str, task: dict, rename_map: dict, target: Optional[str] 
     return text, ["t_eq_requires", "t_eq_ensures"] + [u for u in used if u.startswith("t_eq_fn_")]
 
 
+def _negated_twin(text: str) -> Optional[str]:
+    """The harness with t_eq_ensures's equivalence negated (`ensures !(A <==> B)`), or None when the lemma's
+    ensures line is not found."""
+    i = text.find("proof fn t_eq_ensures")
+    if i < 0:
+        return None
+    m = re.search(r"(\n    ensures )(.+?) <==> (t_lift_post\(.*?\)),\n", text[i:], re.S)
+    if not m:
+        return None
+    j = i + m.start()
+    return text[:j] + f"{m.group(1)}!(({m.group(2)}) <==> {m.group(3)}),\n" + text[i + m.end():]
+
+
 def run(text: str, workdir: Path, stem: str, timeout_s: float = 120.0) -> dict:
     """Run verus on the harness; {"verdict", "seconds", "message"}."""
     workdir.mkdir(parents=True, exist_ok=True)
@@ -500,6 +520,8 @@ def run(text: str, workdir: Path, stem: str, timeout_s: float = 120.0) -> dict:
     except OSError as e:
         return {"verdict": "error", "seconds": 0.0, "message": f"verus did not start: {e}"}
     secs = round(time.monotonic() - started, 1)
+    if p.returncode < 0:            # ended by a signal: no verdict, whatever it printed before
+        return {"verdict": "error", "seconds": secs, "message": f"verus ended by signal {-p.returncode}"}
     out = p.stdout + "\n" + p.stderr
     errors = None
     m = re.search(r'"errors"\s*:\s*(\d+)', p.stdout)
@@ -507,11 +529,30 @@ def run(text: str, workdir: Path, stem: str, timeout_s: float = 120.0) -> dict:
         errors = int(m.group(1))
     mv = re.search(r'"verified"\s*:\s*(\d+)', p.stdout)
     verified = int(mv.group(1)) if mv else 0
-    # positive evidence only (t/verifiers/verus.py's rule): both lemmas discharged, no error
     ok = (p.returncode == 0 and errors == 0 and verified >= 2
           and not re.search(r"^error", p.stderr, re.M))
     if ok:
-        return {"verdict": "proved", "seconds": secs, "message": ""}
+        # the one-edit twin: the same harness with the ensures-equivalence negated. A harness whose
+        # premises are inconsistent (or whose views are vacuous) proves that too; `proved` needs the
+        # kernel to REFUTE it, exactly as the matrix's twin rule asks of every task.
+        twin = _negated_twin(text)
+        if twin is None:
+            return {"verdict": "not-proved", "seconds": secs, "message": "no one-edit twin could be built"}
+        tpath = path.with_name(path.stem + "_twin.rs")
+        tpath.write_text(twin, encoding="utf-8")
+        try:
+            tp = subprocess.run(memory_capped([str(VERUS_BIN), "--output-json", "--no-cheating", "--rlimit",
+                                 str(RLIMIT), str(tpath)]), capture_output=True, text=True, timeout=timeout_s)
+        except (subprocess.TimeoutExpired, OSError) as e:
+            return {"verdict": "error", "seconds": round(time.monotonic() - started, 1),
+                    "message": f"twin run: {type(e).__name__}"}
+        tm = re.search(r'"errors"\s*:\s*(\d+)', tp.stdout)
+        twin_errors = int(tm.group(1)) if tm else None
+        if tp.returncode == 0 and twin_errors == 0 and not re.search(r"^error", tp.stderr, re.M):
+            return {"verdict": "vacuous", "seconds": round(time.monotonic() - started, 1),
+                    "message": "the harness also proves the negated equivalence: its premises are inconsistent"}
+        return {"verdict": "proved", "seconds": round(time.monotonic() - started, 1), "message": ""}
+    # positive evidence only (t/verifiers/verus.py's rule): both lemmas discharged, no error
     first = next((ln for ln in p.stderr.splitlines() if ln.startswith("error")), "")
     where = re.search(r"-->\s*\S+:(\d+):", p.stderr)
     line = int(where.group(1)) if where else None

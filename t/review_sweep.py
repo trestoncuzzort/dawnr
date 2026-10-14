@@ -150,6 +150,9 @@ def main(argv=None) -> int:
                 ledger["usd"] = ledger["in"] / 1e6 * a.price_in_per_mtok + ledger["out"] / 1e6 * a.price_out_per_mtok
                 if ledger["usd"] >= a.cap_usd:
                     ledger["stop"] = True
+        if findings and all("error" in f for f in findings):
+            print(f"{p}: every call failed ({findings[0]['error'][:120]}); not recorded, a rerun retries it", flush=True)
+            return
         rec = {"module": str(p), "test": str(test) if test else None, "model": a.model, "reasoning_effort": a.reasoning_effort,
                "lines": src.count("\n") + 1, "usage": usage, "wall_s": round(time.monotonic() - t0, 1), "findings": findings}
         (out / (p.as_posix().replace("/", "__") + ".json")).write_text(json.dumps(rec, indent=1), encoding="utf-8")
@@ -157,8 +160,16 @@ def main(argv=None) -> int:
         print(f"{p}: {len(real)} findings ({sum(1 for f in real if f.get('severity') == 'critical')} critical) "
               f"in {rec['wall_s']}s; ${ledger['usd']:.2f} so far", flush=True)
 
-    with concurrent.futures.ThreadPoolExecutor(max_workers=max(1, a.concurrency)) as ex:
-        list(ex.map(one, todo))
+    import faulthandler
+    import traceback
+    faulthandler.enable()
+    try:
+        with concurrent.futures.ThreadPoolExecutor(max_workers=max(1, a.concurrency)) as ex:
+            list(ex.map(one, todo))
+    except BaseException as e:          # noqa: BLE001 -- a sweep that stops must say why, in its own log
+        print(f"review_sweep: stopped by {type(e).__name__}: {str(e)[:300]}", file=sys.stderr, flush=True)
+        traceback.print_exc()
+        raise
     summary = {"model": a.model, "modules": len(files), "reviewed": ledger["calls"], "usd_estimate": round(ledger["usd"], 2),
                "stopped_at_cap": ledger["stop"]}
     (out / "SUMMARY.json").write_text(json.dumps(summary, indent=1), encoding="utf-8")

@@ -1,7 +1,10 @@
 """Remote monitor UI checks. Run with a Tk display on the lab workstation."""
 import os
-import tkinter as tk
 import unittest
+
+import pytest
+
+tk = pytest.importorskip("tkinter", exc_type=ImportError)   # a Python built without Tk skips, as locallm does
 from pathlib import Path
 from tempfile import TemporaryDirectory
 from unittest.mock import patch
