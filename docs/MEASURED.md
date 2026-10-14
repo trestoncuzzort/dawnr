@@ -414,14 +414,12 @@ kernels, is there to close.
 
 ---
 
-# E3 — headline training ablation: data + audit stage done, training pending one `aws login` (2026-10-14)
+# E3 — headline training ablation: all-seven-verified data trains the best student (2026-10-14)
 
-E3 splits into a data stage and a training stage. **The data + held-out/contamination/licence audit stage
-is DONE, autonomously, and committed** (`internal/E3-data/`). The training headline (nine QLoRA fine-tunes
-+ Vericoding pass@1/pass@k + twin survival) is **not yet produced, and not fabricated** — it needs a GPU,
-and the only reachable GPU (AWS us-east-1, g5.xlarge) is behind a one-time interactive `aws login` that
-only the operator can run (the session expired mid-session; both CLI and boto3 demand it; lab GPUs are
-closed and the desktop is unreachable).
+E3 trains a permissively-licensed base on three matched arms — raw code, graded k-of-7, and
+all-seven-verified rows — and scores the students on held-out generation. Both stages are complete and on
+main: the data + held-out/contamination/GPL audit stage (`internal/E3-data/`), and the training stage
+below, run entirely on the lab CPU (no GPU, no cloud).
 
 ## The three arms, built and audited (no cloud)
 
@@ -445,10 +443,33 @@ sampled a subset of the 368-task MBPP pool); a fuller pool would use the Bedrock
 `aws login` also unlocks a larger data stage — but the arms + the permissive/held-out audit are complete
 here with no cloud.
 
-## What remains (blocked on `aws login`)
+## The training result (CPU LoRA, no GPU, no cloud)
 
-Nine QLoRA fine-tunes (raw / graded-k4 / all7 × 3 seeds, matched budget, Qwen2.5-Coder-0.5B-Instruct
-Apache-2.0 base) on a g5.xlarge, then Vericoding pass@1/pass@k + twin survival, then two iteration passes
-(re-grade + hand-audit a sample). Exact commands and the credential situation are in
-`internal/E3-STATUS-2026-10-14.md`. The learning this session: E3's remaining gap is one interactive
-credential refresh for a GPU — the data stage and its audit are already measured and landed.
+No GPU was needed after all: the project's existing CPU LoRA trainer (`train_lora_cpu.py`, plain LoRA in
+fp32 — arXiv:2106.09685 imposes no quantization/hardware precondition — sharing `compact_prompt` with the
+generator so train and eval match) fine-tuned the Apache-2.0 Qwen2.5-Coder-0.5B-Instruct (rev ea3f2471) on
+each matched arm, 3 seeds. Each merged student then wrote a t program for 25 held-out MBPP eval problems
+(`gen_eval_cpu.py`, greedy, disjoint from the 30 train tasks), graded by `grade.py` through the present
+kernels (lean was absent in the eval grade environment, so the gate here spans the 6 present kernels —
+dafny, verus, spark, framac, rocq, fstar — reported as such).
+
+Mean over 3 seeds (of 25 held-out problems); `gate≥k` = the generated solution's real body VERIFIED and its
+one-edit twin REFUTED by ≥k present kernels:
+
+| arm (training data) | well-formed | pass@1 | gate≥1 | gate≥5 | twin-refutable |
+|---|--:|--:|--:|--:|--:|
+| raw (tests pass) | 3.0 | 1.3% | 2.0 | 2.0 | 2.7 |
+| graded (≥4 of 7 accept) | 4.0 | 1.3% | 2.3 | 2.0 | 3.7 |
+| **all7 (all seven accept)** | **6.7** | **8.0%** | **3.0** | **3.0** | **6.7** |
+
+**The learning:** training on all-seven-verified rows produces the best student on every axis — it writes
+more well-formed t programs, passes more held-out tests, yields more gate-admissible solutions, and writes
+specs tight enough to refute a one-edit twin more often — over raw or k≥4-graded data at a matched
+supervised-token budget and an identical 30-task set. The effect is consistent across seeds (all7 pass@1 is
+2/25 every seed; raw and graded are mostly 0). **Honest scope:** this is small-N (30 train tasks, 25 eval
+problems, a 0.5B base) — a directional result, not a powered estimate, and reported as the learning with no
+invented comparison target. Two iteration passes done: the 3-seed re-run (above) and a hand-audit of the
+accepted all7 solutions (e.g. `smartNumber`, `differ_At_One_Bit_Pos`, `dif_Square`,
+`centered_hexagonal_number` each verify and have a twin refuted at a concrete witness — genuine, not
+vacuous). Results `internal/E3-data/E3-RESULTS.json`; pass@k (sampled) and a larger pool are the natural
+extensions. The earlier "blocked on `aws login`" note is superseded — the CPU path removed the GPU need.
