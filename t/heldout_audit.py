@@ -96,7 +96,7 @@ RULE = ("a training row is flagged for a gated problem (held-out or dev) when it
 
 _STEM = re.compile(r"vericoding_([A-Za-z]{2}\d{4})")
 _DFY = re.compile(r"dafny[-_]synthesis[-_]task[-_]id[-_](\d+)", re.I)
-_FENCE = re.compile(r"```t\n(.*?)```", re.S)
+_FENCE = re.compile(r"```t[ \t]*\r?\n(.*?)```", re.S)       # CRLF rows carry t programs too
 _QUIET = ("pass", "requires-excluded")
 
 
@@ -117,7 +117,9 @@ def strings(value):
     if isinstance(value, str):
         yield value
     elif isinstance(value, dict):
-        for v in value.values():
+        for k, v in value.items():
+            if isinstance(k, str):
+                yield k                     # a name can sit in a key (a provenance map), not only in a value
             yield from strings(v)
     elif isinstance(value, (list, tuple)):
         for v in value:
@@ -221,8 +223,7 @@ def candidates(task: dict, gated: dict[int, tuple[dict, str]]) -> list[dict]:
         for i, j in length_arguments(entry):
             verdicts = quiet(task, without_argument(entry["points"], i))
             if verdicts is not None:
-                out.append({"problem": tid, "gate": gate, "points": verdicts, "dropped": [i, j]})
-                break
+                out.append({"problem": tid, "gate": gate, "points": verdicts, "dropped": [i, j]})   # every eligible omission
     return out
 
 
@@ -348,10 +349,14 @@ def _candidates_of(item: tuple[str, str]) -> tuple[str, list[dict] | None]:
 
 def read_rows(paths: list[Path]) -> list[tuple[str, int, dict]]:
     out = []
+    names = [Path(p).name for p in paths]
     for path in paths:
-        for k, line in enumerate(Path(path).read_text(encoding="utf-8").splitlines()):
+        name = Path(path).name
+        if names.count(name) > 1:                 # two files of one basename stay two files in the findings
+            name = str(Path(path).parent.name) + "/" + name
+        for k, line in enumerate(Path(path).read_text(encoding="utf-8").split("\n")):   # not splitlines(): \u2028 is text
             if line.strip():
-                out.append((Path(path).name, k, json.loads(line)))
+                out.append((name, k, json.loads(line)))
     return out
 
 
@@ -362,7 +367,7 @@ def audit(rows: list[tuple[str, int, dict]], *, pool_name: str = "v7", split_pat
     (row, problem, why) with its evidence; a row can carry several."""
     table = lineage() if table is None else table
     pool = se.pool(pool_name)
-    gate_of = gates(split_path, dev_path)
+    gate_of = gates(split_path, dev_path, wider=pool_name != "v5")    # v5 excludes the wider panel, as advertised
     findings: list[dict] = []
     programs: dict[str, str] = {}
     holders: dict[str, list[int]] = {}
@@ -519,7 +524,14 @@ def main(argv: list[str] | None = None) -> int:
     if a.write_wider_policy:
         if a.panels:
             raise SystemExit("heldout_audit: --write-wider-policy records a whole audit; it does not take --panels")
-        a.write_wider_policy.write_text(json.dumps(wider_policy_of(result, a.rows), indent=1) + "\n", encoding="utf-8")
+        record = wider_policy_of(result, a.rows)
+        try:                                       # an existing record's unfaithful-reference exclusions survive a rewrite
+            old = json.loads(a.write_wider_policy.read_text(encoding="utf-8"))
+            if isinstance(old.get("unfaithful_ids"), list):
+                record["unfaithful_ids"] = sorted({int(i) for i in old["unfaithful_ids"]})
+        except (OSError, ValueError):
+            pass
+        a.write_wider_policy.write_text(json.dumps(record, indent=1) + "\n", encoding="utf-8")
         print(f"wrote {a.write_wider_policy}")
     if a.keep:
         bad = {line for _file, line in result["flagged"]}

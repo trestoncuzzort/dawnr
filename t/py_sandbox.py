@@ -38,6 +38,7 @@ import shutil
 import subprocess
 import sys
 import tempfile
+import uuid
 import time
 from pathlib import Path
 
@@ -52,42 +53,62 @@ for _lim, _val in ((resource.RLIMIT_AS, MEM), (resource.RLIMIT_NPROC, 0), (resou
     except (ValueError, OSError):
         if sys.platform != "darwin":                    # macOS does not enforce every limit; Linux must
             raise
-RESULT = %(result)r
+import time as _time
+
+
+class _Deadline(BaseException):
+    pass
 
 
 def _alarm(*_):
-    raise TimeoutError()
+    raise _Deadline()
 
 
-def done(payload):
-    sys.stdout.write("\n" + RESULT + json.dumps(payload) + "\n")
-    sys.stdout.flush()
-    raise SystemExit(0)
+# bound before the solution runs: what it rebinds later (json.load, sys.stdout, signal) is not what reports
+_write, _flush, _dumps = sys.stdout.write, sys.stdout.flush, json.dumps
+_asserts = json.load(open(os.path.join(JOB, "asserts.json")))     # read before the solution can replace them
+_PER = %(per_test)d
 
 
-signal.signal(signal.SIGALRM, _alarm)
+def done(payload, _marker=%(result)r):
+    _write("\n" + _marker + _dumps(payload) + "\n")
+    _flush()
+    os._exit(0)
+
+
+def _arm():
+    signal.signal(signal.SIGALRM, _alarm)       # re-installed every time: the solution may have replaced it
+    signal.setitimer(signal.ITIMER_REAL, _PER)
+
+
 g = {"__name__": "solution"}
-signal.alarm(%(per_test)d)
+_arm()
+_t0 = _time.monotonic()
 try:
     exec(compile(open(os.path.join(JOB, "solution.py")).read(), "solution", "exec"), g)
 except BaseException as e:
-    signal.alarm(0)
+    signal.setitimer(signal.ITIMER_REAL, 0)
     done({"load": (type(e).__name__ + ": " + str(e))[:200]})
-signal.alarm(0)
+signal.setitimer(signal.ITIMER_REAL, 0)
+if _time.monotonic() - _t0 > _PER:
+    done({"load": "timeout"})
 out = []
-for a in json.load(open(os.path.join(JOB, "asserts.json"))):
-    signal.alarm(%(per_test)d)
+for a in _asserts:
+    _arm()
+    _t0 = _time.monotonic()
     try:
         exec(a, dict(g))
         out.append("pass")
     except AssertionError:
         out.append("fail")
-    except TimeoutError:
+    except _Deadline:
         out.append("timeout")
     except BaseException as e:
         out.append("error: " + type(e).__name__)
     finally:
-        signal.alarm(0)
+        signal.setitimer(signal.ITIMER_REAL, 0)
+    if out[-1] == "pass" and _time.monotonic() - _t0 > _PER:
+        out[-1] = "timeout"                     # the clock the solution cannot cancel
 done({"verdicts": out})
 '''
 
@@ -102,16 +123,29 @@ for _lim, _val in ((resource.RLIMIT_AS, MEM), (resource.RLIMIT_NPROC, 0), (resou
     except (ValueError, OSError):
         if sys.platform != "darwin":                    # macOS does not enforce every limit; Linux must
             raise
-RESULT = %(result)r
+import time as _time
+
+
+class _Deadline(BaseException):
+    pass
 
 
 def _alarm(*_):
-    raise TimeoutError()
+    raise _Deadline()
 
 
-def say(payload):
-    sys.stdout.write("\n" + RESULT + json.dumps(payload) + "\n")
-    sys.stdout.flush()
+_write, _flush, _dumps = sys.stdout.write, sys.stdout.flush, json.dumps
+_PER = %(per_call)d
+
+
+def say(payload, _marker=%(result)r):
+    _write("\n" + _marker + _dumps(payload) + "\n")
+    _flush()
+
+
+def _arm():
+    signal.signal(signal.SIGALRM, _alarm)
+    signal.setitimer(signal.ITIMER_REAL, _PER)
 
 
 def plain(v, depth=0):
@@ -127,41 +161,45 @@ def plain(v, depth=0):
     raise TypeError(type(v).__name__)
 
 
-signal.signal(signal.SIGALRM, _alarm)
 g = {"__name__": "solution"}
-signal.alarm(%(per_call)d)
+_arm()
 try:
     exec(compile(open(os.path.join(JOB, "solution.py")).read(), "solution", "exec"), g)
     f = g[%(fn)r]
     if not callable(f):
         raise TypeError("not callable")
 except BaseException as e:
-    signal.alarm(0)
+    signal.setitimer(signal.ITIMER_REAL, 0)
     say({"load": (type(e).__name__ + ": " + str(e))[:200]})
-    raise SystemExit(0)
-signal.alarm(0)
+    os._exit(0)
+signal.setitimer(signal.ITIMER_REAL, 0)
 say({"ready": True})
+_loads = json.loads
 for line in sys.stdin:
     try:
-        args = json.loads(line)
+        args = _loads(line)
     except ValueError:
         say({"error": "bad request"})
         continue
-    signal.alarm(%(per_call)d)
+    _arm()
+    _t0 = _time.monotonic()
     try:
         out = f(*args)
-        signal.alarm(0)
+        signal.setitimer(signal.ITIMER_REAL, 0)
+        if _time.monotonic() - _t0 > _PER:
+            say({"timeout": True})
+            continue
         try:
             say({"value": plain(out)})
         except (TypeError, ValueError) as e:
             say({"unrepresentable": str(e)[:60]})
-    except TimeoutError:
+    except _Deadline:
         say({"timeout": True})
     except BaseException as e:
-        signal.alarm(0)
-        say({"error": type(e).__name__})
+        signal.setitimer(signal.ITIMER_REAL, 0)
+        say({"error": type(e).__name__})          # an application TimeoutError is an error, not the deadline
     finally:
-        signal.alarm(0)
+        signal.setitimer(signal.ITIMER_REAL, 0)
 '''
 
 
@@ -292,28 +330,63 @@ def run_tests(code: str, asserts: list[str], per_test: int = 3, memory_mb: int =
     {"status": "timeout"} | {"status": "sandbox-error", "why"}. Raises RuntimeError without a sandbox."""
     if not available():
         raise RuntimeError(f"py_sandbox: no sandbox ({why_unavailable()}); model-written code is not run without it")
+    marker = _marker()
     with tempfile.TemporaryDirectory(prefix="py-sandbox-") as tmp:
         job = Path(tmp)
         (job / "solution.py").write_text(code, encoding="utf-8")
         (job / "asserts.json").write_text(json.dumps(list(asserts)), encoding="utf-8")
-        (job / "runner.py").write_text(RUNNER % {"memory": memory_mb, "per_test": per_test, "result": RESULT},
+        (job / "runner.py").write_text(RUNNER % {"memory": memory_mb, "per_test": per_test, "result": marker},
                                        encoding="utf-8")
+        out_path, err_path = job / "stdout.txt", job / "stderr.txt"
         try:
             # no terminal and a session of its own: a process that holds its controlling terminal can push
             # keystrokes into the shell after we return (TIOCSTI, CVE-2017-5226). bwrap's --new-session covers
-            # Linux; Codex runs Seatbelt jobs only after setsid() and a null stdin (codex-rs/core/src/spawn.rs)
-            p = subprocess.run(_command(job), capture_output=True, text=True, errors="replace", stdin=subprocess.DEVNULL,
+            # Linux; Codex runs Seatbelt jobs only after setsid() and a null stdin (codex-rs/core/src/spawn.rs).
+            # Output goes to files, not pipes into memory: a solution that prints without end meets the child's
+            # RLIMIT_FSIZE, not the supervisor's RAM; only the tail is read back.
+            with open(out_path, "wb") as out_f, open(err_path, "wb") as err_f:
+                subprocess.run(_command(job), stdout=out_f, stderr=err_f, stdin=subprocess.DEVNULL,
                                start_new_session=True, timeout=per_test * (len(asserts) + 1) + 5)
         except subprocess.TimeoutExpired:
             return {"status": "timeout"}
-    for line in reversed(p.stdout.splitlines()):
-        if line.startswith(RESULT):
-            payload = json.loads(line[len(RESULT):])
+        stdout_tail, stderr_tail = _tail(out_path, 1 << 20), _tail(err_path, 4096)
+    for line in reversed(stdout_tail.splitlines()):
+        if line.startswith(marker):
+            try:
+                payload = json.loads(line[len(marker):])
+            except ValueError:
+                break
             if "load" in payload:
+                if payload["load"] == "timeout":
+                    return {"status": "timeout"}
                 return {"status": "load-error", "why": payload["load"]}
             v = payload["verdicts"]
             return {"status": "ran", "verdicts": v, "all_pass": bool(v) and all(x == "pass" for x in v)}
-    return {"status": "sandbox-error", "why": (p.stderr or p.stdout)[-300:]}
+    return {"status": "sandbox-error", "why": (stderr_tail or stdout_tail)[-300:]}
+
+
+def _marker() -> str:
+    """A protocol marker the solution cannot guess: new for every run, never a constant it could print."""
+    return "@@py_sandbox " + uuid.uuid4().hex + "@@ "
+
+
+def _tail(path: Path, n: int) -> str:
+    try:
+        size = path.stat().st_size
+        with open(path, "rb") as f:
+            if size > n:
+                f.seek(size - n)
+            return f.read().decode("utf-8", "replace")
+    except OSError:
+        return ""
+
+
+def _has_non_string_key(v) -> bool:
+    if isinstance(v, dict):
+        return any(not isinstance(k, str) for k in v) or any(_has_non_string_key(x) for x in v.values())
+    if isinstance(v, (list, tuple)):
+        return any(_has_non_string_key(x) for x in v)
+    return False
 
 
 class Session:
@@ -332,8 +405,9 @@ class Session:
         self._tmp = tempfile.TemporaryDirectory(prefix="py-sandbox-")
         job = Path(self._tmp.name)
         (job / "solution.py").write_text(code, encoding="utf-8")
+        self._marker = _marker()
         (job / "runner.py").write_text(SESSION_RUNNER % {"memory": memory_mb, "per_call": per_call,
-                                                         "result": RESULT, "fn": fn}, encoding="utf-8")
+                                                         "result": self._marker, "fn": fn}, encoding="utf-8")
         self._job, self._p, self._buf, self.restarts = job, None, b"", 0
         self._start()
 
@@ -375,9 +449,9 @@ class Session:
             while b"\n" in self._buf:
                 line, self._buf = self._buf.split(b"\n", 1)
                 text = line.decode("utf-8", "replace")
-                if text.startswith(RESULT):
+                if text.startswith(self._marker):
                     try:
-                        return json.loads(text[len(RESULT):])
+                        return json.loads(text[len(self._marker):])
                     except ValueError:
                         return None
             left = end - time.monotonic()
@@ -390,13 +464,16 @@ class Session:
             if not chunk:
                 return None
             self._buf += chunk
-            if len(self._buf) > (8 << 20):                      # a function that prints without end
-                return None
+            if len(self._buf) > (8 << 20):                      # a function that prints without end, or a reply this large
+                self._buf = b""
+                return {"unrepresentable": "a reply longer than 8 MiB"}
 
     def call(self, args: list):
         if self._p is None or self._p.poll() is not None:
             self.restarts += 1
             self._start()
+        if _has_non_string_key(args):
+            raise CallError("arguments JSON cannot carry: a dict with a key that is not a string")
         try:
             self._p.stdin.write((json.dumps(list(args)) + "\n").encode("utf-8"))
             self._p.stdin.flush()

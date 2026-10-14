@@ -161,7 +161,7 @@ def _skip_block_comment(text: str, i: int) -> int:
             j += 2
         else:
             j += 1
-    return j
+    return -1 if depth > 0 else j
 
 
 _SCC_HEAD_RE = re.compile(r"^\s*\*\s*SCC at height\s+(\d+)\s*:\s*$")
@@ -238,7 +238,10 @@ def _lex(text: str, start: int, line_starts: list[int]) -> list[Token]:
             i = n if j < 0 else j
             continue
         if text.startswith("/*", i):
-            i = _skip_block_comment(text, i)
+            j = _skip_block_comment(text, i)
+            if j < 0:
+                raise LiftParseError("/*", _line_of(line_starts, i), "unterminated block comment")
+            i = j
             continue
 
         start_i = i
@@ -533,10 +536,12 @@ class _Parser:
             else:
                 node = IfStmt(pat.line, cond, body, node)
         if not cases:
-            # `match e { case _ => B }` is just B
+            # `match e { case _ => B }` is B after e was evaluated: the subject's own definedness and
+            # precondition obligations stay, as a binding of it that B need not read
+            scrut = Param(line, "t_scrutinee", None, False)
             if as_expr:
-                return node
-            return BlockStmt(line, node)
+                return LetExpr(line, ghost=False, binders=(scrut,), op=":=", rhs=(subject,), body=node)
+            return BlockStmt(line, (VarDeclStmt(line, ghost=True, names=(scrut,), init=(subject,)),) + tuple(node))
         node.origin = "match-literal"
         node.line = line
         return node
@@ -602,6 +607,8 @@ class _Parser:
             if self.at("("):
                 depth = 0
                 while True:
+                    if self.at_eof():
+                        raise LiftParseError("<eof>", self.cur.line, "unterminated type characteristic")
                     if self.at("("):
                         depth += 1
                     elif self.at(")"):
@@ -663,6 +670,7 @@ class _Parser:
         self.expect(")")
         is_predicate = base == "predicate"
         ret_type = None
+        ret_name = None
         if self.at(":"):
             self.advance()
             # A named result ("function abs(x: int32): (r: int32)"): the
@@ -678,7 +686,7 @@ class _Parser:
             if (self.at("(") and self.tokens[self.pos + 1].kind == "id"
                     and self.tokens[self.pos + 2].text == ":"):
                 self.advance()  # "("
-                self.expect_ident()  # result name, discarded
+                ret_name = self.expect_ident()      # the name the postconditions refer to
                 self.expect(":")
                 ret_type = self.parse_type()
                 self.expect(")")
@@ -704,7 +712,7 @@ class _Parser:
             self._skip_brace_matched_block()
             raise LiftParseError("by", line, "function ... by method",
                                   reason="function-method")
-        return FunctionDecl(line, name=name, ghost="ghost" in modifiers,
+        return FunctionDecl(line, name=name, ghost="ghost" in modifiers, ret_name=ret_name,
                              is_predicate=is_predicate, type_params=type_params,
                              params=tuple(params), ret_type=ret_type,
                              specs=tuple(specs), body=body, attrs=attrs)
@@ -921,9 +929,9 @@ class _Parser:
     def parse_type(self) -> Type:
         base = self._parse_type_primary()
         if self.cur.text in ("->", "~>", "-->"):
-            self.advance()
+            arrow = self.advance().text
             cod = self.parse_type()
-            return Type(base.line, kind="func", args=(base, cod))
+            return Type(base.line, kind="func", args=(base, cod), name=arrow)
         return base
 
     def _parse_type_primary(self) -> Type:
@@ -1102,11 +1110,12 @@ class _Parser:
             # always `forall-statement`-refused downstream regardless, per
             # its own docstring), so they are parsed and discarded here
             # rather than left to derail the rest of the file's decl loop.
+            ensures = []
             while self.at("ensures"):
                 self.advance()
-                self.parse_expr()
+                ensures.append(self.parse_expr())
             body = self.parse_block()
-            return ForallStmt(line, binders, attrs, range_, body)
+            return ForallStmt(line, binders, attrs, range_, body, tuple(ensures))
         if self.at("print"):
             self.advance()
             args = self._parse_exprlist_or_star()
@@ -1202,7 +1211,7 @@ class _Parser:
             cond = self.parse_expr()
             self.expect(";")
             names = tuple(Param(l.line, l.name, None, False) for l in lhss)
-            return AssignSuchThat(line, names, cond)
+            return AssignSuchThat(line, names, cond, declares=False)
         if self.at("("):
             # A call statement on a dotted or indexed receiver
             # ("cm.Restock();", "carPark.closeCarPark();", "aa[j,
@@ -1328,6 +1337,9 @@ class _Parser:
 
     def _parse_while_stmt(self, line: int) -> Stmt:
         self.advance()  # while
+        pre_specs = []
+        if self.cur.text in ("invariant", "decreases", "modifies"):
+            pre_specs = self._parse_loopspec_list()       # `while invariant ... { case ... }`
         if self.at("{") or self.at("case"):
             braced = self.at("{")
             if braced:
@@ -1335,7 +1347,10 @@ class _Parser:
             cases = self._parse_case_block()
             if braced:
                 self.expect("}")
-            return WhileCaseStmt(line, (), tuple(cases))
+            return WhileCaseStmt(line, tuple(pre_specs), tuple(cases))
+        if pre_specs:
+            raise LiftParseError(self.cur.text or "<eof>", self.cur.line,
+                                 "loop specifications before a guard that is not a case block")
         cond: Union[Expr, Star]
         if self.at("*"):
             cond = Star(self.cur.line)
@@ -1461,10 +1476,12 @@ class _Parser:
                 break
             if depth == 0 and (self.at(",") or self.at(";")):
                 break
-            if self.cur.text in ("(", "[", "{"):
+            if self.cur.text in ("(", "[", "{", "<"):
                 depth += 1
-            elif self.cur.text in (")", "]", "}"):
+            elif self.cur.text in (")", "]", "}", ">"):
                 depth -= 1
+            elif self.cur.text == ">>":
+                depth -= 2
             end = self.advance().end
         text = self._source[start:end].strip()
         return NewRhs(line, text)
@@ -1582,10 +1599,40 @@ class _Parser:
             return Unary(line, "-", self._parse_unary())
         return self._parse_primary()
 
+    def _type_args_then_call(self) -> int:
+        """At `<`: the number of tokens that form `<Type, ...>` immediately followed by `(`, or 0 when this
+        `<` is a comparison. `P<int>(x)` is a call with explicit type arguments (Reference Manual, "Function
+        and method calls"); the chain parser above would otherwise read `P < int > (x)`."""
+        depth, k = 0, self.pos
+        while k < len(self.tokens):
+            t = self.tokens[k]
+            if t.kind == "eof":
+                return 0
+            if t.text == "<":
+                depth += 1
+            elif t.text == ">":
+                depth -= 1
+            elif t.text == ">>":
+                depth -= 2
+            elif not (t.kind == "id" or t.text in (",", ".", "?", "(", ")")
+                      or t.text in ("int", "nat", "bool", "string", "char", "real", "seq", "set", "iset",
+                                    "multiset", "map", "imap", "array", "object")):
+                return 0
+            if depth <= 0:
+                return (k + 1 - self.pos) if (depth == 0 and k + 1 < len(self.tokens)
+                                               and self.tokens[k + 1].text == "(") else 0
+            k += 1
+        return 0
+
     def _parse_primary(self) -> Expr:
         atom = self._parse_atom()
         while True:
             line = self.cur.line
+            if isinstance(atom, Ident) and self.at("<"):
+                n = self._type_args_then_call()
+                if n:
+                    for _ in range(n):          # the explicit type arguments are not part of the t task
+                        self.advance()
             if self.at("("):
                 self.advance()
                 args = self._parse_expr_list_until(")")
@@ -1624,7 +1671,9 @@ class _Parser:
                             self.advance()
                             idxs.append(self.parse_expr())
                         self.expect("]")
-                        atom = Index(line, atom, TupleExpr(line, tuple(idxs)))
+                        multi = TupleExpr(line, tuple(idxs))
+                        multi.multi_index = True            # `a[i, j]`, not `a[(i, j)]`
+                        atom = Index(line, atom, multi)
                     else:
                         self.expect("]")
                         atom = Index(line, atom, first)
@@ -2058,7 +2107,8 @@ def _declares_bitvector(text: str) -> bool:
     `bv<N>` type written in a declaration. The preamble line alone is not
     enough because `print_dafny`'s output (the section 10(b) fixpoint feeds
     it back through here) does not reproduce the preamble."""
-    if "bitvector types in use" in text:
+    m = re.search(r"bitvector types in use:?(.*?)(?:\*/|$)", text, re.S)
+    if m and re.search(r"\bbv\d+\b", m.group(1)):
         return True
     return re.search(r"\bbv\d+\b", text) is not None
 
@@ -2124,9 +2174,10 @@ def _print_type(t: Type) -> str:
     if t.kind == "bv":
         return f"bv{t.bits}"
     if t.kind in ("seq", "set", "iset", "multiset"):
-        return f"{t.kind}<{_print_type(t.args[0])}>"
+        return f"{t.kind}<{_print_type(t.args[0])}>" if t.args else t.kind
     if t.kind in ("map", "imap"):
-        return f"{t.kind}<{_print_type(t.args[0])}, {_print_type(t.args[1])}>"
+        return (f"{t.kind}<{_print_type(t.args[0])}, {_print_type(t.args[1])}>" if len(t.args) == 2
+                else t.kind)
     if t.kind == "array":
         q = "?" if t.nullable else ""
         inner = f"<{_print_type(t.args[0])}>" if t.args else ""
@@ -2134,7 +2185,7 @@ def _print_type(t: Type) -> str:
     if t.kind == "tuple":
         return "(" + ", ".join(_print_type(a) for a in t.args) + ")"
     if t.kind == "func":
-        return f"({_print_type(t.args[0])}) -> ({_print_type(t.args[1])})"
+        return f"({_print_type(t.args[0])}) {t.name or '->'} ({_print_type(t.args[1])})"
     if t.kind == "id":
         args = f"<{', '.join(_print_type(a) for a in t.args)}>" if t.args else ""
         return f"{t.name}{args}"
@@ -2194,7 +2245,7 @@ def _print_expr(e: Expr) -> str:
         rng = f" | {_print_expr(e.range)}" if e.range is not None else ""
         return f"({e.kind} {binders}{rng} :: {_print_expr(e.body)})"
     if isinstance(e, SetDisplay):
-        return "{" + ", ".join(_print_expr(x) for x in e.elems) + "}"
+        return ("multiset" if e.multiset else "") + "{" + ", ".join(_print_expr(x) for x in e.elems) + "}"
     if isinstance(e, MapDisplay):
         return "map[" + ", ".join(f"{_print_expr(k)} := {_print_expr(v)}" for k, v in e.pairs) + "]"
     if isinstance(e, SeqDisplay):
@@ -2213,6 +2264,8 @@ def _print_expr(e: Expr) -> str:
     if isinstance(e, Call):
         return f"{_print_expr(e.fn)}({', '.join(_print_expr(a) for a in e.args)})"
     if isinstance(e, Index):
+        if isinstance(e.index, TupleExpr) and getattr(e.index, "multi_index", False):
+            return f"{_print_expr(e.base)}[{', '.join(_print_expr(x) for x in e.index.elems)}]"
         return f"{_print_expr(e.base)}[{_print_expr(e.index)}]"
     if isinstance(e, Slice):
         lo = _print_expr(e.lo) if e.lo is not None else ""
@@ -2280,10 +2333,11 @@ def _print_stmt(s: Stmt, indent: int) -> list[str]:
         g = "ghost " if s.ghost else ""
         names = ", ".join(_print_param(p) for p in s.names)
         init = f" := {', '.join(_print_rhs(v) for v in s.init)}" if s.init is not None else ""
-        return [f"{pad}var {g}{names}{init};"]
+        return [f"{pad}{g}var {names}{init};"]
     if isinstance(s, AssignSuchThat):
         names = ", ".join(_print_param(p) for p in s.names)
-        return [f"{pad}var {names} :| {_print_expr(s.cond)};"]
+        head = "var " if getattr(s, "declares", True) else ""
+        return [f"{pad}{head}{names} :| {_print_expr(s.cond)};"]
     if isinstance(s, Assign):
         lhss = ", ".join(_print_lhs(l) for l in s.targets)
         values = ", ".join(_print_rhs(v) for v in s.values)
@@ -2358,7 +2412,10 @@ def _print_stmt(s: Stmt, indent: int) -> list[str]:
     if isinstance(s, ForallStmt):
         binders = ", ".join(_print_param(b) for b in s.binders)
         rng = f" | {_print_expr(s.range)}" if s.range is not None else ""
-        lines = [f"{pad}forall {binders}{rng} {{"]
+        lines = [f"{pad}forall {binders}{rng}"]
+        for en in getattr(s, "ensures", ()):
+            lines.append(f"{pad}  ensures {_print_expr(en)}")
+        lines[-1] += " {"
         lines.extend(_print_stmts(s.body, indent + 2))
         lines.append(f"{pad}}}")
         return lines
@@ -2370,7 +2427,7 @@ def _print_stmt(s: Stmt, indent: int) -> list[str]:
         return [f"{pad}reveal {s.text};"]
     if isinstance(s, LabelStmt):
         inner = _print_stmt(s.stmt, indent)
-        inner[0] = f"{pad}{s.label}: {inner[0].lstrip()}"
+        inner[0] = f"{pad}label {s.label}: {inner[0].lstrip()}"
         return inner
     if isinstance(s, CallStmt):
         args = ", ".join(_print_expr(a) for a in s.args)
@@ -2391,7 +2448,8 @@ def _print_decl(d) -> str:
             header += "<" + ", ".join(d.type_params) + ">"
         header += "(" + ", ".join(_print_param(p) for p in d.params) + ")"
         if d.ret_type is not None:
-            header += f": {_print_type(d.ret_type)}"
+            rn = getattr(d, "ret_name", None)
+            header += f": ({rn}: {_print_type(d.ret_type)})" if rn else f": {_print_type(d.ret_type)}"
         lines = [header]
         for s in d.specs:
             lines.append(f"  {_print_fspec(s)}")
@@ -2401,7 +2459,7 @@ def _print_decl(d) -> str:
             lines.append("}")
         return "\n".join(lines)
     if isinstance(d, MethodDecl):
-        header = "method " + d.name
+        header = ("ghost " if d.ghost else "") + "method " + d.name
         if d.type_params:
             header += "<" + ", ".join(d.type_params) + ">"
         header += "(" + ", ".join(_print_param(p) for p in d.params) + ")"
@@ -2418,9 +2476,8 @@ def _print_decl(d) -> str:
     if isinstance(d, LemmaDecl):
         return d.text
     if isinstance(d, SkippedDecl):
-        # See "KNOWN GAP" above the printer section: no raw text is kept
-        # for a skipped declaration, so this is a syntactically valid
-        # placeholder, not a faithful reproduction.
+        if d.text and d.text.strip():
+            return d.text            # the declaration as read, so whatever refers to its name stays bound
         base = d.keyword.split()[-1]
         safe_name = f"Skipped_{abs(hash((d.keyword, d.line))) % 100000}"
         if base in ("datatype", "codatatype"):

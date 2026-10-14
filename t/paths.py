@@ -56,6 +56,7 @@ from __future__ import annotations
 
 import functools
 import os
+import uuid
 import sys
 import tempfile
 from pathlib import Path
@@ -103,12 +104,31 @@ def writable(d: Path) -> bool:
     created and could not then write to is removed again, because a stick must be left
     with nothing of ours on it.
     """
-    existed = d.is_dir()
-    probe = d / f".locallm-write-probe-{os.getpid()}"
+    try:
+        existed = d.is_dir()
+    except OSError:                   # a parent we may not read: not a place for state, and not an error either
+        return False
+    probe = d / f".locallm-write-probe-{os.getpid()}-{uuid.uuid4().hex[:8]}"
+    fd = None
     try:
         d.mkdir(parents=True, exist_ok=True)
-        probe.write_text("probe\n", encoding="utf-8")   # real bytes, so a full stick fails here
+        # O_EXCL|O_NOFOLLOW: a probe of this name that already exists (a symlink planted there, say) is never
+        # followed or overwritten; the write goes to a file this call created
+        fd = os.open(probe, os.O_WRONLY | os.O_CREAT | os.O_EXCL | getattr(os, "O_NOFOLLOW", 0), 0o600)
+        os.close(fd)
+        fd = None
+        probe.write_text("probe\n", encoding="utf-8")   # real bytes into the file just created, so a full stick fails here
     except OSError:
+        if fd is not None:
+            try:
+                os.close(fd)
+            except OSError:
+                pass
+            fd = None
+        try:
+            probe.unlink()                    # a file this call created before the write failed
+        except OSError:
+            pass
         if not existed:
             try:
                 d.rmdir()
@@ -116,8 +136,14 @@ def writable(d: Path) -> bool:
                 pass
         return False
     finally:
+        if fd is not None:
+            try:
+                os.close(fd)
+            except OSError:
+                pass
         try:
-            probe.unlink()
+            if probe.is_symlink() is False and probe.exists():
+                probe.unlink()
         except OSError:
             pass
     return True
@@ -140,8 +166,8 @@ def platform_state_dir() -> Path:
     # basedir-spec, section 2: "All paths set in these environment variables must be
     # absolute. If an implementation encounters a relative path in any of these variables
     # it should consider the path invalid and ignore it."
-    xdg = os.environ.get("XDG_STATE_HOME", "").strip()
-    base = Path(xdg) if xdg and os.path.isabs(xdg) else Path.home() / ".local" / "state"
+    xdg = os.environ.get("XDG_STATE_HOME", "")
+    base = Path(xdg) if xdg.strip() and os.path.isabs(xdg) else Path.home() / ".local" / "state"
     return base / APP
 
 
@@ -159,16 +185,12 @@ def state_root(program: Path | None = None, platform: Path | None = None) -> Pat
     beside = (program if program is not None else program_dir()) / PORTABLE
     if writable(beside):
         return beside
-    fallback = platform if platform is not None else platform_state_dir()
-    if writable(fallback):
+    try:
+        fallback = platform if platform is not None else platform_state_dir()
+    except (RuntimeError, OSError):          # no home directory can be determined: the temporary fallback stands
+        fallback = None
+    if fallback is not None and writable(fallback):
         return fallback
-    # INVENTED: searched for what a portable application does when neither its own folder
-    # nor the platform folder will take a file -- a read-only stick unpacked under a
-    # root-owned directory, or a service account with no home -- and found only "refuse to
-    # start" (VS Code's portable mode errors) or an unguarded write that raises. Neither is
-    # right for this window: it is mostly a reader of other machines' files, and a window
-    # that opens without its history beats a traceback instead of a window. So the last
-    # resort is a folder that lasts until reboot, and nothing above this line raises.
     return Path(tempfile.mkdtemp(prefix=f"{APP}-state-"))
 
 
@@ -198,8 +220,13 @@ def state_path(var: str, *parts: str, env_join: tuple[str, ...] = ()) -> Path:
     relative value is ignored there rather than honoured, which is what basedir-spec
     section 2 says to do with one.
     """
-    raw = os.environ.get(var, "").strip()
-    if raw and (not env_join or os.path.isabs(os.path.expanduser(raw))):
-        return Path(raw).expanduser().joinpath(*env_join)
+    raw = os.environ.get(var, "")
+    if raw.strip() and (not env_join or os.path.isabs(raw)):     # a base folder must be absolute as written (basedir-spec 2)
+        target = Path(raw).expanduser().joinpath(*env_join)       # the value itself is kept whole: a path may end in a space
+        try:
+            target.parent.mkdir(parents=True, exist_ok=True)       # the promise holds for an override too
+        except OSError:
+            pass
+        return target
     *folders, leaf = parts
     return state_dir(*folders) / leaf

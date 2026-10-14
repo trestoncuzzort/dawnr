@@ -421,12 +421,17 @@ class Scope:
     # bounds a quantifier through a predicate's body exactly as classify did.
     # Shared, never mutated after `rewrite()` sets it.
     predicates: dict = field(default_factory=dict)
+    json_types: dict = field(default_factory=dict)     # t name -> the JSON type entry (nesting kept)
+    function_rets: dict = field(default_factory=dict)  # dafny function name -> its declared result Type
 
     def copy(self) -> "Scope":
-        return Scope(dict(self.renames), dict(self.types), list(self.nat), self.ret_name,
-                     self.old_array_name, self.old_array_param_tname, self.null_drop_ids,
-                     dict(self.pair_view), self.pair_ret, dict(self.method_rets),
-                     self.lemmas, self.predicates)
+        c = Scope(dict(self.renames), dict(self.types), list(self.nat), self.ret_name,
+                  self.old_array_name, self.old_array_param_tname, self.null_drop_ids,
+                  dict(self.pair_view), self.pair_ret, dict(self.method_rets),
+                  self.lemmas, self.predicates)
+        c.json_types = dict(self.json_types)
+        c.function_rets = self.function_rets
+        return c
 
 
 # ---------------------------------------------------------------------------
@@ -881,10 +886,31 @@ class _AtHole:
         self.binder = binder
 
 
+def _idents_of(e, out: set | None = None) -> set:
+    """Every identifier name an expression mentions."""
+    import dataclasses as _dc
+    out = set() if out is None else out
+    if isinstance(e, Ident):
+        out.add(e.name)
+    elif isinstance(e, (tuple, list)):
+        for v in e:
+            _idents_of(v, out)
+    elif hasattr(e, "__dataclass_fields__"):
+        for f in _dc.fields(e):
+            _idents_of(getattr(e, f.name), out)
+    return out
+
+
 def _subst(e: Expr, name: str, repl) -> Expr:
     import dataclasses as _dc
     if isinstance(e, Ident):
         return repl if e.name == name else e
+    binders = getattr(e, "binders", None)
+    if binders and e.__class__.__name__ in ("Quantifier", "Comprehension", "LetExpr") \
+            and any(getattr(b, "name", None) == name for b in binders):
+        if e.__class__.__name__ == "LetExpr":          # the binder shadows the body, not the right-hand sides
+            return _dc.replace(e, rhs=_subst_any(e.rhs, name, repl))
+        return e
     if hasattr(e, "__dataclass_fields__"):
         changes = {}
         for f in _dc.fields(e):
@@ -1325,7 +1351,10 @@ def _lift_stmt(s: Stmt, scope: Scope, fn_names: dict, self_name: str,
                 out.append({"var": {"name": tmp, "type": ty, "init": rhs_e}})
                 if lhs.kind == "index":
                     idx_e = _lift_expr(lhs.index, scope, fn_names, self_name, task_name, record, renamer)
-                    temps.append((tgt_t, tmp, idx_e))
+                    tmpi = renamer.fresh(f"tmpi{i}", record, "temp")     # the index, read before any write
+                    scope.types[tmpi] = "int"
+                    out.append({"var": {"name": tmpi, "type": "int", "init": idx_e}})
+                    temps.append((tgt_t, tmp, {"var": tmpi}))
                 else:
                     temps.append((tgt_t, tmp, None))
             for tgt_t, tmp, idx_e in temps:
@@ -1379,17 +1408,8 @@ def _lift_stmt(s: Stmt, scope: Scope, fn_names: dict, self_name: str,
                 # "args": []}`, since `[]` is t's own empty seq value
                 # (row 30: the same empty literal for a nested-typed
                 # local too, the declared type disambiguating).
-                if ty == "seq":
-                    default = {"op": "seq", "args": []}
-                elif ty == "set":
-                    # Row 52 (2026-09-27): `var d: set<int>;`, no
-                    # initialiser -- t's empty set, the same convention
-                    # `_type_default` states (measured on dafny 4.11.0,
-                    # `~/scratch/setslift/tset.dfy`: an uninitialised
-                    # `set<int>` prints `{}`).
-                    default = {"op": "set", "args": []}
-                else:
-                    default = {"bool": False} if ty == "bool" else {"int": 0}
+                default = _type_default(_t_json_type(nm.type))        # a pair gets a pair, not an int
+                scope.json_types[tname] = _t_json_type(nm.type)
                 out.append({"var": {"name": tname, "type": _t_json_type(nm.type), "init": default}})
                 record.rewrites.append(Rewrite(rule="default-init", line=s.line))
                 record.clauses_added.append(ClauseAdded(rule="default-init", text=f"{tname} := {default}"))
@@ -1426,6 +1446,10 @@ def _lift_stmt(s: Stmt, scope: Scope, fn_names: dict, self_name: str,
                     callee_rets = (scope.method_rets.get(rhs.fn.name)
                                    if isinstance(rhs, Call) and isinstance(rhs.fn, Ident) else None)
                     callee_ret = callee_rets[0].type if callee_rets and len(callee_rets) == 1 else None
+                    fn_ret = (scope.function_rets.get(rhs.fn.name)
+                              if isinstance(rhs, Call) and isinstance(rhs.fn, Ident) else None)
+                    alias_json = (scope.json_types.get(scope.renames.get(rhs.name))
+                                  if isinstance(rhs, Ident) else None)
                     if nm.type is not None:
                         ty = _t_type_of(nm.type)
                         json_ty = _t_json_type(nm.type)
@@ -1434,6 +1458,12 @@ def _lift_stmt(s: Stmt, scope: Scope, fn_names: dict, self_name: str,
                         # declared out-parameter.
                         ty = _t_type_of(callee_ret)
                         json_ty = _t_json_type(callee_ret)
+                    elif fn_ret is not None:                     # a spec function's declared result
+                        ty = _t_type_of(fn_ret)
+                        json_ty = _t_json_type(fn_ret)
+                    elif isinstance(alias_json, dict):            # `var x := m` keeps m's nesting
+                        ty = "seq" if "seq" in alias_json else "pair" if "pair" in alias_json else "int"
+                        json_ty = alias_json
                     else:
                         # Rows 25-27: an UNTYPED local (`var r := [];`,
                         # `var r := r + [x];`) is exactly as common a
@@ -1472,6 +1502,7 @@ def _lift_stmt(s: Stmt, scope: Scope, fn_names: dict, self_name: str,
                     scope.nat.append(nm.name)
                 if json_ty is None:
                     json_ty = ty
+                scope.json_types[tname] = json_ty
                 out.append({"var": {"name": tname, "type": json_ty, "init": rhs_e}})
         return out
 
@@ -1557,6 +1588,14 @@ def _lift_stmt(s: Stmt, scope: Scope, fn_names: dict, self_name: str,
                 record.for_bound_locals = {}
             record.for_bound_locals.setdefault(s.line, []).append(h_t)
             out.append({"var": {"name": h_t, "type": "int", "init": hi_e}})
+            if _idents_of(s.lo) & _assigned_dafny_names(s.body):
+                # the lower bound is evaluated once, at entry: a body that assigns a name it mentions must not
+                # re-evaluate it in the synthesized invariant
+                l_t = renamer.fresh("l", record, "local")
+                scope.types[l_t] = "int"
+                record.for_bound_locals[s.line].append(l_t)
+                out.append({"var": {"name": l_t, "type": "int", "init": lo_e}})
+                lo_e = {"var": l_t}
             out.append({"var": {"name": i_t, "type": "int", "init": lo_e}})
             cond = {"op": "<", "args": [{"var": i_t}, {"var": h_t}]}
             invs = [{"op": "<=", "args": [lo_e, {"var": i_t}]},
@@ -1581,8 +1620,9 @@ def _lift_stmt(s: Stmt, scope: Scope, fn_names: dict, self_name: str,
 
     if cls == "BlockStmt":
         out = []
+        block_scope = scope.copy()           # a shadowing local inside the block is not visible after it
         for st in s.body:
-            out.extend(_lift_stmt(st, scope, fn_names, self_name, task_name, renamer, record))
+            out.extend(_lift_stmt(st, block_scope, fn_names, self_name, task_name, renamer, record))
         return out
 
     if cls == "LabelStmt":
@@ -1678,8 +1718,11 @@ def _contains_key(node, key) -> bool:
 # Function (spec_fun) lifting (sections 4.1/4.6/6/7).
 # ---------------------------------------------------------------------------
 
-def _lift_function(d: FunctionDecl, renamer: _Renamer, fn_names: dict, record: LiftRecord) -> dict:
+def _lift_function(d: FunctionDecl, renamer: _Renamer, fn_names: dict, record: LiftRecord,
+                   predicates: dict | None = None, function_rets: dict | None = None) -> dict:
     scope = Scope()
+    scope.predicates = predicates or {}          # a quantifier bounded through a closure predicate rewrites here too
+    scope.function_rets = function_rets or {}
     params_out = []
     guard_parts = []
     for p in d.params:
@@ -1956,6 +1999,7 @@ def rewrite(module: Module, plan: Liftable, source_path: str,
         scope.types[tname] = ty
         if p.type is not None and p.type.kind == "nat":
             scope.nat.append(p.name)
+        scope.json_types[tname] = ty if json_ty is None else json_ty
         params_out.append({"name": tname, "type": ty if json_ty is None else json_ty})
 
     if mutated_param_name is not None:
@@ -2068,7 +2112,9 @@ def rewrite(module: Module, plan: Liftable, source_path: str,
     fn_decls = [d for d in closure if isinstance(d, FunctionDecl)]
     for d in fn_decls:
         fn_names[d.name] = renamer.fresh(d.name, record, "function")
-    spec_funs_out = [_lift_function(d, renamer, fn_names, record) for d in fn_decls]
+    scope.function_rets = {d.name: d.ret_type for d in fn_decls}
+    spec_funs_out = [_lift_function(d, renamer, fn_names, record, scope.predicates, scope.function_rets)
+                     for d in fn_decls]
     # Row 37: a call of a callee method lifts to a call of its task name
     # (`_lift_expr`'s `Call` case reads `fn_names`); set after the spec_funs
     # are lifted, since no function body can call a method.
@@ -2385,7 +2431,14 @@ def rewrite(module: Module, plan: Liftable, source_path: str,
         methods_out: list = []
         seen_methods: set = set()
         funs_by_name = {f["name"]: f for f in spec_funs_out}
+        seen_from: dict = {}
         for cname, cplan, crr in callee_results:
+            if crr.task["name"] in seen_from and seen_from[crr.task["name"]] != cname:
+                return RewriteResult(task=task, record=record,
+                                     refusal=("callee-name-collision",
+                                              f"{cname} and {seen_from[crr.task['name']]} both lift to "
+                                              f"{crr.task['name']}"))
+            seen_from.setdefault(crr.task["name"], cname)
             for m in crr.task.get("methods", []):
                 if m["name"] not in seen_methods:
                     seen_methods.add(m["name"])

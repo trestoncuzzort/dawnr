@@ -64,6 +64,7 @@ from lift_ast import Refusal
 # "(policy 15.1 could turn read-only params into seq)": `array`. Both name
 # the same census gap name.
 POLICY_GAP_NAMES: frozenset[str] = frozenset({"array"})
+NON_BLOCKING_FIELDS: frozenset[str] = frozenset({"has-method", "method-with-ensures"})   # positive detectors, never gaps
 
 # Section 8, verbatim: "one of the verified rewrites (`seq-membership`,
 # `s != []`)". `seq-membership` is the census's own gap name (decision 2,
@@ -178,7 +179,7 @@ def disagreement_verdict(census_record: dict, refusal: Optional[Refusal],
     data (which gap names are policy gaps is a section-15/decisions-file
     fact, looked up, not computed from the AST)."""
     in_fragment = bool(census_record.get("in_fragment", False))
-    true_gaps = set(census_record.get("gaps") or [])
+    true_gaps = set(_census_gaps_dict(census_record))     # a boolean-only record keeps its gaps too
 
     if in_fragment:
         if refusal is None:
@@ -189,8 +190,8 @@ def disagreement_verdict(census_record: dict, refusal: Optional[Refusal],
             return "agree" if lifted_and_checked else "undecided"
         if refusal.reason in INCOMPLETE_PIPELINE_REASONS:
             return "undecided"
-        if refusal.reason == "lift-check-failed":
-            return "undecided"
+        if refusal.reason in ("lift-check-failed", "check-wf-failed"):
+            return "undecided"              # the generated task failed its own check: the lifter is suspect, not the census
         if refusal.reason in POLICY_REFUSAL_REASONS:
             return "undecided"
         # The census cannot be right that a program is in-fragment when a
@@ -273,7 +274,7 @@ def _census_gaps_dict(census_record: dict) -> list[str]:
     the shipped `census.json` has one)."""
     if "gaps" in census_record:
         return list(census_record["gaps"])
-    skip = {"file", "family", "gaps", "in_fragment"}
+    skip = {"file", "family", "gaps", "in_fragment"} | NON_BLOCKING_FIELDS
     return sorted(k for k, v in census_record.items() if k not in skip and v)
 
 
@@ -299,7 +300,8 @@ def _row_from_method_outcome(census_record: dict, method_outcome) -> "CensusRow"
         differential_verdict=(record.differential_verdict if record is not None else None),
         kernel_outcomes={},
     )
-    row.disagreement = disagreement_verdict(census_record, refusal, lifted)
+    checked = lifted and record is not None and (bool(record.checker_verdicts) or record.differential_verdict is not None)
+    row.disagreement = disagreement_verdict(census_record, refusal, checked)   # lifted and CHECKED, or undecided
     return row
 
 
@@ -421,6 +423,8 @@ def _is_counted(row: "CensusRow") -> bool:
         return False
     if row.differential_verdict is not None and not row.differential_verdict.startswith("agrees"):
         return False
+    if any(str(v).upper() not in ("PROVED", "VERIFIED", "PASS", "PASSED", "AGREES") for v in (row.checker_verdicts or {}).values()):
+        return False                        # a recorded checker failure is not counted coverage
     return True
 
 
