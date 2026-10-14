@@ -239,3 +239,12 @@ that to 23 percent, a threefold cut but not to zero. The floor is specifications
 sound prover to reject the wrong program, worst in DafnyBench at 38 percent. Cross-kernel agreement
 removes prover unsoundness, not spec weakness, which is what the one-edit twin-refutation layer is
 for. Full account in docs/MEASURED.md; raw data and harness in internal/.
+
+**Seven kernels, how independent (E2, 14 October 2026).** The gate's seven kernels do not share one
+solver: dafny, verus and fstar use Z3, framac uses Alt-Ergo, spark uses cvc5, and lean and rocq use no
+SMT at all, so a k=7 verdict already spans three independent SMT solvers plus two proof assistants. On
+167 adjudicated survivors, the 38 that all seven accept (E1's false-accept floor) are confirmed across
+all three solvers, so the floor is genuine specification weakness, not a Z3 artifact. Same-solver
+kernels agree no more than cross-solver ones (Z3 trio 87 percent versus 94 percent across backends),
+and Alt-Ergo and cvc5 each reject a few wrong programs Z3 accepts. Agreement is real independence.
+Full account in docs/MEASURED.md; data and harness in internal/.
