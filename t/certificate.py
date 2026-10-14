@@ -231,6 +231,17 @@ def check(certificate: dict, prover=None, jobs: int = 2, spec: dict | None = Non
         steps.append({"what": what, "result": result, "detail": detail})
         return result != BAD
 
+    # Additive dispatch: a paired-observation certificate (urn:dawnr:observation:v1) is replayed by the
+    # observation checker -- it re-lowers and re-runs the EXACT archived twin, reproducing the measured
+    # OBSERVATION with no model (not a whole-program correctness proof). The generic prove/ask/verify path
+    # below is unchanged. Verdicts share this module's REPRODUCED/FAILED/UNDECIDED vocabulary.
+    if isinstance(certificate, dict) and certificate.get("predicateType") == "urn:dawnr:observation:v1":
+        import obs_certificate
+        return obs_certificate.check(certificate, spec=spec, jobs=jobs)   # CLI --kernels honoured in main()
+    if isinstance(certificate, dict) and certificate.get("predicateType") == "urn:dawnr:observation-record:v1":
+        import obs_certificate
+        return obs_certificate.check_record(certificate)                  # typed/absent cell: explicit UNDECIDED record
+
     predicate = certificate.get("predicate") if isinstance(certificate, dict) else None
     if (not isinstance(predicate, dict) or certificate.get("_type") != STATEMENT or certificate.get("predicateType") != PREDICATE
             or predicate.get("version") != VERSION or not isinstance(predicate.get("program"), str)):
@@ -350,6 +361,11 @@ _WHAT = {"certificate": "the file is a certificate", "digests": "each part is th
 
 
 def render(report: dict) -> str:
+    # SHARED dispatch: a paired-observation report renders observation-only (never "proved here"), so every
+    # consumer of render() -- the CLI, mcp_gate, any caller -- is covered, not just the CLI path.
+    if report.get("kind") in ("paired-observation", "observation-record-only"):
+        import obs_certificate
+        return obs_certificate.render(report)
     steps = report["steps"]
     bad = [s for s in steps if s["result"] == BAD]
     if report["verdict"] == REPRODUCED:
@@ -399,8 +415,14 @@ def main(argv: list[str] | None = None) -> int:
             spec = prove.read_spec(a.spec.read_text(encoding="utf-8"))
         except (OSError, prove.Refused) as error:
             raise SystemExit(f"check: {error}")
-    report = check(certificate, prover=functools.partial(gate.prove, kernels=a.kernels) if a.kernels else None, jobs=a.jobs, spec=spec)
-    print(render(report))
+    if isinstance(certificate, dict) and certificate.get("predicateType") == "urn:dawnr:observation:v1":
+        import obs_certificate                              # honour --spec, --kernels and --jobs explicitly
+        sel = [k for k in a.kernels.split(",") if k] or None
+        report = obs_certificate.check(certificate, spec=spec, kernels=sel, jobs=a.jobs)
+        print(obs_certificate.render(report))              # observation-only render (never "proved here")
+    else:
+        report = check(certificate, prover=functools.partial(gate.prove, kernels=a.kernels) if a.kernels else None, jobs=a.jobs, spec=spec)
+        print(render(report))
     if a.json:
         a.json.write_text(json.dumps(report, indent=1, default=str) + "\n", encoding="utf-8")
     return {REPRODUCED: 0, FAILED: 1}.get(report["verdict"], 2)

@@ -1,0 +1,100 @@
+{
+  "mode": "v2-validated",
+  "eff_config_id": "d6a55f7a691e",
+  "n_pairs": 426,
+  "expected_cells": 2982,
+  "admissible_graded_cells": 2982,
+  "cell_states": {
+    "graded": 2982
+  },
+  "real_side_states": {
+    "verified": 2966,
+    "unverifiable:vacuous|agreed=True": 16
+  },
+  "twin_side_states": {
+    "refuted": 2963,
+    "unverifiable:vacuous|agreed=True": 16,
+    "unverifiable:unproved|agreed=True": 3
+  },
+  "curve": [
+    {
+      "k": 1,
+      "paired_gate_pass_same_kernel_conj": 426,
+      "paired_gate_pass_pct": 100.0,
+      "real_verified_ge_k": 426,
+      "twin_refuted_ge_k": 426,
+      "DIAGNOSTIC_across_halves": 426
+    },
+    {
+      "k": 2,
+      "paired_gate_pass_same_kernel_conj": 426,
+      "paired_gate_pass_pct": 100.0,
+      "real_verified_ge_k": 426,
+      "twin_refuted_ge_k": 426,
+      "DIAGNOSTIC_across_halves": 426
+    },
+    {
+      "k": 3,
+      "paired_gate_pass_same_kernel_conj": 426,
+      "paired_gate_pass_pct": 100.0,
+      "real_verified_ge_k": 426,
+      "twin_refuted_ge_k": 426,
+      "DIAGNOSTIC_across_halves": 426
+    },
+    {
+      "k": 4,
+      "paired_gate_pass_same_kernel_conj": 426,
+      "paired_gate_pass_pct": 100.0,
+      "real_verified_ge_k": 426,
+      "twin_refuted_ge_k": 426,
+      "DIAGNOSTIC_across_halves": 426
+    },
+    {
+      "k": 5,
+      "paired_gate_pass_same_kernel_conj": 426,
+      "paired_gate_pass_pct": 100.0,
+      "real_verified_ge_k": 426,
+      "twin_refuted_ge_k": 426,
+      "DIAGNOSTIC_across_halves": 426
+    },
+    {
+      "k": 6,
+      "paired_gate_pass_same_kernel_conj": 424,
+      "paired_gate_pass_pct": 99.5,
+      "real_verified_ge_k": 426,
+      "twin_refuted_ge_k": 424,
+      "DIAGNOSTIC_across_halves": 424
+    },
+    {
+      "k": 7,
+      "paired_gate_pass_same_kernel_conj": 409,
+      "paired_gate_pass_pct": 96.0,
+      "real_verified_ge_k": 410,
+      "twin_refuted_ge_k": 409,
+      "DIAGNOSTIC_across_halves": 409
+    }
+  ],
+  "reproducibility_vs_archived": {
+    "pairs_all7_real_verified": 410,
+    "pairs_all7_twin_refuted": 409,
+    "pairs_all7_conjunction": 409
+  },
+  "false_accepts_by_witness_kind": {
+    "value": {
+      "n_pairs": 406,
+      "pairs_with_stable_verified_twin": 0,
+      "by_kernel": {}
+    },
+    "undefined": {
+      "n_pairs": 20,
+      "pairs_with_stable_verified_twin": 0,
+      "by_kernel": {}
+    }
+  },
+  "notes": {
+    "k": "same-kernel conjunction; NOT T_MIN_KERNELS; across-halves DIAGNOSTIC only",
+    "VACUOUS": "verifier refusal, never a false-accept",
+    "stability": "both agreed flags True",
+    "false_accept": "stable twin==VERIFIED only; value-witness twins provably violate ensures"
+  }
+}

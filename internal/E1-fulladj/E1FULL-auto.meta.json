@@ -1,0 +1,15 @@
+{
+  "tag": "auto",
+  "label": "full-pop",
+  "config_id": "1e3a19aaf14c",
+  "config": {
+    "engine_pin": "d13d11d01f8f",
+    "spark_prover": "z3",
+    "spark_jobs": "1",
+    "dafny": "4.11.0+fcb2042d6d043a2634f0854338c08feeaaaf4ae2",
+    "z3": "Z3 version 4.16.0 - 64 bit",
+    "harness_sha": "8dc67b0f8f30"
+  },
+  "expected_cells": 182,
+  "resumed": 0
+}

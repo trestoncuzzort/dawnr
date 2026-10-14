@@ -1,0 +1,83 @@
+{
+  "config_id": "302d00d91058",
+  "eff_config_id": "d6a55f7a691e",
+  "eff_config": {
+    "base": "302d00d91058",
+    "jobs": 8,
+    "spark_env": {
+      "T_SPARK_JOBS": "1"
+    },
+    "available": [
+      "dafny",
+      "framac",
+      "fstar",
+      "lean",
+      "rocq",
+      "spark",
+      "verus"
+    ]
+  },
+  "config": {
+    "gate": "paired-grounded-witness",
+    "flake_n": 3,
+    "engine_pin": "d13d11d01f8f",
+    "git_head": "3c17d7318f6f",
+    "kernels": {
+      "dafny": "dafny 4.11.0+fcb2042d6d043a2634f0854338c08feeaaaf4ae2",
+      "verus": "verus 0.2026.08.30.b432e82",
+      "spark": "gnatprove FSF 16.1.0 / Why3 for gnatprove version 1.8.2+git",
+      "framac": "frama-c 33.0 (Arsenic) / alt-ergo 2.4.3-free",
+      "lean": "Lean (version 4.33.1",
+      "rocq": "The Rocq Prover, version 9.2",
+      "fstar": "F* 2026.08.30 / platform=Linux_x86_64 / system=Unix / compil"
+    },
+    "available": [
+      "dafny",
+      "framac",
+      "fstar",
+      "lean",
+      "rocq",
+      "spark",
+      "verus"
+    ],
+    "serial": null,
+    "spark_prover": null,
+    "engine_src": {
+      "run_par.py": "2493661467f4",
+      "verifiers/__init__.py": "4665477f07da",
+      "fuzz_lower.py": "3961223bfee3",
+      "tlib.py": "2a5ca416aa89",
+      "e1_admit.py": "b4ac1c27c4b7",
+      "verifiers/dafny.py": "039ba12f019a",
+      "verifiers/verus.py": "846601a50481",
+      "verifiers/spark.py": "620a7ef500ec",
+      "verifiers/framac.py": "ca6ee4d6159c",
+      "verifiers/lean.py": "d65fb8211dae",
+      "verifiers/rocq.py": "48c39217b805",
+      "verifiers/fstar.py": "4e54bc292a06",
+      "lower_dafny.py": "ea0f6366d027",
+      "lower_framac.py": "b4881aae41bb",
+      "lower_fstar.py": "b1835f734fff",
+      "lower_lean.py": "75153eb94df5",
+      "lower_rocq.py": "2f5793ced1e2",
+      "lower_spark.py": "67d819cca3a0",
+      "lower_verus.py": "9ccd13c28089"
+    },
+    "harness_sha": "4c9f001c4d9a"
+  },
+  "jobs": 8,
+  "flake": 3,
+  "spark_env": {
+    "T_SPARK_JOBS": "1"
+  },
+  "expected_cells": 2982,
+  "complete": 2982,
+  "incomplete": 0,
+  "incomplete_sample": [],
+  "reasons": {
+    "newly-graded": 2982
+  },
+  "graded_this_run": 2982,
+  "src_index": "E1PAIRS2-SRC-INDEX.d6a55f7a691e.json",
+  "resolution": "E1PAIRS2-RESOLUTION.d6a55f7a691e.json"
+}
