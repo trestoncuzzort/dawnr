@@ -388,3 +388,13 @@ partly decoded text. `errors="ignore"` is not allowed on those paths.
 container formats, and neither this entry nor the README describes that, because
 it was still being written when this was. What is described above is the reader's
 contract, which was fixed first.
+
+- **The E1 false-accept curve counted unobserved survivors as rejections, and E2 named the wrong SPARK
+  solver (2026-10-14).** `t/audit.py` adjudicates a survivor only when the real body verifies and stops at
+  the first it proves, so only 48 of 167 survivors were seen by all seven kernels; `e1_adequacy.py` treated
+  the missing observations as non-accepts, so the published "67%→23% false-accept removal by cross-kernel
+  agreement" is not supported (71 of the 74 that dropped out were unobserved, not refuted). `T_MIN_KERNELS`
+  was also mislabelled a vote threshold; it is an availability floor. E2's "three independent SMT solvers"
+  is wrong: SPARK is pinned to Z3 (`t/verifiers/spark.py:185`), so the gate rests on two SMT solvers plus
+  two proof assistants. The 95.1% spec-level mutation kill rate is unaffected. Full account and the
+  fully-adjudicated re-run: internal/CORRECTION-2026-10-14-E1-E2.md.

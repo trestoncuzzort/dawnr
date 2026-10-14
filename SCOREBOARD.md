@@ -231,7 +231,7 @@ trained on t from random weights, parses 98 percent and passes the problems'
 tests in 2 of 464 answers: it has the notation and not the problem. The
 fine-tuned student parses 32 percent, where the untrained 1.5B already sat.
 
-**The gate's false-accept, measured (E1, 14 October 2026).** Across 893 tasks in five Dafny and
+**The gate's false-accept, measured (E1, 14 October 2026).** ⚠ *The false-accept curve below is CORRECTED 2026-10-14: it counted unobserved survivors as rejections (only 48/167 adjudicated by all seven), so the 67%→23% removal is withdrawn pending a fully-adjudicated re-run; the 95.1% spec-level kill rate stands. See internal/CORRECTION-2026-10-14-E1-E2.md.* Across 893 tasks in five Dafny and
 Frama-C corpora, the specification alone rejects 95.1 percent of behaviour-changing one-edit mutants;
 the 4.9 percent it admits are survivors, wrong programs the spec accepts. Run through all seven
 kernels, a single prover proves 67 percent of those survivors, and requiring all seven to agree drops
@@ -240,7 +240,7 @@ sound prover to reject the wrong program, worst in DafnyBench at 38 percent. Cro
 removes prover unsoundness, not spec weakness, which is what the one-edit twin-refutation layer is
 for. Full account in docs/MEASURED.md; raw data and harness in internal/.
 
-**Seven kernels, how independent (E2, 14 October 2026).** The gate's seven kernels do not share one
+**Seven kernels, how independent (E2, 14 October 2026).** ⚠ *CORRECTED 2026-10-14: SPARK used Z3 not cvc5, so this is two SMT solvers plus two non-SMT kernels, not three SMT solvers; independence claim withdrawn pending an explicit alternate-solver run. See internal/CORRECTION-2026-10-14-E1-E2.md.* The gate's seven kernels do not share one
 solver: dafny, verus and fstar use Z3, framac uses Alt-Ergo, spark uses cvc5, and lean and rocq use no
 SMT at all, so a k=7 verdict already spans three independent SMT solvers plus two proof assistants. On
 167 adjudicated survivors, the 38 that all seven accept (E1's false-accept floor) are confirmed across
