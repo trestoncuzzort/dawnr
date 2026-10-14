@@ -201,9 +201,11 @@ shown with real tests were right
 
 # E1 — twin-gate adequacy, measured across all seven kernels (2026-10-14)
 
-**Question.** When the seven-kernel gate accepts a program, how often is it wrong? And how does
-requiring more kernels to agree (the `T_MIN_KERNELS = k` knob on `t/prove.py`) trade yield for
-soundness? This is the gate's false-accept rate — a number no prior multi-prover work publishes.
+**Question.** When the seven-kernel gate accepts a program, how often is it wrong, and how does
+requiring more kernels to agree trade yield for selectivity? Here `k` is an experimental cross-kernel
+AGREEMENT threshold defined for this curve — NOT `T_MIN_KERNELS`, which is an availability floor
+(minimum installed kernels), a distinction the 2026-10-14 correction draws explicitly. This is the
+gate's adequacy curve — a number no prior multi-prover work publishes.
 
 **Method.** For every task in five corpora, `t/audit.py` enumerates every one-edit mutant and the
 interpreter classifies it over the task's bounded domain: *killed* (the spec rejects its result
@@ -234,34 +236,40 @@ postcondition gaps where the spec admits a wrong program.
 
 ## Coverage vs false-accept over the agreement threshold k
 
-> **⚠ CORRECTED 2026-10-14 — this curve is withdrawn.** It counted kernels that never *observed* a
-> survivor as rejections: only 48 of 167 survivors were adjudicated by all seven kernels, and 71 of the
-> 74 between "accepted by ≥1" and "accepted by all 7" are unobserved, not refuted. The "67%→23% removal"
-> is not established, and "threshold k" is an experimental vote I defined, not the `T_MIN_KERNELS`
-> availability floor. The spec-level 95.1% kill rate is unaffected. Full account + fixed re-run:
-> internal/CORRECTION-2026-10-14-E1-E2.md.
+> **RESTORED 2026-10-14 on a fully-adjudicated matrix.** The withdrawn curve counted kernels that never
+> *observed* a survivor as rejections (only 48 of 167 survivors were adjudicated by all seven). It is
+> replaced below by a re-run that adjudicates EVERY mutant in EVERY kernel with no real-verified gating
+> and no early stop — four states (verified / refuted / unverifiable-with-reason / not-run), a common
+> denominator, a missing observation never a rejection — reporting the survivor VERIFICATION rate with
+> intended-incorrectness NOT assumed (note 4 of internal/CORRECTION-2026-10-14-E1-E2.md), and the
+> AUTHENTIC paired grounded-witness gate separately below. Harness `t/e1_full_adjudicate.py`; raw
+> verdicts `internal/E1-fulladj/`.
 
-`coverage(k)` = correct programs verified by ≥ k kernels (yield). `false-accept(k)` = survivors
-(wrong programs) proved by ≥ k kernels. Pooled over 167 kernel-adjudicated survivors:
+`coverage(k)` = real programs verified by ≥ k kernels (yield). `survivor-verification(k)` = survivors
+verified by ≥ k kernels (programs a weak-admitting spec lets a kernel prove; intended-incorrectness not
+assumed). Over the 11,088-cell fully-adjudicated matrix — 878 real groups and 706 survivor groups across
+7 kernels — unobserved cells never counted as rejections:
 
-| k (kernels must agree) | coverage (yield) | false-accept | survivors slipping through |
-|--:|--:|--:|--:|
-| 1 | high | 67.1% | 112/167 |
-| 2 | — | 56.9% | 95/167 |
-| 3 | — | 50.3% | 84/167 |
-| 4 | — | 42.5% | 71/167 |
-| 5 | — | 31.1% | 52/167 |
-| 6 | — | 25.1% | 42/167 |
-| 7 (all) | lowest | **22.8%** | 38/167 |
+| k (kernels verifying) | real coverage | survivor-verification rate |
+|--:|--:|--:|
+| 1 | 95.1% (835/878) | 72.5% (512/706) |
+| 2 | 87.9% (772/878) | 64.9% (458/706) |
+| 3 | 82.7% (726/878) | 59.9% (423/706) |
+| 4 | 76.8% (674/878) | 51.8% (366/706) |
+| 5 | 65.9% (579/878) | 39.1% (276/706) |
+| 6 | 57.1% (501/878) | 29.2% (206/706) |
+| 7 (all) | **43.8% (385/878)** | **17.6% (124/706)** |
 
-Per-corpus coverage at k=7: Vericoding 32%, DafnyBench 61%, HumanEval 36%, Autonomy 60%, ACSL 31%.
-Per-corpus false-accept at k=7: DafnyBench 38%, Vericoding 10%, HumanEval 0%, Autonomy 100% (n=1),
-ACSL n/a (0 survivors).
+Four-state tally over all 11,088 cells: 6,837 verified, 3,995 unverifiable-with-reason, 256
+unobserved-infra (worker/timeout/lower-error; excluded from rejection — they only lower an observed k;
+85 survivor groups carry ≥1). Raising k roughly quarters the survivor-verification rate (72.5%→17.6%)
+and halves real coverage (95.1%→43.8%) — the honest yield-vs-selectivity shape, no threshold both
+complete and gap-free.
 
 ## The finding: agreement kills prover unsoundness, not spec weakness
 
-Requiring all seven kernels instead of one cuts the false-accept rate roughly threefold, from **67.1%
-to 22.8%**. It does **not** reach zero. The residual splits false-accepts into two kinds:
+Requiring all seven kernels instead of one cuts the survivor-verification rate roughly fourfold, from
+**72.5% to 17.6%**. It does **not** reach zero. The residual splits into two kinds:
 
 1. **Prover-specific false-accepts** — one kernel unsoundly proves a wrong program others reject.
    Cross-kernel agreement removes these: this is the 67%→23% drop, and on HumanEval it reached 0%.
@@ -283,9 +291,35 @@ guarantee the *spec* is right — consistent with the prior `t/out/KERNEL-DISAGR
 **This is exactly why the one-edit twin-refutation layer exists.** Kernel agreement handles prover
 unsoundness; the twin-refutation requirement — a concrete one-edit twin that all kernels *refute* at
 a witness — is what targets spec-gap survivors, filtering them out of the accepted training set at
-build time. The 426 kept twins in `t/twins/pairs` are all refuted by all seven kernels: they are the
-mutations the spec *does* catch. E1 isolates the kernel-agreement contribution (67%→23%); E2 and the
-twin set characterize the twin-refutation layer.
+build time. E1 isolates the kernel-agreement contribution (the curve above); the paired grounded-witness
+gate below characterizes the twin-refutation layer directly, on provably-wrong twins.
+
+## The authentic paired grounded-witness gate (426 grounded-wrong twins)
+
+The survivor-verification curve above does not assume a survivor is intended-incorrect. The paired gate
+removes that ambiguity: each of the 426 archived pairs in `t/twins/pairs` is a real body plus a one-edit
+twin carrying a GROUNDED WITNESS — a concrete input at which the twin provably violates the spec. The
+twin is lowered WITH that witness as a `t_refutation_certificate` the kernel must PROVE, so a refusal is
+a genuine REFUTED, not a body-only UNPROVED. Run through `verifiers.cell_pair` at flake n=3 across two
+independent, hash-bound runs (`internal/E1-paired/pass1`, `pass2`; identical manifest bytes), the
+same-kernel conjunction curve — that kernel both verifies the real and refutes the twin, stably — is
+426, 426, 426, 426, 426, 424, 409 for k=1..7, and **zero twins are stably VERIFIED by any kernel on
+either run**: no kernel accepts a provably-wrong twin. The residual 17 below k=7 are 16 Frama-C
+structural abstentions on recursive definitions ∪ 1 Rocq unsolved VC (Lean's 2 unproved overlap the 16);
+reported per reason, never relabelled.
+
+Every paired verdict carries a run-backed in-toto certificate that `dawnr check` replays with no model:
+it recomputes the pair identity from the embedded real/twin/witness, re-lowers and re-runs the kernel,
+binds the recorded config and full Result (outcome/source/version/budget; wall-time excluded), applies
+the hash-bound flake and per-cell SPARK policy, and fails or goes undecided on any tamper. The 2,982
+certificates were minted and FULL-SET structurally validated by an independent validator
+(`internal/e1_structural_validator.py`, both runs PASS — eff-filtered, byte-re-hashing the retained
+sources, re-hashing the archived payloads and parsed contracts) plus representative native replays — NOT
+2,982 executed replays. The engine-first Frama-C adapter fix behind the all-seven refutation figure is
+under a separate baseline-vs-patched whole-column verification and syncs after it passes; the
+zero-stable-verified-twins result does not depend on it, since no kernel verified a twin under either the
+pre- or post-fix adapter. Tooling: `t/obs_certificate.py`, `t/e1_batch_cert.py`, `t/e1_pairs_gate2.py`;
+full write-up `internal/E1-FINDINGS-2026-10-14.md`.
 
 ## Yield bottleneck
 
@@ -298,9 +332,12 @@ there is no threshold that is both complete and gap-free, which is the honest sh
 
 - The false-accept curve rests on 167 kernel-adjudicated survivors — `audit.py` sends at most three
   survivors per task to the kernels. The spec-level kill rate (95.1%) is complete, not sampled.
-- Verdicts here reuse the engine's kernel verification; per-verdict certificates are producible with
-  `dawnr prove --certificate` and replayable by `dawnr check` with no model, but were not bulk-emitted
-  in this sweep. Reproduce from the committed harness + raw verdicts.
+- The paired gate's verdicts are each backed by an in-toto certificate `dawnr check` replays with no
+  model (run-backed, tamper-evident); the full 2,982-cert set was minted and structurally validated, with
+  sampled native replays — not a full re-execution. The direct-body matrix's historical records are
+  state-only; `t/db_certificate.py` replays each body-only adjudication and attaches the fresh Result as a
+  new observation under the current engine. Reproduce from the committed harnesses + raw verdicts in
+  internal/.
 - No invented comparison target: the result is reported against the gate's own thresholds, not a
   baseline chosen to flatter it.
 

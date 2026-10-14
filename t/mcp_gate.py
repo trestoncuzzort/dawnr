@@ -147,7 +147,13 @@ def prove(a: dict, prover=None) -> dict:
 def check_certificate(a: dict, prover=None) -> dict:
     import certificate
     report = certificate.check(a["certificate"], prover=prover)
-    return {"text": certificate.render(report), "data": {"outcome": report["verdict"], "steps": report["steps"], "proved here": report["proved here"]}}
+    data = {"outcome": report["verdict"], "steps": report["steps"]}
+    if report.get("kind") == "paired-observation":
+        # observation-only structured result: NEVER "proved here" (an unproved/timeout observation is not a proof)
+        data["observation"] = report.get("replayed")
+    else:
+        data["proved here"] = report.get("proved here", [])
+    return {"text": certificate.render(report), "data": data}
 
 
 def compute(a: dict) -> dict:
