@@ -230,3 +230,12 @@ a proof system at all, more loss than every other gate together. locallm,
 trained on t from random weights, parses 98 percent and passes the problems'
 tests in 2 of 464 answers: it has the notation and not the problem. The
 fine-tuned student parses 32 percent, where the untrained 1.5B already sat.
+
+**The gate's false-accept, measured (E1, 14 October 2026).** Across 893 tasks in five Dafny and
+Frama-C corpora, the specification alone rejects 95.1 percent of behaviour-changing one-edit mutants;
+the 4.9 percent it admits are survivors, wrong programs the spec accepts. Run through all seven
+kernels, a single prover proves 67 percent of those survivors, and requiring all seven to agree drops
+that to 23 percent, a threefold cut but not to zero. The floor is specifications too weak for any
+sound prover to reject the wrong program, worst in DafnyBench at 38 percent. Cross-kernel agreement
+removes prover unsoundness, not spec weakness, which is what the one-edit twin-refutation layer is
+for. Full account in docs/MEASURED.md; raw data and harness in internal/.

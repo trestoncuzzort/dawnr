@@ -1,0 +1,111 @@
+{
+  "tag": "acsl",
+  "corpus": "acslbyexample",
+  "n_tasks": 16,
+  "spec_level": {
+    "behaviour_changing": 457,
+    "killed": 457,
+    "survivors_total": 0,
+    "tasks": 16,
+    "tasks_audited": 16,
+    "tasks_with_survivor": 0,
+    "mutant_survival_rate": 0.0,
+    "kill_rate": 1.0
+  },
+  "kernel_adjudicated_survivors": 0,
+  "per_kernel": {
+    "dafny": {
+      "survivors_proved": 0,
+      "survivors_seen": 0,
+      "real_verified": 12,
+      "real_decided": 12
+    },
+    "verus": {
+      "survivors_proved": 0,
+      "survivors_seen": 0,
+      "real_verified": 11,
+      "real_decided": 11
+    },
+    "spark": {
+      "survivors_proved": 0,
+      "survivors_seen": 0,
+      "real_verified": 12,
+      "real_decided": 12
+    },
+    "framac": {
+      "survivors_proved": 0,
+      "survivors_seen": 0,
+      "real_verified": 10,
+      "real_decided": 10
+    },
+    "lean": {
+      "survivors_proved": 0,
+      "survivors_seen": 0,
+      "real_verified": 8,
+      "real_decided": 8
+    },
+    "rocq": {
+      "survivors_proved": 0,
+      "survivors_seen": 0,
+      "real_verified": 8,
+      "real_decided": 8
+    },
+    "fstar": {
+      "survivors_proved": 0,
+      "survivors_seen": 0,
+      "real_verified": 12,
+      "real_decided": 12
+    }
+  },
+  "curve": [
+    {
+      "k": 1,
+      "coverage": 0.8125,
+      "false_accept": 0.0,
+      "false_accept_n": 0,
+      "surv_n": 0
+    },
+    {
+      "k": 2,
+      "coverage": 0.75,
+      "false_accept": 0.0,
+      "false_accept_n": 0,
+      "surv_n": 0
+    },
+    {
+      "k": 3,
+      "coverage": 0.75,
+      "false_accept": 0.0,
+      "false_accept_n": 0,
+      "surv_n": 0
+    },
+    {
+      "k": 4,
+      "coverage": 0.75,
+      "false_accept": 0.0,
+      "false_accept_n": 0,
+      "surv_n": 0
+    },
+    {
+      "k": 5,
+      "coverage": 0.75,
+      "false_accept": 0.0,
+      "false_accept_n": 0,
+      "surv_n": 0
+    },
+    {
+      "k": 6,
+      "coverage": 0.4375,
+      "false_accept": 0.0,
+      "false_accept_n": 0,
+      "surv_n": 0
+    },
+    {
+      "k": 7,
+      "coverage": 0.3125,
+      "false_accept": 0.0,
+      "false_accept_n": 0,
+      "surv_n": 0
+    }
+  ]
+}

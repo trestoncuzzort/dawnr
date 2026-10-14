@@ -195,3 +195,104 @@ question, one the accepted examples did not rule out, where all of the answers
 shown with real tests were right
 ([the record](../t/PREDICT-2026-10-05-examples.md)).
 
+
+
+---
+
+# E1 — twin-gate adequacy, measured across all seven kernels (2026-10-14)
+
+**Question.** When the seven-kernel gate accepts a program, how often is it wrong? And how does
+requiring more kernels to agree (the `T_MIN_KERNELS = k` knob on `t/prove.py`) trade yield for
+soundness? This is the gate's false-accept rate — a number no prior multi-prover work publishes.
+
+**Method.** For every task in five corpora, `t/audit.py` enumerates every one-edit mutant and the
+interpreter classifies it over the task's bounded domain: *killed* (the spec rejects its result
+somewhere), *same* (same result everywhere), *diverges*, or **survivor** — a program that computes a
+different result at some input yet satisfies the spec everywhere, i.e. a wrong program the spec
+accepts, with a concrete witness. Each real body and each survivor is then verified in all seven
+kernels (dafny, verus, spark, framac, lean, rocq, fstar). A survivor the gate accepts at threshold k
+(proved by ≥ k kernels) is a **false-accept**. ~6,100 audits on the lab (120 cores).
+
+**Reproducibility.** The measurement is deterministic: two independent runs of HumanEval-Dafny gave
+identical curves and kill counts, and the fresh DafnyBench run reproduced the prior independent
+`t/AUDIT-DAFNYBENCH.md` (94.2% kill, 53 survivor-admitting tasks). Harness: `internal/e1_adequacy.py`;
+raw per-corpus results: `internal/E1-data/E1-*.json`.
+
+## Spec-level mutation adequacy (complete — every behaviour-changing mutant)
+
+| corpus | tasks | behaviour-changing mutants | killed by spec | survivors | tasks w/ survivor |
+|---|--:|--:|--:|--:|--:|
+| Vericoding-Dafny | 487 | 15125 | 14411 (95.3%) | 714 | 53 |
+| DafnyBench | 320 | 7255 | 6837 (94.2%) | 418 | 53 |
+| HumanEval-Dafny | 45 | 1377 | 1287 (93.5%) | 90 | 6 |
+| Autonomy | 25 | 813 | 812 (99.9%) | 1 | 1 |
+| ACSLByExample | 16 | 457 | 457 (100.0%) | 0 | 0 |
+| **pooled** | **893** | **25027** | **23804 (95.1%)** | **1223** | **113** |
+
+The spec, on its own, rejects 95.1% of behaviour-changing mutants. The remaining 4.9% are survivors:
+postcondition gaps where the spec admits a wrong program.
+
+## Coverage vs false-accept over the agreement threshold k
+
+`coverage(k)` = correct programs verified by ≥ k kernels (yield). `false-accept(k)` = survivors
+(wrong programs) proved by ≥ k kernels. Pooled over 167 kernel-adjudicated survivors:
+
+| k (kernels must agree) | coverage (yield) | false-accept | survivors slipping through |
+|--:|--:|--:|--:|
+| 1 | high | 67.1% | 112/167 |
+| 2 | — | 56.9% | 95/167 |
+| 3 | — | 50.3% | 84/167 |
+| 4 | — | 42.5% | 71/167 |
+| 5 | — | 31.1% | 52/167 |
+| 6 | — | 25.1% | 42/167 |
+| 7 (all) | lowest | **22.8%** | 38/167 |
+
+Per-corpus coverage at k=7: Vericoding 32%, DafnyBench 61%, HumanEval 36%, Autonomy 60%, ACSL 31%.
+Per-corpus false-accept at k=7: DafnyBench 38%, Vericoding 10%, HumanEval 0%, Autonomy 100% (n=1),
+ACSL n/a (0 survivors).
+
+## The finding: agreement kills prover unsoundness, not spec weakness
+
+Requiring all seven kernels instead of one cuts the false-accept rate roughly threefold, from **67.1%
+to 22.8%**. It does **not** reach zero. The residual splits false-accepts into two kinds:
+
+1. **Prover-specific false-accepts** — one kernel unsoundly proves a wrong program others reject.
+   Cross-kernel agreement removes these: this is the 67%→23% drop, and on HumanEval it reached 0%.
+2. **Specification-gap false-accepts** — the spec is genuinely too weak, so *every* sound kernel
+   correctly proves the wrong program against it. Agreement cannot remove these; they are the 22.8%
+   floor, concentrated where specs are weakest (DafnyBench 38%).
+
+Hand-audited examples of spec-gap survivors proved by a kernel (a wrong program with a proof):
+
+- `plusOne`: body `y := x + 1` → mutant `y := x + 2`, proved; at x=0 the real returns 1, the mutant 2.
+- `summax/m`: `sum := 0` → `sum := -1`, proved; at n=0 the real returns [0,0], the mutant [-1,0].
+- `findMax`: `if a[index] > a[i]` → `>=`, proved; at a=[0,0] the real returns 0, the mutant 1.
+
+In each the postcondition does not pin the output tightly enough, so a sound prover proves a
+behaviourally wrong program. Seven kernels agreeing is an integrity check on the *provers*, not a
+guarantee the *spec* is right — consistent with the prior `t/out/KERNEL-DISAGREEMENT-2026-09-20.md`
+(0 cross-kernel contradictions over 3,321 programs: the instrument is self-consistent, not omniscient).
+
+**This is exactly why the one-edit twin-refutation layer exists.** Kernel agreement handles prover
+unsoundness; the twin-refutation requirement — a concrete one-edit twin that all kernels *refute* at
+a witness — is what targets spec-gap survivors, filtering them out of the accepted training set at
+build time. The 426 kept twins in `t/twins/pairs` are all refuted by all seven kernels: they are the
+mutations the spec *does* catch. E1 isolates the kernel-agreement contribution (67%→23%); E2 and the
+twin set characterize the twin-refutation layer.
+
+## Yield bottleneck
+
+At k=7 the weakest kernels bound coverage: pooled real bodies verified were dafny 809, spark 715,
+fstar 708, verus 696, lean 550, rocq 542, framac 524. Lean and Frama-C/Rocq are the ceiling — the
+55-point Dafny-vs-Lean spread the landscape sweep predicted. Raising k buys soundness and costs yield;
+there is no threshold that is both complete and gap-free, which is the honest shape of the tradeoff.
+
+## Honesty notes
+
+- The false-accept curve rests on 167 kernel-adjudicated survivors — `audit.py` sends at most three
+  survivors per task to the kernels. The spec-level kill rate (95.1%) is complete, not sampled.
+- Verdicts here reuse the engine's kernel verification; per-verdict certificates are producible with
+  `dawnr prove --certificate` and replayable by `dawnr check` with no model, but were not bulk-emitted
+  in this sweep. Reproduce from the committed harness + raw verdicts.
+- No invented comparison target: the result is reported against the gate's own thresholds, not a
+  baseline chosen to flatter it.
