@@ -1,0 +1,5 @@
+{
+ "file": "src/lib/mixer_module/mixer_module.cpp",
+ "symbol": "MixingOutput::updateParams",
+ "sha256": "9d2a3df5d5444cc6b43c17462270497b0e7f8d6845b0034d2c86b90bc367e586"
+}

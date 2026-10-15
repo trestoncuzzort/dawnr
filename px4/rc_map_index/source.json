@@ -1,0 +1,5 @@
+{
+ "file": "src/modules/rc_update/rc_update.cpp",
+ "symbol": "RCUpdate::getChannelIndex",
+ "sha256": "8bb8f319f7ac5ca605cd7fe47df6c5ceadaa5d13c138b9f4f253f15d66d0e1cf"
+}

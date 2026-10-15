@@ -1,0 +1,34 @@
+{
+  "eval": "Vericoding spec problems; student generates k samples; pass = real body verified by >=1 present kernel; unbiased pass@k over n samples (arXiv:2107.03374). Denominator is problems with >=1 well-formed sample; problems where every sample is malformed have pass=0.",
+  "n_samples": 5,
+  "k": 5,
+  "arms": {
+    "all7": {
+      "problems_with_wellformed_prog": 26,
+      "n_samples": 5,
+      "greedy_pass_at_1_count": 2,
+      "pass_at_1_unbiased_mean_over_wf": 0.046,
+      "pass_at_5_unbiased_mean_over_wf": 0.231,
+      "verified_samples": 6,
+      "twin_refuted_of_verified": 6
+    },
+    "graded": {
+      "problems_with_wellformed_prog": 27,
+      "n_samples": 5,
+      "greedy_pass_at_1_count": 2,
+      "pass_at_1_unbiased_mean_over_wf": 0.037,
+      "pass_at_5_unbiased_mean_over_wf": 0.185,
+      "verified_samples": 5,
+      "twin_refuted_of_verified": 5
+    },
+    "raw": {
+      "problems_with_wellformed_prog": 29,
+      "n_samples": 5,
+      "greedy_pass_at_1_count": 3,
+      "pass_at_1_unbiased_mean_over_wf": 0.069,
+      "pass_at_5_unbiased_mean_over_wf": 0.345,
+      "verified_samples": 10,
+      "twin_refuted_of_verified": 10
+    }
+  }
+}
