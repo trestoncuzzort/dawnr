@@ -63,7 +63,7 @@ def main():
     rep_path = outd / "replies.jsonl"
     n = 0
     with rep_path.open("w", encoding="utf-8") as fh:
-        for name, t in tasks:
+        for idx, (name, t) in enumerate(tasks):
             msgs = spec_prompt(t)
             text = tok.apply_chat_template(msgs, tokenize=False, add_generation_prompt=True)
             enc = tok(text, return_tensors="pt")
@@ -76,11 +76,12 @@ def main():
                     else:
                         out = model.generate(**enc, do_sample=True, temperature=a.temperature, top_p=0.95, **kw)
                 reply = tok.decode(out[0][enc["input_ids"].shape[1]:], skip_special_tokens=True)
-                # rename the first `task <name>` to a per-sample unique name so grade.py (which keys by the
-                # extracted program's task name) does not collide k samples of one Vericoding problem.
-                reply = re.sub(r"(^|\n)(\s*)task\s+([A-Za-z_][A-Za-z0-9_]*)",
-                               lambda m: f"{m.group(1)}{m.group(2)}task {m.group(3)}__s{s}", reply, count=1)
-                fh.write(json.dumps({"id": f"{name}#{s}", "task": name, "sample": s, "reply": reply}) + "\n")
+                # REPLACE the model's task name with a deterministic id I control (vp<problem>_s<sample>), so
+                # grade.py (which keys by the extracted program's task name) groups reliably by PROBLEM and
+                # sample -- the model's own per-sample renaming no longer corrupts the pass@k grouping.
+                reply = re.sub(r"(^|\n)(\s*)task\s+[A-Za-z_][A-Za-z0-9_]*",
+                               lambda m: f"{m.group(1)}{m.group(2)}task vp{idx}_s{s}", reply, count=1)
+                fh.write(json.dumps({"id": f"vp{idx}#s{s}", "task": name, "problem": idx, "sample": s, "reply": reply}) + "\n")
                 n += 1
             print(f"  {name}: {a.samples} samples", flush=True)
     print(f"gen_vericoding {a.tag}: {len(tasks)} problems x {a.samples} = {n} replies -> {rep_path}")

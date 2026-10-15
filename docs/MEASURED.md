@@ -490,31 +490,35 @@ superseded — the CPU path removed the GPU need.
 ## On Vericoding (the goal's named eval): pass@1, pass@k, twin survival — and the ordering REVERSES
 
 The students were then evaluated on the goal's named corpus — public Vericoding Dafny specs, rendered to t
-with `surface.print_task` (body stripped) into the same compact prompt they trained on, 14 held-out
-non-recursion problems, 5 samples each (sample 0 greedy for pass@1, the rest sampled for pass@k), one seed
-per arm, graded by the gate (pass = the generated real body VERIFIED by ≥1 present kernel; Vericoding is
-spec-based, no tests). Vericoding is disjoint from the MBPP training tasks.
+with `surface.print_task` (body stripped) into the same compact prompt they trained on, **20 held-out
+non-recursion problems, 5 samples each (sample 0 greedy for pass@1, the rest sampled for pass@k), 3 seeds
+per arm**, graded by the gate (pass = the generated real body VERIFIED by ≥1 present kernel; Vericoding is
+spec-based, no tests). Each generated program is given a deterministic id (`vp<problem>_s<sample>`) so the
+pass@k grouping is reliable (the model's own per-sample renaming cannot corrupt it), and the denominator is
+fixed at the 20 problems (a problem with no verified sample scores 0). Vericoding is disjoint from the MBPP
+training tasks. Mean over 3 seeds:
 
-| arm | greedy pass@1 (/14) | verified samples (/70) | twin refuted of verified | pass@5 (est.) |
-|---|--:|--:|--:|--:|
-| raw | 3 | 10 | 10/10 | 0.35 |
-| graded-k4 | 2 | 5 | 5/5 | 0.19 |
-| all7 | 2 | 6 | 6/6 | 0.23 |
+| arm | greedy pass@1 (/20) | unbiased pass@1 | unbiased pass@5 | verified samples/seed | twin survivors |
+|---|--:|--:|--:|--:|--:|
+| raw | 3.0 | 0.13 | **0.28** | 13.0 | 0 |
+| graded-k4 | 1.7 | 0.053 | 0.15 | 5.3 | 0 |
+| all7 | 2.0 | 0.073 | 0.15 | 7.3 | 0 |
 
 **The ablation ordering reverses out of distribution.** In-distribution (held-out MBPP, above)
 all-seven-verified training wins; on the harder cross-corpus Vericoding specs the **raw** arm produces the
-most verifiable solutions (10 vs 6 vs 5 verified samples; greedy pass@1 3 vs 2 vs 2). A plausible reading:
-filtering the training set to only all-seven-verified programs narrows its distribution, which helps when
-the eval matches the training distribution (MBPP) but transfers worse to a different, harder one
-(Vericoding), where more diverse raw data generalises better — consistent with the project's own finding
-that over-narrow proof-gated data costs generality. **Twin survival is 0 across all arms**: every verified
-Vericoding solution had its one-edit twin refuted by the gate — the specs the students write are tight
-enough to catch a mutant. Honest caveats: small-N (14 problems, 1 seed, 5–10 verified samples/arm) —
-directional, not powered; and the unbiased pass@k estimator is only approximate here because the 0.5B
-student renamed the task per sample, so the robust numbers are the verified-sample and greedy-pass@1 counts
-(the pass@5 column is the estimator over well-formed program variants). Most generated Vericoding programs
-were malformed or unverifiable — the small MBPP-trained student transfers weakly to Vericoding's harder
-specs, which is itself an honest finding. Results `internal/E3-data/E3-VERICODING-RESULTS.json`; harness
+most verifiable solutions and the highest pass@k (pass@5 0.28 vs 0.15/0.15; verified 13/seed vs 7.3/5.3),
+consistently across all three seeds. A plausible reading: filtering the training set to only
+all-seven-verified programs narrows its distribution, which helps when the eval matches the training
+distribution (MBPP) but transfers worse to a different, harder one (Vericoding), where more diverse raw
+data generalises better — consistent with the project's own finding that over-narrow proof-gated data costs
+generality. **Twin survival is 0 across all arms**: every verified Vericoding solution had its one-edit
+twin refuted by the gate — the specs the students write are tight enough to catch a mutant. Honest caveats:
+still small-N (20 problems, 3 seeds, a 0.5B base; 5–13 verified samples/arm/seed) — directional, not a
+powered estimate; and most generated Vericoding programs are malformed or refuted (the small MBPP-trained
+student transfers weakly to Vericoding's harder specs), which is itself an honest finding. The pass@k
+grouping/denominator are now reliable (deterministic ids, fixed 20-problem denominator), superseding an
+earlier 1-seed run whose estimator was corrupted by per-sample renaming. Results
+`internal/E3-data/E3-VERICODING2-RESULTS.json`; harness
 `t/gen_vericoding.py` + `t/e3_vericoding_aggregate.py`.
 
 Taken together, E3 now carries both evals the goal named: the in-distribution MBPP ablation (all7 best) and

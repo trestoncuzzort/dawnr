@@ -1,0 +1,104 @@
+{
+  "eval": "Vericoding, 20 problems x 5 samples, pass=real verified by >=1 present kernel, unbiased pass@k, averaged over seeds; problem denominator fixed (0 if no verified sample)",
+  "arms": {
+    "all7": {
+      "seeds": 3,
+      "n_problems": 20,
+      "n_samples": 5,
+      "greedy_pass_at_1_mean": 2,
+      "pass_at_1_mean": 0.073,
+      "pass_at_5_mean": 0.15,
+      "verified_samples_mean": 7.333,
+      "twin_survivors_mean": 0,
+      "per_seed": [
+        {
+          "greedy_pass_at_1": 2,
+          "pass_at_1": 0.06,
+          "pass_at_5": 0.15,
+          "verified_samples": 6,
+          "twin_survivors": 0
+        },
+        {
+          "greedy_pass_at_1": 3,
+          "pass_at_1": 0.1,
+          "pass_at_5": 0.2,
+          "verified_samples": 10,
+          "twin_survivors": 0
+        },
+        {
+          "greedy_pass_at_1": 1,
+          "pass_at_1": 0.06,
+          "pass_at_5": 0.1,
+          "verified_samples": 6,
+          "twin_survivors": 0
+        }
+      ]
+    },
+    "graded": {
+      "seeds": 3,
+      "n_problems": 20,
+      "n_samples": 5,
+      "greedy_pass_at_1_mean": 1.667,
+      "pass_at_1_mean": 0.053,
+      "pass_at_5_mean": 0.15,
+      "verified_samples_mean": 5.333,
+      "twin_survivors_mean": 0,
+      "per_seed": [
+        {
+          "greedy_pass_at_1": 2,
+          "pass_at_1": 0.05,
+          "pass_at_5": 0.15,
+          "verified_samples": 5,
+          "twin_survivors": 0
+        },
+        {
+          "greedy_pass_at_1": 3,
+          "pass_at_1": 0.08,
+          "pass_at_5": 0.2,
+          "verified_samples": 8,
+          "twin_survivors": 0
+        },
+        {
+          "greedy_pass_at_1": 0,
+          "pass_at_1": 0.03,
+          "pass_at_5": 0.1,
+          "verified_samples": 3,
+          "twin_survivors": 0
+        }
+      ]
+    },
+    "raw": {
+      "seeds": 3,
+      "n_problems": 20,
+      "n_samples": 5,
+      "greedy_pass_at_1_mean": 3,
+      "pass_at_1_mean": 0.13,
+      "pass_at_5_mean": 0.283,
+      "verified_samples_mean": 13,
+      "twin_survivors_mean": 0,
+      "per_seed": [
+        {
+          "greedy_pass_at_1": 3,
+          "pass_at_1": 0.12,
+          "pass_at_5": 0.3,
+          "verified_samples": 12,
+          "twin_survivors": 0
+        },
+        {
+          "greedy_pass_at_1": 3,
+          "pass_at_1": 0.13,
+          "pass_at_5": 0.3,
+          "verified_samples": 13,
+          "twin_survivors": 0
+        },
+        {
+          "greedy_pass_at_1": 3,
+          "pass_at_1": 0.14,
+          "pass_at_5": 0.25,
+          "verified_samples": 14,
+          "twin_survivors": 0
+        }
+      ]
+    }
+  }
+}
