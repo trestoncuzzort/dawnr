@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """framac_lib.py: SPEC.md "The library (v1)" and max/min of one argument ("Reductions (v1)") in the Frama-C lowering
-(PREDICT T11, 2026-10-06; internal/RESEARCH-2026-10-06-landscape.md decision D1).
+(2026-10-06, decision D1).
 
 The library is two things here, the pattern the string library already uses (`t_count_c`): ACSL `logic` definitions
 for specification positions (recursive ones paired with the termination lemma the lowering emits for a recursive spec
@@ -11,7 +11,7 @@ specification, a C conditional in code. No ACSL `axiom` is emitted. Measured fir
 adapter's own WP flags (scratch p1.c, p2.c, 2026-10-06): every functional goal proved."""
 from __future__ import annotations
 
-# "rev" since PREDICT T20 (2026-10-07): no prelude; an element rewrite in ACSL (_seq_at_render) and T19's write loop in
+# "rev" since 2026-10-07: no prelude; an element rewrite in ACSL (_seq_at_render) and T19's write loop in
 # code (seq_assign_lines), both in lower_framac
 FRAMAC_LIB = frozenset({"min", "max", "abs", "gcd", "pow", "isqrt", "sum", "maxs", "in", "rev"})
 

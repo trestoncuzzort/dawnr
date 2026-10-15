@@ -193,7 +193,7 @@ reads identical to AGREEMENT.md's framac column, wall unchanged at
 fz_p_ret_* probes, 1 a deliberate wf-error) moved from real counts
 verified 22 / timeout 2 / vacuous 1 to verified 23 / timeout 2 / vacuous
 0: the one vacuous cell was fz_p_ret_bothbranches, now verified. Of the
-ten framac vacuous/vacuous rows in COVERAGE-lifted-785.md, nine used
+ten framac vacuous/vacuous rows in the coverage census, nine used
 div/mod and all nine stopped reading vacuous after the fix (seven now
 verify outright; extra_mod2__mod2 reads an honest timeout;
 isArmstrong reads an honest timeout, having also read MALFORMED under the
@@ -378,7 +378,7 @@ same way at scale, measured by running every task through
 `harness.run_task` (T_CELL_SERIAL=1, an outer 6-way task pool, so total
 kernel concurrency stays at 6, never the 36 that an ungated outer pool
 times `cell_pair`'s own 2*n=6 fan-out would reach). Framac column,
-COVERAGE-lifted-785.md before -> measured after: verified/refuted 87 ->
+the coverage census before -> measured after: verified/refuted 87 ->
 125 (+38), verified/timeout 65 -> 14 (-51), timeout/timeout 16 -> 6
 (-10), timeout/refuted 4 -> 14 (+10, the other end of the same 10 moves),
 verified/unproved 2 -> 4 (+2: two `exit`-witness certificates the kernel
@@ -428,7 +428,7 @@ lowering (a conditionally-evaluated `at`/`div`/`mod` in a `while`
 condition, or a `spec_fun` call in executable position), completely
 unrelated to the certificate gate: the traceback bottoms out in
 `stmts()`/`code_ats()` before `certificate()` is ever reached, so it
-fires identically with the gate in place. COVERAGE-lifted-785.md already
+fires identically with the gate in place. the coverage census already
 reads these four `abstain / abstain`, which is `run_par.py`'s own
 wrapper catching this same exception, not measured directly here since
 RULES scoped this pass away from `run_par.py`/`run_all.py`; counted as
@@ -437,7 +437,7 @@ below `at_asserts`/`stmts()`'s `while` case: invertArray's own abstain
 was actually the UNCONDITIONAL case that note fixes, not the conditional
 one this paragraph names, and it now lowers; the other three still
 abstain for the reasons stated here, unchanged). Six more lifted tasks
-that read `no-twin / no-twin` in COVERAGE-lifted-785.md print a REFUSED
+that read `no-twin / no-twin` in the coverage census print a REFUSED
 reason from `harness.run_task` instead (twin_cached found no operator,
 no input, or no witness) -- the identical refusal, before `certificate()`
 runs at all, just a different label than the sweep driver's; also
@@ -571,7 +571,7 @@ length has no buffer to give it.
   one). Each raises `NotImplementedError` by name, never guesses.
 
 WHILE-GUARD DEFINEDNESS, added 2026-09-09, the eighth sweep's residual
-(COVERAGE-lifted-785.md): the two MBPP-DFY tasks (`dafny_synthesis_
+(the coverage census): the two MBPP-DFY tasks (`dafny_synthesis_
 task_id_3__isNonPrime`, `dafny_synthesis_task_id_605__isPrime`) loop on
 `while i <= n / 2`, and this lowering used to ABSTAIN on any `at`/`div`/
 `mod` appearing unconditionally in a `while` guard, full stop: there was
@@ -608,7 +608,7 @@ harness.run_task with OUT pointed at out/agent-framac-guard):
        `..._ensures` failing every time, well under a second of actual
        solver work reported each try -- a wall/step ceiling never
        reached, not a close call). Consistent with the wider census:
-       COVERAGE-lifted-785.md already reads this same real function
+       the coverage census already reads this same real function
        unproved or timeout on five of the other six kernels (verus,
        spark, lean, rocq, fstar); only dafny's automation closes it.
     2. Independently, the invariant-drop twin's witness for both tasks
@@ -1022,7 +1022,7 @@ case above are reached by none of them, and the file's existing
 behaviour for a plain seq, a pair, or neither is unaffected.
 
 THE BUFFER-LENGTH GATE and THE INT-LITERAL GATE, both 2026-09-10, the
-tenth sweep's own residual (COVERAGE-lifted-785.md, "Sole blockers"):
+tenth sweep's own residual (the coverage census, "Sole blockers"):
 framac was the only column keeping 11 lifted-785 tasks out of the
 seven-kernel bar, six `verified / malformed`, two `verified / unproved`,
 one `verified / timeout`, two `abstain / abstain`. Measured against each
@@ -2111,7 +2111,7 @@ message, unchanged from before this pass (measured both sides,
   after.json` under that same scratchpad directory) -- no other
   cell's verdict moved either direction, no PASS lost.
 
-  ROADMAP 16.2's own framac rows (t/COVERAGE-lifted-785.md,
+  ROADMAP 16.2's own framac rows (the coverage census,
   2026-09-10, RE-MEASURED 2026-09-11 rather than trusted: `python3
   grade.py --tasks <task-set> --kernels framac,dafny --flake 3 --jobs
   8`, twelve named tasks copied from the 59-lifted set into
@@ -2336,7 +2336,7 @@ fz_p_nest_eq's own outcome.
   since `fz_p_nest_eq` is the only one reaching the fixed branch on a
   row operand and its own cell stays ABSTAIN either side, moved from a
   crash to a named refusal, not to a PASS). ROADMAP 16.2's own named
-  framac cells (t/COVERAGE-lifted-785.md, r20: 240, 262, 414, 576, 577,
+  framac cells (the coverage census, r20: 240, 262, 414, 576, 577,
   586, 603, 69, 470, copied into `<scratchpad>/framac-seq4/
   roadmap162-tasks`, graded `python3 grade.py --tasks
   roadmap162-tasks --kernels framac,dafny --flake 3 --jobs 8`): all
@@ -2423,7 +2423,7 @@ rather than assumed from the wave-I note:
     typed_nat_dafny_synthesis_task_id_460_getFirstElements_t_ensures_2,
     ..._loop_5_preserved, ..._assert_2".
 
-The nine named abstains/malformed (COVERAGE-lifted-785.md r21) were
+The nine named abstains/malformed (the coverage census r21) were
 each re-measured against this wave's own edited file (`lower_framac.lower`
 called directly on the copied task JSON; none of the nine's lowering
 path touches `seq_assign_lines`'s `"var" in e` branch or a `while`
@@ -2490,7 +2490,7 @@ framac --tasks fz_p_nest_eq,... --flake 3` for the probe itself):
   conformance manifest and the 34-task AGREEMENT.md matrix do not
   contain this task (it is a ROADMAP 16.2 lifted-sweep row, not a
   committed task or a fuzz probe), so this is a NEW pass, not a moved
-  cell in either of those two files; ROADMAP 16.2/COVERAGE-lifted-785.md
+  cell in either of those two files; ROADMAP 16.2/the coverage census
   itself is not this pass's file to edit.
 
   MOVED, not landed: `fz_p_nest_eq` (the 66-item framac conformance
@@ -2631,7 +2631,7 @@ framac --tasks fz_p_nest_eq,... --flake 3` for the probe itself):
   identical cell for cell (fz_p_nest_eq is the only cell whose own
   RAW OUTCOME text differs, `abstain -> timeout`, both sides still
   scored FAIL, matching `_expect` neither before nor after). The 66
-  `dafny_synthesis_*` rows of t/COVERAGE-lifted-785.md that read
+  `dafny_synthesis_*` rows of the coverage census that read
   `verified / refuted` in the framac column TODAY (grepped from the
   live file, copied into <scratch>
   441b-804f-aa0d13f350ee/scratchpad/framac-nested/ds-verified-refuted-
@@ -2839,7 +2839,7 @@ SmallestListLength`, `792 CountLists`, `69 ContainsSequence`, all
 seq<seq> PARAMETERS, read only) declares a nested seq<seq> RETURN or
 LOCAL or calls `lower`/`upper`, confirmed by direct inspection of each
 task's own JSON, so none of this pass's new code paths is even reached
-by any of them -- the dafny_synthesis rows of t/COVERAGE-lifted-785.md
+by any of them -- the dafny_synthesis rows of the coverage census
 that read `verified`/`refuted` in the framac column are therefore
 PROVABLY unmoved, not merely unmeasured.
 
@@ -2915,7 +2915,7 @@ unrelated to spec_funs). The conformance suite's framac column
 framac backend alone) reads 61 of 66 PASS, the SAME five FAIL cells as
 before this pass (fz_p_biglen, fz_p_seqlen, fz_p_pair_seq, fz_p_nest_eq,
 fz_p_str_tab) -- no PASS lost, no new FAIL. The dafny_synthesis rows of
-t/COVERAGE-lifted-785.md that read verified/refuted in the framac column
+the coverage census that read verified/refuted in the framac column
 are unmoved BY CONSTRUCTION, not merely unmeasured: `cexpr`'s "call"
 case only reaches its NEW branch when `c["fun"] != task_name`, a
 position that unconditionally raised NotImplementedError (ABSTAIN)
@@ -3028,7 +3028,7 @@ cells as before (`fz_p_biglen`, `fz_p_seqlen`, `fz_p_pair_seq`,
 `test_framac_seq4.py` and `test_framac_while_cert.py` all pass
 unchanged. None of the thirteen tasks named above (240, 262, 307, 412,
 426, 436, 460, 554, 577, 629, 743, 86, ghost_triple) read `verified /
-refuted` in the framac column of t/COVERAGE-lifted-785.md before this
+refuted` in the framac column of the coverage census before this
 pass (every one was `abstain / abstain` or `timeout / timeout`), so the
 "no real may move" regression bar on that document's own verified/
 refuted cells is vacuously satisfied, not merely unmeasured.
@@ -3036,7 +3036,7 @@ refuted cells is vacuously satisfied, not merely unmeasured.
 FRAMAC-SEQ5, 2026-09-19 (ROADMAP 13.4, the three ADDRESSABLE framac
 conformance cells still FAILing after wave Q). Measured first, before
 anything was written, because the brief this pass was handed named six
-cells from a stale reading of internal/ROADMAP-LOG.md's 13.4 section
+cells from a stale reading of the design notes's 13.4 section
 (which stops at pass 8) and three of those six had already been closed
 by wave O: `python3 t/conformance.py`'s own committed table
 (t/CONFORMANCE.md, 2026-09-15 20:23Z) and a direct re-measurement of
@@ -3558,7 +3558,6 @@ def _wordcount(s: list) -> int:
 # whose invariant carries the recursive value at the CURRENT index equal
 # to the recursive value at the START index, exactly `t_wc_c`'s own
 # `wc == t_wc(s, i)` shape one level up).
-#
 # MEASURED (frama-c 33.0 / alt-ergo 2.4.3-free, 2026-09-11, standalone
 # file, <scratch>
 # aa0d13f350ee/scratchpad/framac-seq2/t_strfind.c): `t_find_c`,
@@ -3730,7 +3729,7 @@ def _has_partial_op(x) -> bool:
 SEQOPS = ("update", "fill")
 
 
-# DATATYPES in Frama-C (PREDICT T37, 2026-10-07; SPEC.md "Datatypes (v1)", "(v2): fields"). A t datatype is a C
+# DATATYPES in Frama-C (2026-10-07, SPEC.md "Datatypes (v1)", "(v2): fields"). A t datatype is a C
 # struct passed BY VALUE, the encoding this file's pairs already use (the PAIRS section above `_pair_field_c`): `int
 # tag`, an enum constant `dt_<D>_<C>` per constructor, and one field `f_<C>_<f>` per constructor's field, int for an
 # int or bool, so every variant's storage is present and a constructor is a C99 compound literal with the others zero.
@@ -3739,7 +3738,7 @@ SEQOPS = ("update", "fill")
 # on the tag, each binder bound by ACSL's `\let` (in C, substituted by its field). A field read owes its constructor:
 # in a specification `defs()` states it, in code `code_ats` asserts it before the statement (its guard included).
 # Each datatype parameter `requires dt_D_ok(p)`, the tag one of its constructors' (a t value is always built by one).
-# Since PREDICT T40 a datatype is a return or local too (a struct value, as a pair's). `==` on datatypes in executable
+# Since the landing a datatype is a return or local too (a struct value, as a pair's). `==` on datatypes in executable
 # position, a recursive datatype (a C struct cannot hold itself by value) and a seq, set or pair field refuse by name.
 _DTS: dict = {}
 
@@ -3772,7 +3771,7 @@ def _dt_field_ctors(d: str, f: str) -> list:
     return [k["name"] for k in _DTS[d]["ctors"] if any(fd["name"] == f for fd in k.get("fields", []))]
 
 
-# PREDICT T43: a single-constructor, non-recursive datatype with a seq field cannot be a struct by value (a struct
+# a single-constructor, non-recursive datatype with a seq field cannot be a struct by value (a struct
 # field holds neither a buffer nor its `\\valid` obligation, the PAIRS section's reason). As a PARAMETER it is
 # FLATTENED instead, as a pair with a seq component is (`_pair_flat`): each field its own C parameter, the seq field
 # `int *p_f, int p_f_n`, so `p.f` IS the bare name `p_f` everywhere (`_dt_flat_field`). `_DT_FLAT` maps each such
@@ -3807,12 +3806,12 @@ def _dt_check(task: dict, body: list) -> None:
                         "framac: a recursive datatype (SPEC.md 'Datatypes (v3): recursion'): a C struct cannot hold "
                         "itself by value, and the pointer encoding is not built")
                 if t == "seq" and _dt_flattens(d["name"]):
-                    continue                              # PREDICT T43: flattened, as a parameter only (below)
+                    continue                              # flattened, as a parameter only (below)
                 if t == "seq":
                     raise NotImplementedError(
                         "framac: a seq field in a datatype with several constructors or a field other than int, bool "
                         "or seq (SPEC.md 'Datatypes (v2): fields'): a C struct field cannot hold a seq buffer, and "
-                        "only a single-constructor datatype is flattened into parameters (PREDICT T43)")
+                        "only a single-constructor datatype is flattened into parameters")
                 if t not in ("int", "bool") and _dt_of(t) not in names:
                     raise NotImplementedError(
                         f"framac: a datatype field of type {t!r} (SPEC.md 'Datatypes (v2): fields'): only int, bool "
@@ -3820,7 +3819,7 @@ def _dt_check(task: dict, body: list) -> None:
     flat_types = {d["name"] for d in task.get("datatypes", []) if any(
         fd["type"] == "seq" for k in d["ctors"] for fd in k.get("fields", []))}
     if flat_types:
-        # PREDICT T43: such a datatype exists only as flattened task parameters, each read only as `p.f` (that read
+        # such a datatype exists only as flattened task parameters, each read only as `p.f` (that read
         # is the bare C name `p_f`); any other use of `p`, and any return, local, spec-function parameter,
         # constructor or field of the type, would need a value of it that C has no struct for
         flat_params = {p["name"] for p in task["params"] if _dt_of(p["type"]) in flat_types}
@@ -3861,7 +3860,7 @@ def _dt_decls(task: dict) -> list:
     for d in task.get("datatypes", []):
         name = d["name"]
         if any(fd["type"] == "seq" for k in d["ctors"] for fd in k.get("fields", [])):
-            continue                                      # PREDICT T43: flattened, no struct
+            continue                                      # flattened, no struct
         tags = ", ".join(_ctag(name, k["name"]) for k in d["ctors"])
         out.append(f"enum dt_{name}_tag {{ {tags} }};")
         fields = []
@@ -3932,7 +3931,7 @@ def typ(e: dict, env: dict, funs: dict):
     `pred()`'s `==`/`!=` dispatch, which gains a pair branch below it, and
     this function's own recursion)."""
     if "ctor" in e:
-        return {"datatype": e["ctor"]["dtype"]}          # PREDICT T37
+        return {"datatype": e["ctor"]["dtype"]}          # the landing
     if "_dtf" in e:
         return e["_dtf"]["type"]
     if "field" in e:
@@ -3997,14 +3996,14 @@ def typ(e: dict, env: dict, funs: dict):
         bt = typ(e["args"][0], env, funs)
         return "seq" if is_nested_seq_type(bt) else "int"
     if op == "float":
-        return "float"                           # SPEC.md "Floats (v1)" (PREDICT T51)
+        return "float"                           # SPEC.md "Floats (v1)" 
     if op in ("neg", "div", "min", "max", "abs") or op in ARITH:
         if args_float(e, env, funs):
             return "float"
     if op in ("len", "neg") or op in ARITH or op in DIVMOD:
         return "int"
     if op in ("min", "max", "abs", "gcd", "pow", "isqrt", "sum"):
-        return "int"                             # SPEC.md "The library (v1)" (PREDICT T11)
+        return "int"                             # SPEC.md "The library (v1)" 
     return "bool"                                # cmp, and, or, not, implies, in
 
 
@@ -4021,7 +4020,7 @@ def args_float(e: dict, env: dict, funs: dict) -> bool:
 
 
 def float_lit(v: float) -> str:
-    """SPEC.md "Floats (v1)" (PREDICT T51): a double as the exact decimal value it has, `d.ddde±x`. C reads it back as
+    """SPEC.md "Floats (v1)" : a double as the exact decimal value it has, `d.ddde±x`. C reads it back as
     that same double (it is one), and ACSL reads it as that same real. A hexadecimal literal was the first choice,
     but WP warned "Unexpected constant literal" on `0x0.0p+0` and could prove nothing about it (measured)."""
     from decimal import Decimal
@@ -4071,7 +4070,7 @@ def seq_var(e: dict, env: dict) -> str:
             return e["var"]
     dflat = _dt_flat_field(e)
     if dflat is not None and dflat[1] == "seq":
-        return dflat[0]                                   # PREDICT T43: a flattened datatype's seq field
+        return dflat[0]                                   # a flattened datatype's seq field
     flat = _pair_flat(e, env)
     if flat is not None and (flat[1] == "seq" or is_nested_seq_type(flat[1])):
         # A PAIR WITH A SEQ COMPONENT, 2026-09-19: `fst(p)` IS a bare
@@ -4177,7 +4176,7 @@ def _seq_len_render(e: dict, ctx) -> str:
         # below, never a materialized buffer.
         return str(len(e.get("args", ())))
     if e.get("op") == "rev":
-        return _seq_len_render(e["args"][0], ctx)       # PREDICT T20: rev keeps the length
+        return _seq_len_render(e["args"][0], ctx)       # rev keeps the length
     if e.get("op") == "slice":
         _, lo, hi = e["args"]
         return f"(({term(hi, ctx)}) - ({term(lo, ctx)}))"
@@ -4261,7 +4260,7 @@ def _seq_at_render(e: dict, k_render: str, ctx) -> str:
         s, lo, _ = e["args"]
         return f"{seq_var(s, ctx.env)}[({term(lo, ctx)}) + ({k_render})]"
     if e.get("op") == "rev":
-        # SPEC.md "The library (v1)" in Frama-C (PREDICT T20): element k of rev(s) is element len(s) - 1 - k of s,
+        # SPEC.md "The library (v1)" in Frama-C : element k of rev(s) is element len(s) - 1 - k of s,
         # a formula rewrite like the slice's
         s0 = e["args"][0]
         return _seq_at_render(s0, f"(({_seq_len_render(s0, ctx)}) - 1 - ({k_render}))", ctx)
@@ -4351,7 +4350,7 @@ class Ctx:
         return Ctx(env2, self.funs, self.ret, self.label, self.seq_len)
 
 
-# PREDICT T65: the task's read-only sequence inputs, for exactly one lower() call (set there)
+# the task's read-only sequence inputs, for exactly one lower() call (set there)
 _RO_SEQ: set = set()
 
 
@@ -4373,7 +4372,7 @@ def acsl_call(c: dict, ctx: Ctx) -> str:
     seq_args = [a for p, a in zip(info["params"], c["args"]) if p["type"] == "seq"]
     if (info["labeled"] and ctx.label == "Here" and seq_args
             and all(isinstance(a, dict) and a.get("var") in _RO_SEQ for a in seq_args)):
-        # PREDICT T65: every memory the call reads is an input no code writes, so its value at entry is its value
+        # every memory the call reads is an input no code writes, so its value at entry is its value
         # everywhere; read there, a write elsewhere (a result buffer, a loop's accumulator) needs no frame fact,
         # which WP does not derive for a recursive logic function (filter_pos stepped out at 1,000,000 steps)
         lab = "{Pre}"
@@ -4415,7 +4414,7 @@ def list_term(e: dict, ctx: Ctx) -> str:
     if e.get("op") == "seq":
         out = "\\Nil"
         for a in reversed(e.get("args", ())):
-            # PREDICT T55: an element read from a C array is an `int`, and \Cons takes its element type from its
+            # an element read from a C array is an `int`, and \Cons takes its element type from its
             # argument, so `\Cons(s[i], \Nil)` is a \list<int> that does not unify with the \list<integer> the
             # function returns (Frama-C 33: annot-error "Failure"); ACSL makes int a subtype of integer, so the cast is
             # exact (https://raw.githubusercontent.com/acsl-language/acsl/master/speclang_modern.tex, "implicit coercions")
@@ -4458,7 +4457,7 @@ def _gap(rendered: str) -> str:
 
 
 def _lib_term(op: str, args: list, ctx: "Ctx") -> str:
-    """A library call in an ACSL term (SPEC.md "The library (v1)", PREDICT T11): ACSL's own \\min/\\max/\\abs, the
+    """A library call in an ACSL term (SPEC.md "The library (v1)"): ACSL's own \\min/\\max/\\abs, the
     prelude's logic functions, a sum over a seq variable or (its definitional unfolding) over a display."""
     if op in ("min", "max") and len(args) == 2:
         return f"\\{op}({term(args[0], ctx)}, {term(args[1], ctx)})"
@@ -4479,7 +4478,7 @@ def _lib_term(op: str, args: list, ctx: "Ctx") -> str:
     return f"t_sum({sv}, {ctx.seq_len.get(sv, sv + '_n')})"
 
 
-# SPEC.md "Heap (v1)" (PREDICT T50): the label `old(...)` reads at, "Pre" in the function's contract and loops, the
+# SPEC.md "Heap (v1)" : the label `old(...)` reads at, "Pre" in the function's contract and loops, the
 # certificate's own entry label in a certificate; and a counter for the `\let` names it binds
 _OLD_LABEL = ["Pre"]
 _OLD_N = [0]
@@ -4495,7 +4494,7 @@ def _old_array_read(e):
 
 
 def _old_check(x) -> None:
-    """SPEC.md "Heap (v1)" (PREDICT T50): Frama-C reads the entry state element by element (`old(a)[i]`,
+    """SPEC.md "Heap (v1)" : Frama-C reads the entry state element by element (`old(a)[i]`,
     `len(old(a))`); a whole array in old(...), e.g. `a == rev(old(a))`, would need the entry contents as a value of
     their own, and refuses by name."""
     if isinstance(x, list):
@@ -4525,7 +4524,7 @@ def term(e: dict, ctx: Ctx) -> str:
     if "bool" in e:
         return "\\true" if e["bool"] else "\\false"
     if e.get("op") == "float":
-        return float_lit(_float_const(e))         # SPEC.md "Floats (v1)" (PREDICT T51)
+        return float_lit(_float_const(e))         # SPEC.md "Floats (v1)" 
     if e.get("op") in ("+", "-", "*", "div") and args_float(e, ctx.env, ctx.funs):
         # ACSL computes on reals; t's float operation is the RNE-rounded double, made explicit by the cast
         o = "/" if e["op"] == "div" else e["op"]
@@ -4535,7 +4534,7 @@ def term(e: dict, ctx: Ctx) -> str:
         raise NotImplementedError(f"framac: {e['op']} on a float is not lowered yet (SPEC.md 'Floats (v1)')")
     old_read = _old_array_read(e)
     if old_read is not None:
-        # SPEC.md "Heap (v1)" (PREDICT T50): `old(a)[i]` is a's element in the entry state, with i read NOW (a loop
+        # SPEC.md "Heap (v1)" : `old(a)[i]` is a's element in the entry state, with i read NOW (a loop
         # index), so the index is bound first: `\let` takes it from the current state, `\at` reads the array at Pre
         a, idx = old_read
         if idx is None:
@@ -4560,17 +4559,17 @@ def term(e: dict, ctx: Ctx) -> str:
     if "call" in e:
         return acsl_call(e["call"], ctx)
     if "_dtf" in e:
-        txt = f"({term(e['_dtf']['of'], ctx)}).{e['_dtf']['field']}"      # PREDICT T37: a match binder
+        txt = f"({term(e['_dtf']['of'], ctx)}).{e['_dtf']['field']}"      # a match binder
         return f"({txt} != 0)" if e["_dtf"]["type"] == "bool" else txt
     if _dt_flat_field(e) is not None:
-        name, ft = _dt_flat_field(e)                      # PREDICT T43
+        name, ft = _dt_flat_field(e)                      # the landing
         if ft == "seq":
             raise NotImplementedError(
                 "a seq-typed datatype field in ACSL TERM position (not under `len`/`at`): a seq has no ACSL term "
                 "of its own in this lowering, the same gap a bare seq-typed variable already has there")
         return f"({name} != 0)" if ft == "bool" else name
     if "field" in e:
-        # PREDICT T37: the constructor's own field (a field several constructors declare: chosen by the tag)
+        # the constructor's own field (a field several constructors declare: chosen by the tag)
         f = e["field"]
         d = _dt_of(typ(f["of"], ctx.env, ctx.funs))
         of = term(f["of"], ctx)
@@ -4583,13 +4582,13 @@ def term(e: dict, ctx: Ctx) -> str:
         return _dt_match_acsl(e, ctx, term)
     if "ctor" in e:
         raise NotImplementedError("framac: a constructor in ACSL term position other than one side of `==` "
-                                  "(PREDICT T37) is not lowered yet")
+                                  "is not lowered yet")
     if "forall" in e or "exists" in e:
         raise NotImplementedError("quantifier in ACSL term position")
     op, args = e["op"], e.get("args", [])
     _strlib_abstain(op, "ACSL term position")
     if op in ("min", "max", "abs", "gcd", "pow", "isqrt", "sum"):
-        return _lib_term(op, args, ctx)          # SPEC.md "The library (v1)" (PREDICT T11)
+        return _lib_term(op, args, ctx)          # SPEC.md "The library (v1)" 
     if op == "len":
         return _seq_len_render(args[0], ctx)
     if op == "at":
@@ -4603,7 +4602,6 @@ def term(e: dict, ctx: Ctx) -> str:
         # the `var` case above) in both committed tasks, but the
         # rendering is generic over any pair-typed term this backend can
         # otherwise express (never `pair(...)` itself, see below).
-        #
         # A PAIR WITH A SEQ COMPONENT, 2026-09-19: there is no struct at
         # all for that shape (see `_pair_flat`), so the SCALAR sibling
         # is a plain C name and the seq half never reaches here (it
@@ -4780,9 +4778,9 @@ def defs(e: dict, ctx: Ctx):
                 _DEFS_OPEN.discard(c["fun"])
         return _conj(parts)
     if "ctor" in e:
-        return _conj([defs(a, ctx) for a in e["ctor"]["args"]])   # PREDICT T37
+        return _conj([defs(a, ctx) for a in e["ctor"]["args"]])   # the landing
     if "field" in e:
-        # PREDICT T37: `e.f` owes a constructor that declares f
+        # `e.f` owes a constructor that declares f
         f = e["field"]
         d = _dt_of(typ(f["of"], ctx.env, ctx.funs))
         cs = _dt_field_ctors(d, f["name"])
@@ -4790,7 +4788,7 @@ def defs(e: dict, ctx: Ctx):
             "(" + " || ".join(f"({term(f['of'], ctx)}).tag == {_ctag(d, c)}" for c in cs) + ")")
         return _conj([defs(f["of"], ctx), tag])
     if "match" in e:
-        # PREDICT T37: each arm's body defined on its own constructor, its binders bound
+        # each arm's body defined on its own constructor, its binders bound
         m = e["match"]
         d = _dt_of(typ(m["scrutinee"], ctx.env, ctx.funs))
         scr = term(m["scrutinee"], ctx)
@@ -4874,7 +4872,7 @@ def defs(e: dict, ctx: Ctx):
         return _conj([defs(args[0], ctx), defs(args[1], ctx),
                       f"(({n}) >= 0)"])
     if op in ("+", "-", "*", "div") and args_float(e, ctx.env, ctx.funs):
-        # SPEC.md "Floats (v1)" (PREDICT T51): the rounded result finite, a divisor nonzero
+        # SPEC.md "Floats (v1)" : the rounded result finite, a divisor nonzero
         y = term(args[1], ctx)
         return _conj([defs(args[0], ctx), defs(args[1], ctx), (f"(({y}) != 0)" if op == "div" else None),
                       f"\\is_finite({term(e, ctx)})"])
@@ -4904,7 +4902,7 @@ def defs(e: dict, ctx: Ctx):
 
 
 def _dt_match_acsl(e: dict, ctx, render) -> str:
-    """PREDICT T37: a match as a conditional on the tag, each arm's binders bound by ACSL's `\\let`."""
+    """a match as a conditional on the tag, each arm's binders bound by ACSL's `\\let`."""
     m = e["match"]
     d = _dt_of(typ(m["scrutinee"], ctx.env, ctx.funs))
     scr = term(m["scrutinee"], ctx)
@@ -4924,7 +4922,7 @@ def _dt_match_acsl(e: dict, ctx, render) -> str:
 
 
 def _dt_eq_acsl(x: str, e: dict, d: str, ctx) -> str:
-    """PREDICT T37: the ACSL predicate "the struct value `x` equals the t value `e`" -- a constructor expanded field
+    """the ACSL predicate "the struct value `x` equals the t value `e`" -- a constructor expanded field
     by field, anything else through `dt_D_eq`."""
     if "ctor" in e:
         c = e["ctor"]
@@ -4944,9 +4942,9 @@ def _dt_eq_acsl(x: str, e: dict, d: str, ctx) -> str:
 def pred(e: dict, ctx: Ctx) -> str:
     """ACSL predicate (for requires/ensures/invariants/asserts/lemmas)."""
     if "field" in e or "_dtf" in e:
-        return term(e, ctx)                              # PREDICT T37: a bool field, `!= 0`
+        return term(e, ctx)                              # a bool field, `!= 0`
     if "match" in e:
-        return _dt_match_acsl(e, ctx, pred)              # PREDICT T37
+        return _dt_match_acsl(e, ctx, pred)              # the landing
     if "bool" in e:
         return "\\true" if e["bool"] else "\\false"
     if "var" in e:
@@ -4971,7 +4969,7 @@ def pred(e: dict, ctx: Ctx) -> str:
         return f"({acsl_call(e['call'], ctx)} == \\true)"
     op, args = e["op"], e.get("args", [])
     if op == "in" and typ(args[1], ctx.env, ctx.funs) == "seq":
-        # SPEC.md "The library (v1)" (PREDICT T11): membership in a seq is some index holding it
+        # SPEC.md "The library (v1)" : membership in a seq is some index holding it
         sv = seq_var(args[1], ctx.env)
         n = ctx.seq_len.get(sv, f"{sv}_n")
         return f"(\\exists integer t_k; 0 <= t_k < {n} && {sv}[t_k] == ({term(args[0], ctx)}))"
@@ -4986,12 +4984,12 @@ def pred(e: dict, ctx: Ctx) -> str:
     if op in ("==", "!="):
         t0 = typ(args[0], ctx.env, ctx.funs)
         if _dt_of(t0) is not None:
-            # PREDICT T37: by constructor and fields; a constructor operand expanded, never a struct literal
+            # by constructor and fields; a constructor operand expanded, never a struct literal
             a, b = args
             if "ctor" in a and "ctor" not in b:
                 a, b = b, a
             if "ctor" in a:
-                raise NotImplementedError("framac: `==` between two constructors (PREDICT T37) is not lowered yet")
+                raise NotImplementedError("framac: `==` between two constructors is not lowered yet")
             eq = _dt_eq_acsl(term(a, ctx), b, _dt_of(t0), ctx)
             return eq if op == "==" else f"(!{eq})"
         if t0 == "bool":
@@ -5103,7 +5101,6 @@ def pred(e: dict, ctx: Ctx) -> str:
         # `term()`, never here), so this applies the SAME `!= 0` bool
         # convention the `var` case above already applies to a bare
         # bool-typed C name, to the field read instead of the name.
-        #
         # A PAIR WITH A SEQ COMPONENT, 2026-09-19: the bool sibling of a
         # seq component is a plain C name, not a field (see
         # `_pair_flat`); the same `!= 0` convention applies to it.
@@ -5116,7 +5113,6 @@ def pred(e: dict, ctx: Ctx) -> str:
 
 
 # ------------------------------------------------------------- C (code) -----
-#
 # PAIRS (SPEC.md "Pairs", 2026-09-10, ROADMAP 12.7). C has no product value
 # either, so this is a second MEASURED encoding choice next to seq's own
 # (the seq value machinery section, above): a struct returned/held BY
@@ -5141,7 +5137,6 @@ def pred(e: dict, ctx: Ctx) -> str:
 # struct equality this backend would trust (a bitwise/representation
 # equality on a struct is not the value equality SPEC.md means, and this
 # backend never asks WP for one).
-#
 # T1/T2 are restricted to "int"/"bool" by this backend, not by SPEC.md
 # (which also allows "seq"): a pair with a seq component has no clean
 # value semantics in a struct returned BY VALUE, since a seq is itself a
@@ -5155,7 +5150,6 @@ def pred(e: dict, ctx: Ctx) -> str:
 # moment a "seq" component is seen, never guessing a struct layout for it;
 # neither committed task has one (`divmod_pair`, `min_max`: both
 # `(int, int)`).
-#
 # FIXED 2026-09-10 (the framac fuzz family v1pairs's own 18-task residual,
 # measured on the fuzz corpus, not on a committed task): a pair-typed
 # PARAMETER or LOCAL. Both committed tasks use a pair only as a RETURN,
@@ -5187,7 +5181,6 @@ def pred(e: dict, ctx: Ctx) -> str:
 # type -- `cexpr()` now has a componentwise `==`/`!=` case mirroring
 # `pred()`'s own (below), so this is fixed rather than traded for a
 # different malformed cause.
-#
 # Still NOT implemented, found by construction, kept as a named refusal
 # because nothing in the framac residual needs it measured: a pair
 # inside another pair's component (SPEC.md itself excludes this, "no
@@ -5396,7 +5389,7 @@ def cexpr(e: dict, env: dict, funs: dict, task_name: str,
     ("invalid operands to binary -; unexpected bool and bool") rather
     than a smoke or proof failure."""
     if e.get("op") == "float":
-        return float_lit(_float_const(e))         # SPEC.md "Floats (v1)" (PREDICT T51): the exact double
+        return float_lit(_float_const(e))         # SPEC.md "Floats (v1)" : the exact double
     if e.get("op") == "div" and args_float(e, env, funs):
         # C's own double division (RNE), its divisor and finiteness asserted first by code_ats ("fin")
         return (f"({cexpr(e['args'][0], env, funs, task_name, _div_style)} / "
@@ -5415,7 +5408,7 @@ def cexpr(e: dict, env: dict, funs: dict, task_name: str,
                 f"? ({cexpr(i['then'], env, funs, task_name, _div_style)}) "
                 f": ({cexpr(i['else'], env, funs, task_name, _div_style)}))")
     if "ctor" in e:
-        # PREDICT T37: a C99 compound literal, the other variants' fields zero
+        # a C99 compound literal, the other variants' fields zero
         c = e["ctor"]
         d = c["dtype"]
         inits = [f".tag = {_ctag(d, c['name'])}"] + [
@@ -5423,7 +5416,7 @@ def cexpr(e: dict, env: dict, funs: dict, task_name: str,
             for a, fd in zip(c["args"], _dt_fields(d, c["name"]), strict=True)]
         return f"((struct dt_{d}){{{', '.join(inits)}}})"
     if _dt_flat_field(e) is not None:
-        name, ft = _dt_flat_field(e)                      # PREDICT T43
+        name, ft = _dt_flat_field(e)                      # the landing
         if ft == "seq":
             raise NotImplementedError(
                 "a seq-typed datatype field in C VALUE position (not under `len`/`at`): a seq has no single C "
@@ -5439,7 +5432,7 @@ def cexpr(e: dict, env: dict, funs: dict, task_name: str,
             txt = f"(({of}).tag == {_ctag(d, c)} ? ({of}).{_cfield(c, f['name'])} : {txt})"
         return txt
     if "match" in e:
-        # PREDICT T37: a conditional on the tag, each binder replaced by its constructor's field
+        # a conditional on the tag, each binder replaced by its constructor's field
         m = e["match"]
         d = _dt_of(typ(m["scrutinee"], env, funs))
         scr = cexpr(m["scrutinee"], env, funs, task_name, _div_style)
@@ -5567,7 +5560,7 @@ def cexpr(e: dict, env: dict, funs: dict, task_name: str,
         return f"{fn}({sv}, {sv}_n, {t_ptr}, {t_n})"
     _strlib_abstain(op, "executable position")
     if op in ("min", "max", "abs", "gcd", "pow", "isqrt", "sum", "in"):
-        # SPEC.md "The library (v1)" in Frama-C (PREDICT T11): a C conditional, or the prelude's helper
+        # SPEC.md "The library (v1)" in Frama-C : a C conditional, or the prelude's helper
         c = [cexpr(a, env, funs, task_name, _div_style) if op not in ("sum", "in") or k > 0 or op == "in"
              else None for k, a in enumerate(args)]
         if op in ("min", "max") and len(args) == 2:
@@ -5708,7 +5701,6 @@ def cexpr(e: dict, env: dict, funs: dict, task_name: str,
     if op in ("fst", "snd"):
         # p.0 / p.1: a plain field read on whatever `cexpr` already
         # renders for the pair-typed operand.
-        #
         # A PAIR WITH A SEQ COMPONENT, 2026-09-19: no struct exists for
         # that shape (see `_pair_flat`), so the scalar sibling is its
         # own C parameter; a seq-typed projection has no C VALUE, the
@@ -5771,9 +5763,9 @@ def cexpr(e: dict, env: dict, funs: dict, task_name: str,
         sign_y = f"({y_pos} - {y_neg})"          # 1 or -1 (y != 0)
         return f"({quo} - {neg} * {sign_y})"
     if op in ("==", "!=") and _dt_of(typ(args[0], env, funs)) is not None:
-        raise NotImplementedError("framac: `==` on datatypes in executable position (PREDICT T37) is not lowered yet")
+        raise NotImplementedError("framac: `==` on datatypes in executable position is not lowered yet")
     if op in ("==", "!=") and typ(args[0], env, funs) == "bool":
-        # PREDICT T68: a t bool is carried by a C int, and WP's model of an int bool may hold any truthy value. C's
+        # a t bool is carried by a C int, and WP's model of an int bool may hold any truthy value. C's
         # `a != b` on two of them compares the ints, so 1 and 2 count as different (CERT EXP20-C's class), and a
         # program true of t's bools went unproved (px4_hysteresis_set, px4_hysteresis_switches). `!x` is 0 or 1, so
         # comparing the negations compares the truth values, as `pred()`'s `<==>` already does in ACSL.
@@ -5818,7 +5810,6 @@ def cexpr(e: dict, env: dict, funs: dict, task_name: str,
             # cause on the same task, only visible once the first one
             # was fixed). Componentwise, the same rule `pred()`'s own
             # branch above uses.
-            #
             # BRANCH-FREE, not `cexpr()`'s ordinary "and" (`&&`):
             # MEASURED on `fz_v1pairs_053`'s own wrong-var twin (`p == q`
             # mutated to `q == q`, a certificate whose replay substitutes
@@ -5950,10 +5941,10 @@ def code_ats(e: dict, env: dict, guard: tuple = ()) -> list:
         return out
     if "ctor" in e:
         for a in e["ctor"]["args"]:
-            out += code_ats(a, env, guard)               # PREDICT T37
+            out += code_ats(a, env, guard)               # the landing
         return out
     if "field" in e:
-        # PREDICT T37: the read owes its constructor, asserted under the guard that reaches it
+        # the read owes its constructor, asserted under the guard that reaches it
         f = e["field"]
         out += code_ats(f["of"], env, guard)
         d = _dt_of(typ(f["of"], env, {}))
@@ -5962,7 +5953,7 @@ def code_ats(e: dict, env: dict, guard: tuple = ()) -> list:
             out.append(("dtf", _dt_is(f["of"], d, cs), guard))
         return out
     if "match" in e:
-        # PREDICT T37: each arm's obligations under the guard that its constructor was matched, its binders read as
+        # each arm's obligations under the guard that its constructor was matched, its binders read as
         # the constructor's fields
         m = e["match"]
         out += code_ats(m["scrutinee"], env, guard)
@@ -6009,7 +6000,7 @@ def code_ats(e: dict, env: dict, guard: tuple = ()) -> list:
             out.append(("at", seq_var(base, env), args[1], guard))
         return out
     if op in ("pow", "isqrt"):
-        # SPEC.md "The library (v1)" (PREDICT T11): pow(a, n) and isqrt(n) DEFINED IFF n >= 0
+        # SPEC.md "The library (v1)" : pow(a, n) and isqrt(n) DEFINED IFF n >= 0
         for a in args:
             out += code_ats(a, env, guard)
         out.append(("ge0", args[-1], guard))
@@ -6019,7 +6010,7 @@ def code_ats(e: dict, env: dict, guard: tuple = ()) -> list:
         out.append(("pos", seq_var(args[0], env), guard))
         return out
     if op in ("+", "-", "*", "div") and args_float(e, env, {}):
-        # SPEC.md "Floats (v1)" (PREDICT T51): defined iff the rounded result is finite (and a divisor nonzero)
+        # SPEC.md "Floats (v1)" : defined iff the rounded result is finite (and a divisor nonzero)
         out += code_ats(args[0], env, guard)
         out += code_ats(args[1], env, guard)
         if op == "div":
@@ -6107,7 +6098,7 @@ def at_asserts(e: dict, ctx: Ctx, indent: str, funs=None,
             body = f"{sv}_n > 0"
         elif tag == "dtf":
             (cond,) = rest
-            body = pred(cond, ctx)                       # PREDICT T37: a field read's constructor
+            body = pred(cond, ctx)                       # a field read's constructor
         else:                                      # "dm": bridging assert
             (node,) = rest
             if funs is not None and task_name is not None:
@@ -6139,7 +6130,6 @@ def at_asserts(e: dict, ctx: Ctx, indent: str, funs=None,
 
 
 # --------------------------------------------------- seq value machinery ----
-#
 # THE ENCODING (2026-09-09, SPEC.md "Sequences as values"). C has no
 # sequence value at all, so every column measures its own answer to what a
 # `seq` local/return IS in C; this one is measured on the two committed
@@ -6158,7 +6148,6 @@ def at_asserts(e: dict, ctx: Ctx, indent: str, funs=None,
 # ghost-only encoding): every `s[i := v]`/`seq(n, v)` becomes a REAL
 # memory store into that buffer, proven by WP's own points-to reasoning
 # over ordinary C writes, nothing bespoke.
-#
 # What this candidate CANNOT express, stated rather than discovered late:
 # the return buffer's requires-time validity bound must be a term over
 # PARAMS ALONE (ACSL's `requires` scope), so a `fill` whose length is not
@@ -6174,7 +6163,6 @@ def at_asserts(e: dict, ctx: Ctx, indent: str, funs=None,
 # still needs an expression fixed in advance; not implemented, since
 # neither committed task needs it (both `update` and `fill` here reduce to
 # `len(s)`, a bare param length).
-#
 # A seq-typed LOCAL (`var a: seq := s;`, SPEC.md's other new position) is
 # NOT implemented: it would need its own backing storage with no external
 # contract to size it from (v1's own scope rule keeps locals out of
@@ -6212,9 +6200,9 @@ def _expr_seq_len(e: dict, lens: dict) -> dict | None:
     if "var" in e:
         return lens.get(e["var"])
     if e.get("op") == "rev":
-        return _expr_seq_len(e["args"][0], lens)          # PREDICT T20: rev keeps the length
+        return _expr_seq_len(e["args"][0], lens)          # rev keeps the length
     if "comp" in e and e["comp"].get("cond") == {"bool": True}:
-        # SPEC.md "Comprehensions (v1)" (PREDICT T19): a map has its source's length, over a range `[lo, hi)` the
+        # SPEC.md "Comprehensions (v1)" : a map has its source's length, over a range `[lo, hi)` the
         # count `hi - lo` (the write loop asserts it equal to the buffer's length; a negative one cannot be)
         c = e["comp"]
         if "seq" in c:
@@ -6652,7 +6640,7 @@ def _flatten_slice_at(e, obls: list):
     """`s[a..b][i]` as `s[a + i]` (SPEC.md: the element of the slice at i is the element of s at a + i), collecting the
     slice's definedness, `0 <= a <= b <= len(s)` and `0 <= i < b - a`, into `obls`: Frama-C indexes only a buffer by
     name ("seq position holds non-variable"), and a stepped slice reaches a comprehension in exactly this form
-    (`every_other`, `odd_positions`; PREDICT T19)."""
+    (`every_other`, `odd_positions`)."""
     if isinstance(e, list):
         return [_flatten_slice_at(x, obls) for x in e]
     if not isinstance(e, dict):
@@ -6671,7 +6659,7 @@ def _flatten_slice_at(e, obls: list):
 
 
 def _comp_map_lines(target: str, xn: str, e: dict, ctx, indent: str, funs: dict, task_name: str) -> list:
-    """SPEC.md "Comprehensions (v1)" in Frama-C (PREDICT T19): `target := [body for x in s]` (or over `[lo, hi)`) as
+    """SPEC.md "Comprehensions (v1)" in Frama-C : `target := [body for x in s]` (or over `[lo, hi)`) as
     one write loop of `xn` steps, the count asserted equal to `xn` first (EXACT mode pins `xn` from the ensures, as a
     slice's copy does), each step asserting the body's definedness at that element and writing its value, with the
     loop invariant stating every element written so far. A filter refuses by name (`_comp_refusal`)."""
@@ -6784,7 +6772,7 @@ def seq_assign_lines(target: str, e: dict, ctx: Ctx, indent: str,
         ]
 
     if e.get("op") == "rev" and "var" in e["args"][0]:
-        # SPEC.md "The library (v1)" in Frama-C (PREDICT T20): `target := rev(s)` is the map
+        # SPEC.md "The library (v1)" in Frama-C : `target := rev(s)` is the map
         # `[s[len(s) - 1 - i] for i in [0, len(s))]` (SPEC.md's definition of rev, element by element), so it is
         # T19's write loop with that body; the bound name t_rv is reserved (t's own names never begin with t_)
         s0 = e["args"][0]
@@ -6793,7 +6781,7 @@ def seq_assign_lines(target: str, e: dict, ctx: Ctx, indent: str,
                       "body": {"op": "at", "args": [s0, {"op": "-", "args": [
                           {"op": "-", "args": [n0, {"int": 1}]}, {"var": "t_rv"}]}]}}}
     if "comp" in e:
-        # SPEC.md "Comprehensions (v1)" in Frama-C (PREDICT T19): a map is a write loop, the copy loop above with
+        # SPEC.md "Comprehensions (v1)" in Frama-C : a map is a write loop, the copy loop above with
         # the body's value in place of the source's element
         if cap is not None:
             raise NotImplementedError("framac: a comprehension appended to a capacity-tracked buffer is not lowered "
@@ -6908,7 +6896,6 @@ def seq_assign_lines(target: str, e: dict, ctx: Ctx, indent: str,
         # own shape) or, more generally, `r := r + t` for a bare seq `t`:
         # CAPACITY mode only, self-referential on the left. See this
         # function's own docstring for what is and is not measured here.
-        #
         # SEQ VALUE, executable position, item 1 (literal), 2026-09-11
         # (framac-seq): `[] + e` is `e` by SPEC.md's own concatenation
         # identity (len([]) == 0, so every index of the result shifts by
@@ -7004,7 +6991,6 @@ def seq_assign_lines(target: str, e: dict, ctx: Ctx, indent: str,
         # CAPACITY bound), one loop mapping each cell through the same
         # ternary T_CASE_ACSL states, invariant `target[t] ==
         # t_lower_c(src[t])` (or `t_upper_c`) for `t` below the counter.
-        #
         # Two source shapes, both measured: `fz_p_str_lowernonletter`'s
         # own probe body is `r := lower([32, 64, 91, 96, 123, 1000000])`,
         # a fully LITERAL argument with no backing buffer at all (no
@@ -7245,7 +7231,6 @@ def _assigns_target(n: str, ctx: Ctx) -> str:
 
 
 # -------------------------------------------- seq extensional equality -----
-#
 # FRAMAC-NESTED, ROADMAP 13.4 item (a), 2026-09-12 (the design order's
 # design note above `lower_framac`'s own docstring names the three cells:
 # fz_p_nest_eq, 576 isSublist, 69 containsSequence). `cexpr`'s own
@@ -7663,7 +7648,6 @@ def _seq_eq_hoist(e, ctx: Ctx, indent: str, funs: dict, task_name: str):
 
 
 # ------------------------------------------------------------- methods ----
-#
 # SPEC.md "Methods (v1)" (2026-09-26). Each method is its own C function
 # `{m}_t` with its own ACSL contract, lowered by `lower()` itself on a
 # task-shaped view of the method (`_lower_method`), so its body, loops,
@@ -7677,7 +7661,6 @@ def _seq_eq_hoist(e, ctx: Ctx, indent: str, funs: dict, task_name: str):
 # `assigns` are unchanged), never through its body, which is Dafny's
 # modular call rule. `t/methods_probe/opaque_callee.t` is the probe: a
 # caller needing more than the callee's `ensures` must not verify.
-#
 # A seq argument is passed as its (pointer, length) pair. A seq RESULT is
 # written into a caller-provided buffer, the same encoding a seq-returning
 # task already uses for its own return: the callee's contract states the
@@ -7857,7 +7840,7 @@ def _method_scratch(task: dict, body: list, funs: dict, used: set) -> list:
     return scratch
 
 
-# SEQ LOCALS AS WORKSPACE (PREDICT T31, 2026-10-07). A seq-typed local `var w: seq := e` whose initializer this
+# SEQ LOCALS AS WORKSPACE (2026-10-07). A seq-typed local `var w: seq := e` whose initializer this
 # lowering can already write into a buffer (`seq_assign_lines`: a copy, `fill`, `update` of a variable, a literal,
 # `rev` of a variable, a map) and whose length is a function of the params alone (`_expr_seq_len`) gets the method
 # call's workspace: a caller-provided buffer `int *w, int w_n`, `\valid`, separated from every other buffer, sized by
@@ -8088,7 +8071,7 @@ def stmts(body: list, ctx: Ctx, task_name: str, indent: str,
     out = []
     for s in body:
         if "aset" in s:
-            # SPEC.md "Heap (v1)" (PREDICT T50): one element written in place, C's own `a[i] = e;`, the index's range
+            # SPEC.md "Heap (v1)" : one element written in place, C's own `a[i] = e;`, the index's range
             # asserted first (the write's definedness), as an `at` read's is
             name, ie, ve = s["aset"]
             out += at_asserts(ie, ctx, indent, ctx.funs, task_name)
@@ -8172,7 +8155,6 @@ def stmts(body: list, ctx: Ctx, task_name: str, indent: str,
             # file's), so no dead-code smoke goal can arise from it: the
             # code after the enclosing `if` remains reachable on the other
             # branch, never on this one.
-            #
             # A seq-typed return (2026-09-09) has no scalar C `return`
             # value at all: `lower()` gives it an output buffer parameter
             # instead (see the seq value machinery section), so an early
@@ -8241,7 +8223,7 @@ def stmts(body: list, ctx: Ctx, task_name: str, indent: str,
                 ctx = ctx.bind(v["name"], v["type"])
                 continue
             if v["type"] == "seq" and v["name"] in _LOCAL_WS:
-                # PREDICT T31: a workspace buffer `lower()` added to the function's own parameters (`_local_scratch`),
+                # a workspace buffer `lower()` added to the function's own parameters (`_local_scratch`),
                 # written here exactly as an assignment to a seq name is
                 out += seq_assign_lines(v["name"], v["init"], ctx, indent, ctx.funs, task_name)
                 ctx = ctx.bind(v["name"], "seq")
@@ -8331,7 +8313,7 @@ def stmts(body: list, ctx: Ctx, task_name: str, indent: str,
             out += at_asserts(v["init"], ctx, indent, ctx.funs, task_name)
             ctx = ctx.bind(v["name"], v["type"])
             if _dt_of(v["type"]) is not None:
-                # PREDICT T40: a datatype local, its struct by value
+                # a datatype local, its struct by value
                 out.append(f"{indent}struct dt_{_dt_of(v['type'])} {v['name']} = "
                            f"{cexpr(v['init'], ctx.env, ctx.funs, task_name)};")
             elif isinstance(v["type"], dict) and "pair" in v["type"]:
@@ -8414,7 +8396,7 @@ def stmts(body: list, ctx: Ctx, task_name: str, indent: str,
         elif "while" in s:
             w = s["while"]
             # WHILE-GUARD DEFINEDNESS, added 2026-09-09 (the eighth sweep's
-            # residual, COVERAGE-lifted-785.md: the two MBPP-DFY
+            # residual, the coverage census: the two MBPP-DFY
             # IsPrime/IsNonPrime tasks loop on `while i <= n / 2`). A
             # `div`/`mod`/`at` in the GUARD is evaluated once before the loop
             # and once more per iteration, and unlike every other position
@@ -8424,7 +8406,6 @@ def stmts(body: list, ctx: Ctx, task_name: str, indent: str,
             # assert could go in front of, so this lowering used to ABSTAIN
             # (NotImplementedError) on any such guard rather than emit an
             # under-checked one.
-            #
             # The fix: emit the same `at_asserts` twice. Once immediately
             # before the `while` -- this discharges the guard's FIRST
             # evaluation, proved from whatever state the code before the
@@ -8468,7 +8449,7 @@ def stmts(body: list, ctx: Ctx, task_name: str, indent: str,
             # about it would be sound to state as an invariant.
             for pn, pinit in prefix.items():
                 if pn not in hit:
-                    # PREDICT T70: an annotation is an ACSL term. cexpr's `%`/`div` is C's branchless Euclidean form,
+                    # an annotation is an ACSL term. cexpr's `%`/`div` is C's branchless Euclidean form,
                     # which multiplies a comparison as an int and is ill-typed in ACSL (Frama-C: annot-error), so an
                     # initializer using them is written with term(), as every other annotation is. Others keep cexpr,
                     # byte-identical to before.
@@ -8487,7 +8468,6 @@ def stmts(body: list, ctx: Ctx, task_name: str, indent: str,
             # honest ALT-ERGO STEP LIMIT, because that lower bound has no
             # other source (the task's own invariants never state it;
             # nothing about `i`'s own bound implies it).
-            #
             # Deliberately NOT the matching upper bound `r_len <= {n}_n`:
             # that one is TASK semantics, not an encoding artifact -- on
             # `filter_pos` it already follows from the task's OWN stated
@@ -8530,7 +8510,6 @@ def stmts(body: list, ctx: Ctx, task_name: str, indent: str,
             # the state BEFORE the loop, and the moment the loop writes
             # `pn` it stops holding, at the loop head of any inner loop
             # and at any later loop in this list alike.
-            #
             # MEASURED on has_duplicate.t, the nested `while` task, which
             # is where this surfaced: `var i := 0;` sits in the function
             # prefix, the OUTER loop assigns `i`, and the INNER loop does
@@ -8555,7 +8534,6 @@ def stmts(body: list, ctx: Ctx, task_name: str, indent: str,
             # -wp-smoke-timeout, not the stepout, which ran alongside it
             # -- so raising -wp-steps or -wp-timeout would have bought
             # nothing here, only a longer wall on a false goal.
-            #
             # `hit` (this loop's own assignment targets, recursive) is
             # exactly the set `loop assigns` already frames and the same
             # set the invariant emitter above skips; reusing it keeps the
@@ -8859,7 +8837,6 @@ def _place_mirrors(text: str, mirrors: list) -> str:
 
 
 # ------------------------------------------------ refutation certificate ----
-#
 # THE CERTIFICATE (shared protocol, ROADMAP 10.7): WP with alt-ergo never
 # distinguishes a false goal from a hard one (verifiers/framac.py records the
 # side-by-side measurement), so the adapter no longer mints REFUTED from an
@@ -8871,7 +8848,6 @@ def _place_mirrors(text: str, mirrors: list) -> str:
 # unsatisfied). The adapter mints REFUTED only when the kernel accepts that
 # assert AND every other goal of the certificate function; a rejected
 # certificate is UNPROVED, never REFUTED.
-#
 # Branch discipline, measured 2026-09-02: a ground-decided `if` in the
 # certificate makes its untaken arm dead code, and -wp-smoke-tests fails the
 # dead-code smoke goal (`Failed smoke-test` on cert_deadif.c), which scores
@@ -8883,18 +8859,15 @@ def _place_mirrors(text: str, mirrors: list) -> str:
 # if the lowering's replay disagrees with the program, some assert fails,
 # the certificate is rejected, and the file honestly reads UNPROVED. A
 # mis-replay can never mint, only fail.
-#
 # Scope, stated rather than stretched: a whole-program `value` witness whose
 # twin value falsifies `ensures` (_ens is True) is certificatable by
 # `_value_certificate`, straight-line ground replay from the params, exactly
 # as above. A twin body carrying a task self-call (recursion has no bounded
 # ground unrolling here) is skipped there. Skipping means the twin cell reads
 # timeout/unproved and the flip is honestly lost.
-#
 # Two more kinds, added 2026-09-09 for SPEC.md "Sequences as values" (the
 # construct that also added `update`/`fill`, whose committed tasks measure
 # one of each):
-#
 #   `undefined` (`_undef_certificate`): the twin has NO VALUE at the
 #   witness, because some statement's right-hand side hit a partial
 #   operator (`at`, `update`, `fill`, `div`, `mod`) outside its domain
@@ -8915,7 +8888,6 @@ def _place_mirrors(text: str, mirrors: list) -> str:
 #   replay this shortcut exists to avoid); swap's own undefined witness
 #   fails on the body's FIRST statement, so this is not exercised there,
 #   only documented for the next task that might need it.
-#
 #   `exit` (`_exit_certificate`): interp.invariant_witness's own
 #   obligation restated: a loop STATE where the surviving invariants hold,
 #   the guard is false, but `ensures` is false there. Unlike a `value`
@@ -8930,7 +8902,6 @@ def _place_mirrors(text: str, mirrors: list) -> str:
 #   when the witness already has the guard false, exactly reverse's own
 #   measured case. Scope limit: only a TOP-LEVEL loop (not nested under an
 #   `if`) is handled; no committed task's exit witness has needed more.
-#
 # Both new kinds reuse `_cert_stmts`/`_cev`/`_cert_cexpr` only where those
 # already work (ground replay of ordinary, non-seq-assigning statements);
 # neither extends them to emit a seq-typed assignment's C text (the copy
@@ -8942,7 +8913,6 @@ def _place_mirrors(text: str, mirrors: list) -> str:
 # something unmeasured.
 
 # --------------------------------------- the divisor-bound lemma -----
-#
 # DIVISOR-BOUND LEMMA (2026-09-12, ROADMAP 16.2, framac-cert): ported from
 # `lower_verus.py`/`lower_fstar.py`'s own functions of the same name
 # (2026-09-11), restated over THIS file's own t-AST access (`exists`/
@@ -8965,13 +8935,11 @@ def _place_mirrors(text: str, mirrors: list) -> str:
 # and `[lo, i)` lets it instantiate at the two ground integers already
 # in the goal's own context (the function's `n`, the loop's own final
 # `i`) with no explicit trigger syntax to write (ACSL/WP has none).
-#
 # `_divisor_bound_target` recognizes the shape from the task's own AST:
 # an `ensures` of the form `result == (forall|exists) k in [lo, N) .
 # (N mod k) RELOP 0`, a matching loop invariant of the SAME shape over
 # `[lo, i)` (`i` the loop's own counter), and a guard `cond` exactly
 # `i <= N div 2`. A task with none of it is untouched.
-#
 # NOT WIRED into `lower()`, measured 2026-09-12 (see the dated note just
 # above the `spec_fun_acsl` header loop in `lower()`, where a hook that
 # called these two functions was tried and then removed): the compound
@@ -9337,7 +9305,7 @@ def _flush_trace(out: list, ind: str) -> None:
 
 
 def _cev_dt(e: dict, st: dict):
-    """PREDICT T37: a datatype expression's ground value, interp's own `Ctor`."""
+    """a datatype expression's ground value, interp's own `Ctor`."""
     import interp
     if "ctor" in e:
         c = e["ctor"]
@@ -9356,7 +9324,7 @@ def _cev_dt(e: dict, st: dict):
 
 
 def _cert_dt_resolve(e, ctx, st: dict, asserts: list, ind: str):
-    """PREDICT T37: `e` with every match and every read of a field several constructors share resolved at the
+    """`e` with every match and every read of a field several constructors share resolved at the
     ground state, each decision asserted as a kernel goal (`(s).tag == dt_D_C`), the way an `if` is: no live `?:`
     reaches the certificate, whose audit has no exemption for a dead arm."""
     if isinstance(e, list):
@@ -9409,7 +9377,7 @@ def _cev(e: dict, st: dict):
     if "call" in e:
         return _cev_call(e["call"], st)
     if "ctor" in e or "field" in e or "_dtf" in e or "match" in e:
-        return _cev_dt(e, st)                            # PREDICT T37
+        return _cev_dt(e, st)                            # the landing
     if "forall" in e or "exists" in e:
         raise _CertSkip("quantifier in executable position")
     op, args = e["op"], e.get("args", [])
@@ -9447,7 +9415,7 @@ def _cev(e: dict, st: dict):
             raise _CertSkip("undefined fill in replay")
         return [v] * n
     if op == "rev":
-        return list(_cev(args[0], st))[::-1]          # PREDICT T31: SPEC.md's rev
+        return list(_cev(args[0], st))[::-1]          # SPEC.md's rev
     if op == "pair":
         # SPEC.md "Pairs" (2026-09-10): a pair value, defined iff both
         # components are (both already evaluated above by the time this
@@ -9498,7 +9466,7 @@ def _cev(e: dict, st: dict):
         return {"==": a == b, "!=": a != b, "<": a < b, "<=": a <= b,
                 ">": a > b, ">=": a >= b}[op]
     if op in ("min", "max", "abs", "gcd", "pow", "isqrt", "sum", "in"):
-        # SPEC.md "The library (v1)" (PREDICT T11): the interpreter's own values, undefined where it is
+        # SPEC.md "The library (v1)" : the interpreter's own values, undefined where it is
         import math
         vs = [_cev(a, st) for a in args]
         if op in ("min", "max"):
@@ -9535,7 +9503,7 @@ def _has_ite(x) -> bool:
 
 
 def _has_libcond(x) -> bool:
-    """True iff a `min`/`max` of two arguments or an `abs` occurs strictly INSIDE `x` (PREDICT T37): each is a C
+    """True iff a `min`/`max` of two arguments or an `abs` occurs strictly INSIDE `x` : each is a C
     conditional, so nested under an operator it reached `cexpr` as a live `?:` whose dead arm the certificate's own
     audit rejects (measured on manhattan's twin, `abs(..) + abs(..)`); routed through the recursive arms below, the
     top-level rule decides each one at the ground state. False for a lone top-level one, which that rule already
@@ -9597,9 +9565,9 @@ def _cert_cexpr(e: dict, ctx: Ctx, st: dict, funs: dict, name: str,
     containing a partial operator anywhere falls through to the ordinary
     path below unchanged."""
     if _DTS and _dt_has_choice(e):
-        e = _cert_dt_resolve(e, ctx, st, asserts, ind)   # PREDICT T37: matches decided at the ground tag
+        e = _cert_dt_resolve(e, ctx, st, asserts, ind)   # matches decided at the ground tag
     if e.get("op") in ("min", "max", "abs") and (e["op"] == "abs" or len(e.get("args", [])) == 2):
-        # SPEC.md "The library (v1)" (PREDICT T11): min/max/abs are C conditionals, so in the replay they are their
+        # SPEC.md "The library (v1)" : min/max/abs are C conditionals, so in the replay they are their
         # `ite`, resolved branch-free below (measured: clamp's twin read UNPROVED on a live `?:` arm at ground values)
         a = e["args"]
         if e["op"] == "abs":
@@ -9832,7 +9800,7 @@ def _cert_method_call(target: str, e: dict, ctx: Ctx, st: dict, name: str,
 
 
 def _cert_seq_cells(e: dict, ctx: Ctx, st: dict, name: str, out: list, ind: str) -> tuple:
-    """PREDICT T31: a seq local's ground value and, cell by cell, the C rvalue the replay stores there -- SPEC.md's
+    """a seq local's ground value and, cell by cell, the C rvalue the replay stores there -- SPEC.md's
     definition of each initializer element by element at ground indices (a copy, `rev`, `fill`, `update`, a literal,
     a map), each ground fact it leans on (a length, an index) asserted first as a kernel goal."""
     if "var" in e:
@@ -9922,7 +9890,7 @@ def _cert_stmts(body: list, ctx: Ctx, st: dict, name: str,
             ctx = ctx.bind(v["name"], v["type"])
             _cert_method_call(v["name"], v["init"], ctx, st, name, out, count)
         elif "var" in s and s["var"]["type"] == "seq":
-            # PREDICT T31: a seq local is a fresh ground array, written cell by cell (`_cert_seq_cells`)
+            # a seq local is a fresh ground array, written cell by cell (`_cert_seq_cells`)
             v = s["var"]
             if v["name"] in st:
                 raise _CertSkip(f"seq local {v['name']} declared twice in the replay")
@@ -9934,7 +9902,7 @@ def _cert_stmts(body: list, ctx: Ctx, st: dict, name: str,
             ctx = ctx.bind(v["name"], "seq")
             st[v["name"]] = vals
         elif "assign" in s and _contains_seq_eq(s["assign"][1], ctx):
-            # PREDICT T31: a bool built from a seq equality has no C value (`cexpr` refuses it); at ground values its
+            # a bool built from a seq equality has no C value (`cexpr` refuses it); at ground values its
             # truth is decided here and asserted as a kernel goal, the way an `if` decision is
             n, e = s["assign"]
             if typ(e, ctx.env, ctx.funs) != "bool":
@@ -9946,7 +9914,7 @@ def _cert_stmts(body: list, ctx: Ctx, st: dict, name: str,
             out.append(f"{ind}{n} = {1 if val else 0};")
             st[n] = val
         elif "aset" in s:
-            # SPEC.md "Heap (v1)" (PREDICT T50): the write replayed on the ground array, its index range asserted
+            # SPEC.md "Heap (v1)" : the write replayed on the ground array, its index range asserted
             n, ie, ve = s["aset"]
             out += at_asserts(ie, ctx, ind) + at_asserts(ve, ctx, ind)
             dm_asserts: list = []
@@ -10048,7 +10016,7 @@ def _cert_stmts(body: list, ctx: Ctx, st: dict, name: str,
 
 
 def _dt_local_types(body: list) -> dict:
-    """PREDICT T40: name -> datatype of every datatype-typed `var` in `body`."""
+    """name -> datatype of every datatype-typed `var` in `body`."""
     out: dict = {}
     for st in body:
         if "var" in st and _dt_of(st["var"]["type"]):
@@ -10078,7 +10046,7 @@ def _tty(v):
         return ("pair", v)
     import interp
     if isinstance(v, interp.Ctor):
-        return ("dt", interp._j(v))                  # PREDICT T40: a constructor value, by its t text
+        return ("dt", interp._j(v))                  # a constructor value, by its t text
     if isinstance(v, str):
         return ("dt", v)
     return ("int", v)
@@ -10153,7 +10121,7 @@ def _value_certificate(task: dict, twin_body: list, w: dict,
             return None                # a bool-seq or non-ground value
     elif _dt_of(rett) is not None:
         if not isinstance(twin_val, str):
-            return None                # PREDICT T40: a datatype twin value is its t text
+            return None                # a datatype twin value is its t text
     elif not isinstance(twin_val, (bool, int, float)):
         return None                    # no-value twins have no ground replay (a float: SPEC.md "Floats (v1)")
     if CERT_FN in used or CERT_GOAL in used:
@@ -10292,7 +10260,7 @@ def _value_certificate(task: dict, twin_body: list, w: dict,
                              f"(struct {psname}){{{a0}, {b0}}};")
                 st[p["name"]] = v
             elif p["name"] in _DT_FLAT:
-                # PREDICT T43: a flattened datatype witness, declared field by field exactly as its C parameters
+                # a flattened datatype witness, declared field by field exactly as its C parameters
                 # are (a seq field as array + pointer + length, the seq branch's own shape), `st` the Ctor itself
                 import interp
                 import surface
@@ -10312,7 +10280,7 @@ def _value_certificate(task: dict, twin_body: list, w: dict,
                         decls.append(f"  int {nm} = {_int_lit(int(fv))};")
                 st[p["name"]] = val
             elif _dt_of(p["type"]) is not None:
-                # PREDICT T37: a datatype witness, the t text parsed, declared as its ground compound literal
+                # a datatype witness, the t text parsed, declared as its ground compound literal
                 import interp
                 import surface
                 ast = surface.parse_expr(v)
@@ -10352,12 +10320,12 @@ def _value_certificate(task: dict, twin_body: list, w: dict,
             st[ret] = r_vals
         else:
             _, dec = assigned_names(twin_body)
-            seq_locals = _seq_local_names(twin_body)             # PREDICT T31: declared where the replay writes them
+            seq_locals = _seq_local_names(twin_body)             # declared where the replay writes them
             names = [ret] + [d for d in dec if d != ret and d not in seq_locals]
             if set(dec) & set(st):
                 return None            # flattening scopes would collide
             if len(set(dec)) != len(dec):
-                # PREDICT T69: PX4's Ringbuffer::push_back declares `available` in both arms of an `if`. The
+                # PX4's Ringbuffer::push_back declares `available` in both arms of an `if`. The
                 # replay runs one arm, so locals of one name and one type share a single flattened slot; two
                 # types under one name still collide.
                 decl_types: dict = {}
@@ -10377,7 +10345,7 @@ def _value_certificate(task: dict, twin_body: list, w: dict,
                 dec = list(dict.fromkeys(dec))
                 names = [ret] + [d for d in dec if d != ret and d not in seq_locals]
             dt_names = {ret: _dt_of(rett)} if _dt_of(rett) else {}
-            dt_names.update(_dt_local_types(twin_body))                 # PREDICT T40
+            dt_names.update(_dt_local_types(twin_body))                 # the landing
             fl_names = {ret} if rett == "float" else set()
             fl_names |= _float_local_names(twin_body)                   # SPEC.md "Floats (v1)"
             decls += [f"  {'struct dt_' + dt_names[n] if n in dt_names else 'struct ' + struct_name if is_pair and n == ret else 'double' if n in fl_names else 'int'}"
@@ -10446,7 +10414,6 @@ def _value_certificate(task: dict, twin_body: list, w: dict,
     # the int ladder's own `f(args) == v` line already relies on.
     # Untouched (an empty, no-op loop) for any task with no seq-valued
     # spec_fun call in `ensures` (byte identity).
-    #
     # Per-entry try/except, 2026-09-27 (review finding, feat/framac-seq-fun):
     # this loop sat outside the `except (_CertSkip, NotImplementedError,
     # ValueError, KeyError, TypeError, RecursionError)` umbrella above it,
@@ -10518,7 +10485,6 @@ def _call_nodes(e) -> list:
 
 
 # ---------------------------------------- definedness, as a t formula -----
-#
 # `defs()` (above, ACSL section) renders SPEC.md's definedness rule to ACSL
 # text. `_undef_certificate` (below) needs the SAME rule as a t Expr
 # instead, so `interp.ev` can DECIDE it at a ground witness state before
@@ -10728,7 +10694,7 @@ def _undef_certificate(task: dict, twin_body: list, w: dict,
                 # which way each iteration goes, so a mis-decided
                 # iteration cannot mint anything, only fail a false
                 # assert under WP. Traced from task 610 removeElement
-                # (t/COVERAGE-lifted-785.md r20): a compare-flip twin's
+                # (the coverage census r20): a compare-flip twin's
                 # undefined `v[i_v2]` access (`i_v2` reaching `v_n` one
                 # pass early) sits inside the loop's OWN body, past the
                 # point the old flat walk gave up (`raise ValueError`
@@ -10762,7 +10728,7 @@ def _undef_certificate(task: dict, twin_body: list, w: dict,
             elif "lemma" in s:
                 continue          # SPEC.md "Lemmas (v1)": erased at run time
             elif "aset" in s:
-                # SPEC.md "Heap (v1)" (PREDICT T50): the write's index and value first, then its range
+                # SPEC.md "Heap (v1)" : the write's index and value first, then its range
                 nm, ie, ve = s["aset"]
                 ob = _t_and([defs_t(ie), defs_t(ve)])
                 if ob is not None and not interp.ev(ob, env_py, ifuns, st):
@@ -11388,7 +11354,7 @@ def certificate(task: dict, twin_body: list, w: dict,
 
 
 def _certificate(task: dict, twin_body: list, w: dict, *args, **kwargs):
-    """SPEC.md "Heap (v1)" (PREDICT T50): an array parameter is a seq to every certificate builder (its witness is a
+    """SPEC.md "Heap (v1)" : an array parameter is a seq to every certificate builder (its witness is a
     ground array as a seq's is), and old(...) reads at the certificate's own entry label."""
     if any(p["type"] == "array" for p in task["params"]):
         task = {**task, "params": [{**p, "type": "seq"} if p["type"] == "array" else p for p in task["params"]]}
@@ -11422,7 +11388,7 @@ def _label_entry(src: str) -> str:
 
 def _certificate_inner(task: dict, twin_body: list, w: dict,
                  env: dict, funs: dict, used: set) -> str | None:
-    # PREDICT T65: a certificate's sequences are arrays it declares and fills itself, so a call reads them where they
+    # a certificate's sequences are arrays it declares and fills itself, so a call reads them where they
     # stand, never at its function's entry: the Pre rule is off here
     saved = set(_RO_SEQ)
     _RO_SEQ.clear()
@@ -11476,7 +11442,7 @@ def _always_returns(body: list) -> bool:
     if "if" in s:
         c = s["if"]
         return _always_returns(c["then"]) and _always_returns(c["else"])
-    # PREDICT T44: a `while true` with no `break` (tshape.desugar_exits leaves none) is left only by `return`
+    # a `while true` with no `break` (tshape.desugar_exits leaves none) is left only by `return`
     return "while" in s and s["while"].get("cond") == {"bool": True} and not _has_break(s["while"]["body"])
 
 
@@ -11492,7 +11458,7 @@ def _has_break(stmts) -> bool:
 # sites pass it; when it is certifiable, the emitted file carries the
 # refutation certificate (see the section above).
 
-# `in` left this list on 2026-10-06 (PREDICT T11): membership in a SEQ is the library's
+# `in` left this list on 2026-10-06 : membership in a SEQ is the library's
 _SET_OPS_T = {"set", "card", "union", "inter", "diff"}
 
 
@@ -11510,7 +11476,7 @@ def _uses_sets(obj) -> bool:
 
 
 def _comp_refusal(task: dict, body: list) -> None:
-    """PREDICT T19: Frama-C carries a comprehension that is a map (no filter) and is the whole right-hand side of an
+    """Frama-C carries a comprehension that is a map (no filter) and is the whole right-hand side of an
     assignment or a declaration of a seq-typed name, the one place a buffer exists to write it into. Anywhere else,
     including a requires, ensures, invariant, condition, spec_fun, method or lemma, it refuses by name."""
     def refuse(where: str):
@@ -11558,19 +11524,19 @@ def _comp_refusal(task: dict, body: list) -> None:
 
 def lower(task: dict, body: list, witness: dict | None = None,
           _unit: dict | None = None) -> str:
-    # PREDICT T37: the task's datatype declarations, for the module-level helpers, for exactly this call
+    # the task's datatype declarations, for the module-level helpers, for exactly this call
     if _unit is not None:
         return _lower(task, body, witness, _unit)
     prev, prev_flat, prev_ro = dict(_DTS), dict(_DT_FLAT), set(_RO_SEQ)
     _DTS.clear()
     _DTS.update({d["name"]: d for d in task.get("datatypes", [])})
-    # PREDICT T65: the inputs no code writes (a seq parameter is a value; an array outside `modifies`)
+    # the inputs no code writes (a seq parameter is a value; an array outside `modifies`)
     _RO_SEQ.clear()
     _RO_SEQ.update(p["name"] for p in task["params"]
                    if p["type"] == "seq" or (p["type"] == "array" and p["name"] not in task.get("modifies", [])))
     _DT_FLAT.clear()
     _DT_FLAT.update({p["name"]: _dt_of(p["type"]) for p in task["params"]
-                     if _dt_of(p["type"]) is not None and _dt_flattens(_dt_of(p["type"]))})   # PREDICT T43
+                     if _dt_of(p["type"]) is not None and _dt_flattens(_dt_of(p["type"]))})   # the landing
     try:
         return _lower(task, body, witness, _unit)
     finally:
@@ -11587,14 +11553,14 @@ def _lower(task: dict, body: list, witness: dict | None = None,
     import tshape
     task, body = tshape.desugar_seq_quants(task, body)   # SPEC.md "Quantifiers over a collection": seq ranges as indices
     import framac_lib
-    task, body = tshape.desugar_par(task, body)          # PREDICT T47: a parallel loop as its sequential `for`
-    task, body = tshape.desugar_exits(task, body)        # PREDICT T44: break/continue rewritten; `while true` stays
-    # SPEC.md "Heap (v1)": carried natively since PREDICT T50 (C pointers)
+    task, body = tshape.desugar_par(task, body)          # a parallel loop as its sequential `for`
+    task, body = tshape.desugar_exits(task, body)        # break/continue rewritten; `while true` stays
+    # SPEC.md "Heap (v1)": carried natively since 2026-10-07 (C pointers)
     tshape.abstain_unless_carried(task, body, "framac", carried={"comp", "exit", "array", "float"},
-                                  lib=framac_lib.FRAMAC_LIB)   # PREDICT T11: the library in Frama-C
-    _comp_refusal(task, body)                              # PREDICT T19: maps assigned to a buffer, the rest by name
-    _dt_check(task, body)                                  # PREDICT T37: datatype parameters; the rest by name
-    _old_check([task.get("ensures", []), body])            # PREDICT T50: old(a) read element by element
+                                  lib=framac_lib.FRAMAC_LIB)   # the library in Frama-C
+    _comp_refusal(task, body)                              # maps assigned to a buffer, the rest by name
+    _dt_check(task, body)                                  # datatype parameters; the rest by name
+    _old_check([task.get("ensures", []), body])            # old(a) read element by element
     if _uses_sets(task) or _uses_sets(body):
         # FINITE SETS (2026-09-27, SPEC.md "Finite sets (v1)"): C has no
         # set value. ACSL's logic sets (`\union`, `\inter`, `\subset`)
@@ -11838,7 +11804,6 @@ def _lower(task: dict, body: list, witness: dict | None = None,
     # `_pair_flat` for the encoding and why it needs no struct. What is
     # decided HERE is the scope, and each refusal below is a question
     # this pass did not answer rather than a shape it thinks impossible:
-    #
     #   * a RETURN: the seq half would need a caller-provided buffer
     #     sized from a `requires`-time bound, i.e. CAPACITY mode reaching
     #     inside a pair. CAPACITY threads ONE length through `Ctx.seq_len`
@@ -11848,7 +11813,6 @@ def _lower(task: dict, body: list, witness: dict | None = None,
     #   * two seq components: two buffers, needing their own
     #     `\separated` pair and a second flattened length; no measured
     #     task has even one, so the second is unwritten, not assumed.
-    #
     # A PARAMETER with exactly one seq component is what `fz_p_pair_seq`
     # is and what is built. Each refusal raises the SAME
     # NotImplementedError class every other named scope limit in this
@@ -11922,7 +11886,7 @@ def _lower(task: dict, body: list, witness: dict | None = None,
         k = p["type"]["pair"].index("seq")
         seqs.append(f"{p['name']}_{'fst' if k == 0 else 'snd'}")
     for pname, d in _DT_FLAT.items():
-        # PREDICT T43: a flattened datatype's seq fields join `seqs` the same way, under their flattened names
+        # a flattened datatype's seq fields join `seqs` the same way, under their flattened names
         for fd in _dt_fields(d, _DTS[d]["ctors"][0]["name"]):
             nm = f"{pname}_{fd['name']}"
             for suffix in ("", "_n"):
@@ -11936,7 +11900,7 @@ def _lower(task: dict, body: list, witness: dict | None = None,
     # every clause below byte-identical, for a body with no such call.
     scratch = (_method_scratch(task, body, funs, used)
                if task.get("methods") else [])
-    local_ws = _local_scratch(task, body, env, funs, used, {w for w, _ in scratch})   # PREDICT T31
+    local_ws = _local_scratch(task, body, env, funs, used, {w for w, _ in scratch})   # the landing
     scratch += local_ws
 
     # PAIRS (SPEC.md "Pairs", 2026-09-10): a pair-typed RETURN's struct
@@ -11968,7 +11932,7 @@ def _lower(task: dict, body: list, witness: dict | None = None,
 
     header = []
     if task.get("datatypes"):
-        header += _dt_decls(task)                         # PREDICT T37
+        header += _dt_decls(task)                         # the landing
     if pair_ty is not None:
         header.append(f"struct {struct_name} {{ int a; int b; }};")
     for pt in extra_pair_types:
@@ -11981,7 +11945,7 @@ def _lower(task: dict, body: list, witness: dict | None = None,
         header.append(T_WORDCOUNT_ACSL.rstrip("\n"))
     if _has_countfind(task) or _has_countfind(body):
         header.append(T_STRFIND_ACSL.rstrip("\n"))
-    import framac_lib       # SPEC.md "The library (v1)" in Frama-C (PREDICT T11)
+    import framac_lib       # SPEC.md "The library (v1)" in Frama-C 
     _lib = framac_lib.used(task) | framac_lib.used(body)
     if _lib:
         header.append(framac_lib.prelude(_lib).rstrip("\n"))
@@ -12059,7 +12023,6 @@ def _lower(task: dict, body: list, witness: dict | None = None,
     # writes; the real and twin lowerings of the same task can therefore
     # legitimately compute different (but here, on both committed tasks,
     # equal) length expressions.
-    #
     # CAPACITY mode, added 2026-09-09 (SPEC.md "Sequences: literals,
     # concatenation, slices", the append idiom `r := r + [x]`,
     # `filter_pos`'s own shape): when the exact length has no closed form
@@ -12161,7 +12124,7 @@ def _lower(task: dict, body: list, witness: dict | None = None,
     clauses = []
     for p in task["params"]:
         if _dt_of(p["type"]) is not None and p["name"] not in _DT_FLAT:
-            # PREDICT T37: a t value is always built by one of its constructors (a flattened one has one, T43)
+            # a t value is always built by one of its constructors (a flattened one has one, T43)
             clauses.append(f"  requires dt_{_dt_of(p['type'])}_ok({p['name']});")
     for p in task["params"]:
         if p["type"] == "float":
@@ -12228,7 +12191,6 @@ def _lower(task: dict, body: list, witness: dict | None = None,
         # not `\valid_read`), and pinned to the length the body's own
         # writes will actually produce (`ret_len_expr`, rendered here in
         # PARAMS-only terms, exactly what ACSL's `requires` scope allows).
-        #
         # FILL DEFINEDNESS, fixed 2026-09-10 (see this file's own dated
         # note below `assigned_names`): this clause set used to also
         # state `requires {ret}_n >= 0;` unconditionally, BEFORE the
@@ -12403,12 +12365,12 @@ def _lower(task: dict, body: list, witness: dict | None = None,
             sname = _pair_struct_name(*p["type"]["pair"])
             cparams.append(f"struct {sname} {p['name']}")
         elif p["name"] in _DT_FLAT:
-            # PREDICT T43: flattened, each field its own C parameter
+            # flattened, each field its own C parameter
             for fd in _dt_fields(_DT_FLAT[p["name"]], _DTS[_DT_FLAT[p["name"]]]["ctors"][0]["name"]):
                 nm = f"{p['name']}_{fd['name']}"
                 cparams += [f"int *{nm}", f"int {nm}_n"] if fd["type"] == "seq" else [f"int {nm}"]
         elif _dt_of(p["type"]) is not None:
-            cparams.append(f"struct dt_{_dt_of(p['type'])} {p['name']}")   # PREDICT T37: by value
+            cparams.append(f"struct dt_{_dt_of(p['type'])} {p['name']}")   # by value
         else:
             cparams.append(f"{'double' if p['type'] == 'float' else 'int'} {p['name']}")   # Floats (v1)
     if rett == "seq":
@@ -12474,14 +12436,12 @@ def _lower(task: dict, body: list, witness: dict | None = None,
     # `_always_returns(body)` says the body needs it least: every other
     # body (no `return` at all, or a `return` that leaves a path falling
     # through) still gets it, unchanged.
-    #
     # A seq return (2026-09-09) is `void` in EXACT mode: the "return
     # value" already lives in the caller-provided buffer, so no trailing
     # statement is ever needed, `return;` or otherwise -- a body that
     # falls off the end having already written every element it owes is
     # exactly correct, and a body with its own early `return;` (see
     # `stmts()`) needs nothing after it either.
-    #
     # CAPACITY mode (2026-09-09) is `int` instead: the buffer's actual
     # final logical length has nowhere else externally visible to live
     # (see the note above this function's Ctx construction), so it is
@@ -12513,14 +12473,14 @@ def _lower(task: dict, body: list, witness: dict | None = None,
     # CAPACITY use, nothing here grows it; the point is only to make the
     # TASK's own length invariant a real preservation obligation instead
     # of a `requires`-derivable one.
-    ret_decl = (f"  struct dt_{_dt_of(rett)} {ret};\n" if _dt_of(rett) is not None else   # PREDICT T40
+    ret_decl = (f"  struct dt_{_dt_of(rett)} {ret};\n" if _dt_of(rett) is not None else   # the landing
                f"  struct {struct_name} {ret};\n" if pair_ty is not None else
                f"  int {LEN} = {cexpr(ret_len_expr, env, funs, name)};\n"
                if tracked_exact else
                f"  int {LEN};\n" if capacity_mode else
                "" if nested_return_rows is not None else
                ("" if rett == "seq" else f"  {'double' if rett == 'float' else 'int'} {ret};\n"))
-    cfun_ret_ty = (f"struct dt_{_dt_of(rett)}" if _dt_of(rett) is not None else   # PREDICT T40
+    cfun_ret_ty = (f"struct dt_{_dt_of(rett)}" if _dt_of(rett) is not None else   # the landing
                   f"struct {struct_name}" if pair_ty is not None else
                   "void" if rett == "seq" and not capacity_mode
                   else "void" if nested_return_rows is not None
