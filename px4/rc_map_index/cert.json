@@ -1,0 +1,49 @@
+{
+ "_type": "https://in-toto.io/Statement/v1",
+ "predicateType": "urn:dawnr:observation:v1",
+ "predicate": {
+  "version": 1,
+  "kind": "paired-observation",
+  "pair": "7e2c871720290b0d",
+  "task": "rc_map_index",
+  "kernel": "spark",
+  "flake": 3,
+  "spark_jobs": 1,
+  "witness": {
+   "_kind": "value",
+   "_ens": true,
+   "ch": 19
+  },
+  "witness_kind": "value",
+  "real_program": "t 1\ntask px4_rc_map_index(ch: int) returns (r: (bool, int))\n  requires -2147483648 <= ch and ch <= 2147483647\n  ensures r.0 ==> 0 <= r.1 and r.1 < 18\n  ensures not r.0 ==> r.1 == -1\n{\n  var f: int := ch - 1;\n  if 0 <= f and f < 18 {\n    r := (true, f);\n  } else {\n    r := (false, -1);\n  }\n}",
+  "twin_program": "t 1\ntask px4_rc_map_index(ch: int) returns (r: (bool, int))\n  requires -2147483648 <= ch and ch <= 2147483647\n  ensures r.0 ==> 0 <= r.1 and r.1 < 18\n  ensures not r.0 ==> r.1 == -1\n{\n  var f: int := ch - 1;\n  if f >= 0 {\n    r := (true, f);\n  } else {\n    r := (false, -1);\n  }\n}",
+  "contract_sha256": "90e648b12fc70b8b8162709dbe07296bd4dcf78fa2b58b5e59c269a2a4d8239c",
+  "observed": {
+   "real_outcome": "verified",
+   "twin_outcome": "refuted",
+   "real_agreed": true,
+   "twin_agreed": true
+  },
+  "semantics": "reproduces the measured OBSERVATION under re-run; NOT whole-program correctness"
+ },
+ "subject": [
+  {
+   "name": "real.t",
+   "digest": {
+    "sha256": "d10f64163d03b84ff6e82d14012ef66fa0f5a751e70e366aff70cca091d7c9b6"
+   }
+  },
+  {
+   "name": "twin.t",
+   "digest": {
+    "sha256": "015ee53e274dbe0487b4e86bc1b1cc13a03c8648737d9f99386a22f3d75b9e6d"
+   }
+  },
+  {
+   "name": "witness",
+   "digest": {
+    "sha256": "1224a82348e63dc7ac792be549010c32ecc6dc92f6ccc3ea0729a3470b4bf72a"
+   }
+  }
+ ]
+}

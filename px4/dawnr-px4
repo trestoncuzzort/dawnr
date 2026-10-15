@@ -1,0 +1,66 @@
+#!/usr/bin/env bash
+# dawnr ▸ px4 — formal safety-property gates for PX4. Self-contained: uses this machine's dawnr + provers.
+#   dawnr-px4 list                      list gates
+#   dawnr-px4 verify                    replay every gate's certificate (no model); non-zero if any breaks
+#   dawnr-px4 mint <gate>               (re)mint a gate's cert.json from model.t + twin.t + witness.json
+#   dawnr-px4 drift                     check each gate's modeled PX4 function hash vs source.json
+#   dawnr-px4 new <gate> <file> <symbol>  scaffold a new gate from a PX4 source function
+# PX4 tree defaults to $HOME/Projects/PX4-Autopilot; override with PX4_ROOT.
+set -uo pipefail
+HERE="$(cd "$(dirname "$0")" && pwd)"
+PX4_ROOT="${PX4_ROOT:-$HOME/Projects/PX4-Autopilot}"
+PY=python3
+cmd="${1:-help}"; shift 2>/dev/null || true
+
+case "$cmd" in
+  list)
+    for g in "$HERE"/*/; do [ -f "$g/model.t" ] && echo "- $(basename "$g")"; done ;;
+  verify)
+    "$HERE/verify_all.sh" ;;
+  mint)
+    [ $# -ge 1 ] || { echo "usage: dawnr-px4 mint <gate>"; exit 2; }
+    $PY "$HERE/lib/mint_gate.py" "$HERE/$1" ;;
+  drift)
+    rc=0
+    for g in "$HERE"/*/; do
+      [ -f "$g/source.json" ] || continue
+      printf "%-18s " "$(basename "$g")"
+      $PY "$HERE/lib/drift_check.py" "$g" "$PX4_ROOT" || rc=1
+    done
+    [ "$rc" = 0 ] && echo "no drift: every modeled PX4 function is unchanged" || echo "DRIFT found — re-review the model(s) above"
+    exit $rc ;;
+  new)
+    [ $# -ge 3 ] || { echo "usage: dawnr-px4 new <gate> <px4-file-rel> <symbol>"; exit 2; }
+    name="$1"; file="$2"; symbol="$3"; d="$HERE/$name"
+    [ -e "$d" ] && { echo "gate $name already exists"; exit 2; }
+    mkdir -p "$d"
+    cat > "$d/source.json" <<JSON
+{ "file": "$file", "symbol": "$symbol", "sha256": "" }
+JSON
+    $PY "$HERE/lib/drift_check.py" "$d" "$PX4_ROOT" --update >/dev/null 2>&1 \
+      && echo "recorded source hash for $symbol" || echo "WARN: could not extract $symbol from $file (fill source.json by hand)"
+    cat > "$d/model.t" <<'TMPL'
+t 1
+task TODO(x: int) returns (r: int)
+  requires true
+  ensures true          -- the SAFETY contract of the modeled PX4 function
+{
+  r := x;               -- a faithful abstraction of the PX4 body
+}
+TMPL
+    cp "$d/model.t" "$d/twin.t"   # edit twin.t to the BROKEN variant this gate must catch
+    cat > "$d/witness.json" <<'JSON'
+{ "_kind": "value", "_ens": true }
+JSON
+    cat > "$d/NOTES.md" <<MD
+# $name — $symbol
+
+PX4: \`$file\` \`$symbol\`. Invariant: TODO.
+
+model.t models the contract; twin.t is the broken variant; witness.json is the grounded counterexample.
+Then: \`dawnr-px4 mint $name\` and \`dawnr-px4 verify\`.
+MD
+    echo "scaffolded $name/ — edit model.t (contract+body), twin.t (broken), witness.json, then: dawnr-px4 mint $name" ;;
+  help|*)
+    sed -n '2,9p' "$0" | sed 's/^# \{0,1\}//' ;;
+esac

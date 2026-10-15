@@ -487,13 +487,37 @@ accepted all7 solutions (e.g. `smartNumber`, `differ_At_One_Bit_Pos`, `dif_Squar
 vacuous). Results `internal/E3-data/E3-RESULTS.json`. The earlier "blocked on `aws login`" note is
 superseded — the CPU path removed the GPU need.
 
-**Scope vs the goal's eval spec (stated honestly, not claimed as met).** The goal named pass@1 AND pass@k
-on *Vericoding* plus twin survival. What is measured above is pass@1 (greedy) on held-out *MBPP* (disjoint
-from the 30 train tasks), with twin survival as the gate's twin-refutation on the generated solution — a
-valid test of the same hypothesis (gate-graded training data → a better student), but not the exact corpus
-or metric the goal named. Two named elements are NOT done, and are recorded rather than faked: (1) pass@k
-needs k sampled generations per problem and a second multi-hour gen+grade pass; (2) a Vericoding eval needs
-a Vericoding prompt harness — `spec_experiment.pool()` is MBPP-only and the Vericoding tasks are stored as
-structured ASTs with no exposed t-source unparser, so a training-consistent Vericoding prompt must be built
-first. These are the concrete remaining refinements; the ablation direction (all7 > graded > raw on
-well-formedness, pass@1, gate-admissibility, and twin-refutability) is what the held-out-MBPP run measured.
+## On Vericoding (the goal's named eval): pass@1, pass@k, twin survival — and the ordering REVERSES
+
+The students were then evaluated on the goal's named corpus — public Vericoding Dafny specs, rendered to t
+with `surface.print_task` (body stripped) into the same compact prompt they trained on, 14 held-out
+non-recursion problems, 5 samples each (sample 0 greedy for pass@1, the rest sampled for pass@k), one seed
+per arm, graded by the gate (pass = the generated real body VERIFIED by ≥1 present kernel; Vericoding is
+spec-based, no tests). Vericoding is disjoint from the MBPP training tasks.
+
+| arm | greedy pass@1 (/14) | verified samples (/70) | twin refuted of verified | pass@5 (est.) |
+|---|--:|--:|--:|--:|
+| raw | 3 | 10 | 10/10 | 0.35 |
+| graded-k4 | 2 | 5 | 5/5 | 0.19 |
+| all7 | 2 | 6 | 6/6 | 0.23 |
+
+**The ablation ordering reverses out of distribution.** In-distribution (held-out MBPP, above)
+all-seven-verified training wins; on the harder cross-corpus Vericoding specs the **raw** arm produces the
+most verifiable solutions (10 vs 6 vs 5 verified samples; greedy pass@1 3 vs 2 vs 2). A plausible reading:
+filtering the training set to only all-seven-verified programs narrows its distribution, which helps when
+the eval matches the training distribution (MBPP) but transfers worse to a different, harder one
+(Vericoding), where more diverse raw data generalises better — consistent with the project's own finding
+that over-narrow proof-gated data costs generality. **Twin survival is 0 across all arms**: every verified
+Vericoding solution had its one-edit twin refuted by the gate — the specs the students write are tight
+enough to catch a mutant. Honest caveats: small-N (14 problems, 1 seed, 5–10 verified samples/arm) —
+directional, not powered; and the unbiased pass@k estimator is only approximate here because the 0.5B
+student renamed the task per sample, so the robust numbers are the verified-sample and greedy-pass@1 counts
+(the pass@5 column is the estimator over well-formed program variants). Most generated Vericoding programs
+were malformed or unverifiable — the small MBPP-trained student transfers weakly to Vericoding's harder
+specs, which is itself an honest finding. Results `internal/E3-data/E3-VERICODING-RESULTS.json`; harness
+`t/gen_vericoding.py` + `t/e3_vericoding_aggregate.py`.
+
+Taken together, E3 now carries both evals the goal named: the in-distribution MBPP ablation (all7 best) and
+the Vericoding pass@1/pass@k + twin-survival eval (raw best out of distribution, twin survival 0) — the
+learning is the *interaction*, not a single winner: gate-verified training helps on-distribution and the
+raw/diverse set transfers better off-distribution, both measured honestly at small N.

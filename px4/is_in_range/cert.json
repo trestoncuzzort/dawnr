@@ -1,0 +1,51 @@
+{
+ "_type": "https://in-toto.io/Statement/v1",
+ "predicateType": "urn:dawnr:observation:v1",
+ "predicate": {
+  "version": 1,
+  "kind": "paired-observation",
+  "pair": "99710b0d628405f7",
+  "task": "is_in_range",
+  "kernel": "spark",
+  "flake": 3,
+  "spark_jobs": 1,
+  "witness": {
+   "_kind": "value",
+   "_ens": true,
+   "x": 100,
+   "lo": 0,
+   "hi": 10
+  },
+  "witness_kind": "value",
+  "real_program": "t 1\ntask is_in_range(x: int, lo: int, hi: int) returns (r: bool)\n  requires lo <= hi\n  ensures r == (lo <= x and x <= hi)\n{\n  r := lo <= x and x <= hi;\n}",
+  "twin_program": "t 1\ntask is_in_range(x: int, lo: int, hi: int) returns (r: bool)\n  requires lo <= hi\n  ensures r == (lo <= x and x <= hi)\n{\n  r := lo <= x;\n}",
+  "contract_sha256": "24dd412bbb4fd5797ef38eb2f786d466e03fa9c1d376f7d5e0b96e2a6049fa10",
+  "observed": {
+   "real_outcome": "verified",
+   "twin_outcome": "refuted",
+   "real_agreed": true,
+   "twin_agreed": true
+  },
+  "semantics": "reproduces the measured OBSERVATION under re-run; NOT whole-program correctness"
+ },
+ "subject": [
+  {
+   "name": "real.t",
+   "digest": {
+    "sha256": "67a336fe0125a98e0f7b7bfe0b4a7f01689b8a94ec2a9b95ef0c486922e34059"
+   }
+  },
+  {
+   "name": "twin.t",
+   "digest": {
+    "sha256": "2d644fad0229572f7c01c7f0955673de84b8482fd6d76cec4ec628f8e869e27a"
+   }
+  },
+  {
+   "name": "witness",
+   "digest": {
+    "sha256": "0d0d0f2deaef3a0b8510d1c1a4aa43ccefc41120e722065317a7d2743b7aba6f"
+   }
+  }
+ ]
+}
