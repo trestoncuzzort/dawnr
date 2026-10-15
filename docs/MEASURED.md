@@ -484,5 +484,16 @@ problems, a 0.5B base) — a directional result, not a powered estimate, and rep
 invented comparison target. Two iteration passes done: the 3-seed re-run (above) and a hand-audit of the
 accepted all7 solutions (e.g. `smartNumber`, `differ_At_One_Bit_Pos`, `dif_Square`,
 `centered_hexagonal_number` each verify and have a twin refuted at a concrete witness — genuine, not
-vacuous). Results `internal/E3-data/E3-RESULTS.json`; pass@k (sampled) and a larger pool are the natural
-extensions. The earlier "blocked on `aws login`" note is superseded — the CPU path removed the GPU need.
+vacuous). Results `internal/E3-data/E3-RESULTS.json`. The earlier "blocked on `aws login`" note is
+superseded — the CPU path removed the GPU need.
+
+**Scope vs the goal's eval spec (stated honestly, not claimed as met).** The goal named pass@1 AND pass@k
+on *Vericoding* plus twin survival. What is measured above is pass@1 (greedy) on held-out *MBPP* (disjoint
+from the 30 train tasks), with twin survival as the gate's twin-refutation on the generated solution — a
+valid test of the same hypothesis (gate-graded training data → a better student), but not the exact corpus
+or metric the goal named. Two named elements are NOT done, and are recorded rather than faked: (1) pass@k
+needs k sampled generations per problem and a second multi-hour gen+grade pass; (2) a Vericoding eval needs
+a Vericoding prompt harness — `spec_experiment.pool()` is MBPP-only and the Vericoding tasks are stored as
+structured ASTs with no exposed t-source unparser, so a training-consistent Vericoding prompt must be built
+first. These are the concrete remaining refinements; the ablation direction (all7 > graded > raw on
+well-formedness, pass@1, gate-admissibility, and twin-refutability) is what the held-out-MBPP run measured.
