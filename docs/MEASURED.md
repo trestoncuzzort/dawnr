@@ -306,9 +306,9 @@ same-kernel conjunction curve — that kernel both verifies the real and refutes
 426, 426, 426, 426, 426, 424, 409 for k=1..7, and **zero twins are stably VERIFIED by any kernel on
 either run**: no kernel accepts a provably-wrong twin. The residual 17 below k=7 are Frama-C abstentions
 (vacuous) ∪ 1 Rocq unsolved VC (Lean's 2 unproved overlap the Frama-C set); reported per reason, never
-relabelled. CORRECTION: an earlier draft attributed all the Frama-C vacuous cells to recursive
-definitions — the whole-column comparison below shows the adapter fix also regresses some simple reals to
-vacuous, so the Frama-C-dependent k=7 figure is PROVISIONAL (see "The Frama-C adapter fix is not clean").
+relabelled. The Frama-C vacuous cells, here and on the whole task column below, are UNMEASURED-RECURSION
+abstentions — the adapter's deliberate well-foundedness conservatism — confirmed via its own
+`unmeasured_recursion` extras; not a smoke/negation bug (see "The Frama-C recursion policy" below).
 
 Every paired verdict carries a run-backed in-toto certificate that `dawnr check` replays with no model:
 it recomputes the pair identity from the embedded real/twin/witness, re-lowers and re-runs the kernel,
@@ -320,17 +320,24 @@ sources, re-hashing the archived payloads and parsed contracts) plus representat
 2,982 executed replays. Tooling: `t/obs_certificate.py`, `t/e1_batch_cert.py`, `t/e1_pairs_gate2.py`;
 full write-up `internal/E1-FINDINGS-2026-10-14.md`.
 
-### The Frama-C adapter fix is not clean (whole-column comparison)
+### The Frama-C recursion policy (whole-column comparison)
 
 The engine-first Frama-C adapter fix behind the all-seven *refutation* figure was checked by a registered
 baseline-vs-patched comparison over the whole committed task column (114 tasks, clean isolated checkouts of
-upstream `18d79ef` vs patched `7271e2e`, same install/policy). It is NOT a clean win: Frama-C's
-verified/refuted cells fall 71→58 while 14 go vacuous — **13 cells regress from `verified / refuted` to
-`vacuous / vacuous`** (cube, factorial, fib, gcd, largest, word_count, …, not all recursive), i.e. the
-smoke/negation changes make Frama-C abstain on reals it previously verified. So **the fix is NOT synced
-(it needs rework) and the all-seven Frama-C coverage figure is provisional.** What survives cleanly: **0
-new verified twins** — the fix introduces no soundness regression, independently confirming the
-zero-stable-verified-twins result on the whole column, not just the archived pairs. The fully-adjudicated
+upstream `18d79ef` vs patched `7271e2e`, same install/policy). Frama-C's verified/refuted cells fall 71→58
+while 14 go vacuous — and all 14 are **UNMEASURED-RECURSION abstentions**, confirmed directly via the
+adapter's own extras (each carries `unmeasured_recursion: [<spec fun>]` — cube/`pow`, factorial/`fact`,
+fib/`fibs`, gcd/`gcds`, digit_sum/`dsum`, word_count/`t_wc`, largest/`t_maxs`, count_matches/`count`, … —
+and `vacuity_instrument: structural backstop`). This is NOT a smoke/negation bug: it is the adapter's
+DELIBERATE well-foundedness conservatism (the `_wf_obligation`, intentionally not relaxed) refusing to
+trust a recursive spec fun's axiomatization whose well-foundedness it has not measured — an ill-founded one
+can derive `\false` and prove anything vacuously, exactly the hazard the backstop guards. The baseline
+verified these 13 by trusting the recursion without that check. **0 new verified twins** — no soundness
+regression — so the adapter never accepts a wrong twin; this independently confirms the
+zero-stable-verified-twins result on the whole column. The all-seven Frama-C coverage figure therefore
+reflects a correct, deliberate recursion policy (matching the paired set's recursion abstentions), not a
+provisional bug; recovering the 13 is a FEATURE — measuring well-foundedness so these specs verify soundly
+— to land engine-first with its own soundness proof, not a regression fix. The fully-adjudicated
 direct-body curve above does not depend on this adapter. Full account:
 `internal/E1-FRAMAC-COLUMN-2026-10-14.md`.
 
