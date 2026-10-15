@@ -494,6 +494,14 @@ accepted all7 solutions (e.g. `smartNumber`, `differ_At_One_Bit_Pos`, `dif_Squar
 vacuous). Results `internal/E3-data/E3-RESULTS.json`. The earlier "blocked on `aws login`" note is
 superseded — the CPU path removed the GPU need.
 
+**Base comparison (0.5B vs 1.5B).** The goal allows a 0.5–1.5B base, "whichever you measure best". The
+all7 arm (seed 0) was trained on both Qwen2.5-Coder-**0.5B** and **1.5B**-Instruct (both Apache-2.0) and
+scored on the same 25 held-out MBPP problems: 0.5B → well-formed 7 / tests-pass 2 / gate-admissible 4;
+1.5B → well-formed 8 / tests-pass 3 / gate-admissible 2. The two are comparable at this N (1.5B marginally
+ahead on well-formedness and tests, 0.5B on gate-admissibility) — no decisive winner, so the full ablation
+uses the faster, cached 0.5B base and the gate-graded-data finding is not an artifact of too small a base.
+(Driver `t/e3_base15.sh`.)
+
 ## On Vericoding (the goal's named eval): pass@1, pass@k, twin survival — and the ordering REVERSES
 
 The students were then evaluated on the goal's named corpus — public Vericoding Dafny specs, rendered to t
