@@ -77,6 +77,9 @@ def encode_row(tokenizer, row: dict, max_len: int) -> dict | None:
             "labels": [-100] * len(prompt_ids) + answer_ids}
 
 
+RESPONSE_LOSS_CHUNK = 256  # response positions per checkpointed lm_head+CE chunk (memory, not math)
+
+
 def response_loss(base, batch: dict, num_items_in_batch=None):
     """Cross-entropy on the response tokens, with the output layer applied ONLY at the positions
     that predict them. The standard forward builds logits for every position: with a 248,320-word
@@ -101,14 +104,34 @@ def response_loss(base, batch: dict, num_items_in_batch=None):
         return base(**inputs).loss
     hidden = base.model(input_ids=batch["input_ids"], attention_mask=batch["attention_mask"]).last_hidden_state
     predicts = labels[:, 1:] != -100                            # position i predicts token i + 1
-    logits = base.lm_head(hidden[:, :-1][predicts]).float()
-    targets = labels[:, 1:][predicts]
-    if num_items_in_batch is None:
-        return torch.nn.functional.cross_entropy(logits, targets)
-    total = torch.nn.functional.cross_entropy(logits, targets, reduction="sum")
-    if torch.is_tensor(num_items_in_batch):
-        num_items_in_batch = num_items_in_batch.to(total.device)
-    return total / num_items_in_batch
+    hsel = hidden[:, :-1][predicts]                             # [P, hidden] at the response positions
+    targets = labels[:, 1:][predicts]                           # [P]
+    # The float32 logit block over all P response tokens by a 248,320-word vocabulary is the dominant
+    # memory cost (Cut Cross-Entropy, arXiv:2411.09009: the cross-entropy logit matrix is "an order of
+    # magnitude more memory than the rest of the LLM combined"); at ~1,160 response tokens it is ~1 GiB
+    # and ended the 4B run on the 8 GB laptop card at step 3, at LoRA rank 64 and 32 alike. So the
+    # lm_head and its cross-entropy run over the response positions in CHECKPOINTED chunks: one chunk of
+    # logits is materialised at a time, the rest recomputed in the backward. Math-identical to the single
+    # call -- a sum of per-chunk summed losses over the same denominator (t/test_response_loss.py checks
+    # the chunked loss equals the unchunked one, in the mean and the accumulation form).
+    import torch.utils.checkpoint as _ckpt
+    P = int(hsel.shape[0])
+    if P == 0:
+        return hsel.sum() * 0.0                                 # a degenerate batch with no response token
+    denom = P if num_items_in_batch is None else num_items_in_batch
+    if torch.is_tensor(denom):
+        denom = denom.to(hsel.device)
+
+    def _chunk_sum(h, t):
+        return torch.nn.functional.cross_entropy(base.lm_head(h).float(), t, reduction="sum")
+
+    use_ckpt = torch.is_grad_enabled() and hsel.requires_grad
+    total = hsel.new_zeros(())
+    for i in range(0, P, RESPONSE_LOSS_CHUNK):
+        h, t = hsel[i:i + RESPONSE_LOSS_CHUNK], targets[i:i + RESPONSE_LOSS_CHUNK]
+        total = total + (_ckpt.checkpoint(_chunk_sum, h, t, use_reentrant=False) if use_ckpt
+                         else _chunk_sum(h, t))
+    return total / denom
 
 
 def _rows_from_bytes(data: bytes, label: Path) -> list[dict]:
