@@ -1,0 +1,77 @@
+{
+  "scope": "Fresh native comparison of original and strengthened training tasks; no training data changed.",
+  "builder": "t/recipes/v6_training_repair_controls.py",
+  "dataset_sha256": "e14f766f06299d589d9a6e3293f6bf3e3f06ffac026433e2fdeff1c04294af80",
+  "image_sha256": "64b75853957cc77d6cad79a9fd84b504d7ddc46b853753ed886520dd79f9acdf",
+  "framac_override_sha256": "f6ecbd38ae61a754c83febed37370c9bb08f1c7f9f204e98484c6f7235186ea2",
+  "jobs": 1,
+  "cache": false,
+  "columns": [
+    "dafny",
+    "verus",
+    "spark",
+    "framac",
+    "lean",
+    "rocq",
+    "fstar"
+  ],
+  "cells": {
+    "findLUSlength_original": {
+      "dafny": "verified / refuted",
+      "verus": "verified / refuted",
+      "spark": "verified / refuted",
+      "framac": "verified / refuted",
+      "lean": "verified / refuted",
+      "rocq": "verified / refuted",
+      "fstar": "verified / unproved"
+    },
+    "findLUSlength_strengthened": {
+      "dafny": "verified / refuted",
+      "verus": "verified / refuted",
+      "spark": "verified / refuted",
+      "framac": "verified / refuted",
+      "lean": "verified / refuted",
+      "rocq": "unproved / refuted",
+      "fstar": "verified / unproved"
+    },
+    "move_first_original": {
+      "dafny": "unproved / refuted",
+      "verus": "unproved / refuted",
+      "spark": "verified / refuted",
+      "framac": "verified / refuted",
+      "lean": "unproved / refuted",
+      "rocq": "unproved / refuted",
+      "fstar": "unproved / refuted"
+    },
+    "move_first_strengthened": {
+      "dafny": "unproved / refuted",
+      "verus": "unproved / refuted",
+      "spark": "verified / refuted",
+      "framac": "verified / refuted",
+      "lean": "unproved / refuted",
+      "rocq": "unproved / refuted",
+      "fstar": "unproved / refuted"
+    }
+  },
+  "verified_with_twin_refuted": {
+    "findLUSlength_original": 6,
+    "findLUSlength_strengthened": 5,
+    "move_first_original": 2,
+    "move_first_strengthened": 2
+  },
+  "integrity": {
+    "contradictions": [],
+    "unsound_cells": []
+  },
+  "prediction_R2_holds": false,
+  "finding": "move_first preserves 2 passing kernels. findLUSlength falls from 6 to 5: its strengthened real program is unproved by Rocq, and F* cannot refute the twin for either version. The historical seven-kernel training label is not reproduced by this frozen evaluation image.",
+  "protocol_sha256": "bf8ef779b40e79885cbdaa1d68f90e307be2b1d9afcaec7d9a59fcdcb9dfb8ab",
+  "kernel_table_sha256": "e9f62d621813fa360259bb1e6a749750a92649d3271ecc406f3fa24f69f1cd6d",
+  "task_files": {
+    "move_first_original": "3e7d062961ef5f1a98deefdb55a4c5d159895a4b0b09b8af26b38746cb33b643",
+    "move_first_strengthened": "e9ad9206fdc0d7a7f85de0b6653c55f39ee7d1acbb7e780ed5b821a36fe7c691",
+    "findLUSlength_original": "acdbfeaf032ba19d3843e24bee0be8115c3f3438a116f62dce1eda6c339658d2",
+    "findLUSlength_strengthened": "52f4448481f19ffd90bc9284595347c054a9c86fe30e8bfccf43ca52d21c02f4"
+  },
+  "command": "python3 t/recipes/bounded-grading-python.py t/run_par.py --tasks <controls>/tasks --out <controls>/kernels --table <controls>/kernels.md --jobs 1 --no-cache"
+}

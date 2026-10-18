@@ -88,6 +88,13 @@ output-length or result-selection constraints. These findings motivate
 data-repair controls, but do not establish a cause of the development failures
 or automatically change training admission.
 
+Two [reviewed repair controls](evidence/v6-training-repair-interpreter.json)
+eliminate their sampled surviving mutants under the interpreter. The
+[native comparison](evidence/v6-training-repair-native.json) does not satisfy
+its prediction: one repaired contract loses a passing kernel, while the
+other retains two. No training rows were changed on the basis of these
+controls, and their interpreter results are not counted as all-seven proofs.
+
 The correct-source specification control currently reaches 32/33 in all seven
 proof systems ([complete table](evidence/v6-prover-controls.md)). Frama-C rejects one twin certificate; all 33 pass in each of
 the other six systems. That instrument limitation is retained for both arms.

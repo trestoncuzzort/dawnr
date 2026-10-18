@@ -95,7 +95,7 @@
       "R1_holds": true
     }
   ],
-  "native_result": "pending",
+  "native_result": "completed; R2 falsified; see v6-training-repair-native.json",
   "builder": "t/recipes/v6_training_repair_controls.py",
   "builder_sha256": "e4e4f54ff7660aca29a868111f96352daa5f9664b3e08e7f851fd71cabac1b65",
   "well_formedness_controls": {
