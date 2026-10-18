@@ -76,6 +76,13 @@ It permits at most 17 calls per programming problem, with 1,024 new tokens per
 call. Development evaluation comes first. The held-out panel cannot guide
 candidate training or selection.
 
+The held-out driver loads the versioned GGUF shards intended for installation
+and checks their manifest before serving. Packaging compares every tensor's
+name, dimensions, type and bytes with the Q8 export, and preserves its model
+metadata. The [step-400 packaging probe](evidence/v6-packaging-probe.json)
+passed all 426 tensors and a native loader/API check. Final-candidate packaging
+and evaluation are still pending.
+
 | Measurement | Historical v5 | New matched v5 | Candidate |
 |---|---:|---|---|
 | Clean-182, at least one kernel, including specification checks | 17 | pending | pending |

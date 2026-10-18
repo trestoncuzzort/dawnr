@@ -1,0 +1,54 @@
+{
+  "scope": "Step-400 development export packaging probe only. Not the final candidate or a published model.",
+  "initial_check": "Rejected because the first checker incorrectly expected full model metadata in every shard. The pinned splitter stores that metadata only in the first shard. Original shards were preserved and rechecked with the documented layout.",
+  "package": {
+    "schema": 1,
+    "source_gguf_sha256": "8916646c539a94f53b48f5b43f54312dc8e55cc57a00adc62cf3ffe0605a9eba",
+    "adapter_step": 400,
+    "converter_commit": "f1cee9941b0e843ea260bf8dd9a090fbd9711b6a",
+    "packager_sha256": "eac2e41e03ed56f5bb16d03b6180f4be4ffc8637de172163e0c5a4f836d67ee9",
+    "splitter_sha256": "ce4572045dbbd031c3f5e2c8cdf965f9d30a6528c8c9e17a065cd21b30b01dfb",
+    "manifest_sha256": "7fcad231b3617e2bdc2e5ed542089d2526af26e3ed4560536569566ced46857a",
+    "first_shard": "dawnr-v6-step400-packaging-probe-00001-of-00003.gguf",
+    "files": {
+      "dawnr-v6-step400-packaging-probe-00001-of-00003.gguf": {
+        "sha256": "4556cb456cc3b709d4c68ed11e103a529e28f40a01d697d9290ae534bd32be55",
+        "bytes": 1909306368
+      },
+      "dawnr-v6-step400-packaging-probe-00002-of-00003.gguf": {
+        "sha256": "6c18a8917d6bdefd6bbc92b3bc83545fc149eb58b91a7e7011c2897a51854fa1",
+        "bytes": 1892135392
+      },
+      "dawnr-v6-step400-packaging-probe-00003-of-00003.gguf": {
+        "sha256": "b13ee4c934c69e907456aae9fcf22b4d6e80bb1ac3afc8185e43a19154fcd493",
+        "bytes": 680961312
+      }
+    },
+    "equivalence": {
+      "tensors": 426,
+      "tensor_contents_sha256": "6cb5c9f75380ba98a01d50e4b1e7ed7aeb8307149adf17380c860770f1ead94c",
+      "model_metadata_sha256": "64381a4c56358a30b4203109835b2a8fb69661261faa2a0c4c51b52d84be4be1"
+    }
+  },
+  "loader": {
+    "source": "step-400 development export",
+    "package_sha256": "ff6ceac12ff096d84ed07f498ab42a259370250214112456e54d0f6d0437abd8",
+    "slots": 8,
+    "chat_template_sha256": "a4aee8afcf2e0711942cf848899be66016f8d14a889ff9ede07bca099c28f715",
+    "healthy": true,
+    "completion_tokens": 3,
+    "finish_reason": "stop",
+    "reply": "Ready.",
+    "scope": "One loader/API smoke check, not a model-quality measurement"
+  },
+  "commands": [
+    "python3 t/recipes/v6_package_gguf.py --export EXPORT --llama-dir PINNED_LLAMA --stem dawnr-v6-step400-packaging-probe",
+    "After diagnosing the first refusal, repeat with --verify-existing to check the same files"
+  ],
+  "checks": [
+    "Every tensor name, shape, type and raw byte sequence matches the original",
+    "First-shard metadata matches the original; later shards contain only the file version and split bookkeeping",
+    "All three shard sizes are below 2 GiB",
+    "Eight-slot native server loads the shards with the registered chat template and answers an API request"
+  ]
+}

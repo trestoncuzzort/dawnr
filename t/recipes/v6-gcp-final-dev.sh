@@ -14,4 +14,6 @@ PY
 python3 t/recipes/v6_export.py --adapter "$root/final-adapter" \
   --manifest "$root/final-adapter/manifest.json" --llama-dir /opt/dawnr-run/inference/llama.cpp \
   --out "$root/export-final" --name dawnr-v6-20261018 --device cuda
+python3 t/recipes/v6_package_gguf.py --export "$root/export-final" \
+  --llama-dir /opt/dawnr-run/inference/llama.cpp --stem dawnr-v6-20261018
 bash t/recipes/v6-gcp-candidate-dev.sh "$root/export-final" v6-20261018-final-dev dawnr-v6-final

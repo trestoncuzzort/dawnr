@@ -142,6 +142,12 @@ def main(argv=None):
     selected = read(root/'candidate-frozen.json')
     assert selected['status'] == 'candidate-frozen' and selected['step'] == 1275
     assert selected['development_complete'] is True
+    package_root = root/'export-final-receipts/release'
+    package = read(package_root/'package.json')
+    assert package['adapter_step'] == 1275
+    assert package['source_gguf_sha256'] == selected['candidate_gguf_sha256']
+    assert package['manifest_sha256'] == selected['candidate_release_manifest_sha256']
+    assert digest(package_root/'dawnr-student.sha256') == selected['candidate_release_manifest_sha256']
     for name in ('clean-182.txt', 'spec-heldout.jsonl'):
         assert selected['panels'][name] == digest(root/name)
     ids = {int(s) for s in (root/'clean-182.txt').read_text().split()}
@@ -151,7 +157,7 @@ def main(argv=None):
         meta = read(root/f'{arm}-heldout/generation.json')
         assert meta['arm'] == arm and meta['candidate_lock_sha256'] == digest(root/'candidate-frozen.json')
         model_sha = ('d855000c3dffd9772da5a2f9dc238b41d7f8337d9bf58e578e5274ebb9566a4e'
-                     if arm == 'v5' else selected['candidate_gguf_sha256'])
+                     if arm == 'v5' else selected['candidate_release_manifest_sha256'])
         assert meta['model_identity'] == f'student-{arm}:{model_sha}:llama-f1cee9941b0e843ea260bf8dd9a090fbd9711b6a'
         problem, spec = problems(root, arm, ids), specifications(root, arm)
         assert problem['protocol']['identity'] == spec['protocol']['identity'] == meta['model_identity']

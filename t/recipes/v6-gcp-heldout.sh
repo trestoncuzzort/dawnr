@@ -48,6 +48,18 @@ else:
     assert receipt['adapter']['step'] == 1275
     sha = digest(exported/'model-Q8_0.gguf')
     assert sha == receipt['output']['sha256'] == selected['candidate_gguf_sha256']
+    package = json.loads((exported/'release/package.json').read_text())
+    assert package['adapter_step'] == 1275 and package['source_gguf_sha256'] == sha
+    manifest = exported/'release/dawnr-student.sha256'
+    sha = digest(manifest)
+    assert sha == package['manifest_sha256'] == selected['candidate_release_manifest_sha256']
+    entries = [line.split() for line in manifest.read_text().splitlines()]
+    assert entries and entries[0][1] == package['first_shard']
+    assert len(entries) == len({name for _,name in entries}) == len(package['files'])
+    for expected, name in entries:
+        assert pathlib.Path(name).name == name
+        assert expected == package['files'][name]['sha256']
+        assert digest(exported/'release'/name) == expected
 record = {'arm': arm, 'model_identity': f'student-{arm}:{sha}:llama-{revision}',
           'candidate_lock_sha256': digest(freeze), 'panels': selected['panels'],
           'script_sha256': digest('t/recipes/v6-gcp-heldout.sh'),
@@ -65,7 +77,7 @@ server=/opt/dawnr-run/inference/llama.cpp/build/bin/llama-server
 if [ "$arm" = v5 ]; then
   model=/opt/dawnr-run/inference/models/dawnr-student-00001-of-00003.gguf
 else
-  model="$export_dir/model-Q8_0.gguf"
+  model="$export_dir/release/$(awk 'NR == 1 {print $2}' "$export_dir/release/dawnr-student.sha256")"
 fi
 "$server" --model "$model" --alias "dawnr-$arm" --host 127.0.0.1 --port 8846 \
   --n-gpu-layers 99 --threads 4 --threads-batch 4 --parallel 8 --ctx-size 65536 \
