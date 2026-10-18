@@ -1,0 +1,67 @@
+{
+  "scope": "Synthetic coordinator controls; no model queried",
+  "three_ready": {
+    "questions": 33,
+    "stages": {
+      "ready": 3,
+      "no-block": 30
+    },
+    "ready": 3,
+    "no twin could be built (not graded)": 0,
+    "a kernel refutes it": 0,
+    "no row in the table": 0,
+    "proved by at least 1": 3,
+    "proved by at least 3": 3,
+    "proved by at least 5": 3,
+    "proved by at least 6": 3,
+    "proved by all seven": 3
+  },
+  "zero_ready": {
+    "questions": 33,
+    "stages": {
+      "no-block": 33
+    },
+    "ready": 0,
+    "no twin could be built (not graded)": 0,
+    "a kernel refutes it": 0,
+    "no row in the table": 0,
+    "proved by at least 1": 0,
+    "proved by at least 3": 0,
+    "proved by at least 5": 0,
+    "proved by at least 6": 0,
+    "proved by all seven": 0
+  },
+  "incomplete_answers_refused_before_proofs": true,
+  "grader_sha256": "f0aa3a90befd32cd077bd4c8f4a46197d4c0e9f6c28fecca2c01a249acbdbcec",
+  "input_sha256": {
+    "missing-answer/generated/answers.jsonl": "d30cf07829d683587301edd14c34833e434d1978b69be0db00a3b536b9003a15",
+    "missing-answer/generated/completed.json": "78c9ab16f9b7b78158ca9b0c78c3fd455c376f4d985aaecb9c9b28ae3fd9acf2",
+    "missing-answer/generated/protocol.json": "f7daea0dc02cd3fd3915e0c6d6dcde06045ad9a86c591bfd9c6a35db49c14273",
+    "three-ready/generated/answers.jsonl": "485543e6a5fd249a1b5e93a24e9639be74fbc5e3e8979f91e6560b0f1acd1355",
+    "three-ready/generated/completed.json": "41b24144f9450c31fb67020226f75d9568799877c76ae35a97d5f7fbcbc311d1",
+    "three-ready/generated/protocol.json": "2df91db4e0043dec8d73fd15c1dfbddfc20348cbbeaf2f1327fefa458b87f191",
+    "zero-ready/generated/answers.jsonl": "1a09bead4d6117dbab2e2de769b3332716d43ee99f9de84c81205ca36187e633",
+    "zero-ready/generated/completed.json": "22da9c8de4e91cf265d1ae4c082d5a8db149257b2524c9b4c19e41182302fb65",
+    "zero-ready/generated/protocol.json": "c306f2c5810d55e5becc567ffbf42aaf2f922066a81022f0956ef74694c0a670"
+  },
+  "native_calls": {
+    "kernels": 7,
+    "positive_tasks": 3,
+    "cells": 21,
+    "kernel_runs": 126
+  },
+  "initial_attempt": "Refused before preparation because the frozen question file was missing from the worker. Copied the exact registered panel and retried the same fixtures.",
+  "questions_sha256": "effc2f4e586e0c4f7638a5a9a2b75515aaf7019de03ca819d46e5aa3d593ab24",
+  "proof_image": "sha256:64b75853957cc77d6cad79a9fd84b504d7ddc46b853753ed886520dd79f9acdf",
+  "positive_names": [
+    "acsl_count__count",
+    "all_nonneg",
+    "clover_abs__abs"
+  ],
+  "fixture_recipe": {
+    "three_ready": "Use each listed question's chosen answer; use an empty reply for the other 30 names.",
+    "zero_ready": "Use an empty reply for all 33 names.",
+    "missing_answer": "Use empty replies and omit the last question in the frozen panel."
+  },
+  "grader": "t/recipes/v6-grade-spec.sh"
+}
