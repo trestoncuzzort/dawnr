@@ -1,5 +1,9 @@
 # The plan of record from 2026-10-01: every goal, on borrowed ladders
 
+**Scope update, 2026-10-17:** the computer-control parts of this dated plan are
+retired. Repository and document tools support dawnr's coding and reasoning
+work; whole-system control is out of scope. See [the current ambition](AMBITION.md).
+
 The operator's direction, the evening of 2026-09-30: build from the ladders others have made; no
 step may rest on a maybe; nothing the system says is relied on until it is proved, and that is the
 whole point; other people's weights are fine if they are the best for this job and usable by

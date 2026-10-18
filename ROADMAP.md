@@ -5,6 +5,10 @@ specifications, and real flight-software source. The model, datasets, and
 counterexamples remain part of the system; accepted results need evidence
 that can be replayed without trusting a model's explanation.
 
+As of 2026-10-17, whole-system control is out of scope. Repository and document
+tools support the coding, reasoning, training, and verification work. Desktop
+automation and host administration are no longer product goals.
+
 ## Current priorities
 
 - Make compiled PX4 comparisons reject incomplete executions and identify
@@ -15,8 +19,9 @@ that can be replayed without trusting a model's explanation.
   each changed backend across the full core corpus.
 - Keep code-generation and review calls bounded and accounted for, and turn
   useful model suggestions into deterministic regression checks.
-- Maintain repository tools and retire built-in desktop and host-service
-  control. Preserve the training and verification records behind the results.
+- Maintain repository tools within their configured roots and sandbox.
+  Built-in desktop and host-service control is retired. Preserve the training
+  and verification records behind the results.
 
 The research and implementation plan is in
 [the verification research note](internal/RESEARCH-2026-10-10-verification-next.md).

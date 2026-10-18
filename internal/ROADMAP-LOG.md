@@ -3281,3 +3281,16 @@ every single line of code needs to be perfect so i can start definitively spammi
 4. The student run on judge rows when the GPU VM gets stock.
 
 Rule kept: OpenAI outputs serve the bundle, the review and the proofs; they never enter training rows.
+
+## 2026-10-17: whole-system control removed from dawnr's scope
+
+The operator dropped the computer-control ambition: it was intended as a small
+feature and does not fit the project. Dawnr's focus is coding and reasoning,
+program verification, stronger specifications, and better training data.
+Repository and document tools support that work. Desktop automation and host
+administration are out of scope.
+
+Built-in host control was already retired on 2026-10-10 (`DAWNR-AGENT.md`);
+this decision also retires it as a product goal. The current ambition, public
+roadmap, README, and contributor instructions now state that boundary. Earlier
+computer-control plans and experiment results remain historical records.

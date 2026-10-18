@@ -15,6 +15,12 @@ exists to answer is whether a model built from that data does more per parameter
 
 `README.md` is the honest public summary, including what has been ruled out and what this project got wrong.
 
+**Scope decision, 2026-10-17:** whole-system control is out of scope. Focus dawnr on coding, reasoning,
+program verification, and better training data. Repository file tools, sandboxed builds/tests, document
+tools, and read-only build diagnostics support that work. Do not revive desktop automation, host-service
+control, or general computer administration from older plans. Built-in host control is already retired;
+the older ambitions and measurements remain historical records.
+
 **The t engine has its own repository.** [t-proof-engine](https://github.com/trestoncuzzort/t-proof-engine) holds the
 language, the seven lowerings, the kernel adapters, the twin harness, the matrix runner, the tasks and their
 documents. It was split out on 2026-10-06 with its history. `t/` here carries a pinned copy (`t/ENGINE.md` names

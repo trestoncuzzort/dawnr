@@ -4,6 +4,9 @@ dawnr combines local language models, program verification, and an assistant tha
 It generates candidate programs, tests their behavior and specifications, checks them with proof tools, and uses
 accepted results to build training data. The trained models can then propose new programs through the same checks.
 
+The focus is better coding and reasoning through checked programs and better training data. Repository and
+document tools support that work. Controlling the whole computer is outside the project's scope.
+
 The repository contains both the system and its working record: programs, contracts, deliberately broken variants,
 counterexamples, datasets, model-training code, evaluation scripts, and measured results. Its applications include
 checking selected PX4 flight-software routines against compiled C++ and recording proposed fixes alongside the

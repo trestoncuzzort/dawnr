@@ -6,6 +6,20 @@ the route, and every number here links to the run that produced it. The ideas
 being worked toward are kept at the end of this file, stated plainly, with
 where each one stands.
 
+## Current scope, 2026-10-17
+
+The operator dropped whole-system control from dawnr's goals: it was intended
+as a small feature and does not fit the project. The focus is coding and
+reasoning, checked programs, stronger specifications, and better training data
+for the local models. Repository and document tools support that work;
+desktop automation and host administration are out of scope.
+
+Built-in host control was retired on 2026-10-10 (`../DAWNR-AGENT.md`). Keep
+repository actions within configured roots and the sandbox, with read-only
+build diagnostics where useful. This decision supersedes the computer-control
+parts of the older directions below and their linked plans. Historical runs
+remain evidence of what was measured, not a backlog to restore.
+
 ## The north star since 2026-10-07
 
 The operator, 2026-10-07: "we need a new north star and this one's up to you." It is set in the engine repository's
@@ -36,7 +50,10 @@ was aimed at and are re-read as follows: section 1's comparison is now the stude
 same reference on the clean 200; section 2's product is the gate with the student behind it;
 section 3's curve is fine-tuned small models against prompted large ones.
 
-## The direction since 2026-10-05
+## Historical direction, 2026-10-05
+
+The computer-control goal and its priority in this section were superseded
+by the scope decision of 2026-10-17 above.
 
 The operator, with the count of proved problems flat for a week: "we are trying to make a god model at coding and
 computer control but we have been stuck writing proofs"; "an offline version of a cli where it can access
@@ -301,9 +318,8 @@ is judged by the same rule: nothing is trusted without evidence.
 
 ### dawnr's harness: reaching past itself
 
-dawnr is meant to be a full assistant built on everything machine learning and
-the sciences around it can contribute, not only a model. Around the model sits
-a harness, the way an agent runtime wraps a language model:
+dawnr's harness supports its coding, reasoning, and document work. It gives the
+model access to the checks and tools needed for those tasks:
 
 | dawnr needs | the idea | where it stands |
 |---|---|---|
@@ -332,10 +348,10 @@ followed as an instruction.
 
 ### dawnr grows with the person using it
 
-The operator's words: an expansive assistant that learns like a child from
-every session, with a personality that grows per person, in control of the
-machine it runs on, not only a doctorate in proofs. The same rule governs all
-of it: nothing is trusted without evidence, and the person stays in control.
+Learning, memory, and personalization support the person's coding and document
+work. The earlier ambition to control the machine was dropped on 2026-10-17.
+The same rule governs the retained features: nothing is trusted without
+evidence, and the person stays in control.
 
 | dawnr needs | the idea | where it stands |
 |---|---|---|
@@ -343,7 +359,7 @@ of it: nothing is trusted without evidence, and the person stays in control.
 | to learn from every session | per-person learning between sessions: feedback and corrections become training data; a small per-person adapter is updated while the shared model stays fixed; replay against forgetting; measured so a person's model gets better at their tasks without getting worse at everything else | **built and measured**: feedback kept per person under their control (read, correct, export, erase); a style profile inferred from their edits cut four simulated persons' edit cost 26-53% with no checked answer made worse; a per-person LoRA adapter, trained in guarded sleeps with exact forgetting, fits each person in likelihood but loses correct answers where it changes what dawnr writes, so it stays off on this base (`DAWNR-LEARNING.md`; 4 of 16 predictions falsified and said so) |
 | a personality that grows per person | a persona per person (tone, detail, interests, how they like to work) learned from interactions, visible and editable | **built**: a persona record per person (tone, detail, depth, interests, working preferences) updated by named, logged, reversible rules; editable in the chat pane and the CLI (`locallm/dawnr_persona.py`); not yet learned by any model |
 | to know things it was not trained on | retrieval over the proved corpus, the person's own files and fetched pages, cited | **built**: a BM25 index over the proved corpus, a knowledge folder and cached pages, as the `search_knowledge` harness tool with per-passage trust and a measured recall (`DAWNR-RETRIEVAL.md`); **measured on the chosen weights (2026-10-02):** with every claim forced to quote its document verbatim, the base refuses 286 of 300 HotpotQA questions whose answer is absent and answers 78% of those where it is present, at least 79% right ([`locallm/PREDICT-2026-10-01-retrieval-on-the-base.md`](locallm/PREDICT-2026-10-01-retrieval-on-the-base.md)) |
-| to act on the machine, in control | a planning loop over tools (files, shell, processes) through the harness: every action under the owner's allow / ask / deny permissions, logged, reversible where possible; dawnr never grants itself permissions | **measured on the chosen weights (2026-10-01)**: as dawnr's planner the base Qwen3.5-4B planned an instruction planted in a file it was asked to read on 10 of 90 trials and the harness ran none; it did the asked task on 81 (`locallm/PREDICT-2026-10-01-agent-on-the-base.md`). **built, reviewed twice, untrained**: file, command and process tools inside operator roots, commands only from an allowlist, a planning loop with a dry run; a file whose name lies outside the roots is refused by its link count and real path, not by a list (0 escapes over 5,000 generated paths, 0 of 80 injected actions ran); the model never changes its own permissions (`DAWNR-AGENT.md`) |
+| to work within a repository | file edits and sandboxed build/test commands within configured roots, with the owner's permissions and a change journal | **current scope (2026-10-17)**: built-in host control is retired; whole-system control is no longer a goal (`DAWNR-AGENT.md`). **Historical measurement (2026-10-01)**: the base Qwen3.5-4B planned a planted instruction on 10 of 90 trials and the harness ran none; it did the asked task on 81 (`locallm/PREDICT-2026-10-01-agent-on-the-base.md`). The earlier file-boundary tests recorded 0 escapes over 5,000 generated paths and 0 of 80 injected actions run. |
 | to hear and speak | speech in and out, trained here | **superseded by pretrained weights (2026-10-01)**: hearing works offline with Whisper base.en (the row above); *the from-scratch track:* a from-scratch CTC speech recogniser that overfits a handful of utterances on CPU, the LibriSpeech/LJSpeech data plan and prep scripts on the lab, a TTS design, and an optional mic/speaker layer (`DAWNR-SPEECH.md`); no full training yet |
 
 **The order**, trustworthy core first and breadth after, because a system that
@@ -353,7 +369,7 @@ the north star:
 1. A core that learns instead of memorising (now: data, denoising, the sweep).
 2. Reinforcement learning with the provers as the reward.
 3. Retrieval and memory.
-4. Tools and agency, starting with programs it writes, proves and then runs.
+4. Repository tools, starting with programs it writes, proves and runs in a sandbox.
 5. Speech, then vision.
 
 ---
