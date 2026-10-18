@@ -8,7 +8,7 @@
   "grade": "t/recipes/v6-grade.sh",
   "reporter": {
     "path": "t/recipes/v6_development_report.py",
-    "sha256": "46d4e190fc744e3b4ab85e14397920fbf27c12e7a9af4023c46ebf56b8bc7caf"
+    "sha256": "6824e4dffe0418884c1949098ccd50c7ee303f4d5111cfe802f07dcae7d7aa00"
   },
   "scope": "Development-only candidate selection. This is not a held-out result or release qualification.",
   "arms": {
@@ -617,10 +617,10 @@
         }
       },
       "evidence_sha256": {
-        "/home/t/Projects/dawnr/t/out/spec-experiment/v6-20261018-v5-dev/spec_first.json": "6bc7e999b05c20b708b63295b25715de790029f8ca1df13bb7b9e39e64a9461b",
-        "/home/t/Projects/dawnr/t/out/spec-experiment/v6-20261018-v5-dev/extract.json": "ac7450c32968d1539f0fbc62dbd6966238e771d70ebca9c9630a0e5bf10a5354",
-        "/home/t/Projects/dawnr/t/out/spec-experiment/v6-20261018-v5-dev/tests.json": "9743131202ce2a5fe0ce74020a5adf632a216f46e7e1fac12cbb9a6ced6ec384",
-        "/home/t/Projects/dawnr/t/out/spec-experiment/v6-20261018-v5-dev/kernels.md": "f05ca7a09b0ca31f84a30a726275dc108af2ad94e4f4a5015f4bba7adceda708",
+        "t/out/spec-experiment/v6-20261018-v5-dev/spec_first.json": "6bc7e999b05c20b708b63295b25715de790029f8ca1df13bb7b9e39e64a9461b",
+        "t/out/spec-experiment/v6-20261018-v5-dev/extract.json": "ac7450c32968d1539f0fbc62dbd6966238e771d70ebca9c9630a0e5bf10a5354",
+        "t/out/spec-experiment/v6-20261018-v5-dev/tests.json": "9743131202ce2a5fe0ce74020a5adf632a216f46e7e1fac12cbb9a6ced6ec384",
+        "t/out/spec-experiment/v6-20261018-v5-dev/kernels.md": "f05ca7a09b0ca31f84a30a726275dc108af2ad94e4f4a5015f4bba7adceda708",
         "t/out/v6-20261018/proof-results/v5-dev-full/verdicts.json": "45b426375d41d61367694e46a49023c51b5e3a743845946aaee8c2d5ce9ef3d3",
         "t/out/v6-20261018/proof-results/v5-dev-full/levels.json": "28a97279802ff8897d9d5bc0a581e537dce8ce3f4df35647fe83cb694e56bbe8",
         "t/out/v6-20261018/proof-results/v5-dev-full/evaluator.json": "822bebe66d09a3dcc136a8b779ff79f879907501e1bc54a71302047b4b8eaa47",
@@ -1217,10 +1217,10 @@
         }
       },
       "evidence_sha256": {
-        "/home/t/Projects/dawnr/t/out/spec-experiment/v6-20261018-final-dev/spec_first.json": "163fd8c3b3b22fd51fb516936b4c94d53daa292ce3870c653f91683eeca25653",
-        "/home/t/Projects/dawnr/t/out/spec-experiment/v6-20261018-final-dev/extract.json": "1a9a4120a9b217ce1e6ebdc8babc5b80c114bc08551c437303bccd2e969a7eaf",
-        "/home/t/Projects/dawnr/t/out/spec-experiment/v6-20261018-final-dev/tests.json": "04a89c1c2feed71f9b212aae1a3901d6e3d253b3f6fd3264b34a58f461be0284",
-        "/home/t/Projects/dawnr/t/out/spec-experiment/v6-20261018-final-dev/kernels.md": "89cbefafa18aef5bd382c2e9fa38a8f20c5afac42ae4cd540800098958d5e604",
+        "t/out/spec-experiment/v6-20261018-final-dev/spec_first.json": "163fd8c3b3b22fd51fb516936b4c94d53daa292ce3870c653f91683eeca25653",
+        "t/out/spec-experiment/v6-20261018-final-dev/extract.json": "1a9a4120a9b217ce1e6ebdc8babc5b80c114bc08551c437303bccd2e969a7eaf",
+        "t/out/spec-experiment/v6-20261018-final-dev/tests.json": "04a89c1c2feed71f9b212aae1a3901d6e3d253b3f6fd3264b34a58f461be0284",
+        "t/out/spec-experiment/v6-20261018-final-dev/kernels.md": "89cbefafa18aef5bd382c2e9fa38a8f20c5afac42ae4cd540800098958d5e604",
         "t/out/v6-20261018/proof-results/final-dev-full/verdicts.json": "ae03f8e343af33f9528fbe6cc38fabe99a7c4905a9bb1f8f5479aac23c2da705",
         "t/out/v6-20261018/proof-results/final-dev-full/levels.json": "f19c886815b2e4914c9aea862974d531fe274fb5dade923a09e03a84e3284ab9",
         "t/out/v6-20261018/proof-results/final-dev-full/evaluator.json": "822bebe66d09a3dcc136a8b779ff79f879907501e1bc54a71302047b4b8eaa47",

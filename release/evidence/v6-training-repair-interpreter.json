@@ -1,0 +1,107 @@
+{
+  "protocol": {
+    "dataset_sha256": "e14f766f06299d589d9a6e3293f6bf3e3f06ffac026433e2fdeff1c04294af80",
+    "rows_unchanged": true,
+    "seconds_per_interpreter_check": 60,
+    "controls": [
+      {
+        "source_row": 69,
+        "task_id": 378,
+        "name": "move_first",
+        "expression": "len(r) == len(s)",
+        "chosen_sha256": "8fb6898cacff5eae40499a729587c2954273c6cb39e95af469cc3cd6859b7d43",
+        "files": {
+          "original": {
+            "name": "move_first_original",
+            "sha256": "3e7d062961ef5f1a98deefdb55a4c5d159895a4b0b09b8af26b38746cb33b643"
+          },
+          "strengthened": {
+            "name": "move_first_strengthened",
+            "sha256": "e9ad9206fdc0d7a7f85de0b6653c55f39ee7d1acbb7e780ed5b821a36fe7c691"
+          }
+        }
+      },
+      {
+        "source_row": 187,
+        "task_id": 202503,
+        "name": "findLUSlength",
+        "expression": "s1 != s2 ==> (r >= len(s1) and r >= len(s2))",
+        "chosen_sha256": "a0548735fb061578cf59eab53aeb996477fe6eda65b449e2d3affd6ec9f064ac",
+        "files": {
+          "original": {
+            "name": "findLUSlength_original",
+            "sha256": "acdbfeaf032ba19d3843e24bee0be8115c3f3438a116f62dce1eda6c339658d2"
+          },
+          "strengthened": {
+            "name": "findLUSlength_strengthened",
+            "sha256": "52f4448481f19ffd90bc9284595347c054a9c86fe30e8bfccf43ca52d21c02f4"
+          }
+        }
+      }
+    ],
+    "scope": "Interpreter controls and native-proof inputs only. No training admission or model changes."
+  },
+  "interpreter_results": [
+    {
+      "name": "move_first",
+      "positive": {
+        "name": "move_first",
+        "real_ok": true,
+        "after_status": "ok",
+        "survivors_before": 3,
+        "survivors_after": 0,
+        "killed_now": 3,
+        "strength_before": 0.8125,
+        "strength_after": 1.0,
+        "accepted": true
+      },
+      "negative_false_clause": {
+        "name": "move_first",
+        "real_ok": false,
+        "after_status": "real-violates-spec",
+        "survivors_before": 3,
+        "survivors_after": null,
+        "killed_now": null,
+        "strength_before": 0.8125,
+        "strength_after": null,
+        "accepted": false
+      },
+      "R1_holds": true
+    },
+    {
+      "name": "findLUSlength",
+      "positive": {
+        "name": "findLUSlength",
+        "real_ok": true,
+        "after_status": "ok",
+        "survivors_before": 7,
+        "survivors_after": 0,
+        "killed_now": 7,
+        "strength_before": 0.631578947368421,
+        "strength_after": 1.0,
+        "accepted": true
+      },
+      "negative_false_clause": {
+        "name": "findLUSlength",
+        "real_ok": false,
+        "after_status": "real-violates-spec",
+        "survivors_before": 7,
+        "survivors_after": null,
+        "killed_now": null,
+        "strength_before": 0.631578947368421,
+        "strength_after": null,
+        "accepted": false
+      },
+      "R1_holds": true
+    }
+  ],
+  "native_result": "pending",
+  "builder": "t/recipes/v6_training_repair_controls.py",
+  "builder_sha256": "e4e4f54ff7660aca29a868111f96352daa5f9664b3e08e7f851fd71cabac1b65",
+  "well_formedness_controls": {
+    "original_and_strengthened_tasks_accepted": 4,
+    "malformed_result_name_fixtures_refused": 2
+  },
+  "initial_wrapper_correction": "The initial wrapper referred to an unbound result instead of the recorded return variable r. Both initial controls were refused and retained as invalid fixtures. The corrected wrapper uses r and checks well-formedness before measuring.",
+  "limits": "Interpreter-only repair controls do not establish native proofs or qualify training data. Source rows, model weights, and evaluation protocols remain unchanged."
+}

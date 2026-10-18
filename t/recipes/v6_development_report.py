@@ -21,6 +21,7 @@ from v6_export import CONVERTER
 
 
 PANEL_SHA256 = "f807aec7e6b89e524ded720d9ccfb670c1d504a5a5717966a4b870516701daf7"
+REPOSITORY = Path(__file__).resolve().parents[2]
 
 
 def arm_result(root, arm, ids):
@@ -90,7 +91,7 @@ def arm_result(root, arm, ids):
                                  "accepted_t": i in taken,
                                  "clean_kernels": 0 if i in unconfirmed else levels.get(i, (0,))[0]}
                         for i in sorted(ids)},
-        "evidence_sha256": {str(path): digest(path) for path in paths},
+        "evidence_sha256": {str(path.resolve().relative_to(REPOSITORY)): digest(path) for path in paths},
     }
     normalized = {k: v for k, v in protocol.items() if k not in ("model", "identity")}
     normalized["route_args"] = [*normalized["route_args"]]

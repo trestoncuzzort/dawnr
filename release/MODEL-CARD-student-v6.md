@@ -56,25 +56,37 @@ not establish universal semantic independence across arbitrary programs.
 
 ## Evaluation and release gate
 
-Both preserved checkpoints have completed the same Q8_0 development evaluation.
+Both preserved checkpoints and their registered equal-weight average have
+completed the same Q8_0 development evaluation.
 All accepted t answers pass the problem examples; the clean counts also require
 formal proof and the independent specification checks.
 
-| Fixed development-95 | V5 | V6 step 400 | V6 step 1275 |
-|---|---:|---:|---:|
-| Tested Python solutions | 51 | 60 | 46 |
-| Accepted t answers | 13 | 9 | 10 |
-| Clean answers, at least one kernel | 6 | 4 | 4 |
-| Clean answers, all seven kernels | 3 | 3 | 2 |
+| Fixed development-95 | V5 | V6 step 400 | V6 step 1275 | V6 average |
+|---|---:|---:|---:|---:|
+| Tested Python solutions | 51 | 60 | 46 | 53 |
+| Accepted t answers | 13 | 9 | 10 | 9 |
+| Clean answers, at least one kernel | 6 | 4 | 4 | 4 |
+| Clean answers, all seven kernels | 3 | 3 | 2 | 1 |
 
 The [early receipt](evidence/v6-development-early.json) and
 [final receipt](evidence/v6-development-final.json) preserve the paired results.
 The final checkpoint loses problems 543 and 634 against v5 and gains none.
 Its [kernel matrix](evidence/v6-dev-final-kernels.md) records refusals and failures.
-No checkpoint has qualified for promotion, and no new held-out model answers
-have been generated. One equal-weight average of the two saved checkpoints
-is registered for development evaluation, with a gate of seven clean answers
-and at least three all-seven answers. It adds no training updates or data.
+The [average receipt](evidence/v6-development-average.json) records four clean
+answers and one all-seven answer. It gains none over v5 and loses problems
+549 and 634. Its [kernel matrix](evidence/v6-dev-average-kernels.md) retains
+refusals and failures. The average adds no training updates or data and fails
+the registered gate of seven clean answers and at least three all-seven
+answers. No checkpoint has qualified for promotion, and no new held-out
+model answers have been generated.
+
+A bounded [training-contract audit](evidence/v6-training-strength-full.json)
+finds surviving behavior-changing mutants in 102 of 1,011 unique training
+programs; nine timeouts remain unknown and three searches are capped. Some
+survivors reflect intended latitude. Reviewed English examples expose missing
+output-length or result-selection constraints. These findings motivate
+data-repair controls, but do not establish a cause of the development failures
+or automatically change training admission.
 
 The correct-source specification control currently reaches 32/33 in all seven
 proof systems ([complete table](evidence/v6-prover-controls.md)). Frama-C rejects one twin certificate; all 33 pass in each of

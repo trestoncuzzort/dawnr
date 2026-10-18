@@ -51,6 +51,8 @@ def main(argv=None):
     parser.add_argument("--limit", type=int, default=128)
     parser.add_argument("--seconds", type=int, default=15)
     parser.add_argument("--jobs", type=int, default=2)
+    parser.add_argument("--full", action="store_true", help="audit all unique training programs")
+    parser.add_argument("--reuse", type=Path, help="reuse a complete diagnostic with identical scoring inputs")
     args = parser.parse_args(argv)
     assert (args.limit, args.seconds, args.jobs) == (128, 15, 2), "use the registered diagnostic settings"
     assert digest(args.rows) == ROWS_SHA256
@@ -80,11 +82,12 @@ def main(argv=None):
         key = hashlib.sha256(student_rows._normalised(task, body=True).encode()).hexdigest()
         entry = programs.setdefault(key, {"task": task, "rows": []})
         entry["rows"].append(index)
-    selected = sorted(programs)[:args.limit]
+    selected = sorted(programs) if args.full else sorted(programs)[:args.limit]
     sources = sorted(ENGINE.glob("*.py")) + [Path(__file__)]
     protocol = {"dataset_sha256": ROWS_SHA256, "rows": len(rows), "categories": dict(categories),
                 "parse_failures": parse_failures, "unique_programs": len(programs),
-                "selection": "first 128 SHA-256 keys after student_rows._normalised(task, body=True)",
+                "selection": ("all SHA-256 keys" if args.full else "first 128 SHA-256 keys")
+                             + " after student_rows._normalised(task, body=True)",
                 "seconds_per_task": args.seconds, "jobs": args.jobs, "worker_memory_mib": 1536,
                 "selected": {}, "sources": {str(p.relative_to(ENGINE.parent)): digest(p) for p in sources}}
     for key in selected:
@@ -92,13 +95,41 @@ def main(argv=None):
         path.write_text(json.dumps(programs[key]["task"], sort_keys=True) + "\n")
         protocol["selected"][key] = {"name": programs[key]["task"]["name"],
                                      "source_rows": programs[key]["rows"], "task_sha256": digest(path)}
+    reused = {}
+    if args.reuse:
+        old = json.loads((args.reuse / "protocol.json").read_text())
+        old_summary = json.loads((args.reuse / "summary.json").read_text())
+        assert digest(args.reuse / "protocol.json") == old_summary["protocol_sha256"]
+        assert digest(args.reuse / "results.jsonl") == old_summary["results_sha256"]
+        for key in ("dataset_sha256", "seconds_per_task", "jobs", "worker_memory_mib"):
+            assert old[key] == protocol[key], "cached diagnostic settings differ"
+        scorer_sources = lambda p: {k:v for k,v in p["sources"].items()
+                                    if k != "t/recipes/v6_training_strength.py"}
+        assert scorer_sources(old) == scorer_sources(protocol), "cached scoring code differs"
+        previous = [json.loads(line) for line in (args.reuse / "results.jsonl").read_text().splitlines()]
+        assert old_summary["completed"] == old_summary["selected"] == len(old["selected"]) == len(previous)
+        assert {r["program_sha256"] for r in previous} == set(old["selected"])
+        for result in previous:
+            key = result["program_sha256"]
+            if key not in protocol["selected"]:
+                continue
+            assert old["selected"][key] == protocol["selected"][key], "cached task differs"
+            assert result["source_rows"] == programs[key]["rows"]
+            reused[key] = {**result, "file": str(tasks / (key + ".json"))}
+        protocol["reused_results"] = {"count": len(reused),
+                                      "protocol_sha256": old_summary["protocol_sha256"],
+                                      "results_sha256": old_summary["results_sha256"]}
     (args.out / "protocol.json").write_text(json.dumps(protocol, indent=2) + "\n")
     print(json.dumps({"unique_programs": len(programs), "selected": len(selected),
                       "categories": dict(categories)}), flush=True)
-    results = []
+    results = list(reused.values())
     with (args.out / "results.jsonl").open("w") as stream, ProcessPoolExecutor(
             max_workers=args.jobs, initializer=memory_bound) as pool:
-        pending = {pool.submit(measure, str(tasks / (key + ".json")), args.seconds): key for key in selected}
+        for result in results:
+            stream.write(json.dumps(result, sort_keys=True) + "\n")
+        stream.flush()
+        pending = {pool.submit(measure, str(tasks / (key + ".json")), args.seconds): key
+                   for key in selected if key not in reused}
         for future in as_completed(pending):
             key = pending[future]
             result = future.result()
@@ -117,6 +148,7 @@ def main(argv=None):
                "capped": sum(r["capped"] for r in results),
                "known_strength": sum(r["strength"] is not None for r in results),
                "programs_with_survivors": len(weak), "survivors": sum(len(r["survivors"]) for r in ok),
+               "reused_programs": len(reused), "newly_measured_programs": len(results) - len(reused),
                "prediction_S1": bool(weak), "protocol_sha256": digest(args.out / "protocol.json"),
                "results_sha256": digest(args.out / "results.jsonl"),
                "scope": "Bounded interpreter diagnostic on training programs. Survivors require review; unknowns are not passes."}
