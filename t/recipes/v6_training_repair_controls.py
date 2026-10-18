@@ -26,6 +26,21 @@ CONTROLS = [
     (69, 378, 'move_first', 'len(r) == len(s)'),
     (187, 202503, 'findLUSlength', 's1 != s2 ==> (r >= len(s1) and r >= len(s2))'),
 ]
+DIRECT_CONTROLS = [
+    (45, 349, 'check', 'r == [89, 101, 115] or r == [78, 111]'),
+    (257, 203286, 'enough', 'r >= on + wait - cap'),
+    (298, 203693, 'make_negative', 'r <= 0'),
+    (309, 203795, 'combat', 'r >= health - damage'),
+    (2841, 202476, 'addDigits', ['num == 0 ==> r == 0', 'num > 0 ==> r > 0']),
+    (2524, 204424, 'expression_matter', ['r >= a * (b + c)', 'r >= (a + b) * c']),
+    (3171, 577, 'last_Digit_Factorial',
+        ['r == 0 or r == 1 or r == 2 or r == 4 or r == 6', 'r == 6 ==> n == 3']),
+]
+
+
+def clauses(expression):
+    return [surface.parse_expr(value) for value in
+            ([expression] if isinstance(expression, str) else expression)]
 
 
 def check_bounded(task, extra):
@@ -46,6 +61,7 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--rows', type=Path, required=True)
     parser.add_argument('--out', type=Path, required=True)
+    parser.add_argument('--set', choices=['initial', 'direct'], default='initial')
     args = parser.parse_args()
     raw = args.rows.read_bytes()
     assert hashlib.sha256(raw).hexdigest() == ROWS_SHA256
@@ -56,15 +72,16 @@ def main():
     tasks = args.out / 'tasks'
     tasks.mkdir(parents=True)
     protocol = {'dataset_sha256': ROWS_SHA256, 'rows_unchanged': True,
+                'control_set': args.set,
                 'seconds_per_interpreter_check': 60, 'controls': [],
                 'scope': 'Interpreter controls and native-proof inputs only. No training admission or model changes.'}
-    for index, task_id, name, expression in CONTROLS:
+    for index, task_id, name, expression in (CONTROLS if args.set == 'initial' else DIRECT_CONTROLS):
         row = rows[index]
         assert row['task_id'] == task_id
         task = surface.parse(se.find_block(row['chosen']))
         assert task['name'] == name
         assert task['returns'][0]['name'] == 'r', 'repair must refer to the actual result variable'
-        extra = surface.parse_expr(expression)
+        extra = clauses(expression)
         modified = spec_refine.strengthen(task, extra)
         assert not check_wf.check_wf(task), 'original control is not well formed'
         assert not check_wf.check_wf(modified), 'strengthening is not well formed'
@@ -83,17 +100,18 @@ def main():
     results = []
     for control in protocol['controls']:
         task = surface.parse(se.find_block(rows[control['source_row']]['chosen']))
-        positive = check_bounded(task, surface.parse_expr(control['expression']))
+        positive = check_bounded(task, clauses(control['expression']))
         negative = check_bounded(task, surface.parse_expr('false'))
         passed = positive.get('accepted') is True and positive.get('survivors_after') == 0
         passed = passed and negative.get('accepted') is False and negative.get('real_ok') is False
         result = {'name': control['name'], 'positive': positive, 'negative_false_clause': negative,
-                  'R1_holds': passed}
+                  'interpreter_holds': passed,
+                  ('R1_holds' if args.set == 'initial' else 'R5_interpreter_holds'): passed}
         results.append(result)
         (args.out / 'interpreter.json').write_text(json.dumps(results, indent=2) + '\n')
         print(json.dumps(result), flush=True)
     assert hashlib.sha256(args.rows.read_bytes()).hexdigest() == ROWS_SHA256
-    return 0 if all(r['R1_holds'] for r in results) else 1
+    return 0 if all(r['interpreter_holds'] for r in results) else 1
 
 
 if __name__ == '__main__':

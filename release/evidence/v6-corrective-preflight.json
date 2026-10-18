@@ -1,0 +1,38 @@
+{
+  "dataset_sha256": "8aa1b7528363ebfa149e9b6a18ea9081c4904ff3d8687c240a9ea511d45c4794",
+  "base": "Qwen/Qwen3.5-4B",
+  "base_revision": "851bf6e806efd8d0a36b00ddf55e13ccb7b8cd0a",
+  "parent": {
+    "step": 400,
+    "files": {
+      "adapter_config.json": "9c8bb1b245107292a495fde1a14d2323ee70eb985a5bed887a865719e65ac178",
+      "adapter_model.safetensors": "af314c4595d8e648b1a219097d5985ba30b5afb420733ae9da600bb967b54583"
+    }
+  },
+  "parent_manifest_sha256": "6212ee4d766b2c7bde97922145c182a42bc5e19e3a7d10be4b00f300fce50a54",
+  "rows": 4089,
+  "rows_used": 3980,
+  "dropped_too_long": 109,
+  "encoded_sha256": "0a8d9eb504d7be5ca04085014dd978f286e7e206d366cfe66c13480882afd5da",
+  "steps": 249,
+  "epochs": 1,
+  "lr": 2e-05,
+  "seed": 1,
+  "batch": 1,
+  "grad_accum": 16,
+  "max_len": 2845,
+  "save_steps": 50,
+  "trainer_sha256": "e43c27df1ee1e796b1799d38a16e0c5725dd09df762be3fabb2940ad8cb4a46f",
+  "wrapper_sha256": "9ff35a2a770d821f61840880d7c31efd51e300594f8f1f1c583071c3ebb1b2bb",
+  "inputs_sha256": {
+    "training-rows.jsonl": "8aa1b7528363ebfa149e9b6a18ea9081c4904ff3d8687c240a9ea511d45c4794",
+    "build.json": "be33ea5f40b544495ed566c25ba69842f905a8124935b5b103764eeb535ddb3f",
+    "heldout-audit.json": "42376a22b4da7bf4058299213a4dd0163796afa3abcb125db836b7015e683bd4",
+    "tokenization.json": "4a2fb9c3513140fd1ee7b5ada293303df5bf66ca64f7d9d145e4390af3a11a41",
+    "registration.md": "f38fed81599a8e58978f6f3c52e2ab29f4b3084923a83864ab47efd0444c534e"
+  },
+  "scope": "CPU preflight in the pinned training image; complete token stream and parent identities agree. No model-quality claim.",
+  "recipe": "t/recipes/v6_modal_corrective.py",
+  "recipe_sha256": "6dcc8244a942088e56b78eb9bec22cc2b14eede659fd5ad792af13b7181ab9f6",
+  "native_peft_control": "Real saved adapter predictions reproduced exactly; only child adapter parameters changed after an optimizer update; parent bytes and incompatible-input refusals checked."
+}

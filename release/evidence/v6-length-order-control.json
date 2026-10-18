@@ -1,0 +1,66 @@
+{
+  "protocol": {
+    "dataset_sha256": "e14f766f06299d589d9a6e3293f6bf3e3f06ffac026433e2fdeff1c04294af80",
+    "source_row": 187,
+    "task_id": 202503,
+    "chosen_sha256": "a0548735fb061578cf59eab53aeb996477fe6eda65b449e2d3affd6ec9f064ac",
+    "clauses": [
+      "len(s1) > len(s2) ==> r == len(s1)",
+      "len(s2) > len(s1) ==> r == len(s2)"
+    ],
+    "body_and_preconditions_unchanged": true,
+    "task_sha256": "e7f2ef5de950d658f2e752c001c58d2ac257928ba6332f713951924b4f7c4bb9",
+    "original_kernel_table_sha256": "e9f62d621813fa360259bb1e6a749750a92649d3271ecc406f3fa24f69f1cd6d",
+    "original_passing_kernels": 6,
+    "seconds_per_interpreter_check": 60,
+    "scope": "Single training-data control. No training admission or model/evaluation change."
+  },
+  "interpreter": {
+    "positive": {
+      "name": "findLUSlength",
+      "real_ok": true,
+      "after_status": "ok",
+      "survivors_before": 7,
+      "survivors_after": 0,
+      "killed_now": 7,
+      "strength_before": 0.631578947368421,
+      "strength_after": 1.0,
+      "accepted": true
+    },
+    "negative_false_clause": {
+      "name": "findLUSlength",
+      "real_ok": false,
+      "after_status": "real-violates-spec",
+      "survivors_before": 7,
+      "survivors_after": null,
+      "killed_now": null,
+      "strength_before": 0.631578947368421,
+      "strength_after": null,
+      "accepted": false
+    },
+    "R3_interpreter_holds": true
+  },
+  "native_cells": {
+    "findLUSlength_length_order": {
+      "dafny": "verified / refuted",
+      "verus": "verified / refuted",
+      "spark": "verified / refuted",
+      "framac": "verified / refuted",
+      "lean": "verified / refuted",
+      "rocq": "verified / refuted",
+      "fstar": "verified / unproved"
+    }
+  },
+  "native_passing_kernels": 6,
+  "original_native_passing_kernels": 6,
+  "R3_holds": true,
+  "all_seven": false,
+  "integrity": {
+    "contradictions": [],
+    "unsound_cells": []
+  },
+  "kernel_table_sha256": "cf790d7b5185bc5fb01da72b14657ec2e2be680d60167b137a92e72f44d64f64",
+  "builder": "t/recipes/v6_length_order_control.py",
+  "builder_sha256": "57f347be352eb2717fa03822673944921b21aa9eacaff3a1b35b79ccaa7a6350",
+  "limits": "The repaired specification preserves six fresh passing kernels; F* still does not refute the twin. No training admission or model update has occurred."
+}

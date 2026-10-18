@@ -1,0 +1,497 @@
+{
+  "scope": "Seven reviewed training-contract repairs, with unchanged bodies and preconditions. Native counts include verified real programs and refuted twins.",
+  "protocol": {
+    "dataset_sha256": "e14f766f06299d589d9a6e3293f6bf3e3f06ffac026433e2fdeff1c04294af80",
+    "rows_unchanged": true,
+    "control_set": "direct",
+    "seconds_per_interpreter_check": 60,
+    "controls": [
+      {
+        "source_row": 45,
+        "task_id": 349,
+        "name": "check",
+        "expression": "r == [89, 101, 115] or r == [78, 111]",
+        "chosen_sha256": "769f2c96daecde65c6677230d71813b7e7748d11b1bd2ba8723718aab5a587e2",
+        "files": {
+          "original": {
+            "name": "check_original",
+            "sha256": "7e4663f64a9170cbdb4905eb289d64581a70ae1c67358ab828b03b71655aa934"
+          },
+          "strengthened": {
+            "name": "check_strengthened",
+            "sha256": "f6bad6bb43982e8c517bd00d2cc0c854c4a892eee14fb9d5f85118895d547135"
+          }
+        }
+      },
+      {
+        "source_row": 257,
+        "task_id": 203286,
+        "name": "enough",
+        "expression": "r >= on + wait - cap",
+        "chosen_sha256": "cbae56f81b4cfb16444d99e9278d8e64306314d3353f340e261d0a8a9a4c5c64",
+        "files": {
+          "original": {
+            "name": "enough_original",
+            "sha256": "54cc75dba6a4873802b80390dcd8fff39c58cf3723de4988cc09f25ca4fed0cb"
+          },
+          "strengthened": {
+            "name": "enough_strengthened",
+            "sha256": "4ea505b127a2067e2cc7ac3520ca86bdc30883e69e2c72b8440c23f0b2f8f3db"
+          }
+        }
+      },
+      {
+        "source_row": 298,
+        "task_id": 203693,
+        "name": "make_negative",
+        "expression": "r <= 0",
+        "chosen_sha256": "86d85b898631c5522335ba693aa3f2ce3122de5c096db83e70aec94b8022d228",
+        "files": {
+          "original": {
+            "name": "make_negative_original",
+            "sha256": "407a813996028fdb24980dc8455bdfbbd5add63d0e69bad1673266e2effb9a6f"
+          },
+          "strengthened": {
+            "name": "make_negative_strengthened",
+            "sha256": "708f5ba3afaf048dc28f3829b056562f697261e51baaabec07967a44a356caa5"
+          }
+        }
+      },
+      {
+        "source_row": 309,
+        "task_id": 203795,
+        "name": "combat",
+        "expression": "r >= health - damage",
+        "chosen_sha256": "972d31ec25370530b4168c9d53fa4f90bd5b2fbe942d62342e59621e96c0d076",
+        "files": {
+          "original": {
+            "name": "combat_original",
+            "sha256": "f56c16cc42b655bd4cc2f7373df26b07c2f80e4ab3eb89e026576e3ad38f8901"
+          },
+          "strengthened": {
+            "name": "combat_strengthened",
+            "sha256": "7e125c520029998e2e5f481411775858a9583babe320018820573d5256b168ca"
+          }
+        }
+      },
+      {
+        "source_row": 2841,
+        "task_id": 202476,
+        "name": "addDigits",
+        "expression": [
+          "num == 0 ==> r == 0",
+          "num > 0 ==> r > 0"
+        ],
+        "chosen_sha256": "577fb59e5c6ccea318b8d7f489f72c2a4b461f282502a6bb2756e251c2f529fb",
+        "files": {
+          "original": {
+            "name": "addDigits_original",
+            "sha256": "eebf6f3164a9e97b7b68bb03e495f55972a068477cf5c08f4a79fcdb372c6ce7"
+          },
+          "strengthened": {
+            "name": "addDigits_strengthened",
+            "sha256": "37c16d4bdd09a79c8801c5f28f992dc182de42e4131f6e65c56e6007a7006eae"
+          }
+        }
+      },
+      {
+        "source_row": 2524,
+        "task_id": 204424,
+        "name": "expression_matter",
+        "expression": [
+          "r >= a * (b + c)",
+          "r >= (a + b) * c"
+        ],
+        "chosen_sha256": "12a18e21869536fbdd8f97d5c272009f814d7768a6e693744385f280f28e5623",
+        "files": {
+          "original": {
+            "name": "expression_matter_original",
+            "sha256": "82f06c9c5dad200b33d63ce59b272448bb7479e0cecc6fe9af6608dd02487142"
+          },
+          "strengthened": {
+            "name": "expression_matter_strengthened",
+            "sha256": "606cffab5b2183b9c934d0d33145f37242849a724deae8fc810f4382592c18c4"
+          }
+        }
+      },
+      {
+        "source_row": 3171,
+        "task_id": 577,
+        "name": "last_Digit_Factorial",
+        "expression": [
+          "r == 0 or r == 1 or r == 2 or r == 4 or r == 6",
+          "r == 6 ==> n == 3"
+        ],
+        "chosen_sha256": "0c2129702fd79017c794d9445cf2e67724554b7eec7a2f101dbe18a01d61c326",
+        "files": {
+          "original": {
+            "name": "last_Digit_Factorial_original",
+            "sha256": "72a87881d99d1776c3709cf52d1f60e60f97f422e2fade80f858fb865212029b"
+          },
+          "strengthened": {
+            "name": "last_Digit_Factorial_strengthened",
+            "sha256": "9fe415b858dd21da880fbfa0ac75525505c413610b64941c55afc8eb35d44221"
+          }
+        }
+      }
+    ],
+    "scope": "Interpreter controls and native-proof inputs only. No training admission or model changes."
+  },
+  "interpreter": [
+    {
+      "name": "check",
+      "positive": {
+        "name": "check",
+        "real_ok": true,
+        "after_status": "ok",
+        "survivors_before": 10,
+        "survivors_after": 0,
+        "killed_now": 10,
+        "strength_before": 0.5,
+        "strength_after": 1.0,
+        "accepted": true
+      },
+      "negative_false_clause": {
+        "name": "check",
+        "real_ok": false,
+        "after_status": "real-violates-spec",
+        "survivors_before": 10,
+        "survivors_after": null,
+        "killed_now": null,
+        "strength_before": 0.5,
+        "strength_after": null,
+        "accepted": false
+      },
+      "interpreter_holds": true,
+      "R5_interpreter_holds": true
+    },
+    {
+      "name": "enough",
+      "positive": {
+        "name": "enough",
+        "real_ok": true,
+        "after_status": "ok",
+        "survivors_before": 2,
+        "survivors_after": 0,
+        "killed_now": 2,
+        "strength_before": 0.9259259259259259,
+        "strength_after": 1.0,
+        "accepted": true
+      },
+      "negative_false_clause": {
+        "name": "enough",
+        "real_ok": false,
+        "after_status": "real-violates-spec",
+        "survivors_before": 2,
+        "survivors_after": null,
+        "killed_now": null,
+        "strength_before": 0.9259259259259259,
+        "strength_after": null,
+        "accepted": false
+      },
+      "interpreter_holds": true,
+      "R5_interpreter_holds": true
+    },
+    {
+      "name": "make_negative",
+      "positive": {
+        "name": "make_negative",
+        "real_ok": true,
+        "after_status": "ok",
+        "survivors_before": 4,
+        "survivors_after": 0,
+        "killed_now": 4,
+        "strength_before": 0.5,
+        "strength_after": 1.0,
+        "accepted": true
+      },
+      "negative_false_clause": {
+        "name": "make_negative",
+        "real_ok": false,
+        "after_status": "real-violates-spec",
+        "survivors_before": 4,
+        "survivors_after": null,
+        "killed_now": null,
+        "strength_before": 0.5,
+        "strength_after": null,
+        "accepted": false
+      },
+      "interpreter_holds": true,
+      "R5_interpreter_holds": true
+    },
+    {
+      "name": "combat",
+      "positive": {
+        "name": "combat",
+        "real_ok": true,
+        "after_status": "ok",
+        "survivors_before": 2,
+        "survivors_after": 0,
+        "killed_now": 2,
+        "strength_before": 0.8888888888888888,
+        "strength_after": 1.0,
+        "accepted": true
+      },
+      "negative_false_clause": {
+        "name": "combat",
+        "real_ok": false,
+        "after_status": "real-violates-spec",
+        "survivors_before": 2,
+        "survivors_after": null,
+        "killed_now": null,
+        "strength_before": 0.8888888888888888,
+        "strength_after": null,
+        "accepted": false
+      },
+      "interpreter_holds": true,
+      "R5_interpreter_holds": true
+    },
+    {
+      "name": "addDigits",
+      "positive": {
+        "name": "addDigits",
+        "real_ok": true,
+        "after_status": "ok",
+        "survivors_before": 2,
+        "survivors_after": 0,
+        "killed_now": 2,
+        "strength_before": 0.9047619047619048,
+        "strength_after": 1.0,
+        "accepted": true
+      },
+      "negative_false_clause": {
+        "name": "addDigits",
+        "real_ok": false,
+        "after_status": "real-violates-spec",
+        "survivors_before": 2,
+        "survivors_after": null,
+        "killed_now": null,
+        "strength_before": 0.9047619047619048,
+        "strength_after": null,
+        "accepted": false
+      },
+      "interpreter_holds": true,
+      "R5_interpreter_holds": true
+    },
+    {
+      "name": "expression_matter",
+      "positive": {
+        "name": "expression_matter",
+        "real_ok": true,
+        "after_status": "ok",
+        "survivors_before": 18,
+        "survivors_after": 0,
+        "killed_now": 18,
+        "strength_before": 0.9067357512953368,
+        "strength_after": 1.0,
+        "accepted": true
+      },
+      "negative_false_clause": {
+        "name": "expression_matter",
+        "real_ok": false,
+        "after_status": "real-violates-spec",
+        "survivors_before": 18,
+        "survivors_after": null,
+        "killed_now": null,
+        "strength_before": 0.9067357512953368,
+        "strength_after": null,
+        "accepted": false
+      },
+      "interpreter_holds": true,
+      "R5_interpreter_holds": true
+    },
+    {
+      "name": "last_Digit_Factorial",
+      "positive": {
+        "name": "last_Digit_Factorial",
+        "real_ok": true,
+        "after_status": "ok",
+        "survivors_before": 11,
+        "survivors_after": 0,
+        "killed_now": 11,
+        "strength_before": 0.75,
+        "strength_after": 1.0,
+        "accepted": true
+      },
+      "negative_false_clause": {
+        "name": "last_Digit_Factorial",
+        "real_ok": false,
+        "after_status": "real-violates-spec",
+        "survivors_before": 11,
+        "survivors_after": null,
+        "killed_now": null,
+        "strength_before": 0.75,
+        "strength_after": null,
+        "accepted": false
+      },
+      "interpreter_holds": true,
+      "R5_interpreter_holds": true
+    }
+  ],
+  "native_cells": {
+    "addDigits_original": {
+      "dafny": "verified / refuted",
+      "verus": "verified / refuted",
+      "spark": "verified / refuted",
+      "framac": "verified / refuted",
+      "lean": "verified / refuted",
+      "rocq": "verified / refuted",
+      "fstar": "verified / refuted"
+    },
+    "addDigits_strengthened": {
+      "dafny": "verified / refuted",
+      "verus": "verified / refuted",
+      "spark": "verified / refuted",
+      "framac": "verified / refuted",
+      "lean": "verified / refuted",
+      "rocq": "verified / refuted",
+      "fstar": "verified / refuted"
+    },
+    "check_original": {
+      "dafny": "verified / refuted",
+      "verus": "verified / refuted",
+      "spark": "verified / refuted",
+      "framac": "abstain / abstain",
+      "lean": "unproved / unproved",
+      "rocq": "abstain / abstain",
+      "fstar": "unproved / refuted"
+    },
+    "check_strengthened": {
+      "dafny": "verified / refuted",
+      "verus": "verified / refuted",
+      "spark": "verified / refuted",
+      "framac": "abstain / abstain",
+      "lean": "unproved / unproved",
+      "rocq": "abstain / abstain",
+      "fstar": "unproved / refuted"
+    },
+    "combat_original": {
+      "dafny": "verified / refuted",
+      "verus": "verified / refuted",
+      "spark": "verified / refuted",
+      "framac": "verified / refuted",
+      "lean": "verified / refuted",
+      "rocq": "verified / refuted",
+      "fstar": "verified / refuted"
+    },
+    "combat_strengthened": {
+      "dafny": "verified / refuted",
+      "verus": "verified / refuted",
+      "spark": "verified / refuted",
+      "framac": "verified / refuted",
+      "lean": "verified / refuted",
+      "rocq": "verified / refuted",
+      "fstar": "verified / refuted"
+    },
+    "enough_original": {
+      "dafny": "verified / refuted",
+      "verus": "verified / refuted",
+      "spark": "verified / refuted",
+      "framac": "verified / refuted",
+      "lean": "verified / refuted",
+      "rocq": "verified / refuted",
+      "fstar": "verified / refuted"
+    },
+    "enough_strengthened": {
+      "dafny": "verified / refuted",
+      "verus": "verified / refuted",
+      "spark": "verified / refuted",
+      "framac": "verified / refuted",
+      "lean": "verified / refuted",
+      "rocq": "verified / refuted",
+      "fstar": "verified / refuted"
+    },
+    "expression_matter_original": {
+      "dafny": "verified / refuted",
+      "verus": "verified / refuted",
+      "spark": "verified / refuted",
+      "framac": "verified / refuted",
+      "lean": "unproved / refuted",
+      "rocq": "verified / refuted",
+      "fstar": "verified / refuted"
+    },
+    "expression_matter_strengthened": {
+      "dafny": "verified / refuted",
+      "verus": "verified / refuted",
+      "spark": "verified / refuted",
+      "framac": "verified / refuted",
+      "lean": "unproved / refuted",
+      "rocq": "verified / refuted",
+      "fstar": "verified / refuted"
+    },
+    "last_Digit_Factorial_original": {
+      "dafny": "verified / refuted",
+      "verus": "verified / refuted",
+      "spark": "verified / refuted",
+      "framac": "verified / refuted",
+      "lean": "verified / refuted",
+      "rocq": "verified / refuted",
+      "fstar": "verified / refuted"
+    },
+    "last_Digit_Factorial_strengthened": {
+      "dafny": "verified / refuted",
+      "verus": "verified / refuted",
+      "spark": "verified / refuted",
+      "framac": "verified / refuted",
+      "lean": "verified / refuted",
+      "rocq": "verified / refuted",
+      "fstar": "verified / refuted"
+    },
+    "make_negative_original": {
+      "dafny": "verified / refuted",
+      "verus": "verified / refuted",
+      "spark": "verified / refuted",
+      "framac": "verified / refuted",
+      "lean": "verified / refuted",
+      "rocq": "verified / refuted",
+      "fstar": "verified / refuted"
+    },
+    "make_negative_strengthened": {
+      "dafny": "verified / refuted",
+      "verus": "verified / refuted",
+      "spark": "verified / refuted",
+      "framac": "verified / refuted",
+      "lean": "verified / refuted",
+      "rocq": "verified / refuted",
+      "fstar": "verified / refuted"
+    }
+  },
+  "native_passing_kernels": {
+    "addDigits_original": 7,
+    "addDigits_strengthened": 7,
+    "check_original": 3,
+    "check_strengthened": 3,
+    "combat_original": 7,
+    "combat_strengthened": 7,
+    "enough_original": 7,
+    "enough_strengthened": 7,
+    "expression_matter_original": 6,
+    "expression_matter_strengthened": 6,
+    "last_Digit_Factorial_original": 7,
+    "last_Digit_Factorial_strengthened": 7,
+    "make_negative_original": 7,
+    "make_negative_strengthened": 7
+  },
+  "repairs_passing_R5": [
+    "check",
+    "enough",
+    "make_negative",
+    "combat",
+    "addDigits",
+    "expression_matter",
+    "last_Digit_Factorial"
+  ],
+  "R5_holds": true,
+  "all_seven_repairs": 5,
+  "integrity": {
+    "contradictions": [],
+    "unsound_cells": []
+  },
+  "image_sha256": "64b75853957cc77d6cad79a9fd84b504d7ddc46b853753ed886520dd79f9acdf",
+  "source_sha256": {
+    "protocol.json": "cb97dd3e470e5efbe92e73d45dbe8bc9127e93109a2c7277680788651b3b8517",
+    "interpreter.json": "67ffa3f4027f0507d475c2fae0ed7e003dfe261ad22c5f1e4dc5f69573373b99",
+    "kernels.md": "d95880e6de253bc1249a474fd77bd930f403b3a6172fd565be3358906192e33a"
+  },
+  "builder": "t/recipes/v6_training_repair_controls.py"
+}

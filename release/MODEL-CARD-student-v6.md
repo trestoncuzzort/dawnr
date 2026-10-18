@@ -95,6 +95,34 @@ its prediction: one repaired contract loses a passing kernel, while the
 other retains two. No training rows were changed on the basis of these
 controls, and their interpreter results are not counted as all-seven proofs.
 
+An equivalent [length-ordered repair](evidence/v6-length-order-control.json)
+restores the fresh original's six passing kernels while still rejecting the
+seven sampled surviving mutants. F* still does not refute the twin, so the
+repair is not counted as all-seven. Reference checks of flagged training
+programs also exposed a missing APPS input; a
+[preserved copy](evidence/v6-restored-reference-input.json) matches the original
+compressed and uncompressed manifest hashes. The completed
+[reference audit](evidence/v6-training-reference-audit.json) confirms 23 of
+44 flagged programs under the full gate. Nineteen fail completeness, one
+disagrees on a larger input, and one has no valid larger draws.
+
+All seven [direct repairs](evidence/v6-direct-repair-controls.json) retain
+their fresh original proof counts; five pass all seven systems. These seven
+and the two earlier successful repairs all pass the unchanged
+[reference checks](evidence/v6-repaired-reference-audit.json). A separate
+[corrected snapshot](evidence/v6-corrected-data.json) updates 41 prompt/answer rows and quarantines 100 positive
+t targets whose unrepaired contracts failed that audit. Its 4,089 rows retain
+all 909 judge-Python rows unchanged. Original data and quarantined rows are
+preserved. The fixed split, lineage and GPL-origin audit flags no row; this
+does not establish that a corrected model will outperform v5.
+
+The next registered trial initializes from the preserved step-400 adapter,
+uses a fresh optimizer and the corrected data, and runs one epoch at `2e-5`.
+Its [CPU preflight](evidence/v6-corrective-preflight.json) reproduces the exact
+token stream on the training image: 3,980 rows fit, 109 exceed the original
+2,845-token limit, and all 41 repaired rows fit. The trial is 249 updates.
+It must still pass the existing development and release gates.
+
 The correct-source specification control currently reaches 32/33 in all seven
 proof systems ([complete table](evidence/v6-prover-controls.md)). Frama-C rejects one twin certificate; all 33 pass in each of
 the other six systems. That instrument limitation is retained for both arms.

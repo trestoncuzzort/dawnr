@@ -1,0 +1,374 @@
+{
+  "schema": 1,
+  "candidate": "v6-corrective-20261018",
+  "build": {
+    "parent_dataset_sha256": "e14f766f06299d589d9a6e3293f6bf3e3f06ffac026433e2fdeff1c04294af80",
+    "rows": 4089,
+    "changed_rows": [
+      {
+        "parent_row": 45,
+        "task_id": 349,
+        "executable": true,
+        "supplied_specifications_updated": 0,
+        "program_sha256": "289827f3a095b83c71bae183e446a4132676d6330e80836c4dca1f01ee1390ef"
+      },
+      {
+        "parent_row": 69,
+        "task_id": 378,
+        "executable": true,
+        "supplied_specifications_updated": 0,
+        "program_sha256": "dc86acd9bfd76f9e3b526a63ce5d184be4ef4c811ff8321e8437e0f65746ceeb"
+      },
+      {
+        "parent_row": 187,
+        "task_id": 202503,
+        "executable": true,
+        "supplied_specifications_updated": 0,
+        "program_sha256": "6507980c15ecf8e65406d83e88bd607515ef4b47ff1dc2daff71519deaf4ff0d"
+      },
+      {
+        "parent_row": 257,
+        "task_id": 203286,
+        "executable": true,
+        "supplied_specifications_updated": 0,
+        "program_sha256": "af4de30a04e1d4b3283b4373953144a58c6dde6f63b61992a0cde771e85e2940"
+      },
+      {
+        "parent_row": 298,
+        "task_id": 203693,
+        "executable": true,
+        "supplied_specifications_updated": 0,
+        "program_sha256": "26fbe40ead7f66e2981c2c6b4436ea13eda0d35cd5703500d7cd1440420f21ae"
+      },
+      {
+        "parent_row": 309,
+        "task_id": 203795,
+        "executable": true,
+        "supplied_specifications_updated": 0,
+        "program_sha256": "a904af99fe0a942fd2e141c5f95faf51fa2e94fcaf699647829b351f17e2449a"
+      },
+      {
+        "parent_row": 513,
+        "task_id": 349,
+        "executable": false,
+        "supplied_specifications_updated": 0,
+        "program_sha256": "289827f3a095b83c71bae183e446a4132676d6330e80836c4dca1f01ee1390ef"
+      },
+      {
+        "parent_row": 514,
+        "task_id": 349,
+        "executable": true,
+        "supplied_specifications_updated": 1,
+        "program_sha256": "289827f3a095b83c71bae183e446a4132676d6330e80836c4dca1f01ee1390ef"
+      },
+      {
+        "parent_row": 567,
+        "task_id": 378,
+        "executable": false,
+        "supplied_specifications_updated": 0,
+        "program_sha256": "dc86acd9bfd76f9e3b526a63ce5d184be4ef4c811ff8321e8437e0f65746ceeb"
+      },
+      {
+        "parent_row": 568,
+        "task_id": 378,
+        "executable": true,
+        "supplied_specifications_updated": 1,
+        "program_sha256": "dc86acd9bfd76f9e3b526a63ce5d184be4ef4c811ff8321e8437e0f65746ceeb"
+      },
+      {
+        "parent_row": 842,
+        "task_id": 202503,
+        "executable": false,
+        "supplied_specifications_updated": 0,
+        "program_sha256": "6507980c15ecf8e65406d83e88bd607515ef4b47ff1dc2daff71519deaf4ff0d"
+      },
+      {
+        "parent_row": 843,
+        "task_id": 202503,
+        "executable": true,
+        "supplied_specifications_updated": 1,
+        "program_sha256": "6507980c15ecf8e65406d83e88bd607515ef4b47ff1dc2daff71519deaf4ff0d"
+      },
+      {
+        "parent_row": 1010,
+        "task_id": 203286,
+        "executable": false,
+        "supplied_specifications_updated": 0,
+        "program_sha256": "af4de30a04e1d4b3283b4373953144a58c6dde6f63b61992a0cde771e85e2940"
+      },
+      {
+        "parent_row": 1011,
+        "task_id": 203286,
+        "executable": true,
+        "supplied_specifications_updated": 1,
+        "program_sha256": "af4de30a04e1d4b3283b4373953144a58c6dde6f63b61992a0cde771e85e2940"
+      },
+      {
+        "parent_row": 1114,
+        "task_id": 203693,
+        "executable": false,
+        "supplied_specifications_updated": 0,
+        "program_sha256": "26fbe40ead7f66e2981c2c6b4436ea13eda0d35cd5703500d7cd1440420f21ae"
+      },
+      {
+        "parent_row": 1115,
+        "task_id": 203693,
+        "executable": true,
+        "supplied_specifications_updated": 1,
+        "program_sha256": "26fbe40ead7f66e2981c2c6b4436ea13eda0d35cd5703500d7cd1440420f21ae"
+      },
+      {
+        "parent_row": 1137,
+        "task_id": 203795,
+        "executable": false,
+        "supplied_specifications_updated": 0,
+        "program_sha256": "a904af99fe0a942fd2e141c5f95faf51fa2e94fcaf699647829b351f17e2449a"
+      },
+      {
+        "parent_row": 1138,
+        "task_id": 203795,
+        "executable": true,
+        "supplied_specifications_updated": 1,
+        "program_sha256": "a904af99fe0a942fd2e141c5f95faf51fa2e94fcaf699647829b351f17e2449a"
+      },
+      {
+        "parent_row": 1807,
+        "task_id": 349,
+        "executable": true,
+        "supplied_specifications_updated": 0,
+        "program_sha256": "289827f3a095b83c71bae183e446a4132676d6330e80836c4dca1f01ee1390ef"
+      },
+      {
+        "parent_row": 1808,
+        "task_id": 349,
+        "executable": true,
+        "supplied_specifications_updated": 0,
+        "program_sha256": "289827f3a095b83c71bae183e446a4132676d6330e80836c4dca1f01ee1390ef"
+      },
+      {
+        "parent_row": 1809,
+        "task_id": 349,
+        "executable": true,
+        "supplied_specifications_updated": 0,
+        "program_sha256": "289827f3a095b83c71bae183e446a4132676d6330e80836c4dca1f01ee1390ef"
+      },
+      {
+        "parent_row": 1810,
+        "task_id": 349,
+        "executable": true,
+        "supplied_specifications_updated": 0,
+        "program_sha256": "289827f3a095b83c71bae183e446a4132676d6330e80836c4dca1f01ee1390ef"
+      },
+      {
+        "parent_row": 1811,
+        "task_id": 349,
+        "executable": true,
+        "supplied_specifications_updated": 0,
+        "program_sha256": "289827f3a095b83c71bae183e446a4132676d6330e80836c4dca1f01ee1390ef"
+      },
+      {
+        "parent_row": 1812,
+        "task_id": 349,
+        "executable": true,
+        "supplied_specifications_updated": 0,
+        "program_sha256": "289827f3a095b83c71bae183e446a4132676d6330e80836c4dca1f01ee1390ef"
+      },
+      {
+        "parent_row": 2071,
+        "task_id": 202503,
+        "executable": true,
+        "supplied_specifications_updated": 0,
+        "program_sha256": "6507980c15ecf8e65406d83e88bd607515ef4b47ff1dc2daff71519deaf4ff0d"
+      },
+      {
+        "parent_row": 2072,
+        "task_id": 202503,
+        "executable": true,
+        "supplied_specifications_updated": 0,
+        "program_sha256": "6507980c15ecf8e65406d83e88bd607515ef4b47ff1dc2daff71519deaf4ff0d"
+      },
+      {
+        "parent_row": 2073,
+        "task_id": 202503,
+        "executable": true,
+        "supplied_specifications_updated": 0,
+        "program_sha256": "6507980c15ecf8e65406d83e88bd607515ef4b47ff1dc2daff71519deaf4ff0d"
+      },
+      {
+        "parent_row": 2074,
+        "task_id": 202503,
+        "executable": true,
+        "supplied_specifications_updated": 0,
+        "program_sha256": "6507980c15ecf8e65406d83e88bd607515ef4b47ff1dc2daff71519deaf4ff0d"
+      },
+      {
+        "parent_row": 2213,
+        "task_id": 203286,
+        "executable": true,
+        "supplied_specifications_updated": 0,
+        "program_sha256": "af4de30a04e1d4b3283b4373953144a58c6dde6f63b61992a0cde771e85e2940"
+      },
+      {
+        "parent_row": 2214,
+        "task_id": 203286,
+        "executable": true,
+        "supplied_specifications_updated": 0,
+        "program_sha256": "af4de30a04e1d4b3283b4373953144a58c6dde6f63b61992a0cde771e85e2940"
+      },
+      {
+        "parent_row": 2296,
+        "task_id": 203795,
+        "executable": true,
+        "supplied_specifications_updated": 0,
+        "program_sha256": "a904af99fe0a942fd2e141c5f95faf51fa2e94fcaf699647829b351f17e2449a"
+      },
+      {
+        "parent_row": 2297,
+        "task_id": 203795,
+        "executable": true,
+        "supplied_specifications_updated": 0,
+        "program_sha256": "a904af99fe0a942fd2e141c5f95faf51fa2e94fcaf699647829b351f17e2449a"
+      },
+      {
+        "parent_row": 2524,
+        "task_id": 204424,
+        "executable": true,
+        "supplied_specifications_updated": 0,
+        "program_sha256": "7f666c99c43ea5e070a6a2132abb977886d74e5cad86e726dd597a9ac7fa5f14"
+      },
+      {
+        "parent_row": 2722,
+        "task_id": 204424,
+        "executable": false,
+        "supplied_specifications_updated": 0,
+        "program_sha256": "7f666c99c43ea5e070a6a2132abb977886d74e5cad86e726dd597a9ac7fa5f14"
+      },
+      {
+        "parent_row": 2723,
+        "task_id": 204424,
+        "executable": true,
+        "supplied_specifications_updated": 1,
+        "program_sha256": "7f666c99c43ea5e070a6a2132abb977886d74e5cad86e726dd597a9ac7fa5f14"
+      },
+      {
+        "parent_row": 2841,
+        "task_id": 202476,
+        "executable": true,
+        "supplied_specifications_updated": 0,
+        "program_sha256": "fdeb4658a990d3b5fe8a4a533956b99db7327132ec0ac33d90a7b4ca01877bb9"
+      },
+      {
+        "parent_row": 2941,
+        "task_id": 202476,
+        "executable": false,
+        "supplied_specifications_updated": 0,
+        "program_sha256": "fdeb4658a990d3b5fe8a4a533956b99db7327132ec0ac33d90a7b4ca01877bb9"
+      },
+      {
+        "parent_row": 2942,
+        "task_id": 202476,
+        "executable": true,
+        "supplied_specifications_updated": 1,
+        "program_sha256": "fdeb4658a990d3b5fe8a4a533956b99db7327132ec0ac33d90a7b4ca01877bb9"
+      },
+      {
+        "parent_row": 3171,
+        "task_id": 577,
+        "executable": true,
+        "supplied_specifications_updated": 0,
+        "program_sha256": "8ef113f5c8a1f07626eed0f6b87984b9498fd59b0794b75f0ce6134663d77fc6"
+      },
+      {
+        "parent_row": 3182,
+        "task_id": 577,
+        "executable": false,
+        "supplied_specifications_updated": 0,
+        "program_sha256": "8ef113f5c8a1f07626eed0f6b87984b9498fd59b0794b75f0ce6134663d77fc6"
+      },
+      {
+        "parent_row": 3183,
+        "task_id": 577,
+        "executable": true,
+        "supplied_specifications_updated": 1,
+        "program_sha256": "8ef113f5c8a1f07626eed0f6b87984b9498fd59b0794b75f0ce6134663d77fc6"
+      }
+    ],
+    "changed_row_count": 41,
+    "quarantined_row_count": 100,
+    "quarantined_contracts": 19,
+    "quarantined_contract_programs": 20,
+    "deduplicated_parent_rows": [],
+    "prompt_answer_duplicates": 0,
+    "kinds": {
+      "graded": 558,
+      "python": 288,
+      "spec": 502,
+      "proof-py": 567,
+      "spec-given": 547,
+      "debug": 670,
+      "samples": 48,
+      "judge-python": 909
+    },
+    "judge_python_rows_unchanged": 909,
+    "development_or_heldout_id_overlap": [],
+    "specification_panel_text_overlap": [],
+    "inputs": {
+      "t/out/v6-20261018/proof-results/training-reference-audit-v2/summary.json": "e75b3555ddc52832569fe49a045a93b9fb2430c1c42acac844c4f267e1e664ff",
+      "t/out/v6-20261018/proof-results/repaired-reference-audit/summary.json": "eb5c9c3d3eb59141da41d90376b7570832dd35ca327c8b1f96a3337c82242222",
+      "t/out/v6-20261018/dev-95.txt": "f807aec7e6b89e524ded720d9ccfb670c1d504a5a5717966a4b870516701daf7",
+      "t/out/v6-20261018/clean-182.txt": "837e2ac5a70980d2ac7b35a97af258997d153e7c755cd166555d232c371ad51f",
+      "t/out/v6-20261018/spec-heldout.jsonl": "effc2f4e586e0c4f7638a5a9a2b75515aaf7019de03ca819d46e5aa3d593ab24",
+      "t/recipes/v6_corrected_rows.py": "2c9019ecd76e8654e0785ef6cb8b84e9cffc46262013c76620cd62b468db83d2"
+    },
+    "files": {
+      "training-rows.jsonl": "8aa1b7528363ebfa149e9b6a18ea9081c4904ff3d8687c240a9ea511d45c4794",
+      "quarantined.jsonl": "bb9eda50dbf323fd6bab97d29de7f61d53dd912c33ceca297b87d3ad7234830c",
+      "lineage.json": "7589f5db478e77b2dbae1e47aabdff1035d36389dc35e8677ef09a1453afe9b8"
+    },
+    "scope": "Corrected positive t contracts and quarantine of measured nonpassing contracts. Original Python targets unchanged. Full held-out lineage audit and token accounting remain required before training."
+  },
+  "tokenization": {
+    "sha256": "8aa1b7528363ebfa149e9b6a18ea9081c4904ff3d8687c240a9ea511d45c4794",
+    "rows": 4089,
+    "used": 3980,
+    "used_kinds": {
+      "english": 602,
+      "python": 287,
+      "spec": 499,
+      "proof-py": 560,
+      "spec-given": 546,
+      "repair": 661,
+      "judge-python": 825
+    },
+    "tokens": 3131539,
+    "squared_lengths": 3814981035,
+    "response_tokens": 1107487,
+    "median_tokens": 576,
+    "max_tokens": 2838,
+    "base_revision": "851bf6e806efd8d0a36b00ddf55e13ccb7b8cd0a",
+    "encoded_sha256": "0a8d9eb504d7be5ca04085014dd978f286e7e206d366cfe66c13480882afd5da",
+    "tokenizer_sha256": {
+      "chat_template.jinja": "a4aee8afcf2e0711942cf848899be66016f8d14a889ff9ede07bca099c28f715",
+      "config.json": "ddc63e1c717afa86c865bb5e01313d89d72bb53b97ad4a8a03ba8510c0621670",
+      "tokenizer_config.json": "316230d6a809701f4db5ea8f8fc862bc3a6f3229c937c174e674ff3ca0a64ac8",
+      "vocab.json": "ce99b4cb2983d118806ce0a8b777a35b093e2000a503ebde25853284c9dfa003",
+      "merges.txt": "a9d356d7bdf1ef4949e3e748e95b8e10ad9d4e2e838eddc38a0a7b6b94d1db8d",
+      "tokenizer.json": "5f9e4d4901a92b997e463c1f46055088b6cca5ca61a6522d1b9f64c4bb81cb42"
+    },
+    "versions": {
+      "transformers": "5.20.1",
+      "tokenizers": "0.23.3"
+    }
+  },
+  "rows_dropped_too_long": 109,
+  "changed_rows_fitting": 41,
+  "repaired_programs_fitting": 9,
+  "panel_and_lineage_audit": {
+    "rows": 4089,
+    "programs": 2792,
+    "unparsed": 157,
+    "flagged": []
+  },
+  "audit_sha256": "42376a22b4da7bf4058299213a4dd0163796afa3abcb125db836b7015e683bd4",
+  "scope": "Input correction and sampling checks only. No evidence yet that the next model improves. All original Python targets are retained, including judge rows with proof:none."
+}

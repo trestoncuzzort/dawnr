@@ -1,0 +1,12 @@
+{
+  "source": "preserved v5 reference-data snapshot; two independently retained files agree",
+  "bytes": 26013950,
+  "sha256": "a3f4096b423aff78604b984191e4586dc6053fa18c27508d95233f19141062a0",
+  "v5_pool_entries": 3003,
+  "selected_programs": 44,
+  "missing_selected_task_ids": [],
+  "raw_sha256": "45e82ef22ed8e7c0c04d881a21b923e9dd233157896b0b8d5b3493e887499cae",
+  "records": 5000,
+  "raw_bytes": 107101272,
+  "original_manifest_matches": true
+}
