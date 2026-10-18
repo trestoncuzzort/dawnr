@@ -1,0 +1,73 @@
+{
+  "selected": 128,
+  "completed": 128,
+  "statuses": {
+    "ok": 126,
+    "timeout": 2
+  },
+  "capped": 0,
+  "known_strength": 126,
+  "programs_with_survivors": 14,
+  "survivors": 214,
+  "prediction_S1": true,
+  "protocol_sha256": "dfd1dd3222c9c679426c30be11567a16a3d25bb01e26f5ac0fd181b3e60e21ff",
+  "results_sha256": "6469ca5dfe05ec7b51bda6afaf8708c06c226a10d952b143eb4e25820c1506e9",
+  "scope": "Bounded interpreter diagnostic on training programs. Survivors require review; unknowns are not passes.",
+  "dataset_sha256": "e14f766f06299d589d9a6e3293f6bf3e3f06ffac026433e2fdeff1c04294af80",
+  "unique_training_programs": 1011,
+  "row_categories": {
+    "program_row": 2474,
+    "no_t_block": 1197,
+    "empty_body": 518
+  },
+  "selection": "first 128 SHA-256 keys after student_rows._normalised(task, body=True)",
+  "seconds_per_task": 15,
+  "worker_memory_mib": 1536,
+  "reporter": "t/recipes/v6_training_strength.py",
+  "reviewed_examples": [
+    {
+      "name": "move_first",
+      "source_rows": [
+        69,
+        568
+      ],
+      "program_sha256": "02f811a42f074df7507c37f42292672284b1af5b3105efba7c06907ded0f4fc8",
+      "strength": 0.8125,
+      "survivors": 3,
+      "witness": "s=[0] -> real [0], twin [0, 0]",
+      "interpretation": "An extra output element is allowed despite the specified rotation."
+    },
+    {
+      "name": "findLUSlength",
+      "source_rows": [
+        187,
+        843,
+        2071,
+        2072,
+        2073,
+        2074
+      ],
+      "program_sha256": "0bcc362010d9948f72c54a4238859951546d96827bd374641166730ac77f21f0",
+      "strength": 0.631578947368421,
+      "survivors": 7,
+      "witness": "s1=[], s2=[0] -> real 1, twin 0",
+      "interpretation": "The shorter of two unequal input lengths can satisfy the contract."
+    },
+    {
+      "name": "findShortestSubArray",
+      "source_rows": [
+        189,
+        849,
+        2077,
+        2078,
+        2079
+      ],
+      "program_sha256": "0f38e2edc6dc2aec32cc9b90c39112f7f12f916e894d19a16e69832a6f44ca62",
+      "strength": 0.3448275862068966,
+      "survivors": 114,
+      "witness": "nums=[0, 1] -> real 1, twin 2",
+      "interpretation": "The contract bounds the result but does not determine the requested subarray length."
+    }
+  ],
+  "limits": "Survivors may reflect intentional latitude; tied extrema are examples. Two timeouts are unknown. The audit is bounded and interpreter-based, not a formal proof or a causal explanation of the development regression."
+}
