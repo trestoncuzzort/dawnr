@@ -18,6 +18,7 @@ import sys
 ENGINE = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ENGINE))
 import check_wf
+import loop_filter
 import spec_experiment as se
 import student_rows
 import surface
@@ -37,6 +38,17 @@ def fingerprint(task, body=True):
 
 def row_key(row):
     return json.dumps([row['prompt'], row['chosen']], sort_keys=True)
+
+
+def problem_id(row):
+    if row.get('task_id') is not None:
+        return int(row['task_id'])
+    for field in ('name', 'task'):
+        if isinstance(row.get(field), str):
+            found = loop_filter.problem_id(row[field])
+            if found is not None:
+                return found
+    return None
 
 
 def validate_run(directory):
@@ -145,14 +157,15 @@ def build(args):
             result['program_sha256'])
     output, quarantined, lineage, changed, duplicate_rows, seen = [], [], [], [], [], set()
     for index, (row, raw) in enumerate(zip(originals, raw_lines)):
+        row_id = problem_id(row)
         block = se.find_block(row['chosen'])
         task = surface.parse(block) if block is not None else None
         info = None
         if task is not None:
             info = programs.get(fingerprint(task)) if task.get('body') else specifications.get(
-                (row.get('task_id'), fingerprint(task, body=False)))
+                (row_id, fingerprint(task, body=False)))
         if info is not None:
-            assert row.get('task_id') == info['item']['task_id']
+            assert row_id == info['item']['task_id']
             updated, prompt_changes = rewrite(row, task, info['task'])
             old_proof = {k:row[k] for k in ('kernels_verified', 'undecided', 'proof') if k in row}
             executable = bool(task['body'])
@@ -166,13 +179,13 @@ def build(args):
                 'supporting_program_kernels': info['passing']}
             assert surface.parse(se.find_block(updated['chosen']))['body'] == task['body']
             raw = json.dumps(updated, sort_keys=True)
-            changed.append({'parent_row': index, 'task_id': row['task_id'], 'executable': executable,
+            changed.append({'parent_row': index, 'task_id': row_id, 'executable': executable,
                             'supplied_specifications_updated': prompt_changes,
                             'program_sha256': info['item']['program_sha256']})
             row = updated
-        elif task is not None and (row.get('task_id'), fingerprint(task, body=False)) in quarantine_contracts:
+        elif task is not None and (row_id, fingerprint(task, body=False)) in quarantine_contracts:
             quarantined.append({'parent_row': index, 'row': row,
-                'contract_program_sha256s': quarantine_contracts[(row.get('task_id'), fingerprint(task, body=False))],
+                'contract_program_sha256s': quarantine_contracts[(row_id, fingerprint(task, body=False))],
                 'reason': 'Positive target contract did not pass the registered reference gate; this is not a claim that every body is wrong.'})
             continue
         key = row_key(row)
@@ -186,7 +199,7 @@ def build(args):
     assert {r['program_sha256'] for r in changed} == {r['program_sha256'] for r in repair_manifest['selected']}
     assert [r for r in built if r.get('kind') == 'judge-python'] == [r for r in originals if r.get('kind') == 'judge-python']
     for path in (args.dev, args.heldout):
-        assert not set(map(int, path.read_text().split())) & {r.get('task_id') for r in built}
+        assert not set(map(int, path.read_text().split())) & {problem_id(r) for r in built}
     assert not student_rows.leaks_heldout(built, read(args.spec_panel))
     if args.out.exists():
         raise ValueError('preserve previous snapshots; use a fresh output directory')
@@ -195,6 +208,7 @@ def build(args):
     (args.out / 'quarantined.jsonl').write_text(''.join(json.dumps(r, sort_keys=True) + '\n' for r in quarantined))
     (args.out / 'lineage.json').write_text(json.dumps(lineage, indent=2) + '\n')
     report = {'parent_dataset_sha256': DATASET, 'rows': len(output), 'changed_rows': changed,
+        'identity_policy': 'Explicit task_id, otherwise the existing loop_filter.problem_id parser applied to name/task.',
         'changed_row_count': len(changed), 'quarantined_row_count': len(quarantined),
         'quarantined_contracts': len({tuple(r['contract_program_sha256s']) for r in quarantined}),
         'quarantined_contract_programs': len({key for r in quarantined for key in r['contract_program_sha256s']}),

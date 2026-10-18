@@ -123,6 +123,13 @@ token stream on the training image: 3,980 rows fit, 109 exceed the original
 2,845-token limit, and all 41 repaired rows fit. The trial is 249 updates.
 It must still pass the existing development and release gates.
 
+A [follow-up audit](evidence/v6-structure-audit.json) finds all 994 distinct
+nonempty programs in that active input structurally valid under the inference
+gate. Three corpus views of weak contracts remained because their problem
+IDs appeared in names instead of `task_id`. The builder now recognizes those
+identities; a separate, untrained 4,086-row snapshot removes them and passes
+the same lineage audit. The active trial remains tied to its 4,089-row input.
+
 The correct-source specification control currently reaches 32/33 in all seven
 proof systems ([complete table](evidence/v6-prover-controls.md)). Frama-C rejects one twin certificate; all 33 pass in each of
 the other six systems. That instrument limitation is retained for both arms.

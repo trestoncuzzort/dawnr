@@ -1,0 +1,1076 @@
+{
+  "script": "t/recipes/v6_structure_audit.py",
+  "script_sha256": "68e3c1bbf0922eb95e293d24b82e6d10aaa9ab01fb6b97994d63bc3c348ad781",
+  "frozen_sources": {
+    "t/surface.py": "14b7a852d54689fdca9342967780a65edeae8272778a55d99caf11a517b11a68",
+    "t/fuzz_lower.py": "3961223bfee3ed30bb58117b0146e779bb57c320c772d36474db96697e90cec5",
+    "t/check_wf.py": "5325957fdb1552120b3ae244bfdff17c02f485bf873cac88b46acd861c734115",
+    "t/spec_given.py": "ef5f362e27a61f1ca116811b36196ffbc71ff927a3d0c6f0d1f743a740b1e3ae",
+    "t/student_rows.py": "1e821e077fefb83e995c4e709a71f06c3d1aea320993819e865943a1c60c486a"
+  },
+  "training": {
+    "original": {
+      "dataset_sha256": "e14f766f06299d589d9a6e3293f6bf3e3f06ffac026433e2fdeff1c04294af80",
+      "rows": 4189,
+      "without_t": 1197,
+      "unparsed_chosen": [],
+      "distinct_nonempty_programs": 1011,
+      "invalid_nonempty_programs": [],
+      "nonempty_header_promotions": 9,
+      "distinct_empty_body_specifications": 510,
+      "empty_body_specifications_with_checker_errors": 9,
+      "W1_holds": true,
+      "scope": "Positive chosen targets only. Empty-body specifications are reported separately; no executable proof is claimed for them."
+    },
+    "corrected": {
+      "dataset_sha256": "8aa1b7528363ebfa149e9b6a18ea9081c4904ff3d8687c240a9ea511d45c4794",
+      "rows": 4089,
+      "without_t": 1197,
+      "unparsed_chosen": [],
+      "distinct_nonempty_programs": 994,
+      "invalid_nonempty_programs": [],
+      "nonempty_header_promotions": 9,
+      "distinct_empty_body_specifications": 494,
+      "empty_body_specifications_with_checker_errors": 8,
+      "W1_holds": true,
+      "scope": "Positive chosen targets only. Empty-body specifications are reported separately; no executable proof is claimed for them."
+    },
+    "lineage_corrected_untrained": {
+      "dataset_sha256": "0b8c786bb8aa667716780df7732460ef7f14a707c3f9731c666a7c1e89ca21a9",
+      "rows": 4086,
+      "without_t": 1197,
+      "unparsed_chosen": [],
+      "distinct_nonempty_programs": 991,
+      "invalid_nonempty_programs": [],
+      "nonempty_header_promotions": 9,
+      "distinct_empty_body_specifications": 494,
+      "empty_body_specifications_with_checker_errors": 8,
+      "W1_holds": true,
+      "scope": "Positive chosen targets only. Empty-body specifications are reported separately; no executable proof is claimed for them."
+    }
+  },
+  "development_cache": {
+    "v5": {
+      "cached_body_requests": 43,
+      "categories": {
+        "not well formed": 8,
+        "passes structural gates": 32,
+        "parse": 3
+      },
+      "invalid_body_replies_with_errors_in_given_spec": 3,
+      "invalid_body_replies_with_forward_helper_calls": 0,
+      "first_error_per_invalid_reply": {
+        "unbound var k [SPEC: a name must be bound before use (v0 and Gate 1 scope rule)]": 1,
+        "task decreases without a self-call [SPEC: a task decreases requires a self-recursive body, and vice versa (Gate 3)]": 3,
+        "* wants all ints or all reals (not ['seq', 'int']); write real(x) to convert [SPEC: + - * neg take all ints or all reals, / both, % ints only; real(x) converts (Division and modulo; Exact rationals)]": 3,
+        "assign r: {'seq': 'seq'} into seq [SPEC: assign's expression type must match the target's declared type]": 1
+      },
+      "invalid_body_replies": [
+        {
+          "request_sha256": "012ebf492e9dcfe5b079e0b1fb3b3e88237e264ec632da68ba0bbe989b3d1ed0",
+          "name": "second_frequent",
+          "errors": [
+            "unbound var k [SPEC: a name must be bound before use (v0 and Gate 1 scope rule)]",
+            "at wants (a seq of any element type, int) [SPEC: at wants (a seq of any element type, int) and gives the element (Gate 1; Compositional types)]",
+            "== wants two values of one type, found 'seq' and None [SPEC: == and != apply to two values of one type, structural at every depth (Gate 1; Compositional types)]",
+            "unbound var k [SPEC: a name must be bound before use (v0 and Gate 1 scope rule)]",
+            "at wants (a seq of any element type, int) [SPEC: at wants (a seq of any element type, int) and gives the element (Gate 1; Compositional types)]",
+            "== wants two values of one type, found 'seq' and None [SPEC: == and != apply to two values of one type, structural at every depth (Gate 1; Compositional types)]",
+            "unbound var k [SPEC: a name must be bound before use (v0 and Gate 1 scope rule)]",
+            "at wants (a seq of any element type, int) [SPEC: at wants (a seq of any element type, int) and gives the element (Gate 1; Compositional types)]",
+            "!= wants two values of one type, found 'seq' and None [SPEC: == and != apply to two values of one type, structural at every depth (Gate 1; Compositional types)]",
+            "unbound var k [SPEC: a name must be bound before use (v0 and Gate 1 scope rule)]",
+            "at wants (a seq of any element type, int) [SPEC: at wants (a seq of any element type, int) and gives the element (Gate 1; Compositional types)]",
+            "!= wants two values of one type, found 'seq' and None [SPEC: == and != apply to two values of one type, structural at every depth (Gate 1; Compositional types)]",
+            "count wants (seq, seq) [SPEC: each string-library member's argument types must match its signature (The string library)]",
+            "+ wants all ints or all reals (not [{'seq': 'seq'}, {'seq': {'pair': ['seq', 'int']}}]); write real(x) to convert [SPEC: + - * neg take all ints or all reals, / both, % ints only; real(x) converts (Division and modulo; Exact rationals)]",
+            "assign counts: int into {'seq': 'seq'} [SPEC: assign's expression type must match the target's declared type]",
+            "assign counts: seq into {'seq': 'seq'} [SPEC: assign's expression type must match the target's declared type]"
+          ],
+          "category": "not well formed",
+          "given_spec_errors": [],
+          "forward_helper_calls": []
+        },
+        {
+          "request_sha256": "0ef799b41ea9e67c6c61ae49a46ac4b470ede06ef3940777efcfaa599b2cdf6f",
+          "name": "bell_number",
+          "errors": [
+            "task decreases without a self-call [SPEC: a task decreases requires a self-recursive body, and vice versa (Gate 3)]"
+          ],
+          "category": "not well formed",
+          "given_spec_errors": [],
+          "forward_helper_calls": []
+        },
+        {
+          "request_sha256": "2271d6236714edf9a6e5bf510b53e0726b355f595d88e56c5af6d606a2db0643",
+          "name": "bell_number",
+          "errors": [
+            "task decreases without a self-call [SPEC: a task decreases requires a self-recursive body, and vice versa (Gate 3)]"
+          ],
+          "category": "not well formed",
+          "given_spec_errors": [],
+          "forward_helper_calls": []
+        },
+        {
+          "request_sha256": "3f8394fec9d1531481b085684e43283e64a9d82e03439d4dca59506778c1ecd8",
+          "name": "re_order",
+          "errors": [
+            "* wants all ints or all reals (not ['seq', 'int']); write real(x) to convert [SPEC: + - * neg take all ints or all reals, / both, % ints only; real(x) converts (Division and modulo; Exact rationals)]",
+            "+ wants all ints or all reals (not ['seq', 'int']); write real(x) to convert [SPEC: + - * neg take all ints or all reals, / both, % ints only; real(x) converts (Division and modulo; Exact rationals)]",
+            "== wants two values of one type, found 'seq' and 'int' [SPEC: == and != apply to two values of one type, structural at every depth (Gate 1; Compositional types)]",
+            "* wants all ints or all reals (not ['seq', 'int']); write real(x) to convert [SPEC: + - * neg take all ints or all reals, / both, % ints only; real(x) converts (Division and modulo; Exact rationals)]",
+            "local zeros init type mismatch [SPEC: assign's expression type must match the target's declared type]"
+          ],
+          "category": "not well formed",
+          "given_spec_errors": [
+            "* wants all ints or all reals (not ['seq', 'int']); write real(x) to convert [SPEC: + - * neg take all ints or all reals, / both, % ints only; real(x) converts (Division and modulo; Exact rationals)]",
+            "+ wants all ints or all reals (not ['seq', 'int']); write real(x) to convert [SPEC: + - * neg take all ints or all reals, / both, % ints only; real(x) converts (Division and modulo; Exact rationals)]",
+            "== wants two values of one type, found 'seq' and 'int' [SPEC: == and != apply to two values of one type, structural at every depth (Gate 1; Compositional types)]"
+          ],
+          "forward_helper_calls": []
+        },
+        {
+          "request_sha256": "76d1b8865279a0c468ed40ec1db0ebd2f86756c6c6562e900481ef875a5a081b",
+          "name": "re_order",
+          "errors": [
+            "* wants all ints or all reals (not ['seq', 'int']); write real(x) to convert [SPEC: + - * neg take all ints or all reals, / both, % ints only; real(x) converts (Division and modulo; Exact rationals)]",
+            "+ wants all ints or all reals (not ['seq', 'int']); write real(x) to convert [SPEC: + - * neg take all ints or all reals, / both, % ints only; real(x) converts (Division and modulo; Exact rationals)]",
+            "== wants two values of one type, found 'seq' and 'int' [SPEC: == and != apply to two values of one type, structural at every depth (Gate 1; Compositional types)]",
+            "* wants all ints or all reals (not ['seq', 'int']); write real(x) to convert [SPEC: + - * neg take all ints or all reals, / both, % ints only; real(x) converts (Division and modulo; Exact rationals)]",
+            "+ wants all ints or all reals (not ['seq', 'int']); write real(x) to convert [SPEC: + - * neg take all ints or all reals, / both, % ints only; real(x) converts (Division and modulo; Exact rationals)]",
+            "assign r: int into seq [SPEC: assign's expression type must match the target's declared type]"
+          ],
+          "category": "not well formed",
+          "given_spec_errors": [
+            "* wants all ints or all reals (not ['seq', 'int']); write real(x) to convert [SPEC: + - * neg take all ints or all reals, / both, % ints only; real(x) converts (Division and modulo; Exact rationals)]",
+            "+ wants all ints or all reals (not ['seq', 'int']); write real(x) to convert [SPEC: + - * neg take all ints or all reals, / both, % ints only; real(x) converts (Division and modulo; Exact rationals)]",
+            "== wants two values of one type, found 'seq' and 'int' [SPEC: == and != apply to two values of one type, structural at every depth (Gate 1; Compositional types)]"
+          ],
+          "forward_helper_calls": []
+        },
+        {
+          "request_sha256": "c638a6e445445695960011afc8d4f774cfe36bf3b80eaa3cf26aaf7b8b85cb51",
+          "name": "bell_number",
+          "errors": [
+            "task decreases without a self-call [SPEC: a task decreases requires a self-recursive body, and vice versa (Gate 3)]"
+          ],
+          "category": "not well formed",
+          "given_spec_errors": [],
+          "forward_helper_calls": []
+        },
+        {
+          "request_sha256": "d4b34fba44b055cfc89f1b62e2c8009d4a5dba32ecba3fca6d93b8a3957c0836",
+          "name": "re_order",
+          "errors": [
+            "* wants all ints or all reals (not ['seq', 'int']); write real(x) to convert [SPEC: + - * neg take all ints or all reals, / both, % ints only; real(x) converts (Division and modulo; Exact rationals)]",
+            "+ wants all ints or all reals (not ['seq', 'int']); write real(x) to convert [SPEC: + - * neg take all ints or all reals, / both, % ints only; real(x) converts (Division and modulo; Exact rationals)]",
+            "== wants two values of one type, found 'seq' and 'int' [SPEC: == and != apply to two values of one type, structural at every depth (Gate 1; Compositional types)]",
+            "* wants all ints or all reals (not ['seq', 'int']); write real(x) to convert [SPEC: + - * neg take all ints or all reals, / both, % ints only; real(x) converts (Division and modulo; Exact rationals)]",
+            "+ wants all ints or all reals (not ['seq', 'int']); write real(x) to convert [SPEC: + - * neg take all ints or all reals, / both, % ints only; real(x) converts (Division and modulo; Exact rationals)]",
+            "assign r: int into seq [SPEC: assign's expression type must match the target's declared type]"
+          ],
+          "category": "not well formed",
+          "given_spec_errors": [
+            "* wants all ints or all reals (not ['seq', 'int']); write real(x) to convert [SPEC: + - * neg take all ints or all reals, / both, % ints only; real(x) converts (Division and modulo; Exact rationals)]",
+            "+ wants all ints or all reals (not ['seq', 'int']); write real(x) to convert [SPEC: + - * neg take all ints or all reals, / both, % ints only; real(x) converts (Division and modulo; Exact rationals)]",
+            "== wants two values of one type, found 'seq' and 'int' [SPEC: == and != apply to two values of one type, structural at every depth (Gate 1; Compositional types)]"
+          ],
+          "forward_helper_calls": []
+        },
+        {
+          "request_sha256": "fccc4587bb714ac3c6d37d83586988a0af26fdd2d656890d9b715606890ad307",
+          "name": "re_order",
+          "errors": [
+            "assign r: {'seq': 'seq'} into seq [SPEC: assign's expression type must match the target's declared type]"
+          ],
+          "category": "not well formed",
+          "given_spec_errors": [],
+          "forward_helper_calls": []
+        }
+      ],
+      "scope": "Every cached body request, including replies ignored after another answer in its batch was accepted. Static diagnosis only; these are not official evaluation scores."
+    },
+    "step400": {
+      "cached_body_requests": 55,
+      "categories": {
+        "passes structural gates": 27,
+        "parse": 9,
+        "not well formed": 19
+      },
+      "invalid_body_replies_with_errors_in_given_spec": 14,
+      "invalid_body_replies_with_forward_helper_calls": 11,
+      "first_error_per_invalid_reply": {
+        "call of unknown fun is_prime [SPEC: call names a declared spec_fun or the task's own name (Gate 3)]": 5,
+        "call of unknown fun lcm [SPEC: call names a declared spec_fun or the task's own name (Gate 3)]": 6,
+        "count wants (seq, seq) [SPEC: each string-library member's argument types must match its signature (The string library)]": 2,
+        "len of a non-seq, non-map [SPEC: len is defined on a seq (Gate 1)]": 3,
+        "unbound var k [SPEC: a name must be bound before use (v0 and Gate 1 scope rule)]": 1,
+        "unbound var j [SPEC: a name must be bound before use (v0 and Gate 1 scope rule)]": 1,
+        "call of unknown fun length [SPEC: call names a declared spec_fun or the task's own name (Gate 3)]": 1
+      },
+      "invalid_body_replies": [
+        {
+          "request_sha256": "1f12ff0a60b49eb5cda6e94623d7fd6378fab5efd6de0d7ffe8d07e848b65a04",
+          "name": "sum_Of_Primes",
+          "errors": [
+            "call of unknown fun is_prime [SPEC: call names a declared spec_fun or the task's own name (Gate 3)]",
+            "ite condition is not bool [SPEC: a condition or loop guard must be bool]"
+          ],
+          "category": "not well formed",
+          "given_spec_errors": [
+            "call of unknown fun is_prime [SPEC: call names a declared spec_fun or the task's own name (Gate 3)]",
+            "ite condition is not bool [SPEC: a condition or loop guard must be bool]"
+          ],
+          "forward_helper_calls": [
+            [
+              "sum_of_primes",
+              "is_prime"
+            ]
+          ]
+        },
+        {
+          "request_sha256": "387af08ce0a9b96d9cbeebf8d094c0f16c42f6463503ef75430e540a09eab4f4",
+          "name": "get_lcm",
+          "errors": [
+            "call of unknown fun lcm [SPEC: call names a declared spec_fun or the task's own name (Gate 3)]",
+            "ite branches differ: int vs None [SPEC: ite branches must have the same type]",
+            "call of unknown fun gcd [SPEC: call names a declared spec_fun or the task's own name (Gate 3)]",
+            "div wants all ints or all reals (not ['int', None]); write real(x) to convert [SPEC: + - * neg take all ints or all reals, / both, % ints only; real(x) converts (Division and modulo; Exact rationals)]"
+          ],
+          "category": "not well formed",
+          "given_spec_errors": [
+            "call of unknown fun lcm [SPEC: call names a declared spec_fun or the task's own name (Gate 3)]",
+            "ite branches differ: int vs None [SPEC: ite branches must have the same type]",
+            "call of unknown fun gcd [SPEC: call names a declared spec_fun or the task's own name (Gate 3)]",
+            "div wants all ints or all reals (not ['int', None]); write real(x) to convert [SPEC: + - * neg take all ints or all reals, / both, % ints only; real(x) converts (Division and modulo; Exact rationals)]"
+          ],
+          "forward_helper_calls": [
+            [
+              "get_lcm_spec",
+              "lcm"
+            ],
+            [
+              "lcm",
+              "gcd"
+            ]
+          ]
+        },
+        {
+          "request_sha256": "4746e542c9cfd35aee80c79af07b943749bc1ff548a20e5740a524523c4a3c25",
+          "name": "get_lcm",
+          "errors": [
+            "call of unknown fun lcm [SPEC: call names a declared spec_fun or the task's own name (Gate 3)]",
+            "ite branches differ: int vs None [SPEC: ite branches must have the same type]",
+            "call of unknown fun gcd [SPEC: call names a declared spec_fun or the task's own name (Gate 3)]",
+            "div wants all ints or all reals (not ['int', None]); write real(x) to convert [SPEC: + - * neg take all ints or all reals, / both, % ints only; real(x) converts (Division and modulo; Exact rationals)]"
+          ],
+          "category": "not well formed",
+          "given_spec_errors": [
+            "call of unknown fun lcm [SPEC: call names a declared spec_fun or the task's own name (Gate 3)]",
+            "ite branches differ: int vs None [SPEC: ite branches must have the same type]",
+            "call of unknown fun gcd [SPEC: call names a declared spec_fun or the task's own name (Gate 3)]",
+            "div wants all ints or all reals (not ['int', None]); write real(x) to convert [SPEC: + - * neg take all ints or all reals, / both, % ints only; real(x) converts (Division and modulo; Exact rationals)]"
+          ],
+          "forward_helper_calls": [
+            [
+              "lcm",
+              "gcd"
+            ],
+            [
+              "lcm_array",
+              "lcm"
+            ]
+          ]
+        },
+        {
+          "request_sha256": "6f6df090df87df2dc57a628a3997428f57c2cd92d03e3b0e707daebfd4b6695e",
+          "name": "sum_Of_Primes",
+          "errors": [
+            "call of unknown fun is_prime [SPEC: call names a declared spec_fun or the task's own name (Gate 3)]",
+            "ite condition is not bool [SPEC: a condition or loop guard must be bool]"
+          ],
+          "category": "not well formed",
+          "given_spec_errors": [
+            "call of unknown fun is_prime [SPEC: call names a declared spec_fun or the task's own name (Gate 3)]",
+            "ite condition is not bool [SPEC: a condition or loop guard must be bool]"
+          ],
+          "forward_helper_calls": [
+            [
+              "sum_of_primes",
+              "is_prime"
+            ]
+          ]
+        },
+        {
+          "request_sha256": "7606fddc7a8666ad295219eafcab66b33a4ff3b6ceabe71758f214f5c7cd6eea",
+          "name": "second_frequent",
+          "errors": [
+            "count wants (seq, seq) [SPEC: each string-library member's argument types must match its signature (The string library)]",
+            "count wants (seq, seq) [SPEC: each string-library member's argument types must match its signature (The string library)]"
+          ],
+          "category": "not well formed",
+          "given_spec_errors": [],
+          "forward_helper_calls": []
+        },
+        {
+          "request_sha256": "7919d525cf2d41622e6f0fb3e65a7d85869b5e23f61b108fcce9cef8480e417c",
+          "name": "find_long_word",
+          "errors": [
+            "len of a non-seq, non-map [SPEC: len is defined on a seq (Gate 1)]",
+            "at wants (a seq of any element type, int) [SPEC: at wants (a seq of any element type, int) and gives the element (Gate 1; Compositional types)]",
+            "== wants two values of one type, found 'int' and None [SPEC: == and != apply to two values of one type, structural at every depth (Gate 1; Compositional types)]",
+            "at wants (a seq of any element type, int) [SPEC: at wants (a seq of any element type, int) and gives the element (Gate 1; Compositional types)]",
+            "== wants two values of one type, found 'int' and None [SPEC: == and != apply to two values of one type, structural at every depth (Gate 1; Compositional types)]",
+            "at wants (a seq of any element type, int) [SPEC: at wants (a seq of any element type, int) and gives the element (Gate 1; Compositional types)]",
+            "== wants two values of one type, found 'int' and None [SPEC: == and != apply to two values of one type, structural at every depth (Gate 1; Compositional types)]",
+            "at wants (a seq of any element type, int) [SPEC: at wants (a seq of any element type, int) and gives the element (Gate 1; Compositional types)]",
+            "== wants two values of one type, found 'int' and None [SPEC: == and != apply to two values of one type, structural at every depth (Gate 1; Compositional types)]",
+            "at wants (a seq of any element type, int) [SPEC: at wants (a seq of any element type, int) and gives the element (Gate 1; Compositional types)]",
+            "== wants two values of one type, found 'int' and None [SPEC: == and != apply to two values of one type, structural at every depth (Gate 1; Compositional types)]",
+            "at wants (a seq of any element type, int) [SPEC: at wants (a seq of any element type, int) and gives the element (Gate 1; Compositional types)]",
+            "== wants two values of one type, found 'int' and None [SPEC: == and != apply to two values of one type, structural at every depth (Gate 1; Compositional types)]",
+            "at wants (a seq of any element type, int) [SPEC: at wants (a seq of any element type, int) and gives the element (Gate 1; Compositional types)]",
+            "== wants two values of one type, found 'int' and None [SPEC: == and != apply to two values of one type, structural at every depth (Gate 1; Compositional types)]",
+            "at wants (a seq of any element type, int) [SPEC: at wants (a seq of any element type, int) and gives the element (Gate 1; Compositional types)]",
+            "== wants two values of one type, found 'int' and None [SPEC: == and != apply to two values of one type, structural at every depth (Gate 1; Compositional types)]",
+            "at wants (a seq of any element type, int) [SPEC: at wants (a seq of any element type, int) and gives the element (Gate 1; Compositional types)]",
+            "== wants two values of one type, found 'int' and None [SPEC: == and != apply to two values of one type, structural at every depth (Gate 1; Compositional types)]",
+            "at wants (a seq of any element type, int) [SPEC: at wants (a seq of any element type, int) and gives the element (Gate 1; Compositional types)]",
+            "== wants two values of one type, found 'int' and None [SPEC: == and != apply to two values of one type, structural at every depth (Gate 1; Compositional types)]",
+            "at wants (a seq of any element type, int) [SPEC: at wants (a seq of any element type, int) and gives the element (Gate 1; Compositional types)]",
+            "!= wants two values of one type, found 'int' and None [SPEC: == and != apply to two values of one type, structural at every depth (Gate 1; Compositional types)]",
+            "at wants (a seq of any element type, int) [SPEC: at wants (a seq of any element type, int) and gives the element (Gate 1; Compositional types)]",
+            "!= wants two values of one type, found 'int' and None [SPEC: == and != apply to two values of one type, structural at every depth (Gate 1; Compositional types)]",
+            "at wants (a seq of any element type, int) [SPEC: at wants (a seq of any element type, int) and gives the element (Gate 1; Compositional types)]",
+            "!= wants two values of one type, found 'int' and None [SPEC: == and != apply to two values of one type, structural at every depth (Gate 1; Compositional types)]",
+            "at wants (a seq of any element type, int) [SPEC: at wants (a seq of any element type, int) and gives the element (Gate 1; Compositional types)]",
+            "!= wants two values of one type, found 'int' and None [SPEC: == and != apply to two values of one type, structural at every depth (Gate 1; Compositional types)]",
+            "at wants (a seq of any element type, int) [SPEC: at wants (a seq of any element type, int) and gives the element (Gate 1; Compositional types)]",
+            "!= wants two values of one type, found 'int' and None [SPEC: == and != apply to two values of one type, structural at every depth (Gate 1; Compositional types)]",
+            "len of a non-seq, non-map [SPEC: len is defined on a seq (Gate 1)]",
+            "at wants (a seq of any element type, int) [SPEC: at wants (a seq of any element type, int) and gives the element (Gate 1; Compositional types)]",
+            "== wants two values of one type, found 'int' and None [SPEC: == and != apply to two values of one type, structural at every depth (Gate 1; Compositional types)]",
+            "at wants (a seq of any element type, int) [SPEC: at wants (a seq of any element type, int) and gives the element (Gate 1; Compositional types)]",
+            "== wants two values of one type, found 'int' and None [SPEC: == and != apply to two values of one type, structural at every depth (Gate 1; Compositional types)]",
+            "at wants (a seq of any element type, int) [SPEC: at wants (a seq of any element type, int) and gives the element (Gate 1; Compositional types)]",
+            "== wants two values of one type, found 'int' and None [SPEC: == and != apply to two values of one type, structural at every depth (Gate 1; Compositional types)]",
+            "at wants (a seq of any element type, int) [SPEC: at wants (a seq of any element type, int) and gives the element (Gate 1; Compositional types)]",
+            "== wants two values of one type, found 'int' and None [SPEC: == and != apply to two values of one type, structural at every depth (Gate 1; Compositional types)]",
+            "at wants (a seq of any element type, int) [SPEC: at wants (a seq of any element type, int) and gives the element (Gate 1; Compositional types)]",
+            "== wants two values of one type, found 'int' and None [SPEC: == and != apply to two values of one type, structural at every depth (Gate 1; Compositional types)]",
+            "at wants (a seq of any element type, int) [SPEC: at wants (a seq of any element type, int) and gives the element (Gate 1; Compositional types)]",
+            "== wants two values of one type, found 'int' and None [SPEC: == and != apply to two values of one type, structural at every depth (Gate 1; Compositional types)]",
+            "at wants (a seq of any element type, int) [SPEC: at wants (a seq of any element type, int) and gives the element (Gate 1; Compositional types)]",
+            "== wants two values of one type, found 'int' and None [SPEC: == and != apply to two values of one type, structural at every depth (Gate 1; Compositional types)]",
+            "at wants (a seq of any element type, int) [SPEC: at wants (a seq of any element type, int) and gives the element (Gate 1; Compositional types)]",
+            "== wants two values of one type, found 'int' and None [SPEC: == and != apply to two values of one type, structural at every depth (Gate 1; Compositional types)]",
+            "at wants (a seq of any element type, int) [SPEC: at wants (a seq of any element type, int) and gives the element (Gate 1; Compositional types)]",
+            "== wants two values of one type, found 'int' and None [SPEC: == and != apply to two values of one type, structural at every depth (Gate 1; Compositional types)]",
+            "at wants (a seq of any element type, int) [SPEC: at wants (a seq of any element type, int) and gives the element (Gate 1; Compositional types)]",
+            "== wants two values of one type, found 'int' and None [SPEC: == and != apply to two values of one type, structural at every depth (Gate 1; Compositional types)]",
+            "at wants (a seq of any element type, int) [SPEC: at wants (a seq of any element type, int) and gives the element (Gate 1; Compositional types)]",
+            "!= wants two values of one type, found 'int' and None [SPEC: == and != apply to two values of one type, structural at every depth (Gate 1; Compositional types)]",
+            "at wants (a seq of any element type, int) [SPEC: at wants (a seq of any element type, int) and gives the element (Gate 1; Compositional types)]",
+            "!= wants two values of one type, found 'int' and None [SPEC: == and != apply to two values of one type, structural at every depth (Gate 1; Compositional types)]",
+            "at wants (a seq of any element type, int) [SPEC: at wants (a seq of any element type, int) and gives the element (Gate 1; Compositional types)]",
+            "!= wants two values of one type, found 'int' and None [SPEC: == and != apply to two values of one type, structural at every depth (Gate 1; Compositional types)]",
+            "at wants (a seq of any element type, int) [SPEC: at wants (a seq of any element type, int) and gives the element (Gate 1; Compositional types)]",
+            "!= wants two values of one type, found 'int' and None [SPEC: == and != apply to two values of one type, structural at every depth (Gate 1; Compositional types)]",
+            "at wants (a seq of any element type, int) [SPEC: at wants (a seq of any element type, int) and gives the element (Gate 1; Compositional types)]",
+            "!= wants two values of one type, found 'int' and None [SPEC: == and != apply to two values of one type, structural at every depth (Gate 1; Compositional types)]",
+            "+ wants all ints or all reals (not ['seq', {'seq': 'seq'}]); write real(x) to convert [SPEC: + - * neg take all ints or all reals, / both, % ints only; real(x) converts (Division and modulo; Exact rationals)]",
+            "assign r: int into seq [SPEC: assign's expression type must match the target's declared type]"
+          ],
+          "category": "not well formed",
+          "given_spec_errors": [
+            "len of a non-seq, non-map [SPEC: len is defined on a seq (Gate 1)]",
+            "at wants (a seq of any element type, int) [SPEC: at wants (a seq of any element type, int) and gives the element (Gate 1; Compositional types)]",
+            "== wants two values of one type, found 'int' and None [SPEC: == and != apply to two values of one type, structural at every depth (Gate 1; Compositional types)]",
+            "at wants (a seq of any element type, int) [SPEC: at wants (a seq of any element type, int) and gives the element (Gate 1; Compositional types)]",
+            "== wants two values of one type, found 'int' and None [SPEC: == and != apply to two values of one type, structural at every depth (Gate 1; Compositional types)]",
+            "at wants (a seq of any element type, int) [SPEC: at wants (a seq of any element type, int) and gives the element (Gate 1; Compositional types)]",
+            "== wants two values of one type, found 'int' and None [SPEC: == and != apply to two values of one type, structural at every depth (Gate 1; Compositional types)]",
+            "at wants (a seq of any element type, int) [SPEC: at wants (a seq of any element type, int) and gives the element (Gate 1; Compositional types)]",
+            "== wants two values of one type, found 'int' and None [SPEC: == and != apply to two values of one type, structural at every depth (Gate 1; Compositional types)]",
+            "at wants (a seq of any element type, int) [SPEC: at wants (a seq of any element type, int) and gives the element (Gate 1; Compositional types)]",
+            "== wants two values of one type, found 'int' and None [SPEC: == and != apply to two values of one type, structural at every depth (Gate 1; Compositional types)]",
+            "at wants (a seq of any element type, int) [SPEC: at wants (a seq of any element type, int) and gives the element (Gate 1; Compositional types)]",
+            "== wants two values of one type, found 'int' and None [SPEC: == and != apply to two values of one type, structural at every depth (Gate 1; Compositional types)]",
+            "at wants (a seq of any element type, int) [SPEC: at wants (a seq of any element type, int) and gives the element (Gate 1; Compositional types)]",
+            "== wants two values of one type, found 'int' and None [SPEC: == and != apply to two values of one type, structural at every depth (Gate 1; Compositional types)]",
+            "at wants (a seq of any element type, int) [SPEC: at wants (a seq of any element type, int) and gives the element (Gate 1; Compositional types)]",
+            "== wants two values of one type, found 'int' and None [SPEC: == and != apply to two values of one type, structural at every depth (Gate 1; Compositional types)]",
+            "at wants (a seq of any element type, int) [SPEC: at wants (a seq of any element type, int) and gives the element (Gate 1; Compositional types)]",
+            "== wants two values of one type, found 'int' and None [SPEC: == and != apply to two values of one type, structural at every depth (Gate 1; Compositional types)]",
+            "at wants (a seq of any element type, int) [SPEC: at wants (a seq of any element type, int) and gives the element (Gate 1; Compositional types)]",
+            "== wants two values of one type, found 'int' and None [SPEC: == and != apply to two values of one type, structural at every depth (Gate 1; Compositional types)]",
+            "at wants (a seq of any element type, int) [SPEC: at wants (a seq of any element type, int) and gives the element (Gate 1; Compositional types)]",
+            "!= wants two values of one type, found 'int' and None [SPEC: == and != apply to two values of one type, structural at every depth (Gate 1; Compositional types)]",
+            "at wants (a seq of any element type, int) [SPEC: at wants (a seq of any element type, int) and gives the element (Gate 1; Compositional types)]",
+            "!= wants two values of one type, found 'int' and None [SPEC: == and != apply to two values of one type, structural at every depth (Gate 1; Compositional types)]",
+            "at wants (a seq of any element type, int) [SPEC: at wants (a seq of any element type, int) and gives the element (Gate 1; Compositional types)]",
+            "!= wants two values of one type, found 'int' and None [SPEC: == and != apply to two values of one type, structural at every depth (Gate 1; Compositional types)]",
+            "at wants (a seq of any element type, int) [SPEC: at wants (a seq of any element type, int) and gives the element (Gate 1; Compositional types)]",
+            "!= wants two values of one type, found 'int' and None [SPEC: == and != apply to two values of one type, structural at every depth (Gate 1; Compositional types)]",
+            "at wants (a seq of any element type, int) [SPEC: at wants (a seq of any element type, int) and gives the element (Gate 1; Compositional types)]",
+            "!= wants two values of one type, found 'int' and None [SPEC: == and != apply to two values of one type, structural at every depth (Gate 1; Compositional types)]"
+          ],
+          "forward_helper_calls": []
+        },
+        {
+          "request_sha256": "8ace95ee0020c7b3c608c26ce10a3b1bbfca93cf786bca67b17c50859596b6df",
+          "name": "sum_Of_Primes",
+          "errors": [
+            "call of unknown fun is_prime [SPEC: call names a declared spec_fun or the task's own name (Gate 3)]",
+            "ite condition is not bool [SPEC: a condition or loop guard must be bool]"
+          ],
+          "category": "not well formed",
+          "given_spec_errors": [
+            "call of unknown fun is_prime [SPEC: call names a declared spec_fun or the task's own name (Gate 3)]",
+            "ite condition is not bool [SPEC: a condition or loop guard must be bool]"
+          ],
+          "forward_helper_calls": [
+            [
+              "sum_primes",
+              "is_prime"
+            ]
+          ]
+        },
+        {
+          "request_sha256": "8d177fafb757a9b4c238799ae0db8fa39b64e45cf54064fc9cde1faf42887d5d",
+          "name": "get_lcm",
+          "errors": [
+            "call of unknown fun lcm [SPEC: call names a declared spec_fun or the task's own name (Gate 3)]",
+            "ite branches differ: int vs None [SPEC: ite branches must have the same type]",
+            "call of unknown fun gcd [SPEC: call names a declared spec_fun or the task's own name (Gate 3)]",
+            "div wants all ints or all reals (not ['int', None]); write real(x) to convert [SPEC: + - * neg take all ints or all reals, / both, % ints only; real(x) converts (Division and modulo; Exact rationals)]"
+          ],
+          "category": "not well formed",
+          "given_spec_errors": [
+            "call of unknown fun lcm [SPEC: call names a declared spec_fun or the task's own name (Gate 3)]",
+            "ite branches differ: int vs None [SPEC: ite branches must have the same type]",
+            "call of unknown fun gcd [SPEC: call names a declared spec_fun or the task's own name (Gate 3)]",
+            "div wants all ints or all reals (not ['int', None]); write real(x) to convert [SPEC: + - * neg take all ints or all reals, / both, % ints only; real(x) converts (Division and modulo; Exact rationals)]"
+          ],
+          "forward_helper_calls": [
+            [
+              "get_lcm_spec",
+              "lcm"
+            ],
+            [
+              "lcm",
+              "gcd"
+            ]
+          ]
+        },
+        {
+          "request_sha256": "90d1c27a66e9b2560878236cf47fd3bb47a474555ffe7ba7c9a1beebecfd1386",
+          "name": "find_long_word",
+          "errors": [
+            "len of a non-seq, non-map [SPEC: len is defined on a seq (Gate 1)]",
+            "at wants (a seq of any element type, int) [SPEC: at wants (a seq of any element type, int) and gives the element (Gate 1; Compositional types)]",
+            "== wants two values of one type, found 'int' and None [SPEC: == and != apply to two values of one type, structural at every depth (Gate 1; Compositional types)]",
+            "at wants (a seq of any element type, int) [SPEC: at wants (a seq of any element type, int) and gives the element (Gate 1; Compositional types)]",
+            "== wants two values of one type, found 'int' and None [SPEC: == and != apply to two values of one type, structural at every depth (Gate 1; Compositional types)]",
+            "at wants (a seq of any element type, int) [SPEC: at wants (a seq of any element type, int) and gives the element (Gate 1; Compositional types)]",
+            "== wants two values of one type, found 'int' and None [SPEC: == and != apply to two values of one type, structural at every depth (Gate 1; Compositional types)]",
+            "at wants (a seq of any element type, int) [SPEC: at wants (a seq of any element type, int) and gives the element (Gate 1; Compositional types)]",
+            "== wants two values of one type, found 'int' and None [SPEC: == and != apply to two values of one type, structural at every depth (Gate 1; Compositional types)]",
+            "at wants (a seq of any element type, int) [SPEC: at wants (a seq of any element type, int) and gives the element (Gate 1; Compositional types)]",
+            "== wants two values of one type, found 'int' and None [SPEC: == and != apply to two values of one type, structural at every depth (Gate 1; Compositional types)]",
+            "at wants (a seq of any element type, int) [SPEC: at wants (a seq of any element type, int) and gives the element (Gate 1; Compositional types)]",
+            "== wants two values of one type, found 'int' and None [SPEC: == and != apply to two values of one type, structural at every depth (Gate 1; Compositional types)]",
+            "at wants (a seq of any element type, int) [SPEC: at wants (a seq of any element type, int) and gives the element (Gate 1; Compositional types)]",
+            "== wants two values of one type, found 'int' and None [SPEC: == and != apply to two values of one type, structural at every depth (Gate 1; Compositional types)]",
+            "at wants (a seq of any element type, int) [SPEC: at wants (a seq of any element type, int) and gives the element (Gate 1; Compositional types)]",
+            "== wants two values of one type, found 'int' and None [SPEC: == and != apply to two values of one type, structural at every depth (Gate 1; Compositional types)]",
+            "at wants (a seq of any element type, int) [SPEC: at wants (a seq of any element type, int) and gives the element (Gate 1; Compositional types)]",
+            "== wants two values of one type, found 'int' and None [SPEC: == and != apply to two values of one type, structural at every depth (Gate 1; Compositional types)]",
+            "at wants (a seq of any element type, int) [SPEC: at wants (a seq of any element type, int) and gives the element (Gate 1; Compositional types)]",
+            "== wants two values of one type, found 'int' and None [SPEC: == and != apply to two values of one type, structural at every depth (Gate 1; Compositional types)]",
+            "at wants (a seq of any element type, int) [SPEC: at wants (a seq of any element type, int) and gives the element (Gate 1; Compositional types)]",
+            "!= wants two values of one type, found 'int' and None [SPEC: == and != apply to two values of one type, structural at every depth (Gate 1; Compositional types)]",
+            "at wants (a seq of any element type, int) [SPEC: at wants (a seq of any element type, int) and gives the element (Gate 1; Compositional types)]",
+            "!= wants two values of one type, found 'int' and None [SPEC: == and != apply to two values of one type, structural at every depth (Gate 1; Compositional types)]",
+            "at wants (a seq of any element type, int) [SPEC: at wants (a seq of any element type, int) and gives the element (Gate 1; Compositional types)]",
+            "!= wants two values of one type, found 'int' and None [SPEC: == and != apply to two values of one type, structural at every depth (Gate 1; Compositional types)]",
+            "at wants (a seq of any element type, int) [SPEC: at wants (a seq of any element type, int) and gives the element (Gate 1; Compositional types)]",
+            "!= wants two values of one type, found 'int' and None [SPEC: == and != apply to two values of one type, structural at every depth (Gate 1; Compositional types)]",
+            "at wants (a seq of any element type, int) [SPEC: at wants (a seq of any element type, int) and gives the element (Gate 1; Compositional types)]",
+            "!= wants two values of one type, found 'int' and None [SPEC: == and != apply to two values of one type, structural at every depth (Gate 1; Compositional types)]",
+            "len of a non-seq, non-map [SPEC: len is defined on a seq (Gate 1)]",
+            "at wants (a seq of any element type, int) [SPEC: at wants (a seq of any element type, int) and gives the element (Gate 1; Compositional types)]",
+            "== wants two values of one type, found 'int' and None [SPEC: == and != apply to two values of one type, structural at every depth (Gate 1; Compositional types)]",
+            "at wants (a seq of any element type, int) [SPEC: at wants (a seq of any element type, int) and gives the element (Gate 1; Compositional types)]",
+            "== wants two values of one type, found 'int' and None [SPEC: == and != apply to two values of one type, structural at every depth (Gate 1; Compositional types)]",
+            "at wants (a seq of any element type, int) [SPEC: at wants (a seq of any element type, int) and gives the element (Gate 1; Compositional types)]",
+            "== wants two values of one type, found 'int' and None [SPEC: == and != apply to two values of one type, structural at every depth (Gate 1; Compositional types)]",
+            "at wants (a seq of any element type, int) [SPEC: at wants (a seq of any element type, int) and gives the element (Gate 1; Compositional types)]",
+            "== wants two values of one type, found 'int' and None [SPEC: == and != apply to two values of one type, structural at every depth (Gate 1; Compositional types)]",
+            "at wants (a seq of any element type, int) [SPEC: at wants (a seq of any element type, int) and gives the element (Gate 1; Compositional types)]",
+            "== wants two values of one type, found 'int' and None [SPEC: == and != apply to two values of one type, structural at every depth (Gate 1; Compositional types)]",
+            "at wants (a seq of any element type, int) [SPEC: at wants (a seq of any element type, int) and gives the element (Gate 1; Compositional types)]",
+            "== wants two values of one type, found 'int' and None [SPEC: == and != apply to two values of one type, structural at every depth (Gate 1; Compositional types)]",
+            "at wants (a seq of any element type, int) [SPEC: at wants (a seq of any element type, int) and gives the element (Gate 1; Compositional types)]",
+            "== wants two values of one type, found 'int' and None [SPEC: == and != apply to two values of one type, structural at every depth (Gate 1; Compositional types)]",
+            "at wants (a seq of any element type, int) [SPEC: at wants (a seq of any element type, int) and gives the element (Gate 1; Compositional types)]",
+            "== wants two values of one type, found 'int' and None [SPEC: == and != apply to two values of one type, structural at every depth (Gate 1; Compositional types)]",
+            "at wants (a seq of any element type, int) [SPEC: at wants (a seq of any element type, int) and gives the element (Gate 1; Compositional types)]",
+            "== wants two values of one type, found 'int' and None [SPEC: == and != apply to two values of one type, structural at every depth (Gate 1; Compositional types)]",
+            "at wants (a seq of any element type, int) [SPEC: at wants (a seq of any element type, int) and gives the element (Gate 1; Compositional types)]",
+            "== wants two values of one type, found 'int' and None [SPEC: == and != apply to two values of one type, structural at every depth (Gate 1; Compositional types)]",
+            "at wants (a seq of any element type, int) [SPEC: at wants (a seq of any element type, int) and gives the element (Gate 1; Compositional types)]",
+            "!= wants two values of one type, found 'int' and None [SPEC: == and != apply to two values of one type, structural at every depth (Gate 1; Compositional types)]",
+            "at wants (a seq of any element type, int) [SPEC: at wants (a seq of any element type, int) and gives the element (Gate 1; Compositional types)]",
+            "!= wants two values of one type, found 'int' and None [SPEC: == and != apply to two values of one type, structural at every depth (Gate 1; Compositional types)]",
+            "at wants (a seq of any element type, int) [SPEC: at wants (a seq of any element type, int) and gives the element (Gate 1; Compositional types)]",
+            "!= wants two values of one type, found 'int' and None [SPEC: == and != apply to two values of one type, structural at every depth (Gate 1; Compositional types)]",
+            "at wants (a seq of any element type, int) [SPEC: at wants (a seq of any element type, int) and gives the element (Gate 1; Compositional types)]",
+            "!= wants two values of one type, found 'int' and None [SPEC: == and != apply to two values of one type, structural at every depth (Gate 1; Compositional types)]",
+            "at wants (a seq of any element type, int) [SPEC: at wants (a seq of any element type, int) and gives the element (Gate 1; Compositional types)]",
+            "!= wants two values of one type, found 'int' and None [SPEC: == and != apply to two values of one type, structural at every depth (Gate 1; Compositional types)]"
+          ],
+          "category": "not well formed",
+          "given_spec_errors": [
+            "len of a non-seq, non-map [SPEC: len is defined on a seq (Gate 1)]",
+            "at wants (a seq of any element type, int) [SPEC: at wants (a seq of any element type, int) and gives the element (Gate 1; Compositional types)]",
+            "== wants two values of one type, found 'int' and None [SPEC: == and != apply to two values of one type, structural at every depth (Gate 1; Compositional types)]",
+            "at wants (a seq of any element type, int) [SPEC: at wants (a seq of any element type, int) and gives the element (Gate 1; Compositional types)]",
+            "== wants two values of one type, found 'int' and None [SPEC: == and != apply to two values of one type, structural at every depth (Gate 1; Compositional types)]",
+            "at wants (a seq of any element type, int) [SPEC: at wants (a seq of any element type, int) and gives the element (Gate 1; Compositional types)]",
+            "== wants two values of one type, found 'int' and None [SPEC: == and != apply to two values of one type, structural at every depth (Gate 1; Compositional types)]",
+            "at wants (a seq of any element type, int) [SPEC: at wants (a seq of any element type, int) and gives the element (Gate 1; Compositional types)]",
+            "== wants two values of one type, found 'int' and None [SPEC: == and != apply to two values of one type, structural at every depth (Gate 1; Compositional types)]",
+            "at wants (a seq of any element type, int) [SPEC: at wants (a seq of any element type, int) and gives the element (Gate 1; Compositional types)]",
+            "== wants two values of one type, found 'int' and None [SPEC: == and != apply to two values of one type, structural at every depth (Gate 1; Compositional types)]",
+            "at wants (a seq of any element type, int) [SPEC: at wants (a seq of any element type, int) and gives the element (Gate 1; Compositional types)]",
+            "== wants two values of one type, found 'int' and None [SPEC: == and != apply to two values of one type, structural at every depth (Gate 1; Compositional types)]",
+            "at wants (a seq of any element type, int) [SPEC: at wants (a seq of any element type, int) and gives the element (Gate 1; Compositional types)]",
+            "== wants two values of one type, found 'int' and None [SPEC: == and != apply to two values of one type, structural at every depth (Gate 1; Compositional types)]",
+            "at wants (a seq of any element type, int) [SPEC: at wants (a seq of any element type, int) and gives the element (Gate 1; Compositional types)]",
+            "== wants two values of one type, found 'int' and None [SPEC: == and != apply to two values of one type, structural at every depth (Gate 1; Compositional types)]",
+            "at wants (a seq of any element type, int) [SPEC: at wants (a seq of any element type, int) and gives the element (Gate 1; Compositional types)]",
+            "== wants two values of one type, found 'int' and None [SPEC: == and != apply to two values of one type, structural at every depth (Gate 1; Compositional types)]",
+            "at wants (a seq of any element type, int) [SPEC: at wants (a seq of any element type, int) and gives the element (Gate 1; Compositional types)]",
+            "== wants two values of one type, found 'int' and None [SPEC: == and != apply to two values of one type, structural at every depth (Gate 1; Compositional types)]",
+            "at wants (a seq of any element type, int) [SPEC: at wants (a seq of any element type, int) and gives the element (Gate 1; Compositional types)]",
+            "!= wants two values of one type, found 'int' and None [SPEC: == and != apply to two values of one type, structural at every depth (Gate 1; Compositional types)]",
+            "at wants (a seq of any element type, int) [SPEC: at wants (a seq of any element type, int) and gives the element (Gate 1; Compositional types)]",
+            "!= wants two values of one type, found 'int' and None [SPEC: == and != apply to two values of one type, structural at every depth (Gate 1; Compositional types)]",
+            "at wants (a seq of any element type, int) [SPEC: at wants (a seq of any element type, int) and gives the element (Gate 1; Compositional types)]",
+            "!= wants two values of one type, found 'int' and None [SPEC: == and != apply to two values of one type, structural at every depth (Gate 1; Compositional types)]",
+            "at wants (a seq of any element type, int) [SPEC: at wants (a seq of any element type, int) and gives the element (Gate 1; Compositional types)]",
+            "!= wants two values of one type, found 'int' and None [SPEC: == and != apply to two values of one type, structural at every depth (Gate 1; Compositional types)]",
+            "at wants (a seq of any element type, int) [SPEC: at wants (a seq of any element type, int) and gives the element (Gate 1; Compositional types)]",
+            "!= wants two values of one type, found 'int' and None [SPEC: == and != apply to two values of one type, structural at every depth (Gate 1; Compositional types)]"
+          ],
+          "forward_helper_calls": []
+        },
+        {
+          "request_sha256": "95fdeb3e8605b6be0527f1be570e13f2ff2f632da29d5dda70bde5f2b79863c1",
+          "name": "get_lcm",
+          "errors": [
+            "call of unknown fun lcm [SPEC: call names a declared spec_fun or the task's own name (Gate 3)]",
+            "ite branches differ: int vs None [SPEC: ite branches must have the same type]",
+            "call of unknown fun gcd [SPEC: call names a declared spec_fun or the task's own name (Gate 3)]",
+            "div wants all ints or all reals (not ['int', None]); write real(x) to convert [SPEC: + - * neg take all ints or all reals, / both, % ints only; real(x) converts (Division and modulo; Exact rationals)]"
+          ],
+          "category": "not well formed",
+          "given_spec_errors": [
+            "call of unknown fun lcm [SPEC: call names a declared spec_fun or the task's own name (Gate 3)]",
+            "ite branches differ: int vs None [SPEC: ite branches must have the same type]",
+            "call of unknown fun gcd [SPEC: call names a declared spec_fun or the task's own name (Gate 3)]",
+            "div wants all ints or all reals (not ['int', None]); write real(x) to convert [SPEC: + - * neg take all ints or all reals, / both, % ints only; real(x) converts (Division and modulo; Exact rationals)]"
+          ],
+          "forward_helper_calls": [
+            [
+              "get_lcm_spec",
+              "lcm"
+            ],
+            [
+              "lcm",
+              "gcd"
+            ]
+          ]
+        },
+        {
+          "request_sha256": "a7d71364c9bf7220e4ac25b3754403581b9130c135c1fcc4339cfcc79941f96b",
+          "name": "get_lcm",
+          "errors": [
+            "call of unknown fun lcm [SPEC: call names a declared spec_fun or the task's own name (Gate 3)]",
+            "ite branches differ: int vs None [SPEC: ite branches must have the same type]",
+            "call of unknown fun gcd [SPEC: call names a declared spec_fun or the task's own name (Gate 3)]",
+            "div wants all ints or all reals (not ['int', None]); write real(x) to convert [SPEC: + - * neg take all ints or all reals, / both, % ints only; real(x) converts (Division and modulo; Exact rationals)]"
+          ],
+          "category": "not well formed",
+          "given_spec_errors": [
+            "call of unknown fun lcm [SPEC: call names a declared spec_fun or the task's own name (Gate 3)]",
+            "ite branches differ: int vs None [SPEC: ite branches must have the same type]",
+            "call of unknown fun gcd [SPEC: call names a declared spec_fun or the task's own name (Gate 3)]",
+            "div wants all ints or all reals (not ['int', None]); write real(x) to convert [SPEC: + - * neg take all ints or all reals, / both, % ints only; real(x) converts (Division and modulo; Exact rationals)]"
+          ],
+          "forward_helper_calls": [
+            [
+              "lcm",
+              "gcd"
+            ],
+            [
+              "lcm_array",
+              "lcm"
+            ]
+          ]
+        },
+        {
+          "request_sha256": "b1607f0095c1156faf962d5cf118c9012fab6d9fedb3f0699b51ae68fe63f076",
+          "name": "sum_Of_Primes",
+          "errors": [
+            "call of unknown fun is_prime [SPEC: call names a declared spec_fun or the task's own name (Gate 3)]",
+            "ite condition is not bool [SPEC: a condition or loop guard must be bool]"
+          ],
+          "category": "not well formed",
+          "given_spec_errors": [
+            "call of unknown fun is_prime [SPEC: call names a declared spec_fun or the task's own name (Gate 3)]",
+            "ite condition is not bool [SPEC: a condition or loop guard must be bool]"
+          ],
+          "forward_helper_calls": [
+            [
+              "sum_of_primes",
+              "is_prime"
+            ]
+          ]
+        },
+        {
+          "request_sha256": "ba85b174255f46029d84b973d4eb84fe2f89c0ec4d7afc2a6ecdef3ac6ad7f1f",
+          "name": "common_prefix",
+          "errors": [
+            "unbound var k [SPEC: a name must be bound before use (v0 and Gate 1 scope rule)]",
+            "at wants (a seq of any element type, int) [SPEC: at wants (a seq of any element type, int) and gives the element (Gate 1; Compositional types)]",
+            "at wants (a seq of any element type, int) [SPEC: at wants (a seq of any element type, int) and gives the element (Gate 1; Compositional types)]",
+            "== wants two values of one type, found 'int' and None [SPEC: == and != apply to two values of one type, structural at every depth (Gate 1; Compositional types)]",
+            "unbound var k [SPEC: a name must be bound before use (v0 and Gate 1 scope rule)]",
+            "< compares two ints, two reals or two floats (SPEC.md gate 1; Exact rationals; Floats) [SPEC: < <= > >= compare two ints or two reals (Gate 1; Exact rationals)]"
+          ],
+          "category": "not well formed",
+          "given_spec_errors": [],
+          "forward_helper_calls": []
+        },
+        {
+          "request_sha256": "c8e659a45cc6d222f6387bc16fc379cee62c932468d92a6ec70919b626b0402f",
+          "name": "second_frequent",
+          "errors": [
+            "count wants (seq, seq) [SPEC: each string-library member's argument types must match its signature (The string library)]",
+            "count wants (seq, seq) [SPEC: each string-library member's argument types must match its signature (The string library)]"
+          ],
+          "category": "not well formed",
+          "given_spec_errors": [],
+          "forward_helper_calls": []
+        },
+        {
+          "request_sha256": "c9f9893efa9240983ed892d15c328e4e12f9757c34654da0bb0bd3b7f5e2c6f6",
+          "name": "common_prefix",
+          "errors": [
+            "unbound var j [SPEC: a name must be bound before use (v0 and Gate 1 scope rule)]",
+            "at wants (a seq of any element type, int) [SPEC: at wants (a seq of any element type, int) and gives the element (Gate 1; Compositional types)]",
+            "unbound var j [SPEC: a name must be bound before use (v0 and Gate 1 scope rule)]",
+            "at wants (a seq of any element type, int) [SPEC: at wants (a seq of any element type, int) and gives the element (Gate 1; Compositional types)]"
+          ],
+          "category": "not well formed",
+          "given_spec_errors": [],
+          "forward_helper_calls": []
+        },
+        {
+          "request_sha256": "d552840c8e71938021d0c1c9eeea40a08cf9f6a8e3d60364d5d46d34269101ae",
+          "name": "check_literals",
+          "errors": [
+            "call of unknown fun length [SPEC: call names a declared spec_fun or the task's own name (Gate 3)]",
+            "< compares two ints, two reals or two floats (SPEC.md gate 1; Exact rationals; Floats) [SPEC: < <= > >= compare two ints or two reals (Gate 1; Exact rationals)]",
+            "call of unknown fun length [SPEC: call names a declared spec_fun or the task's own name (Gate 3)]",
+            "- wants all ints or all reals (not [None, 'int']); write real(x) to convert [SPEC: + - * neg take all ints or all reals, / both, % ints only; real(x) converts (Division and modulo; Exact rationals)]",
+            "call of unknown fun length [SPEC: call names a declared spec_fun or the task's own name (Gate 3)]",
+            "<= compares two ints, two reals or two floats (SPEC.md gate 1; Exact rationals; Floats) [SPEC: < <= > >= compare two ints or two reals (Gate 1; Exact rationals)]",
+            "call of unknown fun length [SPEC: call names a declared spec_fun or the task's own name (Gate 3)]",
+            "== wants two values of one type, found 'int' and None [SPEC: == and != apply to two values of one type, structural at every depth (Gate 1; Compositional types)]"
+          ],
+          "category": "not well formed",
+          "given_spec_errors": [],
+          "forward_helper_calls": []
+        },
+        {
+          "request_sha256": "da40f066d2d7ebdfe365c34ef182b6ef020e81aa884e24c11c44f9ac29979196",
+          "name": "find_long_word",
+          "errors": [
+            "len of a non-seq, non-map [SPEC: len is defined on a seq (Gate 1)]",
+            "at wants (a seq of any element type, int) [SPEC: at wants (a seq of any element type, int) and gives the element (Gate 1; Compositional types)]",
+            "== wants two values of one type, found 'int' and None [SPEC: == and != apply to two values of one type, structural at every depth (Gate 1; Compositional types)]",
+            "at wants (a seq of any element type, int) [SPEC: at wants (a seq of any element type, int) and gives the element (Gate 1; Compositional types)]",
+            "== wants two values of one type, found 'int' and None [SPEC: == and != apply to two values of one type, structural at every depth (Gate 1; Compositional types)]",
+            "at wants (a seq of any element type, int) [SPEC: at wants (a seq of any element type, int) and gives the element (Gate 1; Compositional types)]",
+            "== wants two values of one type, found 'int' and None [SPEC: == and != apply to two values of one type, structural at every depth (Gate 1; Compositional types)]",
+            "at wants (a seq of any element type, int) [SPEC: at wants (a seq of any element type, int) and gives the element (Gate 1; Compositional types)]",
+            "== wants two values of one type, found 'int' and None [SPEC: == and != apply to two values of one type, structural at every depth (Gate 1; Compositional types)]",
+            "at wants (a seq of any element type, int) [SPEC: at wants (a seq of any element type, int) and gives the element (Gate 1; Compositional types)]",
+            "== wants two values of one type, found 'int' and None [SPEC: == and != apply to two values of one type, structural at every depth (Gate 1; Compositional types)]",
+            "at wants (a seq of any element type, int) [SPEC: at wants (a seq of any element type, int) and gives the element (Gate 1; Compositional types)]",
+            "== wants two values of one type, found 'int' and None [SPEC: == and != apply to two values of one type, structural at every depth (Gate 1; Compositional types)]",
+            "at wants (a seq of any element type, int) [SPEC: at wants (a seq of any element type, int) and gives the element (Gate 1; Compositional types)]",
+            "== wants two values of one type, found 'int' and None [SPEC: == and != apply to two values of one type, structural at every depth (Gate 1; Compositional types)]",
+            "at wants (a seq of any element type, int) [SPEC: at wants (a seq of any element type, int) and gives the element (Gate 1; Compositional types)]",
+            "== wants two values of one type, found 'int' and None [SPEC: == and != apply to two values of one type, structural at every depth (Gate 1; Compositional types)]",
+            "at wants (a seq of any element type, int) [SPEC: at wants (a seq of any element type, int) and gives the element (Gate 1; Compositional types)]",
+            "== wants two values of one type, found 'int' and None [SPEC: == and != apply to two values of one type, structural at every depth (Gate 1; Compositional types)]",
+            "at wants (a seq of any element type, int) [SPEC: at wants (a seq of any element type, int) and gives the element (Gate 1; Compositional types)]",
+            "== wants two values of one type, found 'int' and None [SPEC: == and != apply to two values of one type, structural at every depth (Gate 1; Compositional types)]",
+            "at wants (a seq of any element type, int) [SPEC: at wants (a seq of any element type, int) and gives the element (Gate 1; Compositional types)]",
+            "!= wants two values of one type, found 'int' and None [SPEC: == and != apply to two values of one type, structural at every depth (Gate 1; Compositional types)]",
+            "at wants (a seq of any element type, int) [SPEC: at wants (a seq of any element type, int) and gives the element (Gate 1; Compositional types)]",
+            "!= wants two values of one type, found 'int' and None [SPEC: == and != apply to two values of one type, structural at every depth (Gate 1; Compositional types)]",
+            "at wants (a seq of any element type, int) [SPEC: at wants (a seq of any element type, int) and gives the element (Gate 1; Compositional types)]",
+            "!= wants two values of one type, found 'int' and None [SPEC: == and != apply to two values of one type, structural at every depth (Gate 1; Compositional types)]",
+            "at wants (a seq of any element type, int) [SPEC: at wants (a seq of any element type, int) and gives the element (Gate 1; Compositional types)]",
+            "!= wants two values of one type, found 'int' and None [SPEC: == and != apply to two values of one type, structural at every depth (Gate 1; Compositional types)]",
+            "at wants (a seq of any element type, int) [SPEC: at wants (a seq of any element type, int) and gives the element (Gate 1; Compositional types)]",
+            "!= wants two values of one type, found 'int' and None [SPEC: == and != apply to two values of one type, structural at every depth (Gate 1; Compositional types)]",
+            "len of a non-seq, non-map [SPEC: len is defined on a seq (Gate 1)]",
+            "at wants (a seq of any element type, int) [SPEC: at wants (a seq of any element type, int) and gives the element (Gate 1; Compositional types)]",
+            "== wants two values of one type, found 'int' and None [SPEC: == and != apply to two values of one type, structural at every depth (Gate 1; Compositional types)]",
+            "at wants (a seq of any element type, int) [SPEC: at wants (a seq of any element type, int) and gives the element (Gate 1; Compositional types)]",
+            "== wants two values of one type, found 'int' and None [SPEC: == and != apply to two values of one type, structural at every depth (Gate 1; Compositional types)]",
+            "at wants (a seq of any element type, int) [SPEC: at wants (a seq of any element type, int) and gives the element (Gate 1; Compositional types)]",
+            "== wants two values of one type, found 'int' and None [SPEC: == and != apply to two values of one type, structural at every depth (Gate 1; Compositional types)]",
+            "at wants (a seq of any element type, int) [SPEC: at wants (a seq of any element type, int) and gives the element (Gate 1; Compositional types)]",
+            "== wants two values of one type, found 'int' and None [SPEC: == and != apply to two values of one type, structural at every depth (Gate 1; Compositional types)]",
+            "at wants (a seq of any element type, int) [SPEC: at wants (a seq of any element type, int) and gives the element (Gate 1; Compositional types)]",
+            "== wants two values of one type, found 'int' and None [SPEC: == and != apply to two values of one type, structural at every depth (Gate 1; Compositional types)]",
+            "at wants (a seq of any element type, int) [SPEC: at wants (a seq of any element type, int) and gives the element (Gate 1; Compositional types)]",
+            "== wants two values of one type, found 'int' and None [SPEC: == and != apply to two values of one type, structural at every depth (Gate 1; Compositional types)]",
+            "at wants (a seq of any element type, int) [SPEC: at wants (a seq of any element type, int) and gives the element (Gate 1; Compositional types)]",
+            "== wants two values of one type, found 'int' and None [SPEC: == and != apply to two values of one type, structural at every depth (Gate 1; Compositional types)]",
+            "at wants (a seq of any element type, int) [SPEC: at wants (a seq of any element type, int) and gives the element (Gate 1; Compositional types)]",
+            "== wants two values of one type, found 'int' and None [SPEC: == and != apply to two values of one type, structural at every depth (Gate 1; Compositional types)]",
+            "at wants (a seq of any element type, int) [SPEC: at wants (a seq of any element type, int) and gives the element (Gate 1; Compositional types)]",
+            "== wants two values of one type, found 'int' and None [SPEC: == and != apply to two values of one type, structural at every depth (Gate 1; Compositional types)]",
+            "at wants (a seq of any element type, int) [SPEC: at wants (a seq of any element type, int) and gives the element (Gate 1; Compositional types)]",
+            "== wants two values of one type, found 'int' and None [SPEC: == and != apply to two values of one type, structural at every depth (Gate 1; Compositional types)]",
+            "at wants (a seq of any element type, int) [SPEC: at wants (a seq of any element type, int) and gives the element (Gate 1; Compositional types)]",
+            "!= wants two values of one type, found 'int' and None [SPEC: == and != apply to two values of one type, structural at every depth (Gate 1; Compositional types)]",
+            "at wants (a seq of any element type, int) [SPEC: at wants (a seq of any element type, int) and gives the element (Gate 1; Compositional types)]",
+            "!= wants two values of one type, found 'int' and None [SPEC: == and != apply to two values of one type, structural at every depth (Gate 1; Compositional types)]",
+            "at wants (a seq of any element type, int) [SPEC: at wants (a seq of any element type, int) and gives the element (Gate 1; Compositional types)]",
+            "!= wants two values of one type, found 'int' and None [SPEC: == and != apply to two values of one type, structural at every depth (Gate 1; Compositional types)]",
+            "at wants (a seq of any element type, int) [SPEC: at wants (a seq of any element type, int) and gives the element (Gate 1; Compositional types)]",
+            "!= wants two values of one type, found 'int' and None [SPEC: == and != apply to two values of one type, structural at every depth (Gate 1; Compositional types)]",
+            "at wants (a seq of any element type, int) [SPEC: at wants (a seq of any element type, int) and gives the element (Gate 1; Compositional types)]",
+            "!= wants two values of one type, found 'int' and None [SPEC: == and != apply to two values of one type, structural at every depth (Gate 1; Compositional types)]",
+            "+ wants all ints or all reals (not ['seq', {'seq': 'seq'}]); write real(x) to convert [SPEC: + - * neg take all ints or all reals, / both, % ints only; real(x) converts (Division and modulo; Exact rationals)]",
+            "assign r: int into seq [SPEC: assign's expression type must match the target's declared type]"
+          ],
+          "category": "not well formed",
+          "given_spec_errors": [
+            "len of a non-seq, non-map [SPEC: len is defined on a seq (Gate 1)]",
+            "at wants (a seq of any element type, int) [SPEC: at wants (a seq of any element type, int) and gives the element (Gate 1; Compositional types)]",
+            "== wants two values of one type, found 'int' and None [SPEC: == and != apply to two values of one type, structural at every depth (Gate 1; Compositional types)]",
+            "at wants (a seq of any element type, int) [SPEC: at wants (a seq of any element type, int) and gives the element (Gate 1; Compositional types)]",
+            "== wants two values of one type, found 'int' and None [SPEC: == and != apply to two values of one type, structural at every depth (Gate 1; Compositional types)]",
+            "at wants (a seq of any element type, int) [SPEC: at wants (a seq of any element type, int) and gives the element (Gate 1; Compositional types)]",
+            "== wants two values of one type, found 'int' and None [SPEC: == and != apply to two values of one type, structural at every depth (Gate 1; Compositional types)]",
+            "at wants (a seq of any element type, int) [SPEC: at wants (a seq of any element type, int) and gives the element (Gate 1; Compositional types)]",
+            "== wants two values of one type, found 'int' and None [SPEC: == and != apply to two values of one type, structural at every depth (Gate 1; Compositional types)]",
+            "at wants (a seq of any element type, int) [SPEC: at wants (a seq of any element type, int) and gives the element (Gate 1; Compositional types)]",
+            "== wants two values of one type, found 'int' and None [SPEC: == and != apply to two values of one type, structural at every depth (Gate 1; Compositional types)]",
+            "at wants (a seq of any element type, int) [SPEC: at wants (a seq of any element type, int) and gives the element (Gate 1; Compositional types)]",
+            "== wants two values of one type, found 'int' and None [SPEC: == and != apply to two values of one type, structural at every depth (Gate 1; Compositional types)]",
+            "at wants (a seq of any element type, int) [SPEC: at wants (a seq of any element type, int) and gives the element (Gate 1; Compositional types)]",
+            "== wants two values of one type, found 'int' and None [SPEC: == and != apply to two values of one type, structural at every depth (Gate 1; Compositional types)]",
+            "at wants (a seq of any element type, int) [SPEC: at wants (a seq of any element type, int) and gives the element (Gate 1; Compositional types)]",
+            "== wants two values of one type, found 'int' and None [SPEC: == and != apply to two values of one type, structural at every depth (Gate 1; Compositional types)]",
+            "at wants (a seq of any element type, int) [SPEC: at wants (a seq of any element type, int) and gives the element (Gate 1; Compositional types)]",
+            "== wants two values of one type, found 'int' and None [SPEC: == and != apply to two values of one type, structural at every depth (Gate 1; Compositional types)]",
+            "at wants (a seq of any element type, int) [SPEC: at wants (a seq of any element type, int) and gives the element (Gate 1; Compositional types)]",
+            "== wants two values of one type, found 'int' and None [SPEC: == and != apply to two values of one type, structural at every depth (Gate 1; Compositional types)]",
+            "at wants (a seq of any element type, int) [SPEC: at wants (a seq of any element type, int) and gives the element (Gate 1; Compositional types)]",
+            "!= wants two values of one type, found 'int' and None [SPEC: == and != apply to two values of one type, structural at every depth (Gate 1; Compositional types)]",
+            "at wants (a seq of any element type, int) [SPEC: at wants (a seq of any element type, int) and gives the element (Gate 1; Compositional types)]",
+            "!= wants two values of one type, found 'int' and None [SPEC: == and != apply to two values of one type, structural at every depth (Gate 1; Compositional types)]",
+            "at wants (a seq of any element type, int) [SPEC: at wants (a seq of any element type, int) and gives the element (Gate 1; Compositional types)]",
+            "!= wants two values of one type, found 'int' and None [SPEC: == and != apply to two values of one type, structural at every depth (Gate 1; Compositional types)]",
+            "at wants (a seq of any element type, int) [SPEC: at wants (a seq of any element type, int) and gives the element (Gate 1; Compositional types)]",
+            "!= wants two values of one type, found 'int' and None [SPEC: == and != apply to two values of one type, structural at every depth (Gate 1; Compositional types)]",
+            "at wants (a seq of any element type, int) [SPEC: at wants (a seq of any element type, int) and gives the element (Gate 1; Compositional types)]",
+            "!= wants two values of one type, found 'int' and None [SPEC: == and != apply to two values of one type, structural at every depth (Gate 1; Compositional types)]"
+          ],
+          "forward_helper_calls": []
+        },
+        {
+          "request_sha256": "f08594154b8752e9ffc8df2b70363fb2a36f5b61d117df89e0ca77e4a1eb117d",
+          "name": "get_lcm",
+          "errors": [
+            "call of unknown fun lcm [SPEC: call names a declared spec_fun or the task's own name (Gate 3)]",
+            "ite branches differ: int vs None [SPEC: ite branches must have the same type]",
+            "call of unknown fun gcd [SPEC: call names a declared spec_fun or the task's own name (Gate 3)]",
+            "div wants all ints or all reals (not ['int', None]); write real(x) to convert [SPEC: + - * neg take all ints or all reals, / both, % ints only; real(x) converts (Division and modulo; Exact rationals)]"
+          ],
+          "category": "not well formed",
+          "given_spec_errors": [
+            "call of unknown fun lcm [SPEC: call names a declared spec_fun or the task's own name (Gate 3)]",
+            "ite branches differ: int vs None [SPEC: ite branches must have the same type]",
+            "call of unknown fun gcd [SPEC: call names a declared spec_fun or the task's own name (Gate 3)]",
+            "div wants all ints or all reals (not ['int', None]); write real(x) to convert [SPEC: + - * neg take all ints or all reals, / both, % ints only; real(x) converts (Division and modulo; Exact rationals)]"
+          ],
+          "forward_helper_calls": [
+            [
+              "lcm",
+              "gcd"
+            ],
+            [
+              "lcm_array",
+              "lcm"
+            ]
+          ]
+        },
+        {
+          "request_sha256": "f183010f84c191799a9bd8fe84fd3c6e674fd6a3f392bdf6d84a504032f2558f",
+          "name": "sum_Of_Primes",
+          "errors": [
+            "call of unknown fun is_prime [SPEC: call names a declared spec_fun or the task's own name (Gate 3)]",
+            "ite condition is not bool [SPEC: a condition or loop guard must be bool]"
+          ],
+          "category": "not well formed",
+          "given_spec_errors": [
+            "call of unknown fun is_prime [SPEC: call names a declared spec_fun or the task's own name (Gate 3)]",
+            "ite condition is not bool [SPEC: a condition or loop guard must be bool]"
+          ],
+          "forward_helper_calls": [
+            [
+              "sum_primes",
+              "is_prime"
+            ]
+          ]
+        }
+      ],
+      "scope": "Every cached body request, including replies ignored after another answer in its batch was accepted. Static diagnosis only; these are not official evaluation scores."
+    },
+    "final": {
+      "cached_body_requests": 30,
+      "categories": {
+        "passes structural gates": 22,
+        "not well formed": 6,
+        "parse": 2
+      },
+      "invalid_body_replies_with_errors_in_given_spec": 0,
+      "invalid_body_replies_with_forward_helper_calls": 0,
+      "first_error_per_invalid_reply": {
+        "assign r: seq into {'seq': 'seq'} [SPEC: assign's expression type must match the target's declared type]": 2,
+        "assign to n, not a return or local [SPEC: assign targets a return or a local in scope (Gate 2)]": 3,
+        "+ wants all ints or all reals (not [{'seq': 'seq'}, 'seq']); write real(x) to convert [SPEC: + - * neg take all ints or all reals, / both, % ints only; real(x) converts (Division and modulo; Exact rationals)]": 1
+      },
+      "invalid_body_replies": [
+        {
+          "request_sha256": "09bebdb7fabb7c0092a998754b17908deb0de9d35c7f1009f266f96b59bc7656",
+          "name": "increment_numerics",
+          "errors": [
+            "assign r: seq into {'seq': 'seq'} [SPEC: assign's expression type must match the target's declared type]"
+          ],
+          "category": "not well formed",
+          "given_spec_errors": [],
+          "forward_helper_calls": []
+        },
+        {
+          "request_sha256": "43d82b71a82d98debd42f4ca55fa19fe7fce3788469f438092a7b584ec2c42ba",
+          "name": "int_to_roman",
+          "errors": [
+            "assign to n, not a return or local [SPEC: assign targets a return or a local in scope (Gate 2)]",
+            "assign to n, not a return or local [SPEC: assign targets a return or a local in scope (Gate 2)]",
+            "assign to n, not a return or local [SPEC: assign targets a return or a local in scope (Gate 2)]",
+            "assign to n, not a return or local [SPEC: assign targets a return or a local in scope (Gate 2)]",
+            "assign to n, not a return or local [SPEC: assign targets a return or a local in scope (Gate 2)]",
+            "assign to n, not a return or local [SPEC: assign targets a return or a local in scope (Gate 2)]",
+            "assign to n, not a return or local [SPEC: assign targets a return or a local in scope (Gate 2)]",
+            "assign to n, not a return or local [SPEC: assign targets a return or a local in scope (Gate 2)]",
+            "assign to n, not a return or local [SPEC: assign targets a return or a local in scope (Gate 2)]",
+            "assign to n, not a return or local [SPEC: assign targets a return or a local in scope (Gate 2)]",
+            "assign to n, not a return or local [SPEC: assign targets a return or a local in scope (Gate 2)]",
+            "assign to n, not a return or local [SPEC: assign targets a return or a local in scope (Gate 2)]",
+            "assign to n, not a return or local [SPEC: assign targets a return or a local in scope (Gate 2)]"
+          ],
+          "category": "not well formed",
+          "given_spec_errors": [],
+          "forward_helper_calls": []
+        },
+        {
+          "request_sha256": "50eef74541cb741dd71e1a0608eec6ec5caf9b8b6a3b127d7754a0efc199b00a",
+          "name": "int_to_roman",
+          "errors": [
+            "assign to n, not a return or local [SPEC: assign targets a return or a local in scope (Gate 2)]",
+            "assign to n, not a return or local [SPEC: assign targets a return or a local in scope (Gate 2)]",
+            "assign to n, not a return or local [SPEC: assign targets a return or a local in scope (Gate 2)]",
+            "assign to n, not a return or local [SPEC: assign targets a return or a local in scope (Gate 2)]",
+            "assign to n, not a return or local [SPEC: assign targets a return or a local in scope (Gate 2)]",
+            "assign to n, not a return or local [SPEC: assign targets a return or a local in scope (Gate 2)]",
+            "assign to n, not a return or local [SPEC: assign targets a return or a local in scope (Gate 2)]",
+            "assign to n, not a return or local [SPEC: assign targets a return or a local in scope (Gate 2)]",
+            "assign to n, not a return or local [SPEC: assign targets a return or a local in scope (Gate 2)]",
+            "assign to n, not a return or local [SPEC: assign targets a return or a local in scope (Gate 2)]",
+            "assign to n, not a return or local [SPEC: assign targets a return or a local in scope (Gate 2)]",
+            "assign to n, not a return or local [SPEC: assign targets a return or a local in scope (Gate 2)]",
+            "assign to n, not a return or local [SPEC: assign targets a return or a local in scope (Gate 2)]"
+          ],
+          "category": "not well formed",
+          "given_spec_errors": [],
+          "forward_helper_calls": []
+        },
+        {
+          "request_sha256": "bb69e00a06e0fc65bc03342636730008cc1c2086839bb0686127ff2f6a038bcf",
+          "name": "increment_numerics",
+          "errors": [
+            "assign r: seq into {'seq': 'seq'} [SPEC: assign's expression type must match the target's declared type]"
+          ],
+          "category": "not well formed",
+          "given_spec_errors": [],
+          "forward_helper_calls": []
+        },
+        {
+          "request_sha256": "bfc629855371f99d67dfb898e28cb1b905de760a9f0edcc1d15490fcc99ab45c",
+          "name": "Convert",
+          "errors": [
+            "+ wants all ints or all reals (not [{'seq': 'seq'}, 'seq']); write real(x) to convert [SPEC: + - * neg take all ints or all reals, / both, % ints only; real(x) converts (Division and modulo; Exact rationals)]",
+            "assign r: int into {'seq': 'seq'} [SPEC: assign's expression type must match the target's declared type]"
+          ],
+          "category": "not well formed",
+          "given_spec_errors": [],
+          "forward_helper_calls": []
+        },
+        {
+          "request_sha256": "c7aa58d4fde5db0812ee8f96a4433a657142449b55fe415bda5cdea4efc708a4",
+          "name": "int_to_roman",
+          "errors": [
+            "assign to n, not a return or local [SPEC: assign targets a return or a local in scope (Gate 2)]",
+            "assign to n, not a return or local [SPEC: assign targets a return or a local in scope (Gate 2)]",
+            "assign to n, not a return or local [SPEC: assign targets a return or a local in scope (Gate 2)]",
+            "assign to n, not a return or local [SPEC: assign targets a return or a local in scope (Gate 2)]",
+            "assign to n, not a return or local [SPEC: assign targets a return or a local in scope (Gate 2)]",
+            "assign to n, not a return or local [SPEC: assign targets a return or a local in scope (Gate 2)]",
+            "assign to n, not a return or local [SPEC: assign targets a return or a local in scope (Gate 2)]",
+            "assign to n, not a return or local [SPEC: assign targets a return or a local in scope (Gate 2)]",
+            "assign to n, not a return or local [SPEC: assign targets a return or a local in scope (Gate 2)]",
+            "assign to n, not a return or local [SPEC: assign targets a return or a local in scope (Gate 2)]",
+            "assign to n, not a return or local [SPEC: assign targets a return or a local in scope (Gate 2)]",
+            "assign to n, not a return or local [SPEC: assign targets a return or a local in scope (Gate 2)]",
+            "assign to n, not a return or local [SPEC: assign targets a return or a local in scope (Gate 2)]"
+          ],
+          "category": "not well formed",
+          "given_spec_errors": [],
+          "forward_helper_calls": []
+        }
+      ],
+      "scope": "Every cached body request, including replies ignored after another answer in its batch was accepted. Static diagnosis only; these are not official evaluation scores."
+    },
+    "average": {
+      "cached_body_requests": 38,
+      "categories": {
+        "passes structural gates": 34,
+        "not well formed": 4
+      },
+      "invalid_body_replies_with_errors_in_given_spec": 2,
+      "invalid_body_replies_with_forward_helper_calls": 2,
+      "first_error_per_invalid_reply": {
+        "> compares two ints, two reals or two floats (SPEC.md gate 1; Exact rationals; Floats) [SPEC: < <= > >= compare two ints or two reals (Gate 1; Exact rationals)]": 1,
+        "call of unknown fun lcm [SPEC: call names a declared spec_fun or the task's own name (Gate 3)]": 2,
+        "ctor of unknown datatype 's' [SPEC: a datatype type or ctor names a datatype this task declares (Datatypes)]": 1
+      },
+      "invalid_body_replies": [
+        {
+          "request_sha256": "14ac7e02268c3ec216e6ceddb954af09c26d7fe6adc4db8d9af693b48049ae30",
+          "name": "second_frequent",
+          "errors": [
+            "> compares two ints, two reals or two floats (SPEC.md gate 1; Exact rationals; Floats) [SPEC: < <= > >= compare two ints or two reals (Gate 1; Exact rationals)]"
+          ],
+          "category": "not well formed",
+          "given_spec_errors": [],
+          "forward_helper_calls": []
+        },
+        {
+          "request_sha256": "18e2cd30a5f029dff1d832d49258cebe50969704f43e0605b471e9d10b91155f",
+          "name": "get_lcm",
+          "errors": [
+            "call of unknown fun lcm [SPEC: call names a declared spec_fun or the task's own name (Gate 3)]",
+            "ite branches differ: int vs None [SPEC: ite branches must have the same type]",
+            "call of unknown fun gcd [SPEC: call names a declared spec_fun or the task's own name (Gate 3)]",
+            "div wants all ints or all reals (not ['int', None]); write real(x) to convert [SPEC: + - * neg take all ints or all reals, / both, % ints only; real(x) converts (Division and modulo; Exact rationals)]"
+          ],
+          "category": "not well formed",
+          "given_spec_errors": [
+            "call of unknown fun lcm [SPEC: call names a declared spec_fun or the task's own name (Gate 3)]",
+            "ite branches differ: int vs None [SPEC: ite branches must have the same type]",
+            "call of unknown fun gcd [SPEC: call names a declared spec_fun or the task's own name (Gate 3)]",
+            "div wants all ints or all reals (not ['int', None]); write real(x) to convert [SPEC: + - * neg take all ints or all reals, / both, % ints only; real(x) converts (Division and modulo; Exact rationals)]"
+          ],
+          "forward_helper_calls": [
+            [
+              "lcm",
+              "gcd"
+            ],
+            [
+              "lcm_array",
+              "lcm"
+            ]
+          ]
+        },
+        {
+          "request_sha256": "53274e617479a33ac20f38815e19e81b0e661dca2f59113d8d5fce95b2e01e44",
+          "name": "get_lcm",
+          "errors": [
+            "call of unknown fun lcm [SPEC: call names a declared spec_fun or the task's own name (Gate 3)]",
+            "ite branches differ: int vs None [SPEC: ite branches must have the same type]"
+          ],
+          "category": "not well formed",
+          "given_spec_errors": [
+            "call of unknown fun lcm [SPEC: call names a declared spec_fun or the task's own name (Gate 3)]",
+            "ite branches differ: int vs None [SPEC: ite branches must have the same type]"
+          ],
+          "forward_helper_calls": [
+            [
+              "reduce_lcm",
+              "lcm"
+            ]
+          ]
+        },
+        {
+          "request_sha256": "7d5d38376a3332fecdf8a6a29619ccb31fc58f507a11a3b429b16fa06cc7bbe3",
+          "name": "text_match_word",
+          "errors": [
+            "ctor of unknown datatype 's' [SPEC: a datatype type or ctor names a datatype this task declares (Datatypes)]",
+            "- wants all ints or all reals (not [None, 'int']); write real(x) to convert [SPEC: + - * neg take all ints or all reals, / both, % ints only; real(x) converts (Division and modulo; Exact rationals)]"
+          ],
+          "category": "not well formed",
+          "given_spec_errors": [],
+          "forward_helper_calls": []
+        }
+      ],
+      "scope": "Every cached body request, including replies ignored after another answer in its batch was accepted. Static diagnosis only; these are not official evaluation scores."
+    }
+  },
+  "limits": "Well-formedness does not establish correctness or proof. This diagnostic changes no training row, model, prompt, native gate, or official evaluation result.",
+  "lineage_correction": {
+    "previous_dataset_sha256": "8aa1b7528363ebfa149e9b6a18ea9081c4904ff3d8687c240a9ea511d45c4794",
+    "new_untrained_dataset_sha256": "0b8c786bb8aa667716780df7732460ef7f14a707c3f9731c666a7c1e89ca21a9",
+    "previous_rows": 4089,
+    "new_rows": 4086,
+    "removed_parent_rows": [
+      3201,
+      3209,
+      3215
+    ],
+    "every_retained_row_byte_identical": true,
+    "changed_rows_retained": 41,
+    "judge_python_rows_retained": 909,
+    "L1_holds": true,
+    "scope": "A separate untrained snapshot. The active trial keeps its registered 4089-row input.",
+    "panel_and_lineage_audit": {
+      "rows": 4086,
+      "programs": 2786,
+      "unparsed": 157,
+      "flagged": []
+    },
+    "audit_sha256": "bba891aa71e17d9470d767503cab0f6b8192216bda21c17446670178693faed7"
+  }
+}
