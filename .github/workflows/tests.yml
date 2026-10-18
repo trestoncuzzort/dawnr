@@ -120,6 +120,9 @@ jobs:
             # sync; shells out to rsync for one of its eight tests and
             # is not meant to be portable to windows-latest
             --ignore=test_lab_mode.py
+            # response_loss compares torch losses and gradients; exercised by
+            # the CPU-torch job below, which installs that dependency.
+            --ignore=test_response_loss.py
           )
           DESELECT=(
             # needs the dafny binary
@@ -199,4 +202,4 @@ jobs:
         run: |
           python -m pytest -v test_dawnr_chat.py test_dawnr_api.py test_harness_chat.py test_fim.py test_early_stop.py \
             test_dawnr_interp_sae.py test_dawnr_interp_activations.py test_dawnr_interp_spec_probe.py \
-            test_dawnr_interp_browser.py test_dawnr_interp_run_sae.py
+            test_dawnr_interp_browser.py test_dawnr_interp_run_sae.py ../t/test_response_loss.py
