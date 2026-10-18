@@ -1,6 +1,6 @@
 # Dawnr v6 candidate (unreleased)
 
-This candidate has completed training. No improvement over v5 has been established.
+This candidate has completed training and failed to improve on v5 in development.
 The installed release remains student-v5 until the matched evaluation and
 release checks pass. The [registered comparison](../t/PREDICT-2026-10-18-v6.md)
 defines the acceptance conditions.
@@ -56,15 +56,25 @@ not establish universal semantic independence across arbitrary programs.
 
 ## Evaluation and release gate
 
-The preserved step-400 adapter has completed an early development pass at
-Q8_0. On the fixed 95 problems, v5 produced 51 test-passing Python solutions
-and 13 accepted t answers; step 400 produced 60 and 9 respectively. All saved
-t answers pass their problem tests. After full formal and specification
-scoring, v5 has 6/95 answers at one or more kernels and 3/95 at all seven;
-step 400 has 4/95 and 3/95. The [paired receipt](evidence/v6-development-early.json)
-records the matching protocols, scores, and individual outcomes. The early checkpoint has not demonstrated an
-improvement. The full five-epoch candidate has completed training and is being
-exported for development evaluation.
+Both preserved checkpoints have completed the same Q8_0 development evaluation.
+All accepted t answers pass the problem examples; the clean counts also require
+formal proof and the independent specification checks.
+
+| Fixed development-95 | V5 | V6 step 400 | V6 step 1275 |
+|---|---:|---:|---:|
+| Tested Python solutions | 51 | 60 | 46 |
+| Accepted t answers | 13 | 9 | 10 |
+| Clean answers, at least one kernel | 6 | 4 | 4 |
+| Clean answers, all seven kernels | 3 | 3 | 2 |
+
+The [early receipt](evidence/v6-development-early.json) and
+[final receipt](evidence/v6-development-final.json) preserve the paired results.
+The final checkpoint loses problems 543 and 634 against v5 and gains none.
+Its [kernel matrix](evidence/v6-dev-final-kernels.md) records refusals and failures.
+No checkpoint has qualified for promotion, and no new held-out model answers
+have been generated. One equal-weight average of the two saved checkpoints
+is registered for development evaluation, with a gate of seven clean answers
+and at least three all-seven answers. It adds no training updates or data.
 
 The correct-source specification control currently reaches 32/33 in all seven
 proof systems ([complete table](evidence/v6-prover-controls.md)). Frama-C rejects one twin certificate; all 33 pass in each of
@@ -85,8 +95,10 @@ The held-out driver loads the versioned GGUF shards intended for installation
 and checks their manifest before serving. Packaging compares every tensor's
 name, dimensions, type and bytes with the Q8 export, and preserves its model
 metadata. The [step-400 packaging probe](evidence/v6-packaging-probe.json)
-passed all 426 tensors and a native loader/API check. Final-candidate packaging
-and evaluation are still pending.
+passed all 426 tensors and a native loader/API check. The final checkpoint's
+[packaging receipt](evidence/v6-packaging-final.json) also confirms all 426
+tensors and metadata. Installed-format quality evaluation remains pending;
+successful packaging does not qualify the failed development candidate.
 
 | Measurement | Historical v5 | New matched v5 | Candidate |
 |---|---:|---|---|

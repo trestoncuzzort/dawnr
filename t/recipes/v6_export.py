@@ -34,16 +34,56 @@ def verify_adapter(adapter, manifest):
     return record
 
 
+def export_inputs(adapter, manifest, average_adapter=None, average_manifest=None):
+    source = verify_adapter(adapter, manifest)
+    if (average_adapter is None) != (average_manifest is None):
+        raise ValueError("averaging requires both an adapter and its manifest")
+    if average_adapter is None:
+        return source
+    other = verify_adapter(average_adapter, average_manifest)
+    configs = [json.loads((Path(path) / "adapter_config.json").read_text())
+               for path in (adapter, average_adapter)]
+    if configs[0] != configs[1]:
+        raise ValueError("checkpoint average requires identical adapter configurations")
+    config = configs[0]
+    if (config.get("peft_type") != "LORA" or config.get("bias") != "none"
+            or any(config.get(key) for key in (
+                "modules_to_save", "lora_bias", "use_dora", "use_rslora",
+                "use_qalora", "use_bdlora", "rank_pattern", "alpha_pattern",
+                "target_parameters", "trainable_token_indices", "alora_invocation_tokens"))):
+        raise ValueError("checkpoint average supports plain, bias-free LoRA only")
+    return {"kind": "uniform-checkpoint-average", "weights": [0.5, 0.5],
+            "method": "PEFT cat: mean of scaled B @ A deltas, not mean of factors",
+            "components": [source, other]}
+
+
+def merge_saved_adapters(base, adapter, average_adapter=None):
+    from peft import PeftModel
+
+    model = PeftModel.from_pretrained(base, str(adapter), adapter_name="first")
+    selected = "first"
+    if average_adapter is not None:
+        model.load_adapter(str(average_adapter), adapter_name="second")
+        model.add_weighted_adapter(["first", "second"], [0.5, 0.5],
+                                   "average", combination_type="cat")
+        model.set_adapter("average")
+        selected = "average"
+    return model.merge_and_unload(safe_merge=True, adapter_names=[selected])
+
+
 def main(argv=None):
     p = argparse.ArgumentParser(description=__doc__)
     p.add_argument("--adapter", required=True, type=Path)
     p.add_argument("--manifest", required=True, type=Path)
+    p.add_argument("--average-adapter", type=Path,
+                   help="optional second checkpoint for an exact equal-weight LoRA-delta average")
+    p.add_argument("--average-manifest", type=Path)
     p.add_argument("--llama-dir", required=True, type=Path)
     p.add_argument("--out", required=True, type=Path)
     p.add_argument("--device", choices=("cpu", "cuda"), default="cuda")
     p.add_argument("--name", required=True)
     a = p.parse_args(argv)
-    source = verify_adapter(a.adapter, a.manifest)
+    source = export_inputs(a.adapter, a.manifest, a.average_adapter, a.average_manifest)
     actual = subprocess.check_output(["git", "-C", str(a.llama_dir), "rev-parse", "HEAD"], text=True).strip()
     if actual != CONVERTER:
         p.error("converter checkout differs from the registered revision")
@@ -54,7 +94,6 @@ def main(argv=None):
     a.out.mkdir(parents=True)
     import torch
     from huggingface_hub import snapshot_download
-    from peft import PeftModel
     from transformers import AutoModelForCausalLM, AutoTokenizer
 
     snapshot = Path(snapshot_download(
@@ -70,7 +109,7 @@ def main(argv=None):
     (a.out / "inputs.json").write_text(json.dumps(receipt, indent=2) + "\n")
     base = AutoModelForCausalLM.from_pretrained(str(snapshot), dtype=torch.bfloat16,
                                               device_map={"": "cpu" if a.device == "cpu" else 0})
-    model = PeftModel.from_pretrained(base, str(a.adapter)).merge_and_unload(safe_merge=True)
+    model = merge_saved_adapters(base, a.adapter, a.average_adapter)
     model.config._name_or_path = MODEL
     merged = a.out / "merged"
     model.save_pretrained(merged)

@@ -1,7 +1,7 @@
 {
   "schema": 1,
   "candidate": "v6-20261018",
-  "status": "training complete; evaluation pending; not released",
+  "status": "training complete; final development result below v5; not released",
   "dataset": {
     "filename": "v6-rows.jsonl",
     "sha256": "e14f766f06299d589d9a6e3293f6bf3e3f06ffac026433e2fdeff1c04294af80",

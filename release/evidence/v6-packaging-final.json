@@ -1,0 +1,29 @@
+{
+  "schema": 1,
+  "source_gguf_sha256": "066205bb4f02c4c741dddcfb8717b3fa427862f5d646d53634367c5e13684903",
+  "adapter_step": 1275,
+  "converter_commit": "f1cee9941b0e843ea260bf8dd9a090fbd9711b6a",
+  "packager_sha256": "eac2e41e03ed56f5bb16d03b6180f4be4ffc8637de172163e0c5a4f836d67ee9",
+  "splitter_sha256": "ce4572045dbbd031c3f5e2c8cdf965f9d30a6528c8c9e17a065cd21b30b01dfb",
+  "manifest_sha256": "3a6a8dd27c8a163c917c984ba96828062cbbdc6435139669224e2ff0782ade5c",
+  "first_shard": "dawnr-v6-20261018-00001-of-00003.gguf",
+  "files": {
+    "dawnr-v6-20261018-00001-of-00003.gguf": {
+      "sha256": "e59f01ca177b578af3d988f6365967b356432a79e4f69f2683ec1263e8ab766f",
+      "bytes": 1909306368
+    },
+    "dawnr-v6-20261018-00002-of-00003.gguf": {
+      "sha256": "f66d95b6e57ba0fd4fa4fc544760fb973f04555faaf2cc7727705e6f022e2131",
+      "bytes": 1892135392
+    },
+    "dawnr-v6-20261018-00003-of-00003.gguf": {
+      "sha256": "649f68a71d150a41ab642bf5ebf22d51b306eb1fedbfafa304222dfdf8c81c71",
+      "bytes": 680961312
+    }
+  },
+  "equivalence": {
+    "tensors": 426,
+    "tensor_contents_sha256": "60f8d9c675f0b3bd455986a2ba3852778173bb3e5ded367eed38236d32de6066",
+    "model_metadata_sha256": "5fd4dced861957755b59670c42dac63a3e48178b761d9bc414f122d32338d3bc"
+  }
+}
