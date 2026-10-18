@@ -52,6 +52,13 @@ not establish universal semantic independence across arbitrary programs.
 
 ## Evaluation and release gate
 
+The preserved step-400 adapter has completed an early development pass at
+Q8_0. On the fixed 95 problems, v5 produced 51 test-passing Python solutions
+and 13 accepted t answers; step 400 produced 60 and 9 respectively. All saved
+t answers pass their problem tests. Full formal and specification scoring is
+still pending. These mixed intermediate counts do not establish an improvement;
+the full five-epoch candidate remains in training.
+
 The matched comparison uses Q8_0 versions of v5 and v6, the same pinned
 llama.cpp server, the same prompts and panels, and the same Python-first route.
 It permits at most 17 calls per programming problem, with 1,024 new tokens per
@@ -72,4 +79,11 @@ specification count and 27/33. The installed-format artifact must retain the
 qualifying results. A one-problem gain on one training seed alone would not
 establish a general gain across seeds.
 
-No release assets or changed installer default accompany this candidate card.
+V6 has not been published or selected as the installer default. The
+[rolling channel](ROLLING.md) currently serves v5.
+
+The application has separate terminal-usability improvements: help before
+installation, command examples, custom storage paths, and a refreshed model
+manifest. A fresh CPU installation and one real read-only repository task
+passed on Ubuntu 24.04.5; the [receipt](evidence/v6-terminal-smoke.json) states
+that check's scope. This application result is separate from model qualification.

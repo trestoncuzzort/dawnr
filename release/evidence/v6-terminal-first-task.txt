@@ -1,0 +1,7 @@
+starting the base model (it stays loaded for the next task, and unloads itself when idle)...
+dawnr in /opt/dawnr-usability/demo (reads only; offline)
+  fs_list here  [ran]
+  fs_read here/README.md  [ran]
+The command to run the tests is `python3 -m unittest`.
+[Nothing was changed.]
+[2 model calls, 2,575 tokens read (2,415 from the cache), 44 written, 5 tokens a second, 17.3 s]

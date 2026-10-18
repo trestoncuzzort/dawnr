@@ -1,0 +1,18 @@
+{
+  "source_commit": "8c73b35b5acfda5ae6593001cb8b546d7e05148f",
+  "platform": "Ubuntu 24.04.5 x86_64",
+  "compute": "2 vCPU, 8 GiB RAM, CPU inference",
+  "model": "installed v5 and base model",
+  "install": "fresh installation into a model directory containing a space",
+  "first_task": "Read README.md and tell me the command to run the tests. Answer in one sentence.",
+  "expected": "python3 -m unittest",
+  "observed": "The command to run the tests is `python3 -m unittest`.",
+  "changes": "Nothing was changed",
+  "scope": "One real read-only task; this is not a model-quality benchmark or proof-command test",
+  "logs_sha256": {
+    "doctor.txt": "368f7395409fff7b69b1aef0d15d614f49c61c763d0c6d2f990c92818ad4163e",
+    "first-task.txt": "fa12a03b98aa1ae0dfcbd3b05005914d1a045ebc3495378818bfc65f7f674f9d",
+    "help.txt": "c541a21fff4fd67dc9dd39276dbcec3dd6c69fd00f98ee509917d6824bed7901",
+    "install.log": "0fda0fe68b34894d34861929d7f065a38d884356adb6dc7c546029a3979d4a6a"
+  }
+}
