@@ -24,16 +24,17 @@ BASE_URL=https://huggingface.co/unsloth/Qwen3.5-4B-GGUF/resolve/main/Qwen3.5-4B-
 # conversion, pinned by revision, fetched as one byte range
 LAYER_URL=https://huggingface.co/unsloth/Qwen3.5-4B-MTP-GGUF/resolve/86835bf9949e4d14d6860f7910b1340ad4f271a9/Qwen3.5-4B-Q4_K_M.gguf
 LAYER_RANGE=2753780032-2834975039
-STUDENT_RELEASE=${DAWNR_STUDENT_RELEASE:-https://github.com/trestoncuzzort/dawnr/releases/download/student-v5}
+STUDENT_RELEASE=${DAWNR_STUDENT_RELEASE:-https://github.com/trestoncuzzort/dawnr/releases/download/rolling}
 BUILD=auto
 STUDENT=""
 DAFNY=1
 
 while [ $# -gt 0 ]; do
   case $1 in
-    --home) DAWNR_HOME=$2; shift 2;;
-    --student) STUDENT=$2; shift 2;;
-    --build) BUILD=$2; shift 2;;
+    --home|--student|--build)
+      [ $# -ge 2 ] && [ -n "$2" ] || { printf 'install.sh: %s needs a value. See ./install.sh --help\n' "$1" >&2; exit 2; }
+      case $1 in --home) DAWNR_HOME=$2;; --student) STUDENT=$2;; --build) BUILD=$2;; esac
+      shift 2;;
     --no-dafny) DAFNY=0; shift;;
     -h|--help) sed -n '2,/^set -euo/p' "$0" | grep '^#'; exit 0;;
     *) echo "install.sh: unknown option $1" >&2; exit 2;;
@@ -201,16 +202,22 @@ if [ -n "$STUDENT" ] && [ -f "$STUDENT" ]; then
   echo "  student: $STUDENT_GGUF"
 else
   # the release carries the student as shards under GitHub's 2 GiB a file, listed with their SHA-256s in a manifest
-  BASE=${STUDENT:-$STUDENT_RELEASE}
-  fetch "$BASE/dawnr-student.sha256" "$DAWNR_HOME/models/dawnr-student.sha256" \
-    || fail "the student model is not published yet at $BASE; pass --student FILE"
+  STUDENT_BASE_URL=${STUDENT:-$STUDENT_RELEASE}
+  # A rolling manifest must be fetched afresh. Keep the installed manifest
+  # until every newly selected model file has passed its checksum.
+  MANIFEST_NEXT="$DAWNR_HOME/models/dawnr-student.sha256.next"
+  curl -L --fail --retry 3 -sS -o "$MANIFEST_NEXT" "$STUDENT_BASE_URL/dawnr-student.sha256" \
+    || fail "the student model is not published yet at $STUDENT_BASE_URL; pass --student FILE"
+  "$PY" "$REPO/locallm/install_runtime.py" check-manifest "$MANIFEST_NEXT" \
+    || fail "the model manifest is invalid; the installed model has not been changed"
   STUDENT_GGUF=""
   while read -r sum name; do
     [ -n "$name" ] || continue
-    fetch "$BASE/$name" "$DAWNR_HOME/models/$name" "$sum" || fail "could not download $name"
+    fetch "$STUDENT_BASE_URL/$name" "$DAWNR_HOME/models/$name" "$sum" || fail "could not download $name"
     [ -z "$STUDENT_GGUF" ] && STUDENT_GGUF="$DAWNR_HOME/models/$name"
-  done < "$DAWNR_HOME/models/dawnr-student.sha256"
+  done < "$MANIFEST_NEXT"
   [ -n "$STUDENT_GGUF" ] || fail "the student manifest lists no files"
+  mv "$MANIFEST_NEXT" "$DAWNR_HOME/models/dawnr-student.sha256"
 fi
 
 if [ "$DAFNY" = 1 ]; then
@@ -262,22 +269,20 @@ fi
 
 say "The dawnr command"
 mkdir -p "$BIN_DIR" "$DAWNR_HOME"
-# settings the person added to the env file (DAWNR_GPU_LAYERS=0, DAWNR_THREADS=...) outlive a re-install
-KEPT=$(grep -E '^DAWNR_[A-Z_]+=' "$DAWNR_HOME/env" 2>/dev/null | grep -v -E '^DAWNR_(REPO|HOME|PYTHON|BUILD)=' || true)
-cat > "$DAWNR_HOME/env" <<ENV
-DAWNR_REPO=$REPO
-DAWNR_HOME=$DAWNR_HOME
-DAWNR_PYTHON=$PY
-LLAMA_SERVER=$DAWNR_HOME/llama.cpp/llama-server
-DAWNR_BUILD=$BUILD
-STUDENT_GGUF=$STUDENT_GGUF
-BASE_GGUF=$([ -s "$MERGED" ] && echo "$MERGED" || echo "$BASE")
-ENV
-[ -s "$MERGED" ] && echo "BASE_DRAFT=mtp" >> "$DAWNR_HOME/env"
-[ -n "$KEPT" ] && printf '%s\n' "$KEPT" >> "$DAWNR_HOME/env"
-[ -x "$DAWNR_HOME/provers/dafny/dafny" ] && echo "T_DAFNY=$DAWNR_HOME/provers/dafny/dafny" >> "$DAWNR_HOME/env"
-[ -n "${INVARIANT:-}" ] && echo "DOTNET_SYSTEM_GLOBALIZATION_INVARIANT=1" >> "$DAWNR_HOME/env"
-ln -sf "$REPO/bin/dawnr" "$BIN_DIR/dawnr"
+SETTINGS=()
+[ -s "$MERGED" ] && SETTINGS+=(--draft)
+[ -x "$DAWNR_HOME/provers/dafny/dafny" ] && SETTINGS+=(--dafny "$DAWNR_HOME/provers/dafny/dafny")
+[ -n "${INVARIANT:-}" ] && SETTINGS+=(--invariant)
+"$PY" "$REPO/locallm/install_runtime.py" write --repo "$REPO" --home "$DAWNR_HOME" --bin-dir "$BIN_DIR" \
+  --python "$PY" --server "$DAWNR_HOME/llama.cpp/llama-server" --build "$BUILD" \
+  --student "$STUDENT_GGUF" --base "$([ -s "$MERGED" ] && echo "$MERGED" || echo "$BASE")" "${SETTINGS[@]}"
 echo "  $BIN_DIR/dawnr"
-case ":$PATH:" in *":$BIN_DIR:"*) ;; *) echo "  add $BIN_DIR to your PATH to type 'dawnr' anywhere";; esac
-say "Done. Try:  dawnr doctor   then   dawnr ask \"Write a function that doubles a number.\" --test \"assert double(3) == 6\""
+say "Installed. Check the setup:"
+printf '  %q doctor\n' "$BIN_DIR/dawnr"
+case ":$PATH:" in *":$BIN_DIR:"*) ;; *)
+  echo "To use dawnr in this terminal:"
+  printf '  export PATH=%q:"$PATH"\n' "$BIN_DIR";;
+esac
+echo 'Then open your project folder and try:'
+echo '  dawnr do "Explain the structure of this project" --read-only'
+echo '  dawnr help ask'

@@ -12,6 +12,25 @@ counterexamples, datasets, model-training code, evaluation scripts, and measured
 checking selected PX4 flight-software routines against compiled C++ and recording proposed fixes alongside the
 inputs that expose the original failures.
 
+## Start in a terminal
+
+```bash
+git clone https://github.com/trestoncuzzort/dawnr
+cd dawnr
+./install.sh
+export PATH="$HOME/.local/bin:$PATH"
+dawnr doctor
+dawnr do "Explain this project's structure and tests" --read-only
+```
+
+Run the last command inside the project you want help with. Models start
+automatically; the first installation downloads several gigabytes.
+Use `dawnr` for an interactive session, `dawnr help ask` for checked-code
+examples, or the [user guide](docs/USER-GUIDE.md) for setup and troubleshooting.
+You can read `./bin/dawnr --help` before installing anything.
+Downloads use a [single rolling release](release/ROLLING.md); its current
+model remains v5 while the v6 candidate is evaluated.
+
 ## What is implemented
 
 | Part | What it does | Implementation |

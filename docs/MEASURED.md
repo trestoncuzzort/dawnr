@@ -13,7 +13,7 @@ run, good and bad, is in [DISCLAIMERS.md](../DISCLAIMERS.md); what was corrected
 > seed of the recipe beats it at both levels, and given a specification the new model proves **27 of 33** held-out
 > ones by all seven provers, more than any earlier release. It is a small model (Qwen3.5-4B, fine-tuned here) that
 > runs offline on an ordinary CPU or an 8 GB laptop graphics card.
-> [The release](../../../releases/tag/student-v5) · [how it was measured](../t/PREDICT-2026-10-05-release-v5.md) ·
+> [Rolling release and model history](../release/ROLLING.md) · [how it was measured](../t/PREDICT-2026-10-05-release-v5.md) ·
 > [every number, good and bad](../DISCLAIMERS.md)
 >
 > *Corrected the same day.* This first read 26 of 200, and 16. An audit of the training data then found 18 of

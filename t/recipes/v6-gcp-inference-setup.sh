@@ -20,13 +20,16 @@ cmake -S llama.cpp -B llama.cpp/build -DCMAKE_BUILD_TYPE=Release \
 cmake --build llama.cpp/build --target llama-server llama-quantize llama-gguf-split -j 4
 llama.cpp/build/bin/llama-server --version
 cd models
-base=https://github.com/trestoncuzzort/dawnr/releases/download/student-v5
+base=https://github.com/trestoncuzzort/dawnr/releases/download/rolling
 for name in dawnr-student.sha256 dawnr-student-00001-of-00003.gguf \
             dawnr-student-00002-of-00003.gguf dawnr-student-00003-of-00003.gguf; do
   if [ ! -s "$name" ]; then
-    curl -fL --retry 3 -o "$name.part" "$base/$name"
+    asset=$name
+    [ "$name" != dawnr-student.sha256 ] || asset=dawnr-v5-baseline.sha256
+    curl -fL --retry 3 -o "$name.part" "$base/$asset"
     mv "$name.part" "$name"
   fi
 done
+echo 'd855000c3dffd9772da5a2f9dc238b41d7f8337d9bf58e578e5274ebb9566a4e  dawnr-student.sha256' | sha256sum -c -
 sha256sum -c dawnr-student.sha256
 touch ../INFERENCE_READY

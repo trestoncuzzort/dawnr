@@ -24,8 +24,100 @@
 # and is proved. From a question it is t/answer.py: the model answers, the answers that pass the tests are checked
 # against an independent Python solution, then proved; one is shown with its evidence, or the question is refused.
 set -euo pipefail
+show_help() {
+  case ${1:-} in
+    ""|help|-h|--help)
+      cat <<'HELP'
+dawnr — coding help and checked programs, running locally
+
+Usage: dawnr [command] [options]
+
+Start in your project folder:
+  dawnr                              Open the repository assistant
+  dawnr do "Explain this project" --read-only
+                                     Run one task without changing files
+  dawnr doctor                       Check the local installation
+
+Generate and check code:
+  dawnr ask "Write a function that doubles a number." \
+    --test "assert double(3) == 6" --save-python double.py
+  dawnr verify FILE.py                Check an existing Python function
+  dawnr prove SPEC.t                  Implement a specification
+  dawnr check CERTIFICATE.json        Replay a saved check without a model
+
+More commands:
+  spec, cite, extract, calc, tools, ui, mcp, serve, forget
+
+Run dawnr help COMMAND for examples and options.
+First installation: run ./install.sh from the Dawnr checkout.
+Guide: https://github.com/trestoncuzzort/dawnr/blob/main/docs/USER-GUIDE.md
+HELP
+      ;;
+    assistant|do|--read-only|--root|--online|--yes)
+      cat <<'HELP'
+Usage: dawnr [--read-only] [--root DIR] [--online] [--yes]
+       dawnr do "TASK" [options]
+
+Work in the current project folder. With no task, open an interactive session.
+  dawnr do "Explain the tests in this project" --read-only
+  dawnr do "Add a test for empty input"
+
+  --read-only  Read and explain files without editing or running commands
+  --root DIR   Allow reading another folder (repeatable)
+  --online     Enable the web tools for this session
+  --yes        Apply proposed changes without asking
+
+Changes normally appear as a plan for review. Use /undo in an interactive
+session to restore the last recorded change. Models start automatically.
+HELP
+      ;;
+    ask)
+      cat <<'HELP'
+Usage: dawnr ask "QUESTION" [--test "assert f(x) == y" ...]
+       [--save-python FILE] [--save-t FILE] [--certificate FILE]
+
+Generate a function, check examples and its specification, and run provers.
+  dawnr ask "Return the larger of two integers." \
+    --test "assert larger(3, 5) == 5" --test "assert larger(-2, -1) == -1" \
+    --save-python larger.py --certificate larger.cert.json
+  dawnr check larger.cert.json
+
+Give examples to make the intended behavior clear. In an interactive terminal,
+omitting --test lets you review proposed examples first. Checks may take minutes.
+HELP
+      ;;
+    doctor) printf '%s\n' 'Usage: dawnr doctor' 'Check models, the model server, sandbox, and available proof tools.' ;;
+    serve) printf '%s\n' 'Usage: dawnr serve start|stop|status|api' 'Keep models ready, unload them, check their status, or start the local HTTP API.' ;;
+    prove) printf '%s\n' 'Usage: dawnr prove SPEC.t [--test "assert f(x) == y" ...] [--save-python FILE] [--certificate FILE]' 'Implement the supplied specification and check the result.' ;;
+    spec) printf '%s\n' 'Usage: dawnr spec "QUESTION" --test "assert f(x) == y" [--save SPEC.t]' 'Propose specifications for you to review before implementation.' ;;
+    verify) printf '%s\n' 'Usage: dawnr verify FILE.py [--fn NAME] [--test "assert f(x) == y" ...]' 'Check an existing Python function against a generated specification.' ;;
+    check) printf '%s\n' 'Usage: dawnr check CERTIFICATE.json [--spec SPEC.t] [--json REPORT.json]' 'Replay the recorded checks using local proof tools; no model is needed.' ;;
+    cite) printf '%s\n' 'Usage: dawnr cite "QUESTION" FILE [FILE ...]' 'Answer a question using quotations from the supplied documents.' ;;
+    extract) printf '%s\n' 'Usage: dawnr extract FILE [FILE ...] --field "name: description" [--json OUT.json]' 'Extract fields with the source sentence for each value.' ;;
+    calc) printf '%s\n' 'Usage: dawnr calc "QUESTION WITH NUMBERS" [--json OUT.json]' 'Compare a numerical answer with separately evaluated workings.' ;;
+    tools) printf '%s\n' 'Usage: dawnr tools TOOLS.json "REQUEST" [--json OUT.json]' 'Use tools that you supply in a tool-definition file.' ;;
+    ui) printf '%s\n' 'Usage: dawnr ui' 'Open the local browser interface.' ;;
+    mcp) printf '%s\n' 'Usage: dawnr mcp' 'Expose Dawnr checks to an MCP client over standard input and output.' ;;
+    forget) printf '%s\n' 'Usage: dawnr forget [--all]' 'Erase saved journals, jobs, and run files. --all also removes downloaded models and tools.' ;;
+    *) printf 'dawnr: unknown command: %s\nTry: dawnr --help\n' "$1" >&2; return 2 ;;
+  esac
+}
+
+# Help and command validation precede configuration and model startup.
+case ${1:-} in
+  -h|--help|help) show_help "${2:-}"; exit $?;;
+  "") if ! [ -t 0 ]; then show_help; exit 0; fi;;
+  assistant|do|ask|prove|spec|verify|check|cite|extract|calc|tools|doctor|serve|ui|mcp|forget|--read-only|--root|--online|--yes) ;;
+  *) printf 'dawnr: unknown command: %s\nTry: dawnr --help\n' "$1" >&2; exit 2;;
+esac
+for arg in "$@"; do
+  case $arg in
+    --) break;;
+    -h|--help) show_help "${1:-}"; exit $?;;
+  esac
+done
 ENVF=${DAWNR_HOME:-$HOME/.local/share/dawnr}/env
-[ -f "$ENVF" ] || { echo "dawnr: not installed yet; run install.sh from the dawnr folder" >&2; exit 1; }
+[ -f "$ENVF" ] || { printf '%s\n' 'dawnr: setup is not complete.' 'From your Dawnr checkout, run: ./install.sh' 'Then check the installation: dawnr doctor' >&2; exit 1; }
 set -a; . "$ENVF"; set +a
 CORES=$(getconf _NPROCESSORS_ONLN 2>/dev/null || sysctl -n hw.ncpu 2>/dev/null || echo 4)
 THREADS=${DAWNR_THREADS:-$(( CORES > 2 ? CORES / 2 : 1 ))}
