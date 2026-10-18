@@ -118,6 +118,37 @@ def checkpoint() -> dict:
     raise RuntimeError("no complete checkpoint is available")
 
 
+@app.function(timeout=900, cpu=2, memory=4096, volumes=volumes)
+def finalize() -> dict:
+    """Hash completed artifacts after the controller observes a successful training call."""
+    out = RUN / "adapter"
+    record = json.loads((out / "run.json").read_text())
+    if record["steps"] != 1275 or record["sft_sha256"] != ROWS_SHA:
+        raise RuntimeError("final run is incomplete or its data changed")
+    expected = {"lr": 2e-4, "epochs": 5, "batch": 1, "grad_accum": 16,
+                "max_len": 2845, "seed": 1, "shared_prefix": False, "small_card": False}
+    if any(record["recipe"].get(key) != value for key, value in expected.items()):
+        raise RuntimeError("final training recipe changed")
+    if record["recipe"]["lora"] != {"r": 64, "alpha": 16, "dropout": .1, "target_modules": "all-linear"}:
+        raise RuntimeError("final adapter recipe changed")
+    if (record["rows_selected"], record["rows_used"], record["rows_dropped_too_long"]) != (4189, 4073, 116):
+        raise RuntimeError("final training row counts changed")
+    if digest(out / "training-rows.jsonl") != ROWS_SHA or digest(TRAINER_SOURCE) != TRAINER_SHA:
+        raise RuntimeError("final data or trainer bytes changed")
+    for name in ("adapter_config.json", "adapter_model.safetensors"):
+        if not (out / name).is_file() or not (out / name).stat().st_size:
+            raise RuntimeError("completed run lacks " + name)
+    files = sorted(p for p in out.rglob("*") if p.is_file())
+    manifest = {"step": 1275, "source": "adapter", "trainer_sha256": TRAINER_SHA,
+                "files": {str(p.relative_to(out)): digest(p) for p in files}}
+    path = RUN / "final-manifest.json"
+    if path.exists() and json.loads(path.read_text()) != manifest:
+        raise RuntimeError("completed training artifacts changed after finalization")
+    path.write_text(json.dumps(manifest, indent=2) + "\n")
+    data.commit()
+    return {"step": 1275, "files": len(files), "adapter_sha256": manifest["files"]["adapter_model.safetensors"]}
+
+
 @app.function(gpu="H100", timeout=900, cpu=8, memory=32768, volumes=volumes)
 def benchmark_h100() -> dict:
     """Ten updates from the preserved step-300 state; never used as a release candidate."""
@@ -224,10 +255,10 @@ def train() -> dict:
 
 @app.local_entrypoint()
 def main(mode: str = "prepare"):
-    modes = {"prepare": prepare, "checkpoint": checkpoint, "train": train,
+    modes = {"prepare": prepare, "checkpoint": checkpoint, "finalize": finalize, "train": train,
              "benchmark-h100": benchmark_h100}
     if mode not in modes:
-        raise ValueError("mode must be prepare, checkpoint, train, or benchmark-h100")
+        raise ValueError("mode must be prepare, checkpoint, finalize, train, or benchmark-h100")
     call = modes[mode].spawn()
     print(f"Function call: {call.object_id}", flush=True)
     print(json.dumps(call.get()), flush=True)

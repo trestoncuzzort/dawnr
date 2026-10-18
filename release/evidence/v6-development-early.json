@@ -1,0 +1,152 @@
+{
+  "panel": {
+    "name": "development-95",
+    "count": 95,
+    "sha256": "f807aec7e6b89e524ded720d9ccfb670c1d504a5a5717966a4b870516701daf7"
+  },
+  "route": "t/recipes/v6_server_route.py",
+  "grade": "t/recipes/v6-grade.sh",
+  "scope": "Early step-400 development measurement, not the final candidate or a held-out result. Installed weights remain v5.",
+  "arms": {
+    "v5": {
+      "python_test_passing": 51,
+      "accepted_answers": 13,
+      "scores": {
+        "tag": "v6-20261018-v5-dev",
+        "problems": 95,
+        "task": 13,
+        "tests pass": 13,
+        ">=1": 6,
+        ">=3": 5,
+        ">=5": 3,
+        ">=6": 3,
+        ">=7": 3
+      },
+      "confirmed_ids": {
+        "1": [
+          251,
+          450,
+          476,
+          543,
+          549,
+          634
+        ],
+        "3": [
+          251,
+          450,
+          476,
+          549,
+          634
+        ],
+        "5": [
+          476,
+          549,
+          634
+        ],
+        "6": [
+          476,
+          549,
+          634
+        ],
+        "7": [
+          476,
+          549,
+          634
+        ]
+      },
+      "evidence_sha256": {
+        "t/out/spec-experiment/v6-20261018-v5-dev/spec_first.json": "6bc7e999b05c20b708b63295b25715de790029f8ca1df13bb7b9e39e64a9461b",
+        "t/out/spec-experiment/v6-20261018-v5-dev/extract.json": "ac7450c32968d1539f0fbc62dbd6966238e771d70ebca9c9630a0e5bf10a5354",
+        "t/out/spec-experiment/v6-20261018-v5-dev/tests.json": "9743131202ce2a5fe0ce74020a5adf632a216f46e7e1fac12cbb9a6ced6ec384",
+        "t/out/spec-experiment/v6-20261018-v5-dev/kernels.md": "f05ca7a09b0ca31f84a30a726275dc108af2ad94e4f4a5015f4bba7adceda708",
+        "t/out/v6-20261018/proof-results/v5-dev-full/verdicts.json": "45b426375d41d61367694e46a49023c51b5e3a743845946aaee8c2d5ce9ef3d3",
+        "t/out/v6-20261018/proof-results/v5-dev-full/levels.json": "28a97279802ff8897d9d5bc0a581e537dce8ce3f4df35647fe83cb694e56bbe8",
+        "t/out/v6-20261018/proof-results/v5-dev-full/evaluator.json": "822bebe66d09a3dcc136a8b779ff79f879907501e1bc54a71302047b4b8eaa47",
+        "t/out/v6-20261018/v5-dev/requests/protocol.json": "8a04ef97a1a00202e2e06504216bfd2ee739ac0cc8b31b0730544839f709e6e7"
+      }
+    },
+    "step400": {
+      "python_test_passing": 60,
+      "accepted_answers": 9,
+      "scores": {
+        "tag": "v6-20261018-step400-dev",
+        "problems": 95,
+        "task": 9,
+        "tests pass": 9,
+        ">=1": 4,
+        ">=3": 3,
+        ">=5": 3,
+        ">=6": 3,
+        ">=7": 3
+      },
+      "confirmed_ids": {
+        "1": [
+          450,
+          476,
+          549,
+          634
+        ],
+        "3": [
+          476,
+          549,
+          634
+        ],
+        "5": [
+          476,
+          549,
+          634
+        ],
+        "6": [
+          476,
+          549,
+          634
+        ],
+        "7": [
+          476,
+          549,
+          634
+        ]
+      },
+      "evidence_sha256": {
+        "t/out/spec-experiment/v6-20261018-step400-dev/spec_first.json": "686aeab67f46926d409875c3fb26de090b5032f21de783824ad4edd1c5d24d07",
+        "t/out/spec-experiment/v6-20261018-step400-dev/extract.json": "57d64c9c29b48ce2af90b9aadf5c78f79d4fa7df1a7edc5108f2d0b28a9b7119",
+        "t/out/spec-experiment/v6-20261018-step400-dev/tests.json": "1554a12cec943e8e53b454e1dc6494d22c75f310e1261c908ba584cd729e87ac",
+        "t/out/spec-experiment/v6-20261018-step400-dev/kernels.md": "366c0e3f2c64530f09961c76b81e60a9f398e3d7693cefe3643aadb423aee324",
+        "t/out/v6-20261018/proof-results/step400-dev-full/verdicts.json": "9a5a6b980d43733b3c74334faf4508f044af2e75dce72d83015f946d284025f7",
+        "t/out/v6-20261018/proof-results/step400-dev-full/levels.json": "4e1628e04ad801e7e3610f9550026e8d568ae41156c0784819fb2254eb8a4608",
+        "t/out/v6-20261018/proof-results/step400-dev-full/evaluator.json": "822bebe66d09a3dcc136a8b779ff79f879907501e1bc54a71302047b4b8eaa47",
+        "t/out/v6-20261018/v6-20261018-step400-dev/requests/protocol.json": "50a84b605b8b3df3a4cfbd40cf1b9e1d3a9ec62f7595f32fa14ce7b3319d3274"
+      }
+    }
+  },
+  "same_generation_protocol": true,
+  "same_evaluator": true,
+  "difference": {
+    "1": {
+      "gained": [],
+      "lost": [
+        251,
+        543
+      ]
+    },
+    "3": {
+      "gained": [],
+      "lost": [
+        251,
+        450
+      ]
+    },
+    "5": {
+      "gained": [],
+      "lost": []
+    },
+    "6": {
+      "gained": [],
+      "lost": []
+    },
+    "7": {
+      "gained": [],
+      "lost": []
+    }
+  }
+}

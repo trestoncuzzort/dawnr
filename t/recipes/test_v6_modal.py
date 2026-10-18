@@ -69,3 +69,30 @@ def test_completed_training_is_not_resumed(run):
     (run / "adapter/run.json").write_text("{}")
     with pytest.raises(RuntimeError, match="complete"):
         recipe.checkpoint.local()
+
+
+def test_final_artifact_receipt_is_immutable_and_never_starts_training(run, monkeypatch):
+    trainer = run/'trainer.py'
+    trainer.write_bytes(b'trainer')
+    monkeypatch.setattr(recipe, 'TRAINER_SOURCE', trainer)
+    monkeypatch.setattr(recipe, 'TRAINER_SHA', recipe.digest(trainer))
+    out = run/'adapter'
+    record = {'steps': 1275, 'sft_sha256': recipe.ROWS_SHA,
+              'rows_selected': 4189, 'rows_used': 4073, 'rows_dropped_too_long': 116,
+              'recipe': {'lr': 2e-4, 'epochs': 5, 'batch': 1, 'grad_accum': 16, 'max_len': 2845,
+                         'seed': 1, 'shared_prefix': False, 'small_card': False,
+                         'lora': {'r': 64, 'alpha': 16, 'dropout': .1, 'target_modules': 'all-linear'}}}
+    (out/'run.json').write_text(json.dumps(record))
+    (out/'adapter_config.json').write_text('{}')
+    (out/'adapter_model.safetensors').write_bytes(b'weights')
+    assert recipe.finalize.local()['step'] == 1275
+    assert recipe.finalize.local()['adapter_sha256'] == recipe.digest(out/'adapter_model.safetensors')
+    (out/'adapter_model.safetensors').write_bytes(b'changed weights')
+    with pytest.raises(RuntimeError, match='changed after finalization'):
+        recipe.finalize.local()
+
+
+def test_partial_run_cannot_be_finalized(run):
+    (run/'adapter/run.json').write_text(json.dumps({'steps': 1200, 'sft_sha256': recipe.ROWS_SHA}))
+    with pytest.raises(RuntimeError, match='incomplete'):
+        recipe.finalize.local()

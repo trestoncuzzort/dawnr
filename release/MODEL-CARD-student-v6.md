@@ -55,9 +55,15 @@ not establish universal semantic independence across arbitrary programs.
 The preserved step-400 adapter has completed an early development pass at
 Q8_0. On the fixed 95 problems, v5 produced 51 test-passing Python solutions
 and 13 accepted t answers; step 400 produced 60 and 9 respectively. All saved
-t answers pass their problem tests. Full formal and specification scoring is
-still pending. These mixed intermediate counts do not establish an improvement;
-the full five-epoch candidate remains in training.
+t answers pass their problem tests. After full formal and specification
+scoring, v5 has 6/95 answers at one or more kernels and 3/95 at all seven;
+step 400 has 4/95 and 3/95. The [paired receipt](evidence/v6-development-early.json)
+records the matching protocols, scores, and individual outcomes. The early checkpoint has not demonstrated an
+improvement. The full five-epoch candidate remains in training.
+
+The correct-source specification control currently reaches 32/33 in all seven
+proof systems ([complete table](evidence/v6-prover-controls.md)). Frama-C rejects one twin certificate; all 33 pass in each of
+the other six systems. That instrument limitation is retained for both arms.
 
 The matched comparison uses Q8_0 versions of v5 and v6, the same pinned
 llama.cpp server, the same prompts and panels, and the same Python-first route.
