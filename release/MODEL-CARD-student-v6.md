@@ -65,6 +65,11 @@ The correct-source specification control currently reaches 32/33 in all seven
 proof systems ([complete table](evidence/v6-prover-controls.md)). Frama-C rejects one twin certificate; all 33 pass in each of
 the other six systems. That instrument limitation is retained for both arms.
 
+The full 33-specification panel includes 19 functions whose behavior appeared
+in v5 training under another name, as recorded in the
+[v5 model card](MODEL-CARD-student-v5.md). Its score is a compatibility
+comparison, not a wholly unseen generalization measurement for v5.
+
 The matched comparison uses Q8_0 versions of v5 and v6, the same pinned
 llama.cpp server, the same prompts and panels, and the same Python-first route.
 It permits at most 17 calls per programming problem, with 1,024 new tokens per
