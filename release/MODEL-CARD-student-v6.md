@@ -1,6 +1,6 @@
-# Dawnr v6 candidate — unreleased
+# Dawnr v6 candidate (unreleased)
 
-This candidate is in training. No improvement over v5 has been established.
+This candidate has completed training. No improvement over v5 has been established.
 The installed release remains student-v5 until the matched evaluation and
 release checks pass. The [registered comparison](../t/PREDICT-2026-10-18-v6.md)
 defines the acceptance conditions.
@@ -14,7 +14,7 @@ dropout 0.1, all linear layers, learning rate 2e-4, five epochs, batch 1 with
 16 gradient accumulation steps, maximum row length 2,845, and seed 1.
 
 The exact input contains 4,189 rows. Tokenization admits 4,073 and drops 116
-whole rows that exceed the length limit. The planned run has 1,275 optimizer
+whole rows that exceed the length limit. The run completed all 1,275 optimizer
 steps. A complete checkpoint, including optimizer and RNG state, was moved
 after step 300; the base revision, trainer bytes, data bytes, and package
 versions were checked before resuming on the new GPU.
@@ -26,7 +26,11 @@ run retains its recipe and optimizer state across the moves.
 
 The input identity, construction, and panel hashes are in
 [DATA-student-v6.json](DATA-student-v6.json). The input snapshot remains beside
-the adapter. Final training metrics and artifact checksums are pending.
+the adapter. The [training receipt](evidence/v6-training-complete.json) records
+the final metrics, all 25 saved-file hashes, and complete checkpoints at steps
+1,200 and 1,275. The final invocation resumed at step 400; its reported loss
+and duration describe that invocation. The adapter was transferred to the
+export worker with its checksums verified.
 
 ## Data and its limits
 
@@ -59,7 +63,8 @@ t answers pass their problem tests. After full formal and specification
 scoring, v5 has 6/95 answers at one or more kernels and 3/95 at all seven;
 step 400 has 4/95 and 3/95. The [paired receipt](evidence/v6-development-early.json)
 records the matching protocols, scores, and individual outcomes. The early checkpoint has not demonstrated an
-improvement. The full five-epoch candidate remains in training.
+improvement. The full five-epoch candidate has completed training and is being
+exported for development evaluation.
 
 The correct-source specification control currently reaches 32/33 in all seven
 proof systems ([complete table](evidence/v6-prover-controls.md)). Frama-C rejects one twin certificate; all 33 pass in each of

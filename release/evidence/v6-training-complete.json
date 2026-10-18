@@ -1,0 +1,91 @@
+{
+  "schema": 1,
+  "candidate": "v6-20261018",
+  "status": "training complete; evaluation pending; unreleased",
+  "base": {
+    "model": "Qwen/Qwen3.5-4B",
+    "revision": "851bf6e806efd8d0a36b00ddf55e13ccb7b8cd0a"
+  },
+  "steps": 1275,
+  "rows_selected": 4189,
+  "rows_used": 4073,
+  "rows_dropped_too_long": 116,
+  "trainable_parameters": 129859584,
+  "data_sha256": "e14f766f06299d589d9a6e3293f6bf3e3f06ffac026433e2fdeff1c04294af80",
+  "trainer_sha256": "e43c27df1ee1e796b1799d38a16e0c5725dd09df762be3fabb2940ad8cb4a46f",
+  "recipe": {
+    "quantisation": "nf4, double, bf16 compute",
+    "lora": {
+      "r": 64,
+      "alpha": 16,
+      "dropout": 0.1,
+      "target_modules": "all-linear"
+    },
+    "lr": 0.0002,
+    "schedule": "constant",
+    "adam_beta2": 0.999,
+    "max_grad_norm": 0.3,
+    "warmup_steps": 0,
+    "max_steps": null,
+    "batch": 1,
+    "grad_accum": 16,
+    "epochs": 5.0,
+    "max_len": 2845,
+    "seed": 1,
+    "loss": "response only",
+    "shared_prefix": false,
+    "small_card": false,
+    "sources": [
+      "arXiv:2305.14314 B.2, table 9",
+      "arXiv:2410.15756 C.3"
+    ]
+  },
+  "versions": {
+    "torch": "2.9.1+cu129",
+    "transformers": "5.20.1",
+    "peft": "0.21.2"
+  },
+  "reported_train_loss_from_final_invocation": 0.042359512201377326,
+  "seconds_in_final_trainer_invocation": 9201.6,
+  "final_continuation": {
+    "from_step": 400,
+    "to_step": 1275,
+    "gpu": "H100",
+    "steps": 1275,
+    "seconds_this_call": 9227.47448015213
+  },
+  "metrics_scope": "The final Trainer invocation resumed at step 400. These training metrics are not a model-quality comparison.",
+  "preserved_checkpoint_steps": [
+    1200,
+    1275
+  ],
+  "final_checkpoint_complete": true,
+  "artifact_manifest_sha256": "b6c05545de8253533ad42ae39c936c49f47484f3a39a14889006d67eebf7451f",
+  "artifact_sha256": {
+    "README.md": "fef8babc2982214ec0c6a91f885d9ca2621e1be0300538a3eb7e6d0bc6f73828",
+    "adapter_config.json": "9c8bb1b245107292a495fde1a14d2323ee70eb985a5bed887a865719e65ac178",
+    "adapter_model.safetensors": "f82df9d94f4ac702f6035c3f665eeff0a56b82d69a432fc7f1bb5004561d9444",
+    "chat_template.jinja": "a4aee8afcf2e0711942cf848899be66016f8d14a889ff9ede07bca099c28f715",
+    "run.json": "944995cd1c23a26d9872988e05053a9dd399495a7163c45d54c640fa2a73068c",
+    "tokenizer.json": "a5cd9732badce41de57e6efce8302930ded1c1188c5f81feb2bd6c24c4a1941f",
+    "tokenizer_config.json": "6fc30221b0ec773811dfa2a04ebf0eec1a7e36a3bb1698888e28b38eabc1126c",
+    "trainer/checkpoint-1200/README.md": "fef8babc2982214ec0c6a91f885d9ca2621e1be0300538a3eb7e6d0bc6f73828",
+    "trainer/checkpoint-1200/adapter_config.json": "9c8bb1b245107292a495fde1a14d2323ee70eb985a5bed887a865719e65ac178",
+    "trainer/checkpoint-1200/adapter_model.safetensors": "86266f4e7717a6eefc623d13c6e11d3e2ae4a06e0540e55a1d44262a121b92b4",
+    "trainer/checkpoint-1200/optimizer.pt": "c9a4c135587ce762821d9ab07fa0d0cde1fbdd17641ef62182518cc8b5aabb9a",
+    "trainer/checkpoint-1200/rng_state.pth": "859d1f0cb2b22fb385888cc333c8017e372bee52cabfe102ff63abf94bd8d1f1",
+    "trainer/checkpoint-1200/scheduler.pt": "4d161bde92bb11b599f691fc1261bd7cf06dfefaaf37faa113fbccc332aa794b",
+    "trainer/checkpoint-1200/trainer_state.json": "c9d8a7e7dbaa3a7799d1b4fce42f3ceabf5fb834e5311cea7bcaddbcef191dd5",
+    "trainer/checkpoint-1200/training_args.bin": "1520813b5d310561e73081daf1fa5c8020622303de0f8c0fcf584af7d3fa18f4",
+    "trainer/checkpoint-1275/README.md": "fef8babc2982214ec0c6a91f885d9ca2621e1be0300538a3eb7e6d0bc6f73828",
+    "trainer/checkpoint-1275/adapter_config.json": "9c8bb1b245107292a495fde1a14d2323ee70eb985a5bed887a865719e65ac178",
+    "trainer/checkpoint-1275/adapter_model.safetensors": "f82df9d94f4ac702f6035c3f665eeff0a56b82d69a432fc7f1bb5004561d9444",
+    "trainer/checkpoint-1275/optimizer.pt": "c23b4aece2e2aae4db0553111c3ada3dfddc5175e7692ad29765c70d6e4c3e03",
+    "trainer/checkpoint-1275/rng_state.pth": "6e712160ebb5f6482b15e814d1d15958e18497991f265950f3b018b6abca9de5",
+    "trainer/checkpoint-1275/scheduler.pt": "70bdeb61f6077aa6b341f7deaddf9bb38e83e5bc69410bdb9d5113b0af0f4911",
+    "trainer/checkpoint-1275/trainer_state.json": "49e9efc9582d0a8d67f1a7bbbe3922061a5953a212cf5a09dab632cfac771a56",
+    "trainer/checkpoint-1275/training_args.bin": "1520813b5d310561e73081daf1fa5c8020622303de0f8c0fcf584af7d3fa18f4",
+    "training-data.json": "519a5645d17d47044896b1d2c48d7dc01bd592706c797aeb99e03fbdb336eb9b",
+    "training-rows.jsonl": "e14f766f06299d589d9a6e3293f6bf3e3f06ffac026433e2fdeff1c04294af80"
+  }
+}
