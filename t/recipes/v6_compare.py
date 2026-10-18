@@ -19,6 +19,7 @@ import score_levels
 import score_spec_given
 import spec_check
 import spec_experiment as se
+from v6_candidate import validate_export, validate_selection
 
 
 def read(path):
@@ -140,13 +141,13 @@ def main(argv=None):
     args = parser.parse_args(argv)
     root = args.root
     selected = read(root/'candidate-frozen.json')
-    assert selected['status'] == 'candidate-frozen' and selected['step'] == 1275
-    assert selected['development_complete'] is True
-    package_root = root/'export-final-receipts/release'
+    development_path = root/'selection-development.json'
+    assert digest(development_path) == selected['development_receipt_sha256']
+    candidate = validate_selection(selected, read(development_path))
+    exported_root = root/f'export-{candidate}-receipts'
+    package_root = exported_root/'release'
     package = read(package_root/'package.json')
-    assert package['adapter_step'] == 1275
-    assert package['source_gguf_sha256'] == selected['candidate_gguf_sha256']
-    assert package['manifest_sha256'] == selected['candidate_release_manifest_sha256']
+    validate_export(selected, read(exported_root/'export.json'), package)
     assert digest(package_root/'dawnr-student.sha256') == selected['candidate_release_manifest_sha256']
     for name in ('clean-182.txt', 'spec-heldout.jsonl'):
         assert selected['panels'][name] == digest(root/name)

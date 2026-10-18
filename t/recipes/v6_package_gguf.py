@@ -122,7 +122,8 @@ def main(argv=None):
     manifest = out/'dawnr-student.sha256'
     manifest.write_text(''.join(value['sha256']+'  '+name+'\n' for name,value in files.items()))
     record = {'schema': 1, 'source_gguf_sha256': exported['output']['sha256'],
-              'adapter_step': exported['adapter']['step'], 'converter_commit': CONVERTER,
+              'adapter_step': exported['adapter'].get('step'),
+              'adapter': exported['adapter'], 'converter_commit': CONVERTER,
               'packager_sha256': digest(Path(__file__)),
               'splitter_sha256': digest(splitter), 'manifest_sha256': digest(manifest),
               'first_shard': shards[0].name, 'files': files, 'equivalence': equivalence}

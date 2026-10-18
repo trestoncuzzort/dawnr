@@ -8,11 +8,12 @@
   "grade": "t/recipes/v6-grade.sh",
   "reporter": {
     "path": "t/recipes/v6_development_report.py",
-    "sha256": "193c744bcad8adfcc72dc3aa900d246cfaf9f3beb8fde2c3f6724802725c9f2b"
+    "sha256": "46d4e190fc744e3b4ab85e14397920fbf27c12e7a9af4023c46ebf56b8bc7caf"
   },
   "scope": "Development-only candidate selection. This is not a held-out result or release qualification.",
   "arms": {
     "v5": {
+      "model_identity": "student-v5:d855000c3dffd9772da5a2f9dc238b41d7f8337d9bf58e578e5274ebb9566a4e:llama-f1cee9941b0e843ea260bf8dd9a090fbd9711b6a",
       "python_test_passing": 51,
       "accepted_answers": 13,
       "scores": {
@@ -628,6 +629,7 @@
       }
     },
     "final": {
+      "model_identity": "student-v6:066205bb4f02c4c741dddcfb8717b3fa427862f5d646d53634367c5e13684903:llama-f1cee9941b0e843ea260bf8dd9a090fbd9711b6a",
       "python_test_passing": 46,
       "accepted_answers": 10,
       "scores": {
@@ -1223,7 +1225,8 @@
         "t/out/v6-20261018/proof-results/final-dev-full/levels.json": "f19c886815b2e4914c9aea862974d531fe274fb5dade923a09e03a84e3284ab9",
         "t/out/v6-20261018/proof-results/final-dev-full/evaluator.json": "822bebe66d09a3dcc136a8b779ff79f879907501e1bc54a71302047b4b8eaa47",
         "t/out/v6-20261018/v6-20261018-final-dev/requests/protocol.json": "b48eb247294f479928fb1c4c0f0ba88c937c5a2a8222be3398e59d80d19f7833",
-        "t/out/v6-20261018/v6-20261018-final-dev/requests/completed.json": "b48eb247294f479928fb1c4c0f0ba88c937c5a2a8222be3398e59d80d19f7833"
+        "t/out/v6-20261018/v6-20261018-final-dev/requests/completed.json": "b48eb247294f479928fb1c4c0f0ba88c937c5a2a8222be3398e59d80d19f7833",
+        "t/out/v6-20261018/export-final-receipts/export.json": "61e5852be27a399f323420cb899080af20723ea4818a1d9bf13c583a4f16779f"
       }
     }
   },

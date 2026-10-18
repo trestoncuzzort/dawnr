@@ -1,0 +1,8 @@
+{
+  "operation": "saved-and-reloaded linear checkpoint mean",
+  "passed": true,
+  "max_absolute_error": 9.5367431640625e-07,
+  "torch": "2.9.1+cu129",
+  "peft": "0.21.2",
+  "exporter_sha256": "f452cd23eeaceb32ec3bb7dc0b7fd63fcdcda2be7cd7098e203b992eb3a05915"
+}

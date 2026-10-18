@@ -17,6 +17,7 @@ import score_levels
 import spec_check
 import spec_experiment as se
 from v6_compare import confirmed_specification, digest, integrity_findings, kernel_outcomes, paired, read
+from v6_export import CONVERTER
 
 
 PANEL_SHA256 = "f807aec7e6b89e524ded720d9ccfb670c1d504a5a5717966a4b870516701daf7"
@@ -34,6 +35,16 @@ def arm_result(root, arm, ids):
     protocol = read(protocol_path)
     assert read(generated / "requests/completed.json") == protocol
     assert protocol["panel_sha256"] == PANEL_SHA256
+    export_path = None
+    if arm == "v5":
+        model_digest = "d855000c3dffd9772da5a2f9dc238b41d7f8337d9bf58e578e5274ebb9566a4e"
+        model_identity = f"student-v5:{model_digest}:llama-{CONVERTER}"
+    else:
+        export_path = root / f"export-{arm}-receipts/export.json"
+        exported = read(export_path)
+        assert exported["converter_commit"] == CONVERTER and exported["quantization"] == "Q8_0"
+        model_identity = f"student-v6:{exported['output']['sha256']}:llama-{CONVERTER}"
+    assert protocol["identity"] == model_identity, "development answers belong to another model"
     assert protocol["route_args"] == [
         "--tag", tag, "--ids-file", "t/out/v6-20261018/dev-95.txt", "--pool", "v5",
         "--python", "3", "--spec-samples", "4", "--per-problem", "3", "--samples", "2",
@@ -62,7 +73,10 @@ def arm_result(root, arm, ids):
     paths = [directory / name for name in ("spec_first.json", "extract.json", "tests.json", "kernels.md")]
     paths += [graded / name for name in ("verdicts.json", "levels.json", "evaluator.json")]
     paths += [protocol_path, generated / "requests/completed.json"]
+    if export_path is not None:
+        paths.append(export_path)
     result = {
+        "model_identity": model_identity,
         "python_test_passing": summary["with a tested Python solution"],
         "accepted_answers": summary["answered"], "scores": rows[0],
         "confirmed_ids": {k: sorted(v) for k, v in sets.items()},

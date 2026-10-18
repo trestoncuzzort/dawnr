@@ -16,6 +16,8 @@ flock -n 9
 test ! -e "$out/GENERATED"
 identity=$(python3 - "$arm" "$freeze" "$export_dir" "$out" <<'PY'
 import hashlib, json, pathlib, subprocess, sys
+sys.path.insert(0, 't/recipes')
+from v6_candidate import validate_export, validate_selection
 arm, freeze, export_dir, output = sys.argv[1:]
 root, out = pathlib.Path('t/out/v6-20261018'), pathlib.Path(output)
 def digest(path):
@@ -24,8 +26,9 @@ def digest(path):
         for block in iter(lambda: stream.read(1024*1024), b''): h.update(block)
     return h.hexdigest()
 selected = json.loads(pathlib.Path(freeze).read_text())
-assert selected['status'] == 'candidate-frozen' and selected['step'] == 1275
-assert selected['development_complete'] is True
+development = root/'selection-development.json'
+assert digest(development) == selected['development_receipt_sha256']
+validate_selection(selected, json.loads(development.read_text()))
 for name in ('clean-182.txt', 'spec-heldout.jsonl'):
     assert selected['panels'][name] == digest(root/name), 'frozen panel changed'
 ids = (root/'clean-182.txt').read_text().split()
@@ -45,11 +48,10 @@ else:
     exported = pathlib.Path(export_dir)
     receipt = json.loads((exported/'export.json').read_text())
     assert receipt['converter_commit'] == revision and receipt['quantization'] == 'Q8_0'
-    assert receipt['adapter']['step'] == 1275
     sha = digest(exported/'model-Q8_0.gguf')
     assert sha == receipt['output']['sha256'] == selected['candidate_gguf_sha256']
     package = json.loads((exported/'release/package.json').read_text())
-    assert package['adapter_step'] == 1275 and package['source_gguf_sha256'] == sha
+    validate_export(selected, receipt, package)
     manifest = exported/'release/dawnr-student.sha256'
     sha = digest(manifest)
     assert sha == package['manifest_sha256'] == selected['candidate_release_manifest_sha256']
@@ -63,6 +65,7 @@ else:
 record = {'arm': arm, 'model_identity': f'student-{arm}:{sha}:llama-{revision}',
           'candidate_lock_sha256': digest(freeze), 'panels': selected['panels'],
           'script_sha256': digest('t/recipes/v6-gcp-heldout.sh'),
+          'selection_validator_sha256': digest('t/recipes/v6_candidate.py'),
           'server': {'revision': revision, 'binary_sha256': digest(llama/'build/bin/llama-server'),
                      'gpu_layers': 99, 'threads': 4,
                      'threads_batch': 4, 'parallel': 8, 'ctx_size': 65536,
