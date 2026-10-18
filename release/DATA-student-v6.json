@@ -1,0 +1,89 @@
+{
+  "schema": 1,
+  "candidate": "v6-20261018",
+  "status": "training; not released",
+  "dataset": {
+    "filename": "v6-rows.jsonl",
+    "sha256": "e14f766f06299d589d9a6e3293f6bf3e3f06ffac026433e2fdeff1c04294af80",
+    "rows": 4189,
+    "token_fit_rows": 4073,
+    "rows_dropped_above_2845_tokens": 116,
+    "kinds_as_recorded": {
+      "unspecified": 2016,
+      "spec-given": 547,
+      "debug": 717,
+      "judge-python": 909
+    }
+  },
+  "construction": {
+    "sources_in_order": [
+      {
+        "path": "t/out/v5-full-20261011/train-rows.jsonl",
+        "rows": 3352,
+        "sha256": "443b674393f5f6a87178b74010f6901cd4cfe0f80a12423880518485aaa2e717",
+        "unique_rows_added": 3195
+      },
+      {
+        "path": "t/out/udebug-student-2026-10-13/train-rows.jsonl",
+        "rows": 1315,
+        "sha256": "1bebb99c69e1b58863c39507d7ce5b7d9f617918e1c21a2f1d063f436740b2fb",
+        "unique_rows_added": 994
+      },
+      {
+        "path": "t/out/gcp-student-2026-10-11-s1/train-rows.jsonl",
+        "rows": 406,
+        "sha256": "0248cf93e57092d91d0f8b6471a22ffae0a5f7aeff337f24bc8604155094fb39",
+        "unique_rows_added": 0
+      }
+    ],
+    "raw_rows": 5073,
+    "deduplication": "first unique (prompt, chosen), sorted-key JSON comparison",
+    "prompt_answer_duplicates": 0
+  },
+  "audits": {
+    "panel_and_gpl_lineage_flagged_rows": 0,
+    "specification_panel_text_matches": 0,
+    "specification_questions": 33,
+    "unparsed_t_blocks": 182,
+    "unparsed_chosen_t_answers": 0,
+    "unparsed_role": "deliberately broken repair prompts",
+    "judge_python_rows": 909,
+    "judge_python_source_code_matches": 909,
+    "judge_heldout_problems": 377,
+    "judge_heldout_overlap": [],
+    "replayed_historical_count_discrepancies": 6,
+    "replayed_discrepancies_passing": 6
+  },
+  "panels": {
+    "clean-182.txt": {
+      "sha256": "837e2ac5a70980d2ac7b35a97af258997d153e7c755cd166555d232c371ad51f",
+      "count": 182
+    },
+    "dev-95.txt": {
+      "sha256": "f807aec7e6b89e524ded720d9ccfb670c1d504a5a5717966a4b870516701daf7",
+      "count": 95
+    },
+    "spec-heldout.jsonl": {
+      "sha256": "effc2f4e586e0c4f7638a5a9a2b75515aaf7019de03ca819d46e5aa3d593ab24",
+      "count": 33
+    }
+  },
+  "training": {
+    "base": "Qwen/Qwen3.5-4B",
+    "revision": "851bf6e806efd8d0a36b00ddf55e13ccb7b8cd0a",
+    "trainer_commit": "a961cfba",
+    "trainer_sha256": "e43c27df1ee1e796b1799d38a16e0c5725dd09df762be3fabb2940ad8cb4a46f",
+    "rank": 64,
+    "alpha": 16,
+    "dropout": 0.1,
+    "learning_rate": 0.0002,
+    "epochs": 5,
+    "batch": 1,
+    "gradient_accumulation": 16,
+    "max_length": 2845,
+    "seed": 1,
+    "planned_steps": 1275
+  },
+  "scope": "Judge-Python rows are execution-tested with proof:none. Other rows include specifications, repairs, Python, and t examples; their count is not a count of all-seven proofs. The audits establish the listed checks, not universal semantic independence from every benchmark.",
+  "registration": "t/PREDICT-2026-10-18-v6.md"
+}

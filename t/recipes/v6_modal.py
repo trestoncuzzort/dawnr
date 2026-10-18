@@ -118,6 +118,42 @@ def checkpoint() -> dict:
     raise RuntimeError("no complete checkpoint is available")
 
 
+@app.function(gpu="H100", timeout=900, cpu=8, memory=32768, volumes=volumes)
+def benchmark_h100() -> dict:
+    """Ten updates from the preserved step-300 state; never used as a release candidate."""
+    import shutil
+    import tempfile
+    original = RUN / "adapter"
+    prior = json.loads((RUN / "resume.json").read_text())
+    if prior["from_step"] != 300 or prior["data_sha256"] != ROWS_SHA:
+        raise RuntimeError("the benchmark requires the unchanged step-300 experiment")
+    with tempfile.TemporaryDirectory(prefix="v6-speed-") as temporary:
+        out = Path(temporary) / "adapter"
+        shutil.copytree(original / "trainer/checkpoint-300", out / "trainer/checkpoint-300")
+        for name in ("training-rows.jsonl", "training-data.json"):
+            shutil.copy2(original / name, out / name)
+        command = list(prior["command"])
+        command[command.index("--out") + 1] = str(out)
+        command[command.index("--log-every") + 1] = "1"
+        command += ["--max-steps", "310"]
+        result = subprocess.run(command, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
+                                text=True, timeout=800, env={**os.environ, "HF_HUB_OFFLINE": "1"})
+        (RUN / "benchmark-h100.log").write_text(result.stdout)
+        data.commit()
+        if result.returncode:
+            raise RuntimeError(f"benchmark failed: {result.returncode}; see benchmark-h100.log")
+        run = json.loads((out / "run.json").read_text())
+        if run["steps"] != 310:
+            raise RuntimeError("benchmark did not finish exactly ten resumed updates")
+        record = {"from_step": 300, "to_step": 310, "seconds": run["seconds"],
+                  "seconds_per_update": run["seconds"] / 10, "train_loss": run["train_loss"],
+                  "gpu": subprocess.check_output(["nvidia-smi", "--query-gpu=name",
+                                                  "--format=csv,noheader"], text=True).strip()}
+        (RUN / "benchmark-h100.json").write_text(json.dumps(record, indent=2) + "\n")
+        data.commit()
+        return record
+
+
 @app.function(gpu=GPU, timeout=TIMEOUT_S + 300, cpu=8, memory=32768,
               max_containers=1, volumes=volumes)
 def train() -> dict:
@@ -188,9 +224,10 @@ def train() -> dict:
 
 @app.local_entrypoint()
 def main(mode: str = "prepare"):
-    modes = {"prepare": prepare, "checkpoint": checkpoint, "train": train}
+    modes = {"prepare": prepare, "checkpoint": checkpoint, "train": train,
+             "benchmark-h100": benchmark_h100}
     if mode not in modes:
-        raise ValueError("mode must be prepare, checkpoint, or train")
+        raise ValueError("mode must be prepare, checkpoint, train, or benchmark-h100")
     call = modes[mode].spawn()
     print(f"Function call: {call.object_id}", flush=True)
     print(json.dumps(call.get()), flush=True)
