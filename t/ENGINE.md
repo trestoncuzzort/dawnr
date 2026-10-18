@@ -7,6 +7,13 @@ carries a copy of that engine beside dawnr's own pipeline scripts, which still l
 
 Pinned commit: `d13d11d01f8f50687ef645d60aa08c870d664b84` (t-proof-engine, 2026-10-10)
 
+The Frama-C adapter, its review/control tests, and their October 18 evidence
+are imported from engine commit `5828ed07aaba864a4dc4ae06ab20a4a01a5d686b`.
+This is a per-file update; the base pin above has not been changed to imply
+a full synchronization. The repair landed in the engine first. It restores
+the four seven-kernel controls while retaining the tested negative checks;
+see [the measurement](PREDICT-2026-10-18-framac-controls.md).
+
 - **Engine changes land in t-proof-engine first.** Then `bash t/sync_engine.sh` brings them here and moves the
   pin above. It overwrites every file the engine tracks under `t/` and deletes the ones it dropped.
 - **dawnr owns `t/requirements.txt`**, although the engine has a file of the same name. dawnr's pipeline needs

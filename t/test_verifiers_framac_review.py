@@ -2,7 +2,7 @@ import sys
 from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
-# Four findings of the GPT-6 Astra review of 2026-10-13 on the Frama-C adapter, each reproduced before its fix.
+# Negative controls for the Frama-C adapter review of 2026-10-13.
 
 
 def test_unrelated_named_assertion_cannot_refute():

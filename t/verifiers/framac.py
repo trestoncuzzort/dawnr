@@ -208,7 +208,7 @@ THE TWO SEMANTIC VACUITY INSTRUMENTS, and the measured division of labour:
    exactly as before.
 
    WIDER THAN THE NAMED THREE, MEASURED not assumed: every lifted row in
-   COVERAGE-lifted-785.md whose framac column contains "vacuous" anywhere
+   the coverage census whose framac column contains "vacuous" anywhere
    (17 of the 277, not only the three lower_framac.py named) was re-run
    directly, before and after, the same way. 16 of 17 changed. All three
    named rows move to verified/refuted as above; five more (sum, pow,
@@ -230,7 +230,7 @@ THE TWO SEMANTIC VACUITY INSTRUMENTS, and the measured division of labour:
    correctly leaves it exactly where it was.
 
    OPEN, untouched by this pass: the other four named sole-blocker tasks
-   in COVERAGE-lifted-785.md's framac row (mfirstCero's `spec_fun` calls
+   in the coverage census's framac row (mfirstCero's `spec_fun` calls
    in executable position, factorialOfLastDigit similarly, ghost/triple's
    conditionally-evaluated `at`, swap's timeout) are each a different
    defect, left for whichever pass takes them next.
@@ -298,7 +298,7 @@ from .discover import find, missing
 FRAMAC = find("T_FRAMAC", ['frama-c'], [".opam/*/bin/frama-c"])
 _FRAMAC_WHY = missing("framac", "T_FRAMAC", ['frama-c'], [".opam/*/bin/frama-c"])
 DEFAULT_STEPS = 20_000
-# PREDICT T58: a program over doubles gets 100x the steps (Alt-Ergo's float goals report Stepout, the one case where
+# a program over doubles gets 100x the steps (Alt-Ergo's float goals report Stepout, the one case where
 # a larger limit can help, SPARK UG 7.8 under receipt eeffe70f487e): rate_limit proves at 10x and sat_scale at 100x;
 # pid_step still steps out. Integer programs keep DEFAULT_STEPS.
 FLOAT_STEPS = 2_000_000
@@ -323,7 +323,7 @@ PROBE_WALL_S = 120
 # the operative budget bound there. Raising it buys no verdict, only
 # ~13s of suite time per extra second, so it stays small and stated.
 GOAL_TIMEOUT_S = 10
-# PREDICT T58's read: at FLOAT_STEPS an honest float goal takes seconds, not milliseconds, and under a clean run's load
+# the read: at FLOAT_STEPS an honest float goal takes seconds, not milliseconds, and under a clean run's load
 # (three cells, four provers each) rate_limit's and sat_scale's slowest goals reached the 10 s wall before the step
 # budget, though both verify alone. For a program over doubles the wall goes back to being a backstop.
 FLOAT_GOAL_TIMEOUT_S = 120
@@ -412,7 +412,9 @@ def _cert_states_negation(text: str) -> bool:
     if m is None:
         return False
     body = m.group(1).strip()
-    return body.startswith("!") or body.startswith("\\false")
+    # The kernel's default -print uses Unicode, even under LC_ALL=C.
+    # Read its negation without changing the source or the proof obligations.
+    return body.startswith(("!", "¬")) or re.match(r"\\false\b", body) is not None
 
 
 _PROVED = re.compile(r"^\[wp\] Proved goals:\s*(\d+)\s*/\s*(\d+)\s*$", re.M)
@@ -434,7 +436,7 @@ _DOOMED_GOAL = re.compile(r"\(Doomed\)\s+(\S+)")
 # No \b after the class: WP suffixes the goal with its statement id, as in
 # ..._wp_smoke_dead_code_s8, and `_` is a word character.
 _UNREACHABLE_SMOKE = re.compile(r"_wp_smoke_(?:dead_code|dead_loop|"
-                                r"dead_local_init|dead_call|dead_assumes)(?:_\d+)?$")   # the class, at the end
+                                r"dead_local_init|dead_call|dead_assumes)(?:_(?:s)?\d+)?$")
 
 
 def _all_obligations_proved(m, smoke) -> bool:
@@ -618,12 +620,30 @@ def _wf_obligation(flat: str, name: str) -> bool:
     """A kernel-emitted well-foundedness goal for recursive symbol `name`.
     Frama-C 33 rejects `decreases` inside a logic definition (measured), so
     the lemma form lower_framac.py emits is the only one that exists."""
-    m = re.search(r"\blemma\s+" + re.escape(name) + r"_(?:terminates|decreases)\w*\s*:\s*(.*?);", flat, re.S)
+    m = re.search(r"\blemma\s+" + re.escape(name)
+                  + r"_(?:terminates|decreases)\w*(?:\{[^}]*\})?\s*:\s*", flat)
     if m is None:
         return False
-    body = m.group(1)
-    # the lemma states the measure strictly decreases across a call of `name`: a bare `\true` states nothing
-    return (re.search(r"(?<![\w.])" + re.escape(name) + r"\s*\(", body) is not None) and "<" in body
+    body = flat[m.end():].lstrip()
+    # A quantifier's semicolon ends its binders, not the lemma. The emitted
+    # formula compares the old and new integer MEASURES, so it need not call
+    # the recursive logic function. Requiring that call rejected gcd itself.
+    while body.startswith(("\\forall", "∀")):
+        _binders, sep, body = body.partition(";")
+        if not sep:
+            return False
+        body = body.lstrip()
+    body, sep, _ = body.partition(";")
+    if not sep:
+        return False
+    # This remains a structural backstop, not a proof of termination or of
+    # the lemma's connection to the definition. The consistency probes and
+    # the kernel's acceptance of every emitted lemma remain mandatory.
+    # Reject empty/tautological marker lemmas: require a strict comparison
+    # together with the nonnegative integer bound emitted by the lowering.
+    strict = re.search(r"(?<![<=>])<(?![=>])", body) is not None
+    bounded = re.search(r"(?:>=|≥)\s*0\b|\b0\s*(?:<=|≤)", body) is not None
+    return strict and bounded
 
 
 def _restype(kind: str, ret: str | None) -> str | None:
@@ -800,7 +820,7 @@ def _budget(steps: int) -> str:
 
 def _wp_prover() -> str:
     """WP's prover: the pinned alt-ergo unless T_FRAMAC_PROVER names z3 or cvc5, which WP reaches through Why3. Set only
-    for the common-mode audit (PREDICT T22's Frama-C half, internal/RESEARCH-2026-10-07-zoom-out.md D6), never for the
+    for the common-mode audit (the Frama-C half, the design notes D6), never for the
     matrix of record; a non-default prover is named in version(), so a table built under it says so."""
     p = os.environ.get("T_FRAMAC_PROVER", "alt-ergo")
     if p not in ("alt-ergo", "z3", "cvc5"):

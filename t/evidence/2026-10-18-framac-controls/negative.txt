@@ -1,0 +1,12 @@
+test_inconsistent_definition_with_tautological_marker (__main__.NativeNegativeControls.test_inconsistent_definition_with_tautological_marker) ... ok
+test_precondition_vacuity_with_misleading_name (__main__.NativeNegativeControls.test_precondition_vacuity_with_misleading_name) ... ok
+test_unrelated_certificate (__main__.NativeNegativeControls.test_unrelated_certificate) ... ok
+test_kernel_printed_negation_is_recognized (__main__.PrintedSyntax.test_kernel_printed_negation_is_recognized) ... ok
+test_lowered_gcd_has_a_bounded_decrease_obligation (__main__.PrintedSyntax.test_lowered_gcd_has_a_bounded_decrease_obligation) ... ok
+test_quantified_marker_and_unbounded_comparison_are_rejected (__main__.PrintedSyntax.test_quantified_marker_and_unbounded_comparison_are_rejected) ... ok
+test_real_statement_suffix_does_not_mask_a_precondition (__main__.PrintedSyntax.test_real_statement_suffix_does_not_mask_a_precondition) ... ok
+
+----------------------------------------------------------------------
+Ran 7 tests in 5.487s
+
+OK
