@@ -1,0 +1,51 @@
+{
+  "source_base_commit": "8c73b35b5acfda5ae6593001cb8b546d7e05148f",
+  "tested_source_sha256": {
+    "bin/dawnr": "c7cce346d7b2258b3ed04638be0e5c0d9188575809cb7539b76f9362ae92dd26",
+    "locallm/model_memory.py": "36829dc2f3c47dc415e6b5a8834d121b053fecd67f3bc5126ba8ed97e4438d75"
+  },
+  "source_note": "The committed launcher additionally installs its cleanup trap before startup, covering a failed startup. The successful native path used the hashes above.",
+  "platform": "Ubuntu 24.04.5 x86_64; 2 vCPU, 8 GiB RAM; CPU inference",
+  "model": "Installed v5 student and base, unchanged from the first-task receipt",
+  "sandbox": "Landlock, selected explicitly because unprivileged bubblewrap namespaces were unavailable",
+  "sequence": [
+    "Read README.md and return the test command, read only",
+    "With the base still loaded, ask for double(n) = 2*n",
+    "Replay the saved certificate"
+  ],
+  "tests": [
+    "assert double(3) == 6",
+    "assert double(-4) == -8",
+    "assert double(0) == 0"
+  ],
+  "memory_policy": "LLAMA_ARG_REPACK unset before invocation; automatic policy selected no-repack, sequential loading, paired context 4096 and no paired MTP draft",
+  "observed": {
+    "read_only_task": "expected command, no changes",
+    "tests_passed": 3,
+    "provers": [
+      "dafny",
+      "spark"
+    ],
+    "twin": "refuted by both",
+    "specification_draws": 100,
+    "wrong_outputs_rejected": 1.0,
+    "python_comparison_inputs": 89,
+    "certificate": "REPRODUCED",
+    "service": "successful",
+    "memory_peak_reported": "7.2 GiB",
+    "swap_peak_reported": "0 B"
+  },
+  "earlier_trials": [
+    "Parallel loading and paired draft: out-of-memory kill before generation",
+    "Sequential loading without paired draft: out-of-memory kill before generation",
+    "Explicit no-repack plus sequential loading and no paired draft: checked code and certificate replay passed"
+  ],
+  "scope": "One small checked-code example and a warm transition on this machine, using v5 weights. No general memory bound or v6 model-quality claim.",
+  "output": "v6-terminal-checked-code.txt",
+  "redaction": "The public output replaces the temporary project path with <project>. Raw digests below identify the preserved original logs.",
+  "logs_sha256": {
+    "warm-first-task.txt": "eb57872459102ee0bce3783fe5e088b0bb1cc9a0738e71f47282cf273921529d",
+    "checked-task-auto-memory.txt": "239159e2b10911f07bdfb897bf77a2a00670d3efa0e98b472cbe127d80c7a68c",
+    "certificate-check-auto-memory.txt": "aafd276feb6d949477a53cf98260b71c0a1582bf28717cdc35042b4e174675ae"
+  }
+}

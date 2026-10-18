@@ -76,6 +76,10 @@ and runs available provers. It may take several minutes and may return a
 reason it could not establish an answer. `check` replays the saved evidence
 without generating another answer. Results name the checks that actually ran.
 
+On Linux CPU installations with limited available memory, Dawnr automatically
+loads the two models in sequence with smaller buffers. Switching from a
+repository task may reload the base model with a smaller context window.
+
 A proof covers the program's stated specification and assumptions. Read those
 alongside the examples to decide whether they describe the behavior you need.
 

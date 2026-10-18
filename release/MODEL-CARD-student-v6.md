@@ -87,3 +87,10 @@ installation, command examples, custom storage paths, and a refreshed model
 manifest. A fresh CPU installation and one real read-only repository task
 passed on Ubuntu 24.04.5; the [receipt](evidence/v6-terminal-smoke.json) states
 that check's scope. This application result is separate from model qualification.
+
+A further terminal test switched from a repository task to checked code on
+the same 8-GiB CPU machine. Automatic memory settings avoided the loading
+failures seen in the first two trials. Dafny and SPARK proved a three-example
+`double` function and rejected its broken twin; certificate replay passed.
+The [checked-code receipt](evidence/v6-terminal-checked-code.json) limits this
+result to the tested example and installed v5 weights.

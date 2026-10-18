@@ -1,0 +1,66 @@
+warm-first-task.txt
+starting the base model (it stays loaded for the next task, and unloads itself when idle)...
+dawnr in <project> (reads only; offline)
+  fs_list here  [ran]
+  fs_read here/README.md  [ran]
+The command to run the tests is `python3 -m unittest`.
+[Nothing was changed.]
+[2 model calls, 2,627 tokens read (2,441 from the cache), 44 written, 5 tokens a second, 19.3 s]
+
+
+checked-task-auto-memory.txt
+Loading the local models with reduced memory use.
+Reloading the base model with its smaller window to run both models.
+starting the models (half a minute here, a few minutes the first time on a small machine)...
+SHOWN: proved by 2 of 7 provers (dafny, spark); none refutes it. Undecided: framac, fstar, lean, rocq, verus.
+Its specification passes the question's 3 test(s), holds at an independently written Python solution's answer on 100 drawn inputs, and rejects 100% of the wrong outputs tried.
+What the proof is of: the program has no loop and the specification gives its result as a formula or by cases. The proof says the two writings agree; what this answer rests on is the specification, which was held to an independent solution on drawn inputs and is printed to be read.
+
+t 1
+task double(n: int) returns (r: int)
+  ensures r == 2 * n
+{
+  r := 2 * n;
+}
+
+The same function in Python. It is translated from the proved program and gave the same answer on 89 inputs, the question's tests among them; the proof is of the t program above, and the Python is tested against it, not proved.
+
+def double(n):
+    """The program dawnr proved in `t`, written in Python (checked against `t`, not itself proved).
+
+    ensures  r == 2 * n
+    """
+    if not (_t_ints(n, 0)):
+        raise TypeError('double: `n` must be an integer; nothing was proved for anything else')
+    _t_result = _t_core(n)
+    return _t_result
+
+def _t_core(n):
+    r = (2 * n)
+    return r
+
+def _t_ints(v, depth):
+    if depth == 0:
+        return isinstance(v, int) and not isinstance(v, bool)
+    return isinstance(v, (list, tuple)) and all(_t_ints(x, depth - 1) for x in v)
+
+Python written to <project>/double-warm.py
+
+Certificate written to <project>/double-warm.cert.json; `dawnr check` replays it on any machine, without the model.
+
+
+certificate-check-auto-memory.txt
+REPRODUCED: proved here by 2 provers (dafny, spark), the sabotaged twin refuted, and nothing recorded failed.
+
+  ok               each part is the text its digest was taken of
+  ok               the program parses and is well formed
+  ok               the specification listed is the program's own
+  ok               the recorded tests pass: 3 pass
+  ok               the search for an input that breaks the specification: none found
+  ok               the provers on this machine: proved by dafny, spark, the sabotaged twin refuted
+  ok               the Python handed back: the same answer as the proved program on 89 inputs
+  ok               what was said of the specification: the specification holds at the recorded Python's answer on 100 drawn inputs and rejects 100% of the wrong outputs tried
+
+What it establishes: `double` meets
+  ensures r == 2 * n
+It does not establish that this specification is what was meant; that is the reader's to judge.

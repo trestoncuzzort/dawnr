@@ -98,6 +98,13 @@ jobs:
         # for the model server
         run: python -m pytest -v locallm/test_cite_docs.py locallm/test_extract_docs.py locallm/test_extract_eval.py locallm/test_calc.py locallm/test_calc_eval.py locallm/test_doc_read.py locallm/test_tool_check.py locallm/test_tool_check_eval.py
 
+      - name: model memory policy
+        run: python -m pytest -v locallm/test_model_memory.py
+
+      - name: terminal installation and help
+        if: runner.os != 'Windows'
+        run: python -m pytest -v locallm/test_dawnr_launcher.py
+
       - name: t/ unit tests that need neither provers nor torch
         # t/ is the research pipeline and runs on POSIX by design: its interpreter
         # timeouts are SIGALRM/setitimer, its stall checks read /proc, its verifiers

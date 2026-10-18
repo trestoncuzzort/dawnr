@@ -150,10 +150,19 @@ sent_away() {  # said every time: with a writer elsewhere, what is asked leaves 
 # --cache-ram 256: llama-server keeps up to 8 GiB of old prompts in RAM by default, a speed feature for switching
 # between prompts (github.com/ggml-org/llama.cpp/pull/16391); dawnr repeats one prompt, which the slot reuses anyway,
 # and the default pushed the student's server to 10.8 GB (measured 2026-10-02)
-start_both() {  # the student, then the base: on a GPU build the base waits for the student to hold its memory
+start_both() {  # avoid overlapping temporary allocations on GPU and smaller CPU machines
+  prepare_pair
   start_one student "$STUDENT_GGUF" "$SP"
-  if [ "${DAWNR_BUILD:-cpu}" != cpu ]; then
-    for _ in $(seq 1 "${DAWNR_START_SECONDS:-600}"); do healthy "$SP" && break; sleep 1; done
+  if on_card || [ "${CPU_LOW_MEMORY:-0}" = 1 ]; then
+    for _ in $(seq 1 "${DAWNR_START_SECONDS:-600}"); do
+      healthy "$SP" && break
+      if [ -f "$RUN/student.pid" ] && ! kill -0 "$(cat "$RUN/student.pid")" 2>/dev/null; then
+        echo "dawnr: the student model stopped while loading; see $RUN/student.log" >&2
+        return 1
+      fi
+      sleep 1
+    done
+    healthy "$SP" || { echo "dawnr: the student model did not load; see $RUN/student.log" >&2; return 1; }
   fi
   start_one base "$BASE_GGUF" "$BP"                                # beside the student, the base keeps the small window
 }
@@ -165,6 +174,23 @@ stop_one() {  # name port
   for _ in $(seq 1 20); do healthy "$2" || break; sleep 0.5; done
 }
 
+prepare_pair() {
+  [ "${PAIR_PREPARED:-0}" = 0 ] || return 0
+  PAIR_PREPARED=1; CPU_LOW_MEMORY=0
+  if ! on_card && [ "$("$DAWNR_PYTHON" "$DAWNR_REPO/locallm/model_memory.py" "$STUDENT_GGUF" "$BASE_GGUF")" = low ]; then
+    CPU_LOW_MEMORY=1
+    # Respect a deliberate server setting, including an explicit request to repack.
+    export LLAMA_ARG_REPACK=${LLAMA_ARG_REPACK:-0}
+    echo 'Loading the local models with reduced memory use.' >&2
+  fi
+  # A solo assistant may still hold the large window and its draft model.
+  if { on_card || [ "$CPU_LOW_MEMORY" = 1 ]; } && ! healthy "$SP" && healthy "$BP" \
+      && [ "$(cat "$RUN/base.ctx" 2>/dev/null || echo 4096)" -gt 4096 ]; then
+    echo 'Reloading the base model with its smaller window to run both models.' >&2
+    stop_one base "$BP"
+  fi
+}
+
 start_one() {  # name gguf port [context] [seconds idle before the model is unloaded]
   healthy "$3" && return 0
   [ -s "$2" ] || { echo "dawnr: the $1 model is missing ($2); run install.sh" >&2; exit 1; }
@@ -172,10 +198,11 @@ start_one() {  # name gguf port [context] [seconds idle before the model is unlo
   # (locallm/gguf_layer.py): the layer guesses the next tokens and the model checks them in one pass, so what is
   # written is the model's own and comes sooner. Measured 2026-10-05 on the assistant's tasks, the same tasks done:
   # 16.8 to 29.4 tokens a second on a 12-core CPU, 55 to 72 on a laptop's 8 GB card. On a card it takes 0.35 GB
-  # more, so there it is used when the base runs alone with the large window, and not beside the student, where
-  # the two models were measured to fill 7.6 of 8 GB. DAWNR_DRAFT=0 turns it off.
+  # more. On a GPU or a smaller CPU machine it is used only for the base's larger solo window. CPU weight
+  # repacking is also disabled automatically where memory is tight. DAWNR_DRAFT=0 turns the draft off.
   local draft=()
-  if [ "$1" = base ] && [ "${DAWNR_DRAFT:-1}" != 0 ] && [ "${BASE_DRAFT:-}" = mtp ] && { ! on_card || [ "${4:-4096}" -gt 4096 ]; }; then
+  if [ "$1" = base ] && [ "${DAWNR_DRAFT:-1}" != 0 ] && [ "${BASE_DRAFT:-}" = mtp ] \
+      && { { ! on_card && [ "${CPU_LOW_MEMORY:-0}" != 1 ]; } || [ "${4:-4096}" -gt 4096 ]; }; then
     # draft-mtp,ngram-mod: the prediction layer's draft, and runs the model has already written (file content it
     # quotes back) drafted from the text itself. Six CPU cores, the same eight tasks: 11.3 tokens/s with no draft,
     # 12.0 at n-max 3, 15.8 at 5, 17.7 at 6, 16.1 at 8, and 21.2 at 6 with the n-gram draft (PREDICT S2, S2b, S2c)
@@ -238,18 +265,14 @@ own_paths() {
 both_up() {  # start the two models if they are not running, and stop them again on the way out
   if [ -n "${DAWNR_WRITER_URL:-}" ]; then base_up; return 0; fi   # the writer is elsewhere: only the base runs here
   started=0
-  # the assistant leaves the base model loaded with its large window; on a card the student does not fit beside that
-  if on_card && ! healthy "$SP" && healthy "$BP" && [ "$(cat "$RUN/base.ctx" 2>/dev/null || echo 4096)" -gt 4096 ]; then
-    echo "reloading the base model with its small window, so that both models fit the card..." >&2
-    stop_one base "$BP"
-  fi
+  prepare_pair
   if ! { healthy "$SP" && healthy "$BP"; }; then
     echo "starting the models (half a minute here, a few minutes the first time on a small machine)..." >&2
     # on the way out only what this command started is stopped: a base model the assistant left loaded stays
     local had_student=0 had_base=0
     healthy "$SP" && had_student=1; healthy "$BP" && had_base=1
-    start_both; started=1
     trap "[ $had_student = 1 ] || stop_one student $SP; [ $had_base = 1 ] || stop_one base $BP" EXIT
+    start_both; started=1
     wait_ready
   fi
 }
