@@ -14,10 +14,11 @@ Writes out/v7/v7-rows.jsonl (the snapshot's rows, then the new ones), out/v7/ann
 (one in ten eligible programs by name, never trained on, the sub-skill's own test) and
 out/v7/decomposition.json (counts and digests).
 
-An annotation row: the admitted program with every `invariant`, `decreases` and `assert` line removed
-is the question; the admitted program, verbatim, is the answer. Only programs that lose at least one
-line inside a loop, a lemma or a body count; a program whose only annotation is a spec fun's
-`decreases` is left out. Specification rows for admitted programs that still lack one are built with
+An annotation row: the admitted program with every `invariant` and `assert` line removed is the
+question; the admitted program, verbatim, is the answer. `decreases` stays: t's grammar requires a
+measure on every loop (surface.py: "expected 'decreases'"), so removing it would make the question
+not a t program. The first build of 2026-10-19 removed it and 420 of 455 questions did not parse.
+Only programs that lose at least one line count. Specification rows for admitted programs that still lack one are built with
 t/spec_first_rows.build, in the route's own words, and kept only when the pair is new.
 """
 from __future__ import annotations
@@ -36,12 +37,11 @@ import spec_experiment as se                                    # noqa: E402
 import spec_first_rows                                          # noqa: E402
 
 BLOCK = re.compile(r"```t\n(.*?)```", re.S)
-ANNOTATION = re.compile(r"^[ \t]*(?:invariant|decreases)\b[^\n]*\n", re.M)
+ANNOTATION = re.compile(r"^[ \t]*invariant\b[^\n]*\n", re.M)
 ASSERT = re.compile(r"^[ \t]*assert\b[^\n]*;[ \t]*\n", re.M)
-SPEC_FUN_DECREASES = re.compile(r"^spec fun[^\n]*\n(?:[ \t]+(?:requires|ensures|decreases)\b[^\n]*\n)*", re.M)
 QUESTION = ("Complete the proof annotations of this t task. Keep its header, parameters, requires, ensures, "
-            "spec funs, lemmas and every statement exactly as given, and add the loop invariants, decreases "
-            "clauses and assertions the provers need, so that they can verify it.\n\n")
+            "spec funs, lemmas, decreases clauses and every statement exactly as given, and add the loop "
+            "invariants and assertions the provers need, so that they can verify it.\n\n")
 NL_SOURCES = ("graded", "samples", "spec", "proof-py")
 
 
@@ -55,11 +55,8 @@ def program_of(chosen: str) -> str | None:
 
 
 def stripped(program: str) -> str | None:
-    """The program without its annotations, or None when nothing outside a spec fun's header is removed."""
-    heads = [m.group(0) for m in SPEC_FUN_DECREASES.finditer(program)]
-    inside_heads = sum(len(ANNOTATION.findall(h)) for h in heads)
-    removed = len(ANNOTATION.findall(program)) + len(ASSERT.findall(program))
-    if removed - inside_heads <= 0:
+    """The program without its invariants and assertions, or None when nothing is removed."""
+    if not (ANNOTATION.search(program) or ASSERT.search(program)):
         return None
     return ASSERT.sub("", ANNOTATION.sub("", program))
 
