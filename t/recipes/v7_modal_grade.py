@@ -26,7 +26,9 @@ IMAGE_DIR = HERE.parent / "out/v7-20261019/modal/proof-image"
 STAGED_T = Path(os.environ.get("V7_STAGED_T", "/home/t/.claude/jobs/d76813cf/tmp/dawnr-t/t"))
 
 kernels = (
-    modal.Image.from_dockerfile(str(IMAGE_DIR / "Dockerfile.kernels"))
+    # add_python gives Modal a Python it can introspect for the function wrapper; the engine's own
+    # run_par is invoked as system python3 in a subprocess, so the two never mix.
+    modal.Image.from_dockerfile(str(IMAGE_DIR / "Dockerfile.kernels"), add_python="3.12")
     .env({"HOME": "/home/prover", "T_SPARK_JOBS": "1", "PYTHONUNBUFFERED": "1"})
     .add_local_dir(str(STAGED_T), "/opt/dawnr/t", copy=True)
 )
