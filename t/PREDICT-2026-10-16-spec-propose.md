@@ -47,21 +47,29 @@ Persisting accepted clauses back and re-scoring the corpus false-accept floor is
 
 Step 4 run over the 53 under-constrained `t/dafnybench` specs (weakest first, from the
 `t/spec_strength.py` worklist) with Fable (`~/.local/bin/fable`), eight processes. Every
-accepted clause passed `spec_refine.check`: a prover confirms the real body still verifies
-against the strengthened spec (so the added `ensures` is provably true of the real program
-— a *sound* strengthening, never a weakening) **and** strictly fewer behaviour-changing
-mutants survive. Nothing the model emitted was trusted without the gate.
+accepted clause passed `spec_refine.check`, which is **interpreter-only**: `audit.classify`
+draws bounded inputs and reports that the real body still satisfies the strengthened spec on
+those draws **and** that strictly fewer behaviour-changing mutants survive. No kernel was asked
+to prove anything. (Correction, 2026-10-19: the first version of this section said "a prover
+confirms the real body still verifies ... provably true of the real program"; that was false.
+An interpreter-accepted clause is a *candidate*, and the 2026-10-18 v6 training-contract
+control showed why the distinction matters: a `findLUSlength` strengthening passed this same
+gate with 7 → 0 survivors, then under the native seven kernels fell from six to five passing
+because Rocq did not prove it, `release/evidence/v6-training-repair-native.json`.)
+Nothing the model emitted was trusted without the gate.
 
 - **40 of 53** under-constrained specs strengthened; **31 fully closed** (0 survivors).
 - Surviving mutants across these 53 specs: **418 → 152  (−64%)**.
-- dafnybench corpus spec-strength (Dafny kernel, 320 tasks / 7,255 behaviour-changing
-  mutants): **94.2% → 97.9%** killed; false-accept 5.76% → 2.10%.
+- dafnybench corpus spec-strength (interpreter audit, 320 tasks / 7,255 behaviour-changing
+  mutants) was measured at **94.2%** killed before this run. The **97.9%** figure is arithmetic
+  on the per-spec deltas — what the corpus number *would* be if the 40 clauses were persisted —
+  not a re-measurement; nothing was persisted (see below).
 - 0 errors. (An earlier thread-parallel pass errored on all 53 with `signal only works in
   main thread of the main interpreter` — the gate's per-check timeout uses `signal.alarm`,
   which needs a process's main thread; the run is therefore per-process, not per-thread.)
 
-**Scope, stated honestly.** This is the Dafny-kernel spec-strength instrument on the
-dafnybench corpus. It is **not** the seven-kernel false-accept FLOOR of E1
+**Scope, stated honestly.** This is the interpreter spec-strength instrument on the
+dafnybench corpus (the tasks happen to be Dafny-derived; no Dafny ran here). It is **not** the seven-kernel false-accept FLOOR of E1
 (`internal/E1-FINDINGS-2026-10-14.md`); that floor is a broader measurement across all
 seven kernels and is re-scored only by re-running E1, not by this run. What this shows is
 that the ExVerus/SpecSyn proposer+gate loop closes real `ensures` gaps automatically — the
@@ -72,7 +80,8 @@ t-proof-engine content (`t/ENGINE.md`: "the tasks"). Merging these clauses into 
 benchmark is a t-proof-engine change (then `bash t/sync_engine.sh`), not a dawnr-only edit,
 so the clauses are recorded here as a candidate engine strengthening rather than written
 into the corpus in this repository. Machine-readable per-spec record (clause, witness,
-before/after): `out/v6/spec-strengthenings-dafnybench.jsonl`.
+before/after) and the pre-run worklist: `t/evidence/2026-10-17-spec-propose-dafnybench/`
+(moved into the tree 2026-10-19; it had been left untracked under `out/`).
 
 ### Accepted strengthenings (40, all gate-verified)
 

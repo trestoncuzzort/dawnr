@@ -1,0 +1,2881 @@
+[
+ {
+  "name": "dafny_training_tmp_tmp_n2kixni_session1_training1__max",
+  "file": "t/dafnybench/dafny-training_tmp_tmp_n2kixni_session1_training1.max.json",
+  "strength": 0.0,
+  "survivors": [
+   {
+    "op": "collapse-if",
+    "change": "`if x > y {` -> `r := 0;`",
+    "witness": "x=0, y=0 -> real 1, twin 0",
+    "kernel_proved": false
+   },
+   {
+    "op": "negate-cond",
+    "change": "`r := 0;` -> `r := 1;`",
+    "witness": "x=0, y=0 -> real 1, twin 0",
+    "kernel_proved": false
+   },
+   {
+    "op": "compare-flip",
+    "change": "`if x > y {` -> `if x >= y {`",
+    "witness": "x=0, y=0 -> real 1, twin 0",
+    "kernel_proved": false
+   },
+   {
+    "op": "boundary-swap",
+    "change": "`if x > y {` -> `if y > x {`",
+    "witness": "x=0, y=1 -> real 1, twin 0",
+    "kernel_proved": false
+   },
+   {
+    "op": "off-by-one#2",
+    "change": "`r := 0;` -> `r := 1;`",
+    "witness": "x=1, y=0 -> real 0, twin 1",
+    "kernel_proved": false
+   },
+   {
+    "op": "off-by-one#3",
+    "change": "`r := 0;` -> `r := -1;`",
+    "witness": "x=1, y=0 -> real 0, twin -1",
+    "kernel_proved": false
+   },
+   {
+    "op": "off-by-one#4",
+    "change": "`r := 1;` -> `r := 2;`",
+    "witness": "x=0, y=0 -> real 1, twin 2",
+    "kernel_proved": false
+   },
+   {
+    "op": "off-by-one#5",
+    "change": "`r := 1;` -> `r := 0;`",
+    "witness": "x=0, y=0 -> real 1, twin 0",
+    "kernel_proved": false
+   },
+   {
+    "op": "wrong-var",
+    "change": "`if x > y {` -> `if y > y {`",
+    "witness": "x=1, y=0 -> real 0, twin 1",
+    "kernel_proved": false
+   },
+   {
+    "op": "wrong-var#1",
+    "change": "`if x > y {` -> `if r > y {`",
+    "witness": "x=1, y=0 -> real 0, twin 1",
+    "kernel_proved": false
+   },
+   {
+    "op": "wrong-var#2",
+    "change": "`if x > y {` -> `if x > x {`",
+    "witness": "x=1, y=0 -> real 0, twin 1",
+    "kernel_proved": false
+   },
+   {
+    "op": "wrong-var#3",
+    "change": "`if x > y {` -> `if x > r {`",
+    "witness": "x=1, y=1 -> real 1, twin 0",
+    "kernel_proved": false
+   },
+   {
+    "op": "wrong-var#4",
+    "change": "`m := r;` -> `m := x;`",
+    "witness": "x=0, y=0 -> real 1, twin 0",
+    "kernel_proved": false
+   },
+   {
+    "op": "wrong-var#5",
+    "change": "`m := r;` -> `m := y;`",
+    "witness": "x=0, y=0 -> real 1, twin 0",
+    "kernel_proved": false
+   },
+   {
+    "op": "wrong-constant#2",
+    "change": "`r := 0;` -> `r := 0 + 1;`",
+    "witness": "x=1, y=0 -> real 0, twin 1",
+    "kernel_proved": false
+   },
+   {
+    "op": "wrong-constant#3",
+    "change": "`r := 0;` -> `r := 0 + -1;`",
+    "witness": "x=1, y=0 -> real 0, twin -1",
+    "kernel_proved": false
+   },
+   {
+    "op": "wrong-constant#4",
+    "change": "`r := 1;` -> `r := 1 + 1;`",
+    "witness": "x=0, y=0 -> real 1, twin 2",
+    "kernel_proved": false
+   },
+   {
+    "op": "wrong-constant#5",
+    "change": "`r := 1;` -> `r := 1 + -1;`",
+    "witness": "x=0, y=0 -> real 1, twin 0",
+    "kernel_proved": false
+   },
+   {
+    "op": "wrong-constant#6",
+    "change": "`m := r;` -> `m := r + 1;`",
+    "witness": "x=0, y=0 -> real 1, twin 2",
+    "kernel_proved": false
+   },
+   {
+    "op": "wrong-constant#7",
+    "change": "`m := r;` -> `m := r + -1;`",
+    "witness": "x=0, y=0 -> real 1, twin 0",
+    "kernel_proved": false
+   }
+  ]
+ },
+ {
+  "name": "dafny_training_tmp_tmp_n2kixni_session1_training1__abs",
+  "file": "t/dafnybench/dafny-training_tmp_tmp_n2kixni_session1_training1.abs.json",
+  "strength": 0.0,
+  "survivors": [
+   {
+    "op": "collapse-if",
+    "change": "`if x < 0 {` -> `y := -x;`",
+    "witness": "x=1 -> real 1, twin -1",
+    "kernel_proved": false
+   },
+   {
+    "op": "negate-cond",
+    "change": "`y := -x;` -> `y := x;`",
+    "witness": "x=1 -> real 1, twin -1",
+    "kernel_proved": false
+   },
+   {
+    "op": "boundary-swap",
+    "change": "`if x < 0 {` -> `if 0 < x {`",
+    "witness": "x=1 -> real 1, twin -1",
+    "kernel_proved": false
+   },
+   {
+    "op": "off-by-one#1",
+    "change": "`if x < 0 {` -> `if x < -1 {`",
+    "witness": "x=-1 -> real 1, twin -1",
+    "kernel_proved": false
+   },
+   {
+    "op": "wrong-constant",
+    "change": "`y := -x;` -> `y := -x + 1;`",
+    "witness": "x=-1 -> real 1, twin 2",
+    "kernel_proved": false
+   },
+   {
+    "op": "wrong-constant#1",
+    "change": "`y := -x;` -> `y := -x + -1;`",
+    "witness": "x=-1 -> real 1, twin 0",
+    "kernel_proved": false
+   },
+   {
+    "op": "wrong-constant#2",
+    "change": "`y := x;` -> `y := x + 1;`",
+    "witness": "x=0 -> real 0, twin 1",
+    "kernel_proved": false
+   },
+   {
+    "op": "wrong-constant#3",
+    "change": "`y := x;` -> `y := x + -1;`",
+    "witness": "x=0 -> real 0, twin -1",
+    "kernel_proved": false
+   }
+  ]
+ },
+ {
+  "name": "software_building_and_verification_projects_tmp_tmp5tm1srrn_cvs_projeto_aula2__m4",
+  "file": "t/dafnybench/Software-building-and-verification-Projects_tmp_tmp5tm1srrn_CVS-projeto_aula2.m4.json",
+  "strength": 0.0,
+  "survivors": [
+   {
+    "op": "collapse-if",
+    "change": "`if x == y {` -> `z := true;`",
+    "witness": "x=0, y=1 -> real False, twin True",
+    "kernel_proved": false
+   },
+   {
+    "op": "negate-cond",
+    "change": "`z := true;` -> `z := false;`",
+    "witness": "x=0, y=0 -> real True, twin False",
+    "kernel_proved": false
+   },
+   {
+    "op": "wrong-var",
+    "change": "`if x == y {` -> `if y == y {`",
+    "witness": "x=0, y=1 -> real False, twin True",
+    "kernel_proved": false
+   },
+   {
+    "op": "wrong-var#1",
+    "change": "`if x == y {` -> `if x == x {`",
+    "witness": "x=0, y=1 -> real False, twin True",
+    "kernel_proved": false
+   }
+  ]
+ },
+ {
+  "name": "dafny_verify_tmp_tmphq7j0row_generated_code_15__main_v",
+  "file": "t/dafnybench/Dafny_Verify_tmp_tmphq7j0row_Generated_Code_15.main.json",
+  "strength": 0.08695652173913043,
+  "survivors": [
+   {
+    "op": "compare-flip",
+    "change": "`while j < n` -> `while j <= n`",
+    "witness": "n=1, k=2 -> real 1, twin 0",
+    "kernel_proved": false
+   },
+   {
+    "op": "boundary-swap",
+    "change": "`while j < n` -> `while n < j`",
+    "witness": "n=1, k=2 -> real 1, twin 2",
+    "kernel_proved": false
+   },
+   {
+    "op": "off-by-one",
+    "change": "`var j: int := 0;` -> `var j: int := 1;`",
+    "witness": "n=1, k=2 -> real 1, twin 2",
+    "kernel_proved": false
+   },
+   {
+    "op": "off-by-one#1",
+    "change": "`var j: int := 0;` -> `var j: int := -1;`",
+    "witness": "n=1, k=2 -> real 1, twin 0",
+    "kernel_proved": false
+   },
+   {
+    "op": "off-by-one#2",
+    "change": "`while j < n` -> `while j < n + 1`",
+    "witness": "n=1, k=2 -> real 1, twin 0",
+    "kernel_proved": false
+   },
+   {
+    "op": "off-by-one#3",
+    "change": "`while j < n` -> `while j < n + -1`",
+    "witness": "n=1, k=2 -> real 1, twin 2",
+    "kernel_proved": false
+   },
+   {
+    "op": "off-by-one#4",
+    "change": "`j := j + 1;` -> `j := j + 2;`",
+    "witness": "n=2, k=1000000 -> real 999998, twin 999999",
+    "kernel_proved": false
+   },
+   {
+    "op": "off-by-one#7",
+    "change": "`k_out := k_out - 1;` -> `k_out := k_out - 0;`",
+    "witness": "n=1, k=2 -> real 1, twin 2",
+    "kernel_proved": false
+   },
+   {
+    "op": "wrong-var",
+    "change": "`k_out := k;` -> `k_out := n;`",
+    "witness": "n=1, k=2 -> real 1, twin 0",
+    "kernel_proved": false
+   },
+   {
+    "op": "wrong-var#1",
+    "change": "`while j < n` -> `while n < n`",
+    "witness": "n=1, k=2 -> real 1, twin 2",
+    "kernel_proved": false
+   },
+   {
+    "op": "wrong-var#2",
+    "change": "`while j < n` -> `while k < n`",
+    "witness": "n=1, k=2 -> real 1, twin 2",
+    "kernel_proved": false
+   },
+   {
+    "op": "wrong-var#4",
+    "change": "`while j < n` -> `while j < j`",
+    "witness": "n=1, k=2 -> real 1, twin 2",
+    "kernel_proved": false
+   },
+   {
+    "op": "wrong-var#5",
+    "change": "`j := j + 1;` -> `j := n + 1;`",
+    "witness": "n=2, k=1000000 -> real 999998, twin 999999",
+    "kernel_proved": false
+   },
+   {
+    "op": "wrong-var#6",
+    "change": "`j := j + 1;` -> `j := k + 1;`",
+    "witness": "n=2, k=1000000 -> real 999998, twin 999999",
+    "kernel_proved": false
+   },
+   {
+    "op": "wrong-constant",
+    "change": "`k_out := k;` -> `k_out := k + 1;`",
+    "witness": "n=1, k=2 -> real 1, twin 2",
+    "kernel_proved": false
+   },
+   {
+    "op": "wrong-constant#1",
+    "change": "`k_out := k;` -> `k_out := k + -1;`",
+    "witness": "n=1, k=2 -> real 1, twin 0",
+    "kernel_proved": false
+   },
+   {
+    "op": "wrong-constant#2",
+    "change": "`var j: int := 0;` -> `var j: int := 0 + 1;`",
+    "witness": "n=1, k=2 -> real 1, twin 2",
+    "kernel_proved": false
+   },
+   {
+    "op": "wrong-constant#3",
+    "change": "`var j: int := 0;` -> `var j: int := 0 + -1;`",
+    "witness": "n=1, k=2 -> real 1, twin 0",
+    "kernel_proved": false
+   },
+   {
+    "op": "wrong-constant#4",
+    "change": "`k_out := k_out - 1;` -> `k_out := k_out - 1 + 1;`",
+    "witness": "n=1, k=2 -> real 1, twin 2",
+    "kernel_proved": false
+   },
+   {
+    "op": "wrong-operator#2",
+    "change": "`k_out := k_out - 1;` -> `k_out := k_out + 1;`",
+    "witness": "n=1, k=2 -> real 1, twin 3",
+    "kernel_proved": false
+   },
+   {
+    "op": "wrong-operator#3",
+    "change": "`k_out := k_out - 1;` -> `k_out := k_out * 1;`",
+    "witness": "n=1, k=2 -> real 1, twin 2",
+    "kernel_proved": false
+   }
+  ]
+ },
+ {
+  "name": "dafny_verify_tmp_tmphq7j0row_dataset_c_convert_examples_15__main_v",
+  "file": "t/dafnybench/Dafny_Verify_tmp_tmphq7j0row_dataset_C_convert_examples_15.main.json",
+  "strength": 0.08695652173913043,
+  "survivors": [
+   {
+    "op": "compare-flip",
+    "change": "`while j < n` -> `while j <= n`",
+    "witness": "n=1, k=2 -> real 1, twin 0",
+    "kernel_proved": false
+   },
+   {
+    "op": "boundary-swap",
+    "change": "`while j < n` -> `while n < j`",
+    "witness": "n=1, k=2 -> real 1, twin 2",
+    "kernel_proved": false
+   },
+   {
+    "op": "off-by-one",
+    "change": "`var j: int := 0;` -> `var j: int := 1;`",
+    "witness": "n=1, k=2 -> real 1, twin 2",
+    "kernel_proved": false
+   },
+   {
+    "op": "off-by-one#1",
+    "change": "`var j: int := 0;` -> `var j: int := -1;`",
+    "witness": "n=1, k=2 -> real 1, twin 0",
+    "kernel_proved": false
+   },
+   {
+    "op": "off-by-one#2",
+    "change": "`while j < n` -> `while j < n + 1`",
+    "witness": "n=1, k=2 -> real 1, twin 0",
+    "kernel_proved": false
+   },
+   {
+    "op": "off-by-one#3",
+    "change": "`while j < n` -> `while j < n + -1`",
+    "witness": "n=1, k=2 -> real 1, twin 2",
+    "kernel_proved": false
+   },
+   {
+    "op": "off-by-one#4",
+    "change": "`j := j + 1;` -> `j := j + 2;`",
+    "witness": "n=2, k=1000000 -> real 999998, twin 999999",
+    "kernel_proved": false
+   },
+   {
+    "op": "off-by-one#7",
+    "change": "`k_out := k_out - 1;` -> `k_out := k_out - 0;`",
+    "witness": "n=1, k=2 -> real 1, twin 2",
+    "kernel_proved": false
+   },
+   {
+    "op": "wrong-var",
+    "change": "`k_out := k;` -> `k_out := n;`",
+    "witness": "n=1, k=2 -> real 1, twin 0",
+    "kernel_proved": false
+   },
+   {
+    "op": "wrong-var#1",
+    "change": "`while j < n` -> `while n < n`",
+    "witness": "n=1, k=2 -> real 1, twin 2",
+    "kernel_proved": false
+   },
+   {
+    "op": "wrong-var#2",
+    "change": "`while j < n` -> `while k < n`",
+    "witness": "n=1, k=2 -> real 1, twin 2",
+    "kernel_proved": false
+   },
+   {
+    "op": "wrong-var#4",
+    "change": "`while j < n` -> `while j < j`",
+    "witness": "n=1, k=2 -> real 1, twin 2",
+    "kernel_proved": false
+   },
+   {
+    "op": "wrong-var#5",
+    "change": "`j := j + 1;` -> `j := n + 1;`",
+    "witness": "n=2, k=1000000 -> real 999998, twin 999999",
+    "kernel_proved": false
+   },
+   {
+    "op": "wrong-var#6",
+    "change": "`j := j + 1;` -> `j := k + 1;`",
+    "witness": "n=2, k=1000000 -> real 999998, twin 999999",
+    "kernel_proved": false
+   },
+   {
+    "op": "wrong-constant",
+    "change": "`k_out := k;` -> `k_out := k + 1;`",
+    "witness": "n=1, k=2 -> real 1, twin 2",
+    "kernel_proved": false
+   },
+   {
+    "op": "wrong-constant#1",
+    "change": "`k_out := k;` -> `k_out := k + -1;`",
+    "witness": "n=1, k=2 -> real 1, twin 0",
+    "kernel_proved": false
+   },
+   {
+    "op": "wrong-constant#2",
+    "change": "`var j: int := 0;` -> `var j: int := 0 + 1;`",
+    "witness": "n=1, k=2 -> real 1, twin 2",
+    "kernel_proved": false
+   },
+   {
+    "op": "wrong-constant#3",
+    "change": "`var j: int := 0;` -> `var j: int := 0 + -1;`",
+    "witness": "n=1, k=2 -> real 1, twin 0",
+    "kernel_proved": false
+   },
+   {
+    "op": "wrong-constant#4",
+    "change": "`k_out := k_out - 1;` -> `k_out := k_out - 1 + 1;`",
+    "witness": "n=1, k=2 -> real 1, twin 2",
+    "kernel_proved": false
+   },
+   {
+    "op": "wrong-operator#2",
+    "change": "`k_out := k_out - 1;` -> `k_out := k_out + 1;`",
+    "witness": "n=1, k=2 -> real 1, twin 3",
+    "kernel_proved": false
+   },
+   {
+    "op": "wrong-operator#3",
+    "change": "`k_out := k_out - 1;` -> `k_out := k_out * 1;`",
+    "witness": "n=1, k=2 -> real 1, twin 2",
+    "kernel_proved": false
+   }
+  ]
+ },
+ {
+  "name": "software_building_and_verification_projects_tmp_tmp5tm1srrn_cvs_projeto_aula2__max",
+  "file": "t/dafnybench/Software-building-and-verification-Projects_tmp_tmp5tm1srrn_CVS-projeto_aula2.max.json",
+  "strength": 0.09090909090909091,
+  "survivors": [
+   {
+    "op": "collapse-if",
+    "change": "`if a > b {` -> `z := a;`",
+    "witness": "a=0, b=1 -> real 1, twin 0",
+    "kernel_proved": false
+   },
+   {
+    "op": "negate-cond",
+    "change": "`z := a;` -> `z := b;`",
+    "witness": "a=0, b=1 -> real 1, twin 0",
+    "kernel_proved": false
+   },
+   {
+    "op": "boundary-swap",
+    "change": "`if a > b {` -> `if b > a {`",
+    "witness": "a=0, b=1 -> real 1, twin 0",
+    "kernel_proved": false
+   },
+   {
+    "op": "wrong-var",
+    "change": "`if a > b {` -> `if b > b {`",
+    "witness": "a=1, b=0 -> real 1, twin 0",
+    "kernel_proved": false
+   },
+   {
+    "op": "wrong-var#1",
+    "change": "`if a > b {` -> `if a > a {`",
+    "witness": "a=1, b=0 -> real 1, twin 0",
+    "kernel_proved": false
+   },
+   {
+    "op": "wrong-var#2",
+    "change": "`z := a;` -> `z := b;`",
+    "witness": "a=1, b=0 -> real 1, twin 0",
+    "kernel_proved": false
+   },
+   {
+    "op": "wrong-var#3",
+    "change": "`z := b;` -> `z := a;`",
+    "witness": "a=0, b=1 -> real 1, twin 0",
+    "kernel_proved": false
+   },
+   {
+    "op": "wrong-constant",
+    "change": "`z := a;` -> `z := a + 1;`",
+    "witness": "a=1, b=0 -> real 1, twin 2",
+    "kernel_proved": false
+   },
+   {
+    "op": "wrong-constant#1",
+    "change": "`z := a;` -> `z := a + -1;`",
+    "witness": "a=1, b=0 -> real 1, twin 0",
+    "kernel_proved": false
+   },
+   {
+    "op": "wrong-constant#2",
+    "change": "`z := b;` -> `z := b + 1;`",
+    "witness": "a=0, b=0 -> real 0, twin 1",
+    "kernel_proved": false
+   }
+  ]
+ },
+ {
+  "name": "dafny_synthesis_task_id_397__medianOfThree",
+  "file": "t/dafnybench/dafny-synthesis_task_id_397.MedianOfThree.json",
+  "strength": 0.1111111111111111,
+  "survivors": [
+   {
+    "op": "collapse-if",
+    "change": "`if a <= b and b <= c or c <= b and b <= a {` -> `median := b;`",
+    "witness": "a=0, b=1, c=0 -> real 0, twin 1",
+    "kernel_proved": false
+   },
+   {
+    "op": "collapse-if#1",
+    "change": "`if b <= a and a <= c or c <= a and a <= b {` -> `median := a;`",
+    "witness": "a=1, b=-1, c=0 -> real 0, twin 1",
+    "kernel_proved": false
+   },
+   {
+    "op": "negate-cond",
+    "change": "`median := b;` -> `if b <= a and a <= c or c <= a and a <= b {`",
+    "witness": "a=0, b=1, c=0 -> real 0, twin 1",
+    "kernel_proved": false
+   },
+   {
+    "op": "negate-cond#1",
+    "change": "`median := a;` -> `median := c;`",
+    "witness": "a=0, b=1, c=-1 -> real 0, twin -1",
+    "kernel_proved": false
+   },
+   {
+    "op": "boundary-swap",
+    "change": "`if a <= b and b <= c or c <= b and b <= a {` -> `if b <= a and b <= c or c <= b and b <= a {`",
+    "witness": "a=1, b=0, c=1 -> real 1, twin 0",
+    "kernel_proved": false
+   },
+   {
+    "op": "boundary-swap#1",
+    "change": "`if a <= b and b <= c or c <= b and b <= a {` -> `if a <= b and c <= b or c <= b and b <= a {`",
+    "witness": "a=0, b=1, c=0 -> real 0, twin 1",
+    "kernel_proved": false
+   },
+   {
+    "op": "boundary-swap#2",
+    "change": "`if a <= b and b <= c or c <= b and b <= a {` -> `if a <= b and b <= c or b <= c and b <= a {`",
+    "witness": "a=1, b=0, c=1 -> real 1, twin 0",
+    "kernel_proved": false
+   },
+   {
+    "op": "boundary-swap#3",
+    "change": "`if a <= b and b <= c or c <= b and b <= a {` -> `if a <= b and b <= c or c <= b and a <= b {`",
+    "witness": "a=0, b=1, c=0 -> real 0, twin 1",
+    "kernel_proved": false
+   },
+   {
+    "op": "boundary-swap#4",
+    "change": "`if b <= a and a <= c or c <= a and a <= b {` -> `if a <= b and a <= c or c <= a and a <= b {`",
+    "witness": "a=0, b=-1, c=1 -> real 0, twin 1",
+    "kernel_proved": false
+   },
+   {
+    "op": "boundary-swap#5",
+    "change": "`if b <= a and a <= c or c <= a and a <= b {` -> `if b <= a and c <= a or c <= a and a <= b {`",
+    "witness": "a=0, b=-1, c=1 -> real 0, twin 1",
+    "kernel_proved": false
+   },
+   {
+    "op": "boundary-swap#6",
+    "change": "`if b <= a and a <= c or c <= a and a <= b {` -> `if b <= a and a <= c or a <= c and a <= b {`",
+    "witness": "a=0, b=1, c=-1 -> real 0, twin -1",
+    "kernel_proved": false
+   },
+   {
+    "op": "boundary-swap#7",
+    "change": "`if b <= a and a <= c or c <= a and a <= b {` -> `if b <= a and a <= c or c <= a and b <= a {`",
+    "witness": "a=0, b=1, c=-1 -> real 0, twin -1",
+    "kernel_proved": false
+   },
+   {
+    "op": "wrong-var",
+    "change": "`if a <= b and b <= c or c <= b and b <= a {` -> `if b <= b and b <= c or c <= b and b <= a {`",
+    "witness": "a=1, b=0, c=1 -> real 1, twin 0",
+    "kernel_proved": false
+   },
+   {
+    "op": "wrong-var#1",
+    "change": "`if a <= b and b <= c or c <= b and b <= a {` -> `if c <= b and b <= c or c <= b and b <= a {`",
+    "witness": "a=-1, b=0, c=1 -> real 0, twin 1",
+    "kernel_proved": false
+   },
+   {
+    "op": "wrong-var#2",
+    "change": "`if a <= b and b <= c or c <= b and b <= a {` -> `if a <= a and b <= c or c <= b and b <= a {`",
+    "witness": "a=1, b=0, c=1 -> real 1, twin 0",
+    "kernel_proved": false
+   },
+   {
+    "op": "wrong-var#3",
+    "change": "`if a <= b and b <= c or c <= b and b <= a {` -> `if a <= c and b <= c or c <= b and b <= a {`",
+    "witness": "a=1, b=0, c=1 -> real 1, twin 0",
+    "kernel_proved": false
+   },
+   {
+    "op": "wrong-var#4",
+    "change": "`if a <= b and b <= c or c <= b and b <= a {` -> `if a <= b and a <= c or c <= b and b <= a {`",
+    "witness": "a=0, b=1, c=0 -> real 0, twin 1",
+    "kernel_proved": false
+   },
+   {
+    "op": "wrong-var#5",
+    "change": "`if a <= b and b <= c or c <= b and b <= a {` -> `if a <= b and c <= c or c <= b and b <= a {`",
+    "witness": "a=0, b=1, c=0 -> real 0, twin 1",
+    "kernel_proved": false
+   },
+   {
+    "op": "wrong-var#6",
+    "change": "`if a <= b and b <= c or c <= b and b <= a {` -> `if a <= b and b <= a or c <= b and b <= a {`",
+    "witness": "a=-1, b=0, c=1 -> real 0, twin 1",
+    "kernel_proved": false
+   },
+   {
+    "op": "wrong-var#7",
+    "change": "`if a <= b and b <= c or c <= b and b <= a {` -> `if a <= b and b <= b or c <= b and b <= a {`",
+    "witness": "a=0, b=1, c=0 -> real 0, twin 1",
+    "kernel_proved": false
+   },
+   {
+    "op": "wrong-var#8",
+    "change": "`if a <= b and b <= c or c <= b and b <= a {` -> `if a <= b and b <= c or a <= b and b <= a {`",
+    "witness": "a=1, b=0, c=-1 -> real 0, twin -1",
+    "kernel_proved": false
+   },
+   {
+    "op": "wrong-var#9",
+    "change": "`if a <= b and b <= c or c <= b and b <= a {` -> `if a <= b and b <= c or b <= b and b <= a {`",
+    "witness": "a=1, b=0, c=1 -> real 1, twin 0",
+    "kernel_proved": false
+   },
+   {
+    "op": "wrong-var#10",
+    "change": "`if a <= b and b <= c or c <= b and b <= a {` -> `if a <= b and b <= c or c <= a and b <= a {`",
+    "witness": "a=1, b=0, c=1 -> real 1, twin 0",
+    "kernel_proved": false
+   },
+   {
+    "op": "wrong-var#11",
+    "change": "`if a <= b and b <= c or c <= b and b <= a {` -> `if a <= b and b <= c or c <= c and b <= a {`",
+    "witness": "a=1, b=0, c=1 -> real 1, twin 0",
+    "kernel_proved": false
+   },
+   {
+    "op": "wrong-var#12",
+    "change": "`if a <= b and b <= c or c <= b and b <= a {` -> `if a <= b and b <= c or c <= b and a <= a {`",
+    "witness": "a=0, b=1, c=0 -> real 0, twin 1",
+    "kernel_proved": false
+   },
+   {
+    "op": "wrong-var#13",
+    "change": "`if a <= b and b <= c or c <= b and b <= a {` -> `if a <= b and b <= c or c <= b and c <= a {`",
+    "witness": "a=0, b=1, c=0 -> real 0, twin 1",
+    "kernel_proved": false
+   },
+   {
+    "op": "wrong-var#14",
+    "change": "`if a <= b and b <= c or c <= b and b <= a {` -> `if a <= b and b <= c or c <= b and b <= b {`",
+    "witness": "a=0, b=1, c=0 -> real 0, twin 1",
+    "kernel_proved": false
+   },
+   {
+    "op": "wrong-var#15",
+    "change": "`if a <= b and b <= c or c <= b and b <= a {` -> `if a <= b and b <= c or c <= b and b <= c {`",
+    "witness": "a=1, b=0, c=-1 -> real 0, twin -1",
+    "kernel_proved": false
+   },
+   {
+    "op": "wrong-var#16",
+    "change": "`median := b;` -> `median := a;`",
+    "witness": "a=0, b=1, c=1 -> real 1, twin 0",
+    "kernel_proved": false
+   },
+   {
+    "op": "wrong-var#17",
+    "change": "`median := b;` -> `median := c;`",
+    "witness": "a=0, b=0, c=1 -> real 0, twin 1",
+    "kernel_proved": false
+   },
+   {
+    "op": "wrong-var#18",
+    "change": "`if b <= a and a <= c or c <= a and a <= b {` -> `if a <= a and a <= c or c <= a and a <= b {`",
+    "witness": "a=-1, b=1, c=0 -> real 0, twin -1",
+    "kernel_proved": false
+   },
+   {
+    "op": "wrong-var#19",
+    "change": "`if b <= a and a <= c or c <= a and a <= b {` -> `if c <= a and a <= c or c <= a and a <= b {`",
+    "witness": "a=0, b=-1, c=1 -> real 0, twin 1",
+    "kernel_proved": false
+   },
+   {
+    "op": "wrong-var#20",
+    "change": "`if b <= a and a <= c or c <= a and a <= b {` -> `if b <= b and a <= c or c <= a and a <= b {`",
+    "witness": "a=-1, b=1, c=0 -> real 0, twin -1",
+    "kernel_proved": false
+   },
+   {
+    "op": "wrong-var#22",
+    "change": "`if b <= a and a <= c or c <= a and a <= b {` -> `if b <= a and b <= c or c <= a and a <= b {`",
+    "witness": "a=1, b=-1, c=0 -> real 0, twin 1",
+    "kernel_proved": false
+   },
+   {
+    "op": "wrong-var#23",
+    "change": "`if b <= a and a <= c or c <= a and a <= b {` -> `if b <= a and c <= c or c <= a and a <= b {`",
+    "witness": "a=1, b=-1, c=0 -> real 0, twin 1",
+    "kernel_proved": false
+   },
+   {
+    "op": "wrong-var#24",
+    "change": "`if b <= a and a <= c or c <= a and a <= b {` -> `if b <= a and a <= a or c <= a and a <= b {`",
+    "witness": "a=1, b=-1, c=0 -> real 0, twin 1",
+    "kernel_proved": false
+   },
+   {
+    "op": "wrong-var#25",
+    "change": "`if b <= a and a <= c or c <= a and a <= b {` -> `if b <= a and a <= b or c <= a and a <= b {`",
+    "witness": "a=0, b=-1, c=1 -> real 0, twin 1",
+    "kernel_proved": false
+   },
+   {
+    "op": "wrong-var#26",
+    "change": "`if b <= a and a <= c or c <= a and a <= b {` -> `if b <= a and a <= c or a <= a and a <= b {`",
+    "witness": "a=-1, b=1, c=0 -> real 0, twin -1",
+    "kernel_proved": false
+   },
+   {
+    "op": "wrong-var#27",
+    "change": "`if b <= a and a <= c or c <= a and a <= b {` -> `if b <= a and a <= c or b <= a and a <= b {`",
+    "witness": "a=0, b=1, c=-1 -> real 0, twin -1",
+    "kernel_proved": false
+   },
+   {
+    "op": "wrong-var#28",
+    "change": "`if b <= a and a <= c or c <= a and a <= b {` -> `if b <= a and a <= c or c <= b and a <= b {`",
+    "witness": "a=-1, b=1, c=0 -> real 0, twin -1",
+    "kernel_proved": false
+   },
+   {
+    "op": "wrong-var#29",
+    "change": "`if b <= a and a <= c or c <= a and a <= b {` -> `if b <= a and a <= c or c <= c and a <= b {`",
+    "witness": "a=-1, b=1, c=0 -> real 0, twin -1",
+    "kernel_proved": false
+   },
+   {
+    "op": "wrong-var#30",
+    "change": "`if b <= a and a <= c or c <= a and a <= b {` -> `if b <= a and a <= c or c <= a and b <= b {`",
+    "witness": "a=1, b=-1, c=0 -> real 0, twin 1",
+    "kernel_proved": false
+   },
+   {
+    "op": "wrong-var#32",
+    "change": "`if b <= a and a <= c or c <= a and a <= b {` -> `if b <= a and a <= c or c <= a and a <= a {`",
+    "witness": "a=1, b=-1, c=0 -> real 0, twin 1",
+    "kernel_proved": false
+   },
+   {
+    "op": "wrong-var#33",
+    "change": "`if b <= a and a <= c or c <= a and a <= b {` -> `if b <= a and a <= c or c <= a and a <= c {`",
+    "witness": "a=0, b=1, c=-1 -> real 0, twin -1",
+    "kernel_proved": false
+   },
+   {
+    "op": "wrong-var#34",
+    "change": "`median := a;` -> `median := b;`",
+    "witness": "a=0, b=1, c=0 -> real 0, twin 1",
+    "kernel_proved": false
+   },
+   {
+    "op": "wrong-var#35",
+    "change": "`median := a;` -> `median := c;`",
+    "witness": "a=0, b=1, c=-1 -> real 0, twin -1",
+    "kernel_proved": false
+   },
+   {
+    "op": "wrong-var#36",
+    "change": "`median := c;` -> `median := a;`",
+    "witness": "a=1, b=-1, c=0 -> real 0, twin 1",
+    "kernel_proved": false
+   },
+   {
+    "op": "wrong-var#37",
+    "change": "`median := c;` -> `median := b;`",
+    "witness": "a=1, b=-1, c=0 -> real 0, twin -1",
+    "kernel_proved": false
+   }
+  ]
+ },
+ {
+  "name": "dafny_verify_tmp_tmphq7j0row_test_cases_ghost__myMethod",
+  "file": "t/dafnybench/Dafny_Verify_tmp_tmphq7j0row_Test_Cases_Ghost.MyMethod.json",
+  "strength": 0.125,
+  "survivors": [
+   {
+    "op": "collapse-if",
+    "change": "`if x < 20 {` -> `b := 32 - x;`",
+    "witness": "x=20 -> real 39, twin 35",
+    "kernel_proved": false
+   },
+   {
+    "op": "negate-cond",
+    "change": "`b := 32 - x;` -> `b := 16;`",
+    "witness": "x=20 -> real 39, twin 35",
+    "kernel_proved": false
+   },
+   {
+    "op": "compare-flip",
+    "change": "`if x < 20 {` -> `if x <= 20 {`",
+    "witness": "x=20 -> real 39, twin 35",
+    "kernel_proved": false
+   },
+   {
+    "op": "boundary-swap",
+    "change": "`if x < 20 {` -> `if 20 < x {`",
+    "witness": "x=21 -> real 40, twin 35",
+    "kernel_proved": false
+   },
+   {
+    "op": "off-by-one#4",
+    "change": "`a := x + 3;` -> `a := x + 4;`",
+    "witness": "x=20 -> real 39, twin 40",
+    "kernel_proved": false
+   },
+   {
+    "op": "off-by-one#5",
+    "change": "`a := x + 3;` -> `a := x + 2;`",
+    "witness": "x=20 -> real 39, twin 38",
+    "kernel_proved": false
+   },
+   {
+    "op": "off-by-one#6",
+    "change": "`if x < 20 {` -> `if x < 21 {`",
+    "witness": "x=20 -> real 39, twin 35",
+    "kernel_proved": false
+   },
+   {
+    "op": "off-by-one#7",
+    "change": "`if x < 20 {` -> `if x < 19 {`",
+    "witness": "x=19 -> real 35, twin 38",
+    "kernel_proved": false
+   },
+   {
+    "op": "off-by-one#8",
+    "change": "`b := 32 - x;` -> `b := 33 - x;`",
+    "witness": "x=19 -> real 35, twin 36",
+    "kernel_proved": false
+   },
+   {
+    "op": "off-by-one#9",
+    "change": "`b := 32 - x;` -> `b := 31 - x;`",
+    "witness": "x=19 -> real 35, twin 34",
+    "kernel_proved": false
+   },
+   {
+    "op": "off-by-one#10",
+    "change": "`b := 16;` -> `b := 17;`",
+    "witness": "x=20 -> real 39, twin 40",
+    "kernel_proved": false
+   },
+   {
+    "op": "off-by-one#11",
+    "change": "`b := 16;` -> `b := 15;`",
+    "witness": "x=20 -> real 39, twin 38",
+    "kernel_proved": false
+   },
+   {
+    "op": "wrong-var#2",
+    "change": "`if x < 20 {` -> `if a < 20 {`",
+    "witness": "x=19 -> real 35, twin 38",
+    "kernel_proved": false
+   },
+   {
+    "op": "wrong-var#3",
+    "change": "`if x < 20 {` -> `if b < 20 {`",
+    "witness": "x=20 -> real 39, twin 35",
+    "kernel_proved": false
+   },
+   {
+    "op": "wrong-var#4",
+    "change": "`b := 32 - x;` -> `b := 32 - a;`",
+    "witness": "x=19 -> real 35, twin 32",
+    "kernel_proved": false
+   },
+   {
+    "op": "wrong-var#5",
+    "change": "`b := 32 - x;` -> `b := 32 - b;`",
+    "witness": "x=19 -> real 35, twin 54",
+    "kernel_proved": false
+   },
+   {
+    "op": "wrong-var#6",
+    "change": "`y := a + b;` -> `y := x + b;`",
+    "witness": "x=20 -> real 39, twin 36",
+    "kernel_proved": false
+   },
+   {
+    "op": "wrong-var#7",
+    "change": "`y := a + b;` -> `y := b + b;`",
+    "witness": "x=20 -> real 39, twin 32",
+    "kernel_proved": false
+   },
+   {
+    "op": "wrong-var#9",
+    "change": "`y := a + b;` -> `y := a + a;`",
+    "witness": "x=20 -> real 39, twin 46",
+    "kernel_proved": false
+   },
+   {
+    "op": "wrong-constant#4",
+    "change": "`b := 32 - x;` -> `b := 32 - x + 1;`",
+    "witness": "x=19 -> real 35, twin 36",
+    "kernel_proved": false
+   },
+   {
+    "op": "wrong-constant#5",
+    "change": "`b := 32 - x;` -> `b := 32 - x + -1;`",
+    "witness": "x=19 -> real 35, twin 34",
+    "kernel_proved": false
+   },
+   {
+    "op": "wrong-constant#6",
+    "change": "`b := 16;` -> `b := 16 + 1;`",
+    "witness": "x=20 -> real 39, twin 40",
+    "kernel_proved": false
+   },
+   {
+    "op": "wrong-constant#7",
+    "change": "`b := 16;` -> `b := 16 + -1;`",
+    "witness": "x=20 -> real 39, twin 38",
+    "kernel_proved": false
+   },
+   {
+    "op": "wrong-operator",
+    "change": "`a := x + 3;` -> `a := x - 3;`",
+    "witness": "x=20 -> real 39, twin 33",
+    "kernel_proved": false
+   },
+   {
+    "op": "wrong-operator#1",
+    "change": "`a := x + 3;` -> `a := x * 3;`",
+    "witness": "x=20 -> real 39, twin 76",
+    "kernel_proved": false
+   },
+   {
+    "op": "wrong-operator#2",
+    "change": "`b := 32 - x;` -> `b := 32 + x;`",
+    "witness": "x=19 -> real 35, twin 73",
+    "kernel_proved": false
+   },
+   {
+    "op": "wrong-operator#3",
+    "change": "`b := 32 - x;` -> `b := 32 * x;`",
+    "witness": "x=19 -> real 35, twin 630",
+    "kernel_proved": false
+   },
+   {
+    "op": "wrong-operator#5",
+    "change": "`y := a + b;` -> `y := a * b;`",
+    "witness": "x=20 -> real 39, twin 368",
+    "kernel_proved": false
+   }
+  ]
+ },
+ {
+  "name": "dafny_training_tmp_tmp_n2kixni_session1_training1__find",
+  "file": "t/dafnybench/dafny-training_tmp_tmp_n2kixni_session1_training1.find.json",
+  "strength": 0.30434782608695654,
+  "survivors": [
+   {
+    "op": "collapse-if",
+    "change": "`if a[index] == key {` -> `return 0;`",
+    "witness": "a=[0], key=1 -> real -10, twin 0",
+    "kernel_proved": false
+   },
+   {
+    "op": "negate-cond",
+    "change": "`return 0;` -> `} else {`",
+    "witness": "a=[0], key=0 -> real 0, twin -10",
+    "kernel_proved": false
+   },
+   {
+    "op": "boundary-swap",
+    "change": "`while index < len(a)` -> `while len(a) < index`",
+    "witness": "a=[0], key=0 -> real 0, twin -10",
+    "kernel_proved": false
+   },
+   {
+    "op": "off-by-one",
+    "change": "`index := 0;` -> `index := 1;`",
+    "witness": "a=[0], key=0 -> real 0, twin -10",
+    "kernel_proved": false
+   },
+   {
+    "op": "off-by-one#3",
+    "change": "`while index < len(a)` -> `while index < len(a) + -1`",
+    "witness": "a=[0], key=0 -> real 0, twin -10",
+    "kernel_proved": false
+   },
+   {
+    "op": "off-by-one#6",
+    "change": "`return 0;` -> `return 1;`",
+    "witness": "a=[0], key=0 -> real 0, twin 1",
+    "kernel_proved": false
+   },
+   {
+    "op": "off-by-one#7",
+    "change": "`return 0;` -> `return -1;`",
+    "witness": "a=[0], key=0 -> real 0, twin -1",
+    "kernel_proved": false
+   },
+   {
+    "op": "off-by-one#8",
+    "change": "`index := index + 2;` -> `index := index + 3;`",
+    "witness": "a=[0, 0, 1], key=1 -> real 0, twin -10",
+    "kernel_proved": false
+   },
+   {
+    "op": "off-by-one#9",
+    "change": "`index := index + 2;` -> `index := index + 1;`",
+    "witness": "a=[0, 1], key=1 -> real -10, twin 0",
+    "kernel_proved": false
+   },
+   {
+    "op": "off-by-one#10",
+    "change": "`index := -(10);` -> `index := -(11);`",
+    "witness": "a=[], key=0 -> real -10, twin -11",
+    "kernel_proved": false
+   },
+   {
+    "op": "off-by-one#11",
+    "change": "`index := -(10);` -> `index := -(9);`",
+    "witness": "a=[], key=0 -> real -10, twin -9",
+    "kernel_proved": false
+   },
+   {
+    "op": "wrong-constant",
+    "change": "`index := 0;` -> `index := 0 + 1;`",
+    "witness": "a=[0], key=0 -> real 0, twin -10",
+    "kernel_proved": false
+   },
+   {
+    "op": "wrong-constant#2",
+    "change": "`return 0;` -> `return 0 + 1;`",
+    "witness": "a=[0], key=0 -> real 0, twin 1",
+    "kernel_proved": false
+   },
+   {
+    "op": "wrong-constant#3",
+    "change": "`return 0;` -> `return 0 + -1;`",
+    "witness": "a=[0], key=0 -> real 0, twin -1",
+    "kernel_proved": false
+   },
+   {
+    "op": "wrong-constant#4",
+    "change": "`index := -(10);` -> `index := -(10) + 1;`",
+    "witness": "a=[], key=0 -> real -10, twin -9",
+    "kernel_proved": false
+   },
+   {
+    "op": "wrong-constant#5",
+    "change": "`index := -(10);` -> `index := -(10) + -1;`",
+    "witness": "a=[], key=0 -> real -10, twin -11",
+    "kernel_proved": false
+   }
+  ]
+ },
+ {
+  "name": "nitwit_tmp_tmplm098gxz_nit__nit_increment",
+  "file": "t/dafnybench/nitwit_tmp_tmplm098gxz_nit.nit_increment.json",
+  "strength": 0.3939393939393939,
+  "survivors": [
+   {
+    "op": "off-by-one#4",
+    "change": "`sum := (n + 1) % b;` -> `sum := (n + 2) % b;`",
+    "witness": "b=2, n=0 -> real [1, 0], twin [0, 0]",
+    "kernel_proved": false
+   },
+   {
+    "op": "off-by-one#5",
+    "change": "`sum := (n + 1) % b;` -> `sum := (n + 0) % b;`",
+    "witness": "b=2, n=0 -> real [1, 0], twin [0, 0]",
+    "kernel_proved": false
+   },
+   {
+    "op": "off-by-one#6",
+    "change": "`carry := (n + 1) / b;` -> `carry := (n + 2) / b;`",
+    "witness": "b=2, n=0 -> real [1, 0], twin [1, 1]",
+    "kernel_proved": false
+   },
+   {
+    "op": "off-by-one#7",
+    "change": "`carry := (n + 1) / b;` -> `carry := (n + 0) / b;`",
+    "witness": "b=2, n=1 -> real [0, 1], twin [0, 0]",
+    "kernel_proved": false
+   },
+   {
+    "op": "wrong-var",
+    "change": "`sum := (n + 1) % b;` -> `sum := (b + 1) % b;`",
+    "witness": "b=2, n=1 -> real [0, 1], twin [1, 1]",
+    "kernel_proved": false
+   },
+   {
+    "op": "wrong-var#1",
+    "change": "`sum := (n + 1) % b;` -> `sum := (sum + 1) % b;`",
+    "witness": "b=2, n=1 -> real [0, 1], twin [1, 1]",
+    "kernel_proved": false
+   },
+   {
+    "op": "wrong-var#2",
+    "change": "`sum := (n + 1) % b;` -> `sum := (carry + 1) % b;`",
+    "witness": "b=2, n=1 -> real [0, 1], twin [1, 1]",
+    "kernel_proved": false
+   },
+   {
+    "op": "wrong-var#6",
+    "change": "`carry := (n + 1) / b;` -> `carry := (b + 1) / b;`",
+    "witness": "b=2, n=0 -> real [1, 0], twin [1, 1]",
+    "kernel_proved": false
+   },
+   {
+    "op": "wrong-var#7",
+    "change": "`carry := (n + 1) / b;` -> `carry := (sum + 1) / b;`",
+    "witness": "b=2, n=0 -> real [1, 0], twin [1, 1]",
+    "kernel_proved": false
+   },
+   {
+    "op": "wrong-var#8",
+    "change": "`carry := (n + 1) / b;` -> `carry := (carry + 1) / b;`",
+    "witness": "b=2, n=1 -> real [0, 1], twin [0, 0]",
+    "kernel_proved": false
+   },
+   {
+    "op": "wrong-var#12",
+    "change": "`r := (sum, carry);` -> `r := (carry, sum);`",
+    "witness": "b=2, n=0 -> real [1, 0], twin [0, 1]",
+    "kernel_proved": false
+   },
+   {
+    "op": "wrong-var#14",
+    "change": "`r := (sum, carry);` -> `r := (n, carry);`",
+    "witness": "b=2, n=0 -> real [1, 0], twin [0, 0]",
+    "kernel_proved": false
+   },
+   {
+    "op": "wrong-var#15",
+    "change": "`r := (sum, carry);` -> `r := (carry, carry);`",
+    "witness": "b=2, n=0 -> real [1, 0], twin [0, 0]",
+    "kernel_proved": false
+   },
+   {
+    "op": "wrong-var#17",
+    "change": "`r := (sum, carry);` -> `r := (sum, n);`",
+    "witness": "b=3, n=1 -> real [2, 0], twin [2, 1]",
+    "kernel_proved": false
+   },
+   {
+    "op": "wrong-var#18",
+    "change": "`r := (sum, carry);` -> `r := (sum, sum);`",
+    "witness": "b=2, n=0 -> real [1, 0], twin [1, 1]",
+    "kernel_proved": false
+   },
+   {
+    "op": "wrong-operator",
+    "change": "`sum := (n + 1) % b;` -> `sum := (n + 1) / b;`",
+    "witness": "b=2, n=0 -> real [1, 0], twin [0, 0]",
+    "kernel_proved": false
+   },
+   {
+    "op": "wrong-operator#1",
+    "change": "`sum := (n + 1) % b;` -> `sum := (n - 1) % b;`",
+    "witness": "b=3, n=0 -> real [1, 0], twin [2, 0]",
+    "kernel_proved": false
+   },
+   {
+    "op": "wrong-operator#2",
+    "change": "`sum := (n + 1) % b;` -> `sum := n * 1 % b;`",
+    "witness": "b=2, n=0 -> real [1, 0], twin [0, 0]",
+    "kernel_proved": false
+   },
+   {
+    "op": "wrong-operator#3",
+    "change": "`carry := (n + 1) / b;` -> `carry := (n + 1) % b;`",
+    "witness": "b=2, n=0 -> real [1, 0], twin [1, 1]",
+    "kernel_proved": false
+   },
+   {
+    "op": "wrong-operator#5",
+    "change": "`carry := (n + 1) / b;` -> `carry := n * 1 / b;`",
+    "witness": "b=2, n=1 -> real [0, 1], twin [0, 0]",
+    "kernel_proved": false
+   }
+  ]
+ },
+ {
+  "name": "stunning_palm_tree_tmp_tmpr84c2iwh_ch1__minUnderSpec",
+  "file": "t/dafnybench/stunning-palm-tree_tmp_tmpr84c2iwh_ch1.MinUnderSpec.json",
+  "strength": 0.47368421052631576,
+  "survivors": [
+   {
+    "op": "off-by-one",
+    "change": "`r := x - 1;` -> `r := x - 2;`",
+    "witness": "x=0, y=0 -> real -1, twin -2",
+    "kernel_proved": false
+   },
+   {
+    "op": "off-by-one#1",
+    "change": "`r := x - 1;` -> `r := x - 0;`",
+    "witness": "x=0, y=0 -> real -1, twin 0",
+    "kernel_proved": false
+   },
+   {
+    "op": "off-by-one#2",
+    "change": "`r := y - 1;` -> `r := y - 2;`",
+    "witness": "x=1, y=0 -> real -1, twin -2",
+    "kernel_proved": false
+   },
+   {
+    "op": "off-by-one#3",
+    "change": "`r := y - 1;` -> `r := y - 0;`",
+    "witness": "x=1, y=0 -> real -1, twin 0",
+    "kernel_proved": false
+   },
+   {
+    "op": "wrong-constant",
+    "change": "`r := x - 1;` -> `r := x - 1 + 1;`",
+    "witness": "x=0, y=0 -> real -1, twin 0",
+    "kernel_proved": false
+   },
+   {
+    "op": "wrong-constant#1",
+    "change": "`r := x - 1;` -> `r := x - 1 + -1;`",
+    "witness": "x=0, y=0 -> real -1, twin -2",
+    "kernel_proved": false
+   },
+   {
+    "op": "wrong-constant#2",
+    "change": "`r := y - 1;` -> `r := y - 1 + 1;`",
+    "witness": "x=1, y=0 -> real -1, twin 0",
+    "kernel_proved": false
+   },
+   {
+    "op": "wrong-constant#3",
+    "change": "`r := y - 1;` -> `r := y - 1 + -1;`",
+    "witness": "x=1, y=0 -> real -1, twin -2",
+    "kernel_proved": false
+   },
+   {
+    "op": "wrong-operator#1",
+    "change": "`r := x - 1;` -> `r := x * 1;`",
+    "witness": "x=0, y=0 -> real -1, twin 0",
+    "kernel_proved": false
+   },
+   {
+    "op": "wrong-operator#3",
+    "change": "`r := y - 1;` -> `r := y * 1;`",
+    "witness": "x=1, y=0 -> real -1, twin 0",
+    "kernel_proved": false
+   }
+  ]
+ },
+ {
+  "name": "nitwit_tmp_tmplm098gxz_nit__nit_add",
+  "file": "t/dafnybench/nitwit_tmp_tmplm098gxz_nit.nit_add.json",
+  "strength": 0.4883720930232558,
+  "survivors": [
+   {
+    "op": "wrong-var",
+    "change": "`z := (x + y) % b;` -> `z := (b + y) % b;`",
+    "witness": "b=2, x=1, y=0 -> real [1, 0], twin [0, 0]",
+    "kernel_proved": false
+   },
+   {
+    "op": "wrong-var#1",
+    "change": "`z := (x + y) % b;` -> `z := (y + y) % b;`",
+    "witness": "b=2, x=0, y=1 -> real [1, 0], twin [0, 0]",
+    "kernel_proved": false
+   },
+   {
+    "op": "wrong-var#2",
+    "change": "`z := (x + y) % b;` -> `z := (z + y) % b;`",
+    "witness": "b=2, x=1, y=0 -> real [1, 0], twin [0, 0]",
+    "kernel_proved": false
+   },
+   {
+    "op": "wrong-var#3",
+    "change": "`z := (x + y) % b;` -> `z := (carry + y) % b;`",
+    "witness": "b=2, x=1, y=0 -> real [1, 0], twin [0, 0]",
+    "kernel_proved": false
+   },
+   {
+    "op": "wrong-var#4",
+    "change": "`z := (x + y) % b;` -> `z := (x + b) % b;`",
+    "witness": "b=2, x=0, y=1 -> real [1, 0], twin [0, 0]",
+    "kernel_proved": false
+   },
+   {
+    "op": "wrong-var#5",
+    "change": "`z := (x + y) % b;` -> `z := (x + x) % b;`",
+    "witness": "b=2, x=0, y=1 -> real [1, 0], twin [0, 0]",
+    "kernel_proved": false
+   },
+   {
+    "op": "wrong-var#6",
+    "change": "`z := (x + y) % b;` -> `z := (x + z) % b;`",
+    "witness": "b=2, x=0, y=1 -> real [1, 0], twin [0, 0]",
+    "kernel_proved": false
+   },
+   {
+    "op": "wrong-var#7",
+    "change": "`z := (x + y) % b;` -> `z := (x + carry) % b;`",
+    "witness": "b=2, x=0, y=1 -> real [1, 0], twin [0, 0]",
+    "kernel_proved": false
+   },
+   {
+    "op": "wrong-var#12",
+    "change": "`carry := (x + y) / b;` -> `carry := (b + y) / b;`",
+    "witness": "b=2, x=0, y=0 -> real [0, 0], twin [0, 1]",
+    "kernel_proved": false
+   },
+   {
+    "op": "wrong-var#13",
+    "change": "`carry := (x + y) / b;` -> `carry := (y + y) / b;`",
+    "witness": "b=2, x=0, y=1 -> real [1, 0], twin [1, 1]",
+    "kernel_proved": false
+   },
+   {
+    "op": "wrong-var#14",
+    "change": "`carry := (x + y) / b;` -> `carry := (z + y) / b;`",
+    "witness": "b=2, x=0, y=1 -> real [1, 0], twin [1, 1]",
+    "kernel_proved": false
+   },
+   {
+    "op": "wrong-var#15",
+    "change": "`carry := (x + y) / b;` -> `carry := (carry + y) / b;`",
+    "witness": "b=2, x=1, y=1 -> real [0, 1], twin [0, 0]",
+    "kernel_proved": false
+   },
+   {
+    "op": "wrong-var#16",
+    "change": "`carry := (x + y) / b;` -> `carry := (x + b) / b;`",
+    "witness": "b=2, x=0, y=0 -> real [0, 0], twin [0, 1]",
+    "kernel_proved": false
+   },
+   {
+    "op": "wrong-var#17",
+    "change": "`carry := (x + y) / b;` -> `carry := (x + x) / b;`",
+    "witness": "b=2, x=1, y=0 -> real [1, 0], twin [1, 1]",
+    "kernel_proved": false
+   },
+   {
+    "op": "wrong-var#18",
+    "change": "`carry := (x + y) / b;` -> `carry := (x + z) / b;`",
+    "witness": "b=2, x=1, y=0 -> real [1, 0], twin [1, 1]",
+    "kernel_proved": false
+   },
+   {
+    "op": "wrong-var#19",
+    "change": "`carry := (x + y) / b;` -> `carry := (x + carry) / b;`",
+    "witness": "b=2, x=1, y=1 -> real [0, 1], twin [0, 0]",
+    "kernel_proved": false
+   },
+   {
+    "op": "wrong-var#26",
+    "change": "`r := (z, carry);` -> `r := (x, carry);`",
+    "witness": "b=2, x=0, y=1 -> real [1, 0], twin [0, 0]",
+    "kernel_proved": false
+   },
+   {
+    "op": "wrong-var#27",
+    "change": "`r := (z, carry);` -> `r := (y, carry);`",
+    "witness": "b=2, x=1, y=0 -> real [1, 0], twin [0, 0]",
+    "kernel_proved": false
+   },
+   {
+    "op": "wrong-var#28",
+    "change": "`r := (z, carry);` -> `r := (carry, carry);`",
+    "witness": "b=2, x=0, y=1 -> real [1, 0], twin [0, 0]",
+    "kernel_proved": false
+   },
+   {
+    "op": "wrong-operator",
+    "change": "`z := (x + y) % b;` -> `z := (x + y) / b;`",
+    "witness": "b=2, x=0, y=1 -> real [1, 0], twin [0, 0]",
+    "kernel_proved": false
+   },
+   {
+    "op": "wrong-operator#1",
+    "change": "`z := (x + y) % b;` -> `z := (x - y) % b;`",
+    "witness": "b=3, x=0, y=1 -> real [1, 0], twin [2, 0]",
+    "kernel_proved": false
+   },
+   {
+    "op": "wrong-operator#2",
+    "change": "`z := (x + y) % b;` -> `z := x * y % b;`",
+    "witness": "b=2, x=0, y=1 -> real [1, 0], twin [0, 0]",
+    "kernel_proved": false
+   }
+  ]
+ },
+ {
+  "name": "dafny_tmp_tmp0wu8wmfr_tests_f1a__f",
+  "file": "t/dafnybench/Dafny_tmp_tmp0wu8wmfr_tests_F1a.F.json",
+  "strength": 0.5,
+  "survivors": [
+   {
+    "op": "off-by-one#1",
+    "change": "`r := 0;` -> `r := -1;`",
+    "witness": " -> real 0, twin -1",
+    "kernel_proved": false
+   },
+   {
+    "op": "wrong-constant#1",
+    "change": "`r := 0;` -> `r := 0 + -1;`",
+    "witness": " -> real 0, twin -1",
+    "kernel_proved": false
+   }
+  ]
+ },
+ {
+  "name": "dafny_verify_tmp_tmphq7j0row_fine_tune_examples_50_examples_41__main_v",
+  "file": "t/dafnybench/Dafny_Verify_tmp_tmphq7j0row_Fine_Tune_Examples_50_examples_41.main.json",
+  "strength": 0.53125,
+  "survivors": [
+   {
+    "op": "compare-flip",
+    "change": "`while i < n` -> `while i <= n`",
+    "witness": "n=0, k=0 -> real [0, 0], twin [1, 1]",
+    "kernel_proved": false
+   },
+   {
+    "op": "off-by-one#6",
+    "change": "`j := 0;` -> `j := 1;`",
+    "witness": "n=0, k=0 -> real [0, 0], twin [0, 1]",
+    "kernel_proved": false
+   },
+   {
+    "op": "off-by-one#8",
+    "change": "`while i < n` -> `while i < n + 1`",
+    "witness": "n=0, k=0 -> real [0, 0], twin [1, 1]",
+    "kernel_proved": false
+   },
+   {
+    "op": "off-by-one#10",
+    "change": "`i := i + 1;` -> `i := i + 2;`",
+    "witness": "n=1, k=0 -> real [1, 1], twin [2, 2]",
+    "kernel_proved": false
+   },
+   {
+    "op": "wrong-var#6",
+    "change": "`i := i + 1;` -> `i := n + 1;`",
+    "witness": "n=1, k=0 -> real [1, 1], twin [2, 2]",
+    "kernel_proved": false
+   },
+   {
+    "op": "wrong-var#8",
+    "change": "`i := i + 1;` -> `i := j + 1;`",
+    "witness": "n=3, k=0 -> real [3, 6], twin [4, 7]",
+    "kernel_proved": false
+   },
+   {
+    "op": "wrong-var#9",
+    "change": "`j := j + i;` -> `j := n + i;`",
+    "witness": "n=1, k=0 -> real [1, 1], twin [1, 2]",
+    "kernel_proved": false
+   },
+   {
+    "op": "wrong-var#10",
+    "change": "`j := j + i;` -> `j := k + i;`",
+    "witness": "n=1, k=1 -> real [1, 1], twin [1, 2]",
+    "kernel_proved": false
+   },
+   {
+    "op": "wrong-var#11",
+    "change": "`j := j + i;` -> `j := i + i;`",
+    "witness": "n=1, k=0 -> real [1, 1], twin [1, 2]",
+    "kernel_proved": false
+   },
+   {
+    "op": "wrong-var#12",
+    "change": "`j := j + i;` -> `j := j + n;`",
+    "witness": "n=2, k=0 -> real [2, 3], twin [2, 4]",
+    "kernel_proved": false
+   },
+   {
+    "op": "wrong-var#15",
+    "change": "`r := (i, j);` -> `r := (j, i);`",
+    "witness": "n=2, k=0 -> real [2, 3], twin [3, 2]",
+    "kernel_proved": false
+   },
+   {
+    "op": "wrong-var#18",
+    "change": "`r := (i, j);` -> `r := (j, j);`",
+    "witness": "n=2, k=0 -> real [2, 3], twin [3, 3]",
+    "kernel_proved": false
+   },
+   {
+    "op": "wrong-var#19",
+    "change": "`r := (i, j);` -> `r := (i, n);`",
+    "witness": "n=2, k=0 -> real [2, 3], twin [2, 2]",
+    "kernel_proved": false
+   },
+   {
+    "op": "wrong-var#21",
+    "change": "`r := (i, j);` -> `r := (i, i);`",
+    "witness": "n=2, k=0 -> real [2, 3], twin [2, 2]",
+    "kernel_proved": false
+   },
+   {
+    "op": "wrong-constant#6",
+    "change": "`j := 0;` -> `j := 0 + 1;`",
+    "witness": "n=0, k=0 -> real [0, 0], twin [0, 1]",
+    "kernel_proved": false
+   }
+  ]
+ },
+ {
+  "name": "dafny_synthesis_task_id_603__lucidNumbers",
+  "file": "t/dafnybench/dafny-synthesis_task_id_603.LucidNumbers.json",
+  "strength": 0.5625,
+  "survivors": [
+   {
+    "op": "compare-flip",
+    "change": "`while i_v3 <= n` -> `while i_v3 < n`",
+    "witness": "n=0 -> real [0], twin []",
+    "kernel_proved": false
+   },
+   {
+    "op": "off-by-one",
+    "change": "`var i_v3: int := 0;` -> `var i_v3: int := 1;`",
+    "witness": "n=0 -> real [0], twin []",
+    "kernel_proved": false
+   },
+   {
+    "op": "off-by-one#3",
+    "change": "`while i_v3 <= n` -> `while i_v3 <= n + -1`",
+    "witness": "n=0 -> real [0], twin []",
+    "kernel_proved": false
+   },
+   {
+    "op": "off-by-one#7",
+    "change": "`if i_v3 % 3 == 0 {` -> `if i_v3 % 3 == -1 {`",
+    "witness": "n=0 -> real [0], twin []",
+    "kernel_proved": false
+   },
+   {
+    "op": "off-by-one#8",
+    "change": "`i_v3 := i_v3 + 1;` -> `i_v3 := i_v3 + 2;`",
+    "witness": "n=3 -> real [0, 3], twin [0]",
+    "kernel_proved": false
+   },
+   {
+    "op": "wrong-var#4",
+    "change": "`i_v3 := i_v3 + 1;` -> `i_v3 := n + 1;`",
+    "witness": "n=3 -> real [0, 3], twin [0]",
+    "kernel_proved": false
+   },
+   {
+    "op": "wrong-constant",
+    "change": "`var i_v3: int := 0;` -> `var i_v3: int := 0 + 1;`",
+    "witness": "n=0 -> real [0], twin []",
+    "kernel_proved": false
+   }
+  ]
+ },
+ {
+  "name": "dafny_synthesis_task_id_567__isSorted",
+  "file": "t/dafnybench/dafny-synthesis_task_id_567.IsSorted.json",
+  "strength": 0.5757575757575758,
+  "survivors": [
+   {
+    "op": "boundary-swap",
+    "change": "`while i_v2 < h` -> `while h < i_v2`",
+    "witness": "a=[1, 0] -> real False, twin True",
+    "kernel_proved": false
+   },
+   {
+    "op": "off-by-one",
+    "change": "`var h: int := len(a) - 1;` -> `var h: int := len(a) - 2;`",
+    "witness": "a=[1, 0] -> real False, twin True",
+    "kernel_proved": false
+   },
+   {
+    "op": "off-by-one#2",
+    "change": "`var i_v2: int := 0;` -> `var i_v2: int := 1;`",
+    "witness": "a=[1, 0] -> real False, twin True",
+    "kernel_proved": false
+   },
+   {
+    "op": "off-by-one#5",
+    "change": "`while i_v2 < h` -> `while i_v2 < h + -1`",
+    "witness": "a=[1, 0] -> real False, twin True",
+    "kernel_proved": false
+   },
+   {
+    "op": "off-by-one#6",
+    "change": "`if a[i_v2] > a[i_v2 + 1] {` -> `if a[i_v2 + 1] > a[i_v2 + 1] {`",
+    "witness": "a=[1, 0] -> real False, twin True",
+    "kernel_proved": false
+   },
+   {
+    "op": "off-by-one#9",
+    "change": "`if a[i_v2] > a[i_v2 + 1] {` -> `if a[i_v2] > a[i_v2 + 1 + -1] {`",
+    "witness": "a=[1, 0] -> real False, twin True",
+    "kernel_proved": false
+   },
+   {
+    "op": "off-by-one#11",
+    "change": "`if a[i_v2] > a[i_v2 + 1] {` -> `if a[i_v2] > a[i_v2 + 0] {`",
+    "witness": "a=[1, 0] -> real False, twin True",
+    "kernel_proved": false
+   },
+   {
+    "op": "off-by-one#12",
+    "change": "`i_v2 := i_v2 + 1;` -> `i_v2 := i_v2 + 2;`",
+    "witness": "a=[0, 1, 0] -> real False, twin True",
+    "kernel_proved": false
+   },
+   {
+    "op": "wrong-var",
+    "change": "`while i_v2 < h` -> `while h < h`",
+    "witness": "a=[1, 0] -> real False, twin True",
+    "kernel_proved": false
+   },
+   {
+    "op": "wrong-var#1",
+    "change": "`while i_v2 < h` -> `while i_v2 < i_v2`",
+    "witness": "a=[1, 0] -> real False, twin True",
+    "kernel_proved": false
+   },
+   {
+    "op": "wrong-var#4",
+    "change": "`i_v2 := i_v2 + 1;` -> `i_v2 := h + 1;`",
+    "witness": "a=[0, 1, 0] -> real False, twin True",
+    "kernel_proved": false
+   },
+   {
+    "op": "wrong-constant#1",
+    "change": "`var h: int := len(a) - 1;` -> `var h: int := len(a) - 1 + -1;`",
+    "witness": "a=[1, 0] -> real False, twin True",
+    "kernel_proved": false
+   },
+   {
+    "op": "wrong-constant#2",
+    "change": "`var i_v2: int := 0;` -> `var i_v2: int := 0 + 1;`",
+    "witness": "a=[1, 0] -> real False, twin True",
+    "kernel_proved": false
+   },
+   {
+    "op": "wrong-operator#3",
+    "change": "`if a[i_v2] > a[i_v2 + 1] {` -> `if a[i_v2] > a[i_v2 * 1] {`",
+    "witness": "a=[1, 0] -> real False, twin True",
+    "kernel_proved": false
+   }
+  ]
+ },
+ {
+  "name": "dafny_language_server_tmp_tmpkir0kenl_test_vscomp2010_problem1_summax__m",
+  "file": "t/dafnybench/dafny-language-server_tmp_tmpkir0kenl_Test_VSComp2010_Problem1-SumMax.M.json",
+  "strength": 0.631578947368421,
+  "survivors": [
+   {
+    "op": "boundary-swap",
+    "change": "`while i < n` -> `while n < i`",
+    "witness": "n=1, a=[1] -> real [1, 1], twin [0, 0]",
+    "kernel_proved": false
+   },
+   {
+    "op": "off-by-one#5",
+    "change": "`sum := 0;` -> `sum := -1;`",
+    "witness": "n=0, a=[] -> real [0, 0], twin [-1, 0]",
+    "kernel_proved": false
+   },
+   {
+    "op": "off-by-one#6",
+    "change": "`max := 0;` -> `max := 1;`",
+    "witness": "n=0, a=[] -> real [0, 0], twin [0, 1]",
+    "kernel_proved": false
+   },
+   {
+    "op": "off-by-one#7",
+    "change": "`max := 0;` -> `max := -1;`",
+    "witness": "n=0, a=[] -> real [0, 0], twin [0, -1]",
+    "kernel_proved": false
+   },
+   {
+    "op": "off-by-one#8",
+    "change": "`var i: int := 0;` -> `var i: int := 1;`",
+    "witness": "n=1, a=[1] -> real [1, 1], twin [0, 0]",
+    "kernel_proved": false
+   },
+   {
+    "op": "off-by-one#11",
+    "change": "`while i < n` -> `while i < n + -1`",
+    "witness": "n=1, a=[1] -> real [1, 1], twin [0, 0]",
+    "kernel_proved": false
+   },
+   {
+    "op": "off-by-one#18",
+    "change": "`i := i + 1;` -> `i := i + 2;`",
+    "witness": "n=2, a=[0, 1] -> real [1, 1], twin [0, 0]",
+    "kernel_proved": false
+   },
+   {
+    "op": "wrong-var",
+    "change": "`while i < n` -> `while n < n`",
+    "witness": "n=1, a=[1] -> real [1, 1], twin [0, 0]",
+    "kernel_proved": false
+   },
+   {
+    "op": "wrong-var#3",
+    "change": "`while i < n` -> `while i < sum`",
+    "witness": "n=1, a=[1] -> real [1, 1], twin [0, 0]",
+    "kernel_proved": false
+   },
+   {
+    "op": "wrong-var#4",
+    "change": "`while i < n` -> `while i < max`",
+    "witness": "n=1, a=[1] -> real [1, 1], twin [0, 0]",
+    "kernel_proved": false
+   },
+   {
+    "op": "wrong-var#5",
+    "change": "`while i < n` -> `while i < i`",
+    "witness": "n=1, a=[1] -> real [1, 1], twin [0, 0]",
+    "kernel_proved": false
+   },
+   {
+    "op": "wrong-var#21",
+    "change": "`i := i + 1;` -> `i := n + 1;`",
+    "witness": "n=2, a=[0, 1] -> real [1, 1], twin [0, 0]",
+    "kernel_proved": false
+   },
+   {
+    "op": "wrong-var#24",
+    "change": "`r := (sum, max);` -> `r := (max, sum);`",
+    "witness": "n=2, a=[1, 1] -> real [2, 1], twin [1, 2]",
+    "kernel_proved": false
+   },
+   {
+    "op": "wrong-var#26",
+    "change": "`r := (sum, max);` -> `r := (max, max);`",
+    "witness": "n=2, a=[1, 1] -> real [2, 1], twin [1, 1]",
+    "kernel_proved": false
+   },
+   {
+    "op": "wrong-var#29",
+    "change": "`r := (sum, max);` -> `r := (sum, sum);`",
+    "witness": "n=2, a=[1, 1] -> real [2, 1], twin [2, 2]",
+    "kernel_proved": false
+   },
+   {
+    "op": "wrong-constant#5",
+    "change": "`sum := 0;` -> `sum := 0 + -1;`",
+    "witness": "n=0, a=[] -> real [0, 0], twin [-1, 0]",
+    "kernel_proved": false
+   },
+   {
+    "op": "wrong-constant#6",
+    "change": "`max := 0;` -> `max := 0 + 1;`",
+    "witness": "n=0, a=[] -> real [0, 0], twin [0, 1]",
+    "kernel_proved": false
+   },
+   {
+    "op": "wrong-constant#7",
+    "change": "`max := 0;` -> `max := 0 + -1;`",
+    "witness": "n=0, a=[] -> real [0, 0], twin [0, -1]",
+    "kernel_proved": false
+   },
+   {
+    "op": "wrong-constant#8",
+    "change": "`var i: int := 0;` -> `var i: int := 0 + 1;`",
+    "witness": "n=1, a=[1] -> real [1, 1], twin [0, 0]",
+    "kernel_proved": false
+   },
+   {
+    "op": "wrong-operator",
+    "change": "`sum := sum + a[i];` -> `sum := sum - a[i];`",
+    "witness": "n=1, a=[1] -> real [1, 1], twin [-1, 1]",
+    "kernel_proved": false
+   },
+   {
+    "op": "wrong-operator#1",
+    "change": "`sum := sum + a[i];` -> `sum := sum * a[i];`",
+    "witness": "n=1, a=[1] -> real [1, 1], twin [0, 1]",
+    "kernel_proved": false
+   }
+  ]
+ },
+ {
+  "name": "dafny_synthesis_task_id_126__sumOfCommonDivisors",
+  "file": "t/dafnybench/dafny-synthesis_task_id_126.SumOfCommonDivisors.json",
+  "strength": 0.6904761904761905,
+  "survivors": [
+   {
+    "op": "collapse-if",
+    "change": "`if a % i == 0 and b % i == 0 {` -> `sum := sum + i;`",
+    "witness": "a=2, b=2147483647 -> real 1, twin 3",
+    "kernel_proved": false
+   },
+   {
+    "op": "off-by-one",
+    "change": "`sum := 0;` -> `sum := 1;`",
+    "witness": "a=1, b=1 -> real 1, twin 2",
+    "kernel_proved": false
+   },
+   {
+    "op": "wrong-var#8",
+    "change": "`if a % i == 0 and b % i == 0 {` -> `if b % i == 0 and b % i == 0 {`",
+    "witness": "a=2147483647, b=2 -> real 1, twin 3",
+    "kernel_proved": false
+   },
+   {
+    "op": "wrong-var#9",
+    "change": "`if a % i == 0 and b % i == 0 {` -> `if i % i == 0 and b % i == 0 {`",
+    "witness": "a=2147483647, b=2 -> real 1, twin 3",
+    "kernel_proved": false
+   },
+   {
+    "op": "wrong-var#10",
+    "change": "`if a % i == 0 and b % i == 0 {` -> `if a % a == 0 and b % i == 0 {`",
+    "witness": "a=2147483647, b=2 -> real 1, twin 3",
+    "kernel_proved": false
+   },
+   {
+    "op": "wrong-var#12",
+    "change": "`if a % i == 0 and b % i == 0 {` -> `if a % i == 0 and a % i == 0 {`",
+    "witness": "a=2, b=2147483647 -> real 1, twin 3",
+    "kernel_proved": false
+   },
+   {
+    "op": "wrong-var#13",
+    "change": "`if a % i == 0 and b % i == 0 {` -> `if a % i == 0 and i % i == 0 {`",
+    "witness": "a=2, b=2147483647 -> real 1, twin 3",
+    "kernel_proved": false
+   },
+   {
+    "op": "wrong-var#15",
+    "change": "`if a % i == 0 and b % i == 0 {` -> `if a % i == 0 and b % b == 0 {`",
+    "witness": "a=2, b=2147483647 -> real 1, twin 3",
+    "kernel_proved": false
+   },
+   {
+    "op": "wrong-var#16",
+    "change": "`sum := sum + i;` -> `sum := sum + a;`",
+    "witness": "a=2, b=1 -> real 1, twin 2",
+    "kernel_proved": false
+   },
+   {
+    "op": "wrong-var#17",
+    "change": "`sum := sum + i;` -> `sum := sum + b;`",
+    "witness": "a=1, b=2 -> real 1, twin 2",
+    "kernel_proved": false
+   },
+   {
+    "op": "drop-guard#2",
+    "change": "`if a % i == 0 and b % i == 0 {` -> `if b % i == 0 {`",
+    "witness": "a=2147483647, b=2 -> real 1, twin 3",
+    "kernel_proved": false
+   },
+   {
+    "op": "drop-guard#3",
+    "change": "`if a % i == 0 and b % i == 0 {` -> `if a % i == 0 {`",
+    "witness": "a=2, b=2147483647 -> real 1, twin 3",
+    "kernel_proved": false
+   },
+   {
+    "op": "wrong-constant",
+    "change": "`sum := 0;` -> `sum := 0 + 1;`",
+    "witness": "a=1, b=1 -> real 1, twin 2",
+    "kernel_proved": false
+   }
+  ]
+ },
+ {
+  "name": "dafny_tmp_tmpmvs2dmry_examples1__multiReturn",
+  "file": "t/dafnybench/Dafny_tmp_tmpmvs2dmry_examples1.MultiReturn.json",
+  "strength": 0.72,
+  "survivors": [
+   {
+    "op": "wrong-var#4",
+    "change": "`more := x + y;` -> `more := x + more;`",
+    "witness": "x=0, y=1 -> real [1, -1], twin [0, -1]",
+    "kernel_proved": false
+   },
+   {
+    "op": "wrong-var#5",
+    "change": "`more := x + y;` -> `more := x + less;`",
+    "witness": "x=0, y=1 -> real [1, -1], twin [0, -1]",
+    "kernel_proved": false
+   },
+   {
+    "op": "wrong-var#7",
+    "change": "`less := x - y;` -> `less := more - y;`",
+    "witness": "x=0, y=1 -> real [1, -1], twin [1, 0]",
+    "kernel_proved": false
+   },
+   {
+    "op": "wrong-var#11",
+    "change": "`less := x - y;` -> `less := x - less;`",
+    "witness": "x=0, y=1 -> real [1, -1], twin [1, 0]",
+    "kernel_proved": false
+   },
+   {
+    "op": "wrong-var#13",
+    "change": "`r := (more, less);` -> `r := (x, less);`",
+    "witness": "x=0, y=1 -> real [1, -1], twin [0, -1]",
+    "kernel_proved": false
+   },
+   {
+    "op": "wrong-var#16",
+    "change": "`r := (more, less);` -> `r := (more, x);`",
+    "witness": "x=0, y=1 -> real [1, -1], twin [1, 0]",
+    "kernel_proved": false
+   },
+   {
+    "op": "wrong-constant#5",
+    "change": "`less := x - y;` -> `less := x - y + -1;`",
+    "witness": "x=0, y=0 -> real [0, 0], twin [0, -1]",
+    "kernel_proved": false
+   }
+  ]
+ },
+ {
+  "name": "workshop_tmp_tmp0cu11bdq_workshop_answers_question6__arrayUpToN",
+  "file": "t/dafnybench/Workshop_tmp_tmp0cu11bdq_Workshop_Answers_Question6.arrayUpToN.json",
+  "strength": 0.7222222222222222,
+  "survivors": [
+   {
+    "op": "boundary-swap",
+    "change": "`while i < n` -> `while n < i`",
+    "witness": "n=2 -> real [0, 1], twin [0, 0]",
+    "kernel_proved": false
+   },
+   {
+    "op": "wrong-var#1",
+    "change": "`while i < n` -> `while n < n`",
+    "witness": "n=2 -> real [0, 1], twin [0, 0]",
+    "kernel_proved": false
+   },
+   {
+    "op": "wrong-var#2",
+    "change": "`while i < n` -> `while i < i`",
+    "witness": "n=2 -> real [0, 1], twin [0, 0]",
+    "kernel_proved": false
+   },
+   {
+    "op": "wrong-var#4",
+    "change": "`a := a[i := i];` -> `a := a[i := n];`",
+    "witness": "n=1 -> real [0], twin [1]",
+    "kernel_proved": false
+   },
+   {
+    "op": "wrong-var#5",
+    "change": "`i := i + 1;` -> `i := n + 1;`",
+    "witness": "n=2 -> real [0, 1], twin [0, 0]",
+    "kernel_proved": false
+   }
+  ]
+ },
+ {
+  "name": "projectoscvs_tmp_tmp_02_gmcw_handout_1_cvs_handout1_55754_55780__euclidianDiv",
+  "file": "t/dafnybench/ProjectosCVS_tmp_tmp_02_gmcw_Handout 1_CVS_handout1_55754_55780.euclidianDiv.json",
+  "strength": 0.7435897435897436,
+  "survivors": [
+   {
+    "op": "compare-flip",
+    "change": "`while r_v - b >= 0` -> `while r_v - b > 0`",
+    "witness": "a=1, b=1 -> real [1, 0], twin [0, 1]",
+    "kernel_proved": false
+   },
+   {
+    "op": "off-by-one#6",
+    "change": "`while r_v - b >= 0` -> `while r_v - b >= 0 + 1`",
+    "witness": "a=1, b=1 -> real [1, 0], twin [0, 1]",
+    "kernel_proved": false
+   },
+   {
+    "op": "off-by-one#7",
+    "change": "`while r_v - b >= 0` -> `while r_v - b >= 0 + -1`",
+    "witness": "a=0, b=1 -> real [0, 0], twin [1, -1]",
+    "kernel_proved": false
+   },
+   {
+    "op": "off-by-one#8",
+    "change": "`while r_v - b >= 0` -> `while r_v - b >= 1`",
+    "witness": "a=1, b=1 -> real [1, 0], twin [0, 1]",
+    "kernel_proved": false
+   },
+   {
+    "op": "off-by-one#9",
+    "change": "`while r_v - b >= 0` -> `while r_v - b >= -1`",
+    "witness": "a=0, b=1 -> real [0, 0], twin [1, -1]",
+    "kernel_proved": false
+   },
+   {
+    "op": "wrong-var#5",
+    "change": "`while r_v - b >= 0` -> `while q - b >= 0`",
+    "witness": "a=1, b=1 -> real [1, 0], twin [0, 1]",
+    "kernel_proved": false
+   },
+   {
+    "op": "wrong-var#6",
+    "change": "`while r_v - b >= 0` -> `while r_v - a >= 0`",
+    "witness": "a=0, b=1 -> real [0, 0], twin [1, -1]",
+    "kernel_proved": false
+   },
+   {
+    "op": "wrong-var#7",
+    "change": "`while r_v - b >= 0` -> `while r_v - q >= 0`",
+    "witness": "a=0, b=1 -> real [0, 0], twin [1, -1]",
+    "kernel_proved": false
+   },
+   {
+    "op": "wrong-operator",
+    "change": "`while r_v - b >= 0` -> `while r_v + b >= 0`",
+    "witness": "a=0, b=1 -> real [0, 0], twin [2, -2]",
+    "kernel_proved": false
+   },
+   {
+    "op": "wrong-operator#1",
+    "change": "`while r_v - b >= 0` -> `while r_v * b >= 0`",
+    "witness": "a=0, b=1 -> real [0, 0], twin [1, -1]",
+    "kernel_proved": false
+   }
+  ]
+ },
+ {
+  "name": "cmsc433_tmp_tmpe3ob3a0o_dafny_project1_p1_assignment_2__plusOne",
+  "file": "t/dafnybench/cmsc433_tmp_tmpe3ob3a0o_dafny_project1_p1-assignment-2.PlusOne.json",
+  "strength": 0.75,
+  "survivors": [
+   {
+    "op": "off-by-one",
+    "change": "`y := x + 1;` -> `y := x + 2;`",
+    "witness": "x=0 -> real 1, twin 2",
+    "kernel_proved": false
+   }
+  ]
+ },
+ {
+  "name": "dafny_synthesis_task_id_161__removeElements",
+  "file": "t/dafnybench/dafny-synthesis_task_id_161.RemoveElements.json",
+  "strength": 0.78,
+  "survivors": [
+   {
+    "op": "boundary-swap",
+    "change": "`while i_v2 < h` -> `while h < i_v2`",
+    "witness": "a=[0], b=[] -> real [0], twin []",
+    "kernel_proved": false
+   },
+   {
+    "op": "off-by-one",
+    "change": "`var i_v2: int := 0;` -> `var i_v2: int := 1;`",
+    "witness": "a=[0], b=[] -> real [0], twin []",
+    "kernel_proved": false
+   },
+   {
+    "op": "off-by-one#3",
+    "change": "`while i_v2 < h` -> `while i_v2 < h + -1`",
+    "witness": "a=[0], b=[] -> real [0], twin []",
+    "kernel_proved": false
+   },
+   {
+    "op": "off-by-one#14",
+    "change": "`i_v2 := i_v2 + 1;` -> `i_v2 := i_v2 + 2;`",
+    "witness": "a=[0, 1], b=[] -> real [0, 1], twin [0]",
+    "kernel_proved": false
+   },
+   {
+    "op": "wrong-var#1",
+    "change": "`var h: int := len(a);` -> `var h: int := len(res);`",
+    "witness": "a=[0], b=[] -> real [0], twin []",
+    "kernel_proved": false
+   },
+   {
+    "op": "wrong-var#2",
+    "change": "`while i_v2 < h` -> `while h < h`",
+    "witness": "a=[0], b=[] -> real [0], twin []",
+    "kernel_proved": false
+   },
+   {
+    "op": "wrong-var#3",
+    "change": "`while i_v2 < h` -> `while i_v2 < i_v2`",
+    "witness": "a=[0], b=[] -> real [0], twin []",
+    "kernel_proved": false
+   },
+   {
+    "op": "wrong-var#4",
+    "change": "`if not inArray(b, a[i_v2]) and not (exists k in [0, len(res)) . res[k] == a[i_v2]) {` -> `if not inArray(a, a[i_v2]) and not (exists k in [0, len(res)) . res[k] == a[i_v2]) {`",
+    "witness": "a=[0], b=[] -> real [0], twin []",
+    "kernel_proved": false
+   },
+   {
+    "op": "wrong-var#21",
+    "change": "`i_v2 := i_v2 + 1;` -> `i_v2 := h + 1;`",
+    "witness": "a=[0, 1], b=[] -> real [0, 1], twin [0]",
+    "kernel_proved": false
+   },
+   {
+    "op": "wrong-constant#1",
+    "change": "`var h: int := len(a);` -> `var h: int := len(a) + -1;`",
+    "witness": "a=[0], b=[] -> real [0], twin []",
+    "kernel_proved": false
+   },
+   {
+    "op": "wrong-constant#2",
+    "change": "`var i_v2: int := 0;` -> `var i_v2: int := 0 + 1;`",
+    "witness": "a=[0], b=[] -> real [0], twin []",
+    "kernel_proved": false
+   }
+  ]
+ },
+ {
+  "name": "dafny_synthesis_task_id_2__sharedElements",
+  "file": "t/dafnybench/dafny-synthesis_task_id_2.SharedElements.json",
+  "strength": 0.78,
+  "survivors": [
+   {
+    "op": "boundary-swap",
+    "change": "`while i_v2 < h` -> `while h < i_v2`",
+    "witness": "a=[0], b=[0] -> real [0], twin []",
+    "kernel_proved": false
+   },
+   {
+    "op": "off-by-one",
+    "change": "`var i_v2: int := 0;` -> `var i_v2: int := 1;`",
+    "witness": "a=[0], b=[0] -> real [0], twin []",
+    "kernel_proved": false
+   },
+   {
+    "op": "off-by-one#3",
+    "change": "`while i_v2 < h` -> `while i_v2 < h + -1`",
+    "witness": "a=[0], b=[0] -> real [0], twin []",
+    "kernel_proved": false
+   },
+   {
+    "op": "off-by-one#14",
+    "change": "`i_v2 := i_v2 + 1;` -> `i_v2 := i_v2 + 2;`",
+    "witness": "a=[0, 1], b=[1] -> real [1], twin []",
+    "kernel_proved": false
+   },
+   {
+    "op": "wrong-var#1",
+    "change": "`var h: int := len(a);` -> `var h: int := len(res);`",
+    "witness": "a=[0], b=[0] -> real [0], twin []",
+    "kernel_proved": false
+   },
+   {
+    "op": "wrong-var#2",
+    "change": "`while i_v2 < h` -> `while h < h`",
+    "witness": "a=[0], b=[0] -> real [0], twin []",
+    "kernel_proved": false
+   },
+   {
+    "op": "wrong-var#3",
+    "change": "`while i_v2 < h` -> `while i_v2 < i_v2`",
+    "witness": "a=[0], b=[0] -> real [0], twin []",
+    "kernel_proved": false
+   },
+   {
+    "op": "wrong-var#5",
+    "change": "`if inArray(b, a[i_v2]) and not (exists k in [0, len(res)) . res[k] == a[i_v2]) {` -> `if inArray(res, a[i_v2]) and not (exists k in [0, len(res)) . res[k] == a[i_v2]) {`",
+    "witness": "a=[0], b=[0] -> real [0], twin []",
+    "kernel_proved": false
+   },
+   {
+    "op": "wrong-var#21",
+    "change": "`i_v2 := i_v2 + 1;` -> `i_v2 := h + 1;`",
+    "witness": "a=[0, 1], b=[1] -> real [1], twin []",
+    "kernel_proved": false
+   },
+   {
+    "op": "wrong-constant#1",
+    "change": "`var h: int := len(a);` -> `var h: int := len(a) + -1;`",
+    "witness": "a=[0], b=[0] -> real [0], twin []",
+    "kernel_proved": false
+   },
+   {
+    "op": "wrong-constant#2",
+    "change": "`var i_v2: int := 0;` -> `var i_v2: int := 0 + 1;`",
+    "witness": "a=[0], b=[0] -> real [0], twin []",
+    "kernel_proved": false
+   }
+  ]
+ },
+ {
+  "name": "dafny_synthesis_task_id_249__intersection",
+  "file": "t/dafnybench/dafny-synthesis_task_id_249.Intersection.json",
+  "strength": 0.78,
+  "survivors": [
+   {
+    "op": "boundary-swap",
+    "change": "`while i_v2 < h` -> `while h < i_v2`",
+    "witness": "a=[0], b=[0] -> real [0], twin []",
+    "kernel_proved": false
+   },
+   {
+    "op": "off-by-one",
+    "change": "`var i_v2: int := 0;` -> `var i_v2: int := 1;`",
+    "witness": "a=[0], b=[0] -> real [0], twin []",
+    "kernel_proved": false
+   },
+   {
+    "op": "off-by-one#3",
+    "change": "`while i_v2 < h` -> `while i_v2 < h + -1`",
+    "witness": "a=[0], b=[0] -> real [0], twin []",
+    "kernel_proved": false
+   },
+   {
+    "op": "off-by-one#14",
+    "change": "`i_v2 := i_v2 + 1;` -> `i_v2 := i_v2 + 2;`",
+    "witness": "a=[0, 1], b=[1] -> real [1], twin []",
+    "kernel_proved": false
+   },
+   {
+    "op": "wrong-var#1",
+    "change": "`var h: int := len(a);` -> `var h: int := len(res);`",
+    "witness": "a=[0], b=[0] -> real [0], twin []",
+    "kernel_proved": false
+   },
+   {
+    "op": "wrong-var#2",
+    "change": "`while i_v2 < h` -> `while h < h`",
+    "witness": "a=[0], b=[0] -> real [0], twin []",
+    "kernel_proved": false
+   },
+   {
+    "op": "wrong-var#3",
+    "change": "`while i_v2 < h` -> `while i_v2 < i_v2`",
+    "witness": "a=[0], b=[0] -> real [0], twin []",
+    "kernel_proved": false
+   },
+   {
+    "op": "wrong-var#5",
+    "change": "`if inArray(b, a[i_v2]) and not (exists k in [0, len(res)) . res[k] == a[i_v2]) {` -> `if inArray(res, a[i_v2]) and not (exists k in [0, len(res)) . res[k] == a[i_v2]) {`",
+    "witness": "a=[0], b=[0] -> real [0], twin []",
+    "kernel_proved": false
+   },
+   {
+    "op": "wrong-var#21",
+    "change": "`i_v2 := i_v2 + 1;` -> `i_v2 := h + 1;`",
+    "witness": "a=[0, 1], b=[1] -> real [1], twin []",
+    "kernel_proved": false
+   },
+   {
+    "op": "wrong-constant#1",
+    "change": "`var h: int := len(a);` -> `var h: int := len(a) + -1;`",
+    "witness": "a=[0], b=[0] -> real [0], twin []",
+    "kernel_proved": false
+   },
+   {
+    "op": "wrong-constant#2",
+    "change": "`var i_v2: int := 0;` -> `var i_v2: int := 0 + 1;`",
+    "witness": "a=[0], b=[0] -> real [0], twin []",
+    "kernel_proved": false
+   }
+  ]
+ },
+ {
+  "name": "mfes_2021_tmp_tmpuljn8zd9_fcul_exercises_10_find__find",
+  "file": "t/dafnybench/MFES_2021_tmp_tmpuljn8zd9_FCUL_Exercises_10_find.find.json",
+  "strength": 0.7857142857142857,
+  "survivors": [
+   {
+    "op": "off-by-one",
+    "change": "`index := 0;` -> `index := 1;`",
+    "witness": "a=[0], key=0 -> real 0, twin 1",
+    "kernel_proved": false
+   },
+   {
+    "op": "drop-guard#1",
+    "change": "`while index < len(a) and a[index] != key` -> `while index < len(a)`",
+    "witness": "a=[0], key=0 -> real 0, twin 1",
+    "kernel_proved": false
+   },
+   {
+    "op": "wrong-constant",
+    "change": "`index := 0;` -> `index := 0 + 1;`",
+    "witness": "a=[0], key=0 -> real 0, twin 1",
+    "kernel_proved": false
+   }
+  ]
+ },
+ {
+  "name": "dafny_learning_experience_tmp_tmpuxvcet_u_week8_12_a3_search_findpositionofindex__findPositionOfElement",
+  "file": "t/dafnybench/Dafny_Learning_Experience_tmp_tmpuxvcet_u_week8_12_a3_search_findPositionOfIndex.FindPositionOfElement.json",
+  "strength": 0.7884615384615384,
+  "survivors": [
+   {
+    "op": "off-by-one#12",
+    "change": "`position := count + 1;` -> `position := count + 2;`",
+    "witness": "a=[0], element=0, n1=1, s1=[0] -> real [1, 0], twin [2, 0]",
+    "kernel_proved": false
+   },
+   {
+    "op": "wrong-var#1",
+    "change": "`while count != n1` -> `while n1 != n1`",
+    "witness": "a=[0], element=0, n1=1, s1=[0] -> real [1, 0], twin [-1, 0]",
+    "kernel_proved": false
+   },
+   {
+    "op": "wrong-var#4",
+    "change": "`while count != n1` -> `while count != position`",
+    "witness": "a=[0], element=0, n1=1, s1=[0] -> real [1, 0], twin [-1, 0]",
+    "kernel_proved": false
+   },
+   {
+    "op": "wrong-var#5",
+    "change": "`while count != n1` -> `while count != count`",
+    "witness": "a=[0], element=0, n1=1, s1=[0] -> real [1, 0], twin [-1, 0]",
+    "kernel_proved": false
+   },
+   {
+    "op": "wrong-var#16",
+    "change": "`position := count + 1;` -> `position := element + 1;`",
+    "witness": "a=[1], element=1, n1=1, s1=[1] -> real [1, 0], twin [2, 0]",
+    "kernel_proved": false
+   },
+   {
+    "op": "wrong-var#17",
+    "change": "`position := count + 1;` -> `position := n1 + 1;`",
+    "witness": "a=[0], element=0, n1=1, s1=[0] -> real [1, 0], twin [2, 0]",
+    "kernel_proved": false
+   },
+   {
+    "op": "wrong-var#23",
+    "change": "`return (position, count);` -> `return (position, element);`",
+    "witness": "a=[1], element=1, n1=1, s1=[1] -> real [1, 0], twin [1, 1]",
+    "kernel_proved": false
+   },
+   {
+    "op": "wrong-var#24",
+    "change": "`return (position, count);` -> `return (position, n1);`",
+    "witness": "a=[0], element=0, n1=1, s1=[0] -> real [1, 0], twin [1, 1]",
+    "kernel_proved": false
+   },
+   {
+    "op": "wrong-var#25",
+    "change": "`return (position, count);` -> `return (position, position);`",
+    "witness": "a=[0], element=0, n1=1, s1=[0] -> real [1, 0], twin [1, 1]",
+    "kernel_proved": false
+   },
+   {
+    "op": "wrong-var#33",
+    "change": "`r := (position, count);` -> `r := (position, element);`",
+    "witness": "a=[], element=1, n1=0, s1=[] -> real [-1, 0], twin [-1, 1]",
+    "kernel_proved": false
+   },
+   {
+    "op": "wrong-operator#4",
+    "change": "`position := count + 1;` -> `position := count - 1;`",
+    "witness": "a=[0], element=0, n1=1, s1=[0] -> real [1, 0], twin [-1, 0]",
+    "kernel_proved": false
+   }
+  ]
+ },
+ {
+  "name": "final_project_dafny_tmp_tmpmcywuqox_final_project_3__nonZeroReturn",
+  "file": "t/dafnybench/Final-Project-Dafny_tmp_tmpmcywuqox_Final_Project_3.nonZeroReturn.json",
+  "strength": 0.8,
+  "survivors": [
+   {
+    "op": "off-by-one#2",
+    "change": "`y := x + 1;` -> `y := x + 2;`",
+    "witness": "x=0 -> real 1, twin 2",
+    "kernel_proved": false
+   },
+   {
+    "op": "wrong-operator",
+    "change": "`y := x + 1;` -> `y := x - 1;`",
+    "witness": "x=0 -> real 1, twin -1",
+    "kernel_proved": false
+   }
+  ]
+ },
+ {
+  "name": "dafny_learn_tmp_tmpn94ir40q_r01_assertions__max",
+  "file": "t/dafnybench/dafny-learn_tmp_tmpn94ir40q_R01_assertions.Max.json",
+  "strength": 0.8,
+  "survivors": [
+   {
+    "op": "wrong-constant",
+    "change": "`c := a;` -> `c := a + 1;`",
+    "witness": "a=0, b=0 -> real 0, twin 1",
+    "kernel_proved": false
+   },
+   {
+    "op": "wrong-constant#2",
+    "change": "`c := b;` -> `c := b + 1;`",
+    "witness": "a=0, b=1 -> real 1, twin 2",
+    "kernel_proved": false
+   }
+  ]
+ },
+ {
+  "name": "dafny_learning_experience_tmp_tmpuxvcet_u_week8_12_week9_lemma__assignmentsToMarkOne",
+  "file": "t/dafnybench/Dafny_Learning_Experience_tmp_tmpuxvcet_u_week8_12_week9_lemma.AssignmentsToMarkOne.json",
+  "strength": 0.8,
+  "survivors": [
+   {
+    "op": "wrong-constant#1",
+    "change": "`r := students / tutors;` -> `r := students / tutors + -1;`",
+    "witness": "students=1, tutors=2 -> real 0, twin -1",
+    "kernel_proved": false
+   }
+  ]
+ },
+ {
+  "name": "dafny_verify_tmp_tmphq7j0row_test_cases_index__index",
+  "file": "t/dafnybench/Dafny_Verify_tmp_tmphq7j0row_Test_Cases_Index.Index.json",
+  "strength": 0.8,
+  "survivors": [
+   {
+    "op": "off-by-one",
+    "change": "`i := n / 2;` -> `i := n / 3;`",
+    "witness": "n=2 -> real 1, twin 0",
+    "kernel_proved": false
+   }
+  ]
+ },
+ {
+  "name": "dafny_programs_tmp_tmp99966ew4_mymax__max",
+  "file": "t/dafnybench/Dafny_Programs_tmp_tmp99966ew4_mymax.Max.json",
+  "strength": 0.8181818181818182,
+  "survivors": [
+   {
+    "op": "wrong-constant",
+    "change": "`c := b;` -> `c := b + 1;`",
+    "witness": "a=0, b=1 -> real 1, twin 2",
+    "kernel_proved": false
+   },
+   {
+    "op": "wrong-constant#2",
+    "change": "`c := a;` -> `c := a + 1;`",
+    "witness": "a=0, b=0 -> real 0, twin 1",
+    "kernel_proved": false
+   }
+  ]
+ },
+ {
+  "name": "software_verification_tmp_tmpv4ueky2d_best_time_to_buy_and_sell_stock_best_time_to_buy_and_sell_stock__best_time_to_buy_and_sell_stock",
+  "file": "t/dafnybench/Software-Verification_tmp_tmpv4ueky2d_Best Time to Buy and Sell Stock_best_time_to_buy_and_sell_stock.best_time_to_buy_and_sell_stock.json",
+  "strength": 0.8571428571428571,
+  "survivors": [
+   {
+    "op": "off-by-one#2",
+    "change": "`max_profit := 0;` -> `max_profit := 1;`",
+    "witness": "prices=[0] -> real 0, twin 1",
+    "kernel_proved": false
+   },
+   {
+    "op": "wrong-var#7",
+    "change": "`min_price := price;` -> `min_price := i_v2;`",
+    "witness": "prices=[1] -> real 0, twin 1",
+    "kernel_proved": false
+   },
+   {
+    "op": "wrong-var#13",
+    "change": "`max_profit := price - min_price;` -> `max_profit := i_v2 - min_price;`",
+    "witness": "prices=[0, 0, 1] -> real 1, twin 2",
+    "kernel_proved": false
+   },
+   {
+    "op": "wrong-constant#2",
+    "change": "`max_profit := 0;` -> `max_profit := 0 + 1;`",
+    "witness": "prices=[0] -> real 0, twin 1",
+    "kernel_proved": false
+   },
+   {
+    "op": "wrong-constant#7",
+    "change": "`min_price := price;` -> `min_price := price + -1;`",
+    "witness": "prices=[0] -> real 0, twin 1",
+    "kernel_proved": false
+   },
+   {
+    "op": "wrong-constant#8",
+    "change": "`max_profit := price - min_price;` -> `max_profit := price - min_price + 1;`",
+    "witness": "prices=[0, 1] -> real 1, twin 2",
+    "kernel_proved": false
+   }
+  ]
+ },
+ {
+  "name": "cs245_verification_tmp_tmp0h_nxhqp_a8_q2__a8Q1",
+  "file": "t/dafnybench/cs245-verification_tmp_tmp0h_nxhqp_A8_Q2.A8Q1.json",
+  "strength": 0.8918918918918919,
+  "survivors": [
+   {
+    "op": "wrong-constant#1",
+    "change": "`m := z;` -> `m := z + -1;`",
+    "witness": "x=1, y=1, z=0 -> real 0, twin -1",
+    "kernel_proved": false
+   },
+   {
+    "op": "wrong-constant#3",
+    "change": "`m := x;` -> `m := x + -1;`",
+    "witness": "x=0, y=1, z=0 -> real 0, twin -1",
+    "kernel_proved": false
+   },
+   {
+    "op": "wrong-constant#5",
+    "change": "`m := y;` -> `m := y + -1;`",
+    "witness": "x=0, y=0, z=0 -> real 0, twin -1",
+    "kernel_proved": false
+   },
+   {
+    "op": "wrong-constant#7",
+    "change": "`m := x;` -> `m := x + -1;`",
+    "witness": "x=0, y=1, z=1 -> real 0, twin -1",
+    "kernel_proved": false
+   }
+  ]
+ },
+ {
+  "name": "dafny_verify_tmp_tmphq7j0row_dataset_bql_exampls_smallnum__add_small_numbers",
+  "file": "t/dafnybench/Dafny_Verify_tmp_tmphq7j0row_dataset_bql_exampls_SmallNum.add_small_numbers.json",
+  "strength": 0.9047619047619048,
+  "survivors": [
+   {
+    "op": "off-by-one#5",
+    "change": "`r := 0;` -> `r := -1;`",
+    "witness": "a=[0], n=1, max=0 -> real 0, twin -1",
+    "kernel_proved": false
+   },
+   {
+    "op": "wrong-constant#5",
+    "change": "`r := 0;` -> `r := 0 + -1;`",
+    "witness": "a=[0], n=1, max=0 -> real 0, twin -1",
+    "kernel_proved": false
+   }
+  ]
+ },
+ {
+  "name": "dafny_tmp_tmp0wu8wmfr_heimaverkefni_3_insertionsortmultiset__search",
+  "file": "t/dafnybench/Dafny_tmp_tmp0wu8wmfr_Heimaverkefni 3_InsertionSortMultiset.Search.json",
+  "strength": 0.9230769230769231,
+  "survivors": [
+   {
+    "op": "off-by-one#2",
+    "change": "`var m: int := p_v + (q_v - p_v) / 2;` -> `var m: int := p_v + (q_v - p_v) / 3;`",
+    "witness": "s=[0, 0], x=0 -> real 1, twin 0",
+    "kernel_proved": false
+   },
+   {
+    "op": "wrong-var#13",
+    "change": "`var m: int := p_v + (q_v - p_v) / 2;` -> `var m: int := p_v + (p_v - p_v) / 2;`",
+    "witness": "s=[0, 0], x=0 -> real 1, twin 0",
+    "kernel_proved": false
+   },
+   {
+    "op": "wrong-var#15",
+    "change": "`var m: int := p_v + (q_v - p_v) / 2;` -> `var m: int := p_v + (q_v - q_v) / 2;`",
+    "witness": "s=[0, 0], x=0 -> real 1, twin 0",
+    "kernel_proved": false
+   },
+   {
+    "op": "wrong-var#17",
+    "change": "`if s[m] == x {` -> `if s[p_v] == x {`",
+    "witness": "s=[0, 1], x=0 -> real 0, twin 1",
+    "kernel_proved": false
+   },
+   {
+    "op": "wrong-constant#6",
+    "change": "`return m;` -> `return m + 1;`",
+    "witness": "s=[0], x=0 -> real 0, twin 1",
+    "kernel_proved": false
+   }
+  ]
+ },
+ {
+  "name": "cs245_verification_tmp_tmp0h_nxhqp_sortingissues_firstattempt__sort",
+  "file": "t/dafnybench/cs245-verification_tmp_tmp0h_nxhqp_SortingIssues_FirstAttempt.sort.json",
+  "strength": 0.9411764705882353,
+  "survivors": [
+   {
+    "op": "wrong-var#3",
+    "change": "`a_out := a_out[k := k];` -> `a_out := a_out[k := n];`",
+    "witness": "a=[0], n=1 -> real [0], twin [1]",
+    "kernel_proved": false
+   }
+  ]
+ },
+ {
+  "name": "final_project_dafny_tmp_tmpmcywuqox_attempts_exercise6_binary_search__binarySearch",
+  "file": "t/dafnybench/Final-Project-Dafny_tmp_tmpmcywuqox_Attempts_Exercise6_Binary_Search.binarySearch.json",
+  "strength": 0.9418604651162791,
+  "survivors": [
+   {
+    "op": "off-by-one#8",
+    "change": "`return -(1);` -> `return -(2);`",
+    "witness": "a=[0], val=1 -> real -1, twin -2",
+    "kernel_proved": false
+   },
+   {
+    "op": "off-by-one#20",
+    "change": "`pos := -(1);` -> `pos := -(2);`",
+    "witness": "a=[-1, 1], val=0 -> real -1, twin -2",
+    "kernel_proved": false
+   },
+   {
+    "op": "wrong-var#15",
+    "change": "`var med: int := (left + right) / 2;` -> `var med: int := (left + left) / 2;`",
+    "witness": "a=[0, 0], val=0 -> real 1, twin 0",
+    "kernel_proved": false
+   },
+   {
+    "op": "wrong-constant#5",
+    "change": "`return -(1);` -> `return -(1) + -1;`",
+    "witness": "a=[0], val=1 -> real -1, twin -2",
+    "kernel_proved": false
+   },
+   {
+    "op": "wrong-constant#13",
+    "change": "`pos := -(1);` -> `pos := -(1) + -1;`",
+    "witness": "a=[-1, 1], val=0 -> real -1, twin -2",
+    "kernel_proved": false
+   }
+  ]
+ },
+ {
+  "name": "dafny_verify_tmp_tmphq7j0row_test_cases_index__reconstructFromMaxSum",
+  "file": "t/dafnybench/Dafny_Verify_tmp_tmphq7j0row_Test_Cases_Index.ReconstructFromMaxSum.json",
+  "strength": 0.95,
+  "survivors": [
+   {
+    "op": "wrong-var#9",
+    "change": "`r := (x, y);` -> `r := (y, x);`",
+    "witness": "s=0, m=1 -> real [1, -1], twin [-1, 1]",
+    "kernel_proved": false
+   }
+  ]
+ },
+ {
+  "name": "stunning_palm_tree_tmp_tmpr84c2iwh_ch1__reconstructFromMaxSum",
+  "file": "t/dafnybench/stunning-palm-tree_tmp_tmpr84c2iwh_ch1.ReconstructFromMaxSum.json",
+  "strength": 0.95,
+  "survivors": [
+   {
+    "op": "wrong-var#9",
+    "change": "`r := (x, y);` -> `r := (y, x);`",
+    "witness": "s=0, m=1 -> real [1, -1], twin [-1, 1]",
+    "kernel_proved": false
+   }
+  ]
+ },
+ {
+  "name": "dafny_exercises_tmp_tmpjm75muf__session3exercises_exercisemaximum__mmaximum1",
+  "file": "t/dafnybench/Dafny-Exercises_tmp_tmpjm75muf__Session3Exercises_ExerciseMaximum.mmaximum1.json",
+  "strength": 0.9545454545454546,
+  "survivors": [
+   {
+    "op": "compare-flip#1",
+    "change": "`if v[j] > v[i] {` -> `if v[j] >= v[i] {`",
+    "witness": "v=[0, 0] -> real 0, twin 1",
+    "kernel_proved": false
+   }
+  ]
+ },
+ {
+  "name": "dafny_experiences_tmp_tmp150sm9qy_dafny_started_tutorial_dafny_tutorial_array__findMax",
+  "file": "t/dafnybench/Dafny-experiences_tmp_tmp150sm9qy_dafny_started_tutorial_dafny_tutorial_array.FindMax.json",
+  "strength": 0.9545454545454546,
+  "survivors": [
+   {
+    "op": "compare-flip#1",
+    "change": "`if a[index] > a[i] {` -> `if a[index] >= a[i] {`",
+    "witness": "a=[0, 0] -> real 0, twin 1",
+    "kernel_proved": false
+   }
+  ]
+ },
+ {
+  "name": "final_project_dafny_tmp_tmpmcywuqox_attempts_insertion_sort_normal__lookForMin",
+  "file": "t/dafnybench/Final-Project-Dafny_tmp_tmpmcywuqox_Attempts_Insertion_Sort_Normal.lookForMin.json",
+  "strength": 0.9545454545454546,
+  "survivors": [
+   {
+    "op": "compare-flip#1",
+    "change": "`if a[j] < a[m] {` -> `if a[j] <= a[m] {`",
+    "witness": "a=[0, 0], i=0 -> real 0, twin 1",
+    "kernel_proved": false
+   }
+  ]
+ },
+ {
+  "name": "program_verification_dataset_tmp_tmpgbdrlnu__dafny_basic_examples_find_max__findMax",
+  "file": "t/dafnybench/Program-Verification-Dataset_tmp_tmpgbdrlnu__Dafny_basic examples_find_max.FindMax.json",
+  "strength": 0.9545454545454546,
+  "survivors": [
+   {
+    "op": "compare-flip#1",
+    "change": "`if a[i] > a[max] {` -> `if a[i] >= a[max] {`",
+    "witness": "a=[0, 0] -> real 0, twin 1",
+    "kernel_proved": false
+   }
+  ]
+ },
+ {
+  "name": "programmverifikation_und_synthese_tmp_tmppurk6ime_pvs_assignment_ex_07_hoangkim_ex07_hoangkim__findMin",
+  "file": "t/dafnybench/Programmverifikation-und-synthese_tmp_tmppurk6ime_PVS_Assignment_ex_07_Hoangkim_ex07_Hoangkim.FindMin.json",
+  "strength": 0.9545454545454546,
+  "survivors": [
+   {
+    "op": "compare-flip#1",
+    "change": "`if a[j] < a[minIdx] {` -> `if a[j] <= a[minIdx] {`",
+    "witness": "a=[0, 0], lo=0 -> real 0, twin 1",
+    "kernel_proved": false
+   }
+  ]
+ },
+ {
+  "name": "dafny_workout_tmp_tmp0abkw6f8_starter_ex12__findMax",
+  "file": "t/dafnybench/dafny-workout_tmp_tmp0abkw6f8_starter_ex12.FindMax.json",
+  "strength": 0.9545454545454546,
+  "survivors": [
+   {
+    "op": "compare-flip#1",
+    "change": "`if a[i] > a[max_idx] {` -> `if a[i] >= a[max_idx] {`",
+    "witness": "a=[0, 0] -> real 0, twin 1",
+    "kernel_proved": false
+   }
+  ]
+ },
+ {
+  "name": "dafny_synthesis_task_id_145__maxDifference",
+  "file": "t/dafnybench/dafny-synthesis_task_id_145.MaxDifference.json",
+  "strength": 0.9552238805970149,
+  "survivors": [
+   {
+    "op": "wrong-var#28",
+    "change": "`diff := maxVal - minVal;` -> `diff := h - minVal;`",
+    "witness": "a=[0, 0] -> real 0, twin 2",
+    "kernel_proved": false
+   },
+   {
+    "op": "wrong-var#29",
+    "change": "`diff := maxVal - minVal;` -> `diff := i_v - minVal;`",
+    "witness": "a=[0, 0] -> real 0, twin 2",
+    "kernel_proved": false
+   },
+   {
+    "op": "wrong-constant#4",
+    "change": "`diff := maxVal - minVal;` -> `diff := maxVal - minVal + 1;`",
+    "witness": "a=[0, 0] -> real 0, twin 1",
+    "kernel_proved": false
+   }
+  ]
+ },
+ {
+  "name": "bbfny_tmp_tmpw4m0jvl0_enjoying__multipleReturns",
+  "file": "t/dafnybench/bbfny_tmp_tmpw4m0jvl0_enjoying.MultipleReturns.json",
+  "strength": 0.96,
+  "survivors": [
+   {
+    "op": "wrong-constant#5",
+    "change": "`less := x - y;` -> `less := x - y + -1;`",
+    "witness": "x=0, y=1 -> real [1, -1], twin [1, -2]",
+    "kernel_proved": false
+   }
+  ]
+ },
+ {
+  "name": "seng2011_tmp_tmpgk5jq85q_ass1_ex8__getEven",
+  "file": "t/dafnybench/SENG2011_tmp_tmpgk5jq85q_ass1_ex8.GetEven.json",
+  "strength": 0.9629629629629629,
+  "survivors": [
+   {
+    "op": "wrong-operator#1",
+    "change": "`a_out := a_out[i_v := a_out[i_v] + 1];` -> `a_out := a_out[i_v := a_out[i_v] - 1];`",
+    "witness": "a=[1] -> real [2], twin [0]",
+    "kernel_proved": false
+   }
+  ]
+ },
+ {
+  "name": "laboratory_tmp_tmps8ws6mu2_dafny_tutorial_exercise12__findMax",
+  "file": "t/dafnybench/laboratory_tmp_tmps8ws6mu2_dafny-tutorial_exercise12.FindMax.json",
+  "strength": 0.9642857142857143,
+  "survivors": [
+   {
+    "op": "compare-flip#1",
+    "change": "`if max < a[i] {` -> `if max <= a[i] {`",
+    "witness": "a=[0, 0] -> real 0, twin 1",
+    "kernel_proved": false
+   }
+  ]
+ },
+ {
+  "name": "dafny_verify_tmp_tmphq7j0row_fine_tune_examples_error_data_completion_11__main_v",
+  "file": "t/dafnybench/Dafny_Verify_tmp_tmphq7j0row_Fine_Tune_Examples_error_data_completion_11.main.json",
+  "strength": 0.9655172413793104,
+  "survivors": [
+   {
+    "op": "wrong-var#12",
+    "change": "`r := (j, i);` -> `r := (j, j);`",
+    "witness": "x=1 -> real [2, 1], twin [2, 2]",
+    "kernel_proved": false
+   }
+  ]
+ },
+ {
+  "name": "dafny_verify_tmp_tmphq7j0row_dataset_c_convert_examples_11__main_v",
+  "file": "t/dafnybench/Dafny_Verify_tmp_tmphq7j0row_dataset_C_convert_examples_11.main.json",
+  "strength": 0.9655172413793104,
+  "survivors": [
+   {
+    "op": "wrong-var#12",
+    "change": "`r := (j, i);` -> `r := (j, j);`",
+    "witness": "x=1 -> real [2, 1], twin [2, 2]",
+    "kernel_proved": false
+   }
+  ]
+ },
+ {
+  "name": "final_project_dafny_tmp_tmpmcywuqox_attempts_exercise4_find_max__findMax",
+  "file": "t/dafnybench/Final-Project-Dafny_tmp_tmpmcywuqox_Attempts_Exercise4_Find_Max.findMax.json",
+  "strength": 0.975609756097561,
+  "survivors": [
+   {
+    "op": "compare-flip#1",
+    "change": "`if a[j] > maxVal {` -> `if a[j] >= maxVal {`",
+    "witness": "a=[0, 0] -> real [0, 0], twin [1, 0]",
+    "kernel_proved": false
+   }
+  ]
+ }
+]
