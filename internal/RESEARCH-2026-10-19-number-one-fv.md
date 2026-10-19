@@ -125,7 +125,7 @@ inference-time gain. Row 3 only after a data step moved an unseen number, since 
 ## 6. What the corrective candidate decides (running now)
 
 The interrupted C2 grade of the corrective candidate and a paired local re-grade of v5's development answers are
-running on this laptop's seven kernels (`t/out/v6-20261018/local-grade-2026-10-19/`). If the candidate clears C2
+ran on this laptop's seven kernels (`t/out/v6-20261018/local-grade-2026-10-19/`). **Measured 21:05Z: 6 clean, 2 all-seven against v5's 6 and 3; C2 fails; the two lost problems were never answered in t** (the dated section at the end of `t/PREDICT-2026-10-18-v6.md`). If the candidate had cleared C2
 (clean ≥ 7, all-seven ≥ 3), the contract repairs were the lever and row 1 builds on the corrected rows; if not, row
 1 starts from the corrected 4,089 rows anyway, because the decomposition is a different lever.
 
