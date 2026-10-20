@@ -5500,6 +5500,16 @@ def cexpr(e: dict, env: dict, funs: dict, task_name: str,
                     "functions are not executable)")
             cargs = ", ".join(
                 cexpr(a, env, funs, task_name, _div_style) for a in c["args"])
+            # The "ternary" style renders text that lands INSIDE an ACSL
+            # annotation (`_divmod_ternary_cexpr`'s sole use, the "dm"
+            # bridging assert), where the C mirror `{name}_c` is an unbound
+            # logic function ("[kernel:annot-error] unbound logic function
+            # h2_0_c", frama-c 33.0 on a spec_fun that calls another
+            # spec_fun, crawford-drone verify/t_mlp/p8b 2026-10-20); there
+            # the call names the logic function `spec_fun_acsl` emits,
+            # whose value the mirror's own contract equates to anyway.
+            if _div_style == "ternary":
+                return f"{c['fun']}({cargs})"
             return f"{c['fun']}_c({cargs})"
         if funs[task_name]["result"] == "seq":
             # A seq-returning task (2026-09-09) is lowered to a `void` C
