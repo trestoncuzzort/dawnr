@@ -24,6 +24,7 @@ import modal
 HERE = Path(__file__).resolve().parent
 IMAGE_DIR = HERE.parent / "out/v7-20261019/modal/proof-image"
 STAGED_T = Path(os.environ.get("V7_STAGED_T", "/home/t/.claude/jobs/d76813cf/tmp/dawnr-t/t"))
+STAGED_NL = Path(os.environ.get("V7_STAGED_NL", "/home/t/.claude/jobs/d76813cf/tmp/dawnr-serve/nl"))
 
 kernels = (
     # add_python gives Modal a Python it can introspect for the function wrapper; the engine's own
@@ -31,6 +32,9 @@ kernels = (
     modal.Image.from_dockerfile(str(IMAGE_DIR / "Dockerfile.kernels"), add_python="3.12")
     .env({"HOME": "/home/prover", "T_SPARK_JOBS": "1", "PYTHONUNBUFFERED": "1"})
     .add_local_dir(str(STAGED_T), "/opt/dawnr/t", copy=True)
+    # The grader's pool (spec_experiment.pool, --pool v5) reads nl/data; without this mount the tests step
+    # raised KeyError on the first task id (2026-10-20). The serve image mounts nl/ the same way.
+    .add_local_dir(str(STAGED_NL), "/opt/dawnr/nl", copy=True)
 )
 data = modal.Volume.from_name("dawnr-data")
 app = modal.App("dawnr-v7-grade", image=kernels)
@@ -82,9 +86,18 @@ def grade(tag: str) -> dict:
     if dst.exists():
         shutil.rmtree(dst)
     shutil.copytree(src, dst)
+    # v6-grade.sh asserts `test ! -e kernels.md`; the post-step below copies grader outputs back beside the
+    # source, so a re-run must start from the generation's files only (attempt 4, 2026-10-20, exited on that guard).
+    for name in ("kernels.md", "extract.json", "tests.json"):
+        (dst / name).unlink(missing_ok=True)
+    if (dst / "tasks").exists():
+        shutil.rmtree(dst / "tasks")
     panel = Path("/data/v7-20261019/dev-95.txt")
     out = Path(f"/data/v7-20261019/proof-results/{tag}")
     out.mkdir(parents=True, exist_ok=True)
+    # v6-grade.sh takes a flock under t/out/v6-20261018 (its era's run directory); the staged image has no
+    # t/out, so the script died there on 2026-10-20 after tests passed. Create it; the frozen script stays as is.
+    Path("/opt/dawnr/t/out/v6-20261018").mkdir(parents=True, exist_ok=True)
     env = {**os.environ, "T_MIN_KERNELS": "7", "T_SPARK_JOBS": "1", "PYTHONUNBUFFERED": "1"}
     proc = subprocess.run(
         ["bash", "/opt/dawnr/t/recipes/v6-grade.sh", tag, str(panel), str(out)],

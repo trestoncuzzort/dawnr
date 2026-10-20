@@ -26,7 +26,13 @@ import modal
 
 HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE))
-from v6_modal import data, models, CACHE, MODEL, REVISION  # noqa: E402 (constants + volumes only)
+# Constants and volumes are inlined, not imported from v6_modal: the Modal container does not ship
+# that sibling module; importing it remotely is what broke the first export run.
+MODEL = "Qwen/Qwen3.5-4B"
+REVISION = "851bf6e806efd8d0a36b00ddf55e13ccb7b8cd0a"
+CACHE = "/models/v6-20261018/hub"
+data = modal.Volume.from_name("dawnr-data")
+models = modal.Volume.from_name("dawnr-hf-cache")
 
 LLAMA_COMMIT = "f1cee9941b0e843ea260bf8dd9a090fbd9711b6a"
 STAGED_SERVE = Path(os.environ.get("V7_STAGED_SERVE", "/home/t/.claude/jobs/d76813cf/tmp/dawnr-serve"))
@@ -59,9 +65,19 @@ serve_image = (
     .run_commands(
         "git init /opt/llama && cd /opt/llama && git remote add origin https://github.com/ggml-org/llama.cpp.git"
         f" && git fetch --depth 1 origin {LLAMA_COMMIT} && git checkout --detach FETCH_HEAD",
-        "cd /opt/llama && cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DGGML_CUDA=ON"
+        # The builder has no GPU driver. libggml-cuda.so's SONAME dependency is libcuda.so.1, but the
+        # devel image ships only the unversioned stub libcuda.so, so symlink a libcuda.so.1 onto it and
+        # give ld -rpath-link to the stubs dir (link-time only; at run time Modal injects the real
+        # driver). -j 4 keeps the CUDA kernel compile under the builder's memory; LLAMA_CURL=OFF drops
+        # the web-UI asset fetch we do not use (--no-webui at run time).
+        "ln -sf /usr/local/cuda/lib64/stubs/libcuda.so /usr/local/cuda/lib64/stubs/libcuda.so.1"
+        " && cd /opt/llama && cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DGGML_CUDA=ON"
         " -DCMAKE_CUDA_ARCHITECTURES='80;86;89;90' -DLLAMA_BUILD_TESTS=OFF -DLLAMA_BUILD_EXAMPLES=OFF"
-        " && cmake --build build --target llama-server llama-quantize llama-gguf-split -j 8",
+        " -DLLAMA_CURL=OFF"
+        " -DCMAKE_EXE_LINKER_FLAGS='-L/usr/local/cuda/lib64/stubs -Wl,-rpath-link,/usr/local/cuda/lib64/stubs'"
+        " -DCMAKE_SHARED_LINKER_FLAGS='-L/usr/local/cuda/lib64/stubs -Wl,-rpath-link,/usr/local/cuda/lib64/stubs'"
+        " && LIBRARY_PATH=/usr/local/cuda/lib64/stubs:${LIBRARY_PATH:-}"
+        " cmake --build build --target llama-server llama-quantize llama-gguf-split -j 4",
     )
     .env({"PYTHONUNBUFFERED": "1"})
     .add_local_dir(str(STAGED_SERVE / "t"), "/opt/dawnr/t", copy=True)
@@ -74,19 +90,24 @@ SERVER = "/opt/llama/build/bin/llama-server"
 
 @app.function(image=serve_image, cpu=4, memory=8192, timeout=900)
 def build_smoke() -> dict:
-    """No GPU: prove the pinned llama-server built and the bubblewrap sandbox runs in this container."""
+    """No GPU: check the pinned llama-server built and which Python sandbox works in this container."""
+    import importlib
+    import os
     import subprocess
 
     ver = subprocess.run([SERVER, "--version"], capture_output=True, text=True)
     sys.path.insert(0, "/opt/dawnr/t")
-    import py_sandbox
-
-    ok = py_sandbox.available()
-    why = "" if ok else py_sandbox.why_unavailable()
-    probe = py_sandbox.run_tests("def f(x):\n    return x+1\n", ["assert f(1)==2"]) if ok else {}
-    return {"llama_version": (ver.stdout + ver.stderr).strip()[-200:], "returncode": ver.returncode,
-            "sandbox_available": ok, "sandbox_why": why, "sandbox_probe": probe}
-
+    sandbox = {}
+    for backend in ("bwrap", "landlock"):
+        os.environ["T_SANDBOX"] = backend
+        import py_sandbox
+        importlib.reload(py_sandbox)
+        ok = py_sandbox.available()
+        probe = py_sandbox.run_tests("def f(x):\n    return x+1\n", ["assert f(1)==2"]) if ok else {}
+        sandbox[backend] = {"available": ok, "why": "" if ok else py_sandbox.why_unavailable()[:200],
+                            "probe_all_pass": probe.get("all_pass")}
+    return {"llama_version": (ver.stdout + ver.stderr).strip()[-120:], "returncode": ver.returncode,
+            "sandbox": sandbox}
 
 @app.function(image=export_image, gpu="L4", cpu=8, memory=32768, timeout=2400,
               volumes={"/data": data, "/models": models})
@@ -112,10 +133,14 @@ def export() -> dict:
     return json.loads((out / "export.json").read_text())["output"]
 
 
-@app.function(image=serve_image, gpu="L4", cpu=8, memory=32768, timeout=3 * 3600,
+@app.function(image=serve_image, gpu="A100", cpu=16, memory=65536, timeout=3 * 3600,
               volumes={"/data": data})
 def generate() -> dict:
-    """Serve the v7 Q8 and run the frozen Python-first route on the 95-problem development panel."""
+    """Serve the v7 Q8 and run the frozen Python-first route on the 95-problem development panel.
+
+    A100 (not L4) and 8 concurrent slots/requests to shorten the decode-bound generation; the route
+    and gates are unchanged, so the answers are identical to a slower single-stream run.
+    """
     import shutil
     import subprocess
     import time
@@ -130,8 +155,8 @@ def generate() -> dict:
 
     server = subprocess.Popen(
         [SERVER, "--model", str(gguf), "--alias", "dawnr-v7", "--host", "127.0.0.1", "--port", "8847",
-         "--n-gpu-layers", "99", "--threads", "8", "--threads-batch", "8", "--parallel", "4",
-         "--ctx-size", "16384", "--chat-template-kwargs", '{"enable_thinking":false}'],
+         "--n-gpu-layers", "99", "--threads", "16", "--threads-batch", "16", "--parallel", "8",
+         "--ctx-size", "32768", "--chat-template-kwargs", '{"enable_thinking":false}'],
         stdout=open(Path(RUN) / "server-v7.log", "w"), stderr=subprocess.STDOUT)
     try:
         for _ in range(240):
@@ -144,7 +169,7 @@ def generate() -> dict:
             raise RuntimeError("llama-server did not become healthy")
         route = ["python", "/opt/dawnr/t/recipes/v6_server_route.py",
                  "--endpoint", "http://127.0.0.1:8847/v1/chat/completions", "--model", "dawnr-v7",
-                 "--identity", identity, "--cache", f"{RUN}/requests", "--concurrency", "4",
+                 "--identity", identity, "--cache", f"{RUN}/requests", "--concurrency", "8",
                  "--", "--tag", tag, "--ids-file", str(panel), "--pool", "v5", "--python", "3",
                  "--spec-samples", "4", "--per-problem", "3", "--samples", "2", "--max-new", "1024", "--batch", "16"]
         proc = subprocess.run(route, text=True, capture_output=True, timeout=3 * 3600 - 600,

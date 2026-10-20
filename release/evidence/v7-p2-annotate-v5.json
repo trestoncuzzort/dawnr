@@ -1,0 +1,13 @@
+{
+  "identity": "student-v5:d855000c3dffd9772da5a2f9dc238b41d7f8337d9bf58e578e5274ebb9566a4e:llama-f1cee9941b0e843ea260bf8dd9a090fbd9711b6a",
+  "heldout": "/home/t/v7/annotate/annotate-heldout.jsonl",
+  "kernels": [
+    "dafny"
+  ],
+  "asked": 55,
+  "block": 55,
+  "parses": 54,
+  "keeps": 53,
+  "verified": 0,
+  "passes": 0
+}
