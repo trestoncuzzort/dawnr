@@ -8271,6 +8271,16 @@ Qed.
     else:
         chunks.append("Ltac t_eqs := idtac.\n")
         chunks.append("Ltac t_eqs_h := idtac.\n")
+        # `t_dis` gains its `solve [ t_nf; .. ]` alternative whenever `_nonrec_sfs(task)` is non-empty
+        # (`_add_nr_alt`), but `Ltac t_nf` is only defined in the `if eqs:` branch above. A non-recursive
+        # spec_fun without a `decreases` clause gets a plain `Definition sf_f` and no `sf_f_eq` lemma, so
+        # `eqs` is empty here while `_nonrec_sfs` still lists it: Rocq then rejects the whole file with
+        # "The reference t_nf was not found" and both the real and the twin program read MALFORMED while
+        # six kernels verify them (measured 2026-10-20 on crawford-drone verify/t/envelope_{vx,yaw}.t: a
+        # `spec fun vxmax(speed) = (6 * speed) / 10`). Define the tactic as `fail`, like `t_eqs_rec` when
+        # unused: a `first [..]` alternative whose tactic fails is skipped (Rocq refman, Ltac `fail`).
+        if _nonrec_sfs(task):
+            chunks.append("Ltac t_nf := fail.\n")
         chunks.append(_emit_t_eqs_rec(rec_int_sf))
     return "\n".join(chunks)
 

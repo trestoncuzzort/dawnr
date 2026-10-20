@@ -752,6 +752,62 @@ spec fun tri(k: int): int
         side = out[out.index("Ltac t_side := first ["):]
         self.assertNotIn("t_nf;", side[:side.index("].\n")])
 
+    # 2026-10-20 (crawford-drone verify/t/envelope_vx.t, the drone command envelope through all seven kernels):
+    # a non-recursive spec_fun WITHOUT a `decreases` clause gets a plain `Definition sf_f` and no `sf_f_eq`
+    # lemma, so no `Ltac t_nf` was defined, while `_nonrec_sfs` still listed it and `t_dis` referenced `t_nf`.
+    # Rocq rejected the file ("The reference t_nf was not found"), real and twin both MALFORMED, six kernels
+    # verified. The tactic must exist whenever `t_dis` names it.
+    NO_DECREASES = """t 1
+task envelope_vx(vx: int, pv: int, speed: int) returns (v: int)
+  requires speed >= 0
+  requires speed <= 1000
+  requires pv >= 0
+  requires pv <= vxmax(speed)
+  ensures v >= 0
+  ensures v <= vxmax(speed)
+  ensures v - pv <= 10
+  ensures pv - v <= 10
+spec fun vxmax(speed: int): int
+= (6 * speed) / 10
+{
+  if vx < 0 {
+    v := 0;
+  } else {
+    if vx > vxmax(speed) {
+      v := vxmax(speed);
+    } else {
+      v := vx;
+    }
+  }
+  if v - pv > 10 {
+    v := pv + 10;
+  } else {
+    if pv - v > 10 {
+      v := pv - 10;
+    }
+  }
+}
+"""
+
+    def test_nonrec_without_eq_lemma_still_defines_t_nf(self):
+        t = self._task(self.NO_DECREASES)
+        self.assertEqual(lower_rocq._nonrec_sfs(t), ["vxmax"])
+        out = lower_rocq.lower(t, t["body"])
+        self.assertNotIn("sf_vxmax_eq", out)              # no equation lemma for this shape
+        self.assertIn("solve [ t_nf;", out)              # t_dis still names the tactic ...
+        self.assertIn("Ltac t_nf := fail.", out)         # ... so it must be defined, as a stub
+        self.assertLess(out.index("Ltac t_nf := fail."), out.index("Ltac t_dis := first ["))
+
+    @unittest.skipUnless(COQC, "coqc not on PATH")
+    def test_nonrec_without_eq_lemma_compiles(self):
+        t = self._task(self.NO_DECREASES)
+        out = lower_rocq.lower(t, t["body"])
+        with tempfile.TemporaryDirectory() as td:
+            p = Path(td) / "probe.v"
+            p.write_text(out, encoding="utf-8")
+            r = subprocess.run([COQC, "-q", str(p)], capture_output=True, text=True, cwd=td, timeout=600)
+            self.assertEqual(r.returncode, 0, (r.stdout + r.stderr)[-3000:])
+
     @staticmethod
     def _wrong(task: dict, old: str, new: str) -> list:
         import json
