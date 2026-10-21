@@ -271,6 +271,63 @@ def oracle_gate(written: dict, python: dict, P: dict, ids: list[str], per: dict,
     return changed
 
 
+REFUSAL_RANK = {"fails a test": 4, "not well formed": 3, "specification changed": 2, "does not parse": 1,
+                "no task block": 0}
+PROOF_REPAIR_ASK = ("This task is refused:\n{witnesses}\n\nFix the task. Keep its header, parameters, requires, "
+                    "ensures and spec funs exactly as given. Reply with the whole task in one fenced t block and "
+                    "nothing else.")
+
+
+def proof_witnesses(reply: str, spec: dict, entry: dict, why: str) -> list[str]:
+    """What the cheap gates refused in a proof reply, as sentences the student can act on: the parser's message,
+    the changed specification, the first well-formedness errors (fuzz_lower.check_wf, the same check accept()
+    runs), or the first tests the task fails with what it returned. The witness is the gate's own finding, the
+    way ExVerus (arXiv:2603.25810) and AxDafny (arXiv:2606.32007) return a verifier's finding for a repair."""
+    kind = why.split(":")[0]
+    if kind == "no task block":
+        return ["the reply has no fenced t task"]
+    block = se.find_block(reply) or ""
+    if kind == "specification changed":
+        detail = why.split(": ", 1)[1] if ": " in why else why
+        return [f"the specification was changed: {detail}; keep the given requires and ensures exactly"]
+    try:
+        task = surface.parse(block)
+    except Exception as e:                                      # noqa: BLE001
+        return [f"the task does not parse: {e}"[:240]]
+    if kind == "not well formed":
+        try:
+            errs = fuzz_lower.check_wf(task)
+            if errs and task.get("t") == 0 and not fuzz_lower.check_wf(dict(task, t=1)):
+                errs = []
+        except Exception as e:                                  # noqa: BLE001
+            errs = [f"{type(e).__name__}: {e}"]
+        return [f"not well formed: {e}"[:240] for e in errs[:3]] or ["not well formed"]
+    if kind == "fails a test":
+        out = []
+        for point in entry["points"]:
+            r = se.run_point(task, point)
+            if r.get("verdict") == "pass":
+                continue
+            call, _like = spec_quality.call_text(entry, point)
+            if r.get("verdict") == "fail":
+                out.append(f"the test `{call}` fails: the task returns {json.dumps(r.get('got'))}"[:240])
+            else:
+                out.append(f"the test `{call}` is {r.get('verdict')}: {r.get('why', '')}".rstrip(": ")[:240])
+            if len(out) == 2:
+                break
+        return out or ["a test fails"]
+    return [why[:240]]
+
+
+def repair_proof_question(spec: dict, code: str | None, reply: str, why: str, entry: dict) -> list[dict]:
+    """The proof question, the student's refused reply, and one more user turn with the gate's witnesses
+    (t/PREDICT-2026-10-21-proof-repair.md): the last proof attempt repairs instead of sampling afresh."""
+    base = spec_first_rows.proof_question(spec, code) if code else question(spec)
+    lines = "\n".join(f"- {w}" for w in proof_witnesses(reply, spec, entry, why))
+    return base + [{"role": "assistant", "content": reply},
+                   {"role": "user", "content": PROOF_REPAIR_ASK.format(witnesses=lines)}]
+
+
 def specification_of(task: dict) -> dict:
     """The task with its body and lemmas removed: what a specification-given question shows."""
     spec = copy.deepcopy(task)
@@ -401,7 +458,12 @@ def main(argv: list[str] | None = None) -> int:
                     help="--python: keep specifications by the student's own tested Python as the oracle "
                          "(t/spec_gate.judge, 100 draws) in place of the three-test gate; the three-test "
                          "scores stay recorded")
+    ap.add_argument("--proof-repair", action="store_true",
+                    help="the last proof attempt repairs the best refused reply of each kept specification, "
+                         "with the gate's refusal as the witness, instead of sampling afresh (the same budget)")
     a = ap.parse_args(argv)
+    if a.proof_repair and a.samples < 1:
+        ap.error("--proof-repair needs at least one sampled attempt to replace (--samples 1 or more)")
     if a.oracle_gate and not a.python:
         ap.error("--oracle-gate needs the student's Python (--python)")
     if a.repair < 0:
@@ -523,35 +585,56 @@ def main(argv: list[str] | None = None) -> int:
         import student_generate                                 # noqa: E402  (loads torch)
         model, tokenizer = student_generate.load(a.model)
     taken: dict[str, dict] = {}
+    refused: dict[tuple[str, int], tuple[int, str, str]] = {}  # (problem, spec) -> (rank, reply, why): the best refusal
+    if a.proof_repair:
+        for tid in with_spec:
+            stats[tid].update({"proof repair asks": 0, "proof repaired": 0})
     started = time.monotonic()
     for attempt in range(a.samples + 1):
         temperature = 0.0 if attempt == 0 else TEMPERATURE
+        repairing = bool(a.proof_repair and attempt == a.samples)
         todo = [(t, k) for t in with_spec if t not in taken for k in range(len(per[t]))]
+        if repairing:
+            todo = [(t, k) for t, k in todo if (t, k) in refused]
         for start in range(0, len(todo), a.batch):
             chunk = todo[start:start + a.batch]
-            conversations = [spec_first_rows.proof_question(per[t][k]["task"], python[t]) if t in python
-                             else question(per[t][k]["task"]) for t, k in chunk]
+            if repairing:
+                conversations = [repair_proof_question(per[t][k]["task"], python.get(t), refused[(t, k)][1],
+                                                       refused[(t, k)][2], P[t]) for t, k in chunk]
+            else:
+                conversations = [spec_first_rows.proof_question(per[t][k]["task"], python[t]) if t in python
+                                 else question(per[t][k]["task"]) for t, k in chunk]
             replies = student_generate.decode(model, tokenizer, conversations, a.max_new, temperature, TOP_P,
                                               student_generate.problem_seed(attempt, chunk[0][0]))
             for (t, k), msgs, (text, stopped, ntok) in zip(chunk, conversations, replies):
                 stats[t]["asked"] += 1
+                if repairing:
+                    stats[t]["proof repair asks"] += 1
                 if t in taken:
                     continue                                    # an earlier specification of this problem was just proved
                 answer, why = accept(text, per[t][k]["task"], P[t])
                 if answer is None:
-                    stats[t]["refusals"][why.split(":")[0]] = stats[t]["refusals"].get(why.split(":")[0], 0) + 1
+                    kind = why.split(":")[0]
+                    stats[t]["refusals"][kind] = stats[t]["refusals"].get(kind, 0) + 1
+                    rank = REFUSAL_RANK.get(kind, 0)
+                    if not repairing and ((t, k) not in refused or rank > refused[(t, k)][0]):
+                        refused[(t, k)] = (rank, text, why)
                     continue
                 taken[t] = {"reply": loop_dataset.fence(answer.strip()), "messages": msgs, "tokens": ntok,
                             "stopped": stopped, "attempt": attempt, "specification": per[t][k]["source"],
-                            "scores": per[t][k]["scores"]}
-                stats[t]["taken"] = {"attempt": attempt, "specification": per[t][k]["source"]}
-        print(f"spec_first: attempt {attempt} ({'greedy' if attempt == 0 else 'sampled'}): "
+                            "scores": per[t][k]["scores"], **({"repair": True} if repairing else {})}
+                stats[t]["taken"] = {"attempt": attempt, "specification": per[t][k]["source"],
+                                     **({"repair": True} if repairing else {})}
+                if repairing:
+                    stats[t]["proof repaired"] = 1
+        print(f"spec_first: attempt {attempt} ({'greedy' if attempt == 0 else 'repair' if repairing else 'sampled'}): "
               f"{len(taken)} of {len(with_spec)} problems answered ({time.monotonic() - started:.0f} s)", flush=True)
     options = {"temperature": TEMPERATURE, "top_p": TOP_P, "num_predict": a.max_new, "decoder": "transformers-batched",
                "spec_first": {"from": a.from_samples, "per_problem": a.per_problem, "samples": a.samples,
                               "python": a.python, "spec_samples": a.spec_samples if a.python else None,
                               **({"repair": a.repair} if a.repair else {}),
-                              **({"oracle_gate": True} if a.oracle_gate else {})}}
+                              **({"oracle_gate": True} if a.oracle_gate else {}),
+                              **({"proof_repair": True} if a.proof_repair else {})}}
     for t, r in taken.items():
         se.write_record(d / "raw" / f"{t}.json", {
             "task_id": t, "fn": P[t]["fn"], "model": str(a.model), "digest": "", "pool_version": a.pool,

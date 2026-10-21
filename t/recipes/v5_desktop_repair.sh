@@ -30,6 +30,8 @@ PYARG=""; [ "$PYTHON_ATTEMPTS" != 0 ] && PYARG="--python $PYTHON_ATTEMPTS"
 # PARALLEL server slots and CONCURRENCY route workers (neither is in the route's protocol record; answers are seeded by
 # stage and prompt, so a run can resume at a different setting from the same cache). 16/16 for long training-panel runs.
 PARALLEL=${PARALLEL:-8}; CONCURRENCY=${CONCURRENCY:-8}
+# CACHE_RAM caps the server's host-side prompt cache (its default is 8 GiB, which on the 14 GB desktop pushed the server to
+# 10.6 GB resident and the run into swap during the 2,597-problem self-distillation on 2026-10-21).
 export LD_LIBRARY_PATH=$L PYTHONPATH=$D/t PYTHONUNBUFFERED=1
 mkdir -p $A
 cd $D || exit 1
@@ -38,6 +40,7 @@ rm -f $A/gen.done
 echo "$(date -u +%FT%TZ) start identity=$IDENT" > $A/gen.log
 $L/llama-server --model $GGUF --alias $ALIAS --host 127.0.0.1 --port $PORT \
   --n-gpu-layers 99 --threads 16 --threads-batch 16 --parallel $PARALLEL --ctx-size $((PARALLEL * 4096)) \
+  --cache-ram ${CACHE_RAM:-1024} \
   --chat-template-kwargs '{"enable_thinking":false}' > $A/server.log 2>&1 &
 SP=$!
 for i in $(seq 1 240); do curl -sf http://127.0.0.1:$PORT/health >/dev/null && break; timeout 1 tail -f /dev/null; done
