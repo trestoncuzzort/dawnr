@@ -103,17 +103,21 @@ def sampled_python(decode, ids: list[str], P: dict, samples: int, batch: int, ma
     return out
 
 
-def written_specifications(decode, python: dict, P: dict, samples: int, batch: int, max_new: int) -> dict:
+def written_specifications(decode, python: dict, P: dict, samples: int, batch: int, max_new: int,
+                           replies: dict | None = None) -> dict:
     """Step 1 of the --python route: problem -> [(label, task)] the student wrote from the problem,
-    its tests and its own tested Python. They are scored with every other candidate afterwards."""
+    its tests and its own tested Python. They are scored with every other candidate afterwards.
+    `replies`, when given, receives every reply as (label, text), parsed or not, for the repair turn."""
     out = {t: [] for t in python}
     ids = list(python)
     for attempt in range(samples + 1):
         for start in range(0, len(ids), batch):
             chunk = ids[start:start + batch]
-            replies = decode([spec_first_rows.spec_question(P[t], python[t]) for t in chunk],
+            answers = decode([spec_first_rows.spec_question(P[t], python[t]) for t in chunk],
                              0.0 if attempt == 0 else TEMPERATURE, 100 + attempt, chunk[0], max_new)
-            for t, (text, _stopped, _ntok) in zip(chunk, replies):
+            for t, (text, _stopped, _ntok) in zip(chunk, answers):
+                if replies is not None:
+                    replies.setdefault(t, []).append((f"written/{attempt}", text))
                 block = se.find_block(text)
                 if block is None:
                     continue
@@ -122,6 +126,106 @@ def written_specifications(decode, python: dict, P: dict, samples: int, batch: i
                 except Exception:                               # noqa: BLE001
                     continue
     return out
+
+
+REPAIR_ASK = ("This specification does not fit the tests:\n{witnesses}\n\nRewrite the specification of the t task "
+              "named `{fn}` with {arity} parameter(s) of type(s) {kinds}, in the order the tests pass them, returning "
+              "{ret}: every test must satisfy it, a wrong result must be rejected, and the body stays empty.")
+
+
+def repair_question(entry: dict, code: str, reply: str, witnesses: list[str]) -> list[dict]:
+    """The specification question, the student's candidate reply, and one more user turn carrying the
+    interpreter's witnesses. ExVerus (arXiv:2603.25810) and AxDafny (arXiv:2606.32007) send the verifier's
+    counterexample back for a repair; here the counterexample is the problem's own test, which the route
+    already evaluated when it dropped the candidate (t/PREDICT-2026-10-21-repair-turn.md)."""
+    arity, kinds, ret = se.signature_words(entry, surface=True)
+    lines = "\n".join(f"- {w}" for w in witnesses)
+    return spec_first_rows.spec_question(entry, code) + [
+        {"role": "assistant", "content": reply},
+        {"role": "user", "content": REPAIR_ASK.format(witnesses=lines, fn=entry["fn"], arity=arity, kinds=kinds,
+                                                      ret=ret)}]
+
+
+def best_candidate(written: list[tuple[str, dict]], scored: list[dict], replies: list[tuple[str, str]],
+                   entry: dict) -> tuple[str, str, list[str]] | None:
+    """(label, the student's reply, witnesses) of the candidate to repair: the scored candidate with the highest
+    correctness, then completeness; else the last reply, with why it could not be scored or parsed. None when
+    the student replied nothing."""
+    if not replies:
+        return None
+    by_label = dict(replies)
+    tasks = dict(written)
+    ranked = [r for r in scored if "unscorable" not in r["scores"] and r["source"] in tasks and r["source"] in by_label]
+    if ranked:
+        best = max(ranked, key=lambda r: (r["scores"]["correctness"], r["scores"]["completeness"] or 0.0))
+        spec = specification_of(tasks[best["source"]])
+        return best["source"], by_label[best["source"]], spec_quality.witnesses(spec, entry)
+    label, text = replies[-1]
+    if label in tasks:
+        return label, text, spec_quality.witnesses(specification_of(tasks[label]), entry)
+    block = se.find_block(text)
+    if block is None:
+        return label, text, ["the reply has no fenced t task"]
+    try:
+        surface.parse(block)
+    except Exception as e:                                      # noqa: BLE001
+        return label, text, [f"the task does not parse: {e}"[:200]]
+    return label, text, ["the task could not be scored"]
+
+
+def repaired_specifications(decode, ids: list[str], python: dict, P: dict, written: dict, replies: dict, per: dict,
+                            scored_by: dict, repairs: int, per_problem: int, batch: int, max_new: int,
+                            record: list, stats: dict) -> int:
+    """Up to `repairs` more specification calls for every problem with a tested Python solution and no kept
+    specification: the best candidate and its witnesses go back to the student (repair_question); the first
+    call is greedy, later ones sampled. A kept repair enters `per` and the proof stage like any other
+    specification. A problem with a kept specification is never touched, so its conversations stay those of
+    the route without repair. Returns the number of problems repaired."""
+    repaired = 0
+    for r in range(repairs):
+        questions, shown = {}, {}
+        for t in ids:
+            if t not in python or per.get(t):
+                continue
+            best = best_candidate(written.get(t, []), scored_by.get(t, []), replies.get(t, []), P[t])
+            if best is None:
+                continue
+            _label, reply, ws = best
+            questions[t] = repair_question(P[t], python[t], reply, ws)
+            shown[t] = ws
+        todo = list(questions)
+        for start in range(0, len(todo), batch):
+            chunk = todo[start:start + batch]
+            answers = decode([questions[t] for t in chunk], 0.0 if r == 0 else TEMPERATURE, 200 + r, chunk[0],
+                             max_new)
+            for t, (text, _stopped, _ntok) in zip(chunk, answers):
+                label = f"repair/{r}"
+                stats[t]["repair asks"] += 1
+                stats[t]["repair witnesses"] = shown[t]
+                replies.setdefault(t, []).append((label, text))
+                block = se.find_block(text)
+                if block is None:
+                    continue
+                try:
+                    task = surface.parse(block)
+                except Exception:                               # noqa: BLE001
+                    continue
+                written.setdefault(t, []).append((label, task))
+                rec: list[dict] = []
+                kept, counts = kept_specifications([(label, task)], P[t], per_problem, record=rec)
+                for x in rec:
+                    record.append({"task_id": int(t), **x})
+                    scored_by.setdefault(t, []).append(x)
+                for k in ("scored", "dropped", "unscorable", "duplicate"):
+                    stats[t][k] += counts[k]
+                if kept:
+                    per[t] = kept
+                    stats[t]["kept"] = len(kept)
+                    stats[t]["repaired"] = 1
+                    repaired += 1
+        print(f"spec_first: repair {r} ({'greedy' if r == 0 else 'sampled'}): {len(todo)} asked, "
+              f"{repaired} problems repaired so far", flush=True)
+    return repaired
 
 
 def specification_of(task: dict) -> dict:
@@ -246,7 +350,15 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--max-new", type=int, default=1024)
     ap.add_argument("--batch", type=int, default=16)
     ap.add_argument("--stage1-only", action="store_true", help="score and keep specifications; ask nothing")
+    ap.add_argument("--repair", type=int, default=0, metavar="R",
+                    help="--python: up to R more specification calls for a problem with no kept specification, "
+                         "each carrying the interpreter's witnesses against the best candidate (ExVerus "
+                         "arXiv:2603.25810, AxDafny arXiv:2606.32007); 0 keeps the route as it was")
     a = ap.parse_args(argv)
+    if a.repair < 0:
+        ap.error("--repair takes a count")
+    if a.repair and not (a.python or a.reference_python):
+        ap.error("--repair needs the student's Python (--python or --reference-python)")
 
     P = {str(k): v for k, v in se.pool(a.pool).items()}
     ids = [x for x in a.ids_file.read_text(encoding="utf-8").split() if x.strip()]
@@ -267,6 +379,7 @@ def main(argv: list[str] | None = None) -> int:
                 g = json.loads(line)
                 given[str(g["task_id"])] = list(zip(g["sources"], g["tasks"]))
     python, python_counts, written, model, tokenizer, student_generate = {}, {}, {}, None, None, None
+    replies, decode, repaired_n = {}, None, 0
     if a.python or a.reference_python:
         if a.stage1_only:
             ap.error("--python and --reference-python need the model; they cannot run with --stage1-only")
@@ -282,7 +395,7 @@ def main(argv: list[str] | None = None) -> int:
             python, python_counts = written_python(decode, ids, P, a.python, a.batch, a.max_new)
             print(f"spec_first: {len(python)} of {len(ids)} problems have a Python solution that passes "
                   "their tests", flush=True)
-        written = written_specifications(decode, python, P, a.spec_samples, a.batch, a.max_new)
+        written = written_specifications(decode, python, P, a.spec_samples, a.batch, a.max_new, replies=replies)
     per, stats, all_scored = {}, {}, []
     for tid in ids:
         tasks = list(written.get(tid, [])) + list(given.get(tid, []))
@@ -300,6 +413,15 @@ def main(argv: list[str] | None = None) -> int:
         stats[tid] = {"one-shot tasks": len(tasks) - len(written.get(tid, [])),
                       "written specifications": len(written.get(tid, [])), **python_counts.get(tid, {}),
                       **counts, "asked": 0, "taken": None, "refusals": {}}
+    if a.repair:
+        scored_by: dict[str, list] = {}
+        for r in all_scored:
+            scored_by.setdefault(str(r["task_id"]), []).append(r)
+        for tid in ids:
+            stats[tid].update({"repair asks": 0, "repaired": 0, "repair witnesses": []})
+        repaired_n = repaired_specifications(decode, ids, python, P, written, replies, per, scored_by, a.repair,
+                                             a.per_problem, a.batch, a.max_new, all_scored, stats)
+        print(f"spec_first: the repair turn kept a specification for {repaired_n} more problems", flush=True)
     if a.reference_python:
         # training problems: the reference check as a second filter (never available for a real question)
         import random
@@ -373,7 +495,8 @@ def main(argv: list[str] | None = None) -> int:
               f"{len(taken)} of {len(with_spec)} problems answered ({time.monotonic() - started:.0f} s)", flush=True)
     options = {"temperature": TEMPERATURE, "top_p": TOP_P, "num_predict": a.max_new, "decoder": "transformers-batched",
                "spec_first": {"from": a.from_samples, "per_problem": a.per_problem, "samples": a.samples,
-                              "python": a.python, "spec_samples": a.spec_samples if a.python else None}}
+                              "python": a.python, "spec_samples": a.spec_samples if a.python else None,
+                              **({"repair": a.repair} if a.repair else {})}}
     for t, r in taken.items():
         se.write_record(d / "raw" / f"{t}.json", {
             "task_id": t, "fn": P[t]["fn"], "model": str(a.model), "digest": "", "pool_version": a.pool,
@@ -381,6 +504,8 @@ def main(argv: list[str] | None = None) -> int:
             "reply_tokens": r["tokens"], "done_reason": "stop" if r["stopped"] else "length",
             "spec_first": {"attempt": r["attempt"], "specification": r["specification"], "scores": r["scores"]}})
     summary["answered"] = len(taken)
+    if a.repair:
+        summary["repaired"] = repaired_n
     if a.python:
         summary["with a tested Python solution"] = len(python)
     (d / "spec_first.json").write_text(json.dumps(summary, indent=1) + "\n", encoding="utf-8")
