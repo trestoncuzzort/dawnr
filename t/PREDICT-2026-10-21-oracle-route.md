@@ -44,7 +44,7 @@ Both arms generated on the desktop (stage-1 calls replayed from the control's an
 caches), graded in the kernel container, paired by `t/recipes/v7_local_pair.py` (receipts
 `release/evidence/v5-oracle17-2026-10-21.json`, `v5-oracle39-2026-10-21.json`). The evaluator records differ
 from the control's grade in two files only, `t/spec_first.py` and `t/test_spec_first_oracle.py`, neither in the
-grading path; a control re-grade under the current tree is queued so the receipt's own flag can say so.
+grading path. The control re-graded under the current tree (`v5-20261021-dev-desktop-r2`, 2026-10-21 08:48Z) is identical cell for cell (13 / 13 / 6 / 3); paired against it with the same evaluator, O39 is a development gain (`release/evidence/v5-oracle39-vs-control-r2-2026-10-21.json`: clean 7 against 6, all-seven 3 against 3, nothing lost) and O17 is not (`v5-oracle17-vs-control-r2-2026-10-21.json`).
 
 | arm | Python | kept spec | answered | verified before the specification check | clean | all seven |
 |---|---:|---:|---:|---:|---:|---:|
