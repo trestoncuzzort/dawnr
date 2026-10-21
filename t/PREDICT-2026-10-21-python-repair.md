@@ -32,3 +32,10 @@ Default off; without the flag the route is byte for byte what it was (tested).
   P1 fails: the student does not use test feedback either, and the Python stage waits for training.
 
 Sources: Self-Debugging arXiv:2304.05128, Reflexion arXiv:2303.11366; t/py_sandbox.py (the finding).
+
+## Result (2026-10-21 15:06Z; generated 12:55Z, graded in the desktop container, paired against `v5-20261021-dev-desktop-r2`)
+
+Python passing the tests 48 (control 51): the third attempt as a repair passed 5 of 52 asks where the control's
+third attempt as a fresh sample passed 8. Answered 13 (13), **clean 5 (6), lost 543** (its Python never came), all-seven
+3 (3). Receipt `release/evidence/v5-python-repair17-2026-10-21.json`. **P1, P2 and P3 falsified** (48 under 55; clean
+5 with a loss; 5 of 52 under a third). By P4 the Python stage waits for training; the test feedback is not used.

@@ -38,3 +38,17 @@ block). Default off; without the flag the route is byte for byte what it was (te
   this student at either stage, and only training can move it.
 
 Sources: ExVerus arXiv:2603.25810, AxDafny arXiv:2606.32007 (the repair loop), SAFE arXiv:2410.15756.
+
+## Result (2026-10-21 15:06Z; generated 12:50Z, graded in the desktop container, paired)
+
+| arm | answered | clean | all seven | repair asks | accepted by the gates | paired against |
+|---|---:|---:|---:|---:|---:|---|
+| R17 | 14 (13) | 6 (6), the same six | 3 (3) | 7 | 1 | `v5-20261021-dev-desktop-r2` |
+| R39 | 16 (16) | 7 (7), the same seven | 3 (3) | 25 | 0 | `v5-20261021-oracle39` |
+
+Receipts `release/evidence/v5-proof-repair17-2026-10-21.json`, `v5-proof-repair39-2026-10-21.json`; records under
+`t/out/v5-repair-20261021/`. **P1 falsified** (R39 answered 16, clean 7, neither moved). **P2 falsified** (R17 clean
+6; one more answer, 14, and it does not verify). **P3 falsified**: 1 of 32 repair asks was accepted, far under a
+third; the gate's own finding (an unbound variable, a type mismatch, a call to an undeclared helper, a failing test
+with the returned value) does not get fixed by this student either. By P4 the finding is the same as the
+specification stage's: feedback does not work on this student at any stage, and only training can move it.

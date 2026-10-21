@@ -27,8 +27,14 @@ narrower than v5's (t/PREDICT-2026-10-21-oracle-route.md).
   training, and the cache lets a later pass extend to ten), kept by the three tests and then by the reference
   check at 100 draws. Prompts past the server's slot context (a few long problems) are refused and count as
   no candidate.
-- Added rows: TO FILL (problems, spec rows, python rows), output `out/v8/v8-rows.jsonl`, sha TO FILL,
-  `t/heldout_audit.py --panels --refuse-gpl` on the output: TO FILL.
+- The candidate run finished 2026-10-21 12:40Z: 602 of the 2,597 training problems have a specification kept by the
+  three tests and the reference check (1,103 specifications; the reference check dropped 625 the tests had kept);
+  `t/out/v5-repair-20261021/spec-experiment/v5-20261021-selfdistill/kept-specs.jsonl`. Rows not yet built (dawnr
+  paused by the user the same day): output `out/v8/v8-rows.jsonl`, sha and the held-out audit TO FILL before training.
+- Teacher audition the same day (`teacher9b-20261021-spec`, Qwen3.5-9B at Q4 on the development panel, the ceiling
+  instrument): Python for 83 of 95 problems (the student: 63) and zero usable specifications, because it has never
+  seen the t language. A teacher needs the grammar and worked t examples in its prompt, or writes contracts in a
+  language it knows for translation; the self-distilled rows do not depend on it.
 
 ## Recipe
 

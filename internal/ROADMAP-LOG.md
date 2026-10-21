@@ -3377,3 +3377,19 @@ computer-control plans and experiment results remain historical records.
   (60 calls a minute), and the laptop's cable port advertised 10 Mb/s until re-advertised at gigabit. v8 then trains on
   the desktop (13.5 s a step at the v5 recipe), exports with the pinned converter, and is graded under both routes
   (`t/recipes/v8_desktop_train.sh`, `v8_desktop_finish.sh`).
+
+## 2026-10-21 (closing): the repair rows at every stage falsified; dawnr paused at a saving point; the desktop's card
+
+- Proof-stage repair (`t/PREDICT-2026-10-21-proof-repair.md`): at 17 calls 14 / 6 / 3 (one more answer, the same six
+  clean), at 39 calls 16 / 7 / 3 (identical to the oracle route); 1 of 32 repair asks accepted by the gates. Python-stage
+  repair (`t/PREDICT-2026-10-21-python-repair.md`): Python 48 (51), clean 5 (6, lost 543); 5 of 52 repair asks passed
+  where fresh samples passed 8. With the morning's specification-stage repair, the finding holds at every stage: this
+  student does not turn feedback into a better answer; sampling does as well or better. Only training can move it.
+- Self-distilled specification candidates for v8: 602 of 2,597 training problems, 1,103 specifications, reference-checked
+  (`t/out/v5-repair-20261021/`). The teacher audition (Qwen3.5-9B) wrote Python for 83 of 95 problems and no t
+  specifications: a teacher must be taught the language first.
+- Paused by the user at this saving point (the real Crazyflie flight took over); every result of the day is saved
+  under `t/out/v5-repair-20261021/` with receipts in `release/evidence/`. Resume: build the v8 rows
+  (`t/recipes/v8_spec_rows.py`), audit, fill the PREDICT, train on the desktop (`t/recipes/v8_desktop_train.sh`).
+- The desktop's RTX 4080 fell off the bus twice today (13:23Z under three model servers, 14:23Z under one); the guard
+  rebooted it both times and now caps it at 200 W with an earlier rest; a third drop at 200 W means the fault is physical.
