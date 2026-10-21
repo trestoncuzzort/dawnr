@@ -3355,3 +3355,25 @@ computer-control plans and experiment results remain historical records.
   desktop (`t/recipes/v8_desktop_train.sh`, environment and base model staged), graded under the frozen route and
   under the 39-call oracle route. The teacher lane (DeepSeek on Bedrock) waits on an AWS login only the user can do.
 - Scout list on the specification skill: `internal/research-2026-10-21/spec-skill-scout.md` (150 papers, 100 repositories).
+
+## 2026-10-21 (continued): the proof stage's refusals, a proof-stage repair registered, the teacher scout, the desktop pipeline
+
+- Why the proof stage loses right specifications (the 39-call oracle arm): 12 of 28 kept problems got no accepted
+  answer in three attempts; over their 75 asks the cheap gates refused 49 as not well formed (unbound loop variables
+  used outside their scope, `at` and `==` on mismatched types, calls to helpers never declared, string-library
+  signatures), 21 as failing a test, 5 as unparsable. Compiler-style findings, unlike the specification misreadings.
+- Registered `t/PREDICT-2026-10-21-proof-repair.md`: `t/spec_first.py --proof-repair`, the last proof attempt repairs
+  the best refused reply with the gate's own finding (parser message, changed specification, well-formedness errors,
+  failing tests with the returned value), a repair ask replacing a sampled ask one for one. Arms R17 and R39 queued on
+  the desktop behind the self-distillation run; tests prove the route is unchanged without the flag.
+- Teacher scout (`internal/research-2026-10-21/teacher-scout.md`, 250 entries): for one 16 GB card the first picks
+  are Qwen2.5-Coder-7B/14B-Instruct, Qwen3-Coder-30B-A3B with expert offload, Goedel-Prover-V2-8B and
+  Pythagoras-Prover-4B on the Lean side, Qwen3.5-9B (Apache-2.0, on hand); the DeepSeek model licence treats models
+  trained on its outputs as derivatives carrying its terms, the Llama licence requires a "Llama" name, Gemma's terms
+  cover derivatives. A Qwen3.5-9B audition (the ceiling instrument on the development panel) is queued.
+- Desktop pipeline today: the self-distillation run (2,597 training problems, five candidates each, reference-checked)
+  is the slow step; findings on the way: the server's 8 GiB host prompt cache pushed the 14 GB desktop into swap
+  (capped at 1 GiB), sixteen slots are not faster than eight on the 4080, route batches of 64 keep the slots busy
+  (60 calls a minute), and the laptop's cable port advertised 10 Mb/s until re-advertised at gigabit. v8 then trains on
+  the desktop (13.5 s a step at the v5 recipe), exports with the pinned converter, and is graded under both routes
+  (`t/recipes/v8_desktop_train.sh`, `v8_desktop_finish.sh`).
