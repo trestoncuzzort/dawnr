@@ -58,25 +58,79 @@ def python_of(reply: str) -> str | None:
     return m.group(1) if m and m.group(1).strip() else None
 
 
-def written_python(decode, ids: list[str], P: dict, attempts: int, batch: int, max_new: int) -> tuple[dict, dict]:
+PYTHON_REPAIR_ASK = ("These tests fail:\n{witnesses}\n\nFix the function `{fn}` so that every test passes. Reply with "
+                     "one fenced python block and nothing else.")
+
+
+def python_witnesses(code: str | None, result: dict | None, asserts: list[str]) -> list[str]:
+    """What the sandbox found in a failed Python reply, as sentences the student can act on: the first two failing
+    asserts with their verdicts, or that the code does not load, times out, or has no fenced block (Self-Debugging
+    arXiv:2304.05128 and Reflexion arXiv:2303.11366 feed exactly this back; t/PREDICT-2026-10-21-python-repair.md)."""
+    if code is None:
+        return ["the reply has no fenced python block"]
+    status = (result or {}).get("status")
+    if status == "load-error":
+        return [f"the code does not load: {result.get('why')}"[:240]]
+    if status == "timeout":
+        return ["the tests time out"]
+    if status == "ran":
+        failing = [f"`{a}`: {v}"[:240] for a, v in zip(asserts, result.get("verdicts", [])) if v != "pass"]
+        return failing[:2] or ["a test fails"]
+    return [f"the tests could not run: {(result or {}).get('why', status)}"[:240]]
+
+
+def repair_python_question(entry: dict, reply: str, witnesses: list[str]) -> list[dict]:
+    """The Python question, the student's failed reply, and one more user turn with the sandbox's finding."""
+    lines = "\n".join(f"- {w}" for w in witnesses)
+    return spec_first_rows.python_question(entry) + [
+        {"role": "assistant", "content": reply},
+        {"role": "user", "content": PYTHON_REPAIR_ASK.format(witnesses=lines, fn=entry["fn"])}]
+
+
+def written_python(decode, ids: list[str], P: dict, attempts: int, batch: int, max_new: int,
+                   repair: bool = False) -> tuple[dict, dict]:
     """Step 0 of the --python route: (problem -> a Python solution the student wrote that passes the
-    problem's tests in the sandbox, problem -> counts). One greedy attempt, then sampled ones."""
+    problem's tests in the sandbox, problem -> counts). One greedy attempt, then sampled ones. With `repair`
+    the last attempt repairs the failed reply that passed the most tests instead of sampling afresh."""
     python, counts = {}, {t: {"python attempts": 0, "python": None} for t in ids}
+    best: dict[str, tuple[int, str, dict | None, str | None]] = {}   # problem -> (passes, reply, result, code)
+    if repair:
+        for t in ids:
+            counts[t].update({"python repair asks": 0, "python repaired": 0})
     for attempt in range(attempts):
+        repairing = bool(repair and attempts >= 2 and attempt == attempts - 1)
         todo = [t for t in ids if t not in python]
+        if repairing:
+            todo = [t for t in todo if t in best]
         for start in range(0, len(todo), batch):
             chunk = todo[start:start + batch]
-            replies = decode([spec_first_rows.python_question(P[t]) for t in chunk],
-                             0.0 if attempt == 0 else TEMPERATURE, attempt, chunk[0], max_new)
+            if repairing:
+                questions = [repair_python_question(P[t], best[t][1], python_witnesses(best[t][3], best[t][2],
+                                                                                        P[t]["rec"]["test_list"]))
+                             for t in chunk]
+            else:
+                questions = [spec_first_rows.python_question(P[t]) for t in chunk]
+            replies = decode(questions, 0.0 if attempt == 0 else TEMPERATURE, attempt, chunk[0], max_new)
             for t, (text, _stopped, _ntok) in zip(chunk, replies):
                 counts[t]["python attempts"] += 1
+                if repairing:
+                    counts[t]["python repair asks"] += 1
                 code = python_of(text)
                 if code is None:
+                    if not repairing and t not in best:
+                        best[t] = (-2, text, None, None)
                     continue
                 out = py_sandbox.run_tests(code, P[t]["rec"]["test_list"])
                 if out.get("all_pass"):
                     python[t] = code
                     counts[t]["python"] = attempt
+                    if repairing:
+                        counts[t]["python repaired"] = 1
+                    continue
+                passes = (sum(1 for v in out.get("verdicts", []) if v == "pass") if out.get("status") == "ran"
+                          else -1)
+                if not repairing and (t not in best or passes > best[t][0]):
+                    best[t] = (passes, text, out, code)
     return python, counts
 
 
@@ -458,10 +512,15 @@ def main(argv: list[str] | None = None) -> int:
                     help="--python: keep specifications by the student's own tested Python as the oracle "
                          "(t/spec_gate.judge, 100 draws) in place of the three-test gate; the three-test "
                          "scores stay recorded")
+    ap.add_argument("--python-repair", action="store_true",
+                    help="--python: the last Python attempt repairs the failed reply that passed the most tests, "
+                         "with the sandbox's finding, instead of sampling afresh (the same budget)")
     ap.add_argument("--proof-repair", action="store_true",
                     help="the last proof attempt repairs the best refused reply of each kept specification, "
                          "with the gate's refusal as the witness, instead of sampling afresh (the same budget)")
     a = ap.parse_args(argv)
+    if a.python_repair and a.python < 2:
+        ap.error("--python-repair needs at least two Python attempts (--python 2 or more)")
     if a.proof_repair and a.samples < 1:
         ap.error("--proof-repair needs at least one sampled attempt to replace (--samples 1 or more)")
     if a.oracle_gate and not a.python:
@@ -503,7 +562,8 @@ def main(argv: list[str] | None = None) -> int:
         if a.reference_python:
             python = {t: P[t]["rec"]["code"].strip("\n") for t in ids if (P[t]["rec"].get("code") or "").strip()}
         else:
-            python, python_counts = written_python(decode, ids, P, a.python, a.batch, a.max_new)
+            python, python_counts = written_python(decode, ids, P, a.python, a.batch, a.max_new,
+                                                   repair=a.python_repair)
             print(f"spec_first: {len(python)} of {len(ids)} problems have a Python solution that passes "
                   "their tests", flush=True)
         written = written_specifications(decode, python, P, a.spec_samples, a.batch, a.max_new, replies=replies)
@@ -634,7 +694,8 @@ def main(argv: list[str] | None = None) -> int:
                               "python": a.python, "spec_samples": a.spec_samples if a.python else None,
                               **({"repair": a.repair} if a.repair else {}),
                               **({"oracle_gate": True} if a.oracle_gate else {}),
-                              **({"proof_repair": True} if a.proof_repair else {})}}
+                              **({"proof_repair": True} if a.proof_repair else {}),
+                              **({"python_repair": True} if a.python_repair else {})}}
     for t, r in taken.items():
         se.write_record(d / "raw" / f"{t}.json", {
             "task_id": t, "fn": P[t]["fn"], "model": str(a.model), "digest": "", "pool_version": a.pool,
