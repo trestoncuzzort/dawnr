@@ -515,10 +515,15 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--python-repair", action="store_true",
                     help="--python: the last Python attempt repairs the failed reply that passed the most tests, "
                          "with the sandbox's finding, instead of sampling afresh (the same budget)")
+    ap.add_argument("--spec-primer", type=Path, default=None, metavar="FILE",
+                    help="--python: append this grammar card with worked examples to the specification question's "
+                         "system message (t/recipes/teacher_primer.py), for a teacher that has never seen t")
     ap.add_argument("--proof-repair", action="store_true",
                     help="the last proof attempt repairs the best refused reply of each kept specification, "
                          "with the gate's refusal as the witness, instead of sampling afresh (the same budget)")
     a = ap.parse_args(argv)
+    if a.spec_primer is not None:
+        spec_first_rows.SPEC_PRIMER = a.spec_primer.read_text(encoding="utf-8").strip()
     if a.python_repair and a.python < 2:
         ap.error("--python-repair needs at least two Python attempts (--python 2 or more)")
     if a.proof_repair and a.samples < 1:
@@ -695,7 +700,8 @@ def main(argv: list[str] | None = None) -> int:
                               **({"repair": a.repair} if a.repair else {}),
                               **({"oracle_gate": True} if a.oracle_gate else {}),
                               **({"proof_repair": True} if a.proof_repair else {}),
-                              **({"python_repair": True} if a.python_repair else {})}}
+                              **({"python_repair": True} if a.python_repair else {}),
+                              **({"spec_primer": a.spec_primer.name} if a.spec_primer is not None else {})}}
     for t, r in taken.items():
         se.write_record(d / "raw" / f"{t}.json", {
             "task_id": t, "fn": P[t]["fn"], "model": str(a.model), "digest": "", "pool_version": a.pool,

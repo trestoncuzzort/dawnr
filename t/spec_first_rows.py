@@ -64,9 +64,13 @@ def python_question(entry: dict) -> list[dict]:
                                                              "that passes the tests."}]
 
 
+SPEC_PRIMER = ""   # t/spec_first.py --spec-primer: a grammar card and worked examples for a teacher that has never seen t
+
+
 def spec_question(entry: dict, code: str) -> list[dict]:
     arity, kinds, ret = se.signature_words(entry, surface=True)
-    return [{"role": "system", "content": SPEC_SYSTEM},
+    system = SPEC_SYSTEM + ("\n\n" + SPEC_PRIMER if SPEC_PRIMER else "")
+    return [{"role": "system", "content": system},
             {"role": "user", "content": _statement(entry) + "\n\nA Python solution:\n" + python_block(code) +
              f"\n\nWrite the specification of the t task named `{entry['fn']}` with {arity} parameter(s) of "
              f"type(s) {kinds}, in the order the tests pass them, returning {ret}: the ensures must specify "
