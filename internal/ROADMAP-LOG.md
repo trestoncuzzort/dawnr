@@ -3306,3 +3306,31 @@ computer-control plans and experiment results remain historical records.
 - Scale note: a 14-ReLU integer program's sign property takes Dafny ~5 min directly but times out in the harness's
   default rlimit; Rocq and F* time out at 1 h; Lean needs ~3 GB per process at 80M heartbeats. The library defaults
   are sized for the task corpus, not for networks.
+
+## 2026-10-21: queue row 2, the repair turn at the specification stage, measured and closed (t/PREDICT-2026-10-21-repair-turn.md)
+
+- The change: `t/spec_first.py --repair R` (default 0 keeps the frozen route byte for byte). A problem with a tested
+  Python solution and no kept specification gets up to R more calls that carry the interpreter's witnesses against
+  the student's best candidate: the problem's own test the specification rejects with the clause that is false on
+  it, the wrong result it accepts, or the parse error (`t/spec_quality.witnesses`). Tests `t/test_spec_first_repair.py`.
+  Sources ExVerus arXiv:2603.25810, AxDafny arXiv:2606.32007, SAFE arXiv:2410.15756.
+- Why this row: the v5 development funnel is 95 → 51 Python → 18 kept specification → 13 answers → 6 clean → 3
+  all-seven; 33 of the 51 die at the SAFE gate, 20 of them with a best candidate that is false on one of the three tests.
+- Result, v5 on the desktop GPU node, graded in its pinned-kernel container, paired: control 51 / 13 / 6 / 3 (a
+  byte-exact replay of the 2026-10-18 generation from its request cache; the grade matches the 2026-10-19 grade cell
+  for cell, so the container is the same instrument and the 2026-10-20 lowering fixes change nothing on this panel);
+  repair 51 / 16 / 6 / 3; the same-budget control of two more plain samples 51 / 15 / 6 / 3. P1, P2, P3 falsified;
+  the paired clean set (251, 450, 476, 543, 549, 634) and all-seven set (476, 549, 634) are unchanged in every arm.
+  Receipts `release/evidence/v5-repair-turn-2026-10-21.json`, `v5-samples6-control-2026-10-21.json`; records
+  `t/out/v5-repair-20261021/` (generation, repair conversations, grades).
+- Learned: (a) the student acts on the witness (47 of 64 replies rewrite the clause) and keeps its error (41 of 53
+  scored repairs have the same scores as the candidate shown): the misreading is of the problem, not of the
+  feedback. (b) Candidates that pass the three tests and the kernels still fail the problem: 92 `is_undulating`
+  (a repair, verified by SPARK, Lean and F*) and 150 `does_Contain_B` (a seventh sample, verified by all seven) were
+  removed by the specification check, false at "44" and at (1, -4, 1). Three tests are too weak a target. (c) Two
+  repair calls equal two plain samples at 4B.
+- Next: the training side (repair rows with reference-checked targets, or the dense verifier reward, row 3), and a
+  stronger inference-time target for the specification stage: the student's own tested Python as the oracle of a
+  many-draw agreement check, the instrument `spec_check` already runs against the reference on the training side.
+- Also today: a research library of 500 papers and 500 repositories (404 and 461 distinct) tagged against the open
+  issues, `internal/research-2026-10-21/`, gathered by four Haiku scouts from search results and spot-checked.

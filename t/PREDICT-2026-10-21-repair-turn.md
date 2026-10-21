@@ -155,3 +155,31 @@ is on the training side: repair rows whose targets are reference-checked specifi
 the problem's solution, the training-side check that already exists in `spec_check`), or the dense verifier
 reward (queue row 3), where the signal is a prover's, not three tests'. The same-budget control (two more
 plain samples instead of two repair calls) is recorded below when its grade lands.
+
+## The same-budget control (two more plain samples, 2026-10-21 06:08Z): equal
+
+`--spec-samples 6` (seven specification calls, no repair), tag `v5-20261021-samples6-dev`, graded the same way
+(receipt `release/evidence/v5-samples6-control-2026-10-21.json`):
+
+| arm | spec calls per problem | kept specification | answered | clean | all seven |
+|---|---:|---:|---:|---:|---:|
+| control | 5 | 18 | 13 | 6 | 3 |
+| repair (`--repair 2`) | 5 + 2 | 21 | 16 | 6 | 3 |
+| two more samples | 7 | 22 | 15 | 6 | 3 |
+
+Two repair calls and two plain samples buy the same thing: three or four more kept specifications, two or
+three more answers, and no clean answer. The seventh sample answered 150 `does_Contain_B` with a program all
+seven kernels verify and the twin refuted; the specification check removed it, `ensures[0]` false at
+`(1, -4, 1)` where the problem's solution answers False. With the repair arm's 92 that makes two candidates in
+this row that pass the three tests and the kernels and fail the problem. The paired clean and all-seven sets
+are the control's in every arm.
+
+## Verdict
+
+P1, P2 and P3 falsified; the repair turn as a route change is closed. What was learned: the student uses the
+witness (47 of 64 rewrites) and keeps its error (41 of 53 same scores); three tests are too weak a target for a
+specification, and the candidates that satisfy them and the kernels still fail the problem. By P4 the next row
+is on the training side (repair rows with reference-checked targets, or the dense verifier reward), and the
+specification stage needs a stronger inference-time target than three tests, for which the student's own
+tested Python is the obvious oracle to try (the 1,000-draw agreement check `spec_check` already runs against
+the reference on the training side).

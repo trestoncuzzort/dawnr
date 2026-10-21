@@ -122,6 +122,8 @@ Row 1 first: it is the user's rule for v6 (same recipe, better data), it needs n
 and it is judged by the instrument already frozen. Row 2 second because it is cheap and the field's most consistent
 inference-time gain. Row 3 only after a data step moved an unseen number, since RL on this student has not yet.
 
+Status 2026-10-21: row 1 measured (decomposed rows, P1 falsified, P2 held: t/PREDICT-2026-10-19-decomposed-rows.md); row 2 measured and closed (the repair turn as a route change: kept 18 to 21, answers 13 to 16, clean 6 and all-seven 3 unchanged, t/PREDICT-2026-10-21-repair-turn.md). Next: the training side, repair rows with reference-checked targets or row 3, the dense reward.
+
 ## 6. What the corrective candidate decides (running now)
 
 The interrupted C2 grade of the corrective candidate and a paired local re-grade of v5's development answers are
