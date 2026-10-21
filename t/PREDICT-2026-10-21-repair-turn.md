@@ -118,3 +118,40 @@ feedback problem: the student rewrites when told, and still writes the same wron
 understood the problem the way its own tested Python has. A same-budget control (two more plain samples,
 `--spec-samples 6`, tag `v5-20261021-samples6-dev`) runs after the grades to tell whether two repair calls beat two
 samples at all. P2 waits on the seven-kernel grade of both arms.
+
+## Result, stage 2 (the seven-kernel grade in the desktop container, 2026-10-21 05:44Z): P2 falsified
+
+Both arms graded by `t/recipes/v6-grade.sh` inside `dawnr-kernels` with the same `t/` code (evaluator records
+identical), paired by `t/recipes/v7_local_pair.py`; receipt `release/evidence/v5-repair-turn-2026-10-21.json`,
+records under `t/out/v5-repair-20261021/`.
+
+| arm | Python | t answers | tests pass | at least one kernel, before the specification check | after it (clean) | all seven |
+|---|---:|---:|---:|---:|---:|---:|
+| control (frozen route, replayed) | 51 | 13 | 13 | 8 | **6** | **3** |
+| repair (`--repair 2`) | 51 | 16 | 16 | 9 | **6** | **3** |
+
+Paired clean: the same six problems in both arms (251, 450, 476, 543, 549, 634); all-seven the same three (476,
+549, 634); nothing gained, nothing lost. **P2 (clean at least 7, all-seven at least 3): falsified.**
+
+Instrument check: the fresh control grade reproduces the 2026-10-19 grade of the same answers cell for cell
+(13 / 13 / 6 / 3, the same kernel table), so the lowering fixes of 2026-10-20 (`lower_rocq` t_nf, `lower_framac`
+bridging assert) change nothing on this panel, and the desktop container is the same instrument.
+
+The three repaired problems under the kernels:
+
+- 92 `is_undulating`: the repaired specification scored 1.0 / 1.0 on the three tests and the answer verified under
+  SPARK, Lean and F* (Frama-C verified it with the twin unproved), then the specification check removed it:
+  `ensures[0]` is false at `"44"`, where the problem's solution answers False. The repair fitted the three tests
+  it was shown and not the problem.
+- 708 `Convert`: unproved under every kernel that did not abstain.
+- 958 `int_to_roman`: refuted by five kernels; the body passes the three tests and violates its own
+  specification elsewhere.
+
+Reading, by P4. P1 and P2 fail: the repair turn as a route change is closed. At 4B the student rewrites when
+shown the test it fails, and the rewrite is either the same error again (41 of 53) or a patch that fits the
+witness and nothing else (92). A witness drawn from three tests is too weak a signal to repair a
+misunderstanding, and when it is strong enough to pass them, it is strong enough to overfit them. The next row
+is on the training side: repair rows whose targets are reference-checked specifications (1,000 draws against
+the problem's solution, the training-side check that already exists in `spec_check`), or the dense verifier
+reward (queue row 3), where the signal is a prover's, not three tests'. The same-budget control (two more
+plain samples instead of two repair calls) is recorded below when its grade lands.
