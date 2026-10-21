@@ -49,7 +49,7 @@ class Decoder:
             # empty, which the route reads as no answer, instead of the whole run dying (2026-10-21).
             detail = e.read().decode("utf-8", "replace")[:300]
             sys.stderr.write(f"server refused a request (400): {detail}\n")
-            return {"choices": [{"message": {"content": ""}, "finish_reason": "error"}],
+            return {"choices": [{"message": {"content": ""}, "finish_reason": "length"}],
                     "usage": {"completion_tokens": 0}, "error": detail}
 
     def one(self, messages, max_new, temperature, top_p, stage):
