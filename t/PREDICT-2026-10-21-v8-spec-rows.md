@@ -21,9 +21,12 @@ narrower than v5's (t/PREDICT-2026-10-21-oracle-route.md).
 
 - Base: `t/out/v6-20261018/corrected-data/training-rows.jsonl`, 4,089 rows, sha `8aa1b7528363…` (the corrected
   v5 snapshot of 2026-10-18; 305 problems with a specification row).
-- Candidates: `t/spec_first.py --reference-python --spec-samples 9 --specs-only` on the 2,597 training problems
-  (tag `v5-20261021-selfdistill`, desktop, the installed v5): ten candidates a problem, kept by the three tests
-  and then by the reference check at 100 draws.
+- Candidates: `t/spec_first.py --reference-python --spec-samples 4 --specs-only` on the 2,597 training problems
+  (tag `v5-20261021-selfdistill`, desktop, the installed v5): five candidates a problem (the ceiling run found 18
+  of the 29 right ones within five and 24 within ten; ten would have cost seven more desktop hours before any
+  training, and the cache lets a later pass extend to ten), kept by the three tests and then by the reference
+  check at 100 draws. Prompts past the server's slot context (a few long problems) are refused and count as
+  no candidate.
 - Added rows: TO FILL (problems, spec rows, python rows), output `out/v8/v8-rows.jsonl`, sha TO FILL,
   `t/heldout_audit.py --panels --refuse-gpl` on the output: TO FILL.
 
