@@ -1,4 +1,4 @@
-# v8: self-distilled specification rows at the exact v5 recipe (draft, to be registered before training)
+# v8: self-distilled specification rows at the exact v5 recipe: registered 2026-10-21 17:29Z, before training
 
 The specification stage is the bottleneck (t/PREDICT-2026-10-21-spec-ceiling.md): the student writes a
 reference-correct specification for 29 of 63 problems within twenty candidates and for 18 within five, and its
@@ -29,8 +29,15 @@ narrower than v5's (t/PREDICT-2026-10-21-oracle-route.md).
   no candidate.
 - The candidate run finished 2026-10-21 12:40Z: 602 of the 2,597 training problems have a specification kept by the
   three tests and the reference check (1,103 specifications; the reference check dropped 625 the tests had kept);
-  `t/out/v5-repair-20261021/spec-experiment/v5-20261021-selfdistill/kept-specs.jsonl`. Rows not yet built (dawnr
-  paused by the user the same day): output `out/v8/v8-rows.jsonl`, sha and the held-out audit TO FILL before training.
+  `t/out/v5-repair-20261021/spec-experiment/v5-20261021-selfdistill/kept-specs.jsonl` (sha `549ca386…`).
+- Rows built 2026-10-21 17:25Z by `t/recipes/v8_spec_rows.py` (report `out/v8/rows.json`): of the 602 problems, 256
+  already had a specification row in the base and were skipped; the other 346 gave 637 specification rows (up to
+  three a problem, the route's own cap) and 343 python rows; 980 rows added, output `out/v8/v8-rows.jsonl`, 5,069
+  rows, sha `a279cc9a1b878865a447c61a67fc14250c39869c915e0cf7d3932ba6faf2cd03`.
+- Audit `t/heldout_audit.py --rows out/v8/v8-rows.jsonl --panels --refuse-gpl --jobs 4` (2026-10-21 17:27Z,
+  `out/v8/audit.json`): 5,069 rows, 3,428 distinct t programs, 0 rows flagged against the held-out and development
+  panels; 35 rows match problems already out of the panels, not refused. Specification rows now cover 621 training
+  problems (275 before).
 - Teacher audition the same day (`teacher9b-20261021-spec`, Qwen3.5-9B at Q4 on the development panel, the ceiling
   instrument): Python for 83 of 95 problems (the student: 63) and zero usable specifications, because it has never
   seen the t language. A teacher needs the grammar and worked t examples in its prompt, or writes contracts in a
