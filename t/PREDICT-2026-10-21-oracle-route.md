@@ -74,3 +74,12 @@ gain is bounded by the proof stage, which converts 16 of 28 right specifications
 candidate meets the bar there. Two things follow: v7 (the decomposed-rows model, whose annotation sub-skill
 is the proof stage's) under the same O39 route, running now; and the training-side row for the absent half of
 the problems, with the Haiku scout's list `internal/research-2026-10-21/spec-skill-scout.md` read first.
+
+## v7 under the same 39-call oracle route (2026-10-21 08:28Z): 4 clean, v5 stays the base
+
+v7 (decomposed rows, `t/PREDICT-2026-10-19-decomposed-rows.md`), same route, same caches seeded from its own
+development requests, graded the same way, paired against v5 under the route
+(`release/evidence/v7-oracle39-vs-v5-2026-10-21.json`): Python 62, kept 22, answered 11, verified before the
+specification check 6, **clean 4, all-seven 3** against v5's 63 / 28 / 16 / 9 / 7 / 3. The annotation sub-skill
+does not reach the development count through the proof stage either; v7's specification stage is narrower than
+v5's under both gates. The v8 data row builds on the corrected v5 snapshot, not on v7's rows.

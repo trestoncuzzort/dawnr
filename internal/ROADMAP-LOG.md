@@ -3334,3 +3334,24 @@ computer-control plans and experiment results remain historical records.
   many-draw agreement check, the instrument `spec_check` already runs against the reference on the training side.
 - Also today: a research library of 500 papers and 500 repositories (404 and 461 distinct) tagged against the open
   issues, `internal/research-2026-10-21/`, gathered by four Haiku scouts from search results and spot-checked.
+
+## 2026-10-21 (continued): the specification stage measured three ways; the oracle gate; v7 under the oracle route
+
+- Ceiling (`t/PREDICT-2026-10-21-spec-ceiling.md`, tag `v5-20261021-spec20`, desktop): ten Python attempts take 63
+  of 95 problems (three take 51); twenty specification candidates give a reference-correct specification to 29 of
+  those 63 (12 at the greedy sample, 18 within five); the three-test SAFE gate keeps right candidates with 78.5%
+  precision and loses 10 problems that have one. The skill is present for just under half, absent for the rest.
+- Oracle gate (`t/spec_first.py --oracle-gate`, the student's own tested Python judging every candidate by
+  `t/spec_gate.judge`; `t/PREDICT-2026-10-21-oracle-route.md`): at the frozen 17 calls it drops six wrong
+  specifications the three tests kept and admits four right ones the proof stage then fails, clean 6 as before;
+  at 39 calls (ten Python attempts, twenty candidates) 16 answered, **clean 7** (gained 270, lost none), all-seven
+  3. The gain comes from the budget; the gate is a precision instrument. The route of record stays at 17 calls
+  under the three-test gate until a candidate meets the bar there. Receipts `release/evidence/v5-oracle17-2026-10-21.json`,
+  `v5-oracle39-2026-10-21.json`.
+- v7 under the 39-call oracle route: 62 / 22 / 11 / clean 4 / all-seven 3 against v5's 63 / 28 / 16 / 7 / 3. v7's
+  specification stage is narrower under both gates; v8 builds on the corrected v5 snapshot.
+- Next, running on the desktop: self-distilled specification rows for the 2,597 training problems (the student's
+  own candidates kept by the reference check, `t/recipes/v8_spec_rows.py`), then v8 at the exact v5 recipe on the
+  desktop (`t/recipes/v8_desktop_train.sh`, environment and base model staged), graded under the frozen route and
+  under the 39-call oracle route. The teacher lane (DeepSeek on Bedrock) waits on an AWS login only the user can do.
+- Scout list on the specification skill: `internal/research-2026-10-21/spec-skill-scout.md` (150 papers, 100 repositories).

@@ -1,0 +1,321 @@
+{
+  "panel": {
+    "path": "t/out/v6-20261018/dev-95.txt",
+    "count": 95,
+    "sha256": "f807aec7e6b89e524ded720d9ccfb670c1d504a5a5717966a4b870516701daf7"
+  },
+  "grade": "t/recipes/v6-grade.sh",
+  "pairing": {
+    "path": "t/recipes/v7_local_pair.py",
+    "sha256": "b1809b3b0026c4bb13fabdc76b47d5a7912272cc03e03d56ec8a91ee5040ad4b"
+  },
+  "scope": "Development-only candidate selection on one local evaluator; not a held-out result.",
+  "same_evaluator": true,
+  "evaluator_differences": [],
+  "arms": {
+    "baseline": {
+      "tag": "v5-20261021-oracle39",
+      "graded": "t/out/v5-repair-20261021/proof-results/v5-20261021-oracle39",
+      "python_test_passing": 63,
+      "accepted_answers": 16,
+      "scores": {
+        "tag": "v5-20261021-oracle39",
+        "problems": 95,
+        "task": 16,
+        "tests pass": 16,
+        ">=1": 7,
+        ">=3": 4,
+        ">=5": 3,
+        ">=6": 3,
+        ">=7": 3
+      },
+      "confirmed_ids": {
+        "1": [
+          251,
+          270,
+          450,
+          476,
+          543,
+          549,
+          634
+        ],
+        "3": [
+          251,
+          476,
+          549,
+          634
+        ],
+        "5": [
+          476,
+          549,
+          634
+        ],
+        "6": [
+          476,
+          549,
+          634
+        ],
+        "7": [
+          476,
+          549,
+          634
+        ]
+      },
+      "unconfirmed_admissions": [],
+      "integrity": {
+        "contradictions": [],
+        "unsound_cells": []
+      },
+      "kernel_outcomes": {
+        "dafny": {
+          "unproved / refuted": 4,
+          "verified / refuted": 5,
+          "unproved / unproved": 2,
+          "no-twin / no-twin": 2,
+          "verified / timeout": 1,
+          "verified / unproved": 1,
+          "refuted / refuted": 1
+        },
+        "verus": {
+          "unproved / refuted": 4,
+          "verified / refuted": 8,
+          "no-twin / no-twin": 2,
+          "refuted / refuted": 1,
+          "abstain / abstain": 1
+        },
+        "spark": {
+          "timeout / refuted": 3,
+          "verified / refuted": 7,
+          "refuted / refuted": 2,
+          "no-twin / no-twin": 2,
+          "tool_error / tool_error": 1,
+          "abstain / abstain": 1
+        },
+        "framac": {
+          "abstain / abstain": 9,
+          "verified / refuted": 5,
+          "no-twin / no-twin": 2
+        },
+        "lean": {
+          "unproved / refuted": 4,
+          "verified / refuted": 5,
+          "timeout / unproved": 1,
+          "malformed / refuted": 1,
+          "no-twin / no-twin": 2,
+          "timeout / timeout": 1,
+          "verified / timeout": 1,
+          "abstain / abstain": 1
+        },
+        "rocq": {
+          "unproved / unproved": 2,
+          "verified / refuted": 4,
+          "refuted / unproved": 1,
+          "timeout / refuted": 1,
+          "unproved / refuted": 1,
+          "no-twin / no-twin": 2,
+          "timeout / timeout": 1,
+          "lower-error / lower-error": 1,
+          "verified / malformed": 1,
+          "refuted / refuted": 1,
+          "abstain / abstain": 1
+        },
+        "fstar": {
+          "unproved / refuted": 3,
+          "verified / refuted": 5,
+          "no-twin / no-twin": 2,
+          "timeout / timeout": 1,
+          "abstain / abstain": 3,
+          "timeout / refuted": 1,
+          "refuted / refuted": 1
+        }
+      },
+      "evidence_sha256": {
+        "spec_first.json": "edbe2721831a9326280a9ca0ed39f187ffa72c04b6ce39105f28326fba2b5f11",
+        "extract.json": "d0862d88c57faa3955c0fa32be93200a522b133d3b3c4653b3fe7ae295b5178f",
+        "tests.json": "916aa746fd3ab41755ce3115ec33ec1f6149fc251710dc3d2c3388efb70dbcc6",
+        "kernels.md": "48f55608a0f2e0136e788b207aea65cb440ffe6ab98301a671d02eb1fbe64733"
+      }
+    },
+    "candidate": {
+      "tag": "v7-20261021-oracle39",
+      "graded": "t/out/v5-repair-20261021/proof-results/v7-20261021-oracle39",
+      "python_test_passing": 62,
+      "accepted_answers": 11,
+      "scores": {
+        "tag": "v7-20261021-oracle39",
+        "problems": 95,
+        "task": 11,
+        "tests pass": 11,
+        ">=1": 4,
+        ">=3": 3,
+        ">=5": 3,
+        ">=6": 3,
+        ">=7": 3
+      },
+      "confirmed_ids": {
+        "1": [
+          476,
+          543,
+          549,
+          634
+        ],
+        "3": [
+          476,
+          549,
+          634
+        ],
+        "5": [
+          476,
+          549,
+          634
+        ],
+        "6": [
+          476,
+          549,
+          634
+        ],
+        "7": [
+          476,
+          549,
+          634
+        ]
+      },
+      "unconfirmed_admissions": [],
+      "integrity": {
+        "contradictions": [],
+        "unsound_cells": []
+      },
+      "kernel_outcomes": {
+        "dafny": {
+          "refuted / refuted": 1,
+          "unproved / refuted": 2,
+          "verified / refuted": 5,
+          "unproved / unproved": 1,
+          "verified / unproved": 1,
+          "no-twin / no-twin": 1
+        },
+        "verus": {
+          "refuted / refuted": 1,
+          "unproved / refuted": 3,
+          "verified / refuted": 5,
+          "malformed / malformed": 1,
+          "no-twin / no-twin": 1
+        },
+        "spark": {
+          "refuted / refuted": 1,
+          "timeout / refuted": 3,
+          "verified / refuted": 5,
+          "tool_error / tool_error": 1,
+          "no-twin / no-twin": 1
+        },
+        "framac": {
+          "refuted / refuted": 1,
+          "abstain / abstain": 3,
+          "verified / refuted": 5,
+          "timeout / refuted": 1,
+          "no-twin / no-twin": 1
+        },
+        "lean": {
+          "refuted / refuted": 1,
+          "unproved / refuted": 3,
+          "timeout / timeout": 1,
+          "verified / refuted": 5,
+          "no-twin / no-twin": 1
+        },
+        "rocq": {
+          "refuted / refuted": 1,
+          "unproved / unproved": 2,
+          "timeout / refuted": 1,
+          "verified / refuted": 4,
+          "unproved / refuted": 1,
+          "verified / timeout": 1,
+          "no-twin / no-twin": 1
+        },
+        "fstar": {
+          "refuted / refuted": 1,
+          "unproved / refuted": 2,
+          "verified / refuted": 5,
+          "timeout / refuted": 1,
+          "abstain / abstain": 1,
+          "no-twin / no-twin": 1
+        }
+      },
+      "evidence_sha256": {
+        "spec_first.json": "1b15b3d75b93fc68ee36d10a2dc8b8d1c380a9a532bf26592d48a6951165b697",
+        "extract.json": "3075f8d27feb07f56d2986b965659f0411600214ce53e49d48f8c83d61ec95eb",
+        "tests.json": "3d48789002070cc50ba476022050b2911ef15adeafe3fa88b02afad946d785ea",
+        "kernels.md": "cf586e522a7fcc89ab5936ffe740fade5653cd793e68b993f376831f18ae0013"
+      }
+    }
+  },
+  "paired": {
+    "1": {
+      "v5": 7,
+      "v6": 4,
+      "difference": -3,
+      "gained": [],
+      "lost": [
+        251,
+        270,
+        450
+      ],
+      "both": [
+        476,
+        543,
+        549,
+        634
+      ]
+    },
+    "3": {
+      "v5": 4,
+      "v6": 3,
+      "difference": -1,
+      "gained": [],
+      "lost": [
+        251
+      ],
+      "both": [
+        476,
+        549,
+        634
+      ]
+    },
+    "5": {
+      "v5": 3,
+      "v6": 3,
+      "difference": 0,
+      "gained": [],
+      "lost": [],
+      "both": [
+        476,
+        549,
+        634
+      ]
+    },
+    "6": {
+      "v5": 3,
+      "v6": 3,
+      "difference": 0,
+      "gained": [],
+      "lost": [],
+      "both": [
+        476,
+        549,
+        634
+      ]
+    },
+    "7": {
+      "v5": 3,
+      "v6": 3,
+      "difference": 0,
+      "gained": [],
+      "lost": [],
+      "both": [
+        476,
+        549,
+        634
+      ]
+    }
+  },
+  "development_gain_without_all_seven_regression": false
+}
