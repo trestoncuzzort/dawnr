@@ -84,7 +84,7 @@ def prepare() -> dict:
               "trainer_sha256": TRAINER_SHA,
               "inputs_sha256": {name: digest(INPUT / name) for name in
                                 ("training-rows.jsonl", "decomposition.json", "audit.json",
-                                 "PREDICT-2026-10-19-decomposed-rows.md")}}
+                                 "PREDICT-2026-10-21-v8-spec-rows.md")}}
     path = INPUT / "prepared.json"
     if path.exists():
         assert json.loads(path.read_text()) == record, "inputs changed since the first preparation"
