@@ -12,7 +12,8 @@ H=/home/t; D=$H/dawnr; A=$H/v5-repair; OUT=$A/proof-results/$TAG
 rm -f $A/grade-$TAG.done
 # a graded directory left by an interrupted grade (no GRADED sentinel) makes run_par report incomplete kernel coverage
 # (2026-10-21, after a GPU reset mid-grade); start it clean
-[ -e $OUT/GRADED ] || rm -rf $OUT
+# (the container's user, prover, owns what it wrote, so the host user needs sudo to clear it; tlab has NOPASSWD sudo)
+[ -e $OUT/GRADED ] || { rm -rf $OUT 2>/dev/null; [ -e $OUT ] && sudo -n rm -rf $OUT; }
 mkdir -p $OUT $D/t/out/v6-20261018
 rm -f $D/t/out/spec-experiment/$TAG/kernels.md $D/t/out/spec-experiment/$TAG/extract.json $D/t/out/spec-experiment/$TAG/tests.json
 rm -rf $D/t/out/spec-experiment/$TAG/tasks
