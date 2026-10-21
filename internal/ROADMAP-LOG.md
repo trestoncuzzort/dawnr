@@ -3294,3 +3294,15 @@ Built-in host control was already retired on 2026-10-10 (`DAWNR-AGENT.md`);
 this decision also retires it as a product goal. The current ambition, public
 roadmap, README, and contributor instructions now state that boundary. Earlier
 computer-control plans and experiment results remain historical records.
+
+## 2026-10-21: two kernel findings from the drone feature-MLP tasks (crawford-drone verify/t_mlp/p8b)
+
+- lower_framac: the dm bridging assert named the C mirror `{spec_fun}_c` inside an ACSL annotation (unbound logic
+  function) for a spec_fun that calls another spec_fun; FIXED d05c31a1 for the real program. The TWIN lowering of the
+  same program is still reported MALFORMED by frama-c in the harness (`art7long/kernels.md`: p8b_u framac
+  "verified / malformed"); a second instance of the same class on the twin path, not yet chased.
+- F*: the twin search on `p8b_u` (108-parameter ReLU net, 14 ReLUs) times out at a 1 h wall where Verus, SPARK and
+  Rocq refute the twin in seconds; the real program verifies. Worth a look at how the F* adapter budgets the twin.
+- Scale note: a 14-ReLU integer program's sign property takes Dafny ~5 min directly but times out in the harness's
+  default rlimit; Rocq and F* time out at 1 h; Lean needs ~3 GB per process at 80M heartbeats. The library defaults
+  are sized for the task corpus, not for networks.
