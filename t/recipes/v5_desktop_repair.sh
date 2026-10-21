@@ -6,15 +6,26 @@
 # Sources: t/recipes/v7_desktop_gen.sh (the desktop route), t/recipes/v7_desktop_p2_annotate.sh (the v5 identity).
 set -u
 H=/home/t; L=$H/.local/share/dawnr/llama.cpp; D=$H/dawnr; A=$H/v5-repair
-IDENT="student-v5:d855000c3dffd9772da5a2f9dc238b41d7f8337d9bf58e578e5274ebb9566a4e:llama-f1cee9941b0e843ea260bf8dd9a090fbd9711b6a"
 PORT=8849
+# MODEL=v5 (default) serves the installed shards; MODEL=v7 serves the decomposed-rows export (t/recipes/v7_desktop_gen.sh)
+# and seeds the arm's cache from v7's own development requests. IDS overrides the problem panel; PYTHON_ATTEMPTS=0 omits
+# --python (for --reference-python runs on training problems).
+MODEL=${MODEL:-v5}; IDS=${IDS:-$H/v7/dev-95.txt}; PYTHON_ATTEMPTS=${PYTHON_ATTEMPTS:-3}
+if [ "$MODEL" = v7 ]; then
+  GGUF=$H/v7/model-Q8_0.gguf; ALIAS=dawnr-v7; SEED=$H/v7/requests
+  IDENT="student-v7:$(python3 -c "import json;print(json.load(open('$H/v7/export.json'))['output']['sha256'])"):llama-f1cee9941b0e843ea260bf8dd9a090fbd9711b6a"
+else
+  GGUF=$H/v5/dawnr-student-00001-of-00003.gguf; ALIAS=dawnr-v5; SEED=$A/requests
+  IDENT="student-v5:d855000c3dffd9772da5a2f9dc238b41d7f8337d9bf58e578e5274ebb9566a4e:llama-f1cee9941b0e843ea260bf8dd9a090fbd9711b6a"
+fi
+PYARG=""; [ "$PYTHON_ATTEMPTS" != 0 ] && PYARG="--python $PYTHON_ATTEMPTS"
 export LD_LIBRARY_PATH=$L PYTHONPATH=$D/t PYTHONUNBUFFERED=1
 mkdir -p $A
 cd $D || exit 1
 rm -f $A/gen.done
-(cd $H/v5 && sha256sum -c --quiet dawnr-student.sha256) || { echo "$(date -u +%FT%TZ) v5 shards fail their checksum" > $A/gen.log; echo 91 > $A/gen.done; exit 1; }
+[ "$MODEL" = v7 ] || (cd $H/v5 && sha256sum -c --quiet dawnr-student.sha256) || { echo "$(date -u +%FT%TZ) v5 shards fail their checksum" > $A/gen.log; echo 91 > $A/gen.done; exit 1; }
 echo "$(date -u +%FT%TZ) start identity=$IDENT" > $A/gen.log
-$L/llama-server --model $H/v5/dawnr-student-00001-of-00003.gguf --alias dawnr-v5 --host 127.0.0.1 --port $PORT \
+$L/llama-server --model $GGUF --alias $ALIAS --host 127.0.0.1 --port $PORT \
   --n-gpu-layers 99 --threads 16 --threads-batch 16 --parallel 8 --ctx-size 32768 \
   --chat-template-kwargs '{"enable_thinking":false}' > $A/server.log 2>&1 &
 SP=$!
@@ -23,9 +34,9 @@ curl -sf http://127.0.0.1:$PORT/health >/dev/null || { echo "$(date -u +%FT%TZ) 
 echo "$(date -u +%FT%TZ) server healthy; routes starting" >> $A/gen.log
 route() {
   local tag=$1; shift
-  python3 $D/t/recipes/v6_server_route.py --endpoint http://127.0.0.1:$PORT/v1/chat/completions --model dawnr-v5 \
+  python3 $D/t/recipes/v6_server_route.py --endpoint http://127.0.0.1:$PORT/v1/chat/completions --model $ALIAS \
     --identity "$IDENT" --cache $A/cache-$tag --concurrency 8 \
-    -- --tag $tag --ids-file $H/v7/dev-95.txt --pool v5 --python 3 --spec-samples 4 --per-problem 3 --samples 2 \
+    -- --tag $tag --ids-file $IDS --pool v5 $PYARG --spec-samples 4 --per-problem 3 --samples 2 \
     --max-new 1024 --batch 16 "$@" > $A/route-$tag.log 2>&1
   echo "$(date -u +%FT%TZ) $tag rc=$?" >> $A/gen.log
 }
@@ -42,7 +53,7 @@ if [ $# -ge 1 ]; then
   # control: two more plain samples instead of two repair calls)
   tag=$1; shift
   mkdir -p $A/cache-$tag
-  ls $A/requests/*.json 2>/dev/null | grep -v protocol.json | xargs -r -I{} ln -f {} $A/cache-$tag/
+  ls $SEED/*.json 2>/dev/null | grep -v protocol.json | xargs -r -I{} ln -f {} $A/cache-$tag/ 2>/dev/null
   rm -f $A/cache-$tag/protocol.json
   route $tag "$@"
 else

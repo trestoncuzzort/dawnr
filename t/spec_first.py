@@ -228,6 +228,49 @@ def repaired_specifications(decode, ids: list[str], python: dict, P: dict, writt
     return repaired
 
 
+def oracle_gate(written: dict, python: dict, P: dict, ids: list[str], per: dict, per_problem: int, stats: dict,
+                record: list, draws: int = 100) -> int:
+    """The student's own tested Python as the specification gate's oracle in place of the three tests
+    (t/spec_gate.judge: the reference check with that Python where the reference stands; Clover's doc2code
+    edge, arXiv:2310.17807; CodeT arXiv:2207.10397). Every parsed candidate of a problem with Python is judged;
+    the ones that pass are kept, most complete first, at most `per_problem`. The three-test scores stay in the
+    kept records. Returns the number of problems whose kept set changed (t/PREDICT-2026-10-21-oracle-route.md)."""
+    import spec_gate                                            # noqa: E402  (loads the sandbox)
+    changed = 0
+    for t in ids:
+        if t not in python or not written.get(t):
+            continue
+        seen, kept = set(), []
+        for order, (source, task) in enumerate(written[t]):
+            spec = specification_of(task)
+            try:
+                text = _nameless(spec)
+                surface.parse(surface.print_task(spec))
+            except Exception:                                   # noqa: BLE001
+                continue
+            if text in seen:
+                continue
+            seen.add(text)
+            v = spec_gate.judge(spec, P[t], python[t], seed=1, n=draws, beyond=0)
+            agreement = v.get("agreement") or {}
+            record.append({"task_id": int(t), "source": source,
+                           "verdict": "oracle-kept" if v["passes"] else "oracle-dropped",
+                           "oracle": {"passes": v["passes"], "why": v.get("why"), "agreement": agreement},
+                           "scores": v.get("tests"), "spec": text})
+            if v["passes"]:
+                kept.append({"source": source, "task": spec, "scores": v.get("tests"), "order": order,
+                             "oracle": agreement})
+        kept.sort(key=lambda k: (-(k["oracle"].get("completeness") or 0.0), -(k["oracle"].get("draws") or 0), k["order"]))
+        before = [k["source"] for k in per.get(t, [])]
+        per[t] = kept[:per_problem]
+        stats[t]["oracle judged"] = len(seen)
+        stats[t]["oracle kept"] = len(kept)
+        stats[t]["kept"] = len(per[t])
+        if [k["source"] for k in per[t]] != before:
+            changed += 1
+    return changed
+
+
 def specification_of(task: dict) -> dict:
     """The task with its body and lemmas removed: what a specification-given question shows."""
     spec = copy.deepcopy(task)
@@ -354,7 +397,13 @@ def main(argv: list[str] | None = None) -> int:
                     help="--python: up to R more specification calls for a problem with no kept specification, "
                          "each carrying the interpreter's witnesses against the best candidate (ExVerus "
                          "arXiv:2603.25810, AxDafny arXiv:2606.32007); 0 keeps the route as it was")
+    ap.add_argument("--oracle-gate", action="store_true",
+                    help="--python: keep specifications by the student's own tested Python as the oracle "
+                         "(t/spec_gate.judge, 100 draws) in place of the three-test gate; the three-test "
+                         "scores stay recorded")
     a = ap.parse_args(argv)
+    if a.oracle_gate and not a.python:
+        ap.error("--oracle-gate needs the student's Python (--python)")
     if a.repair < 0:
         ap.error("--repair takes a count")
     if a.repair and not (a.python or a.reference_python):
@@ -422,6 +471,11 @@ def main(argv: list[str] | None = None) -> int:
         repaired_n = repaired_specifications(decode, ids, python, P, written, replies, per, scored_by, a.repair,
                                              a.per_problem, a.batch, a.max_new, all_scored, stats)
         print(f"spec_first: the repair turn kept a specification for {repaired_n} more problems", flush=True)
+    if a.oracle_gate:
+        for tid in ids:
+            stats[tid].update({"oracle judged": 0, "oracle kept": 0})
+        changed = oracle_gate(written, python, P, ids, per, a.per_problem, stats, all_scored)
+        print(f"spec_first: the oracle gate changed the kept specifications of {changed} problems", flush=True)
     if a.reference_python:
         # training problems: the reference check as a second filter (never available for a real question)
         import random
@@ -496,7 +550,8 @@ def main(argv: list[str] | None = None) -> int:
     options = {"temperature": TEMPERATURE, "top_p": TOP_P, "num_predict": a.max_new, "decoder": "transformers-batched",
                "spec_first": {"from": a.from_samples, "per_problem": a.per_problem, "samples": a.samples,
                               "python": a.python, "spec_samples": a.spec_samples if a.python else None,
-                              **({"repair": a.repair} if a.repair else {})}}
+                              **({"repair": a.repair} if a.repair else {}),
+                              **({"oracle_gate": True} if a.oracle_gate else {})}}
     for t, r in taken.items():
         se.write_record(d / "raw" / f"{t}.json", {
             "task_id": t, "fn": P[t]["fn"], "model": str(a.model), "digest": "", "pool_version": a.pool,
