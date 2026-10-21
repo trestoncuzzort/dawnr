@@ -42,8 +42,20 @@ narrower than v5's (t/PREDICT-2026-10-21-oracle-route.md).
   instrument): Python for 83 of 95 problems (the student: 63) and zero usable specifications, because it has never
   seen the t language. A teacher needs the grammar and worked t examples in its prompt, or writes contracts in a
   language it knows for translation; the self-distilled rows do not depend on it.
+- Primed audition the same evening (`teacher9b-20261021-primer`, the same model with `--spec-primer`, a syntax card
+  and six worked examples from training problems, on the laptop's GPU): Python for 82 of 95; 249 candidates scored;
+  reference-correct specifications for 15 problems (13 within five candidates), against the student's 29 within
+  twenty; 9 of the 15 the student also gets, 6 it does not (5, 128, 328, 608, 905, 910), so the union is 35 of the
+  panel. The primer makes the 9B a weak but complementary specification writer: a teacher row would add rows for
+  about a tenth more problems, at ten candidates a problem; not before v8 is measured.
 
 ## Recipe
+
+Training ran on a Modal H100 from 17:43Z to 19:30Z (steps 1 to 500, checkpoints 400 and 500 on the volume), was stopped
+by the user over the charge, and resumes on the laptop's RTX 5050 (8 GB) from checkpoint 500 with the same arguments
+plus `--small-card` (`t/recipes/v8_laptop_resume.sh`); the laptop's torch build is 2.11.0+cu128 against the H100's
+2.9.1+cu129, so the run is one candidate trained on two builds, judged by the frozen grade like any other.
+
 
 `t/recipes/v8_desktop_train.sh`: the exact v5 recipe as run for v7 (`t/recipes/v7_modal.py`: rank 64, alpha 16,
 dropout 0.1, lr 2e-4, 5 epochs, max-len 2845, seed 1, batch 1, grad-accum 16) with the pinned trainer
