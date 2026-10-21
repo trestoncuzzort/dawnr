@@ -52,9 +52,11 @@ narrower than v5's (t/PREDICT-2026-10-21-oracle-route.md).
 ## Recipe
 
 Training ran on a Modal H100 from 17:43Z to 19:30Z (steps 1 to 500, checkpoints 400 and 500 on the volume), was stopped
-by the user over the charge, and resumes on the laptop's RTX 5050 (8 GB) from checkpoint 500 with the same arguments
-plus `--small-card` (`t/recipes/v8_laptop_resume.sh`); the laptop's torch build is 2.11.0+cu128 against the H100's
-2.9.1+cu129, so the run is one candidate trained on two builds, judged by the frozen grade like any other.
+by the user over the charge. The laptop's RTX 5050 (8 GB) cannot resume it: `--small-card` swaps the paged 32-bit AdamW
+for plain AdamW, whose state cannot load the paged optimizer's checkpoint (KeyError `exp_avg`, 20:25Z), and the exact
+arguments need about 10.5 GB (out of memory at the first step, 20:32Z). The checkpoint is staged on the desktop
+(`~/v8/adapter`, torch 2.9.1+cu129 like the H100), where `t/recipes/v8_desktop_train.sh` resumes it with the exact
+arguments once the card holds, or the paid run resumes on Modal with the user's yes.
 
 
 `t/recipes/v8_desktop_train.sh`: the exact v5 recipe as run for v7 (`t/recipes/v7_modal.py`: rank 64, alpha 16,
