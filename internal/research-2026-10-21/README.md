@@ -11,6 +11,13 @@ depth. Each file ends with a "Top 25" section.
 | [`repos-A.md`](repos-A.md) | 250 repositories: spec tools, repair loops and agents, RL trainers, serving and decoding | 462 `gh search repos` calls, 35 `gh repo view`, 23 WebSearch; pool 22,191 | D1 45, D2 82, D3 83, D7 70; 184 permissive licences |
 | [`repos-B.md`](repos-B.md) | 250 repositories: datasets, invariant generators, kernels and translation, benchmarks | 259 `gh search repos` calls, 8 `gh repo view`, 12 WebSearch | D4 47, D5 59, D6 101, D8 47; 158 permissive; star median 30 |
 
+Two focused lists followed the same day, each from one Haiku scout on the issue that had just stopped the work:
+
+| file | issue | counts |
+|---|---|---|
+| [`spec-skill-scout.md`](spec-skill-scout.md) | teaching a 4B student to write specifications: distillation, self-training with checkers, selection among candidates, why small models misread problems, verifier-reward RL | 150 papers, 100 repositories; S1 71, S2 25, S3 40, S4 29, S5 26 (papers); 52 permissive repositories |
+| [`teacher-scout.md`](teacher-scout.md) | an open-weight teacher for specifications on one 16 GB card: models, measured comparisons, distillation pipelines, running larger models on 16 GB, licence facts | 120 papers, 80 repositories, 50 model cards; 39 of 50 models Apache-2.0 or MIT; a Top 15 ranked for the RTX 4080 |
+
 Distinct across the pairs: 404 papers (96 arXiv ids appear in both paper lists) and 461 repositories (39 appear
 in both repository lists). Checks run on 2026-10-21: 250 numbered rows per file, no duplicate links inside a
 file, no em or en dashes, ten sampled links per paper list and eight per repository list resolve with the stated
