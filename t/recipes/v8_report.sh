@@ -10,8 +10,8 @@ for tag in v8-20261021-dev v8-20261021-oracle39; do
   rsync -a --exclude raw $H:~/dawnr/t/out/spec-experiment/$tag $D/spec-experiment/ || exit 1
   [ -e t/out/spec-experiment/$tag ] || ln -s ../v5-repair-20261021/spec-experiment/$tag t/out/spec-experiment/$tag
 done
-rsync -a $H:~/v5-repair/v8-ceiling.json $D/ 2>/dev/null
-rsync -a $H:~/v8/export/export.json $H:~/v8/manifest.json $H:~/v8/train.log $D/v8-export/ 2>/dev/null || { mkdir -p $D/v8-export; rsync -a $H:~/v8/export/export.json $H:~/v8/manifest.json $H:~/v8/train.log $D/v8-export/; }
+rsync -a $H:~/v5-repair/v8-ceiling.json $D/ 2>/dev/null; cp t/out/v8-export/export.json t/out/v8-export/inputs.json $D/v8-export/ 2>/dev/null
+mkdir -p $D/v8-export
 echo "--- P1: v8 frozen route vs the v5 control (same tree) ---"
 python3 t/recipes/v7_local_pair.py --panel t/out/v6-20261018/dev-95.txt --baseline "v5-20261021-dev-desktop-r2:$D/proof-results/v5-20261021-dev-desktop-r2" --candidate "v8-20261021-dev:$D/proof-results/v8-20261021-dev" --out release/evidence/v8-development-2026-10-21.json | tail -1 | cut -c1-400
 echo "--- P3: v8 oracle route vs v5 oracle route ---"
