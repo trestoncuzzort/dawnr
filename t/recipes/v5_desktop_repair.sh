@@ -30,6 +30,8 @@ PYARG=""; [ "$PYTHON_ATTEMPTS" != 0 ] && PYARG="--python $PYTHON_ATTEMPTS"
 # PARALLEL server slots and CONCURRENCY route workers (neither is in the route's protocol record; answers are seeded by
 # stage and prompt, so a run can resume at a different setting from the same cache). 16/16 for long training-panel runs.
 PARALLEL=${PARALLEL:-8}; CONCURRENCY=${CONCURRENCY:-8}
+# BATCH is the route's own batch (a spec_first argument, so it is in the cache's protocol record): a chunk waits for its
+# slowest reply, so a long training-panel run keeps the slots busier at 64 than at the development default of 16.
 # CACHE_RAM caps the server's host-side prompt cache (its default is 8 GiB, which on the 14 GB desktop pushed the server to
 # 10.6 GB resident and the run into swap during the 2,597-problem self-distillation on 2026-10-21).
 export LD_LIBRARY_PATH=$L PYTHONPATH=$D/t PYTHONUNBUFFERED=1
@@ -51,7 +53,7 @@ route() {
   python3 $D/t/recipes/v6_server_route.py --endpoint http://127.0.0.1:$PORT/v1/chat/completions --model $ALIAS \
     --identity "$IDENT" --cache $A/cache-$tag --concurrency $CONCURRENCY \
     -- --tag $tag --ids-file $IDS --pool v5 $PYARG --spec-samples 4 --per-problem 3 --samples 2 \
-    --max-new 1024 --batch 16 "$@" > $A/route-$tag.log 2>&1
+    --max-new 1024 --batch ${BATCH:-16} "$@" > $A/route-$tag.log 2>&1
   echo "$(date -u +%FT%TZ) $tag rc=$?" >> $A/gen.log
 }
 # Each arm has its own cache (the route refuses a cache whose protocol record differs), seeded with the 503 requests of
