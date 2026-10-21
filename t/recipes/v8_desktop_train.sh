@@ -11,6 +11,9 @@ ROWS=${ROWS:-$V/v8-rows.jsonl}; ROWS_SHA=${ROWS_SHA:?sha256 of the rows}
 SNAP=$(cat $H/venv-train.snapshot)
 TRAINER_SHA=e43c27df1ee1e796b1799d38a16e0c5725dd09df762be3fabb2940ad8cb4a46f
 mkdir -p $V; cd $D || exit 1
+# a persistent unit re-runs this after every boot (the card may drop mid-run; the trainer resumes from trainer/checkpoint-*);
+# once the run has completed (train.done holds 0) there is nothing to do
+[ -f $V/train.done ] && [ "$(cat $V/train.done)" = 0 ] && { echo "$(date -u +%FT%TZ) already complete" >> $V/train.log; exit 0; }
 rm -f $V/train.done
 echo "$(date -u +%FT%TZ) start rows=$ROWS sha=$ROWS_SHA snapshot=$SNAP" > $V/train.log
 [ "$(sha256sum $D/t/student_sft.py | cut -c1-64)" = "$TRAINER_SHA" ] || { echo "trainer sha differs" >> $V/train.log; echo 92 > $V/train.done; exit 1; }
