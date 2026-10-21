@@ -19,6 +19,7 @@ from pathlib import Path
 import sys
 import tempfile
 import threading
+import urllib.error
 import urllib.request
 
 
@@ -37,8 +38,19 @@ class Decoder:
     def _post(self, body):
         request = urllib.request.Request(self.endpoint, data=canonical(body),
                                          headers={"Content-Type": "application/json"})
-        with urllib.request.urlopen(request, timeout=1800) as response:
-            return json.load(response)
+        try:
+            with urllib.request.urlopen(request, timeout=1800) as response:
+                return json.load(response)
+        except urllib.error.HTTPError as e:
+            if e.code != 400:
+                raise
+            # llama.cpp answers 400 when a prompt does not fit the slot's context (tools/server, "exceeds the
+            # available context size"); on a training panel some problems are that long. The reply is then
+            # empty, which the route reads as no answer, instead of the whole run dying (2026-10-21).
+            detail = e.read().decode("utf-8", "replace")[:300]
+            sys.stderr.write(f"server refused a request (400): {detail}\n")
+            return {"choices": [{"message": {"content": ""}, "finish_reason": "error"}],
+                    "usage": {"completion_tokens": 0}, "error": detail}
 
     def one(self, messages, max_new, temperature, top_p, stage):
         seed = int(hashlib.sha256(canonical([stage, messages])).hexdigest()[:8], 16) & 0x7fffffff
