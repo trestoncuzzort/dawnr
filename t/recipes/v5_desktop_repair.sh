@@ -14,19 +14,30 @@ MODEL=${MODEL:-v5}; IDS=${IDS:-$H/v7/dev-95.txt}; PYTHON_ATTEMPTS=${PYTHON_ATTEM
 if [ "$MODEL" = v7 ]; then
   GGUF=$H/v7/model-Q8_0.gguf; ALIAS=dawnr-v7; SEED=$H/v7/requests
   IDENT="student-v7:$(python3 -c "import json;print(json.load(open('$H/v7/export.json'))['output']['sha256'])"):llama-f1cee9941b0e843ea260bf8dd9a090fbd9711b6a"
+elif [ "$MODEL" = teacher9b ]; then
+  # a teacher audition: Qwen3.5-9B at Q4_K_M (the laptop's copy, Apache-2.0), the same route, judged by the reference check
+  GGUF=$H/teachers/Qwen3.5-9B-Q4_K_M.gguf; ALIAS=qwen3.5-9b; SEED=$A/cache-none
+  IDENT="teacher-qwen3.5-9b-q4km:$(cat $H/teachers/Qwen3.5-9B-Q4_K_M.gguf.sha):llama-f1cee9941b0e843ea260bf8dd9a090fbd9711b6a"
+elif [ "$MODEL" = v8 ]; then
+  # the v8 export written by t/recipes/v6_export.py under ~/v8/export (model-Q8_0.gguf + export.json)
+  GGUF=$H/v8/export/model-Q8_0.gguf; ALIAS=dawnr-v8; SEED=$A/cache-none
+  IDENT="student-v8:$(python3 -c "import json;print(json.load(open('$H/v8/export/export.json'))['output']['sha256'])"):llama-f1cee9941b0e843ea260bf8dd9a090fbd9711b6a"
 else
   GGUF=$H/v5/dawnr-student-00001-of-00003.gguf; ALIAS=dawnr-v5; SEED=$A/requests
   IDENT="student-v5:d855000c3dffd9772da5a2f9dc238b41d7f8337d9bf58e578e5274ebb9566a4e:llama-f1cee9941b0e843ea260bf8dd9a090fbd9711b6a"
 fi
 PYARG=""; [ "$PYTHON_ATTEMPTS" != 0 ] && PYARG="--python $PYTHON_ATTEMPTS"
+# PARALLEL server slots and CONCURRENCY route workers (neither is in the route's protocol record; answers are seeded by
+# stage and prompt, so a run can resume at a different setting from the same cache). 16/16 for long training-panel runs.
+PARALLEL=${PARALLEL:-8}; CONCURRENCY=${CONCURRENCY:-8}
 export LD_LIBRARY_PATH=$L PYTHONPATH=$D/t PYTHONUNBUFFERED=1
 mkdir -p $A
 cd $D || exit 1
 rm -f $A/gen.done
-[ "$MODEL" = v7 ] || (cd $H/v5 && sha256sum -c --quiet dawnr-student.sha256) || { echo "$(date -u +%FT%TZ) v5 shards fail their checksum" > $A/gen.log; echo 91 > $A/gen.done; exit 1; }
+[ "$MODEL" != v5 ] || (cd $H/v5 && sha256sum -c --quiet dawnr-student.sha256) || { echo "$(date -u +%FT%TZ) v5 shards fail their checksum" > $A/gen.log; echo 91 > $A/gen.done; exit 1; }
 echo "$(date -u +%FT%TZ) start identity=$IDENT" > $A/gen.log
 $L/llama-server --model $GGUF --alias $ALIAS --host 127.0.0.1 --port $PORT \
-  --n-gpu-layers 99 --threads 16 --threads-batch 16 --parallel 8 --ctx-size 32768 \
+  --n-gpu-layers 99 --threads 16 --threads-batch 16 --parallel $PARALLEL --ctx-size $((PARALLEL * 4096)) \
   --chat-template-kwargs '{"enable_thinking":false}' > $A/server.log 2>&1 &
 SP=$!
 for i in $(seq 1 240); do curl -sf http://127.0.0.1:$PORT/health >/dev/null && break; timeout 1 tail -f /dev/null; done
@@ -35,7 +46,7 @@ echo "$(date -u +%FT%TZ) server healthy; routes starting" >> $A/gen.log
 route() {
   local tag=$1; shift
   python3 $D/t/recipes/v6_server_route.py --endpoint http://127.0.0.1:$PORT/v1/chat/completions --model $ALIAS \
-    --identity "$IDENT" --cache $A/cache-$tag --concurrency 8 \
+    --identity "$IDENT" --cache $A/cache-$tag --concurrency $CONCURRENCY \
     -- --tag $tag --ids-file $IDS --pool v5 $PYARG --spec-samples 4 --per-problem 3 --samples 2 \
     --max-new 1024 --batch 16 "$@" > $A/route-$tag.log 2>&1
   echo "$(date -u +%FT%TZ) $tag rc=$?" >> $A/gen.log
