@@ -29,7 +29,8 @@ Use `dawnr` for an interactive session, `dawnr help ask` for checked-code
 examples, or the [user guide](docs/USER-GUIDE.md) for setup and troubleshooting.
 You can read `./bin/dawnr --help` before installing anything.
 Downloads use a [single rolling release](release/ROLLING.md); its current
-model remains v5 while the v6 candidate is evaluated.
+model is dawnr v5; the candidates since it (v6, v7, v8) did not separate from it under the measured noise of the
+development panel, and v9 is in training (see the model status below).
 
 ## What is implemented
 
@@ -121,7 +122,33 @@ Results and corrections are kept in [SCOREBOARD.md](SCOREBOARD.md), [docs/MEASUR
 [CORRECTIONS.md](CORRECTIONS.md), and the linked experiment records. They describe particular runs and populations.
 Large weights and many generated run artifacts are downloaded or produced separately from a source checkout.
 
-The [October 11 GPU retrain](t/PREDICT-2026-10-11-gcp-student.md) trained on 405 rows from the recovered corpus,
+### Model status, 2026-10-22
+
+The installed model is dawnr v5 (the `student-v5` adapter of the model card). Every candidate since then is read
+against it on the development panel: the count that matters is problems that pass their tests, the specification
+gates and all seven kernels from the frozen 17-call route ("clean"), with the all-seven-kernels count beside it.
+
+| model | what changed | clean / all-seven, one column per decode | record |
+|---|---|---|---|
+| dawnr v5, installed | the original 4,189 rows | 6, 4, 6 / 3, 2, 3 | [seed variance](t/PREDICT-2026-10-22-seed-variance.md) |
+| v5 trained again, seed 2 | nothing but the training seed | 4, 5, 4 / 2, 1, 1 | same |
+| v6 corrective | corrected data | 6 / 2 | [v6](t/PREDICT-2026-10-18-v6.md) |
+| v7 | decomposed rows | 4 / 3 | [decomposed rows](t/PREDICT-2026-10-19-decomposed-rows.md) |
+| v8 | 980 self-distilled specification rows | 4, 4, 5 / 1, 2, 2 | [v8](t/PREDICT-2026-10-21-v8-spec-rows.md), [three decodes](t/PREDICT-2026-10-22-seed-variance.md) |
+| v9 | v5's rows plus self-distilled rows kept at a 90% strength floor | in training | [v9](t/PREDICT-2026-10-22-v9-strict-rows.md) |
+
+What the week established: a sampling seed alone moves the clean count by two and a training seed by one to two,
+so none of v6, v7 or v8 is separable from v5 on one decode of one trained model (paired per-problem tests, p above
+0.6 in every case). From v9 on, a candidate is read on two training seeds and three decodes each, paired per
+problem on a 240-problem development panel, and is never called better on a mean. v8's rows did change one thing
+the count cannot see: the three-test gate's precision on the ceiling instrument fell from 0.785 to 0.515, which is
+why v9 keeps only the self-distilled specifications that agree with the reference at 1,000 draws and reject 90% of
+both mutant families. The plateau's causes and the plan from here (teacher specifications from DeepSeek v3.2 and a
+primed 9B for the problems the student fails, repair traces as training data, then reinforcement learning with the
+verifier as the reward) are in [the plateau note](internal/RESEARCH-2026-10-22-plateau.md), with four verified lists
+of 250 papers and repositories each under `internal/research-2026-10-22/`.
+
+Earlier: the [October 11 GPU retrain](t/PREDICT-2026-10-11-gcp-student.md) trained on 405 rows from the recovered corpus,
 with 18 of 22 new verified answers represented (17 distinct additions). Four new answers overlap held-out
 specification functions and were excluded. The candidate proves **21/33 supplied specifications** in all seven
 systems; the reference-program control passes all 33. On clean-182 programming problems, **4/182 pass the
