@@ -8,7 +8,10 @@ D=t/out/v5-repair-20261021; H=t@10.42.0.2
 for tag in v8-20261021-dev v8-20261021-oracle39; do
   rsync -a $H:~/v5-repair/proof-results/$tag $D/proof-results/ || exit 1
   rsync -a --exclude raw $H:~/dawnr/t/out/spec-experiment/$tag $D/spec-experiment/ || exit 1
-  [ -e t/out/spec-experiment/$tag ] || ln -s ../v5-repair-20261021/spec-experiment/$tag t/out/spec-experiment/$tag
+  # the laptop generated these arms, so t/out/spec-experiment/<tag> already exists here: merge the desktop's grader
+  # artifacts (kernels.md, extract.json, tests.json, tasks/) into it instead of linking (2026-10-22: the pairing read a
+  # generation without its kernel table and reported incomplete coverage)
+  if [ -e t/out/spec-experiment/$tag ] && [ ! -L t/out/spec-experiment/$tag ]; then rsync -a --exclude raw $H:~/dawnr/t/out/spec-experiment/$tag/ t/out/spec-experiment/$tag/; else ln -s ../v5-repair-20261021/spec-experiment/$tag t/out/spec-experiment/$tag 2>/dev/null; fi
 done
 rsync -a $H:~/v5-repair/v8-ceiling.json $D/ 2>/dev/null; cp t/out/v8-export/export.json t/out/v8-export/inputs.json $D/v8-export/ 2>/dev/null
 mkdir -p $D/v8-export

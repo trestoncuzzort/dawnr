@@ -3393,3 +3393,21 @@ computer-control plans and experiment results remain historical records.
   (`t/recipes/v8_spec_rows.py`), audit, fill the PREDICT, train on the desktop (`t/recipes/v8_desktop_train.sh`).
 - The desktop's RTX 4080 fell off the bus twice today (13:23Z under three model servers, 14:23Z under one); the guard
   rebooted it both times and now caps it at 200 W with an earlier rest; a third drop at 200 W means the fault is physical.
+
+## 2026-10-22: v8 (self-distilled specification rows) falsified on every count; the instrument's variance is the next row
+
+- v8 trained on the exact v5 recipe from the corrected snapshot plus 980 self-distilled rows (637 reference-checked
+  specifications for 346 new problems): steps 1 to 500 on a Modal H100 (stopped by the user over the charge), 501 to 1,550
+  on the desktop at a 150 W cap with no drop; exported on the laptop, generated on the laptop's GPU, graded in the desktop
+  container, paired. Frozen route 48 / 17 / 12 / **4 clean / 1 all-seven** against v5's 51 / 18 / 13 / 6 / 3; the 39-call
+  oracle route 65 / 36 / 17 / 5 / 1 against 63 / 28 / 16 / 7 / 3. The ceiling instrument: a reference-correct specification
+  for 29 of 65 problems within twenty candidates, exactly v5's count, with the three-test gate's precision down from 0.785
+  to 0.515. The rows taught test-fitting, not specification.
+- The primed Qwen3.5-9B teacher (grammar card plus six worked examples): 15 reference-correct, 6 beyond the student.
+- Pattern of the week: v6 corrective 6 / 2, v7 4 / 3, v8 4 / 1, all at or below v5's 6 / 3 by one to three problems, and
+  the variance of a count of six on 95 problems under a training seed or a sampling seed has never been measured. Registered
+  next: `t/PREDICT-2026-10-22-seed-variance.md` (v5's exact rows and recipe, seed 2, on the desktop; v5 decoded with a
+  second sampling seed), with a Haiku scout's list on seed variance and small-benchmark statistics
+  (`internal/research-2026-10-22/variance-scout.md`).
+- The desktop's card has held for 13.6 h under ASPM off, runtime PM off, clock floors and a 150 W cap, five of them in
+  training; the user's knock, not the workload, preceded the earlier reseat.

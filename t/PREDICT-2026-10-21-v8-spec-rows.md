@@ -79,3 +79,28 @@ with the pinned converter; generation on the desktop; the seven-kernel grade in 
   repair sub-skills, dense reward). P2 fails: self-distillation did not move the skill; the next data is a
   teacher's (an open-weight model run locally, `internal/research-2026-10-21/teacher-scout.md`). P1 holds: v8
   qualifies for the promotion floor (33 supplied specifications, all seven at least 27) before release.
+
+## Result (2026-10-22 07:19Z): P1, P2 and P3 falsified; v8 is below v5 on every count
+
+Training finished on the desktop at 04:41Z (steps 501 to 1,550 at a 150 W cap, 18 to 19 s a step, no drop); export on the
+laptop (`t/out/v8-export`, sha `1c51a168…`); both arms generated on the laptop's GPU; graded in the desktop container;
+paired (`release/evidence/v8-development-2026-10-21.json`, `v8-oracle39-2026-10-21.json`).
+
+| arm | Python | kept spec | answered | clean | all seven | paired against |
+|---|---:|---:|---:|---:|---:|---|
+| v8, frozen route | 48 | 17 | 12 | **4** (lost 450, 634) | **1** (lost 476, 634) | v5 control 51 / 18 / 13 / 6 / 3 |
+| v8, 39-call oracle route | 65 | 36 | 17 | **5** (lost 270, 634) | **1** (lost 476, 634) | v5 under the route 63 / 28 / 16 / 7 / 3 |
+
+The ceiling instrument (`t/out/v5-repair-20261021/v8-ceiling.json`): Python 65 of 95; a reference-correct specification
+within five candidates for 19 problems (v5 18), within twenty for 29 (v5 29), the same 24 problems plus five each way; the
+three-test gate keeps 130 candidates of which 67 are right, precision 0.515 (v5 0.785). **P1 falsified** (clean 4),
+**P2 falsified** (19 and 29 against 25 and 36), **P3 falsified** (clean 5). The self-distilled rows did not add a single
+problem to the specification skill and made the student write more candidates that fit the three tests and not the
+problem; the proof stage lost two of the three all-seven answers.
+
+Reading, by P4, and one step further. Every candidate retrained this week from the corrected data (v6 corrective 6 / 2,
+v7 4 / 3, v8 4 / 1) lands at or below v5 (6 / 3) by one to three problems, and no one has measured what one training
+seed or one sampling seed does to a count of six on 95 problems. Before any more data rows, the instrument's variance is
+the row (t/PREDICT-2026-10-22-seed-variance.md): v5's exact rows and recipe with a second seed, and v5 decoded with a
+second sampling seed. If a seed alone moves the count by two, this panel cannot separate these candidates, and the
+protocol changes before the data does.
