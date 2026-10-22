@@ -3469,4 +3469,4 @@ computer-control plans and experiment results remain historical records.
   5.33 against 4.33, three problems up and four down, p 0.69), all-seven 2.67 against 1.33; the twin loses 549 outright
   and gains 649, which v5 never solves. A training seed alone has the shape of every data candidate this week. Protocol
   from v9: training-side candidates on two seeds and three decodes each, paired per problem over six decodes on the
-  widened 206-problem development panel (`t/out/v6-20261018/dev-206.txt`); the clean 182 stays held out.
+  widened 240-problem development panel (`t/out/v6-20261018/dev-240.txt`: the 95 plus the wider reader's 145); the clean 182 stays held out.

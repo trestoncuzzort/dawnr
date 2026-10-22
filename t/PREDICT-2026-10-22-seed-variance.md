@@ -135,9 +135,9 @@ every verdict of the week that rested on one trained model and one decode was a 
 - A candidate trained from new rows is read against v5 on two training seeds and three decodes each, paired per
   problem over the six decodes; the control is v5's own six (three of seed 1, three of seed 2). Route-side changes
   keep the three decodes on one model.
-- The development panel widens: the 95 plus the 111 problems only the wider reader reads
-  (`spec_experiment.wider_pool`, no model was trained on them), 206 in all (`t/out/v6-20261018/dev-206.txt`). At
-  about five clean of 95 the sign test needs about six problems moving one way; at 206 the same candidate has twice
+- The development panel widens: the 95 plus the 145 problems only the wider reader reads
+  (`spec_experiment.wider_pool`, no model was trained on them), 240 in all (`t/out/v6-20261018/dev-240.txt`; the wider set was 111 on 2026-10-05 and holds 145 today). At
+  about five clean of 95 the sign test needs about six problems moving one way; at 240 the same candidate has two and a half times
   the problems to move. The clean 182 stays held out for the final reading.
 - A candidate is called better only on the paired per-problem fractions, never on a mean, and the three instruments
   that do not carry this noise (the ceiling instrument's gate precision, the kept-row counts of the teachers, the
