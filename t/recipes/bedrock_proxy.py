@@ -83,7 +83,8 @@ def converse_cli(model: str, region: str, system: list[dict], messages: list[dic
                 return json.loads(p.stdout)
             err = p.stderr.strip()[-400:]
             transient = any(k in err for k in ("Throttling", "TooManyRequests", "ServiceUnavailable",
-                                                "ModelNotReady", "timed out", "Timeout", "InternalServer"))
+                                                "ModelNotReady", "timed out", "Timeout", "InternalServer",
+                                                "Rate exceeded", "(429)", "CreateOAuth2Token"))
             if not transient or attempt == attempts:
                 raise RuntimeError(err or f"aws exited {p.returncode}")
             time.sleep(delay)
@@ -117,8 +118,14 @@ class Handler(BaseHTTPRequestHandler):
             try:
                 result = converse_cli(self.server.model, self.server.region, system, messages, config)
             except Exception as e:                              # noqa: BLE001
+                # a call that fails after every retry becomes an empty "length" reply, exactly what the route makes of
+                # llama.cpp's 400 (v6_server_route.Decoder._post): one bad call costs one candidate, never the chunk
+                # (2026-10-22 14:51Z: one "CreateOAuth2Token Rate exceeded" 502 killed a 50-problem chunk)
                 self.server.log({"ok": False, "error": str(e)[:300], "seconds": round(time.time() - t0, 1)})
-                return self._send(502, {"error": str(e)[:300]})
+                return self._send(200, {"model": self.server.model, "error": str(e)[:300],
+                                        "choices": [{"index": 0, "message": {"role": "assistant", "content": ""},
+                                                     "finish_reason": "length"}],
+                                        "usage": {"prompt_tokens": 0, "completion_tokens": 0, "total_tokens": 0}})
         reply = from_converse(result, int(body.get("max_tokens") or 1024), self.server.model)
         self.server.log({"ok": True, "seconds": round(time.time() - t0, 1), "stop": reply["stop_reason_raw"],
                          **reply["usage"]})
