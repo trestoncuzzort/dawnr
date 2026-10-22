@@ -3481,3 +3481,7 @@ computer-control plans and experiment results remain historical records.
   student's own dropped candidates and 293 from the teachers' (`release/evidence/v10-components-2026-10-22.json`). The
   base (v9's rows or v5's) is decided by v9's precision reading tonight; the self-generated share stays at 16%, the
   teacher and repair rows are distillation, not self-training.
+- 23:58Z, the first 240-problem reading: v5 30 / 29 / 31 clean (mean 30.0) against its seed-2 twin 22 / 25 / 22 (23.0),
+  12 problems up and 18 down, permutation p 0.084; the wider 145 carry the route's successes (about 25 of them clean on
+  every v5 decode against 6 of the 95) and the training seed's effect holds across decodes, so v5 is likely a good draw of
+  its recipe. Every candidate from v9 is read against v5's six decodes (both seeds), mean 26.5 clean on 240.

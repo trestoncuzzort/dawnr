@@ -145,3 +145,24 @@ every verdict of the week that rested on one trained model and one decode was a 
 
 Sources: arXiv:2406.10229 (seed variance of benchmark scores); arXiv:2605.30315 (paired resolution); the receipts
 named above.
+
+## Result (2026-10-22 23:58Z): v5 and its seed-2 twin on the 240-problem panel
+
+The wider reader's 145 problems were generated for both models at the same three seed offsets (laptop GPU; v5's graded
+in the desktop container, the twin's natively on the laptop's seven kernels, the first time that path was used for a
+reading) and joined per decode with the 95 (`t/recipes/three_decode_report.py`, parts read on their own panels;
+receipt `release/evidence/three-decode-240-v5-v5s2-2026-10-22.json`):
+
+| model, count on 240 | decode 1 | decode 2 | decode 3 | mean |
+|---|---|---|---|---|
+| v5, clean | 31 | 29 | 30 | 30.00 |
+| v5 seed 2, clean | 22 | 25 | 22 | 23.00 |
+| v5, all-seven | 13 | 12 | 13 | 12.67 |
+| v5 seed 2, all-seven | 11 | 12 | 9 | 10.67 |
+
+Paired per problem, clean: 12 problems up and 18 down, mean difference -7.00, sign test p 0.36, permutation p 0.084;
+all-seven 4 up and 5 down, p 0.46. Two things the 95 could not show: the wider 145 are where the route succeeds (v5
+solves about 25 of them cleanly on every decode against 6 of the 95), so the panel's resolution lives there; and the
+training seed's effect is not decode noise, since the twin sits six or seven problems under v5 on all three decodes.
+v5 may be a good draw of its own recipe. The protocol's control for every candidate is therefore v5's six decodes (three
+of each seed), mean 26.5 clean on 240, and a candidate must beat that paired per problem.

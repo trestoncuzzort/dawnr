@@ -1,5 +1,5 @@
 {
- "checked": 2290,
+ "checked": 2393,
  "tags": [
   "dawnr-chat-r12c-s1337",
   "dawnr-chat-r12c-s1339",
@@ -87,6 +87,9 @@
   "student-r5-v3",
   "student-r6-g",
   "student-r6-v3",
+  "v5s2-20261022-wider-off0",
+  "v5s2-20261022-wider-off1000",
+  "v5s2-20261022-wider-off2000",
   "v6-20261018-corrective-dev",
   "v6-20261018-v5-dev-local"
  ],
@@ -191,6 +194,12 @@
   "student-r5-v3/mbpp_768__check_Odd_Parity",
   "student-r6-g/mbpp_768__check_Odd_Parity",
   "student-r6-v3/mbpp_768__check_Odd_Parity",
+  "v5s2-20261022-wider-off0/mbpp_357__find_max",
+  "v5s2-20261022-wider-off0/mbpp_805__max_sum_list",
+  "v5s2-20261022-wider-off1000/mbpp_357__find_max",
+  "v5s2-20261022-wider-off2000/mbpp_357__find_max",
+  "v5s2-20261022-wider-off2000/mbpp_660__find_Points",
+  "v5s2-20261022-wider-off2000/mbpp_805__max_sum_list",
   "v6-20261018-corrective-dev/mbpp_186__check_literals",
   "v6-20261018-corrective-dev/mbpp_520__get_lcm",
   "v6-20261018-corrective-dev/mbpp_708__Convert",
@@ -310,7 +319,13 @@
   "v6-20261018-corrective-dev/mbpp_520__get_lcm": "t 1\ngate loops\ntask mbpp_520__get_lcm(s: seq) returns (r: int)\n  requires len(s) > 0\n  ensures r == get_lcm_spec(s)\nspec fun get_lcm_spec(s: seq): int\n  decreases len(s)\n= if len(s) == 1 then s[0] else get_lcm_spec(s[0..len(s) - 1]) * get_lcm_spec([s[len(s) - 1]]) / gcd(get_lcm_spec(s[0..len(s) - 1]), s[len(s) - 1])\n{\n  r := s[0];\n  var i: int := 1;\n  while i < len(s)\n    invariant 1 <= i and i <= len(s)\n    invariant r == get_lcm_spec(s[0..i])\n    decreases len(s) - i\n  {\n    var next: int := s[i];\n    r := r * next / gcd(r, next);\n    i := i + 1;\n  }\n}",
   "v6-20261018-corrective-dev/mbpp_708__Convert": "t 1\ngate loops\ntask mbpp_708__Convert(s: seq) returns (r: seq<seq>)\n  ensures len(r) == len(s.split())\n  ensures forall i in [0, len(r)) . r[i] == s.split()[i]\n{\n  r := s.split();\n}",
   "v6-20261018-corrective-dev/mbpp_745__divisible_by_digits": "t 1\ngate loops\ntask mbpp_745__divisible_by_digits(a: int, b: int) returns (r: seq)\n  requires a <= b\n  ensures forall n in [a, b + 1) . n in r ==> (forall d in digits(n) . d != 0 and n % d == 0)\n  ensures forall n in [a, b + 1) . (forall d in digits(n) . d != 0 and n % d == 0) ==> n in r\nspec fun digits(n: int): seq\n  decreases n\n= if n <= 0 then [] else [n % 10] + digits(n / 10)\n{\n  r := [];\n  var i: int := a;\n  while i <= b\n    invariant a <= i and i <= b + 1\n    invariant forall n in [a, i) . n in r ==> (forall d in digits(n) . d != 0 and n % d == 0)\n    invariant forall n in [a, i) . (forall d in digits(n) . d != 0 and n % d == 0) ==> n in r\n    decreases b + 1 - i\n  {\n    if (forall d in digits(i) . d != 0 and i % d == 0) {\n      r := r + [i];\n    }\n    i := i + 1;\n  }\n}",
-  "v6-20261018-corrective-dev/mbpp_92__is_undulating": "t 1\ngate loops\ntask mbpp_92__is_undulating(s: seq) returns (r: bool)\n  ensures r == (len(s) > 1 and (forall i in [0, len(s) - 1) . s[i] != s[i + 1]))\n{\n  if len(s) <= 1 {\n    r := false;\n  } else {\n    var i: int := 0;\n    var ok: bool := true;\n    while i < len(s) - 1\n      invariant 0 <= i and i <= len(s) - 1\n      invariant ok == (forall j in [0, i) . s[j] != s[j + 1])\n      decreases len(s) - 1 - i\n    {\n      if s[i] == s[i + 1] {\n        ok := false;\n      }\n      i := i + 1;\n    }\n    r := ok;\n  }\n}"
+  "v6-20261018-corrective-dev/mbpp_92__is_undulating": "t 1\ngate loops\ntask mbpp_92__is_undulating(s: seq) returns (r: bool)\n  ensures r == (len(s) > 1 and (forall i in [0, len(s) - 1) . s[i] != s[i + 1]))\n{\n  if len(s) <= 1 {\n    r := false;\n  } else {\n    var i: int := 0;\n    var ok: bool := true;\n    while i < len(s) - 1\n      invariant 0 <= i and i <= len(s) - 1\n      invariant ok == (forall j in [0, i) . s[j] != s[j + 1])\n      decreases len(s) - 1 - i\n    {\n      if s[i] == s[i + 1] {\n        ok := false;\n      }\n      i := i + 1;\n    }\n    r := ok;\n  }\n}",
+  "v5s2-20261022-wider-off0/mbpp_357__find_max": "t 1\ngate loops\ntask mbpp_357__find_max(records: seq<seq>) returns (r: int)\n  requires len(records) > 0\n  ensures forall i in [0, len(records)) . r >= records[i][0] and r >= records[i][1]\n  ensures exists i in [0, len(records)) . r == records[i][0] or r == records[i][1]\n{\n  r := records[0][0];\n  var i: int := 1;\n  while i < len(records)\n    invariant forall j in [0, i) . j < len(records) ==> r >= records[j][0] and r >= records[j][1]\n    invariant exists j in [0, i) . j < len(records) and r == records[j][0] or r == records[j][1]\n    invariant i >= 1\n    decreases len(records) - i\n  {\n    var curr: int := records[i][0];\n    var next: int := records[i][1];\n    if curr > r or next > r {\n      r := if curr > r then curr else next;\n    }\n    i := i + 1;\n  }\n}",
+  "v5s2-20261022-wider-off0/mbpp_805__max_sum_list": "t 1\ntask mbpp_805__max_sum_list(s: seq<seq>) returns (r: seq)\n  requires len(s) > 0\n  ensures forall i in [0, len(s)) . sum(r) >= sum(s[i])\n  ensures len(r) == len(s[0])\n{\n  r := s[0];\n  var i: int := 1;\n  while i < len(s)\n    invariant 1 <= i\n    invariant i <= len(s)\n    invariant len(r) == len(s[0])\n    invariant forall j in [0, i) . sum(r) >= sum(s[j])\n    decreases len(s) - i\n  {\n    if sum(s[i]) > sum(r) {\n      r := s[i];\n    }\n    i := i + 1;\n  }\n}",
+  "v5s2-20261022-wider-off1000/mbpp_357__find_max": "t 1\ngate loops\ntask mbpp_357__find_max(records: seq<seq>) returns (r: int)\n  requires len(records) > 0\n  ensures forall i in [0, len(records)) . r >= records[i][0] and r >= records[i][1]\n  ensures exists i in [0, len(records)) . r == records[i][0] or r == records[i][1]\n{\n  r := records[0][0];\n  var i: int := 1;\n  while i < len(records)\n    invariant forall j in [0, i) . j < len(records) ==> r >= records[j][0] and r >= records[j][1]\n    invariant exists j in [0, i) . j < len(records) and r == records[j][0] or r == records[j][1]\n    invariant i >= 1\n    decreases len(records) - i\n  {\n    var curr: int := records[i][0];\n    var next: int := records[i][1];\n    if curr > r or next > r {\n      r := if curr > r then curr else next;\n    }\n    i := i + 1;\n  }\n}",
+  "v5s2-20261022-wider-off2000/mbpp_357__find_max": "t 1\ngate loops\ntask mbpp_357__find_max(records: seq<seq>) returns (r: int)\n  requires len(records) > 0\n  ensures forall i in [0, len(records)) . r >= records[i][0] and r >= records[i][1]\n  ensures exists i in [0, len(records)) . r == records[i][0] or r == records[i][1]\n{\n  r := records[0][0];\n  var i: int := 1;\n  while i < len(records)\n    invariant forall j in [0, i) . j < len(records) ==> r >= records[j][0] and r >= records[j][1]\n    invariant exists j in [0, i) . j < len(records) and r == records[j][0] or r == records[j][1]\n    invariant i >= 1\n    decreases len(records) - i\n  {\n    var curr: int := records[i][0];\n    var next: int := records[i][1];\n    if curr > r or next > r {\n      r := if curr > r then curr else next;\n    }\n    i := i + 1;\n  }\n}",
+  "v5s2-20261022-wider-off2000/mbpp_660__find_Points": "t 1\ntask mbpp_660__find_Points(a: int, b: int, c: int, d: int) returns (r: seq)\n  requires a <= b\n  requires c <= d\n  ensures r == [min(a, c), max(b, d)]\n{\n  r := [min(a, c), max(b, d)];\n}",
+  "v5s2-20261022-wider-off2000/mbpp_805__max_sum_list": "t 1\ngate loops\ntask mbpp_805__max_sum_list(lst: seq<seq>) returns (r: seq)\n  requires len(lst) >= 1\n  ensures forall i in [0, len(lst)) . r == lst[i] ==> (forall j in [0, len(lst)) . sum(lst[j]) <= sum(r))\n  ensures forall i in [0, len(lst)) . sum(lst[i]) >= sum(r) ==> r == lst[i]\n{\n  r := lst[0];\n  var i: int := 1;\n  while i < len(lst)\n    invariant 1 <= i\n    invariant i <= len(lst)\n    invariant forall k in [0, i) . r == lst[k] ==> (forall j in [0, len(lst)) . sum(lst[j]) <= sum(r))\n    invariant forall k in [0, i) . sum(lst[k]) >= sum(r) ==> r == lst[k]\n    decreases len(lst) - i\n  {\n    if sum(lst[i]) > sum(r) {\n      r := lst[i];\n    }\n    i := i + 1;\n  }\n}"
  },
  "results": {
   "prover-train/mbpp_135__hexagonal_num": {
@@ -11420,6 +11435,3866 @@
    "pool": "v5",
    "seed": 1,
    "attempts": 1000
+  },
+  "v5s2-20261022-wider-off0/mbpp_106__add_lists": {
+   "status": "no valid draws",
+   "draws": 0,
+   "pre_completeness_unmeasurable": "reference never ran",
+   "points_held": 3,
+   "points_failed": 0,
+   "points_excluded": 0,
+   "task_id": 106,
+   "task_sha256": "b55dcad2776563671e70bafeef91bca9a514df691cb0d602adfdc36861618af9",
+   "pool": "v7",
+   "seed": 1,
+   "attempts": 1000
+  },
+  "v5s2-20261022-wider-off0/mbpp_120__max_product_tuple": {
+   "status": "agrees",
+   "draws": 78,
+   "mutants_rejected": 297,
+   "mutants_accepted": 587,
+   "completeness": 0.336,
+   "weak": true,
+   "weak_witness": {
+    "args": [
+     [
+      [
+       3,
+       2
+      ]
+     ]
+    ],
+    "reference_said": 6,
+    "also_accepts": 7
+   },
+   "cross_rejected": 48,
+   "cross_accepted": 151,
+   "cross_completeness": 0.241,
+   "cross_witness": {
+    "args": [
+     [
+      [
+       -4,
+       4
+      ]
+     ]
+    ],
+    "reference_said": 16,
+    "also_accepts": 6,
+    "which_is_the_answer_for": [
+     [
+      [
+       3,
+       2
+      ]
+     ]
+    ]
+   },
+   "domain_probes": 922,
+   "domain_admitted": 681,
+   "reference_ran": 78,
+   "pre_completeness": 0.261,
+   "pre_incomplete": true,
+   "domain_witness": {
+    "args": [
+     [
+      [
+       1
+      ]
+     ]
+    ],
+    "reference_raised": true
+   },
+   "larger": {
+    "status": "no valid draws",
+    "draws": 0,
+    "requires_caps_size": false
+   },
+   "points_held": 3,
+   "points_failed": 0,
+   "points_excluded": 0,
+   "task_id": 120,
+   "task_sha256": "85370b132a2baf59dcca6816e5c59c958595c452fc8008caea031b2077054c2a",
+   "pool": "v7",
+   "seed": 1,
+   "attempts": 1000
+  },
+  "v5s2-20261022-wider-off0/mbpp_132__tup_string": {
+   "status": "agrees",
+   "draws": 1000,
+   "mutants_rejected": 6887,
+   "mutants_accepted": 0,
+   "completeness": 1.0,
+   "weak": false,
+   "cross_rejected": 2970,
+   "cross_accepted": 0,
+   "cross_completeness": 1.0,
+   "larger": {
+    "status": "agrees",
+    "draws": 200,
+    "completeness": 1.0,
+    "cross_completeness": 1.0,
+    "mutants_rejected": 1590,
+    "mutants_accepted": 0,
+    "cross_rejected": 594,
+    "cross_accepted": 0,
+    "requires_caps_size": false
+   },
+   "points_held": 3,
+   "points_failed": 0,
+   "points_excluded": 0,
+   "task_id": 132,
+   "task_sha256": "7aeb2c626937ca89fb1e366589b8a83f921f8797433968e83abc1f1de3fd2dbe",
+   "pool": "v7",
+   "seed": 1,
+   "attempts": 1000
+  },
+  "v5s2-20261022-wider-off0/mbpp_154__specified_element": {
+   "status": "agrees",
+   "draws": 155,
+   "mutants_rejected": 868,
+   "mutants_accepted": 0,
+   "completeness": 1.0,
+   "weak": false,
+   "cross_rejected": 450,
+   "cross_accepted": 0,
+   "cross_completeness": 1.0,
+   "domain_probes": 597,
+   "domain_admitted": 105,
+   "reference_ran": 403,
+   "pre_completeness": 0.824,
+   "pre_incomplete": true,
+   "domain_witness": {
+    "args": [
+     [
+      [
+       2,
+       3,
+       1
+      ],
+      [
+       0
+      ],
+      [
+       4,
+       2,
+       -1
+      ]
+     ],
+     2
+    ],
+    "reference_raised": true
+   },
+   "larger": {
+    "status": "agrees",
+    "draws": 8,
+    "completeness": 1.0,
+    "cross_completeness": 1.0,
+    "mutants_rejected": 48,
+    "mutants_accepted": 0,
+    "cross_rejected": 17,
+    "cross_accepted": 0,
+    "requires_caps_size": false
+   },
+   "points_held": 3,
+   "points_failed": 0,
+   "points_excluded": 0,
+   "task_id": 154,
+   "task_sha256": "cd52b7b5329fdb01fd5d849b8a43de7bbab16299380a4b0e8cdbb717f5c94312",
+   "pool": "v7",
+   "seed": 1,
+   "attempts": 1000
+  },
+  "v5s2-20261022-wider-off0/mbpp_213__concatenate_strings": {
+   "status": "agrees",
+   "draws": 165,
+   "outside_requires": 835,
+   "mutants_rejected": 603,
+   "mutants_accepted": 0,
+   "completeness": 1.0,
+   "weak": false,
+   "cross_rejected": 476,
+   "cross_accepted": 0,
+   "cross_completeness": 1.0,
+   "larger": {
+    "status": "agrees",
+    "draws": 11,
+    "outside_requires": 189,
+    "completeness": 1.0,
+    "cross_completeness": 1.0,
+    "mutants_rejected": 55,
+    "mutants_accepted": 0,
+    "cross_rejected": 27,
+    "cross_accepted": 0,
+    "requires_caps_size": false
+   },
+   "points_held": 3,
+   "points_failed": 0,
+   "points_excluded": 0,
+   "task_id": 213,
+   "task_sha256": "2d0bcb1128dc137e8021228287d5ecaaceb3a941dc41d39a420f86851d050881",
+   "pool": "v7",
+   "seed": 1,
+   "attempts": 1000
+  },
+  "v5s2-20261022-wider-off0/mbpp_257__swap_numbers": {
+   "status": "agrees",
+   "draws": 1000,
+   "mutants_rejected": 6935,
+   "mutants_accepted": 0,
+   "completeness": 1.0,
+   "weak": false,
+   "cross_rejected": 2993,
+   "cross_accepted": 0,
+   "cross_completeness": 1.0,
+   "larger": {
+    "status": "agrees",
+    "draws": 200,
+    "completeness": 1.0,
+    "cross_completeness": 1.0,
+    "mutants_rejected": 1398,
+    "mutants_accepted": 0,
+    "cross_rejected": 594,
+    "cross_accepted": 0,
+    "requires_caps_size": false
+   },
+   "points_held": 3,
+   "points_failed": 0,
+   "points_excluded": 0,
+   "task_id": 257,
+   "task_sha256": "bab0248006cde84bca001594181c07d667276c000761e391ddc0766f6fc9edc4",
+   "pool": "v7",
+   "seed": 1,
+   "attempts": 1000
+  },
+  "v5s2-20261022-wider-off0/mbpp_261__division_elements": {
+   "status": "agrees",
+   "draws": 26,
+   "outside_requires": 298,
+   "skipped": {
+    "reference result has no t value": 606
+   },
+   "mutants_rejected": 60,
+   "mutants_accepted": 0,
+   "completeness": 1.0,
+   "weak": false,
+   "cross_rejected": 38,
+   "cross_accepted": 0,
+   "cross_completeness": 1.0,
+   "domain_probes": 70,
+   "domain_admitted": 0,
+   "reference_ran": 930,
+   "pre_completeness": 1.0,
+   "pre_incomplete": false,
+   "larger": {
+    "status": "reference result has no t value",
+    "draws": 0,
+    "outside_requires": 18,
+    "skipped": {
+     "reference result has no t value": 146
+    },
+    "requires_caps_size": false
+   },
+   "points_held": 3,
+   "points_failed": 0,
+   "points_excluded": 0,
+   "task_id": 261,
+   "task_sha256": "c6a27a4b779216166673b5fb173e6abe61142b72adcbc5af96456a11ea8a7f41",
+   "pool": "v7",
+   "seed": 1,
+   "attempts": 1000
+  },
+  "v5s2-20261022-wider-off0/mbpp_273__substract_elements": {
+   "status": "agrees",
+   "draws": 172,
+   "outside_requires": 828,
+   "mutants_rejected": 1052,
+   "mutants_accepted": 0,
+   "completeness": 1.0,
+   "weak": false,
+   "cross_rejected": 493,
+   "cross_accepted": 0,
+   "cross_completeness": 1.0,
+   "larger": {
+    "status": "agrees",
+    "draws": 12,
+    "outside_requires": 188,
+    "completeness": 1.0,
+    "cross_completeness": 1.0,
+    "mutants_rejected": 95,
+    "mutants_accepted": 0,
+    "cross_rejected": 30,
+    "cross_accepted": 0,
+    "requires_caps_size": false
+   },
+   "points_held": 3,
+   "points_failed": 0,
+   "points_excluded": 0,
+   "task_id": 273,
+   "task_sha256": "72b2671e5dcc077999b279e8d69d278873f0a62b580da34018f07d8ffecd5355",
+   "pool": "v7",
+   "seed": 1,
+   "attempts": 1000
+  },
+  "v5s2-20261022-wider-off0/mbpp_357__find_max": {
+   "status": "disagrees",
+   "ensures": 1,
+   "args": [
+    [
+     [
+      2,
+      -1,
+      4
+     ]
+    ]
+   ],
+   "reference_said": 4,
+   "agreed_before": 68,
+   "points_held": 3,
+   "points_failed": 0,
+   "points_excluded": 0,
+   "task_id": 357,
+   "task_sha256": "bcb394c56652eb33da4b5774d2e6b88ca039312062dd173000880d602ccf2742",
+   "pool": "v7",
+   "seed": 1,
+   "attempts": 1000
+  },
+  "v5s2-20261022-wider-off0/mbpp_380__multi_list": {
+   "status": "agrees",
+   "draws": 1000,
+   "mutants_rejected": 3988,
+   "mutants_accepted": 0,
+   "completeness": 1.0,
+   "weak": false,
+   "cross_rejected": 2966,
+   "cross_accepted": 0,
+   "cross_completeness": 1.0,
+   "larger": {
+    "status": "agrees",
+    "draws": 189,
+    "completeness": 1.0,
+    "cross_completeness": 1.0,
+    "mutants_rejected": 869,
+    "mutants_accepted": 0,
+    "cross_rejected": 561,
+    "cross_accepted": 0,
+    "requires_caps_size": false
+   },
+   "points_held": 3,
+   "points_failed": 0,
+   "points_excluded": 0,
+   "task_id": 380,
+   "task_sha256": "4eb492c738cba9fe758a14bc54d51bc93be257d6e0e0bec020dd8c2bad8b5585",
+   "pool": "v7",
+   "seed": 1,
+   "attempts": 1000
+  },
+  "v5s2-20261022-wider-off0/mbpp_409__min_product_tuple": {
+   "status": "agrees",
+   "draws": 72,
+   "mutants_rejected": 766,
+   "mutants_accepted": 0,
+   "completeness": 1.0,
+   "weak": false,
+   "cross_rejected": 194,
+   "cross_accepted": 0,
+   "cross_completeness": 1.0,
+   "domain_probes": 928,
+   "domain_admitted": 671,
+   "reference_ran": 72,
+   "pre_completeness": 0.277,
+   "pre_incomplete": true,
+   "domain_witness": {
+    "args": [
+     [
+      [
+       -1,
+       3,
+       -3
+      ],
+      [
+       0
+      ],
+      [
+       4
+      ]
+     ]
+    ],
+    "reference_raised": true
+   },
+   "larger": {
+    "status": "no valid draws",
+    "draws": 0,
+    "requires_caps_size": false
+   },
+   "points_held": 3,
+   "points_failed": 0,
+   "points_excluded": 0,
+   "task_id": 409,
+   "task_sha256": "728f3c5be534b7b1294132a1500054ca0e75add5d8ac793d2f78c6a0989f634c",
+   "pool": "v7",
+   "seed": 1,
+   "attempts": 1000
+  },
+  "v5s2-20261022-wider-off0/mbpp_424__extract_rear": {
+   "status": "agrees",
+   "draws": 579,
+   "outside_requires": 144,
+   "mutants_rejected": 4045,
+   "mutants_accepted": 0,
+   "completeness": 1.0,
+   "weak": false,
+   "cross_rejected": 1729,
+   "cross_accepted": 0,
+   "cross_completeness": 1.0,
+   "domain_probes": 277,
+   "domain_admitted": 277,
+   "reference_ran": 723,
+   "pre_completeness": 0.0,
+   "pre_incomplete": true,
+   "domain_witness": {
+    "args": [
+     [
+      [
+       76,
+       79,
+       73,
+       110,
+       102,
+       84
+      ],
+      [
+       90,
+       74,
+       101,
+       101,
+       118
+      ],
+      [],
+      [
+       94,
+       88,
+       94
+      ]
+     ]
+    ],
+    "reference_raised": true
+   },
+   "larger": {
+    "status": "agrees",
+    "draws": 43,
+    "completeness": 1.0,
+    "cross_completeness": 1.0,
+    "mutants_rejected": 344,
+    "mutants_accepted": 0,
+    "cross_rejected": 123,
+    "cross_accepted": 0,
+    "requires_caps_size": false
+   },
+   "points_held": 3,
+   "points_failed": 0,
+   "points_excluded": 0,
+   "task_id": 424,
+   "task_sha256": "3b22be2bf7818330ef6c85b05e0f3664852d61921bec8951fc263fe7756e1307",
+   "pool": "v7",
+   "seed": 1,
+   "attempts": 1000
+  },
+  "v5s2-20261022-wider-off0/mbpp_457__Find_Min": {
+   "status": "agrees",
+   "draws": 755,
+   "mutants_rejected": 2774,
+   "mutants_accepted": 12,
+   "completeness": 0.996,
+   "weak": true,
+   "weak_witness": {
+    "args": [
+     [
+      [
+       -2
+      ],
+      [
+       -1
+      ]
+     ]
+    ],
+    "reference_said": [
+     -2
+    ],
+    "also_accepts": [
+     -1
+    ]
+   },
+   "cross_rejected": 1794,
+   "cross_accepted": 5,
+   "cross_completeness": 0.997,
+   "cross_witness": {
+    "args": [
+     [
+      [
+       1,
+       0,
+       -1
+      ],
+      [
+       -1
+      ],
+      [
+       0
+      ]
+     ]
+    ],
+    "reference_said": [
+     -1
+    ],
+    "also_accepts": [
+     0
+    ],
+    "which_is_the_answer_for": [
+     [
+      [
+       0
+      ]
+     ]
+    ]
+   },
+   "domain_probes": 245,
+   "domain_admitted": 0,
+   "reference_ran": 755,
+   "pre_completeness": 1.0,
+   "pre_incomplete": false,
+   "larger": {
+    "status": "agrees",
+    "draws": 200,
+    "completeness": 0.965,
+    "cross_completeness": 1.0,
+    "mutants_rejected": 248,
+    "mutants_accepted": 9,
+    "cross_rejected": 92,
+    "cross_accepted": 0,
+    "weak_witness": {
+     "args": [
+      [
+       [
+        -2
+       ],
+       [
+        -1,
+        1
+       ],
+       [
+        -3,
+        2
+       ],
+       [
+        -1,
+        -2
+       ],
+       [
+        -1,
+        1,
+        -4
+       ],
+       [
+        -1
+       ],
+       [
+        -2,
+        -4
+       ],
+       [
+        1,
+        0,
+        0
+       ]
+      ]
+     ],
+     "reference_said": [
+      -2
+     ],
+     "also_accepts": [
+      -1
+     ]
+    },
+    "requires_caps_size": false
+   },
+   "points_held": 3,
+   "points_failed": 0,
+   "points_excluded": 0,
+   "task_id": 457,
+   "task_sha256": "4b1b77ae8fb9793beb898e6de80a2c6a0ff2d098fb2442df8f292417d0db8fa5",
+   "pool": "v7",
+   "seed": 1,
+   "attempts": 1000
+  },
+  "v5s2-20261022-wider-off0/mbpp_460__Extract": {
+   "status": "agrees",
+   "draws": 676,
+   "mutants_rejected": 2766,
+   "mutants_accepted": 0,
+   "completeness": 1.0,
+   "weak": false,
+   "cross_rejected": 1749,
+   "cross_accepted": 0,
+   "cross_completeness": 1.0,
+   "domain_probes": 324,
+   "domain_admitted": 0,
+   "reference_ran": 676,
+   "pre_completeness": 1.0,
+   "pre_incomplete": false,
+   "larger": {
+    "status": "agrees",
+    "draws": 18,
+    "completeness": 1.0,
+    "cross_completeness": 1.0,
+    "mutants_rejected": 136,
+    "mutants_accepted": 0,
+    "cross_rejected": 48,
+    "cross_accepted": 0,
+    "requires_caps_size": false
+   },
+   "points_held": 3,
+   "points_failed": 0,
+   "points_excluded": 0,
+   "task_id": 460,
+   "task_sha256": "8496a8d8a7b347d94e0b65f911e6beb89d7000c9c802ccd8016164cd0efade44",
+   "pool": "v7",
+   "seed": 1,
+   "attempts": 1000
+  },
+  "v5s2-20261022-wider-off0/mbpp_470__add_pairwise": {
+   "status": "agrees",
+   "draws": 730,
+   "outside_requires": 270,
+   "mutants_rejected": 5215,
+   "mutants_accepted": 0,
+   "completeness": 1.0,
+   "weak": false,
+   "cross_rejected": 2178,
+   "cross_accepted": 0,
+   "cross_completeness": 1.0,
+   "larger": {
+    "status": "agrees",
+    "draws": 200,
+    "completeness": 1.0,
+    "cross_completeness": 1.0,
+    "mutants_rejected": 1491,
+    "mutants_accepted": 0,
+    "cross_rejected": 594,
+    "cross_accepted": 0,
+    "requires_caps_size": false
+   },
+   "points_held": 3,
+   "points_failed": 0,
+   "points_excluded": 0,
+   "task_id": 470,
+   "task_sha256": "fc3ced48280795b210c157e615d4164ad844703b3055b38a6ee20193ff2080ec",
+   "pool": "v7",
+   "seed": 1,
+   "attempts": 1000
+  },
+  "v5s2-20261022-wider-off0/mbpp_49__specified_element": {
+   "status": "agrees",
+   "draws": 160,
+   "outside_requires": 306,
+   "mutants_rejected": 987,
+   "mutants_accepted": 0,
+   "completeness": 1.0,
+   "weak": false,
+   "cross_rejected": 465,
+   "cross_accepted": 0,
+   "cross_completeness": 1.0,
+   "domain_probes": 534,
+   "domain_admitted": 268,
+   "reference_ran": 466,
+   "pre_completeness": 0.498,
+   "pre_incomplete": true,
+   "domain_witness": {
+    "args": [
+     [
+      [
+       -2
+      ],
+      [
+       0,
+       4,
+       -2
+      ],
+      []
+     ],
+     1
+    ],
+    "reference_raised": true
+   },
+   "larger": {
+    "status": "agrees",
+    "draws": 5,
+    "outside_requires": 16,
+    "completeness": 1.0,
+    "cross_completeness": 1.0,
+    "mutants_rejected": 32,
+    "mutants_accepted": 0,
+    "cross_rejected": 9,
+    "cross_accepted": 0,
+    "requires_caps_size": false
+   },
+   "points_held": 3,
+   "points_failed": 0,
+   "points_excluded": 0,
+   "task_id": 49,
+   "task_sha256": "1ef23e7466e0eec67ce22d5e0602eb12d977cc4e52aa2b69a3a409a968fe851d",
+   "pool": "v7",
+   "seed": 1,
+   "attempts": 1000
+  },
+  "v5s2-20261022-wider-off0/mbpp_551__extract_column": {
+   "status": "agrees",
+   "draws": 476,
+   "mutants_rejected": 1528,
+   "mutants_accepted": 0,
+   "completeness": 1.0,
+   "weak": false,
+   "cross_rejected": 979,
+   "cross_accepted": 0,
+   "cross_completeness": 1.0,
+   "domain_probes": 524,
+   "domain_admitted": 0,
+   "reference_ran": 476,
+   "pre_completeness": 1.0,
+   "pre_incomplete": false,
+   "larger": {
+    "status": "agrees",
+    "draws": 21,
+    "completeness": 1.0,
+    "cross_completeness": 1.0,
+    "mutants_rejected": 40,
+    "mutants_accepted": 0,
+    "cross_rejected": 19,
+    "cross_accepted": 0,
+    "requires_caps_size": false
+   },
+   "points_held": 3,
+   "points_failed": 0,
+   "points_excluded": 0,
+   "task_id": 551,
+   "task_sha256": "9ceb0f1d4eefda0551130fcf05655855f2101c88ffe5281268bd1cb5177bfb01",
+   "pool": "v7",
+   "seed": 1,
+   "attempts": 1000
+  },
+  "v5s2-20261022-wider-off0/mbpp_587__list_tuple": {
+   "status": "agrees",
+   "draws": 1000,
+   "mutants_rejected": 6485,
+   "mutants_accepted": 0,
+   "completeness": 1.0,
+   "weak": false,
+   "cross_rejected": 2947,
+   "cross_accepted": 0,
+   "cross_completeness": 1.0,
+   "larger": {
+    "status": "agrees",
+    "draws": 200,
+    "completeness": 1.0,
+    "cross_completeness": 1.0,
+    "mutants_rejected": 1569,
+    "mutants_accepted": 0,
+    "cross_rejected": 594,
+    "cross_accepted": 0,
+    "requires_caps_size": false
+   },
+   "points_held": 3,
+   "points_failed": 0,
+   "points_excluded": 0,
+   "task_id": 587,
+   "task_sha256": "f2887f83e9606d241b3ac690b3002f07dd02c2ed303f1ae01d8e67031db06a1e",
+   "pool": "v7",
+   "seed": 1,
+   "attempts": 1000
+  },
+  "v5s2-20261022-wider-off0/mbpp_616__tuple_modulo": {
+   "status": "agrees",
+   "draws": 149,
+   "outside_requires": 851,
+   "mutants_rejected": 931,
+   "mutants_accepted": 0,
+   "completeness": 1.0,
+   "weak": false,
+   "cross_rejected": 436,
+   "cross_accepted": 0,
+   "cross_completeness": 1.0,
+   "larger": {
+    "status": "agrees",
+    "draws": 7,
+    "outside_requires": 193,
+    "completeness": 1.0,
+    "cross_completeness": 1.0,
+    "mutants_rejected": 49,
+    "mutants_accepted": 0,
+    "cross_rejected": 15,
+    "cross_accepted": 0,
+    "requires_caps_size": false
+   },
+   "points_held": 3,
+   "points_failed": 0,
+   "points_excluded": 0,
+   "task_id": 616,
+   "task_sha256": "2a75b4cce73df5e73bff8bca530fea238d5cc16f1495a11307ec0eef71a1ed19",
+   "pool": "v7",
+   "seed": 1,
+   "attempts": 1000
+  },
+  "v5s2-20261022-wider-off0/mbpp_695__check_greater": {
+   "status": "agrees",
+   "draws": 187,
+   "outside_requires": 813,
+   "mutants_rejected": 187,
+   "mutants_accepted": 0,
+   "completeness": 1.0,
+   "weak": false,
+   "cross_rejected": 273,
+   "cross_accepted": 0,
+   "cross_completeness": 1.0,
+   "larger": {
+    "status": "agrees",
+    "draws": 8,
+    "outside_requires": 192,
+    "completeness": 1.0,
+    "cross_completeness": 1.0,
+    "mutants_rejected": 8,
+    "mutants_accepted": 0,
+    "cross_rejected": 9,
+    "cross_accepted": 0,
+    "requires_caps_size": false
+   },
+   "points_held": 3,
+   "points_failed": 0,
+   "points_excluded": 0,
+   "task_id": 695,
+   "task_sha256": "83234359245fd0f67d5cf2b14a320623ff5413eeb12b550b7debf9ae1015b022",
+   "pool": "v7",
+   "seed": 1,
+   "attempts": 1000
+  },
+  "v5s2-20261022-wider-off0/mbpp_696__zip_list": {
+   "status": "agrees",
+   "draws": 254,
+   "outside_requires": 746,
+   "mutants_rejected": 806,
+   "mutants_accepted": 0,
+   "completeness": 1.0,
+   "weak": false,
+   "cross_rejected": 724,
+   "cross_accepted": 0,
+   "cross_completeness": 1.0,
+   "larger": {
+    "status": "agrees",
+    "draws": 11,
+    "outside_requires": 189,
+    "completeness": 1.0,
+    "cross_completeness": 1.0,
+    "mutants_rejected": 49,
+    "mutants_accepted": 0,
+    "cross_rejected": 27,
+    "cross_accepted": 0,
+    "requires_caps_size": false
+   },
+   "points_held": 3,
+   "points_failed": 0,
+   "points_excluded": 0,
+   "task_id": 696,
+   "task_sha256": "20742d7a298efeb23568d25bebc62c0a9ba31d09d03c2b1861e7b2213fb7c297",
+   "pool": "v7",
+   "seed": 1,
+   "attempts": 1000
+  },
+  "v5s2-20261022-wider-off0/mbpp_70__get_equal": {
+   "status": "agrees",
+   "draws": 757,
+   "outside_requires": 243,
+   "mutants_rejected": 6056,
+   "mutants_accepted": 0,
+   "completeness": 1.0,
+   "weak": false,
+   "cross_rejected": 268,
+   "cross_accepted": 0,
+   "cross_completeness": 1.0,
+   "larger": {
+    "status": "agrees",
+    "draws": 189,
+    "outside_requires": 11,
+    "completeness": 1.0,
+    "cross_completeness": 1.0,
+    "mutants_rejected": 1512,
+    "mutants_accepted": 0,
+    "cross_rejected": 12,
+    "cross_accepted": 0,
+    "requires_caps_size": false
+   },
+   "points_held": 3,
+   "points_failed": 0,
+   "points_excluded": 0,
+   "task_id": 70,
+   "task_sha256": "b013c53b516484007e8244e0c5e16a5f3cc6d5d32df31921e76bc83e7df285d5",
+   "pool": "v7",
+   "seed": 1,
+   "attempts": 1000
+  },
+  "v5s2-20261022-wider-off0/mbpp_710__front_and_rear": {
+   "status": "agrees",
+   "draws": 764,
+   "outside_requires": 113,
+   "mutants_rejected": 5102,
+   "mutants_accepted": 0,
+   "completeness": 1.0,
+   "weak": false,
+   "cross_rejected": 2253,
+   "cross_accepted": 0,
+   "cross_completeness": 1.0,
+   "domain_probes": 123,
+   "domain_admitted": 0,
+   "reference_ran": 877,
+   "pre_completeness": 1.0,
+   "pre_incomplete": false,
+   "larger": {
+    "status": "agrees",
+    "draws": 200,
+    "completeness": 1.0,
+    "cross_completeness": 1.0,
+    "mutants_rejected": 1312,
+    "mutants_accepted": 0,
+    "cross_rejected": 533,
+    "cross_accepted": 0,
+    "requires_caps_size": false
+   },
+   "points_held": 3,
+   "points_failed": 0,
+   "points_excluded": 0,
+   "task_id": 710,
+   "task_sha256": "f78a5f6d7ba46d8e724d15289c654414f8cf9b95c648f5b74e37ab3ab80ae6ed",
+   "pool": "v7",
+   "seed": 1,
+   "attempts": 1000
+  },
+  "v5s2-20261022-wider-off0/mbpp_726__multiply_elements": {
+   "status": "agrees",
+   "draws": 753,
+   "outside_requires": 247,
+   "mutants_rejected": 5234,
+   "mutants_accepted": 0,
+   "completeness": 1.0,
+   "weak": false,
+   "cross_rejected": 2252,
+   "cross_accepted": 0,
+   "cross_completeness": 1.0,
+   "larger": {
+    "status": "agrees",
+    "draws": 200,
+    "completeness": 1.0,
+    "cross_completeness": 1.0,
+    "mutants_rejected": 1396,
+    "mutants_accepted": 0,
+    "cross_rejected": 594,
+    "cross_accepted": 0,
+    "requires_caps_size": false
+   },
+   "points_held": 3,
+   "points_failed": 0,
+   "points_excluded": 0,
+   "task_id": 726,
+   "task_sha256": "8bbababb87314b64b854308deb82cafa92d0abeae7c2218f0898085996af2c6f",
+   "pool": "v7",
+   "seed": 1,
+   "attempts": 1000
+  },
+  "v5s2-20261022-wider-off0/mbpp_788__new_tuple": {
+   "status": "agrees",
+   "draws": 1000,
+   "mutants_rejected": 4179,
+   "mutants_accepted": 0,
+   "completeness": 1.0,
+   "weak": false,
+   "cross_rejected": 2992,
+   "cross_accepted": 0,
+   "cross_completeness": 1.0,
+   "larger": {
+    "status": "agrees",
+    "draws": 200,
+    "completeness": 1.0,
+    "cross_completeness": 1.0,
+    "mutants_rejected": 957,
+    "mutants_accepted": 0,
+    "cross_rejected": 594,
+    "cross_accepted": 0,
+    "requires_caps_size": false
+   },
+   "points_held": 3,
+   "points_failed": 0,
+   "points_excluded": 0,
+   "task_id": 788,
+   "task_sha256": "34d80860405627f990378c32aee9a26f428a9ce0b729933abbf9e7aca5aa8b87",
+   "pool": "v7",
+   "seed": 1,
+   "attempts": 1000
+  },
+  "v5s2-20261022-wider-off0/mbpp_792__count_list": {
+   "status": "agrees",
+   "draws": 1000,
+   "mutants_rejected": 8519,
+   "mutants_accepted": 0,
+   "completeness": 1.0,
+   "weak": false,
+   "cross_rejected": 2246,
+   "cross_accepted": 0,
+   "cross_completeness": 1.0,
+   "larger": {
+    "status": "agrees",
+    "draws": 200,
+    "completeness": 1.0,
+    "cross_completeness": 1.0,
+    "mutants_rejected": 2750,
+    "mutants_accepted": 0,
+    "cross_rejected": 559,
+    "cross_accepted": 0,
+    "requires_caps_size": false
+   },
+   "points_held": 3,
+   "points_failed": 0,
+   "points_excluded": 0,
+   "task_id": 792,
+   "task_sha256": "5b4254f896d20ce1ac0e106e0958bf02c2e500ce8ceab090cfb39fb4e005c407",
+   "pool": "v7",
+   "seed": 1,
+   "attempts": 1000
+  },
+  "v5s2-20261022-wider-off0/mbpp_805__max_sum_list": {
+   "status": "disagrees",
+   "ensures": 1,
+   "args": [
+    [
+     [
+      -1,
+      0
+     ],
+     [],
+     [
+      -3,
+      -3,
+      3
+     ]
+    ]
+   ],
+   "reference_said": [],
+   "agreed_before": 0,
+   "points_held": 3,
+   "points_failed": 0,
+   "points_excluded": 0,
+   "task_id": 805,
+   "task_sha256": "618474fb2cf535445a0bde37db9b6da95fec6ba26455bb9b40743e8ddbb6a90b",
+   "pool": "v7",
+   "seed": 1,
+   "attempts": 1000
+  },
+  "v5s2-20261022-wider-off0/mbpp_808__check_K": {
+   "status": "agrees",
+   "draws": 1000,
+   "mutants_rejected": 1000,
+   "mutants_accepted": 0,
+   "completeness": 1.0,
+   "weak": false,
+   "cross_rejected": 915,
+   "cross_accepted": 0,
+   "cross_completeness": 1.0,
+   "larger": {
+    "status": "agrees",
+    "draws": 200,
+    "completeness": 1.0,
+    "cross_completeness": 1.0,
+    "mutants_rejected": 200,
+    "mutants_accepted": 0,
+    "cross_rejected": 134,
+    "cross_accepted": 0,
+    "requires_caps_size": false
+   },
+   "points_held": 3,
+   "points_failed": 0,
+   "points_excluded": 0,
+   "task_id": 808,
+   "task_sha256": "e2795776aca8220745ac75a0194458f9ba93f83c7c622a0e9d6054c60ebc71b5",
+   "pool": "v7",
+   "seed": 1,
+   "attempts": 1000
+  },
+  "v5s2-20261022-wider-off0/mbpp_809__check_smaller": {
+   "status": "agrees",
+   "draws": 172,
+   "outside_requires": 828,
+   "mutants_rejected": 172,
+   "mutants_accepted": 0,
+   "completeness": 1.0,
+   "weak": false,
+   "cross_rejected": 233,
+   "cross_accepted": 0,
+   "cross_completeness": 1.0,
+   "larger": {
+    "status": "agrees",
+    "draws": 9,
+    "outside_requires": 191,
+    "completeness": 1.0,
+    "cross_completeness": 1.0,
+    "mutants_rejected": 9,
+    "mutants_accepted": 0,
+    "cross_rejected": 8,
+    "cross_accepted": 0,
+    "requires_caps_size": false
+   },
+   "points_held": 3,
+   "points_failed": 0,
+   "points_excluded": 0,
+   "task_id": 809,
+   "task_sha256": "8dcd19347b0e968da7526bfbb6ed2c55274231a28a8efd11bc386a99c35b22a9",
+   "pool": "v7",
+   "seed": 1,
+   "attempts": 1000
+  },
+  "v5s2-20261022-wider-off0/mbpp_811__check_identical": {
+   "status": "agrees",
+   "draws": 1000,
+   "mutants_rejected": 1000,
+   "mutants_accepted": 0,
+   "completeness": 1.0,
+   "weak": false,
+   "cross_rejected": 344,
+   "cross_accepted": 0,
+   "cross_completeness": 1.0,
+   "larger": {
+    "status": "agrees",
+    "draws": 200,
+    "completeness": 1.0,
+    "cross_completeness": 1.0,
+    "mutants_rejected": 200,
+    "mutants_accepted": 0,
+    "cross_rejected": 6,
+    "cross_accepted": 0,
+    "requires_caps_size": false
+   },
+   "points_held": 3,
+   "points_failed": 0,
+   "points_excluded": 0,
+   "task_id": 811,
+   "task_sha256": "defcdc53bde65640c07664282dc3c0eee5a9d251011bc828eaef4943ff3c82f5",
+   "pool": "v7",
+   "seed": 1,
+   "attempts": 1000
+  },
+  "v5s2-20261022-wider-off0/mbpp_816__clear_tuple": {
+   "status": "agrees",
+   "draws": 1000,
+   "mutants_rejected": 1000,
+   "mutants_accepted": 0,
+   "completeness": 1.0,
+   "weak": false,
+   "larger": {
+    "status": "agrees",
+    "draws": 200,
+    "completeness": 1.0,
+    "mutants_rejected": 200,
+    "mutants_accepted": 0,
+    "requires_caps_size": false
+   },
+   "points_held": 3,
+   "points_failed": 0,
+   "points_excluded": 0,
+   "task_id": 816,
+   "task_sha256": "b375e7fcac05ae78fb2f00841912528ddc17a8905aa61384a4260d4445ac4230",
+   "pool": "v7",
+   "seed": 1,
+   "attempts": 1000
+  },
+  "v5s2-20261022-wider-off0/mbpp_857__listify_list": {
+   "status": "agrees",
+   "draws": 1000,
+   "mutants_rejected": 3754,
+   "mutants_accepted": 0,
+   "completeness": 1.0,
+   "weak": false,
+   "cross_rejected": 2927,
+   "cross_accepted": 0,
+   "cross_completeness": 1.0,
+   "larger": {
+    "status": "agrees",
+    "draws": 200,
+    "completeness": 1.0,
+    "cross_completeness": 1.0,
+    "mutants_rejected": 998,
+    "mutants_accepted": 0,
+    "cross_rejected": 594,
+    "cross_accepted": 0,
+    "requires_caps_size": false
+   },
+   "points_held": 3,
+   "points_failed": 0,
+   "points_excluded": 0,
+   "task_id": 857,
+   "task_sha256": "0f815a04bf480677ccb77a38da3348d91a40baa21ebb04a7b3560c0a1038ff46",
+   "pool": "v7",
+   "seed": 1,
+   "attempts": 1000
+  },
+  "v5s2-20261022-wider-off0/mbpp_893__Extract": {
+   "status": "agrees",
+   "draws": 702,
+   "mutants_rejected": 2844,
+   "mutants_accepted": 0,
+   "completeness": 1.0,
+   "weak": false,
+   "cross_rejected": 1796,
+   "cross_accepted": 0,
+   "cross_completeness": 1.0,
+   "domain_probes": 298,
+   "domain_admitted": 0,
+   "reference_ran": 702,
+   "pre_completeness": 1.0,
+   "pre_incomplete": false,
+   "larger": {
+    "status": "agrees",
+    "draws": 13,
+    "completeness": 1.0,
+    "cross_completeness": 1.0,
+    "mutants_rejected": 99,
+    "mutants_accepted": 0,
+    "cross_rejected": 33,
+    "cross_accepted": 0,
+    "requires_caps_size": false
+   },
+   "points_held": 3,
+   "points_failed": 0,
+   "points_excluded": 0,
+   "task_id": 893,
+   "task_sha256": "d96f647d40a130fe6747547dfdd4013dcbf732d876a0f4dc2665c20c6c513905",
+   "pool": "v7",
+   "seed": 1,
+   "attempts": 1000
+  },
+  "v5s2-20261022-wider-off0/mbpp_948__get_item": {
+   "status": "agrees",
+   "draws": 708,
+   "mutants_rejected": 9776,
+   "mutants_accepted": 0,
+   "completeness": 1.0,
+   "weak": false,
+   "cross_rejected": 2106,
+   "cross_accepted": 0,
+   "cross_completeness": 1.0,
+   "domain_probes": 292,
+   "domain_admitted": 219,
+   "reference_ran": 708,
+   "pre_completeness": 0.25,
+   "pre_incomplete": true,
+   "domain_witness": {
+    "args": [
+     [
+      24,
+      70,
+      119,
+      51
+     ],
+     -6
+    ],
+    "reference_raised": true
+   },
+   "larger": {
+    "status": "agrees",
+    "draws": 135,
+    "completeness": 1.0,
+    "cross_completeness": 1.0,
+    "mutants_rejected": 1854,
+    "mutants_accepted": 0,
+    "cross_rejected": 395,
+    "cross_accepted": 0,
+    "requires_caps_size": false
+   },
+   "points_held": 3,
+   "points_failed": 0,
+   "points_excluded": 0,
+   "task_id": 948,
+   "task_sha256": "d42a2c33e2f993217bc701ca9b91ab5771c08327cff644783fc5062fa3bc558c",
+   "pool": "v7",
+   "seed": 1,
+   "attempts": 1000
+  },
+  "v5s2-20261022-wider-off0/mbpp_972__concatenate_nested": {
+   "status": "agrees",
+   "draws": 1000,
+   "mutants_rejected": 6829,
+   "mutants_accepted": 0,
+   "completeness": 1.0,
+   "weak": false,
+   "cross_rejected": 2988,
+   "cross_accepted": 0,
+   "cross_completeness": 1.0,
+   "larger": {
+    "status": "agrees",
+    "draws": 200,
+    "completeness": 1.0,
+    "cross_completeness": 1.0,
+    "mutants_rejected": 1369,
+    "mutants_accepted": 0,
+    "cross_rejected": 594,
+    "cross_accepted": 0,
+    "requires_caps_size": false
+   },
+   "points_held": 3,
+   "points_failed": 0,
+   "points_excluded": 0,
+   "task_id": 972,
+   "task_sha256": "e5bfdbb80c7b0b47766fcb4157900565c2431f09972ab5833f130c77a493d7bb",
+   "pool": "v7",
+   "seed": 1,
+   "attempts": 1000
+  },
+  "v5s2-20261022-wider-off1000/mbpp_106__add_lists": {
+   "status": "no valid draws",
+   "draws": 0,
+   "pre_completeness_unmeasurable": "reference never ran",
+   "points_held": 3,
+   "points_failed": 0,
+   "points_excluded": 0,
+   "task_id": 106,
+   "task_sha256": "b55dcad2776563671e70bafeef91bca9a514df691cb0d602adfdc36861618af9",
+   "pool": "v7",
+   "seed": 1,
+   "attempts": 1000
+  },
+  "v5s2-20261022-wider-off1000/mbpp_120__max_product_tuple": {
+   "status": "agrees",
+   "draws": 78,
+   "mutants_rejected": 297,
+   "mutants_accepted": 587,
+   "completeness": 0.336,
+   "weak": true,
+   "weak_witness": {
+    "args": [
+     [
+      [
+       3,
+       2
+      ]
+     ]
+    ],
+    "reference_said": 6,
+    "also_accepts": 7
+   },
+   "cross_rejected": 48,
+   "cross_accepted": 151,
+   "cross_completeness": 0.241,
+   "cross_witness": {
+    "args": [
+     [
+      [
+       -4,
+       4
+      ]
+     ]
+    ],
+    "reference_said": 16,
+    "also_accepts": 6,
+    "which_is_the_answer_for": [
+     [
+      [
+       3,
+       2
+      ]
+     ]
+    ]
+   },
+   "domain_probes": 922,
+   "domain_admitted": 681,
+   "reference_ran": 78,
+   "pre_completeness": 0.261,
+   "pre_incomplete": true,
+   "domain_witness": {
+    "args": [
+     [
+      [
+       1
+      ]
+     ]
+    ],
+    "reference_raised": true
+   },
+   "larger": {
+    "status": "no valid draws",
+    "draws": 0,
+    "requires_caps_size": false
+   },
+   "points_held": 3,
+   "points_failed": 0,
+   "points_excluded": 0,
+   "task_id": 120,
+   "task_sha256": "85370b132a2baf59dcca6816e5c59c958595c452fc8008caea031b2077054c2a",
+   "pool": "v7",
+   "seed": 1,
+   "attempts": 1000
+  },
+  "v5s2-20261022-wider-off1000/mbpp_132__tup_string": {
+   "status": "agrees",
+   "draws": 1000,
+   "mutants_rejected": 6904,
+   "mutants_accepted": 0,
+   "completeness": 1.0,
+   "weak": false,
+   "cross_rejected": 2969,
+   "cross_accepted": 0,
+   "cross_completeness": 1.0,
+   "larger": {
+    "status": "agrees",
+    "draws": 200,
+    "completeness": 1.0,
+    "cross_completeness": 1.0,
+    "mutants_rejected": 1587,
+    "mutants_accepted": 0,
+    "cross_rejected": 594,
+    "cross_accepted": 0,
+    "requires_caps_size": false
+   },
+   "points_held": 3,
+   "points_failed": 0,
+   "points_excluded": 0,
+   "task_id": 132,
+   "task_sha256": "0ea84650f45890e57b669af0534fa510ae1ef8b9e85b68a3615d6006bdf2e1b5",
+   "pool": "v7",
+   "seed": 1,
+   "attempts": 1000
+  },
+  "v5s2-20261022-wider-off1000/mbpp_154__specified_element": {
+   "status": "agrees",
+   "draws": 177,
+   "mutants_rejected": 1034,
+   "mutants_accepted": 0,
+   "completeness": 1.0,
+   "weak": false,
+   "cross_rejected": 513,
+   "cross_accepted": 0,
+   "cross_completeness": 1.0,
+   "domain_probes": 571,
+   "domain_admitted": 78,
+   "reference_ran": 429,
+   "pre_completeness": 0.863,
+   "pre_incomplete": true,
+   "domain_witness": {
+    "args": [
+     [
+      [
+       0
+      ],
+      [
+       -1,
+       4
+      ],
+      []
+     ],
+     0
+    ],
+    "reference_raised": true
+   },
+   "larger": {
+    "status": "agrees",
+    "draws": 6,
+    "completeness": 1.0,
+    "cross_completeness": 1.0,
+    "mutants_rejected": 40,
+    "mutants_accepted": 0,
+    "cross_rejected": 12,
+    "cross_accepted": 0,
+    "requires_caps_size": false
+   },
+   "points_held": 3,
+   "points_failed": 0,
+   "points_excluded": 0,
+   "task_id": 154,
+   "task_sha256": "267733edca89f7a7159d3d58e9e0a841b7a1c09a5d7daf769f6140751e8d0ec8",
+   "pool": "v7",
+   "seed": 1,
+   "attempts": 1000
+  },
+  "v5s2-20261022-wider-off1000/mbpp_206__concatenate_elements": {
+   "status": "agrees",
+   "draws": 793,
+   "outside_requires": 207,
+   "mutants_rejected": 3474,
+   "mutants_accepted": 0,
+   "completeness": 1.0,
+   "weak": false,
+   "cross_rejected": 2373,
+   "cross_accepted": 0,
+   "cross_completeness": 1.0,
+   "larger": {
+    "status": "agrees",
+    "draws": 200,
+    "completeness": 1.0,
+    "cross_completeness": 1.0,
+    "mutants_rejected": 994,
+    "mutants_accepted": 0,
+    "cross_rejected": 594,
+    "cross_accepted": 0,
+    "requires_caps_size": false
+   },
+   "points_held": 3,
+   "points_failed": 0,
+   "points_excluded": 0,
+   "task_id": 206,
+   "task_sha256": "3acbb322d25584537e00fca21ae32f99d2580c314e61cded523c137c61ca1547",
+   "pool": "v7",
+   "seed": 1,
+   "attempts": 1000
+  },
+  "v5s2-20261022-wider-off1000/mbpp_213__concatenate_strings": {
+   "status": "agrees",
+   "draws": 165,
+   "outside_requires": 835,
+   "mutants_rejected": 603,
+   "mutants_accepted": 0,
+   "completeness": 1.0,
+   "weak": false,
+   "cross_rejected": 476,
+   "cross_accepted": 0,
+   "cross_completeness": 1.0,
+   "larger": {
+    "status": "agrees",
+    "draws": 11,
+    "outside_requires": 189,
+    "completeness": 1.0,
+    "cross_completeness": 1.0,
+    "mutants_rejected": 55,
+    "mutants_accepted": 0,
+    "cross_rejected": 27,
+    "cross_accepted": 0,
+    "requires_caps_size": false
+   },
+   "points_held": 3,
+   "points_failed": 0,
+   "points_excluded": 0,
+   "task_id": 213,
+   "task_sha256": "2d0bcb1128dc137e8021228287d5ecaaceb3a941dc41d39a420f86851d050881",
+   "pool": "v7",
+   "seed": 1,
+   "attempts": 1000
+  },
+  "v5s2-20261022-wider-off1000/mbpp_257__swap_numbers": {
+   "status": "agrees",
+   "draws": 1000,
+   "mutants_rejected": 6935,
+   "mutants_accepted": 0,
+   "completeness": 1.0,
+   "weak": false,
+   "cross_rejected": 2993,
+   "cross_accepted": 0,
+   "cross_completeness": 1.0,
+   "larger": {
+    "status": "agrees",
+    "draws": 200,
+    "completeness": 1.0,
+    "cross_completeness": 1.0,
+    "mutants_rejected": 1398,
+    "mutants_accepted": 0,
+    "cross_rejected": 594,
+    "cross_accepted": 0,
+    "requires_caps_size": false
+   },
+   "points_held": 3,
+   "points_failed": 0,
+   "points_excluded": 0,
+   "task_id": 257,
+   "task_sha256": "bab0248006cde84bca001594181c07d667276c000761e391ddc0766f6fc9edc4",
+   "pool": "v7",
+   "seed": 1,
+   "attempts": 1000
+  },
+  "v5s2-20261022-wider-off1000/mbpp_261__division_elements": {
+   "status": "agrees",
+   "draws": 26,
+   "outside_requires": 298,
+   "skipped": {
+    "reference result has no t value": 606
+   },
+   "mutants_rejected": 60,
+   "mutants_accepted": 0,
+   "completeness": 1.0,
+   "weak": false,
+   "cross_rejected": 38,
+   "cross_accepted": 0,
+   "cross_completeness": 1.0,
+   "domain_probes": 70,
+   "domain_admitted": 0,
+   "reference_ran": 930,
+   "pre_completeness": 1.0,
+   "pre_incomplete": false,
+   "larger": {
+    "status": "reference result has no t value",
+    "draws": 0,
+    "outside_requires": 18,
+    "skipped": {
+     "reference result has no t value": 146
+    },
+    "requires_caps_size": false
+   },
+   "points_held": 3,
+   "points_failed": 0,
+   "points_excluded": 0,
+   "task_id": 261,
+   "task_sha256": "c6a27a4b779216166673b5fb173e6abe61142b72adcbc5af96456a11ea8a7f41",
+   "pool": "v7",
+   "seed": 1,
+   "attempts": 1000
+  },
+  "v5s2-20261022-wider-off1000/mbpp_273__substract_elements": {
+   "status": "agrees",
+   "draws": 172,
+   "outside_requires": 828,
+   "mutants_rejected": 1052,
+   "mutants_accepted": 0,
+   "completeness": 1.0,
+   "weak": false,
+   "cross_rejected": 493,
+   "cross_accepted": 0,
+   "cross_completeness": 1.0,
+   "larger": {
+    "status": "agrees",
+    "draws": 12,
+    "outside_requires": 188,
+    "completeness": 1.0,
+    "cross_completeness": 1.0,
+    "mutants_rejected": 95,
+    "mutants_accepted": 0,
+    "cross_rejected": 30,
+    "cross_accepted": 0,
+    "requires_caps_size": false
+   },
+   "points_held": 3,
+   "points_failed": 0,
+   "points_excluded": 0,
+   "task_id": 273,
+   "task_sha256": "72b2671e5dcc077999b279e8d69d278873f0a62b580da34018f07d8ffecd5355",
+   "pool": "v7",
+   "seed": 1,
+   "attempts": 1000
+  },
+  "v5s2-20261022-wider-off1000/mbpp_357__find_max": {
+   "status": "disagrees",
+   "ensures": 1,
+   "args": [
+    [
+     [
+      2,
+      -1,
+      4
+     ]
+    ]
+   ],
+   "reference_said": 4,
+   "agreed_before": 68,
+   "points_held": 3,
+   "points_failed": 0,
+   "points_excluded": 0,
+   "task_id": 357,
+   "task_sha256": "bcb394c56652eb33da4b5774d2e6b88ca039312062dd173000880d602ccf2742",
+   "pool": "v7",
+   "seed": 1,
+   "attempts": 1000
+  },
+  "v5s2-20261022-wider-off1000/mbpp_380__multi_list": {
+   "status": "agrees",
+   "draws": 1000,
+   "mutants_rejected": 3863,
+   "mutants_accepted": 0,
+   "completeness": 1.0,
+   "weak": false,
+   "cross_rejected": 2946,
+   "cross_accepted": 0,
+   "cross_completeness": 1.0,
+   "larger": {
+    "status": "agrees",
+    "draws": 192,
+    "completeness": 1.0,
+    "cross_completeness": 1.0,
+    "mutants_rejected": 917,
+    "mutants_accepted": 0,
+    "cross_rejected": 570,
+    "cross_accepted": 0,
+    "requires_caps_size": false
+   },
+   "points_held": 3,
+   "points_failed": 0,
+   "points_excluded": 0,
+   "task_id": 380,
+   "task_sha256": "dc292610dd434fca1d5451bb8066a2fbf72e07261f35d082d6c0c3c4566bde3a",
+   "pool": "v7",
+   "seed": 1,
+   "attempts": 1000
+  },
+  "v5s2-20261022-wider-off1000/mbpp_409__min_product_tuple": {
+   "status": "agrees",
+   "draws": 72,
+   "mutants_rejected": 766,
+   "mutants_accepted": 0,
+   "completeness": 1.0,
+   "weak": false,
+   "cross_rejected": 194,
+   "cross_accepted": 0,
+   "cross_completeness": 1.0,
+   "domain_probes": 928,
+   "domain_admitted": 671,
+   "reference_ran": 72,
+   "pre_completeness": 0.277,
+   "pre_incomplete": true,
+   "domain_witness": {
+    "args": [
+     [
+      [
+       -1,
+       3,
+       -3
+      ],
+      [
+       0
+      ],
+      [
+       4
+      ]
+     ]
+    ],
+    "reference_raised": true
+   },
+   "larger": {
+    "status": "no valid draws",
+    "draws": 0,
+    "requires_caps_size": false
+   },
+   "points_held": 3,
+   "points_failed": 0,
+   "points_excluded": 0,
+   "task_id": 409,
+   "task_sha256": "728f3c5be534b7b1294132a1500054ca0e75add5d8ac793d2f78c6a0989f634c",
+   "pool": "v7",
+   "seed": 1,
+   "attempts": 1000
+  },
+  "v5s2-20261022-wider-off1000/mbpp_424__extract_rear": {
+   "status": "agrees",
+   "draws": 579,
+   "outside_requires": 144,
+   "mutants_rejected": 4045,
+   "mutants_accepted": 0,
+   "completeness": 1.0,
+   "weak": false,
+   "cross_rejected": 1729,
+   "cross_accepted": 0,
+   "cross_completeness": 1.0,
+   "domain_probes": 277,
+   "domain_admitted": 277,
+   "reference_ran": 723,
+   "pre_completeness": 0.0,
+   "pre_incomplete": true,
+   "domain_witness": {
+    "args": [
+     [
+      [
+       76,
+       79,
+       73,
+       110,
+       102,
+       84
+      ],
+      [
+       90,
+       74,
+       101,
+       101,
+       118
+      ],
+      [],
+      [
+       94,
+       88,
+       94
+      ]
+     ]
+    ],
+    "reference_raised": true
+   },
+   "larger": {
+    "status": "agrees",
+    "draws": 43,
+    "completeness": 1.0,
+    "cross_completeness": 1.0,
+    "mutants_rejected": 344,
+    "mutants_accepted": 0,
+    "cross_rejected": 123,
+    "cross_accepted": 0,
+    "requires_caps_size": false
+   },
+   "points_held": 3,
+   "points_failed": 0,
+   "points_excluded": 0,
+   "task_id": 424,
+   "task_sha256": "3b22be2bf7818330ef6c85b05e0f3664852d61921bec8951fc263fe7756e1307",
+   "pool": "v7",
+   "seed": 1,
+   "attempts": 1000
+  },
+  "v5s2-20261022-wider-off1000/mbpp_457__Find_Min": {
+   "status": "agrees",
+   "draws": 755,
+   "mutants_rejected": 2774,
+   "mutants_accepted": 12,
+   "completeness": 0.996,
+   "weak": true,
+   "weak_witness": {
+    "args": [
+     [
+      [
+       -2
+      ],
+      [
+       -1
+      ]
+     ]
+    ],
+    "reference_said": [
+     -2
+    ],
+    "also_accepts": [
+     -1
+    ]
+   },
+   "cross_rejected": 1794,
+   "cross_accepted": 5,
+   "cross_completeness": 0.997,
+   "cross_witness": {
+    "args": [
+     [
+      [
+       1,
+       0,
+       -1
+      ],
+      [
+       -1
+      ],
+      [
+       0
+      ]
+     ]
+    ],
+    "reference_said": [
+     -1
+    ],
+    "also_accepts": [
+     0
+    ],
+    "which_is_the_answer_for": [
+     [
+      [
+       0
+      ]
+     ]
+    ]
+   },
+   "domain_probes": 245,
+   "domain_admitted": 0,
+   "reference_ran": 755,
+   "pre_completeness": 1.0,
+   "pre_incomplete": false,
+   "larger": {
+    "status": "agrees",
+    "draws": 200,
+    "completeness": 0.965,
+    "cross_completeness": 1.0,
+    "mutants_rejected": 248,
+    "mutants_accepted": 9,
+    "cross_rejected": 92,
+    "cross_accepted": 0,
+    "weak_witness": {
+     "args": [
+      [
+       [
+        -2
+       ],
+       [
+        -1,
+        1
+       ],
+       [
+        -3,
+        2
+       ],
+       [
+        -1,
+        -2
+       ],
+       [
+        -1,
+        1,
+        -4
+       ],
+       [
+        -1
+       ],
+       [
+        -2,
+        -4
+       ],
+       [
+        1,
+        0,
+        0
+       ]
+      ]
+     ],
+     "reference_said": [
+      -2
+     ],
+     "also_accepts": [
+      -1
+     ]
+    },
+    "requires_caps_size": false
+   },
+   "points_held": 3,
+   "points_failed": 0,
+   "points_excluded": 0,
+   "task_id": 457,
+   "task_sha256": "4b1b77ae8fb9793beb898e6de80a2c6a0ff2d098fb2442df8f292417d0db8fa5",
+   "pool": "v7",
+   "seed": 1,
+   "attempts": 1000
+  },
+  "v5s2-20261022-wider-off1000/mbpp_460__Extract": {
+   "status": "agrees",
+   "draws": 676,
+   "mutants_rejected": 2766,
+   "mutants_accepted": 0,
+   "completeness": 1.0,
+   "weak": false,
+   "cross_rejected": 1749,
+   "cross_accepted": 0,
+   "cross_completeness": 1.0,
+   "domain_probes": 324,
+   "domain_admitted": 0,
+   "reference_ran": 676,
+   "pre_completeness": 1.0,
+   "pre_incomplete": false,
+   "larger": {
+    "status": "agrees",
+    "draws": 18,
+    "completeness": 1.0,
+    "cross_completeness": 1.0,
+    "mutants_rejected": 136,
+    "mutants_accepted": 0,
+    "cross_rejected": 48,
+    "cross_accepted": 0,
+    "requires_caps_size": false
+   },
+   "points_held": 3,
+   "points_failed": 0,
+   "points_excluded": 0,
+   "task_id": 460,
+   "task_sha256": "8496a8d8a7b347d94e0b65f911e6beb89d7000c9c802ccd8016164cd0efade44",
+   "pool": "v7",
+   "seed": 1,
+   "attempts": 1000
+  },
+  "v5s2-20261022-wider-off1000/mbpp_470__add_pairwise": {
+   "status": "agrees",
+   "draws": 730,
+   "outside_requires": 270,
+   "mutants_rejected": 5215,
+   "mutants_accepted": 0,
+   "completeness": 1.0,
+   "weak": false,
+   "cross_rejected": 2178,
+   "cross_accepted": 0,
+   "cross_completeness": 1.0,
+   "larger": {
+    "status": "agrees",
+    "draws": 200,
+    "completeness": 1.0,
+    "cross_completeness": 1.0,
+    "mutants_rejected": 1491,
+    "mutants_accepted": 0,
+    "cross_rejected": 594,
+    "cross_accepted": 0,
+    "requires_caps_size": false
+   },
+   "points_held": 3,
+   "points_failed": 0,
+   "points_excluded": 0,
+   "task_id": 470,
+   "task_sha256": "fc3ced48280795b210c157e615d4164ad844703b3055b38a6ee20193ff2080ec",
+   "pool": "v7",
+   "seed": 1,
+   "attempts": 1000
+  },
+  "v5s2-20261022-wider-off1000/mbpp_49__specified_element": {
+   "status": "agrees",
+   "draws": 450,
+   "mutants_rejected": 1419,
+   "mutants_accepted": 0,
+   "completeness": 1.0,
+   "weak": false,
+   "cross_rejected": 923,
+   "cross_accepted": 0,
+   "cross_completeness": 1.0,
+   "domain_probes": 550,
+   "domain_admitted": 0,
+   "reference_ran": 450,
+   "pre_completeness": 1.0,
+   "pre_incomplete": false,
+   "larger": {
+    "status": "agrees",
+    "draws": 21,
+    "completeness": 1.0,
+    "cross_completeness": 1.0,
+    "mutants_rejected": 64,
+    "mutants_accepted": 0,
+    "cross_rejected": 31,
+    "cross_accepted": 0,
+    "requires_caps_size": false
+   },
+   "points_held": 3,
+   "points_failed": 0,
+   "points_excluded": 0,
+   "task_id": 49,
+   "task_sha256": "9c9bfd5ace1492cf989cdd4dfc736fafc56e5bbc7232b4fe8d456af27beebe71",
+   "pool": "v7",
+   "seed": 1,
+   "attempts": 1000
+  },
+  "v5s2-20261022-wider-off1000/mbpp_551__extract_column": {
+   "status": "agrees",
+   "draws": 476,
+   "mutants_rejected": 1528,
+   "mutants_accepted": 0,
+   "completeness": 1.0,
+   "weak": false,
+   "cross_rejected": 979,
+   "cross_accepted": 0,
+   "cross_completeness": 1.0,
+   "domain_probes": 524,
+   "domain_admitted": 0,
+   "reference_ran": 476,
+   "pre_completeness": 1.0,
+   "pre_incomplete": false,
+   "larger": {
+    "status": "agrees",
+    "draws": 21,
+    "completeness": 1.0,
+    "cross_completeness": 1.0,
+    "mutants_rejected": 40,
+    "mutants_accepted": 0,
+    "cross_rejected": 19,
+    "cross_accepted": 0,
+    "requires_caps_size": false
+   },
+   "points_held": 3,
+   "points_failed": 0,
+   "points_excluded": 0,
+   "task_id": 551,
+   "task_sha256": "9ceb0f1d4eefda0551130fcf05655855f2101c88ffe5281268bd1cb5177bfb01",
+   "pool": "v7",
+   "seed": 1,
+   "attempts": 1000
+  },
+  "v5s2-20261022-wider-off1000/mbpp_587__list_tuple": {
+   "status": "agrees",
+   "draws": 1000,
+   "mutants_rejected": 6485,
+   "mutants_accepted": 0,
+   "completeness": 1.0,
+   "weak": false,
+   "cross_rejected": 2947,
+   "cross_accepted": 0,
+   "cross_completeness": 1.0,
+   "larger": {
+    "status": "agrees",
+    "draws": 200,
+    "completeness": 1.0,
+    "cross_completeness": 1.0,
+    "mutants_rejected": 1569,
+    "mutants_accepted": 0,
+    "cross_rejected": 594,
+    "cross_accepted": 0,
+    "requires_caps_size": false
+   },
+   "points_held": 3,
+   "points_failed": 0,
+   "points_excluded": 0,
+   "task_id": 587,
+   "task_sha256": "f2887f83e9606d241b3ac690b3002f07dd02c2ed303f1ae01d8e67031db06a1e",
+   "pool": "v7",
+   "seed": 1,
+   "attempts": 1000
+  },
+  "v5s2-20261022-wider-off1000/mbpp_616__tuple_modulo": {
+   "status": "agrees",
+   "draws": 149,
+   "outside_requires": 851,
+   "mutants_rejected": 931,
+   "mutants_accepted": 0,
+   "completeness": 1.0,
+   "weak": false,
+   "cross_rejected": 436,
+   "cross_accepted": 0,
+   "cross_completeness": 1.0,
+   "larger": {
+    "status": "agrees",
+    "draws": 7,
+    "outside_requires": 193,
+    "completeness": 1.0,
+    "cross_completeness": 1.0,
+    "mutants_rejected": 49,
+    "mutants_accepted": 0,
+    "cross_rejected": 15,
+    "cross_accepted": 0,
+    "requires_caps_size": false
+   },
+   "points_held": 3,
+   "points_failed": 0,
+   "points_excluded": 0,
+   "task_id": 616,
+   "task_sha256": "2a75b4cce73df5e73bff8bca530fea238d5cc16f1495a11307ec0eef71a1ed19",
+   "pool": "v7",
+   "seed": 1,
+   "attempts": 1000
+  },
+  "v5s2-20261022-wider-off1000/mbpp_695__check_greater": {
+   "status": "agrees",
+   "draws": 187,
+   "outside_requires": 813,
+   "mutants_rejected": 187,
+   "mutants_accepted": 0,
+   "completeness": 1.0,
+   "weak": false,
+   "cross_rejected": 273,
+   "cross_accepted": 0,
+   "cross_completeness": 1.0,
+   "larger": {
+    "status": "agrees",
+    "draws": 8,
+    "outside_requires": 192,
+    "completeness": 1.0,
+    "cross_completeness": 1.0,
+    "mutants_rejected": 8,
+    "mutants_accepted": 0,
+    "cross_rejected": 9,
+    "cross_accepted": 0,
+    "requires_caps_size": false
+   },
+   "points_held": 3,
+   "points_failed": 0,
+   "points_excluded": 0,
+   "task_id": 695,
+   "task_sha256": "83234359245fd0f67d5cf2b14a320623ff5413eeb12b550b7debf9ae1015b022",
+   "pool": "v7",
+   "seed": 1,
+   "attempts": 1000
+  },
+  "v5s2-20261022-wider-off1000/mbpp_696__zip_list": {
+   "status": "agrees",
+   "draws": 254,
+   "outside_requires": 746,
+   "mutants_rejected": 806,
+   "mutants_accepted": 0,
+   "completeness": 1.0,
+   "weak": false,
+   "cross_rejected": 724,
+   "cross_accepted": 0,
+   "cross_completeness": 1.0,
+   "larger": {
+    "status": "agrees",
+    "draws": 11,
+    "outside_requires": 189,
+    "completeness": 1.0,
+    "cross_completeness": 1.0,
+    "mutants_rejected": 49,
+    "mutants_accepted": 0,
+    "cross_rejected": 27,
+    "cross_accepted": 0,
+    "requires_caps_size": false
+   },
+   "points_held": 3,
+   "points_failed": 0,
+   "points_excluded": 0,
+   "task_id": 696,
+   "task_sha256": "20742d7a298efeb23568d25bebc62c0a9ba31d09d03c2b1861e7b2213fb7c297",
+   "pool": "v7",
+   "seed": 1,
+   "attempts": 1000
+  },
+  "v5s2-20261022-wider-off1000/mbpp_70__get_equal": {
+   "status": "agrees",
+   "draws": 751,
+   "outside_requires": 249,
+   "mutants_rejected": 6008,
+   "mutants_accepted": 0,
+   "completeness": 1.0,
+   "weak": false,
+   "cross_rejected": 0,
+   "cross_accepted": 310,
+   "cross_completeness": 0.0,
+   "cross_witness": {
+    "args": [
+     [
+      []
+     ],
+     0
+    ],
+    "reference_said": "All tuples have same length",
+    "also_accepts": "All tuples do not have same length",
+    "which_is_the_answer_for": [
+     [
+      [
+       2,
+       4,
+       3
+      ],
+      []
+     ],
+     6
+    ]
+   },
+   "larger": {
+    "status": "agrees",
+    "draws": 188,
+    "outside_requires": 12,
+    "completeness": 1.0,
+    "cross_completeness": 0.0,
+    "mutants_rejected": 1504,
+    "mutants_accepted": 0,
+    "cross_rejected": 0,
+    "cross_accepted": 6,
+    "cross_witness": {
+     "args": [
+      [
+       [
+        -3
+       ]
+      ],
+      1
+     ],
+     "reference_said": "All tuples have same length",
+     "also_accepts": "All tuples do not have same length",
+     "which_is_the_answer_for": [
+      [
+       [],
+       [],
+       [
+        -4,
+        -4,
+        1
+       ],
+       [],
+       [
+        3,
+        2,
+        3
+       ],
+       [
+        1,
+        1,
+        -4
+       ],
+       [],
+       [
+        0
+       ],
+       [
+        -4
+       ],
+       [],
+       [
+        0
+       ]
+      ],
+      2
+     ]
+    },
+    "requires_caps_size": false
+   },
+   "points_held": 3,
+   "points_failed": 0,
+   "points_excluded": 0,
+   "task_id": 70,
+   "task_sha256": "e3ebb1ada6611e4a0ceddeb9772dda0be2b4bda6eca7770519709c7333894a49",
+   "pool": "v7",
+   "seed": 1,
+   "attempts": 1000
+  },
+  "v5s2-20261022-wider-off1000/mbpp_710__front_and_rear": {
+   "status": "agrees",
+   "draws": 764,
+   "outside_requires": 113,
+   "mutants_rejected": 5102,
+   "mutants_accepted": 0,
+   "completeness": 1.0,
+   "weak": false,
+   "cross_rejected": 2253,
+   "cross_accepted": 0,
+   "cross_completeness": 1.0,
+   "domain_probes": 123,
+   "domain_admitted": 0,
+   "reference_ran": 877,
+   "pre_completeness": 1.0,
+   "pre_incomplete": false,
+   "larger": {
+    "status": "agrees",
+    "draws": 200,
+    "completeness": 1.0,
+    "cross_completeness": 1.0,
+    "mutants_rejected": 1312,
+    "mutants_accepted": 0,
+    "cross_rejected": 533,
+    "cross_accepted": 0,
+    "requires_caps_size": false
+   },
+   "points_held": 3,
+   "points_failed": 0,
+   "points_excluded": 0,
+   "task_id": 710,
+   "task_sha256": "f78a5f6d7ba46d8e724d15289c654414f8cf9b95c648f5b74e37ab3ab80ae6ed",
+   "pool": "v7",
+   "seed": 1,
+   "attempts": 1000
+  },
+  "v5s2-20261022-wider-off1000/mbpp_750__add_tuple": {
+   "status": "agrees",
+   "draws": 1000,
+   "mutants_rejected": 7263,
+   "mutants_accepted": 0,
+   "completeness": 1.0,
+   "weak": false,
+   "cross_rejected": 2989,
+   "cross_accepted": 0,
+   "cross_completeness": 1.0,
+   "larger": {
+    "status": "agrees",
+    "draws": 200,
+    "completeness": 1.0,
+    "cross_completeness": 1.0,
+    "mutants_rejected": 1488,
+    "mutants_accepted": 0,
+    "cross_rejected": 594,
+    "cross_accepted": 0,
+    "requires_caps_size": false
+   },
+   "points_held": 3,
+   "points_failed": 0,
+   "points_excluded": 0,
+   "task_id": 750,
+   "task_sha256": "bb57b9f1faf188a14ddac0036c7e493a12a47d2624bfe84ba1bdf6a9584bcd8c",
+   "pool": "v7",
+   "seed": 1,
+   "attempts": 1000
+  },
+  "v5s2-20261022-wider-off1000/mbpp_788__new_tuple": {
+   "status": "agrees",
+   "draws": 1000,
+   "mutants_rejected": 4179,
+   "mutants_accepted": 0,
+   "completeness": 1.0,
+   "weak": false,
+   "cross_rejected": 2992,
+   "cross_accepted": 0,
+   "cross_completeness": 1.0,
+   "larger": {
+    "status": "agrees",
+    "draws": 200,
+    "completeness": 1.0,
+    "cross_completeness": 1.0,
+    "mutants_rejected": 957,
+    "mutants_accepted": 0,
+    "cross_rejected": 594,
+    "cross_accepted": 0,
+    "requires_caps_size": false
+   },
+   "points_held": 3,
+   "points_failed": 0,
+   "points_excluded": 0,
+   "task_id": 788,
+   "task_sha256": "34d80860405627f990378c32aee9a26f428a9ce0b729933abbf9e7aca5aa8b87",
+   "pool": "v7",
+   "seed": 1,
+   "attempts": 1000
+  },
+  "v5s2-20261022-wider-off1000/mbpp_792__count_list": {
+   "status": "agrees",
+   "draws": 1000,
+   "mutants_rejected": 8519,
+   "mutants_accepted": 0,
+   "completeness": 1.0,
+   "weak": false,
+   "cross_rejected": 2246,
+   "cross_accepted": 0,
+   "cross_completeness": 1.0,
+   "larger": {
+    "status": "agrees",
+    "draws": 200,
+    "completeness": 1.0,
+    "cross_completeness": 1.0,
+    "mutants_rejected": 2750,
+    "mutants_accepted": 0,
+    "cross_rejected": 559,
+    "cross_accepted": 0,
+    "requires_caps_size": false
+   },
+   "points_held": 3,
+   "points_failed": 0,
+   "points_excluded": 0,
+   "task_id": 792,
+   "task_sha256": "5b4254f896d20ce1ac0e106e0958bf02c2e500ce8ceab090cfb39fb4e005c407",
+   "pool": "v7",
+   "seed": 1,
+   "attempts": 1000
+  },
+  "v5s2-20261022-wider-off1000/mbpp_805__max_sum_list": {
+   "status": "agrees",
+   "draws": 746,
+   "mutants_rejected": 3679,
+   "mutants_accepted": 7,
+   "completeness": 0.998,
+   "weak": true,
+   "weak_witness": {
+    "args": [
+     [
+      [
+       0
+      ],
+      [],
+      [
+       -1
+      ]
+     ]
+    ],
+    "reference_said": [
+     0
+    ],
+    "also_accepts": []
+   },
+   "cross_rejected": 2073,
+   "cross_accepted": 9,
+   "cross_completeness": 0.996,
+   "cross_witness": {
+    "args": [
+     [
+      [
+       0,
+       0
+      ],
+      []
+     ]
+    ],
+    "reference_said": [
+     0,
+     0
+    ],
+    "also_accepts": [],
+    "which_is_the_answer_for": [
+     [
+      [],
+      [
+       4,
+       -4
+      ]
+     ]
+    ]
+   },
+   "domain_probes": 254,
+   "domain_admitted": 0,
+   "reference_ran": 746,
+   "pre_completeness": 1.0,
+   "pre_incomplete": false,
+   "larger": {
+    "status": "agrees",
+    "draws": 200,
+    "completeness": 0.997,
+    "cross_completeness": 1.0,
+    "mutants_rejected": 1305,
+    "mutants_accepted": 4,
+    "cross_rejected": 584,
+    "cross_accepted": 0,
+    "weak_witness": {
+     "args": [
+      [
+       [
+        2,
+        -3,
+        1
+       ],
+       [
+        -4,
+        3
+       ],
+       [
+        2,
+        4
+       ],
+       [
+        3,
+        -4,
+        1
+       ],
+       [
+        -3,
+        0,
+        -3
+       ],
+       [
+        4,
+        2
+       ]
+      ]
+     ],
+     "reference_said": [
+      2,
+      4
+     ],
+     "also_accepts": [
+      4,
+      2
+     ]
+    },
+    "requires_caps_size": false
+   },
+   "points_held": 3,
+   "points_failed": 0,
+   "points_excluded": 0,
+   "task_id": 805,
+   "task_sha256": "4ad4bec1b77e592920ae2e83a8c40431146aae2d624f5b3aa65f3408acc32e3e",
+   "pool": "v7",
+   "seed": 1,
+   "attempts": 1000
+  },
+  "v5s2-20261022-wider-off1000/mbpp_808__check_K": {
+   "status": "agrees",
+   "draws": 1000,
+   "mutants_rejected": 1000,
+   "mutants_accepted": 0,
+   "completeness": 1.0,
+   "weak": false,
+   "cross_rejected": 915,
+   "cross_accepted": 0,
+   "cross_completeness": 1.0,
+   "larger": {
+    "status": "agrees",
+    "draws": 200,
+    "completeness": 1.0,
+    "cross_completeness": 1.0,
+    "mutants_rejected": 200,
+    "mutants_accepted": 0,
+    "cross_rejected": 134,
+    "cross_accepted": 0,
+    "requires_caps_size": false
+   },
+   "points_held": 3,
+   "points_failed": 0,
+   "points_excluded": 0,
+   "task_id": 808,
+   "task_sha256": "e2795776aca8220745ac75a0194458f9ba93f83c7c622a0e9d6054c60ebc71b5",
+   "pool": "v7",
+   "seed": 1,
+   "attempts": 1000
+  },
+  "v5s2-20261022-wider-off1000/mbpp_809__check_smaller": {
+   "status": "agrees",
+   "draws": 172,
+   "outside_requires": 828,
+   "mutants_rejected": 172,
+   "mutants_accepted": 0,
+   "completeness": 1.0,
+   "weak": false,
+   "cross_rejected": 233,
+   "cross_accepted": 0,
+   "cross_completeness": 1.0,
+   "larger": {
+    "status": "agrees",
+    "draws": 9,
+    "outside_requires": 191,
+    "completeness": 1.0,
+    "cross_completeness": 1.0,
+    "mutants_rejected": 9,
+    "mutants_accepted": 0,
+    "cross_rejected": 8,
+    "cross_accepted": 0,
+    "requires_caps_size": false
+   },
+   "points_held": 3,
+   "points_failed": 0,
+   "points_excluded": 0,
+   "task_id": 809,
+   "task_sha256": "8dcd19347b0e968da7526bfbb6ed2c55274231a28a8efd11bc386a99c35b22a9",
+   "pool": "v7",
+   "seed": 1,
+   "attempts": 1000
+  },
+  "v5s2-20261022-wider-off1000/mbpp_811__check_identical": {
+   "status": "agrees",
+   "draws": 1000,
+   "mutants_rejected": 1000,
+   "mutants_accepted": 0,
+   "completeness": 1.0,
+   "weak": false,
+   "cross_rejected": 344,
+   "cross_accepted": 0,
+   "cross_completeness": 1.0,
+   "larger": {
+    "status": "agrees",
+    "draws": 200,
+    "completeness": 1.0,
+    "cross_completeness": 1.0,
+    "mutants_rejected": 200,
+    "mutants_accepted": 0,
+    "cross_rejected": 6,
+    "cross_accepted": 0,
+    "requires_caps_size": false
+   },
+   "points_held": 3,
+   "points_failed": 0,
+   "points_excluded": 0,
+   "task_id": 811,
+   "task_sha256": "defcdc53bde65640c07664282dc3c0eee5a9d251011bc828eaef4943ff3c82f5",
+   "pool": "v7",
+   "seed": 1,
+   "attempts": 1000
+  },
+  "v5s2-20261022-wider-off1000/mbpp_816__clear_tuple": {
+   "status": "agrees",
+   "draws": 1000,
+   "mutants_rejected": 1000,
+   "mutants_accepted": 0,
+   "completeness": 1.0,
+   "weak": false,
+   "larger": {
+    "status": "agrees",
+    "draws": 200,
+    "completeness": 1.0,
+    "mutants_rejected": 200,
+    "mutants_accepted": 0,
+    "requires_caps_size": false
+   },
+   "points_held": 3,
+   "points_failed": 0,
+   "points_excluded": 0,
+   "task_id": 816,
+   "task_sha256": "b375e7fcac05ae78fb2f00841912528ddc17a8905aa61384a4260d4445ac4230",
+   "pool": "v7",
+   "seed": 1,
+   "attempts": 1000
+  },
+  "v5s2-20261022-wider-off1000/mbpp_893__Extract": {
+   "status": "agrees",
+   "draws": 702,
+   "mutants_rejected": 2844,
+   "mutants_accepted": 0,
+   "completeness": 1.0,
+   "weak": false,
+   "cross_rejected": 1796,
+   "cross_accepted": 0,
+   "cross_completeness": 1.0,
+   "domain_probes": 298,
+   "domain_admitted": 0,
+   "reference_ran": 702,
+   "pre_completeness": 1.0,
+   "pre_incomplete": false,
+   "larger": {
+    "status": "agrees",
+    "draws": 13,
+    "completeness": 1.0,
+    "cross_completeness": 1.0,
+    "mutants_rejected": 99,
+    "mutants_accepted": 0,
+    "cross_rejected": 33,
+    "cross_accepted": 0,
+    "requires_caps_size": false
+   },
+   "points_held": 3,
+   "points_failed": 0,
+   "points_excluded": 0,
+   "task_id": 893,
+   "task_sha256": "d96f647d40a130fe6747547dfdd4013dcbf732d876a0f4dc2665c20c6c513905",
+   "pool": "v7",
+   "seed": 1,
+   "attempts": 1000
+  },
+  "v5s2-20261022-wider-off1000/mbpp_948__get_item": {
+   "status": "agrees",
+   "draws": 672,
+   "outside_requires": 42,
+   "mutants_rejected": 9262,
+   "mutants_accepted": 0,
+   "completeness": 1.0,
+   "weak": false,
+   "cross_rejected": 2000,
+   "cross_accepted": 0,
+   "cross_completeness": 1.0,
+   "domain_probes": 286,
+   "domain_admitted": 0,
+   "reference_ran": 714,
+   "pre_completeness": 1.0,
+   "pre_incomplete": false,
+   "larger": {
+    "status": "agrees",
+    "draws": 144,
+    "outside_requires": 1,
+    "completeness": 1.0,
+    "cross_completeness": 1.0,
+    "mutants_rejected": 1981,
+    "mutants_accepted": 0,
+    "cross_rejected": 423,
+    "cross_accepted": 0,
+    "requires_caps_size": true
+   },
+   "points_held": 3,
+   "points_failed": 0,
+   "points_excluded": 0,
+   "task_id": 948,
+   "task_sha256": "13a634ebd0821f2dd02ccf24d4ba9c358f61db741b6145973e01b16951b6ccf3",
+   "pool": "v7",
+   "seed": 1,
+   "attempts": 1000
+  },
+  "v5s2-20261022-wider-off1000/mbpp_972__concatenate_nested": {
+   "status": "agrees",
+   "draws": 1000,
+   "mutants_rejected": 6829,
+   "mutants_accepted": 0,
+   "completeness": 1.0,
+   "weak": false,
+   "cross_rejected": 2988,
+   "cross_accepted": 0,
+   "cross_completeness": 1.0,
+   "larger": {
+    "status": "agrees",
+    "draws": 200,
+    "completeness": 1.0,
+    "cross_completeness": 1.0,
+    "mutants_rejected": 1369,
+    "mutants_accepted": 0,
+    "cross_rejected": 594,
+    "cross_accepted": 0,
+    "requires_caps_size": false
+   },
+   "points_held": 3,
+   "points_failed": 0,
+   "points_excluded": 0,
+   "task_id": 972,
+   "task_sha256": "e5bfdbb80c7b0b47766fcb4157900565c2431f09972ab5833f130c77a493d7bb",
+   "pool": "v7",
+   "seed": 1,
+   "attempts": 1000
+  },
+  "v5s2-20261022-wider-off2000/mbpp_106__add_lists": {
+   "status": "no valid draws",
+   "draws": 0,
+   "pre_completeness_unmeasurable": "reference never ran",
+   "points_held": 3,
+   "points_failed": 0,
+   "points_excluded": 0,
+   "task_id": 106,
+   "task_sha256": "b55dcad2776563671e70bafeef91bca9a514df691cb0d602adfdc36861618af9",
+   "pool": "v7",
+   "seed": 1,
+   "attempts": 1000
+  },
+  "v5s2-20261022-wider-off2000/mbpp_120__max_product_tuple": {
+   "status": "agrees",
+   "draws": 78,
+   "mutants_rejected": 297,
+   "mutants_accepted": 587,
+   "completeness": 0.336,
+   "weak": true,
+   "weak_witness": {
+    "args": [
+     [
+      [
+       3,
+       2
+      ]
+     ]
+    ],
+    "reference_said": 6,
+    "also_accepts": 7
+   },
+   "cross_rejected": 48,
+   "cross_accepted": 151,
+   "cross_completeness": 0.241,
+   "cross_witness": {
+    "args": [
+     [
+      [
+       -4,
+       4
+      ]
+     ]
+    ],
+    "reference_said": 16,
+    "also_accepts": 6,
+    "which_is_the_answer_for": [
+     [
+      [
+       3,
+       2
+      ]
+     ]
+    ]
+   },
+   "domain_probes": 922,
+   "domain_admitted": 681,
+   "reference_ran": 78,
+   "pre_completeness": 0.261,
+   "pre_incomplete": true,
+   "domain_witness": {
+    "args": [
+     [
+      [
+       1
+      ]
+     ]
+    ],
+    "reference_raised": true
+   },
+   "larger": {
+    "status": "no valid draws",
+    "draws": 0,
+    "requires_caps_size": false
+   },
+   "points_held": 3,
+   "points_failed": 0,
+   "points_excluded": 0,
+   "task_id": 120,
+   "task_sha256": "85370b132a2baf59dcca6816e5c59c958595c452fc8008caea031b2077054c2a",
+   "pool": "v7",
+   "seed": 1,
+   "attempts": 1000
+  },
+  "v5s2-20261022-wider-off2000/mbpp_132__tup_string": {
+   "status": "agrees",
+   "draws": 1000,
+   "mutants_rejected": 6904,
+   "mutants_accepted": 0,
+   "completeness": 1.0,
+   "weak": false,
+   "cross_rejected": 2969,
+   "cross_accepted": 0,
+   "cross_completeness": 1.0,
+   "larger": {
+    "status": "agrees",
+    "draws": 200,
+    "completeness": 1.0,
+    "cross_completeness": 1.0,
+    "mutants_rejected": 1587,
+    "mutants_accepted": 0,
+    "cross_rejected": 594,
+    "cross_accepted": 0,
+    "requires_caps_size": false
+   },
+   "points_held": 3,
+   "points_failed": 0,
+   "points_excluded": 0,
+   "task_id": 132,
+   "task_sha256": "0ea84650f45890e57b669af0534fa510ae1ef8b9e85b68a3615d6006bdf2e1b5",
+   "pool": "v7",
+   "seed": 1,
+   "attempts": 1000
+  },
+  "v5s2-20261022-wider-off2000/mbpp_213__concatenate_strings": {
+   "status": "agrees",
+   "draws": 165,
+   "outside_requires": 835,
+   "mutants_rejected": 603,
+   "mutants_accepted": 0,
+   "completeness": 1.0,
+   "weak": false,
+   "cross_rejected": 476,
+   "cross_accepted": 0,
+   "cross_completeness": 1.0,
+   "larger": {
+    "status": "agrees",
+    "draws": 11,
+    "outside_requires": 189,
+    "completeness": 1.0,
+    "cross_completeness": 1.0,
+    "mutants_rejected": 55,
+    "mutants_accepted": 0,
+    "cross_rejected": 27,
+    "cross_accepted": 0,
+    "requires_caps_size": false
+   },
+   "points_held": 3,
+   "points_failed": 0,
+   "points_excluded": 0,
+   "task_id": 213,
+   "task_sha256": "2d0bcb1128dc137e8021228287d5ecaaceb3a941dc41d39a420f86851d050881",
+   "pool": "v7",
+   "seed": 1,
+   "attempts": 1000
+  },
+  "v5s2-20261022-wider-off2000/mbpp_261__division_elements": {
+   "status": "agrees",
+   "draws": 26,
+   "outside_requires": 298,
+   "skipped": {
+    "reference result has no t value": 606
+   },
+   "mutants_rejected": 60,
+   "mutants_accepted": 0,
+   "completeness": 1.0,
+   "weak": false,
+   "cross_rejected": 38,
+   "cross_accepted": 0,
+   "cross_completeness": 1.0,
+   "domain_probes": 70,
+   "domain_admitted": 0,
+   "reference_ran": 930,
+   "pre_completeness": 1.0,
+   "pre_incomplete": false,
+   "larger": {
+    "status": "reference result has no t value",
+    "draws": 0,
+    "outside_requires": 18,
+    "skipped": {
+     "reference result has no t value": 146
+    },
+    "requires_caps_size": false
+   },
+   "points_held": 3,
+   "points_failed": 0,
+   "points_excluded": 0,
+   "task_id": 261,
+   "task_sha256": "c6a27a4b779216166673b5fb173e6abe61142b72adcbc5af96456a11ea8a7f41",
+   "pool": "v7",
+   "seed": 1,
+   "attempts": 1000
+  },
+  "v5s2-20261022-wider-off2000/mbpp_273__substract_elements": {
+   "status": "agrees",
+   "draws": 172,
+   "outside_requires": 828,
+   "mutants_rejected": 1052,
+   "mutants_accepted": 0,
+   "completeness": 1.0,
+   "weak": false,
+   "cross_rejected": 493,
+   "cross_accepted": 0,
+   "cross_completeness": 1.0,
+   "larger": {
+    "status": "agrees",
+    "draws": 12,
+    "outside_requires": 188,
+    "completeness": 1.0,
+    "cross_completeness": 1.0,
+    "mutants_rejected": 95,
+    "mutants_accepted": 0,
+    "cross_rejected": 30,
+    "cross_accepted": 0,
+    "requires_caps_size": false
+   },
+   "points_held": 3,
+   "points_failed": 0,
+   "points_excluded": 0,
+   "task_id": 273,
+   "task_sha256": "72b2671e5dcc077999b279e8d69d278873f0a62b580da34018f07d8ffecd5355",
+   "pool": "v7",
+   "seed": 1,
+   "attempts": 1000
+  },
+  "v5s2-20261022-wider-off2000/mbpp_357__find_max": {
+   "status": "disagrees",
+   "ensures": 1,
+   "args": [
+    [
+     [
+      2,
+      -1,
+      4
+     ]
+    ]
+   ],
+   "reference_said": 4,
+   "agreed_before": 68,
+   "points_held": 3,
+   "points_failed": 0,
+   "points_excluded": 0,
+   "task_id": 357,
+   "task_sha256": "bcb394c56652eb33da4b5774d2e6b88ca039312062dd173000880d602ccf2742",
+   "pool": "v7",
+   "seed": 1,
+   "attempts": 1000
+  },
+  "v5s2-20261022-wider-off2000/mbpp_380__multi_list": {
+   "status": "agrees",
+   "draws": 1000,
+   "mutants_rejected": 3863,
+   "mutants_accepted": 0,
+   "completeness": 1.0,
+   "weak": false,
+   "cross_rejected": 2946,
+   "cross_accepted": 0,
+   "cross_completeness": 1.0,
+   "larger": {
+    "status": "agrees",
+    "draws": 192,
+    "completeness": 1.0,
+    "cross_completeness": 1.0,
+    "mutants_rejected": 917,
+    "mutants_accepted": 0,
+    "cross_rejected": 570,
+    "cross_accepted": 0,
+    "requires_caps_size": false
+   },
+   "points_held": 3,
+   "points_failed": 0,
+   "points_excluded": 0,
+   "task_id": 380,
+   "task_sha256": "dc292610dd434fca1d5451bb8066a2fbf72e07261f35d082d6c0c3c4566bde3a",
+   "pool": "v7",
+   "seed": 1,
+   "attempts": 1000
+  },
+  "v5s2-20261022-wider-off2000/mbpp_409__min_product_tuple": {
+   "status": "agrees",
+   "draws": 88,
+   "mutants_rejected": 961,
+   "mutants_accepted": 0,
+   "completeness": 1.0,
+   "weak": false,
+   "cross_rejected": 238,
+   "cross_accepted": 0,
+   "cross_completeness": 1.0,
+   "domain_probes": 912,
+   "domain_admitted": 655,
+   "reference_ran": 88,
+   "pre_completeness": 0.282,
+   "pre_incomplete": true,
+   "domain_witness": {
+    "args": [
+     [
+      [
+       -4,
+       1,
+       1
+      ],
+      [
+       -4,
+       -1
+      ]
+     ]
+    ],
+    "reference_raised": true
+   },
+   "larger": {
+    "status": "no valid draws",
+    "draws": 0,
+    "requires_caps_size": false
+   },
+   "points_held": 3,
+   "points_failed": 0,
+   "points_excluded": 0,
+   "task_id": 409,
+   "task_sha256": "e8ce2b4aa033fa0a0daa422bf60629925f792d0e07e20c9b30c3f22d5d85a889",
+   "pool": "v7",
+   "seed": 1,
+   "attempts": 1000
+  },
+  "v5s2-20261022-wider-off2000/mbpp_424__extract_rear": {
+   "status": "agrees",
+   "draws": 579,
+   "outside_requires": 144,
+   "mutants_rejected": 4045,
+   "mutants_accepted": 0,
+   "completeness": 1.0,
+   "weak": false,
+   "cross_rejected": 1729,
+   "cross_accepted": 0,
+   "cross_completeness": 1.0,
+   "domain_probes": 277,
+   "domain_admitted": 277,
+   "reference_ran": 723,
+   "pre_completeness": 0.0,
+   "pre_incomplete": true,
+   "domain_witness": {
+    "args": [
+     [
+      [
+       76,
+       79,
+       73,
+       110,
+       102,
+       84
+      ],
+      [
+       90,
+       74,
+       101,
+       101,
+       118
+      ],
+      [],
+      [
+       94,
+       88,
+       94
+      ]
+     ]
+    ],
+    "reference_raised": true
+   },
+   "larger": {
+    "status": "agrees",
+    "draws": 43,
+    "completeness": 1.0,
+    "cross_completeness": 1.0,
+    "mutants_rejected": 344,
+    "mutants_accepted": 0,
+    "cross_rejected": 123,
+    "cross_accepted": 0,
+    "requires_caps_size": false
+   },
+   "points_held": 3,
+   "points_failed": 0,
+   "points_excluded": 0,
+   "task_id": 424,
+   "task_sha256": "3b22be2bf7818330ef6c85b05e0f3664852d61921bec8951fc263fe7756e1307",
+   "pool": "v7",
+   "seed": 1,
+   "attempts": 1000
+  },
+  "v5s2-20261022-wider-off2000/mbpp_460__Extract": {
+   "status": "agrees",
+   "draws": 676,
+   "mutants_rejected": 2766,
+   "mutants_accepted": 0,
+   "completeness": 1.0,
+   "weak": false,
+   "cross_rejected": 1749,
+   "cross_accepted": 0,
+   "cross_completeness": 1.0,
+   "domain_probes": 324,
+   "domain_admitted": 0,
+   "reference_ran": 676,
+   "pre_completeness": 1.0,
+   "pre_incomplete": false,
+   "larger": {
+    "status": "agrees",
+    "draws": 18,
+    "completeness": 1.0,
+    "cross_completeness": 1.0,
+    "mutants_rejected": 136,
+    "mutants_accepted": 0,
+    "cross_rejected": 48,
+    "cross_accepted": 0,
+    "requires_caps_size": false
+   },
+   "points_held": 3,
+   "points_failed": 0,
+   "points_excluded": 0,
+   "task_id": 460,
+   "task_sha256": "8496a8d8a7b347d94e0b65f911e6beb89d7000c9c802ccd8016164cd0efade44",
+   "pool": "v7",
+   "seed": 1,
+   "attempts": 1000
+  },
+  "v5s2-20261022-wider-off2000/mbpp_470__add_pairwise": {
+   "status": "agrees",
+   "draws": 730,
+   "outside_requires": 270,
+   "mutants_rejected": 5215,
+   "mutants_accepted": 0,
+   "completeness": 1.0,
+   "weak": false,
+   "cross_rejected": 2178,
+   "cross_accepted": 0,
+   "cross_completeness": 1.0,
+   "larger": {
+    "status": "agrees",
+    "draws": 200,
+    "completeness": 1.0,
+    "cross_completeness": 1.0,
+    "mutants_rejected": 1491,
+    "mutants_accepted": 0,
+    "cross_rejected": 594,
+    "cross_accepted": 0,
+    "requires_caps_size": false
+   },
+   "points_held": 3,
+   "points_failed": 0,
+   "points_excluded": 0,
+   "task_id": 470,
+   "task_sha256": "fc3ced48280795b210c157e615d4164ad844703b3055b38a6ee20193ff2080ec",
+   "pool": "v7",
+   "seed": 1,
+   "attempts": 1000
+  },
+  "v5s2-20261022-wider-off2000/mbpp_49__specified_element": {
+   "status": "agrees",
+   "draws": 197,
+   "mutants_rejected": 1124,
+   "mutants_accepted": 0,
+   "completeness": 1.0,
+   "weak": false,
+   "cross_rejected": 561,
+   "cross_accepted": 0,
+   "cross_completeness": 1.0,
+   "domain_probes": 550,
+   "domain_admitted": 118,
+   "reference_ran": 450,
+   "pre_completeness": 0.785,
+   "pre_incomplete": true,
+   "domain_witness": {
+    "args": [
+     [
+      [
+       3,
+       2,
+       3
+      ],
+      [],
+      []
+     ],
+     1
+    ],
+    "reference_raised": true
+   },
+   "larger": {
+    "status": "agrees",
+    "draws": 6,
+    "completeness": 1.0,
+    "cross_completeness": 1.0,
+    "mutants_rejected": 39,
+    "mutants_accepted": 0,
+    "cross_rejected": 12,
+    "cross_accepted": 0,
+    "requires_caps_size": false
+   },
+   "points_held": 3,
+   "points_failed": 0,
+   "points_excluded": 0,
+   "task_id": 49,
+   "task_sha256": "1c050512ebc15afabf2a28cf5947da476a200e9ed855c8abe8cd626f1e2da805",
+   "pool": "v7",
+   "seed": 1,
+   "attempts": 1000
+  },
+  "v5s2-20261022-wider-off2000/mbpp_514__sum_elements": {
+   "status": "agrees",
+   "draws": 1000,
+   "mutants_rejected": 12966,
+   "mutants_accepted": 0,
+   "completeness": 1.0,
+   "weak": false,
+   "cross_rejected": 2901,
+   "cross_accepted": 0,
+   "cross_completeness": 1.0,
+   "larger": {
+    "status": "agrees",
+    "draws": 200,
+    "completeness": 1.0,
+    "cross_completeness": 1.0,
+    "mutants_rejected": 2800,
+    "mutants_accepted": 0,
+    "cross_rejected": 593,
+    "cross_accepted": 0,
+    "requires_caps_size": false
+   },
+   "points_held": 3,
+   "points_failed": 0,
+   "points_excluded": 0,
+   "task_id": 514,
+   "task_sha256": "240619fdd735a10937bd481966ca94427439d849a8837dcd74c57e1658729b00",
+   "pool": "v7",
+   "seed": 1,
+   "attempts": 1000
+  },
+  "v5s2-20261022-wider-off2000/mbpp_551__extract_column": {
+   "status": "agrees",
+   "draws": 476,
+   "mutants_rejected": 1528,
+   "mutants_accepted": 0,
+   "completeness": 1.0,
+   "weak": false,
+   "cross_rejected": 979,
+   "cross_accepted": 0,
+   "cross_completeness": 1.0,
+   "domain_probes": 524,
+   "domain_admitted": 0,
+   "reference_ran": 476,
+   "pre_completeness": 1.0,
+   "pre_incomplete": false,
+   "larger": {
+    "status": "agrees",
+    "draws": 21,
+    "completeness": 1.0,
+    "cross_completeness": 1.0,
+    "mutants_rejected": 40,
+    "mutants_accepted": 0,
+    "cross_rejected": 19,
+    "cross_accepted": 0,
+    "requires_caps_size": false
+   },
+   "points_held": 3,
+   "points_failed": 0,
+   "points_excluded": 0,
+   "task_id": 551,
+   "task_sha256": "9ceb0f1d4eefda0551130fcf05655855f2101c88ffe5281268bd1cb5177bfb01",
+   "pool": "v7",
+   "seed": 1,
+   "attempts": 1000
+  },
+  "v5s2-20261022-wider-off2000/mbpp_587__list_tuple": {
+   "status": "agrees",
+   "draws": 1000,
+   "mutants_rejected": 6485,
+   "mutants_accepted": 0,
+   "completeness": 1.0,
+   "weak": false,
+   "cross_rejected": 2947,
+   "cross_accepted": 0,
+   "cross_completeness": 1.0,
+   "larger": {
+    "status": "agrees",
+    "draws": 200,
+    "completeness": 1.0,
+    "cross_completeness": 1.0,
+    "mutants_rejected": 1569,
+    "mutants_accepted": 0,
+    "cross_rejected": 594,
+    "cross_accepted": 0,
+    "requires_caps_size": false
+   },
+   "points_held": 3,
+   "points_failed": 0,
+   "points_excluded": 0,
+   "task_id": 587,
+   "task_sha256": "f2887f83e9606d241b3ac690b3002f07dd02c2ed303f1ae01d8e67031db06a1e",
+   "pool": "v7",
+   "seed": 1,
+   "attempts": 1000
+  },
+  "v5s2-20261022-wider-off2000/mbpp_616__tuple_modulo": {
+   "status": "agrees",
+   "draws": 149,
+   "outside_requires": 851,
+   "mutants_rejected": 931,
+   "mutants_accepted": 0,
+   "completeness": 1.0,
+   "weak": false,
+   "cross_rejected": 436,
+   "cross_accepted": 0,
+   "cross_completeness": 1.0,
+   "larger": {
+    "status": "agrees",
+    "draws": 7,
+    "outside_requires": 193,
+    "completeness": 1.0,
+    "cross_completeness": 1.0,
+    "mutants_rejected": 49,
+    "mutants_accepted": 0,
+    "cross_rejected": 15,
+    "cross_accepted": 0,
+    "requires_caps_size": false
+   },
+   "points_held": 3,
+   "points_failed": 0,
+   "points_excluded": 0,
+   "task_id": 616,
+   "task_sha256": "2a75b4cce73df5e73bff8bca530fea238d5cc16f1495a11307ec0eef71a1ed19",
+   "pool": "v7",
+   "seed": 1,
+   "attempts": 1000
+  },
+  "v5s2-20261022-wider-off2000/mbpp_660__find_Points": {
+   "status": "disagrees",
+   "ensures": 0,
+   "args": [
+    1,
+    5,
+    1,
+    13
+   ],
+   "reference_said": [
+    -1,
+    13
+   ],
+   "agreed_before": 2,
+   "points_held": 3,
+   "points_failed": 0,
+   "points_excluded": 0,
+   "task_id": 660,
+   "task_sha256": "407fb0fbf621f1210a53a2515394f0e03556b6dce72a50be4209d15c26688e44",
+   "pool": "v7",
+   "seed": 1,
+   "attempts": 1000
+  },
+  "v5s2-20261022-wider-off2000/mbpp_695__check_greater": {
+   "status": "agrees",
+   "draws": 187,
+   "outside_requires": 813,
+   "mutants_rejected": 187,
+   "mutants_accepted": 0,
+   "completeness": 1.0,
+   "weak": false,
+   "cross_rejected": 273,
+   "cross_accepted": 0,
+   "cross_completeness": 1.0,
+   "larger": {
+    "status": "agrees",
+    "draws": 8,
+    "outside_requires": 192,
+    "completeness": 1.0,
+    "cross_completeness": 1.0,
+    "mutants_rejected": 8,
+    "mutants_accepted": 0,
+    "cross_rejected": 9,
+    "cross_accepted": 0,
+    "requires_caps_size": false
+   },
+   "points_held": 3,
+   "points_failed": 0,
+   "points_excluded": 0,
+   "task_id": 695,
+   "task_sha256": "83234359245fd0f67d5cf2b14a320623ff5413eeb12b550b7debf9ae1015b022",
+   "pool": "v7",
+   "seed": 1,
+   "attempts": 1000
+  },
+  "v5s2-20261022-wider-off2000/mbpp_696__zip_list": {
+   "status": "agrees",
+   "draws": 254,
+   "outside_requires": 746,
+   "mutants_rejected": 806,
+   "mutants_accepted": 0,
+   "completeness": 1.0,
+   "weak": false,
+   "cross_rejected": 724,
+   "cross_accepted": 0,
+   "cross_completeness": 1.0,
+   "larger": {
+    "status": "agrees",
+    "draws": 11,
+    "outside_requires": 189,
+    "completeness": 1.0,
+    "cross_completeness": 1.0,
+    "mutants_rejected": 49,
+    "mutants_accepted": 0,
+    "cross_rejected": 27,
+    "cross_accepted": 0,
+    "requires_caps_size": false
+   },
+   "points_held": 3,
+   "points_failed": 0,
+   "points_excluded": 0,
+   "task_id": 696,
+   "task_sha256": "20742d7a298efeb23568d25bebc62c0a9ba31d09d03c2b1861e7b2213fb7c297",
+   "pool": "v7",
+   "seed": 1,
+   "attempts": 1000
+  },
+  "v5s2-20261022-wider-off2000/mbpp_70__get_equal": {
+   "status": "agrees",
+   "draws": 755,
+   "outside_requires": 245,
+   "mutants_rejected": 6040,
+   "mutants_accepted": 0,
+   "completeness": 1.0,
+   "weak": false,
+   "cross_rejected": 273,
+   "cross_accepted": 0,
+   "cross_completeness": 1.0,
+   "larger": {
+    "status": "agrees",
+    "draws": 189,
+    "outside_requires": 11,
+    "completeness": 1.0,
+    "cross_completeness": 1.0,
+    "mutants_rejected": 1512,
+    "mutants_accepted": 0,
+    "cross_rejected": 12,
+    "cross_accepted": 0,
+    "requires_caps_size": false
+   },
+   "points_held": 3,
+   "points_failed": 0,
+   "points_excluded": 0,
+   "task_id": 70,
+   "task_sha256": "0a7d9d02b4b57bdd3ee2dabb186ef87341fccf82b7a30d0ef8d70eb6c7a559ec",
+   "pool": "v7",
+   "seed": 1,
+   "attempts": 1000
+  },
+  "v5s2-20261022-wider-off2000/mbpp_710__front_and_rear": {
+   "status": "agrees",
+   "draws": 764,
+   "outside_requires": 113,
+   "mutants_rejected": 5102,
+   "mutants_accepted": 0,
+   "completeness": 1.0,
+   "weak": false,
+   "cross_rejected": 2253,
+   "cross_accepted": 0,
+   "cross_completeness": 1.0,
+   "domain_probes": 123,
+   "domain_admitted": 0,
+   "reference_ran": 877,
+   "pre_completeness": 1.0,
+   "pre_incomplete": false,
+   "larger": {
+    "status": "agrees",
+    "draws": 200,
+    "completeness": 1.0,
+    "cross_completeness": 1.0,
+    "mutants_rejected": 1312,
+    "mutants_accepted": 0,
+    "cross_rejected": 533,
+    "cross_accepted": 0,
+    "requires_caps_size": false
+   },
+   "points_held": 3,
+   "points_failed": 0,
+   "points_excluded": 0,
+   "task_id": 710,
+   "task_sha256": "f78a5f6d7ba46d8e724d15289c654414f8cf9b95c648f5b74e37ab3ab80ae6ed",
+   "pool": "v7",
+   "seed": 1,
+   "attempts": 1000
+  },
+  "v5s2-20261022-wider-off2000/mbpp_726__multiply_elements": {
+   "status": "agrees",
+   "draws": 753,
+   "outside_requires": 247,
+   "mutants_rejected": 5234,
+   "mutants_accepted": 0,
+   "completeness": 1.0,
+   "weak": false,
+   "cross_rejected": 2252,
+   "cross_accepted": 0,
+   "cross_completeness": 1.0,
+   "larger": {
+    "status": "agrees",
+    "draws": 200,
+    "completeness": 1.0,
+    "cross_completeness": 1.0,
+    "mutants_rejected": 1396,
+    "mutants_accepted": 0,
+    "cross_rejected": 594,
+    "cross_accepted": 0,
+    "requires_caps_size": false
+   },
+   "points_held": 3,
+   "points_failed": 0,
+   "points_excluded": 0,
+   "task_id": 726,
+   "task_sha256": "8bbababb87314b64b854308deb82cafa92d0abeae7c2218f0898085996af2c6f",
+   "pool": "v7",
+   "seed": 1,
+   "attempts": 1000
+  },
+  "v5s2-20261022-wider-off2000/mbpp_788__new_tuple": {
+   "status": "agrees",
+   "draws": 1000,
+   "mutants_rejected": 4187,
+   "mutants_accepted": 0,
+   "completeness": 1.0,
+   "weak": false,
+   "cross_rejected": 2993,
+   "cross_accepted": 0,
+   "cross_completeness": 1.0,
+   "larger": {
+    "status": "agrees",
+    "draws": 200,
+    "completeness": 1.0,
+    "cross_completeness": 1.0,
+    "mutants_rejected": 946,
+    "mutants_accepted": 0,
+    "cross_rejected": 594,
+    "cross_accepted": 0,
+    "requires_caps_size": false
+   },
+   "points_held": 3,
+   "points_failed": 0,
+   "points_excluded": 0,
+   "task_id": 788,
+   "task_sha256": "6cf4a61c721c67e24b60d70b6cd9d764d9c370898c6270aad0515af9e2688507",
+   "pool": "v7",
+   "seed": 1,
+   "attempts": 1000
+  },
+  "v5s2-20261022-wider-off2000/mbpp_792__count_list": {
+   "status": "agrees",
+   "draws": 1000,
+   "mutants_rejected": 8519,
+   "mutants_accepted": 0,
+   "completeness": 1.0,
+   "weak": false,
+   "cross_rejected": 2246,
+   "cross_accepted": 0,
+   "cross_completeness": 1.0,
+   "larger": {
+    "status": "agrees",
+    "draws": 200,
+    "completeness": 1.0,
+    "cross_completeness": 1.0,
+    "mutants_rejected": 2750,
+    "mutants_accepted": 0,
+    "cross_rejected": 559,
+    "cross_accepted": 0,
+    "requires_caps_size": false
+   },
+   "points_held": 3,
+   "points_failed": 0,
+   "points_excluded": 0,
+   "task_id": 792,
+   "task_sha256": "5b4254f896d20ce1ac0e106e0958bf02c2e500ce8ceab090cfb39fb4e005c407",
+   "pool": "v7",
+   "seed": 1,
+   "attempts": 1000
+  },
+  "v5s2-20261022-wider-off2000/mbpp_805__max_sum_list": {
+   "status": "disagrees",
+   "ensures": 1,
+   "args": [
+    [
+     [
+      0
+     ],
+     []
+    ]
+   ],
+   "reference_said": [
+    0
+   ],
+   "agreed_before": 3,
+   "points_held": 3,
+   "points_failed": 0,
+   "points_excluded": 0,
+   "task_id": 805,
+   "task_sha256": "f185201e94a4fb56e715f70b72ff381dd03e72fe9eedabf5c8263f0e137c5a44",
+   "pool": "v7",
+   "seed": 1,
+   "attempts": 1000
+  },
+  "v5s2-20261022-wider-off2000/mbpp_808__check_K": {
+   "status": "agrees",
+   "draws": 1000,
+   "mutants_rejected": 1000,
+   "mutants_accepted": 0,
+   "completeness": 1.0,
+   "weak": false,
+   "cross_rejected": 915,
+   "cross_accepted": 0,
+   "cross_completeness": 1.0,
+   "larger": {
+    "status": "agrees",
+    "draws": 200,
+    "completeness": 1.0,
+    "cross_completeness": 1.0,
+    "mutants_rejected": 200,
+    "mutants_accepted": 0,
+    "cross_rejected": 134,
+    "cross_accepted": 0,
+    "requires_caps_size": false
+   },
+   "points_held": 3,
+   "points_failed": 0,
+   "points_excluded": 0,
+   "task_id": 808,
+   "task_sha256": "e2795776aca8220745ac75a0194458f9ba93f83c7c622a0e9d6054c60ebc71b5",
+   "pool": "v7",
+   "seed": 1,
+   "attempts": 1000
+  },
+  "v5s2-20261022-wider-off2000/mbpp_809__check_smaller": {
+   "status": "agrees",
+   "draws": 172,
+   "outside_requires": 828,
+   "mutants_rejected": 172,
+   "mutants_accepted": 0,
+   "completeness": 1.0,
+   "weak": false,
+   "cross_rejected": 233,
+   "cross_accepted": 0,
+   "cross_completeness": 1.0,
+   "larger": {
+    "status": "agrees",
+    "draws": 9,
+    "outside_requires": 191,
+    "completeness": 1.0,
+    "cross_completeness": 1.0,
+    "mutants_rejected": 9,
+    "mutants_accepted": 0,
+    "cross_rejected": 8,
+    "cross_accepted": 0,
+    "requires_caps_size": false
+   },
+   "points_held": 3,
+   "points_failed": 0,
+   "points_excluded": 0,
+   "task_id": 809,
+   "task_sha256": "8dcd19347b0e968da7526bfbb6ed2c55274231a28a8efd11bc386a99c35b22a9",
+   "pool": "v7",
+   "seed": 1,
+   "attempts": 1000
+  },
+  "v5s2-20261022-wider-off2000/mbpp_811__check_identical": {
+   "status": "agrees",
+   "draws": 1000,
+   "mutants_rejected": 1000,
+   "mutants_accepted": 0,
+   "completeness": 1.0,
+   "weak": false,
+   "cross_rejected": 344,
+   "cross_accepted": 0,
+   "cross_completeness": 1.0,
+   "larger": {
+    "status": "agrees",
+    "draws": 200,
+    "completeness": 1.0,
+    "cross_completeness": 1.0,
+    "mutants_rejected": 200,
+    "mutants_accepted": 0,
+    "cross_rejected": 6,
+    "cross_accepted": 0,
+    "requires_caps_size": false
+   },
+   "points_held": 3,
+   "points_failed": 0,
+   "points_excluded": 0,
+   "task_id": 811,
+   "task_sha256": "defcdc53bde65640c07664282dc3c0eee5a9d251011bc828eaef4943ff3c82f5",
+   "pool": "v7",
+   "seed": 1,
+   "attempts": 1000
+  },
+  "v5s2-20261022-wider-off2000/mbpp_816__clear_tuple": {
+   "status": "agrees",
+   "draws": 1000,
+   "mutants_rejected": 1000,
+   "mutants_accepted": 0,
+   "completeness": 1.0,
+   "weak": false,
+   "larger": {
+    "status": "agrees",
+    "draws": 200,
+    "completeness": 1.0,
+    "mutants_rejected": 200,
+    "mutants_accepted": 0,
+    "requires_caps_size": false
+   },
+   "points_held": 3,
+   "points_failed": 0,
+   "points_excluded": 0,
+   "task_id": 816,
+   "task_sha256": "b375e7fcac05ae78fb2f00841912528ddc17a8905aa61384a4260d4445ac4230",
+   "pool": "v7",
+   "seed": 1,
+   "attempts": 1000
+  },
+  "v5s2-20261022-wider-off2000/mbpp_857__listify_list": {
+   "status": "agrees",
+   "draws": 1000,
+   "mutants_rejected": 3754,
+   "mutants_accepted": 0,
+   "completeness": 1.0,
+   "weak": false,
+   "cross_rejected": 2927,
+   "cross_accepted": 0,
+   "cross_completeness": 1.0,
+   "larger": {
+    "status": "agrees",
+    "draws": 200,
+    "completeness": 1.0,
+    "cross_completeness": 1.0,
+    "mutants_rejected": 998,
+    "mutants_accepted": 0,
+    "cross_rejected": 594,
+    "cross_accepted": 0,
+    "requires_caps_size": false
+   },
+   "points_held": 3,
+   "points_failed": 0,
+   "points_excluded": 0,
+   "task_id": 857,
+   "task_sha256": "0f815a04bf480677ccb77a38da3348d91a40baa21ebb04a7b3560c0a1038ff46",
+   "pool": "v7",
+   "seed": 1,
+   "attempts": 1000
+  },
+  "v5s2-20261022-wider-off2000/mbpp_893__Extract": {
+   "status": "agrees",
+   "draws": 702,
+   "mutants_rejected": 2844,
+   "mutants_accepted": 0,
+   "completeness": 1.0,
+   "weak": false,
+   "cross_rejected": 1796,
+   "cross_accepted": 0,
+   "cross_completeness": 1.0,
+   "domain_probes": 298,
+   "domain_admitted": 0,
+   "reference_ran": 702,
+   "pre_completeness": 1.0,
+   "pre_incomplete": false,
+   "larger": {
+    "status": "agrees",
+    "draws": 13,
+    "completeness": 1.0,
+    "cross_completeness": 1.0,
+    "mutants_rejected": 99,
+    "mutants_accepted": 0,
+    "cross_rejected": 33,
+    "cross_accepted": 0,
+    "requires_caps_size": false
+   },
+   "points_held": 3,
+   "points_failed": 0,
+   "points_excluded": 0,
+   "task_id": 893,
+   "task_sha256": "d96f647d40a130fe6747547dfdd4013dcbf732d876a0f4dc2665c20c6c513905",
+   "pool": "v7",
+   "seed": 1,
+   "attempts": 1000
+  },
+  "v5s2-20261022-wider-off2000/mbpp_972__concatenate_nested": {
+   "status": "agrees",
+   "draws": 1000,
+   "mutants_rejected": 6829,
+   "mutants_accepted": 0,
+   "completeness": 1.0,
+   "weak": false,
+   "cross_rejected": 2988,
+   "cross_accepted": 0,
+   "cross_completeness": 1.0,
+   "larger": {
+    "status": "agrees",
+    "draws": 200,
+    "completeness": 1.0,
+    "cross_completeness": 1.0,
+    "mutants_rejected": 1369,
+    "mutants_accepted": 0,
+    "cross_rejected": 594,
+    "cross_accepted": 0,
+    "requires_caps_size": false
+   },
+   "points_held": 3,
+   "points_failed": 0,
+   "points_excluded": 0,
+   "task_id": 972,
+   "task_sha256": "e5bfdbb80c7b0b47766fcb4157900565c2431f09972ab5833f130c77a493d7bb",
+   "pool": "v7",
+   "seed": 1,
+   "attempts": 1000
   }
  },
  "runs": [
@@ -11933,6 +15808,54 @@
    },
    "checked_nothing": [],
    "when": "2026-10-19T21:04:29.328227+00:00"
+  },
+  {
+   "tags": [
+    "v5s2-20261022-wider-off0"
+   ],
+   "pool": "v7",
+   "seed": 1,
+   "attempts": 1000,
+   "only": "all",
+   "counts": {
+    "agrees": 32,
+    "disagrees": 2,
+    "other": 1
+   },
+   "checked_nothing": [],
+   "when": "2026-10-22T22:14:11.629673+00:00"
+  },
+  {
+   "tags": [
+    "v5s2-20261022-wider-off1000"
+   ],
+   "pool": "v7",
+   "seed": 1,
+   "attempts": 1000,
+   "only": "all",
+   "counts": {
+    "agrees": 33,
+    "disagrees": 1,
+    "other": 1
+   },
+   "checked_nothing": [],
+   "when": "2026-10-22T23:01:20.002774+00:00"
+  },
+  {
+   "tags": [
+    "v5s2-20261022-wider-off2000"
+   ],
+   "pool": "v7",
+   "seed": 1,
+   "attempts": 1000,
+   "only": "all",
+   "counts": {
+    "agrees": 29,
+    "disagrees": 3,
+    "other": 1
+   },
+   "checked_nothing": [],
+   "when": "2026-10-22T23:54:22.990547+00:00"
   }
  ]
 }

@@ -68,13 +68,27 @@ def permutation_test(diffs: dict[int, float], draws: int = 20000, seed: int = 0)
     return {"sum": observed, "p": hits / draws, "draws": draws}
 
 
-def decode_sets(spec: str, ids: list[int], arm) -> dict:
+WIDER_PANEL = HERE / "out" / "v6-20261018" / "wider-145.txt"
+DEV_PANEL = HERE / "out" / "v6-20261018" / "dev-95.txt"
+
+
+def part_ids(tag: str, ids: list[int], panels: dict | None = None) -> set[int]:
+    """The ids a part was graded on: a graded directory's levels.json is recomputed by v7_local_pair.arm over exactly
+    the panel it was graded with, so a part is read on its own panel (the wider 145 when the tag says "wider", else the
+    development 95), intersected with the ids asked for."""
+    panels = panels or {}
+    path = panels.get("wider", WIDER_PANEL) if "wider" in tag else panels.get("dev", DEV_PANEL)
+    panel = {int(x) for x in Path(path).read_text().split()}
+    return set(ids) & panel
+
+
+def decode_sets(spec: str, ids: list[int], arm, panels: dict | None = None) -> dict:
     """The per-level problem sets of one decode: one graded directory, or several joined with '+' when the panel was
-    generated and graded in parts (each part scored on the ids it holds; a problem in no part counts as not solved)."""
+    generated and graded in parts (each part scored on its own panel; a problem in no part counts as not solved)."""
     joined: dict = {}
     for part in spec.split("+"):
         tag, graded = part.split(":", 1)
-        _, sets, _ = arm(part, set(ids))
+        _, sets, _ = arm(part, part_ids(tag, ids, panels) if "+" in spec else set(ids))
         for level, members in sets.items():
             joined.setdefault(level, set()).update(members)
     return joined

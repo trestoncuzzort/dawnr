@@ -51,5 +51,22 @@ class JoinedDecodeTest(unittest.TestCase):
         self.assertEqual(sets, {"1": {1}, "7": set()})
 
 
+class PartPanelTest(unittest.TestCase):
+    def test_a_part_is_read_on_its_own_panel(self):
+        import tempfile, os
+        d = tempfile.mkdtemp()
+        dev, wider = os.path.join(d, "dev.txt"), os.path.join(d, "wider.txt")
+        open(dev, "w").write("1\n2\n3\n"); open(wider, "w").write("7\n8\n")
+        panels = {"dev": dev, "wider": wider}
+        self.assertEqual(r.part_ids("m-dev", [1, 2, 3, 7, 8, 9], panels), {1, 2, 3})
+        self.assertEqual(r.part_ids("m-wider-off0", [1, 2, 3, 7, 8, 9], panels), {7, 8})
+        seen = []
+        def fake_arm(spec, ids):
+            seen.append((spec.split(":")[0], ids)); return None, {"1": set(ids), "7": set()}, None
+        sets = r.decode_sets("m-dev:/x+m-wider-off0:/y", [1, 2, 3, 7, 8, 9], fake_arm, panels)
+        self.assertEqual(seen, [("m-dev", {1, 2, 3}), ("m-wider-off0", {7, 8})])
+        self.assertEqual(sets["1"], {1, 2, 3, 7, 8})
+
+
 if __name__ == "__main__":
     unittest.main()
