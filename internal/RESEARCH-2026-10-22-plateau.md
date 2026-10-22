@@ -46,7 +46,17 @@ specification appears in 20 samples), and a noise problem (a single decode canno
   gain up to 63.5% relative on three benchmarks, and a 350M refiner beats an untrained 1B. This is our repair-turn
   finding by another route, and it says the repair turn is a training target, not a prompt.
 
-## Working hypothesis (to be tested, not assumed)
+## Working hypothesis, revised after papers A (10:55Z)
+
+Two of the three moves in the first hypothesis are now contradicted by the literature at our model size: wider
+sampling (the trained prover saturates at k=32) and repair as a prompt (no gain over resampling at 7B). What is
+supported at 4B to 8B is the quality of the kept rows: curation (arXiv:2603.15510) and the removal of weak,
+hackable specifications (arXiv:2605.30914). The self-distilled rows of v8 were reference-correct but not filtered for
+strength; the ranked-weakest-first instrument for that exists (`t/spec_strength.py`). The next data row is therefore
+v5's rows plus only the strong, reference-correct self-distilled and teacher specifications, trained from v5's own
+base, read under the three-decode protocol; expert iteration continues from there only if that row moves the count.
+
+## The first hypothesis (10:05Z, kept for the record)
 
 The plateau is what one supervised round on a fixed, narrow set produces for a 4B student in a near-zero-data
 language. The moves that the literature shows working at this size are (1) expert iteration: sample wide (20 or
@@ -59,7 +69,22 @@ under the three-decode protocol; none is called a gain on one decode.
 
 ## Pending from the scouts
 
-- papers A: which mechanism moved which model size, with numbers (pending)
+- papers A (landed 10:45Z, verified, `plateau-papers-A.md`, 250 papers): four findings bear directly on our instruments,
+  all checked against their abstracts. (1) Sampling saturates for a trained prover: DeepSeek-Prover-V1.5-RL solves 42 of
+  244 miniF2F theorems at k=32 and the same 42 at k=64; a fixed schedule of 15 tactic skeletons breaks that plateau,
+  +12.3 theorems over three seeds (arXiv:2601.16172). Our ceiling instrument's "a correct specification within 20 samples
+  for 29 of 63" is likely a ceiling of the model, not a selection problem that more samples fix. (2) Repair with the
+  verifier's diagnostics does not beat plain resampling at equal budget for a 7B prover; DeepSeek-Prover-V2-7B shows no
+  recovery over 64 attempts (arXiv:2610.22698). Our three falsified repair rows are the same finding. (3) Curated training
+  data for invariant synthesis nearly doubles invariant correctness for Qwen3 4B and 8B, and the 4B model then beats an
+  off-the-shelf model twenty times its size on InvBench (arXiv:2603.15510): data quality moves a 4B model where rows did
+  not. (4) Reinforcement learning with a verified reward on Dafny lifts the verified reward from 2.2% to 58.1%, but by
+  specification hacking; after filtering underspecified tasks, multi-turn RLVR takes the verified pass rate from 9.7% to
+  31.1% (arXiv:2605.30914). Our v8 test-fitting (gate precision 0.785 to 0.515) is specification hacking by another name,
+  and the remedy that worked was filtering the weak specifications out of the task set. Also: specialization on a verifier
+  signal adds 33 to 38 points of solve rate where no augmentation mode adds more than 3 (arXiv:2609.34460); self-play for
+  200 rounds lets a 7B prover pass a 671B model at pass@4 (arXiv:2604.20209); Goedel-Prover-V2-8B reaches 84.6% pass@32
+  with scaffolded data and self-correction (arXiv:2508.03613).
 - papers B: why supervised fine-tuning saturates and why self-generated rows collapse into test-fitting (pending)
 - repos A (landed 10:10Z, verified, `plateau-repos-A.md`, 250 repositories, 174 permissive): the specification corner
   has six permissively licensed pieces to take: dafny-annotator (MIT; an LLM adds assertions and invariants until Dafny
