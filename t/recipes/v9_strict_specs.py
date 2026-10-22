@@ -51,9 +51,10 @@ def _check(job: tuple) -> tuple:
         r = spec_check.check_task(task, _POOL[tid], draws, rnd)
     except Exception as e:                                      # noqa: BLE001
         r = {"status": f"check raised: {type(e).__name__}"}
-    return tid, index, {k: r.get(k) for k in ("status", "draws", "completeness", "cross_completeness",
-                                               "mutants_rejected", "mutants_accepted", "cross_rejected",
-                                               "cross_accepted", "skipped")}
+    keep = ("status", "draws", "completeness", "cross_completeness", "mutants_rejected", "mutants_accepted",
+            "cross_rejected", "cross_accepted", "skipped", "args", "reference_said", "ensures", "also_accepts",
+            "weak_witness", "cross_witness")
+    return tid, index, {k: r.get(k) for k in keep if k in r}
 
 
 def main(argv=None) -> int:
@@ -65,6 +66,7 @@ def main(argv=None) -> int:
     ap.add_argument("--jobs", type=int, default=4)
     ap.add_argument("--out", type=Path, required=True)
     ap.add_argument("--report", type=Path, required=True)
+    ap.add_argument("--dropped", type=Path, help="also write the candidates the strict floor drops, with their reference results (repair-trace material)")
     a = ap.parse_args(argv)
     global _POOL
     _POOL = se.pool(a.pool)
@@ -84,7 +86,7 @@ def main(argv=None) -> int:
     with multiprocessing.get_context("fork").Pool(a.jobs) as p:
         for tid, index, r in p.imap_unordered(_check, jobs, chunksize=4):
             results[index] = r
-    kept_rows, dist, status = [], Counter(), Counter()
+    kept_rows, dropped_rows, dist, status = [], [], Counter(), Counter()
     before = after = 0
     for n, row in enumerate(rows):
         keep = []
@@ -98,12 +100,17 @@ def main(argv=None) -> int:
                 after += 1
                 keep.append((task, row["sources"][i] if i < len(row.get("sources", [])) else None,
                              row["scores"][i] if i < len(row.get("scores", [])) else None, r))
+            else:
+                dropped_rows.append({"task_id": row["task_id"], "task": task, "reference": r,
+                                     "source": row["sources"][i] if i < len(row.get("sources", [])) else None})
         if keep:
             kept_rows.append({"task_id": row["task_id"], "tasks": [k[0] for k in keep],
                               "sources": [k[1] for k in keep], "scores": [k[2] for k in keep],
                               "reference": [k[3] for k in keep]})
     a.out.parent.mkdir(parents=True, exist_ok=True)
     a.out.write_text("".join(json.dumps(r) + "\n" for r in kept_rows), encoding="utf-8")
+    if a.dropped:
+        a.dropped.write_text("".join(json.dumps(r) + "\n" for r in dropped_rows), encoding="utf-8")
     report = {"inputs": [str(p) for p in a.kept], "pool": a.pool, "draws": a.draws, "floor": a.floor,
               "problems_in": len(rows), "candidates_in": before, "candidates_kept": after,
               "problems_kept": len(kept_rows), "status": dict(status),

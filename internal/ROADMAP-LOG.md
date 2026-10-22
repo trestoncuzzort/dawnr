@@ -3440,3 +3440,9 @@ computer-control plans and experiment results remain historical records.
   instrument to follow. P1 is the gate's precision (at least 0.70; v8 fell to 0.515). The primed 9B teacher is writing
   specifications for the 2,061 training problems the student failed, in chunks on the laptop's GPU
   (`t/recipes/teacher_train_specs.sh`), the data for v10 beside repair traces.
+- 11:05Z, v10's first data built before its registration (`t/recipes/v10_repair_rows.py`, receipt
+  `release/evidence/v10-repair-rows-2026-10-22.json`): 232 repair traces over 136 training problems, each a candidate
+  the tests or the strict reference check dropped, the checker's witness in the route's own repair question, and the
+  strictly kept specification of the same problem as the answer (217 from the tests, 15 from the reference check at
+  1,000 draws). The teacher's chunks add their own dropped-and-kept pairs as they land. v10 is registered after v9's
+  precision reading decides its base.

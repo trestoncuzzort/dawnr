@@ -1,0 +1,8 @@
+{
+ "traces from tests": 217,
+ "problems": 136,
+ "duplicate": 34,
+ "traces from reference": 15,
+ "rows": 232,
+ "output": "out/v10/repair-rows.jsonl"
+}
