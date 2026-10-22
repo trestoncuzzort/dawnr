@@ -3470,3 +3470,8 @@ computer-control plans and experiment results remain historical records.
   and gains 649, which v5 never solves. A training seed alone has the shape of every data candidate this week. Protocol
   from v9: training-side candidates on two seeds and three decodes each, paired per problem over six decodes on the
   widened 240-problem development panel (`t/out/v6-20261018/dev-240.txt`: the 95 plus the wider reader's 145); the clean 182 stays held out.
+- 21:05Z, the DeepSeek v3.2 teacher on Bedrock finished its half of the failed training problems: 193 of 906 problems
+  kept by the tests and the reference check (21%), 9,090 Converse calls in 5 h 49 min with one failure, 33.5 million
+  tokens in and 2.9 million out (the spend is read from Cost Explorer when it posts, not estimated). The laptop's 9B
+  keeps about 16 to 20 of 50 on the shortest problems and continues. Every teacher-kept specification goes through the
+  strict re-check (1,000 draws, both mutant families at 90%) before it becomes a v10 row.
