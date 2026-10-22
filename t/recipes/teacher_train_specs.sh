@@ -28,5 +28,7 @@ for f in out/v9/chunks/ids-*.txt; do
   IDS=$f PYTHON_ATTEMPTS=0 PORT=8852 bash t/recipes/laptop_route.sh $TAG $GGUF "$IDENT" \
     --reference-python --specs-only --spec-samples 9 --spec-primer $PRIMER
   grep -E "spec_first: .*kept specification" t/out/laptop-runs/$TAG.route.log | tail -1 >> $LOG
+  # the chunk's own server takes a moment to exit after laptop_route.sh kills it; wait for it before the next check
+  for i in $(seq 1 30); do pgrep -f "[l]lama-server" >/dev/null || break; sleep 2; done
 done
 echo "$(date -u +%FT%TZ) all chunks done" >> $LOG
