@@ -515,6 +515,9 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--python-repair", action="store_true",
                     help="--python: the last Python attempt repairs the failed reply that passed the most tests, "
                          "with the sandbox's finding, instead of sampling afresh (the same budget)")
+    ap.add_argument("--seed-offset", type=int, default=0, metavar="N",
+                    help="add N to every sampling salt (the greedy calls are unchanged): a second decode of the same "
+                         "model for the variance of the development count (t/PREDICT-2026-10-22-seed-variance.md)")
     ap.add_argument("--spec-primer", type=Path, default=None, metavar="FILE",
                     help="--python: append this grammar card with worked examples to the specification question's "
                          "system message (t/recipes/teacher_primer.py), for a teacher that has never seen t")
@@ -563,7 +566,7 @@ def main(argv: list[str] | None = None) -> int:
 
         def decode(conversations, temperature, salt, first, max_new):
             return student_generate.decode(model, tokenizer, conversations, max_new, temperature, TOP_P,
-                                           student_generate.problem_seed(salt, first))
+                                           student_generate.problem_seed(salt + a.seed_offset, first))
         if a.reference_python:
             python = {t: P[t]["rec"]["code"].strip("\n") for t in ids if (P[t]["rec"].get("code") or "").strip()}
         else:
@@ -670,7 +673,7 @@ def main(argv: list[str] | None = None) -> int:
                 conversations = [spec_first_rows.proof_question(per[t][k]["task"], python[t]) if t in python
                                  else question(per[t][k]["task"]) for t, k in chunk]
             replies = student_generate.decode(model, tokenizer, conversations, a.max_new, temperature, TOP_P,
-                                              student_generate.problem_seed(attempt, chunk[0][0]))
+                                              student_generate.problem_seed(attempt + a.seed_offset, chunk[0][0]))
             for (t, k), msgs, (text, stopped, ntok) in zip(chunk, conversations, replies):
                 stats[t]["asked"] += 1
                 if repairing:
@@ -701,7 +704,8 @@ def main(argv: list[str] | None = None) -> int:
                               **({"oracle_gate": True} if a.oracle_gate else {}),
                               **({"proof_repair": True} if a.proof_repair else {}),
                               **({"python_repair": True} if a.python_repair else {}),
-                              **({"spec_primer": a.spec_primer.name} if a.spec_primer is not None else {})}}
+                              **({"spec_primer": a.spec_primer.name} if a.spec_primer is not None else {}),
+                              **({"seed_offset": a.seed_offset} if a.seed_offset else {})}}
     for t, r in taken.items():
         se.write_record(d / "raw" / f"{t}.json", {
             "task_id": t, "fn": P[t]["fn"], "model": str(a.model), "digest": "", "pool_version": a.pool,
