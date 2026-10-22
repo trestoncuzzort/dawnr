@@ -1,0 +1,65 @@
+{
+ "rows": {
+  "base": {
+   "path": "t/out/v6-20261018/training-rows.jsonl",
+   "rows": 4189,
+   "sha256": "e14f766f06299d589d9a6e3293f6bf3e3f06ffac026433e2fdeff1c04294af80",
+   "problems with a spec row": 288
+  },
+  "kept": {
+   "path": "out/v9/strict-kept.jsonl",
+   "problems": 536,
+   "sha256": "d7db8083a3f4c93f66a08ce0a5a6213cd1d327f467f029a085c186a5f84e1ce4"
+  },
+  "built": {
+   "problems": 290,
+   "python": 290,
+   "spec": 543,
+   "already in the pool": 246
+  },
+  "added": {
+   "rows": 833,
+   "by source": {
+    "python": 290,
+    "spec": 543
+   },
+   "problems": 290
+  },
+  "output": {
+   "path": "out/v9/v9-selfdistill-rows.jsonl",
+   "rows": 5022,
+   "sha256": "f2611fdccdb977c32e6f5f46c667165deaebe047e58687e5ac9425ae5433e2c7"
+  }
+ },
+ "strict": {
+  "inputs": [
+   "t/out/v5-repair-20261021/spec-experiment/v5-20261021-selfdistill/kept-specs.jsonl"
+  ],
+  "pool": "v5",
+  "draws": 1000,
+  "floor": 0.9,
+  "problems_in": 602,
+  "candidates_in": 1103,
+  "candidates_kept": 985,
+  "problems_kept": 536,
+  "status": {
+   "agrees": 1076,
+   "disagrees": 27
+  },
+  "completeness_distribution": {
+   "none": 27,
+   "0.6": 3,
+   "0.7": 23,
+   "0.8": 43,
+   "0.9": 24,
+   "1.0": 983
+  },
+  "output": "out/v9/strict-kept.jsonl"
+ },
+ "audit": {
+  "flagged": [],
+  "rows": 5022
+ },
+ "teacher_targets": 2061,
+ "note": "v9 rows of record: v5's base plus the strictly filtered self-distilled specifications; t/PREDICT-2026-10-22-v9-strict-rows.md"
+}

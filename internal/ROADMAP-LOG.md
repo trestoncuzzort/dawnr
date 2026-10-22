@@ -3433,3 +3433,10 @@ computer-control plans and experiment results remain historical records.
   separable. "v8 did not gain" is the supportable statement; v8 moved the reliable set sideways (543 always, 450 never)
   without moving the count. The panel resolves about six problems moving one way at three decodes; smaller candidates go
   to the wider panels.
+- 11:00Z, v9 registered before training (`t/PREDICT-2026-10-22-v9-strict-rows.md`): v5's own 4,189 rows plus the
+  self-distilled specifications that survive a strict re-check at 1,000 draws with both mutant families at 90% (985 of
+  1,103 candidates; 27 of the dropped disagree with the reference outright), 833 rows for 290 new problems, 5,022 rows,
+  self-generated share 16.6%, audit 0 flagged; queued on the desktop behind the seed-2 run, three decodes and the ceiling
+  instrument to follow. P1 is the gate's precision (at least 0.70; v8 fell to 0.515). The primed 9B teacher is writing
+  specifications for the 2,061 training problems the student failed, in chunks on the laptop's GPU
+  (`t/recipes/teacher_train_specs.sh`), the data for v10 beside repair traces.
