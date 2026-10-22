@@ -3475,3 +3475,9 @@ computer-control plans and experiment results remain historical records.
   tokens in and 2.9 million out (the spend is read from Cost Explorer when it posts, not estimated). The laptop's 9B
   keeps about 16 to 20 of 50 on the shortest problems and continues. Every teacher-kept specification goes through the
   strict re-check (1,000 draws, both mutant families at 90%) before it becomes a v10 row.
+- 21:25Z, v10's components are on disk ahead of its registration: the two teachers' 528 kept specifications over 288
+  failed training problems pass the strict re-check at 89% (468 candidates, 255 problems; 17 disagree with the reference
+  at 1,000 draws); on top of v9's rows they add 687 rows for 243 new problems; repair traces number 232 from the
+  student's own dropped candidates and 293 from the teachers' (`release/evidence/v10-components-2026-10-22.json`). The
+  base (v9's rows or v5's) is decided by v9's precision reading tonight; the self-generated share stays at 16%, the
+  teacher and repair rows are distillation, not self-training.

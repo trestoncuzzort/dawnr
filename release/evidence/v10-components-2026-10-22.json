@@ -1,0 +1,99 @@
+{
+ "teacher_strict": {
+  "inputs": [
+   "t/out/spec-experiment/teacher9b-20261022b-tc04/kept-specs.jsonl",
+   "t/out/spec-experiment/teacher9b-20261022c-tc00/kept-specs.jsonl",
+   "t/out/spec-experiment/teacher9b-20261022c-tc01/kept-specs.jsonl",
+   "t/out/spec-experiment/teacher9b-20261022c-tc02/kept-specs.jsonl",
+   "t/out/spec-experiment/teacher9b-20261022c-tc03/kept-specs.jsonl",
+   "t/out/spec-experiment/teacher9b-20261022c-tc04/kept-specs.jsonl",
+   "t/out/spec-experiment/teacher9b-20261022c-tc05/kept-specs.jsonl",
+   "t/out/spec-experiment/teacher9b-20261022-tc00/kept-specs.jsonl",
+   "t/out/spec-experiment/teacher9b-20261022-tc01/kept-specs.jsonl",
+   "t/out/spec-experiment/teacher9b-20261022-tc02/kept-specs.jsonl",
+   "t/out/spec-experiment/teacher-ds32-20261022-tc00/kept-specs.jsonl",
+   "t/out/spec-experiment/teacher-ds32-20261022-tc01/kept-specs.jsonl",
+   "t/out/spec-experiment/teacher-ds32-20261022-tc02/kept-specs.jsonl",
+   "t/out/spec-experiment/teacher-ds32-20261022-tc03/kept-specs.jsonl",
+   "t/out/spec-experiment/teacher-ds32-20261022-tc04/kept-specs.jsonl",
+   "t/out/spec-experiment/teacher-ds32-20261022-tc05/kept-specs.jsonl",
+   "t/out/spec-experiment/teacher-ds32-20261022-tc06/kept-specs.jsonl",
+   "t/out/spec-experiment/teacher-ds32-20261022-tc07/kept-specs.jsonl",
+   "t/out/spec-experiment/teacher-ds32-20261022-tc08/kept-specs.jsonl",
+   "t/out/spec-experiment/teacher-ds32-20261022-tc09/kept-specs.jsonl",
+   "t/out/spec-experiment/teacher-ds32-20261022-tc10/kept-specs.jsonl",
+   "t/out/spec-experiment/teacher-ds32-20261022-tc11/kept-specs.jsonl",
+   "t/out/spec-experiment/teacher-ds32-20261022-tc12/kept-specs.jsonl",
+   "t/out/spec-experiment/teacher-ds32-20261022-tc13/kept-specs.jsonl",
+   "t/out/spec-experiment/teacher-ds32-20261022-tc14/kept-specs.jsonl",
+   "t/out/spec-experiment/teacher-ds32-20261022-tc15/kept-specs.jsonl",
+   "t/out/spec-experiment/teacher-ds32-20261022-tc16/kept-specs.jsonl",
+   "t/out/spec-experiment/teacher-ds32-20261022-tc17/kept-specs.jsonl",
+   "t/out/spec-experiment/teacher-ds32-20261022-tc18/kept-specs.jsonl"
+  ],
+  "pool": "v5",
+  "draws": 1000,
+  "floor": 0.9,
+  "problems_in": 288,
+  "candidates_in": 528,
+  "candidates_kept": 468,
+  "problems_kept": 255,
+  "status": {
+   "agrees": 511,
+   "disagrees": 17
+  },
+  "completeness_distribution": {
+   "none": 17,
+   "0.6": 5,
+   "0.7": 8,
+   "0.8": 19,
+   "0.9": 8,
+   "1.0": 471
+  },
+  "output": "out/v10/teacher-strict-kept.jsonl"
+ },
+ "teacher_repair_rows": {
+  "traces from tests": 281,
+  "duplicate": 12,
+  "problems": 153,
+  "traces from reference": 12,
+  "rows": 293,
+  "output": "out/v10/teacher-repair-rows.jsonl"
+ },
+ "teacher_rows_on_v9": {
+  "base": {
+   "path": "out/v9/v9-rows.jsonl",
+   "rows": 5022,
+   "sha256": "f2611fdccdb977c32e6f5f46c667165deaebe047e58687e5ac9425ae5433e2c7",
+   "problems with a spec row": 578
+  },
+  "built": {
+   "problems": 244,
+   "python": 244,
+   "spec": 445,
+   "already in the pool": 11
+  },
+  "added": {
+   "rows": 687,
+   "by source": {
+    "python": 243,
+    "spec": 444
+   },
+   "problems": 243
+  },
+  "output": {
+   "path": "out/v10/teacher-rows-on-v9.jsonl",
+   "rows": 5709,
+   "sha256": "d53c5c897c0b36e9c966571c6fd2a8e7e99382cdf6fc0e2fd6d58ef0776d530a"
+  }
+ },
+ "own_repair_rows": {
+  "traces from tests": 217,
+  "problems": 136,
+  "duplicate": 34,
+  "traces from reference": 15,
+  "rows": 232,
+  "output": "out/v10/repair-rows.jsonl"
+ },
+ "note": "v10 components before its registration (t/PREDICT-2026-10-22-v10-repair-rows.md follows v9's reading): teacher specifications (DeepSeek v3.2 on Bedrock + the primed 9B) through the strict re-check, repair traces from the student's and the teachers' dropped candidates"
+}
