@@ -11,7 +11,7 @@
 # same 10 candidates per problem); t/PREDICT-2026-10-22-v9-strict-rows.md (P3: the teacher rows are v10's data).
 set -u
 D=$HOME/Projects/dawnr; cd $D || exit 1
-IDS=${IDS:-out/v9/teacher-ids-ordered.txt}; CHUNK=${CHUNK:-50}; START=${START:-0}; STOP_AT=${STOP_AT:-0}; STOP_FILE=${STOP_FILE:-out/v9/teacher.stop}
+IDS=${IDS:-out/v9/teacher-ids-laptop.txt}; CHUNK=${CHUNK:-50}; START=${START:-0}; STOP_AT=${STOP_AT:-0}; STOP_FILE=${STOP_FILE:-out/v9/teacher.stop}
 # 2026-10-22 13:45Z: the slice's statements grow with the id (chunk 02 of 100: 958 of 1,012 prompts over 3,500 tokens, 137
 # truncated at a 4,096 slot, 2 problems kept); two slots of 8,192 keep the same KV memory on the 8 GB card.
 # 14:25Z: the remaining failed problems are ordered by statement size (out/v9/teacher-ids-ordered.txt): short ones kept 16

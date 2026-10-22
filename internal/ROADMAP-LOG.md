@@ -3451,3 +3451,12 @@ computer-control plans and experiment results remain historical records.
   truncation (only 43 of 505 replies parsed as t tasks). The 9B is a short-problem teacher; the remaining 1,811 problems
   are reordered by statement size so the best yield comes first (`t/recipes/teacher_train_specs.sh`); the long tail
   waits for a stronger teacher on a cloud card. Kept so far: 38 problems (`teacher9b-20261022*/kept-specs.jsonl`).
+- 14:50Z, the clouds (the user: "do we not have aws and google cloud"). AWS after `aws login`: the account is on the
+  Free plan, which refuses GPU instance types, so no training slot there without upgrading the plan; Bedrock works on
+  it, and DeepSeek v3.2 (MIT) is now the second teacher through a chat-completions proxy in front of the Converse API
+  (`t/recipes/bedrock_proxy.py`, `teacher_bedrock_specs.sh`): the smoke chunk ran 30 calls in two minutes, 1 of 3
+  problems kept; the lane runs on the second half of the failed problems (906, by statement size), the laptop's 9B on
+  the first half. Google: the active account's project has a global GPU cap of 0 with a denied increase and the
+  daily request quota used up; the project that trained v6 needs the jonhhjackson login, on which a watcher starts
+  an L4 teacher VM (`t/recipes/gcp_teacher_vm.sh`, not yet run). v9 training started on the desktop 14:30Z
+  (1,535 steps, about 7 h).
