@@ -8,7 +8,7 @@
 set -u
 TAG=${1:?tag}; GGUF=${2:?gguf}; IDENT=${3:?identity}; shift 3
 D=/home/t/Projects/dawnr; L=/home/t/.local/share/dawnr/llama.cpp; A=$D/t/out/laptop-runs; PORT=${PORT:-8851}
-PARALLEL=${PARALLEL:-4}; CONCURRENCY=${CONCURRENCY:-4}; BATCH=${BATCH:-16}; SEED=${SEED:-}; SLOT_CTX=${SLOT_CTX:-4096}
+PARALLEL=${PARALLEL:-4}; CONCURRENCY=${CONCURRENCY:-4}; BATCH=${BATCH:-16}; SEED=${SEED:-}; SLOT_CTX=${SLOT_CTX:-4096}; POOL=${POOL:-v5}   # the wider reader's problems live in pool v7
 IDS=${IDS:-$D/t/out/v6-20261018/dev-95.txt}; PYTHON_ATTEMPTS=${PYTHON_ATTEMPTS:-3}
 PYARG=""; [ "$PYTHON_ATTEMPTS" != 0 ] && PYARG="--python $PYTHON_ATTEMPTS"
 export LD_LIBRARY_PATH=$L PYTHONPATH=$D/t PYTHONUNBUFFERED=1
@@ -24,7 +24,7 @@ for i in $(seq 1 240); do curl -sf http://127.0.0.1:$PORT/health >/dev/null && b
 curl -sf http://127.0.0.1:$PORT/health >/dev/null || { echo "$(date -u +%FT%TZ) server not healthy" >> $A/$TAG.log; kill $SP; echo 90 > $A/$TAG.done; exit 1; }
 python3 $D/t/recipes/v6_server_route.py --endpoint http://127.0.0.1:$PORT/v1/chat/completions --model dawnr-route \
   --identity "$IDENT" --cache $A/cache-$TAG --concurrency $CONCURRENCY \
-  -- --tag $TAG --ids-file $IDS --pool v5 $PYARG --spec-samples 4 --per-problem 3 --samples 2 --max-new 1024 --batch $BATCH "$@" \
+  -- --tag $TAG --ids-file $IDS --pool $POOL $PYARG --spec-samples 4 --per-problem 3 --samples 2 --max-new 1024 --batch $BATCH "$@" \
   > $A/$TAG.route.log 2>&1
 RC=$?
 kill $SP 2>/dev/null
