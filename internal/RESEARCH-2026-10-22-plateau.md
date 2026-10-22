@@ -61,5 +61,23 @@ under the three-decode protocol; none is called a gain on one decode.
 
 - papers A: which mechanism moved which model size, with numbers (pending)
 - papers B: why supervised fine-tuning saturates and why self-generated rows collapse into test-fitting (pending)
-- repos A: what we can take, with licences (pending)
-- repos B: what runs this week on an 8 GB and a 16 GB card (pending)
+- repos A (landed 10:10Z, verified, `plateau-repos-A.md`, 250 repositories, 174 permissive): the specification corner
+  has six permissively licensed pieces to take: dafny-annotator (MIT; an LLM adds assertions and invariants until Dafny
+  accepts, the verifier-error loop), Microsoft's loop-invariant experiments and NeuralInvariantRanker (MIT; candidate
+  invariants checked by Frama-C, and a ranker that cuts verifier calls), SpecGen (MIT; generate, check with OpenJML,
+  repair), CLEVER (MIT; specification quality scored against held-out reference specifications, which is our reference
+  check as a benchmark), Verina (Apache-2.0; Lean tasks with specification, code and proof), STP (MIT; self-play that
+  proposes and proves statements, a source of verifier-checked rows). The MCTS-with-verifier search
+  (llm-verified-with-monte-carlo-tree-search, MIT) is the step-wise search option. No repository for Clover, Laurel,
+  SAFE, Baldur or nl2postcond was found; Huosj/AutoSpec is excluded (its contents are a leaked commercial tool).
+  Nothing here has been run on our data; READMEs were read, not code.
+- repos B (landed 10:30Z, verified, `plateau-repos-B.md`, 250 repositories, 209 permissive): the infrastructure for every
+  move in the hypothesis exists under Apache-2.0 or MIT and runs without cloud: TRL (GRPO, online DPO, GKD with custom
+  reward functions), unsloth (QLoRA and GRPO with less memory), ms-swift (SFT, DPO, GRPO with quantized base weights;
+  its README states 9 GB for a 7B model), LMFlow (RAFT, a reward-ranked rejection-sampling loop, the expert-iteration
+  shape; its QLoRA table gives 6 GB at 7B), EasyR1 (GRPO on veRL; 12 GB at 1.5B with LoRA, so the 4080 covers small
+  models only), search-and-learn (best-of-n and beam search with a reward model, where our verifier is the reward),
+  llama.cpp GBNF grammars (constrained decoding of the t syntax on the pinned server, to be tried against a t program
+  first), Liger-Kernel (fused training kernels, relative memory savings only), DistillKit (logit distillation from a
+  local teacher). Only LMFlow's table reaches an 8 GB card with a stated number; fitting the 4B student is our own
+  estimate. Nothing here has been run on our data.
