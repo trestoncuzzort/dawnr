@@ -1,0 +1,323 @@
+{
+  "panel": {
+    "path": "t/out/v6-20261018/dev-95.txt",
+    "count": 95,
+    "sha256": "f807aec7e6b89e524ded720d9ccfb670c1d504a5a5717966a4b870516701daf7"
+  },
+  "grade": "t/recipes/v6-grade.sh",
+  "pairing": {
+    "path": "t/recipes/v7_local_pair.py",
+    "sha256": "b1809b3b0026c4bb13fabdc76b47d5a7912272cc03e03d56ec8a91ee5040ad4b"
+  },
+  "scope": "Development-only candidate selection on one local evaluator; not a held-out result.",
+  "same_evaluator": false,
+  "evaluator_differences": [
+    "t/spec_first.py",
+    "t/spec_first_rows.py",
+    "t/test_spec_first_proof_repair.py",
+    "t/test_spec_first_python_repair.py"
+  ],
+  "arms": {
+    "baseline": {
+      "tag": "v5-20261021-dev-desktop-r2",
+      "graded": "t/out/v5-repair-20261021/proof-results/v5-20261021-dev-desktop-r2",
+      "python_test_passing": 51,
+      "accepted_answers": 13,
+      "scores": {
+        "tag": "v5-20261021-dev-desktop-r2",
+        "problems": 95,
+        "task": 13,
+        "tests pass": 13,
+        ">=1": 6,
+        ">=3": 5,
+        ">=5": 3,
+        ">=6": 3,
+        ">=7": 3
+      },
+      "confirmed_ids": {
+        "1": [
+          251,
+          450,
+          476,
+          543,
+          549,
+          634
+        ],
+        "3": [
+          251,
+          450,
+          476,
+          549,
+          634
+        ],
+        "5": [
+          476,
+          549,
+          634
+        ],
+        "6": [
+          476,
+          549,
+          634
+        ],
+        "7": [
+          476,
+          549,
+          634
+        ]
+      },
+      "unconfirmed_admissions": [],
+      "integrity": {
+        "contradictions": [],
+        "unsound_cells": []
+      },
+      "kernel_outcomes": {
+        "dafny": {
+          "unproved / refuted": 1,
+          "refuted / refuted": 2,
+          "unproved / unproved": 1,
+          "verified / refuted": 6,
+          "no-twin / no-twin": 1,
+          "verified / timeout": 1,
+          "verified / unproved": 1
+        },
+        "verus": {
+          "unproved / refuted": 3,
+          "refuted / refuted": 2,
+          "verified / refuted": 7,
+          "no-twin / no-twin": 1
+        },
+        "spark": {
+          "timeout / refuted": 1,
+          "refuted / refuted": 3,
+          "verified / refuted": 7,
+          "no-twin / no-twin": 1,
+          "tool_error / tool_error": 1
+        },
+        "framac": {
+          "abstain / abstain": 8,
+          "refuted / refuted": 1,
+          "no-twin / no-twin": 1,
+          "verified / refuted": 3
+        },
+        "lean": {
+          "unproved / refuted": 1,
+          "unproved / unproved": 1,
+          "timeout / unproved": 1,
+          "refuted / unproved": 1,
+          "malformed / refuted": 1,
+          "verified / refuted": 5,
+          "no-twin / no-twin": 1,
+          "timeout / timeout": 1,
+          "verified / timeout": 1
+        },
+        "rocq": {
+          "unproved / unproved": 2,
+          "refuted / unproved": 1,
+          "refuted / refuted": 1,
+          "timeout / refuted": 1,
+          "unproved / refuted": 1,
+          "no-twin / no-twin": 1,
+          "timeout / timeout": 1,
+          "lower-error / lower-error": 1,
+          "verified / refuted": 3,
+          "verified / malformed": 1
+        },
+        "fstar": {
+          "unproved / refuted": 2,
+          "refuted / refuted": 2,
+          "verified / refuted": 5,
+          "abstain / abstain": 3,
+          "no-twin / no-twin": 1
+        }
+      },
+      "evidence_sha256": {
+        "spec_first.json": "6bc7e999b05c20b708b63295b25715de790029f8ca1df13bb7b9e39e64a9461b",
+        "extract.json": "ac7450c32968d1539f0fbc62dbd6966238e771d70ebca9c9630a0e5bf10a5354",
+        "tests.json": "9743131202ce2a5fe0ce74020a5adf632a216f46e7e1fac12cbb9a6ced6ec384",
+        "kernels.md": "f6ffbaac37692da65f0677f44f83d7d10769c95db24ac058735a210cfa0e9ad6"
+      }
+    },
+    "candidate": {
+      "tag": "v5-20261022-seedoff1000",
+      "graded": "t/out/v5-repair-20261021/proof-results/v5-20261022-seedoff1000",
+      "python_test_passing": 54,
+      "accepted_answers": 11,
+      "scores": {
+        "tag": "v5-20261022-seedoff1000",
+        "problems": 95,
+        "task": 11,
+        "tests pass": 11,
+        ">=1": 4,
+        ">=3": 4,
+        ">=5": 2,
+        ">=6": 2,
+        ">=7": 2
+      },
+      "confirmed_ids": {
+        "1": [
+          251,
+          450,
+          476,
+          549
+        ],
+        "3": [
+          251,
+          450,
+          476,
+          549
+        ],
+        "5": [
+          476,
+          549
+        ],
+        "6": [
+          476,
+          549
+        ],
+        "7": [
+          476,
+          549
+        ]
+      },
+      "unconfirmed_admissions": [],
+      "integrity": {
+        "contradictions": [],
+        "unsound_cells": []
+      },
+      "kernel_outcomes": {
+        "dafny": {
+          "refuted / refuted": 3,
+          "verified / refuted": 5,
+          "no-twin / no-twin": 1,
+          "unproved / refuted": 1,
+          "refuted / unproved": 1
+        },
+        "verus": {
+          "refuted / refuted": 4,
+          "verified / refuted": 4,
+          "no-twin / no-twin": 1,
+          "unproved / refuted": 2
+        },
+        "spark": {
+          "refuted / refuted": 3,
+          "verified / refuted": 5,
+          "no-twin / no-twin": 1,
+          "timeout / refuted": 2
+        },
+        "framac": {
+          "abstain / abstain": 6,
+          "refuted / refuted": 1,
+          "no-twin / no-twin": 1,
+          "verified / refuted": 3
+        },
+        "lean": {
+          "timeout / refuted": 1,
+          "refuted / unproved": 1,
+          "malformed / refuted": 1,
+          "no-twin / no-twin": 1,
+          "timeout / timeout": 1,
+          "verified / refuted": 3,
+          "unproved / refuted": 1,
+          "abstain / abstain": 2
+        },
+        "rocq": {
+          "refuted / unproved": 1,
+          "refuted / refuted": 2,
+          "timeout / refuted": 1,
+          "no-twin / no-twin": 1,
+          "timeout / timeout": 2,
+          "verified / refuted": 2,
+          "unproved / refuted": 1,
+          "abstain / abstain": 1
+        },
+        "fstar": {
+          "refuted / refuted": 3,
+          "verified / refuted": 5,
+          "no-twin / no-twin": 1,
+          "unproved / refuted": 1,
+          "abstain / abstain": 1
+        }
+      },
+      "evidence_sha256": {
+        "spec_first.json": "cef580d1ac1a941bdfff718c29dd3b244c62d4e7257088f3821c21ba24a3628e",
+        "extract.json": "bc88c9e331693a0a59d05efb04e04ecded1fdcc3214ff24a8d0608b2de6295a4",
+        "tests.json": "2f673ea7f619d6686a76ba6bfdf84e43940af80bdd9e3434db3930d9024f2378",
+        "kernels.md": "eed77bf5bda3f8c0c70527d4669d543e32757e08984dc529f6b1dfe2de01c785"
+      }
+    }
+  },
+  "paired": {
+    "1": {
+      "v5": 6,
+      "v6": 4,
+      "difference": -2,
+      "gained": [],
+      "lost": [
+        543,
+        634
+      ],
+      "both": [
+        251,
+        450,
+        476,
+        549
+      ]
+    },
+    "3": {
+      "v5": 5,
+      "v6": 4,
+      "difference": -1,
+      "gained": [],
+      "lost": [
+        634
+      ],
+      "both": [
+        251,
+        450,
+        476,
+        549
+      ]
+    },
+    "5": {
+      "v5": 3,
+      "v6": 2,
+      "difference": -1,
+      "gained": [],
+      "lost": [
+        634
+      ],
+      "both": [
+        476,
+        549
+      ]
+    },
+    "6": {
+      "v5": 3,
+      "v6": 2,
+      "difference": -1,
+      "gained": [],
+      "lost": [
+        634
+      ],
+      "both": [
+        476,
+        549
+      ]
+    },
+    "7": {
+      "v5": 3,
+      "v6": 2,
+      "difference": -1,
+      "gained": [],
+      "lost": [
+        634
+      ],
+      "both": [
+        476,
+        549
+      ]
+    }
+  },
+  "development_gain_without_all_seven_regression": false
+}

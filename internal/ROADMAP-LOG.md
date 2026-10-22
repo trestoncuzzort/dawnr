@@ -3411,3 +3411,19 @@ computer-control plans and experiment results remain historical records.
   (`internal/research-2026-10-22/variance-scout.md`).
 - The desktop's card has held for 13.6 h under ASPM off, runtime PM off, clock floors and a 150 W cap, five of them in
   training; the user's knock, not the workload, preceded the earlier reseat.
+
+## 2026-10-22, later: the sampling seed alone moves the development count by two; three decodes per candidate from here
+
+- The variance row's sampling-seed arm: v5 itself, decoded a second time (`--seed-offset 1000`, greedy calls replayed) on
+  the laptop's GPU and graded in the desktop container, 54 / 11 / **4 clean / 2 all-seven** against its own first decode's
+  51 / 13 / 6 / 3 (lost 543 and 634; `release/evidence/v5-decode-seed-2026-10-22.json`). P2 of
+  `t/PREDICT-2026-10-22-seed-variance.md` falsified; P3 takes the "protocol changes before the data" branch. The week's
+  one-to-three problem verdicts (v6 corrective, v7, v8 against v5) were inside the instrument's own spread; v8's
+  test-fitting finding stands on the ceiling instrument, "v8 lost two clean problems" is withdrawn.
+- Protocol in force: three decodes per candidate (seed offsets 0, 1000, 2000), the mean clean count and the paired
+  per-problem fractions decide, never one decode's count. First application running on the laptop's GPU
+  (`t/recipes/decode_protocol_20261022.sh`, `decode_arm.sh`): v5's third decode and v8's second and third.
+- The seed-2 training of v5's exact rows continues on the desktop (step 25 of 1,275 at 07:29Z, no drop in 14 h); its
+  verdict decides whether training-side candidates also need two seeds.
+- The variance scout's 250 entries (170 papers, 80 repositories) are on main, verified: 40 of 40 sampled links live, the
+  key rows checked against their abstracts or full text; no retrieved result measures seed spread on a Dafny or Lean panel.

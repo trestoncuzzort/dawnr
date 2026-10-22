@@ -33,3 +33,37 @@ of noise as much as of data.
 
 Sources: the week's PREDICT files; SCOREBOARD.md (round 11, nine seeds); the scout list on seed variance and
 small-benchmark statistics, `internal/research-2026-10-22/variance-scout.md`, read before the protocol decision.
+
+## Result (2026-10-22 08:10Z): the sampling-seed arm falsifies P2
+
+- The second decode of v5 (the same shards, route and panel; every sampled call under a different seed, the greedy calls
+  replayed from the control's cache; generated on the laptop's GPU 07:23Z to 07:37Z, graded in the desktop container):
+  54 Python, 11 t, **4 clean, 2 all-seven** against the control's 51 / 13 / 6 / 3. Paired: clean lost 543 and 634, gained
+  none, 251 / 450 / 476 / 549 in both; all-seven lost 634, 476 and 549 in both. Receipt
+  `release/evidence/v5-decode-seed-2026-10-22.json`.
+- P2 falsified: two clean and one all-seven from the sampling seed alone, with nothing changed in the model or the data.
+  The same model, run the way v8 was run (laptop generation, desktop grade), lands exactly on v8's clean count.
+- P1 pending: the seed-2 training is at step 136/1275 of 1,275 (about 19 s a step, due near 14:10Z), then the laptop's
+  tandem unit exports, generates and grades it. Its answer is recorded below when it lands; it no longer changes P3's branch.
+- P3, the "either falsified" branch: the development panel cannot separate this week's candidates. v7's 4 / 3 and v8's
+  4 / 1 sit within one decode of v5 itself. The test-fitting reading of v8 (the three-test gate's precision 0.785 to 0.515
+  on the ceiling instrument, 20 candidates per problem) stands on its own, larger instrument and is not withdrawn; "v8 lost
+  two clean problems" is withdrawn as a reading of noise.
+
+## The protocol from here, in force before any more data
+
+- Three decodes per candidate on the development panel (seed offsets 0, 1000, 2000), each graded in the desktop container.
+  A candidate's number is its mean clean count and its per-problem success fraction over the three decodes. A candidate is
+  called better or worse than the control only on the paired per-problem fractions (the sign of the paired difference on
+  each problem, summed over the panel), never on one decode's count.
+- Running now on the laptop's GPU (unit `dawnr-decode-protocol`, `t/recipes/decode_protocol_20261022.sh` over
+  `t/recipes/decode_arm.sh`): v5's third decode (offset 2000) and v8's second and third (1000, 2000), about 40 minutes
+  each; the log is `t/out/decode-arms.log`, the receipts `release/evidence/decode-<tag>.json`. These complete three decodes
+  for v5 and for v8 and re-read the week's largest verdict under the protocol.
+- Why one decode cannot do it: a count of six of 95 carries a binomial spread of about 2.4 problems by itself
+  (sqrt(95 x 0.063 x 0.937)), and the published single-run spreads on code evaluations say the same
+  (`internal/research-2026-10-22/variance-scout.md` rows 16 and 22: 2.2 to 6.0 points between runs, standard deviations
+  0.33 to 1.49 points over reruns of a whole pipeline). A one-to-three problem difference is inside that.
+- Training-side candidates: if P1 also lands outside one problem of v5, a candidate trained from new data needs two
+  training seeds before a verdict (about 6.5 h each on the desktop at 150 W); route-side candidates (flags, prompts, gates)
+  need only the three decodes. The clean 182 panel stays held out for the final reading and is not used in development.
