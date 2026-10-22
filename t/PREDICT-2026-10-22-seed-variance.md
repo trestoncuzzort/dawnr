@@ -67,3 +67,32 @@ small-benchmark statistics, `internal/research-2026-10-22/variance-scout.md`, re
 - Training-side candidates: if P1 also lands outside one problem of v5, a candidate trained from new data needs two
   training seeds before a verdict (about 6.5 h each on the desktop at 150 W); route-side candidates (flags, prompts, gates)
   need only the three decodes. The clean 182 panel stays held out for the final reading and is not used in development.
+
+## Result (2026-10-22 10:34Z): v5 and v8 under the three-decode protocol
+
+Three decodes each (seed offsets 0, 1000, 2000; generated on the laptop's GPU except v5's first, which is the desktop
+control; all graded in the desktop container), read by `t/recipes/three_decode_report.py`:
+
+| model, count | decode 1 | decode 2 | decode 3 | mean | clean on all three | clean on at least one |
+|---|---|---|---|---|---|---|
+| v5, clean | 6 | 4 | 6 | 5.33 | 251, 450, 476, 549 | those plus 270, 543, 634 |
+| v8, clean | 4 | 4 | 5 | 4.33 | 476, 543, 549 | those plus 251, 634 |
+| v5, all-seven | 3 | 2 | 3 | 2.67 | 476, 549 | those plus 634 |
+| v8, all-seven | 1 | 2 | 2 | 1.67 | 549 | that plus 634 |
+
+Paired per problem, clean: v8 up on 543 (fraction +0.67), down on 251 (-0.33), 270 (-0.33) and 450 (-1.0); mean
+difference -1.00 problems; exact sign test p 0.625; paired permutation test p 0.624. All-seven: one problem moved
+(476, -1.0); p 1.0. Receipt `release/evidence/three-decode-v5-v8-2026-10-22.json`; the per-decode pairings
+`release/evidence/decode-v5-20261022-seedoff2000.json`, `decode-v8-20261022-seedoff1000.json`,
+`decode-v8-20261022-seedoff2000.json`.
+
+Reading: v8 and v5 are not separable on this panel. The supportable statement is "v8 did not gain"; "v8 lost two
+problems" is withdrawn. What the three decodes do show is a change in which problems come out, not in how many: v8
+solves 543 on every decode (v5 on one of three) and never solves 450 (v5 on every decode); it reaches all-seven on 476
+never (v5 always). A data row can move the reliable set sideways without moving the count.
+
+What the panel can resolve from here: with about five reliably clean problems, the sign test needs about six problems
+moving one way and none the other to reach p below 0.05 at three decodes. A candidate that gains fewer than that on 95
+problems is read on the wider panels (the development 95 plus the wider 111) or with more decodes, and is never called
+better or worse on the mean alone. P1 (the training seed) is still pending; it is recorded here when the seed-2 model is
+graded.

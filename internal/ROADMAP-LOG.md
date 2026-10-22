@@ -3427,3 +3427,9 @@ computer-control plans and experiment results remain historical records.
   verdict decides whether training-side candidates also need two seeds.
 - The variance scout's 250 entries (170 papers, 80 repositories) are on main, verified: 40 of 40 sampled links live, the
   key rows checked against their abstracts or full text; no retrieved result measures seed spread on a Dafny or Lean panel.
+- 10:34Z, the three-decode reading of v5 against v8 (`t/recipes/three_decode_report.py`, receipt
+  `release/evidence/three-decode-v5-v8-2026-10-22.json`): clean v5 6 / 4 / 6 (mean 5.33) against v8 4 / 4 / 5 (mean
+  4.33); paired per problem one up (543) and three down (251, 270, 450), sign test p 0.625, permutation p 0.624; not
+  separable. "v8 did not gain" is the supportable statement; v8 moved the reliable set sideways (543 always, 450 never)
+  without moving the count. The panel resolves about six problems moving one way at three decodes; smaller candidates go
+  to the wider panels.
