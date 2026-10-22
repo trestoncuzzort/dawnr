@@ -96,3 +96,16 @@ moving one way and none the other to reach p below 0.05 at three decodes. A cand
 problems is read on the wider panels (the development 95 plus the wider 111) or with more decodes, and is never called
 better or worse on the mean alone. P1 (the training seed) is still pending; it is recorded here when the seed-2 model is
 graded.
+
+## Result (2026-10-22 16:15Z): the training-seed arm, first decode
+
+v5's exact rows and recipe with seed 2 (desktop, 150 W, 1,275 steps; export sha `407dd4a9…`), decoded once on the
+laptop's GPU and graded in the desktop container: frozen route 50 Python, 9 t, **4 clean, 2 all-seven** against the
+control's 51 / 13 / 6 / 3; paired clean lost 251 and 549, gained none, 450 / 476 / 543 / 634 in both; all-seven lost 549,
+476 and 634 in both. The 39-call oracle route: 66 / 12 / 5 / 2 against 63 / 16 / 7 / 3, lost 270 and 549. Receipts
+`release/evidence/v5s2-dev-2026-10-22.json`, `v5s2-oracle39-2026-10-22.json`.
+
+On its first decode P1 is falsified by the same margin P2 was: the training seed alone moves the clean count by two,
+on both routes. The seed-2 model's second and third decodes are running (the three-decode protocol); the paired
+three-against-three reading of v5 and v5s2 is recorded below when they land, and it is the number that decides whether
+a training-side candidate needs two training seeds before any verdict.

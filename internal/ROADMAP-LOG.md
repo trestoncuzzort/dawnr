@@ -3460,3 +3460,8 @@ computer-control plans and experiment results remain historical records.
   daily request quota used up; the project that trained v6 needs the jonhhjackson login, on which a watcher starts
   an L4 teacher VM (`t/recipes/gcp_teacher_vm.sh`, not yet run). v9 training started on the desktop 14:30Z
   (1,535 steps, about 7 h).
+- 16:15Z, the training-seed arm's first decode (v5's exact rows and recipe, seed 2): frozen route 50 / 9 / **4 clean /
+  2 all-seven** against the control's 51 / 13 / 6 / 3, oracle route 66 / 12 / 5 / 2 against 63 / 16 / 7 / 3 (lost 251 and
+  549; `release/evidence/v5s2-*.json`). The training seed moves the count by two, as the sampling seed did; the
+  three-decode reading of v5s2 follows. The desktop grade had to be re-run twice today: the tandem recipe's remote
+  commands carried an empty tag (fixed), then the user's knock rebooted the box mid-grade.
