@@ -68,6 +68,18 @@ def permutation_test(diffs: dict[int, float], draws: int = 20000, seed: int = 0)
     return {"sum": observed, "p": hits / draws, "draws": draws}
 
 
+def decode_sets(spec: str, ids: list[int], arm) -> dict:
+    """The per-level problem sets of one decode: one graded directory, or several joined with '+' when the panel was
+    generated and graded in parts (each part scored on the ids it holds; a problem in no part counts as not solved)."""
+    joined: dict = {}
+    for part in spec.split("+"):
+        tag, graded = part.split(":", 1)
+        _, sets, _ = arm(part, set(ids))
+        for level, members in sets.items():
+            joined.setdefault(level, set()).update(members)
+    return joined
+
+
 def model_reading(name: str, arms: list[tuple[str, set[int]]], ids: list[int]) -> dict:
     counts = [len(s) for _, s in arms]
     frac = fractions([s for _, s in arms], ids)
@@ -87,8 +99,10 @@ def compare(base: dict, cand: dict, ids: list[int]) -> dict:
 def main(argv=None) -> int:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--panel", type=Path, required=True)
-    ap.add_argument("--baseline", action="append", required=True, help="TAG:GRADED_DIR, repeat per decode")
-    ap.add_argument("--candidate", action="append", required=True, help="TAG:GRADED_DIR, repeat per decode")
+    ap.add_argument("--baseline", action="append", required=True,
+                    help="TAG:GRADED_DIR, repeat per decode; a decode graded in parts (the 95 and the wider 145 of the "
+                         "240-problem panel) is TAG:DIR+TAG2:DIR2, the parts' sets joined")
+    ap.add_argument("--candidate", action="append", required=True, help="as --baseline")
     ap.add_argument("--names", default="baseline,candidate")
     ap.add_argument("--out", type=Path, required=True)
     a = ap.parse_args(argv)
@@ -99,8 +113,7 @@ def main(argv=None) -> int:
     for name, specs in ((base_name, a.baseline), (cand_name, a.candidate)):
         arms = []
         for spec in specs:
-            _, sets, _ = arm(spec, set(ids))
-            arms.append((spec.split(":", 1)[0], sets))
+            arms.append((spec.split(":", 1)[0].split("+")[0], decode_sets(spec, ids, arm)))
         readings[name] = {level: model_reading(name, [(t, s[level]) for t, s in arms], ids) for level in LEVELS}
     result = {"panel": str(a.panel), "problems": len(ids), "protocol": "three decodes per candidate, paired per problem",
               "decodes": {base_name: len(a.baseline), cand_name: len(a.candidate)},
