@@ -56,6 +56,24 @@ strength; the ranked-weakest-first instrument for that exists (`t/spec_strength.
 v5's rows plus only the strong, reference-correct self-distilled and teacher specifications, trained from v5's own
 base, read under the three-decode protocol; expert iteration continues from there only if that row moves the count.
 
+## The plan from the four lists (11:25Z), each step read under the three-decode protocol
+
+1. **v9, strict rows (running now).** v5's own 4,189 rows plus only the self-distilled specifications that pass the
+   reference check at 1000 draws with both mutant families rejected at 90% or more (`t/recipes/v9_strict_specs.py`,
+   the floor raised from SAFE's 60%); the synthetic share stays under 20%. Trained from v5's base with the exact recipe
+   on the desktop after the seed-2 run; three decodes; the ceiling instrument's gate precision beside the count.
+2. **v10, repair as a trained skill.** Rows of (a failed specification, the verifier's witness, the kept specification)
+   built from our own scored candidates (the failed and the kept candidates of one problem are natural pairs, the
+   witness from `spec_quality.witnesses`), on the pattern of the 5,306 correction traces of arXiv:2507.02778 and CYCLE;
+   then the falsified `--repair` turn is re-run on the model that was taught it.
+3. **Expert iteration, round two, with the strict filter and the primer in context during sampling**, over the
+   3,003-problem pool rather than 346 problems, keeping the synthetic share at the edge the literature allows.
+4. **Reinforcement learning with the verifier reward** (TRL GRPO on the desktop's card, the strict strength filter as
+   the guard against specification hacking) only after a supervised step has moved the count.
+
+Not pursued, on the evidence: wider sampling of the same model, repair as a prompt, and another round of weakly
+filtered self-distillation.
+
 ## The first hypothesis (10:05Z, kept for the record)
 
 The plateau is what one supervised round on a fixed, narrow set produces for a 4B student in a near-zero-data
@@ -85,7 +103,17 @@ under the three-decode protocol; none is called a gain on one decode.
   signal adds 33 to 38 points of solve rate where no augmentation mode adds more than 3 (arXiv:2609.34460); self-play for
   200 rounds lets a 7B prover pass a 671B model at pass@4 (arXiv:2604.20209); Goedel-Prover-V2-8B reaches 84.6% pass@32
   with scaffolded data and self-correction (arXiv:2508.03613).
-- papers B: why supervised fine-tuning saturates and why self-generated rows collapse into test-fitting (pending)
+- papers B (landed 11:10Z, verified, `plateau-papers-B.md`, 250 papers): (1) the share of self-generated rows has a
+  known edge: Pythia models from 410M to 12B hold up to 20% synthetic data and degrade faster beyond 30%, smaller models
+  first (arXiv:2510.05133); v8 added 980 self-distilled rows to 4,089, a 19% share, right at that edge. (2) The repair
+  failure is a blind spot of supervised data, not of size alone: 14 open models show a 64.5% self-correction blind spot
+  traced to training data without error-correction sequences, and fine-tuning on 5,306 correction traces cuts it by
+  76.0% (arXiv:2507.02778). (3) On Dafny at 8B, fine-tuning LLaMA 3.1 on DafnyBench plus DafnySynth, a synthetic set
+  validated by Dafny itself, takes annotation success from 15.7% to 50.6% of methods, more than either set alone
+  (arXiv:2411.15143). (4) Repetition over scaling: Olmo3-7B at 128 epochs on 400 samples beats one epoch on 51,200 by 12
+  to 26 points (arXiv:2602.11149), so which rows repeat matters more than how many exist. (5) Rejection-sampling
+  fine-tuning with a real checker lifted LLaMA-7B from 35.9% to 49.3% on GSM8K (arXiv:2308.01825), and ReST-EM's filtered
+  self-training beat human data alone (arXiv:2312.06585); both are the expert-iteration shape with a strict filter.
 - repos A (landed 10:10Z, verified, `plateau-repos-A.md`, 250 repositories, 174 permissive): the specification corner
   has six permissively licensed pieces to take: dafny-annotator (MIT; an LLM adds assertions and invariants until Dafny
   accepts, the verifier-error loop), Microsoft's loop-invariant experiments and NeuralInvariantRanker (MIT; candidate
