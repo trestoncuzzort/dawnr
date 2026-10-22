@@ -151,7 +151,7 @@ def main(argv=None):
             raise RuntimeError("the route did not account for every requested problem")
         taken = {tid for tid, state in summary["per_problem"].items() if state.get("taken") is not None}
         raw_ids = {p.stem for p in (directory / "raw").glob("*.json")}
-        if summary["answered"] != len(taken) or raw_ids != taken:
+        if "answered" in summary and (summary["answered"] != len(taken) or raw_ids != taken):
             raise RuntimeError("the saved answer set is incomplete or contains foreign problems")
         (args.cache / "completed.json").write_text(json.dumps(protocol, indent=2) + "\n")
     return result

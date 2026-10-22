@@ -11,7 +11,10 @@
 # same 10 candidates per problem); t/PREDICT-2026-10-22-v9-strict-rows.md (P3: the teacher rows are v10's data).
 set -u
 D=$HOME/Projects/dawnr; cd $D || exit 1
-IDS=${IDS:-out/v9/teacher-ids.txt}; CHUNK=${CHUNK:-100}; STOP_AT=${STOP_AT:-0}; STOP_FILE=${STOP_FILE:-out/v9/teacher.stop}
+IDS=${IDS:-out/v9/teacher-ids.txt}; CHUNK=${CHUNK:-50}; START=${START:-0}; STOP_AT=${STOP_AT:-0}; STOP_FILE=${STOP_FILE:-out/v9/teacher.stop}
+# 2026-10-22 13:45Z: the slice's statements grow with the id (chunk 02 of 100: 958 of 1,012 prompts over 3,500 tokens, 137
+# truncated at a 4,096 slot, 2 problems kept); two slots of 8,192 keep the same KV memory on the 8 GB card.
+SERIES=${SERIES:-teacher9b-20261022b}; export PARALLEL=${PARALLEL:-2} CONCURRENCY=${CONCURRENCY:-2} SLOT_CTX=${SLOT_CTX:-8192}
 GGUF=$HOME/.local/share/dawnr/models/Qwen3.5-9B-Q4_K_M.gguf
 IDENT="teacher-qwen3.5-9b-q4km:8c4cc24f54473f3d4e080d4ec7fd2a40d0bbec0f94f3c807cd62694905357d54:llama-f1cee9941b0e843ea260bf8dd9a090fbd9711b6a"
 PRIMER=t/out/v5-repair-20261021/teacher-primer.md
@@ -19,7 +22,8 @@ LOG=out/v9/teacher.log
 mkdir -p out/v9/chunks
 split -l $CHUNK -d -a 2 --additional-suffix=.txt $IDS out/v9/chunks/ids- 2>/dev/null
 for f in out/v9/chunks/ids-*.txt; do
-  n=$(basename $f .txt | sed 's/ids-//'); TAG=teacher9b-20261022-tc$n
+  n=$(basename $f .txt | sed 's/ids-//'); TAG=$SERIES-tc$n
+  [ "$((10#$n))" -lt "$START" ] && continue
   [ -s t/out/spec-experiment/$TAG/kept-specs.jsonl ] && continue
   [ -f $STOP_FILE ] && { echo "$(date -u +%FT%TZ) stop file; not starting $TAG" >> $LOG; exit 0; }
   [ "$STOP_AT" != 0 ] && [ "$(date +%s)" -ge "$STOP_AT" ] && { echo "$(date -u +%FT%TZ) past STOP_AT; not starting $TAG" >> $LOG; exit 0; }
