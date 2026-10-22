@@ -137,7 +137,10 @@ gates and all seven kernels from the frozen 17-call route ("clean"), with the al
 | v8 | 980 self-distilled specification rows | 4, 4, 5 / 1, 2, 2 | [v8](t/PREDICT-2026-10-21-v8-spec-rows.md), [three decodes](t/PREDICT-2026-10-22-seed-variance.md) |
 | v9 | v5's rows plus self-distilled rows kept at a 90% strength floor | in training | [v9](t/PREDICT-2026-10-22-v9-strict-rows.md) |
 
-What the week established: a sampling seed alone moves the clean count by two and a training seed by one to two,
+On the 240-problem panel (the 95 plus the wider reader's 145) v5 reads 31, 29, 30 clean over three decodes and its
+seed-2 twin 22, 25, 22 (12 problems up, 18 down, permutation p 0.084): the wider problems carry the route's successes,
+and the training seed's effect holds across decodes, so every candidate is read against both seeds of v5 (mean 26.5
+clean on 240). What the week established: a sampling seed alone moves the clean count by two and a training seed by one to two,
 so none of v6, v7 or v8 is separable from v5 on one decode of one trained model (paired per-problem tests, p above
 0.6 in every case). From v9 on, a candidate is read on two training seeds and three decodes each, paired per
 problem on a 240-problem development panel, and is never called better on a mean. v8's rows did change one thing
