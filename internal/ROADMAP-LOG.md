@@ -3446,3 +3446,8 @@ computer-control plans and experiment results remain historical records.
   strictly kept specification of the same problem as the answer (217 from the tests, 15 from the reference check at
   1,000 draws). The teacher's chunks add their own dropped-and-kept pairs as they land. v10 is registered after v9's
   precision reading decides its base.
+- 14:25Z, the primed 9B teacher on the failed training problems (laptop GPU, chunks): short statements keep 16 and 17 of
+  100; long statements keep 2 of 100 at a 4,096-token slot (137 of 1,012 prompts truncated) and 3 of 50 at 8,192 with no
+  truncation (only 43 of 505 replies parsed as t tasks). The 9B is a short-problem teacher; the remaining 1,811 problems
+  are reordered by statement size so the best yield comes first (`t/recipes/teacher_train_specs.sh`); the long tail
+  waits for a stronger teacher on a cloud card. Kept so far: 38 problems (`teacher9b-20261022*/kept-specs.jsonl`).
