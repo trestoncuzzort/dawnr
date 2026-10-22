@@ -109,3 +109,39 @@ On its first decode P1 is falsified by the same margin P2 was: the training seed
 on both routes. The seed-2 model's second and third decodes are running (the three-decode protocol); the paired
 three-against-three reading of v5 and v5s2 is recorded below when they land, and it is the number that decides whether
 a training-side candidate needs two training seeds before any verdict.
+
+## Result (2026-10-22 16:25Z): the training-seed arm under the three-decode protocol, and P3
+
+Three decodes of the seed-2 twin against v5's three (`t/recipes/three_decode_report.py`, receipt
+`release/evidence/three-decode-v5-v5s2-2026-10-22.json`):
+
+| model, count | decode 1 | decode 2 | decode 3 | mean | on all three | on at least one |
+|---|---|---|---|---|---|---|
+| v5, clean | 6 | 4 | 6 | 5.33 | 251, 450, 476, 549 | those plus 270, 543, 634 |
+| v5 seed 2, clean | 4 | 5 | 4 | 4.33 | 476, 634 | those plus 251, 450, 543, 649 |
+| v5, all-seven | 3 | 2 | 3 | 2.67 | 476, 549 | those plus 634 |
+| v5 seed 2, all-seven | 2 | 1 | 1 | 1.33 | 634 | that plus 476 |
+
+Paired per problem, clean: up on 543, 634 and 649 (649 is a problem v5 never solves), down on 251, 270, 450 and 549 (549
+lost outright); mean difference -1.00; sign test p 1.0; permutation p 0.69. All-seven: mean difference -1.33, p 1.0.
+
+P1 falsified (the mean moved by one and the all-seven count by more; the all-seven sets share one problem, not two).
+P3's reading: a training seed alone produces exactly the shape the week's data candidates produced against v5 (a mean
+one problem lower, four problems down and three up, p above 0.6), and it reshuffles which problems are reliable. So
+every verdict of the week that rested on one trained model and one decode was a reading of two noises at once.
+
+## The protocol for training-side candidates, in force from v9
+
+- A candidate trained from new rows is read against v5 on two training seeds and three decodes each, paired per
+  problem over the six decodes; the control is v5's own six (three of seed 1, three of seed 2). Route-side changes
+  keep the three decodes on one model.
+- The development panel widens: the 95 plus the 111 problems only the wider reader reads
+  (`spec_experiment.wider_pool`, no model was trained on them), 206 in all (`t/out/v6-20261018/dev-206.txt`). At
+  about five clean of 95 the sign test needs about six problems moving one way; at 206 the same candidate has twice
+  the problems to move. The clean 182 stays held out for the final reading.
+- A candidate is called better only on the paired per-problem fractions, never on a mean, and the three instruments
+  that do not carry this noise (the ceiling instrument's gate precision, the kept-row counts of the teachers, the
+  strict reference check) are read beside the count every time.
+
+Sources: arXiv:2406.10229 (seed variance of benchmark scores); arXiv:2605.30315 (paired resolution); the receipts
+named above.

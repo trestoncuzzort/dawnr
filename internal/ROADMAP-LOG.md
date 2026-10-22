@@ -3465,3 +3465,8 @@ computer-control plans and experiment results remain historical records.
   549; `release/evidence/v5s2-*.json`). The training seed moves the count by two, as the sampling seed did; the
   three-decode reading of v5s2 follows. The desktop grade had to be re-run twice today: the tandem recipe's remote
   commands carried an empty tag (fixed), then the user's knock rebooted the box mid-grade.
+- 16:25Z, the training-seed arm under the three-decode protocol: v5 6 / 4 / 6 against its seed-2 twin 4 / 5 / 4 (mean
+  5.33 against 4.33, three problems up and four down, p 0.69), all-seven 2.67 against 1.33; the twin loses 549 outright
+  and gains 649, which v5 never solves. A training seed alone has the shape of every data candidate this week. Protocol
+  from v9: training-side candidates on two seeds and three decodes each, paired per problem over six decodes on the
+  widened 206-problem development panel (`t/out/v6-20261018/dev-206.txt`); the clean 182 stays held out.
