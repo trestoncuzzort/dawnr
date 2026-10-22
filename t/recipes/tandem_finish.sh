@@ -1,5 +1,5 @@
 #!/bin/bash
-# Generalised from v8_tandem_finish.sh (2026-10-22): usage tandem_finish.sh RUN TAGPREFIX ROWS_SHA. After the desktop finishes a run (tlab:~/$RUN/train.done holds 0): fetch the adapter, EXPORT ON THE LAPTOP (CPU merge, pinned
+# Generalised from v8_tandem_finish.sh (2026-10-22; 15:35Z the grade and done-file commands were single-quoted, so $PFX reached the desktop empty and v5s2 graded nothing): usage tandem_finish.sh RUN TAGPREFIX ROWS_SHA. After the desktop finishes a run (tlab:~/$RUN/train.done holds 0): fetch the adapter, EXPORT ON THE LAPTOP (CPU merge, pinned
 # converter), GENERATE BOTH ARMS ON THE LAPTOP'S GPU (t/recipes/laptop_route.sh), copy them to the desktop, GRADE THERE ON THE
 # CPU (kernel container) and run the ceiling instrument; then t/recipes/v8_report.sh pairs them. Run on the laptop as a user
 # unit; it waits for the desktop. Sources: t/recipes/v6_export.py, t/recipes/laptop_route.sh, t/recipes/v5_desktop_grade.sh.
@@ -46,8 +46,8 @@ log "copying the generations to the desktop; grading there on the cpu"
 for tag in $PFX-dev $PFX-oracle39; do
   rsync -a --delete t/out/spec-experiment/$tag/ $H:dawnr/t/out/spec-experiment/$tag/ || { log "rsync $tag failed"; exit 1; }
 done
-ssh -o ConnectTimeout=20 $H 'systemctl --user reset-failed 2>/dev/null; rm -f ~/v5-repair/$PFX-grades.done; systemd-run --user --unit dawnr-$PFX-grades --collect -p WorkingDirectory=/home/t/dawnr bash -c "bash t/recipes/v5_desktop_grade.sh $PFX-dev; bash t/recipes/v5_desktop_grade.sh $PFX-oracle39; PYTHONPATH=/home/t/dawnr/t python3 t/recipes/spec_ceiling.py --tag $PFX-oracle39 --ids-file /home/t/v7/dev-95.txt --n 200 --jobs 16 --out /home/t/v5-repair/$PFX-ceiling.json > /home/t/v5-repair/$PFX-ceiling.log 2>&1; touch /home/t/v5-repair/$PFX-grades.done"'
-until ssh -o ConnectTimeout=15 $H 'test -f ~/v5-repair/$PFX-grades.done' 2>/dev/null; do sleep 300; done
+ssh -o ConnectTimeout=20 $H "systemctl --user reset-failed 2>/dev/null; rm -f ~/v5-repair/$PFX-grades.done; systemd-run --user --unit dawnr-$PFX-grades --collect -p WorkingDirectory=/home/t/dawnr bash -c \"bash t/recipes/v5_desktop_grade.sh $PFX-dev; bash t/recipes/v5_desktop_grade.sh $PFX-oracle39; PYTHONPATH=/home/t/dawnr/t python3 t/recipes/spec_ceiling.py --tag $PFX-oracle39 --ids-file /home/t/v7/dev-95.txt --n 200 --jobs 16 --out /home/t/v5-repair/$PFX-ceiling.json > /home/t/v5-repair/$PFX-ceiling.log 2>&1; touch /home/t/v5-repair/$PFX-grades.done\""
+until ssh -o ConnectTimeout=15 $H "test -f ~/v5-repair/$PFX-grades.done" 2>/dev/null; do sleep 300; done
 log "desktop grades done; pairing"
 echo "pair with v7_local_pair.py against the controls" 2>&1 | tee -a $D/t/out/$PFX-handoff.log
-log "v8 tandem finish complete"
+log "$PFX tandem finish complete"
