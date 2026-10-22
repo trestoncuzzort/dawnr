@@ -9,6 +9,7 @@
 set -u
 TAG=${1:?generation tag}
 H=/home/t; D=$H/dawnr; A=$H/v5-repair; OUT=$A/proof-results/$TAG
+PANEL=${PANEL:-$H/v7/dev-95.txt}; POOL=${POOL:-v5}; PNAME=$(basename $PANEL)   # PANEL and POOL for the wider 145 (pool v7)
 rm -f $A/grade-$TAG.done
 # a graded directory left by an interrupted grade (no GRADED sentinel) makes run_par report incomplete kernel coverage
 # (2026-10-21, after a GPU reset mid-grade); start it clean
@@ -19,9 +20,9 @@ rm -f $D/t/out/spec-experiment/$TAG/kernels.md $D/t/out/spec-experiment/$TAG/ext
 rm -rf $D/t/out/spec-experiment/$TAG/tasks
 chmod -R a+rwX $D/t/out $A
 echo "$(date -u +%FT%TZ) grade $TAG start" >> $A/grade.log
-docker run --rm --name grade-$TAG -v $D:/opt/dawnr -v $A:$A -v $H/v7/dev-95.txt:/panel/dev-95.txt:ro -w /opt/dawnr \
-  -e T_MIN_KERNELS=7 -e T_SPARK_JOBS=1 -e PYTHONUNBUFFERED=1 -e PYTHONDONTWRITEBYTECODE=1 --memory=12g \
-  dawnr-kernels bash t/recipes/v6-grade.sh $TAG /panel/dev-95.txt $OUT > $A/grade-$TAG.log 2>&1
+docker run --rm --name grade-$TAG -v $D:/opt/dawnr -v $A:$A -v $PANEL:/panel/$PNAME:ro -w /opt/dawnr \
+  -e POOL=$POOL -e T_MIN_KERNELS=7 -e T_SPARK_JOBS=1 -e PYTHONUNBUFFERED=1 -e PYTHONDONTWRITEBYTECODE=1 --memory=12g \
+  dawnr-kernels bash t/recipes/v6-grade.sh $TAG /panel/$PNAME $OUT > $A/grade-$TAG.log 2>&1
 RC=$?
 echo "$(date -u +%FT%TZ) grade $TAG rc=$RC graded=$([ -e $OUT/GRADED ] && echo yes || echo no)" >> $A/grade.log
 echo $RC > $A/grade-$TAG.done

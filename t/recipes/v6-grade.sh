@@ -5,14 +5,15 @@ set -euo pipefail
 cd "$(dirname -- "${BASH_SOURCE[0]}")/../.."
 tag="${1:?generation tag}"
 ids="${2:?frozen problem panel}"
+POOL=${POOL:-v5}   # the wider reader's 145 problems live in pool v7 (2026-10-22)
 out="${3:?fresh output directory}"
 export T_MIN_KERNELS=7 T_SPARK_JOBS=1 T_SANDBOX=landlock PYTHONUNBUFFERED=1
 mkdir -p "$out"
 exec 9>"$out/grade.lock"
 flock -n 9
 test ! -e "$out/GRADED"
-python3 t/spec_experiment.py extract --model "$tag" --pool v5 --promote-header
-python3 t/spec_experiment.py tests --model "$tag" --pool v5
+python3 t/spec_experiment.py extract --model "$tag" --pool $POOL --promote-header
+python3 t/spec_experiment.py tests --model "$tag" --pool $POOL
 table="t/out/spec-experiment/$tag/kernels.md"
 tasks="t/out/spec-experiment/$tag/tasks"
 test ! -e "$table"
@@ -40,7 +41,7 @@ PY
 # spec_check keeps a shared verdict index; serialize writes and capture this tag.
 exec 8>t/out/v6-20261018/spec-check.lock
 flock -x 8
-python3 t/spec_check.py "$tag" --pool v5 --only all --n 1000 --per-task-seed \
+python3 t/spec_check.py "$tag" --pool $POOL --only all --n 1000 --per-task-seed \
   --reference-plus t/out/gcp-student-2026-10-11-s1/reference/mbppplus.jsonl --out "$out/spec-check.md"
 python3 - "$tag" "$out" "$tasks" <<'PY'
 import json, pathlib, sys
