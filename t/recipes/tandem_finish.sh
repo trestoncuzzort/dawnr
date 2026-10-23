@@ -5,7 +5,7 @@
 # unit; it waits for the desktop. Sources: t/recipes/v6_export.py, t/recipes/laptop_route.sh, t/recipes/v5_desktop_grade.sh.
 set -u
 RUN=${1:?run dir on the desktop, e.g. v5s2}; PFX=${2:?tag prefix, e.g. v5s2-20261022}; ROWS_SHA=${3:?rows sha}
-H=t@10.42.0.2; D=$HOME/Projects/dawnr; VENV=$HOME/scratch/venv-train; EXPORT=$D/t/out/$PFX-export; AD=$D/t/out/$PFX/adapter-final
+H=${H:-t@10.42.0.2}; D=$HOME/Projects/dawnr; VENV=$HOME/scratch/venv-train; EXPORT=$D/t/out/$PFX-export; AD=$D/t/out/$PFX/adapter-final
 cd $D || exit 1
 log() { echo "$(date -u +%FT%TZ) $*" | tee -a $D/t/out/$PFX-handoff.log; }
 until ssh -o ConnectTimeout=15 $H "test -f ~/$RUN/train.done && [ \"\$(cat ~/$RUN/train.done)\" = 0 ]" 2>/dev/null; do sleep 300; done

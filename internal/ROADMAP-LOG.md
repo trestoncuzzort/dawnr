@@ -3485,3 +3485,54 @@ computer-control plans and experiment results remain historical records.
   12 problems up and 18 down, permutation p 0.084; the wider 145 carry the route's successes (about 25 of them clean on
   every v5 decode against 6 of the 95) and the training seed's effect holds across decodes, so v5 is likely a good draw of
   its recipe. Every candidate from v9 is read against v5's six decodes (both seeds), mean 26.5 clean on 240.
+
+## 2026-10-23: v9's ceiling read, the release documents brought current, everything paused at the user's request
+
+- 01:55Z, v9's ceiling instrument (twenty specification candidates for every development problem the model solves in
+  Python, each judged by the three-test gate and by the reference check at 200 draws): gate precision 0.682 against v5's
+  0.785 and v8's 0.515; a reference-correct specification within five candidates on 25 problems (v5 18) and within twenty
+  on 31 (v5 29); 105 reference-correct kept candidates against v5's 73. The strict floor recovered most of what v8 lost
+  and v9 finds a correct specification sooner. Its 39-call oracle route, one decode: 8 clean and 2 all-seven against
+  v5's 7 and 3 (`release/evidence/v9-ceiling-2026-10-23.json`, `release/evidence/v9-oracle39-2026-10-23.json`).
+- 04:05Z, the release documents say what is true today: dawnr v5 is current, no candidate is promoted, and the two-seed
+  three-decode protocol qualifies the next (release/ROLLING.md, the v5 model card, docs/MEASURED.md, the GitHub rolling
+  release notes; 9479eb17, CI green).
+- 04:52Z, PAUSED at the user's request ("pause everything and push whats left to github to be picked up later"). What
+  stopped, and where each piece stands:
+  - laptop: the v9 arms driver (`dawnr-arms-v9-20261022`), the two native wider grades (`v9-20261022-wider-off1000` had
+    57 of 145 replies through the tests, `-off2000` had 50; `t/recipes/v6-grade.sh` has no resume, so both run again
+    from the start, about seventy minutes each, side by side), the 9B teacher lane (131 kept specifications in
+    `t/out/spec-experiment/teacher9b-2026102*/kept-specs.jsonl`; those written after 16:17Z on 10/22 have not been
+    through the strict re-check), and the v9s2 tandem waiter. The laptop's GPU had sat at its 87 C target temperature
+    with the driver's software thermal slowdown active (1,507 of 3,090 MHz at 46 W, the CPU package at 78 C under the
+    graders); it read 71 C a minute after the stop and 56 C after five. No Xid in any boot's kernel log, PCIe at
+    32 GT/s x8, no hardware slowdown ever counted: the card is healthy, it was simply held at its limit for hours.
+  - desktop: `dawnr-v9s2-train.service` stopped at step 1008 of 1535 (66%, checkpoints 900 and 1000 on disk) and was
+    disabled together with the finished v5s2, v8 and v9 unit files, so a reboot restarts nothing. The gpu-guard stays
+    on; the boot of 15:37Z on 10/22 shows no Xid after thirteen hours. The Crawford stage stream (crawford-stage.service,
+    CPU only) was left running because it is not dawnr work.
+  - v9's arms in hand: dev (graded 00:23Z; one decode on the 95: 19 task, 7 clean, 2 all-seven against v5's 13, 6 and 3;
+    one decode is not a verdict under the protocol), seedoff1000 and seedoff2000 (desktop, rc 0, pulled), wider-off0
+    (laptop, rc 0). The desktop regrade meant to recreate the dev arm's wiped intermediate grader files failed at its
+    first step (root-owned task files under `~/dawnr/t/out/spec-experiment/v9-20261022-dev/tasks`, Permission denied);
+    the arm's grade itself is intact and identical on both machines (levels.json md5 2f47fb81), so the regrade is not
+    needed for the reading. If it is ever wanted: `sudo -n chown -R t: ~/dawnr/t/out/spec-experiment/v9-20261022-dev` first.
+  - data: `out/` (the v9 rows, the v10 components, the teacher outputs; 100 MB, 145 files) copied to the desktop at
+    `~/dawnr-out-backup-2026-10-23/` at 04:59Z. Rows are not tracked in this public repository; the receipts under
+    `release/evidence/` are.
+  - the cable address of the desktop (10.42.0.2) did not answer at the pause while the tailnet name `tlab` did; the arms
+    driver and the tandem recipe take `H=tlab`.
+
+  Resume, in this order: (1) on the desktop, `systemctl --user enable --now dawnr-v9s2-train.service` (about 2.5 hours
+  from checkpoint-1000); (2) on the laptop, `systemd-run --user --unit dawnr-v9s2-tandem --collect -p WorkingDirectory=$HOME/Projects/dawnr
+  /usr/bin/bash t/recipes/tandem_finish.sh v9s2 v9s2-20261022 <rows sha>` with the rows sha from
+  t/PREDICT-2026-10-22-v9-strict-rows.md (f2611fdc...), which waits for the desktop, exports, decodes the dev arm and grades
+  it there; (3) on the laptop, `systemd-run --user --unit dawnr-arms-v9-20261022 --collect -p WorkingDirectory=$HOME/Projects/dawnr
+  /usr/bin/bash t/recipes/model_arms.sh v9-20261022 t/out/v9-20261022-export/model-Q8_0.gguf "$IDENT"` with IDENT from the
+  `identity=` line of `t/out/laptop-runs/v9-20261022-dev.log`; it redoes only the two wider grades and then gives the
+  teacher the card for six hours; the same command for v9s2-20261022 once its tandem has finished; (4) the 240-problem
+  reading: v9's three joined decodes against v5's six (the three seed-1 decodes and v5s2's three), with
+  `t/recipes/three_decode_report.py --panel t/out/v6-20261018/dev-240.txt`, each decode given as `TAG-dev:DIR+TAG-wider-offN:DIR`,
+  then the two-seed reading once v9s2's arms land, written into the PREDICT record, README and SCOREBOARD; (5) v10 on the
+  base that reading decides, after `t/recipes/v9_strict_specs.py` has been run over the teacher kept files written since
+  16:17Z on 10/22. Nothing restarts until the user says so.

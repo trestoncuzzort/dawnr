@@ -69,3 +69,9 @@ more problems (within five candidates on 25 problems against 18, within twenty o
 one decode: 67 Python, 22 t, 8 clean, 2 all-seven against v5's 63 / 16 / 7 / 3 (gained 449 and 708, lost 270; all-seven
 lost 476), `release/evidence/v9-oracle39-2026-10-23.json`. The frozen-route counts (three decodes on the 240-problem panel,
 against v5's six) are recorded below when the arms land.
+
+Paused 2026-10-23 04:52Z at the user's request before the counts could be read. In hand: the dev arm (one decode on the 95:
+19 task, 7 clean, 2 all-seven against v5's 13, 6 and 3; one decode is not a verdict under this protocol), seedoff1000,
+seedoff2000 and wider-off0 graded; wider-off1000 and wider-off2000 were half graded on the laptop and run again from the
+start on resume (`t/recipes/model_arms.sh v9-20261022 ...` does only what is missing). The seed-2 twin stopped at step 1008
+of 1535 on the desktop with its checkpoint kept. The resume order is in internal/ROADMAP-LOG.md under 2026-10-23.

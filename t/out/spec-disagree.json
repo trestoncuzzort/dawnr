@@ -1,5 +1,5 @@
 {
- "checked": 2393,
+ "checked": 2437,
  "tags": [
   "dawnr-chat-r12c-s1337",
   "dawnr-chat-r12c-s1339",
@@ -91,7 +91,8 @@
   "v5s2-20261022-wider-off1000",
   "v5s2-20261022-wider-off2000",
   "v6-20261018-corrective-dev",
-  "v6-20261018-v5-dev-local"
+  "v6-20261018-v5-dev-local",
+  "v9-20261022-wider-off0"
  ],
  "disagree": [
   "dawnr-chat-r12c-s1337/mbpp_711__product_Equal",
@@ -208,7 +209,14 @@
   "v6-20261018-v5-dev-local/mbpp_186__check_literals",
   "v6-20261018-v5-dev-local/mbpp_207__find_longest_repeating_subseq",
   "v6-20261018-v5-dev-local/mbpp_337__text_match_word",
-  "v6-20261018-v5-dev-local/mbpp_459__remove_uppercase"
+  "v6-20261018-v5-dev-local/mbpp_459__remove_uppercase",
+  "v9-20261022-wider-off0/mbpp_120__max_product_tuple",
+  "v9-20261022-wider-off0/mbpp_660__find_Points",
+  "v9-20261022-wider-off0/mbpp_695__check_greater",
+  "v9-20261022-wider-off0/mbpp_811__check_identical",
+  "v9-20261022-wider-off0/mbpp_869__remove_list_range",
+  "v9-20261022-wider-off0/mbpp_888__substract_elements",
+  "v9-20261022-wider-off0/mbpp_889__reverse_list_lists"
  ],
  "programs": {
   "qwen15b-base-v3/mbpp_768__check_Odd_Parity": "t 1\ntask mbpp_768__check_Odd_Parity(n: int) returns (r: bool)\n  ensures r == (n % 2 != 0)\n{\n  r := n % 2 != 0;\n}",
@@ -325,7 +333,14 @@
   "v5s2-20261022-wider-off1000/mbpp_357__find_max": "t 1\ngate loops\ntask mbpp_357__find_max(records: seq<seq>) returns (r: int)\n  requires len(records) > 0\n  ensures forall i in [0, len(records)) . r >= records[i][0] and r >= records[i][1]\n  ensures exists i in [0, len(records)) . r == records[i][0] or r == records[i][1]\n{\n  r := records[0][0];\n  var i: int := 1;\n  while i < len(records)\n    invariant forall j in [0, i) . j < len(records) ==> r >= records[j][0] and r >= records[j][1]\n    invariant exists j in [0, i) . j < len(records) and r == records[j][0] or r == records[j][1]\n    invariant i >= 1\n    decreases len(records) - i\n  {\n    var curr: int := records[i][0];\n    var next: int := records[i][1];\n    if curr > r or next > r {\n      r := if curr > r then curr else next;\n    }\n    i := i + 1;\n  }\n}",
   "v5s2-20261022-wider-off2000/mbpp_357__find_max": "t 1\ngate loops\ntask mbpp_357__find_max(records: seq<seq>) returns (r: int)\n  requires len(records) > 0\n  ensures forall i in [0, len(records)) . r >= records[i][0] and r >= records[i][1]\n  ensures exists i in [0, len(records)) . r == records[i][0] or r == records[i][1]\n{\n  r := records[0][0];\n  var i: int := 1;\n  while i < len(records)\n    invariant forall j in [0, i) . j < len(records) ==> r >= records[j][0] and r >= records[j][1]\n    invariant exists j in [0, i) . j < len(records) and r == records[j][0] or r == records[j][1]\n    invariant i >= 1\n    decreases len(records) - i\n  {\n    var curr: int := records[i][0];\n    var next: int := records[i][1];\n    if curr > r or next > r {\n      r := if curr > r then curr else next;\n    }\n    i := i + 1;\n  }\n}",
   "v5s2-20261022-wider-off2000/mbpp_660__find_Points": "t 1\ntask mbpp_660__find_Points(a: int, b: int, c: int, d: int) returns (r: seq)\n  requires a <= b\n  requires c <= d\n  ensures r == [min(a, c), max(b, d)]\n{\n  r := [min(a, c), max(b, d)];\n}",
-  "v5s2-20261022-wider-off2000/mbpp_805__max_sum_list": "t 1\ngate loops\ntask mbpp_805__max_sum_list(lst: seq<seq>) returns (r: seq)\n  requires len(lst) >= 1\n  ensures forall i in [0, len(lst)) . r == lst[i] ==> (forall j in [0, len(lst)) . sum(lst[j]) <= sum(r))\n  ensures forall i in [0, len(lst)) . sum(lst[i]) >= sum(r) ==> r == lst[i]\n{\n  r := lst[0];\n  var i: int := 1;\n  while i < len(lst)\n    invariant 1 <= i\n    invariant i <= len(lst)\n    invariant forall k in [0, i) . r == lst[k] ==> (forall j in [0, len(lst)) . sum(lst[j]) <= sum(r))\n    invariant forall k in [0, i) . sum(lst[k]) >= sum(r) ==> r == lst[k]\n    decreases len(lst) - i\n  {\n    if sum(lst[i]) > sum(r) {\n      r := lst[i];\n    }\n    i := i + 1;\n  }\n}"
+  "v5s2-20261022-wider-off2000/mbpp_805__max_sum_list": "t 1\ngate loops\ntask mbpp_805__max_sum_list(lst: seq<seq>) returns (r: seq)\n  requires len(lst) >= 1\n  ensures forall i in [0, len(lst)) . r == lst[i] ==> (forall j in [0, len(lst)) . sum(lst[j]) <= sum(r))\n  ensures forall i in [0, len(lst)) . sum(lst[i]) >= sum(r) ==> r == lst[i]\n{\n  r := lst[0];\n  var i: int := 1;\n  while i < len(lst)\n    invariant 1 <= i\n    invariant i <= len(lst)\n    invariant forall k in [0, i) . r == lst[k] ==> (forall j in [0, len(lst)) . sum(lst[j]) <= sum(r))\n    invariant forall k in [0, i) . sum(lst[k]) >= sum(r) ==> r == lst[k]\n    decreases len(lst) - i\n  {\n    if sum(lst[i]) > sum(r) {\n      r := lst[i];\n    }\n    i := i + 1;\n  }\n}",
+  "v9-20261022-wider-off0/mbpp_120__max_product_tuple": "t 1\ngate loops\ntask mbpp_120__max_product_tuple(tuples: seq<seq>) returns (r: int)\n  requires forall i in [0, len(tuples)) . len(tuples[i]) == 2\n  ensures forall i in [0, len(tuples)) . r >= tuples[i][0] * tuples[i][1]\n  ensures forall i in [0, len(tuples)) . exists j in [0, len(tuples)) . r == tuples[j][0] * tuples[j][1]\n{\n  r := tuples[0][0] * tuples[0][1];\n  var i: int := 1;\n  while i < len(tuples)\n    invariant 1 <= i and i <= len(tuples)\n    invariant forall j in [0, i) . r >= tuples[j][0] * tuples[j][1]\n    invariant exists j in [0, i) . r == tuples[j][0] * tuples[j][1]\n    decreases len(tuples) - i\n  {\n    if tuples[i][0] * tuples[i][1] > r {\n      r := tuples[i][0] * tuples[i][1];\n    }\n    i := i + 1;\n  }\n}",
+  "v9-20261022-wider-off0/mbpp_660__find_Points": "t 1\ngate loops\ntask mbpp_660__find_Points(m1: int, m2: int, n1: int, n2: int) returns (r: seq)\n  requires m1 <= m2\n  requires n1 <= n2\n  ensures len(r) == 2\n  ensures r[0] == (if m1 < n1 then m1 else n1)\n  ensures r[1] == (if m1 < n1 then n2 else m2)\n{\n  var p1: int := if m1 < n1 then m1 else n1;\n  var p2: int := if m1 < n1 then n2 else m2;\n  r := [p1, p2];\n}",
+  "v9-20261022-wider-off0/mbpp_695__check_greater": "t 1\ngate loops\ntask mbpp_695__check_greater(s1: seq, s2: seq) returns (r: bool)\n  requires len(s1) == len(s2)\n  ensures r == (forall i in [0, len(s1)) . s2[i] > i)\n{\n  r := true;\n  var i: int := 0;\n  while i < len(s1)\n    invariant 0 <= i and i <= len(s1)\n    invariant r == (forall j in [0, i) . s2[j] > j)\n    decreases len(s1) - i\n  {\n    if s2[i] <= i {\n      r := false;\n    }\n    i := i + 1;\n  }\n}",
+  "v9-20261022-wider-off0/mbpp_811__check_identical": "t 1\ngate loops\ntask mbpp_811__check_identical(a: seq<seq>, b: seq<seq>) returns (r: bool)\n  requires forall i in [0, len(a)) . len(a[i]) == 2\n  requires forall i in [0, len(b)) . len(b[i]) == 2\n  ensures r == (forall i in [0, len(a)) . a[i] == b[i])\n{\n  r := true;\n  var i: int := 0;\n  while i < len(a)\n    invariant 0 <= i and i <= len(a)\n    invariant r == (forall j in [0, i) . a[j] == b[j])\n    decreases len(a) - i\n  {\n    if a[i] != b[i] {\n      r := false;\n    }\n    i := i + 1;\n  }\n}",
+  "v9-20261022-wider-off0/mbpp_869__remove_list_range": "t 1\ngate loops\ntask mbpp_869__remove_list_range(lst: seq<seq>, lo: int, hi: int) returns (r: seq<seq>)\n  requires forall i in [0, len(lst)) . len(lst[i]) > 0\n  ensures forall i in [0, len(r)) . exists j in [0, len(lst)) . r[i] == lst[j] and lo <= r[i][0] and r[i][len(r[i]) - 1] <= hi\n  ensures forall j in [0, len(lst)) . lo <= lst[j][0] and lst[j][len(lst[j]) - 1] <= hi ==> (exists i in [0, len(r)) . r[i] == lst[j])\n  ensures len(r) <= len(lst)\n{\n  r := [];\n  var i: int := 0;\n  while i < len(lst)\n    invariant 0 <= i\n    invariant i <= len(lst)\n    invariant len(r) <= i\n    invariant forall k in [0, len(r)) . exists j in [0, i) . r[k] == lst[j] and lo <= r[k][0] and r[k][len(r[k]) - 1] <= hi\n    invariant forall j in [0, i) . lo <= lst[j][0] and lst[j][len(lst[j]) - 1] <= hi ==> (exists k in [0, len(r)) . r[k] == lst[j])\n    decreases len(lst) - i\n  {\n    if lo <= lst[i][0] and lst[i][len(lst[i]) - 1] <= hi {\n      r := r + [lst[i]];\n    }\n    i := i + 1;\n  }\n}",
+  "v9-20261022-wider-off0/mbpp_888__substract_elements": "t 1\ngate loops\ntask mbpp_888__substract_elements(a: seq<seq>, b: seq<seq>) returns (r: seq<seq>)\n  requires forall i in [0, len(a)) . len(a[i]) == 2\n  requires forall i in [0, len(b)) . len(b[i]) == 2\n  ensures len(r) == len(a)\n  ensures forall i in [0, len(r)) . len(r[i]) == 2\n  ensures forall i in [0, len(r)) . r[i][0] == a[i][0] - b[i][0]\n  ensures forall i in [0, len(r)) . r[i][1] == a[i][1] - b[i][1]\n{\n  r := [];\n  var i: int := 0;\n  while i < len(a)\n    invariant 0 <= i\n    invariant i <= len(a)\n    invariant len(r) == i\n    invariant forall j in [0, i) . len(r[j]) == 2\n    invariant forall j in [0, i) . r[j][0] == a[j][0] - b[j][0]\n    invariant forall j in [0, i) . r[j][1] == a[j][1] - b[j][1]\n    decreases len(a) - i\n  {\n    var c: seq := [a[i][0] - b[i][0], a[i][1] - b[i][1]];\n    r := r + [c];\n    i := i + 1;\n  }\n}",
+  "v9-20261022-wider-off0/mbpp_889__reverse_list_lists": "t 1\ngate loops\ntask mbpp_889__reverse_list_lists(s: seq<seq>) returns (r: seq<seq>)\n  ensures len(r) == len(s)\n  ensures forall i in [0, len(s)) . len(r[i]) == len(s[i])\n  ensures forall i in [0, len(s)) . forall j in [0, len(s[i])) . r[i][j] == s[i][len(s[i]) - 1 - j]\n{\n  r := [];\n  var i: int := 0;\n  while i < len(s)\n    invariant len(r) == i\n    invariant i >= 0 and i <= len(s)\n    invariant forall j in [0, i) . len(r[j]) == len(s[j])\n    invariant forall j in [0, i) . forall k in [0, len(s[j])) . r[j][k] == s[j][len(s[j]) - 1 - k]\n    decreases len(s) - i\n  {\n    var reversed: seq := [];\n    var j: int := len(s[i]) - 1;\n    while j >= 0\n      invariant -1 <= j and j < len(s[i])\n      invariant len(reversed) == len(s[i]) - 1 - j\n      invariant forall k in [0, len(reversed)) . reversed[k] == s[i][len(s[i]) - 1 - k]\n      decreases j + 1\n    {\n      reversed := reversed + [s[i][j]];\n      j := j - 1;\n    }\n    r := r + [reversed];\n    i := i + 1;\n  }\n}"
  },
  "results": {
   "prover-train/mbpp_135__hexagonal_num": {
@@ -15295,6 +15310,1729 @@
    "pool": "v7",
    "seed": 1,
    "attempts": 1000
+  },
+  "v9-20261022-wider-off0/mbpp_106__add_lists": {
+   "status": "no valid draws",
+   "draws": 0,
+   "pre_completeness_unmeasurable": "reference never ran",
+   "points_held": 3,
+   "points_failed": 0,
+   "points_excluded": 0,
+   "task_id": 106,
+   "task_sha256": "c7e2d0b34eabac394b979d1f339edb90d55a3129759319cfefc623f3c59439f3",
+   "pool": "v7",
+   "seed": 1,
+   "attempts": 1000
+  },
+  "v9-20261022-wider-off0/mbpp_120__max_product_tuple": {
+   "status": "disagrees",
+   "ensures": 1,
+   "args": [
+    [
+     [
+      0,
+      -3
+     ],
+     [
+      -3,
+      2
+     ]
+    ]
+   ],
+   "reference_said": 6,
+   "agreed_before": 0,
+   "points_held": 3,
+   "points_failed": 0,
+   "points_excluded": 0,
+   "task_id": 120,
+   "task_sha256": "2adaa8a453bd9dc10c7b1f118881f516a0f174423da442bade50d0517770d988",
+   "pool": "v7",
+   "seed": 1,
+   "attempts": 1000
+  },
+  "v9-20261022-wider-off0/mbpp_132__tup_string": {
+   "status": "agrees",
+   "draws": 1000,
+   "mutants_rejected": 6887,
+   "mutants_accepted": 0,
+   "completeness": 1.0,
+   "weak": false,
+   "cross_rejected": 2970,
+   "cross_accepted": 0,
+   "cross_completeness": 1.0,
+   "larger": {
+    "status": "agrees",
+    "draws": 200,
+    "completeness": 1.0,
+    "cross_completeness": 1.0,
+    "mutants_rejected": 1590,
+    "mutants_accepted": 0,
+    "cross_rejected": 594,
+    "cross_accepted": 0,
+    "requires_caps_size": false
+   },
+   "points_held": 3,
+   "points_failed": 0,
+   "points_excluded": 0,
+   "task_id": 132,
+   "task_sha256": "7aeb2c626937ca89fb1e366589b8a83f921f8797433968e83abc1f1de3fd2dbe",
+   "pool": "v7",
+   "seed": 1,
+   "attempts": 1000
+  },
+  "v9-20261022-wider-off0/mbpp_154__specified_element": {
+   "status": "agrees",
+   "draws": 413,
+   "mutants_rejected": 1087,
+   "mutants_accepted": 0,
+   "completeness": 1.0,
+   "weak": false,
+   "cross_rejected": 721,
+   "cross_accepted": 0,
+   "cross_completeness": 1.0,
+   "domain_probes": 587,
+   "domain_admitted": 0,
+   "reference_ran": 413,
+   "pre_completeness": 1.0,
+   "pre_incomplete": false,
+   "larger": {
+    "status": "agrees",
+    "draws": 12,
+    "completeness": 1.0,
+    "cross_completeness": 1.0,
+    "mutants_rejected": 24,
+    "mutants_accepted": 0,
+    "cross_rejected": 11,
+    "cross_accepted": 0,
+    "requires_caps_size": false
+   },
+   "points_held": 3,
+   "points_failed": 0,
+   "points_excluded": 0,
+   "task_id": 154,
+   "task_sha256": "6a9776d2a3a2679177128f43659616eee86dd315f096cd9abd5a85c02f5f848a",
+   "pool": "v7",
+   "seed": 1,
+   "attempts": 1000
+  },
+  "v9-20261022-wider-off0/mbpp_196__remove_tuples": {
+   "status": "agrees",
+   "draws": 1000,
+   "mutants_rejected": 1601,
+   "mutants_accepted": 576,
+   "completeness": 0.735,
+   "weak": true,
+   "weak_witness": {
+    "args": [
+     [
+      [
+       -1,
+       2,
+       -4
+      ],
+      [
+       1,
+       -2
+      ],
+      [
+       4
+      ]
+     ],
+     2
+    ],
+    "reference_said": [
+     [
+      -1,
+      2,
+      -4
+     ],
+     [
+      4
+     ]
+    ],
+    "also_accepts": [
+     [
+      4
+     ],
+     [
+      -1,
+      2,
+      -4
+     ]
+    ]
+   },
+   "cross_rejected": 2669,
+   "cross_accepted": 4,
+   "cross_completeness": 0.999,
+   "cross_witness": {
+    "args": [
+     [
+      [],
+      []
+     ],
+     1
+    ],
+    "reference_said": [
+     [],
+     []
+    ],
+    "also_accepts": [
+     []
+    ],
+    "which_is_the_answer_for": [
+     [
+      [],
+      [
+       0
+      ]
+     ],
+     1
+    ]
+   },
+   "larger": {
+    "status": "agrees",
+    "draws": 200,
+    "completeness": 0.46,
+    "cross_completeness": 1.0,
+    "mutants_rejected": 396,
+    "mutants_accepted": 465,
+    "cross_rejected": 589,
+    "cross_accepted": 0,
+    "weak_witness": {
+     "args": [
+      [
+       [],
+       [
+        1,
+        1,
+        0
+       ],
+       [
+        1,
+        -4
+       ],
+       [],
+       [
+        2
+       ],
+       [],
+       [
+        -3
+       ],
+       [],
+       [
+        4,
+        3
+       ],
+       [
+        2,
+        0
+       ],
+       [],
+       [],
+       [],
+       [
+        1,
+        3,
+        0
+       ],
+       [
+        1
+       ],
+       [
+        -1,
+        -4
+       ],
+       [
+        4,
+        4,
+        0
+       ]
+      ],
+      17
+     ],
+     "reference_said": [
+      [],
+      [
+       1,
+       1,
+       0
+      ],
+      [
+       1,
+       -4
+      ],
+      [],
+      [
+       2
+      ],
+      [],
+      [
+       -3
+      ],
+      [],
+      [
+       4,
+       3
+      ],
+      [
+       2,
+       0
+      ],
+      [],
+      [],
+      [],
+      [
+       1,
+       3,
+       0
+      ],
+      [
+       1
+      ],
+      [
+       -1,
+       -4
+      ],
+      [
+       4,
+       4,
+       0
+      ]
+     ],
+     "also_accepts": [
+      [
+       4,
+       4,
+       0
+      ],
+      [
+       -1,
+       -4
+      ],
+      [
+       1
+      ],
+      [
+       1,
+       3,
+       0
+      ],
+      [],
+      [],
+      [],
+      [
+       2,
+       0
+      ],
+      [
+       4,
+       3
+      ],
+      [],
+      [
+       -3
+      ],
+      [],
+      [
+       2
+      ],
+      [],
+      [
+       1,
+       -4
+      ],
+      [
+       1,
+       1,
+       0
+      ],
+      []
+     ]
+    },
+    "requires_caps_size": false
+   },
+   "points_held": 3,
+   "points_failed": 0,
+   "points_excluded": 0,
+   "task_id": 196,
+   "task_sha256": "551a72559ced311cd3e44944eafa97f48521fb0872df05f23f494271836c1100",
+   "pool": "v7",
+   "seed": 1,
+   "attempts": 1000
+  },
+  "v9-20261022-wider-off0/mbpp_197__find_exponentio": {
+   "status": "agrees",
+   "draws": 163,
+   "outside_requires": 837,
+   "mutants_rejected": 1038,
+   "mutants_accepted": 0,
+   "completeness": 1.0,
+   "weak": false,
+   "cross_rejected": 471,
+   "cross_accepted": 0,
+   "cross_completeness": 1.0,
+   "larger": {
+    "status": "agrees",
+    "draws": 7,
+    "outside_requires": 193,
+    "completeness": 1.0,
+    "cross_completeness": 1.0,
+    "mutants_rejected": 49,
+    "mutants_accepted": 0,
+    "cross_rejected": 15,
+    "cross_accepted": 0,
+    "requires_caps_size": false
+   },
+   "points_held": 3,
+   "points_failed": 0,
+   "points_excluded": 0,
+   "task_id": 197,
+   "task_sha256": "5b5da62f3efba6180ea83dc9e8d485ac811c3cb5ba06398e5a054a83ab29a980",
+   "pool": "v7",
+   "seed": 1,
+   "attempts": 1000
+  },
+  "v9-20261022-wider-off0/mbpp_213__concatenate_strings": {
+   "status": "agrees",
+   "draws": 159,
+   "outside_requires": 841,
+   "mutants_rejected": 569,
+   "mutants_accepted": 0,
+   "completeness": 1.0,
+   "weak": false,
+   "cross_rejected": 456,
+   "cross_accepted": 0,
+   "cross_completeness": 1.0,
+   "larger": {
+    "status": "agrees",
+    "draws": 9,
+    "outside_requires": 191,
+    "completeness": 1.0,
+    "cross_completeness": 1.0,
+    "mutants_rejected": 34,
+    "mutants_accepted": 0,
+    "cross_rejected": 21,
+    "cross_accepted": 0,
+    "requires_caps_size": false
+   },
+   "points_held": 3,
+   "points_failed": 0,
+   "points_excluded": 0,
+   "task_id": 213,
+   "task_sha256": "c4a6456a8a5bc2d44eefd0d79dd3c4b1f3dd1b322e866bddd0b8431cd345f8d6",
+   "pool": "v7",
+   "seed": 1,
+   "attempts": 1000
+  },
+  "v9-20261022-wider-off0/mbpp_250__count_X": {
+   "status": "agrees",
+   "draws": 1000,
+   "mutants_rejected": 8704,
+   "mutants_accepted": 0,
+   "completeness": 1.0,
+   "weak": false,
+   "cross_rejected": 1347,
+   "cross_accepted": 0,
+   "cross_completeness": 1.0,
+   "larger": {
+    "status": "agrees",
+    "draws": 200,
+    "completeness": 1.0,
+    "cross_completeness": 1.0,
+    "mutants_rejected": 1771,
+    "mutants_accepted": 0,
+    "cross_rejected": 224,
+    "cross_accepted": 0,
+    "requires_caps_size": false
+   },
+   "points_held": 3,
+   "points_failed": 0,
+   "points_excluded": 0,
+   "task_id": 250,
+   "task_sha256": "21db2f259fcb6c3a92016e74c653d1e0f2f64858142a69e88a9c7721002b5be7",
+   "pool": "v7",
+   "seed": 1,
+   "attempts": 1000
+  },
+  "v9-20261022-wider-off0/mbpp_257__swap_numbers": {
+   "status": "agrees",
+   "draws": 1000,
+   "mutants_rejected": 6911,
+   "mutants_accepted": 0,
+   "completeness": 1.0,
+   "weak": false,
+   "cross_rejected": 2993,
+   "cross_accepted": 0,
+   "cross_completeness": 1.0,
+   "larger": {
+    "status": "agrees",
+    "draws": 200,
+    "completeness": 1.0,
+    "cross_completeness": 1.0,
+    "mutants_rejected": 1400,
+    "mutants_accepted": 0,
+    "cross_rejected": 594,
+    "cross_accepted": 0,
+    "requires_caps_size": false
+   },
+   "points_held": 3,
+   "points_failed": 0,
+   "points_excluded": 0,
+   "task_id": 257,
+   "task_sha256": "2f8e67238671564c4012b0008fa8fcea72bb9be40c9e239722d66fca45e5b132",
+   "pool": "v7",
+   "seed": 1,
+   "attempts": 1000
+  },
+  "v9-20261022-wider-off0/mbpp_261__division_elements": {
+   "status": "agrees",
+   "draws": 26,
+   "outside_requires": 298,
+   "skipped": {
+    "reference result has no t value": 606
+   },
+   "mutants_rejected": 60,
+   "mutants_accepted": 0,
+   "completeness": 1.0,
+   "weak": false,
+   "cross_rejected": 38,
+   "cross_accepted": 0,
+   "cross_completeness": 1.0,
+   "domain_probes": 70,
+   "domain_admitted": 0,
+   "reference_ran": 930,
+   "pre_completeness": 1.0,
+   "pre_incomplete": false,
+   "larger": {
+    "status": "reference result has no t value",
+    "draws": 0,
+    "outside_requires": 18,
+    "skipped": {
+     "reference result has no t value": 146
+    },
+    "requires_caps_size": false
+   },
+   "points_held": 3,
+   "points_failed": 0,
+   "points_excluded": 0,
+   "task_id": 261,
+   "task_sha256": "c6a27a4b779216166673b5fb173e6abe61142b72adcbc5af96456a11ea8a7f41",
+   "pool": "v7",
+   "seed": 1,
+   "attempts": 1000
+  },
+  "v9-20261022-wider-off0/mbpp_273__substract_elements": {
+   "status": "agrees",
+   "draws": 148,
+   "outside_requires": 852,
+   "mutants_rejected": 916,
+   "mutants_accepted": 0,
+   "completeness": 1.0,
+   "weak": false,
+   "cross_rejected": 429,
+   "cross_accepted": 0,
+   "cross_completeness": 1.0,
+   "larger": {
+    "status": "agrees",
+    "draws": 3,
+    "outside_requires": 197,
+    "completeness": 1.0,
+    "cross_completeness": 1.0,
+    "mutants_rejected": 24,
+    "mutants_accepted": 0,
+    "cross_rejected": 3,
+    "cross_accepted": 0,
+    "requires_caps_size": false
+   },
+   "points_held": 3,
+   "points_failed": 0,
+   "points_excluded": 0,
+   "task_id": 273,
+   "task_sha256": "8c3965d3db03799b8ef76f99633c69e0b26f4dda3d3c7acf42900469b0c4afe1",
+   "pool": "v7",
+   "seed": 1,
+   "attempts": 1000
+  },
+  "v9-20261022-wider-off0/mbpp_357__find_max": {
+   "status": "agrees",
+   "draws": 203,
+   "outside_requires": 226,
+   "mutants_rejected": 923,
+   "mutants_accepted": 903,
+   "completeness": 0.505,
+   "weak": true,
+   "weak_witness": {
+    "args": [
+     [
+      [
+       -2,
+       -3,
+       1
+      ]
+     ]
+    ],
+    "reference_said": 1,
+    "also_accepts": -2
+   },
+   "cross_rejected": 208,
+   "cross_accepted": 253,
+   "cross_completeness": 0.451,
+   "cross_witness": {
+    "args": [
+     [
+      [
+       3,
+       0
+      ],
+      [
+       -1,
+       0
+      ],
+      [
+       2,
+       -1
+      ]
+     ]
+    ],
+    "reference_said": 3,
+    "also_accepts": 4,
+    "which_is_the_answer_for": [
+     [
+      [
+       2,
+       -1,
+       3
+      ],
+      [
+       2,
+       4,
+       -4
+      ]
+     ]
+    ]
+   },
+   "domain_probes": 358,
+   "domain_admitted": 262,
+   "reference_ran": 642,
+   "pre_completeness": 0.268,
+   "pre_incomplete": true,
+   "domain_witness": {
+    "args": [
+     []
+    ],
+    "reference_raised": true
+   },
+   "larger": {
+    "status": "no valid draws",
+    "draws": 0,
+    "outside_requires": 197,
+    "requires_caps_size": false
+   },
+   "points_held": 3,
+   "points_failed": 0,
+   "points_excluded": 0,
+   "task_id": 357,
+   "task_sha256": "7c15367dc05c6a98538f429ccaeaa2d245df31a356485c62e1caf4f94c91ab27",
+   "pool": "v7",
+   "seed": 1,
+   "attempts": 1000
+  },
+  "v9-20261022-wider-off0/mbpp_363__add_K_element": {
+   "status": "agrees",
+   "draws": 700,
+   "outside_requires": 300,
+   "mutants_rejected": 1805,
+   "mutants_accepted": 0,
+   "completeness": 1.0,
+   "weak": false,
+   "cross_rejected": 1864,
+   "cross_accepted": 0,
+   "cross_completeness": 1.0,
+   "larger": {
+    "status": "agrees",
+    "draws": 38,
+    "outside_requires": 162,
+    "completeness": 1.0,
+    "cross_completeness": 1.0,
+    "mutants_rejected": 100,
+    "mutants_accepted": 0,
+    "cross_rejected": 83,
+    "cross_accepted": 0,
+    "requires_caps_size": false
+   },
+   "points_held": 3,
+   "points_failed": 0,
+   "points_excluded": 0,
+   "task_id": 363,
+   "task_sha256": "331835abc19353f405abb56c181fb2fcaf62a65da5320338df5dc36cf38e82f0",
+   "pool": "v7",
+   "seed": 1,
+   "attempts": 1000
+  },
+  "v9-20261022-wider-off0/mbpp_394__check_distinct": {
+   "status": "agrees",
+   "draws": 1000,
+   "mutants_rejected": 1000,
+   "mutants_accepted": 0,
+   "completeness": 1.0,
+   "weak": false,
+   "cross_rejected": 1478,
+   "cross_accepted": 0,
+   "cross_completeness": 1.0,
+   "larger": {
+    "status": "agrees",
+    "draws": 200,
+    "completeness": 1.0,
+    "mutants_rejected": 200,
+    "mutants_accepted": 0,
+    "requires_caps_size": false
+   },
+   "points_held": 3,
+   "points_failed": 0,
+   "points_excluded": 0,
+   "task_id": 394,
+   "task_sha256": "5c38afc15355058c5754d870f50a3b6dead4f4f925713b1aa7213180066c1b26",
+   "pool": "v7",
+   "seed": 1,
+   "attempts": 1000
+  },
+  "v9-20261022-wider-off0/mbpp_409__min_product_tuple": {
+   "status": "agrees",
+   "draws": 87,
+   "mutants_rejected": 942,
+   "mutants_accepted": 0,
+   "completeness": 1.0,
+   "weak": false,
+   "cross_rejected": 236,
+   "cross_accepted": 0,
+   "cross_completeness": 1.0,
+   "domain_probes": 913,
+   "domain_admitted": 248,
+   "reference_ran": 87,
+   "pre_completeness": 0.728,
+   "pre_incomplete": true,
+   "domain_witness": {
+    "args": [
+     []
+    ],
+    "reference_raised": true
+   },
+   "larger": {
+    "status": "no valid draws",
+    "draws": 0,
+    "requires_caps_size": false
+   },
+   "points_held": 3,
+   "points_failed": 0,
+   "points_excluded": 0,
+   "task_id": 409,
+   "task_sha256": "78d7386030fd1de0c1ba3d847d02b992178d7e18d636ed7456753b95ada73e44",
+   "pool": "v7",
+   "seed": 1,
+   "attempts": 1000
+  },
+  "v9-20261022-wider-off0/mbpp_424__extract_rear": {
+   "status": "agrees",
+   "draws": 735,
+   "mutants_rejected": 4106,
+   "mutants_accepted": 0,
+   "completeness": 1.0,
+   "weak": false,
+   "cross_rejected": 2070,
+   "cross_accepted": 0,
+   "cross_completeness": 1.0,
+   "domain_probes": 265,
+   "domain_admitted": 0,
+   "reference_ran": 735,
+   "pre_completeness": 1.0,
+   "pre_incomplete": false,
+   "larger": {
+    "status": "agrees",
+    "draws": 48,
+    "completeness": 1.0,
+    "cross_completeness": 1.0,
+    "mutants_rejected": 382,
+    "mutants_accepted": 0,
+    "cross_rejected": 138,
+    "cross_accepted": 0,
+    "requires_caps_size": false
+   },
+   "points_held": 3,
+   "points_failed": 0,
+   "points_excluded": 0,
+   "task_id": 424,
+   "task_sha256": "d0f15aac53c5cb22495a34789aaf00a3afab12123455b652b73e52af22bf0f22",
+   "pool": "v7",
+   "seed": 1,
+   "attempts": 1000
+  },
+  "v9-20261022-wider-off0/mbpp_460__Extract": {
+   "status": "agrees",
+   "draws": 694,
+   "mutants_rejected": 2764,
+   "mutants_accepted": 0,
+   "completeness": 1.0,
+   "weak": false,
+   "cross_rejected": 1729,
+   "cross_accepted": 0,
+   "cross_completeness": 1.0,
+   "domain_probes": 306,
+   "domain_admitted": 0,
+   "reference_ran": 694,
+   "pre_completeness": 1.0,
+   "pre_incomplete": false,
+   "larger": {
+    "status": "agrees",
+    "draws": 11,
+    "completeness": 1.0,
+    "cross_completeness": 1.0,
+    "mutants_rejected": 86,
+    "mutants_accepted": 0,
+    "cross_rejected": 27,
+    "cross_accepted": 0,
+    "requires_caps_size": false
+   },
+   "points_held": 3,
+   "points_failed": 0,
+   "points_excluded": 0,
+   "task_id": 460,
+   "task_sha256": "5b2aa5385f050a9df6c5eebadb19c4c6a021513f4b176c0bfb893bb4b7f385d1",
+   "pool": "v7",
+   "seed": 1,
+   "attempts": 1000
+  },
+  "v9-20261022-wider-off0/mbpp_470__add_pairwise": {
+   "status": "agrees",
+   "draws": 730,
+   "outside_requires": 270,
+   "mutants_rejected": 5215,
+   "mutants_accepted": 0,
+   "completeness": 1.0,
+   "weak": false,
+   "cross_rejected": 2178,
+   "cross_accepted": 0,
+   "cross_completeness": 1.0,
+   "larger": {
+    "status": "agrees",
+    "draws": 200,
+    "completeness": 1.0,
+    "cross_completeness": 1.0,
+    "mutants_rejected": 1491,
+    "mutants_accepted": 0,
+    "cross_rejected": 594,
+    "cross_accepted": 0,
+    "requires_caps_size": false
+   },
+   "points_held": 3,
+   "points_failed": 0,
+   "points_excluded": 0,
+   "task_id": 470,
+   "task_sha256": "fc3ced48280795b210c157e615d4164ad844703b3055b38a6ee20193ff2080ec",
+   "pool": "v7",
+   "seed": 1,
+   "attempts": 1000
+  },
+  "v9-20261022-wider-off0/mbpp_49__specified_element": {
+   "status": "agrees",
+   "draws": 468,
+   "mutants_rejected": 1487,
+   "mutants_accepted": 0,
+   "completeness": 1.0,
+   "weak": false,
+   "cross_rejected": 974,
+   "cross_accepted": 0,
+   "cross_completeness": 1.0,
+   "domain_probes": 532,
+   "domain_admitted": 0,
+   "reference_ran": 468,
+   "pre_completeness": 1.0,
+   "pre_incomplete": false,
+   "larger": {
+    "status": "agrees",
+    "draws": 15,
+    "completeness": 1.0,
+    "cross_completeness": 1.0,
+    "mutants_rejected": 32,
+    "mutants_accepted": 0,
+    "cross_rejected": 17,
+    "cross_accepted": 0,
+    "requires_caps_size": false
+   },
+   "points_held": 3,
+   "points_failed": 0,
+   "points_excluded": 0,
+   "task_id": 49,
+   "task_sha256": "073c93938ee645182c39da6bcaa47024e35b01c1d19acc2170edcef1592410c0",
+   "pool": "v7",
+   "seed": 1,
+   "attempts": 1000
+  },
+  "v9-20261022-wider-off0/mbpp_551__extract_column": {
+   "status": "agrees",
+   "draws": 479,
+   "mutants_rejected": 1473,
+   "mutants_accepted": 0,
+   "completeness": 1.0,
+   "weak": false,
+   "cross_rejected": 982,
+   "cross_accepted": 0,
+   "cross_completeness": 1.0,
+   "domain_probes": 521,
+   "domain_admitted": 0,
+   "reference_ran": 479,
+   "pre_completeness": 1.0,
+   "pre_incomplete": false,
+   "larger": {
+    "status": "agrees",
+    "draws": 24,
+    "completeness": 1.0,
+    "cross_completeness": 1.0,
+    "mutants_rejected": 50,
+    "mutants_accepted": 0,
+    "cross_rejected": 24,
+    "cross_accepted": 0,
+    "requires_caps_size": false
+   },
+   "points_held": 3,
+   "points_failed": 0,
+   "points_excluded": 0,
+   "task_id": 551,
+   "task_sha256": "9e49fe83aeb7e96df02ac6f0dc01593b874134f385686ebc319f66bf4bebfde6",
+   "pool": "v7",
+   "seed": 1,
+   "attempts": 1000
+  },
+  "v9-20261022-wider-off0/mbpp_587__list_tuple": {
+   "status": "agrees",
+   "draws": 1000,
+   "mutants_rejected": 6455,
+   "mutants_accepted": 0,
+   "completeness": 1.0,
+   "weak": false,
+   "cross_rejected": 2945,
+   "cross_accepted": 0,
+   "cross_completeness": 1.0,
+   "larger": {
+    "status": "agrees",
+    "draws": 200,
+    "completeness": 1.0,
+    "cross_completeness": 1.0,
+    "mutants_rejected": 1566,
+    "mutants_accepted": 0,
+    "cross_rejected": 594,
+    "cross_accepted": 0,
+    "requires_caps_size": false
+   },
+   "points_held": 3,
+   "points_failed": 0,
+   "points_excluded": 0,
+   "task_id": 587,
+   "task_sha256": "8cc7663189285684da3bc35b12b9526a9739e01e8e42693d8f05637818f5c932",
+   "pool": "v7",
+   "seed": 1,
+   "attempts": 1000
+  },
+  "v9-20261022-wider-off0/mbpp_611__max_of_nth": {
+   "status": "agrees",
+   "draws": 200,
+   "mutants_rejected": 1749,
+   "mutants_accepted": 0,
+   "completeness": 1.0,
+   "weak": false,
+   "cross_rejected": 533,
+   "cross_accepted": 0,
+   "cross_completeness": 1.0,
+   "domain_probes": 800,
+   "domain_admitted": 262,
+   "reference_ran": 200,
+   "pre_completeness": 0.672,
+   "pre_incomplete": true,
+   "domain_witness": {
+    "args": [
+     [],
+     2
+    ],
+    "reference_raised": true
+   },
+   "larger": {
+    "status": "agrees",
+    "draws": 6,
+    "completeness": 1.0,
+    "cross_completeness": 1.0,
+    "mutants_rejected": 52,
+    "mutants_accepted": 0,
+    "cross_rejected": 11,
+    "cross_accepted": 0,
+    "requires_caps_size": false
+   },
+   "points_held": 3,
+   "points_failed": 0,
+   "points_excluded": 0,
+   "task_id": 611,
+   "task_sha256": "52d3cf6874b4a1ab5664a61fa92ca6382aa1b9a1b379280a47627d220eb47f47",
+   "pool": "v7",
+   "seed": 1,
+   "attempts": 1000
+  },
+  "v9-20261022-wider-off0/mbpp_616__tuple_modulo": {
+   "status": "agrees",
+   "draws": 148,
+   "outside_requires": 852,
+   "mutants_rejected": 895,
+   "mutants_accepted": 0,
+   "completeness": 1.0,
+   "weak": false,
+   "cross_rejected": 426,
+   "cross_accepted": 0,
+   "cross_completeness": 1.0,
+   "larger": {
+    "status": "agrees",
+    "draws": 11,
+    "outside_requires": 189,
+    "completeness": 1.0,
+    "cross_completeness": 1.0,
+    "mutants_rejected": 81,
+    "mutants_accepted": 0,
+    "cross_rejected": 27,
+    "cross_accepted": 0,
+    "requires_caps_size": false
+   },
+   "points_held": 3,
+   "points_failed": 0,
+   "points_excluded": 0,
+   "task_id": 616,
+   "task_sha256": "12c7fc252435c01ef05114dd6e91c0afbde7e86cda611f2cad44606d2bf16c00",
+   "pool": "v7",
+   "seed": 1,
+   "attempts": 1000
+  },
+  "v9-20261022-wider-off0/mbpp_660__find_Points": {
+   "status": "disagrees",
+   "ensures": 2,
+   "args": [
+    2,
+    7,
+    1,
+    15
+   ],
+   "reference_said": [
+    1,
+    15
+   ],
+   "agreed_before": 1,
+   "points_held": 3,
+   "points_failed": 0,
+   "points_excluded": 0,
+   "task_id": 660,
+   "task_sha256": "f4ae31e431d79986581b42e627656d8ded6c5c66f9f542020c5ec7d84bdb8817",
+   "pool": "v7",
+   "seed": 1,
+   "attempts": 1000
+  },
+  "v9-20261022-wider-off0/mbpp_695__check_greater": {
+   "status": "disagrees",
+   "ensures": 0,
+   "args": [
+    [
+     10,
+     3,
+     2,
+     10
+    ],
+    [
+     16,
+     12,
+     4,
+     9
+    ]
+   ],
+   "reference_said": false,
+   "agreed_before": 1,
+   "points_held": 3,
+   "points_failed": 0,
+   "points_excluded": 0,
+   "task_id": 695,
+   "task_sha256": "8a5fad2fc72c9bdb22dd02c54a4377c911a64726c06d2838cb00b38d98dfb0fb",
+   "pool": "v7",
+   "seed": 1,
+   "attempts": 1000
+  },
+  "v9-20261022-wider-off0/mbpp_696__zip_list": {
+   "status": "agrees",
+   "draws": 243,
+   "outside_requires": 757,
+   "mutants_rejected": 742,
+   "mutants_accepted": 0,
+   "completeness": 1.0,
+   "weak": false,
+   "cross_rejected": 683,
+   "cross_accepted": 0,
+   "cross_completeness": 1.0,
+   "larger": {
+    "status": "agrees",
+    "draws": 11,
+    "outside_requires": 189,
+    "completeness": 1.0,
+    "cross_completeness": 1.0,
+    "mutants_rejected": 54,
+    "mutants_accepted": 0,
+    "cross_rejected": 27,
+    "cross_accepted": 0,
+    "requires_caps_size": false
+   },
+   "points_held": 3,
+   "points_failed": 0,
+   "points_excluded": 0,
+   "task_id": 696,
+   "task_sha256": "e76155678a780ec1014aeb7b0fff2584b3ecb78fe1ce2613a1877333280e44fe",
+   "pool": "v7",
+   "seed": 1,
+   "attempts": 1000
+  },
+  "v9-20261022-wider-off0/mbpp_710__front_and_rear": {
+   "status": "agrees",
+   "draws": 880,
+   "mutants_rejected": 5643,
+   "mutants_accepted": 0,
+   "completeness": 1.0,
+   "weak": false,
+   "cross_rejected": 2605,
+   "cross_accepted": 0,
+   "cross_completeness": 1.0,
+   "domain_probes": 120,
+   "domain_admitted": 0,
+   "reference_ran": 880,
+   "pre_completeness": 1.0,
+   "pre_incomplete": false,
+   "larger": {
+    "status": "agrees",
+    "draws": 200,
+    "completeness": 1.0,
+    "cross_completeness": 1.0,
+    "mutants_rejected": 1333,
+    "mutants_accepted": 0,
+    "cross_rejected": 527,
+    "cross_accepted": 0,
+    "requires_caps_size": false
+   },
+   "points_held": 3,
+   "points_failed": 0,
+   "points_excluded": 0,
+   "task_id": 710,
+   "task_sha256": "2c8541f9ac447290caaca5828da82decdee44fc15283e2104360df7efce56e66",
+   "pool": "v7",
+   "seed": 1,
+   "attempts": 1000
+  },
+  "v9-20261022-wider-off0/mbpp_726__multiply_elements": {
+   "status": "agrees",
+   "draws": 753,
+   "outside_requires": 247,
+   "mutants_rejected": 5234,
+   "mutants_accepted": 0,
+   "completeness": 1.0,
+   "weak": false,
+   "cross_rejected": 2252,
+   "cross_accepted": 0,
+   "cross_completeness": 1.0,
+   "larger": {
+    "status": "agrees",
+    "draws": 200,
+    "completeness": 1.0,
+    "cross_completeness": 1.0,
+    "mutants_rejected": 1396,
+    "mutants_accepted": 0,
+    "cross_rejected": 594,
+    "cross_accepted": 0,
+    "requires_caps_size": false
+   },
+   "points_held": 3,
+   "points_failed": 0,
+   "points_excluded": 0,
+   "task_id": 726,
+   "task_sha256": "8bbababb87314b64b854308deb82cafa92d0abeae7c2218f0898085996af2c6f",
+   "pool": "v7",
+   "seed": 1,
+   "attempts": 1000
+  },
+  "v9-20261022-wider-off0/mbpp_750__add_tuple": {
+   "status": "agrees",
+   "draws": 182,
+   "outside_requires": 818,
+   "mutants_rejected": 1377,
+   "mutants_accepted": 0,
+   "completeness": 1.0,
+   "weak": false,
+   "cross_rejected": 539,
+   "cross_accepted": 0,
+   "cross_completeness": 1.0,
+   "larger": {
+    "status": "agrees",
+    "draws": 10,
+    "outside_requires": 190,
+    "completeness": 1.0,
+    "cross_completeness": 1.0,
+    "mutants_rejected": 76,
+    "mutants_accepted": 0,
+    "cross_rejected": 24,
+    "cross_accepted": 0,
+    "requires_caps_size": true
+   },
+   "points_held": 3,
+   "points_failed": 0,
+   "points_excluded": 0,
+   "task_id": 750,
+   "task_sha256": "f6da71d03f870b562ac5837c8a4d50250a105a803d751ff26ae0e9ef595639b0",
+   "pool": "v7",
+   "seed": 1,
+   "attempts": 1000
+  },
+  "v9-20261022-wider-off0/mbpp_788__new_tuple": {
+   "status": "agrees",
+   "draws": 1000,
+   "mutants_rejected": 4200,
+   "mutants_accepted": 0,
+   "completeness": 1.0,
+   "weak": false,
+   "cross_rejected": 2992,
+   "cross_accepted": 0,
+   "cross_completeness": 1.0,
+   "larger": {
+    "status": "agrees",
+    "draws": 200,
+    "completeness": 1.0,
+    "cross_completeness": 1.0,
+    "mutants_rejected": 947,
+    "mutants_accepted": 0,
+    "cross_rejected": 594,
+    "cross_accepted": 0,
+    "requires_caps_size": false
+   },
+   "points_held": 3,
+   "points_failed": 0,
+   "points_excluded": 0,
+   "task_id": 788,
+   "task_sha256": "1642c9d4f7abfacb7ad72584e008e2f60b46be20e74364216709e0955ba357b6",
+   "pool": "v7",
+   "seed": 1,
+   "attempts": 1000
+  },
+  "v9-20261022-wider-off0/mbpp_792__count_list": {
+   "status": "agrees",
+   "draws": 1000,
+   "mutants_rejected": 8491,
+   "mutants_accepted": 0,
+   "completeness": 1.0,
+   "weak": false,
+   "cross_rejected": 2291,
+   "cross_accepted": 0,
+   "cross_completeness": 1.0,
+   "larger": {
+    "status": "agrees",
+    "draws": 200,
+    "completeness": 1.0,
+    "cross_completeness": 1.0,
+    "mutants_rejected": 2742,
+    "mutants_accepted": 0,
+    "cross_rejected": 560,
+    "cross_accepted": 0,
+    "requires_caps_size": false
+   },
+   "points_held": 3,
+   "points_failed": 0,
+   "points_excluded": 0,
+   "task_id": 792,
+   "task_sha256": "4759a26e014bbac266aa4f87b8149ab4ee57ad380cc242440c33297591e27ce8",
+   "pool": "v7",
+   "seed": 1,
+   "attempts": 1000
+  },
+  "v9-20261022-wider-off0/mbpp_808__check_K": {
+   "status": "agrees",
+   "draws": 1000,
+   "mutants_rejected": 1000,
+   "mutants_accepted": 0,
+   "completeness": 1.0,
+   "weak": false,
+   "cross_rejected": 820,
+   "cross_accepted": 0,
+   "cross_completeness": 1.0,
+   "larger": {
+    "status": "agrees",
+    "draws": 200,
+    "completeness": 1.0,
+    "cross_completeness": 1.0,
+    "mutants_rejected": 200,
+    "mutants_accepted": 0,
+    "cross_rejected": 147,
+    "cross_accepted": 0,
+    "requires_caps_size": false
+   },
+   "points_held": 3,
+   "points_failed": 0,
+   "points_excluded": 0,
+   "task_id": 808,
+   "task_sha256": "dae6a542cee5536f2cb15024fa5f55681b3ea61c2497a4a3e089c92de63ec1a6",
+   "pool": "v7",
+   "seed": 1,
+   "attempts": 1000
+  },
+  "v9-20261022-wider-off0/mbpp_811__check_identical": {
+   "status": "disagrees",
+   "ensures": 0,
+   "args": [
+    [],
+    [
+     [
+      -2,
+      -1
+     ]
+    ]
+   ],
+   "reference_said": false,
+   "agreed_before": 6,
+   "points_held": 3,
+   "points_failed": 0,
+   "points_excluded": 0,
+   "task_id": 811,
+   "task_sha256": "f513d484842025701ddbef31dfcaee4ef28203e82cd9ee88179db80b6c16d551",
+   "pool": "v7",
+   "seed": 1,
+   "attempts": 1000
+  },
+  "v9-20261022-wider-off0/mbpp_827__sum_column": {
+   "status": "agrees",
+   "draws": 455,
+   "mutants_rejected": 4147,
+   "mutants_accepted": 0,
+   "completeness": 1.0,
+   "weak": false,
+   "cross_rejected": 816,
+   "cross_accepted": 0,
+   "cross_completeness": 1.0,
+   "domain_probes": 545,
+   "domain_admitted": 0,
+   "reference_ran": 455,
+   "pre_completeness": 1.0,
+   "pre_incomplete": false,
+   "larger": {
+    "status": "agrees",
+    "draws": 13,
+    "completeness": 1.0,
+    "cross_completeness": 1.0,
+    "mutants_rejected": 116,
+    "mutants_accepted": 0,
+    "cross_rejected": 6,
+    "cross_accepted": 0,
+    "requires_caps_size": false
+   },
+   "points_held": 3,
+   "points_failed": 0,
+   "points_excluded": 0,
+   "task_id": 827,
+   "task_sha256": "45c861dfa4480369224e500611bbe1e91c29e9b32e20a8e9e4a8dcc9a4cbf742",
+   "pool": "v7",
+   "seed": 1,
+   "attempts": 1000
+  },
+  "v9-20261022-wider-off0/mbpp_828__count_alpha_dig_spl": {
+   "status": "agrees",
+   "draws": 1000,
+   "mutants_rejected": 7360,
+   "mutants_accepted": 0,
+   "completeness": 1.0,
+   "weak": false,
+   "cross_rejected": 2967,
+   "cross_accepted": 0,
+   "cross_completeness": 1.0,
+   "larger": {
+    "status": "agrees",
+    "draws": 200,
+    "completeness": 1.0,
+    "cross_completeness": 1.0,
+    "mutants_rejected": 1585,
+    "mutants_accepted": 0,
+    "cross_rejected": 594,
+    "cross_accepted": 0,
+    "requires_caps_size": false
+   },
+   "points_held": 3,
+   "points_failed": 0,
+   "points_excluded": 0,
+   "task_id": 828,
+   "task_sha256": "73ef0a663415efad5cb1dea73800b94e039d2b527f2d23e3c81047addcd09605",
+   "pool": "v7",
+   "seed": 1,
+   "attempts": 1000
+  },
+  "v9-20261022-wider-off0/mbpp_869__remove_list_range": {
+   "status": "disagrees",
+   "ensures": 1,
+   "args": [
+    [
+     [
+      3,
+      -4,
+      1
+     ],
+     [
+      3
+     ]
+    ],
+    0,
+    11
+   ],
+   "reference_said": [
+    [
+     3
+    ]
+   ],
+   "agreed_before": 5,
+   "points_held": 3,
+   "points_failed": 0,
+   "points_excluded": 0,
+   "task_id": 869,
+   "task_sha256": "b9f28ac8ce56e4edc22b9bd2278ce967472b66253759da48b3869833c7e1d580",
+   "pool": "v7",
+   "seed": 1,
+   "attempts": 1000
+  },
+  "v9-20261022-wider-off0/mbpp_875__min_difference": {
+   "status": "agrees",
+   "draws": 69,
+   "mutants_rejected": 642,
+   "mutants_accepted": 0,
+   "completeness": 1.0,
+   "weak": false,
+   "cross_rejected": 169,
+   "cross_accepted": 0,
+   "cross_completeness": 1.0,
+   "domain_probes": 931,
+   "domain_admitted": 260,
+   "reference_ran": 69,
+   "pre_completeness": 0.721,
+   "pre_incomplete": true,
+   "domain_witness": {
+    "args": [
+     []
+    ],
+    "reference_raised": true
+   },
+   "larger": {
+    "status": "no valid draws",
+    "draws": 0,
+    "requires_caps_size": false
+   },
+   "points_held": 3,
+   "points_failed": 0,
+   "points_excluded": 0,
+   "task_id": 875,
+   "task_sha256": "ef33d85707e3f4c1f1617cc8323e9e0c0605b6053ee03aaacd313d92308cbd75",
+   "pool": "v7",
+   "seed": 1,
+   "attempts": 1000
+  },
+  "v9-20261022-wider-off0/mbpp_878__check_tuples": {
+   "status": "agrees",
+   "draws": 759,
+   "outside_requires": 241,
+   "mutants_rejected": 759,
+   "mutants_accepted": 0,
+   "completeness": 1.0,
+   "weak": false,
+   "cross_rejected": 678,
+   "cross_accepted": 0,
+   "cross_completeness": 1.0,
+   "larger": {
+    "status": "agrees",
+    "draws": 156,
+    "outside_requires": 44,
+    "completeness": 1.0,
+    "cross_completeness": 1.0,
+    "mutants_rejected": 156,
+    "mutants_accepted": 0,
+    "cross_rejected": 158,
+    "cross_accepted": 0,
+    "requires_caps_size": false
+   },
+   "points_held": 3,
+   "points_failed": 0,
+   "points_excluded": 0,
+   "task_id": 878,
+   "task_sha256": "073fbfc8bf0eb5c2d58a8273d6a7dbe97fa43cba9e929ce514edf6412b69be0e",
+   "pool": "v7",
+   "seed": 1,
+   "attempts": 1000
+  },
+  "v9-20261022-wider-off0/mbpp_888__substract_elements": {
+   "status": "disagrees",
+   "ensures": 0,
+   "args": [
+    [
+     [
+      -4,
+      0
+     ]
+    ],
+    []
+   ],
+   "reference_said": [],
+   "agreed_before": 6,
+   "points_held": 3,
+   "points_failed": 0,
+   "points_excluded": 0,
+   "task_id": 888,
+   "task_sha256": "44abbe1a778a0aecaf38dc7a94bef90f2659750cb96df42e9ac0eb653389237d",
+   "pool": "v7",
+   "seed": 1,
+   "attempts": 1000
+  },
+  "v9-20261022-wider-off0/mbpp_889__reverse_list_lists": {
+   "status": "disagrees",
+   "ensures": 2,
+   "args": [
+    [
+     [
+      4,
+      2
+     ],
+     [
+      2,
+      -3
+     ]
+    ]
+   ],
+   "reference_said": [
+    [
+     4,
+     2
+    ],
+    [
+     2,
+     -3
+    ]
+   ],
+   "agreed_before": 0,
+   "points_held": 3,
+   "points_failed": 0,
+   "points_excluded": 0,
+   "task_id": 889,
+   "task_sha256": "87983fd152a570c5481cc5ca17befb95e235a478bfc0aa582bd68074a404e01a",
+   "pool": "v7",
+   "seed": 1,
+   "attempts": 1000
+  },
+  "v9-20261022-wider-off0/mbpp_893__Extract": {
+   "status": "agrees",
+   "draws": 675,
+   "mutants_rejected": 2784,
+   "mutants_accepted": 0,
+   "completeness": 1.0,
+   "weak": false,
+   "cross_rejected": 1752,
+   "cross_accepted": 0,
+   "cross_completeness": 1.0,
+   "domain_probes": 325,
+   "domain_admitted": 0,
+   "reference_ran": 675,
+   "pre_completeness": 1.0,
+   "pre_incomplete": false,
+   "larger": {
+    "status": "agrees",
+    "draws": 14,
+    "completeness": 1.0,
+    "cross_completeness": 1.0,
+    "mutants_rejected": 104,
+    "mutants_accepted": 0,
+    "cross_rejected": 36,
+    "cross_accepted": 0,
+    "requires_caps_size": false
+   },
+   "points_held": 3,
+   "points_failed": 0,
+   "points_excluded": 0,
+   "task_id": 893,
+   "task_sha256": "da7875aae63a4411604b0bb974879681e333f89f9de6c897aacf35be6ea2f32d",
+   "pool": "v7",
+   "seed": 1,
+   "attempts": 1000
+  },
+  "v9-20261022-wider-off0/mbpp_942__check_element": {
+   "status": "agrees",
+   "draws": 1000,
+   "mutants_rejected": 1000,
+   "mutants_accepted": 0,
+   "completeness": 1.0,
+   "weak": false,
+   "cross_rejected": 1352,
+   "cross_accepted": 0,
+   "cross_completeness": 1.0,
+   "larger": {
+    "status": "agrees",
+    "draws": 200,
+    "completeness": 1.0,
+    "cross_completeness": 1.0,
+    "mutants_rejected": 200,
+    "mutants_accepted": 0,
+    "cross_rejected": 141,
+    "cross_accepted": 0,
+    "requires_caps_size": false
+   },
+   "points_held": 3,
+   "points_failed": 0,
+   "points_excluded": 0,
+   "task_id": 942,
+   "task_sha256": "d0eb6cded01936d4d9edb396dabd348a53ce768c5d70416f66986d38745b72b8",
+   "pool": "v7",
+   "seed": 1,
+   "attempts": 1000
+  },
+  "v9-20261022-wider-off0/mbpp_95__Find_Min_Length": {
+   "status": "agrees",
+   "draws": 430,
+   "outside_requires": 320,
+   "mutants_rejected": 2795,
+   "mutants_accepted": 726,
+   "completeness": 0.794,
+   "weak": true,
+   "weak_witness": {
+    "args": [
+     [
+      [
+       -3,
+       -4
+      ],
+      [
+       -4,
+       2
+      ]
+     ]
+    ],
+    "reference_said": 2,
+    "also_accepts": 0
+   },
+   "cross_rejected": 404,
+   "cross_accepted": 408,
+   "cross_completeness": 0.498,
+   "cross_witness": {
+    "args": [
+     [
+      [
+       4,
+       -1
+      ]
+     ]
+    ],
+    "reference_said": 2,
+    "also_accepts": 1,
+    "which_is_the_answer_for": [
+     [
+      [
+       0,
+       2
+      ],
+      [
+       -3
+      ],
+      [
+       0,
+       1
+      ]
+     ]
+    ]
+   },
+   "domain_probes": 250,
+   "domain_admitted": 250,
+   "reference_ran": 750,
+   "pre_completeness": 0.0,
+   "pre_incomplete": true,
+   "domain_witness": {
+    "args": [
+     []
+    ],
+    "reference_raised": true
+   },
+   "larger": {
+    "status": "agrees",
+    "draws": 20,
+    "outside_requires": 180,
+    "completeness": 0.875,
+    "mutants_rejected": 140,
+    "mutants_accepted": 20,
+    "weak_witness": {
+     "args": [
+      [
+       [
+        1
+       ],
+       [
+        1
+       ],
+       [
+        1,
+        2
+       ],
+       [
+        -1,
+        -4,
+        2
+       ],
+       [
+        4,
+        0
+       ],
+       [
+        2
+       ],
+       [
+        2
+       ]
+      ]
+     ],
+     "reference_said": 1,
+     "also_accepts": 0
+    },
+    "requires_caps_size": false
+   },
+   "points_held": 3,
+   "points_failed": 0,
+   "points_excluded": 0,
+   "task_id": 95,
+   "task_sha256": "e1d6a861d357bc8bfe53b80efad017c5a06da7302c32b8b656801e0bf5dde377",
+   "pool": "v7",
+   "seed": 1,
+   "attempts": 1000
+  },
+  "v9-20261022-wider-off0/mbpp_972__concatenate_nested": {
+   "status": "agrees",
+   "draws": 1000,
+   "mutants_rejected": 6829,
+   "mutants_accepted": 0,
+   "completeness": 1.0,
+   "weak": false,
+   "cross_rejected": 2988,
+   "cross_accepted": 0,
+   "cross_completeness": 1.0,
+   "larger": {
+    "status": "agrees",
+    "draws": 200,
+    "completeness": 1.0,
+    "cross_completeness": 1.0,
+    "mutants_rejected": 1369,
+    "mutants_accepted": 0,
+    "cross_rejected": 594,
+    "cross_accepted": 0,
+    "requires_caps_size": false
+   },
+   "points_held": 3,
+   "points_failed": 0,
+   "points_excluded": 0,
+   "task_id": 972,
+   "task_sha256": "e5bfdbb80c7b0b47766fcb4157900565c2431f09972ab5833f130c77a493d7bb",
+   "pool": "v7",
+   "seed": 1,
+   "attempts": 1000
   }
  },
  "runs": [
@@ -15856,6 +17594,22 @@
    },
    "checked_nothing": [],
    "when": "2026-10-22T23:54:22.990547+00:00"
+  },
+  {
+   "tags": [
+    "v9-20261022-wider-off0"
+   ],
+   "pool": "v7",
+   "seed": 1,
+   "attempts": 1000,
+   "only": "all",
+   "counts": {
+    "agrees": 36,
+    "disagrees": 7,
+    "other": 1
+   },
+   "checked_nothing": [],
+   "when": "2026-10-23T03:06:45.667900+00:00"
   }
  ]
 }
