@@ -48,3 +48,24 @@ protocol was "no gain". The reading that matters most here is P1, the precision,
 
 Sources: the plateau note and its four verified lists; arXiv:2605.30914; arXiv:2603.15510; arXiv:2510.05133;
 arXiv:2410.15756 section 3.2; arXiv:2507.02778.
+
+## Result (2026-10-23 01:55Z): the ceiling instrument and the oracle arm
+
+v9 trained to completion on the desktop (1,535 steps, interrupted once at step 200 by a physical knock on the card and
+resumed from its checkpoint; export sha `25a1c6e8…`). The ceiling instrument (20 specification candidates per development
+problem the model solves in Python, each judged by the three-test gate and by the reference check at 200 draws,
+`release/evidence/v9-ceiling-2026-10-23.json`):
+
+| model | problems with Python | reference-correct specification within 1 / 5 / 20 candidates | gate kept / reference-correct | gate precision |
+|---|---|---|---|---|
+| v5 | 63 | 12 / 18 / 29 | 93 / 73 | 0.785 |
+| v8 | 65 | 15 / 19 / 29 | 130 / 67 | 0.515 |
+| v9 | 67 | 16 / 25 / 31 | 154 / 105 | 0.682 |
+
+P1 (precision at least 0.70) is falsified by two hundredths, and its other clause did not fire (0.60 would have said the
+strict floor does nothing). The reading in between: the strict floor recovered most of what v8 lost (0.515 to 0.682) while
+v9 keeps more candidates and more correct ones than v5 (105 against 73), and it finds a correct specification sooner on
+more problems (within five candidates on 25 problems against 18, within twenty on 31 against 29). The 39-call oracle route,
+one decode: 67 Python, 22 t, 8 clean, 2 all-seven against v5's 63 / 16 / 7 / 3 (gained 449 and 708, lost 270; all-seven
+lost 476), `release/evidence/v9-oracle39-2026-10-23.json`. The frozen-route counts (three decodes on the 240-problem panel,
+against v5's six) are recorded below when the arms land.
