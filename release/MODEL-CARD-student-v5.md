@@ -87,3 +87,18 @@ programming problems over integers, booleans and sequences. See [../DISCLAIMERS.
 
 Apache License 2.0 ([LICENSE-student](LICENSE-student)); the sources it was built from are credited in
 [NOTICE-student](NOTICE-student).
+
+## Measured again, 22 October 2026
+
+The counts above come from one decode of the model. A week of candidates that read one to three problems under v5
+led to measuring the instrument itself ([the record](../t/PREDICT-2026-10-22-seed-variance.md)). The same file,
+decoded three times on the 95-problem development panel (seed offsets 0, 1000 and 2000 for every sampled call, the
+frozen 17-call route, graded in the seven-kernel container): fully clean on 6, 4 and 6 problems, all seven kernels on
+3, 2 and 3. Retrained from the exact rows and recipe with only the training seed changed: 4, 5 and 4 (2, 1, 1), one
+problem lost outright and one gained that this file never solves. On the 240-problem panel (the 95 plus the wider
+reader's 145, which hold most of the route's successes) this file reads 31, 29 and 30 clean and its seed-2 twin 22, 25
+and 22, so the file published here is likely a good draw of its own recipe. On the ceiling instrument (20 specification
+candidates per problem the model solves in Python) a reference-correct specification appears within 5 candidates for
+18 problems and within 20 for 29 of 63, and the three-test gate keeps 93 candidates of which 73 are reference-correct
+(precision 0.785). Receipts: `evidence/three-decode-v5-v5s2-2026-10-22.json`, `evidence/three-decode-240-v5-v5s2-2026-10-22.json`,
+`../t/out/v5-repair-20261021/spec-ceiling.json`. The limits below are unchanged by these readings.

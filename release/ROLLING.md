@@ -5,11 +5,30 @@ single release channel. The installer follows its model manifest, downloads
 the listed files, and checks each SHA-256 before using it. Reinstalling
 refreshes the manifest and reuses unchanged model files.
 
-The current model remains [v5](MODEL-CARD-student-v5.md). The candidates since
-it (v6, v7, v8) did not separate from v5 under the measured noise of the
-development panel and none is promoted; v9 is in training under the two-seed,
-three-decode protocol of 22 October 2026 (see the README's model status). Historical model names identify measured artifacts, not separate
-release channels.
+## Status, 23 October 2026
+
+The released model is dawnr v5 (the artifact is named `dawnr-student-v5`; its
+[model card](MODEL-CARD-student-v5.md) carries the measurements). Nothing has
+been promoted since: v6 corrective, v7 and v8 were each trained from changed
+data and read against v5 on the 95-problem development panel, and the week of
+22 October showed that the panel's own noise is as large as the differences
+they showed. Decoded three times, v5 ends fully clean on 6, 4 and 6 of 95
+(all seven kernels 3, 2, 3); trained again from its exact rows with only the
+seed changed, 4, 5, 4 (2, 1, 1). On the 240-problem panel (the 95 plus the
+wider reader's 145) v5 reads 31, 29, 30 clean and its seed-2 twin 22, 25, 22.
+v8, the last candidate before the protocol change, reads 4, 4, 5 on the 95
+against v5's 6, 4, 6: not separable (sign test p 0.63).
+
+From v9 on, a model qualifies for this channel only by the protocol of
+[the variance record](../t/PREDICT-2026-10-22-seed-variance.md): trained on two
+seeds, decoded three times each, read paired per problem on the 240-problem
+panel against v5's six decodes (both seeds, mean 26.5 clean), with the
+ceiling instrument's gate precision and the held-out 182 read beside it. A
+mean is never a verdict. v9 (v5's rows plus self-distilled specifications kept
+at a 90% strength floor) finished training on 22 October; its ceiling reading
+is in [its record](../t/PREDICT-2026-10-22-v9-strict-rows.md) and its seed-2
+twin is training. Historical model names identify measured artifacts, not
+separate release channels.
 
 To update an existing checkout:
 
