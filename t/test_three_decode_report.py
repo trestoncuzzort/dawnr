@@ -39,10 +39,16 @@ class ThreeDecodeTest(unittest.TestCase):
 
 class JoinedDecodeTest(unittest.TestCase):
     def test_a_decode_graded_in_parts_joins_the_parts_sets(self):
+        import os, tempfile
+        d = tempfile.mkdtemp()
+        open(os.path.join(d, "dev.txt"), "w").write("1\n2\n9\n")
+        open(os.path.join(d, "wider.txt"), "w").write("7\n")
+        panels = {"dev": os.path.join(d, "dev.txt"), "wider": os.path.join(d, "wider.txt")}
+
         def fake_arm(spec, ids):
             tag = spec.split(":", 1)[0]
             return None, {"1": {1, 2} if tag == "a" else {7}, "7": {1} if tag == "a" else set()}, None
-        sets = r.decode_sets("a:/x+b:/y", [1, 2, 7, 9], fake_arm)
+        sets = r.decode_sets("a:/x+b-wider:/y", [1, 2, 7, 9], fake_arm, panels)
         self.assertEqual(sets["1"], {1, 2, 7})
         self.assertEqual(sets["7"], {1})
 

@@ -77,8 +77,10 @@ def part_ids(tag: str, ids: list[int], panels: dict | None = None) -> set[int]:
     the panel it was graded with, so a part is read on its own panel (the wider 145 when the tag says "wider", else the
     development 95), intersected with the ids asked for."""
     panels = panels or {}
-    path = panels.get("wider", WIDER_PANEL) if "wider" in tag else panels.get("dev", DEV_PANEL)
-    panel = {int(x) for x in Path(path).read_text().split()}
+    path = Path(panels.get("wider", WIDER_PANEL) if "wider" in tag else panels.get("dev", DEV_PANEL))
+    if not path.is_file():
+        raise SystemExit(f"{tag}: its panel file {path} is missing; pass the panels a joined decode was graded on")
+    panel = {int(x) for x in path.read_text().split()}
     return set(ids) & panel
 
 
