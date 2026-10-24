@@ -114,16 +114,35 @@ written after 16:17Z on 10/22, once the strict check has passed them; it is the 
 **Recipe.** v5's, unchanged: Qwen/Qwen3.5-4B at 851bf6e8, QLoRA NF4, rank 64, alpha 16, dropout 0.1, lr 2e-4,
 5 epochs, max-len 2845, batch 1, grad-accum 16, `t/student_sft.py` at its pinned digest, seeds 1 and 2.
 
-## 5. Where work runs
+## 5. Where work runs (the user, 2026-10-24: "outsource for this stuff always. we use the laptop to test if something doesnt work")
 
-- **The laptop does everything except training:** row building, the Cohere lane, audits, decodes on its GPU, the
-  seven-kernel grades, the laptop bar, release engineering.
-- **The desktop trains, and only that:** the two 6.0 seeds on its RTX 4080 at its 150 W cap
-  (`t/recipes/v8_desktop_train.sh`). It is reachable without the cable since 2026-10-24 (`ssh tlab` over Tailscale;
-  its Wi-Fi adapter is switched out of CD-ROM mode at every boot by usb-modeswitch).
-- **Large files without the cable** go through a private GitHub repository used only for transfers: files over
-  2 GiB are split, checksums travel with them, and each transfer is deleted once picked up. Nothing in it is public.
-  With the cable plugged in, Tailscale uses the cable directly.
+- **The laptop is for tests:** a quick check when something does not work, and the release's own laptop condition
+  (does dawnr run smoothly on this laptop). Decoding candidates, seven-kernel grading, the ceiling and spec-33
+  readings, strict checks, teacher lanes and full test suites run elsewhere.
+- **GitHub's CI runs the test suites** on every push (read `gh run list`), and its install-smoke workflow checks a
+  published release on fresh Ubuntu and macOS machines.
+- **Cohere's API writes; the desktop runs the lane around it,** on cores 12 to 23 so training keeps its own
+  (`t/recipes/teacher_cohere_full.sh` with CPUS=12-23 in the clone `~/dawnr-lane`).
+- **The desktop trains** the candidates on its RTX 4080 at 150 W, and, when no cloud machine is available, decodes and
+  grades them after training (its 14 GB cannot hold a seven-kernel grade beside a training run).
+- **Cloud machines on credit** (the AWS credit for CPU grading, Google Cloud's trial for GPU decoding) take decoding
+  and grading as soon as their logins are renewed; both had expired on 2026-10-24.
+- **Large files without the cable** go through a private GitHub repository used only for transfers. With the cable
+  plugged in, Tailscale uses it directly.
+
+### The Cohere lane, measured (2026-10-24)
+
+The same 50 failed training problems, ten candidates each, kept by the route and then by the strict check:
+
+| model | problems kept by the strict check | candidates kept | ledger cost | replies cut off |
+|---|---:|---:|---:|---:|
+| Command A Reasoning (thinking 2,048) | 9 | 18 | $33.83 | 113 of 500 |
+| Command A+ (thinking 2,048) | 6 | 11 | $31.96 | 24 of 500 |
+
+Command A Reasoning and Command A+ are limited to 20 requests a minute and 1,000 calls a month even on a production
+key (docs.cohere.com/docs/rate-limits), so the full run (about 17,000 calls) uses Command A (500 requests a minute,
+no monthly cap); its own pilot on the same 50 problems decides the setting. A higher limit for the reasoning model
+can be asked of Cohere Labs.
 
 ## 6. Where things stand (carried from the deleted log, paused by the user 2026-10-23 04:52Z)
 
