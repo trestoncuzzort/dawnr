@@ -20,13 +20,14 @@ echo "$(date -u +%FT%TZ) start $TAG identity=$IDENT" > $A/$TAG.log
 $L/llama-server --model $GGUF --alias dawnr-route --host 127.0.0.1 --port $PORT --n-gpu-layers 99 --threads 8 --threads-batch 8 \
   --parallel $PARALLEL --ctx-size $((PARALLEL * SLOT_CTX)) --cache-ram 512 --chat-template-kwargs '{"enable_thinking":false}' > $A/$TAG.server.log 2>&1 &
 SP=$!
+trap 'kill "$SP" 2>/dev/null || true; wait "$SP" 2>/dev/null || true' EXIT
 for i in $(seq 1 240); do curl -sf http://127.0.0.1:$PORT/health >/dev/null && break; timeout 1 tail -f /dev/null; done
-curl -sf http://127.0.0.1:$PORT/health >/dev/null || { echo "$(date -u +%FT%TZ) server not healthy" >> $A/$TAG.log; kill $SP; echo 90 > $A/$TAG.done; exit 1; }
+curl -sf http://127.0.0.1:$PORT/health >/dev/null || { echo "$(date -u +%FT%TZ) server not healthy" >> $A/$TAG.log; echo 90 > $A/$TAG.done; exit 1; }
 python3 $D/t/recipes/v6_server_route.py --endpoint http://127.0.0.1:$PORT/v1/chat/completions --model dawnr-route \
   --identity "$IDENT" --cache $A/cache-$TAG --concurrency $CONCURRENCY \
   -- --tag $TAG --ids-file $IDS --pool $POOL $PYARG --spec-samples 4 --per-problem 3 --samples 2 --max-new 1024 --batch $BATCH "$@" \
   > $A/$TAG.route.log 2>&1
 RC=$?
-kill $SP 2>/dev/null
 echo "$(date -u +%FT%TZ) $TAG rc=$RC" >> $A/$TAG.log
 echo $RC > $A/$TAG.done
+exit "$RC"
