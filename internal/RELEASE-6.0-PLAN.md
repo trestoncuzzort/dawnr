@@ -221,6 +221,13 @@ spend, and remains a data draft until all completed teacher sources are reconcil
 Before another teacher pass, remove problems already covered by this draft as well as all subsequent strictly
 kept sources; a single run's remaining list does not account for the other teachers.
 
+That integration passed in run `40144638795`: eight rows on four new problems (four Python, four specification),
+6,803 rows total, SHA-256 `04ae5b85…`. All previous rows are preserved; the full audit has zero current-panel/GPL
+findings and the same 339 inherited unparsed blocks. All eight additions fit the unchanged 2,845-token limit
+(477 to 1,144 tokens). Both predictions held. Receipt: `release/evidence/cohere-smoke-rows-2026-10-24.json`.
+The saved Cohere pilots and smoke now contribute 43 new rows over 16 problems; the late 9B chunks contribute
+33 rows over 11 further problems. These are data gains; model-level qualification remains outstanding.
+
 ## 5b. Releases so far and the next increments
 
 - **6.0.0, published 2026-10-24 21:15Z** (tag `v6.0.0` at `b03f6ce5`): the October 5 model under version names, versioned

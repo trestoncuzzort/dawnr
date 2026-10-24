@@ -1,0 +1,71 @@
+{
+  "kind": "Cohere smoke data integration, not a trained model result",
+  "workflow_run": "https://github.com/trestoncuzzort/dawnr/actions/runs/40144638795",
+  "revision": "32bf3d2c6aaab8e1a8b2f10fc6b932ff95fec98f",
+  "base": {
+    "rows": 6795,
+    "sha256": "4ba7ce5c18f58a00d6e944075aaf75a0686da133d356689ce84f9787788a906d",
+    "rows_preserved": true
+  },
+  "teacher_workflow_run": "https://github.com/trestoncuzzort/dawnr/actions/runs/40134918870",
+  "strict": {
+    "draws": 1000,
+    "floor": 0.9,
+    "problems_kept": 4,
+    "candidates_kept": 4
+  },
+  "sources": [
+    {
+      "tag": "cohere:command-a-03-2025:smoke-20261024",
+      "kept_sha256": "d4f8330c436d10ff6b596a976233c630f2662c47fafdda93aa6937e02305734e",
+      "model_identity": "teacher-cohere:command-a-03-2025:think0:new2048:2026-10-24",
+      "rows": 8,
+      "by source": {
+        "python": 4,
+        "spec": 4
+      },
+      "problems": 4
+    }
+  ],
+  "added": {
+    "rows": 8,
+    "problems": 4,
+    "by_source": {
+      "python": 4,
+      "spec": 4
+    }
+  },
+  "output": {
+    "filename": "training-rows.jsonl",
+    "rows": 6803,
+    "sha256": "04ae5b85527d83d64eedb0b796c9400bfbca2a92e873b38ccb0d8e135e7f545c"
+  },
+  "audit": {
+    "flagged": 0,
+    "unparsed_program_blocks": 339,
+    "base_unparsed_program_blocks": 339,
+    "new_unparsed_program_blocks": 0,
+    "panels": true,
+    "refuse_gpl": true,
+    "sha256": "212ebf83fad7aaaeed14f64479933ba70588de6bad6a1d3eb69b4f13bd7dca72"
+  },
+  "tokenizer_check": {
+    "rows": 8,
+    "rows_used_at_2845": 8,
+    "dropped_too_long": 0,
+    "min_tokens": 477,
+    "max_tokens": 1144,
+    "usable_problems": 4,
+    "base_revision": "851bf6e806efd8d0a36b00ddf55e13ccb7b8cd0a",
+    "trainer_sha256": "e43c27df1ee1e796b1799d38a16e0c5725dd09df762be3fabb2940ad8cb4a46f",
+    "dataset_sha256": "04ae5b85527d83d64eedb0b796c9400bfbca2a92e873b38ccb0d8e135e7f545c"
+  },
+  "artifact": {
+    "encrypted": true,
+    "sha256": "f0aacb965f249655e0a419d243591ac71816f83cb9eeea1ad69f9ce7800bc4ff",
+    "training_rows_published": false
+  },
+  "new_model_calls": 0,
+  "additional_cohere_spend_usd": 0,
+  "training_started": false
+}
