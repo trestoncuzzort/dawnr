@@ -1,0 +1,107 @@
+name: evaluate
+
+# The release door's seven-kernel grades on GitHub's machines instead of a person's laptop (the user, 2026-10-24:
+# "outsource for this stuff always. we use the laptop to test if something doesnt work"). One job builds the image of
+# t-proof-engine's pinned Dockerfile (the prover versions every published table was measured on) and keeps it in this
+# repository's Actions cache; the image is never published, because it carries other projects' binaries. One job per
+# decoded arm then restores it and runs the frozen grader (t/recipes/v6-grade.sh) on that arm, as the desktop does.
+# Decoded arms arrive as assets of the pre-release `eval-inputs` (TAG.tar.gz holds spec-experiment/TAG; panel-NAME.txt
+# is a problem list); each grade leaves as an artifact named grade-TAG holding proof-results/TAG.
+on:
+  workflow_dispatch:
+    inputs:
+      arms:
+        description: 'JSON list of {"tag": "...", "panel": "dev-95" or "wider-145", "pool": "v5" or "v7"}'
+        required: true
+
+permissions:
+  contents: read
+
+env:
+  ENGINE_COMMIT: d13d11d01f8f50687ef645d60aa08c870d664b84
+  DOCKERFILE_SHA256: 1483aad08f6b9ba291e5f1880a057a3c20a9f6f52074e43111d8de215a7f456c
+
+jobs:
+  image:
+    runs-on: ubuntu-latest
+    timeout-minutes: 330
+    steps:
+      - id: cache
+        uses: actions/cache/restore@v4
+        with:
+          path: /mnt/kernels/kernels.tar.zst
+          key: kernels-${{ env.ENGINE_COMMIT }}
+          lookup-only: true
+      - name: build the seven-kernel image from the engine's pinned Dockerfile
+        if: steps.cache.outputs.cache-hit != 'true'
+        run: |
+          sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /opt/hostedtoolcache/CodeQL
+          sudo mkdir -p /mnt/kernels && sudo chown "$USER" /mnt/kernels
+          mkdir ctx && cd ctx
+          curl -fsSL -o Dockerfile "https://raw.githubusercontent.com/trestoncuzzort/t-proof-engine/$ENGINE_COMMIT/Dockerfile"
+          echo "$DOCKERFILE_SHA256  Dockerfile" | sha256sum -c -
+          printf '.git\n' > .dockerignore          # the image's own copy of t is unused: the grader mounts this checkout
+          docker build -t dawnr-kernels .
+          docker run --rm --entrypoint bash dawnr-kernels -lc 'lean --version && coqc -v | head -1 && frama-c -version && why3 config list-provers | head -3'
+          docker save dawnr-kernels | zstd -T0 -3 -o /mnt/kernels/kernels.tar.zst
+          ls -la /mnt/kernels/kernels.tar.zst
+      - if: steps.cache.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v4
+        with:
+          path: /mnt/kernels/kernels.tar.zst
+          key: kernels-${{ env.ENGINE_COMMIT }}
+
+  grade:
+    needs: image
+    runs-on: ubuntu-latest
+    timeout-minutes: 360
+    strategy:
+      fail-fast: false
+      matrix:
+        arm: ${{ fromJSON(inputs.arms) }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: the problem pool (nl/data is git-lfs, as in the tests workflow)
+        run: |
+          git lfs install --local
+          git lfs pull --include="nl/data/*.jsonl.gz"
+      - name: room for the image
+        run: |
+          sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /opt/hostedtoolcache/CodeQL
+          sudo mkdir -p /mnt/kernels && sudo chown "$USER" /mnt/kernels
+      - uses: actions/cache/restore@v4
+        with:
+          path: /mnt/kernels/kernels.tar.zst
+          key: kernels-${{ env.ENGINE_COMMIT }}
+          fail-on-cache-miss: true
+      - name: load the image
+        run: zstd -dc /mnt/kernels/kernels.tar.zst | docker load && rm /mnt/kernels/kernels.tar.zst
+      - name: the decoded arm and its panel
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release download eval-inputs -p "${{ matrix.arm.tag }}.tar.gz" -p "panel-${{ matrix.arm.panel }}.txt" -D /tmp/in
+          mkdir -p t/out/spec-experiment t/out/v6-20261018
+          tar -xzf "/tmp/in/${{ matrix.arm.tag }}.tar.gz" -C t/out/spec-experiment
+          cp "/tmp/in/panel-${{ matrix.arm.panel }}.txt" "t/out/v6-20261018/${{ matrix.arm.panel }}.txt"
+          d="t/out/spec-experiment/${{ matrix.arm.tag }}"
+          rm -rf "$d/kernels.md" "$d/extract.json" "$d/tests.json" "$d/tasks"   # an earlier grade's files: grade afresh
+      - name: grade (the frozen grader, inside the image, as the desktop runs it)
+        run: |
+          OUT="t/out/v5-repair-20261021/proof-results/${{ matrix.arm.tag }}"
+          mkdir -p "$OUT" && chmod -R a+rwX t/out
+          docker run --rm -v "$PWD:/opt/dawnr" -w /opt/dawnr --memory=13g \
+            -e POOL=${{ matrix.arm.pool }} -e T_MIN_KERNELS=7 -e T_SPARK_JOBS=1 -e PYTHONUNBUFFERED=1 -e PYTHONDONTWRITEBYTECODE=1 \
+            --entrypoint bash dawnr-kernels t/recipes/v6-grade.sh "${{ matrix.arm.tag }}" \
+            "t/out/v6-20261018/${{ matrix.arm.panel }}.txt" "$OUT"
+          ls "$OUT"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: grade-${{ matrix.arm.tag }}
+          path: |
+            t/out/v5-repair-20261021/proof-results/${{ matrix.arm.tag }}
+            t/out/spec-experiment/${{ matrix.arm.tag }}/kernels.md
+            t/out/spec-experiment/${{ matrix.arm.tag }}/extract.json
+            t/out/spec-experiment/${{ matrix.arm.tag }}/tests.json
+          retention-days: 30
