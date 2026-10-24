@@ -86,14 +86,23 @@ jobs:
           fi
           cp ~/.config/cohere/ledger.jsonl "out/r61/$SERIES-ledger.jsonl"
           python3 -c "import json,sys; print('spent', round(sum(json.loads(l)['usd'] for l in open(sys.argv[1]) if l.strip()), 2))" "out/r61/$SERIES-ledger.jsonl"
+      - name: seal the outputs (Cohere's text may not be published; only this laptop's key opens them)
+        if: always()
+        run: |
+          python3 -c "import json,sys; d=json.load(open(sys.argv[1])); print({k: d.get(k) for k in ('problems_in','candidates_in','candidates_kept','problems_kept')})" "out/r61/$SERIES-strict.json" 2>/dev/null || true
+          files=$(ls -d out/r61/"$SERIES"* t/out/spec-experiment/"$SERIES"-tc*/kept-specs.jsonl t/out/spec-experiment/"$SERIES"-tc*/scored-specs.jsonl \
+                  t/out/spec-experiment/"$SERIES"-tc*/spec_first.json t/out/laptop-runs/"$SERIES"-tc*.route.log 2>/dev/null)
+          mkdir -p /tmp/sealed
+          tar -czf /tmp/outputs.tar.gz $files
+          openssl rand -hex 32 > /tmp/k.txt
+          openssl enc -aes-256-cbc -pbkdf2 -iter 200000 -salt -in /tmp/outputs.tar.gz -out /tmp/sealed/outputs.tar.gz.enc -pass file:/tmp/k.txt
+          openssl pkeyutl -encrypt -pubin -inkey .github/teacher-outputs.pub.pem -pkeyopt rsa_padding_mode:oaep \
+            -pkeyopt rsa_oaep_md:sha256 -in /tmp/k.txt -out /tmp/sealed/key.enc
+          rm -f /tmp/k.txt /tmp/outputs.tar.gz
+          ls -la /tmp/sealed
       - uses: actions/upload-artifact@v4
         if: always()
         with:
           name: teacher-${{ env.SERIES }}
-          path: |
-            out/r61/${{ env.SERIES }}*
-            t/out/spec-experiment/${{ env.SERIES }}-tc*/kept-specs.jsonl
-            t/out/spec-experiment/${{ env.SERIES }}-tc*/scored-specs.jsonl
-            t/out/spec-experiment/${{ env.SERIES }}-tc*/spec_first.json
-            t/out/laptop-runs/${{ env.SERIES }}-tc*.route.log
+          path: /tmp/sealed
           retention-days: 30
