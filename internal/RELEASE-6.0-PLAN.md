@@ -138,10 +138,14 @@ The same 50 failed training problems, ten candidates each, kept by the route and
 |---|---:|---:|---:|---:|
 | Command A Reasoning (thinking 2,048) | 9 | 18 | $33.83 | 113 of 500 |
 | Command A+ (thinking 2,048) | 6 | 11 | $31.96 | 24 of 500 |
+| Command A (no thinking, 2,048-token replies) | 4 | 9 | $6.48 | 9 of 500 |
 
 Command A Reasoning and Command A+ are limited to 20 requests a minute and 1,000 calls a month even on a production
 key (docs.cohere.com/docs/rate-limits), so the full run (about 17,000 calls) uses Command A (500 requests a minute,
-no monthly cap); its own pilot on the same 50 problems decides the setting. A higher limit for the reasoning model
+no monthly cap). Its pilot on the same 50 problems kept fewer problems (4) but cost a fifth as much: 62 strictly kept
+problems per $100 of ledger against 27 for the reasoning model, so it runs the remaining 1,705 problems on GitHub's
+machines (`.github/workflows/teacher.yml`, ten lists in parallel), with a wider second pass on what it misses if the
+grant allows. A higher limit for the reasoning model
 can be asked of Cohere Labs.
 
 ## 5b. Releases so far and the next increments
