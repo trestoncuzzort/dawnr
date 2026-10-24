@@ -196,6 +196,13 @@ data build starts from the 6,762-row Cohere-pilot integration dataset. Predictio
 additional row and zero current-panel/GPL-lineage findings. A zero or any finding falsifies the respective
 prediction. No teacher is restarted and no new model call is made for this check.
 
+That check passed in run `40142218970`: 25 candidates on 14 problems survived; three problems were already
+covered, so the build added 33 rows on 11 new problems (11 Python rows and 22 specifications). The resulting
+6,795-row draft has SHA-256 `4ba7ce5c…`, zero current-panel/GPL findings, and the same 339 unparsed base blocks.
+All 33 additions fit the registered 2,845-token limit (210 to 834 tokens). Both data-build predictions held.
+Receipt: `release/evidence/late9b-rows-2026-10-24.json`. The full Cohere pass is still needed before candidate B's
+final dataset is registered and trained.
+
 ## 5b. Releases so far and the next increments
 
 - **6.0.0, published 2026-10-24 21:15Z** (tag `v6.0.0` at `b03f6ce5`): the October 5 model under version names, versioned

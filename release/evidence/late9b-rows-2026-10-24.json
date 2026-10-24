@@ -1,0 +1,70 @@
+{
+  "kind": "Late 9B teacher data check, not a trained model result",
+  "workflow_run": "https://github.com/trestoncuzzort/dawnr/actions/runs/40142218970",
+  "revision": "287436e32fdc2d0ea524ab73e72b40ce3e5a8c12",
+  "base": {
+    "rows": 6762,
+    "sha256": "818f164aa23fc46ca6dfbf19b1494541973f2f99bd6e0f7fdb8a6e0d3bb9b32f",
+    "rows_preserved": true
+  },
+  "strict": {
+    "problems_in": 18,
+    "candidates_in": 30,
+    "problems_kept": 14,
+    "candidates_kept": 25
+  },
+  "sources": [
+    {
+      "tag": "teacher9b:20261022c:tc06-tc09",
+      "kept_sha256": "e36025acf9bf11f0a677fa042ebd5158a6b16a9be60abd9dfc0d98b459cdc9ba",
+      "model_identity": "teacher-qwen3.5-9b-q4km:8c4cc24f54473f3d4e080d4ec7fd2a40d0bbec0f94f3c807cd62694905357d54:llama-f1cee9941b0e843ea260bf8dd9a090fbd9711b6a",
+      "raw_kept_sha256": "81d04eaaf849f85f7e279fb7455fbeb62fca75f07523047560e3353014b03355",
+      "rows": 33,
+      "by source": {
+        "python": 11,
+        "spec": 22
+      },
+      "problems": 11
+    }
+  ],
+  "added": {
+    "rows": 33,
+    "problems": 11,
+    "by_source": {
+      "python": 11,
+      "spec": 22
+    }
+  },
+  "output": {
+    "filename": "training-rows.jsonl",
+    "rows": 6795,
+    "sha256": "4ba7ce5c18f58a00d6e944075aaf75a0686da133d356689ce84f9787788a906d"
+  },
+  "audit": {
+    "flagged": 0,
+    "unparsed_program_blocks": 339,
+    "base_unparsed_program_blocks": 339,
+    "new_unparsed_program_blocks": 0,
+    "panels": true,
+    "refuse_gpl": true,
+    "sha256": "69a545a4cda51536823c3be1b10c951ab398e9b05827dfc21cbe2aec994b076f"
+  },
+  "tokenizer_check": {
+    "rows": 33,
+    "rows_used_at_2845": 33,
+    "dropped_too_long": 0,
+    "min_tokens": 210,
+    "max_tokens": 834,
+    "usable_problems": 11,
+    "base_revision": "851bf6e806efd8d0a36b00ddf55e13ccb7b8cd0a",
+    "trainer_sha256": "e43c27df1ee1e796b1799d38a16e0c5725dd09df762be3fabb2940ad8cb4a46f",
+    "dataset_sha256": "4ba7ce5c18f58a00d6e944075aaf75a0686da133d356689ce84f9787788a906d"
+  },
+  "artifact": {
+    "encrypted": true,
+    "sha256": "82bb562a66c412cc7177d46256036aae2b629438259414cf27daff9e49ae2a3b",
+    "training_rows_published": false
+  },
+  "new_model_calls": 0,
+  "training_started": false
+}
