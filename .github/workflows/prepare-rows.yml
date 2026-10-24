@@ -1,0 +1,90 @@
+name: prepare-rows
+
+# Private inputs and outputs are encrypted. Only hashes and counts appear in public logs.
+# Sources: teacher.yml's output seal; t/recipes/prepare_release_rows.py and heldout_audit.py.
+on:
+  workflow_dispatch:
+    inputs:
+      asset:
+        description: 'encrypted input archive on eval-inputs'
+        required: true
+      sha256:
+        description: 'SHA-256 of that encrypted archive'
+        required: true
+      label:
+        description: 'unique data-build label'
+        required: true
+
+permissions:
+  contents: read
+
+jobs:
+  rows:
+    runs-on: ubuntu-latest
+    timeout-minutes: 360
+    env:
+      INPUT_ASSET: ${{ inputs.asset }}
+      INPUT_SHA256: ${{ inputs.sha256 }}
+      BUILD_LABEL: ${{ inputs.label }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: validate the requested build
+        run: |
+          [[ "$INPUT_ASSET" =~ ^[A-Za-z0-9][A-Za-z0-9._-]*\.tar\.gz\.enc$ ]]
+          [[ "$INPUT_SHA256" =~ ^[0-9a-f]{64}$ ]]
+          [[ "$BUILD_LABEL" =~ ^[A-Za-z0-9][A-Za-z0-9._-]*$ ]]
+      - name: the problem pool and sandbox
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          git lfs install --local
+          git lfs pull --include='nl/data/*.jsonl.gz'
+          gh release download eval-inputs -p apps_raw_train.jsonl.gz -D nl/data
+          sudo apt-get update -q
+          sudo apt-get install -y bubblewrap
+          sudo bash t/apparmor-bwrap.sh
+      - name: open the pinned private inputs
+        env:
+          GH_TOKEN: ${{ github.token }}
+          INPUT_KEY: ${{ secrets.DAWNR_PRIVATE_INPUTS_KEY }}
+        run: |
+          umask 077
+          test -n "$INPUT_KEY"
+          mkdir -p out/private-inputs out/candidate-build
+          gh release download eval-inputs -p "$INPUT_ASSET" -D /tmp/private-in
+          printf '%s  %s\n' "$INPUT_SHA256" "/tmp/private-in/$INPUT_ASSET" | sha256sum -c -
+          key=$(mktemp)
+          trap 'rm -f "$key"' EXIT
+          printf '%s' "$INPUT_KEY" > "$key"
+          openssl enc -d -aes-256-cbc -pbkdf2 -iter 200000 -in "/tmp/private-in/$INPUT_ASSET" -pass "file:$key" |
+            tar -xzf - -C out/private-inputs
+      - name: build and audit the training rows
+        run: |
+          python3 t/recipes/prepare_release_rows.py --manifest out/private-inputs/manifest.json \
+            --out out/candidate-build/results --jobs 4 > out/candidate-build/build.log 2>&1
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+          record = json.loads(Path('out/candidate-build/results/rows-manifest.json').read_text())
+          print(json.dumps({'output': record['output'], 'audit': record['audit'], 'sources': record['sources']}))
+          PY
+      - name: seal the rows and diagnostic logs
+        if: always()
+        run: |
+          if [ ! -d out/candidate-build ]; then exit 0; fi
+          umask 077
+          mkdir -p /tmp/sealed
+          tar -czf /tmp/rows.tar.gz out/candidate-build
+          key=$(mktemp)
+          trap 'rm -f "$key" /tmp/rows.tar.gz' EXIT
+          openssl rand -hex 32 > "$key"
+          openssl enc -aes-256-cbc -pbkdf2 -iter 200000 -salt -in /tmp/rows.tar.gz \
+            -out /tmp/sealed/outputs.tar.gz.enc -pass "file:$key"
+          openssl pkeyutl -encrypt -pubin -inkey .github/teacher-outputs.pub.pem -pkeyopt rsa_padding_mode:oaep \
+            -pkeyopt rsa_oaep_md:sha256 -in "$key" -out /tmp/sealed/key.enc
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: rows-${{ env.BUILD_LABEL }}
+          path: /tmp/sealed
+          retention-days: 30

@@ -162,6 +162,16 @@ row build uses `t/recipes/v8_spec_rows.py --tag cohere:MODEL:SERIES` to preserve
 self-distilled label applies only to self-generated rows. The audit and release conditions still decide what is
 eligible and whether the resulting model improves on the released one.
 
+`.github/workflows/prepare-rows.yml` builds and audits those private rows on GitHub. Its input archive is encrypted
+with the separate repository input key and pinned by SHA-256; its rows and diagnostic logs leave encrypted to the
+same local output key as the teacher runs. `t/recipes/prepare_release_rows.py` checks every source's digest and
+strict-check evidence, applies the sources in the manifest's stated order with explicit provenance tags, then
+requires the full `heldout_audit.py --panels --refuse-gpl` to pass before writing a completed dataset receipt.
+The first integration build uses candidate A's 6,727-row base and the three completed Cohere pilots, whose kept
+outputs cover 12 distinct problems. Prediction: at least one added row and zero current-panel or GPL-lineage
+findings. Zero added rows or any such finding falsifies the corresponding prediction. This build tests the
+data path; candidate B's final data hash is registered after the full teacher pass and before training.
+
 ## 5b. Releases so far and the next increments
 
 - **6.0.0, published 2026-10-24 21:15Z** (tag `v6.0.0` at `b03f6ce5`): the October 5 model under version names, versioned
