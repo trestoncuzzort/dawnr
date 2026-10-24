@@ -279,3 +279,26 @@ def test_a_nonpositive_answer_count_is_refused_before_the_model_is_asked():
     with pytest.raises(ValueError):
         answer.answer(ENTRY, decode, decode, answers=0)
     assert not calls
+
+
+def test_an_answer_all_seven_prove_stops_the_provers_there():
+    # 2026-10-24: four answers to one question took 92 of the command's 121 s of provers on the laptop
+    sent = []
+    twin = task("r == 2 * n", "r := n + n;")                     # a second right answer, another program
+    r = answer.answer(ENTRY, student(RIGHT, twin), python(), answers=2,
+                      prover=lambda tasks, jobs: sent.append([t["name"] for t in tasks]) or {t["name"]: ALL for t in tasks})
+    assert len(sent) == 1 and r["shown"]["answer"] == 1 and r["shown"]["proved by"] == 7
+    assert "answer 2: not sent to the provers; answer 1 was proved by all seven" in r["refused"]
+
+
+def test_an_answer_fewer_than_seven_prove_still_sends_the_next_and_the_better_one_is_shown():
+    sent = []
+    twin = task("r == 2 * n", "r := n + n;")
+
+    def cells(tasks, jobs):
+        sent.append([t["name"] for t in tasks])
+        first = len(sent) == 1
+        return {t["name"]: (dict(ALL, lean="timeout / refuted") if first else ALL) for t in tasks}
+    r = answer.answer(ENTRY, student(RIGHT, twin), python(), answers=2, prover=cells)
+    assert len(sent) == 2 and r["shown"]["answer"] == 2 and r["shown"]["proved by"] == 7
+

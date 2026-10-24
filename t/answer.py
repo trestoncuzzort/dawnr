@@ -225,12 +225,28 @@ def answer(entry: dict, student, python, prompt_version: str = "s2", answers: in
         return dict(out, why="no answer's specification could be supported without a reference")
     for i, c in enumerate(judged):                              # distinct names: one table row each
         c["task"] = se.rename_task(c["task"], f"answer_{c['n']}__{entry['fn']}")
-    try:
-        cells = prover([c["task"] for c in judged], jobs)
-    except ProverTimeout as e:
-        for c in judged:
-            refused.append(f"answer {c['n']}: the provers did not finish within the time budget")
-        return dict(out, why=str(e))
+    # One answer at a time, in the order they were written (the greedy answer first). The answer shown is the one the
+    # most provers proved, the first of any tie, so an answer all seven prove cannot be bettered and the provers stop
+    # there (2026-10-24, the laptop: four answers to one question took 92 of the command's 121 s, nearly all of it on
+    # answers that could at best tie). With fewer than seven proving it, the next answer is sent, as before.
+    cells = {}
+    for k, c in enumerate(judged):
+        try:
+            got = prover([c["task"]], jobs)
+        except ProverTimeout as e:
+            for later in judged[k:]:
+                refused.append(f"answer {later['n']}: the provers did not finish within the time budget")
+            judged = judged[:k]
+            if not judged:
+                return dict(out, why=str(e))
+            break
+        cells.update(got)
+        _level, proved = score_levels.answer_level("pass", got.get(c["task"]["name"]), None)
+        if proved == len(spec_check.KERNELS):
+            for later in judged[k + 1:]:
+                refused.append(f"answer {later['n']}: not sent to the provers; answer {c['n']} was proved by all seven")
+            judged = judged[:k + 1]
+            break
     best, best_task = None, None
     for c in judged:
         row = cells.get(c["task"]["name"])
