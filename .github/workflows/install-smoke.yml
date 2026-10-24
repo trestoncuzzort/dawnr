@@ -1,6 +1,6 @@
 name: install-smoke
 
-# Run by hand once the student is published: the README's install steps from a fresh checkout on GitHub's
+# Run by hand once a release is published (it installs the latest one): the README's install steps from a fresh checkout on GitHub's
 # machines (a Mac and Ubuntu 24.04), then each command once, the way a new user would. It downloads about 8 GB.
 on:
   workflow_dispatch:

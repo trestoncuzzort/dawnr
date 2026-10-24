@@ -25,6 +25,20 @@
 # and is proved. From a question it is t/answer.py: the model answers, the answers that pass the tests are checked
 # against an independent Python solution, then proved; one is shown with its evidence, or the question is refused.
 set -euo pipefail
+# The person's own tool folders, whatever started dawnr. An editor's MCP client or a service starts it with a PATH like
+# /usr/local/bin:/usr/bin, where Lean and the Rust toolchain Verus runs are not, and two of the seven provers then read
+# as undecided (2026-10-24). ~/.local/bin is where the XDG base-directory spec puts a person's executables
+# (specifications.freedesktop.org/basedir), ~/.cargo/bin is rustup's (rust-lang.github.io/rustup/installation),
+# ~/.elan/bin is elan's, and opam's default switch holds Frama-C, Rocq and F*. A folder that exists and is not on PATH
+# yet is added after what is there, so the person's own order still wins.
+if [ -n "${HOME:-}" ]; then
+  for tool_dir in "$HOME/.local/bin" "$HOME/.cargo/bin" "$HOME/.elan/bin" "$HOME/.opam/default/bin"; do
+    if [ -d "$tool_dir" ]; then
+      case ":${PATH:-}:" in *":$tool_dir:"*) ;; *) PATH="${PATH:+$PATH:}$tool_dir";; esac
+    fi
+  done
+  export PATH
+fi
 show_help() {
   case ${1:-} in
     ""|help|-h|--help)

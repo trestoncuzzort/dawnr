@@ -124,3 +124,21 @@ def test_installer_refuses_a_release_tag_that_is_not_a_plain_name():
     result = subprocess.run(['bash', str(ROOT/'install.sh'), '--release', '../elsewhere'],
                             capture_output=True, text=True, timeout=5)
     assert result.returncode == 2 and '--release takes a tag' in result.stderr
+
+
+def test_the_persons_tool_folders_join_a_bare_path(tmp_path):
+    # An editor's MCP client or a service starts dawnr with a PATH like /usr/local/bin:/usr/bin, where Lean and the Rust
+    # toolchain Verus runs are not; two of the seven provers then read as undecided (2026-10-24). The launcher adds
+    # the person's own tool folders that exist. Here `dawnr version` can only print through the stand-in `cat` that
+    # lives in ~/.cargo/bin, which a bare PATH does not contain.
+    home = tmp_path / 'home'
+    tools = home / '.cargo' / 'bin'
+    tools.mkdir(parents=True)
+    for name, body in (('cat', 'echo 9.9.9-from-the-tool-folder'), ('dirname', 'exec /usr/bin/dirname "$@"'),
+                       ('readlink', 'exec /usr/bin/readlink "$@"')):
+        (tools / name).write_text('#!/bin/sh\n' + body + '\n')
+        (tools / name).chmod(0o755)
+    result = subprocess.run(['/bin/bash', str(ROOT/'bin/dawnr'), 'version'], capture_output=True, text=True, timeout=5,
+                            env={'HOME': str(home), 'PATH': str(tmp_path / 'nothing-here')})
+    assert result.stdout == 'dawnr 9.9.9-from-the-tool-folder\n', result.stderr
+

@@ -144,6 +144,18 @@ key (docs.cohere.com/docs/rate-limits), so the full run (about 17,000 calls) use
 no monthly cap); its own pilot on the same 50 problems decides the setting. A higher limit for the reasoning model
 can be asked of Cohere Labs.
 
+## 5b. Releases so far and the next increments
+
+- **6.0.0, published 2026-10-24 21:15Z** (tag `v6.0.0` at `b03f6ce5`): the October 5 model under version names, versioned
+  installs, the `dawnr do` context fix the laptop check found, the correction of section 2. Laptop check with all seven
+  provers: every README command works; `ask` 129 s cold is the slow one (`release/evidence/laptop-6.0.0-2026-10-24.json`).
+  GitHub's install-smoke run 40133457459 installs it on fresh Ubuntu and macOS.
+- **6.0.1 (app):** the launcher adds the person's tool folders to PATH (from a bare PATH Lean and Verus could not start,
+  so two provers read as undecided); `ask` made faster where a stage profile shows the time goes (two provers at a time
+  against four saved 9 s of about 100 and cost 4 GB, so prover parallelism is not the lever).
+- **6.1.0 (model):** candidate A, if it passes the door.
+- **6.2.0 (model):** candidate B, A's rows plus the Cohere teacher's strictly kept specifications.
+
 ## 6. Where things stand (carried from the deleted log, paused by the user 2026-10-23 04:52Z)
 
 Nothing below restarts until the user says so.
