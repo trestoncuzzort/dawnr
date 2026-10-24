@@ -211,6 +211,16 @@ All 33 additions fit the registered 2,845-token limit (210 to 834 tokens). Both 
 Receipt: `release/evidence/late9b-rows-2026-10-24.json`. The full Cohere pass is still needed before candidate B's
 final dataset is registered and trained.
 
+The saved GitHub smoke run (`40134918870`) also has four strictly checked candidates on four problems absent
+from that 6,795-row draft. Preserve these accepted outputs even if the ongoing full pass does not reproduce
+them. Its kept-file SHA-256 is `d4f8330c436d10ff6b596a976233c630f2662c47fafdda93aa6937e02305734e`;
+the original strict report records 1,000 draws and the 0.9 floor. Prediction before the encrypted integration
+build: eight added rows on four problems and zero current-panel/GPL-lineage findings. A different added-row
+count or any such finding falsifies the respective prediction. This reuses saved outputs, incurs no new API
+spend, and remains a data draft until all completed teacher sources are reconciled and candidate B is registered.
+Before another teacher pass, remove problems already covered by this draft as well as all subsequent strictly
+kept sources; a single run's remaining list does not account for the other teachers.
+
 ## 5b. Releases so far and the next increments
 
 - **6.0.0, published 2026-10-24 21:15Z** (tag `v6.0.0` at `b03f6ce5`): the October 5 model under version names, versioned
@@ -250,6 +260,9 @@ Nothing below restarts until the user says so.
   remain, the long tail, which the Cohere lane is for.
 
 ## 7. Milestones, each with its DONE WHEN and its Cohere update
+
+The original milestone locations below are superseded by section 5's execution policy: existing candidate A
+training may finish, subsequent compute is outsourced, and local machines perform final testing.
 
 | | milestone | DONE WHEN | where |
 |---|---|---|---|
