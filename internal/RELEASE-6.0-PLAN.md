@@ -150,9 +150,17 @@ can be asked of Cohere Labs.
   installs, the `dawnr do` context fix the laptop check found, the correction of section 2. Laptop check with all seven
   provers: every README command works; `ask` 129 s cold is the slow one (`release/evidence/laptop-6.0.0-2026-10-24.json`).
   GitHub's install-smoke run 40133457459 installs it on fresh Ubuntu and macOS.
-- **6.0.1 (app):** the launcher adds the person's tool folders to PATH (from a bare PATH Lean and Verus could not start,
-  so two provers read as undecided); `ask` made faster where a stage profile shows the time goes (two provers at a time
-  against four saved 9 s of about 100 and cost 4 GB, so prover parallelism is not the lever).
+- **6.0.1, published 2026-10-24 21:50Z** (tag `v6.0.1` at `672ffad9`; its manifest lists 6.0.0's model files by URL, so
+  nothing was uploaded twice): `dawnr ask` from a cold start 128.9 s to 64.6 s on the laptop (the provers take the
+  answers one at a time and stop at one all seven prove; a profile had shown 92 of 121 s in the provers), peak memory
+  8.9 to 6.8 GB, and the launcher adds the person's tool folders to PATH so all seven provers run however dawnr is
+  started (`release/evidence/laptop-6.0.1-2026-10-24.json`).
+- **Off the person's machines (the user, 2026-10-24: "i only want to use the desktop and laptop for final testing"):**
+  `.github/workflows/evaluate.yml` grades decoded arms with the seven kernels on GitHub's machines (its image of
+  t-proof-engine's pinned Dockerfile built in 18 minutes and stays in the Actions cache, never published);
+  `.github/workflows/teacher.yml` runs the Cohere teacher and the strict check there. Inputs are assets of the
+  pre-release `eval-inputs`. Training needs a GPU, which the grant cannot buy: Google Cloud credit or Modal, the user's
+  choice.
 - **6.1.0 (model):** candidate A, if it passes the door.
 - **6.2.0 (model):** candidate B, A's rows plus the Cohere teacher's strictly kept specifications.
 
