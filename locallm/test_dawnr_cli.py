@@ -681,3 +681,81 @@ def test_a_command_that_ends_with_an_error_counts_as_stuck_and_one_that_works_do
     with harness:
         cli.run_task(agent, planner, meter, "Run the two.", [], lambda *_: None)
     assert [bool(b.get("chat_template_kwargs")) for b in model.bodies] == [False, False, True]
+
+
+def _size(msgs):
+    return sum(cli._tokens(m.get("content") or "") + cli._tokens(json.dumps(m.get("tool_calls") or "")) + 4 for m in msgs)
+
+
+def _call(i, name="fs_list"):
+    return {"role": "assistant", "content": "", "tool_calls": [{"id": f"c{i}", "type": "function",
+                                                               "function": {"name": name, "arguments": "{}"}}]}
+
+
+def test_a_listing_too_large_for_the_context_keeps_its_ends_and_says_what_was_left_out():
+    # 2026-10-24: one listing of a large repository (23,693 tokens against a 16,384-token server) stopped `dawnr do`
+    listing = "\n".join(f"here/tup/pkg{i}/file{i}.txt  (41 bytes)" for i in range(3000))
+    msgs = [{"role": "system", "content": "s"}, {"role": "user", "content": "task"}, _call(1),
+            {"role": "tool", "tool_call_id": "c1", "content": listing}]
+    out = cli.fit_to_context(msgs, budget=4000)
+    assert [m["role"] for m in out] == [m["role"] for m in msgs]
+    text = out[-1]["content"]
+    assert text.startswith("here/tup/pkg0/") and text.endswith("(41 bytes)")
+    assert "lines left out here to fit the model's memory" in text and _size(out) <= 4000
+    assert msgs[-1]["content"] == listing                       # the caller's messages are not changed
+
+
+def test_earlier_results_give_way_before_the_latest_one():
+    big = "\n".join("x" * 60 for _ in range(400))
+    msgs = [{"role": "user", "content": "task"}]
+    for k in range(3):
+        msgs += [_call(k, "fs_read"), {"role": "tool", "tool_call_id": f"c{k}", "content": big}]
+    out = cli.fit_to_context(msgs, budget=6000, per_result=4000)
+    assert out[2]["content"].startswith("[the output of an earlier step")
+    assert "lines left out" in out[-1]["content"] and not out[-1]["content"].startswith("[the output")
+    assert _size(out) <= 6000
+
+
+def test_a_conversation_that_fits_is_sent_unchanged():
+    msgs = [{"role": "system", "content": "s"}, {"role": "user", "content": "hello"}, _call(1),
+            {"role": "tool", "tool_call_id": "c1", "content": "here/a.txt  (3 bytes)"}]
+    assert cli.fit_to_context(msgs, budget=4000) == msgs
+
+
+def test_a_refusal_for_length_is_answered_once_with_the_conversation_fitted_to_what_the_server_holds(tmp_path):
+    import io
+    import urllib.error
+
+    class Refuses:
+        def __init__(self):
+            self.bodies = []
+
+        def __call__(self, url, body, timeout=1800.0):
+            self.bodies.append(body)
+            if len(self.bodies) == 1:
+                raise urllib.error.HTTPError(url, 400, "Bad Request", {}, io.BytesIO(
+                    b'{"error":{"code":400,"message":"request (23693 tokens) exceeds the available context size '
+                    b'(16384 tokens), try increasing it","type":"exceed_context_size_error"}}'))
+            return turn(text="done")
+    *_, planner, _meter, _said, _asked, _ask = session(tmp_path, Model())
+    planner.post = refuses = Refuses()
+    huge = "\n".join(f"here/{i}.txt  (1 bytes)" for i in range(9000))
+    body = {"messages": [{"role": "user", "content": "task"}, _call(1),
+                         {"role": "tool", "tool_call_id": "c1", "content": huge}]}
+    reply = planner._send("http://nowhere:1/v1/chat/completions", body)
+    assert reply["choices"][0]["message"]["content"] == "done" and len(refuses.bodies) == 2
+    resent = refuses.bodies[1]["messages"][-1]["content"]
+    assert "lines left out here" in resent and _size(refuses.bodies[1]["messages"]) < planner.context()
+
+
+def test_any_other_refusal_is_not_retried(tmp_path):
+    import io
+    import urllib.error
+
+    def bad(url, body, timeout=1800.0):
+        raise urllib.error.HTTPError(url, 400, "Bad Request", {}, io.BytesIO(b'{"error":{"message":"invalid tool"}}'))
+    *_, planner, _meter, _said, _asked, _ask = session(tmp_path, Model())
+    planner.post = bad
+    with pytest.raises(urllib.error.HTTPError):
+        planner._send("http://nowhere:1/v1/chat/completions", {"messages": [{"role": "user", "content": "x"}]})
+

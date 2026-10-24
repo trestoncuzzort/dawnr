@@ -8,11 +8,12 @@
 #     bash t/recipes/teacher_cohere_specs.sh
 # Sources: t/recipes/teacher_bedrock_specs.sh (the chunk loop and route invocation), t/recipes/cohere_proxy.py.
 set -u
-D=$HOME/Projects/dawnr; cd $D || exit 1
+D=${D:-$HOME/Projects/dawnr}; cd $D || exit 1
 IDS=${IDS:?problem id file}; CHUNK=${CHUNK:-50}; START=${START:-0}; SERIES=${SERIES:?tag series}
 PORT=${PORT:-8863}; MODEL=${MODEL:-command-a-reasoning-08-2025}; THINK=${THINK:-2048}
 CONCURRENCY=${CONCURRENCY:-8}; BATCH=${BATCH:-16}; PRIMER=t/out/v5-repair-20261021/teacher-primer.md
-IDENT="teacher-cohere:$MODEL:think$THINK:2026-10-24"
+MAX_NEW=${MAX_NEW:-1024}   # the reply's room after the thinking budget; the pilot cut 22% of the reasoning model's replies at 1024
+IDENT="teacher-cohere:$MODEL:think$THINK:new$MAX_NEW:2026-10-24"
 A=$D/t/out/laptop-runs; O=out/r61/$SERIES; LOG=$O/lane.log; PLOG=$O/proxy.jsonl
 V=${V:-/home/t/.claude/jobs/d76813cf/tmp/venv/bin/python}
 export PYTHONPATH=$D/t PYTHONUNBUFFERED=1
@@ -38,7 +39,7 @@ for f in $O/chunks/ids-*.txt; do
   mkdir -p $A/cache-$TAG; rm -f $A/cache-$TAG/protocol.json $A/cache-$TAG/run.lock
   $V t/recipes/v6_server_route.py --endpoint http://127.0.0.1:$PORT/v1/chat/completions --model $MODEL \
     --identity "$IDENT" --cache $A/cache-$TAG --concurrency $CONCURRENCY \
-    -- --tag $TAG --ids-file $f --pool v5 --spec-samples 9 --per-problem 3 --samples 2 --max-new 1024 --batch $BATCH \
+    -- --tag $TAG --ids-file $f --pool v5 --spec-samples 9 --per-problem 3 --samples 2 --max-new $MAX_NEW --batch $BATCH \
     --reference-python --specs-only --spec-primer $PRIMER > $A/$TAG.route.log 2>&1
   grep -E "spec_first: .*kept specification" $A/$TAG.route.log | tail -1 >> $LOG
 done

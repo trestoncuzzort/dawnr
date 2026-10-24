@@ -35,7 +35,7 @@ run ask "$W" "$DAWNR" ask "Write a function that returns the larger of two integ
   --test "assert larger(3, 5) == 5" --test "assert larger(9, 2) == 9" --save-python larger.py --certificate larger.cert.json
 run check "$W" "$DAWNR" check larger.cert.json
 run do "$REPO" "$DAWNR" do "Describe the modules in this repository." --read-only
-run cite "$W" "$DAWNR" cite "What assumptions does this check make?" "$REPO/t/flight/README.md"
+run cite "$W" "$DAWNR" cite "What does a comparison receipt not capture?" "$REPO/t/flight/README.md"
 run calc "$W" "$DAWNR" calc "A logger records 12 samples per second for 15 seconds. How many samples is that?"
 kill $SP 2>/dev/null; trap - EXIT
 "$DAWNR" serve stop > /dev/null 2>&1 || true
@@ -49,10 +49,15 @@ temps = [int(g[0]) for g in gpu if g[0].isdigit()]
 slow = [g[1] for g in gpu]
 cmds = [l.split('\t') for l in open(times).read().splitlines() if l.strip()]
 doctor = pathlib.Path(w, 'doctor.out').read_text(errors='replace').splitlines()
+# a command can exit 0 and still not have done its work (2026-10-24: `dawnr do` stopped on a model-server refusal)
+FAILED = ('Stopped: the model server', 'did not answer', 'Traceback (most recent call last)', 'HTTP Error')
+def ok(c):
+    text = pathlib.Path(w, c[0] + '.out').read_text(errors='replace')
+    return int(c[2]) == 0 and not any(f in text for f in FAILED)
 rec = {'label': label, 'version': pathlib.Path(repo, 'VERSION').read_text().strip(),
-       'commands': {c[0]: {'seconds': round(float(c[1]), 1), 'rc': int(c[2])} for c in cmds},
+       'commands': {c[0]: {'seconds': round(float(c[1]), 1), 'rc': int(c[2]), 'ok': ok(c)} for c in cmds},
        'median_seconds': round(statistics.median(float(c[1]) for c in cmds), 1),
-       'all_succeeded': all(int(c[2]) == 0 for c in cmds),
+       'all_succeeded': all(ok(c) for c in cmds),
        'memory_total_gib': round(int(total) / 1048576, 2),
        'memory_in_use_before_gib': round((int(total) - int(base_avail)) / 1048576, 2),
        'memory_in_use_peak_gib': round((int(total) - min(avail)) / 1048576, 2) if avail else None,

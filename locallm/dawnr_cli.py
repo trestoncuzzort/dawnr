@@ -45,6 +45,8 @@ import shlex
 import shutil
 import sys
 import time
+import urllib.error
+import urllib.request
 from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
@@ -234,6 +236,71 @@ def listing(text: str, base: str) -> str:
     return "\n".join(out)
 
 
+# The model server holds a fixed context (llama.cpp's --ctx-size; /props reports it as
+# default_generation_settings.n_ctx) and refuses a longer request with HTTP 400, "request (N tokens) exceeds the
+# available context size". On 2026-10-24 one folder listing of a large repository (23,693 tokens against 16,384)
+# stopped `dawnr do` there. A conversation is therefore fitted to the context before it is sent: a large tool result
+# keeps its first and last lines with a note of what was left out, then earlier results give way to a one-line note,
+# oldest first, and the latest are cut harder only if that is still not enough.
+CHARS_PER_TOKEN = 3.0                    # conservative for paths and code; English prose runs nearer 4
+LEFT_OUT = "[{n} of {m} lines left out here to fit the model's memory; list a narrower folder or search for a name to see them]"
+EARLIER = "[the output of an earlier step, {m} lines, left out to fit the model's memory]"
+TOO_LONG = "exceeds the available context size"
+
+
+def _tokens(text: str) -> int:
+    return int(len(text) / CHARS_PER_TOKEN) + 1
+
+
+def _cut(text: str, limit: int) -> str:
+    """`text` within `limit` estimated tokens: its first lines (two thirds of the room), its last lines, and a note."""
+    if _tokens(text) <= limit:
+        return text
+    lines = text.split("\n")
+    room = int(limit * CHARS_PER_TOKEN)
+    head, size = [], 0
+    for line in lines:
+        if size + len(line) + 1 > room * 2 // 3:
+            break
+        head.append(line)
+        size += len(line) + 1
+    tail, size = [], 0
+    for line in reversed(lines[len(head):]):
+        if size + len(line) + 1 > room // 3:
+            break
+        tail.append(line)
+        size += len(line) + 1
+    tail.reverse()
+    if not head and not tail:                                   # one line longer than the room
+        return text[:room * 2 // 3] + "\n" + LEFT_OUT.format(n=len(lines), m=len(lines))
+    return "\n".join(head + [LEFT_OUT.format(n=len(lines) - len(head) - len(tail), m=len(lines))] + tail)
+
+
+def fit_to_context(msgs: list[dict], budget: int, per_result: int | None = None) -> list[dict]:
+    """The same messages, in the same order and roles, estimated to fit `budget` tokens; only tool results change."""
+    per_result = per_result or max(800, budget // 4)
+    out = [dict(m) for m in msgs]
+    tools = [i for i, m in enumerate(out) if m.get("role") == "tool"]
+    last_call = max((i for i, m in enumerate(out) if m.get("role") == "assistant" and m.get("tool_calls")), default=-1)
+    latest = [i for i in tools if i > last_call]
+    for i in tools:
+        out[i]["content"] = _cut(out[i].get("content") or "", per_result)
+
+    def total() -> int:
+        return sum(_tokens(m.get("content") or "") + _tokens(json.dumps(m.get("tool_calls") or "")) + 4 for m in out)
+    for i in tools:                                             # earlier results give way first, oldest first
+        if total() <= budget:
+            break
+        if i not in latest:
+            out[i]["content"] = EARLIER.format(m=(out[i].get("content") or "").count("\n") + 1)
+    limit = per_result
+    while total() > budget and limit > 200:                     # then the latest, harder
+        limit //= 2
+        for i in latest:
+            out[i]["content"] = _cut(out[i]["content"], limit)
+    return out
+
+
 class Planner(NativePlanner):
     """The model through native tool calls (locallm/agent_eval_native.py), as the front door needs it: told where it
     is, a plain path taken as one in the folder, and a plan that did not run handed back with the reason."""
@@ -244,6 +311,7 @@ class Planner(NativePlanner):
         self.think = THINK if think is None else think          # which turns are taken with the driver's reasoning on
         self.windows = under_windows() and machine is None      # Windows's programs by their .exe names (not for a described machine)
         self.think_budget = THINK_BUDGET if think_budget is None else think_budget
+        self.n_ctx: int | None = None                           # the server's context, read once (context())
         # A task starts with the folder listed, by the front door and not by the model: no tokens are written for
         # it, most tasks began with that call anyway, and a question that sounds like the computer's ("on which
         # date did job 12 finish?", with log.txt in the folder) is no longer taken to the system journal unseen
@@ -406,6 +474,37 @@ class Planner(NativePlanner):
         return dict(body, chat_template_kwargs={"enable_thinking": True}, reasoning_budget_tokens=self.think_budget,
                     reasoning_budget_message=THINK_END, max_tokens=body["max_tokens"] + self.think_budget)
 
+    def context(self) -> int:
+        """The model server's context in tokens, read once from llama.cpp's /props; DAWNR_BASE_CTX if it cannot say."""
+        if self.n_ctx is None:
+            self.n_ctx = int(os.environ.get("DAWNR_BASE_CTX", "16384") or 16384)
+            if self.host.split(":")[0] in ("127.0.0.1", "localhost", "::1", "[::1]"):   # dawnr's own servers are local
+                try:
+                    with urllib.request.urlopen(f"http://{self.host}/props", timeout=5) as r:
+                        self.n_ctx = int(json.loads(r.read())["default_generation_settings"]["n_ctx"])
+                except (OSError, ValueError, KeyError, TypeError):
+                    pass
+        return self.n_ctx
+
+    def budget(self) -> int:
+        """Tokens the messages may take: the context less the reply, the reasoning budget, the tool index and a margin."""
+        return max(1024, self.context() - self.max_tokens - self.think_budget - _tokens(json.dumps(self.tools)) - 512)
+
+    def _send(self, url: str, body: dict) -> dict:
+        """One request; a refusal for length is answered once, with the messages fitted to what the server said it holds."""
+        try:
+            return self.post(url, body)
+        except urllib.error.HTTPError as error:
+            try:
+                detail = error.read().decode(errors="replace")
+            except Exception:                                   # noqa: BLE001
+                detail = ""
+            if error.code != 400 or TOO_LONG not in detail:
+                raise
+            asked = re.search(r"request \((\d+) tokens\)", detail)
+            shrink = min(0.85, self.context() / int(asked.group(1)) * 0.8) if asked else 0.6
+            return self.post(url, dict(body, messages=fit_to_context(body["messages"], int(self.budget() * shrink))))
+
     def messages(self, state) -> list[dict]:
         msgs = messages_for(state)
         msgs[0]["content"] = state.task                         # the tools are offered natively; the index repeats them
@@ -427,7 +526,7 @@ class Planner(NativePlanner):
             at = last + 1
         if self.last_round(state):
             msgs.append({"role": "user", "content": LAST_ROUND})
-        return [{"role": "system", "content": self.system}] + msgs
+        return fit_to_context([{"role": "system", "content": self.system}] + msgs, self.budget())
 
     @staticmethod
     def last_round(state) -> bool:
@@ -439,7 +538,7 @@ class Planner(NativePlanner):
         body = {"model": self.name, "temperature": 0, "max_tokens": 300,
                 "messages": self.messages(result) + [{"role": "user", "content": ACCOUNT.format(why=why)}]}
         try:
-            msg = self.post(f"http://{self.host}/v1/chat/completions", body)["choices"][0].get("message") or {}
+            msg = self._send(f"http://{self.host}/v1/chat/completions", body)["choices"][0].get("message") or {}
         except Exception:                                       # noqa: BLE001  (no account is not an error of the task)
             return ""
         text = (msg.get("content") or "").strip()
@@ -454,20 +553,20 @@ class Planner(NativePlanner):
         if not self.last_round(state):                          # in the last round there is nothing left to call
             body["tools"] = self.tools
         reasoned = "tools" in body and (self.think == "always" or ("stuck" in self.think and self.stuck(state)))
-        choice = self.post(f"http://{self.host}/v1/chat/completions", self.thinking(body) if reasoned else body)["choices"][0]
+        choice = self._send(f"http://{self.host}/v1/chat/completions", self.thinking(body) if reasoned else body)["choices"][0]
         msg = choice.get("message") or {}
         calls = msg.get("tool_calls") or []
         if not calls and choice.get("finish_reason") == "length" and "tools" in body:
             # the turn ran out of length while thinking aloud, before the call it was working up to: that is not an
             # answer (a failing test was followed by 1,500 tokens tracing it by hand, and the task ended there)
             body["messages"] = body["messages"] + [{"role": "assistant", "content": (msg.get("content") or "")[-600:]}, {"role": "user", "content": CUT_OFF}]
-            msg = self.post(f"http://{self.host}/v1/chat/completions", body)["choices"][0].get("message") or {}
+            msg = self._send(f"http://{self.host}/v1/chat/completions", body)["choices"][0].get("message") or {}
             calls = msg.get("tool_calls") or []
         if not calls and len(state.rounds) == int(self.look_first) and UNLOOKED.search(msg.get("content") or ""):
             # "I cannot determine that from the files", said before any file was opened: sent back once
             body["messages"] = body["messages"] + [{"role": "assistant", "content": msg.get("content") or ""},
                                                    {"role": "user", "content": LOOK_FIRST}]
-            msg = self.post(f"http://{self.host}/v1/chat/completions", body)["choices"][0].get("message") or {}
+            msg = self._send(f"http://{self.host}/v1/chat/completions", body)["choices"][0].get("message") or {}
             calls = msg.get("tool_calls") or []
         if not calls and "unrun" not in self.told and "sh" in {t["function"]["name"] for t in self.tools} and not self.last_round(state):
             unrun = self.unrun(state)
@@ -475,7 +574,7 @@ class Planner(NativePlanner):
                 self.told.add("unrun")
                 body["messages"] = body["messages"] + [{"role": "assistant", "content": msg.get("content") or ""},
                                                        {"role": "user", "content": UNRUN.format(files=", ".join(unrun))}]
-                msg = self.post(f"http://{self.host}/v1/chat/completions", body)["choices"][0].get("message") or {}
+                msg = self._send(f"http://{self.host}/v1/chat/completions", body)["choices"][0].get("message") or {}
                 calls = msg.get("tool_calls") or []
         if (not calls and not reasoned and "answer" in self.think and "answer" not in self.told and "tools" in body
                 and self.worked(state)):
@@ -483,7 +582,7 @@ class Planner(NativePlanner):
             # and from the same place: not the first answer handed back to be doubted, the same question considered.
             # What comes back may be calls (it found something still to do) or the answer that stands.
             self.told.add("answer")
-            again = self.post(f"http://{self.host}/v1/chat/completions", self.thinking(dict(body, messages=self.messages(state))))["choices"][0].get("message") or {}
+            again = self._send(f"http://{self.host}/v1/chat/completions", self.thinking(dict(body, messages=self.messages(state))))["choices"][0].get("message") or {}
             if again.get("tool_calls") or (again.get("content") or "").strip():
                 msg, calls = again, again.get("tool_calls") or []
         if not calls:
@@ -493,7 +592,7 @@ class Planner(NativePlanner):
                 body["messages"] = body["messages"] + [{"role": "assistant", "content": text},
                                                        {"role": "user", "content": UNSAID.format(files=", ".join(unsaid))}]
                 body.pop("tools", None)
-                again = (self.post(f"http://{self.host}/v1/chat/completions", body)["choices"][0].get("message") or {}).get("content") or ""
+                again = (self._send(f"http://{self.host}/v1/chat/completions", body)["choices"][0].get("message") or {}).get("content") or ""
                 text = again.strip() or text
             # asked to answer with nothing left to call, the model sometimes writes the call it wanted as text
             return Finish(UNFINISHED if "<tool_call>" in text or "<function=" in text else text)

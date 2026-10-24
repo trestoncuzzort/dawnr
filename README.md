@@ -187,7 +187,7 @@ dawnr check larger.cert.json
 
 # Work with a folder or ask a question about a document.
 dawnr do "Describe the modules in this repository." --read-only
-dawnr cite "What assumptions does this check make?" t/flight/README.md
+dawnr cite "What does a comparison receipt not capture?" t/flight/README.md
 dawnr calc "A logger records 12 samples per second for 15 seconds. How many samples is that?"
 ```
 
