@@ -20,6 +20,12 @@ on:
         default: '0'
       max_new:
         default: '2048'
+      spec_samples:
+        description: 'sampled specifications after the greedy one'
+        default: '9'
+      seed_offset:
+        description: 'new sampling salts for a further pass over unsolved training problems'
+        default: '0'
       budget:
         description: 'dollars of the grant each job may spend'
         default: '80'
@@ -73,10 +79,15 @@ jobs:
           MODEL: ${{ inputs.model }}
           THINK: ${{ inputs.think }}
           MAX_NEW: ${{ inputs.max_new }}
+          SPEC_SAMPLES: ${{ inputs.spec_samples }}
+          SEED_OFFSET: ${{ inputs.seed_offset }}
           PORT: '8863'
           CONCURRENCY: '8'
-        run: bash t/recipes/teacher_cohere_specs.sh; tail -5 "out/r61/$SERIES/lane.log"
+        run: |
+          bash t/recipes/teacher_cohere_specs.sh
+          tail -5 "out/r61/$SERIES/lane.log"
       - name: the strict check
+        if: ${{ !cancelled() }}
         run: |
           cat t/out/spec-experiment/"$SERIES"-tc*/kept-specs.jsonl > "out/r61/$SERIES-kept.jsonl" 2>/dev/null || true
           if [ -s "out/r61/$SERIES-kept.jsonl" ]; then
@@ -84,16 +95,25 @@ jobs:
               --floor 0.9 --jobs 4 --out "out/r61/$SERIES-strict-kept.jsonl" --report "out/r61/$SERIES-strict.json" \
               --dropped "out/r61/$SERIES-strict-dropped.jsonl"
           fi
-          cp ~/.config/cohere/ledger.jsonl "out/r61/$SERIES-ledger.jsonl"
-          python3 -c "import json,sys; print('spent', round(sum(json.loads(l)['usd'] for l in open(sys.argv[1]) if l.strip()), 2))" "out/r61/$SERIES-ledger.jsonl"
       - name: seal the outputs (Cohere's text may not be published; only this laptop's key opens them)
         if: always()
         run: |
+          mkdir -p out/r61
+          if [ -f ~/.config/cohere/ledger.jsonl ]; then
+            cp ~/.config/cohere/ledger.jsonl "out/r61/$SERIES-ledger.jsonl"
+            python3 -c "import json,sys; print('spent', round(sum(json.loads(l)['usd'] for l in open(sys.argv[1]) if l.strip()), 2))" "out/r61/$SERIES-ledger.jsonl"
+          fi
           python3 -c "import json,sys; d=json.load(open(sys.argv[1])); print({k: d.get(k) for k in ('problems_in','candidates_in','candidates_kept','problems_kept')})" "out/r61/$SERIES-strict.json" 2>/dev/null || true
-          files=$(ls -d out/r61/"$SERIES"* t/out/spec-experiment/"$SERIES"-tc*/kept-specs.jsonl t/out/spec-experiment/"$SERIES"-tc*/scored-specs.jsonl \
-                  t/out/spec-experiment/"$SERIES"-tc*/spec_first.json t/out/laptop-runs/"$SERIES"-tc*.route.log 2>/dev/null)
+          shopt -s nullglob
+          files=(out/r61/"$SERIES"* t/out/spec-experiment/"$SERIES"-tc*/kept-specs.jsonl t/out/spec-experiment/"$SERIES"-tc*/scored-specs.jsonl
+                 t/out/spec-experiment/"$SERIES"-tc*/spec_first.json t/out/laptop-runs/"$SERIES"-tc*.route.log
+                 t/out/laptop-runs/cache-"$SERIES"-tc*)
+          if [ "${#files[@]}" -eq 0 ]; then
+            echo "no teacher outputs to seal"
+            exit 0
+          fi
           mkdir -p /tmp/sealed
-          tar -czf /tmp/outputs.tar.gz $files
+          tar -czf /tmp/outputs.tar.gz "${files[@]}"
           openssl rand -hex 32 > /tmp/k.txt
           openssl enc -aes-256-cbc -pbkdf2 -iter 200000 -salt -in /tmp/outputs.tar.gz -out /tmp/sealed/outputs.tar.gz.enc -pass file:/tmp/k.txt
           openssl pkeyutl -encrypt -pubin -inkey .github/teacher-outputs.pub.pem -pkeyopt rsa_padding_mode:oaep \

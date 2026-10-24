@@ -13,6 +13,7 @@ IDS=${IDS:?problem id file}; CHUNK=${CHUNK:-50}; START=${START:-0}; SERIES=${SER
 PORT=${PORT:-8863}; MODEL=${MODEL:-command-a-reasoning-08-2025}; THINK=${THINK:-2048}
 CONCURRENCY=${CONCURRENCY:-8}; BATCH=${BATCH:-16}; PRIMER=t/out/v5-repair-20261021/teacher-primer.md
 MAX_NEW=${MAX_NEW:-1024}   # the reply's room after the thinking budget; the pilot cut 22% of the reasoning model's replies at 1024
+SPEC_SAMPLES=${SPEC_SAMPLES:-9}; SEED_OFFSET=${SEED_OFFSET:-0}
 IDENT="teacher-cohere:$MODEL:think$THINK:new$MAX_NEW:2026-10-24"
 A=$D/t/out/laptop-runs; O=out/r61/$SERIES; LOG=$O/lane.log; PLOG=$O/proxy.jsonl
 V=${V:-/home/t/.claude/jobs/d76813cf/tmp/venv/bin/python}
@@ -30,7 +31,7 @@ rm -f $O/chunks/ids-*.txt; split -l $CHUNK -d -a 2 --additional-suffix=.txt $IDS
 for f in $O/chunks/ids-*.txt; do
   n=$(basename $f .txt | sed 's/ids-//'); TAG=$SERIES-tc$n
   [ "$((10#$n))" -lt "$START" ] && continue
-  [ -s t/out/spec-experiment/$TAG/kept-specs.jsonl ] && continue
+  [ -s "$A/cache-$TAG/completed.json" ] && continue
   if curl -sf http://127.0.0.1:$PORT/health | grep -q '"spent_usd"'; then
     spent=$(curl -sf http://127.0.0.1:$PORT/health | python3 -c 'import sys,json; print(json.load(sys.stdin)["spent_usd"])')
     python3 -c "import sys; sys.exit(0 if $spent < ${COHERE_CEILING_USD:-950} else 1)" || { echo "$(date -u +%FT%TZ) ledger at ceiling (\$$spent); not starting $TAG" >> $LOG; exit 0; }
@@ -39,8 +40,12 @@ for f in $O/chunks/ids-*.txt; do
   mkdir -p $A/cache-$TAG; rm -f $A/cache-$TAG/protocol.json $A/cache-$TAG/run.lock
   $V t/recipes/v6_server_route.py --endpoint http://127.0.0.1:$PORT/v1/chat/completions --model $MODEL \
     --identity "$IDENT" --cache $A/cache-$TAG --concurrency $CONCURRENCY \
-    -- --tag $TAG --ids-file $f --pool v5 --spec-samples 9 --per-problem 3 --samples 2 --max-new $MAX_NEW --batch $BATCH \
-    --reference-python --specs-only --spec-primer $PRIMER > $A/$TAG.route.log 2>&1
+    -- --tag $TAG --ids-file $f --pool v5 --spec-samples $SPEC_SAMPLES --seed-offset $SEED_OFFSET \
+    --per-problem 3 --samples 2 --max-new $MAX_NEW --batch $BATCH \
+    --reference-python --specs-only --spec-primer $PRIMER > $A/$TAG.route.log 2>&1 || {
+      echo "$(date -u +%FT%TZ) route failed for $TAG; paid replies remain in the cache" >> $LOG
+      exit 1
+    }
   grep -E "spec_first: .*kept specification" $A/$TAG.route.log | tail -1 >> $LOG
 done
 echo "$(date -u +%FT%TZ) all chunks done" >> $LOG

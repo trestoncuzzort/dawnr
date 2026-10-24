@@ -148,6 +148,20 @@ machines (`.github/workflows/teacher.yml`, ten lists in parallel), with a wider 
 grant allows. A higher limit for the reasoning model
 can be asked of Cohere Labs.
 
+The full pass started on GitHub at 22:28Z on 2026-10-24, run `40138722401`: 1,705 distinct training problems in
+ten jobs, Command A, ten candidates per problem, 2,048-token replies, $60 per-job ceilings ($600 allocated, not
+spent). The prior desktop ledger was $77.9143 and the GitHub smoke cost $5.167696. Outputs are encrypted before
+upload. After the jobs finish, `t/recipes/teacher_outputs.sh` opens them and `t/recipes/cohere_run_report.py`
+reconciles the strict-check counts and all supplied ledgers, writes the private kept rows, and lists problems
+still without a strictly kept specification. The next pass uses a fresh series and sampling seed offset; its
+budget comes from actual remaining credit, with the $950 grant stop retained. The report's remaining allocation
+assumes no other live grant run, so outstanding job allocations must also be reserved before dispatch.
+
+The grant's purpose is to train dawnr with these checked outputs, as the written permission allows. Candidate B's
+row build uses `t/recipes/v8_spec_rows.py --tag cohere:MODEL:SERIES` to preserve that provenance; the default
+self-distilled label applies only to self-generated rows. The audit and release conditions still decide what is
+eligible and whether the resulting model improves on the released one.
+
 ## 5b. Releases so far and the next increments
 
 - **6.0.0, published 2026-10-24 21:15Z** (tag `v6.0.0` at `b03f6ce5`): the October 5 model under version names, versioned

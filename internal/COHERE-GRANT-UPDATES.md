@@ -2,7 +2,10 @@
 
 Grant accepted 2026-10-22, $1000 API credit, account jonhhjackson@gmail.com, expires 2027-10-22.
 Rule: one dated entry per milestone, numbers first, then a short draft the user sends to grants@cohere.com.
-Cohere outputs are used for evaluation, reranking and embeddings only. None go into dawnr training rows.
+Cohere Labs gave written permission on 2026-10-24 to train dawnr on Cohere outputs that pass our checks. That is
+the grant's main use: checked specifications and repair examples for the next dawnr model. The earlier entries
+below describe the scope before that permission. Updates are due at every incremental release and at completion;
+the generated text and training rows stay private.
 
 ## 2026-10-24 Milestone 0: credit live, first lane open
 
@@ -73,5 +76,6 @@ Draft to Brittawnya (send when 6.0.1 is live):
 
 Hi Brittawnya. Small update. dawnr 6.0.1 is out. Same model as 6.0.0 but asking it for a checked function is about
 twice as fast now. We also moved our Command A runs to cloud machines so they run in parallel. One question if you know:
-Command A Reasoning gave us the best results per dollar but it is capped at 20 requests a minute and 1,000 calls a month.
+Command A Reasoning solved more of the pilot's problems, while Command A kept more per dollar. Reasoning is capped
+at 20 requests a minute and 1,000 calls a month.
 Is there a way to raise that for the grant?

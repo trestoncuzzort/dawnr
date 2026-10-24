@@ -195,6 +195,9 @@ email_founders.py
 # by construction, so committing it would only be a large duplicate.
 /dist/
 
+# Private run data, including teacher outputs and training rows.
+/out/
+
 # the Mac that demos and tests it, which is nobody else business either
 t/mac-workstation.conf
 # t/py_sandbox.py: which Linux sandbox this machine uses (bwrap or landlock); machine-local

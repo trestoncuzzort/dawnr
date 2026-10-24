@@ -45,6 +45,8 @@ def main(argv=None) -> int:
     ap.add_argument("--kept", type=Path, required=True, help="kept-specs.jsonl of a --reference-python stage-1 run")
     ap.add_argument("--pool", default="v5")
     ap.add_argument("--keep-covered", action="store_true", help="also add rows for problems the base already covers")
+    ap.add_argument("--tag", default="self-distilled-specs",
+                    help="provenance label for added rows; name the teacher and run when using teacher outputs")
     ap.add_argument("--out", type=Path, required=True)
     ap.add_argument("--report", type=Path, required=True)
     a = ap.parse_args(argv)
@@ -55,7 +57,7 @@ def main(argv=None) -> int:
     skip = set() if a.keep_covered else covered
     new, counts = spec_first_rows.build_from_specs(kept, pool, skip)
     for r in new:
-        r["tag"] = "self-distilled-specs"
+        r["tag"] = a.tag
     seen = {json.dumps((r.get("prompt"), r.get("chosen")), sort_keys=True) for r in base}
     added = []
     for r in new:
@@ -70,7 +72,7 @@ def main(argv=None) -> int:
     by_source = Counter(r.get("source") for r in added)
     report = {"base": {"path": str(a.base), "rows": len(base), "sha256": sha256(a.base),
                        "problems with a spec row": len(covered)},
-              "kept": {"path": str(a.kept), "problems": len(kept), "sha256": sha256(a.kept)},
+              "kept": {"path": str(a.kept), "problems": len(kept), "sha256": sha256(a.kept), "tag": a.tag},
               "built": counts, "added": {"rows": len(added), "by source": dict(by_source),
                                          "problems": len({r["task_id"] for r in added})},
               "output": {"path": str(a.out), "rows": len(rows), "sha256": sha256(a.out)}}
