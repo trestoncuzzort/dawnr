@@ -65,7 +65,9 @@ Registered here and repeated with numbers in the candidate's PREDICT file before
 1. **Paired reading on the 206.** The candidate's six decodes (two seeds, three decodes each) against the published
    v5's three, per problem, on the clean development panel (`t/out/release-6.0/dev-206.txt`, written in M1 from the
    95 and `wider_clean()`), with `t/recipes/three_decode_report.py`. More problems up than down, permutation p at
-   or below 0.05.
+   or below 0.05. Declare `--expected-baseline-decodes 3 --expected-candidate-decodes 6` when reading a release
+   candidate. The report validates the original 95- and 145-problem grading receipts before restricting their
+   solved sets to the 206; a missing declared decode is refused.
 2. **Gate precision.** On the ceiling instrument, the three-test gate's precision is at least 0.70 (v5 0.785).
 3. **Given specifications.** At least 27 of the 33 held-out specifications proved by all seven kernels at Q8_0.
 4. **Held-out 182, read once.** After 1 to 3 decide, the winner is read once on the clean 182 under the

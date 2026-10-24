@@ -72,16 +72,16 @@ WIDER_PANEL = HERE / "out" / "v6-20261018" / "wider-145.txt"
 DEV_PANEL = HERE / "out" / "v6-20261018" / "dev-95.txt"
 
 
-def part_ids(tag: str, ids: list[int], panels: dict | None = None) -> set[int]:
+def part_ids(tag: str, panels: dict | None = None) -> set[int]:
     """The ids a part was graded on: a graded directory's levels.json is recomputed by v7_local_pair.arm over exactly
-    the panel it was graded with, so a part is read on its own panel (the wider 145 when the tag says "wider", else the
-    development 95), intersected with the ids asked for."""
+    the panel it was graded with, so validate the whole original panel (wider 145 or development 95).
+    Excluded problems are removed from the resulting sets only after that validation."""
     panels = panels or {}
     path = Path(panels.get("wider", WIDER_PANEL) if "wider" in tag else panels.get("dev", DEV_PANEL))
     if not path.is_file():
         raise SystemExit(f"{tag}: its panel file {path} is missing; pass the panels a joined decode was graded on")
     panel = {int(x) for x in path.read_text().split()}
-    return set(ids) & panel
+    return panel
 
 
 def decode_sets(spec: str, ids: list[int], arm, panels: dict | None = None) -> dict:
@@ -90,10 +90,25 @@ def decode_sets(spec: str, ids: list[int], arm, panels: dict | None = None) -> d
     joined: dict = {}
     for part in spec.split("+"):
         tag, graded = part.split(":", 1)
-        _, sets, _ = arm(part, part_ids(tag, ids, panels) if "+" in spec else set(ids))
+        _, sets, _ = arm(part, part_ids(tag, panels) if "+" in spec else set(ids))
         for level, members in sets.items():
-            joined.setdefault(level, set()).update(members)
+            joined.setdefault(level, set()).update(members & set(ids))
     return joined
+
+
+def declared_counts(baseline: int, candidate: int, expected_baseline: int | None,
+                    expected_candidate: int | None) -> dict | None:
+    """Enforce explicitly registered counts; the release uses three baseline and six candidate decodes."""
+    if (expected_baseline is None) != (expected_candidate is None):
+        raise ValueError("declare both baseline and candidate decode counts")
+    if expected_baseline is None:
+        return None
+    if min(expected_baseline, expected_candidate) < 1:
+        raise ValueError("expected decode counts must be positive")
+    if (baseline, candidate) != (expected_baseline, expected_candidate):
+        raise ValueError(f"expected {expected_baseline} baseline and {expected_candidate} candidate decodes; "
+                         f"received {baseline} and {candidate}")
+    return {"baseline": expected_baseline, "candidate": expected_candidate}
 
 
 def model_reading(name: str, arms: list[tuple[str, set[int]]], ids: list[int]) -> dict:
@@ -119,9 +134,16 @@ def main(argv=None) -> int:
                     help="TAG:GRADED_DIR, repeat per decode; a decode graded in parts (the 95 and the wider 145 of the "
                          "240-problem panel) is TAG:DIR+TAG2:DIR2, the parts' sets joined")
     ap.add_argument("--candidate", action="append", required=True, help="as --baseline")
+    ap.add_argument("--expected-baseline-decodes", type=int, help="require the registered baseline count")
+    ap.add_argument("--expected-candidate-decodes", type=int, help="require the registered candidate count (6 for two seeds)")
     ap.add_argument("--names", default="baseline,candidate")
     ap.add_argument("--out", type=Path, required=True)
     a = ap.parse_args(argv)
+    try:
+        expected = declared_counts(len(a.baseline), len(a.candidate),
+                                   a.expected_baseline_decodes, a.expected_candidate_decodes)
+    except ValueError as error:
+        ap.error(str(error))
     from v7_local_pair import arm                                   # noqa: E402  (graded arms, same sets as every pairing)
     ids = [int(x) for x in a.panel.read_text().split()]
     base_name, cand_name = a.names.split(",")
@@ -131,8 +153,9 @@ def main(argv=None) -> int:
         for spec in specs:
             arms.append((spec.split(":", 1)[0].split("+")[0], decode_sets(spec, ids, arm)))
         readings[name] = {level: model_reading(name, [(t, s[level]) for t, s in arms], ids) for level in LEVELS}
-    result = {"panel": str(a.panel), "problems": len(ids), "protocol": "three decodes per candidate, paired per problem",
+    result = {"panel": str(a.panel), "problems": len(ids), "protocol": "paired per-problem fractions over the decode sets",
               "decodes": {base_name: len(a.baseline), cand_name: len(a.candidate)},
+              "expected_decodes": {base_name: expected["baseline"], cand_name: expected["candidate"]} if expected else None,
               "unequal_decodes": len(a.baseline) != len(a.candidate),
               "readings": {NAMES[level]: {n: readings[n][level] for n in (base_name, cand_name)} for level in LEVELS},
               "paired": {NAMES[level]: compare(readings[base_name][level], readings[cand_name][level], ids) for level in LEVELS}}
@@ -145,7 +168,10 @@ def main(argv=None) -> int:
               f"paired mean diff {p['mean_difference']:+.2f}, up {p['sign_test']['up']} down {p['sign_test']['down']}, "
               f"sign p {p['sign_test']['p']:.3f}, permutation p {p['permutation_test']['p']:.3f}")
     if result["unequal_decodes"]:
-        print("note: unequal decode counts; the reading is provisional until both have three")
+        if expected:
+            print(f"note: registered decode counts met ({expected['baseline']} baseline, {expected['candidate']} candidate)")
+        else:
+            print("note: unequal decode counts; no expected counts were declared")
     return 0
 
 

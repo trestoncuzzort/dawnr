@@ -79,7 +79,9 @@ jobs:
       - name: the decoded arm and its panel
         env:
           GH_TOKEN: ${{ github.token }}
+          GRADE_PANEL: ${{ matrix.arm.panel }}
         run: |
+          case "$GRADE_PANEL" in dev-95|wider-145) ;; *) echo "this workflow publishes only development-panel evidence" >&2; exit 2;; esac
           gh release download eval-inputs -p "${{ matrix.arm.tag }}.tar.gz" -p "panel-${{ matrix.arm.panel }}.txt" -D /tmp/in
           mkdir -p t/out/spec-experiment t/out/v6-20261018
           tar -xzf "/tmp/in/${{ matrix.arm.tag }}.tar.gz" -C t/out/spec-experiment
@@ -104,4 +106,7 @@ jobs:
             t/out/spec-experiment/${{ matrix.arm.tag }}/kernels.md
             t/out/spec-experiment/${{ matrix.arm.tag }}/extract.json
             t/out/spec-experiment/${{ matrix.arm.tag }}/tests.json
+            t/out/spec-experiment/${{ matrix.arm.tag }}/spec_first.json
+            t/out/spec-experiment/${{ matrix.arm.tag }}/tasks
+            t/out/spec-experiment/${{ matrix.arm.tag }}/raw
           retention-days: 30

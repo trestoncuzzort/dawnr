@@ -9,6 +9,13 @@ import three_decode_report as r  # noqa: E402
 
 
 class ThreeDecodeTest(unittest.TestCase):
+    def test_the_registered_release_counts_allow_three_against_six(self):
+        self.assertEqual(r.declared_counts(3, 6, 3, 6), {"baseline": 3, "candidate": 6})
+        with self.assertRaisesRegex(ValueError, "expected 3 baseline and 6 candidate"):
+            r.declared_counts(3, 5, 3, 6)
+        with self.assertRaisesRegex(ValueError, "declare both"):
+            r.declared_counts(3, 6, None, 6)
+
     def test_fractions_count_each_problem_over_the_decodes(self):
         f = r.fractions([{1, 2}, {1}, {1, 3}], [1, 2, 3, 4])
         self.assertEqual(f, {1: 1.0, 2: 1 / 3, 3: 1 / 3, 4: 0.0})
@@ -58,14 +65,30 @@ class JoinedDecodeTest(unittest.TestCase):
 
 
 class PartPanelTest(unittest.TestCase):
+    def test_excluded_problems_are_filtered_after_the_full_grade_is_validated(self):
+        import tempfile
+        with tempfile.TemporaryDirectory() as name:
+            root = Path(name)
+            (root / "dev.txt").write_text("1\n2\n")
+            (root / "wider.txt").write_text("7\n8\n")
+            panels = {"dev": root / "dev.txt", "wider": root / "wider.txt"}
+
+            def checked_arm(spec, ids):
+                full_panel = {7, 8} if "wider" in spec else {1, 2}
+                self.assertEqual(ids, full_panel, "stored grading totals belong to the full original panel")
+                return None, {"1": full_panel, "7": full_panel}, None
+
+            sets = r.decode_sets("m-dev:/x+m-wider:/y", [1, 7], checked_arm, panels)
+            self.assertEqual(sets, {"1": {1, 7}, "7": {1, 7}})
+
     def test_a_part_is_read_on_its_own_panel(self):
         import tempfile, os
         d = tempfile.mkdtemp()
         dev, wider = os.path.join(d, "dev.txt"), os.path.join(d, "wider.txt")
         open(dev, "w").write("1\n2\n3\n"); open(wider, "w").write("7\n8\n")
         panels = {"dev": dev, "wider": wider}
-        self.assertEqual(r.part_ids("m-dev", [1, 2, 3, 7, 8, 9], panels), {1, 2, 3})
-        self.assertEqual(r.part_ids("m-wider-off0", [1, 2, 3, 7, 8, 9], panels), {7, 8})
+        self.assertEqual(r.part_ids("m-dev", panels), {1, 2, 3})
+        self.assertEqual(r.part_ids("m-wider-off0", panels), {7, 8})
         seen = []
         def fake_arm(spec, ids):
             seen.append((spec.split(":")[0], ids)); return None, {"1": set(ids), "7": set()}, None
