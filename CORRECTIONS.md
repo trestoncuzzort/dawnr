@@ -4,6 +4,22 @@ Published claims that turned out to be wrong, and what they are now. They are
 kept here rather than quietly fixed, because a project that only reports its
 successful measurements is not measuring anything.
 
+- **The "training seed alone" reading changed the training rows too, and the 240-problem panel held 34 problems
+  the published model's rows had matched (2026-10-24).** On 22 October a model registered as "v5's exact rows and
+  recipe with seed 2" read 4, 5 and 4 clean against the published model's 6, 4 and 6 on the 95 development problems,
+  and the README, the scoreboard, the rolling release note, the October 5 model card and docs/MEASURED.md said a
+  training seed alone moves the count by one to two, and made the control for every later candidate the published
+  model's three decodes plus that model's three (mean 26.5 clean on 240). That model trained on the corrected
+  4,189-row set (its manifest records `e14f766f…`); the published model trained on 5,095 rows (`848fca29…`). The arm
+  changed the data and the seed at once and measures neither alone. The 240-problem panel is the 95 plus all 145 of
+  the wider reader's pool, and 34 of those 145 are problems `heldout_audit.wider_flagged()` marks as matched by the
+  rows of 2026-10-05, the published model's own. On the other 206 the two read 19.33 and 14.67 clean per decode, 12
+  problems up and 8 down, permutation p 0.15: not separable (on 240, p 0.084). Every candidate trained since
+  5 October used a corrected set rather than the published rows; that the corrected set is weaker is likely and not
+  shown. From now a candidate is read against the released model alone, on the 206, and the next candidate trains on
+  the published model's own audited rows ([the plan](internal/RELEASE-6.0-PLAN.md), section 2;
+  [the registration](t/PREDICT-2026-10-24-release-6.1-candidate-a.md)).
+
 - **The specification check stopped at the size of the examples, and every fine-tuned row lost up to three
   problems (2026-10-05, the day's second).** A specification is counted when it holds at the reference's answer
   on drawn inputs and rejects most wrong outputs there. The draws were shaped like the problem's examples and no

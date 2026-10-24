@@ -545,13 +545,15 @@ raw/diverse set transfers better off-distribution, both measured honestly at sma
 
 Every development reading before this week was one decode of one trained model on 95 problems. Measured
 ([record](../t/PREDICT-2026-10-22-seed-variance.md)): a second sampling seed moves dawnr v5's clean count from 6 to 4;
-a second training seed of the exact rows and recipe gives 4, 5, 4 against 6, 4, 6 over three decodes; on the
-240-problem panel v5 reads 30.0 clean on average and its twin 23.0 (12 problems up, 18 down, permutation p 0.084).
+a model registered as a second training seed of the exact rows gives 4, 5, 4 against 6, 4, 6 over three decodes
+(corrected 2026-10-24: it trained on the corrected 4,189-row set, so it differs in data as well as seed); on the
+240-problem panel v5 reads 30.0 clean on average and that model 23.0 (12 problems up, 18 down, permutation p 0.084),
+and on the 206 that leave out the 34 problems v5's rows had matched, 19.33 against 14.67 (p 0.15).
 Against that, v6 corrective (6 / 2), v7 (4 / 3) and v8 (4, 4, 5 against 6, 4, 6; sign test p 0.63) are not separable
 from v5 ([v8](../t/PREDICT-2026-10-21-v8-spec-rows.md)). What v8 did change is seen on a larger instrument: the
 three-test gate's precision over 20 candidates per problem fell from 0.785 to 0.515, so its self-distilled rows taught
 test-fitting; v9, the same idea with a 90% strength floor at 1,000 draws, reads 0.682 with a reference-correct
 specification within 5 candidates on 25 problems against v5's 18 ([v9](../t/PREDICT-2026-10-22-v9-strict-rows.md)).
-The protocol from v9 on: two training seeds, three decodes each, paired per problem on 240, never a verdict on a mean.
+The protocol from 6.1.0 on: two training seeds, three decodes each, paired per problem on the 206 against the released model alone, never a verdict on a mean.
 The plateau's causes, read from four verified lists of 250 papers and repositories, are in
 [the plateau note](../internal/RESEARCH-2026-10-22-plateau.md).

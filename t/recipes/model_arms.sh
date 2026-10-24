@@ -6,7 +6,7 @@
 # parts (TAG-dev:DIR+TAG-wider-offN:DIR).
 #   model_arms.sh PFX GGUF IDENT            e.g. model_arms.sh v9-20261022 t/out/v9-20261022-export/model-Q8_0.gguf "$IDENT"
 # First run: v9-20261022 (t/out/model-arms.log), paused by the user on 2026-10-23 at 04:52Z with the two wider grades half
-# done (internal/ROADMAP-LOG.md, 2026-10-23). Run the same command again: it skips what is generated and graded and redoes
+# done (internal/RELEASE-6.0-PLAN.md section 5). Run the same command again: it skips what is generated and graded and redoes
 # only the missing arms. H=tlab selects the tailnet route to the desktop when the cable address does not answer.
 set -u
 PFX=${1:?prefix}; GGUF=${2:?gguf}; IDENT=${3:?identity}

@@ -74,7 +74,7 @@ dawnr's pipeline imports from (the assistant layer, `dawnr_*`, chat, home and th
 | `internal/HANDOFF-2026-09-20-antigravity.md` | **start here** — current state, what is running, the traps that have cost hours |
 | `t/RUN-NEXT-locallm-r12.md` | the next locallm run: blockers, data, recipe, how it is judged |
 | `t/DECONTAMINATION-2026-09-21.md` | the 32 held-out problems with a same-task source in training |
-| `internal/ROADMAP-LOG.md` | the roadmap of record: every hurdle, its measurement, its DONE WHEN |
+| `internal/RELEASE-6.0-PLAN.md` | the roadmap of record since 2026-10-24: the 6.0 release plan, its door and milestones (the old ROADMAP-LOG.md is in git history at a24d20a2) |
 | `ROADMAP.md` | the public face of the same, updated as things finish |
 | `t/RUN-NEXT.md` | the recipe for the next pipeline run, with the number behind each choice |
 | `t/` | the language, the seven lowerings, and every pipeline script |

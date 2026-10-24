@@ -5,11 +5,12 @@
 #   - llama.cpp's prebuilt server, a pinned build (github.com/ggml-org/llama.cpp releases),
 #   - the base model, Qwen3.5-4B at 4 bits (Apache-2.0, huggingface.co/unsloth/Qwen3.5-4B-GGUF), which writes the
 #     independent Python solution the gate checks the specification against,
-#   - the dawnr student at 8 bits (this repository's release, or --student FILE),
+#   - the dawnr model at 8 bits (this repository's latest release, or --model FILE),
 #   - Dafny 4.11.0 (github.com/dafny-lang/dafny releases), the first of the seven provers;
 # and writes a `dawnr` command into ~/.local/bin. The other six provers are optional (see t/README.md).
 #
-#   ./install.sh [--home DIR] [--student FILE_OR_RELEASE_URL] [--build auto|cpu|vulkan|cuda] [--no-dafny]
+#   ./install.sh [--home DIR] [--model FILE_OR_RELEASE_URL] [--release TAG] [--build auto|cpu|vulkan|cuda] [--no-dafny]
+# --release TAG installs the model of one release (for example v6.0.0) instead of the latest one.
 # --build auto (the default) takes CUDA when an NVIDIA GPU answers nvidia-smi (WSL2 included), else the CPU build.
 # Every download is checked against the SHA-256 its publisher lists.
 set -euo pipefail
@@ -24,16 +25,22 @@ BASE_URL=https://huggingface.co/unsloth/Qwen3.5-4B-GGUF/resolve/main/Qwen3.5-4B-
 # conversion, pinned by revision, fetched as one byte range
 LAYER_URL=https://huggingface.co/unsloth/Qwen3.5-4B-MTP-GGUF/resolve/86835bf9949e4d14d6860f7910b1340ad4f271a9/Qwen3.5-4B-Q4_K_M.gguf
 LAYER_RANGE=2753780032-2834975039
-STUDENT_RELEASE=${DAWNR_STUDENT_RELEASE:-https://github.com/trestoncuzzort/dawnr/releases/download/rolling}
+MODEL_RELEASE=${DAWNR_MODEL_RELEASE:-${DAWNR_STUDENT_RELEASE:-https://github.com/trestoncuzzort/dawnr/releases/latest/download}}
 BUILD=auto
-STUDENT=""
+MODEL=""
 DAFNY=1
 
 while [ $# -gt 0 ]; do
   case $1 in
-    --home|--student|--build)
+    --home|--model|--student|--release|--build)
       [ $# -ge 2 ] && [ -n "$2" ] || { printf 'install.sh: %s needs a value. See ./install.sh --help\n' "$1" >&2; exit 2; }
-      case $1 in --home) DAWNR_HOME=$2;; --student) STUDENT=$2;; --build) BUILD=$2;; esac
+      case $1 in
+        --home) DAWNR_HOME=$2;;
+        --model|--student) MODEL=$2;;                      # --student: the earlier name of the same option
+        --release) [[ $2 =~ ^[A-Za-z0-9._-]+$ ]] || { echo "install.sh: --release takes a tag such as v6.0.0" >&2; exit 2; }
+                   MODEL_RELEASE=https://github.com/trestoncuzzort/dawnr/releases/download/$2;;
+        --build) BUILD=$2;;
+      esac
       shift 2;;
     --no-dafny) DAFNY=0; shift;;
     -h|--help) sed -n '2,/^set -euo/p' "$0" | grep '^#'; exit 0;;
@@ -196,28 +203,41 @@ else
   fi
 fi
 rm -f "$DAWNR_HOME/models/Qwen3.5-0.8B-Q4_K_M.gguf"      # the separate drafting model of an earlier installer, replaced by the layer
-if [ -n "$STUDENT" ] && [ -f "$STUDENT" ]; then
+if [ -n "$MODEL" ] && [ -f "$MODEL" ]; then
   # used where it is: a split model is found from its first shard's own name (llama.cpp's gguf-split)
-  STUDENT_GGUF="$(cd "$(dirname "$STUDENT")" && pwd)/$(basename "$STUDENT")"
-  echo "  student: $STUDENT_GGUF"
+  STUDENT_GGUF="$(cd "$(dirname "$MODEL")" && pwd)/$(basename "$MODEL")"
+  echo "  model: $STUDENT_GGUF"
 else
-  # the release carries the student as shards under GitHub's 2 GiB a file, listed with their SHA-256s in a manifest
-  STUDENT_BASE_URL=${STUDENT:-$STUDENT_RELEASE}
-  # A rolling manifest must be fetched afresh. Keep the installed manifest
-  # until every newly selected model file has passed its checksum.
-  MANIFEST_NEXT="$DAWNR_HOME/models/dawnr-student.sha256.next"
-  curl -L --fail --retry 3 -sS -o "$MANIFEST_NEXT" "$STUDENT_BASE_URL/dawnr-student.sha256" \
-    || fail "the student model is not published yet at $STUDENT_BASE_URL; pass --student FILE"
-  "$PY" "$REPO/locallm/install_runtime.py" check-manifest "$MANIFEST_NEXT" \
+  # a release carries the model as shards under GitHub's 2 GiB a file, listed with their SHA-256s in dawnr.sha256;
+  # a release that keeps an earlier model lists the files where that release published them
+  MODEL_BASE_URL=${MODEL:-$MODEL_RELEASE}
+  # The manifest is fetched afresh. The installed one stays until every newly selected file has passed its checksum.
+  MANIFEST_NEXT="$DAWNR_HOME/models/dawnr.sha256.next"
+  mkdir -p "$DAWNR_HOME/models"
+  curl -L --fail --retry 3 -sS -o "$MANIFEST_NEXT" "$MODEL_BASE_URL/dawnr.sha256" 2>/dev/null \
+    || curl -L --fail --retry 3 -sS -o "$MANIFEST_NEXT" "$MODEL_BASE_URL/dawnr-student.sha256" \
+    || fail "no dawnr model is published at $MODEL_BASE_URL; pass --model FILE or --release TAG"
+  ENTRIES=$("$PY" "$REPO/locallm/install_runtime.py" manifest-entries "$MANIFEST_NEXT" "$MODEL_BASE_URL") \
     || fail "the model manifest is invalid; the installed model has not been changed"
   STUDENT_GGUF=""
-  while read -r sum name; do
+  while read -r sum url name; do
     [ -n "$name" ] || continue
-    fetch "$STUDENT_BASE_URL/$name" "$DAWNR_HOME/models/$name" "$sum" || fail "could not download $name"
+    fetch "$url" "$DAWNR_HOME/models/$name" "$sum" || fail "could not download $name"
     [ -z "$STUDENT_GGUF" ] && STUDENT_GGUF="$DAWNR_HOME/models/$name"
-  done < "$MANIFEST_NEXT"
-  [ -n "$STUDENT_GGUF" ] || fail "the student manifest lists no files"
-  mv "$MANIFEST_NEXT" "$DAWNR_HOME/models/dawnr-student.sha256"
+  done <<< "$ENTRIES"
+  [ -n "$STUDENT_GGUF" ] || fail "the model manifest lists no files"
+  # model files that only an earlier manifest listed are the replaced model: remove them once the new one is complete
+  for OLD in "$DAWNR_HOME/models/dawnr.sha256" "$DAWNR_HOME/models/dawnr-student.sha256"; do
+    [ -s "$OLD" ] || continue
+    if OLD_ENTRIES=$("$PY" "$REPO/locallm/install_runtime.py" manifest-entries "$OLD" "$MODEL_BASE_URL" 2>/dev/null); then
+      while read -r _ _ oldname; do
+        [ -n "$oldname" ] || continue
+        grep -q " $oldname\$" <<< "$ENTRIES" || { rm -f "$DAWNR_HOME/models/$oldname"; echo "  removed the replaced $oldname"; }
+      done <<< "$OLD_ENTRIES"
+    fi
+    rm -f "$OLD"
+  done
+  mv "$MANIFEST_NEXT" "$DAWNR_HOME/models/dawnr.sha256"
 fi
 
 if [ "$DAFNY" = 1 ]; then

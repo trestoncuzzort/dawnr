@@ -28,9 +28,10 @@ automatically; the first installation downloads several gigabytes.
 Use `dawnr` for an interactive session, `dawnr help ask` for checked-code
 examples, or the [user guide](docs/USER-GUIDE.md) for setup and troubleshooting.
 You can read `./bin/dawnr --help` before installing anything.
-Downloads use a [single rolling release](release/ROLLING.md); its current
-model is dawnr v5; the candidates since it (v6, v7, v8) did not separate from it under the measured noise of the
-development panel, and v9 is in training (see the model status below).
+Downloads come from the [latest versioned release](release/ROLLING.md), now **dawnr 6.0.0**
+([model card](release/MODEL-CARD-dawnr-6.0.md)). Its model is the one first released on October 5, unchanged; the
+next model is in training as the 6.1.0 candidate and ships only if it beats this one (see the model status below).
+`dawnr version` prints the release a checkout is.
 
 ## What is implemented
 
@@ -113,43 +114,43 @@ existing checkpoint, conversation construction, mid-training, optional supervise
 reporting. Stage records contain input hashes and parameters; changed inputs invalidate downstream work. Its
 chat reinforcement-learning stage currently records a skip. Other experiments have their own drivers and records.
 
-The installer supplies the **student-v5** fine-tuned Qwen3.5-4B for program generation and a quantized base
-Qwen3.5-4B for the assistant and reference answers, served locally through llama.cpp. The repository also contains
-training code for models initialized from random weights. These are separate experimental paths; the installed
-model is described in the [model card](release/MODEL-CARD-student-v5.md).
+The installer supplies the **dawnr 6.0.0** model, a fine-tuned Qwen3.5-4B, for program generation and a quantized
+base Qwen3.5-4B for the assistant and reference answers, served locally through llama.cpp. The repository also
+contains training code for models initialized from random weights. These are separate experimental paths; the
+installed model is described in the [model card](release/MODEL-CARD-dawnr-6.0.md).
 
 Results and corrections are kept in [SCOREBOARD.md](SCOREBOARD.md), [docs/MEASURED.md](docs/MEASURED.md),
 [CORRECTIONS.md](CORRECTIONS.md), and the linked experiment records. They describe particular runs and populations.
 Large weights and many generated run artifacts are downloaded or produced separately from a source checkout.
 
-### Model status, 2026-10-22
+### Model status, 2026-10-24
 
-The installed model is dawnr v5 (the `student-v5` adapter of the model card). Every candidate since then is read
-against it on the development panel: the count that matters is problems that pass their tests, the specification
-gates and all seven kernels from the frozen 17-call route ("clean"), with the all-seven-kernels count beside it.
+Releases are numbered dawnr MAJOR.MINOR.PATCH from 6.0.0. The released model is the October 5 model, carried
+unchanged in dawnr 6.0.0. A candidate is read against it alone: the count that matters is problems that pass their
+tests, the specification gates and all seven kernels from the frozen 17-call route ("clean"), on the 206 development
+problems no training row of the released model touches, two training seeds and three decodes each, paired per
+problem, never a verdict on a mean. The names v6 to v9 below are the names of measured experiments in their records.
 
-| model | what changed | clean / all-seven, one column per decode | record |
+| model | training rows | clean / all-seven on the 95, one column per decode | record |
 |---|---|---|---|
-| dawnr v5, installed | the original 4,189 rows | 6, 4, 6 / 3, 2, 3 | [seed variance](t/PREDICT-2026-10-22-seed-variance.md) |
-| v5 trained again, seed 2 | nothing but the training seed | 4, 5, 4 / 2, 1, 1 | same |
-| v6 corrective | corrected data | 6 / 2 | [v6](t/PREDICT-2026-10-18-v6.md) |
-| v7 | decomposed rows | 4 / 3 | [decomposed rows](t/PREDICT-2026-10-19-decomposed-rows.md) |
-| v8 | 980 self-distilled specification rows | 4, 4, 5 / 1, 2, 2 | [v8](t/PREDICT-2026-10-21-v8-spec-rows.md), [three decodes](t/PREDICT-2026-10-22-seed-variance.md) |
-| v9 | v5's rows plus self-distilled rows kept at a 90% strength floor | in training | [v9](t/PREDICT-2026-10-22-v9-strict-rows.md) |
+| dawnr 6.0.0, released (the October 5 model) | its own 5,095 | 6, 4, 6 / 3, 2, 3; 19.33 clean per decode on the 206 | [card](release/MODEL-CARD-dawnr-6.0.md) |
+| the "seed 2" model | the corrected 4,189, seed 2 | 4, 5, 4 / 2, 1, 1; 14.67 on the 206 | [seed variance](t/PREDICT-2026-10-22-seed-variance.md) |
+| v6 corrective | the corrected 4,089 | 6 / 2 | [v6](t/PREDICT-2026-10-18-v6.md) |
+| v7 | the corrected 4,089 plus decomposed rows | 4 / 3 | [decomposed rows](t/PREDICT-2026-10-19-decomposed-rows.md) |
+| v8 | the corrected 4,089 plus 980 self-distilled specification rows | 4, 4, 5 / 1, 2, 2 | [v8](t/PREDICT-2026-10-21-v8-spec-rows.md) |
+| v9 | the corrected 4,189 plus self-distilled rows kept at a 90% strength floor | 7 / 2, one decode | [v9](t/PREDICT-2026-10-22-v9-strict-rows.md) |
+| 6.1.0 candidate A | the October 5 model's own rows, audited, plus strictly checked specifications and repair examples | in training, seeds 1 and 2 | [registration](t/PREDICT-2026-10-24-release-6.1-candidate-a.md) |
 
-On the 240-problem panel (the 95 plus the wider reader's 145) v5 reads 31, 29, 30 clean over three decodes and its
-seed-2 twin 22, 25, 22 (12 problems up, 18 down, permutation p 0.084): the wider problems carry the route's successes,
-and the training seed's effect holds across decodes, so every candidate is read against both seeds of v5 (mean 26.5
-clean on 240). What the week established: a sampling seed alone moves the clean count by two and a training seed by one to two,
-so none of v6, v7 or v8 is separable from v5 on one decode of one trained model (paired per-problem tests, p above
-0.6 in every case). From v9 on, a candidate is read on two training seeds and three decodes each, paired per
-problem on a 240-problem development panel, and is never called better on a mean. v8's rows did change one thing
-the count cannot see: the three-test gate's precision on the ceiling instrument fell from 0.785 to 0.515, which is
-why v9 keeps only the self-distilled specifications that agree with the reference at 1,000 draws and reject 90% of
-both mutant families. The plateau's causes and the plan from here (teacher specifications from DeepSeek v3.2 and a
-primed 9B for the problems the student fails, repair traces as training data, then reinforcement learning with the
-verifier as the reward) are in [the plateau note](internal/RESEARCH-2026-10-22-plateau.md), with four verified lists
-of 250 papers and repositories each under `internal/research-2026-10-22/`.
+Corrected 2026-10-24: every candidate from v6 to v9, and the "seed 2" model, trained on a corrected set rather than
+the released model's own rows, and the 240-problem panel used to compare them held 34 problems the released model's
+rows had matched ([CORRECTIONS.md](CORRECTIONS.md)). On the 206 unleaked problems the released model and the "seed 2"
+model read 19.33 and 14.67 clean per decode, permutation p 0.15, not separable. That is why 6.1.0 candidate A goes
+back to the released model's own rows. v8's rows did change one thing the count cannot see: the three-test gate's
+precision on the ceiling instrument fell from 0.785 to 0.515, so only self-distilled specifications that agree with
+the reference at 1,000 draws and reject 90% of both mutant families are kept (v9: 0.682). The next increment adds
+specifications written by Cohere's Command A models for the problems the model fails, kept only when the same checks
+pass, used with Cohere's written permission under a Cohere Labs Catalyst Grant. The plan is
+[internal/RELEASE-6.0-PLAN.md](internal/RELEASE-6.0-PLAN.md).
 
 Earlier: the [October 11 GPU retrain](t/PREDICT-2026-10-11-gcp-student.md) trained on 405 rows from the recovered corpus,
 with 18 of 22 new verified answers represented (17 distinct additions). Four new answers overlap held-out
@@ -157,7 +158,7 @@ specification functions and were excluded. The candidate proves **21/33 supplied
 systems; the reference-program control passes all 33. On clean-182 programming problems, **4/182 pass the
 tests, specification gates and all seven kernels** from one greedy answer; five reach at least six kernels.
 The VM and boot disk were deleted after the artifacts were saved. This smaller, single-answer experiment
-does not reproduce v5's training set or evaluation budget; the installed release remains student-v5.
+does not reproduce the October 5 model's training set or evaluation budget; that model remained the release.
 
 ## Install and use
 

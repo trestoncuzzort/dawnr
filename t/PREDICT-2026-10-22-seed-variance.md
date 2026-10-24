@@ -166,3 +166,14 @@ solves about 25 of them cleanly on every decode against 6 of the 95), so the pan
 training seed's effect is not decode noise, since the twin sits six or seven problems under v5 on all three decodes.
 v5 may be a good draw of its own recipe. The protocol's control for every candidate is therefore v5's six decodes (three
 of each seed), mean 26.5 clean on 240, and a candidate must beat that paired per problem.
+
+## Correction (2026-10-24): the training-seed arm changed the rows too
+
+The arm registered above as "v5's exact rows ... with `--seed 2`" trained on `t/out/v6-20261018/training-rows.jsonl`,
+the corrected 4,189-row set (`e14f766f…`, recorded in `t/out/v5s2-20261022/manifest.json`). The published v5 trained
+on 5,095 rows (`848fca29…`, its model card and the recovery receipt of 2026-10-11). The arm therefore changed the data
+and the seed together, and P1's reading ("a training seed alone moves the count by two") is not supported by it; the
+sampling-seed arm (P2) is unaffected. The 240-problem panel holds 34 problems `heldout_audit.wider_flagged()` marks as
+matched by v5's rows; on the other 206 v5 and this model read 19.33 and 14.67 clean per decode, 12 problems up and 8
+down, permutation p 0.15. The control for later candidates is the released model alone, on the 206
+(`internal/RELEASE-6.0-PLAN.md`, section 2; `CORRECTIONS.md`).

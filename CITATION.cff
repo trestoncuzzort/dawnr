@@ -1,11 +1,13 @@
 cff-version: 1.2.0
-title: "locallm: small language models trained only on code seven proof systems agree is correct"
+title: "dawnr: an offline assistant whose code seven proof systems check"
 message: "If you refer to this work, cite it as below."
 type: software
 authors:
   - family-names: Cuzzort
     given-names: Treston Malachi
-repository-code: "https://github.com/trestoncuzzort/locallm"
+repository-code: "https://github.com/trestoncuzzort/dawnr"
+version: "6.0.0"
+date-released: "2026-10-24"
 abstract: >-
   A pipeline that keeps a generated program as training data only when it passes its tests, is proven against
   its specification by Dafny, Verus, SPARK, Frama-C, Lean 4, Rocq and F*, and has a deliberately broken copy of
@@ -17,4 +19,4 @@ keywords:
   - synthetic data
   - program synthesis
   - small language models
-license-url: "https://github.com/trestoncuzzort/locallm/blob/main/LICENSE"
+license-url: "https://github.com/trestoncuzzort/dawnr/blob/main/LICENSE"
