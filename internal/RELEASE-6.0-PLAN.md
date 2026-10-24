@@ -122,14 +122,20 @@ remaining 9B chunks, once the strict check has passed them; it is the 6.2.0 cand
 - **The laptop is for tests:** a quick check when something does not work, and the release's own laptop condition
   (does dawnr run smoothly on this laptop). Decoding candidates, seven-kernel grading, the ceiling and spec-33
   readings, strict checks, teacher lanes and full test suites run elsewhere.
-- **GitHub's CI runs the test suites** on every push (read `gh run list`), and its install-smoke workflow checks a
-  published release on fresh Ubuntu and macOS machines.
-- **Cohere's API writes; the desktop runs the lane around it,** on cores 12 to 23 so training keeps its own
-  (`t/recipes/teacher_cohere_full.sh` with CPUS=12-23 in the clone `~/dawnr-lane`).
-- **The desktop trains** the candidates on its RTX 4080 at 150 W, and, when no cloud machine is available, decodes and
-  grades them after training (its 14 GB cannot hold a seven-kernel grade beside a training run).
-- **Cloud machines on credit** (the AWS credit for CPU grading, Google Cloud's trial for GPU decoding) take decoding
-  and grading as soon as their logins are renewed; both had expired on 2026-10-24.
+- **GitHub runs the CPU work:** test suites on every code push (read `gh run list`), installation checks on fresh
+  Ubuntu and macOS machines, teacher orchestration, strict specification checks, training-row builds and audits,
+  and seven-kernel grading. Private inputs and Cohere outputs are encrypted in transit through release assets
+  and workflow artifacts.
+- **Cohere's API writes the training material.** The full pass and subsequent pilots run from GitHub via
+  `.github/workflows/teacher.yml`; checked outputs feed candidate B under the recorded written permission.
+- **The existing candidate A training may finish on the desktop.** This is the sole exception to the user's
+  later instruction that both local machines are for final testing. No new local training, model decoding or
+  full grading is authorized by this plan.
+- **New training and GPU evaluation run on approved cloud compute.** Google Cloud authentication and unused L4
+  quota were verified on 2026-10-24. A bounded evaluation instance is prepared, but the separate compute-spend
+  question remains unanswered. Launch only after that answer and both candidate A seed adapters are complete;
+  keep the instance unprovisioned while waiting. Cohere's grant allocation does not establish a Google Cloud
+  credit balance.
 - **Large files without the cable** go through a private GitHub repository used only for transfers. With the cable
   plugged in, Tailscale uses it directly.
 

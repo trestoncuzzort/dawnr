@@ -25,7 +25,12 @@ checks, so it is read against the published v5 on equal footing.
 Qwen/Qwen3.5-4B at `851bf6e8`, QLoRA NF4 with double quantisation and bf16 compute, rank 64, alpha 16, dropout 0.1,
 lr 2e-4, 5 epochs, max-len 2845, batch 1, grad-accum 16, trainer `t/student_sft.py` sha `e43c27df…`. Seeds 1 and 2,
 one after the other, on the desktop's RTX 4080 at its 150 W cap (`t/recipes/v8_desktop_train.sh`). Q8_0 export with
-the pinned converter on the laptop; decodes on the laptop's GPU; grades with the seven kernels on the laptop.
+the pinned converter.
+
+**Execution-location amendment, 2026-10-24, before either adapter completed:** the user reserved both local
+machines for final testing, allowing the existing training to finish. Export and decodes move to approved cloud
+GPU compute; seven-kernel grading runs in the frozen image on GitHub. This supersedes the original local
+evaluation schedule. Rows, training recipe, decoding settings, panels and acceptance thresholds are unchanged.
 
 ## Predictions, with the numbers that falsify them (the plan's five conditions)
 
