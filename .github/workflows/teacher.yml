@@ -1,0 +1,99 @@
+name: teacher
+
+# The Cohere teacher on GitHub's machines (Cohere Labs Catalyst Grant; Cohere's written permission of 2026-10-24 to turn
+# outputs that pass our checks into training rows, internal/COHERE-GRANT-UPDATES.md). Cohere's model writes; each job
+# runs the frozen route around it (t/recipes/teacher_cohere_specs.sh through t/recipes/cohere_proxy.py) on one list of
+# training problems the model fails, then the strict check (t/recipes/v9_strict_specs.py: 1,000 draws, both mutant
+# families at 90%). The key is the repository secret COHERE_API_KEY. Each job may spend at most `budget` dollars of the
+# grant (the proxy's ceiling, priced from Cohere's billed units). Inputs (the problem lists, the primer, the APPS data)
+# are assets of the pre-release `eval-inputs`; each job's output is the artifact teacher-SERIES-N.
+on:
+  workflow_dispatch:
+    inputs:
+      lists:
+        description: 'JSON list of problem-list asset names, e.g. ["cohere-a-ids-0.txt", "cohere-a-ids-1.txt"]'
+        required: true
+      model:
+        default: command-a-03-2025
+      think:
+        description: 'thinking budget; 0 leaves the model as it is, -1 turns thinking off'
+        default: '0'
+      max_new:
+        default: '2048'
+      budget:
+        description: 'dollars of the grant each job may spend'
+        default: '80'
+      series:
+        default: cohere-a-20261024
+
+permissions:
+  contents: read
+
+jobs:
+  lane:
+    runs-on: ubuntu-latest
+    timeout-minutes: 360
+    strategy:
+      fail-fast: false
+      max-parallel: 10
+      matrix:
+        list: ${{ fromJSON(inputs.lists) }}
+    env:
+      SERIES: ${{ inputs.series }}-${{ strategy.job-index }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: the problem pool (nl/data is git-lfs; APPS comes from the inputs)
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          git lfs install --local
+          git lfs pull --include="nl/data/*.jsonl.gz"
+          gh release download eval-inputs -p apps_raw_train.jsonl.gz -D nl/data
+          gh release download eval-inputs -p teacher-primer.md -D t/out/v5-repair-20261021
+          gh release download eval-inputs -p "${{ matrix.list }}" -D out/r61
+      - name: the sandbox the route runs Python in
+        run: |
+          sudo apt-get update -q
+          sudo apt-get install -y bubblewrap
+          sudo bash t/apparmor-bwrap.sh
+      - name: the grant key, for this job only
+        env:
+          KEY: ${{ secrets.COHERE_API_KEY }}
+        run: |
+          mkdir -p ~/.config/cohere
+          printf '%s' "$KEY" > ~/.config/cohere/api_key
+          chmod 600 ~/.config/cohere/api_key
+          : > ~/.config/cohere/ledger.jsonl
+      - name: the lane
+        env:
+          D: ${{ github.workspace }}
+          V: python3
+          COHERE_CEILING_USD: ${{ inputs.budget }}
+          IDS: out/r61/${{ matrix.list }}
+          MODEL: ${{ inputs.model }}
+          THINK: ${{ inputs.think }}
+          MAX_NEW: ${{ inputs.max_new }}
+          PORT: '8863'
+          CONCURRENCY: '8'
+        run: bash t/recipes/teacher_cohere_specs.sh; tail -5 "out/r61/$SERIES/lane.log"
+      - name: the strict check
+        run: |
+          cat t/out/spec-experiment/"$SERIES"-tc*/kept-specs.jsonl > "out/r61/$SERIES-kept.jsonl" 2>/dev/null || true
+          if [ -s "out/r61/$SERIES-kept.jsonl" ]; then
+            PYTHONPATH=t python3 t/recipes/v9_strict_specs.py --kept "out/r61/$SERIES-kept.jsonl" --pool v5 --draws 1000 \
+              --floor 0.9 --jobs 4 --out "out/r61/$SERIES-strict-kept.jsonl" --report "out/r61/$SERIES-strict.json" \
+              --dropped "out/r61/$SERIES-strict-dropped.jsonl"
+          fi
+          cp ~/.config/cohere/ledger.jsonl "out/r61/$SERIES-ledger.jsonl"
+          python3 -c "import json,sys; print('spent', round(sum(json.loads(l)['usd'] for l in open(sys.argv[1]) if l.strip()), 2))" "out/r61/$SERIES-ledger.jsonl"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: teacher-${{ env.SERIES }}
+          path: |
+            out/r61/${{ env.SERIES }}*
+            t/out/spec-experiment/${{ env.SERIES }}-tc*/kept-specs.jsonl
+            t/out/spec-experiment/${{ env.SERIES }}-tc*/scored-specs.jsonl
+            t/out/spec-experiment/${{ env.SERIES }}-tc*/spec_first.json
+            t/out/laptop-runs/${{ env.SERIES }}-tc*.route.log
+          retention-days: 30
