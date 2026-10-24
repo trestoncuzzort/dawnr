@@ -84,6 +84,15 @@ def test_over_budget_never_yields_negative_or_extra_allocation(teacher):
     assert result["unallocated_usd"] == "0"
 
 
+def test_free_calls_keep_their_evidence_without_an_infinite_dollar_yield(teacher):
+    root, directory = teacher
+    write(directory / "pass-0-ledger.jsonl", [{"usd": 0}, {"usd": 0}], lines=True)
+    result, rows, _ = report.collect(root, ["1", "2"], 1, [])
+    assert result["calls"] == 2 and len(rows) == 1
+    assert result["run_usd"] == "0" and result["unallocated_usd"] == "950"
+    assert result["strict_kept_problems_per_100_usd"] is None
+
+
 @pytest.mark.parametrize("amount", ["NaN", "Infinity", "-1"])
 def test_invalid_charges_are_refused(teacher, amount):
     root, directory = teacher

@@ -34,7 +34,10 @@ LEDGER = os.path.expanduser("~/.config/cohere/ledger.jsonl")
 # make the ledger overstate spend, so the ceiling trips early rather than late. Read the real balance in the dashboard.
 PRICE = {"command-a-03-2025": (2.5, 10), "command-a-reasoning-08-2025": (5, 20), "command-a-plus-05-2026": (5, 20),
          "command-r-plus-08-2024": (2.5, 10), "command-r-08-2024": (0.15, 0.6), "command-r7b-12-2024": (0.0375, 0.15),
-         "c4ai-aya-expanse-32b": (0.5, 1.5)}
+         "c4ai-aya-expanse-32b": (0.5, 1.5),
+         # API evaluation is listed as free within rate limits on 2026-10-24; paid Model Vault is separate.
+         # https://docs.cohere.com/docs/north-mini-code-1.0
+         "north-mini-code-1-0": (0, 0)}
 
 
 def to_cohere(body: dict, model: str, think: int) -> dict:
