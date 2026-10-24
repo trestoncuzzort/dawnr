@@ -12,7 +12,11 @@ the replaced manifest listed once the new model is complete.
 
 ## Status, 24 October 2026
 
-**dawnr 6.0.0** (tag `v6.0.0`) is the current release. Its model is the October 5 model, byte for byte, under version
+**dawnr 6.0.1** (tag `v6.0.1`) is the current release: 6.0.0 with `dawnr ask` about twice as fast from a cold
+start (the provers stop at an answer all seven prove) and all seven provers found however dawnr is started. Its
+manifest lists the model files 6.0.0 published, so nothing was uploaded twice.
+
+**dawnr 6.0.0** (tag `v6.0.0`) was the first versioned release. Its model is the October 5 model, byte for byte, under version
 names ([card](MODEL-CARD-dawnr-6.0.md)); what is new is the application at that tag, the version it carries, the
 installer, and the correction of the October 22 to 23 readings ([CORRECTIONS.md](../CORRECTIONS.md)). The 6.1.0
 candidate is in training on the October 5 model's own audited rows plus strictly checked specifications and repair

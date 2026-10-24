@@ -60,3 +60,18 @@ https://github.com/trestoncuzzort/dawnr/releases/tag/v6.0.0. It keeps the same m
 installs, fixes a bug our laptop test found, and corrects a measurement mistake we found in our own records. The next
 model is training now. We also started using Command A as a teacher. It writes specs for problems our model gets
 wrong and our provers keep only the ones that check out. Next update comes with 6.1.0.
+
+## 2026-10-24: release dawnr 6.0.1
+
+- An application release on the same model: `dawnr ask` about twice as fast from a cold start on the laptop the release
+  is checked on (the provers stop at an answer all seven prove), and all seven provers found however dawnr is started.
+- The Cohere teacher moved to GitHub's machines: Cohere's model writes, our checks run around it in parallel jobs, each
+  with its own budget on the grant ledger. Command A Reasoning and Command A+ turned out to be limited to 20 requests
+  a minute and 1,000 calls a month, so the full run uses Command A.
+
+Draft to Brittawnya (send when 6.0.1 is live):
+
+Hi Brittawnya. Small update. dawnr 6.0.1 is out. Same model as 6.0.0 but asking it for a checked function is about
+twice as fast now. We also moved our Command A runs to cloud machines so they run in parallel. One question if you know:
+Command A Reasoning gave us the best results per dollar but it is capped at 20 requests a minute and 1,000 calls a month.
+Is there a way to raise that for the grant?

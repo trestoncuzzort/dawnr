@@ -28,7 +28,7 @@ automatically; the first installation downloads several gigabytes.
 Use `dawnr` for an interactive session, `dawnr help ask` for checked-code
 examples, or the [user guide](docs/USER-GUIDE.md) for setup and troubleshooting.
 You can read `./bin/dawnr --help` before installing anything.
-Downloads come from the [latest versioned release](release/ROLLING.md), now **dawnr 6.0.0**
+Downloads come from the [latest versioned release](release/ROLLING.md), now **dawnr 6.0.1**
 ([model card](release/MODEL-CARD-dawnr-6.0.md)). Its model is the one first released on October 5, unchanged; the
 next model is in training as the 6.1.0 candidate and ships only if it beats this one (see the model status below).
 `dawnr version` prints the release a checkout is.

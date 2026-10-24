@@ -1,4 +1,6 @@
-# dawnr 6.0.0
+# dawnr 6.0.0 and 6.0.1
+
+*6.0.1 (2026-10-24) carries the same model; its changes are in the application (release notes, `release/ROLLING.md`).*
 
 dawnr 6.0.0 is the first release numbered by version. Earlier releases were named "student" and "vN"; from here on a
 release is dawnr MAJOR.MINOR.PATCH, and every later one is measured against this one before it ships.
