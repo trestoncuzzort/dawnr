@@ -179,6 +179,13 @@ blocks as the base, with none added by the Cohere rows. Those inherited blocks r
 audit, not evidence of a successful check. Counts and hashes, without training text:
 `release/evidence/cohere-pilot-rows-2026-10-24.json`. This is data preparation; no new model has trained from it.
 
+The given-specification condition can now be measured off the person's machines too: `spec33.sh LABEL GGUF ask`
+generates answers on a GPU host selected by `D` and `L`; `.github/workflows/spec33.yml` grades the encrypted,
+complete answer set in the existing pinned kernel image. It refuses a changed 33-question panel, missing or
+duplicate answers, mixed model/prompt metadata, or an incomplete kernel table. Its control is registered in
+`t/PREDICT-2026-10-24-spec33-cloud.md`: replay the saved October 11 v5 answers and predict their previous 28
+all-seven count. That control does not change the release requirement of 27 and does not read the held-out 182.
+
 ## 5b. Releases so far and the next increments
 
 - **6.0.0, published 2026-10-24 21:15Z** (tag `v6.0.0` at `b03f6ce5`): the October 5 model under version names, versioned
