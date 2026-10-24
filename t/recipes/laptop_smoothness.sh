@@ -6,6 +6,9 @@
 #   LABEL=6.0.0 OUT=release/evidence/laptop-6.0.0-2026-10-24.json bash t/recipes/laptop_smoothness.sh
 #   DAWNR_HOME=/path/with/a/candidate/env LABEL=6.1.0-candidate ... (a home whose env names another model)
 set -u
+# a user unit starts with PATH=/usr/local/bin:/usr/bin, where Lean and Rust (which Verus needs) are not; the person's
+# shell has ~/.local/bin, and a measurement without it reads two provers as undecided (2026-10-24)
+export PATH=$HOME/.local/bin:$HOME/.cargo/bin:$HOME/.elan/bin:$PATH
 REPO=$(cd "$(dirname "$0")/../.." && pwd)
 LABEL=${LABEL:?label}; OUT=${OUT:?output json}; DAWNR=${DAWNR:-$REPO/bin/dawnr}
 W=$(mktemp -d); SAMPLES=$W/samples.tsv; TIMES=$W/times.tsv

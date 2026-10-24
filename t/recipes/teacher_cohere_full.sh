@@ -18,6 +18,6 @@ curl -sf http://127.0.0.1:$PORT/health || { echo "proxy not up"; exit 1; }
 for k in $(seq 0 $((LANES - 1))); do
   systemd-run --user --unit dawnr-cohere-lane-$k --collect -p WorkingDirectory=$D "${AFF[@]}" --setenv=V=$V --setenv=MAX_NEW=$MAX_NEW --setenv=D=$D \
     --setenv=SHARED_PROXY=1 --setenv=PORT=$PORT --setenv=MODEL=$MODEL --setenv=THINK=$THINK --setenv=CONCURRENCY=8 \
-    --setenv=IDS=out/r61/cohere-full-ids-$k.txt --setenv=SERIES=cohere-full-$SHORT-$k \
+    --setenv=IDS=${IDPREFIX:-out/r61/cohere-full-ids}-$k.txt --setenv=SERIES=cohere-full-$SHORT-$k \
     /usr/bin/bash t/recipes/teacher_cohere_specs.sh
 done
