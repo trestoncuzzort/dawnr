@@ -7,7 +7,7 @@
 #   laptop_route.sh TAG GGUF IDENT [route args...]      env: SEED=<cache dir to seed from> PARALLEL=4 CONCURRENCY=4
 set -u
 TAG=${1:?tag}; GGUF=${2:?gguf}; IDENT=${3:?identity}; shift 3
-D=/home/t/Projects/dawnr; L=/home/t/.local/share/dawnr/llama.cpp; A=$D/t/out/laptop-runs; PORT=${PORT:-8851}
+D=${D:-/home/t/Projects/dawnr}; L=${L:-/home/t/.local/share/dawnr/llama.cpp}; A=$D/t/out/laptop-runs; PORT=${PORT:-8851}
 PARALLEL=${PARALLEL:-4}; CONCURRENCY=${CONCURRENCY:-4}; BATCH=${BATCH:-16}; SEED=${SEED:-}; SLOT_CTX=${SLOT_CTX:-4096}; POOL=${POOL:-v5}   # the wider reader's problems live in pool v7
 IDS=${IDS:-$D/t/out/v6-20261018/dev-95.txt}; PYTHON_ATTEMPTS=${PYTHON_ATTEMPTS:-3}
 PYARG=""; [ "$PYTHON_ATTEMPTS" != 0 ] && PYARG="--python $PYTHON_ATTEMPTS"

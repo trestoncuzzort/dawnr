@@ -48,11 +48,15 @@ card, which cites this permission.
 - Cohere's part so far: Rerank 3.5 in the research search, and a head-to-head pilot of Command A Reasoning and
   Command A+ as teachers on 50 problems the model fails. The better one by checked specifications per dollar writes
   for the remaining failed problems, and the survivors go into the 6.2.0 candidate.
-- Spend so far: see the ledger line under this entry when it is sent.
+- Released 2026-10-24 21:15Z: https://github.com/trestoncuzzort/dawnr/releases/tag/v6.0.0 (the latest release; the
+  installer takes it by default). The laptop check: every README command does its work; one bug it found (`dawnr do`
+  stopping when a folder listing outgrew the model's context) is fixed in this release.
+- Spend so far (the grant ledger, conservative prices): about $75, nearly all of it the teacher pilots.
 
 Draft to Brittawnya (send when the release page is live):
 
-Hi Brittawnya. Update on dawnr like you asked. We just put out dawnr 6.0.0, our first versioned release. It keeps the
-same model as before but cleans up the installs and fixes a measurement mistake we found in our own records. The next
+Hi Brittawnya. Update on dawnr like you asked. We just put out dawnr 6.0.0, our first versioned release:
+https://github.com/trestoncuzzort/dawnr/releases/tag/v6.0.0. It keeps the same model as before but cleans up the
+installs, fixes a bug our laptop test found, and corrects a measurement mistake we found in our own records. The next
 model is training now. We also started using Command A as a teacher. It writes specs for problems our model gets
 wrong and our provers keep only the ones that check out. Next update comes with 6.1.0.
