@@ -94,8 +94,9 @@ skipped) and audited with `t/heldout_audit.py --panels --refuse-gpl`:**
 
 - v9's strict self-distilled specifications: 985 candidates over 536 problems that passed the strict check.
 - The teachers' strict-kept specifications: DeepSeek v3.2 on Bedrock and the primed 9B, 468 over 255 problems
-  (`out/v10/teacher-strict-kept.jsonl`), plus the 9B chunks written after 2026-10-22 16:17Z once
-  `t/recipes/v9_strict_specs.py` has checked them.
+  (`out/v10/teacher-strict-kept.jsonl`), plus the four remaining 9B chunks (`teacher9b-20261022c-tc06` through
+  `tc09`) once `t/recipes/v9_strict_specs.py` has checked them. The saved strict report already lists the chunks
+  through `tc05`; its timestamp is 2026-10-22 21:17Z. The earlier 16:17Z cutoff in this plan was stale.
 - The repair traces: 232 from the student's own dropped candidates and 293 from the teachers'.
 - **The Cohere teacher (new, written permission 2026-10-24).** `command-a-reasoning-08-2025` and
   `command-a-plus-05-2026` piloted head to head on the same 50 failed training problems with the DeepSeek lane's
@@ -108,8 +109,8 @@ skipped) and audited with `t/heldout_audit.py --panels --refuse-gpl`:**
 
 **Which candidate has what.** Candidate A (registered and training since 2026-10-24,
 `t/PREDICT-2026-10-24-release-6.1-candidate-a.md`, 6,727 rows) has the base, v9's and the earlier teachers'
-strictly kept specifications and the repair traces. Candidate B adds the Cohere teacher's rows and the 9B chunks
-written after 16:17Z on 10/22, once the strict check has passed them; it is the 6.2.0 candidate.
+strictly kept specifications and the repair traces. Candidate B adds the Cohere teacher's rows and the four
+remaining 9B chunks, once the strict check has passed them; it is the 6.2.0 candidate.
 
 **Recipe.** v5's, unchanged: Qwen/Qwen3.5-4B at 851bf6e8, QLoRA NF4, rank 64, alpha 16, dropout 0.1, lr 2e-4,
 5 epochs, max-len 2845, batch 1, grad-accum 16, `t/student_sft.py` at its pinned digest, seeds 1 and 2.
@@ -186,6 +187,15 @@ duplicate answers, mixed model/prompt metadata, or an incomplete kernel table. I
 `t/PREDICT-2026-10-24-spec33-cloud.md`: replay the saved October 11 v5 answers and predict their previous 28
 all-seven count. That control does not change the release requirement of 27 and does not read the held-out 182.
 
+The remaining 9B inputs contain 30 candidates on 18 problems, 15 not already covered by candidate A. Their
+concatenated SHA-256 is `81d04eaaf849f85f7e279fb7455fbeb62fca75f07523047560e3353014b03355`;
+all four request-cache identities name the same Qwen3.5-9B Q4_K_M model (`8c4cc24f…`) and pinned llama.cpp server.
+`prepare-rows.yml` can now accept a pinned `raw_kept` source: it refuses non-training IDs, runs the existing
+1,000-draw/0.9 strict check, validates that evidence, then builds rows and audits the whole dataset. The next
+data build starts from the 6,762-row Cohere-pilot integration dataset. Prediction before dispatch: at least one
+additional row and zero current-panel/GPL-lineage findings. A zero or any finding falsifies the respective
+prediction. No teacher is restarted and no new model call is made for this check.
+
 ## 5b. Releases so far and the next increments
 
 - **6.0.0, published 2026-10-24 21:15Z** (tag `v6.0.0` at `b03f6ce5`): the October 5 model under version names, versioned
@@ -214,7 +224,7 @@ Nothing below restarts until the user says so.
   disabled with the finished v5s2, v8 and v9 units. It is not resumed: its comparison was built on the mixed control.
   The out/ backup of 2026-10-23 is at `~/dawnr-out-backup-2026-10-23/` there.
 - **Laptop:** the v9 arms driver, two native wider grades (`v9-20261022-wider-off1000` and `-off2000`; no resume,
-  about seventy minutes each), the 9B teacher lane (131 kept specifications; those after 16:17Z on 10/22 not yet
+  about seventy minutes each), the 9B teacher lane (131 kept specifications; the final four chunks not yet
   strict-checked) and the tandem waiter were stopped.
 - **v9's arms in hand:** dev (7 clean, 2 all-seven on one decode), seedoff1000, seedoff2000, wider-off0. Ceiling
   read 2026-10-23: gate precision 0.682; a reference-correct specification within five candidates on 25 problems

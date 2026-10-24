@@ -96,3 +96,41 @@ def test_success_retains_source_and_requires_the_named_audit_flags(inputs, tmp_p
     assert rows[1]["tag"] == "cohere:command-a:pilot"
     assert receipt["output"]["rows"] == 2 and receipt["audit"]["flagged"] == 0
     assert (out / "COMPLETE").read_text().strip() == prep.digest(out / "training-rows.jsonl")
+
+
+def raw_source(inputs):
+    manifest = json.loads(inputs.read_text())
+    source = manifest["sources"][0]
+    source["raw_kept"] = source.pop("kept")
+    source.pop("report")
+    inputs.write_text(json.dumps(manifest))
+
+
+def test_raw_candidates_outside_training_are_refused_before_reference_checks(inputs, tmp_path, monkeypatch):
+    import graded_pool
+    raw_source(inputs)
+    monkeypatch.setattr(prep.v8_spec_rows.se, "pool", lambda _: {})
+    monkeypatch.setattr(graded_pool, "training_ids", lambda *_: set())
+    def forbidden(*args, **kwargs):
+        raise AssertionError("no reference check may run on a held-out problem")
+    monkeypatch.setattr(prep.subprocess, "run", forbidden)
+    with pytest.raises(ValueError, match="permitted training side"):
+        prep.build(inputs, tmp_path / "result", 2)
+
+
+def test_raw_candidates_cannot_bypass_a_failed_strict_check(inputs, tmp_path, monkeypatch):
+    import graded_pool
+    raw_source(inputs)
+    monkeypatch.setattr(prep.v8_spec_rows.se, "pool", lambda _: {})
+    monkeypatch.setattr(graded_pool, "training_ids", lambda *_: {7})
+    def strict(command, **kwargs):
+        assert command[1].endswith("v9_strict_specs.py")
+        assert command[command.index("--draws") + 1] == "1000"
+        assert command[command.index("--floor") + 1] == "0.9"
+        raise subprocess.CalledProcessError(1, command)
+    monkeypatch.setattr(prep.subprocess, "run", strict)
+    out = tmp_path / "result"
+    with pytest.raises(subprocess.CalledProcessError):
+        prep.build(inputs, out, 2)
+    assert not (out / "COMPLETE").exists()
+    assert not (out / "training-rows.jsonl").exists()
