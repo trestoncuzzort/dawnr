@@ -1,0 +1,59 @@
+{
+  "label": "6.0.0",
+  "version": "6.0.0",
+  "commands": {
+    "doctor": {
+      "seconds": 1.0,
+      "rc": 0,
+      "ok": true
+    },
+    "ask": {
+      "seconds": 122.0,
+      "rc": 0,
+      "ok": true
+    },
+    "check": {
+      "seconds": 21.4,
+      "rc": 0,
+      "ok": true
+    },
+    "do": {
+      "seconds": 29.4,
+      "rc": 0,
+      "ok": true
+    },
+    "cite": {
+      "seconds": 2.3,
+      "rc": 0,
+      "ok": true
+    },
+    "calc": {
+      "seconds": 3.9,
+      "rc": 0,
+      "ok": true
+    }
+  },
+  "median_seconds": 12.6,
+  "all_succeeded": true,
+  "memory_total_gib": 15.3,
+  "memory_in_use_before_gib": 3.37,
+  "memory_in_use_peak_gib": 8.87,
+  "gpu_temperature_max_c": 64,
+  "gpu_sw_thermal_slowdown_seen": false,
+  "samples": 170,
+  "doctor": [
+    "dawnr 6.0.0 at ~/Projects/dawnr, data in ~/.local/share/dawnr",
+    "python: Python 3.14.7",
+    "model server: version: 0.5.0-dev (build 11342, commit f1cee9941) (cuda build)",
+    "model: dawnr-student-00001-of-00003.gguf (1.8G)"
+  ],
+  "outputs": {
+    "doctor": "-4B-Q4_K_M-mtp.gguf (2.7G)\ncard: NVIDIA GeForce RTX 5050 Laptop GPU, PCIe generation 2 of 5 now\nPDFs: read with pdftotext\nsandbox: bubblewrap, runs\nprovers: 6 of 7 found\n  dafny: dafny 4.11.0+fcb2042d6d043a2634f0854338c08feeaaaf4ae2\n  verus: verus ?\n  spark: gnatprove FSF 16.1.0 / Why3 for gnatprove version 1.8.2+git\n  framac: frama-c 33.0 (Arsenic) / alt-ergo 2.4.3-free\n  lean: not installed\n  rocq: The Rocq Prover, version 9.2\n  fstar: F* 2026.08.30 / platform=Linux_x86_64 / system=Unix / compiler=OCaml 5.3.0 / date=2026-08-30 16:26:18 +0000 / commit=2b82aefeff37f78509c876844954b07fcb8813ff\n",
+    "ask": ", 0)):\n        raise TypeError('larger: `y` must be an integer; nothing was proved for anything else')\n    _t_result = _t_core(x, y)\n    return _t_result\n\ndef _t_core(x, y):\n    if (x >= y):\n        r = x\n    else:\n        r = y\n    return r\n\ndef _t_ints(v, depth):\n    if depth == 0:\n        return isinstance(v, int) and not isinstance(v, bool)\n    return isinstance(v, (list, tuple)) and all(_t_ints(x, depth - 1) for x in v)\n\nPython written to <work>/larger.py\n\nCertificate written to <work>/larger.cert.json; `dawnr check` replays it on any machine, without the model.\n",
+    "check": "is machine: proved by dafny, framac, fstar, rocq, spark, the sabotaged twin refuted; not finished here: verus (tool_error / tool_error)\n  ok               the Python handed back: the same answer as the proved program on 202 inputs\n  ok               what was said of the specification: the specification holds at the recorded Python's answer on 100 drawn inputs and rejects 100% of the wrong outputs tried\n\nWhat it establishes: `larger` meets\n  ensures r >= x\n  ensures r >= y\n  ensures r == x or r == y\nIt does not establish that this specification is what was meant; that is the reader's to judge.\n",
+    "do": "ta for local LLMs\n\n### 7. **nl/** - Dutch language module\n- Language-specific content\n\n### 8. **out/** - Output directory\n- Generated outputs and results\n\n### 9. **t/** - Tests directory\n- Test files\n\n### 10. **tup/** - TUP (Type Universal Package) directory\n- Package metadata\n\nThe repository appears to be focused on building an AI assistant system (Dawnr) with capabilities for file system operations, agent execution, learning, memory management, and drone control (PX4).\n[Nothing was changed.]\n[3 model calls, 20,603 tokens read (11,703 from the cache), 947 written, 68 tokens a second, 18.9 s]\n",
+    "cite": "A receipt identifies the artifacts needed to repeat a bounded comparison; it does not embed those artifacts or prove equivalence outside the compared inputs.\n    \"A receipt identifies the artifacts needed to repeat a bounded comparison; it does not embed those artifacts or prove equivalence outside the compared inputs.\"\n    (README.md, part 2)\n",
+    "calc": "ANSWER: 180\n\n  samples_per_second = 12\n  duration_seconds = 15\n  total_samples = samples_per_second * duration_seconds\n  answer = total_samples\n\nThe model reasoned its way to 180 in words; this working, written separately and computed exactly, gives the same (3 of 3 workings do).\nRead the working: it is the reading of your question that was computed.\n"
+  },
+  "machine": "RTX 5050 Laptop GPU 8 GB, 16 cores, 15 GB memory; cold start (models stopped before the first command)"
+}
