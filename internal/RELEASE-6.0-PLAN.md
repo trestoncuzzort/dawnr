@@ -172,6 +172,13 @@ outputs cover 12 distinct problems. Prediction: at least one added row and zero 
 findings. Zero added rows or any such finding falsifies the corresponding prediction. This build tests the
 data path; candidate B's final data hash is registered after the full teacher pass and before training.
 
+The integration build passed on GitHub, run `40140570064`: 35 added rows over 12 problems (12 Python rows and 23
+specification rows), 6,762 total, SHA-256 `818f164a…`; both predictions held. The base's 6,727 rows are unchanged.
+The whole-dataset audit reports zero current-panel or GPL-lineage findings and the same 339 unparsed program
+blocks as the base, with none added by the Cohere rows. Those inherited blocks remain a limit of the behavioral
+audit, not evidence of a successful check. Counts and hashes, without training text:
+`release/evidence/cohere-pilot-rows-2026-10-24.json`. This is data preparation; no new model has trained from it.
+
 ## 5b. Releases so far and the next increments
 
 - **6.0.0, published 2026-10-24 21:15Z** (tag `v6.0.0` at `b03f6ce5`): the October 5 model under version names, versioned

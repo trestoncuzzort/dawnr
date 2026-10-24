@@ -1,0 +1,76 @@
+{
+  "kind": "Cohere pilot training-data integration, not a trained model result",
+  "workflow_run": "https://github.com/trestoncuzzort/dawnr/actions/runs/40140570064",
+  "revision": "4986708826d05d077febbd28cb3ba7a83067aeb6",
+  "base": {
+    "rows": 6727,
+    "sha256": "2c2eff287493fd8774d1a71bc9e799ca4cc40f21fd9a1b082c17f8206f7351d8",
+    "rows_preserved": true
+  },
+  "added": {
+    "rows": 35,
+    "problems": 12,
+    "by_source": {
+      "python": 12,
+      "spec": 23
+    },
+    "by_teacher": [
+      {
+        "tag": "cohere:command-a-03-2025:pilot-20261024",
+        "kept_sha256": "33a082d033e36f969e1fa4cf6fb0e42d5d284b973af6d130d63b2530800d35b6",
+        "rows": 13,
+        "by source": {
+          "python": 4,
+          "spec": 9
+        },
+        "problems": 4
+      },
+      {
+        "tag": "cohere:command-a-reasoning-08-2025:pilot-20261024",
+        "kept_sha256": "dd36c7ddebd87341a3f31c95b8fcb72c133ef5e23d885ffa759d95d7827dc91d",
+        "rows": 20,
+        "by source": {
+          "python": 7,
+          "spec": 13
+        },
+        "problems": 7
+      },
+      {
+        "tag": "cohere:command-a-plus-05-2026:pilot-20261024",
+        "kept_sha256": "f477c78ddab603c19208a636e2a8b6d9540c72320d430678630cf22e5a7be21d",
+        "rows": 2,
+        "by source": {
+          "python": 1,
+          "spec": 1
+        },
+        "problems": 1
+      }
+    ]
+  },
+  "output": {
+    "filename": "training-rows.jsonl",
+    "rows": 6762,
+    "sha256": "818f164aa23fc46ca6dfbf19b1494541973f2f99bd6e0f7fdb8a6e0d3bb9b32f"
+  },
+  "audit": {
+    "rows": 6762,
+    "flagged": 0,
+    "unparsed_program_blocks": 339,
+    "base_unparsed_program_blocks": 339,
+    "new_unparsed_program_blocks": 0,
+    "limitation": "The unchanged base contains 339 program blocks the behavioral audit could not parse. Lineage checks still inspect all rows.",
+    "panels": true,
+    "refuse_gpl": true,
+    "sha256": "7e1a69de011b8d4f5d393cdea5df52dceb9a324800882c2a27368eb087035b85"
+  },
+  "artifact": {
+    "sha256": "d901d0dc8f80edb9124155bc16e3010dd6313a30a21743209d34d0207f84de3f",
+    "encrypted": true,
+    "training_rows_published": false
+  },
+  "prediction": {
+    "added_at_least_one_row": true,
+    "zero_current_panel_or_gpl_findings": true
+  },
+  "training_started": false
+}
