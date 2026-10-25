@@ -20,6 +20,8 @@ permissions:
 
 env:
   ENGINE_COMMIT: d13d11d01f8f50687ef645d60aa08c870d664b84
+  # Retain the exact code measured by fixed-answer control 40141581001, including its recorded limitations.
+  GRADER_COMMIT: 878a5cb322edb4fdf6e40f0b6fb556878cac5486
 
 jobs:
   grade:
@@ -31,6 +33,8 @@ jobs:
       LABEL: ${{ inputs.label }}
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ env.GRADER_COMMIT }}
       - name: validate inputs and make room for the image
         run: |
           [[ "$INPUT_ASSET" =~ ^[A-Za-z0-9][A-Za-z0-9._-]*\.tar\.gz\.enc$ ]]

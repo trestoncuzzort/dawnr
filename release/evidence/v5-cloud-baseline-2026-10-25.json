@@ -1,0 +1,85 @@
+{
+  "kind": "Released v5 same-grader baseline; no candidate comparison",
+  "workflow_run": "https://github.com/trestoncuzzort/dawnr/actions/runs/40134628181",
+  "revision": "01c94ef5509fc51ab6484c1350c1cb9f8504e459",
+  "panel": {
+    "path": "t/out/release-6.0/dev-206.txt",
+    "sha256": "eb333196e9d6b15da83befa5b8477e5ce11d2748fab8fc7173d605f1c0286426",
+    "problems": 206
+  },
+  "decodes": [
+    {
+      "seed_offset": 0,
+      "tags": [
+        "v5-20261021-dev-desktop-r2",
+        "v5-20261022-wider-off0"
+      ],
+      "clean": 20,
+      "all_seven": 9
+    },
+    {
+      "seed_offset": 1000,
+      "tags": [
+        "v5-20261022-seedoff1000",
+        "v5-20261022-wider-off1000"
+      ],
+      "clean": 19,
+      "all_seven": 8
+    },
+    {
+      "seed_offset": 2000,
+      "tags": [
+        "v5-20261022-seedoff2000",
+        "v5-20261022-wider-off2000"
+      ],
+      "clean": 19,
+      "all_seven": 9
+    }
+  ],
+  "all_six_original_panel_receipts_validated": true,
+  "same_evaluator_excluding_panel_paths": true,
+  "evaluator_sha256": "4ed929157299a15f261e209dcff7b82d58c3af79881331dadf94c9540e4c91f8",
+  "artifacts": [
+    {
+      "id": 12580086047,
+      "name": "grade-v5-20261022-wider-off2000",
+      "digest": "sha256:0b9f7c93750b679652a0c170ccc0caff81be597b4d98cf56e72c91c27cc12774",
+      "head_sha": "01c94ef5509fc51ab6484c1350c1cb9f8504e459"
+    },
+    {
+      "id": 12579789790,
+      "name": "grade-v5-20261022-wider-off0",
+      "digest": "sha256:f9c27e6f84acbc41b6f888e9db87bd4ff20c745d601654bf1a6d97359fbe3023",
+      "head_sha": "01c94ef5509fc51ab6484c1350c1cb9f8504e459"
+    },
+    {
+      "id": 12579474372,
+      "name": "grade-v5-20261022-wider-off1000",
+      "digest": "sha256:bec6318c054b649a694e33bc730d1c5b87a6833004885e0545eab2d56d8d72fe",
+      "head_sha": "01c94ef5509fc51ab6484c1350c1cb9f8504e459"
+    },
+    {
+      "id": 12578215283,
+      "name": "grade-v5-20261021-dev-desktop-r2",
+      "digest": "sha256:ee864de2e876845563cc767921b2728924449adcf4c1b0f1615d715cd3532d1c",
+      "head_sha": "01c94ef5509fc51ab6484c1350c1cb9f8504e459"
+    },
+    {
+      "id": 12577468454,
+      "name": "grade-v5-20261022-seedoff1000",
+      "digest": "sha256:8ac0c2373f968fe91a45e0e242223f11e8c5c36efcd6bcba7d619d53b080a4f5",
+      "head_sha": "01c94ef5509fc51ab6484c1350c1cb9f8504e459"
+    },
+    {
+      "id": 12577463659,
+      "name": "grade-v5-20261022-seedoff2000",
+      "digest": "sha256:e5788640d9468c62b1d3e544569f2a4c1beec799b60f8b523084f9d8ab58bdd7",
+      "head_sha": "01c94ef5509fc51ab6484c1350c1cb9f8504e459"
+    }
+  ],
+  "mean": {
+    "clean": 19.333333333333332,
+    "all_seven": 8.666666666666666
+  },
+  "source_tasks_verified": 182
+}

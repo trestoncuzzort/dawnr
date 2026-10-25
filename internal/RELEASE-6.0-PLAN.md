@@ -201,6 +201,15 @@ rejects a negated inequality after the kernel printer rewrites it as equality; a
 `t/PREDICT-2026-10-24-spec33-cloud.md` records the failed prediction and a bounded private diagnostic. No release
 threshold or engine rule has been changed to recover the count.
 
+The development baseline completed in run `40134628181`: clean-206 counts 20, 19, 19 (mean 19.33), and all-seven
+counts 9, 8, 9 (mean 8.67), reproducing the recorded baseline. All six original 95/145-problem receipts were
+validated before filtering, and their evaluator hashes agree apart from the panel paths. Aggregate receipt:
+`release/evidence/v5-cloud-baseline-2026-10-25.json`. The image pins prover binaries; it does not freeze the
+mounted checkout. `evaluate.yml` now explicitly checks out the measured grader revision `01c94ef5`, while
+`spec33.yml` checks out its measured control revision `878a5cb3`. A future evaluator change needs new control
+evidence and a newly matched baseline before candidate comparisons; updating the application alone does not
+silently change either evaluator.
+
 The remaining 9B inputs contain 30 candidates on 18 problems, 15 not already covered by candidate A. Their
 concatenated SHA-256 is `81d04eaaf849f85f7e279fb7455fbeb62fca75f07523047560e3353014b03355`;
 all four request-cache identities name the same Qwen3.5-9B Q4_K_M model (`8c4cc24f…`) and pinned llama.cpp server.

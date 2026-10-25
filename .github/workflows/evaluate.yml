@@ -20,6 +20,8 @@ permissions:
 env:
   ENGINE_COMMIT: d13d11d01f8f50687ef645d60aa08c870d664b84
   DOCKERFILE_SHA256: 1483aad08f6b9ba291e5f1880a057a3c20a9f6f52074e43111d8de215a7f456c
+  # This checkout produced all six baseline arms in run 40134628181. The image pins tools, not mounted code.
+  GRADER_COMMIT: 01c94ef5509fc51ab6484c1350c1cb9f8504e459
 
 jobs:
   image:
@@ -61,6 +63,8 @@ jobs:
         arm: ${{ fromJSON(inputs.arms) }}
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ env.GRADER_COMMIT }}
       - name: the problem pool (nl/data is git-lfs, as in the tests workflow)
         run: |
           git lfs install --local
