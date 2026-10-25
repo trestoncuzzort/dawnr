@@ -19,9 +19,14 @@ def host(tmp_path):
     recipes = root / "t/recipes"
     recipes.mkdir(parents=True)
     mock = recipes / "mock_route.py"
-    mock.write_text('''import json,os,sys
+    mock.write_text('''import fcntl,json,os,sys
 from pathlib import Path
 root=Path(os.environ['D']); tag=sys.argv[1]
+(root/'t/out').mkdir(parents=True,exist_ok=True)
+with (root/'t/out/.laptop-gpu.lock').open('a') as gpu:
+ try:fcntl.flock(gpu,fcntl.LOCK_EX | fcntl.LOCK_NB)
+ except BlockingIOError:pass
+ else:sys.exit(91)
 with (root/'calls.txt').open('a') as stream:stream.write(tag+'\\n')
 if tag==os.environ.get('FAKE_FAIL'):sys.exit(7)
 ids=Path(os.environ['IDS']).read_text().split()

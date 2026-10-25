@@ -130,8 +130,13 @@ def generate(checkout, server_dir, prefix, gguf, identity, destination, panels=N
                        "IDS": str(checkout / item["ids_path"]), "POOL": item["pool"],
                        "SEED": str(checkout / "t/out/laptop-runs" /
                                    ("cache-" + tag_for(prefix, item["panel"], 0)))}
-                subprocess.run(["bash", str(checkout / "t/recipes/laptop_route.sh"), tag, str(gguf), identity,
-                                "--seed-offset", str(item["offset"])], cwd=checkout, env=env, check=True)
+                gpu_path = checkout / "t/out/.laptop-gpu.lock"
+                gpu_path.parent.mkdir(parents=True, exist_ok=True)
+                with gpu_path.open("a") as gpu:
+                    fcntl.flock(gpu, fcntl.LOCK_EX)
+                    subprocess.run(["bash", str(checkout / "t/recipes/laptop_route.sh"), tag, str(gguf), identity,
+                                    "--seed-offset", str(item["offset"])], cwd=checkout, env=env, check=True,
+                                   pass_fds=(gpu.fileno(),))
                 done = checkout / "t/out/laptop-runs" / (tag + ".done")
                 if done.read_text().strip() != "0":
                     raise ValueError("the decoder did not write a successful completion marker")
