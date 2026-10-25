@@ -26,3 +26,26 @@ public results contain only counts and hashes. No held-out-182 evaluation is sta
 
 Sources: `t/recipes/v5-matched-2026-10-11-grade.sh`; `t/score_spec_given.py`; `t/recipes/v6-grade.sh`;
 `internal/RELEASE-6.0-PLAN.md`, condition 3.
+
+## Result, 2026-10-25: the all-seven prediction failed
+
+Run `40141581001` completed the full matrix but read 26 all-seven, not the predicted 28. The at-least-one count
+reproduced at 29. All 33 prepared tasks match the saved October 11 tasks. Of 231 cells, 229 agree; two Frama-C
+cells changed: one real-program timeout and one twin changed from refuted to unproved. Their generated C files
+are byte-identical to the rescued originals. The scorer is unchanged, but the adapter changed since October 11,
+so this is not an isolated measurement of the execution environment. No model answer changed.
+
+A printer-only diagnostic found why the newer adapter can reject the twin: Frama-C normalizes a negated
+inequality into equality, while the adapter's new negation guard requires a leading negation. The original
+source passes that guard and the printed form fails it. No prover was run locally for this check. The timeout's
+cause remains unestablished. Aggregate evidence: `release/evidence/spec33-cloud-control-2026-10-25.json`.
+The release threshold stays 27; this control does not qualify a new model.
+
+### Registered follow-up: bounded Frama-C diagnostics
+
+Replay only these two saved real/twin pairs in the same pinned image, using the unchanged adapter and budgets.
+Use `verifiers.cell_pair` with its normal three repetitions per side, preserving all 12 detailed results and
+both agreement flags. Predict that all three affected twin results are unproved with the negation-guard reason,
+and that at least one of the three affected real results times out. A different twin reason/outcome or no real
+timeout falsifies the corresponding prediction. This probe investigates causes; its results cannot replace the
+original 26 or produce a release score. Inputs and detailed outputs remain encrypted. No engine rule changes.

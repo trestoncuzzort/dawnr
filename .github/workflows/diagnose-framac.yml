@@ -1,0 +1,91 @@
+name: diagnose-framac
+
+# Replay selected Frama-C cells privately; this workflow never makes a release decision.
+# Input/output encryption follows prepare-rows.yml and teacher.yml; no answers appear in public logs.
+on:
+  workflow_dispatch:
+    inputs:
+      asset:
+        description: 'encrypted input archive on eval-inputs'
+        required: true
+      sha256:
+        description: 'SHA-256 of that encrypted archive'
+        required: true
+      label:
+        description: 'unique diagnostic label'
+        required: true
+
+permissions:
+  contents: read
+
+env:
+  ENGINE_COMMIT: d13d11d01f8f50687ef645d60aa08c870d664b84
+
+jobs:
+  grade:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    env:
+      INPUT_ASSET: ${{ inputs.asset }}
+      INPUT_SHA256: ${{ inputs.sha256 }}
+      LABEL: ${{ inputs.label }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: validate inputs and make room for the image
+        run: |
+          [[ "$INPUT_ASSET" =~ ^[A-Za-z0-9][A-Za-z0-9._-]*\.tar\.gz\.enc$ ]]
+          [[ "$INPUT_SHA256" =~ ^[0-9a-f]{64}$ ]]
+          [[ "$LABEL" =~ ^[A-Za-z0-9][A-Za-z0-9._-]*$ ]]
+          sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /opt/hostedtoolcache/CodeQL
+          sudo mkdir -p /mnt/kernels && sudo chown "$USER" /mnt/kernels
+      - uses: actions/cache/restore@v4
+        with:
+          path: /mnt/kernels/kernels.tar.zst
+          key: kernels-${{ env.ENGINE_COMMIT }}
+          fail-on-cache-miss: true
+      - name: load the pinned seven-kernel image
+        run: zstd -dc /mnt/kernels/kernels.tar.zst | docker load && rm /mnt/kernels/kernels.tar.zst
+      - name: open the pinned private C sources
+        env:
+          GH_TOKEN: ${{ github.token }}
+          INPUT_KEY: ${{ secrets.DAWNR_PRIVATE_INPUTS_KEY }}
+        run: |
+          umask 077
+          test -n "$INPUT_KEY"
+          mkdir -p out/framac-inputs out/framac-diagnostic
+          gh release download eval-inputs -p "$INPUT_ASSET" -D /tmp/private-in
+          printf '%s  %s\n' "$INPUT_SHA256" "/tmp/private-in/$INPUT_ASSET" | sha256sum -c -
+          key=$(mktemp)
+          trap 'rm -f "$key"' EXIT
+          printf '%s' "$INPUT_KEY" > "$key"
+          openssl enc -d -aes-256-cbc -pbkdf2 -iter 200000 -in "/tmp/private-in/$INPUT_ASSET" -pass "file:$key" |
+            tar -xzf - -C out/framac-inputs
+          chmod a+rx out
+          chmod -R a+rX out/framac-inputs
+          chmod a+rwx out/framac-diagnostic
+      - name: record each Frama-C repetition at its unchanged budget
+        run: |
+          docker run --rm -v "$PWD:/opt/dawnr" -w /opt/dawnr --memory=13g \
+            -e T_SPARK_JOBS=1 -e T_SANDBOX=landlock -e PYTHONUNBUFFERED=1 -e PYTHONDONTWRITEBYTECODE=1 \
+            --entrypoint bash dawnr-kernels -c 'umask 022; exec python3 t/recipes/diagnose_framac.py \
+            --manifest out/framac-inputs/manifest.json --out out/framac-diagnostic/results' > out/framac-diagnostic/grade.log 2>&1
+      - name: seal the diagnostic evidence
+        if: always()
+        run: |
+          if [ ! -d out/framac-diagnostic ]; then exit 0; fi
+          umask 077
+          mkdir -p /tmp/sealed
+          tar -czf /tmp/framac-diagnostic.tar.gz out/framac-diagnostic
+          key=$(mktemp)
+          trap 'rm -f "$key" /tmp/framac-diagnostic.tar.gz' EXIT
+          openssl rand -hex 32 > "$key"
+          openssl enc -aes-256-cbc -pbkdf2 -iter 200000 -salt -in /tmp/framac-diagnostic.tar.gz \
+            -out /tmp/sealed/outputs.tar.gz.enc -pass "file:$key"
+          openssl pkeyutl -encrypt -pubin -inkey .github/teacher-outputs.pub.pem -pkeyopt rsa_padding_mode:oaep \
+            -pkeyopt rsa_oaep_md:sha256 -in "$key" -out /tmp/sealed/key.enc
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: framac-diagnostic-${{ env.LABEL }}
+          path: /tmp/sealed
+          retention-days: 30

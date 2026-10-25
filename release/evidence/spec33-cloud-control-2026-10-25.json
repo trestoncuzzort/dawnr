@@ -1,0 +1,73 @@
+{
+  "kind": "Fixed-answer specification control; reproduction prediction falsified",
+  "workflow_run": "https://github.com/trestoncuzzort/dawnr/actions/runs/40141581001",
+  "revision": "878a5cb322edb4fdf6e40f0b6fb556878cac5486",
+  "image_engine_commit": "d13d11d01f8f50687ef645d60aa08c870d664b84",
+  "questions_sha256": "effc2f4e586e0c4f7638a5a9a2b75515aaf7019de03ca819d46e5aa3d593ab24",
+  "answers_sha256": "0ad976413b61e2936bef64752ee7b584bb15c9b3b3e592e5556aef40c5e9149f",
+  "new_model_calls": 0,
+  "heldout_182_read": false,
+  "expected": {
+    "at_least_one": 29,
+    "all_seven": 28
+  },
+  "observed": {
+    "at_least_one": 29,
+    "all_seven": 26
+  },
+  "levels": {
+    "questions": 33,
+    "stages": {
+      "ready": 33
+    },
+    "ready": 33,
+    "no twin could be built (not graded)": 0,
+    "a kernel refutes it": 3,
+    "no row in the table": 0,
+    "proved by at least 1": 29,
+    "proved by at least 3": 29,
+    "proved by at least 5": 28,
+    "proved by at least 6": 28,
+    "proved by all seven": 26
+  },
+  "prediction_held": false,
+  "release_threshold_all_seven": 27,
+  "release_threshold_changed": false,
+  "tasks": 33,
+  "identical_prepared_tasks": 33,
+  "matrix_cells": 231,
+  "unchanged_cells": 229,
+  "changed_cells": [
+    {
+      "kernel": "framac",
+      "before": "verified / refuted",
+      "after": "verified / unproved",
+      "task_sha256": "8ab5bfb40f2be77e321bbe4c6e39021281fa794d85c42e9abaec9d81d458e64e",
+      "real_c_sha256": "a05f3f8901db57357328f92a537bb632dacdd1a03c5a822f88d743058db09470",
+      "twin_c_sha256": "f80966156b4c1cae3ccff7c415aef38e42a8d335316edc07c47907c7620ac866"
+    },
+    {
+      "kernel": "framac",
+      "before": "verified / refuted",
+      "after": "timeout / refuted",
+      "task_sha256": "177b1090dd8591c2ada22b1d6422dee4cb080561fc67c9c0491a1716c85a73b2",
+      "real_c_sha256": "3baef8b3f57d0bb7c242463e2d883382f7a754639a190329b4335b7001f7dea2",
+      "twin_c_sha256": "5b324064c3256fe66d1f4d542ce32bee943a9206c3e6814027e0dd6ab8e90bb3"
+    }
+  ],
+  "changed_pairs_generated_c_identical_to_old": true,
+  "adapter": {
+    "old_sha256": "47c357e14ceacc0773b7995df7d6221d6e70011f454b7ab54e2647f9de728eeb",
+    "new_sha256": "f6ecbd38ae61a754c83febed37370c9bb08f1c7f9f204e98484c6f7235186ea2"
+  },
+  "diagnosis": {
+    "certificate_negation_lost_by_normalization": true,
+    "normalizer_only_no_local_prover_run": true,
+    "second_cell_timeout_cause": "not yet determined",
+    "environment_and_adapter_changed_since_original_reading": true
+  },
+  "artifact": {
+    "encrypted": true,
+    "sha256": "7158ed46c0f2db1be36fd4cd5bc32d932d95a9bbf4ba81fd173d989170fb8f66"
+  }
+}

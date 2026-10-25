@@ -195,6 +195,12 @@ duplicate answers, mixed model/prompt metadata, or an incomplete kernel table. I
 `t/PREDICT-2026-10-24-spec33-cloud.md`: replay the saved October 11 v5 answers and predict their previous 28
 all-seven count. That control does not change the release requirement of 27 and does not read the held-out 182.
 
+The control completed in run `40141581001`: 29 at least one reproduced, but 26 all-seven falsified the prediction
+of 28. Two of 231 cells changed, both Frama-C, on identical saved tasks and generated C. A new adapter guard
+rejects a negated inequality after the kernel printer rewrites it as equality; a second cell timed out.
+`t/PREDICT-2026-10-24-spec33-cloud.md` records the failed prediction and a bounded private diagnostic. No release
+threshold or engine rule has been changed to recover the count.
+
 The remaining 9B inputs contain 30 candidates on 18 problems, 15 not already covered by candidate A. Their
 concatenated SHA-256 is `81d04eaaf849f85f7e279fb7455fbeb62fca75f07523047560e3353014b03355`;
 all four request-cache identities name the same Qwen3.5-9B Q4_K_M model (`8c4cc24f…`) and pinned llama.cpp server.
