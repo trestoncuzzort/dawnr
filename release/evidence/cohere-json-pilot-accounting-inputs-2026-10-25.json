@@ -1,0 +1,21 @@
+{
+  "kind": "Independent expected-request accounting for the already registered JSON pilot",
+  "prepared_at": "2026-10-25T04:13:17.467291+00:00",
+  "pilot_workflow_run": 40160251665,
+  "pilot_head": "01425aad2b9d65609263bee2270b5311c07ff9ea",
+  "historical_input_workflow_run": 40139205280,
+  "historical_artifact_sha256": "f2d616858e09ba717270830225c796fea4b100f465898502f70e5af57c568020",
+  "historical_cache_manifest_sha256": "b85b911ff4856a841e6b730f8557db52beafb2df556971c172ac09f84d288c08",
+  "historical_requests_checked_against_original_seed_rule": 1000,
+  "unchanged_original_prompt_groups": 50,
+  "expected_logical_candidates": 500,
+  "panel_sha256": "446fbee835307badfa317826dceee48c9f5f6b7c26921d051503b86ed02351d4",
+  "expected_request_manifest_sha256": "7fbc287d5f2966ef028badeb1d92cac89c531f20e452fcec23d6b9355bb57ac7",
+  "codec_identity": "t-json-v1:eeb9a14359b58e0cc5444e686dd10599f1af936d933fe6429e7c0d275ef85e4e",
+  "driver_sha256": "c04b7674af8eccdbba4ae13e5adb34ae450a0c9589521153554666ea4c2bd77d",
+  "source_hashes_to_check": 569,
+  "source_hash_manifest_sha256": "38763b2a83ae830e0217c9f8405b0cb22e1b82eea30d4fbea026587d906e1aac",
+  "source_basis": "Python files from the frozen pilot git revision; six data files from the verified historical same-cohort protocol.",
+  "scope": "Prepared while pilot is live, using only the earlier input prompts. No pilot outputs read. No prediction or recipe change.",
+  "raw_prompts_or_teacher_outputs_published": false
+}

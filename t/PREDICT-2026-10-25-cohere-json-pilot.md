@@ -56,3 +56,22 @@ weight change, model-quality claim or held-out-182 reading follows from this tea
 
 Sources: `t/PREDICT-2026-10-25-cohere-json-transport.md`, `t/recipes/teacher_cohere_specs.sh`,
 `t/recipes/cohere_proxy.py`, `t/recipes/v9_strict_specs.py`, and the original pilot/source receipts.
+
+## Accounting instrument prepared while the pilot runs
+
+The pilot was already live when `cohere_json_audit.py` was added. This changes no recipe, prediction or
+expansion condition. Before reading any pilot output, the expected 500 requests were reconstructed from
+the earlier wider pilot's same 50 original prompt groups, checking all 1,000 historical requests against
+their original stage/seed rule. Only the registered reply allowance, sample count and seed offset change.
+The expected request manifest stays private; its SHA-256 is
+`7fbc287d5f2966ef028badeb1d92cac89c531f20e452fcec23d6b9355bb57ac7`.
+
+After artifact verification, the audit requires that complete request set and the 569 registered source/data
+hashes, then replays the JSON wire mapping and conversion without model calls or reference/proof grading.
+Successful responses, including
+paid conversion refusals, must match billed input/output units, per-call rounded charges and proxy logs.
+Concurrent charges lack request IDs, so the check matches their full billing signatures and multiplicities.
+It reports recorded charges rather than an invoice, and does not infer the number of physical API retries.
+Missing billing remains unresolved. Counts, novelty, token fit and the final data audit remain separate
+requirements. Aggregate input evidence is in
+`release/evidence/cohere-json-pilot-accounting-inputs-2026-10-25.json`.
