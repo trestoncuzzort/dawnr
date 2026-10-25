@@ -145,6 +145,10 @@ remaining 9B chunks, once the strict check has passed them; it is the 6.2.0 cand
   The old local `release_candidate.sh` exits before work; export directly with `v6_export.py` on the GPU host.
   The oracle instrument and `spec33.sh ... ask` remain separate registered steps; their evidence is handled
   according to its existing privacy rules. An eight-hour VM limit is not a promise that all work fits that window.
+- **Specification-gate precision:** `.github/workflows/ceiling.yml` takes encrypted saved stage-1 answers for the
+  development 95 and runs the unchanged `spec_ceiling.py` at grader revision `01c94ef5`, with 200 reference draws.
+  The original v5 inputs are replayed first under `t/PREDICT-2026-10-25-ceiling-cloud-control.md`; the expected
+  control is 73 reference-correct among 93 kept. This measurement asks no model and runs no proof kernels.
 - **Large files without the cable** go through a private GitHub repository used only for transfers. With the cable
   plugged in, Tailscale uses it directly.
 

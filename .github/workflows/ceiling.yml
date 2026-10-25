@@ -1,0 +1,163 @@
+name: ceiling
+
+# Run the existing specification-gate instrument on saved answers, without a GPU or proof kernels.
+# Sources: t/recipes/spec_ceiling.py, PREDICT-2026-10-21-spec-ceiling.md, prepare-rows.yml's encrypted transport.
+on:
+  workflow_dispatch:
+    inputs:
+      asset:
+        description: 'encrypted saved-answer archive on eval-inputs'
+        required: true
+      sha256:
+        description: 'SHA-256 of that encrypted archive'
+        required: true
+      label:
+        description: 'unique measurement label'
+        required: true
+
+permissions:
+  contents: read
+
+env:
+  # Same reference-check code as the measured development baseline; independent of future engine repairs.
+  GRADER_COMMIT: 01c94ef5509fc51ab6484c1350c1cb9f8504e459
+
+jobs:
+  measure:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    env:
+      INPUT_ASSET: ${{ inputs.asset }}
+      INPUT_SHA256: ${{ inputs.sha256 }}
+      MEASUREMENT_LABEL: ${{ inputs.label }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ env.GRADER_COMMIT }}
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: the pinned output encryption key
+        run: |
+          curl -fsSL --retry 3 \
+            https://raw.githubusercontent.com/trestoncuzzort/dawnr/6589dc09c47465536adbb7a165f8d3d19796c0e5/.github/teacher-outputs.pub.pem \
+            -o .github/teacher-outputs.pub.pem
+          echo '872304aa76f70b61b2af330a97dcbba39141c30a0b1fb58ed80c3e5af043bc47  .github/teacher-outputs.pub.pem' | sha256sum -c -
+      - name: validate the request
+        run: |
+          [[ "$INPUT_ASSET" =~ ^[A-Za-z0-9][A-Za-z0-9._-]*\.tar\.gz\.enc$ ]]
+          [[ "$INPUT_SHA256" =~ ^[0-9a-f]{64}$ ]]
+          [[ "$MEASUREMENT_LABEL" =~ ^[A-Za-z0-9][A-Za-z0-9._-]*$ ]]
+      - name: the problem pool and sandbox
+        run: |
+          git lfs install --local
+          git lfs pull --include='nl/data/*.jsonl.gz'
+          sudo apt-get update -q
+          sudo apt-get install -y bubblewrap
+          sudo bash t/apparmor-bwrap.sh
+      - name: open and validate the saved development answers
+        env:
+          GH_TOKEN: ${{ github.token }}
+          INPUT_KEY: ${{ secrets.DAWNR_PRIVATE_INPUTS_KEY }}
+        run: |
+          umask 077
+          test -n "$INPUT_KEY"
+          mkdir -p out/private-inputs out/ceiling
+          gh release download eval-inputs -p "$INPUT_ASSET" -D /tmp/private-in
+          printf '%s  %s\n' "$INPUT_SHA256" "/tmp/private-in/$INPUT_ASSET" | sha256sum -c -
+          key=$(mktemp)
+          trap 'rm -f "$key" /tmp/ceiling-input.tar.gz' EXIT
+          printf '%s' "$INPUT_KEY" > "$key"
+          openssl enc -d -aes-256-cbc -pbkdf2 -iter 200000 -in "/tmp/private-in/$INPUT_ASSET" \
+            -out /tmp/ceiling-input.tar.gz -pass "file:$key"
+          python3 - <<'PY'
+          from pathlib import Path
+          import hashlib, json, os, re, shutil, tarfile
+          root = Path('out/private-inputs')
+          names = {'manifest.json', 'panel.txt', 'spec_first.json', 'python.jsonl', 'scored-specs.jsonl'}
+          with tarfile.open('/tmp/ceiling-input.tar.gz') as archive:
+              members = archive.getmembers()
+              if len(members) != len(names) or {m.name for m in members} != names or any(not m.isfile() for m in members):
+                  raise ValueError('the input archive must contain only the five named regular files')
+              archive.extractall(root, filter='data')
+          digest = lambda p: hashlib.sha256(p.read_bytes()).hexdigest()
+          manifest = json.loads((root / 'manifest.json').read_text())
+          if set(manifest['files']) != names - {'manifest.json'}:
+              raise ValueError('the manifest must bind every input file')
+          for name, expected in manifest['files'].items():
+              if digest(root / name) != expected:
+                  raise ValueError('an input differs from its manifest')
+          if digest(root / 'panel.txt') != 'f807aec7e6b89e524ded720d9ccfb670c1d504a5a5717966a4b870516701daf7':
+              raise ValueError('only the registered development 95 are eligible')
+          ids = (root / 'panel.txt').read_text().split()
+          summary = json.loads((root / 'spec_first.json').read_text())
+          if len(ids) != 95 or len(set(ids)) != 95 or summary['problems'] != 95 or set(summary['per_problem']) != set(ids):
+              raise ValueError('the saved run does not account for the exact panel')
+          python_ids = []
+          for name in ('python.jsonl', 'scored-specs.jsonl'):
+              for line in (root / name).read_text().splitlines():
+                  row = json.loads(line)
+                  tid = str(row['task_id'])
+                  if tid not in ids:
+                      raise ValueError('a saved row is foreign to the panel')
+                  if name == 'python.jsonl':
+                      python_ids.append(tid)
+          passing_ids = {tid for tid, state in summary['per_problem'].items() if state.get('python') is not None}
+          if len(python_ids) != len(set(python_ids)) or set(python_ids) != passing_ids:
+              raise ValueError('the saved Python answers disagree with the run summary')
+          tag = manifest['tag']
+          if not re.fullmatch(r'[A-Za-z0-9][A-Za-z0-9_.-]*', tag):
+              raise ValueError('invalid run tag')
+          destination = Path('t/out/spec-experiment') / tag
+          destination.mkdir(parents=True, exist_ok=False)
+          for name in names - {'manifest.json', 'panel.txt'}:
+              shutil.copy2(root / name, destination / name)
+          with Path(os.environ['GITHUB_ENV']).open('a') as env:
+              env.write('CEILING_TAG=' + tag + '\n')
+          PY
+      - name: measure the unchanged specification gate
+        env:
+          PYTHONUNBUFFERED: '1'
+        run: |
+          python3 t/recipes/spec_ceiling.py --tag "$CEILING_TAG" --ids-file out/private-inputs/panel.txt \
+            --pool v5 --n 200 --jobs 4 --per-problem 3 --out out/ceiling/result.json > out/ceiling/measure.log 2>&1
+          python3 - <<'PY'
+          from pathlib import Path
+          import hashlib, json, os, platform
+          digest = lambda p: hashlib.sha256(p.read_bytes()).hexdigest()
+          result = json.loads(Path('out/ceiling/result.json').read_text())
+          paths = sorted(set(Path('t').glob('*.py')) | set(Path('t/verifiers').rglob('*.py')) |
+                         set(Path('nl/data').glob('*.gz')) | {Path('t/recipes/spec_ceiling.py')})
+          receipt = {'grader_commit': os.environ['GRADER_COMMIT'], 'python': platform.python_version(),
+                     'workflow_ref': os.environ['GITHUB_WORKFLOW_REF'], 'workflow_run': os.environ['GITHUB_RUN_ID'],
+                     'output_public_key_sha256': digest(Path('.github/teacher-outputs.pub.pem')),
+                     'input_asset_sha256': os.environ['INPUT_SHA256'],
+                     'input_manifest': json.loads(Path('out/private-inputs/manifest.json').read_text()),
+                     'source_sha256': {str(p): digest(p) for p in paths},
+                     'result_sha256': digest(Path('out/ceiling/result.json')),
+                     'procedure': {'pool': 'v5', 'draws': 200, 'per_problem': 3, 'jobs': 4}}
+          Path('out/ceiling/receipt.json').write_text(json.dumps(receipt, indent=2) + '\n')
+          Path('out/ceiling/COMPLETE').write_text(digest(Path('out/ceiling/receipt.json')) + '\n')
+          print(json.dumps({k: result[k] for k in ('problems', 'with_python', 'candidates_scored', 'safe_kept',
+                                                  'safe_kept_reference_correct', 'safe_precision')}))
+          PY
+      - name: seal the measurement and diagnostics
+        if: always()
+        run: |
+          if [ ! -d out/ceiling ]; then exit 0; fi
+          umask 077
+          mkdir -p /tmp/sealed
+          tar -czf /tmp/ceiling-output.tar.gz out/ceiling
+          key=$(mktemp)
+          trap 'rm -f "$key" /tmp/ceiling-output.tar.gz' EXIT
+          openssl rand -hex 32 > "$key"
+          openssl enc -aes-256-cbc -pbkdf2 -iter 200000 -salt -in /tmp/ceiling-output.tar.gz \
+            -out /tmp/sealed/outputs.tar.gz.enc -pass "file:$key"
+          openssl pkeyutl -encrypt -pubin -inkey .github/teacher-outputs.pub.pem -pkeyopt rsa_padding_mode:oaep \
+            -pkeyopt rsa_oaep_md:sha256 -in "$key" -out /tmp/sealed/key.enc
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: ceiling-${{ env.MEASUREMENT_LABEL }}
+          path: /tmp/sealed
+          retention-days: 30
