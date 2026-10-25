@@ -136,6 +136,14 @@ remaining 9B chunks, once the strict check has passed them; it is the 6.2.0 cand
   question remains unanswered. Launch only after that answer and both candidate A seed adapters are complete;
   keep the instance unprovisioned while waiting. Cohere's grant allocation does not establish a Google Cloud
   credit balance.
+- **Remote development decoding:** `release_arms.sh PFX GGUF IDENT` requires explicit `D` and `L` for the approved
+  GPU host. It runs only the six registered development parts, with the same settings and seed offsets. Each
+  completed part gets an atomic archive and receipt under `t/out/release-decoded/PFX`; `arms.json` lists the parts
+  ready for `evaluate.yml`. Fetch and verify these checkpoints as they finish. The driver refuses decoder
+  failures, changed model/procedure reuse, foreign panel rows and unreceipted older output. It performs no grading.
+  The old local `release_candidate.sh` exits before work; export directly with `v6_export.py` on the GPU host.
+  The oracle instrument and `spec33.sh ... ask` remain separate registered steps; their evidence is handled
+  according to its existing privacy rules. An eight-hour VM limit is not a promise that all work fits that window.
 - **Large files without the cable** go through a private GitHub repository used only for transfers. With the cable
   plugged in, Tailscale uses it directly.
 
