@@ -1,0 +1,120 @@
+{
+  "workflow_run": 40155901277,
+  "artifact_id": 12583814832,
+  "artifact_sha256": "5e3dfa6f0f2738b6b00e558e6ec3aa8e516be5116f5376cb0f4d770d4827904f",
+  "input_manifest_verified": true,
+  "code_hashes_verified": 5,
+  "parent_rows_preserved_in_order": true,
+  "base_rows": 7066,
+  "output_rows": 7176,
+  "output_sha256": "52404c473208d01cb8f074a540c3cbe988f301c063d976a44fa25c40e76e3c03",
+  "added_rows": 110,
+  "added_problems": 39,
+  "added_by_source": {
+    "python": 39,
+    "spec": 71
+  },
+  "audit": {
+    "rows": 7176,
+    "flagged": 0,
+    "unparsed": 339,
+    "sha256": "6f9e5cad1eb88538a8ed0b7e02198e04b9b7ce44bb7c141c68a7ff1c73d1dae8",
+    "panels": true,
+    "refuse_gpl": true
+  },
+  "row_count_prediction_held": true,
+  "audit_prediction_held": true,
+  "kind": "Audited incremental Cohere training-data update",
+  "workflow_url": "https://github.com/trestoncuzzort/dawnr/actions/runs/40155901277",
+  "revision": "09575a0310c565dacc509960f0185a2829bae2b8",
+  "base_sha256": "633ededffc2be4718c3341393845272268fdbe316d10e7e2fa4549f74ce606dc",
+  "input_manifest_sha256": "ecf302ff090124e4d6464e14497e182dccf9b2806e0be62238dc79336e11c3ae",
+  "ciphertext_sha256": "bb631efeea764859c001e5479b3f4877dee492885792f36935365b19b192b832",
+  "source_additions": [
+    {
+      "tag": "cohere:command-a-03-2025:cohere-a-20261024-4",
+      "kept_sha256": "c04c49b4e427fcf47dc27d1e3981cd07cdae50ec9b6f9b6cd715f5ba423335e9",
+      "model_identity": "teacher-cohere:command-a-03-2025:think0:new2048:2026-10-24",
+      "rows": 56,
+      "by source": {
+        "python": 20,
+        "spec": 36
+      },
+      "problems": 20
+    },
+    {
+      "tag": "cohere:command-a-03-2025:cohere-a-20261024-6",
+      "kept_sha256": "23622e5e4754d2691000bd1e3ebf4d08cb1e992818bcc7ca89518be2d0c7d2ed",
+      "model_identity": "teacher-cohere:command-a-03-2025:think0:new2048:2026-10-24",
+      "rows": 52,
+      "by source": {
+        "python": 18,
+        "spec": 34
+      },
+      "problems": 18
+    },
+    {
+      "tag": "cohere:north-mini-code-1-0:cohere-north-budget-pilot-20261025-0",
+      "kept_sha256": "326c2381a56c1ca5fddfd6a3676676da90e7e0556a03b17375a0270ffde24d7a",
+      "model_identity": "teacher-cohere:north-mini-code-1-0:think2048:new4096:2026-10-24",
+      "rows": 2,
+      "by source": {
+        "python": 1,
+        "spec": 1
+      },
+      "problems": 1
+    }
+  ],
+  "token_lengths": {
+    "model": "Qwen/Qwen3.5-4B",
+    "revision": "851bf6e806efd8d0a36b00ddf55e13ccb7b8cd0a",
+    "training_max_len": 2845,
+    "added_rows": 110,
+    "fits": 107,
+    "over_limit": 3,
+    "minimum_tokens": 165,
+    "median_tokens": 571.0,
+    "maximum_tokens": 3778,
+    "prediction_held": false,
+    "trainer_sha256": "e43c27df1ee1e796b1799d38a16e0c5725dd09df762be3fabb2940ad8cb4a46f",
+    "tokenizer_files_sha256": {
+      "config.json": "ddc63e1c717afa86c865bb5e01313d89d72bb53b97ad4a8a03ba8510c0621670",
+      "tokenizer.json": "5f9e4d4901a92b997e463c1f46055088b6cca5ca61a6522d1b9f64c4bb81cb42",
+      "tokenizer_config.json": "316230d6a809701f4db5ea8f8fc862bc3a6f3229c937c174e674ff3ca0a64ac8",
+      "chat_template.jinja": "a4aee8afcf2e0711942cf848899be66016f8d14a889ff9ede07bca099c28f715"
+    },
+    "method": "Offline tokenization with the registered trainer encoder; no model loaded, training or generation."
+  },
+  "all_registered_predictions_held": false,
+  "scope": "Checked private data for future weight-update experiments. No training, model generation, weight change or held-out-182 model reading.",
+  "audit_limitation": "The same 339 inherited blocks remain unparsed; they are not claimed to have passed parsing.",
+  "length_accounting": {
+    "current_max_len": 2845,
+    "new_rows": 110,
+    "new_rows_used_by_existing_encoder": 107,
+    "new_rows_skipped_by_existing_encoder": 3,
+    "new_specification_problems_after_length_filter": 38,
+    "new_reference_only_problems_after_length_filter": 1,
+    "policy": "Retain the audited archive. Existing student_sft.encode_row returns None beyond max_len; these three rows are explicitly expected to be skipped at 2845, never truncated. The registered training window is unchanged. Count all parent and new exclusions when freezing a future training manifest.",
+    "excluded_new_rows": [
+      {
+        "index": 105,
+        "source": "spec",
+        "tokens": 2982,
+        "row_sha256": "d140d00853c2b285166dfca3ce2152916b82991a53553d32c9ce1e519718832f"
+      },
+      {
+        "index": 106,
+        "source": "spec",
+        "tokens": 3778,
+        "row_sha256": "6934bf93b1fdaa7b21176ba65025ff76b9fde3c328999aa323a2e6fcc7f08d97"
+      },
+      {
+        "index": 107,
+        "source": "spec",
+        "tokens": 2896,
+        "row_sha256": "15f65312090e5568538d4d6580a807aede30f3376e998df2909b9b04510e73ee"
+      }
+    ]
+  }
+}

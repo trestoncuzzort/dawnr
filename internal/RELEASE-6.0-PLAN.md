@@ -221,6 +221,11 @@ Historical placeholder prices remain estimates, not verified invoices. There is 
 The audited draft already incorporates eight Command A shards. The final two shards and the bounded North
 pilot supply 39 additional uncovered problems and 71 specifications. Their next encrypted data build is
 registered in `t/PREDICT-2026-10-25-cohere-data-completion.md`, expecting 110 added rows and 7,176 total.
+Build `40155901277` met that count and passed the full audit with no new findings or unparsed blocks. Its
+length prediction failed: three specifications exceed 2,845 tokens, so the existing trainer skips them.
+The other 107 additions fit, supplying 39 reference-Python rows and 68 specifications on 38 new specification
+problems, plus one reference-only problem. The full 7,176-row audited archive is retained; it is not a claim
+that every row fits a training run. Exclusions and hashes: `release/evidence/cohere-data-2026-10-25b.json`.
 
 The syntax-loss evidence motivates a different representation as a research hypothesis. Command A supports
 [JSON Schema output](https://docs.cohere.com/docs/structured-outputs), and `t/SPEC.md` already defines the engine's

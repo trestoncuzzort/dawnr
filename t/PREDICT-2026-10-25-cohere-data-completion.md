@@ -43,3 +43,24 @@ gains. This build performs no held-out-182 model reading.
 
 Sources: `t/recipes/prepare_release_rows.py`, `t/recipes/v8_spec_rows.py`, the original
 strict reports, and `release/evidence/cohere-full-pass-2026-10-25.json`.
+
+## Result
+
+Build `40155901277` passed its full audit. Predictions 1 and 2 held: 110 rows were added
+on 39 new problems, giving 7,176 rows with SHA-256
+`52404c473208d01cb8f074a540c3cbe988f301c063d976a44fa25c40e76e3c03`.
+The 7,066 parent rows remain unchanged and in order. There are zero current-panel or
+GPL-lineage findings, with the same 339 inherited unparsed blocks.
+
+**Prediction 3 failed.** Three specifications for one problem require 2,896, 2,982 and
+3,778 tokens, exceeding the registered 2,845-token window. The other 107 new rows fit.
+The existing `student_sft.encode_row` skips overlong rows and counts them; it never
+truncates them. At this window, the additions supply 39 reference-Python rows and 68
+specification rows covering 38 new specification problems, plus one reference-only
+problem. The three longer specifications stay in the private audited archive, with
+their exclusions explicitly recorded. The training window is unchanged. A future
+training manifest must account for all parent and new exclusions before any run.
+
+All artifact, input, builder and output digests were verified. The length reading used
+the pinned tokenizer and unchanged trainer encoder offline, without loading a model.
+Aggregate receipt: `release/evidence/cohere-data-2026-10-25b.json`.
