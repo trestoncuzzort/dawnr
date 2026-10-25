@@ -4,6 +4,17 @@ Published claims that turned out to be wrong, and what they are now. They are
 kept here rather than quietly fixed, because a project that only reports its
 successful measurements is not measuring anything.
 
+- **The Cohere cost comparison used placeholder prices as if they established a cost advantage (2026-10-25).**
+  The first teacher comparison assigned conservative token rates to Command A Reasoning and A+, producing
+  ledger estimates of $33.83 and $31.96. Their current model pages state that API evaluation is free within
+  rate limits for both trial and production keys. Those estimates are not verified invoices and do not support
+  the claim that Command A is cheaper per accepted problem. The full Command A pass remains justified by the
+  other models' lower request and monthly limits. Historical ledgers are retained as conservative planning
+  estimates; future API calls use the documented rates. Paid Model Vault deployment is a different service.
+  Sources: [Reasoning](https://docs.cohere.com/docs/command-a-reasoning),
+  [A+](https://docs.cohere.com/docs/command-a-plus), and
+  [rate limits](https://docs.cohere.com/docs/rate-limits).
+
 - **The "training seed alone" reading changed the training rows too, and the 240-problem panel held 34 problems
   the published model's rows had matched (2026-10-24).** On 22 October a model registered as "v5's exact rows and
   recipe with seed 2" read 4, 5 and 4 clean against the published model's 6, 4 and 6 on the 95 development problems,

@@ -1,11 +1,16 @@
 # Cohere Labs Catalyst Grant: milestone updates
 
-Grant accepted 2026-10-22, $1000 API credit, account jonhhjackson@gmail.com, expires 2027-10-22.
+Grant accepted 2026-10-22, $1000 API credit, expires 2027-10-22.
 Rule: one dated entry per milestone, numbers first, then a short draft the user sends to grants@cohere.com.
 Cohere Labs gave written permission on 2026-10-24 to train dawnr on Cohere outputs that pass our checks. That is
 the grant's main use: checked specifications and repair examples for the next dawnr model. The earlier entries
 below describe the scope before that permission. Updates are due at every incremental release and at completion;
 the generated text and training rows stay private.
+
+Accounting correction, 2026-10-25: the first Reasoning and A+ costs were conservative placeholder estimates.
+Their current API documentation lists evaluation as free within rate limits for both key types. Retain the old
+ledgers for audit, but do not describe them as invoiced charges or infer an actual per-dollar advantage from
+them. The dashboard is the authority for the grant balance. See `CORRECTIONS.md` and the model pricing pages.
 
 ## 2026-10-24 Milestone 0: credit live, first lane open
 
@@ -54,7 +59,8 @@ card, which cites this permission.
 - Released 2026-10-24 21:15Z: https://github.com/trestoncuzzort/dawnr/releases/tag/v6.0.0 (the latest release; the
   installer takes it by default). The laptop check: every README command does its work; one bug it found (`dawnr do`
   stopping when a folder listing outgrew the model's context) is fixed in this release.
-- Spend so far (the grant ledger, conservative prices): about $75, nearly all of it the teacher pilots.
+- The ledger then estimated about $75, nearly all from the teacher pilots. The later accounting correction above
+  distinguishes those conservative estimates from actual API prices and the dashboard balance.
 
 Draft to Brittawnya (send when the release page is live):
 
@@ -76,6 +82,6 @@ Draft to Brittawnya (send when 6.0.1 is live):
 
 Hi Brittawnya. Small update. dawnr 6.0.1 is out. Same model as 6.0.0 but asking it for a checked function is about
 twice as fast now. We also moved our Command A runs to cloud machines so they run in parallel. One question if you know:
-Command A Reasoning solved more of the pilot's problems, while Command A kept more per dollar. Reasoning is capped
+Command A Reasoning solved more of the pilot's problems, but its evaluation API quota is smaller. Reasoning is capped
 at 20 requests a minute and 1,000 calls a month.
 Is there a way to raise that for the grant?

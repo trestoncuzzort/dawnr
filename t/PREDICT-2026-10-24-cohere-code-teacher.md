@@ -36,3 +36,12 @@ and elapsed time, not an invented infinite score.
 Model and reply budget change together relative to the original Command A pilot. This chooses a practical
 teacher recipe on training problems; it isolates neither change and establishes no model-level gain. The five
 release conditions remain unchanged.
+
+## Result, 2026-10-25: neither expansion prediction held
+
+Run `40142664557` completed all 500 requests over all 50 problems without proxy errors. The strict check kept
+seven candidates on four problems; none are outside the original pilots' union of 12 or the current data draft.
+Both predictions failed and this recipe is not eligible for expansion. Recorded API evaluation cost is zero.
+Of 500 replies, 481 ended at the token limit and 480 contained no final text. This identifies a budgeting problem
+with default thinking, not the model's quality under a different budget. Counts and hashes:
+`release/evidence/cohere-north-pilot-2026-10-25.json`. No new training rows are added under the existing coverage rule.

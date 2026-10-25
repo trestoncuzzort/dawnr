@@ -102,8 +102,9 @@ skipped) and audited with `t/heldout_audit.py --panels --refuse-gpl`:**
 - The repair traces: 232 from the student's own dropped candidates and 293 from the teachers'.
 - **The Cohere teacher (new, written permission 2026-10-24).** `command-a-reasoning-08-2025` and
   `command-a-plus-05-2026` piloted head to head on the same 50 failed training problems with the DeepSeek lane's
-  prompt. Strict-kept specifications per dollar decides the model; it then runs the remaining failed problems
-  in size order. Every call is priced in the grant ledger (`~/.config/cohere/ledger.jsonl`, hard stop at $950).
+  prompt. Checked coverage, novel problems, quota and documented API cost decide the recipe; subsequent passes
+  target remaining failed problems in size order. Every call is recorded in the grant ledger
+  (`~/.config/cohere/ledger.jsonl`, planning stop at $950).
   Every Cohere-written row is labelled by source and the data card cites the permission
   (`internal/COHERE-GRANT-UPDATES.md`). Cost basis for the pilot: the DeepSeek lane used about 37,000 prompt and
   3,200 reply tokens per problem; at Command A's listed $2.50 and $10 per million that is about $0.13 a problem
@@ -151,7 +152,7 @@ remaining 9B chunks, once the strict check has passed them; it is the 6.2.0 cand
 
 The same 50 failed training problems, ten candidates each, kept by the route and then by the strict check:
 
-| model | problems kept by the strict check | candidates kept | ledger cost | replies cut off |
+| model | problems kept by the strict check | candidates kept | historical ledger estimate | replies cut off |
 |---|---:|---:|---:|---:|
 | Command A Reasoning (thinking 2,048) | 9 | 18 | $33.83 | 113 of 500 |
 | Command A+ (thinking 2,048) | 6 | 11 | $31.96 | 24 of 500 |
@@ -159,11 +160,12 @@ The same 50 failed training problems, ten candidates each, kept by the route and
 
 Command A Reasoning and Command A+ are limited to 20 requests a minute and 1,000 calls a month even on a production
 key (docs.cohere.com/docs/rate-limits), so the full run (about 17,000 calls) uses Command A (500 requests a minute,
-no monthly cap). Its pilot on the same 50 problems kept fewer problems (4) but cost a fifth as much: 62 strictly kept
-problems per $100 of ledger against 27 for the reasoning model, so it runs the remaining 1,705 problems on GitHub's
-machines (`.github/workflows/teacher.yml`, ten lists in parallel), with a wider second pass on what it misses if the
-grant allows. A higher limit for the reasoning model
-can be asked of Cohere Labs.
+no monthly cap). Current model pages list API evaluation of Reasoning and A+ as free within those limits; their
+positive ledger entries above came from conservative placeholder rates, not verified invoices. The earlier
+per-dollar advantage claimed for Command A is withdrawn in `CORRECTIONS.md`. Its own pilot produced about 62
+strictly kept problems per $100 at its configured API rate, the absolute bar registered for the wider Command A
+pilot. The remaining 1,705 problems run on GitHub (`.github/workflows/teacher.yml`, ten lists in parallel), with
+further work chosen from actual yield, quota and reconciled budgets.
 
 The full pass started on GitHub at 22:28Z on 2026-10-24, run `40138722401`: 1,705 distinct training problems in
 ten jobs, Command A, ten candidates per problem, 2,048-token replies, $60 per-job ceilings ($600 allocated, not

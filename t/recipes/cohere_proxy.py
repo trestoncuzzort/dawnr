@@ -30,9 +30,11 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
 API = "https://api.cohere.com/v2/chat"
 LEDGER = os.path.expanduser("~/.config/cohere/ledger.jsonl")
-# USD per million billed tokens (in, out). Cohere publishes no list price for some of these; the conservative figures
-# make the ledger overstate spend, so the ceiling trips early rather than late. Read the real balance in the dashboard.
-PRICE = {"command-a-03-2025": (2.5, 10), "command-a-reasoning-08-2025": (5, 20), "command-a-plus-05-2026": (5, 20),
+# USD per million billed tokens on this API route (in, out), not Model Vault charges.
+# API evaluation of Reasoning and A+ is documented as free within rate limits on 2026-10-25:
+# https://docs.cohere.com/docs/command-a-reasoning and https://docs.cohere.com/docs/command-a-plus
+# Historical positive estimates remain in their original ledgers; they are not verified invoices.
+PRICE = {"command-a-03-2025": (2.5, 10), "command-a-reasoning-08-2025": (0, 0), "command-a-plus-05-2026": (0, 0),
          "command-r-plus-08-2024": (2.5, 10), "command-r-08-2024": (0.15, 0.6), "command-r7b-12-2024": (0.0375, 0.15),
          "c4ai-aya-expanse-32b": (0.5, 1.5),
          # API evaluation is listed as free within rate limits on 2026-10-24; paid Model Vault is separate.

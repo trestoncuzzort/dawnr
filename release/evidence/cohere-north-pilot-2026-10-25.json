@@ -1,0 +1,44 @@
+{
+  "kind": "North Mini Code teacher pilot; expansion predictions failed",
+  "workflow_run": "https://github.com/trestoncuzzort/dawnr/actions/runs/40142664557",
+  "model": "north-mini-code-1-0",
+  "procedure": {
+    "problems": 50,
+    "candidates_per_problem": 10,
+    "max_output_tokens": 4096,
+    "thinking": "model default",
+    "seed_offset": 0
+  },
+  "result": {
+    "planned_problems": 50,
+    "accounted_problems": 50,
+    "not_accounted_problems": 0,
+    "strict_kept_problems": 4,
+    "strict_kept_candidates": 7,
+    "remaining_problems": 46,
+    "calls": 500,
+    "run_usd": "0.0",
+    "grant_stop_usd": "950",
+    "proxy_errors": {},
+    "strict_kept_problems_per_100_usd": null
+  },
+  "novel_to_original_pilot_union": 0,
+  "novel_to_6803_row_draft": 0,
+  "predictions": {
+    "at_least_8_strict_problems": false,
+    "at_least_4_novel_problems": false
+  },
+  "expansion_eligible": false,
+  "stop_reasons": {
+    "MAX_TOKENS": 481,
+    "COMPLETE": 19
+  },
+  "empty_final_replies": 480,
+  "new_training_rows_under_skip_covered_rule": 0,
+  "artifact": {
+    "sha256": "8df5d54537b57918b5d7cae9e3fa26fa8ae665d92308ecec33028f81b01f0924",
+    "files_verified": 516,
+    "encrypted": true
+  },
+  "interpretation": "The 4096-token default-thinking recipe does not qualify for expansion. Most calls ended before producing final text; this does not establish performance with an explicit thinking budget."
+}
