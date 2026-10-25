@@ -30,3 +30,15 @@ The model still has to pass the five conditions in `internal/RELEASE-6.0-PLAN.md
 
 Sources: the first pilot table in that plan; `t/recipes/teacher_cohere_specs.sh`; `t/recipes/v9_strict_specs.py`;
 [Cohere Chat](https://docs.cohere.com/reference/chat) for the token limit and best-effort seeded sampling.
+
+## Result, 2026-10-25
+
+Run `40139205280` completed all 50 problems. The strict check kept 5 problems and 9 candidates for a recorded
+$13.064852, or 38.27 kept problems per $100. Both predictions failed: fewer than 8 problems and below 62 per $100.
+The 1,000 logical requests comprise 990 successful calls and 10 HTTP 422 errors; 22 replies hit the token limit.
+The $25 ceiling did not stop the run. The verified encrypted artifact and aggregate receipt are recorded in
+`release/evidence/cohere-wider-pilot-2026-10-25.json`.
+
+All five kept problems were already covered by the original pilots and the 6,803-row draft. Two overlap with
+the original North Mini Code pilot. The skip-covered rule therefore adds no rows. Do not expand this recipe
+unchanged. Its $25 reservation is replaced by the recorded $13.064852 in subsequent allocation calculations.

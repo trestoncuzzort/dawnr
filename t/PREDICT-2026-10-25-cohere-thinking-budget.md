@@ -33,3 +33,17 @@ The conservative prior ledger total remains $83.082037; the two active Command A
 With this $1 smoke reservation, the planning total is $709.082037, below the $950 stop. Reconcile the smoke
 before replacing its reservation with the conditional $25 pilot reservation. These are allocations and
 conservative estimates, not a claim about the dashboard balance.
+
+## Configuration result and conditional dispatch, 2026-10-25
+
+Smoke `40149271462` passed its registered configuration check: one successful response, `COMPLETE`, nonempty
+final text, no proxy error and zero recorded API cost. The strict check kept zero problems; it was explicitly
+not the configuration gate. The encrypted artifact's digest and aggregate result are in
+`release/evidence/cohere-thinking-smoke-2026-10-25.json`.
+
+The conditional follow-up started at 01:10:23Z, run `40149580546`, revision `7161f773`, with the original 50 IDs
+and the registered settings above. The wider Command A pilot also completed, costing $13.064852 and releasing
+the rest of its $25 reservation. The conservative prior estimate is now $96.146889; the full Command A pass
+reserves $600 and this follow-up reserves $25. Their combined planning total is $721.146889, leaving $228.853111
+unreserved below the $950 stop. The smoke and original North pilot each cost zero under the documented API rate.
+This supersedes the pre-smoke allocation snapshot above, without treating estimated spend as a verified bill.

@@ -176,6 +176,21 @@ still without a strictly kept specification. The next pass uses a fresh series a
 budget comes from actual remaining credit, with the $950 grant stop retained. The report's remaining allocation
 assumes no other live grant run, so outstanding job allocations must also be reserved before dispatch.
 
+Two follow-up pilots completed on 2026-10-25. The wider Command A recipe (20 candidates, 4096-token replies)
+kept 5 problems and 9 candidates for $13.064852, below both registered expansion targets. All five were already
+covered. North Mini Code with default thinking kept 4 problems and 7 candidates, also all covered; 481 of its
+500 replies hit the token limit and 480 contained no final text. Neither recipe qualifies for expansion, and
+neither adds rows to the current draft. Aggregate receipts are in `release/evidence/cohere-wider-pilot-2026-10-25.json`
+and `release/evidence/cohere-north-pilot-2026-10-25.json`.
+
+A registered one-request North configuration smoke with 2048 thinking tokens plus 4096 answer tokens returned
+a complete nonempty answer. It kept no strict example and establishes no quality result. Its successful
+configuration check permits the registered 50-problem follow-up, now running as `40149580546`; the full Command A
+pass remains active. The conservative historical estimate plus completed runs is $96.146889, and these two
+live runs reserve $625, totaling $721.146889 against the $950 planning stop. The original North pilot and
+configuration smoke each recorded zero API cost. The final follow-up result must satisfy every condition in
+`t/PREDICT-2026-10-25-cohere-thinking-budget.md` before expansion.
+
 The grant's purpose is to train dawnr with these checked outputs, as the written permission allows. Candidate B's
 row build uses `t/recipes/v8_spec_rows.py --tag cohere:MODEL:SERIES` to preserve that provenance; the default
 self-distilled label applies only to self-generated rows. The audit and release conditions still decide what is

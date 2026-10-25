@@ -1,0 +1,37 @@
+{
+  "kind": "North Mini Code explicit thinking budget; configuration smoke passed",
+  "workflow_run": "https://github.com/trestoncuzzort/dawnr/actions/runs/40149271462",
+  "registration": "t/PREDICT-2026-10-25-cohere-thinking-budget.md",
+  "model": "north-mini-code-1-0",
+  "procedure": {
+    "selection": "First ID in the original 50-problem list, chosen by order before dispatch",
+    "problems": 1,
+    "candidates_per_problem": 1,
+    "thinking_tokens": 2048,
+    "final_answer_allowance_tokens": 4096,
+    "api_max_tokens": 6144,
+    "seed_offset": 20000
+  },
+  "result": {
+    "planned_problems": 1,
+    "accounted_problems": 1,
+    "not_accounted_problems": 0,
+    "strict_kept_problems": 0,
+    "strict_kept_candidates": 0,
+    "remaining_problems": 1,
+    "calls": 1,
+    "run_usd": "0.0",
+    "proxy_errors": {},
+    "strict_kept_problems_per_100_usd": null
+  },
+  "stop_reasons": {
+    "COMPLETE": 1
+  },
+  "empty_final_replies": 0,
+  "configuration_passed": true,
+  "artifact": {
+    "sha256": "7ac419ae2087a631629c9b72ed9187fd3acff753ab54229c7c6abdb9d232dc72",
+    "encrypted": true
+  },
+  "interpretation": "One complete nonempty reply permits the registered 50-problem follow-up. The strict check kept zero problems; this smoke does not establish teacher quality."
+}

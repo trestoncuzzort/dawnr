@@ -1,0 +1,47 @@
+{
+  "kind": "Wider Command A teacher pilot; both expansion predictions failed",
+  "workflow_run": "https://github.com/trestoncuzzort/dawnr/actions/runs/40139205280",
+  "model": "command-a-03-2025",
+  "procedure": {
+    "problems": 50,
+    "candidates_per_problem": 20,
+    "max_output_tokens": 4096,
+    "thinking": 0,
+    "seed_offset": 10000
+  },
+  "result": {
+    "planned_problems": 50,
+    "accounted_problems": 50,
+    "not_accounted_problems": 0,
+    "strict_kept_problems": 5,
+    "strict_kept_candidates": 9,
+    "remaining_problems": 45,
+    "calls": 990,
+    "run_usd": "13.064852",
+    "proxy_errors": {
+      "HTTP 422": 10
+    },
+    "strict_kept_problems_per_100_usd": 38.27
+  },
+  "logical_requests": 1000,
+  "stop_reasons": {
+    "COMPLETE": 968,
+    "MAX_TOKENS": 22,
+    "ERROR": 10
+  },
+  "empty_final_replies": 10,
+  "novel_to_original_pilot_union": 0,
+  "novel_to_6803_row_draft": 0,
+  "overlap_with_north_default_pilot": 2,
+  "predictions": {
+    "at_least_8_strict_problems": false,
+    "at_least_62_strict_problems_per_100_usd": false
+  },
+  "expansion_eligible": false,
+  "new_training_rows_under_skip_covered_rule": 0,
+  "artifact": {
+    "sha256": "f2d616858e09ba717270830225c796fea4b100f465898502f70e5af57c568020",
+    "encrypted": true
+  },
+  "interpretation": "The wider recipe failed both registered targets and adds no new problem coverage. Do not expand it unchanged. Sampling and output length changed together; their separate effects are unidentified."
+}
