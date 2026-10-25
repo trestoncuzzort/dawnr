@@ -27,7 +27,8 @@ Replacing its weights additionally requires the checks in section 3. The version
   15 GB of memory), measured there as a release condition;
 - the qualification protocol as code and as a document, so a model enters the release only one way;
 - the instruments the five lines produced: the ceiling instrument and its gate precision, the three-decode report,
-  the strict reference check (1,000 draws, both mutant families at 90%), the annotation held-out set;
+  the strict reference check (1,000-draw request budget, at least 10 valid draws, both mutant families at 90%),
+  the annotation held-out set;
 - the data every useful line contributed, on v5's own base, trained on two seeds and read by the protocol;
 - the model that passes that reading, or v5's weights under the 6.0 card if none does, said plainly;
 - the receipts under `release/evidence/` for every number in the card.
@@ -87,6 +88,11 @@ Registered here and repeated with numbers in the candidate's PREDICT file before
 A mean is never a verdict. A weight experiment that does not pass leaves the installed weights in place;
 the record says what was measured. Tested application, verifier and data updates continue independently.
 
+The repaired evaluator's fixed-answer spec33 control completed as 27 all-seven / 29 at one or more kernels.
+The exact prediction of 28 / 29 failed: the certificate refusal is repaired, while the existing Frama-C
+timeout remains. All other 230 cells are unchanged from the earlier cloud control. The standing threshold
+of 27 remains unchanged. Receipt: `release/evidence/spec33-certificate-control-2026-10-25.json`.
+
 ## 4. Ongoing weight experiments: candidates A and B
 
 **Base.** v5's 5,095 rows minus what today's policy refuses: the GPL lineage (`--refuse-gpl`; 61 rows built from
@@ -124,6 +130,12 @@ the weight experiments; routine dawnr updates continue as their own checks finis
 
 **Recipe.** v5's, unchanged: Qwen/Qwen3.5-4B at 851bf6e8, QLoRA NF4, rank 64, alpha 16, dropout 0.1, lr 2e-4,
 5 epochs, max-len 2845, batch 1, grad-accum 16, `t/student_sft.py` at its pinned digest, seeds 1 and 2.
+
+The encoder skips oversized rows and counts them, without truncation. Candidate A's existing training log
+reports 6,678 used and 49 skipped from its 6,727-row archive. An offline check of the complete updated
+7,176-row archive reproduces those inherited skips and adds three, yielding 7,124 fitting rows. The 449
+additions since candidate A contribute 446 fitting rows. These counts describe the unchanged recipe;
+no new training is started. Receipt: `release/evidence/cohere-data-window-2026-10-25.json`.
 
 ## 5. Where work runs (the user, 2026-10-24: "outsource for this stuff always. we use the laptop to test if something doesnt work")
 
@@ -216,9 +228,9 @@ against the collected evidence. Aggregate receipt: `release/evidence/cohere-full
 All teacher allocations are now released. Historical conservative estimates plus completed runs total
 $310.646105, leaving $639.353895 below the $950 planning stop. This counts the common prior $83.082037 once,
 the wider pilot's $13.064852 once, and the full pass once; all three North runs recorded zero API cost.
-Historical placeholder prices remain estimates, not verified invoices. There is no live teacher allocation.
-The separately registered three-request schema capability test reserves $1, making the current planning
-amount $311.646105. It does not allocate a larger teacher pass.
+Historical placeholder prices remain estimates, not verified invoices. The separately registered schema
+capability test completed for $0.002285, releasing its $1 reservation. Including that test, the conservative
+total is $310.648390, with $639.351610 below the stop and no live allocation.
 
 The audited draft already incorporates eight Command A shards. The final two shards and the bounded North
 pilot supply 39 additional uncovered problems and 71 specifications. Their next encrypted data build is
@@ -235,8 +247,12 @@ JSON task representation. Schema mode supports references and `anyOf`; plain JSO
 levels, and several schema features such as `oneOf` and array-length bounds are unsupported. A small remote
 capability check must establish the needed schema behavior before a teacher pilot. Engine structure, type and
 reference checks must still validate every result; valid JSON alone is not an accepted specification. A fixed
-three-request capability test is registered in `t/PREDICT-2026-10-25-cohere-schema-smoke.md`, with a $1 reservation.
+three-request capability test was registered in `t/PREDICT-2026-10-25-cohere-schema-smoke.md`, with an initial $1 reservation.
 It separates inline, referenced and recursive schemas on synthetic contracts, before any teacher pilot.
+Run `40156495978` passed all three cases, including the depth-eight recursive expression. Each result was
+well formed and survived an exact printer/parser round trip. Receipt:
+`release/evidence/cohere-schema-smoke-2026-10-25.json`. This permits preparing a registered training-only
+pilot with the full needed representation and unchanged semantic checks; it establishes no teacher-quality gain.
 This follows the existing grammar-generation research in
 `internal/research-2026-10-22/plateau-repos-B.md` and the measured pilot attrition, rather than assuming another
 prose instruction or repair prompt resolves the earlier failures.

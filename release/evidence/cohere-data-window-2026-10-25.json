@@ -1,0 +1,60 @@
+{
+  "kind": "Whole-archive encoding at the unchanged training window",
+  "created_utc": "2026-10-25T03:00:05.253367+00:00",
+  "archive_sha256": "52404c473208d01cb8f074a540c3cbe988f301c063d976a44fa25c40e76e3c03",
+  "model": "Qwen/Qwen3.5-4B",
+  "tokenizer_revision": "851bf6e806efd8d0a36b00ddf55e13ccb7b8cd0a",
+  "tokenizer_files_sha256": {
+    "config.json": "ddc63e1c717afa86c865bb5e01313d89d72bb53b97ad4a8a03ba8510c0621670",
+    "tokenizer.json": "5f9e4d4901a92b997e463c1f46055088b6cca5ca61a6522d1b9f64c4bb81cb42",
+    "tokenizer_config.json": "316230d6a809701f4db5ea8f8fc862bc3a6f3229c937c174e674ff3ca0a64ac8",
+    "chat_template.jinja": "a4aee8afcf2e0711942cf848899be66016f8d14a889ff9ede07bca099c28f715"
+  },
+  "trainer_sha256": "e43c27df1ee1e796b1799d38a16e0c5725dd09df762be3fabb2940ad8cb4a46f",
+  "max_len": 2845,
+  "regions": {
+    "candidate_a": {
+      "rows": 6727,
+      "used": 6678,
+      "dropped": 49,
+      "maximum_tokens": 14508,
+      "median_tokens": 512
+    },
+    "prior_draft": {
+      "rows": 7066,
+      "used": 7017,
+      "dropped": 49,
+      "maximum_tokens": 14508,
+      "median_tokens": 514.0
+    },
+    "latest_additions": {
+      "rows": 110,
+      "used": 107,
+      "dropped": 3,
+      "maximum_tokens": 3778,
+      "median_tokens": 571.0
+    },
+    "all_additions_since_a": {
+      "rows": 449,
+      "used": 446,
+      "dropped": 3,
+      "maximum_tokens": 3778,
+      "median_tokens": 540
+    },
+    "whole_archive": {
+      "rows": 7176,
+      "used": 7124,
+      "dropped": 52,
+      "maximum_tokens": 14508,
+      "median_tokens": 515.0
+    }
+  },
+  "specification_problems_in_archive": 1008,
+  "specification_problems_with_fitting_rows": 1003,
+  "existing_training_log_crosscheck": {
+    "candidate_a_rows_used": 6678,
+    "candidate_a_rows_dropped": 49,
+    "matches": true
+  },
+  "method": "Offline tokenizer and unchanged encoder only. No model loaded, generation, training or reference/proof grading. Oversized rows are skipped, never truncated."
+}

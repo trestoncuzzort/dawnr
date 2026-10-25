@@ -39,3 +39,20 @@ still unread and remain reserved for the candidate selected after release condit
 
 Sources: `t/PREDICT-2026-10-25-framac-certificate-binding.md`, `release/evidence/v5-cloud-baseline-2026-10-25.json`,
 `release/evidence/spec33-cloud-control-2026-10-25.json`, and `t/recipes/three_decode_report.py`.
+
+## Private specification-control result
+
+Run `40152941556` finished at the registered grader. The four native certificate controls and seven adapter
+controls passed without skips. All 562 source hashes, the original question/answer/model identities and all
+33 prepared task files were verified. There were no model calls.
+
+The exact count prediction failed: **27 all-seven and 29 at one or more kernels**, against the predicted
+28 and 29. Of 231 matrix cells, 230 are unchanged from the earlier cloud control. The single changed cell
+is the repaired certificate path: Frama-C changes from `verified / unproved` to `verified / refuted`.
+The other previously identified Frama-C timeout remains, so its diagnostic success did not predict this
+full control. No favorable repeat replaces this result. The historical 26 remains recorded, and the
+standing requirement of 27 is unchanged and met by the refreshed control.
+
+Aggregate evidence: `release/evidence/spec33-certificate-control-2026-10-25.json`. The clean-206 development
+prediction remains pending until all three wider parts finish. The three completed dev-95 parts retain
+their historical 6/4/6 clean and 3/2/3 all-seven counts, with no changed kernel cells.

@@ -116,5 +116,12 @@
         "row_sha256": "15f65312090e5568538d4d6580a807aede30f3376e998df2909b9b04510e73ee"
       }
     ]
+  },
+  "whole_archive_window_check": {
+    "receipt": "release/evidence/cohere-data-window-2026-10-25.json",
+    "rows_used": 7124,
+    "rows_skipped": 52,
+    "inherited_from_candidate_a": 49,
+    "newly_skipped": 3
   }
 }

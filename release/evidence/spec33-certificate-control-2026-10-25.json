@@ -1,0 +1,78 @@
+{
+  "kind": "Matched fixed-answer control after certificate repair",
+  "workflow_run": 40152941556,
+  "workflow_url": "https://github.com/trestoncuzzort/dawnr/actions/runs/40152941556",
+  "workflow_revision": "f5af269865510a564c1890f38910632ea1f4534c",
+  "grader_revision": "66be29b4de81dbfe5a09e794274a58087867c42b",
+  "artifact_id": 12584164560,
+  "artifact_sha256": "97d0d0d0740430df8f929dabe21db6e83d3a3b8c878c1ac8524b5d5001024f97",
+  "input_manifest_sha256": "4fd709da2284a6bbff8ef35aa24f22da432cf241355fd0109fafe8776927d107",
+  "questions_sha256": "effc2f4e586e0c4f7638a5a9a2b75515aaf7019de03ca819d46e5aa3d593ab24",
+  "answers_sha256": "0ad976413b61e2936bef64752ee7b584bb15c9b3b3e592e5556aef40c5e9149f",
+  "source_hashes_verified": 562,
+  "all_task_files_identical": true,
+  "tasks": 33,
+  "matrix_cells": 231,
+  "unchanged_cells": 230,
+  "changed_cells": [
+    {
+      "task_sha256": "8ab5bfb40f2be77e321bbe4c6e39021281fa794d85c42e9abaec9d81d458e64e",
+      "kernel": "framac",
+      "before": "verified / unproved",
+      "after": "verified / refuted"
+    }
+  ],
+  "remaining_timeout_cells": [
+    {
+      "task_sha256": "1a3ee84da298dfe0690d6954e34d67ce2ce9d4f75b215954dda6395dde22d871",
+      "kernel": "spark",
+      "verdict": "timeout / refuted"
+    },
+    {
+      "task_sha256": "1a3ee84da298dfe0690d6954e34d67ce2ce9d4f75b215954dda6395dde22d871",
+      "kernel": "framac",
+      "verdict": "timeout / refuted"
+    },
+    {
+      "task_sha256": "177b1090dd8591c2ada22b1d6422dee4cb080561fc67c9c0491a1716c85a73b2",
+      "kernel": "framac",
+      "verdict": "timeout / refuted"
+    }
+  ],
+  "native_controls": {
+    "binding": 4,
+    "adapter": 7,
+    "skipped": 0,
+    "passed": true
+  },
+  "expected": {
+    "at_least_one": 29,
+    "all_seven": 28
+  },
+  "observed": {
+    "at_least_one": 29,
+    "all_seven": 27
+  },
+  "levels": {
+    "questions": 33,
+    "stages": {
+      "ready": 33
+    },
+    "ready": 33,
+    "no twin could be built (not graded)": 0,
+    "a kernel refutes it": 3,
+    "no row in the table": 0,
+    "proved by at least 1": 29,
+    "proved by at least 3": 29,
+    "proved by at least 5": 28,
+    "proved by at least 6": 28,
+    "proved by all seven": 27
+  },
+  "exact_prediction_held": false,
+  "standing_requirement_all_seven": 27,
+  "standing_requirement_met": true,
+  "new_model_calls": 0,
+  "heldout_182_read": false,
+  "original_failed_control_retained": true,
+  "original_question_answer_and_model_identity_identical": true
+}

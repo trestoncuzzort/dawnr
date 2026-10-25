@@ -64,3 +64,9 @@ training manifest must account for all parent and new exclusions before any run.
 All artifact, input, builder and output digests were verified. The length reading used
 the pinned tokenizer and unchanged trainer encoder offline, without loading a model.
 Aggregate receipt: `release/evidence/cohere-data-2026-10-25b.json`.
+
+The subsequent whole-archive encoding check accounts for the parent too: 7,124 of 7,176 rows fit, with
+52 skipped at the unchanged window. Forty-nine are inherited from candidate A, whose existing training
+log independently reports 6,678 used and 49 skipped; the other three are the failed prediction above.
+All 449 additions since candidate A contribute 446 fitting rows. Receipt:
+`release/evidence/cohere-data-window-2026-10-25.json`. The archive stays intact and no new training starts.

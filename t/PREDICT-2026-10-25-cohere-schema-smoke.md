@@ -49,3 +49,16 @@ coverage comparison and budget. A valid synthetic JSON expression establishes no
 Sources: [structured outputs](https://docs.cohere.com/docs/structured-outputs),
 [Chat API](https://docs.cohere.com/reference/chat), [Command A pricing](https://docs.cohere.com/docs/command-a),
 `t/recipes/cohere_proxy.py`, `t/SPEC.md`, `t/surface.py`, and `t/check_wf.py`.
+
+## Result
+
+Run `40156495978` passed all three predictions at revision `2fbc4de2`. Each case returned complete,
+nonempty JSON, matched its requested expression, passed well-formedness, and survived an exact printer/parser
+round trip. The recursive case had expression depth eight. Exactly three calls were made, with no retries.
+Their billed-unit total was $0.002285. The $1 reservation is released; the conservative consolidated grant
+estimate is now $310.648390, with $639.351610 below the $950 stop and no live reservation.
+
+All source hashes, original input bytes, the encrypted artifact digest and the three response/ledger records
+were checked. Receipt: `release/evidence/cohere-schema-smoke-2026-10-25.json`. A teacher pilot may now be
+prepared under the conditions above. The smoke does not establish that real specifications become more
+correct, that the full expression language is covered, or that any training problem is newly solved.
