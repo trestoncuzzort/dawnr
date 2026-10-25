@@ -1,0 +1,55 @@
+{
+  "kind": "North explicit-thinking pilot; expansion conditions failed",
+  "workflow_run": "https://github.com/trestoncuzzort/dawnr/actions/runs/40149580546",
+  "registration": "t/PREDICT-2026-10-25-cohere-thinking-budget.md",
+  "model": "north-mini-code-1-0",
+  "procedure": {
+    "problems": 50,
+    "candidates_per_problem": 10,
+    "thinking_tokens": 2048,
+    "answer_allowance_tokens": 4096,
+    "api_max_tokens": 6144,
+    "seed_offset": 20000
+  },
+  "result": {
+    "planned_problems": 50,
+    "accounted_problems": 50,
+    "not_accounted_problems": 0,
+    "strict_kept_problems": 10,
+    "strict_kept_candidates": 16,
+    "calls": 485,
+    "run_usd": "0.0",
+    "proxy_errors": {
+      "HTTP 429": 15
+    }
+  },
+  "logical_requests": 500,
+  "stop_counts": {
+    "COMPLETE": 455,
+    "MAX_TOKENS": 30,
+    "ERROR": 15
+  },
+  "empty_final_replies": 15,
+  "novel_to_original_pilot_union": 1,
+  "overlap_with_wider_command_a": 4,
+  "novel_to_7066_row_draft": 1,
+  "new_specifications": 1,
+  "conditions": {
+    "all_50_accounted": true,
+    "at_most_5pct_token_limit": false,
+    "at_most_5pct_empty": true,
+    "no_budget_ceiling": true,
+    "at_most_5pct_errors": true,
+    "at_least_8_strict_problems": true,
+    "at_least_4_novel_to_original_union": false
+  },
+  "expansion_eligible": false,
+  "quota_observation": "All 15 HTTP 429 errors report exhaustion of the monthly request limit for this model. Do not make more calls until that quota changes.",
+  "artifact": {
+    "id": 12584216586,
+    "sha256": "843547c1bc22e7a0b895e8e0a31ebbab8753e069c646cbf238733ee12f1a7bb9",
+    "files_verified": 516,
+    "encrypted": true
+  },
+  "interpretation": "The configuration produced nonempty final text on every successful call, but failed the token-limit and novel-coverage conditions. Its one new strictly kept specification remains eligible for an audited data increment."
+}

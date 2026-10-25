@@ -47,3 +47,26 @@ the rest of its $25 reservation. The conservative prior estimate is now $96.1468
 reserves $600 and this follow-up reserves $25. Their combined planning total is $721.146889, leaving $228.853111
 unreserved below the $950 stop. The smoke and original North pilot each cost zero under the documented API rate.
 This supersedes the pre-smoke allocation snapshot above, without treating estimated spend as a verified bill.
+
+## Follow-up result
+
+Run `40149580546` completed all 50 problems: 485 successful calls and 15 monthly-quota errors across 500 logical
+requests, zero recorded API cost, 10 strictly kept problems and 16 candidates. Nine kept problems were already
+in the original pilots' union of 12. Only one problem and one specification are new to the 7,066-row draft; four
+kept problems overlap the wider Command A pilot.
+
+The two expansion conditions failed: novelty is 1 against the required 4, and 30 of 500 replies (6%) hit the token
+limit against the 5% ceiling. The other conditions held: all 50 were accounted for, 10 exceeds the 8-problem bar,
+there was no budget stop, and empty replies and request errors are each 15/500 (3%). All successful calls returned
+nonempty final text; 455 finished complete. These results do not isolate thinking budget from total output budget
+or sampling-seed effects.
+
+Every HTTP 429 message reports the model's monthly request limit, so further calls wait for that quota to change.
+The recipe does not qualify for expansion even independently of the quota. Retain the one new accepted example
+for an audited data update. The encrypted ZIP digest and all 516 archived files matched the private collection;
+aggregate receipt `release/evidence/cohere-thinking-pilot-2026-10-25.json`.
+
+The $25 reservation is released and replaced by the recorded zero cost. The common conservative prior remains
+$96.146889, with the full Command A pass's $600 allocation still reserved, including its completed shards.
+That planning total is $696.146889, leaving $253.853111 below the $950 stop. Reconcile the full pass once before
+allocating against its final cost; its partial ledger figures are already inside the $600 allocation.
