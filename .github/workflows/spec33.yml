@@ -20,8 +20,8 @@ permissions:
 
 env:
   ENGINE_COMMIT: d13d11d01f8f50687ef645d60aa08c870d664b84
-  # Retain the exact code measured by fixed-answer control 40141581001, including its recorded limitations.
-  GRADER_COMMIT: 878a5cb322edb4fdf6e40f0b6fb556878cac5486
+  # Targeted, validated certificate repair; its fixed-answer control is registered before dispatch.
+  GRADER_COMMIT: 66be29b4de81dbfe5a09e794274a58087867c42b
 
 jobs:
   grade:
@@ -51,6 +51,15 @@ jobs:
           fail-on-cache-miss: true
       - name: load the pinned seven-kernel image
         run: zstd -dc /mnt/kernels/kernels.tar.zst | docker load && rm /mnt/kernels/kernels.tar.zst
+      - name: native certificate controls on the imported evaluator
+        run: |
+          mkdir -p out/spec33-grade
+          docker run --rm -v "$PWD:/opt/dawnr" -w /opt/dawnr --memory=13g \
+            -e PYTHONPATH=/opt/dawnr/t -e T_RUN_NATIVE_CERTIFICATE_TESTS=1 -e PYTHONDONTWRITEBYTECODE=1 \
+            --entrypoint bash dawnr-kernels -c \
+            'python3 -c "from verifiers import framac; assert framac.FRAMAC" &&
+             python3 t/test_framac_certificate_binding.py && python3 t/test_framac_adapter_controls.py' \
+            > out/spec33-grade/native-controls.log 2>&1
       - name: open the pinned private answers
         env:
           GH_TOKEN: ${{ github.token }}

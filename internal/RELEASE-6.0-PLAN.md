@@ -5,6 +5,12 @@ full text stays in git history (`git show a24d20a2:internal/ROADMAP-LOG.md`). Wh
 carried into section 6. From today this file is the roadmap of record for the 6.0 release; `ROADMAP.md` at the
 root is the public face and is updated as milestones finish.
 
+**Operating clarification, 2026-10-25 UTC:** improve the existing dawnr incrementally as useful changes are found.
+Tested application, verifier and data improvements can land independently. A new set of weights is not required
+for an update. Section 3 governs changing the released weights and claiming model-quality gains; it does not
+hold unrelated code fixes behind completion of a training experiment. Candidate A and B remain experiment labels,
+and their old proposed release numbers are not reservations for future product versions.
+
 The first draft of this plan, written the same afternoon, built 6.0 on the corrected 4,189-row set and read
 candidates against a control that mixed two training sets. Section 2 records why both were wrong.
 
@@ -13,8 +19,8 @@ candidates against a control that mixed two training sets. Section 2 records why
 dawnr has shipped through one rolling channel whose model is dawnr v5. Since v5, five candidate lines were trained
 or prepared and each was called a version: v6, v7, v8, v9 and v10. None was promoted. 6.0 folds all five into
 versioned releases (the user, 2026-10-24: "drop the student and vN niche and just call it dawnr X.Y.Z"): 6.0.0 ships
-now with the October 5 model unchanged, and each increment after it (6.1.0, 6.2.0, ...) ships a model only when it
-passes the door of section 3. The number names the whole system, not a training run:
+now with the October 5 model unchanged. Subsequent updates carry tested improvements to the existing system.
+Replacing its weights additionally requires the checks in section 3. The version names the whole system:
 
 - the application at a tested revision, with `dawnr version` printing it;
 - dawnr running smoothly on a laptop like the one it is built on (an RTX 5050 Laptop GPU with 8 GB, 16 cores,
@@ -58,7 +64,7 @@ v9 (the corrected set plus 833 strict self-distilled rows) 7 on its one decode.
 average, but no paired test separates them. A weaker base is likely and not proven. 6.0 does not need the answer:
 it builds on v5's own rows and reads the result against the published v5 alone, on unleaked problems.
 
-## 3. The door: how a model becomes the 6.0 model
+## 3. Checks for replacing the released weights
 
 Registered here and repeated with numbers in the candidate's PREDICT file before training. All five must hold:
 
@@ -81,7 +87,7 @@ Registered here and repeated with numbers in the candidate's PREDICT file before
 A mean is never a verdict. If no candidate passes, 6.0 ships v5's weights as the 6.0 model and the card says which
 candidates were read and what they scored.
 
-## 4. The candidates: 6.1.0 (A) and 6.2.0 (B)
+## 4. Ongoing weight experiments: candidates A and B
 
 **Base.** v5's 5,095 rows minus what today's policy refuses: the GPL lineage (`--refuse-gpl`; 61 rows built from
 MBPP-DFY programs) and any row touching a panel in use (the held-out 182, the development 95, the wider clean 111,
@@ -113,7 +119,8 @@ skipped) and audited with `t/heldout_audit.py --panels --refuse-gpl`:**
 **Which candidate has what.** Candidate A (registered and training since 2026-10-24,
 `t/PREDICT-2026-10-24-release-6.1-candidate-a.md`, 6,727 rows) has the base, v9's and the earlier teachers'
 strictly kept specifications and the repair traces. Candidate B adds the Cohere teacher's rows and the four
-remaining 9B chunks, once the strict check has passed them; it is the 6.2.0 candidate.
+remaining 9B chunks, once the strict check has passed them. Their data hashes and training receipts identify
+the weight experiments; routine dawnr updates continue as their own checks finish.
 
 **Recipe.** v5's, unchanged: Qwen/Qwen3.5-4B at 851bf6e8, QLoRA NF4, rank 64, alpha 16, dropout 0.1, lr 2e-4,
 5 epochs, max-len 2845, batch 1, grad-accum 16, `t/student_sft.py` at its pinned digest, seeds 1 and 2.
@@ -244,10 +251,11 @@ The development baseline completed in run `40134628181`: clean-206 counts 20, 19
 counts 9, 8, 9 (mean 8.67), reproducing the recorded baseline. All six original 95/145-problem receipts were
 validated before filtering, and their evaluator hashes agree apart from the panel paths. Aggregate receipt:
 `release/evidence/v5-cloud-baseline-2026-10-25.json`. The image pins prover binaries; it does not freeze the
-mounted checkout. `evaluate.yml` now explicitly checks out the measured grader revision `01c94ef5`, while
-`spec33.yml` checks out its measured control revision `878a5cb3`. A future evaluator change needs new control
-evidence and a newly matched baseline before candidate comparisons; updating the application alone does not
-silently change either evaluator.
+mounted checkout. Those measurements used grader revisions `01c94ef5` and `878a5cb3`, respectively. The validated
+certificate-normalization repair is now imported at `66be29b4`, and both workflows explicitly pin that revision.
+The same saved answers will be regraded under `t/PREDICT-2026-10-25-framac-control-refresh.md`; the original
+receipts remain recorded. The verifier fix is an incremental code update. Its refreshed measurements establish
+the evaluator for later weight comparisons, and are not themselves a claim that the weights improved.
 
 The remaining 9B inputs contain 30 candidates on 18 problems, 15 not already covered by candidate A. Their
 concatenated SHA-256 is `81d04eaaf849f85f7e279fb7455fbeb62fca75f07523047560e3353014b03355`;

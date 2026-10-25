@@ -9,14 +9,17 @@ As of 2026-10-17, whole-system control is out of scope. Repository and document
 tools support the coding, reasoning, training, and verification work. Desktop
 automation and host administration are no longer product goals.
 
-## Releases (2026-10-24)
+## Incremental updates (2026-10-25 UTC)
 
-dawnr is released as dawnr MAJOR.MINOR.PATCH ([release/ROLLING.md](release/ROLLING.md)). **6.0.0** carries the
-October 5 model unchanged with the application at its tag, versioned installs, and the correction of the October 22
-readings. **6.1.0** is in training: the October 5 model's own audited rows plus strictly checked specifications and
-repair examples, read against 6.0.0 by the plan's five conditions. The increment after it adds specifications written
-by Cohere's Command A models for the problems the model fails. The plan and its milestones are in
-[the 6.0 plan](internal/RELEASE-6.0-PLAN.md).
+dawnr is updated as dawnr MAJOR.MINOR.PATCH ([release/ROLLING.md](release/ROLLING.md)). Tested improvements to the
+application, verifier and data pipeline can land as they are ready. Weight changes are measured before adoption;
+they are not required for every update.
+
+The ongoing candidate A experiment uses the October 5 model's audited rows plus strictly checked specifications
+and repair examples. Cohere is generating checked data for a further weight experiment. Existing weights remain
+in use while those experiments run. Their proposed version labels are historical identifiers, not reserved
+product releases. The qualification checks and working records are in
+[the plan](internal/RELEASE-6.0-PLAN.md).
 
 ## Current priorities
 

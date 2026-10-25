@@ -1,0 +1,83 @@
+{
+  "kind": "Saved v5 inputs for matched controls after the certificate repair",
+  "grader_commit": "66be29b4de81dbfe5a09e794274a58087867c42b",
+  "development_arms": [
+    {
+      "tag": "v5-20261021-dev-desktop-r2",
+      "panel": "dev-95",
+      "pool": "v5",
+      "sha256": "8917ad487dc814a470099174492e0f2ca4e79ec8bf14e6ca96f5b4fa7b7a4b0d"
+    },
+    {
+      "tag": "v5-20261022-seedoff1000",
+      "panel": "dev-95",
+      "pool": "v5",
+      "sha256": "56dc0b8bbd3b12e518f2aad1f84a6467d22ed7527021460bc4f6799f81fe2025"
+    },
+    {
+      "tag": "v5-20261022-seedoff2000",
+      "panel": "dev-95",
+      "pool": "v5",
+      "sha256": "21a1ffb69c69c3081763c589b0049810d9b25d0c93ff333e116dbb28d5a0164e"
+    },
+    {
+      "tag": "v5-20261022-wider-off0",
+      "panel": "wider-145",
+      "pool": "v7",
+      "sha256": "d736fc9a2f9b58a46d463b153c18bc617d10a7254481320af4070ce6f02fdad9"
+    },
+    {
+      "tag": "v5-20261022-wider-off1000",
+      "panel": "wider-145",
+      "pool": "v7",
+      "sha256": "2c4e39c323730c6e41be9fef8aaae42285c784c4ca8d55401d8917acb21c0282"
+    },
+    {
+      "tag": "v5-20261022-wider-off2000",
+      "panel": "wider-145",
+      "pool": "v7",
+      "sha256": "2325a7b22416a3a38ced1a692afe8bfdf237ab7526fb564a393a44c26ae5cdfd"
+    }
+  ],
+  "original_files_verified": [
+    {
+      "tag": "v5-20261021-dev-desktop-r2",
+      "sha256": "8917ad487dc814a470099174492e0f2ca4e79ec8bf14e6ca96f5b4fa7b7a4b0d",
+      "original_answer_summary_and_identity_files_verified": 15
+    },
+    {
+      "tag": "v5-20261022-seedoff1000",
+      "sha256": "56dc0b8bbd3b12e518f2aad1f84a6467d22ed7527021460bc4f6799f81fe2025",
+      "original_answer_summary_and_identity_files_verified": 13
+    },
+    {
+      "tag": "v5-20261022-seedoff2000",
+      "sha256": "21a1ffb69c69c3081763c589b0049810d9b25d0c93ff333e116dbb28d5a0164e",
+      "original_answer_summary_and_identity_files_verified": 20
+    },
+    {
+      "tag": "v5-20261022-wider-off0",
+      "sha256": "d736fc9a2f9b58a46d463b153c18bc617d10a7254481320af4070ce6f02fdad9",
+      "original_answer_summary_and_identity_files_verified": 48
+    },
+    {
+      "tag": "v5-20261022-wider-off1000",
+      "sha256": "2c4e39c323730c6e41be9fef8aaae42285c784c4ca8d55401d8917acb21c0282",
+      "original_answer_summary_and_identity_files_verified": 51
+    },
+    {
+      "tag": "v5-20261022-wider-off2000",
+      "sha256": "2325a7b22416a3a38ced1a692afe8bfdf237ab7526fb564a393a44c26ae5cdfd",
+      "original_answer_summary_and_identity_files_verified": 47
+    }
+  ],
+  "spec33": {
+    "asset": "spec33-v5-control-certificate-20261025.tar.gz.enc",
+    "ciphertext_sha256": "55c0dda010d231c0ac4f9e7246cf04eff8e4ce7d501cf5e75d8e543a3435a41c",
+    "questions_sha256": "effc2f4e586e0c4f7638a5a9a2b75515aaf7019de03ca819d46e5aa3d593ab24",
+    "answers_sha256": "0ad976413b61e2936bef64752ee7b584bb15c9b3b3e592e5556aef40c5e9149f",
+    "label": "v5-control-certificate-20261025"
+  },
+  "no_new_model_calls": true,
+  "heldout_182_reading_started": false
+}

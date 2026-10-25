@@ -20,8 +20,8 @@ permissions:
 env:
   ENGINE_COMMIT: d13d11d01f8f50687ef645d60aa08c870d664b84
   DOCKERFILE_SHA256: 1483aad08f6b9ba291e5f1880a057a3c20a9f6f52074e43111d8de215a7f456c
-  # This checkout produced all six baseline arms in run 40134628181. The image pins tools, not mounted code.
-  GRADER_COMMIT: 01c94ef5509fc51ab6484c1350c1cb9f8504e459
+  # Targeted, validated certificate repair; matched controls are registered before candidate comparisons.
+  GRADER_COMMIT: 66be29b4de81dbfe5a09e794274a58087867c42b
 
 jobs:
   image:
@@ -84,9 +84,19 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           GRADE_PANEL: ${{ matrix.arm.panel }}
+          ARCHIVE_SHA256: ${{ matrix.arm.sha256 }}
         run: |
-          case "$GRADE_PANEL" in dev-95|wider-145) ;; *) echo "this workflow publishes only development-panel evidence" >&2; exit 2;; esac
+          case "$GRADE_PANEL" in
+            dev-95) panel_sha=f807aec7e6b89e524ded720d9ccfb670c1d504a5a5717966a4b870516701daf7;;
+            wider-145) panel_sha=ba3f9e023b0a8d458989be9419dd016d26a35727eaf3c1cacc3a935f65f9ede7;;
+            *) echo "this workflow publishes only development-panel evidence" >&2; exit 2;;
+          esac
           gh release download eval-inputs -p "${{ matrix.arm.tag }}.tar.gz" -p "panel-${{ matrix.arm.panel }}.txt" -D /tmp/in
+          printf '%s  %s\n' "$panel_sha" "/tmp/in/panel-$GRADE_PANEL.txt" | sha256sum -c -
+          if [ -n "$ARCHIVE_SHA256" ]; then
+            [[ "$ARCHIVE_SHA256" =~ ^[0-9a-f]{64}$ ]]
+            printf '%s  %s\n' "$ARCHIVE_SHA256" "/tmp/in/${{ matrix.arm.tag }}.tar.gz" | sha256sum -c -
+          fi
           mkdir -p t/out/spec-experiment t/out/v6-20261018
           tar -xzf "/tmp/in/${{ matrix.arm.tag }}.tar.gz" -C t/out/spec-experiment
           cp "/tmp/in/panel-${{ matrix.arm.panel }}.txt" "t/out/v6-20261018/${{ matrix.arm.panel }}.txt"
