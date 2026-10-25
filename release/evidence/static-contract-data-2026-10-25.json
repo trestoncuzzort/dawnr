@@ -1,0 +1,67 @@
+{
+  "workflow_run": 40157909167,
+  "revision": "e664e3b15c01fda2b509d4855a2c4a4b021f5ddc",
+  "artifact_id": 12585128059,
+  "artifact_sha256": "cf1dc3b86e32161be4b9164768233cc31ef7c3a54521920482d083cd06c11486",
+  "input_manifest_sha256": "c8ae51e496891da1748ec520ca828de4275d80d9739a90c5407215a5fde08d77",
+  "code_hashes_verified": 8,
+  "all_original_row_actions_verified": true,
+  "frozen_prefix_preserved_in_order": true,
+  "all_reference_additions_preserved": true,
+  "output_rows": 7123,
+  "output_sha256": "eb139437b33b4797023e1f6ef121628588d5397f9f57241695d654071c4457b5",
+  "added_rows": 396,
+  "added_by_source": {
+    "python": 166,
+    "spec": 230
+  },
+  "static_counts": {
+    "input_additions": 449,
+    "reference_rows_retained": 166,
+    "specifications_retained_unchanged": 208,
+    "specifications_retained": 230,
+    "header_promotion_candidates": 24,
+    "headers_promoted": 22,
+    "duplicates_dropped": 3,
+    "invalid_specifications_dropped": 50
+  },
+  "all_retained_added_contracts_valid": true,
+  "baseline_statically_checked": false,
+  "audit": {
+    "rows": 7123,
+    "flagged": 0,
+    "unparsed": 339,
+    "sha256": "edf7190ebbc15ad32e5ee5c48c4d1fa647ef1e0c88af2e45c33bdafcc27cb6d1",
+    "panels": true,
+    "refuse_gpl": true
+  },
+  "predictions_1_and_2_held": true,
+  "kind": "Statically curated additions to the frozen baseline",
+  "workflow_url": "https://github.com/trestoncuzzort/dawnr/actions/runs/40157909167",
+  "base_rows": 6727,
+  "base_sha256": "2c2eff287493fd8774d1a71bc9e799ca4cc40f21fd9a1b082c17f8206f7351d8",
+  "previous_archive_rows": 7176,
+  "previous_archive_sha256": "52404c473208d01cb8f074a540c3cbe988f301c063d976a44fa25c40e76e3c03",
+  "ciphertext_sha256": "cd275066545004efd91c6b0bbb1ed13b39d540dedb10b83b516ef9d6492fa948",
+  "token_lengths": {
+    "model": "Qwen/Qwen3.5-4B",
+    "revision": "851bf6e806efd8d0a36b00ddf55e13ccb7b8cd0a",
+    "trainer_sha256": "e43c27df1ee1e796b1799d38a16e0c5725dd09df762be3fabb2940ad8cb4a46f",
+    "tokenizer_files_sha256": {
+      "config.json": "ddc63e1c717afa86c865bb5e01313d89d72bb53b97ad4a8a03ba8510c0621670",
+      "tokenizer.json": "5f9e4d4901a92b997e463c1f46055088b6cca5ca61a6522d1b9f64c4bb81cb42",
+      "tokenizer_config.json": "316230d6a809701f4db5ea8f8fc862bc3a6f3229c937c174e674ff3ca0a64ac8",
+      "chat_template.jinja": "a4aee8afcf2e0711942cf848899be66016f8d14a889ff9ede07bca099c28f715"
+    },
+    "max_len": 2845,
+    "rows": 7123,
+    "used": 7072,
+    "skipped": 51,
+    "inherited_skips": 49,
+    "added_skips": 2,
+    "prediction_held": true,
+    "method": "Offline encoding with the pinned tokenizer and unchanged trainer; no model loaded."
+  },
+  "all_registered_predictions_held": true,
+  "scope": "Only additions received the new static gate. The registered baseline remains unchanged, including its 339 inherited unparsed blocks. All original archives remain. No new model calls, training, weight change or held-out-182 model reading."
+}

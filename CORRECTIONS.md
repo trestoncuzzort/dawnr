@@ -8,10 +8,12 @@ successful measurements is not measuring anything.
   strict filter required reference agreement and rejection of both mutant families, but did not run the engine's
   static contract checks. Of the completed Command A pass's 250 kept specifications, 200 pass those checks
   (18 need the existing checked header promotion) and 50 fail; 125 of the original 149 problems retain a valid
-  candidate. Failures include undeclared calls, self-reference in ensures, type mismatches and termination
+  candidate ([census](release/evidence/cohere-static-contract-census-2026-10-25.json)). Failures include
+  undeclared calls, self-reference in ensures, type mismatches and termination
   measures. The original counts remain results of the earlier reference-only gate. Future strict checks now
-  apply static validation first, and row preparation independently checks it. A registered curation build
-  removes invalid additions while preserving the frozen candidate A baseline and all original archives
+  apply static validation first, and row preparation independently checks it. The registered curation build passed,
+  removing 50 invalid additions and three normalization duplicates while preserving the frozen candidate A baseline
+  and all original archives
   ([registration](t/PREDICT-2026-10-25-static-contract-data.md)). This does not claim every inherited baseline
   row passed the new check, or change released weights.
 

@@ -63,3 +63,21 @@ and tested. Static validity and reference checks do not establish a model-qualit
 Sources: `t/spec_first.py:accept`, `t/check_wf.py`, `t/surface.py`, `t/recipes/v9_strict_specs.py`,
 `t/recipes/prepare_release_rows.py`, and the archived source receipts. Header-promotion precedent:
 [spec_first](https://github.com/trestoncuzzort/dawnr/blob/main/t/spec_first.py).
+
+## Result
+
+Run `40157909167` passed at revision `e664e3b1`. All three predictions held. The corrected archive contains
+7,123 rows, SHA-256 `eb139437b33b4797023e1f6ef121628588d5397f9f57241695d654071c4457b5`.
+Its 396 additions are 166 unchanged reference-Python rows and 230 statically valid specifications. Fifty
+invalid specifications and three normalization duplicates were removed; 22 retained rows received the
+existing checked header promotion. Every action was verified against the original row hashes, and the
+entire 6,727-row prefix remains unchanged and in order.
+
+The whole-data audit found zero current-panel or GPL-lineage findings and retained exactly 339 inherited
+unparsed blocks. All retained added specifications were independently rechecked. At the unchanged tokenizer
+and 2,845-token window, 7,072 rows fit and 51 are skipped: 49 inherited and two remaining overlong additions.
+No row was truncated. Artifact, manifest, eight code hashes, audit and completion receipts were verified.
+
+Aggregate receipt: `release/evidence/static-contract-data-2026-10-25.json`. The original 7,176-row archive
+and all previous predictions remain intact. This establishes the corrected data boundary; the larger JSON
+teacher still needs its own integration checks and registered pilot.

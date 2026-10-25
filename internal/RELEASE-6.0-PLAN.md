@@ -253,6 +253,11 @@ A remote curation build is registered in `t/PREDICT-2026-10-25-static-contract-d
 clears all errors, and remove three normalization duplicates. Expected archive: 7,123 rows, with 7,072 fitting
 the unchanged training window. The full panel/GPL audit must pass again. The larger JSON teacher pilot waits
 for this data boundary to be fixed and the curated archive verified; the running baseline experiment is unchanged.
+Build `40157909167` passed all three registered predictions. The current curated archive has 7,123 rows,
+SHA-256 `eb139437b33b4797023e1f6ef121628588d5397f9f57241695d654071c4457b5`, with 7,072 fitting the unchanged
+window. Its 396 additions contain 166 reference-Python rows and 230 statically valid specifications; 22
+retained headers were promoted under the existing rule. The baseline prefix, zero panel/GPL findings and
+339 inherited unparsed blocks are unchanged. Receipt: `release/evidence/static-contract-data-2026-10-25.json`.
 
 The syntax-loss evidence motivates a different representation as a research hypothesis. Command A supports
 [JSON Schema output](https://docs.cohere.com/docs/structured-outputs), and `t/SPEC.md` already defines the engine's

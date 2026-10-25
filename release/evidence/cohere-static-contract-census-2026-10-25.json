@@ -1,0 +1,29 @@
+{
+  "kind": "Static compatibility census of the archived reference-only full pass",
+  "teacher_run": 40138722401,
+  "teacher_revision": "9279f18e81fe9670c4fdd88978f758a9113eb121",
+  "original_source_receipt": "release/evidence/cohere-full-pass-2026-10-25.json",
+  "checker_revision": "e664e3b15c01fda2b509d4855a2c4a4b021f5ddc",
+  "checker": "t/recipes/spec_contract.py:checked_contract",
+  "summary": {
+    "counts": {
+      "total": 250,
+      "invalid": 50,
+      "unchanged_valid": 182,
+      "promoted": 18
+    },
+    "problems": 149,
+    "problems_with_valid_candidate": 125,
+    "problems_losing_all_candidates": 24,
+    "self_reference_invalid_candidates": 31
+  },
+  "reference_checks_rerun": false,
+  "original_reference_only_result_preserved": true,
+  "checked_header_promotion": "The existing spec_first.accept rule: change t=0 to t=1 only if that alone clears every static error; no expression or clause rewritten.",
+  "code_sha256": {
+    "t/recipes/spec_contract.py": "ce6323700675cff1cb90b526b9817d81b118f097ba30b52a9a9db7411f19ec54",
+    "t/check_wf.py": "5325957fdb1552120b3ae244bfdff17c02f485bf873cac88b46acd861c734115",
+    "t/surface.py": "14b7a852d54689fdca9342967780a65edeae8272778a55d99caf11a517b11a68"
+  },
+  "privacy": "Only aggregates published; original tasks and per-candidate reasons remain encrypted/private."
+}
