@@ -1,0 +1,27 @@
+{
+  "series": "cohere-json-pilot-20261025",
+  "workflow": "teacher.yml",
+  "transport_gate_run": 40159613022,
+  "inputs": {
+    "lists": "[\"cohere-pilot-ids.txt\"]",
+    "model": "command-a-03-2025",
+    "think": "0",
+    "max_new": "8000",
+    "representation": "json",
+    "spec_samples": "9",
+    "seed_offset": "30000",
+    "budget": "25",
+    "series": "cohere-json-pilot-20261025"
+  },
+  "ids_sha256": "446fbee835307badfa317826dceee48c9f5f6b7c26921d051503b86ed02351d4",
+  "planned_problems": 50,
+  "logical_candidates": 500,
+  "base_rows": 7123,
+  "base_sha256": "eb139437b33b4797023e1f6ef121628588d5397f9f57241695d654071c4457b5",
+  "codec_identity": "t-json-v1:eeb9a14359b58e0cc5444e686dd10599f1af936d933fe6429e7c0d275ef85e4e",
+  "prior_conservative_usd": "310.666400",
+  "proxy_ceiling_usd": "25",
+  "reservation_including_inflight_usd": "32",
+  "planning_total_usd": "342.666400",
+  "baseline_covered_pilot_problems": 12
+}

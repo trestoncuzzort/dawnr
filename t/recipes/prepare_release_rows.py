@@ -20,6 +20,7 @@ import subprocess
 import sys
 
 import v8_spec_rows
+import surface
 from v9_strict_specs import strict_keeps
 from spec_contract import checked_contract
 
@@ -86,6 +87,27 @@ def validate_inputs(manifest_path: Path) -> tuple[dict, Path, list[tuple]]:
     return manifest, base, sources
 
 
+def validate_added_rows(base: list[dict], rows: list[dict]) -> int:
+    """Validate the actual serialized rows after the builder's task-name changes."""
+    if rows[:len(base)] != base or len(rows) < len(base):
+        raise ValueError("row preparation changed the frozen baseline")
+    checked_specs = 0
+    for row in rows[len(base):]:
+        if row.get("source") == "python":
+            continue
+        if row.get("source") != "spec":
+            raise ValueError("row preparation produced an unknown source kind")
+        try:
+            task = surface.parse(v8_spec_rows.se.find_block(row["chosen"]))
+            checked, _promoted = checked_contract(task)
+            if checked != task:
+                raise ValueError("prepared contract still requires normalization")
+        except (ValueError, KeyError, TypeError, surface.SurfaceError) as error:
+            raise ValueError("row preparation produced an invalid contract") from error
+        checked_specs += 1
+    return checked_specs
+
+
 def build(manifest_path: Path, output: Path, jobs: int) -> dict:
     manifest, base, sources = validate_inputs(manifest_path)
     if output.exists():
@@ -122,6 +144,8 @@ def build(manifest_path: Path, output: Path, jobs: int) -> dict:
         current = stage
     final = output / "training-rows.jsonl"
     shutil.copyfile(current, final)
+    rows = read_rows(final)
+    checked_specs = validate_added_rows(read_rows(base), rows)
     audit_path = output / "audit.json"
     command = [sys.executable, str(REPO / "t/heldout_audit.py"), "--rows", str(final), "--panels",
                "--refuse-gpl", "--jobs", str(jobs), "--json", str(audit_path)]
@@ -134,13 +158,14 @@ def build(manifest_path: Path, output: Path, jobs: int) -> dict:
     record = {"label": manifest["label"], "purpose": manifest.get("purpose", "candidate-data-preparation"),
               "input_manifest_sha256": digest(manifest_path),
               "base": manifest["base"], "sources": additions,
+              "added_static_contracts_checked_after_rendering": checked_specs,
               "output": {"filename": final.name, "rows": len(rows), "sha256": digest(final)},
               "audit": {"rows": audit["rows"], "flagged": 0, "unparsed": audit["unparsed"],
                         "sha256": digest(audit_path), "panels": True, "refuse_gpl": True},
               "code_sha256": {name: digest(REPO / name) for name in
                               ("t/recipes/prepare_release_rows.py", "t/recipes/v8_spec_rows.py",
                                "t/recipes/v9_strict_specs.py", "t/spec_first_rows.py", "t/heldout_audit.py",
-                               "t/recipes/spec_contract.py", "t/check_wf.py", "t/surface.py")}}
+                               "t/recipes/spec_contract.py", "t/check_wf.py", "t/surface.py", "t/spec_experiment.py")}}
     (output / "rows-manifest.json").write_text(json.dumps(record, indent=2) + "\n")
     (output / "COMPLETE").write_text(record["output"]["sha256"] + "\n")
     return record

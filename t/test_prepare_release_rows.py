@@ -67,7 +67,7 @@ def stand_in_builder(monkeypatch):
     def build(arguments):
         args = dict(zip(arguments[::2], arguments[1::2]))
         rows = prep.read_rows(Path(args["--base"]))
-        rows.append({"prompt": "new", "chosen": "checked", "tag": args["--tag"]})
+        rows.append({"source": "python", "prompt": "new", "chosen": "checked", "tag": args["--tag"]})
         Path(args["--out"]).write_text("".join(json.dumps(row) + "\n" for row in rows))
         Path(args["--report"]).write_text(json.dumps({"added": {"rows": 1, "problems": 1}}))
     monkeypatch.setattr(prep.v8_spec_rows, "main", build)
@@ -137,3 +137,15 @@ def test_raw_candidates_cannot_bypass_a_failed_strict_check(inputs, tmp_path, mo
         prep.build(inputs, out, 2)
     assert not (out / "COMPLETE").exists()
     assert not (out / "training-rows.jsonl").exists()
+
+
+def test_renaming_cannot_introduce_an_unchecked_self_reference():
+    import surface
+    from spec_contract import checked_contract
+    source = surface.parse('t 1 task before(x: int) returns (r: int) ensures r == target(x) '
+                           'spec fun target(y: int): int = y {}')
+    checked_contract(source)
+    renamed = prep.v8_spec_rows.se.rename_task(source, "target")
+    row = {"source": "spec", "chosen": "```t\n" + surface.print_task(renamed) + "\n```"}
+    with pytest.raises(ValueError, match="invalid contract"):
+        prep.validate_added_rows([], [row])

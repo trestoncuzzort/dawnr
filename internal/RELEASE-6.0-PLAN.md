@@ -276,6 +276,12 @@ original six examples and all problem/test/Python evidence. Its full schema vali
 eligible historical contracts. The next registered check is one synthetic request through the actual
 decoder and converters (`t/PREDICT-2026-10-25-cohere-json-transport.md`), with a separate $1 reservation.
 Its live planning amount is $311.648390. A real training-only pilot waits for that complete transport check.
+The complete transport check passed as `40159613022` for $0.018010, with all inputs, wire evidence and code
+hashes verified. Its reservation is released; the conservative total is $310.666400. A real JSON teacher pilot
+on the unchanged original 50 IDs is registered in `t/PREDICT-2026-10-25-cohere-json-pilot.md`: ten candidates,
+8,000-token replies, a $25 proxy ceiling and $32 reservation including in-flight requests. Combined planning
+is $342.666400. Expansion requires new usable coverage, strict yield, efficiency and complete accounting;
+the diagnostic conversion-rate prediction is reported separately. No training or weight change is implied.
 This follows the existing grammar-generation research in
 `internal/research-2026-10-22/plateau-repos-B.md` and the measured pilot attrition, rather than assuming another
 prose instruction or repair prompt resolves the earlier failures.

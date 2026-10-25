@@ -53,3 +53,14 @@ Sources: [Cohere structured outputs](https://docs.cohere.com/docs/structured-out
 [JSON Schema validation](https://python-jsonschema.readthedocs.io/en/stable/validate/),
 `t/recipes/cohere_schema_smoke.py`, `t/recipes/v6_server_route.py`, `t/spec_first_rows.py`, and
 `t/PREDICT-2026-10-25-static-contract-data.md`.
+
+## Result
+
+Run `40159613022` passed all three predictions at `6cfa025e`. The single response was complete and matched
+the entire synthetic contract after schema/static validation and the actual decoder round trip. The original
+inputs, actual wire request/response, cache identity, ten code hashes and encrypted artifact digest were verified.
+The response reported 4,212 billed input tokens and 748 billed output tokens, costing $0.018010.
+
+The $1 reservation is released. The conservative consolidated estimate is $310.666400, leaving $639.333600
+below the $950 stop before any pilot allocation. Receipt: `release/evidence/cohere-json-transport-2026-10-25.json`.
+This permits the separately registered real-problem pilot; the copied fixture is not a yield result.

@@ -1,0 +1,48 @@
+{
+  "kind": "Verified full JSON teacher transport check",
+  "workflow_run": 40159613022,
+  "workflow_url": "https://github.com/trestoncuzzort/dawnr/actions/runs/40159613022",
+  "revision": "6cfa025ee164abfd8b236c5622154534cbc61917",
+  "artifact_id": 12585880892,
+  "artifact_sha256": "c2d9dfcc90886c80d309db177c67a31f9ad8f6d72e0274f9ffbd2b5590de2e5a",
+  "input_sha256": "162075897a25c969fbead2ba6e244e33284c7e65ebf4ca823f26ac1cfdbc8c1a",
+  "schema_sha256": "2a81409e134829af3e7946659ddb3a48c1289cda45e184c0de6704042ea21fe9",
+  "codec_identity": "t-json-v1:eeb9a14359b58e0cc5444e686dd10599f1af936d933fe6429e7c0d275ef85e4e",
+  "code_hashes_verified": 10,
+  "original_inputs_and_actual_wire_evidence_verified": true,
+  "requests": 1,
+  "automatic_retries": 0,
+  "cases": [
+    {
+      "case": "full_teacher_schema",
+      "api_success": true,
+      "passed": true,
+      "billed_units": {
+        "input_tokens": 4212,
+        "output_tokens": 748
+      },
+      "complete": true,
+      "nonempty": true,
+      "completion_tokens": 751,
+      "matches_original_contract": true,
+      "schema_and_static_checked": true
+    }
+  ],
+  "recorded_cost_usd": "0.01801",
+  "all_registered_predictions_held": true,
+  "dependency_versions": {
+    "jsonschema": "4.26.0",
+    "jsonschema-specifications": "2023.12.1",
+    "referencing": "0.36.2",
+    "rpds-py": "0.27.1"
+  },
+  "grant_reconciliation": {
+    "prior_conservative_usd": "310.648390",
+    "this_check_usd": "0.01801",
+    "conservative_total_usd": "310.666400",
+    "reservation_released_usd": "1",
+    "live_reservations_usd": "0",
+    "remaining_under_950_stop_usd": "639.333600"
+  },
+  "scope": "One copied synthetic contract through the full schema and actual decoder. No real-problem yield or model-quality claim."
+}
