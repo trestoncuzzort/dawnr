@@ -1,0 +1,185 @@
+{
+  "kind": "Matched released-v5 development control after the certificate repair; no model comparison",
+  "workflow_run": 40152940345,
+  "workflow_head": "f5af269865510a564c1890f38910632ea1f4534c",
+  "grader_revision": "66be29b4de81dbfe5a09e794274a58087867c42b",
+  "panel_sha256": "eb333196e9d6b15da83befa5b8477e5ce11d2748fab8fc7173d605f1c0286426",
+  "panel_problems": 206,
+  "all_six_full_panel_receipts_verified_before_filtering": true,
+  "all_per_problem_level_sets_identical": true,
+  "development_task_files_verified": 182,
+  "matrix_cells": 1274,
+  "changed_matrix_cells": 7,
+  "unchanged_matrix_cells": 1267,
+  "changed_cell_kernels": {
+    "spark": 6,
+    "fstar": 1
+  },
+  "changed_cells": [
+    {
+      "task": "mbpp_213__concatenate_strings",
+      "kernel": "spark",
+      "before": "verified / refuted",
+      "after": "verified / timeout",
+      "tag": "v5-20261022-wider-off1000",
+      "emitted_source_sha256": {
+        "mbpp_213__concatenate_strings.ads": "360c79e8e80eed0c3d165cf6ab52889556632c28c546ecdf0b32d524e75f0b65",
+        "mbpp_213__concatenate_strings_twin.ads": "5f887f0f1de82c6e9dc7048b486bf18ef1521cdeeb73e0b88742313d42e0cdfa"
+      },
+      "emitted_sources_identical": true
+    },
+    {
+      "task": "mbpp_363__add_K_element",
+      "kernel": "spark",
+      "before": "timeout / refuted",
+      "after": "timeout / timeout",
+      "tag": "v5-20261022-wider-off1000",
+      "emitted_source_sha256": {
+        "mbpp_363__add_K_element.ads": "401856cc501509bba4cccd2bc0b8aa01ebbee25d11a5add599d76ad081fb95c1",
+        "mbpp_363__add_K_element_twin.ads": "a70246acfb36144e08255ad24481c8c381976c44ee9d335edab940c731694a60"
+      },
+      "emitted_sources_identical": true
+    },
+    {
+      "task": "mbpp_696__zip_list",
+      "kernel": "spark",
+      "before": "verified / refuted",
+      "after": "verified / timeout",
+      "tag": "v5-20261022-wider-off1000",
+      "emitted_source_sha256": {
+        "mbpp_696__zip_list.ads": "cf5d72ad708fbf84dfc500e62f46c1d22d6af1831fc0a0b90a4d5c5df7ba9d23",
+        "mbpp_696__zip_list_twin.ads": "7db917f174c6ad9c1d390574ebdaf97df7802d07b8d99beab00c59d7d52e985e"
+      },
+      "emitted_sources_identical": true
+    },
+    {
+      "task": "mbpp_805__max_sum_list",
+      "kernel": "spark",
+      "before": "refuted / refuted",
+      "after": "timeout / refuted",
+      "tag": "v5-20261022-wider-off1000",
+      "emitted_source_sha256": {
+        "mbpp_805__max_sum_list.ads": "fe41bc27d9af4cf7d02175f053844060a5e7b4f61ed4deec63b06b0c40ceb356",
+        "mbpp_805__max_sum_list_twin.ads": "08967737706ccc675b9603acee35ff7516303fed366d8fd957334c0954d45422"
+      },
+      "emitted_sources_identical": true
+    },
+    {
+      "task": "mbpp_805__max_sum_list",
+      "kernel": "fstar",
+      "before": "refuted / refuted",
+      "after": "refuted / timeout (FLAKED)",
+      "tag": "v5-20261022-wider-off1000",
+      "emitted_source_sha256": {
+        "mbpp_805__max_sum_list.fst": "509e7f41184549daa83cde36cccc8f3116afa8ff9e9087cb2abfac7d1aeb1e0c",
+        "mbpp_805__max_sum_list_twin.fst": "0f8249893474856d0b159f6479ff579b444701dd105beb9d9f34efa759d22781"
+      },
+      "emitted_sources_identical": true
+    },
+    {
+      "task": "mbpp_921__chunk_tuples",
+      "kernel": "spark",
+      "before": "timeout / timeout (FLAKED)",
+      "after": "timeout / timeout",
+      "tag": "v5-20261022-wider-off1000",
+      "emitted_source_sha256": {
+        "mbpp_921__chunk_tuples.ads": "cb0892b88857840cfa5ba2979f5a1b1ad279bf8beb44b4ff74c00cea5cf878f2",
+        "mbpp_921__chunk_tuples_twin.ads": "9ea818f2eab4a45c93068e3ecc3aaf1220b686d19e120379bc4a2de00569033b"
+      },
+      "emitted_sources_identical": true
+    },
+    {
+      "task": "mbpp_921__chunk_tuples",
+      "kernel": "spark",
+      "before": "timeout / timeout",
+      "after": "timeout / refuted",
+      "tag": "v5-20261022-wider-off2000",
+      "emitted_source_sha256": {
+        "mbpp_921__chunk_tuples.ads": "c711fb41890b3db26d08ec3c097dbd7e9369a3669568c7dcb9f6dc36e984e819",
+        "mbpp_921__chunk_tuples_twin.ads": "93436c05d4af037c73164f27a91e3537e5c379d583493e0980556083828ce73f"
+      },
+      "emitted_sources_identical": true
+    }
+  ],
+  "clean": [
+    20,
+    19,
+    19
+  ],
+  "all_seven": [
+    9,
+    8,
+    9
+  ],
+  "mean": {
+    "clean": 19.333333333333332,
+    "all_seven": 8.666666666666666
+  },
+  "development_predictions_held": true,
+  "artifacts": [
+    {
+      "tag": "v5-20261021-dev-desktop-r2",
+      "artifact_id": 12584004523,
+      "sha256": "fec6abf5bc2853c463beed0340f30ef2998018c7b8901a9ff7e02a32c4f19e13",
+      "source_hashes_verified": 563,
+      "inputs_matched": {
+        "raw": 13,
+        "tasks": 13
+      }
+    },
+    {
+      "tag": "v5-20261022-wider-off0",
+      "artifact_id": 12585929168,
+      "sha256": "599acc470a19770e93559285879dab0e7941b125b5e16db3faa628a3a19f6264",
+      "source_hashes_verified": 563,
+      "inputs_matched": {
+        "raw": 46,
+        "tasks": 46
+      }
+    },
+    {
+      "tag": "v5-20261022-seedoff1000",
+      "artifact_id": 12584298527,
+      "sha256": "d252c3cb4c988d47e3a0b96d3f2fde315b264fff6e9bad2430511485a17813de",
+      "source_hashes_verified": 563,
+      "inputs_matched": {
+        "raw": 11,
+        "tasks": 11
+      }
+    },
+    {
+      "tag": "v5-20261022-wider-off1000",
+      "artifact_id": 12587350872,
+      "sha256": "a0c9802b74287f2387c14b289dd6b4c496ec70647d33f582a8da9dceba87126f",
+      "source_hashes_verified": 563,
+      "inputs_matched": {
+        "raw": 49,
+        "tasks": 49
+      }
+    },
+    {
+      "tag": "v5-20261022-seedoff2000",
+      "artifact_id": 12584630471,
+      "sha256": "67547924ed94bef652a7449f720d374c57302c7a1fe1840c9a3a5544a8db62d0",
+      "source_hashes_verified": 563,
+      "inputs_matched": {
+        "raw": 18,
+        "tasks": 18
+      }
+    },
+    {
+      "tag": "v5-20261022-wider-off2000",
+      "artifact_id": 12585708640,
+      "sha256": "3219c6368bd1946934a8068df1e247147a34c9a0d64eb35d14bda76ead0f814d",
+      "source_hashes_verified": 563,
+      "inputs_matched": {
+        "raw": 45,
+        "tasks": 45
+      }
+    }
+  ],
+  "interpretation": "The seven changed cells involve timeouts in SPARK or F*. Original and twin emitted sources are identical, and backend code and budgets remain fixed. Runtime variability is consistent with this evidence; exact causes are not established. No acceptance set changes and no favorable rerun.",
+  "model_calls": 0,
+  "heldout_182_model_readings": 0,
+  "backend_and_budget_source_hashes_match_historical": true
+}

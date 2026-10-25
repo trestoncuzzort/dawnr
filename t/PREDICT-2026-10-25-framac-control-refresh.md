@@ -53,6 +53,24 @@ The other previously identified Frama-C timeout remains, so its diagnostic succe
 full control. No favorable repeat replaces this result. The historical 26 remains recorded, and the
 standing requirement of 27 is unchanged and met by the refreshed control.
 
-Aggregate evidence: `release/evidence/spec33-certificate-control-2026-10-25.json`. The clean-206 development
-prediction remains pending until all three wider parts finish. The three completed dev-95 parts retain
-their historical 6/4/6 clean and 3/2/3 all-seven counts, with no changed kernel cells.
+Aggregate evidence: `release/evidence/spec33-certificate-control-2026-10-25.json`.
+
+## Completed development control
+
+Run `40152940345` completed all six parts. Every artifact digest, each part's 563 source/panel hashes, and
+all 182 prepared development task files and corresponding saved answers were verified. Each full 95- or
+145-problem receipt was validated before filtering and joining the clean 206 through the existing reader.
+
+The development prediction held: **20, 19, 19 clean** and **9, 8, 9 all-seven**. Every per-problem acceptance
+set at every recorded level is identical to the historical control. The means remain 19.33 and 8.67.
+This completes the matched baseline at grader `66be29b4`; it is not a model gain.
+
+Of 1,274 matrix cells, 1,267 are unchanged. Seven timeout-related outcomes differ: six SPARK cells and one
+F* cell. Every change is recorded in the aggregate receipt. The original/twin emitted sources for those
+cells, the backend adapters and budget/grade drivers match the historical control. Runtime variability is
+consistent with the evidence; these artifacts do not establish its exact cause. No changed cell alters an
+acceptance set, and no favorable rerun replaces a result. No model was called and the reserved held-out
+182 had no model reading. The development task-file count above is unrelated to that reserved panel.
+
+Evidence: `release/evidence/v5-certificate-control-2026-10-25.json`. The private specification control's
+exact 28/29 prediction remains failed at 27/29, as recorded above; the standing threshold of 27 is unchanged.

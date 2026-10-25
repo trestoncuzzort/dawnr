@@ -354,8 +354,13 @@ validated before filtering, and their evaluator hashes agree apart from the pane
 `release/evidence/v5-cloud-baseline-2026-10-25.json`. The image pins prover binaries; it does not freeze the
 mounted checkout. Those measurements used grader revisions `01c94ef5` and `878a5cb3`, respectively. The validated
 certificate-normalization repair is now imported at `66be29b4`, and both workflows explicitly pin that revision.
-The same saved answers will be regraded under `t/PREDICT-2026-10-25-framac-control-refresh.md`; the original
-receipts remain recorded. The verifier fix is an incremental code update. Its refreshed measurements establish
+The same saved answers were regraded under `t/PREDICT-2026-10-25-framac-control-refresh.md`; the original
+receipts remain recorded. The completed matched development control is in
+`release/evidence/v5-certificate-control-2026-10-25.json`: all six full-panel receipts and source/input hashes
+verified before joining the 206; clean counts 20, 19, 19 and all-seven 9, 8, 9, with identical per-problem
+acceptance sets. Seven of 1,274 matrix cells have different timeout-related outcomes in SPARK or F*, on
+identical emitted sources, without changing a score. Every changed cell is recorded and no favorable rerun
+replaces it. The verifier fix is an incremental code update. Its refreshed measurements establish
 the evaluator for later weight comparisons, and are not themselves a claim that the weights improved.
 
 The remaining 9B inputs contain 30 candidates on 18 problems, 15 not already covered by candidate A. Their
