@@ -14,6 +14,7 @@ from spec_contract import checked_contract
 import surface
 import spec_experiment as se
 import v9_strict_specs as strict
+import check_wf
 
 
 def contract(version=1):
@@ -33,6 +34,43 @@ def test_checked_promotion_preserves_every_contract_field_and_the_input():
     result, promoted = checked_contract(original)
     assert promoted and result == dict(original, t=1)
     assert original == frozen
+
+
+@pytest.mark.parametrize("version", [0, 1])
+def test_recursive_program_contract_preserves_its_measure_before_a_body_exists(version):
+    program = surface.parse((Path(__file__).parent / "tasks/factorial.t").read_text())
+    assert not check_wf.check_wf(program)
+    original = dict(program, body=[], t=version)
+    frozen = deepcopy(original)
+    result, promoted = checked_contract(original)
+    assert result == dict(original, t=1) and promoted == (version == 0)
+    assert original == frozen and result["decreases"] == program["decreases"]
+    # A specification pass does not authorize this empty task as a verified program.
+    assert any(e.rule == "decreases-selfcall" for e in check_wf.check_wf(result, positions={}))
+    without_measure = deepcopy(program)
+    del without_measure["decreases"]
+    assert any(e.rule == "decreases-selfcall" for e in check_wf.check_wf(without_measure, positions={}))
+
+
+@pytest.mark.parametrize("measure", [{"bool": True}, {"var": "r"}, {"call": {"fun": "missing", "args": []}}])
+def test_deferred_task_body_does_not_skip_measure_type_scope_or_call_checks(measure):
+    value = dict(contract(), decreases=measure)
+    with pytest.raises(ValueError, match="ill-formed"):
+        checked_contract(value)
+
+
+def test_spec_function_termination_is_still_checked_with_an_empty_task_body():
+    program = surface.parse((Path(__file__).parent / "tasks/factorial.t").read_text())
+    value = dict(program, body=[])
+    del value["spec_funs"][0]["decreases"]
+    with pytest.raises(ValueError, match="calls itself without a decreases"):
+        checked_contract(value)
+
+
+def test_contract_entry_point_refuses_a_completed_body():
+    program = surface.parse((Path(__file__).parent / "tasks/factorial.t").read_text())
+    with pytest.raises(ValueError, match="empty body"):
+        checked_contract(program)
 
 
 @pytest.mark.parametrize("callee", ["missing_helper", "f"])

@@ -4,6 +4,16 @@ Published claims that turned out to be wrong, and what they are now. They are
 kept here rather than quietly fixed, because a project that only reports its
 successful measurements is not measuring anything.
 
+- **A contract declaration was checked as though its implementation were present (2026-10-25).**
+  The new pipeline static gate rejected a task termination measure after the training-row builder deliberately
+  removed its recursive body. The committed factorial example reproduces this. Of 171 inherited specification
+  refusals, 47 are valid declarations with measures that must be retained. The pipeline now defers only the
+  exact body/self-call diagnostic while checking the measure's type and scope and every specification-function
+  body. Completed-program checks and proof gates are unchanged. The revised inherited census is 1,407 valid
+  unchanged, 70 needing the existing checked header promotion, and 124 refusals. All 230 added control rows
+  still pass unchanged, and the earlier full Command A census is unchanged. This diagnostic has not modified
+  training inputs ([measurement and correction](t/PREDICT-2026-10-25-baseline-spec-static.md)).
+
 - **Reference-checked specifications were not necessarily statically valid (2026-10-25).** The specification-only
   strict filter required reference agreement and rejection of both mutant families, but did not run the engine's
   static contract checks. Of the completed Command A pass's 250 kept specifications, 200 pass those checks

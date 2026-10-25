@@ -1,0 +1,101 @@
+{
+  "kind": "Inherited specification census and correction of the pipeline contract-checking context",
+  "initial_census": {
+    "started_at": "2026-10-25T04:20:32.817951+00:00",
+    "rows_sha256": "eb139437b33b4797023e1f6ef121628588d5397f9f57241695d654071c4457b5",
+    "registration_sha256_before_reading_specs": "3cb91e9421e6018817a987f2bb2ad2b9124da380ac1e99268f7eadd20bc6b7ca",
+    "script_sha256": "491deacbfccc5c9b65fcdaebe04a7af6b4d40e1141c34d58d7e713e6a34a818c",
+    "completed_at": "2026-10-25T04:20:33.957621+00:00",
+    "counts": {
+      "inherited_specs": {
+        "valid_unchanged": 1362,
+        "valid_after_header_promotion": 68,
+        "static_refused": 171
+      },
+      "added_control_specs": {
+        "valid_unchanged": 230
+      }
+    },
+    "row_count": 7123,
+    "frozen_prefix_rows": 6727,
+    "row_results_sha256": "9934728b126a1c5f4afcb3d4cf0fc0f71223e2404466a07bf9741db135d901b6",
+    "predictions": {
+      "at_least_one_inherited_refusal": true,
+      "all_added_controls_valid_unchanged": true
+    },
+    "source_hashes": {
+      "t/recipes/spec_contract.py": "ce6323700675cff1cb90b526b9817d81b118f097ba30b52a9a9db7411f19ec54",
+      "t/recipes/curate_spec_rows.py": "a40a16cfb579e37fe1149337f1b10045ec19f3a876559f25d37e8f0e9268409b",
+      "t/check_wf.py": "5325957fdb1552120b3ae244bfdff17c02f485bf873cac88b46acd861c734115",
+      "t/surface.py": "14b7a852d54689fdca9342967780a65edeae8272778a55d99caf11a517b11a68",
+      "t/spec_experiment.py": "9b5d1edf7b32ee12f5768621e86fd642272ed4ca55bf22acc86a21dea5b9bcae"
+    },
+    "training_data_modified": false,
+    "model_calls": 0,
+    "reference_or_proof_grading": false
+  },
+  "contract_context_followup": {
+    "kind": "Contract-context diagnostic after a reproduced pipeline over-refusal; no training-data build",
+    "completed_at": "2026-10-25T04:26:49.828025+00:00",
+    "datasets": {
+      "current": {
+        "input_sha256": "eb139437b33b4797023e1f6ef121628588d5397f9f57241695d654071c4457b5",
+        "rows": 7123,
+        "counts": {
+          "inherited": {
+            "valid_unchanged": 1407,
+            "valid_after_header_promotion": 70,
+            "refused": 124
+          },
+          "additions": {
+            "valid_unchanged": 230
+          }
+        },
+        "private_detail_sha256": "80ec8379176f2e524fdfc0cdb4419a7e0160d6c3fe6086b3a9b1c4d2217e1a2f"
+      },
+      "before_curation": {
+        "input_sha256": "52404c473208d01cb8f074a540c3cbe988f301c063d976a44fa25c40e76e3c03",
+        "rows": 7176,
+        "counts": {
+          "inherited": {
+            "valid_unchanged": 1407,
+            "valid_after_header_promotion": 70,
+            "refused": 124
+          },
+          "additions": {
+            "valid_unchanged": 209,
+            "valid_after_header_promotion": 24,
+            "refused": 50
+          }
+        },
+        "private_detail_sha256": "c006744a637662999735d93ef6c653cd7bf7f9fb447d85a55ecedec67855f198"
+      }
+    },
+    "previously_valid_rows_and_normalized_tasks_unchanged": true,
+    "recovered_inherited_rows": 47,
+    "recovered_statuses": {
+      "valid_unchanged": 45,
+      "valid_after_header_promotion": 2
+    },
+    "all_recovered_preserve_task_measure": true,
+    "full_command_a": {
+      "input_sha256": "845df3503720f8e2e1b2020cfbf06f2cfdb63e55e9e0082e83e812c397e0e26d",
+      "counts": {
+        "valid_unchanged": 182,
+        "valid_after_header_promotion": 18,
+        "refused": 50
+      },
+      "problems_with_valid_spec": 125
+    },
+    "pipeline_checker_sha256": "066c11bb986f741d93167ecc6537151aec403928b715dc78ba0fe128f1188158",
+    "full_program_checker_sha256_unchanged": "5325957fdb1552120b3ae244bfdff17c02f485bf873cac88b46acd861c734115",
+    "training_data_modified": false,
+    "reference_or_proof_grading": false,
+    "model_calls": 0,
+    "pipeline_checker_sha256_after_comment_edit": "88d0aa5a6a32c27791f13d40ccccf790a5bc8d94167b91ee996083a63e5ca31b"
+  },
+  "interpretation": "The initial 171 refusals included 47 valid declarations with task termination measures. Those measures are preserved; their relation to a future body is checked when an implementation is supplied. 124 inherited source=spec rows still fail. Other row kinds are outside this census.",
+  "current_training_data_changed": false,
+  "active_teacher_recipe_or_registered_predictions_changed": false,
+  "frozen_teacher_audit_revision": "bf70e6d805411048a4333557a416e393ca5fd68d"
+}

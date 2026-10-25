@@ -68,6 +68,7 @@ def test_schema_and_all_six_converted_examples_preserve_the_problem_evidence():
     't 1 task folded(s: seq) returns (r: int) ensures r == fold((a, x) => a + x, 0, s) {}',
     'datatype Choice = none | some(value: int)\nt 1 task inspect(x: Choice) returns (r: bool) ensures r == true {}',
     't 1 task nested(s: seq<seq>) returns (r: (int, seq)) ensures r == (len(s), []) {}',
+    't 1 gate recursion task later(n: int) returns (r: int) requires n >= 0 ensures r >= 0 decreases n {}',
 ])
 def test_real_language_features_fit_the_schema_and_roundtrip(text):
     expected = surface.parse(text)
