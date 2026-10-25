@@ -10,6 +10,8 @@ models where more rows did not (arXiv:2603.15510). This re-runs t/spec_check.che
 1000 draws and keeps only those that agree, with at least MIN_DRAWS agreeing draws, and reject at least `floor` of
 BOTH mutant families (spec_check.complete with the strict floor; a candidate with no judged mutant is dropped).
 The output has the kept file's shape, so t/recipes/v8_spec_rows.py builds the rows from it unchanged.
+Every candidate must first pass the engine's static contract and exact printer/parser checks. The existing
+checked v0-to-v1 header promotion is allowed; no clause or expression is rewritten to make a candidate pass.
 
     python3 t/recipes/v9_strict_specs.py --kept KEPT.jsonl [--kept ...] --pool v5 --draws 1000 --floor 0.9 \\
         --jobs 12 --out out/v9/strict-kept.jsonl --report out/v9/strict.json
@@ -32,6 +34,7 @@ sys.path.insert(0, str(HERE))
 
 import spec_check                                               # noqa: E402
 import spec_experiment as se                                    # noqa: E402
+from spec_contract import checked_contract
 
 MIN_DRAWS = 10
 _POOL: dict[int, dict] = {}
@@ -46,6 +49,11 @@ def strict_keeps(r: dict, floor: float) -> bool:
 
 def _check(job: tuple) -> tuple:
     tid, index, task, draws, seed = job
+    try:
+        task, promoted = checked_contract(task)
+    except ValueError as error:
+        return tid, index, {"status": "not well formed", "static_contract_checked": False,
+                            "static_refusal": str(error)}
     rnd = random.Random(seed)
     try:
         r = spec_check.check_task(task, _POOL[tid], draws, rnd)
@@ -54,7 +62,8 @@ def _check(job: tuple) -> tuple:
     keep = ("status", "draws", "completeness", "cross_completeness", "mutants_rejected", "mutants_accepted",
             "cross_rejected", "cross_accepted", "skipped", "args", "reference_said", "ensures", "also_accepts",
             "weak_witness", "cross_witness")
-    return tid, index, {k: r.get(k) for k in keep if k in r}
+    return tid, index, {**{k: r.get(k) for k in keep if k in r},
+                        "static_contract_checked": True, "header_promoted": promoted}
 
 
 def main(argv=None) -> int:
@@ -97,6 +106,7 @@ def main(argv=None) -> int:
             c = r.get("completeness")
             dist[round(c, 1) if isinstance(c, (int, float)) else "none"] += 1
             if strict_keeps(r, a.floor):
+                task, _promoted = checked_contract(task)
                 after += 1
                 keep.append((task, row["sources"][i] if i < len(row.get("sources", [])) else None,
                              row["scores"][i] if i < len(row.get("scores", [])) else None, r))
@@ -114,6 +124,8 @@ def main(argv=None) -> int:
     report = {"inputs": [str(p) for p in a.kept], "pool": a.pool, "draws": a.draws, "floor": a.floor,
               "problems_in": len(rows), "candidates_in": before, "candidates_kept": after,
               "problems_kept": len(kept_rows), "status": dict(status),
+              "static_contracts_required": True,
+              "headers_promoted": sum(bool(r.get("header_promoted")) for r in results.values()),
               "completeness_distribution": {str(k): v for k, v in sorted(dist.items(), key=str)},
               "output": str(a.out)}
     a.report.write_text(json.dumps(report, indent=1) + "\n", encoding="utf-8")

@@ -4,6 +4,17 @@ Published claims that turned out to be wrong, and what they are now. They are
 kept here rather than quietly fixed, because a project that only reports its
 successful measurements is not measuring anything.
 
+- **Reference-checked specifications were not necessarily statically valid (2026-10-25).** The specification-only
+  strict filter required reference agreement and rejection of both mutant families, but did not run the engine's
+  static contract checks. Of the completed Command A pass's 250 kept specifications, 200 pass those checks
+  (18 need the existing checked header promotion) and 50 fail; 125 of the original 149 problems retain a valid
+  candidate. Failures include undeclared calls, self-reference in ensures, type mismatches and termination
+  measures. The original counts remain results of the earlier reference-only gate. Future strict checks now
+  apply static validation first, and row preparation independently checks it. A registered curation build
+  removes invalid additions while preserving the frozen candidate A baseline and all original archives
+  ([registration](t/PREDICT-2026-10-25-static-contract-data.md)). This does not claim every inherited baseline
+  row passed the new check, or change released weights.
+
 - **The Cohere cost comparison used placeholder prices as if they established a cost advantage (2026-10-25).**
   The first teacher comparison assigned conservative token rates to Command A Reasoning and A+, producing
   ledger estimates of $33.83 and $31.96. Their current model pages state that API evaluation is free within

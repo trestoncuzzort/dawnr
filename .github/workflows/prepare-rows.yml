@@ -14,6 +14,11 @@ on:
       label:
         description: 'unique data-build label'
         required: true
+      operation:
+        description: 'build sources or statically curate additions to a frozen baseline'
+        type: choice
+        options: [build, curate]
+        default: build
 
 permissions:
   contents: read
@@ -26,6 +31,7 @@ jobs:
       INPUT_ASSET: ${{ inputs.asset }}
       INPUT_SHA256: ${{ inputs.sha256 }}
       BUILD_LABEL: ${{ inputs.label }}
+      ROW_OPERATION: ${{ inputs.operation }}
     steps:
       - uses: actions/checkout@v4
       - name: validate the requested build
@@ -33,6 +39,7 @@ jobs:
           [[ "$INPUT_ASSET" =~ ^[A-Za-z0-9][A-Za-z0-9._-]*\.tar\.gz\.enc$ ]]
           [[ "$INPUT_SHA256" =~ ^[0-9a-f]{64}$ ]]
           [[ "$BUILD_LABEL" =~ ^[A-Za-z0-9][A-Za-z0-9._-]*$ ]]
+          [[ "$ROW_OPERATION" == build || "$ROW_OPERATION" == curate ]]
       - name: the problem pool and sandbox
         env:
           GH_TOKEN: ${{ github.token }}
@@ -60,7 +67,9 @@ jobs:
             tar -xzf - -C out/private-inputs
       - name: build and audit the training rows
         run: |
-          python3 t/recipes/prepare_release_rows.py --manifest out/private-inputs/manifest.json \
+          script=prepare_release_rows.py
+          if [ "$ROW_OPERATION" = curate ]; then script=curate_spec_rows.py; fi
+          python3 "t/recipes/$script" --manifest out/private-inputs/manifest.json \
             --out out/candidate-build/results --jobs 4 > out/candidate-build/build.log 2>&1
           python3 - <<'PY'
           import json

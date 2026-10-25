@@ -15,7 +15,10 @@ def inputs(tmp_path):
     root = tmp_path / "inputs"
     root.mkdir()
     (root / "base.jsonl").write_text('{"prompt":"base","chosen":"original"}\n')
-    row = {"task_id": 7, "tasks": [{"name": "spec"}],
+    task = {"t": 1, "name": "sample", "params": [{"name": "x", "type": "int"}],
+            "returns": [{"name": "r", "type": "int"}], "requires": [],
+            "ensures": [{"op": "==", "args": [{"var": "r"}, {"var": "x"}]}], "body": []}
+    row = {"task_id": 7, "tasks": [task],
            "reference": [{"status": "agrees", "draws": 1000, "completeness": 1.0, "cross_completeness": 0.95}]}
     (root / "kept.jsonl").write_text(json.dumps(row) + "\n")
     report = {"pool": "v5", "draws": 1000, "floor": 0.9, "problems_kept": 1, "candidates_kept": 1}

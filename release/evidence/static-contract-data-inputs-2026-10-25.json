@@ -1,0 +1,17 @@
+{
+  "label": "dawnr-data-static-20261025",
+  "asset": "dawnr-data-static-20261025.tar.gz.enc",
+  "operation": "curate",
+  "ciphertext_sha256": "cd275066545004efd91c6b0bbb1ed13b39d540dedb10b83b516ef9d6492fa948",
+  "input_manifest_sha256": "c8ae51e496891da1748ec520ca828de4275d80d9739a90c5407215a5fde08d77",
+  "base_rows": 6727,
+  "base_sha256": "2c2eff287493fd8774d1a71bc9e799ca4cc40f21fd9a1b082c17f8206f7351d8",
+  "candidate_rows": 7176,
+  "candidate_sha256": "52404c473208d01cb8f074a540c3cbe988f301c063d976a44fa25c40e76e3c03",
+  "predicted_rows": 7123,
+  "predicted_invalid_specs_dropped": 50,
+  "predicted_duplicates_dropped": 3,
+  "predicted_retained_header_promotions": 22,
+  "predicted_fitting_rows": 7072,
+  "no_new_training_or_generation": true
+}

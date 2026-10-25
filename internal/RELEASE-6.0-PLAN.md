@@ -241,6 +241,19 @@ The other 107 additions fit, supplying 39 reference-Python rows and 68 specifica
 problems, plus one reference-only problem. The full 7,176-row audited archive is retained; it is not a claim
 that every row fits a training run. Exclusions and hashes: `release/evidence/cohere-data-2026-10-25b.json`.
 
+The subsequent static compatibility check found a separate data-boundary gap: 50 of the full pass's 250
+reference-kept specifications fail the engine's static rules, after allowing the existing checked header
+promotion. Reference agreement alone had not excluded undeclared calls, circular postconditions or type
+errors. The original reference-only counts remain recorded; 200 specifications on 125 problems pass the
+static check. Future strict checks now apply that gate before reference evaluation, and row preparation
+independently checks it. The correction is recorded at the top of `CORRECTIONS.md`.
+
+A remote curation build is registered in `t/PREDICT-2026-10-25-static-contract-data.md`: preserve the original
+6,727-row candidate A prefix, remove 50 invalid additions, apply the existing header promotion where it alone
+clears all errors, and remove three normalization duplicates. Expected archive: 7,123 rows, with 7,072 fitting
+the unchanged training window. The full panel/GPL audit must pass again. The larger JSON teacher pilot waits
+for this data boundary to be fixed and the curated archive verified; the running baseline experiment is unchanged.
+
 The syntax-loss evidence motivates a different representation as a research hypothesis. Command A supports
 [JSON Schema output](https://docs.cohere.com/docs/structured-outputs), and `t/SPEC.md` already defines the engine's
 JSON task representation. Schema mode supports references and `anyOf`; plain JSON mode is limited to five nesting

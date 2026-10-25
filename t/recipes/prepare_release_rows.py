@@ -21,6 +21,7 @@ import sys
 
 import v8_spec_rows
 from v9_strict_specs import strict_keeps
+from spec_contract import checked_contract
 
 REPO = Path(__file__).resolve().parents[2]
 
@@ -54,6 +55,10 @@ def validate_strict(kept: Path, report_path: Path) -> None:
         if not row["tasks"] or len(row.get("reference", [])) != len(row["tasks"]) or not all(
                 strict_keeps(reference, 0.9) for reference in row["reference"]):
             raise ValueError("every teacher candidate must carry passing strict evidence")
+        for task in row["tasks"]:
+            checked, _promoted = checked_contract(task)
+            if checked != task:
+                raise ValueError("teacher contract must be normalized before row preparation")
 
 
 def validate_inputs(manifest_path: Path) -> tuple[dict, Path, list[tuple]]:
@@ -134,7 +139,8 @@ def build(manifest_path: Path, output: Path, jobs: int) -> dict:
                         "sha256": digest(audit_path), "panels": True, "refuse_gpl": True},
               "code_sha256": {name: digest(REPO / name) for name in
                               ("t/recipes/prepare_release_rows.py", "t/recipes/v8_spec_rows.py",
-                               "t/recipes/v9_strict_specs.py", "t/spec_first_rows.py", "t/heldout_audit.py")}}
+                               "t/recipes/v9_strict_specs.py", "t/spec_first_rows.py", "t/heldout_audit.py",
+                               "t/recipes/spec_contract.py", "t/check_wf.py", "t/surface.py")}}
     (output / "rows-manifest.json").write_text(json.dumps(record, indent=2) + "\n")
     (output / "COMPLETE").write_text(record["output"]["sha256"] + "\n")
     return record
