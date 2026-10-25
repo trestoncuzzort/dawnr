@@ -41,3 +41,17 @@ audit rules. No model-quality gain is inferred from a row count, and no held-out
 
 Sources: `t/recipes/prepare_release_rows.py`, `t/recipes/v8_spec_rows.py`, the eight original strict reports, and
 the source receipts retained under the teacher run.
+
+## Result
+
+Run `40153448857` passed. All three predictions held: 263 rows were added on 100 new problems (100 reference-Python
+rows and 163 specifications), giving 7,066 rows with SHA-256
+`633ededffc2be4718c3341393845272268fdbe316d10e7e2fa4549f74ce606dc`.
+The parent rows are preserved in order. The whole-dataset audit found no current-panel or GPL-lineage findings
+and retained exactly the parent's 339 unparsed blocks. Those blocks remain the stated coverage limitation.
+
+All 263 additions fit the registered tokenizer and 2,845-token limit: 138 to 2,102 tokens, median 534. This was
+an offline encoding check using the pinned tokenizer and unchanged trainer; no model was loaded. The encrypted
+artifact digest, input manifest, five builder/checker code hashes, row-file digest and completion receipt were
+verified. Aggregate receipt: `release/evidence/cohere-data-2026-10-25a.json`. The new draft is available for later
+weight-update work; the remaining teacher shards can be integrated separately under the same rules.

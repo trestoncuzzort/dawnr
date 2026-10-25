@@ -1,8 +1,8 @@
-# dawnr 6.0: the plan of record (2026-10-24, revised the same evening)
+# dawnr updates: the working plan (started 2026-10-24)
 
 This file replaces `internal/ROADMAP-LOG.md`, deleted on 2026-10-24 at the user's request as stale. The log's
 full text stays in git history (`git show a24d20a2:internal/ROADMAP-LOG.md`). What was still live in it is
-carried into section 6. From today this file is the roadmap of record for the 6.0 release; `ROADMAP.md` at the
+carried into section 6. This file is the roadmap of record for ongoing dawnr work; `ROADMAP.md` at the
 root is the public face and is updated as milestones finish.
 
 **Operating clarification, 2026-10-25 UTC:** improve the existing dawnr incrementally as useful changes are found.
@@ -84,8 +84,8 @@ Registered here and repeated with numbers in the candidate's PREDICT file before
    machine; no software thermal slowdown is reported on the GPU during the run. v5's baseline is measured first
    (M1).
 
-A mean is never a verdict. If no candidate passes, 6.0 ships v5's weights as the 6.0 model and the card says which
-candidates were read and what they scored.
+A mean is never a verdict. A weight experiment that does not pass leaves the installed weights in place;
+the record says what was measured. Tested application, verifier and data updates continue independently.
 
 ## 4. Ongoing weight experiments: candidates A and B
 
@@ -290,6 +290,14 @@ findings and the same 339 inherited unparsed blocks. All eight additions fit the
 The saved Cohere pilots and smoke now contribute 43 new rows over 16 problems; the late 9B chunks contribute
 33 rows over 11 further problems. These are data gains; model-level qualification remains outstanding.
 
+The next data increment completed in run `40153448857`: the first eight verified full-pass shards added 263
+rows on 100 new problems (100 reference-Python rows and 163 specifications). The resulting draft has 7,066 rows,
+SHA-256 `633ededffc2be4718c3341393845272268fdbe316d10e7e2fa4549f74ce606dc`; all parent rows are preserved.
+The whole-dataset audit has zero current-panel/GPL findings and the same 339 inherited unparsed blocks. Every
+addition fits the registered tokenizer and 2,845-token limit (138 to 2,102 tokens). All three build predictions
+held. Receipt: `release/evidence/cohere-data-2026-10-25a.json`. Later teacher shards can form another audited
+increment; this update changes the data draft without starting training or changing installed weights.
+
 ## 5b. Releases so far and the next increments
 
 - **6.0.0, published 2026-10-24 21:15Z** (tag `v6.0.0` at `b03f6ce5`): the October 5 model under version names, versioned
@@ -305,10 +313,12 @@ The saved Cohere pilots and smoke now contribute 43 new rows over 16 problems; t
   `.github/workflows/evaluate.yml` grades decoded arms with the seven kernels on GitHub's machines (its image of
   t-proof-engine's pinned Dockerfile built in 18 minutes and stays in the Actions cache, never published);
   `.github/workflows/teacher.yml` runs the Cohere teacher and the strict check there. Inputs are assets of the
-  pre-release `eval-inputs`. Training needs a GPU, which the grant cannot buy: Google Cloud credit or Modal, the user's
-  choice.
-- **6.1.0 (model):** candidate A, if it passes the door.
-- **6.2.0 (model):** candidate B, A's rows plus the Cohere teacher's strictly kept specifications.
+  pre-release `eval-inputs`. Cohere's grant is authorized for the checked training-material work. The existing
+  training run may finish, and later GPU work follows the compute arrangement recorded in section 5.
+- **Weight experiment A:** the registered training run and its measurements.
+- **Weight experiment B:** the existing base plus audited additions, including Cohere's strictly kept
+  specifications. Software and data updates continue as their own checks pass; product versions are not reserved
+  for these experiments.
 
 ## 6. Where things stand (carried from the deleted log, paused by the user 2026-10-23 04:52Z)
 

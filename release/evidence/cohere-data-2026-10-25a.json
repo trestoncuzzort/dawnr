@@ -1,0 +1,84 @@
+{
+  "kind": "Audited incremental Cohere training-data addition",
+  "workflow_run": "https://github.com/trestoncuzzort/dawnr/actions/runs/40153448857",
+  "revision": "71f9563630ea11e1576b8acb3fe8aa9703727e11",
+  "registration": "t/PREDICT-2026-10-25-cohere-data-increment.md",
+  "teacher_model": "command-a-03-2025",
+  "source_shards": [
+    0,
+    1,
+    2,
+    3,
+    5,
+    7,
+    8,
+    9
+  ],
+  "artifact": {
+    "id": 12582829834,
+    "sha256": "130e91084b152845db320253a5382b2d78bec1233bacb80747cefc153d178b8f",
+    "encrypted": true
+  },
+  "base": {
+    "rows": 6803,
+    "sha256": "04ae5b85527d83d64eedb0b796c9400bfbca2a92e873b38ccb0d8e135e7f545c",
+    "preserved_in_order": true
+  },
+  "added": {
+    "rows": 263,
+    "problems": 100,
+    "by_source": {
+      "python": 100,
+      "spec": 163
+    }
+  },
+  "output": {
+    "rows": 7066,
+    "sha256": "633ededffc2be4718c3341393845272268fdbe316d10e7e2fa4549f74ce606dc"
+  },
+  "audit": {
+    "rows": 7066,
+    "flagged": 0,
+    "unparsed": 339,
+    "sha256": "756121ebe72807e38cb9595edb4b214792447c8826e4101ffb68a8a2c4749a35",
+    "panels": true,
+    "refuse_gpl": true
+  },
+  "reference_draws": {
+    "requested_reference_draws": 1000,
+    "minimum_accepted_draws_in_existing_policy": 10,
+    "new_specifications": 163
+  },
+  "actual_valid_reference_draws": {
+    "minimum": 16,
+    "maximum": 1000,
+    "median": 897,
+    "below_requested_budget": 100
+  },
+  "encoding": {
+    "model": "Qwen/Qwen3.5-4B",
+    "revision": "851bf6e806efd8d0a36b00ddf55e13ccb7b8cd0a",
+    "training_max_len": 2845,
+    "added_rows": 263,
+    "fits": 263,
+    "over_limit": 0,
+    "minimum_tokens": 138,
+    "median_tokens": 534,
+    "maximum_tokens": 2102,
+    "prediction_held": true,
+    "trainer_sha256": "e43c27df1ee1e796b1799d38a16e0c5725dd09df762be3fabb2940ad8cb4a46f",
+    "tokenizer_files_sha256": {
+      "config.json": "ddc63e1c717afa86c865bb5e01313d89d72bb53b97ad4a8a03ba8510c0621670",
+      "tokenizer.json": "5f9e4d4901a92b997e463c1f46055088b6cca5ca61a6522d1b9f64c4bb81cb42",
+      "tokenizer_config.json": "316230d6a809701f4db5ea8f8fc862bc3a6f3229c937c174e674ff3ca0a64ac8",
+      "chat_template.jinja": "a4aee8afcf2e0711942cf848899be66016f8d14a889ff9ede07bca099c28f715"
+    },
+    "method": "Offline tokenization with the registered trainer encoder; no model loaded, training or generation."
+  },
+  "predictions": {
+    "row_count": true,
+    "audit": true,
+    "all_added_rows_fit": true
+  },
+  "scope": "Dataset preparation. The 339 inherited unparsed blocks remain an audit limitation. Training text stays private; no weights changed in this update."
+}

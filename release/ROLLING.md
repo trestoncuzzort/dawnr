@@ -18,11 +18,14 @@ manifest lists the model files 6.0.0 published, so nothing was uploaded twice.
 
 **dawnr 6.0.0** (tag `v6.0.0`) was the first versioned release. Its model is the October 5 model, byte for byte, under version
 names ([card](MODEL-CARD-dawnr-6.0.md)); what is new is the application at that tag, the version it carries, the
-installer, and the correction of the October 22 to 23 readings ([CORRECTIONS.md](../CORRECTIONS.md)). The 6.1.0
-candidate is in training on the October 5 model's own audited rows plus strictly checked specifications and repair
+installer, and the correction of the October 22 to 23 readings ([CORRECTIONS.md](../CORRECTIONS.md)). Weight
+experiment A is in training on the October 5 model's own audited rows plus strictly checked specifications and repair
 examples ([registration](../t/PREDICT-2026-10-24-release-6.1-candidate-a.md)).
 
-## How a model enters a release
+Tested application, verifier and data updates land as they are ready. The historical candidate version labels
+do not reserve product releases, and a weight change is not required for an update.
+
+## How released weights change
 
 Only by the protocol of [the 6.0 plan](../internal/RELEASE-6.0-PLAN.md), section 3: two training seeds and three
 decodes each, read paired per problem against the released model on the 206 unleaked development problems (more
