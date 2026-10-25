@@ -1,0 +1,113 @@
+{
+  "kind": "Saved-output parsing and recorded-stage counts only; no new generation or reference grading",
+  "sources": {
+    "t/surface.py": "14b7a852d54689fdca9342967780a65edeae8272778a55d99caf11a517b11a68",
+    "t/spec_experiment.py": "9b5d1edf7b32ee12f5768621e86fd642272ed4ca55bf22acc86a21dea5b9bcae",
+    "t/spec_first.py": "795b39a0495dd7349dea58c9c23f871bac383bf3b719e351270d22b6edd3676d"
+  },
+  "runs": [
+    {
+      "run": "40139205280",
+      "cached_reply_counts": {
+        "cached_responses": 1000,
+        "parsed": 328,
+        "parse_error": 639,
+        "nonempty_without_t_block": 23,
+        "empty_final_reply": 10
+      },
+      "first_parse_error_productions": {
+        "Expr": 371,
+        "Id": 64,
+        "What the notation refuses": 54,
+        "Stmt": 36,
+        "SpecFun": 36,
+        "Task": 33,
+        "Op": 24,
+        "Strings as sequences of code points (v1)": 17,
+        "Type": 4
+      },
+      "counts_by_finish": {
+        "COMPLETE": {
+          "parsed": 322,
+          "parse_error": 623,
+          "nonempty_without_t_block": 23
+        },
+        "MAX_TOKENS": {
+          "parsed": 6,
+          "parse_error": 16
+        },
+        "ERROR": {
+          "empty_final_reply": 10
+        }
+      },
+      "parser_count_matches_saved_run": true,
+      "scored_verdicts": {
+        "dropped": 224,
+        "kept": 45,
+        "duplicate": 15,
+        "unscorable": 42
+      },
+      "reference_filter_candidates_in_strict_check": 12,
+      "strict_kept_candidates": 9,
+      "strict_kept_problems": 5,
+      "three_test_kept_problems": 11,
+      "candidates_after_three_per_problem_cap": 21,
+      "parsed_but_not_scored": 2
+    },
+    {
+      "run": "40142664557",
+      "cached_reply_counts": {
+        "cached_responses": 500,
+        "empty_final_reply": 480,
+        "parse_error": 9,
+        "parsed": 11
+      },
+      "first_parse_error_productions": {
+        "Expr": 5,
+        "Task": 2,
+        "Op": 2
+      },
+      "counts_by_finish": {
+        "MAX_TOKENS": {
+          "empty_final_reply": 480,
+          "parse_error": 1
+        },
+        "COMPLETE": {
+          "parse_error": 8,
+          "parsed": 11
+        }
+      },
+      "parser_count_matches_saved_run": true,
+      "scored_verdicts": {
+        "kept": 8,
+        "dropped": 2,
+        "duplicate": 1
+      },
+      "reference_filter_candidates_in_strict_check": 7,
+      "strict_kept_candidates": 7,
+      "strict_kept_problems": 4,
+      "three_test_kept_problems": 4,
+      "candidates_after_three_per_problem_cap": 8,
+      "parsed_but_not_scored": 0
+    }
+  ],
+  "prior_experiments": [
+    "t/PREDICT-2026-10-12-udebug-teacher.md",
+    "t/PREDICT-2026-10-21-v8-spec-rows.md",
+    "internal/RESEARCH-2026-10-22-plateau.md"
+  ],
+  "limits": [
+    "Parser counts reproduce the saved run. This analysis made no model calls and reran no reference or proof checks.",
+    "The counts identify losses at recorded stages; repairing syntax is not evidence that a candidate will pass semantic checks.",
+    "The older repair and Dafny experiments used different teachers and whole judge programs; they inform hypotheses but do not measure a Cohere specification-only variant."
+  ],
+  "wider_pilot_uncovered_coverage": {
+    "base_spec_problems": 869,
+    "safe_candidates_on_uncovered_problems": 10,
+    "uncovered_problems": 6,
+    "all_uncovered_problems_have_at_most_three_safe_candidates": true
+  },
+  "wider_pilot_provider_error_types": {
+    "NO_VALID_RESPONSE_GENERATED": 10
+  }
+}

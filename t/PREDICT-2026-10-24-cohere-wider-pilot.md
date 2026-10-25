@@ -42,3 +42,28 @@ The $25 ceiling did not stop the run. The verified encrypted artifact and aggreg
 All five kept problems were already covered by the original pilots and the 6,803-row draft. Two overlap with
 the original North Mini Code pilot. The skip-covered rule therefore adds no rows. Do not expand this recipe
 unchanged. Its $25 reservation is replaced by the recorded $13.064852 in subsequent allocation calculations.
+
+## Where candidates were lost
+
+Parsing the saved replies with the unchanged parser reproduces the run's 328 parsed specifications exactly.
+Of 1,000 cached replies, 639 fail parsing, 23 have nonempty text without a recognized t block, and 10 are empty
+provider errors (`NO_VALID_RESPONSE_GENERATED`). Of the 968 complete replies, 623 still fail parsing. Only 22
+requests hit the token limit, so token-limit termination does not explain most failed replies.
+The first parser failure occurs in an expression for 371 replies. This counts the first reported failure, not
+every syntax defect or the semantic quality of a hypothetical repaired answer.
+
+Two of the 328 parsed tasks fail the subsequent printing check. Of the 326 scored records, 45 pass the three-test
+gate on 11 problems, 15 are duplicates, 224 are dropped and 42 are unscorable. The three-per-problem cap leaves
+21 candidates, and the first reference filter leaves 12 for the stricter check; nine survive. All ten three-test
+passing candidates on the six problems absent from the current draft already fit that cap. Removing the cap
+cannot recover an excluded candidate on an uncovered problem from this saved pilot. Counts and source hashes are in
+`release/evidence/cohere-pilot-attrition-2026-10-25.json`. This analysis made no model calls and reran no reference
+or proof checks.
+
+The earlier record matters to the next hypothesis. `t/PREDICT-2026-10-12-udebug-teacher.md` already measured extra
+syntax prose, parser-feedback repair and a Dafny target: those pilots failed their coverage predictions, and the
+Dafny target accepted the same three problems as the t target. Those were different teachers and whole judge
+programs, so they do not settle a Cohere specification-only variant. They do rule out treating the representation
+change or a repair prompt as an established solution. The primed 9B's complementary coverage is separately measured
+in `t/PREDICT-2026-10-21-v8-spec-rows.md`; the current Cohere run already uses that grammar-and-examples primer.
+Wait for the registered North thinking-budget follow-up and the full pass before choosing another grant allocation.
