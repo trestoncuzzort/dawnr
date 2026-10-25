@@ -152,7 +152,38 @@ def test_changed_frozen_prefix_is_refused():
         curate.filter_additions([{"chosen": "original"}], [{"chosen": "changed"}])
 
 
-def test_failed_full_audit_cannot_write_a_completion_receipt(tmp_path, monkeypatch):
+def test_all_spec_scope_preserves_other_rows_and_cures_only_specification_targets():
+    debug = {"source": "debug", "prompt": "repair", "chosen": "intentionally different format"}
+    reference = {"source": "python", "prompt": "python", "chosen": "def f(x): return x"}
+    bad = contract()
+    bad["ensures"][0]["args"][1] = {"var": "undeclared"}
+    base = [debug, row(bad, "bad"), reference, row(contract(0))]
+    candidate = deepcopy(base) + [row(contract())]
+    frozen = deepcopy(candidate)
+    output, report = curate.filter_rows(base, candidate, "all_source_spec")
+    assert output[:2] == [debug, reference] and len(output) == 3
+    assert surface.parse(se.find_block(output[-1]["chosen"])) == contract()
+    assert report["counts"] == {"other_rows_retained": 2, "input_specifications": 3,
+        "invalid_specifications_dropped": 1, "header_promotion_candidates": 1,
+        "headers_promoted": 1, "specifications_retained": 1, "duplicates_dropped": 1,
+        "normalization_duplicates_dropped": 1}
+    assert candidate == frozen
+
+
+def test_all_spec_scope_keeps_a_non_spec_row_even_if_it_occurs_after_its_duplicate():
+    spec = row(contract())
+    other = dict(spec, source="teacher-spec")
+    output, report = curate.filter_rows([], [spec, other], "all_source_spec")
+    assert output == [other] and report["counts"]["duplicates_dropped"] == 1
+
+
+def test_curation_scope_must_be_explicit_and_known():
+    with pytest.raises(ValueError, match="unknown specification curation scope"):
+        curate.filter_rows([], [], "all")
+
+
+@pytest.mark.parametrize("scope", ["additions", "all_source_spec"])
+def test_failed_full_audit_cannot_write_a_completion_receipt(tmp_path, monkeypatch, scope):
     inputs = tmp_path / "inputs"
     inputs.mkdir()
     base = inputs / "base.jsonl"
@@ -161,7 +192,7 @@ def test_failed_full_audit_cannot_write_a_completion_receipt(tmp_path, monkeypat
     candidate.write_text(base.read_text() + json.dumps(row(contract())) + "\n")
     entry = lambda path, n: {"path": path.name, "sha256": prep.digest(path), "rows": n}
     manifest = inputs / "manifest.json"
-    manifest.write_text(json.dumps({"label": "fixture", "base": entry(base, 1), "candidate": entry(candidate, 2)}))
+    manifest.write_text(json.dumps({"label": "fixture", "scope": scope, "base": entry(base, 1), "candidate": entry(candidate, 2)}))
     def fail(command, **kwargs):
         assert "--panels" in command and "--refuse-gpl" in command
         raise subprocess.CalledProcessError(1, command)

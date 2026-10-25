@@ -15,7 +15,7 @@ on:
         description: 'unique data-build label'
         required: true
       operation:
-        description: 'build sources or statically curate additions to a frozen baseline'
+        description: 'build sources or curate the specification scope declared by the pinned manifest'
         type: choice
         options: [build, curate]
         default: build

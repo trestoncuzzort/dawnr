@@ -1,0 +1,22 @@
+{
+  "label": "dawnr-data-contracts-20261025",
+  "operation": "curate",
+  "scope": "all_source_spec",
+  "asset": "dawnr-data-contracts-20261025.tar.gz.enc",
+  "ciphertext_sha256": "292c27cf8ed40fd3e156134c994fb34eb551497993f8f3980423507e11af4a73",
+  "input_manifest_sha256": "0a7bbf742cad5c8cd79720ded17f03715a10dde32ed33730530f2bd145dacd93",
+  "ciphertext_bytes": 2612144,
+  "base": {
+    "path": "base.jsonl",
+    "sha256": "2c2eff287493fd8774d1a71bc9e799ca4cc40f21fd9a1b082c17f8206f7351d8",
+    "rows": 6727
+  },
+  "candidate": {
+    "path": "candidate.jsonl",
+    "sha256": "eb139437b33b4797023e1f6ef121628588d5397f9f57241695d654071c4457b5",
+    "rows": 7123
+  },
+  "projected_rows": 6954,
+  "roundtrip_verified": true,
+  "registration_sha256": "12a1ce658b0ca901ae290af9778a8f1e7eb271a7f63f9f64c679cbfa44abe699"
+}

@@ -1,5 +1,8 @@
 #!/usr/bin/env python3
-"""Statically check only the additions to a frozen training baseline, then audit the whole result.
+"""Curate declared specification rows, then audit the whole result.
+
+The default scope checks only additions to a frozen baseline. The explicit
+all_source_spec scope checks every source=spec answer, preserving all other rows.
 
 Sources: prepare_release_rows.py (pinned inputs and whole-dataset audit),
 spec_first.py:accept (checked header promotion), and spec_contract.py.
@@ -29,16 +32,28 @@ def row_hash(row: dict) -> str:
     return hashlib.sha256(json.dumps(row, sort_keys=True).encode()).hexdigest()
 
 
-def filter_additions(base: list[dict], candidate: list[dict]) -> tuple[list[dict], dict]:
+def filter_rows(base: list[dict], candidate: list[dict], scope: str = "additions") -> tuple[list[dict], dict]:
+    if scope not in ("additions", "all_source_spec"):
+        raise ValueError("unknown specification curation scope")
     if len(candidate) < len(base) or candidate[:len(base)] != base:
         raise ValueError("candidate does not preserve the frozen baseline")
-    kept, actions, counts, tags = list(base), [], Counter(), {}
+    all_specs = scope == "all_source_spec"
+    kept, actions, counts, tags = ([] if all_specs else list(base)), [], Counter(), {}
     row_key = lambda row: json.dumps((row.get("prompt"), row.get("chosen")), sort_keys=True)
-    seen = {row_key(row) for row in base}
-    for index, row in enumerate(candidate[len(base):], len(base)):
+    # Other row kinds can contain intentionally broken examples. Preserve them,
+    # and prefer those original rows if a normalized specification duplicates one.
+    seen = {row_key(row) for row in (candidate if all_specs else base)
+            if not all_specs or row.get("source") != "spec"}
+    original_seen = set(seen)
+    start = 0 if all_specs else len(base)
+    for index, row in enumerate(candidate[start:], start):
+        if all_specs and row.get("source") != "spec":
+            kept.append(row)
+            counts["other_rows_retained"] += 1
+            continue
         if row.get("source") not in ("spec", "python"):
             raise ValueError("an added row has no recognized specification/reference source")
-        counts["input_additions"] += 1
+        counts["input_specifications" if all_specs else "input_additions"] += 1
         tag = row.get("tag")
         if not isinstance(tag, str) or not tag:
             raise ValueError("an added row has no provenance tag")
@@ -50,6 +65,7 @@ def filter_additions(base: list[dict], candidate: list[dict]) -> tuple[list[dict
             if row_key(row) in seen:
                 raise ValueError("the archived reference addition was already in the frozen prefix")
             seen.add(row_key(row))
+            original_seen.add(row_key(row))
             kept.append(row)
             counts["reference_rows_retained"] += 1
             source["retained"] += 1
@@ -72,10 +88,13 @@ def filter_additions(base: list[dict], candidate: list[dict]) -> tuple[list[dict
             counts["header_promotion_candidates"] += 1
         if row_key(result) in seen:
             counts["duplicates_dropped"] += 1
+            counts["existing_duplicates_dropped" if row_key(row) in original_seen
+                   else "normalization_duplicates_dropped"] += 1
             source["duplicate"] += 1
             actions.append({**record, "action": "duplicate_after_normalization"})
             continue
         seen.add(row_key(result))
+        original_seen.add(row_key(row))
         if promoted:
             counts["headers_promoted"] += 1
             source["promoted"] += 1
@@ -86,13 +105,21 @@ def filter_additions(base: list[dict], candidate: list[dict]) -> tuple[list[dict
         counts["specifications_retained"] += 1
         source["retained"] += 1
     # Recheck the serialized answers that will actually train, including promoted headers.
-    for row in kept[len(base):]:
-        if row["source"] == "spec":
+    for row in (kept if all_specs else kept[len(base):]):
+        if row.get("source") == "spec":
             _task, promoted = checked_contract(surface.parse(se.find_block(row["chosen"])))
             if promoted:
                 raise ValueError("the output still needs a header promotion")
+    if all_specs and [r for r in kept if r.get("source") != "spec"] != [
+            r for r in candidate if r.get("source") != "spec"]:
+        raise ValueError("curation changed a non-specification row or its order")
     return kept, {"counts": dict(counts), "sources": [{"tag": k, **dict(v)} for k, v in tags.items()],
                   "row_actions": actions}
+
+
+def filter_additions(base: list[dict], candidate: list[dict]) -> tuple[list[dict], dict]:
+    """Keep the existing additions-only API and its frozen-prefix guarantee."""
+    return filter_rows(base, candidate)
 
 
 def curate(manifest_path: Path, output: Path, jobs: int) -> dict:
@@ -105,7 +132,8 @@ def curate(manifest_path: Path, output: Path, jobs: int) -> dict:
         raise ValueError("pinned row count changed")
     if output.exists() or jobs < 1:
         raise ValueError("use a fresh output directory and positive job count")
-    rows, static = filter_additions(base, candidate)
+    scope = manifest.get("scope", "additions")
+    rows, static = filter_rows(base, candidate, scope)
     output.mkdir(parents=True)
     final = output / "training-rows.jsonl"
     final.write_text("".join(json.dumps(row) + "\n" for row in rows))
@@ -119,11 +147,14 @@ def curate(manifest_path: Path, output: Path, jobs: int) -> dict:
     audit = json.loads(audit_path.read_text())
     if audit["flagged"] or audit["findings"] or audit["rows"] != len(rows):
         raise ValueError("the full resulting dataset did not pass its audit")
-    record = {"label": manifest["label"], "purpose": "static curation of additions to the frozen baseline",
+    validity = ({"all_retained_added_specifications_valid": True, "baseline_checked_statically": False}
+                if scope == "additions" else
+                {"all_retained_source_spec_rows_valid": True, "non_specification_rows_checked_statically": False,
+                 "all_non_specification_rows_preserved_in_order": True})
+    record = {"label": manifest["label"], "purpose": "static curation of " + scope, "scope": scope,
               "input_manifest_sha256": digest(manifest_path), "base": manifest["base"],
               "candidate": manifest["candidate"], "sources": static["sources"],
-              "static": {"counts": static["counts"], "sha256": digest(static_path),
-                         "all_retained_added_specifications_valid": True, "baseline_checked_statically": False},
+              "static": {"counts": static["counts"], "sha256": digest(static_path), **validity},
               "output": {"filename": final.name, "rows": len(rows), "sha256": digest(final)},
               "audit": {"rows": audit["rows"], "flagged": 0, "unparsed": audit["unparsed"],
                         "sha256": digest(audit_path), "panels": True, "refuse_gpl": True},
