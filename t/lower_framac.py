@@ -9166,6 +9166,21 @@ CERT_GOAL = "t_refutation_certificate"
 MAX_CERT_STMTS = 256
 
 
+def _certificate_negation(predicate: str, used: set) -> str:
+    """Keep logical negation visible after Frama-C normalizes comparisons.
+
+    ACSL's local binding means substitution: !(let p = P; p) is !P. The
+    predicate's meaning stays unchanged; the strict adapter
+    still sees an explicit negation instead of a rewritten equality.
+    Source: ACSL implementation manual, section 2.2, local binding.
+    """
+    taken = set(used) | set(re.findall(r"[A-Za-z_]\w*", predicate))
+    name = "t_refutation_clause"
+    while name in taken:
+        name += "_"
+    return f"!(\\let {name} = ({predicate}); {name})"
+
+
 class _CertSkip(Exception):
     """This witness cannot be expressed as a ground certificate; the twin
     file is emitted without one (never a hard failure)."""
@@ -10495,7 +10510,7 @@ def _value_certificate(task: dict, twin_body: list, w: dict,
         pieces.append(f"({p})" if d is None else f"((({d}) && ({p})))")
     lines = ["", "/*@ assigns \\nothing; */",
              f"void {CERT_FN}(void) {{", *decls, *body_out,
-             f"  /*@ assert {CERT_GOAL}: !({' && '.join(pieces)}); */",
+             f"  /*@ assert {CERT_GOAL}: {_certificate_negation(' && '.join(pieces), used)}; */",
              "  return;", "}", ""]
     return "\n".join(lines)
 
@@ -10949,7 +10964,7 @@ def _undef_certificate(task: dict, twin_body: list, w: dict,
     except (interp.Undef, interp.Budget, RecursionError, KeyError,
             ValueError, TypeError):
         return None
-    goal = pred({"op": "not", "args": [found]}, ctx)
+    goal = _certificate_negation(pred(found, ctx), used)
     lines = ["", "/*@ assigns \\nothing; */",
              f"void {CERT_FN}(void) {{", *code,
              f"  /*@ assert {CERT_GOAL}: {goal}; */",
@@ -11241,7 +11256,7 @@ def _exit_certificate(task: dict, twin_body: list, w: dict,
         pieces.append(f"({p})" if d is None else f"((({d}) && ({p})))")
     lines = ["", "/*@ assigns \\nothing; */",
              f"void {CERT_FN}(void) {{", *decls, *body_out,
-             f"  /*@ assert {CERT_GOAL}: !({' && '.join(pieces)}); */",
+             f"  /*@ assert {CERT_GOAL}: {_certificate_negation(' && '.join(pieces), used)}; */",
              "  return;", "}", ""]
     return "\n".join(lines)
 
@@ -11348,7 +11363,7 @@ def _measure_certificate(task: dict, twin_body: list, w: dict,
     fact = f"(({_int_lit(caller_m)} >= 0) && ({_int_lit(callee_m)} < {_int_lit(caller_m)}))"
     lines = ["", "/*@ assigns \\nothing; */",
              f"void {CERT_FN}(void) {{",
-             f"  /*@ assert {CERT_GOAL}: !{fact}; */",
+             f"  /*@ assert {CERT_GOAL}: {_certificate_negation(fact, used)}; */",
              "  return;", "}", ""]
     return "\n".join(lines)
 

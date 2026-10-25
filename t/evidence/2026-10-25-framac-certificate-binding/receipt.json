@@ -1,0 +1,60 @@
+{
+  "workflow_run": "https://github.com/trestoncuzzort/t-language/actions/runs/40146610056",
+  "baseline_commit": "5828ed07aaba864a4dc4ae06ab20a4a01a5d686b",
+  "repair_commit": "2cd6a8c43eb062b84d06d10d57251a6068bf8a82",
+  "artifact_id": 12583001989,
+  "artifact_sha256": "7d754476afb9c819aa5b62e81bdc8500e3743972fe9ad0872f0de7869414d8d4",
+  "tasks": 114,
+  "exact_task_coverage_verified": true,
+  "task_sources_unchanged": true,
+  "baseline_counts": {
+    "verified / refuted": 71,
+    "abstain / abstain": 42,
+    "timeout / refuted": 1
+  },
+  "repaired_counts": {
+    "verified / refuted": 71,
+    "abstain / abstain": 42,
+    "timeout / refuted": 1
+  },
+  "changes": [],
+  "agreement_gains": 0,
+  "agreement_losses": 0,
+  "files": {
+    "baseline.log": "943fba31267346a972bd7afe6790bb6cae313489541a5dd8255d0eec049fd6d5",
+    "baseline.md": "7cf0d930af615e7dba7e607d0a25b318f017d5ca0106f479c7653652b6985324",
+    "native-controls.log": "1858eae055b9cd8dc3aa3f18d884e1d74de577c50b81c16312c21c431ac363f2",
+    "repaired.log": "ab0b223521432508747995b01722a4e9a245cf5f2b933fdf26a27801f897ed17",
+    "repaired.md": "7457081885d5c24d5910dd5adc141dc65f41462d2a395d89e780f9bcb3cee5a6"
+  },
+  "unit_ci_run": "https://github.com/trestoncuzzort/t-language/actions/runs/40146638952",
+  "native_control_tests": {
+    "binding": 4,
+    "adapter": 7,
+    "skipped": 0,
+    "positive_repetitions_per_side": 3,
+    "negative_native_controls": 3
+  },
+  "seven_kernel_control": {
+    "tasks": [
+      "abs",
+      "gcd",
+      "reverse",
+      "swap_at"
+    ],
+    "kernels": 7,
+    "agreeing_cells": 28,
+    "repetitions_per_side": 3,
+    "table_sha256": "e4164c85fe39e921c96361d629f7f9101805b1cbfd9c4ac4ac795865c717b8d3"
+  },
+  "predictions": {
+    "positive_regression": true,
+    "negative_controls": true,
+    "no_column_agreement_regression": true,
+    "four_task_seven_kernel_control": true
+  },
+  "remaining_column_timeout": "double_all, timeout / refuted in both readings",
+  "adapter_unchanged": true,
+  "adapter_sha256": "f6ecbd38ae61a754c83febed37370c9bb08f1c7f9f204e98484c6f7235186ea2",
+  "repair_lowering_sha256": "e23b388f893902af6baf5e298adbe9a61f09febb975253f98f606e77d601e32b"
+}

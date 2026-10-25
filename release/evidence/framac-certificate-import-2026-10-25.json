@@ -1,0 +1,20 @@
+{
+  "kind": "Targeted import of the upstream certificate-normalization repair",
+  "upstream_merge_commit": "d1b57dc640512a81ff58c084a4e2f976c7d5c474",
+  "upstream_pr": "https://github.com/trestoncuzzort/t-language/pull/1",
+  "tested_code_commit": "2cd6a8c43eb062b84d06d10d57251a6068bf8a82",
+  "base_engine_pin_unchanged": "d13d11d01f8f50687ef645d60aa08c870d664b84",
+  "patch_sha256": "dfb14534db132489383fcf519aab63044fe2fcbc16eba4e539936ffc89d71c61",
+  "lowering_before_sha256": "41c1ecb067f9ef8026b2c74e099b357e371551a3013fa0132976992cf0653653",
+  "lowering_after_sha256": "37f11241f244e98f5e076f2dc7b8df2d4255042d0d06a12142878d9b2883b454",
+  "copied_files": {
+    "t/test_framac_certificate_binding.py": "0cbd186e34753fc13672149bcd310d5ed39179297a54421c4c9dac178ab77ae6",
+    "t/PREDICT-2026-10-25-framac-certificate-binding.md": "3dba5e9038a17f366dc5cfdf75199f8f10a8d5c5fad9319face0b1a86aa03290",
+    "t/evidence/2026-10-25-framac-certificate-binding/baseline.md": "7cf0d930af615e7dba7e607d0a25b318f017d5ca0106f479c7653652b6985324",
+    "t/evidence/2026-10-25-framac-certificate-binding/native-controls.log": "1858eae055b9cd8dc3aa3f18d884e1d74de577c50b81c16312c21c431ac363f2",
+    "t/evidence/2026-10-25-framac-certificate-binding/receipt.json": "53c97f338f08e8e45b21bab27effb31f2e5b302f31a336694fac6dd4b31eab12",
+    "t/evidence/2026-10-25-framac-certificate-binding/repaired.md": "7457081885d5c24d5910dd5adc141dc65f41462d2a395d89e780f9bcb3cee5a6",
+    "t/evidence/2026-10-25-framac-certificate-binding/seven-kernel-control.md": "e4164c85fe39e921c96361d629f7f9101805b1cbfd9c4ac4ac795865c717b8d3"
+  },
+  "scope": "Only the upstream certificate-related diff was applied to dawnr lower_framac.py; its existing base and unrelated engine files remain at their recorded versions. New matched controls are required before candidate comparison."
+}
