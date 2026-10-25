@@ -1,0 +1,42 @@
+{
+  "kind": "Saved v5 specification-gate control reproduced on GitHub",
+  "workflow_run": "https://github.com/trestoncuzzort/dawnr/actions/runs/40149932546",
+  "registration": "t/PREDICT-2026-10-25-ceiling-cloud-control.md",
+  "grader_commit": "01c94ef5509fc51ab6484c1350c1cb9f8504e459",
+  "python": "3.12.15",
+  "procedure": {
+    "pool": "v5",
+    "draws": 200,
+    "per_problem": 3,
+    "jobs": 4
+  },
+  "input_manifest": {
+    "tag": "v5-20261021-spec20",
+    "files": {
+      "spec_first.json": "5f8aef31132e4bdc07184e30b460646b6a2c563cbad94a79f8a04e38df485ef9",
+      "python.jsonl": "ab2703d5ef79648726995f3ecc3cb31cfa96096352e24a48d525fa94efa8cb0e",
+      "scored-specs.jsonl": "de468d92c8a0e81567107e36489bedbb4e0e37ee22a46a2865be851c4fd18698",
+      "panel.txt": "f807aec7e6b89e524ded720d9ccfb670c1d504a5a5717966a4b870516701daf7"
+    }
+  },
+  "input_asset_sha256": "d10f1b51c86b4b548a0f380e23f6dba49a716f99f639f18c4ac81f4a65bfce40",
+  "artifact": {
+    "id": 12582263144,
+    "sha256": "d7e4bce69e37793e2a42d2a237775197925f05ab05bc7f208a6a992183cb0330",
+    "encrypted": true
+  },
+  "result": {
+    "problems": 95,
+    "with_python": 63,
+    "candidates_scored": 980,
+    "safe_kept": 93,
+    "safe_kept_reference_correct": 73,
+    "safe_precision": 0.7849462365591398
+  },
+  "result_sha256": "5d851b39adfc7820af433b8b897b7d8950e3f691112d9830e0d7820f1acc028b",
+  "sources_verified": 558,
+  "completion_verified": true,
+  "prediction_held": true,
+  "entire_result_matches_original": true,
+  "interpretation": "The saved original v5 answers reproduce the earlier complete ceiling result. This validates the remote measurement path; it does not evaluate or qualify a new model."
+}

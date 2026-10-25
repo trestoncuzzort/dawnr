@@ -32,3 +32,11 @@ use this same frozen instrument and the same saved-input format, once its answer
 
 Sources: `t/PREDICT-2026-10-21-spec-ceiling.md`, `t/recipes/spec_ceiling.py`, and the encrypted input/output flow in
 `.github/workflows/prepare-rows.yml`. This adds a remote execution path, not a new scoring rule.
+
+## Result
+
+Run `40149932546` passed. All predicted counts match: 95 problems, 63 with passing Python, 980 scored candidates,
+93 kept and 73 reference-correct, precision 0.7849462365591398. The entire result JSON, including per-problem
+readings, equals the saved original. All 558 source hashes, the input manifest, encrypted archive digest and
+completion receipt were verified. Aggregate receipt: `release/evidence/v5-cloud-ceiling-control-2026-10-25.json`.
+No candidate was measured by this control.

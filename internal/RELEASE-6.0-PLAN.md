@@ -149,6 +149,11 @@ remaining 9B chunks, once the strict check has passed them; it is the 6.2.0 cand
   development 95 and runs the unchanged `spec_ceiling.py` at grader revision `01c94ef5`, with 200 reference draws.
   The original v5 inputs are replayed first under `t/PREDICT-2026-10-25-ceiling-cloud-control.md`; the expected
   control is 73 reference-correct among 93 kept. This measurement asks no model and runs no proof kernels.
+  Control `40149932546` reproduced every field of the original result, with all 558 source hashes verified;
+  aggregate receipt `release/evidence/v5-cloud-ceiling-control-2026-10-25.json`. For a candidate, generate the
+  original stage-1 instrument on the approved GPU host with ten Python attempts, twenty specification candidates
+  and `--specs-only`, seeded from its own offset-zero development cache. Transfer the three saved input files and
+  panel privately to this workflow; no additional proof generation is needed to measure gate precision.
 - **Large files without the cable** go through a private GitHub repository used only for transfers. With the cable
   plugged in, Tailscale uses it directly.
 
