@@ -9,8 +9,12 @@ changes installed weights. Later completed shards can form another audited incre
 Start from the audited 6,803-row draft, SHA-256
 `04ae5b85527d83d64eedb0b796c9400bfbca2a92e873b38ccb0d8e135e7f545c`.
 Use completed shards 0, 1, 2, 3, 5, 7, 8 and 9 of teacher run `40138722401`, in that order. Their encrypted artifact
-digests were verified and the strict reports reconciled. Every saved candidate passed 1,000 reference draws
-with both mutant families at the 0.9 floor. All successful-call ledgers name `command-a-03-2025`.
+digests were verified and the strict reports reconciled. The strict check used its 1,000-draw request budget,
+the existing minimum of 10 accepted reference draws, and the 0.9 floor on both mutant families. The actual valid
+draw count is recorded per candidate; a 1,000-draw budget is not a claim that every candidate had 1,000 valid
+cases. For the 163 new specifications, valid counts range from 16 to 1,000 (median 897); 100 are below the
+requested budget. This clarifies the stored evidence without changing the acceptance rule or run settings.
+All successful-call ledgers name `command-a-03-2025`.
 
 These eight shards cover 1,364 planned training problems and keep 179 specifications on 110 problems. Ten of
 those problems are already covered by the parent draft. The remaining 100 problems carry 163 specifications.
