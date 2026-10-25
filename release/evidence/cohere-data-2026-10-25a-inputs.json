@@ -1,0 +1,87 @@
+{
+  "label": "dawnr-cohere-data-20261025a",
+  "asset": "dawnr-cohere-data-20261025a.tar.gz.enc",
+  "ciphertext_sha256": "7cd8e5277455c9e928ca9a22a86fb097d7f365c6543988bc4ddfa798ca855517",
+  "input_manifest_sha256": "fa984952105e6f17ec5e390b939bf1a6b30bafdf286b87cf9d04a800d132a1e1",
+  "base_rows": 6803,
+  "base_sha256": "04ae5b85527d83d64eedb0b796c9400bfbca2a92e873b38ccb0d8e135e7f545c",
+  "source_shards": [
+    0,
+    1,
+    2,
+    3,
+    5,
+    7,
+    8,
+    9
+  ],
+  "strict_new_problems": 100,
+  "strict_new_specifications": 163,
+  "predicted_added_rows": 263,
+  "predicted_total_rows": 7066,
+  "kind": "Encrypted inputs for an incremental Cohere data build",
+  "teacher_workflow_run": 40138722401,
+  "teacher_revision": "9279f18e81fe9670c4fdd88978f758a9113eb121",
+  "model": "command-a-03-2025",
+  "source_artifacts": [
+    {
+      "id": 12583068344,
+      "name": "teacher-cohere-a-20261024-0",
+      "sha256": "f312dff0cad6e8a78cb0b35ff73beeb17fbf2fa6cd11503cb840892be2d07e09",
+      "size": 102456,
+      "list_index": 0
+    },
+    {
+      "id": 12583671269,
+      "name": "teacher-cohere-a-20261024-1",
+      "sha256": "c173d1b1a20d98fd6e9a389c19fdcf68e47d163cf06baeb068a1ffd08fee3a30",
+      "size": 104696,
+      "list_index": 1
+    },
+    {
+      "id": 12582872987,
+      "name": "teacher-cohere-a-20261024-2",
+      "sha256": "96977828c67a35960687c8865023cf4a7a802321a1e31d36bc5bb0c2c7f80958",
+      "size": 101592,
+      "list_index": 2
+    },
+    {
+      "id": 12581647899,
+      "name": "teacher-cohere-a-20261024-3",
+      "sha256": "77771dd862b33e5fe6a335f7d9d2715b5fea11143fa3ee77524043671fb22b2a",
+      "size": 102936,
+      "list_index": 3
+    },
+    {
+      "id": 12582034577,
+      "name": "teacher-cohere-a-20261024-5",
+      "sha256": "887e67b883f14648c3afce1d5e755bf5a866a1ab0d3fc5f34a1c7a0f4a27df0e",
+      "size": 106008,
+      "list_index": 5
+    },
+    {
+      "id": 12582860436,
+      "name": "teacher-cohere-a-20261024-7",
+      "sha256": "f3728b1fdbd3d8724db16a0a4e686feb4a90d0a804789aca130c0e32ece469b9",
+      "size": 108872,
+      "list_index": 7
+    },
+    {
+      "id": 12581454775,
+      "name": "teacher-cohere-a-20261024-8",
+      "sha256": "319ffe46a9ae321398d5cd64f65a45b5b2ab5bee2e2ea66a06411afe31618e30",
+      "size": 103784,
+      "list_index": 8
+    },
+    {
+      "id": 12581393178,
+      "name": "teacher-cohere-a-20261024-9",
+      "sha256": "7a271bd533dac150a201c20a28b3c1a9d7f91b1e8a825a5b5e777adae5c61416",
+      "size": 98963,
+      "list_index": 9
+    }
+  ],
+  "recorded_source_calls": 13475,
+  "recorded_source_cost_usd": "171.049850",
+  "purpose": "Build and audit checked completed shards while the remaining teacher jobs finish; no weight change or training launch."
+}
