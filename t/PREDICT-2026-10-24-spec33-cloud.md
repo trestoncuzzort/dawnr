@@ -49,3 +49,11 @@ both agreement flags. Predict that all three affected twin results are unproved 
 and that at least one of the three affected real results times out. A different twin reason/outcome or no real
 timeout falsifies the corresponding prediction. This probe investigates causes; its results cannot replace the
 original 26 or produce a release score. Inputs and detailed outputs remain encrypted. No engine rule changes.
+
+The follow-up completed in run `40145445753`. The first prediction held: all three affected twin results were
+unproved with the adapter's explicit reason that the certificate assertion states no negation of a clause.
+Their real program verified in all three repetitions. The timeout prediction failed: the other real program
+verified in all three repetitions, with its twin refuted in all three, at the unchanged budgets. This shows
+variation between runs without establishing its cause. The original full control remains 26 all-seven;
+the diagnostic does not substitute its favorable results into that table. Counts, reasons and timings:
+`release/evidence/spec33-framac-diagnostic-2026-10-25.json`.

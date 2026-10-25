@@ -1,0 +1,106 @@
+{
+  "kind": "Targeted Frama-C diagnostics, not a replacement release score",
+  "workflow_run": "https://github.com/trestoncuzzort/dawnr/actions/runs/40145445753",
+  "revision": "1ad69cdcb869ed1946a31563c8de6dc0dcb7977f",
+  "control_workflow_run": 40141581001,
+  "original_control_all_seven": 26,
+  "original_score_replaced": false,
+  "repetitions_per_side": 3,
+  "recorded_adapter_calls": 12,
+  "new_model_calls": 0,
+  "additional_cohere_spend_usd": 0,
+  "adapter_sha256": "f6ecbd38ae61a754c83febed37370c9bb08f1c7f9f204e98484c6f7235186ea2",
+  "pairs": [
+    {
+      "id": "negation-normalization",
+      "agreement": {
+        "real": true,
+        "twin": true
+      },
+      "sides": {
+        "real": {
+          "outcomes": {
+            "verified": 3
+          },
+          "reasons": [
+            ""
+          ],
+          "wall_ms": [
+            8585,
+            8595,
+            9567
+          ],
+          "budgets": [
+            "wp-model=Typed+nat wp-steps=20000 wp-timeout=10s wp-smoke-timeout=5s wp-par=4"
+          ]
+        },
+        "twin": {
+          "outcomes": {
+            "unproved": 3
+          },
+          "reasons": [
+            "certificate not accepted: the certificate assertion states no negation of a clause"
+          ],
+          "wall_ms": [
+            9480,
+            9615,
+            9683
+          ],
+          "budgets": [
+            "wp-model=Typed+nat wp-steps=20000 wp-timeout=10s wp-smoke-timeout=5s wp-par=4"
+          ]
+        }
+      }
+    },
+    {
+      "id": "prior-timeout",
+      "agreement": {
+        "real": true,
+        "twin": true
+      },
+      "sides": {
+        "real": {
+          "outcomes": {
+            "verified": 3
+          },
+          "reasons": [
+            ""
+          ],
+          "wall_ms": [
+            53089,
+            53169,
+            53284
+          ],
+          "budgets": [
+            "wp-model=Typed+nat wp-steps=20000 wp-timeout=10s wp-smoke-timeout=5s wp-par=4"
+          ]
+        },
+        "twin": {
+          "outcomes": {
+            "refuted": 3
+          },
+          "reasons": [
+            "kernel-accepted refutation certificate in t_certificate"
+          ],
+          "wall_ms": [
+            53421,
+            53746,
+            53801
+          ],
+          "budgets": [
+            "wp-model=Typed+nat wp-steps=20000 wp-timeout=10s wp-smoke-timeout=5s wp-par=4"
+          ]
+        }
+      }
+    }
+  ],
+  "predictions": {
+    "negation_guard_reason_in_all_three_twins": true,
+    "at_least_one_repeat_timeout": false
+  },
+  "interpretation": "The normalization guard is reproduced. The earlier timeout did not reproduce; its cause is not established. Do not select favorable repeated outcomes to rewrite the control.",
+  "artifact": {
+    "encrypted": true,
+    "sha256": "6269e92abf9eeb512d3570fe11543e6effffa3175c23687900e6b5accf54673e"
+  }
+}

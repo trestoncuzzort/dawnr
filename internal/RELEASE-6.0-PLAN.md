@@ -201,6 +201,11 @@ rejects a negated inequality after the kernel printer rewrites it as equality; a
 `t/PREDICT-2026-10-24-spec33-cloud.md` records the failed prediction and a bounded private diagnostic. No release
 threshold or engine rule has been changed to recover the count.
 
+The two-pair diagnostic completed in `40145445753`: the negation-guard reason repeated in all three affected
+twin calls. The prior timeout did not repeat; that real/twin pair read verified/refuted three times at the same
+budgets. The second diagnostic prediction therefore failed and the timeout's cause remains unestablished.
+These targeted results do not replace the original full-control score of 26.
+
 The development baseline completed in run `40134628181`: clean-206 counts 20, 19, 19 (mean 19.33), and all-seven
 counts 9, 8, 9 (mean 8.67), reproducing the recorded baseline. All six original 95/145-problem receipts were
 validated before filtering, and their evaluator hashes agree apart from the panel paths. Aggregate receipt:
