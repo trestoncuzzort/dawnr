@@ -1,0 +1,37 @@
+{
+  "kind": "Registered synthetic schema capability inputs",
+  "model": "command-a-03-2025",
+  "reservation_usd": "1",
+  "prior_conservative_usd": "310.646105",
+  "planning_total_with_reservation_usd": "311.646105",
+  "request_limit": 3,
+  "output_token_limit_per_request": 2048,
+  "automatic_retries": 0,
+  "input_sha256": "03ed059cd94ddb11e9822261b672bcee4a4ce151ef010e4988ec366837193e5a",
+  "cases": [
+    {
+      "name": "inline",
+      "request_sha256": "3db40893a6a726802ae31fab70ec479cf0e6d406f362f7da7e4ea0c736e43a01",
+      "schema_sha256": "09f05d5691650a09fc042bd0bf307b790994bf4307ff5fb1f8e09d0096a61a05",
+      "expected_expression_sha256": "b87a04d6386e3aa50be48e7617b2eab9097fad3ef68acd65632656a4dd6c1e51",
+      "expected_expression_depth": 2,
+      "request_bytes": 1048
+    },
+    {
+      "name": "references",
+      "request_sha256": "66da596ecabba12784c07a83b141d084d805d5284be4fdbe114b06a8f36948e6",
+      "schema_sha256": "a368f42ab8e0268a56a962e6c9c3ad2e53ff2540ad37e3ef68667d50e451df23",
+      "expected_expression_sha256": "b87a04d6386e3aa50be48e7617b2eab9097fad3ef68acd65632656a4dd6c1e51",
+      "expected_expression_depth": 2,
+      "request_bytes": 1093
+    },
+    {
+      "name": "recursive",
+      "request_sha256": "b0c688ebe23791c45b04d402aacabae924c2dc65cff63db97cd307e7ea239a89",
+      "schema_sha256": "470cca4920ce00191f68bc5bbc7728cf10ed1a713081a8941c27cac2621abedd",
+      "expected_expression_sha256": "99974ffe3833e6043f102f2b3d8e3e244ad8240a31788ae2d33bae2fc8afc7c4",
+      "expected_expression_depth": 8,
+      "request_bytes": 1212
+    }
+  ]
+}

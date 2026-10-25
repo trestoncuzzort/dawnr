@@ -1,0 +1,64 @@
+name: cohere-schema-smoke
+
+# A fixed synthetic capability probe. Raw replies and diagnostics are always sealed.
+on:
+  workflow_dispatch:
+    inputs:
+      label:
+        description: 'unique capability-probe label'
+        required: true
+        default: cohere-schema-smoke-20261025
+
+permissions:
+  contents: read
+
+jobs:
+  smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      PROBE_LABEL: ${{ inputs.label }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: validate the registered request
+        run: |
+          [[ "$PROBE_LABEL" =~ ^[A-Za-z0-9][A-Za-z0-9._-]*$ ]]
+          test "$GITHUB_RUN_ATTEMPT" = 1
+      - name: three synthetic capability requests
+        env:
+          COHERE_API_KEY: ${{ secrets.COHERE_API_KEY }}
+        run: |
+          umask 077
+          mkdir -p out/schema-smoke
+          python3 t/recipes/cohere_schema_smoke.py --out out/schema-smoke/results \
+            > out/schema-smoke/run.log 2>&1
+      - name: aggregate reading and sealed evidence
+        if: always()
+        run: |
+          if [ ! -d out/schema-smoke ]; then exit 0; fi
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+          path = Path('out/schema-smoke/results/summary.json')
+          if path.exists():
+              report = json.loads(path.read_text())
+              print(json.dumps({k: report[k] for k in
+                    ('model', 'recorded_cost_usd', 'unresolved_billing_or_transport',
+                     'all_conditions_hold', 'cases')}))
+          PY
+          umask 077
+          mkdir -p /tmp/sealed
+          tar -czf /tmp/schema-smoke.tar.gz out/schema-smoke
+          key=$(mktemp)
+          trap 'rm -f "$key" /tmp/schema-smoke.tar.gz' EXIT
+          openssl rand -hex 32 > "$key"
+          openssl enc -aes-256-cbc -pbkdf2 -iter 200000 -salt -in /tmp/schema-smoke.tar.gz \
+            -out /tmp/sealed/outputs.tar.gz.enc -pass "file:$key"
+          openssl pkeyutl -encrypt -pubin -inkey .github/teacher-outputs.pub.pem -pkeyopt rsa_padding_mode:oaep \
+            -pkeyopt rsa_oaep_md:sha256 -in "$key" -out /tmp/sealed/key.enc
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: schema-${{ env.PROBE_LABEL }}
+          path: /tmp/sealed
+          retention-days: 30

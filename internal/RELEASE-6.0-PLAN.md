@@ -217,6 +217,8 @@ All teacher allocations are now released. Historical conservative estimates plus
 $310.646105, leaving $639.353895 below the $950 planning stop. This counts the common prior $83.082037 once,
 the wider pilot's $13.064852 once, and the full pass once; all three North runs recorded zero API cost.
 Historical placeholder prices remain estimates, not verified invoices. There is no live teacher allocation.
+The separately registered three-request schema capability test reserves $1, making the current planning
+amount $311.646105. It does not allocate a larger teacher pass.
 
 The audited draft already incorporates eight Command A shards. The final two shards and the bounded North
 pilot supply 39 additional uncovered problems and 71 specifications. Their next encrypted data build is
@@ -232,8 +234,10 @@ The syntax-loss evidence motivates a different representation as a research hypo
 JSON task representation. Schema mode supports references and `anyOf`; plain JSON mode is limited to five nesting
 levels, and several schema features such as `oneOf` and array-length bounds are unsupported. A small remote
 capability check must establish the needed schema behavior before a teacher pilot. Engine structure, type and
-reference checks must still validate every result; valid JSON alone is not an accepted specification. No such
-probe or additional grant allocation has started yet. This follows the existing grammar-generation research in
+reference checks must still validate every result; valid JSON alone is not an accepted specification. A fixed
+three-request capability test is registered in `t/PREDICT-2026-10-25-cohere-schema-smoke.md`, with a $1 reservation.
+It separates inline, referenced and recursive schemas on synthetic contracts, before any teacher pilot.
+This follows the existing grammar-generation research in
 `internal/research-2026-10-22/plateau-repos-B.md` and the measured pilot attrition, rather than assuming another
 prose instruction or repair prompt resolves the earlier failures.
 
