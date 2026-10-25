@@ -16,7 +16,7 @@ application, verifier and data pipeline can land as they are ready. Weight chang
 they are not required for every update.
 
 The ongoing candidate A experiment uses the October 5 model's audited rows plus strictly checked specifications
-and repair examples. Cohere is generating checked data for a further weight experiment. Existing weights remain
+and repair examples. The completed Cohere pass supplied checked data for a further weight experiment. Existing weights remain
 in use while those experiments run. Their proposed version labels are historical identifiers, not reserved
 product releases. The qualification checks and working records are in
 [the plan](internal/RELEASE-6.0-PLAN.md).

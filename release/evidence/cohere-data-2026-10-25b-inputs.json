@@ -1,0 +1,111 @@
+{
+  "label": "dawnr-cohere-data-20261025b",
+  "asset": "dawnr-cohere-data-20261025b.tar.gz.enc",
+  "ciphertext_sha256": "bb631efeea764859c001e5479b3f4877dee492885792f36935365b19b192b832",
+  "input_manifest_sha256": "ecf302ff090124e4d6464e14497e182dccf9b2806e0be62238dc79336e11c3ae",
+  "base_rows": 7066,
+  "base_sha256": "633ededffc2be4718c3341393845272268fdbe316d10e7e2fa4549f74ce606dc",
+  "sources": [
+    {
+      "tag": "cohere:command-a-03-2025:cohere-a-20261024-4",
+      "strict_new_problems": 20,
+      "strict_new_specifications": 36
+    },
+    {
+      "tag": "cohere:command-a-03-2025:cohere-a-20261024-6",
+      "strict_new_problems": 18,
+      "strict_new_specifications": 34
+    },
+    {
+      "tag": "cohere:north-mini-code-1-0:cohere-north-budget-pilot-20261025-0",
+      "strict_new_problems": 1,
+      "strict_new_specifications": 1
+    }
+  ],
+  "strict_new_problems": 39,
+  "strict_new_specifications": 71,
+  "predicted_added_rows": 110,
+  "predicted_total_rows": 7176,
+  "reference_draws": {
+    "requested": 1000,
+    "existing_policy_minimum": 10,
+    "actual_minimum": 20,
+    "actual_maximum": 1000,
+    "actual_median": 913,
+    "below_requested": 47,
+    "histogram": {
+      "20": 1,
+      "28": 1,
+      "31": 1,
+      "58": 1,
+      "109": 1,
+      "144": 1,
+      "147": 1,
+      "159": 1,
+      "167": 1,
+      "197": 1,
+      "213": 1,
+      "223": 1,
+      "231": 1,
+      "320": 1,
+      "331": 1,
+      "505": 1,
+      "521": 1,
+      "531": 1,
+      "604": 1,
+      "661": 1,
+      "734": 1,
+      "783": 1,
+      "798": 1,
+      "810": 1,
+      "811": 1,
+      "815": 1,
+      "835": 1,
+      "838": 1,
+      "848": 1,
+      "852": 1,
+      "856": 1,
+      "859": 1,
+      "876": 1,
+      "883": 1,
+      "890": 1,
+      "913": 1,
+      "930": 1,
+      "932": 1,
+      "939": 1,
+      "941": 1,
+      "946": 1,
+      "947": 1,
+      "948": 2,
+      "988": 1,
+      "993": 1,
+      "994": 1,
+      "1000": 24
+    }
+  },
+  "kind": "Encrypted inputs for an incremental Cohere data build",
+  "source_artifacts": [
+    {
+      "tag": "cohere:command-a-03-2025:cohere-a-20261024-4",
+      "model_identity": "teacher-cohere:command-a-03-2025:think0:new2048:2026-10-24",
+      "workflow_run": 40138722401,
+      "artifact_id": 12584332134,
+      "artifact_sha256": "aad28b1473189d307ac2b3a2baa90b7292f48143af184e9410ea19f53d4775f5"
+    },
+    {
+      "tag": "cohere:command-a-03-2025:cohere-a-20261024-6",
+      "model_identity": "teacher-cohere:command-a-03-2025:think0:new2048:2026-10-24",
+      "workflow_run": 40138722401,
+      "artifact_id": 12582814495,
+      "artifact_sha256": "65b45a3ba02aa097dcda13e3edb6aff2271b6ace3ba32d2e15b15359ee3663cf"
+    },
+    {
+      "tag": "cohere:north-mini-code-1-0:cohere-north-budget-pilot-20261025-0",
+      "model_identity": "teacher-cohere:north-mini-code-1-0:think2048:new4096:2026-10-24",
+      "workflow_run": 40149580546,
+      "artifact_id": 12584216586,
+      "artifact_sha256": "843547c1bc22e7a0b895e8e0a31ebbab8753e069c646cbf238733ee12f1a7bb9"
+    }
+  ],
+  "no_training_or_generation_started": true
+}

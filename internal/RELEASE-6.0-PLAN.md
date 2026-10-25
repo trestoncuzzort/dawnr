@@ -180,7 +180,7 @@ no monthly cap). Current model pages list API evaluation of Reasoning and A+ as 
 positive ledger entries above came from conservative placeholder rates, not verified invoices. The earlier
 per-dollar advantage claimed for Command A is withdrawn in `CORRECTIONS.md`. Its own pilot produced about 62
 strictly kept problems per $100 at its configured API rate, the absolute bar registered for the wider Command A
-pilot. The remaining 1,705 problems run on GitHub (`.github/workflows/teacher.yml`, ten lists in parallel), with
+pilot. The remaining 1,705 problems were processed on GitHub (`.github/workflows/teacher.yml`, ten lists in parallel), with
 further work chosen from actual yield, quota and reconciled budgets.
 
 The full pass started on GitHub at 22:28Z on 2026-10-24, run `40138722401`: 1,705 distinct training problems in
@@ -201,11 +201,36 @@ and `release/evidence/cohere-north-pilot-2026-10-25.json`.
 
 A registered one-request North configuration smoke with 2048 thinking tokens plus 4096 answer tokens returned
 a complete nonempty answer. It kept no strict example and establishes no quality result. Its successful
-configuration check permits the registered 50-problem follow-up, now running as `40149580546`; the full Command A
-pass remains active. The conservative historical estimate plus completed runs is $96.146889, and these two
-live runs reserve $625, totaling $721.146889 against the $950 planning stop. The original North pilot and
-configuration smoke each recorded zero API cost. The final follow-up result must satisfy every condition in
-`t/PREDICT-2026-10-25-cohere-thinking-budget.md` before expansion.
+configuration check permitted the registered 50-problem follow-up, `40149580546`. It completed with 10 strict-kept
+problems and 16 candidates, but only one new problem. Two expansion conditions failed: novelty was below four
+and token-limit finishes were 6%, above the 5% ceiling. Fifteen requests hit the model's monthly quota; every
+successful call returned nonempty final text. The one new specification remains eligible for an audited data
+increment. The recipe is not expanded, and further North calls wait for its quota to change. Receipt:
+`release/evidence/cohere-thinking-pilot-2026-10-25.json`.
+
+The full Command A pass completed all ten jobs. It accounted for all 1,705 training problems and kept 250
+specifications on 149 problems, with 16,846 successful calls, 194 HTTP 422 errors and ten HTTP 400 errors.
+The recorded cost was $214.499216. All ten encrypted artifact digests and all 280 archived files were verified
+against the collected evidence. Aggregate receipt: `release/evidence/cohere-full-pass-2026-10-25.json`.
+
+All teacher allocations are now released. Historical conservative estimates plus completed runs total
+$310.646105, leaving $639.353895 below the $950 planning stop. This counts the common prior $83.082037 once,
+the wider pilot's $13.064852 once, and the full pass once; all three North runs recorded zero API cost.
+Historical placeholder prices remain estimates, not verified invoices. There is no live teacher allocation.
+
+The audited draft already incorporates eight Command A shards. The final two shards and the bounded North
+pilot supply 39 additional uncovered problems and 71 specifications. Their next encrypted data build is
+registered in `t/PREDICT-2026-10-25-cohere-data-completion.md`, expecting 110 added rows and 7,176 total.
+
+The syntax-loss evidence motivates a different representation as a research hypothesis. Command A supports
+[JSON Schema output](https://docs.cohere.com/docs/structured-outputs), and `t/SPEC.md` already defines the engine's
+JSON task representation. Schema mode supports references and `anyOf`; plain JSON mode is limited to five nesting
+levels, and several schema features such as `oneOf` and array-length bounds are unsupported. A small remote
+capability check must establish the needed schema behavior before a teacher pilot. Engine structure, type and
+reference checks must still validate every result; valid JSON alone is not an accepted specification. No such
+probe or additional grant allocation has started yet. This follows the existing grammar-generation research in
+`internal/research-2026-10-22/plateau-repos-B.md` and the measured pilot attrition, rather than assuming another
+prose instruction or repair prompt resolves the earlier failures.
 
 The grant's purpose is to train dawnr with these checked outputs, as the written permission allows. Candidate B's
 row build uses `t/recipes/v8_spec_rows.py --tag cohere:MODEL:SERIES` to preserve that provenance; the default

@@ -1,0 +1,135 @@
+{
+  "kind": "Completed full Command A teacher pass",
+  "workflow_run": 40138722401,
+  "workflow_url": "https://github.com/trestoncuzzort/dawnr/actions/runs/40138722401",
+  "revision": "9279f18e81fe9670c4fdd88978f758a9113eb121",
+  "model": "command-a-03-2025",
+  "configuration": {
+    "training_lists": 10,
+    "candidates_per_problem": 10,
+    "thinking_tokens": 0,
+    "max_new_tokens": 2048,
+    "seed_offset": 0,
+    "per_job_ceiling_usd": "60"
+  },
+  "result": {
+    "planned_problems": 1705,
+    "accounted_problems": 1705,
+    "not_accounted_problems": 0,
+    "strict_kept_problems": 149,
+    "strict_kept_candidates": 250,
+    "remaining_problems": 1556,
+    "calls": 16846,
+    "proxy_errors": {
+      "HTTP 422": 194,
+      "HTTP 400": 10
+    },
+    "run_usd": "214.499216",
+    "strict_kept_problems_per_100_usd": 69.46
+  },
+  "evidence": {
+    "artifact_digests_verified": 10,
+    "archived_files_matched_to_collection": 280,
+    "all_successful_calls_name_registered_model": true,
+    "source_artifacts": [
+      {
+        "id": 12583068344,
+        "name": "teacher-cohere-a-20261024-0",
+        "sha256": "f312dff0cad6e8a78cb0b35ff73beeb17fbf2fa6cd11503cb840892be2d07e09",
+        "size": 102456,
+        "list_index": 0,
+        "files_matched_to_collection": 28
+      },
+      {
+        "id": 12583671269,
+        "name": "teacher-cohere-a-20261024-1",
+        "sha256": "c173d1b1a20d98fd6e9a389c19fdcf68e47d163cf06baeb068a1ffd08fee3a30",
+        "size": 104696,
+        "list_index": 1,
+        "files_matched_to_collection": 28
+      },
+      {
+        "id": 12582872987,
+        "name": "teacher-cohere-a-20261024-2",
+        "sha256": "96977828c67a35960687c8865023cf4a7a802321a1e31d36bc5bb0c2c7f80958",
+        "size": 101592,
+        "list_index": 2,
+        "files_matched_to_collection": 28
+      },
+      {
+        "id": 12581647899,
+        "name": "teacher-cohere-a-20261024-3",
+        "sha256": "77771dd862b33e5fe6a335f7d9d2715b5fea11143fa3ee77524043671fb22b2a",
+        "size": 102936,
+        "list_index": 3,
+        "files_matched_to_collection": 28
+      },
+      {
+        "id": 12584332134,
+        "name": "teacher-cohere-a-20261024-4",
+        "sha256": "aad28b1473189d307ac2b3a2baa90b7292f48143af184e9410ea19f53d4775f5",
+        "size": 108872,
+        "list_index": 4,
+        "files_matched_to_collection": 28
+      },
+      {
+        "id": 12582034577,
+        "name": "teacher-cohere-a-20261024-5",
+        "sha256": "887e67b883f14648c3afce1d5e755bf5a866a1ab0d3fc5f34a1c7a0f4a27df0e",
+        "size": 106008,
+        "list_index": 5,
+        "files_matched_to_collection": 28
+      },
+      {
+        "id": 12582814495,
+        "name": "teacher-cohere-a-20261024-6",
+        "sha256": "65b45a3ba02aa097dcda13e3edb6aff2271b6ace3ba32d2e15b15359ee3663cf",
+        "size": 119069,
+        "list_index": 6,
+        "files_matched_to_collection": 28
+      },
+      {
+        "id": 12582860436,
+        "name": "teacher-cohere-a-20261024-7",
+        "sha256": "f3728b1fdbd3d8724db16a0a4e686feb4a90d0a804789aca130c0e32ece469b9",
+        "size": 108872,
+        "list_index": 7,
+        "files_matched_to_collection": 28
+      },
+      {
+        "id": 12581454775,
+        "name": "teacher-cohere-a-20261024-8",
+        "sha256": "319ffe46a9ae321398d5cd64f65a45b5b2ab5bee2e2ea66a06411afe31618e30",
+        "size": 103784,
+        "list_index": 8,
+        "files_matched_to_collection": 28
+      },
+      {
+        "id": 12581393178,
+        "name": "teacher-cohere-a-20261024-9",
+        "sha256": "7a271bd533dac150a201c20a28b3c1a9d7f91b1e8a825a5b5e777adae5c61416",
+        "size": 98963,
+        "list_index": 9,
+        "files_matched_to_collection": 28
+      }
+    ]
+  },
+  "budget_reconciliation": {
+    "historical_common_prior_estimate_usd": "83.082037",
+    "wider_pilot_usd": "13.064852",
+    "full_pass_usd": "214.499216",
+    "north_original_usd": "0",
+    "north_configuration_smoke_usd": "0",
+    "north_bounded_pilot_usd": "0",
+    "conservative_total_usd": "310.646105",
+    "live_allocations_usd": "0",
+    "planning_stop_usd": "950",
+    "remaining_under_planning_stop_usd": "639.353895",
+    "note": "Each run counted once; the laptop ledger is a prefix of the desktop ledger. Historical Reasoning/A+ entries used placeholder rates and remain conservative estimates, not invoices."
+  },
+  "limitations": [
+    "Strict acceptance uses the existing reference and mutant checks; it is not an end-to-end model-quality result.",
+    "This workflow revision did not preserve raw reply caches, so full-pass response attrition cannot be reconstructed from absent text.",
+    "No held-out-182 model reading or weight change occurred."
+  ]
+}
