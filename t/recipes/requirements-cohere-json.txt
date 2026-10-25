@@ -1,0 +1,2 @@
+# Optional JSON teacher transport and its schema-validation tests; not an engine dependency.
+jsonschema==4.26.0

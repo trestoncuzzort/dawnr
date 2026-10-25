@@ -11,6 +11,9 @@ Mapping: messages pass through (string content); max_tokens -> max_tokens plus t
 on; temperature -> temperature; top_p -> p (clamped to 0.01..0.99); seed -> seed. finish_reason COMPLETE or
 STOP_SEQUENCE -> stop, MAX_TOKENS -> length; thinking blocks are dropped from the content. A call that fails after
 every retry becomes an empty "length" reply: one bad call costs one candidate, never the chunk.
+The opt-in JSON representation replaces the notation card and example syntax, then converts schema-checked,
+statically valid contracts back to t for the same route. Raw provider replies and actual requests stay in the
+private cache even when conversion refuses them. JSON calls with missing billed units stop further API calls.
 
     python3 t/recipes/cohere_proxy.py --port 8863 --model command-a-reasoning-08-2025 --think 2048 --log out/r61/cohere-proxy.jsonl
 Sources: docs.cohere.com/reference/chat (v2 request and response fields, thinking.token_budget, billed_units);
@@ -42,7 +45,7 @@ PRICE = {"command-a-03-2025": (2.5, 10), "command-a-reasoning-08-2025": (0, 0), 
          "north-mini-code-1-0": (0, 0)}
 
 
-def to_cohere(body: dict, model: str, think: int) -> dict:
+def to_cohere(body: dict, model: str, think: int, representation: str = "surface") -> dict:
     msgs = []
     for m in body.get("messages", []):
         text = m.get("content") if isinstance(m.get("content"), str) else "".join(
@@ -51,6 +54,12 @@ def to_cohere(body: dict, model: str, think: int) -> dict:
             msgs.append({"role": m["role"], "content": text})
     max_new = int(body.get("max_tokens") or 1024)
     req = {"model": model, "messages": msgs, "stream": False}
+    if representation == "json":
+        import cohere_task_json
+        req["messages"] = cohere_task_json.messages(msgs)
+        req["response_format"] = {"type": "json_object", "schema": cohere_task_json.schema()}
+    elif representation != "surface":
+        raise ValueError("unknown teacher representation")
     if think > 0:
         req["thinking"] = {"type": "enabled", "token_budget": think}
         req["max_tokens"] = max_new + think
@@ -83,6 +92,21 @@ def from_cohere(result: dict, max_new: int, model: str) -> dict:
             "stop_reason_raw": fr}
 
 
+def structured_reply(result: dict, request: dict, max_new: int, model: str) -> dict:
+    """Keep the original wire evidence even when conversion refuses a paid answer."""
+    import cohere_task_json
+    response = from_cohere(result, max_new, model)
+    try:
+        content, conversion = cohere_task_json.reply(result)
+    except Exception as error:  # malformed provider data is a refused candidate, retained privately
+        content = ""
+        conversion = {"status": "refused", "error_type": type(error).__name__, "reason": str(error)}
+    response["choices"][0]["message"]["content"] = content
+    response["cohere_source"] = {"representation": "json", "identity": cohere_task_json.identity(),
+                                 "request": request, "response": result, "conversion": conversion}
+    return response
+
+
 def call(key: str, req: dict, attempts: int = 7, timeout: int = 600) -> dict:
     data = json.dumps(req).encode()
     delay = 3.0
@@ -112,7 +136,8 @@ class Handler(BaseHTTPRequestHandler):
 
     def do_GET(self):
         if self.path.startswith("/health"):
-            self._send(200, {"status": "ok", "model": self.server.model, "spent_usd": round(self.server.spent, 4)})
+            self._send(200, {"status": "ok", "model": self.server.model, "spent_usd": round(self.server.spent, 4),
+                             "representation": self.server.representation})
         else:
             self._send(404, {"error": "not found"})
 
@@ -127,24 +152,41 @@ class Handler(BaseHTTPRequestHandler):
         empty = {"model": self.server.model, "choices": [{"index": 0, "message": {"role": "assistant", "content": ""},
                                                           "finish_reason": "length"}],
                  "usage": {"prompt_tokens": 0, "completion_tokens": 0, "total_tokens": 0}}
+        if self.server.unaccounted_response:
+            return self._send(200, {**empty, "error": "billing_unresolved"})
         if self.server.spent >= self.server.ceiling:
             self.server.log({"ok": False, "error": "ceiling", "spent_usd": round(self.server.spent, 4)})
             return self._send(200, {**empty, "error": "ceiling"})
         t0 = time.time()
         with self.server.gate:
+            if self.server.unaccounted_response:
+                return self._send(200, {**empty, "error": "billing_unresolved"})
             try:
-                result = call(self.server.key, to_cohere(body, self.server.model, self.server.think))
+                request = to_cohere(body, self.server.model, self.server.think, self.server.representation)
+                result = call(self.server.key, request)
             except Exception as e:                              # noqa: BLE001
                 self.server.log({"ok": False, "error": str(e)[:300], "seconds": round(time.time() - t0, 1)})
                 return self._send(200, {**empty, "error": str(e)[:300]})
-        reply = from_cohere(result, max_new, self.server.model)
         billed = (result.get("usage") or {}).get("billed_units") or {}
+        if self.server.representation == "json" and any(
+                type(billed.get(k)) is not int or billed[k] < 0 for k in ("input_tokens", "output_tokens")):
+            with self.server.lock:
+                self.server.unaccounted_response = True
+            import cohere_task_json
+            self.server.log({"ok": False, "error": "billing_unresolved"})
+            return self._send(200, {**empty, "error": "billing_unresolved", "cohere_source": {
+                "representation": "json", "identity": cohere_task_json.identity(), "request": request,
+                "response": result, "conversion": {"status": "not_run", "reason": "billing_unresolved"}}})
         bi, bo = float(billed.get("input_tokens", 0) or 0), float(billed.get("output_tokens", 0) or 0)
         pi, po = PRICE.get(self.server.model, (5, 20))
         usd = bi * pi / 1e6 + bo * po / 1e6
         self.server.charge(usd, {"in": bi, "out": bo, "tag": self.server.tag})
+        reply = (structured_reply(result, request, max_new, self.server.model)
+                 if self.server.representation == "json" else from_cohere(result, max_new, self.server.model))
         self.server.log({"ok": True, "seconds": round(time.time() - t0, 1), "stop": reply["stop_reason_raw"],
-                         "billed_in": bi, "billed_out": bo, "usd": round(usd, 6), **reply["usage"]})
+                         "billed_in": bi, "billed_out": bo, "usd": round(usd, 6), **reply["usage"],
+                         **({"conversion_status": reply["cohere_source"]["conversion"]["status"]}
+                            if "cohere_source" in reply else {})})
         self._send(200, reply)
 
     def _send(self, code: int, payload: dict):
@@ -159,9 +201,11 @@ class Handler(BaseHTTPRequestHandler):
 class Server(ThreadingHTTPServer):
     daemon_threads = True
 
-    def __init__(self, addr, model, think, concurrency, log_path, ceiling, tag):
+    def __init__(self, addr, model, think, concurrency, log_path, ceiling, tag, representation="surface"):
         super().__init__(addr, Handler)
         self.model, self.think, self.ceiling, self.tag = model, think, ceiling, tag
+        self.representation = representation
+        self.unaccounted_response = False
         self.key = open(os.path.expanduser("~/.config/cohere/api_key")).read().strip()
         self.gate = threading.Semaphore(concurrency)
         self.lock = threading.Lock()
@@ -197,8 +241,9 @@ def main(argv=None) -> int:
     ap.add_argument("--ceiling", type=float, default=float(os.environ.get("COHERE_CEILING_USD", "950")))
     ap.add_argument("--tag", default="teacher")
     ap.add_argument("--log", default="cohere-proxy.jsonl")
+    ap.add_argument("--representation", choices=("surface", "json"), default="surface")
     a = ap.parse_args(argv)
-    server = Server(("127.0.0.1", a.port), a.model, a.think, a.concurrency, a.log, a.ceiling, a.tag)
+    server = Server(("127.0.0.1", a.port), a.model, a.think, a.concurrency, a.log, a.ceiling, a.tag, a.representation)
     print(f"cohere proxy on 127.0.0.1:{a.port} -> {a.model} (think {a.think}), {a.concurrency} in flight, "
           f"ledger ${server.spent:.2f} of ${a.ceiling}", flush=True)
     try:

@@ -271,6 +271,11 @@ Run `40156495978` passed all three cases, including the depth-eight recursive ex
 well formed and survived an exact printer/parser round trip. Receipt:
 `release/evidence/cohere-schema-smoke-2026-10-25.json`. This permits preparing a registered training-only
 pilot with the full needed representation and unchanged semantic checks; it establishes no teacher-quality gain.
+A complete JSON contract transport is now implemented as an opt-in teacher representation, retaining the
+original six examples and all problem/test/Python evidence. Its full schema validates the 200 statically
+eligible historical contracts. The next registered check is one synthetic request through the actual
+decoder and converters (`t/PREDICT-2026-10-25-cohere-json-transport.md`), with a separate $1 reservation.
+Its live planning amount is $311.648390. A real training-only pilot waits for that complete transport check.
 This follows the existing grammar-generation research in
 `internal/research-2026-10-22/plateau-repos-B.md` and the measured pilot attrition, rather than assuming another
 prose instruction or repair prompt resolves the earlier failures.

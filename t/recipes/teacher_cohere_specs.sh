@@ -14,15 +14,22 @@ PORT=${PORT:-8863}; MODEL=${MODEL:-command-a-reasoning-08-2025}; THINK=${THINK:-
 CONCURRENCY=${CONCURRENCY:-8}; BATCH=${BATCH:-16}; PRIMER=t/out/v5-repair-20261021/teacher-primer.md
 MAX_NEW=${MAX_NEW:-1024}   # the reply's room after the thinking budget; the pilot cut 22% of the reasoning model's replies at 1024
 SPEC_SAMPLES=${SPEC_SAMPLES:-9}; SEED_OFFSET=${SEED_OFFSET:-0}
+REPRESENTATION=${REPRESENTATION:-surface}
 IDENT="teacher-cohere:$MODEL:think$THINK:new$MAX_NEW:2026-10-24"
 A=$D/t/out/laptop-runs; O=out/r61/$SERIES; LOG=$O/lane.log; PLOG=$O/proxy.jsonl
 V=${V:-/home/t/.claude/jobs/d76813cf/tmp/venv/bin/python}
 export PYTHONPATH=$D/t PYTHONUNBUFFERED=1
+if [ "$REPRESENTATION" = json ]; then
+  FORMAT_IDENT=$("$V" t/recipes/cohere_task_json.py --identity) || exit 1
+  IDENT="$IDENT:$FORMAT_IDENT"
+elif [ "$REPRESENTATION" != surface ]; then
+  echo "unknown teacher representation" >&2; exit 1
+fi
 mkdir -p $O/chunks $A
 # SHARED_PROXY=1: several lanes use one proxy already running on PORT (one process, so the ceiling is exact)
 if [ "${SHARED_PROXY:-0}" != 1 ]; then
   $V t/recipes/cohere_proxy.py --port $PORT --model $MODEL --think $THINK --concurrency $CONCURRENCY --tag $SERIES \
-    --log $PLOG > $O/proxy.log 2>&1 &
+    --log $PLOG --representation "$REPRESENTATION" > $O/proxy.log 2>&1 &
   PP=$!; trap 'kill $PP 2>/dev/null' EXIT
 fi
 for i in $(seq 1 30); do curl -sf http://127.0.0.1:$PORT/health >/dev/null && break; sleep 1; done

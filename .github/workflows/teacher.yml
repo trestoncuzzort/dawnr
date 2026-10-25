@@ -20,6 +20,11 @@ on:
         default: '0'
       max_new:
         default: '2048'
+      representation:
+        description: 'surface t text or a schema-constrained contract tree'
+        type: choice
+        options: [surface, json]
+        default: surface
       spec_samples:
         description: 'sampled specifications after the greedy one'
         default: '9'
@@ -46,8 +51,12 @@ jobs:
         list: ${{ fromJSON(inputs.lists) }}
     env:
       SERIES: ${{ inputs.series }}-${{ strategy.job-index }}
+      REPRESENTATION: ${{ inputs.representation }}
     steps:
       - uses: actions/checkout@v4
+      - name: optional JSON contract transport
+        if: inputs.representation == 'json'
+        run: python3 -m pip install --break-system-packages -r t/recipes/requirements-cohere-json.txt
       - name: the problem pool (nl/data is git-lfs; APPS comes from the inputs)
         env:
           GH_TOKEN: ${{ github.token }}

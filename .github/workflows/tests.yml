@@ -58,7 +58,8 @@ jobs:
         # `test_*` functions and its unittest.TestCase files in one pass;
         # the project's own convention is `python3 test_x.py` per file, see
         # AGENTS.md). datasets is t/requirements.txt's one dependency.
-        run: python -m pip install --upgrade pip pytest -r t/requirements.txt
+        # The optional teacher requirements exercise the complete JSON transport schema in CI.
+        run: python -m pip install --upgrade pip pytest -r t/requirements.txt -r t/recipes/requirements-cohere-json.txt
 
       - name: best-effort tkinter and a virtual display (Linux)
         # actions/setup-python's Linux interpreters do not bundle tkinter,

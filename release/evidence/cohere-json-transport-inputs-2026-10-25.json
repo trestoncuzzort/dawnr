@@ -1,0 +1,20 @@
+{
+  "kind": "Registered full-schema teacher transport inputs",
+  "label": "cohere-json-transport-20261025",
+  "scope": "teacher",
+  "input_sha256": "162075897a25c969fbead2ba6e244e33284c7e65ebf4ca823f26ac1cfdbc8c1a",
+  "primer_sha256": "96eef6ee2611bb9095772b67a654cfb84ff53b22869aee64c8ca57570c250f61",
+  "schema_sha256": "2a81409e134829af3e7946659ddb3a48c1289cda45e184c0de6704042ea21fe9",
+  "codec_identity": "t-json-v1:eeb9a14359b58e0cc5444e686dd10599f1af936d933fe6429e7c0d275ef85e4e",
+  "request_limit": 1,
+  "max_new": 8000,
+  "stage_salt": 32000,
+  "temperature": 0,
+  "top_p": 0.95,
+  "model": "command-a-03-2025",
+  "reservation_usd": "1",
+  "prior_conservative_usd": "310.648390",
+  "planned_total_with_reservation_usd": "311.648390",
+  "synthetic_only": true,
+  "source_checked_historical_contracts": 200
+}

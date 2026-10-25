@@ -8,6 +8,14 @@ on:
         description: 'unique capability-probe label'
         required: true
         default: cohere-schema-smoke-20261025
+      scope:
+        description: 'small expression capability probe or complete teacher transport'
+        type: choice
+        options: [expressions, teacher]
+        default: expressions
+      input_sha256:
+        description: 'registered input digest, required for the full teacher scope'
+        default: ''
 
 permissions:
   contents: read
@@ -18,20 +26,37 @@ jobs:
     timeout-minutes: 15
     env:
       PROBE_LABEL: ${{ inputs.label }}
+      PROBE_SCOPE: ${{ inputs.scope }}
+      PROBE_INPUT_SHA256: ${{ inputs.input_sha256 }}
     steps:
       - uses: actions/checkout@v4
       - name: validate the registered request
         run: |
           [[ "$PROBE_LABEL" =~ ^[A-Za-z0-9][A-Za-z0-9._-]*$ ]]
           test "$GITHUB_RUN_ATTEMPT" = 1
-      - name: three synthetic capability requests
+          [[ "$PROBE_SCOPE" == expressions || "$PROBE_SCOPE" == teacher ]]
+          if [ "$PROBE_SCOPE" = teacher ]; then [[ "$PROBE_INPUT_SHA256" =~ ^[0-9a-f]{64}$ ]]; fi
+      - name: full teacher schema dependencies and original primer
+        if: inputs.scope == 'teacher'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          python3 -m pip install --break-system-packages -r t/recipes/requirements-cohere-json.txt
+          gh release download eval-inputs -p teacher-primer.md -D out/schema-inputs
+      - name: registered synthetic capability requests
         env:
           COHERE_API_KEY: ${{ secrets.COHERE_API_KEY }}
         run: |
           umask 077
           mkdir -p out/schema-smoke
-          python3 t/recipes/cohere_schema_smoke.py --out out/schema-smoke/results \
-            > out/schema-smoke/run.log 2>&1
+          if [ "$PROBE_SCOPE" = teacher ]; then
+            python3 t/recipes/cohere_json_smoke.py --out out/schema-smoke/results \
+              --primer out/schema-inputs/teacher-primer.md --input-sha256 "$PROBE_INPUT_SHA256" \
+              > out/schema-smoke/run.log 2>&1
+          else
+            python3 t/recipes/cohere_schema_smoke.py --out out/schema-smoke/results \
+              > out/schema-smoke/run.log 2>&1
+          fi
       - name: aggregate reading and sealed evidence
         if: always()
         run: |
