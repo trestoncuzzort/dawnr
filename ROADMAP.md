@@ -15,11 +15,17 @@ dawnr is updated as dawnr MAJOR.MINOR.PATCH ([release/ROLLING.md](release/ROLLIN
 application, verifier and data pipeline can land as they are ready. Weight changes are measured before adoption;
 they are not required for every update.
 
-The ongoing candidate A experiment uses the October 5 model's audited rows plus strictly checked specifications
+The ongoing candidate A experiment uses its frozen October 5 data snapshot plus the recorded specification
 and repair examples. The completed Cohere pass supplied checked data for a further weight experiment. Existing weights remain
 in use while those experiments run. Their proposed version labels are historical identifiers, not reserved
 product releases. The qualification checks and working records are in
 [the plan](internal/RELEASE-6.0-PLAN.md).
+
+The latest data update has 6,954 rows, including 1,662 specification targets that pass the corrected contract
+check. It removes 124 invalid targets and 45 duplicate pairs while preserving task termination measures and
+all other row kinds. Of these rows, 6,904 fit the unchanged training window. The full panel/GPL audit has no
+findings and retains the 339 inherited unparsed blocks in other row kinds. Counts, limits and verification
+evidence are in the [data receipt](release/evidence/inherited-spec-curation-2026-10-25.json).
 
 ## Current priorities
 

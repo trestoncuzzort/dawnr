@@ -1,0 +1,79 @@
+{
+  "run_id": 40162353906,
+  "head": "d4f4cca8655902efd951d09a8593cd699ae69ccf",
+  "artifact_id": 12587575043,
+  "artifact_sha256": "5c9997d196acdd5c267b17c23d4ac1b1fa6b9386c4e361f4a38a6ae2861af1c1",
+  "input_manifest_sha256": "0a7bbf742cad5c8cd79720ded17f03715a10dde32ed33730530f2bd145dacd93",
+  "output": {
+    "filename": "training-rows.jsonl",
+    "rows": 6954,
+    "sha256": "18f3b204abd15c8e497c83840f909877ce5d131a8c23ce6c8633a117e5dbb4f9"
+  },
+  "code_hashes_verified": 8,
+  "all_row_action_hashes_verified": true,
+  "all_retained_rows_and_order_verified": true,
+  "unchanged_non_specification_rows": 5292,
+  "rechecked_specification_rows": 1662,
+  "preserved_task_measures": true,
+  "static_counts": {
+    "other_rows_retained": 5292,
+    "input_specifications": 1831,
+    "specifications_retained_unchanged": 1593,
+    "specifications_retained": 1662,
+    "header_promotion_candidates": 70,
+    "headers_promoted": 69,
+    "duplicates_dropped": 45,
+    "existing_duplicates_dropped": 42,
+    "invalid_specifications_dropped": 124,
+    "normalization_duplicates_dropped": 3
+  },
+  "audit": {
+    "rows": 6954,
+    "flagged": 0,
+    "unparsed": 339,
+    "sha256": "f9c54412de750f0d129ac3903c2053775897cbd564a5cd7823b7bebfd5e768db",
+    "panels": true,
+    "refuse_gpl": true
+  },
+  "complete_receipt_verified": true,
+  "input_ciphertext_sha256": "292c27cf8ed40fd3e156134c994fb34eb551497993f8f3980423507e11af4a73",
+  "token_window": {
+    "model": "Qwen/Qwen3.5-4B",
+    "revision": "851bf6e806efd8d0a36b00ddf55e13ccb7b8cd0a",
+    "trainer_sha256": "e43c27df1ee1e796b1799d38a16e0c5725dd09df762be3fabb2940ad8cb4a46f",
+    "tokenizer_files_sha256": {
+      "config.json": "ddc63e1c717afa86c865bb5e01313d89d72bb53b97ad4a8a03ba8510c0621670",
+      "tokenizer.json": "5f9e4d4901a92b997e463c1f46055088b6cca5ca61a6522d1b9f64c4bb81cb42",
+      "tokenizer_config.json": "316230d6a809701f4db5ea8f8fc862bc3a6f3229c937c174e674ff3ca0a64ac8",
+      "chat_template.jinja": "a4aee8afcf2e0711942cf848899be66016f8d14a889ff9ede07bca099c28f715"
+    },
+    "input_rows_sha256": "18f3b204abd15c8e497c83840f909877ce5d131a8c23ce6c8633a117e5dbb4f9",
+    "max_len": 2845,
+    "rows": 6954,
+    "used": 6904,
+    "skipped": 50,
+    "newly_overlength_rows": [],
+    "previously_skipped_rows_removed": 1,
+    "previously_skipped_rows_now_fit": 0,
+    "prediction_held": true,
+    "method": "Offline full encoding without truncation; compare to the unchanged 2845-token recipe. No model loaded."
+  },
+  "predictions": {
+    "exact_row_counts_and_preservation": true,
+    "whole_data_audit_and_inherited_unparsed_count": true,
+    "no_newly_overlength_retained_rows": true
+  },
+  "scope": "All retained rows with source=spec pass contract-context static checking. Other row kinds remain identical and were not newly checked for static validity.",
+  "active_training_inputs_or_model_weights_changed": false,
+  "registered_json_pilot_novelty_baseline_changed": false,
+  "source_spec_row_parser_coverage": {
+    "before": {
+      "distinct_fenced_t_blocks_in_source_spec_rows": 1787,
+      "unparsed": 0
+    },
+    "after": {
+      "distinct_fenced_t_blocks_in_source_spec_rows": 1660,
+      "unparsed": 0
+    }
+  }
+}

@@ -225,12 +225,17 @@ specifications on 149 problems, with 16,846 successful calls, 194 HTTP 422 error
 The recorded cost was $214.499216. All ten encrypted artifact digests and all 280 archived files were verified
 against the collected evidence. Aggregate receipt: `release/evidence/cohere-full-pass-2026-10-25.json`.
 
-All teacher allocations are now released. Historical conservative estimates plus completed runs total
+At completion of those teacher runs, their allocations were released. The historical subtotal was
 $310.646105, leaving $639.353895 below the $950 planning stop. This counts the common prior $83.082037 once,
 the wider pilot's $13.064852 once, and the full pass once; all three North runs recorded zero API cost.
 Historical placeholder prices remain estimates, not verified invoices. The separately registered schema
 capability test completed for $0.002285, releasing its $1 reservation. Including that test, the conservative
-total is $310.648390, with $639.351610 below the stop and no live allocation.
+total was $310.648390. The subsequent full JSON transport check passed for $0.018010, bringing completed
+conservative accounting to **$310.666400**. The registered 50-problem JSON pilot `40160251665` is now running
+with a $25 proxy ceiling and $32 reserved for in-flight requests. Completed cost plus that reservation is
+$342.666400, leaving $607.333600 unreserved below the $950 stop. The proxy ceiling is not a hard billing cap.
+Its original codec, expected requests, novelty baseline and expansion conditions remain fixed while later
+pipeline corrections land. See `t/PREDICT-2026-10-25-cohere-json-pilot.md`.
 
 The audited draft already incorporates eight Command A shards. The final two shards and the bounded North
 pilot supply 39 additional uncovered problems and 71 specifications. Their next encrypted data build is
@@ -251,13 +256,30 @@ independently checks it. The correction is recorded at the top of `CORRECTIONS.m
 A remote curation build is registered in `t/PREDICT-2026-10-25-static-contract-data.md`: preserve the original
 6,727-row candidate A prefix, remove 50 invalid additions, apply the existing header promotion where it alone
 clears all errors, and remove three normalization duplicates. Expected archive: 7,123 rows, with 7,072 fitting
-the unchanged training window. The full panel/GPL audit must pass again. The larger JSON teacher pilot waits
-for this data boundary to be fixed and the curated archive verified; the running baseline experiment is unchanged.
-Build `40157909167` passed all three registered predictions. The current curated archive has 7,123 rows,
+the unchanged training window. The full panel/GPL audit had to pass before the JSON teacher pilot proceeded;
+that condition was met while the baseline experiment kept its frozen inputs.
+Build `40157909167` passed all three registered predictions. That curated archive has 7,123 rows,
 SHA-256 `eb139437b33b4797023e1f6ef121628588d5397f9f57241695d654071c4457b5`, with 7,072 fitting the unchanged
 window. Its 396 additions contain 166 reference-Python rows and 230 statically valid specifications; 22
 retained headers were promoted under the existing rule. The baseline prefix, zero panel/GPL findings and
 339 inherited unparsed blocks are unchanged. Receipt: `release/evidence/static-contract-data-2026-10-25.json`.
+
+The inherited specification census then exposed a pipeline context error: declarations with task termination
+measures were checked as though their bodies were complete. The factorial fixture reproduces it. The corrected
+pipeline preserves those measures and still checks their types/scopes and every specification-function body;
+the complete-program checker and proof gates are unchanged. This recovers 47 inherited declarations, leaving
+124 specification targets that still fail. The full Command A census and all 230 added controls are unchanged.
+
+The latest data archive comes from build `40162353906`, registered in
+`t/PREDICT-2026-10-25-inherited-spec-curation.md`. Its explicit `all_source_spec` scope checks inherited and added
+specification targets while preserving every other row and its relative order. All predictions held: **6,954 rows**,
+SHA-256 `18f3b204abd15c8e497c83840f909877ce5d131a8c23ce6c8633a117e5dbb4f9`; 5,292 unchanged other rows and
+1,662 checked specification targets. It removes 124 invalid targets, 42 existing duplicates and three duplicates
+created by normalization, and retains 69 checked header promotions. The whole-data audit has zero findings and
+the same 339 inherited unparsed blocks. The unchanged tokenizer/window admits 6,904 rows and skips 50 inherited
+overlength rows, with no new skip or truncation. All artifact, source, row-action and audit evidence is verified
+in `release/evidence/inherited-spec-curation-2026-10-25.json`. This is the current archive for further preparation;
+the active candidate A training and the registered JSON pilot's novelty comparison retain their original inputs.
 
 The syntax-loss evidence motivates a different representation as a research hypothesis. Command A supports
 [JSON Schema output](https://docs.cohere.com/docs/structured-outputs), and `t/SPEC.md` already defines the engine's

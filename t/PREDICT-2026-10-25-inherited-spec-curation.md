@@ -46,3 +46,24 @@ The running Cohere JSON pilot keeps its original recipe, stricter gate, accounti
 
 Sources: `t/recipes/curate_spec_rows.py`, `t/recipes/spec_contract.py`, the inherited census registration,
 and `release/evidence/baseline-spec-static-2026-10-25.json`.
+
+## Result
+
+Build `40162353906` passed at `d4f4cca8`. All three predictions held. The verified archive contains
+**6,954 rows**, SHA-256 `18f3b204abd15c8e497c83840f909877ce5d131a8c23ce6c8633a117e5dbb4f9`.
+All 5,292 other rows are identical and ordered, and all 1,662 retained specification targets pass the
+corrected contract check without another promotion. Every original/new action hash and the resulting row
+sequence were verified. The build removed 124 invalid specification targets, 42 existing duplicates and
+three normalization-created duplicates, and retained 69 checked header promotions without changing measures.
+
+The whole-data audit reports zero current-panel/GPL findings and the same 339 inherited unparsed blocks.
+Every fenced t block in the selected specification rows parses; the inherited unparsed blocks belong to
+other row kinds, which this curation preserves. The encrypted artifact digest, all eight build-source hashes,
+input manifest, data and audit hashes, and completion receipt were verified independently.
+
+Offline encoding with the unchanged pinned tokenizer and trainer finds **6,904 fitting rows and 50 inherited
+length skips**. One previously overlength row was removed by curation; no retained row newly exceeds 2,845
+tokens, and no row was truncated. There were no model calls or new training. The original 6,727-row training
+input and the running JSON pilot's 7,123-row novelty baseline remain fixed.
+
+Aggregate receipt: `release/evidence/inherited-spec-curation-2026-10-25.json`.
