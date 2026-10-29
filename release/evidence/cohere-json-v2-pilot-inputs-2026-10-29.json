@@ -1,0 +1,18 @@
+{
+  "representation": "json-v2",
+  "source_revision": "aed7d2eee2d79f02bfa8022f0f39dfdd1d87ef09",
+  "expected_request_manifest_sha256": "e85e392100f84d0375e8016210ccd1a23a1e3181804e177c0a50f637be024801",
+  "historical_expected_manifest_sha256": "7fbc287d5f2966ef028badeb1d92cac89c531f20e452fcec23d6b9355bb57ac7",
+  "panel_sha256": "446fbee835307badfa317826dceee48c9f5f6b7c26921d051503b86ed02351d4",
+  "expected_logical_requests": 500,
+  "original_prompt_groups": 50,
+  "unchanged_request_bodies": true,
+  "codec_identity": "t-json-v2:4cb8c38c6f44f248ef84bac96d8f235dff5e3bcab627ae0cd8ce48fad5d21976",
+  "sources_to_verify": 571,
+  "source_manifest_sha256": "54219e26d932c61ca5547453365e3e29e413edc7ae8bc74096769520d97cb5ce",
+  "base_rows": 6954,
+  "base_sha256": "18f3b204abd15c8e497c83840f909877ce5d131a8c23ce6c8633a117e5dbb4f9",
+  "panel_problems_already_covered": 12,
+  "proxy_ceiling_usd": 25,
+  "reservation_usd": 32
+}
