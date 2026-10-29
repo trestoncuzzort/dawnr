@@ -72,6 +72,13 @@ were verified ([receipt](../release/evidence/release-6.0.2-2026-10-29.json)).
 This ships useful bug fixes while the separately registered model trains; it does
 not complete the ongoing weight qualification objective.
 
+The [grading handoff](../t/PREDICT-2026-10-29-cloud-grading-handoff.md) validates
+completed encrypted model outputs before submitting the twelve development parts
+and four private measurements to the existing frozen workflows. It retains valid
+zero-answer runs, rejects foreign/private public members, and records dispatches
+so an observation timeout cannot silently repeat a grade. No held-out reading or
+model selection is triggered by this collector.
+
 ## 1. What 6.0 is
 
 dawnr has shipped through one rolling channel whose model is dawnr v5. Since v5, five candidate lines were trained
