@@ -55,6 +55,21 @@ the existing compute authorization. Fourteen software controls pass; no extra
 GPU call has been made. The original job and its limit remain unchanged.
 [Continuation controls](../release/evidence/parallel-seed2-continuation-2026-10-29.json).
 
+The serial wrapper now has a recorded handoff reservation so completion timing
+cannot start duplicate second-seed training. Only that shell is held; its first
+training worker has continued advancing with GPU utilization observed at 100%.
+Verified parallel-adapter adoption releases the reservation. A failed import
+keeps it for inspection. The combined transport, reservation and continuation
+controls pass 43 checks; running training sources remain byte-identical.
+[Reservation](../release/evidence/parallel-seed2-reservation-2026-10-29.json).
+
+The final-reading tools are installed in a separate immutable cloud directory.
+Their exact module, decoder and runtime hashes pass, and an unqualified bundle
+is refused before a process can start. The private grading workflow is pinned
+to its tested revision. No real seed is selected, no final answer is generated,
+and no final grade is dispatched by this preparation.
+[Deployment](../release/evidence/private-heldout-tools-deployment-2026-10-29.json).
+
 **Operating clarification, 2026-10-25 UTC:** improve the existing dawnr incrementally as useful changes are found.
 Tested application, verifier and data improvements can land independently. A new set of weights is not required
 for an update. Section 3 governs changing the released weights and claiming model-quality gains; it does not

@@ -1,0 +1,20 @@
+{
+  "kind": "Prevent duplicate serial training while the registered parallel second seed completes",
+  "software_controls_passed": 43,
+  "includes_conditional_continuation_controls": 14,
+  "source_sha256": {
+    "out/r61/collect_modal_seed2.py": "b24aad4d53ee4cdcfb490b6a98fb1de5c16c93da16e7035e73bd86fc9c5b7402",
+    "out/r61/adopt_modal_seed2.py": "f8cca72aabb8347ffd4068e0ee4286da597dda58b226a8b14cd9b10cb03dad0c"
+  },
+  "reservation_held": true,
+  "first_seed_worker_keeps_running": true,
+  "gpu_utilization_percent_after_reservation": 100,
+  "unchanged_training_worker_sources": {
+    "train.py": "93f2a7f611970c7ca2eace4b71fc477957a56c9d28c2be054462ba9013fe9ad1",
+    "run-seeds.sh": "5c60e7de841f41e9878043d7c8fd97caf6d316225322f2ea483bd4a83c963311",
+    "backup.py": "4ad4b4023653dc3871e6d3b68a50471c78d5b3cd645318fc8c15d8830577515f"
+  },
+  "release_condition": "Authenticated completed second adapter, original worker validation and exclusive atomic adoption",
+  "failed_import_behavior": "Keep the recorded reservation for inspection; never silently launch a duplicate seed",
+  "heldout_started": false
+}

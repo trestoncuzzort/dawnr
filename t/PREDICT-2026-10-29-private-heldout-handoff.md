@@ -78,3 +78,12 @@ a busy GPU lock. Initial tests caught a captured default port and a readiness
 probe that mishandled TIME_WAIT; both were corrected before deployment.
 The original claim and every attempt's diagnostics remain in place.
 [Validation](../release/evidence/private-heldout-launch-validation-2026-10-29.json).
+
+The exact tools are now installed outside the frozen running checkout. All
+registered decoder files and server libraries match; every control module
+imports from the isolated directory. A remote negative check rejects an
+unqualified bundle before any child process starts. Training and the identity
+observer retain their process and source identities. No actual choice or claim
+exists. The private workflow is pinned at `r61-heldout-20261029`, revision
+`1e2b20e516c0d0d4c14599c1178f3dcd3ce0e39e`, whose CI passed.
+[Deployment evidence](../release/evidence/private-heldout-tools-deployment-2026-10-29.json).

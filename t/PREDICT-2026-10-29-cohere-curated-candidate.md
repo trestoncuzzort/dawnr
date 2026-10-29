@@ -61,14 +61,20 @@ The completion collector observes that original call only. On success it verifie
 the final manifest and every adapter file, then sends the bounded archive to the
 original cloud host. The unchanged worker rechecks the completed run and finite
 tensors before an atomic import that refuses an existing second-seed directory.
-Only the orchestration shell is briefly held during that import; its first-seed
-training child continues. The shell is resumed through a stable process handle,
-with a recovery record for an interrupted handoff. The ordinary worker will then
-read the completed second seed and skip duplicate training.
+The orchestration shell has a recorded reservation while its first-seed training
+child continues. This prevents duplicate serial training if the two jobs finish
+close together. Verified atomic adoption releases that shell through a stable
+process handle. A failed import retains the reservation for inspection. The
+ordinary worker will then read the completed second seed and skip training it.
 
 Twenty-three focused checks cover this transport, immutable result binding,
 exclusive import and harmless process controls. The actual adapter is not yet
 complete or imported. [Handoff checks](../release/evidence/parallel-seed2-handoff-2026-10-29.json).
+
+The extended transport, reservation and conditional-continuation suite passes
+43 controls. The reservation is installed: the first worker continued advancing,
+GPU utilization was observed at 100%, and original worker sources still match.
+[Reservation evidence](../release/evidence/parallel-seed2-reservation-2026-10-29.json).
 
 The observed H100 rate may exceed its original eight-hour bound. Register one
 conditional continuation of seed 2, with unchanged inputs and training code,

@@ -1,0 +1,35 @@
+{
+  "kind": "Installed isolated final-reading tools; no selected model or generation",
+  "bundle_manifest_sha256": "9c318eac4af6850e0fe9046c81c5684de3c04d293fb91af5cc4a6557b30232b4",
+  "files": {
+    "decoder.json": "1b4d44ab9f46026cd6be798e9e02da52d333deddde14e9f178d7e3bbfa5e93b9",
+    "panel.txt": "837e2ac5a70980d2ac7b35a97af258997d153e7c755cd166555d232c371ad51f",
+    "protocol.json": "c07d38f31336a2ba4f2431323207e0859071876afb1ca14a9bdbeb39b7aed308",
+    "release_decode_arms.py": "0c65364cf902011809b2c5c1db059b082a15763550f2b6805f365a5f5f66d03d",
+    "release_grading_inputs.py": "993101022a35f51b13fcab1fba259128bb3888c70dc916d650ee723f17582b46",
+    "release_heldout_grade.py": "77a7c5e8acd9651e49a5dc441de4e31a7cfccf9984c5695c5c1ae72ff4d33c02",
+    "release_heldout_inputs.py": "a9bda01e56f69f2aff7ab974c7c2d7fb5bea5acbcf5804dbd1a5cc6807366206",
+    "release_heldout_launch.py": "553e32d6fcfcc0746dee3be5f828681f6d8a6a2d2656a464ddc6742762cfb25e",
+    "release_seed_selection.py": "8f0146ca8a72aeb54a49b49c14e304fb46281ec484afc13ea6e0186195f1c37c",
+    "three_decode_report.py": "564c8ecb417b36e1a1d6256a7c4202b80b947d8ba63b5e7c4fb02f634871e098",
+    "v6_export.py": "f452cd23eeaceb32ec3bb7dc0b7fd63fcdcda2be7cd7098e203b992eb3a05915"
+  },
+  "workflow": {
+    "workflow_ref": "r61-heldout-20261029",
+    "workflow_revision": "1e2b20e516c0d0d4c14599c1178f3dcd3ce0e39e",
+    "workflow_sha256": "673c4daf1f43eee922c83ce692c6bff7801c728e76f54318d62d62ffe10979d9",
+    "deployment_manifest_sha256": "9c318eac4af6850e0fe9046c81c5684de3c04d293fb91af5cc4a6557b30232b4",
+    "grader_revision": "1e033b50c2c53fb3d40932d9561e1a8eefe9aa7d",
+    "workflow_run_attempt": 1,
+    "dispatched": false,
+    "required_clean": 17,
+    "required_all_seven": 12
+  },
+  "all_registered_decoder_and_runtime_files_verified": true,
+  "isolated_imports_verified": true,
+  "unqualified_launch_refused_before_process_start": true,
+  "training_and_observer_services_unchanged": true,
+  "worker_sources_unchanged": true,
+  "model_calls": 0,
+  "initial_preflight_failure": "The first local package lookup used the new grader output path for the old panel. The existing frozen panel was located and its registered hash verified before any remote mutation."
+}
