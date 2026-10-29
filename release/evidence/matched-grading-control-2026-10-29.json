@@ -1,0 +1,136 @@
+{
+  "kind": "Completed matched control and prospective candidate grading amendment",
+  "run_id": 40949622228,
+  "workflow_revision": "a51043aab69e34f4c2e939169f9ee27c2e0701ba",
+  "workflow_ref": "r61-grading-20261029",
+  "grader_revision": "1e033b50c2c53fb3d40932d9561e1a8eefe9aa7d",
+  "baseline_registration_sha256": "118e314c60f806648943f8155c0137c128688f3e1ad7dbe2948299164f832b41",
+  "matched_parts": {
+    "v5-20261021-dev-desktop-r2": {
+      "panel": "dev-95",
+      "input_sha256": "8917ad487dc814a470099174492e0f2ca4e79ec8bf14e6ca96f5b4fa7b7a4b0d",
+      "artifact_sha256": "c3e60fdcc19f07c89a6149aa310e3ac2f36393c2bb1013687dd760a9670a2066",
+      "audit_sha256": "8df3accbfaea26709757ecb1b80d76345a3758b398007df7d703c4d60a704cd2"
+    },
+    "v5-20261022-seedoff1000": {
+      "panel": "dev-95",
+      "input_sha256": "56dc0b8bbd3b12e518f2aad1f84a6467d22ed7527021460bc4f6799f81fe2025",
+      "artifact_sha256": "4a4e89e8359641984f84ca839d6c7ccc9d004c27378b55a09c92b1ba9cb06986",
+      "audit_sha256": "eb83a39a85c0e25cf91c81eef022361841211ea4daf43965569a6146abea7964"
+    },
+    "v5-20261022-seedoff2000": {
+      "panel": "dev-95",
+      "input_sha256": "21a1ffb69c69c3081763c589b0049810d9b25d0c93ff333e116dbb28d5a0164e",
+      "artifact_sha256": "845969a2f3416959035e11ff67cf8d781b8df84b043cd1df1c8bd775f966d004",
+      "audit_sha256": "187e43c3e77ab13e8c6f99b7f9caac640fde9c3096e19184978cc5eadf9c6d6d"
+    },
+    "v5-20261022-wider-off0": {
+      "panel": "wider-145",
+      "input_sha256": "d736fc9a2f9b58a46d463b153c18bc617d10a7254481320af4070ce6f02fdad9",
+      "artifact_sha256": "6ce1968647ae37958b61c46bfba4981f1c5bf7f828ca844643cb4e2b364c8ed2",
+      "audit_sha256": "3ddfb8ef9e98b30f41d6a9120e61bdda745eec44bf6d2d8fa216f46633b4f4a6"
+    },
+    "v5-20261022-wider-off1000": {
+      "panel": "wider-145",
+      "input_sha256": "2c4e39c323730c6e41be9fef8aaae42285c784c4ca8d55401d8917acb21c0282",
+      "artifact_sha256": "3f09545fd120f19078c658c182729e71146bc9f92225f4262520ed3f23e12360",
+      "audit_sha256": "06c11b8d643ed7569d0187de922bc66f385d9c867cd44bd0b4c0a970248a915f"
+    },
+    "v5-20261022-wider-off2000": {
+      "panel": "wider-145",
+      "input_sha256": "2325a7b22416a3a38ced1a692afe8bfdf237ab7526fb564a393a44c26ae5cdfd",
+      "artifact_sha256": "0f43a3b0841c55be8a3aa4c4e5aa386e04d487d123f01a8344d81745ecbb2d95",
+      "audit_sha256": "4ab0fa2e982a8589f6205535de44f1098b2cea8602f35abaa3fa6c710fb54231"
+    }
+  },
+  "clean_206_counts": [
+    20,
+    19,
+    19
+  ],
+  "all_seven_206_counts": [
+    9,
+    8,
+    9
+  ],
+  "all_level_problem_sets_unchanged": true,
+  "all_emitted_sources_unchanged": true,
+  "changed_cells": [
+    {
+      "tag": "v5-20261021-dev-desktop-r2",
+      "task": "mbpp_200__position_max",
+      "kernel": "spark",
+      "before": "refuted / refuted",
+      "after": "timeout / refuted"
+    },
+    {
+      "tag": "v5-20261021-dev-desktop-r2",
+      "task": "mbpp_337__text_match_word",
+      "kernel": "rocq",
+      "before": "unproved / refuted",
+      "after": "timeout / refuted (FLAKED)"
+    },
+    {
+      "tag": "v5-20261022-wider-off0",
+      "task": "mbpp_363__add_K_element",
+      "kernel": "spark",
+      "before": "timeout / timeout",
+      "after": "timeout / refuted"
+    },
+    {
+      "tag": "v5-20261022-wider-off0",
+      "task": "mbpp_696__zip_list",
+      "kernel": "spark",
+      "before": "verified / timeout",
+      "after": "verified / refuted"
+    },
+    {
+      "tag": "v5-20261022-wider-off1000",
+      "task": "mbpp_213__concatenate_strings",
+      "kernel": "spark",
+      "before": "verified / timeout",
+      "after": "verified / refuted"
+    },
+    {
+      "tag": "v5-20261022-wider-off1000",
+      "task": "mbpp_363__add_K_element",
+      "kernel": "spark",
+      "before": "timeout / timeout",
+      "after": "timeout / refuted"
+    },
+    {
+      "tag": "v5-20261022-wider-off1000",
+      "task": "mbpp_696__zip_list",
+      "kernel": "spark",
+      "before": "verified / timeout",
+      "after": "verified / refuted"
+    },
+    {
+      "tag": "v5-20261022-wider-off1000",
+      "task": "mbpp_805__max_sum_list",
+      "kernel": "spark",
+      "before": "timeout / refuted",
+      "after": "refuted / refuted"
+    },
+    {
+      "tag": "v5-20261022-wider-off2000",
+      "task": "mbpp_921__chunk_tuples",
+      "kernel": "spark",
+      "before": "timeout / refuted",
+      "after": "timeout / timeout"
+    }
+  ],
+  "cell_investigation_sha256": {
+    "v5-20261021-dev-desktop-r2": "3fac5a01d86349bf2d995a5c6cd00526a5563036efb835d7131ca287fd6c043b",
+    "v5-20261022-wider-off0": "647e2dc19cc71abb305c58c0817ee3d5cccb948487defa562d7bd7036b729a2e",
+    "v5-20261022-wider-off1000": "d7e042378b7b09c8aefd578ef87e96218f0efade995a3a576d0747b2b86d9b53",
+    "v5-20261022-wider-off2000": "0d8cc480e60491c19c8c633f45b3e13607b41ec3cffef2b24e9feb7d611f4195"
+  },
+  "timeout_cause": "not established; no favorable retries",
+  "focused_checks_passed": 149,
+  "candidate_evaluations_before_amendment": 0,
+  "precision_and_spec33_workflows_unchanged": true,
+  "training_and_generation_unchanged": true,
+  "new_model_or_reference_or_proof_calls": 0,
+  "heldout_started": false
+}

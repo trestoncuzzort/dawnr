@@ -119,6 +119,16 @@ zero-answer runs, rejects foreign/private public members, and records dispatches
 so an observation timeout cannot silently repeat a grade. No held-out reading or
 model selection is triggered by this collector.
 
+All six matched released-model control parts have now passed the corrected
+zero-task grader and the independent content audit. Clean counts remain
+20, 19 and 19; all-seven counts remain 9, 8 and 9. Nine timeout-related cells
+changed without changing any counted problem set or emitted source bytes;
+each difference is preserved and investigated, with no favorable retries.
+Before any candidate grade, the baseline was frozen and both collectors were
+reactivated against the same immutable workflow tag after 149 focused checks.
+Precision, spec33, training and generation remain unchanged.
+[Matched control](../release/evidence/matched-grading-control-2026-10-29.json).
+
 The [current selection checks](../t/PREDICT-2026-10-29-two-seed-selection.md)
 recompute the registered six-versus-three statistics and choose only among seeds
 passing precision and spec33. They bind the chosen final export and refuse a later

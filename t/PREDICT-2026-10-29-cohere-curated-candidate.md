@@ -81,6 +81,16 @@ bind the private worker hashes and the unchanged precision instrument before tra
 
 ## Predictions and release decision
 
+The completed matched grader control preserves the predicted baseline counts:
+20, 19 and 19 clean; 9, 8 and 9 all-seven. All problem sets and emitted source
+bytes match. Nine timeout-related cell changes are recorded without reruns.
+Before candidate grading, freeze workflow `a51043aab69e34f4c2e939169f9ee27c2e0701ba`
+at `r61-grading-20261029`, whose development grader is
+`1e033b50c2c53fb3d40932d9561e1a8eefe9aa7d`. Both collectors now use this pin;
+the precision and spec33 workflows are byte-identical to the previous pin.
+The 149 focused checks and six reaudited baseline parts passed. See
+[the matched control](../release/evidence/matched-grading-control-2026-10-29.json).
+
 1. Both seeds complete exactly 2,160 steps on 6,904 usable rows, preserving the data hash and producing finite weights.
 2. On the clean 206 development problems, the six candidate decodes have mean clean coverage of at least 21
    problems and mean all-seven coverage of at least 10. The released model's matched means are 19.33 and 8.67.
