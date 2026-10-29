@@ -21,10 +21,15 @@ python3 - "$out" "$ids" <<'PY'
 import hashlib, json, pathlib, sys
 out, panel = map(pathlib.Path, sys.argv[1:])
 files = sorted(pathlib.Path('t').glob('*.py')) + sorted(pathlib.Path('t/verifiers').rglob('*.py'))
-files += [pathlib.Path('t/recipes/v6-grade.sh'), pathlib.Path('t/recipes/bounded-grading-python.py'), panel]
+files += [pathlib.Path('t/recipes/v6-grade.sh'), pathlib.Path('t/recipes/bounded-grading-python.py'),
+          pathlib.Path('t/recipes/complete_empty_grade.py'), panel]
 record = {str(p): hashlib.sha256(p.read_bytes()).hexdigest() for p in files}
 (out/'evaluator.json').write_text(json.dumps(record, indent=2)+'\n')
 PY
+empty_status=0
+python3 t/recipes/complete_empty_grade.py "$tag" "$ids" "$out" || empty_status=$?
+if [ "$empty_status" -eq 0 ]; then exit 0; fi
+test "$empty_status" -eq 3  # only a nonempty task set may continue; malformed evidence fails
 status=0
 python3 t/recipes/bounded-grading-python.py t/run_par.py --tasks "$tasks" \
   --out "$out/kernels" --table "$table" --jobs 1 --no-cache > "$out/kernels.log" 2>&1 || status=$?
