@@ -38,3 +38,14 @@ weight change, model-quality claim or held-out-182 evaluation follows from this 
 
 Sources: `t/check_wf.py`, `t/recipes/cohere_task_json.py`, `t/recipes/cohere_json_smoke.py`,
 [Cohere structured outputs](https://docs.cohere.com/docs/structured-outputs).
+
+## Result
+
+All three capability predictions passed on GitHub run `40809918934`, revision `46e83177`. The single request
+returned the exact registered contract, with 4,542 billed input tokens and 364 billed output tokens, costing
+$0.014995 at the recorded rates. No retries occurred. The downloaded artifact digest, registered inputs,
+11 source hashes, actual wire request, cached conversion, restored contract and ledger charge were independently
+checked. The unused reservation is released. [Aggregate receipt](../release/evidence/cohere-json-v2-smoke-2026-10-29.json).
+
+The implementation passes 479 focused tests. It preserves all 200 valid historical contracts; this does not
+recover the 50 invalid contracts or establish better real-problem yield. No training rows or weights changed.

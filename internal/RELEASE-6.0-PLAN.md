@@ -28,6 +28,13 @@ conversion predictions failed, so the unchanged recipe is not expanded. The acce
 unchanged until another addition passes its checks. See
 [the reconciliation](../release/evidence/cohere-json-pilot-reconciled-2026-10-29.json).
 
+The opt-in internal `json-v2` teacher transport uses named operands to enforce fixed operator arities with
+Cohere's supported schema features and excludes noncanonical sequence/set type spellings. It restores the exact
+original AST and retains every acceptance gate. All 200 valid historical contracts remain unchanged, 479 focused
+checks pass, and the one-request cloud capability check passed for $0.014995. This establishes transport
+compatibility only. Measure useful new training coverage in a separate registered pilot before expansion.
+The product runtime, released weights and accepted training archive are unchanged.
+
 ## 1. What 6.0 is
 
 dawnr has shipped through one rolling channel whose model is dawnr v5. Since v5, five candidate lines were trained

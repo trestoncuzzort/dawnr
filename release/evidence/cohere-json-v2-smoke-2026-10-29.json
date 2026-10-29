@@ -1,0 +1,67 @@
+{
+  "kind": "Full teacher schema and decoder transport smoke; no quality benchmark",
+  "model": "command-a-03-2025",
+  "recorded_cost_usd": "0.014995",
+  "representation": "json-v2",
+  "unresolved_billing_or_transport": false,
+  "reservation_usd": "1",
+  "requests": 1,
+  "automatic_retries": 0,
+  "cases": [
+    {
+      "case": "full_teacher_schema",
+      "api_success": true,
+      "passed": true,
+      "billed_units": {
+        "input_tokens": 4542,
+        "output_tokens": 364
+      },
+      "complete": true,
+      "nonempty": true,
+      "completion_tokens": 366,
+      "matches_original_contract": true,
+      "schema_and_static_checked": true
+    }
+  ],
+  "all_conditions_hold": true,
+  "input_sha256": "0bbf84a08a5740362c3bf22921a32d66518c10bfe9a42f3d3cd3f67884fbee24",
+  "primer_sha256": "96eef6ee2611bb9095772b67a654cfb84ff53b22869aee64c8ca57570c250f61",
+  "schema_sha256": "91b4fdd0b5e8326f9f3b7c3191f886bc2c7022aa65c50838940d153853534c0d",
+  "codec_identity": "t-json-v2:4cb8c38c6f44f248ef84bac96d8f235dff5e3bcab627ae0cd8ce48fad5d21976",
+  "dependency_versions": {
+    "jsonschema": "4.26.0",
+    "jsonschema-specifications": "2023.12.1",
+    "referencing": "0.36.2",
+    "rpds-py": "0.27.1"
+  },
+  "code_sha256": {
+    "t/recipes/cohere_json_smoke.py": "5a86215f7e114c799df764bf83ac4691a7927034cfa36e00f038452c1f8b6552",
+    "t/recipes/cohere_proxy.py": "b3c9e40013334b64447828ae8ff0d2a06251a353d9cd2bc6a8e23f3e7580de1f",
+    "t/recipes/cohere_task_json_v2.py": "368836de6fd20b445acb57a0785dbd15ff3561dada8df10c05528ed5cb423a4c",
+    "t/recipes/cohere_task_json.py": "e5ca0ff5fc423bf0c91e6a93e88ef56c8bbb0d50a78b57529cc7fe67744eb0fb",
+    "t/recipes/cohere_schema_smoke.py": "010e55425d12980c2e1c093e786743a8e9a49a86584f1e3db967999f65b97801",
+    "t/recipes/v6_server_route.py": "c04b7674af8eccdbba4ae13e5adb34ae450a0c9589521153554666ea4c2bd77d",
+    "t/recipes/spec_contract.py": "88d0aa5a6a32c27791f13d40ccccf790a5bc8d94167b91ee996083a63e5ca31b",
+    "t/recipes/teacher_primer.py": "63c4810a0421085d5ed5e204caaef6c3f6da0c0c5b1f310f79bcebbc850533f6",
+    "t/surface.py": "14b7a852d54689fdca9342967780a65edeae8272778a55d99caf11a517b11a68",
+    "t/check_wf.py": "5325957fdb1552120b3ae244bfdff17c02f485bf873cac88b46acd861c734115",
+    "t/spec_first_rows.py": "bfbad19a773eb6ba69d1a44e28adc3e9010d50e67d6d16885773010a023e7d67"
+  },
+  "run_id": "40809918934",
+  "revision": "46e8317771064a43f99f7a4259d28fc103182fc6",
+  "artifact_sha256": "48845fdfce6d5a30c6bb83585cde7eeb46d5557a361e70119fb45f78576aed35",
+  "independently_verified": [
+    "artifact digest",
+    "registered inputs",
+    "all 11 source hashes",
+    "actual wire mapping",
+    "cached provider response",
+    "exact expected contract",
+    "billed units and one ledger charge"
+  ],
+  "private_evidence_sha256": {
+    "request.json": "98f3d4169e242685abc6ec7f0c2022bc82c8906e5226064f6b0e312676a9b0c8",
+    "response.json": "145cb810eae0c4055ca1b57798851382916742d2ce56c5ff2eb36e5188f52d42",
+    "ledger.jsonl": "380100ca49ce43fcdcbe771204970ed7d25391d99ff76f36a7c76a6b2747afda"
+  }
+}
