@@ -1,0 +1,16 @@
+{
+  "registered_utc": "2026-10-29T21:10:12.086920+00:00",
+  "observer_sha256": "2fac0bab435376b6f74e6876919302a13cbd51b0e2e0d362bc29520e5a6c5a23",
+  "registration_sha256": "54d7d21799cbd92d64d07e64d77709d0a4a7684e70093477d9ed0a31bd0132a4",
+  "service_sha256": "02692140c782df2f9d4c2542d919054ddb0ec2d07e0be6a13964ceb26b88d4ff",
+  "private_unit_checks": 21,
+  "execution_revision": "b3e9b0d9d71f684d9c68c9334160827fcc501b66",
+  "training_rows_sha256": "18f3b204abd15c8e497c83840f909877ce5d131a8c23ce6c8633a117e5dbb4f9",
+  "questions_sha256": "effc2f4e586e0c4f7638a5a9a2b75515aaf7019de03ca819d46e5aa3d593ab24",
+  "identity_groups": 4,
+  "maximum_group_bytes": 16777216,
+  "maximum_total_identity_bytes": 67108864,
+  "new_model_requests": 0,
+  "training_recipe_changed": false,
+  "generation_provenance_result": null
+}
