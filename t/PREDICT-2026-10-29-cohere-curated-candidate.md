@@ -42,6 +42,11 @@ arm and its input hashes. Grade with the pinned cloud grader and compare through
 three baseline and six candidate decodes. Precision and spec33 use the established instruments. The held-out
 182 never selects a candidate and is not decoded before the development, precision and spec33 decision.
 
+Before any held-out reading, select the release seed among those meeting the precision and spec33 thresholds
+by mean clean coverage across its three development decodes on the 206, then mean all-seven coverage, then
+lower seed number. The combined six-decode paired release gate still must pass. If neither seed qualifies,
+promote neither. If the selected seed fails the held-out reading, do not try the other seed on that panel.
+
 A failed condition leaves released weights unchanged. Preserve failures and their receipts. A passing candidate
 must still complete packaging, install tests, local final testing and publication; training completion is not a release.
 

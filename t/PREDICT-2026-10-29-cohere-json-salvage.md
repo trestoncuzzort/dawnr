@@ -24,3 +24,17 @@ This addition becomes available for a subsequent candidate only after independen
 
 Sources: `t/recipes/prepare_release_rows.py`, `t/recipes/v8_spec_rows.py`,
 `t/PREDICT-2026-10-25-cohere-json-pilot.md`, and `t/PREDICT-2026-10-25-cohere-data-increment.md`.
+
+## Result
+
+All three predictions held. Cloud build `40901478385` added exactly two rows on one new problem, preserving
+all 6,954 original rows. The output has 6,956 rows at SHA-256
+`5b961478df43b2e206b64ed108692173bc3c5b1dd30a69aee88ba57b35dfe293`. Both additions fit: 237 and 413 tokens.
+The unchanged prefix plus the additions gives 6,906 fitting rows and the same 50 skips, without truncation.
+The new serialized specification passes the static check; the complete panel/GPL audit has zero findings and
+the same 339 inherited unparsed blocks. Artifact digest, input/source hashes, row order, unchanged prefix,
+output hash, audit and completion marker were independently checked.
+[Aggregate receipt](../release/evidence/cohere-json-salvage-2026-10-29.json).
+
+No new API calls or training ran for this build. The registered model candidate and running JSON-v2 teacher
+pilot retain their original 6,954-row baseline; this accepted addition is a separate data increment.

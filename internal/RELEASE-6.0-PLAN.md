@@ -33,7 +33,12 @@ Cohere's supported schema features and excludes noncanonical sequence/set type s
 original AST and retains every acceptance gate. All 200 valid historical contracts remain unchanged, 479 focused
 checks pass, and the one-request cloud capability check passed for $0.014995. This establishes transport
 compatibility only. Measure useful new training coverage in a separate registered pilot before expansion.
-The product runtime, released weights and accepted training archive are unchanged.
+The transport check itself changed no product runtime, released weights or accepted training data.
+
+The earlier JSON pilot's one still-uncovered problem was subsequently recovered through the full cloud data
+build and audit. This adds two rows, taking the accepted archive to 6,956 (6,906 fit, 50 unchanged skips), with
+zero audit findings and the same inherited unparsed count. The model candidate and live `json-v2` trial each
+retain their frozen 6,954-row inputs. [Data increment](../release/evidence/cohere-json-salvage-2026-10-29.json).
 
 ## 1. What 6.0 is
 

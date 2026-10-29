@@ -1,0 +1,63 @@
+{
+  "run_id": 40901478385,
+  "artifact_id": 12909082879,
+  "artifact_sha256": "2d34488e82915e9237ef2ab7b2b7ae74a5f131e9f9d71be6831c039fca9d0a6f",
+  "input_manifest_sha256": "3f494009e3b3e7f1b40fcaef1f20ef825802eb0ee737eff6030d81f05ea6e37c",
+  "base_rows": 6954,
+  "base_preserved": true,
+  "new_problems": 1,
+  "added_rows": 2,
+  "added_static_specs": 1,
+  "output": {
+    "filename": "training-rows.jsonl",
+    "rows": 6956,
+    "sha256": "5b961478df43b2e206b64ed108692173bc3c5b1dd30a69aee88ba57b35dfe293"
+  },
+  "audit": {
+    "rows": 6956,
+    "flagged": 0,
+    "unparsed": 339,
+    "sha256": "6badaf8ddf2f7d18a0d5d9824b6c72f324b8598e573c8ff54ffb3e69f18a63ba",
+    "panels": true,
+    "refuse_gpl": true
+  },
+  "code_sha256": {
+    "t/recipes/prepare_release_rows.py": "07d85465b588af36fe7f979582ceb898989a2900bd312bc2339485648385772f",
+    "t/recipes/v8_spec_rows.py": "87d3d3a14e8f79a14e7961cf61a78cf253352cd495d89faa5dbe7e0471168298",
+    "t/recipes/v9_strict_specs.py": "b6a2d46273ece18bce7f98203c599314a7df8be3e386de4578f4e92182fb1b59",
+    "t/spec_first_rows.py": "bfbad19a773eb6ba69d1a44e28adc3e9010d50e67d6d16885773010a023e7d67",
+    "t/heldout_audit.py": "252fc9eb23a806226a6eb91ddb3e32cc5ce7d3715f44cfb3cb830f77b9c25c67",
+    "t/recipes/spec_contract.py": "88d0aa5a6a32c27791f13d40ccccf790a5bc8d94167b91ee996083a63e5ca31b",
+    "t/check_wf.py": "5325957fdb1552120b3ae244bfdff17c02f485bf873cac88b46acd861c734115",
+    "t/surface.py": "14b7a852d54689fdca9342967780a65edeae8272778a55d99caf11a517b11a68",
+    "t/spec_experiment.py": "9b5d1edf7b32ee12f5768621e86fd642272ed4ca55bf22acc86a21dea5b9bcae"
+  },
+  "new_api_calls": 0,
+  "window": {
+    "dataset_sha256": "5b961478df43b2e206b64ed108692173bc3c5b1dd30a69aee88ba57b35dfe293",
+    "base_rows": 6954,
+    "base_used": 6904,
+    "base_skipped": 50,
+    "added_rows": 2,
+    "added_lengths": [
+      237,
+      413
+    ],
+    "added_fit": 2,
+    "total_rows": 6956,
+    "total_used": 6906,
+    "total_skipped": 50,
+    "window": 2845,
+    "truncation": false,
+    "model": "Qwen/Qwen3.5-4B",
+    "revision": "851bf6e806efd8d0a36b00ddf55e13ccb7b8cd0a",
+    "trainer_sha256": "e43c27df1ee1e796b1799d38a16e0c5725dd09df762be3fabb2940ad8cb4a46f",
+    "packages": {
+      "transformers": "5.20.1",
+      "tokenizers": "0.23.3",
+      "jinja2": "3.1.6"
+    }
+  },
+  "all_predictions_held": true,
+  "candidate_training_inputs_changed": false
+}
