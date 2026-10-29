@@ -1,0 +1,37 @@
+{
+  "status": "prepared_before_training",
+  "date": "2026-10-29",
+  "candidate": "cohere-curated-20261029",
+  "execution_source_revision": "b3e9b0d9d71f684d9c68c9334160827fcc501b66",
+  "input_manifest_sha256": "90e8e5486cba022d15bd8bea54837ba20cdf23eed3b4e257c4c03990b516bae0",
+  "initial_manifest_sha256": "cb3c1969978bdf7285a717cb1fd1da1abf7b7bae17b2caab99ff4a5ce000fafe",
+  "manifest_change": "Source revision and annotation only, for the cache-seeding receipt correction. Training data and trainer bytes are unchanged.",
+  "training_rows_sha256": "18f3b204abd15c8e497c83840f909877ce5d131a8c23ce6c8633a117e5dbb4f9",
+  "trainer_sha256": "e43c27df1ee1e796b1799d38a16e0c5725dd09df762be3fabb2940ad8cb4a46f",
+  "rows": 6954,
+  "rows_used": 6904,
+  "rows_skipped": 50,
+  "seeds": [
+    1,
+    2
+  ],
+  "steps_per_seed": 2160,
+  "private_worker_sha256": {
+    "train.py": "93f2a7f611970c7ca2eace4b71fc477957a56c9d28c2be054462ba9013fe9ad1",
+    "run-seeds.sh": "5c60e7de841f41e9878043d7c8fd97caf6d316225322f2ea483bd4a83c963311",
+    "backup.py": "4ad4b4023653dc3871e6d3b68a50471c78d5b3cd645318fc8c15d8830577515f"
+  },
+  "focused_cache_decoder_release_checks": 21,
+  "focused_training_backup_checks": 16,
+  "remote_sequence": [
+    "Train seed 1",
+    "Train seed 2",
+    "Export each seed to Q8_0",
+    "Six development decoding parts per seed",
+    "Specification precision inputs: ten Python attempts, twenty specifications, specs-only, seeded from own offset-zero development cache",
+    "Spec33 answers only"
+  ],
+  "output_storage": "Encrypted checkpoints and completed evaluation inputs, private bucket, seven-day automatic cleanup",
+  "heldout_182": "Not decoded before the registered candidate selection",
+  "model_quality_result": null
+}

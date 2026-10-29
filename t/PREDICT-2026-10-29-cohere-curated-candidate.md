@@ -30,7 +30,11 @@ Training and model decoding run on cloud compute; no new training runs on the la
 Before launch, the cache-seeding receipt bug was reproduced and corrected. The cloud
 checkout includes that correction and records the new seeder hash. The frozen trainer
 digest, data, recipe and release criteria above are unchanged. See
-[the cache-seeding record](PREDICT-2026-10-29-cache-seeding.md).
+[the cache-seeding record](PREDICT-2026-10-29-cache-seeding.md). The deployment input
+manifest is `90e8e5486cba022d15bd8bea54837ba20cdf23eed3b4e257c4c03990b516bae0`;
+only its execution revision and annotation changed. The initial manifest above remains
+the data registration. [Execution inputs](../release/evidence/cohere-curated-execution-inputs-2026-10-29.json)
+bind the private worker hashes and the unchanged precision instrument before training.
 
 ## Predictions and release decision
 
