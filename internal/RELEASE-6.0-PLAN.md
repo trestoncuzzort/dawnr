@@ -79,6 +79,12 @@ zero-answer runs, rejects foreign/private public members, and records dispatches
 so an observation timeout cannot silently repeat a grade. No held-out reading or
 model selection is triggered by this collector.
 
+The [current selection checks](../t/PREDICT-2026-10-29-two-seed-selection.md)
+recompute the registered six-versus-three statistics and choose only among seeds
+passing precision and spec33. They bind the chosen final export and refuse a later
+switch. Actual artifact audits and the single private held-out launch remain
+separate prerequisites; implementation tests do not qualify a model.
+
 ## 1. What 6.0 is
 
 dawnr has shipped through one rolling channel whose model is dawnr v5. Since v5, five candidate lines were trained
