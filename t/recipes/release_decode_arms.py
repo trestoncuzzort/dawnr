@@ -99,7 +99,8 @@ def generate(checkout, server_dir, prefix, gguf, identity, destination, panels=N
                             "pool": panel["pool"], "offset": offset, "ids_path": panel["path"]})
     sources = set((checkout / "t").glob("*.py")) | set((checkout / "t/verifiers").rglob("*.py"))
     sources |= set((checkout / "nl/data").glob("*.gz"))
-    sources |= {checkout / "t/recipes/laptop_route.sh", checkout / "t/recipes/v6_server_route.py"}
+    sources |= {checkout / "t/recipes/laptop_route.sh", checkout / "t/recipes/v6_server_route.py",
+                checkout / "t/recipes/seed_decode_cache.py"}
     source_hashes = {str(p.relative_to(checkout)): digest(p) for p in sorted(sources)}
     settings = {"PARALLEL": "4", "CONCURRENCY": "4", "BATCH": "16", "SLOT_CTX": "4096",
                 "PYTHON_ATTEMPTS": "3"}

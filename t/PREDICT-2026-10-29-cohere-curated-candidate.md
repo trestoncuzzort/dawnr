@@ -27,6 +27,11 @@ final recipe and finite adapter tensors. It reuses the original trainer, exporte
 Its private input manifest SHA-256 is `cb3c1969978bdf7285a717cb1fd1da1abf7b7bae17b2caab99ff4a5ce000fafe`.
 Training and model decoding run on cloud compute; no new training runs on the laptop or desktop.
 
+Before launch, the cache-seeding receipt bug was reproduced and corrected. The cloud
+checkout includes that correction and records the new seeder hash. The frozen trainer
+digest, data, recipe and release criteria above are unchanged. See
+[the cache-seeding record](PREDICT-2026-10-29-cache-seeding.md).
+
 ## Predictions and release decision
 
 1. Both seeds complete exactly 2,160 steps on 6,904 usable rows, preserving the data hash and producing finite weights.

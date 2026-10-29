@@ -12,10 +12,13 @@ PARALLEL=${PARALLEL:-4}; CONCURRENCY=${CONCURRENCY:-4}; BATCH=${BATCH:-16}; SEED
 IDS=${IDS:-$D/t/out/v6-20261018/dev-95.txt}; PYTHON_ATTEMPTS=${PYTHON_ATTEMPTS:-3}
 PYARG=""; [ "$PYTHON_ATTEMPTS" != 0 ] && PYARG="--python $PYTHON_ATTEMPTS"
 export LD_LIBRARY_PATH=$L PYTHONPATH=$D/t PYTHONUNBUFFERED=1
-mkdir -p $A/cache-$TAG; cd $D || exit 1
-rm -f $A/$TAG.done
-if [ -n "$SEED" ] && [ -d "$SEED" ]; then ls $SEED/*.json 2>/dev/null | grep -v protocol.json | xargs -r -I{} ln -f {} $A/cache-$TAG/ 2>/dev/null; fi
-rm -f $A/cache-$TAG/protocol.json $A/cache-$TAG/run.lock
+mkdir -p "$A/cache-$TAG"; cd "$D" || exit 1
+rm -f "$A/$TAG.done"
+if [ -n "$SEED" ] && [ -d "$SEED" ]; then
+  python3 "$D/t/recipes/seed_decode_cache.py" "$SEED" "$A/cache-$TAG" || exit $?
+fi
+# Remove a stale completion receipt, including a hard link made by the old seeder.
+rm -f "$A/cache-$TAG/protocol.json" "$A/cache-$TAG/run.lock" "$A/cache-$TAG/completed.json"
 echo "$(date -u +%FT%TZ) start $TAG identity=$IDENT" > $A/$TAG.log
 $L/llama-server --model $GGUF --alias dawnr-route --host 127.0.0.1 --port $PORT --n-gpu-layers 99 --threads 8 --threads-batch 8 \
   --parallel $PARALLEL --ctx-size $((PARALLEL * SLOT_CTX)) --cache-ram 512 --chat-template-kwargs '{"enable_thinking":false}' > $A/$TAG.server.log 2>&1 &

@@ -39,6 +39,7 @@ runs=root/'t/out/laptop-runs';runs.mkdir(parents=True,exist_ok=True)
     route = recipes / "laptop_route.sh"
     route.write_text('#!/bin/bash\nexec "' + sys.executable + '" "' + str(mock) + '" "$@"\n')
     (recipes / "v6_server_route.py").write_text("# stand-in; no server or model is started\n")
+    (recipes / "seed_decode_cache.py").write_text("# stand-in cache seeder\n")
     panels = []
     for name, pool, ids in [("dev-95", "v5", "1\n2\n"), ("wider-145", "v7", "3\n4\n")]:
         path = root / (name + ".txt")
@@ -84,6 +85,16 @@ def test_changed_model_cannot_reuse_finished_outputs(host):
     run(host)
     calls = (root / "calls.txt").read_bytes()
     model.write_bytes(b"different model")
+    with pytest.raises(ValueError, match="procedure changed"):
+        run(host)
+    assert (root / "calls.txt").read_bytes() == calls
+
+
+def test_changed_cache_seeder_cannot_reuse_finished_outputs(host):
+    root, _, _, _, _ = host
+    run(host)
+    calls = (root / "calls.txt").read_bytes()
+    (root / "t/recipes/seed_decode_cache.py").write_text("# changed procedure\n")
     with pytest.raises(ValueError, match="procedure changed"):
         run(host)
     assert (root / "calls.txt").read_bytes() == calls
