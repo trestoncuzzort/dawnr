@@ -128,6 +128,22 @@ def check_process(value, command, executable, root, parent_pid):
             and type(value['start_ticks']) is int and value['start_ticks'] > 0, 'observed process differs')
 
 
+def observe_child(child, command, executable, root, parent_pid, timeout=2):
+    """Wait for argv during exec; never accept an empty or different identity."""
+    deadline = time.monotonic() + timeout
+    started = None
+    while True:
+        require(child.poll() is None, 'child exited before its identity was observed')
+        value = process(child.pid)
+        if started is None: started = value['start_ticks']
+        require(value['pid'] == child.pid and value['start_ticks'] == started, 'child process identity changed')
+        if value['command'] not in ([], ['']):
+            check_process(value, command, executable, root, parent_pid)
+            return value
+        require(time.monotonic() < deadline, 'child command remained unavailable')
+        time.sleep(.01)
+
+
 def validate_invocation(record, claim, protocol, generation):
     require(record['kind'] == 'observed-private-heldout-generation'
             and record['claim_sha256'] == heldout.choose.sha(claim)
@@ -263,8 +279,7 @@ def run(bundle, decoder, protocol, paths, ready_file, resume=False):
                         if response.status == 200: break
                 except (urllib.error.URLError, TimeoutError): time.sleep(1)
             else: raise TimeoutError('registered server did not become ready')
-            server_record = process(server.pid)
-            check_process(server_record, server_command(claim), paths['server_dir'] + '/llama-server', str(root), os.getpid())
+            server_record = observe_child(server, server_command(claim), paths['server_dir'] + '/llama-server', str(root), os.getpid())
             require(owns_listener(server.pid, PORT), 'the configured server does not own the model endpoint')
             require(file_identity(paths['model']) == model_file, 'selected model changed before generation')
             start = {'attempt': len(attempts) + 1, 'utc': now(), 'claim_sha256': heldout.choose.sha(claim),
@@ -276,8 +291,7 @@ def run(bundle, decoder, protocol, paths, ready_file, resume=False):
             with (attempt / 'route.log').open('wb') as log:
                 client = subprocess.Popen(client_command(claim, sys.executable), cwd=root, env=env,
                                           stdout=log, stderr=subprocess.STDOUT, pass_fds=(lock.fileno(), gpu.fileno()))
-            client_record = process(client.pid)
-            check_process(client_record, client_command(claim, sys.executable), start['python_exe'], str(root), os.getpid())
+            client_record = observe_child(client, client_command(claim, sys.executable), start['python_exe'], str(root), os.getpid())
             write(attempt / 'client.json', client_record)
             returncode = client.wait(timeout=12 * 3600)
             require(returncode == 0, 'original decoder failed; preserve its cache and diagnostics')

@@ -67,12 +67,19 @@ int main(int argc,char **argv) {
     root = tmp_path / 'execution'; (root / 't/recipes').mkdir(parents=True)
     (root / 't/spec_first.py').write_text('# synthetic fixture; no inference or reference execution\n')
     driver = root / 't/recipes/v6_server_route.py'
-    driver.write_text('''import hashlib,json,sys,time
+    driver.write_text('''import hashlib,json,os,sys,time
 from pathlib import Path
-time.sleep(.2)
 args=sys.argv[1:]; route=args[args.index('--')+1:]
 get=lambda xs,k: xs[xs.index(k)+1]
 root=Path.cwd(); tag=get(route,'--tag'); panel=Path(get(route,'--ids-file')); cache=Path(get(args,'--cache'))
+# Keep the harmless fixture alive until the parent has observed it. A fixed
+# sleep can finish before a busy parent gets a timeslice.
+deadline=time.monotonic()+10
+while True:
+ observed=list((root/'t/out/laptop-runs'/('private-heldout-'+tag)).glob('attempt-*/client.json'))
+ if any(json.loads(path.read_text())['pid']==os.getpid() for path in observed):break
+ if time.monotonic()>deadline:raise RuntimeError('fixture observation timed out')
+ time.sleep(.01)
 identity=get(args,'--identity'); sources={'t/spec_first.py':hashlib.sha256((root/'t/spec_first.py').read_bytes()).hexdigest()}
 protocol={'schema':1,'decoder':'llama.cpp-Q8_0','model':'dawnr-route','identity':identity,'route_args':route,
  'panel_sha256':hashlib.sha256(panel.read_bytes()).hexdigest(),'sources':sources,
@@ -159,3 +166,58 @@ def test_busy_shared_gpu_cannot_create_a_generation_claim(stand_in):
         fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
         with pytest.raises(BlockingIOError): launch.run(*stand_in)
     assert not list(root.glob('laptop-runs/private-heldout-*/claim.json'))
+
+
+def test_short_fixture_waits_for_parent_observation_under_scheduling_delay(stand_in, monkeypatch):
+    original = launch.process
+    def delayed(pid):
+        value = original(pid)
+        if any(arg.endswith('/v6_server_route.py') for arg in value['command']):
+            # A busy parent need not get a timeslice during the fixture's old
+            # fixed 200ms sleep. Real generation is not mocked into a proof.
+            import time
+            time.sleep(.4)
+            return original(pid)
+        return value
+    monkeypatch.setattr(launch, 'process', delayed)
+    result = launch.run(*stand_in)
+    assert result['attempts'][-1]['status'] == 'completed'
+
+
+def observation_fixture():
+    from types import SimpleNamespace
+    child = SimpleNamespace(pid=321, poll=lambda: None)
+    value = {'pid': 321, 'start_ticks': 15, 'command': ['/python','driver.py'],
+             'exe': '/python', 'cwd': '/work', 'parent_pid': 123}
+    args = (value['command'], value['exe'], value['cwd'], value['parent_pid'])
+    return child, value, args
+
+
+def test_transient_empty_argv_is_reobserved_but_never_accepted(monkeypatch):
+    child, value, args = observation_fixture()
+    observations = iter([{**value,'command':['']}, value])
+    monkeypatch.setattr(launch,'process',lambda pid:next(observations))
+    assert launch.observe_child(child,*args)==value
+
+
+def test_nonempty_wrong_identity_is_refused_without_retry(monkeypatch):
+    child, value, args = observation_fixture()
+    observations = iter([{**value,'command':['other']},value])
+    monkeypatch.setattr(launch,'process',lambda pid:next(observations))
+    with pytest.raises(ValueError,match='observed process differs'):launch.observe_child(child,*args)
+    assert next(observations)==value
+
+
+def test_unavailable_or_exited_child_cannot_supply_identity(monkeypatch):
+    child, value, args = observation_fixture()
+    monkeypatch.setattr(launch,'process',lambda pid:{**value,'command':['']})
+    with pytest.raises(ValueError,match='remained unavailable'):launch.observe_child(child,*args,timeout=0)
+    child.poll=lambda:0
+    with pytest.raises(ValueError,match='exited before'):launch.observe_child(child,*args)
+
+
+def test_reused_pid_during_identity_wait_is_refused(monkeypatch):
+    child, value, args = observation_fixture()
+    observations=iter([{**value,'command':['']},{**value,'start_ticks':16}])
+    monkeypatch.setattr(launch,'process',lambda pid:next(observations))
+    with pytest.raises(ValueError,match='identity changed'):launch.observe_child(child,*args)

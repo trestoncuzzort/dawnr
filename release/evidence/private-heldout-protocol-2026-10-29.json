@@ -29,7 +29,7 @@
   "required_all_seven": 12,
   "heldout_model_calls_started": false,
   "launcher_sources_sha256": {
-    "release_heldout_launch.py": "553e32d6fcfcc0746dee3be5f828681f6d8a6a2d2656a464ddc6742762cfb25e",
+    "release_heldout_launch.py": "a9c0b5b1b4f6eca0a4b30e4fd75cbcd33d9ab57d80b753134a27dc6147a06e20",
     "release_heldout_inputs.py": "a9bda01e56f69f2aff7ab974c7c2d7fb5bea5acbcf5804dbd1a5cc6807366206",
     "release_seed_selection.py": "8f0146ca8a72aeb54a49b49c14e304fb46281ec484afc13ea6e0186195f1c37c",
     "release_grading_inputs.py": "993101022a35f51b13fcab1fba259128bb3888c70dc916d650ee723f17582b46",

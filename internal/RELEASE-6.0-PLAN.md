@@ -70,6 +70,14 @@ to its tested revision. No real seed is selected, no final answer is generated,
 and no final grade is dispatched by this preparation.
 [Deployment](../release/evidence/private-heldout-tools-deployment-2026-10-29.json).
 
+Subsequent CI exposed a transient empty command line during child startup in
+that final-reading launcher. The exact process check correctly refused it.
+A bounded wait for the same child's populated arguments and a synchronized
+fixture pass 64 focused checks without relaxing any identity requirement.
+Replace the unused tool bundle and workflow pin only after the corrected
+revision passes CI. Training, generation inputs and selection remain unchanged.
+[Correction](../release/evidence/private-heldout-observation-fix-2026-10-29.json).
+
 **Operating clarification, 2026-10-25 UTC:** improve the existing dawnr incrementally as useful changes are found.
 Tested application, verifier and data improvements can land independently. A new set of weights is not required
 for an update. Section 3 governs changing the released weights and claiming model-quality gains; it does not

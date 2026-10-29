@@ -1,0 +1,20 @@
+{
+  "kind": "Correct a transient empty process command observation before any real final reading",
+  "failed_ci_run": 40973574348,
+  "failed_ci_job": "standard-library (ubuntu-latest, py3.12)",
+  "failure": "ValueError: observed process differs",
+  "local_reproduction": "A live child returned an empty command line while executable, working directory and parent matched. No empty identity was accepted.",
+  "failed_reproduction_sha256": "4cd9f31711ab335c33891973b9752390129a681d096513d21968a17d59d2145f",
+  "change": "Bounded re-observation only for empty argv, retaining one child PID/start time and all exact command/executable/cwd/parent checks; synchronize the harmless fixture with its observed-client record",
+  "focused_checks_passed": 64,
+  "model_proof_or_reference_calls": 0,
+  "real_final_reading_started": false,
+  "source_sha256": {
+    "t/recipes/release_heldout_launch.py": "a9c0b5b1b4f6eca0a4b30e4fd75cbcd33d9ab57d80b753134a27dc6147a06e20",
+    "t/test_release_heldout_launch.py": "e26b6d618060d7373a6d6e8e270fb5cbac815e576e18cf1e02c1154fcc92800f",
+    "release/evidence/private-heldout-protocol-2026-10-29.json": "45fde31cd72d452f3cbc972472a92632adecc12a58b8a1f34dade03680f91f28"
+  },
+  "source": "https://github.com/torvalds/linux/blob/master/fs/proc/base.c",
+  "old_workflow_pin_superseded_before_use": "r61-heldout-20261029",
+  "updated_workflow_pin": "pending exact revision CI"
+}

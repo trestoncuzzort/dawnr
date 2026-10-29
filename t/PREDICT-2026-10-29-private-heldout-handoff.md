@@ -87,3 +87,17 @@ observer retain their process and source identities. No actual choice or claim
 exists. The private workflow is pinned at `r61-heldout-20261029`, revision
 `1e2b20e516c0d0d4c14599c1178f3dcd3ce0e39e`, whose CI passed.
 [Deployment evidence](../release/evidence/private-heldout-tools-deployment-2026-10-29.json).
+
+A later CI run exposed a transient empty command line during child startup.
+The local reproduction matched the other identity fields but read an empty
+argument list, so the exact identity check refused it. Linux's command-line
+reader can return no bytes before startup has populated those fields.
+The launcher now waits up to two seconds for an empty argument list, preserving
+the child PID and start time, and then requires every original identity check.
+Nonempty wrong commands, exited children and changed process identities still
+fail. The harmless fixture waits for its observed-client record before writing
+results, replacing a fixed 200 ms sleep. All 64 focused controls pass.
+The earlier unused deployment and workflow pin are preserved and superseded;
+the corrected exact revision must pass CI before its replacement is used.
+No model was selected and no final reading started.
+[Observation fix](../release/evidence/private-heldout-observation-fix-2026-10-29.json).
