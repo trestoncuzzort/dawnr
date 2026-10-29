@@ -70,6 +70,17 @@ Twenty-three focused checks cover this transport, immutable result binding,
 exclusive import and harmless process controls. The actual adapter is not yet
 complete or imported. [Handoff checks](../release/evidence/parallel-seed2-handoff-2026-10-29.json).
 
+The observed H100 rate may exceed its original eight-hour bound. Register one
+conditional continuation of seed 2, with unchanged inputs and training code,
+from the latest complete checkpoint at step 1,900 or later. Only the exact
+original execution timeout permits it; observation timeouts do not. Stop the
+original dedicated container before validating the checkpoint and retain all
+optimizer, scheduler and random states. The additional GPU call is bounded to
+90 minutes with no retries, within a revised $50 Modal planning allowance.
+Fourteen software controls pass. No continuation has been allocated and no
+model-quality requirement changes.
+[Continuation registration](../release/evidence/parallel-seed2-continuation-2026-10-29.json).
+
 Before launch, the cache-seeding receipt bug was reproduced and corrected. The cloud
 checkout includes that correction and records the new seeder hash. The frozen trainer
 digest, data, recipe and release criteria above are unchanged. See

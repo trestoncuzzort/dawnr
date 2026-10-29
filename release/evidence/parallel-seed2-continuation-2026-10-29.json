@@ -1,0 +1,30 @@
+{
+  "kind": "Conditional continuation for the same parallel training seed",
+  "source_sha256": {
+    "out/r61/modal_candidate_b_seed2_resume.py": "56656cd3b8eddace585b2413e6ddcb3bd7005621f2b79cf09ae3d257a865ee1c",
+    "out/r61/seed2_resume_controls.py": "8093335c4fc377cbea1d8ac9e5709548a3625bfce270432881bc383cb94db63e"
+  },
+  "original_source_sha256": "a7e414c155289da606fa007924519772aae452f59fbcdfffe63013ea1097d337",
+  "maximum_extra_gpu_seconds": 5400,
+  "minimum_checkpoint_step": 1900,
+  "required_final_steps": 2160,
+  "total_modal_planning_cap_before_tax_usd": 50,
+  "focused_controls_passed": 14,
+  "guards": [
+    "Only the exact original execution timeout is eligible; polling timeouts are waits",
+    "Original dedicated app must be stopped and have zero containers before checkpoint validation",
+    "Latest checkpoint must be complete, finite and immutable; no silent fallback",
+    "Restore identical data, seed, optimizer, scheduler and random states through the original trainer",
+    "One journaled continuation call, no automatic retries",
+    "Exact result/checkpoint provenance and original validated handoff before adoption"
+  ],
+  "checkpoint_100_members_present": true,
+  "actual_continuation_allocations": 0,
+  "model_selected": false,
+  "heldout_started": false,
+  "sources": [
+    "https://modal.com/docs/examples/long-training",
+    "https://modal.com/docs/guide/timeouts",
+    "https://modal.com/docs/guide/volumes"
+  ]
+}

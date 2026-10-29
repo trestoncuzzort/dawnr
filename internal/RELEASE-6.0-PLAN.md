@@ -45,6 +45,16 @@ it into the original job. The import keeps the original worker checks and
 prevents the serial wrapper from training seed 2 again. Its 23 software controls
 pass; the real model transfer remains pending on completion.
 
+Observed H100 throughput projects slightly beyond the original eight-hour call
+bound. Prepare one continuation of the same seed from its latest complete
+checkpoint, only after that exact call reaches its runtime limit and its
+container stops. Require at least step 1,900, preserve the original trainer,
+data, optimizer, scheduler and random states, and bound the continuation to
+90 minutes. This raises the Modal planning allowance from $40 to $50 under
+the existing compute authorization. Fourteen software controls pass; no extra
+GPU call has been made. The original job and its limit remain unchanged.
+[Continuation controls](../release/evidence/parallel-seed2-continuation-2026-10-29.json).
+
 **Operating clarification, 2026-10-25 UTC:** improve the existing dawnr incrementally as useful changes are found.
 Tested application, verifier and data improvements can land independently. A new set of weights is not required
 for an update. Section 3 governs changing the released weights and claiming model-quality gains; it does not

@@ -1,5 +1,16 @@
 # Dawnr after the current candidate: the next release cycle
 
+Runtime follow-up, October 29: observed H100 throughput projects beyond the
+original eight-hour function bound. Modal documents resuming from saved volume
+checkpoints. The registered trainer already restores its optimizer, scheduler
+and random states. Prepare one 90-minute continuation of the same second seed,
+only after the exact original call reaches its limit and its container stops.
+Refuse incomplete checkpoints, changed inputs, and uncertain dispatches. The
+working goal now includes this conditional recovery, within a $50 Modal planning
+allowance; no extra GPU was allocated by the preparation. See the
+[continuation controls](../release/evidence/parallel-seed2-continuation-2026-10-29.json)
+and Modal's [resumable training example](https://modal.com/docs/examples/long-training).
+
 Finish the registered two-seed candidate and its release decision first. The next
 data experiment should make the internal Cohere teacher better at producing valid,
 useful specifications. Test type and scope restrictions, then problem-matched
