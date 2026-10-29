@@ -1,0 +1,22 @@
+{
+  "kind": "Completed parallel-seed adapter handoff validation",
+  "focused_checks_passed": 23,
+  "source_sha256": {
+    "out/r61/collect_modal_seed2.py": "b24aad4d53ee4cdcfb490b6a98fb1de5c16c93da16e7035e73bd86fc9c5b7402",
+    "out/r61/adopt_modal_seed2.py": "88f36a17191933a20cda5cff8fa4566ba8ca1c691748c1659115350ce9c9a588",
+    "out/r61/test_collect_modal_seed2.py": "6767850afa2806793b9b147e42486e8d6889ca9fa71d0f3c0e15bfaaa7a5e040",
+    "out/r61/test_adopt_modal_seed2.py": "0fc9aaeb0c3e39522677ccdf60662c043c9c3d141ff3bb4b1bf119d3c5ca148c"
+  },
+  "actual_model_reference_or_proof_calls": 0,
+  "harmless_process_check": "A test shell alone is paused and resumed while its sleeping child continues; error paths also resume it.",
+  "cloud_capabilities_verified": [
+    "Linux stable process handles",
+    "atomic exclusive directory rename",
+    "more than 8 GiB free staging space",
+    "unchanged worker and orchestration hashes",
+    "original service still active; seed 2 directory absent"
+  ],
+  "initial_test_failure": "The test paused its shell before the sleeping child was created; it now waits for the child before checking that only the parent is stopped.",
+  "actual_adapter_adopted": false,
+  "remaining": "The original Modal training call must complete; then every adapter byte and the original worker completion checks must pass before atomic adoption."
+}

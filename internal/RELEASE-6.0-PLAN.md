@@ -39,6 +39,12 @@ serial second-seed run. Measure actual throughput before revising the release
 ETA. This scheduling amendment precedes any candidate evaluation; it does not
 add a third seed or allocate another teacher trial.
 
+The H100 second seed has started after its remote preflight passed. A collector
+now waits on that exact call and verifies the completed adapter before importing
+it into the original job. The import keeps the original worker checks and
+prevents the serial wrapper from training seed 2 again. Its 23 software controls
+pass; the real model transfer remains pending on completion.
+
 **Operating clarification, 2026-10-25 UTC:** improve the existing dawnr incrementally as useful changes are found.
 Tested application, verifier and data improvements can land independently. A new set of weights is not required
 for an update. Section 3 governs changing the released weights and claiming model-quality gains; it does not

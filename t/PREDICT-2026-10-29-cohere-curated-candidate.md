@@ -56,6 +56,20 @@ checkpoints rather than starting an unregistered replacement.
 [Modal training pattern](https://modal.com/docs/examples/long-training),
 [current pricing](https://modal.com/pricing).
 
+The parallel call is now active after its remote input/tokenizer checks passed.
+The completion collector observes that original call only. On success it verifies
+the final manifest and every adapter file, then sends the bounded archive to the
+original cloud host. The unchanged worker rechecks the completed run and finite
+tensors before an atomic import that refuses an existing second-seed directory.
+Only the orchestration shell is briefly held during that import; its first-seed
+training child continues. The shell is resumed through a stable process handle,
+with a recovery record for an interrupted handoff. The ordinary worker will then
+read the completed second seed and skip duplicate training.
+
+Twenty-three focused checks cover this transport, immutable result binding,
+exclusive import and harmless process controls. The actual adapter is not yet
+complete or imported. [Handoff checks](../release/evidence/parallel-seed2-handoff-2026-10-29.json).
+
 Before launch, the cache-seeding receipt bug was reproduced and corrected. The cloud
 checkout includes that correction and records the new seeder hash. The frozen trainer
 digest, data, recipe and release criteria above are unchanged. See
