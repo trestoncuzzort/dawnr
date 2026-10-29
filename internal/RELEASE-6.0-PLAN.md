@@ -92,6 +92,14 @@ reference commands. One cloud software control and a matched regrade of the six
 saved baseline parts are registered before candidate use. The running collector
 keeps its prior frozen workflow until those controls validate an amendment.
 
+Research for the following release cycle is in
+[the October 29 next-step note](RESEARCH-2026-10-29-next-release.md). It prioritizes
+type/scope restrictions and matched example retrieval inside the Cohere teacher,
+then a reading of the existing repair training. Its proposed trials and spending
+caps do not change the current candidate or allocate a new run. A read-only
+training census located all 339 inherited unparsed blocks in prompts, with none
+in chosen targets; this resolves their location, not their behavioral audit gap.
+
 ## 1. What 6.0 is
 
 dawnr has shipped through one rolling channel whose model is dawnr v5. Since v5, five candidate lines were trained

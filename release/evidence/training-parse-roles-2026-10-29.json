@@ -1,0 +1,29 @@
+{
+  "dataset_sha256": "18f3b204abd15c8e497c83840f909877ce5d131a8c23ce6c8633a117e5dbb4f9",
+  "rows": 6954,
+  "source_counts": {
+    "corpus": 465,
+    "debug": 1196,
+    "graded": 932,
+    "proof-py": 932,
+    "python": 1129,
+    "spec": 1662,
+    "spec-repair-reference": 27,
+    "spec-repair-tests": 498,
+    "teacher-spec": 113
+  },
+  "distinct_blocks": 5505,
+  "unparsed_distinct_blocks": 339,
+  "unparsed_by_roles": {
+    "prompt": 339
+  },
+  "target_rows_with_unparsed_blocks_by_source": {},
+  "model_reference_or_prover_calls": 0,
+  "scope": "Fenced t syntax only. Does not establish static validity, intent, or absence of contamination.",
+  "sources": {
+    "t/recipes/row_parse_roles.py": "42bfd797de10a9d29aa5a34dd4a5a502529728f5f20fa36b4863e306bca8bcb1",
+    "t/heldout_audit.py": "252fc9eb23a806226a6eb91ddb3e32cc5ce7d3715f44cfb3cb830f77b9c25c67",
+    "t/surface.py": "14b7a852d54689fdca9342967780a65edeae8272778a55d99caf11a517b11a68",
+    "t/student_sft.py": "e43c27df1ee1e796b1799d38a16e0c5725dd09df762be3fabb2940ad8cb4a46f"
+  }
+}
