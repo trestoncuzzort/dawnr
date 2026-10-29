@@ -27,6 +27,35 @@ final recipe and finite adapter tensors. It reuses the original trainer, exporte
 Its private input manifest SHA-256 is `cb3c1969978bdf7285a717cb1fd1da1abf7b7bae17b2caab99ff4a5ce000fafe`.
 Training and model decoding run on cloud compute; no new training runs on the laptop or desktop.
 
+### Parallel second seed, requested before candidate measurements
+
+On October 29 the user requested faster execution. Seed 1 is already running on
+the L4. Move the unstarted second seed to one Modal H100 concurrently, using the
+same frozen input manifest, original worker and trainer bytes, pinned Python
+packages, reference kernels, optimizer settings, row window and seed 2. This is
+a hardware and scheduling amendment, not an added seed or a data change. Record
+the actual device and package versions; it does not establish an isolated causal
+effect of the training data or hardware.
+
+Before GPU execution, remotely verify all input digests and the 6,904 fitting
+rows. Bound the H100 call to eight hours with no automatic retry and a $40
+planning allowance, including CPU and memory. The existing Modal account's
+monthly free credits are used, so this is paid compute under the user's compute
+authorization. Independently verify the completed adapter and import it into the
+original seed-2 location before its serial worker would train it. Prevent a
+duplicate second-seed run; preserve any interrupted attempt and its diagnostics.
+Export, decode, grade and apply the existing release decision on the original
+registered pipeline. All five release conditions stay in force.
+
+Prediction before launch: the second seed completes within eight hours and
+before the original first seed. A measured progress interval will refine the ETA;
+hardware specifications alone are not a throughput measurement. If the remote
+call fails or the adoption checks disagree, preserve that failure and its
+checkpoints rather than starting an unregistered replacement.
+[Execution and cost receipt](../release/evidence/parallel-seed2-inputs-2026-10-29.json),
+[Modal training pattern](https://modal.com/docs/examples/long-training),
+[current pricing](https://modal.com/pricing).
+
 Before launch, the cache-seeding receipt bug was reproduced and corrected. The cloud
 checkout includes that correction and records the new seeder hash. The frozen trainer
 digest, data, recipe and release criteria above are unchanged. See

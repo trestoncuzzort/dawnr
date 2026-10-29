@@ -31,6 +31,14 @@ restart to change that runtime limit, so the training run and its 48-hour limit
 stay in place. This adds a $5 storage planning allowance and a seven-day cleanup
 review; cleanup remains required work.
 
+The user's subsequent speed request adds a current priority: train the already
+registered second seed concurrently on a bounded H100 call while the first seed
+continues on its L4. Preserve all data, training settings and release conditions,
+verify the completed second adapter before adoption, and prevent a duplicate
+serial second-seed run. Measure actual throughput before revising the release
+ETA. This scheduling amendment precedes any candidate evaluation; it does not
+add a third seed or allocate another teacher trial.
+
 **Operating clarification, 2026-10-25 UTC:** improve the existing dawnr incrementally as useful changes are found.
 Tested application, verifier and data improvements can land independently. A new set of weights is not required
 for an update. Section 3 governs changing the released weights and claiming model-quality gains; it does not
