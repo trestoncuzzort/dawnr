@@ -51,6 +51,22 @@ worker hashes were unchanged. No export or answer-identity group exists yet;
 the actual generation-binding prediction remains pending.
 [Deployment receipt](../release/evidence/model-identity-observer-deployment-2026-10-29.json).
 
+Before using the recovered groups for selection, predict that a content reader
+accepts consistent export/training/process/answer records and refuses a changed
+seed, weight digest, recipe, source registration, process command, listener or
+answer set. The spec33 weight digest must match the seed's final export as well
+as its development and precision measurements. A model label cannot substitute
+for any of those bindings. Recovery must retain the authenticated object digest,
+generation number and complete payload manifest; no new inference follows from
+this check.
+
+The receiver now has 24 content checks. Together with the updated selection and
+grade-audit checks, 83 focused tests pass. The private collector's 16 checks cover
+safe recovery and binding all eight measurements for a seed to the observed
+export, including refusal of a different specification answer file. A live
+read-only probe sees no completed identity or candidate grading groups yet.
+Neither a model decision nor a held-out reading has started.
+
 Sources: `t/recipes/v6_spec_route.py`, `t/recipes/spec33.sh`,
 `t/score_spec_given.py`, the registered training worker and backup procedure,
 and [Linux process metadata](https://docs.kernel.org/filesystems/proc.html).

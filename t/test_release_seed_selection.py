@@ -71,6 +71,7 @@ def evidence():
         generation = {"development_models": {choose.tag_for(prefix, p, offset): model
                       for p in ("dev-95", "wider-145") for offset in choose.OFFSETS},
                       "precision_model_sha256": model, "precision_input_asset_sha256": "a" * 64,
+                      "spec33_model_sha256": model, "spec33_identity_sha256": "d" * 64,
                       "precision_input_manifest": manifest, "spec33_answers_sha256": "b" * 64,
                       "spec33_input_manifest_sha256": "c" * 64}
         seeds[s] = {"export": export, "precision": precision, "precision_receipt": precision_receipt,
@@ -146,10 +147,12 @@ def test_changed_or_incomplete_development_report_is_refused(evidence, field):
     with pytest.raises(ValueError): decide(evidence)
 
 
-@pytest.mark.parametrize("change", ["model", "part", "checkpoint", "dataset", "precision-source", "spec-source", "spec-panel", "missing-cell", "precision-ratio", "precision-nan"])
+@pytest.mark.parametrize("change", ["model", "spec-model", "spec-identity", "part", "checkpoint", "dataset", "precision-source", "spec-source", "spec-panel", "missing-cell", "precision-ratio", "precision-nan"])
 def test_unmatched_or_malformed_seed_evidence_is_refused(evidence, change):
     data = evidence[3][1]
     if change == "model": data["generation_audit"]["precision_model_sha256"] = "2" * 64
+    elif change == "spec-model": data["generation_audit"]["spec33_model_sha256"] = "2" * 64
+    elif change == "spec-identity": data["generation_audit"]["spec33_identity_sha256"] = "label-only"
     elif change == "part": data["generation_audit"]["development_models"].popitem()
     elif change == "checkpoint": data["export"]["adapter"]["step"] = 100
     elif change == "dataset": data["export"]["adapter"]["data_sha256"] = "d" * 64

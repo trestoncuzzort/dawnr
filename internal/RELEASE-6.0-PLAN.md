@@ -121,6 +121,14 @@ Its startup checks passed; the completed identity records still await generation
 Those records must be recovered and audited before a model label can satisfy the
 selection evidence requirements.
 
+The [identity content reader](../t/recipes/release_model_identity.py) now checks
+the recovered training/export records and the observed spec33 invocation. The
+selection guard requires its spec33 weight digest to equal the final export,
+development and precision digests, and binds the identity receipt itself. The
+result collector recovers the four identity groups and produces a deterministic
+per-seed generation audit only after all eight measurements agree. Its completed
+state requires both seeds' bindings; it does not make a release decision itself.
+
 The frozen development grader rejected complete zero-task outputs. The
 [zero-task repair](../t/PREDICT-2026-10-29-empty-grading.md) records those as zero
 coverage through the existing scorer, retaining the original nonempty proof and

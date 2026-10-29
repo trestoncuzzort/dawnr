@@ -161,7 +161,7 @@ def decide(registration, development, ids, seeds, evidence_hashes):
     """Select only after the caller independently audits all referenced artifacts.
 
     seeds[number] contains the exact export receipt, precision result, spec33
-    receipt, and the model SHA observed in each development part and precision run.
+    receipt, and the model SHA observed in each development, precision and spec33 run.
     evidence_hashes binds those independently audited inputs for the later freeze.
     """
     require(set(registration["seeds"]) == {"1", "2"} and set(seeds) == set(SEEDS)
@@ -190,7 +190,9 @@ def decide(registration, development, ids, seeds, evidence_hashes):
         expected_parts = {tag_for(prefix, panel, offset) for panel in ("dev-95", "wider-145") for offset in OFFSETS}
         require(set(generation["development_models"]) == expected_parts
                 and set(generation["development_models"].values()) == {model_sha}
-                and generation["precision_model_sha256"] == model_sha, "a measurement used another model or omitted a part")
+                and generation["precision_model_sha256"] == model_sha
+                and generation["spec33_model_sha256"] == model_sha, "a measurement used another model or omitted a part")
+        check_digest(generation["spec33_identity_sha256"], "missing observed spec33 identity binding")
         precision_receipt = data["precision_receipt"]
         require(precision_receipt["grader_commit"] == "01c94ef5509fc51ab6484c1350c1cb9f8504e459"
                 and precision_receipt["procedure"] == {"pool": "v5", "draws": 200, "per_problem": 3, "jobs": 4}
