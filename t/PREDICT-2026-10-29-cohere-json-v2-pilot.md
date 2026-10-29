@@ -44,3 +44,31 @@ requires training and the existing release qualification protocol; this teacher 
 Sources: `t/PREDICT-2026-10-25-cohere-json-pilot.md`, `t/PREDICT-2026-10-29-cohere-json-v2.md`,
 `t/recipes/cohere_json_audit.py`, `t/recipes/prepare_release_rows.py`, and
 [Command A API pricing](https://docs.cohere.com/docs/command-a).
+
+## Result: expansion refused
+
+Run `40897787213` completed successfully as a workflow, but failed the experiment's
+coverage, novelty, efficiency and conversion predictions. It accounted for all 50
+problems and 500 logical requests: 498 charged responses and two HTTP 422 replies,
+with $11.410546 recorded. Five responses reached the token limit; none hit the
+spending ceiling. All 571 source/data hashes, expected requests, wire requests,
+saved conversions and recorded billed units reconcile.
+
+Only two problems and three specifications passed the strict check. Both problems
+already have fitting specification rows in the frozen 6,954-row baseline and the
+current 6,956-row archive. Novel fitting coverage and added rows are therefore zero.
+The yield is 17.53 strict problems per $100, below 62; conversion acceptance is
+142/500 (28.4%), below 80%. The accounting/error-rate conditions pass. No changed
+dataset exists to audit, and no additional rows are admitted.
+
+Of 356 refused conversions, 347 failed the unchanged static contract checks.
+The recurring failures concern library argument types, name scope and missing
+termination measures in recursive specification helpers. Named operands alone did
+not produce useful new coverage. Keep this failed measurement, do not expand the
+same recipe, and register any feedback-based repair experiment separately.
+
+The independent two-seed model run continues on its frozen data. This result says
+nothing about that model's quality. Billing refers to preserved recorded charges;
+physical API retry attempts are not observable from final replies.
+
+[Aggregate result and verification](../release/evidence/cohere-json-v2-pilot-result-2026-10-29.json).

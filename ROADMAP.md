@@ -26,8 +26,10 @@ check. It removes 124 invalid targets and 45 duplicate pairs while preserving ta
 all other row kinds, then adds one recovered Cohere specification and its reference-Python row. Of these rows, 6,906 fit the unchanged training window. The full panel/GPL audit has no
 findings and retains the 339 inherited unparsed blocks in other row kinds. Counts, limits and verification
 evidence are in the [curation receipt](release/evidence/inherited-spec-curation-2026-10-25.json) and
-[the recovered-data receipt](release/evidence/cohere-json-salvage-2026-10-29.json). The model candidate and
-running Cohere JSON-v2 trial retain their separately registered 6,954-row inputs.
+[the recovered-data receipt](release/evidence/cohere-json-salvage-2026-10-29.json). The two-seed model
+candidate is training on its separately registered 6,954-row input. The completed Cohere JSON-v2 trial
+failed its expansion targets: two strict problems, both already covered, and no added rows. The unchanged
+teacher recipe is not expanded ([result](release/evidence/cohere-json-v2-pilot-result-2026-10-29.json)).
 
 ## Current priorities
 

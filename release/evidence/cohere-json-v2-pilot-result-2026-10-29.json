@@ -1,0 +1,64 @@
+{
+  "status": "failed_expansion_gate",
+  "run_id": 40897787213,
+  "revision": "e291889590f20b89d68732f1e587b9a3a5afc4f5",
+  "artifact_id": 12919531047,
+  "artifact_sha256": "de5fe8b3bb281a0ee768eee4b9538a41fcd188d34706b73d62d00de08766d30f",
+  "expected_requests_sha256": "e85e392100f84d0375e8016210ccd1a23a1e3181804e177c0a50f637be024801",
+  "audit_sha256": "fef080a88a70154d4cdcbae4b675940b02fb3b4e6548eb004137b637db9ec5c2",
+  "source_hashes_verified": 571,
+  "panel_problems": 50,
+  "logical_requests": 500,
+  "provider_successful_responses": 498,
+  "provider_error_replies": 2,
+  "error_kinds": {
+    "HTTP 422": 2
+  },
+  "finish_reasons": {
+    "COMPLETE": 493,
+    "MAX_TOKENS": 5
+  },
+  "conversion_statuses": {
+    "refused": 356,
+    "accepted": 142
+  },
+  "accepted_conversion_fraction": 0.284,
+  "static_contract_refusals": 347,
+  "other_conversion_refusals": 9,
+  "strict_kept_problems": 2,
+  "strict_kept_specifications": 3,
+  "recorded_usd": "11.410546",
+  "strict_kept_problems_per_100_usd": 17.53,
+  "novel_problems_vs_frozen_baseline": 0,
+  "novel_fitting_problems_vs_frozen_baseline": 0,
+  "base_rows": 6954,
+  "base_sha256": "18f3b204abd15c8e497c83840f909877ce5d131a8c23ce6c8633a117e5dbb4f9",
+  "current_accepted_rows": 6956,
+  "current_accepted_sha256": "5b961478df43b2e206b64ed108692173bc3c5b1dd30a69aee88ba57b35dfe293",
+  "rows_added": 0,
+  "dataset_decision": "Both kept problems already have fitting specification rows. The existing row builder skips covered problems. No dataset was changed or newly audited.",
+  "expansion_gate": {
+    "at_least_8_strict_problems": false,
+    "at_least_4_novel_fitting_problems": false,
+    "at_least_62_strict_problems_per_100_usd": false,
+    "all_50_problem_ids_accounted": true,
+    "all_500_logical_requests_accounted": true,
+    "no_ceiling_cutoff": true,
+    "provider_errors_at_most_5_percent": true,
+    "token_limit_finishes_at_most_5_percent": true,
+    "complete_recorded_billing_evidence": true,
+    "new_dataset_audit": "not applicable: no eligible additions"
+  },
+  "conversion_diagnostic_80_percent": false,
+  "audit_checks": {
+    "all_expected_requests_match": true,
+    "all_wire_requests_match": true,
+    "all_saved_conversions_match": true,
+    "all_billed_units_and_recorded_charges_match": true
+  },
+  "billing_match_basis": "multiset of model, tag, billed input/output and rounded charge; no request IDs",
+  "physical_api_attempts": "not observable from final replies; proxy may retry",
+  "cost_scope": "recorded charges, not a provider invoice",
+  "decision": "Do not expand the unchanged generation recipe. Preserve the checked alternatives privately; investigate static feedback as a separately registered intervention.",
+  "running_candidate": "The registered 6954-row model training continues unchanged; this teacher result is not a model-quality measurement."
+}

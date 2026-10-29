@@ -40,6 +40,15 @@ build and audit. This adds two rows, taking the accepted archive to 6,956 (6,906
 zero audit findings and the same inherited unparsed count. The model candidate and live `json-v2` trial each
 retain their frozen 6,954-row inputs. [Data increment](../release/evidence/cohere-json-salvage-2026-10-29.json).
 
+The `json-v2` yield trial has now finished: two strict problems and three specifications
+for $11.410546 recorded, with 142/500 accepted conversions. Both problems were already
+covered, so it adds no rows. Coverage, novelty, efficiency and conversion targets fail;
+the unchanged recipe is not expanded. Of 356 conversion refusals, 347 are static
+contract errors. [Trial result](../release/evidence/cohere-json-v2-pilot-result-2026-10-29.json).
+The separately registered candidate is training on approved cloud compute, with both
+seeds and all release conditions unchanged. Its initial encrypted backup was recovered
+and verified against all nine original input files before the first checkpoint.
+
 ## 1. What 6.0 is
 
 dawnr has shipped through one rolling channel whose model is dawnr v5. Since v5, five candidate lines were trained
