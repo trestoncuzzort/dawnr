@@ -1,0 +1,77 @@
+{
+  "workflow_run": 40931863402,
+  "revision": "44dcc3db52be0495b61a2f25bd9cccb3e4972d50",
+  "artifact_id": 12924486061,
+  "artifact_sha256": "9e61b295547cb1fd2589997ac61cadd07843a7800834c923207d3644d298d404",
+  "source_hashes_verified": 581,
+  "recorded_usd": "1.838487",
+  "arms": {
+    "fresh": {
+      "logical_requests": 35,
+      "conversions": {
+        "refused": 25,
+        "accepted": 10
+      },
+      "finishes": {
+        "COMPLETE": 35
+      },
+      "errors": {},
+      "recorded_usd": "0.822640",
+      "prestrict_problems": 0,
+      "strict_problems": 0,
+      "marginal_strict_problems_per_100_usd": 0.0
+    },
+    "feedback": {
+      "logical_requests": 35,
+      "conversions": {
+        "accepted": 8,
+        "refused": 27
+      },
+      "finishes": {
+        "COMPLETE": 35
+      },
+      "errors": {},
+      "recorded_usd": "1.015847",
+      "prestrict_problems": 0,
+      "strict_problems": 0,
+      "marginal_strict_problems_per_100_usd": 0.0
+    }
+  },
+  "paired": {
+    "feedback_wins": 0,
+    "feedback_losses": 0,
+    "both": 0,
+    "neither": 35,
+    "two_sided_exact_p": 1
+  },
+  "cumulative_strict_problems_per_100_usd": 15.095441305037129,
+  "predictions": {
+    "feedback_conversion_at_least_80_percent_and_above_fresh": false,
+    "feedback_strict_at_least_8": false,
+    "feedback_novel_fitting_at_least_4": false,
+    "paired_feedback_improvement": false,
+    "cumulative_yield_at_least_62": false
+  },
+  "new_accepted_rows": 0,
+  "cost_scope": "recorded charges, not a provider invoice",
+  "physical_api_attempts": "not observable from final replies; proxy may retry",
+  "kind": "Paired internal Cohere static-feedback trial; failed expansion decision",
+  "selection_sha256": "cb55bfc35e6d6cd16c292e236385b92cef7975ab9b746f62221d76728d667daa",
+  "expected_manifest_sha256": "a64e807eff46b84d3288a11b17a9d590c7f277d57c25a1a1149fd8a42026e2fc",
+  "logical_requests": 70,
+  "provider_errors": 0,
+  "token_limit_finishes": 0,
+  "ceiling_replies": 0,
+  "all_wire_conversion_and_billing_checks_passed": true,
+  "expansion_accepted": false,
+  "novel_fitting_problems": 0,
+  "strict_check_candidates": 0,
+  "failure_stage_counts": {
+    "static_contract": 52,
+    "visible_specification_gate": 16,
+    "unscorable": 1,
+    "reference_disagreement": 1
+  },
+  "accepted_dataset_rows": 6956,
+  "model_quality_claim": false
+}

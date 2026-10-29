@@ -89,3 +89,24 @@ Sources: `t/spec_repair.py`, `t/spec_first.py`, `t/recipes/v9_strict_specs.py`,
 `t/PREDICT-2026-10-21-repair-turn.md`,
 [Cohere Chat API](https://docs.cohere.com/reference/chat), and
 [SAFE](https://arxiv.org/abs/2410.15756).
+
+## Result
+
+The trial failed all five expansion predictions. Run `40931863402` completed all
+70 logical requests for $1.838487 recorded. Fresh sampling converted 10/35 replies;
+feedback converted 8/35. Neither arm kept a specification through the reference
+prefilter, so neither supplied any candidate to the strict check or a row build.
+There are no new fitting problems and no added training rows.
+
+Across both arms, 52 replies failed static checking, 16 failed the visible
+specification gate, one could not be scored, and one disagreed with its reference.
+All provider finishes were complete; there were no provider errors, token-limit
+finishes or ceiling refusals. The paired strict result is zero wins and zero
+losses, exact two-sided p = 1. Cumulative yield under the registered formula is
+15.10 strict problems per $100, below 62. The feedback recipe is not expanded.
+
+The downloaded artifact digest, all 581 frozen source/data hashes, exact requests,
+wire conversions, gate outputs and recorded billing passed the independent audit.
+Raw responses remain private. Billing reconciles recorded charges rather than a
+provider invoice; hidden physical retries remain unobserved. The accepted data and
+running model are unchanged. [Aggregate result](../release/evidence/cohere-static-feedback-result-2026-10-29.json).

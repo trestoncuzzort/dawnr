@@ -1,6 +1,7 @@
-# dawnr 6.0.0 and 6.0.1
+# dawnr 6.0.0, 6.0.1 and 6.0.2
 
 *6.0.1 (2026-10-24) carries the same model; its changes are in the application (release notes, `release/ROLLING.md`).*
+*6.0.2 carries that same model and fixes certificate handling and the internal data pipeline; it makes no new model-quality claim.*
 
 dawnr 6.0.0 is the first release numbered by version. Earlier releases were named "student" and "vN"; from here on a
 release is dawnr MAJOR.MINOR.PATCH, and every later one is measured against this one before it ships.
@@ -9,8 +10,8 @@ release is dawnr MAJOR.MINOR.PATCH, and every later one is measured against this
 sums listed in `dawnr.sha256`, the same sums the October 5 release published. Nothing trained since then has passed
 the qualification protocol yet, so this release does not claim a better model. What is new in 6.0.0 is the
 application around it, the version it carries, the installer, and a corrected account of what the October and later
-readings measured. The next model is in training as the 6.1.0 candidate
-([registration](../t/PREDICT-2026-10-24-release-6.1-candidate-a.md)); it ships only if it beats this one on the
+readings measured. The current model candidate is training on the audited Cohere-curated data
+([registration](../t/PREDICT-2026-10-29-cohere-curated-candidate.md)); it ships only if it beats this one on the
 measurements below.
 
 ## What the model does

@@ -1,0 +1,134 @@
+{
+  "kind": "Matched final laptop workload for the 6.0.2 patch release; no weight or model-quality change",
+  "procedure": "One cold six-command workload per application revision; same harness, repository-description workload, model bytes and server; isolated temporary configurations.",
+  "comparison": {
+    "both_workloads_succeeded": true,
+    "latency_ratio": 1.0071942446043165,
+    "peak_memory_ratio": 1.017725258493353,
+    "thermal_slowdown_absent": true,
+    "passes": true
+  },
+  "model_verification": {
+    "manifest_sha256": "b91407269c09d97c27c58757fa2f81bb5e3ac7e5e5b6b131b2a9a48be13e63fb",
+    "all_three_installed_shards_match_published_release": true,
+    "models": [
+      {
+        "file": "dawnr-6.0.0-00001-of-00003.gguf",
+        "sha256": "ff2d858f5994b1b615369c38ac0d42010243983f9e877f1d132c9510ceef6118",
+        "bytes": 1909010304
+      },
+      {
+        "file": "dawnr-6.0.0-00002-of-00003.gguf",
+        "sha256": "85b11773df20a3a7a2dab20235293e602f49d81d41c9a4c8a312b8a90c6ff1cd",
+        "bytes": 1898010016
+      },
+      {
+        "file": "dawnr-6.0.0-00003-of-00003.gguf",
+        "sha256": "cf3365cc053f7f1d4394ec4f7b6b1c2cc3593e404b03b212e1310802b8ef5b7f",
+        "bytes": 675382752
+      }
+    ],
+    "harness_sha256": "cf66d157e31a008c9bf56faf83615fca408fcd54465a7731b5da7b6b2a1435c8",
+    "baseline_revision": "672ffad98ad5ec701ede0e86cf3d25467b1cf35f",
+    "candidate_revision": "e95955827214723f251d504b79fd3037c16de285",
+    "baseline_tag_object": "32e7473ca16e3783a1f691b360246a5c6b9b8129"
+  },
+  "measurements": {
+    "baseline": {
+      "version": "6.0.1",
+      "harness_checkout_version": "6.0.2",
+      "application_revision": "672ffad98ad5ec701ede0e86cf3d25467b1cf35f",
+      "harness_sha256": "cf66d157e31a008c9bf56faf83615fca408fcd54465a7731b5da7b6b2a1435c8",
+      "commands": {
+        "doctor": {
+          "seconds": 3.7,
+          "rc": 0,
+          "ok": true
+        },
+        "ask": {
+          "seconds": 73.2,
+          "rc": 0,
+          "ok": true
+        },
+        "check": {
+          "seconds": 24.1,
+          "rc": 0,
+          "ok": true
+        },
+        "do": {
+          "seconds": 24.4,
+          "rc": 0,
+          "ok": true
+        },
+        "cite": {
+          "seconds": 2.0,
+          "rc": 0,
+          "ok": true
+        },
+        "calc": {
+          "seconds": 3.3,
+          "rc": 0,
+          "ok": true
+        }
+      },
+      "median_seconds": 13.9,
+      "all_succeeded": true,
+      "memory_total_gib": 15.3,
+      "memory_in_use_before_gib": 4.68,
+      "memory_in_use_peak_gib": 6.77,
+      "gpu_temperature_max_c": 71,
+      "gpu_sw_thermal_slowdown_seen": false,
+      "samples": 122,
+      "private_raw_receipt_sha256": "7ef357335a09a084d54759b58ee7279e5cbfd14c3f8115b1f6b47945ba86a7d8"
+    },
+    "candidate": {
+      "version": "6.0.2",
+      "harness_checkout_version": "6.0.2",
+      "application_revision": "e95955827214723f251d504b79fd3037c16de285",
+      "harness_sha256": "cf66d157e31a008c9bf56faf83615fca408fcd54465a7731b5da7b6b2a1435c8",
+      "commands": {
+        "doctor": {
+          "seconds": 1.2,
+          "rc": 0,
+          "ok": true
+        },
+        "ask": {
+          "seconds": 65.9,
+          "rc": 0,
+          "ok": true
+        },
+        "check": {
+          "seconds": 24.6,
+          "rc": 0,
+          "ok": true
+        },
+        "do": {
+          "seconds": 25.3,
+          "rc": 0,
+          "ok": true
+        },
+        "cite": {
+          "seconds": 1.9,
+          "rc": 0,
+          "ok": true
+        },
+        "calc": {
+          "seconds": 3.3,
+          "rc": 0,
+          "ok": true
+        }
+      },
+      "median_seconds": 14.0,
+      "all_succeeded": true,
+      "memory_total_gib": 15.3,
+      "memory_in_use_before_gib": 3.13,
+      "memory_in_use_peak_gib": 6.89,
+      "gpu_temperature_max_c": 75,
+      "gpu_sw_thermal_slowdown_seen": false,
+      "samples": 115,
+      "private_raw_receipt_sha256": "bf81e874803e7117eb8f47ed6d0641f0b930ae12b3f9773fe96080ec1244bab7"
+    }
+  },
+  "machine": "RTX 5050 Laptop GPU 8 GB, 16 cores, 15 GB memory",
+  "memory_scope": "Whole-machine memory in use sampled each second, not process RSS."
+}

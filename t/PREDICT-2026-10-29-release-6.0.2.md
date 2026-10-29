@@ -23,8 +23,9 @@ Before final laptop checks, predict:
 3. The release manifest matches the verified 6.0.1 asset byte for byte, and the
    three local model shards match its published SHA-256 values.
 4. The standard CI matrix and the clean Ubuntu/macOS install-smoke workflow pass
-   at the final release source. Install smoke exercises the published manifest
-   after publication; any failure remains visible and requires a fix.
+   at the release candidate source. Before publication, install smoke uses the
+   byte-identical manifest already published by 6.0.1. Independently verify the
+   6.0.2 manifest after publication. Any failure remains visible and requires a fix.
 
 Use the same current smoothness script and repository-description workload for
 both application revisions. The baseline uses a detached 6.0.1 checkout through
@@ -37,3 +38,17 @@ Sources: `internal/RELEASE-6.0-PLAN.md`'s operating clarification,
 `t/recipes/laptop_smoothness.sh`, `release/evidence/framac-certificate-import-2026-10-25.json`,
 `release/evidence/v5-certificate-control-2026-10-25.json`, and
 `t/PREDICT-2026-10-25-framac-certificate-binding.md`.
+
+## Final laptop result and installation-check schedule
+
+Predictions 1 to 3 held. Both fresh six-command workloads succeeded. Median command
+latency was 13.9 seconds for 6.0.1 and 14.0 for 6.0.2; peak whole-machine memory was
+6.77 and 6.89 GiB. Ratios 1.007 and 1.018 meet the 1.10 limits. Neither run reported
+software thermal slowdown. All three model shards and the unchanged manifest match
+the published hashes. [Matched receipt](../release/evidence/laptop-6.0.2-2026-10-29.json).
+
+Before any clean-install dispatch, prediction 4's schedule was amended to run the
+same workflow before publication using the verified identical 6.0.1 model manifest,
+then check the new published manifest. This moves installation validation ahead of
+shipping without changing its commands, inputs or pass conditions. Its outcome is
+still pending at this registration; no failed installation result was replaced.

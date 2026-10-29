@@ -85,3 +85,23 @@ twice as fast now. We also moved our Command A runs to cloud machines so they ru
 Command A Reasoning solved more of the pilot's problems, but its evaluation API quota is smaller. Reasoning is capped
 at 20 requests a minute and 1,000 calls a month.
 Is there a way to raise that for the grant?
+
+## 2026-10-29: dawnr 6.0.2 prepared for release
+
+- A patch release for the validated Frama-C certificate fix and internal data/evaluation pipeline. The released model files are unchanged.
+- The matched final laptop workload passed all six commands, with latency and memory within 10% of a fresh 6.0.1 baseline and no thermal slowdown.
+- A separate two-seed candidate is training in Google Cloud on 6,954 audited rows, including previously accepted Cohere specifications. Its model qualification is still pending.
+- The latest paired teacher experiment produced no accepted specifications for $1.838487 recorded. That recipe is closed; its failure and full accounting remain recorded.
+
+Draft for the user to send after the release page is live:
+
+Quick dawnr update. We put out 6.0.2 with a fix for a verifier that was refusing valid certificates
+and stronger checks around our internal training-data pipeline. The model files in this patch are the same.
+A new candidate is training on two seeds in Google Cloud using our audited data, including the Cohere examples
+that passed our checks. It still has to pass the release measurements before we ship those weights.
+
+We also tested giving Command A its exact checker error against asking for a fresh answer. Neither arm produced
+an accepted specification on those 35 problems, so we closed that recipe. The recorded cost was $1.84. We are
+keeping the failures with the useful results and will send the model measurements when qualification finishes.
+
+Release: https://github.com/trestoncuzzort/dawnr/releases/tag/v6.0.2

@@ -30,6 +30,9 @@ evidence are in the [curation receipt](release/evidence/inherited-spec-curation-
 candidate is training on its separately registered 6,954-row input. The completed Cohere JSON-v2 trial
 failed its expansion targets: two strict problems, both already covered, and no added rows. The unchanged
 teacher recipe is not expanded ([result](release/evidence/cohere-json-v2-pilot-result-2026-10-29.json)).
+The paired static-feedback follow-up also failed: neither feedback nor fresh
+sampling kept a specification on the 35 uncovered problems. It adds no rows and
+is not expanded ([result](release/evidence/cohere-static-feedback-result-2026-10-29.json)).
 
 ## Current priorities
 

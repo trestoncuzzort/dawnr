@@ -58,6 +58,18 @@ before expansion. Useful outputs still require a separate full data audit.
 The running model retains its frozen inputs. Its first saved checkpoint was also
 recovered and checked against all ten independently hashed source files.
 
+The paired static-feedback trial has finished and failed: feedback converted 8/35
+replies versus fresh sampling's 10/35, and neither arm produced a strict candidate.
+All 70 requests and $1.838487 recorded charges reconciled. It adds no rows and is
+not expanded. [Result](../release/evidence/cohere-static-feedback-result-2026-10-29.json).
+
+The independent 6.0.2 patch release is in final checks for the already validated
+Frama-C certificate repair and internal pipeline fixes. Its published-model bytes
+are unchanged. Fresh laptop workloads passed with latency and memory ratios below
+1.10 and no thermal slowdown. Clean Ubuntu/macOS installs precede publication.
+This ships useful bug fixes while the separately registered model trains; it does
+not complete the ongoing weight qualification objective.
+
 ## 1. What 6.0 is
 
 dawnr has shipped through one rolling channel whose model is dawnr v5. Since v5, five candidate lines were trained
