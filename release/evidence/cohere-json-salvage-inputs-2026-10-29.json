@@ -1,0 +1,19 @@
+{
+  "label": "dawnr-json-salvage-20261029",
+  "asset": "dawnr-json-salvage-20261029.tar.gz.enc",
+  "ciphertext_sha256": "26fa6990e972776f513ca0525a74e9af78607eb8fd393abde2ce1100748cf180",
+  "input_manifest_sha256": "3f494009e3b3e7f1b40fcaef1f20ef825802eb0ee737eff6030d81f05ea6e37c",
+  "base_rows": 6954,
+  "base_sha256": "18f3b204abd15c8e497c83840f909877ce5d131a8c23ce6c8633a117e5dbb4f9",
+  "source_workflow_run": 40160251665,
+  "source_artifact_sha256": "60a4b6c5a73db2cfea2c9d2ad80905aa1b50f337b5ae83a78abc5affd1b197b5",
+  "strict_problems": 3,
+  "strict_candidates": 5,
+  "new_specification_problems": 1,
+  "new_specifications": 1,
+  "expected_added_rows": 2,
+  "expected_total_rows": 6956,
+  "base_preserved": true,
+  "new_api_calls": 0,
+  "source_accounting": "frozen bf70e6d8 audit plus 516 files matched to a newly hash-verified artifact"
+}
