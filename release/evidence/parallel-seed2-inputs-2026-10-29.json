@@ -8,7 +8,7 @@
   "planning_cap_before_tax_usd": 40,
   "monthly_free_credits_already_used": 30,
   "funding": "Existing paid Modal account, not Google or Cohere credits.",
-  "source_sha256": "7f6cc061d3cb70dd5819fbeca7a9591fc2af936672db8cd714757cfde26eb7df",
+  "source_sha256": "a7e414c155289da606fa007924519772aae452f59fbcdfffe63013ea1097d337",
   "input_manifest_sha256": "90e8e5486cba022d15bd8bea54837ba20cdf23eed3b4e257c4c03990b516bae0",
   "trainer_sha256": "e43c27df1ee1e796b1799d38a16e0c5725dd09df762be3fabb2940ad8cb4a46f",
   "worker_sha256": "93f2a7f611970c7ca2eace4b71fc477957a56c9d28c2be054462ba9013fe9ad1",
@@ -24,5 +24,7 @@
   "kind": "Prospective parallel execution of the existing second training seed",
   "user_requested_speedup": true,
   "gpu_started": false,
-  "original_gcp_runtime_limit_unchanged": true
+  "original_gcp_runtime_limit_unchanged": true,
+  "initial_source_sha256": "7f6cc061d3cb70dd5819fbeca7a9591fc2af936672db8cd714757cfde26eb7df",
+  "pre_dispatch_image_fix": "Reuse the original image unchanged and pass execution environment to the child worker."
 }
