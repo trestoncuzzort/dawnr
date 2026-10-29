@@ -45,6 +45,12 @@ Twenty-one focused checks passed before deployment, including a harmless real
 process and listening socket. The observer also fingerprints the server's local
 shared libraries; it keeps metadata uploads separate from process observation.
 
+Deployment passed its startup check at 21:11 UTC. Both answer files were absent,
+the observer entered its running state, and the original training process and
+worker hashes were unchanged. No export or answer-identity group exists yet;
+the actual generation-binding prediction remains pending.
+[Deployment receipt](../release/evidence/model-identity-observer-deployment-2026-10-29.json).
+
 Sources: `t/recipes/v6_spec_route.py`, `t/recipes/spec33.sh`,
 `t/score_spec_given.py`, the registered training worker and backup procedure,
 and [Linux process metadata](https://docs.kernel.org/filesystems/proc.html).

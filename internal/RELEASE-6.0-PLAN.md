@@ -113,6 +113,14 @@ instrument requires, while retaining the 0.70 threshold. Artifact-origin checks,
 generation/model binding and collector integration remain explicit prerequisites
 before using this reader for selection.
 
+A [separate identity observer](../t/PREDICT-2026-10-29-model-generation-identity.md)
+is running on the approved cloud host before either spec33 generation starts.
+It will bind observed server/client processes, exact model bytes, fixed questions
+and complete answers, while preserving the current training and decoding recipe.
+Its startup checks passed; the completed identity records still await generation.
+Those records must be recovered and audited before a model label can satisfy the
+selection evidence requirements.
+
 The frozen development grader rejected complete zero-task outputs. The
 [zero-task repair](../t/PREDICT-2026-10-29-empty-grading.md) records those as zero
 coverage through the existing scorer, retaining the original nonempty proof and
