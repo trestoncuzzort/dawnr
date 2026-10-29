@@ -1,0 +1,135 @@
+name: heldout
+
+# One selected private final reading. Dispatch only after the registered choice
+# and generation audit. evaluate.yml prepares the unchanged kernel-image cache.
+# Input transport follows ceiling.yml; every diagnostic and answer is sealed.
+on:
+  workflow_dispatch:
+    inputs:
+      asset:
+        description: 'encrypted final-reading archive on eval-inputs'
+        required: true
+      sha256:
+        description: 'SHA-256 of that encrypted archive'
+        required: true
+      label:
+        description: 'the immutable selected generation tag'
+        required: true
+
+permissions:
+  contents: read
+
+concurrency:
+  group: private-heldout-${{ inputs.label }}
+  cancel-in-progress: false
+
+env:
+  ENGINE_COMMIT: d13d11d01f8f50687ef645d60aa08c870d664b84
+  GRADER_COMMIT: 1e033b50c2c53fb3d40932d9561e1a8eefe9aa7d
+
+jobs:
+  grade:
+    runs-on: ubuntu-latest
+    timeout-minutes: 360
+    env:
+      INPUT_ASSET: ${{ inputs.asset }}
+      INPUT_SHA256: ${{ inputs.sha256 }}
+      LABEL: ${{ inputs.label }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ env.GRADER_COMMIT }}
+      - name: the handoff checks from this exact workflow revision
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          path: handoff
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: validate the request and preserve private diagnostics
+        run: |
+          [[ "$INPUT_ASSET" =~ ^[A-Za-z0-9][A-Za-z0-9._-]*\.tar\.gz\.enc$ ]]
+          [[ "$INPUT_SHA256" =~ ^[0-9a-f]{64}$ ]]
+          [[ "$LABEL" =~ ^[A-Za-z0-9][A-Za-z0-9._-]*-heldout$ ]]
+          test "$GITHUB_RUN_ATTEMPT" = 1
+          test "$(git rev-parse HEAD)" = "$GRADER_COMMIT"
+          test "$(git -C handoff rev-parse HEAD)" = "$GITHUB_SHA"
+          echo '872304aa76f70b61b2af330a97dcbba39141c30a0b1fb58ed80c3e5af043bc47  .github/teacher-outputs.pub.pem' | sha256sum -c -
+          umask 077
+          mkdir -p out/heldout-grade
+      - name: the pinned problem pool and seven-kernel image
+        run: |
+          git lfs install --local
+          git lfs pull --include='nl/data/*.jsonl.gz'
+          sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /opt/hostedtoolcache/CodeQL
+          sudo mkdir -p /mnt/kernels && sudo chown "$USER" /mnt/kernels
+      - uses: actions/cache/restore@v4
+        with:
+          path: /mnt/kernels/kernels.tar.zst
+          key: kernels-${{ env.ENGINE_COMMIT }}
+          fail-on-cache-miss: true
+      - name: load the pinned image
+        run: zstd -dc /mnt/kernels/kernels.tar.zst | docker load && rm /mnt/kernels/kernels.tar.zst
+      - name: open the authenticated final reading and validate the selected seed
+        env:
+          GH_TOKEN: ${{ github.token }}
+          INPUT_KEY: ${{ secrets.DAWNR_PRIVATE_INPUTS_KEY }}
+        run: |
+          umask 077
+          test -n "$INPUT_KEY"
+          gh release download eval-inputs -p "$INPUT_ASSET" -D /tmp/private-in
+          printf '%s  %s\n' "$INPUT_SHA256" "/tmp/private-in/$INPUT_ASSET" | sha256sum -c -
+          key=$(mktemp)
+          trap 'rm -f "$key" /tmp/heldout-input.tar.gz' EXIT
+          printf '%s' "$INPUT_KEY" > "$key"
+          openssl enc -d -aes-256-cbc -pbkdf2 -iter 200000 -in "/tmp/private-in/$INPUT_ASSET" \
+            -out /tmp/heldout-input.tar.gz -pass "file:$key"
+          python3 handoff/t/recipes/release_heldout_grade.py prepare \
+            --archive /tmp/heldout-input.tar.gz --checkout "$PWD" --label "$LABEL" \
+            --protocol handoff/release/evidence/private-heldout-protocol-2026-10-29.json \
+            > out/heldout-grade/input-validation.log 2>&1
+          chmod a+rx out
+          chmod -R a+rwX t/out out/heldout-grade
+      - name: grade through the frozen proof and reference procedure
+        run: |
+          OUT="out/heldout-grade/v5-repair-20261021/proof-results/$LABEL"
+          mkdir -p "$OUT"
+          chmod a+rwx "$OUT"
+          docker run --rm -v "$PWD:/opt/dawnr" -w /opt/dawnr --memory=13g \
+            -e POOL=v5 -e T_MIN_KERNELS=7 -e T_SPARK_JOBS=1 \
+            -e PYTHONUNBUFFERED=1 -e PYTHONDONTWRITEBYTECODE=1 \
+            --entrypoint bash dawnr-kernels t/recipes/v6-grade.sh "$LABEL" \
+            t/out/release-6.0/clean-182.txt "$OUT" > out/heldout-grade/grade.log 2>&1
+          python3 handoff/t/recipes/release_heldout_grade.py finish \
+            --checkout "$PWD" --label "$LABEL" --asset-sha256 "$INPUT_SHA256" \
+            --workflow-revision "$GITHUB_SHA" --run-id "$GITHUB_RUN_ID" \
+            > out/heldout-grade/summary.log 2>&1
+          cat out/heldout-grade/summary.log
+      - name: seal every answer and diagnostic, including partial failures
+        if: always()
+        run: |
+          if [ ! -d out/heldout-grade ]; then exit 0; fi
+          [[ "$LABEL" =~ ^[A-Za-z0-9][A-Za-z0-9._-]*-heldout$ ]]
+          if [ -d "t/out/spec-experiment/$LABEL" ] && [ ! -d "out/heldout-grade/spec-experiment/$LABEL" ]; then
+            mkdir -p out/heldout-grade/spec-experiment
+            cp -a "t/out/spec-experiment/$LABEL" out/heldout-grade/spec-experiment/
+          fi
+          umask 077
+          mkdir -p /tmp/sealed
+          tar -czf /tmp/heldout-output.tar.gz out/heldout-grade
+          key=$(mktemp)
+          trap 'rm -f "$key" /tmp/heldout-output.tar.gz' EXIT
+          openssl rand -hex 32 > "$key"
+          openssl enc -aes-256-cbc -pbkdf2 -iter 200000 -salt -in /tmp/heldout-output.tar.gz \
+            -out /tmp/sealed/outputs.tar.gz.enc -pass "file:$key"
+          openssl pkeyutl -encrypt -pubin -inkey .github/teacher-outputs.pub.pem \
+            -pkeyopt rsa_padding_mode:oaep -pkeyopt rsa_oaep_md:sha256 \
+            -in "$key" -out /tmp/sealed/key.enc
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: heldout-${{ env.LABEL }}
+          path: /tmp/sealed
+          if-no-files-found: error
+          retention-days: 30

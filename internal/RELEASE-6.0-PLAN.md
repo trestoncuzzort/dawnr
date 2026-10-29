@@ -129,6 +129,15 @@ result collector recovers the four identity groups and produces a deterministic
 per-seed generation audit only after all eight measurements agree. Its completed
 state requires both seeds' bindings; it does not make a release decision itself.
 
+The [private final-reading handoff](../t/PREDICT-2026-10-29-private-heldout-handoff.md)
+now recomputes the qualified seed choice, binds one immutable generation claim,
+and prepares encrypted inputs for a separate frozen cloud grader. Its synthetic
+transport checks preserve complete zero-answer readings and reject changed or
+incomplete evidence. The workflow is prepared, not dispatched. Complete the
+matched grader controls, audited evidence assembly and selected-model launch
+binding before using it; its final result still needs the content audit and
+laptop checks. The 182-problem panel, 17-call limit and 17/12 score floors remain.
+
 The frozen development grader rejected complete zero-task outputs. The
 [zero-task repair](../t/PREDICT-2026-10-29-empty-grading.md) records those as zero
 coverage through the existing scorer, retaining the original nonempty proof and

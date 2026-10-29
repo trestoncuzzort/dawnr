@@ -1,0 +1,24 @@
+{
+  "kind": "Private final-reading handoff software validation",
+  "date": "2026-10-29",
+  "focused_checks_passed": 41,
+  "workflow_yaml_and_shell_parse": true,
+  "workflow_run_dispatched": false,
+  "synthetic_encrypted_input_round_trip": true,
+  "real_candidate_choice_created": false,
+  "model_or_reference_or_proof_calls": 0,
+  "source_sha256": {
+    "t/recipes/release_heldout_inputs.py": "2ce6a6abd095d58359ab59aa07538018883901ae8851fd7401d63542c6fd68a9",
+    "t/recipes/release_heldout_grade.py": "4666288f9b23a1459c594de7fbe12f70cb5c873a77b72cd27067dfb12da27fd0",
+    "t/test_release_heldout_inputs.py": "84cc67416cb5c6c525a3b99171a325f23998691a0c7cd2e30afddd990bd6fdc6",
+    "t/test_release_heldout_grade.py": "735b0dd388c88f04a29dfb68f435578134e972a51f4e1f5d259303a6fa9180f3",
+    ".github/workflows/heldout.yml": "673c4daf1f43eee922c83ce692c6bff7801c728e76f54318d62d62ffe10979d9"
+  },
+  "remaining": [
+    "matched frozen-grader baseline controls",
+    "audited evidence assembly",
+    "selected-model invocation and GPU launcher",
+    "private workflow execution and independent artifact audit",
+    "final laptop checks"
+  ]
+}

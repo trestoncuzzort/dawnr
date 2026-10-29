@@ -1,0 +1,31 @@
+{
+  "schema": 1,
+  "kind": "Registered one-selected-seed private final reading",
+  "candidate": "cohere-curated-20261029",
+  "training_rows_sha256": "18f3b204abd15c8e497c83840f909877ce5d131a8c23ce6c8633a117e5dbb4f9",
+  "development_panel_sha256": "eb333196e9d6b15da83befa5b8477e5ce11d2748fab8fc7173d605f1c0286426",
+  "heldout_panel_sha256": "837e2ac5a70980d2ac7b35a97af258997d153e7c755cd166555d232c371ad51f",
+  "generation_registration_sha256": "b9d265fd0d8794feee37645461ec0d517ccdf406e5fc7af717f79f117b1ad794",
+  "execution_revision": "b3e9b0d9d71f684d9c68c9334160827fcc501b66",
+  "server_revision": "f1cee9941b0e843ea260bf8dd9a090fbd9711b6a",
+  "settings": {
+    "PARALLEL": "4",
+    "CONCURRENCY": "4",
+    "BATCH": "16",
+    "SLOT_CTX": "4096",
+    "PYTHON_ATTEMPTS": "3",
+    "POOL": "v5",
+    "SEED": ""
+  },
+  "model_alias": "dawnr-route",
+  "python_attempts": 3,
+  "specification_samples": 5,
+  "kept_specifications": 3,
+  "implementation_samples_per_specification": 3,
+  "max_new_tokens": 1024,
+  "seed_offset": 0,
+  "logical_calls_per_problem": 17,
+  "required_clean": 17,
+  "required_all_seven": 12,
+  "heldout_model_calls_started": false
+}
