@@ -49,6 +49,15 @@ The separately registered candidate is training on approved cloud compute, with 
 seeds and all release conditions unchanged. Its initial encrypted backup was recovered
 and verified against all nine original input files before the first checkpoint.
 
+A bounded [paired static-feedback trial](../t/PREDICT-2026-10-29-cohere-static-feedback.md)
+is registered on 35 still-uncovered training problems: one correction using the
+previous static diagnostic and one fresh sample per problem. The verifier and
+reference gates remain unchanged. Feedback must beat fresh sampling on the paired
+strict result, as well as meet the declared coverage and cumulative-cost thresholds,
+before expansion. Useful outputs still require a separate full data audit.
+The running model retains its frozen inputs. Its first saved checkpoint was also
+recovered and checked against all ten independently hashed source files.
+
 ## 1. What 6.0 is
 
 dawnr has shipped through one rolling channel whose model is dawnr v5. Since v5, five candidate lines were trained

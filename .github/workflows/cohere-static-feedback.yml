@@ -1,0 +1,152 @@
+name: cohere-static-feedback
+
+# Internal paired experiment. Provider text and checker diagnostics are sealed.
+on:
+  workflow_dispatch:
+    inputs:
+      asset:
+        description: 'encrypted selection and expected-request archive on eval-inputs'
+        required: true
+      sha256:
+        description: 'registered encrypted archive SHA-256'
+        required: true
+      selection_sha256:
+        description: 'registered selection SHA-256'
+        required: true
+      expected_sha256:
+        description: 'registered expected-request SHA-256'
+        required: true
+      label:
+        description: 'unique paired-experiment label'
+        required: true
+
+permissions:
+  contents: read
+
+concurrency:
+  group: cohere-static-feedback-${{ inputs.label }}
+  cancel-in-progress: false
+
+jobs:
+  paired:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    env:
+      INPUT_ASSET: ${{ inputs.asset }}
+      INPUT_SHA256: ${{ inputs.sha256 }}
+      SELECTION_SHA256: ${{ inputs.selection_sha256 }}
+      EXPECTED_SHA256: ${{ inputs.expected_sha256 }}
+      TRIAL_LABEL: ${{ inputs.label }}
+      PYTHONPATH: t
+      PYTHONUNBUFFERED: '1'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: validate the registered trial
+        run: |
+          [[ "$INPUT_ASSET" =~ ^[A-Za-z0-9][A-Za-z0-9._-]*\.tar\.gz\.enc$ ]]
+          [[ "$INPUT_SHA256" =~ ^[0-9a-f]{64}$ ]]
+          [[ "$SELECTION_SHA256" =~ ^[0-9a-f]{64}$ ]]
+          [[ "$EXPECTED_SHA256" =~ ^[0-9a-f]{64}$ ]]
+          [[ "$TRIAL_LABEL" =~ ^[A-Za-z0-9][A-Za-z0-9._-]*$ ]]
+          test "$GITHUB_RUN_ATTEMPT" = 1
+      - name: frozen problem pool and sandbox
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          python -m pip install -r t/recipes/requirements-cohere-json.txt
+          git lfs install --local
+          git lfs pull --include='nl/data/*.jsonl.gz'
+          gh release download eval-inputs -p apps_raw_train.jsonl.gz -D nl/data
+          sudo apt-get update -q
+          sudo apt-get install -y bubblewrap
+          sudo bash t/apparmor-bwrap.sh
+      - name: open and verify the registered private inputs
+        env:
+          GH_TOKEN: ${{ github.token }}
+          INPUT_KEY: ${{ secrets.DAWNR_PRIVATE_INPUTS_KEY }}
+        run: |
+          umask 077
+          test -n "$INPUT_KEY"
+          mkdir -p out/feedback/inputs
+          gh release download eval-inputs -p "$INPUT_ASSET" -D /tmp/feedback-input
+          printf '%s  %s\n' "$INPUT_SHA256" "/tmp/feedback-input/$INPUT_ASSET" | sha256sum -c -
+          key=$(mktemp)
+          trap 'rm -f "$key" /tmp/feedback-input.tar.gz' EXIT
+          printf '%s' "$INPUT_KEY" > "$key"
+          openssl enc -d -aes-256-cbc -pbkdf2 -iter 200000 -in "/tmp/feedback-input/$INPUT_ASSET" \
+            -out /tmp/feedback-input.tar.gz -pass "file:$key"
+          python - <<'PY'
+          from pathlib import Path
+          import tarfile
+          with tarfile.open('/tmp/feedback-input.tar.gz') as archive:
+              entries = archive.getmembers()
+              assert sorted(e.name for e in entries) == ['expected.json', 'selection.json']
+              assert all(e.isfile() and 0 < e.size < 100 * 1024**2 for e in entries)
+              for entry in entries:
+                  Path('out/feedback/inputs', entry.name).write_bytes(archive.extractfile(entry).read())
+          PY
+          printf '%s  %s\n' "$SELECTION_SHA256" out/feedback/inputs/selection.json | sha256sum -c -
+          printf '%s  %s\n' "$EXPECTED_SHA256" out/feedback/inputs/expected.json | sha256sum -c -
+          python t/recipes/cohere_static_feedback.py plan \
+            --selection out/feedback/inputs/selection.json --selection-sha256 "$SELECTION_SHA256" \
+            --expected out/feedback/inputs/expected.json --tag "$TRIAL_LABEL" --out out/feedback \
+            > out/feedback/preflight.log 2>&1
+      - name: generate the two registered arms
+        env:
+          COHERE_API_KEY: ${{ secrets.COHERE_API_KEY }}
+          COHERE_CEILING_USD: '8'
+        run: |
+          umask 077
+          test -n "$COHERE_API_KEY"
+          mkdir -p ~/.config/cohere
+          printf '%s' "$COHERE_API_KEY" > ~/.config/cohere/api_key
+          : > ~/.config/cohere/ledger.jsonl
+          proxy_pid=''
+          cleanup() {
+            if [ -n "$proxy_pid" ]; then kill "$proxy_pid" 2>/dev/null || true; wait "$proxy_pid" 2>/dev/null || true; fi
+            cp ~/.config/cohere/ledger.jsonl out/feedback/ledger.jsonl
+            rm -f ~/.config/cohere/api_key
+          }
+          trap cleanup EXIT
+          unset COHERE_API_KEY
+          python t/recipes/cohere_proxy.py --port 8854 --model command-a-03-2025 --think 0 \
+            --concurrency 8 --tag "$TRIAL_LABEL" --representation json-v2 --log out/feedback/proxy.jsonl \
+            > out/feedback/proxy.log 2>&1 &
+          proxy_pid=$!
+          for i in $(seq 1 30); do curl -sf http://127.0.0.1:8854/health >/dev/null && break; sleep 1; done
+          curl -sf http://127.0.0.1:8854/health >/dev/null
+          python t/recipes/cohere_static_feedback.py generate \
+            --selection out/feedback/inputs/selection.json --selection-sha256 "$SELECTION_SHA256" \
+            --expected out/feedback/inputs/expected.json --tag "$TRIAL_LABEL" --out out/feedback \
+            > out/feedback/generate.log 2>&1
+      - name: audit and score both arms with unchanged gates
+        run: |
+          python t/recipes/cohere_static_feedback.py score \
+            --selection out/feedback/inputs/selection.json --selection-sha256 "$SELECTION_SHA256" \
+            --expected out/feedback/inputs/expected.json --tag "$TRIAL_LABEL" --out out/feedback \
+            > out/feedback/score.log 2>&1
+      - name: seal the evidence including incomplete runs
+        if: always()
+        run: |
+          if [ ! -d out/feedback ]; then exit 0; fi
+          umask 077
+          if [ -f ~/.config/cohere/ledger.jsonl ]; then cp ~/.config/cohere/ledger.jsonl out/feedback/ledger.jsonl; fi
+          rm -f ~/.config/cohere/api_key
+          mkdir -p /tmp/sealed
+          tar -czf /tmp/feedback.tar.gz out/feedback
+          key=$(mktemp)
+          trap 'rm -f "$key" /tmp/feedback.tar.gz' EXIT
+          openssl rand -hex 32 > "$key"
+          openssl enc -aes-256-cbc -pbkdf2 -iter 200000 -salt -in /tmp/feedback.tar.gz \
+            -out /tmp/sealed/outputs.tar.gz.enc -pass "file:$key"
+          openssl pkeyutl -encrypt -pubin -inkey .github/teacher-outputs.pub.pem -pkeyopt rsa_padding_mode:oaep \
+            -pkeyopt rsa_oaep_md:sha256 -in "$key" -out /tmp/sealed/key.enc
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: feedback-${{ env.TRIAL_LABEL }}
+          path: /tmp/sealed
+          retention-days: 30
