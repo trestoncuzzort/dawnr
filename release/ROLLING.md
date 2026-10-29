@@ -12,7 +12,7 @@ the replaced manifest listed once the new model is complete.
 
 ## Status, 29 October 2026
 
-**dawnr 6.0.2** fixes a false Frama-C refusal when certificate normalization rewrites
+**dawnr 6.0.2** (tag `v6.0.2`) is the current release. It fixes a false Frama-C refusal when certificate normalization rewrites
 a negated inequality. The lowering preserves that negation through a local binding;
 existing negative-certificate checks and proof requirements still apply. It also
 includes the checked internal teacher/data pipeline and independent evaluation
@@ -20,6 +20,8 @@ cache copies. Its model manifest is identical to 6.0.1. The matched laptop workl
 passes the latency, memory and thermal conditions
 ([receipt](evidence/laptop-6.0.2-2026-10-29.json)); the verifier's native controls and
 full-column comparison are in [the repair record](../t/PREDICT-2026-10-25-framac-certificate-binding.md).
+All eight CI jobs and clean Ubuntu/macOS installations passed before publication;
+the tag and downloaded model manifest were verified ([receipt](evidence/release-6.0.2-2026-10-29.json)).
 
 **dawnr 6.0.1** (tag `v6.0.1`) made `dawnr ask` about twice as fast from a cold
 start (the provers stop at an answer all seven prove) and all seven provers found however dawnr is started. Its

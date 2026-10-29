@@ -63,10 +63,12 @@ replies versus fresh sampling's 10/35, and neither arm produced a strict candida
 All 70 requests and $1.838487 recorded charges reconciled. It adds no rows and is
 not expanded. [Result](../release/evidence/cohere-static-feedback-result-2026-10-29.json).
 
-The independent 6.0.2 patch release is in final checks for the already validated
+The independent 6.0.2 patch release shipped on 2026-10-29 with the already validated
 Frama-C certificate repair and internal pipeline fixes. Its published-model bytes
 are unchanged. Fresh laptop workloads passed with latency and memory ratios below
-1.10 and no thermal slowdown. Clean Ubuntu/macOS installs precede publication.
+1.10 and no thermal slowdown. All eight CI jobs and clean Ubuntu/macOS installations
+passed before publication. The tag, downloaded manifest and latest-release status
+were verified ([receipt](../release/evidence/release-6.0.2-2026-10-29.json)).
 This ships useful bug fixes while the separately registered model trains; it does
 not complete the ongoing weight qualification objective.
 

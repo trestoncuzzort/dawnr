@@ -86,14 +86,15 @@ Command A Reasoning solved more of the pilot's problems, but its evaluation API 
 at 20 requests a minute and 1,000 calls a month.
 Is there a way to raise that for the grant?
 
-## 2026-10-29: dawnr 6.0.2 prepared for release
+## 2026-10-29: dawnr 6.0.2 released
 
 - A patch release for the validated Frama-C certificate fix and internal data/evaluation pipeline. The released model files are unchanged.
 - The matched final laptop workload passed all six commands, with latency and memory within 10% of a fresh 6.0.1 baseline and no thermal slowdown.
 - A separate two-seed candidate is training in Google Cloud on 6,954 audited rows, including previously accepted Cohere specifications. Its model qualification is still pending.
 - The latest paired teacher experiment produced no accepted specifications for $1.838487 recorded. That recipe is closed; its failure and full accounting remain recorded.
+- Published at 19:16:11 UTC after all eight CI jobs and clean Ubuntu/macOS installation checks passed. The release tag, downloaded manifest and latest-release status were verified.
 
-Draft for the user to send after the release page is live:
+Draft ready for the user to send:
 
 Quick dawnr update. We put out 6.0.2 with a fix for a verifier that was refusing valid certificates
 and stronger checks around our internal training-data pipeline. The model files in this patch are the same.

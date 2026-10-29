@@ -1,0 +1,23 @@
+{
+  "release": "6.0.2",
+  "tag": "v6.0.2",
+  "url": "https://github.com/trestoncuzzort/dawnr/releases/tag/v6.0.2",
+  "published_at": "2026-10-29T19:16:11Z",
+  "target_commit": "50e811ba2e0a80acb7f31ee551d5cebf1d071864",
+  "tag_target_verified": true,
+  "is_latest": true,
+  "published_manifest_sha256": "b91407269c09d97c27c58757fa2f81bb5e3ac7e5e5b6b131b2a9a48be13e63fb",
+  "manifest_matches_6_0_1": true,
+  "model_weights_changed": false,
+  "notes_match_reviewed_file": true,
+  "ci_run": 40935931519,
+  "ci_jobs_passed": 8,
+  "install_smoke_run": 40936030947,
+  "install_smoke_platforms_passed": [
+    "Ubuntu",
+    "macOS"
+  ],
+  "laptop_receipt_sha256": "f2c5dfc7c55f510320e15a377a19e971e3806612c71492729206f7efd582082e",
+  "verified_utc": "2026-10-29T19:16:25.973801+00:00",
+  "new_model_qualification_still_pending": true
+}

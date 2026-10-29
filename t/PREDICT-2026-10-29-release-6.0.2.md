@@ -52,3 +52,14 @@ same workflow before publication using the verified identical 6.0.1 model manife
 then check the new published manifest. This moves installation validation ahead of
 shipping without changing its commands, inputs or pass conditions. Its outcome is
 still pending at this registration; no failed installation result was replaced.
+
+## Publication
+
+Prediction 4 held. All eight jobs in CI `40935931519` and both clean-install jobs
+in `40936030947` passed at `50e811ba2e0a80acb7f31ee551d5cebf1d071864`.
+dawnr 6.0.2 was published on 2026-10-29 at 19:16:11 UTC. Its tag points to that
+tested commit; the downloaded release manifest is byte-identical to 6.0.1, and
+GitHub reports 6.0.2 as the latest release. [Publication receipt](../release/evidence/release-6.0.2-2026-10-29.json).
+
+This completes the patch release. The separate two-seed model's training and
+qualification remain outstanding; this patch does not establish improved weights.
