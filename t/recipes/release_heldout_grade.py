@@ -15,6 +15,7 @@ import tarfile
 import tempfile
 
 import release_heldout_inputs as heldout
+import release_heldout_launch as launch
 from release_grading_inputs import MAX_BYTES, digest, json_bytes, require, safe_name
 
 GRADER = '1e033b50c2c53fb3d40932d9561e1a8eefe9aa7d'
@@ -22,7 +23,7 @@ PANEL_PATH = 't/out/release-6.0/clean-182.txt'
 OUTPUT_PATH = 'out/heldout-grade'
 GENERATION_FILES = ('spec_first.json', 'python.jsonl', 'kept-specs.jsonl', 'scored-specs.jsonl')
 CONTROL_FILES = ('selection.json', 'claim.json', 'decoder.json', 'protocol.json', 'generation.json',
-                 'panel.txt', 'route-protocol.json', 'route-completed.json', 'route.done')
+                 'invocation.json', 'panel.txt', 'route-protocol.json', 'route-completed.json', 'route.done')
 
 
 def file_hashes(files):
@@ -44,6 +45,7 @@ def package(checkout, claim, bundle, panel, decoder, protocol):
                   for name in generation['files_sha256'] if name.startswith('raw/')})
     files.update({'route-' + name: (cache / name).read_bytes() for name in ('protocol.json', 'completed.json')})
     files['route.done'] = (checkout / 't/out/laptop-runs' / (tag + '.done')).read_bytes()
+    files['invocation.json'] = (checkout / 't/out/laptop-runs' / ('private-heldout-' + tag) / 'receipt.json').read_bytes()
     files['manifest.json'] = json_bytes({'schema': 1, 'tag': tag, 'files': file_hashes(files)})
     validate(files, protocol, tag)
     return files
@@ -82,6 +84,7 @@ def validate(files, expected_protocol, label):
         (cache.parent / (label + '.done')).write_bytes(files['route.done'])
         actual = heldout.completed(root, claim, bundle, files['panel.txt'], decoder, protocol)
     require(actual == generation, 'completed generation differs from its receipt')
+    launch.validate_invocation(json.loads(files['invocation.json']), claim, protocol, generation)
     return {'tag': label, 'seed': claim['seed'], 'model_sha256': claim['model_sha256'],
             'panel_sha256': heldout.PANEL_SHA, 'generation': generation,
             'input_files_sha256': file_hashes(files), 'independent_content_audit_pending': True}

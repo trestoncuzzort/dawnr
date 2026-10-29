@@ -74,6 +74,12 @@ def request(bundle, panel, actual_model_sha, decoder, protocol, paths):
             'unregistered final decoder procedure')
     require(decoder['seeds'][str(seed)]['prefix'] == registration['seeds'][str(seed)]['prefix'],
             'decoder belongs to another seed')
+    require(isinstance(protocol.get('launcher_sources_sha256'), dict)
+            and 'release_heldout_launch.py' in protocol['launcher_sources_sha256']
+            and isinstance(protocol.get('server_files_sha256'), dict)
+            and 'llama-server' in protocol['server_files_sha256'], 'missing registered invocation sources')
+    for value in list(protocol['launcher_sources_sha256'].values()) + list(protocol['server_files_sha256'].values()):
+        choose.check_digest(value)
     require(set(paths) == {'checkout', 'server_dir', 'model', 'panel'}
             and all(isinstance(value, str) and PurePosixPath(value).is_absolute()
                     and '..' not in PurePosixPath(value).parts for value in paths.values()), 'invalid execution paths')

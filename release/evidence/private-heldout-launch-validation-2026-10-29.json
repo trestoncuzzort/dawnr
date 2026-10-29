@@ -1,0 +1,30 @@
+{
+  "kind": "Private selected-model invocation software validation",
+  "focused_checks_passed": 59,
+  "actual_model_or_reference_or_proof_calls": 0,
+  "stand_in_processes": "A compiled HTTP health responder and a Python fixture writer, neither capable of model inference.",
+  "covered": [
+    "model/source/runtime binding",
+    "actual child process and listener observation",
+    "failed-client cache preservation and explicit resume",
+    "completed receipt recovery without another invocation",
+    "corrupt cache rejection",
+    "busy GPU lock rejection",
+    "sealed transport refuses a changed invocation"
+  ],
+  "initial_failures": [
+    "The initial listener helper used a default port captured at definition; making the port explicit fixed the dynamic-port test.",
+    "The readiness probe could not bind after a health connection left TIME_WAIT; matching the server reuse-address setting permits recovery while an active listener is still refused."
+  ],
+  "sources_sha256": {
+    "t/recipes/release_heldout_launch.py": "553e32d6fcfcc0746dee3be5f828681f6d8a6a2d2656a464ddc6742762cfb25e",
+    "t/recipes/release_heldout_grade.py": "77a7c5e8acd9651e49a5dc441de4e31a7cfccf9984c5695c5c1ae72ff4d33c02",
+    "t/recipes/release_heldout_inputs.py": "a9bda01e56f69f2aff7ab974c7c2d7fb5bea5acbcf5804dbd1a5cc6807366206",
+    "t/test_release_heldout_launch.py": "8d5825fa0635a0065ab239c6140250c69691e97542e3ef0299493375b2e372e8",
+    "t/test_release_heldout_grade.py": "bb4d523c5ef822fdb99f333edc249b806868ca161d67214b9d3a095334a97d5c",
+    "t/test_release_heldout_inputs.py": "7d13035c1fa858adfb6e80f3482ac1dd18d6b7379eb8683edcbc03e31f073b94"
+  },
+  "actual_candidate_selected": false,
+  "gpu_launcher_deployed": false,
+  "private_grade_dispatched": false
+}

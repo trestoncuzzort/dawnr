@@ -12,7 +12,7 @@ import pytest
 sys.path.insert(0, str(Path(__file__).parent / 'recipes'))
 import release_heldout_grade as grade
 from release_grading_inputs import seal_inputs, json_bytes
-from test_release_heldout_inputs import prepared, completed, write  # pytest fixtures
+from test_release_heldout_inputs import prepared, completed, write, invocation_fixture  # pytest fixtures
 
 
 def archive(path, files, extra=None):
@@ -64,6 +64,7 @@ def test_saved_private_answer_is_preserved_without_execution(completed, tmp_path
     write(source / 'spec_first.json', summary)
     answer = {'task_id': 1000, 'reply': 'PRIVATE_FIXTURE_ANSWER'}
     write(source / 'raw/1000.json', answer)
+    invocation_fixture(root, claim, values)
     bundle, panel, _, decoder, protocol, _ = values
     files = grade.package(root, claim, bundle, panel, decoder, protocol)
     destination = tmp_path / 'grader'
@@ -72,7 +73,7 @@ def test_saved_private_answer_is_preserved_without_execution(completed, tmp_path
     assert json.loads((destination / 't/out/spec-experiment' / claim['tag'] / 'raw/1000.json').read_text()) == answer
 
 
-@pytest.mark.parametrize('change', ['hash', 'choice', 'panel', 'generation', 'completion', 'foreign', 'missing', 'label', 'protocol'])
+@pytest.mark.parametrize('change', ['hash', 'choice', 'panel', 'generation', 'completion', 'foreign', 'missing', 'label', 'protocol', 'invocation'])
 def test_changed_evidence_never_prepares_grading(payload, tmp_path, change):
     files, protocol, tag = deepcopy(payload)
     if change == 'hash': files['python.jsonl'] = b'changed'
@@ -87,6 +88,9 @@ def test_changed_evidence_never_prepares_grading(payload, tmp_path, change):
     elif change == 'foreign': files['training-rows.jsonl'] = b'private'; rebind(files)
     elif change == 'missing': files.pop('scored-specs.jsonl'); rebind(files)
     elif change == 'label': tag += '-another'
+    elif change == 'invocation':
+        value = json.loads(files['invocation.json']); value['model_sha256_after'] = '0' * 64
+        files['invocation.json'] = json_bytes(value); rebind(files)
     else: protocol['required_clean'] = 0
     root = tmp_path / 'grader'
     with pytest.raises(ValueError):

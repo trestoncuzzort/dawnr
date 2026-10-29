@@ -57,7 +57,24 @@ existing immutable journal so an ambiguous attempt is not silently repeated.
 
 The workflow's YAML and shell blocks parse, but it has not graded a real final
 reading. The new grader's matched baseline controls must finish before candidate
-use. The GPU launcher, audited-evidence assembly and actual selected-model
-invocation binding remain separate prerequisites; no real choice or claim was
-created. The final artifact still needs independent content and origin audits
+use. The operator assembler and GPU launcher are now prepared; actual selection,
+deployment and invocation evidence are still pending. No real choice or claim
+was created. The final artifact still needs independent content and origin audits
 before its counts can satisfy a release condition.
+
+The launcher runs the original decoder with the same server arguments. It
+rechecks the exact selected model bytes, source files and ten server/library
+fingerprints, holds the shared GPU lock, and observes the server process and
+its listening socket before starting the client. It binds the complete output
+to both observed child processes and unchanged model bytes. The private grading
+transport now requires that invocation receipt as well as the selected choice.
+
+The extended guard, transport and launch checks total 59 passes. The process
+tests use a compiled HTTP health responder and a Python fixture writer, with no
+model inference, reference execution or proof invocation. They verify one
+completion, receipt recovery without another invocation, preserved cache bytes
+after an explicit same-reading resume, and refusal of changed cache evidence or
+a busy GPU lock. Initial tests caught a captured default port and a readiness
+probe that mishandled TIME_WAIT; both were corrected before deployment.
+The original claim and every attempt's diagnostics remain in place.
+[Validation](../release/evidence/private-heldout-launch-validation-2026-10-29.json).

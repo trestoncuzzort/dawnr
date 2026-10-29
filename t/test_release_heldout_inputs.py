@@ -9,6 +9,7 @@ import pytest
 
 sys.path.insert(0, str(Path(__file__).parent / 'recipes'))
 import release_heldout_inputs as heldout
+import release_heldout_launch as launch
 import test_release_seed_selection as selection_tests
 
 
@@ -26,6 +27,26 @@ def freeze(bundle):
     bundle['frozen_choice'] = {'decision_sha256': heldout.choose.sha(decision), 'decision': decision}
 
 
+def invocation_fixture(root, claim, values):
+    """Synthetic provenance only; no server, model, program or proof is executed."""
+    bundle, panel, _, decoder, protocol, _ = values
+    generation = heldout.completed(root, claim, bundle, panel, decoder, protocol)
+    parent = 100; python = '/fixture/python'; cwd = claim['paths']['checkout']
+    def process(pid, command, exe):
+        return {'pid': pid, 'parent_pid': parent, 'start_ticks': pid, 'command': command, 'exe': exe, 'cwd': cwd}
+    model_file = {'ino': 1, 'size': 4096, 'mtime_ns': 1, 'ctime_ns': 1}
+    start = {'attempt': 1, 'claim_sha256': heldout.choose.sha(claim), 'model_sha256': claim['model_sha256'],
+             'model_file': model_file, 'runtime_files_sha256': protocol['server_files_sha256'],
+             'cache_before': {}, 'parent_pid': parent, 'python': python, 'python_exe': python,
+             'server': process(101, launch.server_command(claim), claim['paths']['server_dir'] + '/llama-server'),
+             'server_owned_listener': True}
+    end = {'status': 'completed', 'start': start, 'client': process(102, launch.client_command(claim, python), python),
+           'cache_after': {}, 'returncode': 0}
+    receipt = launch.receipt(claim, protocol, generation, model_file, [end])
+    write(root / 't/out/laptop-runs' / ('private-heldout-' + claim['tag']) / 'receipt.json', receipt)
+    return receipt
+
+
 @pytest.fixture
 def prepared(tmp_path, monkeypatch):
     reg, report, ids, seeds = selection_tests.evidence.__wrapped__()
@@ -41,6 +62,8 @@ def prepared(tmp_path, monkeypatch):
                'seeds': {str(s): {'prefix': reg['seeds'][str(s)]['prefix'],
                                   'identity_prefix': f'fixture-s{s}:'} for s in (1, 2)}}
     protocol = {**deepcopy(heldout.FIXED_PROTOCOL),
+                'launcher_sources_sha256': {'release_heldout_launch.py': 'f' * 64},
+                'server_files_sha256': {'llama-server': 'e' * 64},
                 'generation_registration_sha256': heldout.choose.sha(heldout.decoder_registration(decoder)),
                 'candidate': reg['candidate'], 'training_rows_sha256': reg['training_rows_sha256'],
                 'development_panel_sha256': reg['development_panel_sha256'],
@@ -97,6 +120,7 @@ def completed(prepared, tmp_path):
     write(directory / 'spec_first.json', {'problems': 182, 'answered': 0,
           'per_problem': {i: {'python': None, 'taken': None} for i in prepared[1].decode().split()}})
     for name in ('python.jsonl', 'kept-specs.jsonl', 'scored-specs.jsonl'): (directory / name).write_text('')
+    invocation_fixture(root, claim, prepared)
     return root, claim, prepared, directory, cache
 
 

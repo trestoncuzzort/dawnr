@@ -159,6 +159,12 @@ matched grader controls, audited evidence assembly and selected-model launch
 binding before using it; its final result still needs the content audit and
 laptop checks. The 182-problem panel, 17-call limit and 17/12 score floors remain.
 
+The prepared final-reading launcher adds the actual model and child-process
+binding to that handoff, and the sealed grader requires its invocation receipt.
+Its 59 combined software checks include harmless process/listener stand-ins and
+same-cache recovery. No real final reading has been launched; actual model
+qualification, deployment and final evidence remain pending.
+
 The provider confirms the current VM will be deleted on October 31 at 16:28 UTC.
 Its boot disk is now preserved so the cutoff cannot also erase unuploaded caches.
 The VM's last start, cutoff, training/observer process IDs and all four worker
