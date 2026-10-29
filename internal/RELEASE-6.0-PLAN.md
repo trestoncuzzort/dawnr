@@ -85,6 +85,13 @@ passing precision and spec33. They bind the chosen final export and refuse a lat
 switch. Actual artifact audits and the single private held-out launch remain
 separate prerequisites; implementation tests do not qualify a model.
 
+The frozen development grader rejected complete zero-task outputs. The
+[zero-task repair](../t/PREDICT-2026-10-29-empty-grading.md) records those as zero
+coverage through the existing scorer, retaining the original nonempty proof and
+reference commands. One cloud software control and a matched regrade of the six
+saved baseline parts are registered before candidate use. The running collector
+keeps its prior frozen workflow until those controls validate an amendment.
+
 ## 1. What 6.0 is
 
 dawnr has shipped through one rolling channel whose model is dawnr v5. Since v5, five candidate lines were trained

@@ -20,8 +20,8 @@ permissions:
 env:
   ENGINE_COMMIT: d13d11d01f8f50687ef645d60aa08c870d664b84
   DOCKERFILE_SHA256: 1483aad08f6b9ba291e5f1880a057a3c20a9f6f52074e43111d8de215a7f456c
-  # Targeted, validated certificate repair; matched controls are registered before candidate comparisons.
-  GRADER_COMMIT: 66be29b4de81dbfe5a09e794274a58087867c42b
+  # Keep complete zero-task arms; matched controls must pass before candidate comparisons.
+  GRADER_COMMIT: 1e033b50c2c53fb3d40932d9561e1a8eefe9aa7d
 
 jobs:
   image:

@@ -1,0 +1,60 @@
+{
+  "kind": "Matched development control for complete-zero-task grading",
+  "grader_commit": "1e033b50c2c53fb3d40932d9561e1a8eefe9aa7d",
+  "development_arms": [
+    {
+      "tag": "v5-20261021-dev-desktop-r2",
+      "panel": "dev-95",
+      "pool": "v5",
+      "sha256": "8917ad487dc814a470099174492e0f2ca4e79ec8bf14e6ca96f5b4fa7b7a4b0d"
+    },
+    {
+      "tag": "v5-20261022-seedoff1000",
+      "panel": "dev-95",
+      "pool": "v5",
+      "sha256": "56dc0b8bbd3b12e518f2aad1f84a6467d22ed7527021460bc4f6799f81fe2025"
+    },
+    {
+      "tag": "v5-20261022-seedoff2000",
+      "panel": "dev-95",
+      "pool": "v5",
+      "sha256": "21a1ffb69c69c3081763c589b0049810d9b25d0c93ff333e116dbb28d5a0164e"
+    },
+    {
+      "tag": "v5-20261022-wider-off0",
+      "panel": "wider-145",
+      "pool": "v7",
+      "sha256": "d736fc9a2f9b58a46d463b153c18bc617d10a7254481320af4070ce6f02fdad9"
+    },
+    {
+      "tag": "v5-20261022-wider-off1000",
+      "panel": "wider-145",
+      "pool": "v7",
+      "sha256": "2c4e39c323730c6e41be9fef8aaae42285c784c4ca8d55401d8917acb21c0282"
+    },
+    {
+      "tag": "v5-20261022-wider-off2000",
+      "panel": "wider-145",
+      "pool": "v7",
+      "sha256": "2325a7b22416a3a38ced1a692afe8bfdf237ab7526fb564a393a44c26ae5cdfd"
+    }
+  ],
+  "software_control": {
+    "tag": "grading-empty-control-20261029",
+    "panel": "dev-95",
+    "pool": "v5",
+    "sha256": "fc5db5fe34aa048a4b58d1eb6bda935389f03e3ba0d8f08c2a9db1952ea42c3b"
+  },
+  "predicted_clean": [
+    20,
+    19,
+    19
+  ],
+  "predicted_all_seven": [
+    9,
+    8,
+    9
+  ],
+  "control_model_calls": 0,
+  "heldout_182_reading_started": false
+}
