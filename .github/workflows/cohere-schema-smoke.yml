@@ -16,6 +16,11 @@ on:
       input_sha256:
         description: 'registered input digest, required for the full teacher scope'
         default: ''
+      representation:
+        description: 'teacher transport, used only for scope=teacher'
+        type: choice
+        options: [json, json-v2]
+        default: json
 
 permissions:
   contents: read
@@ -28,6 +33,7 @@ jobs:
       PROBE_LABEL: ${{ inputs.label }}
       PROBE_SCOPE: ${{ inputs.scope }}
       PROBE_INPUT_SHA256: ${{ inputs.input_sha256 }}
+      PROBE_REPRESENTATION: ${{ inputs.representation }}
     steps:
       - uses: actions/checkout@v4
       - name: validate the registered request
@@ -52,6 +58,7 @@ jobs:
           if [ "$PROBE_SCOPE" = teacher ]; then
             python3 t/recipes/cohere_json_smoke.py --out out/schema-smoke/results \
               --primer out/schema-inputs/teacher-primer.md --input-sha256 "$PROBE_INPUT_SHA256" \
+              --representation "$PROBE_REPRESENTATION" \
               > out/schema-smoke/run.log 2>&1
           else
             python3 t/recipes/cohere_schema_smoke.py --out out/schema-smoke/results \

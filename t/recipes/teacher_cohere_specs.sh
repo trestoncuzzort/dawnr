@@ -19,7 +19,10 @@ IDENT="teacher-cohere:$MODEL:think$THINK:new$MAX_NEW:2026-10-24"
 A=$D/t/out/laptop-runs; O=out/r61/$SERIES; LOG=$O/lane.log; PLOG=$O/proxy.jsonl
 V=${V:-/home/t/.claude/jobs/d76813cf/tmp/venv/bin/python}
 export PYTHONPATH=$D/t PYTHONUNBUFFERED=1
-if [ "$REPRESENTATION" = json ]; then
+if [ "$REPRESENTATION" = json-v2 ]; then
+  FORMAT_IDENT=$("$V" t/recipes/cohere_task_json_v2.py) || exit 1
+  IDENT="$IDENT:$FORMAT_IDENT"
+elif [ "$REPRESENTATION" = json ]; then
   FORMAT_IDENT=$("$V" t/recipes/cohere_task_json.py --identity) || exit 1
   IDENT="$IDENT:$FORMAT_IDENT"
 elif [ "$REPRESENTATION" != surface ]; then

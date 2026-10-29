@@ -45,6 +45,16 @@ PRICE = {"command-a-03-2025": (2.5, 10), "command-a-reasoning-08-2025": (0, 0), 
          "north-mini-code-1-0": (0, 0)}
 
 
+def codec_for(representation):
+    if representation == "json":
+        import cohere_task_json as codec
+    elif representation == "json-v2":
+        import cohere_task_json_v2 as codec
+    else:
+        raise ValueError("unknown JSON teacher representation")
+    return codec
+
+
 def to_cohere(body: dict, model: str, think: int, representation: str = "surface") -> dict:
     msgs = []
     for m in body.get("messages", []):
@@ -54,10 +64,10 @@ def to_cohere(body: dict, model: str, think: int, representation: str = "surface
             msgs.append({"role": m["role"], "content": text})
     max_new = int(body.get("max_tokens") or 1024)
     req = {"model": model, "messages": msgs, "stream": False}
-    if representation == "json":
-        import cohere_task_json
-        req["messages"] = cohere_task_json.messages(msgs)
-        req["response_format"] = {"type": "json_object", "schema": cohere_task_json.schema()}
+    if representation in ("json", "json-v2"):
+        codec = codec_for(representation)
+        req["messages"] = codec.messages(msgs)
+        req["response_format"] = {"type": "json_object", "schema": codec.schema()}
     elif representation != "surface":
         raise ValueError("unknown teacher representation")
     if think > 0:
@@ -92,17 +102,17 @@ def from_cohere(result: dict, max_new: int, model: str) -> dict:
             "stop_reason_raw": fr}
 
 
-def structured_reply(result: dict, request: dict, max_new: int, model: str) -> dict:
+def structured_reply(result: dict, request: dict, max_new: int, model: str, representation="json") -> dict:
     """Keep the original wire evidence even when conversion refuses a paid answer."""
-    import cohere_task_json
+    codec = codec_for(representation)
     response = from_cohere(result, max_new, model)
     try:
-        content, conversion = cohere_task_json.reply(result)
+        content, conversion = codec.reply(result)
     except Exception as error:  # malformed provider data is a refused candidate, retained privately
         content = ""
         conversion = {"status": "refused", "error_type": type(error).__name__, "reason": str(error)}
     response["choices"][0]["message"]["content"] = content
-    response["cohere_source"] = {"representation": "json", "identity": cohere_task_json.identity(),
+    response["cohere_source"] = {"representation": representation, "identity": codec.identity(),
                                  "request": request, "response": result, "conversion": conversion}
     return response
 
@@ -168,21 +178,21 @@ class Handler(BaseHTTPRequestHandler):
                 self.server.log({"ok": False, "error": str(e)[:300], "seconds": round(time.time() - t0, 1)})
                 return self._send(200, {**empty, "error": str(e)[:300]})
         billed = (result.get("usage") or {}).get("billed_units") or {}
-        if self.server.representation == "json" and any(
+        if self.server.representation in ("json", "json-v2") and any(
                 type(billed.get(k)) is not int or billed[k] < 0 for k in ("input_tokens", "output_tokens")):
             with self.server.lock:
                 self.server.unaccounted_response = True
-            import cohere_task_json
+            codec = codec_for(self.server.representation)
             self.server.log({"ok": False, "error": "billing_unresolved"})
             return self._send(200, {**empty, "error": "billing_unresolved", "cohere_source": {
-                "representation": "json", "identity": cohere_task_json.identity(), "request": request,
+                "representation": self.server.representation, "identity": codec.identity(), "request": request,
                 "response": result, "conversion": {"status": "not_run", "reason": "billing_unresolved"}}})
         bi, bo = float(billed.get("input_tokens", 0) or 0), float(billed.get("output_tokens", 0) or 0)
         pi, po = PRICE.get(self.server.model, (5, 20))
         usd = bi * pi / 1e6 + bo * po / 1e6
         self.server.charge(usd, {"in": bi, "out": bo, "tag": self.server.tag})
-        reply = (structured_reply(result, request, max_new, self.server.model)
-                 if self.server.representation == "json" else from_cohere(result, max_new, self.server.model))
+        reply = (structured_reply(result, request, max_new, self.server.model, self.server.representation)
+                 if self.server.representation in ("json", "json-v2") else from_cohere(result, max_new, self.server.model))
         self.server.log({"ok": True, "seconds": round(time.time() - t0, 1), "stop": reply["stop_reason_raw"],
                          "billed_in": bi, "billed_out": bo, "usd": round(usd, 6), **reply["usage"],
                          **({"conversion_status": reply["cohere_source"]["conversion"]["status"]}
@@ -241,7 +251,7 @@ def main(argv=None) -> int:
     ap.add_argument("--ceiling", type=float, default=float(os.environ.get("COHERE_CEILING_USD", "950")))
     ap.add_argument("--tag", default="teacher")
     ap.add_argument("--log", default="cohere-proxy.jsonl")
-    ap.add_argument("--representation", choices=("surface", "json"), default="surface")
+    ap.add_argument("--representation", choices=("surface", "json", "json-v2"), default="surface")
     a = ap.parse_args(argv)
     server = Server(("127.0.0.1", a.port), a.model, a.think, a.concurrency, a.log, a.ceiling, a.tag, a.representation)
     print(f"cohere proxy on 127.0.0.1:{a.port} -> {a.model} (think {a.think}), {a.concurrency} in flight, "

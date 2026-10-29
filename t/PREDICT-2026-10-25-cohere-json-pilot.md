@@ -75,3 +75,14 @@ It reports recorded charges rather than an invoice, and does not infer the numbe
 Missing billing remains unresolved. Counts, novelty, token fit and the final data audit remain separate
 requirements. Aggregate input evidence is in
 `release/evidence/cohere-json-pilot-accounting-inputs-2026-10-25.json`.
+
+## Completed reading, reconciled 2026-10-29
+
+The frozen `bf70e6d8` audit matched all 500 logical requests, all 569 source hashes, preserved conversions
+and all 499 charged replies. One request ended in HTTP 500. The recorded cost is $10.180194; this is not a
+provider invoice. Only 115 candidates passed conversion (23%); 497 provider replies were complete and two
+were truncated. Three problems supplied five strict-kept specifications, or 29.47 problems per $100 recorded.
+
+The eight-problem, four-new-problem and efficiency conditions all fail; the 80% conversion diagnostic also
+fails. Expansion is refused. No new training rows or weights are promoted from this reconciliation. The original
+outputs and prior records remain private. [Aggregate evidence](../release/evidence/cohere-json-pilot-reconciled-2026-10-29.json).

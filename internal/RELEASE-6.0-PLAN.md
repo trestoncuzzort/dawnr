@@ -14,6 +14,20 @@ and their old proposed release numbers are not reservations for future product v
 The first draft of this plan, written the same afternoon, built 6.0 on the corrected 4,189-row set and read
 candidates against a control that mixed two training sets. Section 2 records why both were wrong.
 
+## Current pipeline update, 2026-10-29
+
+The objective remains incremental Dawnr releases and bug fixes. The user clarified that Cohere is an internal
+resource for improving Dawnr's model, not a backend offered to Dawnr users. Product commands remain local.
+Use Cohere to produce and improve checked training material. The user reaffirmed permission for this work and
+supplied a current remaining grant balance; that private dashboard figure supersedes historical conservative
+estimates for new allocations. Preserve billing records and account for concurrent allocations.
+
+The completed JSON teacher pilot is reconciled against its frozen audit: 500 logical requests, 499 billed
+responses, $10.180194 recorded, 3 strictly kept problems and 5 specifications. Coverage, efficiency and
+conversion predictions failed, so the unchanged recipe is not expanded. The accepted 6,954-row archive stays
+unchanged until another addition passes its checks. See
+[the reconciliation](../release/evidence/cohere-json-pilot-reconciled-2026-10-29.json).
+
 ## 1. What 6.0 is
 
 dawnr has shipped through one rolling channel whose model is dawnr v5. Since v5, five candidate lines were trained

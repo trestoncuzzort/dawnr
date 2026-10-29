@@ -54,11 +54,17 @@ def evidence(tmp_path, monkeypatch):
         assert sent[0][0] == 200
         return sent[0][1]
 
-    def build(responses=None):
+    def build(responses=None, representation="json"):
+        codec = proxy.codec_for(representation)
+        server.representation = representation
+        identity = "teacher-cohere:" + model + ":fixture:" + codec.identity()
         invalid = codec.contract_document(task())
-        invalid["ensures"][0]["args"][1] = {"var": "undeclared"}
+        if representation == "json-v2":
+            invalid["ensures"][0]["arg2"] = {"var": "undeclared"}
+        else:
+            invalid["ensures"][0]["args"][1] = {"var": "undeclared"}
         if responses is None:
-            responses = [provider(), provider(invalid), provider(finish="MAX_TOKENS"),
+            responses = [provider(codec.contract_document(task())), provider(invalid), provider(finish="MAX_TOKENS"),
                          RuntimeError("HTTP 422: NO_VALID_RESPONSE_GENERATED")]
             responses[1]["usage"]["billed_units"]["input_tokens"] = 101
         pending.extend(responses)
@@ -70,13 +76,14 @@ def evidence(tmp_path, monkeypatch):
         for name in ("protocol.json", "completed.json"):
             (cache / name).write_text(json.dumps(protocol))
         manifest = {**protocol, "tag": tag, "codec_identity": codec.identity(), "think": 0,
-                    "prices_per_million": [2.5, 10], "requests": requests}
+                    "prices_per_million": [2.5, 10], "requests": requests, "representation": representation}
         return cache, ledger, log, manifest
     return build
 
 
-def test_real_cache_and_ledger_include_paid_conversion_refusals(evidence):
-    cache, ledger, log, expected = evidence()
+@pytest.mark.parametrize("representation", ["json", "json-v2"])
+def test_real_cache_and_ledger_include_paid_conversion_refusals(evidence, representation):
+    cache, ledger, log, expected = evidence(representation=representation)
     result = audit.audit(cache, ledger, log, expected)
     assert result["logical_candidates"] == 4 and result["provider_successful_responses"] == 3
     assert result["ledger_entries"] == 3 and result["proxy_log_entries"] == 4

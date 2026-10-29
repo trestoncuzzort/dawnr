@@ -36,7 +36,8 @@ spec fun upto(xs: seq, n: int): int
 """
 
 
-def inputs(primer: str) -> dict:
+def inputs(primer: str, representation="json") -> dict:
+    codec = cohere_proxy.codec_for(representation)
     task = codec.surface.parse(SYNTHETIC)
     document = codec.contract_document(task)
     messages = [{"role": "system", "content": codec.spec_first_rows.SPEC_SYSTEM + "\n\n" + primer},
@@ -47,9 +48,11 @@ def inputs(primer: str) -> dict:
             "identity": "teacher-cohere:" + MODEL + ":full-schema-smoke:" + codec.identity()}
 
 
-def run(output: Path, key: str, primer: str, caller=cohere_proxy.call, expected_input_sha256=None) -> dict:
+def run(output: Path, key: str, primer: str, caller=cohere_proxy.call, expected_input_sha256=None,
+        representation="json") -> dict:
+    codec = cohere_proxy.codec_for(representation)
     output.mkdir(parents=True, exist_ok=False)
-    prepared = inputs(primer)
+    prepared = inputs(primer, representation)
     write_json(output / "inputs.json", prepared)
     if expected_input_sha256 is not None and hashlib.sha256((output / "inputs.json").read_bytes()).hexdigest() != expected_input_sha256:
         raise ValueError("registered inputs changed before the API request")
@@ -61,7 +64,7 @@ def run(output: Path, key: str, primer: str, caller=cohere_proxy.call, expected_
         nonlocal cost
         if calls:
             raise ValueError("the registered smoke allows only one API request")
-        request = cohere_proxy.to_cohere(body, MODEL, 0, "json")
+        request = cohere_proxy.to_cohere(body, MODEL, 0, representation)
         calls.append(request)
         write_json(output / "request.json", request)
         result = caller(key, request, attempts=1, timeout=180)
@@ -71,7 +74,7 @@ def run(output: Path, key: str, primer: str, caller=cohere_proxy.call, expected_
         (output / "ledger.jsonl").write_text(json.dumps({"model": MODEL, "kind": "full-schema-smoke",
             "usd": str(cost), **units}) + "\n")
         reading["billed_units"] = units
-        return cohere_proxy.structured_reply(result, request, MAX_NEW, MODEL)
+        return cohere_proxy.structured_reply(result, request, MAX_NEW, MODEL, representation)
 
     decoder = Decoder("unused", MODEL, prepared["identity"], output / "cache", concurrency=1, post=post)
     try:
@@ -86,6 +89,7 @@ def run(output: Path, key: str, primer: str, caller=cohere_proxy.call, expected_
         write_json(output / "error.json", {"error": str(error)})
     record = {"kind": "Full teacher schema and decoder transport smoke; no quality benchmark",
               "model": MODEL, "recorded_cost_usd": str(cost) if cost is not None else None,
+              "representation": representation,
               "unresolved_billing_or_transport": cost is None,
               "reservation_usd": "1", "requests": len(calls), "automatic_retries": 0,
               "cases": [reading], "all_conditions_hold": reading["passed"] and cost is not None and cost <= 1,
@@ -97,6 +101,7 @@ def run(output: Path, key: str, primer: str, caller=cohere_proxy.call, expected_
                                       ("jsonschema", "jsonschema-specifications", "referencing", "rpds-py")},
               "code_sha256": {str(p.relative_to(codec.HERE.parent)): hashlib.sha256(p.read_bytes()).hexdigest()
                               for p in [Path(__file__).resolve(), Path(cohere_proxy.__file__), Path(codec.__file__),
+                                        Path(cohere_proxy.codec_for("json").__file__),
                                         Path(__file__).with_name("cohere_schema_smoke.py"),
                                         Path(__file__).with_name("v6_server_route.py"),
                                         Path(__file__).with_name("spec_contract.py"),
@@ -112,6 +117,7 @@ def main(argv=None) -> int:
     parser.add_argument("--out", type=Path, required=True)
     parser.add_argument("--primer", type=Path, required=True)
     parser.add_argument("--input-sha256", required=True)
+    parser.add_argument("--representation", choices=("json", "json-v2"), default="json")
     args = parser.parse_args(argv)
     if os.environ.get("GITHUB_ACTIONS") != "true":
         parser.error("paid capability calls run on GitHub")
@@ -119,7 +125,8 @@ def main(argv=None) -> int:
     if not key:
         parser.error("COHERE_API_KEY is missing")
     os.umask(0o077)
-    result = run(args.out, key, args.primer.read_text(), expected_input_sha256=args.input_sha256)
+    result = run(args.out, key, args.primer.read_text(), expected_input_sha256=args.input_sha256,
+                 representation=args.representation)
     return 0 if result["all_conditions_hold"] else 1
 
 

@@ -1,0 +1,15 @@
+{
+  "representation": "json-v2",
+  "input_sha256": "0bbf84a08a5740362c3bf22921a32d66518c10bfe9a42f3d3cd3f67884fbee24",
+  "primer_sha256": "96eef6ee2611bb9095772b67a654cfb84ff53b22869aee64c8ca57570c250f61",
+  "schema_sha256": "91b4fdd0b5e8326f9f3b7c3191f886bc2c7022aa65c50838940d153853534c0d",
+  "codec_identity": "t-json-v2:4cb8c38c6f44f248ef84bac96d8f235dff5e3bcab627ae0cd8ce48fad5d21976",
+  "model": "command-a-03-2025",
+  "max_new": 8000,
+  "accepted_historical_contracts_preserved": 200,
+  "historical_static_refusals": 50,
+  "planned_api_requests": 1,
+  "automatic_retries": 0,
+  "reservation_usd": 1,
+  "purpose": "Internal teacher transport capability, not a quality benchmark"
+}

@@ -1,0 +1,50 @@
+{
+  "logical_candidates": 500,
+  "provider_successful_responses": 499,
+  "provider_error_replies": 1,
+  "error_kinds": {
+    "HTTP 500": 1
+  },
+  "ceiling_replies": 0,
+  "finish_reasons": {
+    "COMPLETE": 497,
+    "MAX_TOKENS": 2
+  },
+  "conversion_statuses": {
+    "refused": 384,
+    "accepted": 115
+  },
+  "conversion_refusal_types": {
+    "ValueError": 383,
+    "ValidationError": 1
+  },
+  "checked_header_promotions": 0,
+  "accepted_conversion_fraction": 0.23,
+  "ledger_entries": 499,
+  "proxy_log_entries": 500,
+  "run_usd": "10.180194",
+  "all_expected_requests_match": true,
+  "all_wire_requests_match": true,
+  "all_saved_conversions_match": true,
+  "all_billed_units_and_recorded_charges_match": true,
+  "source_hashes_verified": 569,
+  "billing_match_basis": "multiset of model, tag, billed input/output and rounded charge; no request IDs",
+  "physical_api_attempts": "not observable from final replies; proxy may retry",
+  "cost_scope": "recorded charges, not a provider invoice",
+  "codec_identity": "t-json-v1:eeb9a14359b58e0cc5444e686dd10599f1af936d933fe6429e7c0d275ef85e4e",
+  "grader_or_model_calls": 0,
+  "run_id": "40160251665",
+  "audit_revision": "bf70e6d8",
+  "expected_manifest_sha256": "7fbc287d5f2966ef028badeb1d92cac89c531f20e452fcec23d6b9355bb57ac7",
+  "strict_kept_problems": 3,
+  "strict_kept_candidates": 5,
+  "strict_kept_problems_per_100_recorded_usd": 29.47,
+  "expand": false,
+  "failed_conditions": [
+    "strict coverage 3 < 8",
+    "at most 3 new problems, required 4",
+    "29.47 per $100 < 62",
+    "conversion diagnostic 23% < 80%"
+  ],
+  "scope": "Cached request, conversion and billing reconciliation, not a fresh invoice or model-quality evaluation"
+}

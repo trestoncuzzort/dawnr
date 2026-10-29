@@ -23,7 +23,7 @@ on:
       representation:
         description: 'surface t text or a schema-constrained contract tree'
         type: choice
-        options: [surface, json]
+        options: [surface, json, json-v2]
         default: surface
       spec_samples:
         description: 'sampled specifications after the greedy one'
@@ -55,7 +55,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: optional JSON contract transport
-        if: inputs.representation == 'json'
+        if: inputs.representation != 'surface'
         run: python3 -m pip install --break-system-packages -r t/recipes/requirements-cohere-json.txt
       - name: the problem pool (nl/data is git-lfs; APPS comes from the inputs)
         env:

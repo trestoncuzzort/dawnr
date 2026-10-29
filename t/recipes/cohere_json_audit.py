@@ -65,6 +65,8 @@ def audit(cache: Path, ledger: Path, log: Path, expected: dict) -> dict:
     This reconciles recorded charges; it does not establish an invoiced amount or
     the number of physical API attempts hidden inside the proxy's retry policy.
     """
+    representation = expected.get("representation", "json")
+    codec = proxy.codec_for(representation)
     identity, model, tag = expected["identity"], expected["model"], expected["tag"]
     require(expected["codec_identity"] == codec.identity(), "codec differs from the registered transport")
     require(identity.endswith(":" + codec.identity()), "request identity does not bind the codec")
@@ -103,15 +105,15 @@ def audit(cache: Path, ledger: Path, log: Path, expected: dict) -> dict:
             continue
 
         source = response["cohere_source"]
-        require(source["representation"] == "json" and source["identity"] == codec.identity(),
+        require(source["representation"] == representation and source["identity"] == codec.identity(),
                 "provider evidence has a different representation")
-        wire = proxy.to_cohere(body, model, expected["think"], "json")
+        wire = proxy.to_cohere(body, model, expected["think"], representation)
         require(source["request"] == wire, "actual provider request differs from the expected transformation")
         raw = source["response"]
         units = (raw.get("usage") or {}).get("billed_units") or {}
         require(all(type(units.get(k)) is int and units[k] >= 0 for k in ("input_tokens", "output_tokens")),
                 "missing billed-unit evidence; spending is unresolved")
-        replay = proxy.structured_reply(raw, wire, body["max_tokens"], model)
+        replay = proxy.structured_reply(raw, wire, body["max_tokens"], model, representation)
         require(response == replay, "saved conversion differs from the preserved provider reply")
         bi, bo = float(units["input_tokens"]), float(units["output_tokens"])
         # Reproduce the proxy's per-call binary-float rounding, including half-microdollar cases.
