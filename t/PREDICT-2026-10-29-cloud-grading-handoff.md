@@ -36,6 +36,11 @@ nine payload hashes verified; its temporary plaintext was removed. The live stor
 probe saw four training/input backups and no grading output, and made no submission.
 These checks validate the handoff implementation, not any model-quality claim.
 
+The initial clean CI run found a test-fixture dependency on a downloaded local
+panel file. The tests now create their own panels and given-question fixtures;
+the production panel constants and collector registration are unchanged. Activation
+waits for the corrected revision's complete CI result. No grading was dispatched.
+
 Sources: `t/recipes/release_decode_arms.py`, `t/recipes/grade_spec33.py`,
 `.github/workflows/ceiling.yml`, `t/recipes/teacher_outputs.sh`,
 [Cloud Storage object identity](https://docs.cloud.google.com/storage/docs/objects),

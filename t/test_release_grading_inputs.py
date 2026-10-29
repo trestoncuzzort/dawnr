@@ -17,10 +17,16 @@ import release_grading_inputs as inputs
 
 
 @pytest.fixture
-def registration():
-    root = Path(__file__).resolve().parents[1]
+def registration(monkeypatch):
+    # Production panels are downloaded assets; unit tests must not depend on t/out.
+    panels = deepcopy(inputs.PANELS)
+    ids = {}
+    for index, panel in enumerate(panels):
+        ids[panel["name"]] = [str(10000 + index * 1000 + i) for i in range(panel["count"])]
+        panel["sha256"] = hashlib.sha256(("\n".join(ids[panel["name"]]) + "\n").encode()).hexdigest()
+    monkeypatch.setattr(inputs, "PANELS", panels)
     return {"seeds": {"1": {"prefix": "fixture-s1", "identity_prefix": "fixture-s1:", "precision_route_args": ["registered-precision"]}},
-            "panel_ids": {p["name"]: (root / p["path"]).read_text().split() for p in inputs.PANELS},
+            "panel_ids": ids,
             "sources": {"t/pipeline.py": "a" * 64, "t/recipes/v6_server_route.py": "b" * 64},
             "decode_driver_sha256": "c" * 64, "route_driver_sha256": "b" * 64}
 
@@ -125,8 +131,9 @@ def test_specs_only_precision_accepts_empty_saved_python(tmp_path, registration)
         inputs.precision_inputs(tmp_path, 1, registration)
 
 
-def test_given_specification_panel_and_names_are_complete(tmp_path, registration):
-    questions = (Path(__file__).parent / "out/gcp-student-2026-10-11-s1/spec-heldout.jsonl").read_bytes()
+def test_given_specification_panel_and_names_are_complete(tmp_path, registration, monkeypatch):
+    questions = "".join(json.dumps({"name": "fixture_" + str(i)}) + "\n" for i in range(33)).encode()
+    monkeypatch.setattr(inputs, "QUESTIONS_SHA", hashlib.sha256(questions).hexdigest())
     rows = [{"name": q["name"], "model": "fixture-s1", "system": "s1", "reply": ""} for q in inputs.read_jsonl(questions)]
     folder = tmp_path / "evaluation/t/out/spec33-fixture-s1"; folder.mkdir(parents=True)
     path = folder / "spec-answers.jsonl"
