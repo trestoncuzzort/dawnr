@@ -1,0 +1,46 @@
+{
+  "kind": "Existing authenticated cloud artifacts through the content auditor; no new model or grading",
+  "development_counts": {
+    "1": [
+      20,
+      19,
+      19
+    ],
+    "7": [
+      9,
+      8,
+      9
+    ]
+  },
+  "development_parts": 6,
+  "source_entries_per_old_part": 563,
+  "development_unconfirmed_removed": {
+    "v5-20261021-dev-desktop-r2": [],
+    "v5-20261022-seedoff1000": [],
+    "v5-20261022-seedoff2000": [],
+    "v5-20261022-wider-off0": [
+      261
+    ],
+    "v5-20261022-wider-off1000": [
+      261
+    ],
+    "v5-20261022-wider-off2000": [
+      261
+    ]
+  },
+  "precision_kept": 93,
+  "precision_reference_correct": 73,
+  "precision": 0.7849462365591398,
+  "spec33_all_seven": 27,
+  "zero_control_clean": 0,
+  "zero_control_all_seven": 0,
+  "auditor_sha256": "d8dcc4415b26125551c1f08a67f770f4e97aafb054781a9d2d93b27bc1391978",
+  "control_runs": {
+    "development": 40152940345,
+    "precision": 40149932546,
+    "zero_task": 40949622228
+  },
+  "content_audit_unit_checks": 25,
+  "combined_focused_checks": 67,
+  "new_zero_grader_matched_baseline_pending": true
+}

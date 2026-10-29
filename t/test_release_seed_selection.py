@@ -57,7 +57,8 @@ def evidence():
                   "output": {"filename": "model-Q8_0.gguf", "bytes": 4096, "sha256": model}}
         manifest = {"tag": prefix + "-spec20", "files": {"spec_first.json": "f" * 64}}
         precision = {"tag": prefix + "-spec20", "draws": 200, "problems": 95,
-                     "safe_kept": 100, "safe_kept_reference_correct": 70, "safe_precision": .7}
+                     "candidates_scored": 100, "safe_kept": 100,
+                     "safe_kept_reference_correct": 70, "safe_precision": .7}
         precision_receipt = {"grader_commit": "01c94ef5509fc51ab6484c1350c1cb9f8504e459",
                              "procedure": {"pool": "v5", "draws": 200, "per_problem": 3, "jobs": 4},
                              "source_sha256": reg["precision_sources"], "input_manifest": manifest, "input_asset_sha256": "a" * 64}
@@ -115,6 +116,22 @@ def test_best_development_seed_must_pass_both_individual_gates(evidence):
 def test_zero_precision_denominator_is_a_valid_failed_measurement(evidence):
     evidence[3][1]["precision"].update(safe_kept=0, safe_kept_reference_correct=0, safe_precision=None)
     assert decide(evidence)["selected_seed"] == 2
+
+
+def test_precision_counts_all_kept_samples_before_the_top_three_cap(evidence):
+    # spec_ceiling measures every "kept" record; per_problem=3 caps only its
+    # selection-gap ranking. Four kept samples on 75 problems is valid.
+    evidence[3][1]["precision"].update(candidates_scored=400, safe_kept=300,
+                                      safe_kept_reference_correct=210, safe_precision=.7)
+    assert decide(evidence)["seeds"]["1"]["precision_passed"]
+
+
+@pytest.mark.parametrize("scored,kept", [(100, 101), (1901, 100), (-1, 0), (True, 1)])
+def test_precision_counts_cannot_exceed_the_registered_twenty_samples(evidence, scored, kept):
+    evidence[3][1]["precision"].update(candidates_scored=scored, safe_kept=kept,
+                                      safe_kept_reference_correct=0, safe_precision=0 if kept else None)
+    with pytest.raises(ValueError, match="precision counts"):
+        decide(evidence)
 
 
 @pytest.mark.parametrize("field", ["mean", "fraction", "p", "missing", "foreign", "repeat"])

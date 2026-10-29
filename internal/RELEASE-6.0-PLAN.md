@@ -5,6 +5,25 @@ full text stays in git history (`git show a24d20a2:internal/ROADMAP-LOG.md`). Wh
 carried into section 6. This file is the roadmap of record for ongoing dawnr work; `ROADMAP.md` at the
 root is the public face and is updated as milestones finish.
 
+**Working goal, updated 2026-10-29:** ship measured incremental Dawnr releases
+and bug fixes, including improved local model weights once they pass the full
+qualification protocol. Use Cohere internally to improve checked training
+material and use approved cloud compute for training and evaluation. Complete
+the current two-seed candidate's evidence audit, selection, one final held-out
+reading when eligible, laptop checks and publication before declaring that
+model-release work done.
+
+**Research updates this goal's next actions (the user, 2026-10-29).** Whenever a
+finding changes the direction, update this working goal with the chosen action,
+supporting evidence and measurable success criteria. The current research adds
+type/scope-restricted teacher generation and matched example retrieval as the
+next bounded experiments after the candidate decision, selected by its measured
+failure stage. Read the existing repair training before expanding it. Exact
+proposal caps and falsifiers are in
+[the next-release research note](RESEARCH-2026-10-29-next-release.md). Those
+follow-ups remain conditional on their stated evidence; the current experiment's
+frozen inputs and release requirements stay in force.
+
 **Operating clarification, 2026-10-25 UTC:** improve the existing dawnr incrementally as useful changes are found.
 Tested application, verifier and data improvements can land independently. A new set of weights is not required
 for an update. Section 3 governs changing the released weights and claiming model-quality gains; it does not
@@ -84,6 +103,15 @@ recompute the registered six-versus-three statistics and choose only among seeds
 passing precision and spec33. They bind the chosen final export and refuse a later
 switch. Actual artifact audits and the single private held-out launch remain
 separate prerequisites; implementation tests do not qualify a model.
+
+The [artifact content auditor](../t/PREDICT-2026-10-29-grading-artifact-audit.md)
+checks original generation bytes, reconstructs extracted tasks, validates complete
+kernel tables and recomputes measured totals against frozen source identities.
+The existing baseline, precision, spec33 and zero-task controls reproduce through
+it. Precision accounting now follows all scored candidates, as the unchanged
+instrument requires, while retaining the 0.70 threshold. Artifact-origin checks,
+generation/model binding and collector integration remain explicit prerequisites
+before using this reader for selection.
 
 The frozen development grader rejected complete zero-task outputs. The
 [zero-task repair](../t/PREDICT-2026-10-29-empty-grading.md) records those as zero

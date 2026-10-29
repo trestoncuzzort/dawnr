@@ -128,7 +128,11 @@ def validate_export(export, seed, registration):
 def validate_precision(result, prefix):
     require(result["tag"] == prefix + "-spec20" and result["problems"] == 95 and result["draws"] == 200, "precision instrument changed")
     kept, correct, value = result["safe_kept"], result["safe_kept_reference_correct"], result["safe_precision"]
-    require(integer(kept, 0, 285) and integer(correct, 0, kept), "invalid precision counts")
+    scored = result["candidates_scored"]
+    # spec_ceiling counts every kept specification before the top-three ranking.
+    # The registered stage samples twenty specifications for each of 95 problems.
+    require(integer(scored, 0, 95 * 20) and integer(kept, 0, scored)
+            and integer(correct, 0, kept), "invalid precision counts")
     if not kept:
         require(value is None, "zero accepted specifications cannot claim precision")
         return False, None
