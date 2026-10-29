@@ -24,6 +24,13 @@ proposal caps and falsifiers are in
 follow-ups remain conditional on their stated evidence; the current experiment's
 frozen inputs and release requirements stay in force.
 
+Runtime research also changes the immediate operating plan: preserve the active
+cloud disk across the fixed VM cutoff, recover and verify any required model and
+request-cache evidence, then remove the retained disk. The provider requires a
+restart to change that runtime limit, so the training run and its 48-hour limit
+stay in place. This adds a $5 storage planning allowance and a seven-day cleanup
+review; cleanup remains required work.
+
 **Operating clarification, 2026-10-25 UTC:** improve the existing dawnr incrementally as useful changes are found.
 Tested application, verifier and data improvements can land independently. A new set of weights is not required
 for an update. Section 3 governs changing the released weights and claiming model-quality gains; it does not
@@ -129,6 +136,12 @@ result collector recovers the four identity groups and produces a deterministic
 per-seed generation audit only after all eight measurements agree. Its completed
 state requires both seeds' bindings; it does not make a release decision itself.
 
+The operator assembler now joins those complete audits into the registered
+three-versus-six decision and can freeze an eligible choice. Its same-results
+control correctly fails the improvement condition, and twelve focused checks
+pass. The actual-input probe writes no choice while the matched baseline
+registration and both trained seeds remain pending.
+
 The [private final-reading handoff](../t/PREDICT-2026-10-29-private-heldout-handoff.md)
 now recomputes the qualified seed choice, binds one immutable generation claim,
 and prepares encrypted inputs for a separate frozen cloud grader. Its synthetic
@@ -137,6 +150,18 @@ incomplete evidence. The workflow is prepared, not dispatched. Complete the
 matched grader controls, audited evidence assembly and selected-model launch
 binding before using it; its final result still needs the content audit and
 laptop checks. The 182-problem panel, 17-call limit and 17/12 score floors remain.
+
+The provider confirms the current VM will be deleted on October 31 at 16:28 UTC.
+Its boot disk is now preserved so the cutoff cannot also erase unuploaded caches.
+The VM's last start, cutoff, training/observer process IDs and all four worker
+hashes remained unchanged; training advanced to step 695 during the checks.
+The existing cloud planning allowance is now $55, including $5 for temporary
+disk retention; no additional GPU runtime was allocated. Independently recover
+needed evidence, then restore auto-delete or remove the detached disk. The
+cleanup review is due November 7 at 16:28 UTC; disk deletion is not automatic.
+[Verified change](../release/evidence/candidate-runtime-retention-2026-10-29.json),
+[provider runtime rules](https://docs.cloud.google.com/compute/docs/instances/limit-vm-runtime),
+[disk retention](https://docs.cloud.google.com/compute/docs/disks/modify-persistent-disk).
 
 The frozen development grader rejected complete zero-task outputs. The
 [zero-task repair](../t/PREDICT-2026-10-29-empty-grading.md) records those as zero

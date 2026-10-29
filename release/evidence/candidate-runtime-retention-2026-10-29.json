@@ -1,0 +1,31 @@
+{
+  "status": "verified",
+  "verified_utc": "2026-10-29T22:07:37.258441+00:00",
+  "reason": "Preserve unuploaded request caches and final evidence across the fixed VM expiration without stopping training or extending GPU runtime.",
+  "instance_termination_utc": "2026-10-31T16:28:15.656870+00:00",
+  "storage_capacity_gib": 150,
+  "retention_allowance_hours_after_vm_deletion": 168,
+  "cleanup_review_due_utc": "2026-11-07T16:28:15.656870+00:00",
+  "extra_storage_estimate_before_tax_usd": 3.4520472,
+  "extra_planning_allowance_before_tax_usd": 5,
+  "planning_allowance_before_tax_usd": 55,
+  "automatic_disk_cleanup": false,
+  "runtime_limit_unchanged": true,
+  "vm_last_start_unchanged": true,
+  "training_pid_unchanged": true,
+  "identity_observer_pid_unchanged": true,
+  "all_four_worker_hashes_unchanged": true,
+  "step_observed_after": 695,
+  "sources": [
+    "https://docs.cloud.google.com/compute/docs/instances/limit-vm-runtime",
+    "https://docs.cloud.google.com/compute/docs/disks/modify-persistent-disk",
+    "https://cloud.google.com/compute/disks-image-pricing"
+  ],
+  "kind": "Preserve the active candidate disk across its fixed cloud runtime limit",
+  "cleanup_requirement": "After independently verified recovery, restore auto-delete for ordinary VM cleanup or delete the exact detached disk. Cleanup remains part of the active goal.",
+  "private_observation_sha256": {
+    "runtime-observation.json": "148a96a48608b1ae414328ed9f1ce0ab63be160d4193c108a91eacc92c4d0633",
+    "runtime-observation-after-retention.json": "2100520921367335147b0e226b068a42659f38971acf5ab79d58f950440cd32a",
+    "disk-retention-training-check.json": "0b82fda8fe66ac78e98450df01246b1f4a1e629ed84ffb02a26747b7b8bcd12d"
+  }
+}

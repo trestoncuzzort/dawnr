@@ -1,0 +1,75 @@
+{
+  "kind": "Negative assembly software control: duplicate the same saved released-model readings on both sides; no candidate model evidence",
+  "source_receipt_sha256": "78ad337c5b7b259b6e443038e2c6124d671aa3c297da0f9e92dcbebe1ee8aa0e",
+  "all_six_original_saved_grade_file_maps_rechecked": true,
+  "baseline_counts": {
+    "clean": [
+      20,
+      19,
+      19
+    ],
+    "all_seven": [
+      9,
+      8,
+      9
+    ]
+  },
+  "virtual_candidate_counts": {
+    "1": {
+      "clean": [
+        20,
+        19,
+        19
+      ],
+      "all_seven": [
+        9,
+        8,
+        9
+      ]
+    },
+    "2": {
+      "clean": [
+        20,
+        19,
+        19
+      ],
+      "all_seven": [
+        9,
+        8,
+        9
+      ]
+    }
+  },
+  "paired_gate_passed": false,
+  "paired_clean": {
+    "mean_difference": 0.0,
+    "summed_fraction_difference": 0.0,
+    "moved": {},
+    "sign_test": {
+      "up": 0,
+      "down": 0,
+      "p": 1.0
+    },
+    "permutation_test": {
+      "sum": 0.0,
+      "p": 1.0,
+      "draws": 0
+    }
+  },
+  "focused_synthetic_checks": 12,
+  "script_sha256": "ac3f24c1f4314c32dfd07a50663563e26405b6f3cae0b49f79a1c5ca405772c3",
+  "control_script_sha256": "fcc125df0c164d42de3b59f7e0ee489995e3233b1061c04e73ff589a59a1658a",
+  "initial_check_failure": "The first join used late-bound generators and repeated the last candidate pair. The eighteen-part guard rejected it. Eagerly materializing each pair corrected the builder before use.",
+  "model_reference_or_proof_calls": 0,
+  "actual_candidate_selected": false,
+  "operator_script": "out/r61/assemble_candidate_b.py",
+  "reproduction_script": "out/r61/check_selection_assembly.py",
+  "synthetic_test_script": "out/r61/test_assemble_candidate_b.py",
+  "real_input_probe": {
+    "status": "waiting-for-matched-baseline-registration",
+    "selected_seed": null,
+    "heldout_started": false,
+    "frozen_choice_written": false
+  },
+  "live_evidence_loading_pending": true
+}

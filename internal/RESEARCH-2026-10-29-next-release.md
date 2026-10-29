@@ -158,3 +158,17 @@ conditions still apply. Current Cohere model access, recorded charges and quotas
 must be checked at execution time; grant balance alone does not establish model
 capacity. The documented limits distinguish models and key types.
 [Cohere limits](https://docs.cohere.com/docs/rate-limits).
+
+One operational finding affects the current run and subsequent evaluation.
+Google's runtime-limit procedure requires stopping and restarting an existing
+VM to change its limit. The running candidate has a confirmed October 31 cutoff,
+and its completed-bundle backups do not include every unfinished request cache.
+Keep the training run intact and preserve its existing disk across VM deletion
+using the separate disk auto-delete setting. That change is now verified, with
+the original cutoff and live training process unchanged. Recover and verify the
+needed model/cache evidence before deleting the retained disk; the working goal
+now includes that cleanup and its seven-day review. This is a $5 storage planning
+increment, not more GPU runtime or a new teacher trial.
+[Runtime-limit documentation](https://docs.cloud.google.com/compute/docs/instances/limit-vm-runtime),
+[disk auto-delete controls](https://docs.cloud.google.com/compute/docs/disks/modify-persistent-disk),
+[change receipt](../release/evidence/candidate-runtime-retention-2026-10-29.json).

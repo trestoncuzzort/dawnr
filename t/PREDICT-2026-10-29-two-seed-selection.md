@@ -47,6 +47,23 @@ the six saved baseline parts, reproduced clean counts 20/19/19 and all-seven
 9/8/9, then used those same sets on both sides. The paired gate correctly failed
 with p = 1. This is an implementation control, not a candidate result.
 
+The operator assembler now connects the completed artifact collector to this
+decision. It requires a separately frozen matched baseline, the activated audit
+procedure and all sixteen candidate measurements plus four model-identity
+groups. It checks the same grader on all eighteen development parts, joins each
+95/145 pair through the existing reader functions, then filters the clean 206.
+Its evidence bundle binds the report, part audits and both seeds' instruments.
+Only a qualifying result may create the immutable final-choice bundle.
+
+Twelve focused checks pass. A control rechecked the saved file digests for all
+six released-model parts, repeated those same readings as both virtual seeds,
+and recovered 20/19/19 clean and 9/8/9 all-seven with p = 1. The initial builder
+repeated the final pair through late-bound generators; the eighteen-part guard
+rejected it, and eager pair construction fixed that test before any real use.
+The actual-input probe remains pending on the matched baseline registration,
+with no choice written. Full live evidence loading is still awaiting training
+and grading. [Validation](../release/evidence/selection-assembly-control-2026-10-29.json).
+
 No candidate decision has been frozen and no held-out answer has been generated.
 A qualifying decision still needs one private held-out reading, the final laptop
 conditions, packaging and publication. The goal is not complete at this step.
