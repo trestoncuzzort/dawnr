@@ -105,6 +105,34 @@ no early generation has begun. All 593 original source/input/runtime files match
 and 86 scheduling, output-integrity, transport and adoption controls pass.
 [Overlap registration and activation](../release/evidence/early-development-overlap-2026-10-30.json).
 
+The next packaging handoff is prepared and remains conditional on qualification.
+It reaudits the recovered final reading before invoking the existing cloud
+splitter, binds the package to the frozen selected model, and verifies every
+tensor and model metadata field through the existing package check. It copies
+the verified manifest to `dawnr.sha256` for the proposed 6.1.0 release and downloads
+only the checked versioned shards for final local testing, within the existing
+transfer allowance. Interrupted or changed packages require inspection; they
+are never silently replaced. Thirty-six transport and package controls pass,
+and the actual cloud preflight rejects an unqualified bundle before creating any
+output or starting the splitter. No candidate has qualified or been packaged.
+[Final model staging preparation](../release/evidence/qualified-model-staging-2026-10-30.json).
+
+Before publication, clean-install checks must use that exact candidate package.
+The previous install-smoke workflow always installed the latest public release,
+which would exercise 6.0.2's old weights. It now accepts an exact model release ID
+and expected manifest digest. The helper downloads authenticated assets, verifies
+every shard, serves just those checked files on loopback to the ordinary installer,
+then verifies the installed files and saves their identities with the application
+revision. The existing clean-machine command checks follow that installation.
+Without explicit inputs, the latest-release path stays available.
+
+Eighteen focused installation-input controls pass, alongside the 36 package and
+staging controls. A clean-machine control is registered using release 6.0.0's
+already published package, whose manifest and asset digests were verified through
+the live API. This tests the new installation path, not the unqualified model.
+The actual candidate installation and registered laptop comparison remain
+required before publishing new weights.
+
 The serial wrapper now has a recorded handoff reservation so completion timing
 cannot start duplicate second-seed training. Only that shell is held; its first
 training worker has continued advancing with GPU utilization observed at 100%.

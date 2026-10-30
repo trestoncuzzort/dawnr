@@ -1,0 +1,51 @@
+{
+  "schema": 1,
+  "kind": "conditional-qualified-model-staging-preparation",
+  "recorded_utc": "2026-10-30T02:21:01.391017+00:00",
+  "proposed_version": "6.1.0",
+  "released_version_unchanged": "6.0.2",
+  "status": "prepared-waiting-for-qualified-model",
+  "prerequisites": [
+    "frozen qualified two-seed selection",
+    "fresh authenticated full-content audit of the one final heldout reading"
+  ],
+  "properties": [
+    "source model hash matches both selection and the final reading",
+    "existing cloud splitter retains all tensors and model metadata",
+    "canonical dawnr.sha256 names the exact versioned shards",
+    "downloaded bytes are checked against the package before local final tests",
+    "an interrupted, foreign or changed package is preserved and refused",
+    "packaging never credits installation, laptop checks or publication"
+  ],
+  "local_sources_sha256": {
+    "out/r61/stage_selected_model.py": "01c4709752cbdfbbcfd1c6ec12b13b5eeeac263af9e72f4f9106387b1332ba44",
+    "out/r61/remote_package_selected.py": "4559614efebaf6aa097d40f89ba6566a4e3b56ca6e06f1bb8a142658ee4b1713",
+    "out/r61/test_stage_selected_model.py": "2ed9bfa8142e401d79f3aa637d957a58141183a7c62f89f3fe7eca4c7f90e3d6",
+    "t/recipes/v6_package_gguf.py": "b7517b935b83424ac444bc8dd8845be89b23903861bda4dce2e5958a2cf506ad",
+    "t/recipes/v6_export.py": "f452cd23eeaceb32ec3bb7dc0b7fd63fcdcda2be7cd7098e203b992eb3a05915"
+  },
+  "registration_sha256": "f3b31d625b72e22e5b9a988210b502c06f83a932a5b7409225971e8caf453016",
+  "splitter_sha256": "ce4572045dbbd031c3f5e2c8cdf965f9d30a6528c8c9e17a065cd21b30b01dfb",
+  "converter_revision": "f1cee9941b0e843ea260bf8dd9a090fbd9711b6a",
+  "tests": {
+    "focused_checks_passed": 36,
+    "actual_cloud_source_and_reader_preflight": true,
+    "actual_cloud_unqualified_refusal_before_output": true,
+    "real_controller_inspect_package_fetch_wait_without_dispatch": true,
+    "synthetic_only_no_local_model_or_prover_execution": true
+  },
+  "new_gpu_allocation": false,
+  "maximum_packaging_seconds": 1800,
+  "existing_transfer_allowance_gib": 20,
+  "candidate_qualified": false,
+  "model_packaged": false,
+  "model_downloaded": false,
+  "model_released": false,
+  "remaining": [
+    "model qualification",
+    "actual selected-model packaging",
+    "explicit candidate clean-install checks",
+    "matched final local product tests",
+    "publication and required resource cleanup"
+  ]
+}
