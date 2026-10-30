@@ -128,3 +128,29 @@ fixture import and expected ValueError where the existing score reader raises
 SystemExit; both expectations were corrected without weakening the checks.
 The actual-input probe reports waiting for the qualified frozen choice.
 [Result audit and transport controls](../release/evidence/private-heldout-final-audit-2026-10-30.json).
+
+The final service uses the same unprivileged account as the original training
+and development job. Testing that account exposed a deployment permission
+failure: the administrator's earlier import passed, but the model account could
+not read the staged directory. Read access for the model group fixes this;
+ownership, content hashes and running workers remain unchanged. The model
+account now passes all module, decoder/runtime and unqualified-launch checks,
+and cannot write the tool files.
+
+Before any real final invocation, require the complete frozen choice on both
+hosts and the original development completion marker. Journal the exact start
+inputs and service on each host before its first request. Every repeated or
+uncertain request must only inspect that original start; changed evidence,
+changed units and existing unregistered units must refuse. The final process
+still acquires the existing GPU lock and enforces all model/source/cache checks.
+The service does not restart automatically or start on boot; its 44,100-second
+bound includes the original 12-hour client bound and setup/cleanup allowance.
+Stopping it stops all of its child processes.
+
+Thirteen software controls and the cloud's actual service-unit parser pass.
+The changed-input fixture initially hit its own read-only file permissions;
+granting write permission to that temporary fixture allowed the intended
+changed-byte rejection to be tested. An actual remote negative start refuses
+the unqualified selection before any start record or service is created.
+No real model call, final service or candidate selection has started.
+[Service start and account-access evidence](../release/evidence/private-heldout-service-start-2026-10-30.json).

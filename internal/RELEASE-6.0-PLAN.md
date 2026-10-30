@@ -96,6 +96,19 @@ development grades, apply the registered decision, then use this prepared final
 reading only if eligible; laptop checks and publication remain required.
 [Final audit controls](../release/evidence/private-heldout-final-audit-2026-10-30.json).
 
+The final invocation can now be started through a recorded cloud service using
+the original unprivileged model account. A real-account preflight found that
+the staged files were readable only by the administrator; the model group now
+has read access, with every source byte unchanged and no write access. Imports,
+decoder/runtime checks and unqualified-launch refusal pass as that account.
+Thirteen service-start controls pass, along with the actual cloud unit parser.
+Both hosts record the first start before requesting it, and an uncertain repeat
+only observes that original service. The service has a time bound, no automatic
+restart or boot enablement, and stops all child processes together. No selected
+model or real service has started. This closes the remaining launch handoff;
+the training, grading, selection, laptop and publication requirements remain.
+[Service start controls](../release/evidence/private-heldout-service-start-2026-10-30.json).
+
 **Operating clarification, 2026-10-25 UTC:** improve the existing dawnr incrementally as useful changes are found.
 Tested application, verifier and data improvements can land independently. A new set of weights is not required
 for an update. Section 3 governs changing the released weights and claiming model-quality gains; it does not

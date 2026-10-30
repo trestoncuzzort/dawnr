@@ -1,0 +1,42 @@
+{
+  "kind": "Original-account access and one-time final service start controls",
+  "utc": "2026-10-30T00:15:34.829031+00:00",
+  "source_revision_before_documentation": "bd30112b2645578c6c79d0b19a5fdfbaad9e2417",
+  "deployment_manifest_sha256": "88f72b8ccb17b7b5a67dabe3643c2bf72aef4669938b27443a7a0f50b2dfba8a",
+  "permission_failure_before_fix": "The administrator could import the tools, but the original model account could not read the root-owned 0700 directory and 0400 modules.",
+  "permission_fix": "The original model group can traverse the 0550 directory and read the 0440 files. Ownership stays with the administrator; the model account cannot write them.",
+  "all_content_hashes_unchanged": true,
+  "original_account_checks": {
+    "isolated_imports": true,
+    "registered_sources": true,
+    "unqualified_launch_refused": true,
+    "write_access": false
+  },
+  "training_and_observer_services_unchanged": true,
+  "start_controls_passed": 13,
+  "remote_unqualified_start_refused_before_service_or_journal": true,
+  "actual_cloud_service_syntax_valid": true,
+  "one_service_start_journal_on_each_host": true,
+  "ambiguous_local_or_remote_starts_observed_without_restarting": true,
+  "changed_start_inputs_or_units_refused": true,
+  "automatic_restart": false,
+  "enabled_on_boot": false,
+  "service_runtime_limit_seconds": 44100,
+  "service_stop_timeout_seconds": 30,
+  "service_kill_mode": "control-group",
+  "source_hashes": {
+    "start_heldout.py": "69dc33862ad568e2fa3729f2ea3fa5c904781f4d168221984791713cea2a5abe",
+    "remote_heldout_start.py": "d696b713589d30e5767fcfc268c20d31e62b5a1aea69f2fdb15b384ee1e41eeb",
+    "test_start_heldout.py": "76dfb1b5b8667cc6b093934dbb3daf22b8fb28b11c9efb2e484ae361dd798290"
+  },
+  "permission_preparation_sha256": "bf81f96632f2be020611d92a17599f9059f704d59a482efaffa4f368bf134336",
+  "procedure_sha256": "e2e06b2707656bfd99b7eb6dcbf40d8eb911d1dce588759e55c1e8b7c48ea671",
+  "actual_input_probe": {
+    "status": "waiting-for-qualified-frozen-choice",
+    "start_requested": false
+  },
+  "model_calls": 0,
+  "real_service_started": false,
+  "initial_control_failure": "The changed-input fixture could not alter the read-only file. It now grants its temporary file write permission before verifying that the changed bytes are refused.",
+  "source": "https://www.freedesktop.org/software/systemd/man/249/systemd.service.html"
+}
