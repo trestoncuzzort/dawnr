@@ -4,6 +4,20 @@ Published claims that turned out to be wrong, and what they are now. They are
 kept here rather than quietly fixed, because a project that only reports its
 successful measurements is not measuring anything.
 
+- **A pending remote result was reported as live training (2026-10-30).**
+  The second seed's result poll kept returning a timeout after its GPU container
+  had terminated. That timeout established only that the result was unavailable.
+  Direct container inspection and the provider's task record showed a billing
+  spending-limit termination at 23:53 UTC, with training last logged at step 310.
+  The complete step-300 checkpoint survived. The original call and app were
+  stopped before preparing a replacement on funded cloud compute. Future liveness
+  reports must check the actual container or process and advancing work, separately
+  from result availability. The recovered checkpoint has now passed cloud tensor,
+  source and package checks, and its original training has advanced again on an L4.
+  The first seed and frozen training recipe are unchanged.
+  [Termination evidence](release/evidence/parallel-seed2-billing-recovery-2026-10-30.json),
+  [observed recovery](release/evidence/parallel-seed2-recovery-running-2026-10-30.json).
+
 - **A contract declaration was checked as though its implementation were present (2026-10-25).**
   The new pipeline static gate rejected a task termination measure after the training-row builder deliberately
   removed its recursive body. The committed factorial example reproduces this. Of 171 inherited specification

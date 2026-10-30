@@ -1,15 +1,16 @@
 # Dawnr after the current candidate: the next release cycle
 
-Runtime follow-up, October 29: observed H100 throughput projects beyond the
-original eight-hour function bound. Modal documents resuming from saved volume
-checkpoints. The registered trainer already restores its optimizer, scheduler
-and random states. Prepare one 90-minute continuation of the same second seed,
-only after the exact original call reaches its limit and its container stops.
-Refuse incomplete checkpoints, changed inputs, and uncertain dispatches. The
-working goal now includes this conditional recovery, within a $50 Modal planning
-allowance; no extra GPU was allocated by the preparation. See the
-[continuation controls](../release/evidence/parallel-seed2-continuation-2026-10-29.json)
-and Modal's [resumable training example](https://modal.com/docs/examples/long-training).
+Current runtime follow-up, October 30: the H100 attempt ended at its account's
+billing spending limit. Its complete step-300 checkpoint has been recovered, and
+a replacement L4 has passed cloud validation and resumed that checkpoint on the
+other funded cloud account. The working goal retains the 24-hour VM bound and
+$30 planning allowance while completing training and qualification. The detailed correction and next
+actions are below. [Recovery registration](../release/evidence/parallel-seed2-billing-recovery-2026-10-30.json).
+
+The earlier 90-minute continuation was designed only for the original eight-hour
+function limit. It was prepared but never invoked and does not apply to this
+billing termination. Its [controls](../release/evidence/parallel-seed2-continuation-2026-10-29.json)
+remain preserved beside Modal's [resumable training example](https://modal.com/docs/examples/long-training).
 
 Finish the registered two-seed candidate and its release decision first. The next
 data experiment should make the internal Cohere teacher better at producing valid,
@@ -183,3 +184,26 @@ increment, not more GPU runtime or a new teacher trial.
 [Runtime-limit documentation](https://docs.cloud.google.com/compute/docs/instances/limit-vm-runtime),
 [disk auto-delete controls](https://docs.cloud.google.com/compute/docs/disks/modify-persistent-disk),
 [change receipt](../release/evidence/candidate-runtime-retention-2026-10-29.json).
+# Runtime correction and next action, 2026-10-30
+
+The second seed's saved log stopped at step 310. A result polling timeout was
+insufficient evidence of live compute: direct provider inspection found its
+container terminated at the account's billing-cycle spend limit. Modal documents
+that spend limits can stop workloads independently of their function timeout
+([budgets](https://modal.com/docs/guide/budgets)). This was a billing termination,
+not the eight-hour runtime limit anticipated by the prepared continuation.
+
+The complete checkpoint at step 300 was recovered with the original preparation,
+training rows and state files. The original call and dedicated app were stopped
+before replacement work. The next action in the working goal is a bounded L4
+recovery on the other funded cloud account, with full cloud validation of the
+same recorded packages and checkpoint state before training. The hardware change
+is explicit; the seed, recipe, data and model qualification conditions stay fixed.
+A replacement is allocated with a 24-hour cutoff and a $30 planning allowance.
+The current model-release objective still requires the complete second seed,
+development comparison, conditional final reading, laptop checks, publication
+and cleanup. The cloud validation has now passed and advancing training is
+observed. The automatic adapter collector has 13 passing controls; its next
+milestone is the verified completed adapter, not another training launch.
+[Registration](../release/evidence/parallel-seed2-billing-recovery-2026-10-30.json),
+[observed recovery](../release/evidence/parallel-seed2-recovery-running-2026-10-30.json).

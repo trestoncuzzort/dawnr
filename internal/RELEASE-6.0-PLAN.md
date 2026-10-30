@@ -39,21 +39,55 @@ serial second-seed run. Measure actual throughput before revising the release
 ETA. This scheduling amendment precedes any candidate evaluation; it does not
 add a third seed or allocate another teacher trial.
 
-The H100 second seed has started after its remote preflight passed. A collector
-now waits on that exact call and verifies the completed adapter before importing
-it into the original job. The import keeps the original worker checks and
-prevents the serial wrapper from training seed 2 again. Its 23 software controls
-pass; the real model transfer remains pending on completion.
+The H100 second seed started after its remote preflight passed. Its collector
+was prepared to verify the completed adapter before importing it into the
+original job, retaining the original worker checks and preventing a duplicate
+serial run. Those 23 software controls passed.
 
-Observed H100 throughput projects slightly beyond the original eight-hour call
-bound. Prepare one continuation of the same seed from its latest complete
-checkpoint, only after that exact call reaches its runtime limit and its
-container stops. Require at least step 1,900, preserve the original trainer,
-data, optimizer, scheduler and random states, and bound the continuation to
-90 minutes. This raises the Modal planning allowance from $40 to $50 under
-the existing compute authorization. Fourteen software controls pass; no extra
-GPU call has been made. The original job and its limit remain unchanged.
+Observed H100 throughput projected slightly beyond the original eight-hour call
+bound. One continuation was prepared for that exact runtime-limit failure,
+requiring at least step 1,900 and preserving the original trainer, data,
+optimizer, scheduler and random states within a 90-minute bound. That preparation
+raised the Modal planning allowance from $40 to $50 under the existing compute
+authorization. Fourteen software controls passed; no extra GPU call was made by
+that prepared continuation.
 [Continuation controls](../release/evidence/parallel-seed2-continuation-2026-10-29.json).
+
+**Current recovery, 2026-10-30:** the H100 container actually terminated at
+23:53 UTC because its account reached a billing-cycle spending limit. A result
+poll timeout had been incorrectly labeled as live training. Direct task and
+container checks established the failure; the complete step-300 checkpoint and
+all original provenance were recovered. The original app/call and its local
+adoption collector are now stopped. The runtime-only continuation above was
+never used and does not apply to this different failure.
+
+Resume the same second seed on the other funded cloud account, preserving its
+adapter, optimizer, scheduler, random state, trainer, recorded package versions
+and training rows. A replacement L4 is allocated after terminal capacity failures
+in other zones. It has a 24-hour provider cutoff, a retained recovery disk and a
+$30 planning allowance against the user's confirmed credits. Check all original
+bytes and finite tensor state on that host before starting training. Record the
+H100-to-L4 transition explicitly. The first seed and its held serial parent stay
+unchanged; adoption, all release conditions and resource cleanup remain required.
+[Recovery registration](../release/evidence/parallel-seed2-billing-recovery-2026-10-30.json).
+
+Recovery is now running. The cloud checks authenticated all 30 transferred files,
+finite adapter/optimizer tensors, scheduler/random states and the recorded package
+versions. The original second-seed worker has advanced beyond step 300 on the L4;
+its encrypted input and checkpoint backups are confirmed. An initial backup
+preflight refused the differently named bucket before any model worker started.
+A dedicated bucket with the required prefix fixed that configuration without
+changing the backup or training sources; the unused empty bucket was removed.
+The original checkpoint was revalidated and the failed attempt preserved.
+
+A new collector now watches the exact recovery instance and will verify its
+completed adapter before reusing the existing atomic adoption procedure. Its 13
+controls cover provider/checkpoint binding, partial and altered results, archive
+integrity, repeated recovery and refusal to overwrite changed local evidence.
+An observation timeout is reported as unknown state and never restarts training.
+The unused runtime-only Modal continuation is retired explicitly. The first seed
+and held parent remain intact; training completion and all later release gates
+are still pending. [Observed recovery](../release/evidence/parallel-seed2-recovery-running-2026-10-30.json).
 
 The serial wrapper now has a recorded handoff reservation so completion timing
 cannot start duplicate second-seed training. Only that shell is held; its first
