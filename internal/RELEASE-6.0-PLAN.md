@@ -78,6 +78,24 @@ Replace the unused tool bundle and workflow pin only after the corrected
 revision passes CI. Training, generation inputs and selection remain unchanged.
 [Correction](../release/evidence/private-heldout-observation-fix-2026-10-29.json).
 
+That corrected revision has now passed all eight CI jobs. Its replacement tool
+bundle is installed and verified, with a new immutable workflow tag. The unused
+old tag and bundle remain preserved. Training workers and observer sources are
+unchanged. [Replacement](../release/evidence/private-heldout-tools-replacement-2026-10-29.json).
+
+The final result reader now recomputes coverage from the full saved evidence and
+requires the original selected inputs, workflow identity and grader sources.
+Only independently confirmed answers can meet the 17/12 floors. The private
+collector encrypts transfers, journals the single dispatch, recovers failed-run
+diagnostics and refuses an uncertain repeat. Its control and reader sources are
+frozen together. Across the public handoff and private collector, 101 software
+checks pass, including a full 182-problem zero reading and real encryption.
+The actual-input probe still waits for a qualified frozen choice. No final
+model generation or grade has started. Next: finish the two training runs and
+development grades, apply the registered decision, then use this prepared final
+reading only if eligible; laptop checks and publication remain required.
+[Final audit controls](../release/evidence/private-heldout-final-audit-2026-10-30.json).
+
 **Operating clarification, 2026-10-25 UTC:** improve the existing dawnr incrementally as useful changes are found.
 Tested application, verifier and data improvements can land independently. A new set of weights is not required
 for an update. Section 3 governs changing the released weights and claiming model-quality gains; it does not

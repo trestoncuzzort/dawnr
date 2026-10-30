@@ -1,0 +1,38 @@
+{
+  "kind": "Final result content audit and encrypted private controller software checks",
+  "utc": "2026-10-30T00:04:43.684762+00:00",
+  "public_heldout_controls_passed": 79,
+  "private_transport_controls_passed": 22,
+  "public_final_audit_controls_passed": 15,
+  "full_panel_problems": 182,
+  "zero_answer_result": "heldout-failed",
+  "reported_counts_alone_cannot_pass": true,
+  "changed_input_and_workflow_identities_refused": true,
+  "encrypted_round_trip_passed": true,
+  "failed_grade_diagnostics_preserved_without_success_verdict": true,
+  "ambiguous_dispatch_not_repeated": true,
+  "changed_frozen_reader_refused": true,
+  "changed_frozen_workflow_refused": true,
+  "unqualified_remote_packaging_refused": true,
+  "controller_source_sha256": "cd0c97d4487fd0e815962045c227eb797167b83c9ebebb4bf84624e8fe4e61d7",
+  "controller_tests_sha256": "4a4df6d21cede4e467e7caccf8a299f933cc2e110fd35522afc26b0dec636f6b",
+  "auditor_source_sha256": "80b84228e1bef195e4117276af7d90e5139d767629db5e08b0710be4174ff7a9",
+  "auditor_tests_sha256": "2e8b4f37a81801841f5ea56ed6219be6b438e731ff0a39da0241b1de73381537",
+  "procedure_sha256": "7ce8c86e1f680d19c9f0c3df44f6a8dbcf6ee1013e922cb02751776a06893a9f",
+  "remote_packaging_source_sha256": "19dfcd7894cac7543002d46357cf5255f93a6073da4443af20627edade00a9a9",
+  "actual_input_probe": {
+    "status": "waiting-for-qualified-frozen-choice",
+    "model_calls": 0,
+    "dispatches": 0
+  },
+  "initial_control_failures": [
+    "The forged-score negative control correctly raised the existing reader SystemExit; its expected exception was corrected.",
+    "The private encrypted test fixture initially omitted its prepared fixture import; adding that import enabled all four affected controls."
+  ],
+  "local_model_calls": 0,
+  "local_reference_or_prover_calls": 0,
+  "real_model_selected": false,
+  "real_final_reading_started": false,
+  "real_final_grade_dispatched": false,
+  "final_laptop_checks_pending": true
+}

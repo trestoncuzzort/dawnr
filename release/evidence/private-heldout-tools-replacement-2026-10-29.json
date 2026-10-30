@@ -1,0 +1,49 @@
+{
+  "kind": "Corrected isolated final-reading deployment before any model selection",
+  "installed_utc": "2026-10-29T23:59:05.087039+00:00",
+  "source_revision": "2d1f2b8c1aa494d8998e23da588d179eda7cdceb",
+  "bundle_manifest_sha256": "88f72b8ccb17b7b5a67dabe3643c2bf72aef4669938b27443a7a0f50b2dfba8a",
+  "files": {
+    "decoder.json": "1b4d44ab9f46026cd6be798e9e02da52d333deddde14e9f178d7e3bbfa5e93b9",
+    "panel.txt": "837e2ac5a70980d2ac7b35a97af258997d153e7c755cd166555d232c371ad51f",
+    "protocol.json": "45fde31cd72d452f3cbc972472a92632adecc12a58b8a1f34dade03680f91f28",
+    "release_decode_arms.py": "0c65364cf902011809b2c5c1db059b082a15763550f2b6805f365a5f5f66d03d",
+    "release_grading_inputs.py": "993101022a35f51b13fcab1fba259128bb3888c70dc916d650ee723f17582b46",
+    "release_heldout_grade.py": "77a7c5e8acd9651e49a5dc441de4e31a7cfccf9984c5695c5c1ae72ff4d33c02",
+    "release_heldout_inputs.py": "a9bda01e56f69f2aff7ab974c7c2d7fb5bea5acbcf5804dbd1a5cc6807366206",
+    "release_heldout_launch.py": "a9c0b5b1b4f6eca0a4b30e4fd75cbcd33d9ab57d80b753134a27dc6147a06e20",
+    "release_seed_selection.py": "8f0146ca8a72aeb54a49b49c14e304fb46281ec484afc13ea6e0186195f1c37c",
+    "three_decode_report.py": "564c8ecb417b36e1a1d6256a7c4202b80b947d8ba63b5e7c4fb02f634871e098",
+    "v6_export.py": "f452cd23eeaceb32ec3bb7dc0b7fd63fcdcda2be7cd7098e203b992eb3a05915"
+  },
+  "workflow": {
+    "workflow_ref": "r61-heldout-20261029-observation",
+    "workflow_revision": "2d1f2b8c1aa494d8998e23da588d179eda7cdceb",
+    "workflow_sha256": "673c4daf1f43eee922c83ce692c6bff7801c728e76f54318d62d62ffe10979d9",
+    "deployment_manifest_sha256": "88f72b8ccb17b7b5a67dabe3643c2bf72aef4669938b27443a7a0f50b2dfba8a",
+    "grader_revision": "1e033b50c2c53fb3d40932d9561e1a8eefe9aa7d",
+    "workflow_run_attempt": 1,
+    "dispatched": false,
+    "required_clean": 17,
+    "required_all_seven": 12,
+    "status": "ready",
+    "ci_run_id": 40975542856,
+    "supersedes_before_use": "r61-heldout-20261029"
+  },
+  "superseded_before_use": {
+    "bundle_manifest_sha256": "9c318eac4af6850e0fe9046c81c5684de3c04d293fb91af5cc4a6557b30232b4",
+    "workflow_ref": "r61-heldout-20261029",
+    "workflow_revision": "1e2b20e516c0d0d4c14599c1178f3dcd3ce0e39e"
+  },
+  "ci_run_id": 40975542856,
+  "ci_jobs_passed": 8,
+  "all_registered_decoder_and_runtime_files_verified": true,
+  "isolated_imports_verified": true,
+  "unqualified_launch_refused_before_process_start": true,
+  "training_and_observer_services_unchanged": true,
+  "worker_sources_unchanged": true,
+  "old_tag_moved": false,
+  "selected_model": false,
+  "model_calls": 0,
+  "grade_dispatches": 0
+}

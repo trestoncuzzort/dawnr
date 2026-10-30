@@ -56,11 +56,11 @@ The workflow refuses another GitHub run attempt; dispatch still requires the
 existing immutable journal so an ambiguous attempt is not silently repeated.
 
 The workflow's YAML and shell blocks parse, but it has not graded a real final
-reading. The new grader's matched baseline controls must finish before candidate
-use. The operator assembler and GPU launcher are now prepared; actual selection,
-deployment and invocation evidence are still pending. No real choice or claim
-was created. The final artifact still needs independent content and origin audits
-before its counts can satisfy a release condition.
+reading. The matched baseline is now frozen. The assembler, isolated GPU
+launcher and private result collector are prepared; actual selection and
+invocation evidence remain pending. No real choice or claim was created. The
+final artifact still needs independent content and origin audits before its
+counts can satisfy a release condition.
 
 The launcher runs the original decoder with the same server arguments. It
 rechecks the exact selected model bytes, source files and ten server/library
@@ -101,3 +101,30 @@ The earlier unused deployment and workflow pin are preserved and superseded;
 the corrected exact revision must pass CI before its replacement is used.
 No model was selected and no final reading started.
 [Observation fix](../release/evidence/private-heldout-observation-fix-2026-10-29.json).
+
+The corrected revision `2d1f2b8c1aa494d8998e23da588d179eda7cdceb` passed all
+eight CI jobs in run 40975542856. Its replacement isolated bundle passes the
+same source, runtime, import and unqualified-launch checks. The new immutable
+workflow tag is `r61-heldout-20261029-observation`; the original tag is preserved.
+Training and observer identities remain unchanged.
+[Replacement](../release/evidence/private-heldout-tools-replacement-2026-10-29.json).
+
+The independent final reader recomputes the full content result from the saved
+182 entries, verifies original input bytes and source/workflow identities, and
+applies the floors only to confirmed admissions. A complete zero reading stays
+a failed result. Forged passing counts with matching receipt hashes are refused;
+reported counts of 17/12 with only 16/11 confirmed still fail. Final laptop and
+publication work remain pending even for a passing reading.
+
+The private controller reuses the existing cloud backup envelope and GitHub
+input encryption. It preserves failed workflow artifacts for inspection but
+does not audit them as successful or repeat an ambiguous dispatch. Changed
+controller, reader, workflow or deployment pins refuse further work. There are
+79 public handoff controls and 22 private controller controls passing. They use
+synthetic evidence and local cryptography, with no model, reference or prover
+execution. A remote packaging negative control also rejects an unqualified
+bundle before reading model answers. The initial test harness omitted one
+fixture import and expected ValueError where the existing score reader raises
+SystemExit; both expectations were corrected without weakening the checks.
+The actual-input probe reports waiting for the qualified frozen choice.
+[Result audit and transport controls](../release/evidence/private-heldout-final-audit-2026-10-30.json).
