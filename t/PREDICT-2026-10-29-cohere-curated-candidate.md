@@ -87,6 +87,35 @@ Fourteen software controls pass. No continuation has been allocated and no
 model-quality requirement changes.
 [Continuation registration](../release/evidence/parallel-seed2-continuation-2026-10-29.json).
 
+### Observed recovery and earlier first-seed evaluation, October 30
+
+The H100 attempt above ended at its account's billing limit, after step 310.
+Its complete step-300 checkpoint was recovered, authenticated and resumed on a
+funded L4 with the original optimizer, scheduler, random states, training code
+and data. The runtime-only continuation was never used and is retired. The
+original call and container are stopped. This hardware transition is part of
+the recorded candidate, not a fresh seed or a hidden replacement attempt.
+[Recovery evidence](../release/evidence/parallel-seed2-recovery-running-2026-10-30.json).
+
+Before any development output exists, register an earlier start for seed 1's
+export, six existing development arms and precision run. They begin only after
+the original first worker releases its lock and its completed run passes the
+original checks. Keep the serial parent held until these phases finish and their
+outputs verify; the second adapter may be recovered and saved during that wait.
+The original wrapper then reuses the same export, ready archives and precision
+cache. Run spec33 only in its original service, preserving its process-observation
+requirements. No additional panel, sampling attempt or selection rule is added.
+
+Prediction: this overlaps first-seed development with second-seed training without
+duplicate generation or concurrent GPU users. Refuse adoption while the early
+service is running, incomplete, failed, uncertain or its recorded output changed.
+A service restart after successful completion verifies its saved outputs without
+generation; an interrupted execution requires explicit inspection of the same
+cache. The service has one journaled start, no automatic restart and a 30-hour
+bound within the existing VM cutoff. The original sources remain unchanged.
+All 86 software controls pass; actual development measurements remain pending.
+[Scheduling evidence](../release/evidence/early-development-overlap-2026-10-30.json).
+
 Before launch, the cache-seeding receipt bug was reproduced and corrected. The cloud
 checkout includes that correction and records the new seeder hash. The frozen trainer
 digest, data, recipe and release criteria above are unchanged. See

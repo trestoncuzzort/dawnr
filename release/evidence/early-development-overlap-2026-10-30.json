@@ -1,0 +1,65 @@
+{
+  "schema": 1,
+  "kind": "original-development-scheduling-overlap",
+  "recorded_utc": "2026-10-30T02:10:54.355708+00:00",
+  "status": "installed-and-waiting-for-original-first-seed-training",
+  "seed": 1,
+  "phases": [
+    "original-export",
+    "original-six-development-arms",
+    "original-precision"
+  ],
+  "spec33": "original orchestration service only, after verified second-adapter adoption",
+  "heldout_started": false,
+  "development_generation_started": false,
+  "training_sources_unchanged": true,
+  "training_steps_each": 2160,
+  "training_rows_sha256": "18f3b204abd15c8e497c83840f909877ce5d131a8c23ce6c8633a117e5dbb4f9",
+  "execution_revision": "b3e9b0d9d71f684d9c68c9334160827fcc501b66",
+  "source_files_sha256": {
+    "early_seed1.py": "5f2da018d8e810bead70ddeb220123210240f6a2abb709338048353e862e451c",
+    "early_seed1_gate.py": "0bb036a061267608870f21e15d108fe64376fb8b8fa834ff514f24d8d4a2a978",
+    "deploy_early_seed1.py": "a07bf85b5f29dd3f5361c4053c11c70451aae33d06534d654e7980dc1b616186",
+    "start_early_seed1.py": "180aa8831abfe725768304abafa180fb3aa57ecbec0692d44c967215e64f5bba",
+    "collect_gcp_seed2.py": "a0a5dcd9f2750c1776a0e03863520618d37d901f6b01ca791911729a910c474c",
+    "collect_modal_seed2.py": "b24aad4d53ee4cdcfb490b6a98fb1de5c16c93da16e7035e73bd86fc9c5b7402",
+    "adopt_modal_seed2.py": "f8cca72aabb8347ffd4068e0ee4286da597dda58b226a8b14cd9b10cb03dad0c",
+    "test_early_seed1.py": "b163d80d1246534e5f9af1fa3f2feedbc747e0650ed86d50ee9e91a8c3b57ddb",
+    "test_early_seed1_gate.py": "baf5b91656cf6a31461bfa2760a4db149cfd429a1a746ebbd5fe6acb3133316d",
+    "test_collect_gcp_seed2.py": "c96773ed75c2c68fd6a072434ac8d213cdb2c48ef7e9a1d6902abcb1ba03ea09",
+    "test_collect_modal_seed2.py": "6767850afa2806793b9b147e42486e8d6889ca9fa71d0f3c0e15bfaaa7a5e040",
+    "test_adopt_modal_seed2.py": "fcb0288c7887f42163dd4838168fa03731c1601dd7d3398bf07ecca338290b07"
+  },
+  "plan_sha256": "91d15be3a3763771e6e7257a2968f228d248a4dff9a754d4b9866d71fdf8f7c0",
+  "registration_sha256": "ff8bf5ba4df0e6c4969305e8bf9c9b8608ebed0fef1a92859627c43035f42d8d",
+  "gate_registration_sha256": "a1269449868bc6aecbc159fed496c3ca614fd6b80bbcb668e59d91d820915ea3",
+  "unit_sha256": "7a6e247e17167bd2ede167ee6f2918ebfc76ff79c370358a76c081cb1f1c18d0",
+  "checks": {
+    "synthetic_controls_passed": 86,
+    "original_files_verified_on_cloud": 593,
+    "original_model_account_can_read_and_validate": true,
+    "unit_parser_passed": true,
+    "prestart_and_running_adoption_gate_closed": true,
+    "repeated_start_only_observed_same_process": true,
+    "original_parent_held_and_training_worker_alive": true,
+    "original_identity_observer_alive": true
+  },
+  "orchestration": {
+    "completed_second_adapter_saved_before_waiting": true,
+    "adoption_requires_terminal_success_and_exact_outputs": true,
+    "active_ambiguous_failed_or_changed_early_job_cannot_adopt": true,
+    "no_automatic_restart": true,
+    "runtime_limit_seconds": 108000,
+    "new_gpu_allocation": false,
+    "existing_vm_cutoff_unchanged": true,
+    "original_adoption_helper_unchanged": true
+  },
+  "remaining": [
+    "complete both original training seeds",
+    "complete and grade every registered development measurement",
+    "apply original release conditions",
+    "one heldout reading only if eligible",
+    "final local tests and publication",
+    "resource cleanup"
+  ]
+}

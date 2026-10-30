@@ -89,6 +89,22 @@ The unused runtime-only Modal continuation is retired explicitly. The first seed
 and held parent remain intact; training completion and all later release gates
 are still pending. [Observed recovery](../release/evidence/parallel-seed2-recovery-running-2026-10-30.json).
 
+**Scheduling improvement, registered before development generation:** after the
+first training worker finishes, export that adapter and run its original six
+development arms and precision check while the second seed continues training.
+The original wrapper reuses those completed outputs. Its 33-specification check
+stays in the original service so its independent process observations remain valid.
+
+The amended adapter collector first saves the complete second adapter, then waits
+for the early service to exit successfully and verifies its model and all output
+hashes before adoption can release the held parent. A failed or uncertain early
+job keeps the gate closed for inspection. There is one journaled start, no automatic
+restart, a 30-hour service bound within the existing VM cutoff, and no additional
+GPU allocation. The installed helper currently waits on the first worker's lock;
+no early generation has begun. All 593 original source/input/runtime files match,
+and 86 scheduling, output-integrity, transport and adoption controls pass.
+[Overlap registration and activation](../release/evidence/early-development-overlap-2026-10-30.json).
+
 The serial wrapper now has a recorded handoff reservation so completion timing
 cannot start duplicate second-seed training. Only that shell is held; its first
 training worker has continued advancing with GPU utilization observed at 100%.
