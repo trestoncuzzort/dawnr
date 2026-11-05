@@ -349,7 +349,11 @@ exists. Per its documentation and the 1.1.18 `grub.cfg` (`vt_check_compatible`,
 `uefi_linux_menu_func`), Ventoy then treats the image as compatible: it does
 not load its own hook cpio and does not replace the image's initrd, and only
 presents the virtual disk and the handoff variable. The marker adds nothing
-else. It is not evidence that this image boots through Ventoy: that has not
+else. Ventoy's UEFI program sets the variable in its normal mode whatever the
+marker says, without the non-volatile attribute, and does not set it in its
+memdisk mode (`VentoyEfiMain` in its `Ventoy.c`). An image loaded to memory by
+Ventoy therefore finds no handoff and no root; that mode is unsupported. The
+marker is not evidence that this image boots through Ventoy: that has not
 been run. Test a subdirectory/path containing spaces, reordered devices,
 duplicate markers, missing media and corruption on disposable virtual media
 before preparing the actual USB; the fixtures cover these cases only with
@@ -400,6 +404,7 @@ Primary sources consulted before implementation: [LFS kernel](https://www.linuxf
 [dracut 112 installer](https://raw.githubusercontent.com/dracut-ng/dracut/112/src/install/dracut-install.c),
 [dracut 112 lsinitrd](https://raw.githubusercontent.com/dracut-ng/dracut/112/lsinitrd.sh),
 [systemd 261 storage rules](https://raw.githubusercontent.com/systemd/systemd/v261/rules.d/60-persistent-storage.rules.in),
+[Ventoy 1.1.18 UEFI program](https://raw.githubusercontent.com/ventoy/Ventoy/v1.1.18/EDK2/edk2_mod/edk2-edk2-stable201911/MdeModulePkg/Application/Ventoy/Ventoy.c),
 [kernel microcode loading](https://docs.kernel.org/arch/x86/microcode.html),
 [GRUB ISO implementation](https://raw.githubusercontent.com/rhboot/grub2/master/util/grub-mkrescue.c),
 [SquashFS installation](https://raw.githubusercontent.com/plougher/squashfs-tools/4.7.5/Documentation/4.7.5/INSTALL),
