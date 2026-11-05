@@ -10,6 +10,7 @@ import re
 import shutil
 import struct
 import subprocess
+import sys
 import tempfile
 import unittest
 
@@ -52,7 +53,7 @@ class SystemPagesTests(unittest.TestCase):
         self.assertTrue(raw.endswith(b"\n") and b"\r" not in raw)
         order = raw.decode("ascii").splitlines()
         self.assertEqual(order, self.pages())
-        self.assertEqual(order, ["01-identity.sh", "02-network.sh", "03-access.sh"])
+        self.assertEqual(order, ["01-identity.sh", "02-network.sh", "03-access.sh", "04-installer.sh"])
         for name in order:  # The driver's own ORDER pattern, plus the NN-name convention.
             self.assertRegex(name, r"^[a-zA-Z0-9][a-zA-Z0-9_.+-]*\.sh$")
             self.assertRegex(name, r"^[0-9]{2}-[a-z0-9-]+\.sh$")
@@ -259,6 +260,100 @@ class SystemPagesTests(unittest.TestCase):
                 with self.subTest(name=name, new=new):
                     self.assertNotEqual(verify().returncode, 0)
                 (units / name).write_text(original)
+
+
+class InstallerPageTests(unittest.TestCase):
+    """04-installer.sh ships tup/install/disk.py and the two boot modules it imports, and /usr/sbin/tup-install."""
+
+    PAGE = PAGES / "04-installer.sh"
+
+    @classmethod
+    def setUpClass(cls):
+        spec = importlib.util.spec_from_file_location("installer_disk", TUP / "install/disk.py")
+        cls.disk = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(cls.disk)
+        cls.text = cls.PAGE.read_text(encoding="ascii")
+
+    def test_it_runs_after_the_access_page_and_the_runner_stages_what_it_installs(self):
+        spec = importlib.util.spec_from_file_location("target_build", TUP / "target/build.py")
+        target = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(target)
+        self.assertIn("install", target.HELPERS)
+        self.assertEqual(target.chapter_pages(TUP, "system")[-2:], ["03-access.sh", "04-installer.sh"])
+        for staged in ("install/disk.py", "boot/__init__.py", "boot/inputs.py"):
+            self.assertTrue((TUP / staged).is_file(), staged)
+            self.assertIn(f'"$src/{staged}"', self.text)
+        self.assertIn('install -v -m 0755 "$src/install/disk.py" "$dest/tup/install/disk.py"\n', self.text)
+        self.assertIn('install -v -m 0644 "$src/boot/__init__.py" "$src/boot/inputs.py" "$dest/tup/boot/"\n', self.text)
+        self.assertIn("dest=/usr/lib/tup-installer\n", self.text)
+
+    def test_what_disk_py_imports_is_what_the_page_installs(self):
+        source = (TUP / "install/disk.py").read_text(encoding="utf-8")
+        self.assertEqual(set(re.findall(r"^from (tup\.[a-z.]+) import", source, re.M)), {"tup.boot", "tup.boot.inputs"})
+        inputs_source = (TUP / "boot/inputs.py").read_text(encoding="utf-8")
+        self.assertEqual(set(re.findall(r"^(?:from|import) (\w+)", inputs_source, re.M)),
+                         {"__future__", "hashlib", "json", "os", "pathlib", "re", "stat", "struct"})  # nothing else to ship
+
+    def test_the_wrapper_runs_the_explicit_script_isolated_without_bytecode(self):
+        wrapper = self.text.split('cat > /usr/sbin/tup-install << "EOF"\n', 1)[1].split("EOF\n", 1)[0]
+        self.assertEqual(wrapper.splitlines()[0], "#!/bin/sh")
+        self.assertEqual(wrapper.splitlines()[-1],
+                         'exec /usr/bin/python3 -I -B /usr/lib/tup-installer/tup/install/disk.py "$@"')
+        self.assertIn("chmod 0755 /usr/sbin/tup-install\n", self.text)
+        self.assertIn("rm -f /usr/sbin/tup-install\n", self.text)  # never written through an existing link
+
+    def test_it_refuses_a_root_without_any_program_the_installer_runs(self):
+        loop = self.text.split("for tool in ", 1)[1].split("; do", 1)[0].replace("\\\n", " ").split()
+        self.assertEqual(set(loop), set(self.disk.TOOLS) | {"blockdev", "findmnt", "python3"})
+        self.assertEqual(len(loop), len(set(loop)))
+        self.assertIn('[ -x "$path" ] || fail "$tool is missing"', self.text)
+        self.assertIn("[ -d /usr/lib/grub/x86_64-efi ] || fail", self.text)
+        # Every module the generated menu loads, and the serial command, must exist for the platform.
+        layout = self.disk.make_layout({"log_sec": 512, "size_bytes": 64 << 30}, 512, lambda n: b"\x05" * n)
+        menu = self.disk.grub_cfg_text(layout, {"name": "vmlinuz-x"}, {"loaded": True}, "0" * 64)
+        modules = set(re.findall(r"^insmod (\w+)$", menu, re.M)) | {"serial"}
+        self.assertEqual(set(self.text.split("for module in ", 1)[1].split(";", 1)[0].split()), modules)
+
+    def test_it_changes_nothing_the_access_page_asserts_and_leaves_no_bytecode(self):
+        body, final = self.text.split("# Final state of a generic image", 1)
+        code = "\n".join(line for line in body.splitlines() if not line.lstrip().startswith("#"))
+        for forbidden in ("systemctl", "ssh-keygen", "useradd", "/etc/machine-id", "/etc/fstab", "/etc/ssh", "/etc/shadow",
+                          "/etc/tup", "/etc/sudoers", "/etc/passwd"):
+            self.assertNotIn(forbidden, code.replace("/usr/lib/tup/remote", ""))
+        for assertion in ("__pycache__", "owner-enrolled.json", "/etc/machine-id", "ssh_host_", "/etc/fstab"):
+            self.assertIn(assertion, final)
+        self.assertIn("python3 -I -B", self.text)
+        self.assertNotIn("python3 -c", self.text)
+        access = (PAGES / "03-access.sh").read_text(encoding="ascii")
+        self.assertIn("[ ! -e /usr/lib/tup/remote/__pycache__ ]", access)  # the same -B discipline, checked there
+
+    @unittest.skipUnless(os.name == "posix" and shutil.which("grub-script-check") and shutil.which("grub-mkstandalone"),
+                         "needs GRUB's tools and Linux")
+    def test_the_pages_python_check_passes_against_an_installed_copy_with_this_hosts_tools(self):
+        """The embedded check, run with this host's tools and its paths pointed at a temporary prefix. Not the layer
+        runner and not the target's Python or GRUB: it shows the check is coherent and that its failure arm works."""
+        snippet = self.text.split('python3 -I -B - << "EOF"\n', 1)[1].split("\nEOF\n", 1)[0]
+        with tempfile.TemporaryDirectory() as temporary:
+            prefix = Path(temporary)
+            tree = prefix / "usr/lib/tup-installer/tup"
+            for name in ("install", "boot", "remote"):
+                (tree / name).mkdir(parents=True)
+            shutil.copyfile(TUP / "install/disk.py", tree / "install/disk.py")
+            for name in ("__init__.py", "inputs.py"):
+                shutil.copyfile(TUP / "boot" / name, tree / "boot" / name)
+            for name in ("enroll.py", "policy.py", "firewall.py"):
+                shutil.copyfile(TUP / "remote" / name, tree / "remote" / name)
+            local = snippet.replace("/usr/lib/tup-installer", str(prefix / "usr/lib/tup-installer")).replace(
+                "/usr/lib/tup/remote/enroll.py", str(tree / "remote/enroll.py")).replace(
+                "host = disk.Host()", "disk.PATH = os.environ['PATH']\nhost = disk.Host()")
+            self.assertNotEqual(local, snippet)
+            done = subprocess.run([sys.executable, "-I", "-B", "-"], input=local, capture_output=True, text=True, timeout=300)
+            self.assertEqual((done.returncode, done.stderr), (0, ""))
+            broken = local.replace('host.which("grub-script-check")', 'host.which("grub-script-check-absent")')
+            self.assertNotEqual(broken, local)
+            done = subprocess.run([sys.executable, "-I", "-B", "-"], input=broken, capture_output=True, text=True, timeout=300)
+            self.assertNotEqual(done.returncode, 0)
+            self.assertFalse(list(prefix.rglob("__pycache__")))
 
 
 if __name__ == "__main__":
