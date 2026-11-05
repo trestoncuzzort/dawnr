@@ -328,6 +328,20 @@ class PackagingTests(BootFixture):
         self.assertIn("console=ttyS0,115200n8", grub)
         self.assertNotRegex(grub, r"/dev/(?:sda|sr0|vda)")
 
+    def test_live_command_line_uses_the_spellings_dracut_112_implements(self):
+        label = "TUP_" + "A" * 24
+        words = next(line for line in boot.grub_config(label).splitlines() if line.lstrip().startswith("linux ")).split()
+        for word in ("root=live:LABEL=" + label, "ro", "rd.live.image", "rd.live.dir=LiveOS", "rd.live.squashimg=squashfs.img",
+                     "rd.overlay=tmpfs:size=512M,nr_inodes=100000", "rd.live.ram=0", "rd.retry=90", "rd.shell", "rd.debug"):
+            self.assertIn(word, words)
+        # dmsquash-live-root.sh reads "tmpfs" as a device to search for a persistent
+        # overlay, finds none and then waits for Enter; a headless boot would hang there.
+        self.assertIn("rd.live.overlay.nouserconfirmprompt", words)
+        self.assertEqual([word for word in words if word.startswith(("rd.overlay", "rd.live.overlay"))],
+                         ["rd.overlay=tmpfs:size=512M,nr_inodes=100000", "rd.live.overlay.nouserconfirmprompt"])
+        self.assertFalse({word.split("=")[0] for word in words} & {"rd.live.overlay", "rd.live.overlay.overlayfs",
+                                                                   "rd.live.overlay.size", "iso-scan/filename"})
+
     def test_failed_native_validation_stops_before_image_tools(self):
         def fail(*args, **kwargs):
             raise inputs.Refusal("fixture native validation failed")

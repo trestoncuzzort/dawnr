@@ -176,7 +176,7 @@ insmod iso9660
 insmod search_label
 search --no-floppy --label --set=root {label}
 menuentry 'TUP x86_64 UEFI disposable test' {{
-    linux /boot/vmlinuz root=live:LABEL={label} ro rd.live.image rd.live.dir=LiveOS rd.live.squashimg=squashfs.img rd.overlay=tmpfs:size=512M,nr_inodes=100000 rd.live.ram=0 rd.luks=0 rd.lvm=0 rd.md=0 rd.shell rd.debug rd.retry=90 console=tty0 console=ttyS0,115200n8 systemd.log_target=console
+    linux /boot/vmlinuz root=live:LABEL={label} ro rd.live.image rd.live.dir=LiveOS rd.live.squashimg=squashfs.img rd.overlay=tmpfs:size={POLICY["overlay_mib"]}M,nr_inodes=100000 rd.live.overlay.nouserconfirmprompt rd.live.ram=0 rd.luks=0 rd.lvm=0 rd.md=0 rd.shell rd.debug rd.retry=90 console=tty0 console=ttyS0,115200n8 systemd.log_target=console
     initrd /boot/initramfs.img
 }}
 '''
