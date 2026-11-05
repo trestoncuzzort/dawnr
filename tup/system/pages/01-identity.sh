@@ -120,6 +120,21 @@ cat > /etc/systemd/system/getty@tty1.service.d/noclear.conf << EOF
 TTYVTDisallocate=no
 EOF
 
-for file in /etc/os-release /etc/hostname /etc/locale.conf /etc/profile /etc/inputrc /etc/shells; do
+# The kernel builds amdgpu as a module, and the boot chapter stages none of its
+# firmware yet. When it binds, it takes the device away from the firmware's own
+# framebuffer partway through initialization (Linux 6.18.60 amdgpu_device.c,
+# aperture_remove_conflicting_pci_devices after early init), so a later failure
+# could leave the integrated graphics without a console. Until the firmware is
+# staged with it, udev must not load it on its own; the firmware framebuffer
+# keeps driving the screen, and "modprobe amdgpu" by hand still works.
+#   modprobe.d(5): "blacklist" stops loading through a module's aliases only.
+mkdir -pv /etc/modprobe.d
+rm -f /etc/modprobe.d/tup-graphics.conf
+cat > /etc/modprobe.d/tup-graphics.conf << "EOF"
+blacklist amdgpu
+EOF
+
+for file in /etc/os-release /etc/hostname /etc/locale.conf /etc/profile /etc/inputrc /etc/shells \
+            /etc/modprobe.d/tup-graphics.conf; do
   [ -f "$file" ] && [ ! -L "$file" ] && [ -s "$file" ] || { echo "01-identity: $file was not written as a regular file" >&2; exit 1; }
 done

@@ -106,6 +106,13 @@ class SystemPagesTests(unittest.TestCase):
                        "chapter09/etcshells.html", "chapter09/systemd-custom.html"):
             self.assertIn("https://www.linuxfromscratch.org/lfs/view/13.1-systemd/" + source, page)
 
+    def test_graphics_module_without_staged_firmware_is_not_loaded_automatically(self):
+        page = (PAGES / "01-identity.sh").read_text(encoding="ascii")
+        self.assertIn('cat > /etc/modprobe.d/tup-graphics.conf << "EOF"\nblacklist amdgpu\nEOF\n', page)
+        # The boot chapter stages network firmware and microcode only. When amdgpu
+        # firmware is added there, this entry has to be reconsidered with it.
+        self.assertNotIn("amdgpu", (TUP / "hardware/firmware-files.sha256").read_text(encoding="ascii"))
+
     def test_network_page_configures_wired_dhcp_mdns_and_bounded_waits(self):
         page = (PAGES / "02-network.sh").read_text(encoding="ascii")
         network = page.split('cat > /etc/systemd/network/20-wired.network << "EOF"\n', 1)[1].split("EOF\n", 1)[0]
