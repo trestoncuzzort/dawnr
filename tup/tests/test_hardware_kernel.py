@@ -32,7 +32,8 @@ class HardwareKernelTests(unittest.TestCase):
                               ("VFIO_PCI", "m"), ("VFIO_IOMMU_TYPE1", "m"), ("WIREGUARD", "m"),
                               ("NFT_REJECT_INET", "m"), ("DM_CRYPT", "m"), ("SP5100_TCO", "m"),
                               ("SENSORS_NCT6775", "m"), ("USB_RTL8152", "m"), ("DRM_AMDGPU", "m"),
-                              ("CFS_BANDWIDTH", "y"), ("SCHED_CORE", "y"), ("IPV6_MULTIPLE_TABLES", "y"),
+                              ("CFS_BANDWIDTH", "y"), ("BLK_DEV_THROTTLING", "y"), ("SCHED_CORE", "y"),
+                              ("IPV6_MULTIPLE_TABLES", "y"),
                               ("NF_TABLES_NETDEV", "y"), ("NF_TABLES_BRIDGE", "m"), ("VFIO_PCI_VGA", "y"),
                               ("TRANSPARENT_HUGEPAGE_MADVISE", "y")):
             self.assertIn(f"CONFIG_{symbol}={value}\n", self.original)

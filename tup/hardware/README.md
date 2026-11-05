@@ -131,7 +131,9 @@ VFIO container; `IOMMUFD` stays off).
 - **Later-stage options were added before the first kernel build** so that
   reaching those stages does not cost a rebuild; none is exercised yet.
   `CFS_BANDWIDTH` (selects `GROUP_SCHED_BANDWIDTH`) gives guest and job cgroups
-  the `cpu.max` quota that H39 needs. `SCHED_CORE` provides
+  the `cpu.max` quota that H39 needs, and `BLK_DEV_THROTTLING` (selects
+  `BLK_CGROUP_RWSTAT`) the `io.max` limit; the I/O cost and latency controllers
+  were already on. `SCHED_CORE` provides
   [core scheduling](https://docs.kernel.org/admin-guide/hw-vuln/core-scheduling.html)
   for H49; it does nothing until a task sets a cookie. `IPV6_MULTIPLE_TABLES`
   gives IPv6 the policy routing that IPv4 already had, which overlay transports
@@ -170,8 +172,8 @@ VFIO container; `IOMMUFD` stays off).
 ### Size of the change
 
 Counted with `grep -c '=m$'` and `grep -c '=y$'` on the two retained
-configurations: **12 to 105 module symbols** and 1695 to 1782 built-in symbols
-(5653 to 5916 lines). The only earlier setting that changed is the default
+configurations: **12 to 105 module symbols** and 1695 to 1784 built-in symbols
+(5653 to 5917 lines). The only earlier setting that changed is the default
 governor choice described above; nothing else was removed or demoted. The
 count includes two live-boot additions made in the boot floor
 ([`boot/inputs.py`](../boot/inputs.py)) in the same qualification run:
