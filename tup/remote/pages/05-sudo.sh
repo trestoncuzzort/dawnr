@@ -45,6 +45,9 @@ if [ -e /etc/sudoers ] || [ -e /etc/sudoers.d ]; then
   echo 'unexpected pre-existing sudoers policy' >&2; exit 1
 fi
 make -j1 install
+# Upstream's install also creates /run/sudo. The layer runner mounts a tmpfs on
+# /run, so that directory never reaches the image; the installed tmpfiles.d
+# entry recreates it at every boot.
 # Restrictive default: upstream's installed sudoers keeps its Defaults and
 # "@includedir /etc/sudoers.d", but its one active rule (root) is disabled.
 # Root is locked; the owner rule is written only at enrollment, as

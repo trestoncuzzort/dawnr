@@ -86,7 +86,7 @@ class LayerChapterTests(unittest.TestCase):
     def test_selected_archives_are_exactly_the_reviewed_layer_inputs(self):
         self.assertEqual(target.chapter_archives(TUP, ["remote", "boot"]), [
             "libmnl-1.0.5.tar.bz2", "libnftnl-1.3.2.tar.xz", "nftables-1.1.7.tar.xz", "openssh-10.6p1.tar.gz",
-            "LVM2.2.03.42.tgz", "linux-6.18.60.tar.xz", "linux-firmware-20261019.tar.xz"])
+            "sudo-1.9.17p2.tar.gz", "LVM2.2.03.42.tgz", "linux-6.18.60.tar.xz", "linux-firmware-20261019.tar.xz"])
 
     def test_order_and_page_set_disagreement_refuses(self):
         with tempfile.TemporaryDirectory() as temporary:

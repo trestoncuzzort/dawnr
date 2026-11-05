@@ -16,7 +16,7 @@ the core build. Chapters run in this fixed order in one ledger:
 
 | Chapter | Directory | Adds |
 | --- | --- | --- |
-| `remote` | [`../remote/pages`](../remote/pages) | libmnl, libnftnl, nftables, OpenSSH (installed without host keys) |
+| `remote` | [`../remote/pages`](../remote/pages) | libmnl, libnftnl, nftables, OpenSSH (installed without host keys), sudo (installed with no rule) |
 | `boot` | [`../boot/pages`](../boot/pages) | device-mapper part of LVM2, Linux 6.18.60 with modules, selected firmware |
 | `system` | `../system/pages` | identity, wired networking, units and the unenrolled access policy |
 
@@ -60,8 +60,8 @@ python3 tup/target/build.py --workspace "$TUP_LAYER_WORKSPACE" \
 `--core-validator` is the same `tup.boot-core-validator.v1` file the packager
 uses. The cache must hold every archive named by the selected pages plus the
 signed Gentoo snapshot used by the distributor-authenticated records. Each
-archive is authenticated again on every run: the four remote archives through
-[`remote/verify_sources.py`](../remote/verify_sources.py), LVM2 and
+archive is authenticated again on every run: the five remote archives through
+[`remote/verify_layer_sources.py`](../remote/verify_layer_sources.py), LVM2 and
 linux-firmware through their retained records and
 [`sources/source_lock.py`](../sources/source_lock.py), and the kernel archive
 against its entry in the core source lock. An earlier receipt is never reused.

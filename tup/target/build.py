@@ -23,7 +23,7 @@ sys.path[:0] = [str(TUP.parent), str(TUP)]
 from tup.boot.assemble import check_completion, check_core_spec, completion_path, stamp
 from tup.boot.inputs import (Refusal, canonical, check_kernel, check_offline_root, checked_file,
                              digest, file_hash, inventory, load_json, root_path)
-from remote.verify_sources import verify as verify_remote
+from remote.verify_layer_sources import verify as verify_remote
 from sources import source_lock as verifier
 
 HERE = Path(__file__).resolve().parent
@@ -95,6 +95,7 @@ def verify_sources(cache: Path, gpg: Path, core_lock: Path, wanted: list[str], s
     return {"schema": "tup-layer-source-verification-v1", "status": "verified", "release_eligible": False,
             "verifier_sha256": verifier.digest(Path(verifier.__file__)),
             "remote_advisory_review_sha256": remote["advisory_review_sha256"],
+            "sudo_advisory_review_sha256": remote["sudo_advisory_review_sha256"],
             "core_source_lock_sha256": file_hash(core_lock),
             "sources": [results[name] for name in wanted],
             "limitations": ["Source verification does not establish target compilation, boot or remote access",

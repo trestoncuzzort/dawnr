@@ -168,15 +168,11 @@ class SudoRecordTests(unittest.TestCase):
         self.refused("unreviewed newest record")
 
     @unittest.skipUnless(GPG, "gpg is required for the real signature controls")
-    def test_real_gpg_refuses_other_bytes_and_a_key_that_did_not_sign(self):
+    def test_real_gpg_refuses_bytes_the_release_signature_does_not_cover(self):
+        # Only the wrong-bytes case can be shown without the real archive. The
+        # wrong-key refusal needs the signed release itself and is retained as a
+        # live control in evidence/sudo/source-negative-controls.json.
         (self.cache / layer.SUDO).write_bytes(b"not the signed sudo release\n")
-        with self.assertRaisesRegex(verifier.Refusal, "OpenPGP signature verification failed"):
-            layer.verify_sudo(self.cache, Path(GPG), self.remote)
-        # A key file that lacks the signing key: the retained OpenSSH release key.
-        other = REMOTE / "evidence/openssh-10.6p1/RELEASE_KEY.asc"
-        shutil.copyfile(other, self.remote / "evidence/sudo/PGPKEYS")
-        self.edit("sudo-source.json", lambda value: value["source"]["authentication"]["key"].update(
-            sha256=verifier.digest(other)))
         with self.assertRaisesRegex(verifier.Refusal, "OpenPGP signature verification failed"):
             layer.verify_sudo(self.cache, Path(GPG), self.remote)
 
