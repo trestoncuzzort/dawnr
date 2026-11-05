@@ -90,9 +90,10 @@
       "evidence": [
         "native/VALIDATION.md",
         "receipts/native-dev-20261104/verification.json",
-        "receipts/native-dev-20261105/verification.json"
+        "receipts/native-dev-20261105/verification.json",
+        "receipts/native-dev-20261105/lfs-patch-provenance-review.json"
       ],
-      "note": "The 94-source maintained-book inventory, replacement-source selection and verifier are implemented. Checkpoint verifies 22/94 sources through published HTTPS SHA256 evidence; 72 sources and full advisory review remain unresolved in that checkpoint. A production lock cannot be exported yet. All 135 integrated Linux fixtures pass; this does not authenticate unreviewed sources or establish full transitive closure."
+      "note": "The 94-source maintained-book inventory, replacement-source selection and verifier are implemented. Checkpoint verifies 22/94 sources through published HTTPS SHA256 evidence; 72 sources and full advisory review remain unresolved in that checkpoint. A production lock cannot be exported yet. All 135 integrated Linux fixtures pass; this does not authenticate unreviewed sources or establish full transitive closure. A later independent review accepts exactly eight LFS patch digests as explicit unsigned-Git/HTTPS provenance exceptions; it does not claim publisher signatures. Selected-version application and package suites remain required."
     },
     {
       "id": "H04",
@@ -984,7 +985,8 @@
         "H48",
         "H50",
         "H51",
-        "H53"
+        "H53",
+        "H55"
       ],
       "finding": "Actual MacBook handoff, long-running reliability and realistic failure recovery have not been exercised. Home power/ISP availability remains an external dependency.",
       "required_change": "Stage 7: declare supported operating conditions and thresholds before qualification. Run the matrix below and log every new hurdle.",
@@ -1032,6 +1034,28 @@
       "finding": "The [LFS download page](https://www.linuxfromscratch.org/lfs/download.html), checked 2026-11-04, says the prior System V edition is no longer maintained. TUP extracts 12.4 SysV; the currently maintained stable book is 13.1-systemd. Updating only the kernel leaves the rest of the native base without a documented maintenance plan.",
       "required_change": "Stage 1 before a production build: choose and pin a maintained LFS baseline, audit each retained named override against its exact generated page, and review applicable advisories. Compare rebasing onto the maintained book with explicitly maintaining the SysV branch; preserve historical generated pages and receipts. Record the chosen init/service design and measure its cost.",
       "acceptance": "Source/book/deviation inventory agrees with the chosen version; no unresolved applicable high-impact advisory is waved through; clean build, boot, supervision, updates and rollback are tested on that exact baseline. An old successful receipt is not production approval."
+    },
+    {
+      "id": "H55",
+      "status": "open",
+      "owner": "integration",
+      "depends_on": [
+        "H03",
+        "H24",
+        "H27",
+        "H38",
+        "H39"
+      ],
+      "finding": "Expat CVE-2025-66382 remains an acknowledged non-public CPU denial of service affecting all releases, including selected 2.10.0. Upstream https://github.com/libexpat/libexpat/issues/1076 remains open.",
+      "required_change": "Separate authenticated disposable-build eligibility from release readiness. Keep release_eligible=false with this named gate until host XML exposure review and workload CPU/time containment are implemented and measured, or an actual upstream fix is qualified.",
+      "acceptance": "No uncontained host XML entry point; resource-exhaustion and timed parser jobs preserve fresh owner login within declared latency and resource budgets. Preserve residual-risk disclosure and never claim an exploit-specific fix/test without the reproducer.",
+      "implementation": [],
+      "test_command": null,
+      "evidence": [
+        "https://github.com/libexpat/libexpat/issues/1076",
+        "https://github.com/libexpat/libexpat/releases/tag/R_2_10_0"
+      ],
+      "note": "Known upstream defect, not a claim of compromise on this machine. Build-only source approval permits isolated qualification; it does not approve production exposure. Runtime mitigation and hardware stress tests are unrun."
     }
   ]
 }
