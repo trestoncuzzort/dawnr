@@ -165,7 +165,8 @@ ExecStartPre=/usr/sbin/sshd -t -f /etc/ssh/sshd_config
 ExecStart=/usr/sbin/sshd -D -e -f /etc/ssh/sshd_config
 ExecReload=/usr/sbin/sshd -t -f /etc/ssh/sshd_config
 ExecReload=/usr/bin/kill -HUP $MAINPID
-KillMode=process
+KillMode=control-group
+TimeoutStopSec=30
 Restart=on-failure
 RestartSec=5
 UMask=0077
@@ -206,7 +207,8 @@ def check_effective(raw: bytes, owner: str, addresses: list[str], port: int = 22
             raise Refusal("malformed effective sshd configuration")
         parsed.setdefault(parts[0].lower(), []).append(parts[1])
     required = {
-        "port": str(port), "allowusers": owner,
+        "port": str(port), "allowusers": owner, "addressfamily": "any",
+        "hostkey": "/etc/ssh/ssh_host_ed25519_key", "pidfile": "/run/tup-sshd.pid",
         "authenticationmethods": "publickey", "pubkeyauthentication": "yes",
         "permitrootlogin": "no", "passwordauthentication": "no",
         "kbdinteractiveauthentication": "no", "permitemptypasswords": "no",
@@ -217,6 +219,11 @@ def check_effective(raw: bytes, owner: str, addresses: list[str], port: int = 22
         "allowtcpforwarding": "local", "allowstreamlocalforwarding": "no",
         "allowagentforwarding": "no", "gatewayports": "no",
         "permittunnel": "no", "x11forwarding": "no",
+        "ignorerhosts": "yes", "logingracetime": "30", "maxauthtries": "3",
+        "maxsessions": "8", "maxstartups": "10:30:30", "persourcemaxstartups": "3",
+        "loglevel": "VERBOSE", "syslogfacility": "AUTHPRIV", "usedns": "no",
+        "compression": "no", "permittty": "yes", "clientaliveinterval": "60",
+        "clientalivecountmax": "3", "subsystem": "sftp internal-sftp",
     }
     for name, value in required.items():
         if parsed.get(name) != [value]:

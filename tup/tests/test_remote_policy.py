@@ -51,6 +51,26 @@ class RemotePolicyTests(unittest.TestCase):
             with self.assertRaises(policy.Refusal):
                 policy.check_effective(raw, "owner", ["127.0.0.1", "::1"])
 
+    def test_effective_host_identity_and_connection_limit_drift_refuse(self):
+        original = self.effective_fixture()
+        for before, after in (
+            (b"HostKey /etc/ssh/ssh_host_ed25519_key", b"HostKey /tmp/shared_host_key"),
+            (b"MaxAuthTries 3", b"MaxAuthTries 100"),
+            (b"MaxStartups 10:30:30", b"MaxStartups 1000:30:1000"),
+            (b"PerSourceMaxStartups 3", b"PerSourceMaxStartups none"),
+            (b"LoginGraceTime 30", b"LoginGraceTime 0"),
+            (b"LogLevel VERBOSE", b"LogLevel QUIET"),
+            (b"Subsystem sftp internal-sftp", b"Subsystem sftp /tmp/other-server"),
+        ):
+            for changed in (original.replace(before, after), original.replace(before + b"\n", b"")):
+                with self.subTest(before=before, missing=before not in changed), self.assertRaises(policy.Refusal):
+                    policy.check_effective(changed, "owner", ["127.0.0.1", "::1"])
+
+    def test_service_stop_cleans_session_cgroup(self):
+        service = policy.render("owner", ["127.0.0.1"], KEY)["tup-sshd.service"]
+        self.assertIn(b"KillMode=control-group\n", service)
+        self.assertIn(b"TimeoutStopSec=30\n", service)
+
     def test_complete_policy_is_owner_only_and_bound_to_exact_files(self):
         files = policy.render("owner", ["127.0.0.1", "::1"], KEY)
         config = files["sshd_config"].decode()

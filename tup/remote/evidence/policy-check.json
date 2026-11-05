@@ -1,0 +1,36 @@
+{
+  "schema": "tup-remote-policy-check-v1",
+  "status": "passed",
+  "kind": "host-configuration-only",
+  "tests_run": 15,
+  "tests_skipped": 0,
+  "policy_sha256": "1a490058838dc607ee560002c44ff67e082031025c265a833dd39741a7be7eaf",
+  "test_sha256": "1e4d7b75d154b2ecbfe49597602d653a9838e427216410a68d2bf7663ddc6959",
+  "sshd_sha256": "ec2b8e61802d94adc5023cba54572675e63d558cb9a07c8175258808dee08ce3",
+  "config_sha256": "ef4810479eec71ce996f7e0eff434784dfbc81ed2010daa6bef62049a4bb08ba",
+  "checks": [
+    {
+      "context": "global",
+      "exit_code": 0,
+      "output_sha256": "5ab6a08268132350a81a9e9e879ccaf79b9c3154b8b2b39e881716557f3e2a44",
+      "status": "passed"
+    },
+    {
+      "context": "user=fixtureowner,addr=127.0.0.2,laddr=127.0.0.1,lport=2222",
+      "exit_code": 0,
+      "output_sha256": "5ab6a08268132350a81a9e9e879ccaf79b9c3154b8b2b39e881716557f3e2a44",
+      "status": "passed"
+    },
+    {
+      "context": "user=fixtureowner,addr=::1,laddr=::1,lport=2222",
+      "exit_code": 0,
+      "output_sha256": "5ab6a08268132350a81a9e9e879ccaf79b9c3154b8b2b39e881716557f3e2a44",
+      "status": "passed"
+    }
+  ],
+  "fixture_adjustment": "Asserted and removed the single command-line -h fixture HostKey line; target HostKey line remains required.",
+  "limitations": [
+    "Ubuntu compiler and OpenSSL 3, not TUP target OpenSSL 4",
+    "No daemon started; no login, service lifecycle or network tested"
+  ]
+}

@@ -53,6 +53,13 @@ build excludes PAM and GSSAPI; their explicit `no` settings produce unsupported
 option warnings in that build. Enabling either feature later requires new
 configuration, session and authentication tests.
 
+The unit uses `KillMode=control-group` with a 30-second stop deadline. Stopping
+or restarting SSH therefore ends its existing sessions and descendants; a
+reload uses SIGHUP. Durable workloads must run in separately supervised service
+cgroups so an access-service restart does not become a job-lifetime policy.
+This follows [systemd's process-killing interface](https://www.freedesktop.org/software/systemd/man/latest/systemd.kill.html).
+The stop behavior still needs a target service test with real sessions.
+
 ## Evidence and remaining work
 
 A disposable Ubuntu host build of the authenticated source accepted the policy
@@ -62,6 +69,15 @@ now normalizes keyword case while preserving argument values, with negative
 tests for altered authentication, owner, key authority and listen addresses.
 The initial missing-host-key refusal and checker failure are retained in the
 host-check receipt. No daemon was started and no remote login was performed.
+
+Independent review reproduced acceptance of a substituted host-key path and
+missing or weakened connection limits. The checker now requires every selected
+directive, including the host-key path, authentication limits, logging, SFTP,
+keepalives and compression. Fifteen focused Linux tests pass, including the new
+negative controls. The existing OpenSSH 10.6p1 binary also passed global and
+IPv4/IPv6 connection-context checks; [the receipt](evidence/policy-check.json)
+records its exact binary and the explicit extra test-key adjustment. These
+configuration checks do not test actual authentication or service shutdown.
 
 This host build uses Ubuntu's compiler and OpenSSL 3. It does not establish
 compatibility with TUP's compiler, OpenSSL 4 or target service environment.
