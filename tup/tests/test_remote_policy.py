@@ -1,7 +1,9 @@
 """Negative controls for private SSH enrollment; no daemon is started here."""
 import base64
+import contextlib
 import hashlib
 import importlib.util
+import io
 import json
 import os
 from pathlib import Path
@@ -127,6 +129,107 @@ class RemotePolicyTests(unittest.TestCase):
         for port in (0, 65536, -1, "22", True):
             with self.assertRaises(policy.Refusal):
                 policy.render("owner", ["127.0.0.1"], KEY, port)
+
+    @staticmethod
+    def private_effective():
+        config = policy.render("owner", None, KEY, scope=policy.PRIVATE)["sshd_config"]
+        return b"\n".join(line for line in config.splitlines() if not line.startswith(b"#")).replace(
+            b"ListenAddress 0.0.0.0\n", b"ListenAddress 0.0.0.0:22\n").replace(
+            b"ListenAddress ::\n", b"ListenAddress [::]:22\n") + b"\n"
+
+    def test_exact_scope_output_is_byte_identical_to_the_reviewed_renderer(self):
+        # SHA256 of every output of the renderer as it stood before the second
+        # scope existed (commit 52a20d8e), for this fixture.
+        expected = {
+            "ENROLLMENT-PLAN.json": "0e4a339d2c160bcc548e3d9cda75363e49721f1239b7b14ea14b7c4fe4ba619c",
+            "authorized_keys": "d5badbd683f6bc900ef7732ee2b5ffd6c693d81fcf96f423e9643d7263f55810",
+            "sshd_config": "706e0af10b215caccb67bcc0c230d79fc6088f7e2f2a5bc3923395b0336cb3f1",
+            "tup-sshd.service": "766779a1c44a6419a93f169d39915aa0b85b109b871d233c5df6a9a54e99a9c5",
+        }
+        for files in (policy.render("owner", ["127.0.0.1", "::1"], KEY),
+                      policy.render("owner", ["127.0.0.1", "::1"], KEY, 22, policy.EXACT)):
+            self.assertEqual({name: hashlib.sha256(data).hexdigest() for name, data in files.items()}, expected)
+        self.assertIn(b"After=network-online.target tup-firewall.service\n", files["tup-sshd.service"])
+
+    def test_private_networks_scope_binds_both_wildcards_and_never_waits_for_an_address(self):
+        files = policy.render("owner", None, KEY, scope=policy.PRIVATE)
+        exact = policy.render("owner", ["127.0.0.1"], KEY)
+        self.assertIn(b"AddressFamily any\nListenAddress 0.0.0.0\nListenAddress ::\nHostKey ", files["sshd_config"])
+        self.assertEqual(files["sshd_config"].count(b"ListenAddress "), 2)
+        unit = files["tup-sshd.service"]
+        self.assertNotIn(b"network-online.target", unit)
+        self.assertIn(b"\nAfter=network.target tup-firewall.service\nRequires=tup-firewall.service\n"
+                      b"ConditionPathExists=/etc/tup/owner-enrolled.json\n", unit)
+        # Only the listeners and the unit's ordering depend on the scope.
+        self.assertEqual(unit.split(b"Requires=", 1)[1], exact["tup-sshd.service"].split(b"Requires=", 1)[1])
+        strip = lambda config: [line for line in config.splitlines() if not line.startswith(b"ListenAddress ")]
+        self.assertEqual(strip(files["sshd_config"]), strip(exact["sshd_config"]))
+        self.assertEqual(files["authorized_keys"], exact["authorized_keys"])
+        plan = json.loads(files["ENROLLMENT-PLAN.json"])
+        self.assertEqual((plan["scope"], plan["listen_addresses"]), ("private-networks", ["0.0.0.0", "::"]))
+        for name, expected in plan["files"].items():
+            self.assertEqual(hashlib.sha256(files[name]).hexdigest(), expected)
+
+    def test_private_networks_effective_check_requires_exactly_both_wildcards(self):
+        raw = self.private_effective()
+        policy.check_effective(raw, "owner", None, 22, policy.PRIVATE)
+        policy.check_effective(raw, "owner", [], scope=policy.PRIVATE)
+        variants = (raw.replace(b"ListenAddress [::]:22\n", b""), raw.replace(b"ListenAddress 0.0.0.0:22\n", b""),
+                    raw.replace(b"ListenAddress 0.0.0.0:22", b"ListenAddress 127.0.0.1:22"),
+                    raw.replace(b"ListenAddress [::]:22", b"ListenAddress [::]:2222"),
+                    raw + b"ListenAddress 10.0.0.5:22\n", raw + b"ListenAddress 0.0.0.0:22\n",
+                    raw.replace(b"PasswordAuthentication no", b"PasswordAuthentication yes"),
+                    raw.replace(b"AllowUsers owner", b"AllowUsers owner root"), self.effective_fixture())
+        for changed in variants:
+            with self.assertRaises(policy.Refusal):
+                policy.check_effective(changed, "owner", None, 22, policy.PRIVATE)
+        # The scopes never accept each other's listeners.
+        with self.assertRaises(policy.Refusal):
+            policy.check_effective(raw, "owner", ["127.0.0.1", "::1"])
+        with self.assertRaises(policy.Refusal):
+            policy.check_effective(raw, "owner", ["127.0.0.1", "::1"], 22, policy.EXACT)
+
+    def test_scope_is_explicit_and_excludes_listen_addresses(self):
+        for addresses, scope in ((["127.0.0.1"], policy.PRIVATE), (["0.0.0.0"], policy.PRIVATE), (None, policy.EXACT),
+                                 ([], policy.EXACT), (["0.0.0.0", "::"], policy.EXACT), (None, "public"),
+                                 (["127.0.0.1"], "any"), (None, None), (None, ""), (["127.0.0.1"], "PRIVATE-NETWORKS")):
+            with self.subTest(addresses=addresses, scope=scope):
+                with self.assertRaises(policy.Refusal):
+                    policy.render("owner", addresses, KEY, 22, scope)
+                with self.assertRaises(policy.Refusal):
+                    policy.check_effective(self.private_effective(), "owner", addresses, 22, scope)
+        for owner, port in (("root", 22), ("owner", 0)):
+            with self.assertRaises(policy.Refusal):
+                policy.render(owner, None, KEY, port, policy.PRIVATE)
+        with self.assertRaises(policy.Refusal):
+            policy.render("owner", None, b"ssh-rsa AAAA\n", scope=policy.PRIVATE)
+
+    def test_private_sources_are_private_networks_without_loopback_plus_link_local(self):
+        self.assertEqual([str(network) for network in policy.PRIVATE_SOURCES],
+                         ["10.0.0.0/8", "172.16.0.0/12", "192.168.0.0/16", "100.64.0.0/10", "fc00::/7", "fe80::/10"])
+        for network in policy.PRIVATE_SOURCES:
+            self.assertFalse(network.is_loopback or network.is_multicast or network.is_unspecified)
+            self.assertFalse(network.is_global, network)
+            self.assertGreater(network.prefixlen, 0)
+
+    def test_command_line_scope_flags_are_mutually_exclusive(self):
+        for arguments in (["--listen", "127.0.0.1", "--private-networks"], []):
+            with self.subTest(arguments=arguments), contextlib.redirect_stderr(io.StringIO()) as errors:
+                with self.assertRaises(SystemExit) as refused:
+                    policy.main(["--owner", "owner", "--public-keys", "unused", "--output", "unused", *arguments])
+                self.assertEqual(refused.exception.code, 2)
+                self.assertIn("--private-networks", errors.getvalue())
+
+    @unittest.skipUnless(os.name == "posix", "requires Linux ownership and modes")
+    def test_command_line_renders_the_private_networks_scope(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            parent = Path(temporary)
+            (parent / "key.pub").write_bytes(KEY)
+            with contextlib.redirect_stdout(io.StringIO()):
+                self.assertEqual(policy.main(["--owner", "owner", "--private-networks", "--public-keys",
+                                              str(parent / "key.pub"), "--output", str(parent / "out")]), 0)
+            expected = policy.render("owner", None, KEY, scope=policy.PRIVATE)
+            self.assertEqual({path.name: path.read_bytes() for path in (parent / "out").iterdir()}, expected)
 
     @unittest.skipUnless(os.name == "posix", "requires Linux ownership and modes")
     def test_private_creation_refuses_overwrite_and_world_writable_parent(self):

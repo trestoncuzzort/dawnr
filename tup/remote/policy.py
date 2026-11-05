@@ -27,6 +27,15 @@ PRIVATE_NETWORKS = tuple(map(ipaddress.ip_network, (
 )))
 RESERVED_USERS = frozenset(("root", "sshd", "nobody", "lfs", "bin", "daemon",
                             "systemd-network", "systemd-resolve"))
+# Two explicit scopes. "exact" binds named private addresses and waits for the
+# network. "private-networks" is for a DHCP home LAN whose addresses are not
+# known in advance: sshd binds both wildcards, so a late or changed lease cannot
+# leave it unbound, and the firewall (firewall.py) admits only PRIVATE_SOURCES.
+# sshd -T prints those listeners as "0.0.0.0:22" and "[::]:22".
+EXACT, PRIVATE = "exact", "private-networks"
+WILDCARD_LISTENERS = ("0.0.0.0", "::")
+PRIVATE_SOURCES = tuple(network for network in PRIVATE_NETWORKS if not network.is_loopback) + (
+    ipaddress.ip_network("fe80::/10"),)
 
 
 class Refusal(ValueError):
@@ -61,6 +70,16 @@ def listen_addresses(values: list[str]) -> list[str]:
             raise Refusal("duplicate listen address")
         addresses.append(normalized)
     return addresses
+
+
+def scope_listeners(scope: str, addresses) -> list[str]:
+    if scope == EXACT:
+        return listen_addresses(addresses)
+    if scope != PRIVATE:
+        raise Refusal("scope must be exact or private-networks")
+    if addresses:
+        raise Refusal("private-networks scope takes no explicit listen addresses")
+    return list(WILDCARD_LISTENERS)
 
 
 def public_keys(raw: bytes) -> tuple[bytes, list[str]]:
@@ -99,9 +118,10 @@ def public_keys(raw: bytes) -> tuple[bytes, list[str]]:
     return ("\n".join(normalized) + "\n").encode(), fingerprints
 
 
-def render(owner: str, addresses: list[str], key_bytes: bytes, port: int = 22) -> dict[str, bytes]:
+def render(owner: str, addresses: list[str], key_bytes: bytes, port: int = 22,
+           scope: str = EXACT) -> dict[str, bytes]:
     owner = owner_name(owner)
-    addresses = listen_addresses(addresses)
+    addresses = scope_listeners(scope, addresses)
     if type(port) is not int or not 1 <= port <= 65535:
         raise Refusal("SSH port must be between 1 and 65535")
     keys, fingerprints = public_keys(key_bytes)
@@ -149,10 +169,13 @@ ClientAliveInterval 60
 ClientAliveCountMax 3
 Subsystem sftp internal-sftp
 """.encode()
+    # network.target is ordering only: it never waits for an address, and it
+    # stops sshd before the network at shutdown (systemd.special(7)).
+    ordering = (b"Wants=network-online.target\nAfter=network-online.target tup-firewall.service"
+                if scope == EXACT else b"After=network.target tup-firewall.service")
     service = b"""[Unit]
 Description=TUP owner SSH access
-Wants=network-online.target
-After=network-online.target tup-firewall.service
+""" + ordering + b"""
 Requires=tup-firewall.service
 ConditionPathExists=/etc/tup/owner-enrolled.json
 StartLimitIntervalSec=60
@@ -175,7 +198,7 @@ UMask=0077
 WantedBy=multi-user.target
 """
     outputs = {"sshd_config": config, "authorized_keys": keys, "tup-sshd.service": service}
-    outputs["ENROLLMENT-PLAN.json"] = canonical({
+    plan = {
         "schema": "tup-owner-enrollment-plan-v1",
         "status": "rendered-not-applied", "release_eligible": False,
         "owner": owner, "listen_addresses": addresses, "port": port,
@@ -184,14 +207,18 @@ WantedBy=multi-user.target
         "pending": ["target account and privileges", "firewall activation and negative tests",
                     "first-boot host identity", "effective sshd policy and real login",
                     "persistent jobs", "private overlay and external-network Mac login"],
-    })
+    }
+    if scope != EXACT:  # The exact-scope plan keeps its original bytes.
+        plan["scope"] = scope
+    outputs["ENROLLMENT-PLAN.json"] = canonical(plan)
     return outputs
 
 
-def check_effective(raw: bytes, owner: str, addresses: list[str], port: int = 22) -> None:
+def check_effective(raw: bytes, owner: str, addresses: list[str], port: int = 22,
+                    scope: str = EXACT) -> None:
     """Check actual sshd -T output, whose keyword capitalization can vary."""
     owner = owner_name(owner)
-    addresses = listen_addresses(addresses)
+    addresses = scope_listeners(scope, addresses)
     if type(port) is not int or not 1 <= port <= 65535:
         raise Refusal("invalid effective-policy port")
     if not isinstance(raw, bytes) or not raw or len(raw) > 1024 * 1024:
@@ -272,7 +299,10 @@ def write_private_directory(destination: Path, outputs: dict[str, bytes]) -> Non
 def main(argv=None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--owner", required=True)
-    parser.add_argument("--listen", action="append", required=True)
+    listeners = parser.add_mutually_exclusive_group(required=True)
+    listeners.add_argument("--listen", action="append")
+    listeners.add_argument("--private-networks", action="store_true",
+                           help="listen on 0.0.0.0 and ::; firewall.py --private-networks limits the sources")
     parser.add_argument("--public-keys", type=Path, required=True)
     parser.add_argument("--port", type=int, default=22)
     parser.add_argument("--output", type=Path, required=True)
@@ -280,7 +310,8 @@ def main(argv=None) -> int:
     try:
         with args.public_keys.open("rb") as stream:
             key_bytes = stream.read(16385)
-        result = render(args.owner, args.listen, key_bytes, args.port)
+        result = render(args.owner, args.listen, key_bytes, args.port,
+                        PRIVATE if args.private_networks else EXACT)
         write_private_directory(args.output, result)
     except (OSError, Refusal) as exc:
         print(f"REFUSED: {exc}", file=sys.stderr)
