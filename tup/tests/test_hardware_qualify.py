@@ -3,6 +3,7 @@ import hashlib
 import importlib.util
 import io
 import json
+import os
 from pathlib import Path
 import tarfile
 import tempfile
@@ -84,6 +85,15 @@ class QualifyRefusalTests(unittest.TestCase):
         self.assertEqual(qualify.snapshot(self.source), before)
         (self.source / "scripts" / "extra").write_bytes(b"x")
         self.assertNotEqual(qualify.snapshot(self.source), before)
+        # The removed file is gone from the listing, but its directory's mtime
+        # still differs: this is the merge_config.sh temporary-file case.
+        os.utime(self.source / "scripts", ns=(1, 1))
+        settled = qualify.snapshot(self.source)
+        (self.source / "scripts" / "transient").write_bytes(b"x")
+        (self.source / "scripts" / "transient").unlink()
+        after = qualify.snapshot(self.source)
+        self.assertEqual(set(after) - set(settled), set())
+        self.assertNotEqual(after, settled)
 
     def test_main_reports_refusal_without_creating_output(self):
         self.assertEqual(qualify.main(["--source", str(self.root / "absent"), "--archive", str(self.archive),

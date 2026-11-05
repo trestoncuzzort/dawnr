@@ -83,9 +83,11 @@ def tool(name, environment):
     found = shutil.which(name, path=environment["PATH"])
     if found is None:
         raise Refusal("required host tool not found: " + name)
-    version = subprocess.run([found, "--version"], env=environment, stdin=subprocess.DEVNULL,
-                             capture_output=True, text=True, check=True).stdout.splitlines()[0]
-    return {"sha256": file_hash(Path(found).resolve()), "version": version}
+    lines = subprocess.run([found, "--version"], env=environment, stdin=subprocess.DEVNULL,
+                           capture_output=True, text=True, check=True).stdout.splitlines()
+    if not lines:
+        raise Refusal("host tool reports no version: " + name)
+    return {"sha256": file_hash(Path(found).resolve()), "version": lines[0]}
 
 
 def qualify(source, archive, output, lock=LOCK):
@@ -101,10 +103,13 @@ def qualify(source, archive, output, lock=LOCK):
     locked = locked_archive(release, lock)
     checked_file(archive, locked)
     before = check_source(source, archive, release)
+    environment = dict(ENVIRONMENT, PATH=os.environ.get("PATH", os.defpath))
+    # Identify the host tools before anything is created: a missing tool is a
+    # refusal with no partial output directory to clean up.
+    tools = {name: tool(name, environment) for name in TOOLS}
     output.mkdir()
     build = output / "build"
     build.mkdir()
-    environment = dict(ENVIRONMENT, PATH=os.environ.get("PATH", os.defpath))
     helpers = {"boot": TUP / "boot" / "kernel.py", "hardware": TUP / "hardware" / "kernel.py"}
     steps = []
 
@@ -156,7 +161,7 @@ def qualify(source, archive, output, lock=LOCK):
         "source_release": release,
         "steps": steps,
         "target_booted": False,
-        "tools": {name: tool(name, environment) for name in TOOLS},
+        "tools": tools,
     }
     with open(output / "KCONFIG-QUALIFICATION.json", "x", encoding="ascii", newline="\n") as stream:
         stream.write(json.dumps(record, indent=2, sort_keys=True) + "\n")

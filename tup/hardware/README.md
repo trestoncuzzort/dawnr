@@ -62,10 +62,10 @@ floor stays built in exactly as before. Links are to
 | Device assignment | `VFIO`, `VFIO_PCI`; `VFIO_NOIOMMU` must stay off | [vfio](https://git.kernel.org/pub/scm/linux/kernel/git/stable/linux.git/tree/drivers/vfio/Kconfig?h=v6.18.60), [vfio/pci](https://git.kernel.org/pub/scm/linux/kernel/git/stable/linux.git/tree/drivers/vfio/pci/Kconfig?h=v6.18.60) |
 | Same kernel as a guest | `HYPERVISOR_GUEST=y`, `PARAVIRT=y`, `KVM_GUEST=y`, `PVH=y`, `VIRTIO_BALLOON`, `VIRTIO_MMIO`, `VIRTIO_MMIO_CMDLINE_DEVICES=y`, `FUSE_FS`, `VIRTIO_FS`, `HW_RANDOM_VIRTIO`, `VIRTIO_VSOCKETS` | [x86](https://git.kernel.org/pub/scm/linux/kernel/git/stable/linux.git/tree/arch/x86/Kconfig?h=v6.18.60), [virtio](https://git.kernel.org/pub/scm/linux/kernel/git/stable/linux.git/tree/drivers/virtio/Kconfig?h=v6.18.60), [fuse](https://git.kernel.org/pub/scm/linux/kernel/git/stable/linux.git/tree/fs/fuse/Kconfig?h=v6.18.60), [hw_random](https://git.kernel.org/pub/scm/linux/kernel/git/stable/linux.git/tree/drivers/char/hw_random/Kconfig?h=v6.18.60) |
 | Overlay and guest networking | `WIREGUARD`, `NF_NAT=y`, `NFT_NAT`, `NFT_MASQ`, `NFT_REJECT`, `NFT_FIB_IPV4`, `NFT_FIB_IPV6`, `NFT_FIB_INET` | [netfilter](https://git.kernel.org/pub/scm/linux/kernel/git/stable/linux.git/tree/net/netfilter/Kconfig?h=v6.18.60), [ipv4](https://git.kernel.org/pub/scm/linux/kernel/git/stable/linux.git/tree/net/ipv4/netfilter/Kconfig?h=v6.18.60), [ipv6](https://git.kernel.org/pub/scm/linux/kernel/git/stable/linux.git/tree/net/ipv6/netfilter/Kconfig?h=v6.18.60) |
-| Rescue and guest storage | `NTFS3_FS`, `UDF_FS`, `DM_CRYPT`, `DM_SNAPSHOT`, `DM_THIN_PROVISIONING`, `DM_VERITY`, `CRYPTO_XTS`, `CRYPTO_AES_NI_INTEL`, `CRYPTO_USER_API_HASH`, `CRYPTO_USER_API_SKCIPHER`, `ZRAM`, `BLK_DEV_NBD` | [ntfs3](https://git.kernel.org/pub/scm/linux/kernel/git/stable/linux.git/tree/fs/ntfs3/Kconfig?h=v6.18.60), [udf](https://git.kernel.org/pub/scm/linux/kernel/git/stable/linux.git/tree/fs/udf/Kconfig?h=v6.18.60), [md](https://git.kernel.org/pub/scm/linux/kernel/git/stable/linux.git/tree/drivers/md/Kconfig?h=v6.18.60), [crypto](https://git.kernel.org/pub/scm/linux/kernel/git/stable/linux.git/tree/crypto/Kconfig?h=v6.18.60), [x86/crypto](https://git.kernel.org/pub/scm/linux/kernel/git/stable/linux.git/tree/arch/x86/crypto/Kconfig?h=v6.18.60), [zram](https://git.kernel.org/pub/scm/linux/kernel/git/stable/linux.git/tree/drivers/block/zram/Kconfig?h=v6.18.60), [block](https://git.kernel.org/pub/scm/linux/kernel/git/stable/linux.git/tree/drivers/block/Kconfig?h=v6.18.60) |
-| Monitoring and recovery | `HWMON=y`, `NVME_HWMON=y`, `SENSORS_K10TEMP`, `SENSORS_NCT6775`, `SENSORS_ASUS_EC`, `WATCHDOG=y`, `SP5100_TCO`, `RAS=y`, `EDAC`, `EDAC_DECODE_MCE`, `EDAC_AMD64`, `I2C_PIIX4`, `IKCONFIG`, `IKCONFIG_PROC=y` | [hwmon](https://git.kernel.org/pub/scm/linux/kernel/git/stable/linux.git/tree/drivers/hwmon/Kconfig?h=v6.18.60), [nvme](https://git.kernel.org/pub/scm/linux/kernel/git/stable/linux.git/tree/drivers/nvme/host/Kconfig?h=v6.18.60), [watchdog](https://git.kernel.org/pub/scm/linux/kernel/git/stable/linux.git/tree/drivers/watchdog/Kconfig?h=v6.18.60), [ras](https://git.kernel.org/pub/scm/linux/kernel/git/stable/linux.git/tree/drivers/ras/Kconfig?h=v6.18.60), [edac](https://git.kernel.org/pub/scm/linux/kernel/git/stable/linux.git/tree/drivers/edac/Kconfig?h=v6.18.60), [i2c](https://git.kernel.org/pub/scm/linux/kernel/git/stable/linux.git/tree/drivers/i2c/busses/Kconfig?h=v6.18.60), [init](https://git.kernel.org/pub/scm/linux/kernel/git/stable/linux.git/tree/init/Kconfig?h=v6.18.60) |
-| CPU frequency | `CPU_FREQ=y`, `X86_AMD_PSTATE=y`, `CPU_FREQ_GOV_SCHEDUTIL=y`, `CPU_FREQ_GOV_PERFORMANCE=y`, `CPU_FREQ_GOV_POWERSAVE` | [cpufreq](https://git.kernel.org/pub/scm/linux/kernel/git/stable/linux.git/tree/drivers/cpufreq/Kconfig?h=v6.18.60), [x86](https://git.kernel.org/pub/scm/linux/kernel/git/stable/linux.git/tree/drivers/cpufreq/Kconfig.x86?h=v6.18.60) |
-| USB Ethernet fallback | `USB_USBNET`, `USB_RTL8152`, `USB_NET_AX88179_178A` | [net/usb](https://git.kernel.org/pub/scm/linux/kernel/git/stable/linux.git/tree/drivers/net/usb/Kconfig?h=v6.18.60) |
+| Rescue and guest storage | `NTFS3_FS`, `NTFS3_LZX_XPRESS=y`, `UDF_FS`, `DM_CRYPT`, `DM_SNAPSHOT`, `DM_THIN_PROVISIONING`, `DM_VERITY`, `CRYPTO_XTS`, `CRYPTO_AES_NI_INTEL`, `CRYPTO_USER_API_HASH`, `CRYPTO_USER_API_SKCIPHER`, `ZRAM`, `BLK_DEV_NBD` | [ntfs3](https://git.kernel.org/pub/scm/linux/kernel/git/stable/linux.git/tree/fs/ntfs3/Kconfig?h=v6.18.60), [udf](https://git.kernel.org/pub/scm/linux/kernel/git/stable/linux.git/tree/fs/udf/Kconfig?h=v6.18.60), [md](https://git.kernel.org/pub/scm/linux/kernel/git/stable/linux.git/tree/drivers/md/Kconfig?h=v6.18.60), [crypto](https://git.kernel.org/pub/scm/linux/kernel/git/stable/linux.git/tree/crypto/Kconfig?h=v6.18.60), [x86/crypto](https://git.kernel.org/pub/scm/linux/kernel/git/stable/linux.git/tree/arch/x86/crypto/Kconfig?h=v6.18.60), [zram](https://git.kernel.org/pub/scm/linux/kernel/git/stable/linux.git/tree/drivers/block/zram/Kconfig?h=v6.18.60), [block](https://git.kernel.org/pub/scm/linux/kernel/git/stable/linux.git/tree/drivers/block/Kconfig?h=v6.18.60) |
+| Monitoring and recovery | `HWMON=y`, `NVME_HWMON=y`, `SENSORS_K10TEMP`, `SENSORS_NCT6775`, `SENSORS_ASUS_EC`, `WATCHDOG=y`, `SP5100_TCO`, `RAS=y`, `EDAC`, `EDAC_DECODE_MCE`, `EDAC_AMD64`, `I2C_PIIX4`, `I2C_CHARDEV`, `SENSORS_SPD5118`, `IKCONFIG`, `IKCONFIG_PROC=y` | [hwmon](https://git.kernel.org/pub/scm/linux/kernel/git/stable/linux.git/tree/drivers/hwmon/Kconfig?h=v6.18.60), [nvme](https://git.kernel.org/pub/scm/linux/kernel/git/stable/linux.git/tree/drivers/nvme/host/Kconfig?h=v6.18.60), [watchdog](https://git.kernel.org/pub/scm/linux/kernel/git/stable/linux.git/tree/drivers/watchdog/Kconfig?h=v6.18.60), [ras](https://git.kernel.org/pub/scm/linux/kernel/git/stable/linux.git/tree/drivers/ras/Kconfig?h=v6.18.60), [edac](https://git.kernel.org/pub/scm/linux/kernel/git/stable/linux.git/tree/drivers/edac/Kconfig?h=v6.18.60), [i2c](https://git.kernel.org/pub/scm/linux/kernel/git/stable/linux.git/tree/drivers/i2c/busses/Kconfig?h=v6.18.60), [init](https://git.kernel.org/pub/scm/linux/kernel/git/stable/linux.git/tree/init/Kconfig?h=v6.18.60) |
+| CPU frequency | `CPU_FREQ=y`, `X86_AMD_PSTATE=y`, `CPU_FREQ_GOV_SCHEDUTIL=y`, `CPU_FREQ_DEFAULT_GOV_SCHEDUTIL=y` (`CPU_FREQ_DEFAULT_GOV_USERSPACE` off), `CPU_FREQ_GOV_PERFORMANCE=y`, `CPU_FREQ_GOV_POWERSAVE` | [cpufreq](https://git.kernel.org/pub/scm/linux/kernel/git/stable/linux.git/tree/drivers/cpufreq/Kconfig?h=v6.18.60), [x86](https://git.kernel.org/pub/scm/linux/kernel/git/stable/linux.git/tree/drivers/cpufreq/Kconfig.x86?h=v6.18.60) |
+| USB Ethernet fallback | `USB_USBNET`, `USB_RTL8152`, `USB_NET_AX88179_178A`; the CDC and other default minidrivers off | [net/usb](https://git.kernel.org/pub/scm/linux/kernel/git/stable/linux.git/tree/drivers/net/usb/Kconfig?h=v6.18.60) |
 | AMD integrated graphics | `DRM_AMDGPU`; `DRM_NOUVEAU` off, `EXTRA_FIRMWARE` empty | [amdgpu](https://git.kernel.org/pub/scm/linux/kernel/git/stable/linux.git/tree/drivers/gpu/drm/amd/amdgpu/Kconfig?h=v6.18.60), [display](https://git.kernel.org/pub/scm/linux/kernel/git/stable/linux.git/tree/drivers/gpu/drm/amd/display/Kconfig?h=v6.18.60), [firmware loader](https://git.kernel.org/pub/scm/linux/kernel/git/stable/linux.git/tree/drivers/base/firmware_loader/Kconfig?h=v6.18.60) |
 | Signing policy | `MODULE_SIG_FORCE` off, `MICROCODE_LATE_LOADING` off | [module](https://git.kernel.org/pub/scm/linux/kernel/git/stable/linux.git/tree/kernel/module/Kconfig?h=v6.18.60) |
 
@@ -79,9 +79,21 @@ VFIO container; `IOMMUFD` stays off).
 - **`R8152` does not exist.** The driver's symbol is `USB_RTL8152`.
   `USB_NET_AX88179_178A` depends on `USB_USBNET`, which was added; with it Kconfig
   defaults in `USB_NET_CDCETHER`, `USB_NET_CDC_NCM`, `USB_NET_CDC_SUBSET`,
-  `USB_NET_NET1080`, `USB_NET_ZAURUS`, `USB_NET_AX8817X` and `USB_RTL8153_ECM`
-  as modules. `r8152` names seven `rtl_nic/rtl8153*`/`rtl8156*` firmware patch
-  files; none is staged, and what the driver does without them is unprobed.
+  `USB_NET_NET1080`, `USB_NET_ZAURUS`, `USB_NET_AX8817X` and `USB_RTL8153_ECM`.
+  Neither requested driver selects or depends on them, and with the wired DHCP
+  profile any CDC gadget that is plugged in would become a configured network
+  link, so the six that have a prompt are pinned off and `USB_RTL8153_ECM`
+  falls away with `USB_NET_CDCETHER`. `r8152` names seven
+  `rtl_nic/rtl8153*`/`rtl8156*` firmware patch files; none is staged, and what
+  the driver does without them is unprobed.
+- **The default governor was `userspace`.** `x86_64_defconfig` selects
+  `CPU_FREQ_DEFAULT_GOV_USERSPACE`, which keeps a fixed frequency under
+  `acpi-cpufreq` if `amd-pstate` does not bind. The default is now `schedutil`;
+  this is the only earlier setting the floor changes.
+- **`I2C_PIIX4` had no consumer.** `I2C_CHARDEV` (userspace probing) and
+  `SENSORS_SPD5118` (DDR5 module temperature) were added as modules, and
+  `NTFS3_LZX_XPRESS`, a bool inside the `ntfs3` module, so files compressed by
+  Windows can be read during a rescue.
 - **`TAP` and `NFT_REJECT_INET` have no prompt** and are derived, as above.
   `NFT_FIB_INET` depends on `NFT_FIB_IPV4` and `NFT_FIB_IPV6`, both added.
 - **`NF_NAT`, `HWMON` and `CPU_FREQ_GOV_PERFORMANCE` are tristate but stay
@@ -140,14 +152,19 @@ VFIO container; `IOMMUFD` stays off).
 ### Size of the change
 
 Counted with `grep -c '=m$'` and `grep -c '=y$'` on the two retained
-configurations: **12 to 110 module symbols** and 1695 to 1760 built-in symbols
-(5653 to 5890 lines). No symbol of the earlier configuration was removed or
-changed. Of the 65 new `=y` symbols only `CEC_CORE` is a tristate; the others are
-bools: `IRQ_REMAP`, `PVH`, `RAS`, `NVME_HWMON`, `IKCONFIG_PROC`, options compiled
-into the new modules, and core hooks that KVM, vhost and the balloon select
-(`PREEMPT_NOTIFIERS`, `USER_RETURN_NOTIFIER`, `VIRT_XFER_TO_GUEST_WORK`,
-`VHOST_TASK`, `MEMORY_BALLOON`, `PAGE_REPORTING`, `MITIGATION_VMSCAPE`). The
-module and image sizes in bytes are unknown until the kernel is compiled.
+configurations: **12 to 103 module symbols** and 1695 to 1766 built-in symbols
+(5653 to 5893 lines). The only earlier setting that changed is the default
+governor choice described above; nothing else was removed or demoted. The
+count includes two live-boot additions made in the boot floor
+([`boot/inputs.py`](../boot/inputs.py)) in the same qualification run:
+`EROFS_FS`, which dracut 112's live module requests without marking it
+optional, and `SQUASHFS_XATTR`, so the live root keeps the extended attributes
+its SquashFS stores. Among the new `=y` symbols are `IRQ_REMAP`, `PVH`, `RAS`,
+`NVME_HWMON`, `IKCONFIG_PROC`, options compiled into the new modules, and core
+hooks that KVM, vhost and the balloon select (`PREEMPT_NOTIFIERS`,
+`USER_RETURN_NOTIFIER`, `VIRT_XFER_TO_GUEST_WORK`, `VHOST_TASK`,
+`MEMORY_BALLOON`, `PAGE_REPORTING`, `MITIGATION_VMSCAPE`). The module and image
+sizes in bytes are unknown until the kernel is compiled.
 
 ## Reproducing the qualification
 

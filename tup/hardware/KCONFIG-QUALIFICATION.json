@@ -1,7 +1,7 @@
 {
   "architecture": "x86_64",
-  "checked_at": "2026-11-05T11:10:12.410908+00:00",
-  "config_sha256": "5bef98396fa21ba247c29313f8c6a13175aaf6b8a5e92c137febf0b2de3f5986",
+  "checked_at": "2026-11-05T11:39:59.558818+00:00",
+  "config_sha256": "784312f1ebfe9fe919e0ba79395eee2aed8155761dc4b0f0a7fda2aa31596157",
   "device_driver_qualified": false,
   "environment": {
     "ARCH": "x86_64",
@@ -12,20 +12,20 @@
   },
   "firmware_loaded": false,
   "inputs": {
-    "boot_fragment_sha256": "2aaa17f6714e1ff6fa4c80c9e6f4d79c24df9063ed6f76873b74e824325eaf7a",
+    "boot_fragment_sha256": "33a64eca0e016cb12c883ef6979447c1c100646d3c235d31a1ddfd78dc388e6f",
     "boot_helper_sha256": "e6497aa86fb32a584b516e5630ff30ad17212939f158e8dffcad099c9cbeeea7",
     "defconfig_sha256": "f157c1c162578abba4d6e9490aef0588e26aaa2331f47023fda03c42e7c66f02",
-    "hardware_fragment_sha256": "11748c38ba736b1d88e0f617cf3d8618d0f071f7683a989255f9bb012958a226",
-    "hardware_helper_sha256": "666c8c15d2a870ea573e14e8622ec34a5e13a10d982d7c551dbd78d21c66c52c",
+    "hardware_fragment_sha256": "7965c9bc09b42183506e34c8f5ca9b74e127dfc572b247952f9818b25e88aba2",
+    "hardware_helper_sha256": "52cd053ef91e9a3f74a762a20c131e1b8993500ece90e1b71f03a530b46ed7a8",
     "merge_config_sha256": "fecdeb0747c88f818f0d5d39333b948cdf83d9aca11c422253da17f5cc36e6f1"
   },
   "jobs": 1,
   "kernel_archive_sha256": "3c2f44ef6acc021a7ad444d9a2e6ec1ef488ff09368793d0004a6080f69d621e",
   "kernel_compiled": false,
   "logs": {
-    "defconfig.log": "ccc18301d5f7fb221ff34eb2f0ac2cceca4590eb43e507f77d389f5b97ab0817",
-    "merge.log": "994a0d51ccd6228064207b1166056412fe015fd6bcfa5b344dc59b42a406a7f8",
-    "olddefconfig.log": "6a4230941c0ea2b713649326195547cfc6c477a458adb3f128d60a02df13fd6a"
+    "defconfig.log": "da284d2978e6a1d36e1ef4e2a4740ac7cfb27228b42d4fda70631af47fd1a349",
+    "merge.log": "8eb058499bb88b3f757ece686d270178dbeb0505aee8e2ead9eafe3ce2a157b9",
+    "olddefconfig.log": "7c771d780e693b11b257f0e8dca84c7725613d41b5a4364a70be646f8c8fd2c6"
   },
   "schema": "tup-hardware-kconfig-qualification-v1",
   "source_release": "6.18.60",
