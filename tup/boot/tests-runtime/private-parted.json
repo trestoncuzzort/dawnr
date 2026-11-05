@@ -1,0 +1,14 @@
+{
+  "scope": "authenticated-ubuntu-packages-extracted-without-installation",
+  "packages": {
+    "parted_3.6-4build1_amd64.deb": "5029269a0aee1b5d94dff101fcb3cc4832625668213d05d9029b342734bd0158",
+    "libparted2t64_3.6-4build1_amd64.deb": "24e84d557b5037d1ad984ba1b6e5136c56cc9a96f2af9d916392372d8513f775",
+    "dmidecode_3.5-3ubuntu0.2_amd64.deb": "b6a124313f744b7ddf7c20b9db040e5b66677685f22a8c9bd63a2a7312e83ede"
+  },
+  "files": {
+    "usr/sbin/parted": "d9e1e189be332ed4103242dfe5fc636bd4f011c5bab9e923973bbc8902ae1848",
+    "usr/sbin/partprobe": "4acfd73d46d7b68d0733d3eeb6dbb58feb273d7432730f9185a124c28452e2a2",
+    "usr/sbin/dmidecode": "e4ad9957c3014d8c3fa463ddd3ab7e3aea16a18c52ccee786c32be00c2307fa1",
+    "usr/lib/x86_64-linux-gnu/libparted.so.2.0.5": "f6ffd90ec4268747b077d988f8191da3573ca78809ccbbe61f7acee906b0edb7"
+  }
+}

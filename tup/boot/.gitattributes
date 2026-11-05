@@ -4,3 +4,4 @@
 *.json -text
 # Authentication evidence retains exact publisher bytes, including whitespace.
 evidence/** -text -whitespace
+*.sha256 text eol=lf

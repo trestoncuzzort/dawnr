@@ -1,0 +1,12 @@
+{
+  "scope": "host-grub-uefi-smoke-only",
+  "marker_seen": true,
+  "qemu_exit": 0,
+  "elapsed_seconds": 2.168,
+  "accelerator": "tcg",
+  "memory_mib": 256,
+  "vcpus": 1,
+  "tup_boot_tested": false,
+  "input_hashes_unchanged": true,
+  "serial_sha256": "e99540b14028e835bf0a13cda4e07dcd056a677ea5e5d9936d1252e6489cb733"
+}
