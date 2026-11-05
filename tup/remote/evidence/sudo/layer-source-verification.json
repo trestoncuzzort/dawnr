@@ -1,0 +1,224 @@
+{
+  "schema": "tup-remote-layer-source-verification-v1",
+  "status": "verified",
+  "scope": "five-remote-layer-sources",
+  "release_eligible": false,
+  "verifier_sha256": "37f39eb2a44b0ff93941fdc2c271ffaec2573a3647fe8cabcce42ee90bff760e",
+  "catalogs": {
+    "source.json": "f6957f003877e5f2db95bb91c52459779df0231fe20505c4cf7e9bad8aa9c176",
+    "firewall-sources.json": "749b9582bc3800fb89bb561dd02d994c1645eafc1c9f6b919961334694f050a2",
+    "advisories.json": "1002e585a65e1e7306f33a933a7a8a0a9fb28e1782ac9d18f5e12cec66ef6aad",
+    "sudo-source.json": "11646758f3e3b86a2604a7a6d6f4c3a988848a15974143a368bd3bcb45fbb5dd",
+    "sudo-advisories.json": "dfdd0cf0c8744df8be667af6b606576500472003842677a6b89ef3b57355b6e6"
+  },
+  "sources": [
+    {
+      "name": "openssh-10.6p1.tar.gz",
+      "status": "verified",
+      "sha256": "a9dc9565dffe8640f64d863cd29a32bc4a3dbdec0566a7fc44c5d6ee767d5f39",
+      "size": 2355244,
+      "authentication": {
+        "status": "verified",
+        "evidence_sha256": "529ca8948e5fc3f4ff280ea5a646bbc2724d36d93b1b8f5667a0934048542719",
+        "trust_class": "publisher-openpgp",
+        "primary_fingerprint": "7168B983815A5EEF59A4ADFD2A3F414E736060BA",
+        "signing_fingerprint": "7168B983815A5EEF59A4ADFD2A3F414E736060BA",
+        "verifier_sha256": "403e04c779ad9fab3895c405f8c53d35ab59fa8e3b8bbe3437f61bc41f468dd4",
+        "status_sha256": "5449fb51173bf3f1a309f84124efbbe4194de8655f314aed252dde30915d5421"
+      }
+    },
+    {
+      "name": "nftables-1.1.7.tar.xz",
+      "status": "verified",
+      "sha256": "a6fbf060d8d4fff001517a2b94f356bb4366bfbf0ba366366f9d27cc38caa58f",
+      "size": 1062488,
+      "authentication": {
+        "status": "verified",
+        "evidence_sha256": "34d784dfa8fc600373542860d0c5b9cd5067b5f985afc6e7452dc22fc9899212",
+        "trust_class": "publisher-openpgp",
+        "primary_fingerprint": "8C5F7146A1757A65E2422A94D70D1A666ACF2B21",
+        "signing_fingerprint": "8C5F7146A1757A65E2422A94D70D1A666ACF2B21",
+        "verifier_sha256": "403e04c779ad9fab3895c405f8c53d35ab59fa8e3b8bbe3437f61bc41f468dd4",
+        "status_sha256": "0bd5323bd5bc1224bec56cc1879b20929b9bc687f1bc2162b37530884da6f550"
+      }
+    },
+    {
+      "name": "libnftnl-1.3.2.tar.xz",
+      "status": "verified",
+      "sha256": "c97abc3409f8fa396b4462b2bb7f147a3a47a4ddc97cfa0b2f18890c9cfde8b0",
+      "size": 349268,
+      "authentication": {
+        "status": "verified",
+        "evidence_sha256": "c03d7dd29e624a4544bfe359b4bb9ad0a4f71bd7e8ff017f5654b57f7b0ce5f5",
+        "trust_class": "publisher-openpgp",
+        "primary_fingerprint": "8C5F7146A1757A65E2422A94D70D1A666ACF2B21",
+        "signing_fingerprint": "8C5F7146A1757A65E2422A94D70D1A666ACF2B21",
+        "verifier_sha256": "403e04c779ad9fab3895c405f8c53d35ab59fa8e3b8bbe3437f61bc41f468dd4",
+        "status_sha256": "4aa75e100ac54cd0a53211ffd7acac509e3de3f8fceb8a8a346b9cb19a869612"
+      }
+    },
+    {
+      "name": "libmnl-1.0.5.tar.bz2",
+      "status": "verified",
+      "sha256": "274b9b919ef3152bfb3da3a13c950dd60d6e2bcd54230ffeca298d03b40d0525",
+      "size": 314791,
+      "authentication": {
+        "status": "verified",
+        "evidence_sha256": "31241b234cd4c4e5454cecb4af9114906176cc446135bd22146add45b8047ba6",
+        "trust_class": "distributor-openpgp-manifest",
+        "primary_fingerprint": "DCD05B71EAB94199527F44ACDB6B8C1F96D8BF6D",
+        "signing_fingerprint": "E1D6ABB63BFCFB4BA02FDF1CEC590EEAC9189250",
+        "verifier_sha256": "403e04c779ad9fab3895c405f8c53d35ab59fa8e3b8bbe3437f61bc41f468dd4",
+        "status_sha256": "0e675efd7fc7ec684b5d53c312b61219c66e4238caef255c74edb78e8afe6ab9",
+        "distributor": "Gentoo",
+        "snapshot_sha256": "923b3132d9214cee3f59fa2b56a3af27a0287c8587576c99ebcd5b24e537a194",
+        "manifest_member": "gentoo-20261103/net-libs/libmnl/Manifest",
+        "manifest_sha256": "48e656e2c720b0a2dedf01e6e15c0566503d526115beebf8fd2711763910a430",
+        "source_digest_algorithm": "sha512",
+        "source_digest": "16fa48e74c9da7724a85c655dfb0abd8369392627934639d65de951543e1447ac3e048d231248f1ce8861443c2ef62654a85a81feeedbbffaf2e5744f6cf4c9f",
+        "source_size": 314791,
+        "assurance": "Gentoo-signed snapshot authenticates exact upstream filename, size and SHA512; SHA256 pin is derived after verification"
+      }
+    },
+    {
+      "name": "sudo-1.9.17p2.tar.gz",
+      "status": "verified",
+      "sha256": "4a38a1ab3adb1199257edc2a7c4a2bd714665eb605b04368843b06dada2cfcfb",
+      "size": 5451682,
+      "authentication": {
+        "status": "verified",
+        "evidence_sha256": "5a62ff9ab8866dc6e73145424628f33ce9c26bf6ec6f02b506fcc7ea8f6364ec",
+        "trust_class": "publisher-openpgp",
+        "primary_fingerprint": "59D1E9CCBA2B376704FDD35BA9F4C021CEA470FB",
+        "signing_fingerprint": "59D1E9CCBA2B376704FDD35BA9F4C021CEA470FB",
+        "verifier_sha256": "403e04c779ad9fab3895c405f8c53d35ab59fa8e3b8bbe3437f61bc41f468dd4",
+        "status_sha256": "14a2918f75610afd4f2a87ebdc73877ac273935544a455c19dd2218f14535db6"
+      }
+    }
+  ],
+  "remote": {
+    "schema": "tup-remote-source-verification-v1",
+    "status": "verified",
+    "scope": "four-remote-layer-sources",
+    "release_eligible": false,
+    "verifier_sha256": "37f39eb2a44b0ff93941fdc2c271ffaec2573a3647fe8cabcce42ee90bff760e",
+    "catalogs": {
+      "source.json": "f6957f003877e5f2db95bb91c52459779df0231fe20505c4cf7e9bad8aa9c176",
+      "firewall-sources.json": "749b9582bc3800fb89bb561dd02d994c1645eafc1c9f6b919961334694f050a2",
+      "advisories.json": "1002e585a65e1e7306f33a933a7a8a0a9fb28e1782ac9d18f5e12cec66ef6aad"
+    },
+    "sources": [
+      {
+        "name": "openssh-10.6p1.tar.gz",
+        "status": "verified",
+        "sha256": "a9dc9565dffe8640f64d863cd29a32bc4a3dbdec0566a7fc44c5d6ee767d5f39",
+        "size": 2355244,
+        "authentication": {
+          "status": "verified",
+          "evidence_sha256": "529ca8948e5fc3f4ff280ea5a646bbc2724d36d93b1b8f5667a0934048542719",
+          "trust_class": "publisher-openpgp",
+          "primary_fingerprint": "7168B983815A5EEF59A4ADFD2A3F414E736060BA",
+          "signing_fingerprint": "7168B983815A5EEF59A4ADFD2A3F414E736060BA",
+          "verifier_sha256": "403e04c779ad9fab3895c405f8c53d35ab59fa8e3b8bbe3437f61bc41f468dd4",
+          "status_sha256": "5449fb51173bf3f1a309f84124efbbe4194de8655f314aed252dde30915d5421"
+        }
+      },
+      {
+        "name": "nftables-1.1.7.tar.xz",
+        "status": "verified",
+        "sha256": "a6fbf060d8d4fff001517a2b94f356bb4366bfbf0ba366366f9d27cc38caa58f",
+        "size": 1062488,
+        "authentication": {
+          "status": "verified",
+          "evidence_sha256": "34d784dfa8fc600373542860d0c5b9cd5067b5f985afc6e7452dc22fc9899212",
+          "trust_class": "publisher-openpgp",
+          "primary_fingerprint": "8C5F7146A1757A65E2422A94D70D1A666ACF2B21",
+          "signing_fingerprint": "8C5F7146A1757A65E2422A94D70D1A666ACF2B21",
+          "verifier_sha256": "403e04c779ad9fab3895c405f8c53d35ab59fa8e3b8bbe3437f61bc41f468dd4",
+          "status_sha256": "0bd5323bd5bc1224bec56cc1879b20929b9bc687f1bc2162b37530884da6f550"
+        }
+      },
+      {
+        "name": "libnftnl-1.3.2.tar.xz",
+        "status": "verified",
+        "sha256": "c97abc3409f8fa396b4462b2bb7f147a3a47a4ddc97cfa0b2f18890c9cfde8b0",
+        "size": 349268,
+        "authentication": {
+          "status": "verified",
+          "evidence_sha256": "c03d7dd29e624a4544bfe359b4bb9ad0a4f71bd7e8ff017f5654b57f7b0ce5f5",
+          "trust_class": "publisher-openpgp",
+          "primary_fingerprint": "8C5F7146A1757A65E2422A94D70D1A666ACF2B21",
+          "signing_fingerprint": "8C5F7146A1757A65E2422A94D70D1A666ACF2B21",
+          "verifier_sha256": "403e04c779ad9fab3895c405f8c53d35ab59fa8e3b8bbe3437f61bc41f468dd4",
+          "status_sha256": "4aa75e100ac54cd0a53211ffd7acac509e3de3f8fceb8a8a346b9cb19a869612"
+        }
+      },
+      {
+        "name": "libmnl-1.0.5.tar.bz2",
+        "status": "verified",
+        "sha256": "274b9b919ef3152bfb3da3a13c950dd60d6e2bcd54230ffeca298d03b40d0525",
+        "size": 314791,
+        "authentication": {
+          "status": "verified",
+          "evidence_sha256": "31241b234cd4c4e5454cecb4af9114906176cc446135bd22146add45b8047ba6",
+          "trust_class": "distributor-openpgp-manifest",
+          "primary_fingerprint": "DCD05B71EAB94199527F44ACDB6B8C1F96D8BF6D",
+          "signing_fingerprint": "E1D6ABB63BFCFB4BA02FDF1CEC590EEAC9189250",
+          "verifier_sha256": "403e04c779ad9fab3895c405f8c53d35ab59fa8e3b8bbe3437f61bc41f468dd4",
+          "status_sha256": "0e675efd7fc7ec684b5d53c312b61219c66e4238caef255c74edb78e8afe6ab9",
+          "distributor": "Gentoo",
+          "snapshot_sha256": "923b3132d9214cee3f59fa2b56a3af27a0287c8587576c99ebcd5b24e537a194",
+          "manifest_member": "gentoo-20261103/net-libs/libmnl/Manifest",
+          "manifest_sha256": "48e656e2c720b0a2dedf01e6e15c0566503d526115beebf8fd2711763910a430",
+          "source_digest_algorithm": "sha512",
+          "source_digest": "16fa48e74c9da7724a85c655dfb0abd8369392627934639d65de951543e1447ac3e048d231248f1ce8861443c2ef62654a85a81feeedbbffaf2e5744f6cf4c9f",
+          "source_size": 314791,
+          "assurance": "Gentoo-signed snapshot authenticates exact upstream filename, size and SHA512; SHA256 pin is derived after verification"
+        }
+      }
+    ],
+    "advisory_review_sha256": "1002e585a65e1e7306f33a933a7a8a0a9fb28e1782ac9d18f5e12cec66ef6aad",
+    "limitations": [
+      "Target core dependencies retain their separate source lock and release gates",
+      "Source verification does not establish target compilation or remote access"
+    ]
+  },
+  "sudo": {
+    "schema": "tup-remote-sudo-source-verification-v1",
+    "status": "verified",
+    "scope": "sudo-owner-administration-source",
+    "release_eligible": false,
+    "verifier_sha256": "37f39eb2a44b0ff93941fdc2c271ffaec2573a3647fe8cabcce42ee90bff760e",
+    "catalogs": {
+      "sudo-source.json": "11646758f3e3b86a2604a7a6d6f4c3a988848a15974143a368bd3bcb45fbb5dd",
+      "sudo-advisories.json": "dfdd0cf0c8744df8be667af6b606576500472003842677a6b89ef3b57355b6e6"
+    },
+    "sources": [
+      {
+        "name": "sudo-1.9.17p2.tar.gz",
+        "status": "verified",
+        "sha256": "4a38a1ab3adb1199257edc2a7c4a2bd714665eb605b04368843b06dada2cfcfb",
+        "size": 5451682,
+        "authentication": {
+          "status": "verified",
+          "evidence_sha256": "5a62ff9ab8866dc6e73145424628f33ce9c26bf6ec6f02b506fcc7ea8f6364ec",
+          "trust_class": "publisher-openpgp",
+          "primary_fingerprint": "59D1E9CCBA2B376704FDD35BA9F4C021CEA470FB",
+          "signing_fingerprint": "59D1E9CCBA2B376704FDD35BA9F4C021CEA470FB",
+          "verifier_sha256": "403e04c779ad9fab3895c405f8c53d35ab59fa8e3b8bbe3437f61bc41f468dd4",
+          "status_sha256": "14a2918f75610afd4f2a87ebdc73877ac273935544a455c19dd2218f14535db6"
+        }
+      }
+    ],
+    "published_sha256_on_approval_page": "4a38a1ab3adb1199257edc2a7c4a2bd714665eb605b04368843b06dada2cfcfb",
+    "advisory_review_sha256": "dfdd0cf0c8744df8be667af6b606576500472003842677a6b89ef3b57355b6e6",
+    "limitations": [
+      "Target core dependencies retain their separate source lock and release gates",
+      "Source verification does not establish target compilation or working administration"
+    ]
+  },
+  "limitations": [
+    "Target core dependencies retain their separate source lock and release gates",
+    "Source verification does not establish target compilation or remote access"
+  ]
+}

@@ -1,0 +1,34 @@
+{
+  "schema": "tup-remote-sudo-source-verification-v1",
+  "status": "verified",
+  "scope": "sudo-owner-administration-source",
+  "release_eligible": false,
+  "verifier_sha256": "37f39eb2a44b0ff93941fdc2c271ffaec2573a3647fe8cabcce42ee90bff760e",
+  "catalogs": {
+    "sudo-source.json": "11646758f3e3b86a2604a7a6d6f4c3a988848a15974143a368bd3bcb45fbb5dd",
+    "sudo-advisories.json": "dfdd0cf0c8744df8be667af6b606576500472003842677a6b89ef3b57355b6e6"
+  },
+  "sources": [
+    {
+      "name": "sudo-1.9.17p2.tar.gz",
+      "status": "verified",
+      "sha256": "4a38a1ab3adb1199257edc2a7c4a2bd714665eb605b04368843b06dada2cfcfb",
+      "size": 5451682,
+      "authentication": {
+        "status": "verified",
+        "evidence_sha256": "5a62ff9ab8866dc6e73145424628f33ce9c26bf6ec6f02b506fcc7ea8f6364ec",
+        "trust_class": "publisher-openpgp",
+        "primary_fingerprint": "59D1E9CCBA2B376704FDD35BA9F4C021CEA470FB",
+        "signing_fingerprint": "59D1E9CCBA2B376704FDD35BA9F4C021CEA470FB",
+        "verifier_sha256": "403e04c779ad9fab3895c405f8c53d35ab59fa8e3b8bbe3437f61bc41f468dd4",
+        "status_sha256": "14a2918f75610afd4f2a87ebdc73877ac273935544a455c19dd2218f14535db6"
+      }
+    }
+  ],
+  "published_sha256_on_approval_page": "4a38a1ab3adb1199257edc2a7c4a2bd714665eb605b04368843b06dada2cfcfb",
+  "advisory_review_sha256": "dfdd0cf0c8744df8be667af6b606576500472003842677a6b89ef3b57355b6e6",
+  "limitations": [
+    "Target core dependencies retain their separate source lock and release gates",
+    "Source verification does not establish target compilation or working administration"
+  ]
+}

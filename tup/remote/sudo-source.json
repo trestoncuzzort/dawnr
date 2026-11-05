@@ -1,0 +1,47 @@
+{
+  "schema": "tup-remote-sudo-source-v1",
+  "architecture": "x86_64",
+  "version": "1.9.17p2",
+  "status": "source-authenticated-not-built",
+  "release_eligible": false,
+  "reviewed_at": "2026-11-05",
+  "verifier": "tup/sources/source_lock.py",
+  "selection": {
+    "blfs_recipe": "https://www.linuxfromscratch.org/blfs/view/13.1-systemd/postlfs/sudo.html",
+    "blfs_version": "1.9.17p2",
+    "upstream_current_stable": "1.9.17p2",
+    "reason": "BLFS 13.1-systemd and the upstream download page both name 1.9.17p2. It is newer than 1.9.17p1, which fixes the two newest upstream advisories (CVE-2025-32462, CVE-2025-32463); the complete LFS 13.1 advisory query has no sudo record. No newer stable source archive was listed upstream on the review date."
+  },
+  "source": {
+    "name": "sudo-1.9.17p2.tar.gz",
+    "url": "https://www.sudo.ws/dist/sudo-1.9.17p2.tar.gz",
+    "disposition": "retain",
+    "sha256": "4a38a1ab3adb1199257edc2a7c4a2bd714665eb605b04368843b06dada2cfcfb",
+    "reason": "Owner administration with a locked root account; source authenticated only, no target build performed.",
+    "authentication": {
+      "method": "openpgp",
+      "primary_fingerprint": "59D1E9CCBA2B376704FDD35BA9F4C021CEA470FB",
+      "signing_fingerprint": "59D1E9CCBA2B376704FDD35BA9F4C021CEA470FB",
+      "payload": "archive",
+      "key": {
+        "path": "PGPKEYS",
+        "url": "https://www.sudo.ws/dist/PGPKEYS",
+        "sha256": "e6c112473a19b70bc58b900c43887a8fa57ec0a690bd1bc506f04bd241e44ab1"
+      },
+      "signature": {
+        "path": "sudo-1.9.17p2.tar.gz.sig",
+        "url": "https://www.sudo.ws/dist/sudo-1.9.17p2.tar.gz.sig",
+        "sha256": "4605f51763a083ab1732da1ae8b28a28ddf8007f4d79d0de51b691a9fe4195ec"
+      },
+      "approval": {
+        "reviewed_at": "2026-11-05",
+        "basis": "Official upstream download page states that all source distributions are signed with the maintainer's key, publishes the complete current signing fingerprint and links the PGPKEYS file retained here. That file also carries the older 1024-bit DSA key; it is not approved, and only the current RSA primary may authorize these bytes.",
+        "material": {
+          "path": "sudo-download.html",
+          "url": "https://www.sudo.ws/getting/download/",
+          "sha256": "a0582cb658a711a3f09713eaa167f438e8b83199f6e4f8c3e5bc71c65c970ffd"
+        }
+      }
+    }
+  }
+}

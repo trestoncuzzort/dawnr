@@ -1,0 +1,85 @@
+{
+  "schema": "tup-remote-sudo-advisory-review-v1",
+  "reviewed_at": "2026-11-05",
+  "request": {
+    "method": "POST",
+    "fields": {
+      "stype": "Book",
+      "release": "13.1",
+      "desc": "true",
+      "submit": "Search"
+    }
+  },
+  "snapshot": {
+    "path": "lfs-13.1-advisories.html",
+    "url": "https://www.linuxfromscratch.org/advisories/index.php",
+    "sha256": "aa562da21adbfa442f88404b029242eea2d24ac04fa4b4eefff4eb819a304de1"
+  },
+  "inventory_sha256": "0924e0d0d47b12c3b7046e53501e87ad674a044e20f147d07a0f1dc6909f69f2",
+  "inventory_count": 100,
+  "selected_advisories": [],
+  "upstream_index": {
+    "path": "sudo-advisories.html",
+    "url": "https://www.sudo.ws/security/advisories/",
+    "sha256": "8de742d6eab9039d50a454659ba975eac60d49f82d400ab7284e3852172b00bc"
+  },
+  "dispositions": [
+    {
+      "id": "upstream-sudo-CVE-2025-32463",
+      "package": "sudo",
+      "disposition": "fixed-by-selection",
+      "selected_sources": [
+        "sudo-1.9.17p2.tar.gz"
+      ],
+      "affected": "1.9.14 to 1.9.17 inclusive",
+      "fixed_in": "1.9.17p1",
+      "evidence": {
+        "path": "sudo-advisory-chroot_bug.html",
+        "url": "https://www.sudo.ws/security/advisories/chroot_bug/",
+        "sha256": "92642d4d843071b85082b866a04ac147cf1733f7425664c84c2c0206cb5fa329"
+      }
+    },
+    {
+      "id": "upstream-sudo-CVE-2025-32462",
+      "package": "sudo",
+      "disposition": "fixed-by-selection",
+      "selected_sources": [
+        "sudo-1.9.17p2.tar.gz"
+      ],
+      "affected": "1.8.8 to 1.9.17 inclusive",
+      "fixed_in": "1.9.17p1",
+      "evidence": {
+        "path": "sudo-advisory-host_any.html",
+        "url": "https://www.sudo.ws/security/advisories/host_any/",
+        "sha256": "36ecc1ab7de2de182f520c21452aa4dda7e4c36155c1394fbcc464b8ef749b6d"
+      }
+    }
+  ],
+  "older_upstream_advisories": {
+    "count": 31,
+    "newest_date": "2023-02-27",
+    "newest_fixed_in": "1.9.13p2",
+    "basis": "All 33 advisories linked from the four upstream index pages were fetched and read on the review date. The 31 older than 2025 name fixed releases no newer than 1.9.13p2 or affect only the 1.6 to 1.8 branches. Only the first index page and the two 2025 advisories are retained as bytes; the other observed pages are identified by digest in evidence/sudo/retrieval.json."
+  },
+  "upstream_material": [
+    {
+      "path": "sudo-download.html",
+      "url": "https://www.sudo.ws/getting/download/",
+      "sha256": "a0582cb658a711a3f09713eaa167f438e8b83199f6e4f8c3e5bc71c65c970ffd"
+    },
+    {
+      "path": "blfs-13.1-sudo.html",
+      "url": "https://www.linuxfromscratch.org/blfs/view/13.1-systemd/postlfs/sudo.html",
+      "sha256": "ce1afb10d33a1158b9ad8450e81cc8c80c7a79d09263f8e188f92db7c1b1330b"
+    }
+  ],
+  "scope": [
+    "sudo"
+  ],
+  "limitations": [
+    "No sudo advisory appears in the complete 13.1 query and no upstream advisory is newer than 2025-06-30; that is not proof of absence of vulnerabilities.",
+    "Advisories are reviewed as published by upstream and LFS; no independent CVE database search is claimed.",
+    "The target is configured without PAM and without OpenSSL; glibc, libxcrypt and zlib retain the core source-lock dispositions and release gates.",
+    "Target compilation, the upstream test suite on the target, owner enrollment and real privilege tests remain required."
+  ]
+}

@@ -1,0 +1,51 @@
+{
+  "schema": "tup-remote-live-source-controls-v1",
+  "status": "passed",
+  "baseline": {
+    "name": "sudo-1.9.17p2.tar.gz",
+    "status": "verified",
+    "sha256": "4a38a1ab3adb1199257edc2a7c4a2bd714665eb605b04368843b06dada2cfcfb"
+  },
+  "cases": [
+    {
+      "case": "tampered-archive",
+      "detail": "byte 2725841 of 5451682 XOR 0x01; reviewed pin removed so only the signature can refuse",
+      "status": "refused-as-required",
+      "refusal": "OpenPGP signature verification failed"
+    },
+    {
+      "case": "tampered-archive-with-pin",
+      "detail": "same modified archive with the reviewed pin kept",
+      "status": "refused-as-required",
+      "refusal": "OpenPGP signature verification failed"
+    },
+    {
+      "case": "wrong-key-material",
+      "detail": "key file replaced by the retained Netfilter key, pinned consistently",
+      "status": "refused-as-required",
+      "refusal": "OpenPGP signature verification failed"
+    },
+    {
+      "case": "wrong-approved-primary",
+      "detail": "approves the superseded 1024-bit DSA primary that is present in PGPKEYS",
+      "status": "refused-as-required",
+      "refusal": "signature is not from the approved primary fingerprint"
+    },
+    {
+      "case": "missing-signature",
+      "detail": "detached signature removed",
+      "status": "refused-as-required",
+      "refusal": "missing evidence: sudo-1.9.17p2.tar.gz.sig"
+    },
+    {
+      "case": "cli-tampered-archive",
+      "detail": "verify_layer_sources.py --sudo-only on the modified archive",
+      "status": "refused-as-required",
+      "refusal": "OpenPGP signature verification failed",
+      "exit_code": 1
+    }
+  ],
+  "verifier_sha256": "37f39eb2a44b0ff93941fdc2c271ffaec2573a3647fe8cabcce42ee90bff760e",
+  "gpg_sha256": "403e04c779ad9fab3895c405f8c53d35ab59fa8e3b8bbe3437f61bc41f468dd4",
+  "archive_sha256": "4a38a1ab3adb1199257edc2a7c4a2bd714665eb605b04368843b06dada2cfcfb"
+}

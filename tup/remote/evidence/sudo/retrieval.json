@@ -1,0 +1,286 @@
+{
+  "retrieved_at": "2026-11-05",
+  "transport": "curl, HTTPS only, TLS 1.2 or newer, no redirects to other schemes",
+  "note": "Observed digests identify downloads; they do not authenticate them. sudo.ws pages end with a per-request CDN script, so a later fetch of the same page differs in that trailer.",
+  "retained": {
+    "sudo-1.9.17p2.tar.gz": {
+      "url": "https://www.sudo.ws/dist/sudo-1.9.17p2.tar.gz",
+      "resolved_url": "https://www.sudo.ws/dist/sudo-1.9.17p2.tar.gz",
+      "sha256": "4a38a1ab3adb1199257edc2a7c4a2bd714665eb605b04368843b06dada2cfcfb",
+      "size_bytes": 5451682
+    },
+    "sudo-1.9.17p2.tar.gz.sig": {
+      "url": "https://www.sudo.ws/dist/sudo-1.9.17p2.tar.gz.sig",
+      "resolved_url": "https://www.sudo.ws/dist/sudo-1.9.17p2.tar.gz.sig",
+      "sha256": "4605f51763a083ab1732da1ae8b28a28ddf8007f4d79d0de51b691a9fe4195ec",
+      "size_bytes": 566,
+      "retained_as": "sudo-1.9.17p2.tar.gz.sig"
+    },
+    "PGPKEYS": {
+      "url": "https://www.sudo.ws/dist/PGPKEYS",
+      "resolved_url": "https://www.sudo.ws/dist/PGPKEYS",
+      "sha256": "e6c112473a19b70bc58b900c43887a8fa57ec0a690bd1bc506f04bd241e44ab1",
+      "size_bytes": 5898,
+      "retained_as": "PGPKEYS"
+    },
+    "sudo-download.html": {
+      "url": "https://www.sudo.ws/getting/download/",
+      "resolved_url": "https://www.sudo.ws/getting/download/",
+      "sha256": "a0582cb658a711a3f09713eaa167f438e8b83199f6e4f8c3e5bc71c65c970ffd",
+      "size_bytes": 159437,
+      "retained_as": "sudo-download.html"
+    },
+    "blfs-13.1-sudo.html": {
+      "url": "https://www.linuxfromscratch.org/blfs/view/13.1-systemd/postlfs/sudo.html",
+      "resolved_url": "https://www.linuxfromscratch.org/blfs/view/13.1-systemd/postlfs/sudo.html",
+      "sha256": "ce1afb10d33a1158b9ad8450e81cc8c80c7a79d09263f8e188f92db7c1b1330b",
+      "size_bytes": 18467,
+      "retained_as": "blfs-13.1-sudo.html"
+    },
+    "sudo-advisories.html": {
+      "url": "https://www.sudo.ws/security/advisories/",
+      "resolved_url": "https://www.sudo.ws/security/advisories/",
+      "sha256": "8de742d6eab9039d50a454659ba975eac60d49f82d400ab7284e3852172b00bc",
+      "size_bytes": 101267,
+      "retained_as": "sudo-advisories.html"
+    },
+    "sudo-advisory-chroot_bug.html": {
+      "url": "https://www.sudo.ws/security/advisories/chroot_bug/",
+      "resolved_url": "https://www.sudo.ws/security/advisories/chroot_bug/",
+      "sha256": "92642d4d843071b85082b866a04ac147cf1733f7425664c84c2c0206cb5fa329",
+      "size_bytes": 90838,
+      "retained_as": "sudo-advisory-chroot_bug.html"
+    },
+    "sudo-advisory-host_any.html": {
+      "url": "https://www.sudo.ws/security/advisories/host_any/",
+      "resolved_url": "https://www.sudo.ws/security/advisories/host_any/",
+      "sha256": "36ecc1ab7de2de182f520c21452aa4dda7e4c36155c1394fbcc464b8ef749b6d",
+      "size_bytes": 93340,
+      "retained_as": "sudo-advisory-host_any.html"
+    }
+  },
+  "observed_not_retained": {
+    "sudo-stable.html": {
+      "url": "https://www.sudo.ws/releases/stable/",
+      "resolved_url": "https://www.sudo.ws/releases/stable/",
+      "sha256": "78444123302a10224c985f9883ea5a208552eabb69c85757e62976835686f8c1",
+      "size_bytes": 1803352
+    },
+    "sudo-dist-index.html": {
+      "url": "https://www.sudo.ws/dist/",
+      "resolved_url": "https://www.sudo.ws/dist/",
+      "sha256": "636268bc30eaea6ae280eb39cabb26235e138cce9cbe000cf62c392238136f38",
+      "size_bytes": 52794
+    },
+    "blfs-development-sudo.html": {
+      "url": "https://www.linuxfromscratch.org/blfs/view/systemd/postlfs/sudo.html",
+      "resolved_url": "https://www.linuxfromscratch.org/blfs/view/systemd/postlfs/sudo.html",
+      "sha256": "00a0fe775dcd95ab23179e93133fdf65a8e1569ee1acecf062c852cccb111af9",
+      "size_bytes": 18582
+    },
+    "sudo-advisories-page-2.html": {
+      "url": "https://www.sudo.ws/security/advisories/page/2/",
+      "resolved_url": "https://www.sudo.ws/security/advisories/page/2/",
+      "sha256": "48fb639d659134e78fab1a106752d80708cec3c4b81f5034431e31742aedf06b",
+      "size_bytes": 99700
+    },
+    "sudo-advisories-page-3.html": {
+      "url": "https://www.sudo.ws/security/advisories/page/3/",
+      "resolved_url": "https://www.sudo.ws/security/advisories/page/3/",
+      "sha256": "4d01c4473a490490ad508a3565973dc0c12bfdcc1eb3eb3194465d221b9a846b",
+      "size_bytes": 104256
+    },
+    "sudo-advisories-page-4.html": {
+      "url": "https://www.sudo.ws/security/advisories/page/4/",
+      "resolved_url": "https://www.sudo.ws/security/advisories/page/4/",
+      "sha256": "895fa63871378bec66a810128254706f3b5237eac8ea8380ddfd639bbfef4b4c",
+      "size_bytes": 89041
+    },
+    "sudo-advisory-bash_env.html": {
+      "url": "https://www.sudo.ws/security/advisories/bash_env/",
+      "resolved_url": "https://www.sudo.ws/security/advisories/bash_env/",
+      "sha256": "6c989e1b2548ecfa345e96ba3dab1c15da42cb39e717625712f5be6701953919",
+      "size_bytes": 91624
+    },
+    "sudo-advisory-bash_functions.html": {
+      "url": "https://www.sudo.ws/security/advisories/bash_functions/",
+      "resolved_url": "https://www.sudo.ws/security/advisories/bash_functions/",
+      "sha256": "6bd67462571f36648857698b5447c4eb8a82552b76a627573d8f10dc67a8bbcf",
+      "size_bytes": 91236
+    },
+    "sudo-advisory-cmnd_alias_negation.html": {
+      "url": "https://www.sudo.ws/security/advisories/cmnd_alias_negation/",
+      "resolved_url": "https://www.sudo.ws/security/advisories/cmnd_alias_negation/",
+      "sha256": "81c88929457877a4753bd34b0c9aa0a05ab6772414e5aeac4591a7396d27329e",
+      "size_bytes": 90716
+    },
+    "sudo-advisory-double_free.html": {
+      "url": "https://www.sudo.ws/security/advisories/double_free/",
+      "resolved_url": "https://www.sudo.ws/security/advisories/double_free/",
+      "sha256": "558335b4210d3ae311eeedfccb641a441fbb3aba8f80166443e0b43079cfc1ec",
+      "size_bytes": 91670
+    },
+    "sudo-advisory-env_add.html": {
+      "url": "https://www.sudo.ws/security/advisories/env_add/",
+      "resolved_url": "https://www.sudo.ws/security/advisories/env_add/",
+      "sha256": "220962eb0fb1c2e0f1a20cd396d98d0faddfd4b995fb7e1148b4b84615af9d4f",
+      "size_bytes": 93361
+    },
+    "sudo-advisory-epoch_ticket.html": {
+      "url": "https://www.sudo.ws/security/advisories/epoch_ticket/",
+      "resolved_url": "https://www.sudo.ws/security/advisories/epoch_ticket/",
+      "sha256": "0b6878d60d42674891b0293d306d7e38682cd3f58ccf9d251e30ab62b7e802d0",
+      "size_bytes": 93408
+    },
+    "sudo-advisory-group_vector.html": {
+      "url": "https://www.sudo.ws/security/advisories/group_vector/",
+      "resolved_url": "https://www.sudo.ws/security/advisories/group_vector/",
+      "sha256": "f17f902270d9e52491b79b6aad8aee63a0f5157c0ee4d404068779ac245cbeb2",
+      "size_bytes": 91356
+    },
+    "sudo-advisory-heap_corruption.html": {
+      "url": "https://www.sudo.ws/security/advisories/heap_corruption/",
+      "resolved_url": "https://www.sudo.ws/security/advisories/heap_corruption/",
+      "sha256": "fb1730e99445f7591b3259f5c6e7e5475d39bd86ae486406d88160ac466359ee",
+      "size_bytes": 88324
+    },
+    "sudo-advisory-kerberos5.html": {
+      "url": "https://www.sudo.ws/security/advisories/kerberos5/",
+      "resolved_url": "https://www.sudo.ws/security/advisories/kerberos5/",
+      "sha256": "a6455cda6f55b2f7f54b83ecb57d1b4a18218561b87a55d94bd4e9623bb4c767",
+      "size_bytes": 92397
+    },
+    "sudo-advisory-linux_tty.html": {
+      "url": "https://www.sudo.ws/security/advisories/linux_tty/",
+      "resolved_url": "https://www.sudo.ws/security/advisories/linux_tty/",
+      "sha256": "3fbbab694d7cf51470df17dcc2375cf3ae523439b7dfb86cdffa932d0445c356",
+      "size_bytes": 94085
+    },
+    "sudo-advisory-minus_1_uid.html": {
+      "url": "https://www.sudo.ws/security/advisories/minus_1_uid/",
+      "resolved_url": "https://www.sudo.ws/security/advisories/minus_1_uid/",
+      "sha256": "1b50da4c45c12c86744b861cf72267cdd3218a1e738446e651fff98dd56f68b8",
+      "size_bytes": 92572
+    },
+    "sudo-advisory-netmask.html": {
+      "url": "https://www.sudo.ws/security/advisories/netmask/",
+      "resolved_url": "https://www.sudo.ws/security/advisories/netmask/",
+      "sha256": "0e5e03f1081252620d90bee4f0c8541bfb50a3fdec0f125f1c830ecb8e21bf83",
+      "size_bytes": 92421
+    },
+    "sudo-advisory-noexec_bypass.html": {
+      "url": "https://www.sudo.ws/security/advisories/noexec_bypass/",
+      "resolved_url": "https://www.sudo.ws/security/advisories/noexec_bypass/",
+      "sha256": "3f900ba718738a9e572b3b2dda6ef59c922d433ea1c1c09c7611ba99fe2a2da7",
+      "size_bytes": 92256
+    },
+    "sudo-advisory-noexec_wordexp.html": {
+      "url": "https://www.sudo.ws/security/advisories/noexec_wordexp/",
+      "resolved_url": "https://www.sudo.ws/security/advisories/noexec_wordexp/",
+      "sha256": "8aabeccfe32a56820cfdd32010f81c156020919b769904788527a655d2a2c861",
+      "size_bytes": 91446
+    },
+    "sudo-advisory-path_race.html": {
+      "url": "https://www.sudo.ws/security/advisories/path_race/",
+      "resolved_url": "https://www.sudo.ws/security/advisories/path_race/",
+      "sha256": "20c128590aab4e2df9c61728525a86d988efda23ed589c202100991707047213",
+      "size_bytes": 92675
+    },
+    "sudo-advisory-perl_env.html": {
+      "url": "https://www.sudo.ws/security/advisories/perl_env/",
+      "resolved_url": "https://www.sudo.ws/security/advisories/perl_env/",
+      "sha256": "d12dccd30ef3381485af3e589f814db5b83f1aac4f75a83061727c3d80d43140",
+      "size_bytes": 91722
+    },
+    "sudo-advisory-postfix.html": {
+      "url": "https://www.sudo.ws/security/advisories/postfix/",
+      "resolved_url": "https://www.sudo.ws/security/advisories/postfix/",
+      "sha256": "41dec8991e50f95a9d68ccb6baf61391e880e5b03bc46897cc70f01218ee68ba",
+      "size_bytes": 90368
+    },
+    "sudo-advisory-prompt.html": {
+      "url": "https://www.sudo.ws/security/advisories/prompt/",
+      "resolved_url": "https://www.sudo.ws/security/advisories/prompt/",
+      "sha256": "660e0b6309db639b06fc41107606c2c58e0721dc91dd77a359c62d8f042ff476",
+      "size_bytes": 90345
+    },
+    "sudo-advisory-pwfeedback.html": {
+      "url": "https://www.sudo.ws/security/advisories/pwfeedback/",
+      "resolved_url": "https://www.sudo.ws/security/advisories/pwfeedback/",
+      "sha256": "63ddecef66a3e326282ac75e929ad594a5c58914860b27bc9aba3327d042e125",
+      "size_bytes": 97281
+    },
+    "sudo-advisory-runas_group.html": {
+      "url": "https://www.sudo.ws/security/advisories/runas_group/",
+      "resolved_url": "https://www.sudo.ws/security/advisories/runas_group/",
+      "sha256": "4f423d393e679de1f87cadcc193684c4a6e1982d92f333c9d0e39f174a13151d",
+      "size_bytes": 91773
+    },
+    "sudo-advisory-runas_group_pw.html": {
+      "url": "https://www.sudo.ws/security/advisories/runas_group_pw/",
+      "resolved_url": "https://www.sudo.ws/security/advisories/runas_group_pw/",
+      "sha256": "59244788ded357a748e28fa06ed8a9073d04b5b03fa8829d2c3d0364b5ad968a",
+      "size_bytes": 91588
+    },
+    "sudo-advisory-secure_path.html": {
+      "url": "https://www.sudo.ws/security/advisories/secure_path/",
+      "resolved_url": "https://www.sudo.ws/security/advisories/secure_path/",
+      "sha256": "ecd3dafe9added9897471cf1fc8dd4caf1ea215fd167a8d42cf38fa22cd21a2e",
+      "size_bytes": 91575
+    },
+    "sudo-advisory-sudo_debug.html": {
+      "url": "https://www.sudo.ws/security/advisories/sudo_debug/",
+      "resolved_url": "https://www.sudo.ws/security/advisories/sudo_debug/",
+      "sha256": "2566536ac8070a96fb9d3cf2172ff27c44724a23ba58b6912d2ed385163b98c1",
+      "size_bytes": 91956
+    },
+    "sudo-advisory-sudoedit.html": {
+      "url": "https://www.sudo.ws/security/advisories/sudoedit/",
+      "resolved_url": "https://www.sudo.ws/security/advisories/sudoedit/",
+      "sha256": "14c6d22d3dad9e69e7e82b9f54201043aa70fa7f9c3b1da3309858b614e66a8f",
+      "size_bytes": 90378
+    },
+    "sudo-advisory-sudoedit_any.html": {
+      "url": "https://www.sudo.ws/security/advisories/sudoedit_any/",
+      "resolved_url": "https://www.sudo.ws/security/advisories/sudoedit_any/",
+      "sha256": "786083d917d99e4bab5f26acffbcc8d3f1ee7c0c0124c8c5d0cfcf655e599edf",
+      "size_bytes": 94037
+    },
+    "sudo-advisory-sudoedit_escalate.html": {
+      "url": "https://www.sudo.ws/security/advisories/sudoedit_escalate/",
+      "resolved_url": "https://www.sudo.ws/security/advisories/sudoedit_escalate/",
+      "sha256": "a339f6fba74b8fb9faec874151a71b6c48a7d40538eab431d27de5da9c423b17",
+      "size_bytes": 91435
+    },
+    "sudo-advisory-sudoedit_escalate2.html": {
+      "url": "https://www.sudo.ws/security/advisories/sudoedit_escalate2/",
+      "resolved_url": "https://www.sudo.ws/security/advisories/sudoedit_escalate2/",
+      "sha256": "89ac6717912877c005d84adce343c516aa2b1bb61ccbe57d16a929ce27d1fcae",
+      "size_bytes": 92866
+    },
+    "sudo-advisory-sudoedit_selinux.html": {
+      "url": "https://www.sudo.ws/security/advisories/sudoedit_selinux/",
+      "resolved_url": "https://www.sudo.ws/security/advisories/sudoedit_selinux/",
+      "sha256": "2741ec62e33fe20350ebce7097baf252cd3634680e99abdd53157face18bcec7",
+      "size_bytes": 95742
+    },
+    "sudo-advisory-tty_tickets.html": {
+      "url": "https://www.sudo.ws/security/advisories/tty_tickets/",
+      "resolved_url": "https://www.sudo.ws/security/advisories/tty_tickets/",
+      "sha256": "dba77dc5607a342c86417233a69873f994e418539499d233f2644888d11befb4",
+      "size_bytes": 96134
+    },
+    "sudo-advisory-tz.html": {
+      "url": "https://www.sudo.ws/security/advisories/tz/",
+      "resolved_url": "https://www.sudo.ws/security/advisories/tz/",
+      "sha256": "6bce687a7d7a168a7d363c54c6b83ede42707e6b99300361e20c03eafa646bdb",
+      "size_bytes": 93760
+    },
+    "sudo-advisory-unescape_overflow.html": {
+      "url": "https://www.sudo.ws/security/advisories/unescape_overflow/",
+      "resolved_url": "https://www.sudo.ws/security/advisories/unescape_overflow/",
+      "sha256": "887e7be4cc5475613a265c16c9cc69a387a0a4b3ebfd58810fedd4d4611c3e50",
+      "size_bytes": 93609
+    }
+  }
+}
