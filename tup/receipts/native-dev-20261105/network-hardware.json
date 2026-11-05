@@ -1,0 +1,18 @@
+{
+  "archive": "linux-6.18.60.tar.xz",
+  "sha256": "3c2f44ef6acc021a7ad444d9a2e6ec1ef488ff09368793d0004a6080f69d621e",
+  "rtw8852cu_source_present": false,
+  "rtw8852cu_config_present": false,
+  "usb_id_matches": [],
+  "schema": 1,
+  "observation_local_date": "2026-11-05",
+  "usb_vendor_product": "35bc:0102",
+  "windows_inf_mapping": "RTL8852cu.ndi",
+  "windows_driver_version": "5001.19.128.1",
+  "ethernet_pci_vendor_device": "10ec:8125",
+  "ethernet_link_observed": "Up, 1 Gbps",
+  "wifi_link_observed": "Up, 2.4 Gbps",
+  "inference": "The selected Linux 6.18.60 source lacks this USB driver and ID; native Wi-Fi remains a separate unresolved qualification gate.",
+  "later_upstream_driver": "https://raw.githubusercontent.com/torvalds/linux/v6.19/drivers/net/wireless/realtek/rtw89/rtw8852cu.c",
+  "native_device_probe_run": false
+}

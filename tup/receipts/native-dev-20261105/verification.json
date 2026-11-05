@@ -1,0 +1,42 @@
+{
+  "schema": 1,
+  "observation_local_date": "2026-11-05",
+  "source_commit": "f2ac0c1c29ecdbb9d118f88f4fff3849c3753c42",
+  "command": "python3 -m unittest discover -s tup/tests -v",
+  "prediction": {
+    "tests": 135,
+    "passed": 135,
+    "skipped": 0
+  },
+  "exit_code": 0,
+  "wall_seconds": 12.466,
+  "raw_log_sha256": "fed499a73be710af28e7caea0db19033b906857632c52794a9041a3a44518545",
+  "runtime": {
+    "python": "3.12.3",
+    "kernel": "6.18.54.1-microsoft-standard-WSL2",
+    "architecture": "x86_64"
+  },
+  "limits": [
+    "Unit/integration fixtures only; no complete LFS build, native boot, physical power-cut test, installer or remote workload qualification."
+  ],
+  "tests": 135,
+  "seconds": 12.395,
+  "skipped": 0,
+  "failures": 0,
+  "errors": 0,
+  "passed": 135,
+  "public_log": "integration-linux.txt",
+  "public_log_sha256": "fed499a73be710af28e7caea0db19033b906857632c52794a9041a3a44518545",
+  "log_transforms": [],
+  "shell_syntax_checks": 147,
+  "shell_syntax_exit_code": 0,
+  "offline_extraction_check_exit_code": 0,
+  "whitespace_check": {
+    "implementation_and_documentation_exit_code": 0,
+    "full_diff_exit_code": 1,
+    "retained_original_book_whitespace": [
+      "book-x86_64-13.1-systemd/ch08/17-tcl.sh:47",
+      "book-x86_64-13.1-systemd/ch08/61-coreutils.sh:37"
+    ]
+  }
+}

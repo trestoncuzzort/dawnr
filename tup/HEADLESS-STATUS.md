@@ -9,6 +9,35 @@ the owner's MacBook. Disposable TUP guests install workload tools through an
 in-guest package manager, keep running across remote disconnects, and discard
 their writable state on explicit finish. Only selected results persist.
 
+## Linux checkpoint: 2026-11-05
+
+The integrated checkpoint at `f2ac0c1c` passes **135 tests, zero failures and
+zero skips**, in 12.395 seconds on Linux. This includes the real GNU sync path
+previously skipped on Windows. All 147 selected shell files pass syntax checks;
+the offline book extraction exactly matches its committed bytes. The two
+original upstream trailing spaces in generated Tcl/coreutils commands are
+retained deliberately. [Verification](receipts/native-dev-20261105/verification.json)
+links to the unchanged raw Linux test log. No hardware power-loss or native-boot
+claim follows from these fixtures.
+
+The separate maintained-book extraction inventories 143 pages, 640 command
+blocks and 94 sources. Its command-bearing pages refuse execution until their
+named native overrides are reviewed. The native13 CLI is still disabled. The
+source checkpoint verifies 22 of 94 inputs against published HTTPS SHA256
+metadata; unresolved sources and advisory dispositions prevent production
+export. The full block audit, authenticated source lock and actual core build
+are the next gates.
+
+The hardware check found wired Ethernet now linked at 1 Gbps. The vendor INF
+identifies USB Wi-Fi as RTL8852CU; the selected 6.18.60 kernel source lacks its
+USB driver. H21 retains the need for a maintained backport or newer kernel and
+separate native Wi-Fi tests. Working Windows networking is not a TUP result.
+
+The owner requires continued work through headless boot, remote access,
+adversarial tests and sustained tests on this desktop. Disposable image tests
+precede preparation of the connected Ventoy USB; live hardware qualification
+still precedes Windows replacement. No physical storage has been changed.
+
 ## First implementation checkpoint: 2026-11-04
 
 - Research baseline: `a403386720e9ee67789b5ee0b92e303a972c8a34`.
@@ -47,12 +76,12 @@ available. Python's archive matched its published SHA256 and its executable
 has a valid Python Software Foundation signature.
 
 WSL 3.0.3 was installed from the official Microsoft release after checking the
-published SHA256 and Authenticode publisher. The installer returned zero. The
-required Windows features were enabled without restarting. WSL still reports
-that a Windows restart is required; no Linux distribution/build has run yet.
-The owner explicitly requested a reboot after the checkpoint is saved. Verify
-runtime state after returning; installation success does not prove the restart
-or distribution setup has occurred.
+published SHA256 and Authenticode publisher. The authorized Windows reboot
+completed. Ubuntu 24.04.5 LTS now runs an x86_64 Linux build environment on
+ext4. Build tools and distribution security updates are installed; a dedicated
+locked `lfs` account exists. A private mount/PID namespace probe passed.
+Windows drive automount and executable interoperability are disabled in this
+builder. These observations do not establish isolation from a hostile build.
 The initial disposable-builder budget is 6 GiB RAM, 8 virtual CPUs, 4 GiB swap
 and four compiler jobs. These are preparation limits, not final native-host
 performance claims. Build files must live on a Linux filesystem, not DrvFs.
@@ -69,12 +98,12 @@ pass on Linux without Windows compatibility shims; a single failure falsifies
 that prediction. In particular, real file/directory durability operations must
 be exercised on Linux. Windows fixtures cannot establish crash durability.
 
-After the Windows restart, verify the installed WSL runtime and install a
-disposable Ubuntu 24.04 build distribution if it is still absent. Confirm Linux
-architecture, memory/CPU/swap limits, ext4 build storage, chroot/mount facilities
-and the selected LFS host requirements. Complete source authentication and the
-maintained-book decision before starting a real base build. A failed preflight
-must stop without a completion marker or an altered physical device.
+Linux architecture, memory/CPU/swap limits, ext4 storage and mount/PID namespace
+creation have been checked. Complete source authentication, the maintained
+book's execution audit, and its profile-specific host checks before starting
+a real base build. A failed preflight must stop without a completion marker or
+an altered physical device. Check physical host free space as well as the
+virtual ext4 filesystem before admitting a build.
 
 The first whole-build prediction and peak-resource limits must be recorded
 after those gates are satisfied. No build-duration prediction is justified yet.

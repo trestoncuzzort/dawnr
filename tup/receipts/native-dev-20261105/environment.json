@@ -1,0 +1,32 @@
+{
+  "schema": 1,
+  "observation_local_date": "2026-11-05",
+  "scope": "Disposable build environment; not the installed TUP host",
+  "windows_restart_completed": true,
+  "wsl_version": "3.0.3",
+  "distribution": "Ubuntu 24.04.5 LTS",
+  "architecture": "x86_64",
+  "kernel": "6.18.54.1-microsoft-standard-WSL2",
+  "python": "3.12.3",
+  "cpu_affinity_count": 8,
+  "configured_memory_limit_bytes": 6442450944,
+  "observed_memory_total_bytes": 6215634944,
+  "observed_swap_total_bytes": 4294967296,
+  "build_filesystem": "ext4",
+  "initial_compiler_jobs": 4,
+  "private_mount_pid_namespace_probe": {
+    "command": "unshare --mount --pid --fork --kill-child --propagation private true",
+    "exit_code": 0
+  },
+  "configuration": {
+    "windows_drive_automount": false,
+    "windows_executable_interop": false,
+    "append_windows_path": false,
+    "dedicated_locked_build_account": true
+  },
+  "limits": [
+    "No complete LFS build or resource-peak qualification yet.",
+    "The build environment is not evidence of native TUP boot, hardware support or hostile-guest containment.",
+    "Virtual filesystem free space must be checked against physical Windows host storage before a build."
+  ]
+}

@@ -39,9 +39,11 @@
       "evidence": [
         "native/VALIDATION.md",
         "receipts/native-dev-20261104/environment.json",
-        "receipts/native-dev-20261104/verification.json"
+        "receipts/native-dev-20261104/verification.json",
+        "receipts/native-dev-20261105/verification.json",
+        "receipts/native-dev-20261105/environment.json"
       ],
-      "note": "WSL MSI installed and Windows features enabled; restart required. No Linux distribution or LFS build has run. Builder cap6GiB/8vCPU/4GiBswap; initial jobs4. Native foundation has19portable fixture passes; whole build, Linux execution, source authentication and production book migration remain open. Final combined checkpoint:75pass/1explicit Linux skip. No native build acceptance."
+      "note": "Windows restart and disposable Ubuntu 24.04.5 setup completed. Linux x86_64/ext4, 8 CPUs, 6 GiB configured RAM and 4 GiB swap verified; private mount/PID namespace probe passed. All 135 integrated fixtures pass on Linux, zero skips. Initial compiler budget remains four jobs; actual full-build resource peaks and management responsiveness are unmeasured."
     },
     {
       "id": "H02",
@@ -79,14 +81,18 @@
         "native/README.md",
         "native/build.py",
         "native/run-stage.sh",
-        "tests/test_native_build.py"
+        "tests/test_native_build.py",
+        "sources/source_lock.py",
+        "sources/catalog-13.1.json",
+        "sources/README.md"
       ],
       "test_command": "python -m unittest discover -s tup/tests -p test_native_build.py -v",
       "evidence": [
         "native/VALIDATION.md",
-        "receipts/native-dev-20261104/verification.json"
+        "receipts/native-dev-20261104/verification.json",
+        "receipts/native-dev-20261105/verification.json"
       ],
-      "note": "Implementation and measured acceptance remain required. No native success claimed. Native foundation has19portable fixture passes; whole build, Linux execution, source authentication and production book migration remain open. Final combined checkpoint:75pass/1explicit Linux skip. No native build acceptance."
+      "note": "The 94-source maintained-book inventory, replacement-source selection and verifier are implemented. Checkpoint verifies 22/94 sources through published HTTPS SHA256 evidence; 72 sources and full advisory review remain unresolved in that checkpoint. A production lock cannot be exported yet. All 135 integrated Linux fixtures pass; this does not authenticate unreviewed sources or establish full transitive closure."
     },
     {
       "id": "H04",
@@ -107,9 +113,10 @@
       "test_command": "python -m unittest discover -s tup/tests -p 'test_driver*.py' -v",
       "evidence": [
         "receipts/native-dev-20261104/verification.json",
-        "receipts/native-dev-20261104/integration-windows.txt"
+        "receipts/native-dev-20261104/integration-windows.txt",
+        "receipts/native-dev-20261105/verification.json"
       ],
-      "note": "Driver protocol:38Windows fixture passes and1Linux-durability skip. Actual Linux fsync/syncfs, native LFS execution and full manifest closure remain required. Auxiliary event JSON must also be validated by release tooling. Old VM wrappers do not supply the new contract and are superseded, not repaired."
+      "note": "Driver resume and replacement-source binding pass Linux fixtures including real GNU sync. Integrated suite: 135 passes, zero skips. Full native LFS execution, transitive closure and artifact inventory binding remain required. Old VM wrappers are superseded and do not supply the new contract."
     },
     {
       "id": "H05",
@@ -136,9 +143,10 @@
       "test_command": "python -m unittest discover -s tup/tests -p test_native_build.py -v",
       "evidence": [
         "native/VALIDATION.md",
-        "receipts/native-dev-20261104/verification.json"
+        "receipts/native-dev-20261104/verification.json",
+        "receipts/native-dev-20261105/verification.json"
       ],
-      "note": "Implementation and measured acceptance remain required. No native success claimed. Native foundation has19portable fixture passes; whole build, Linux execution, source authentication and production book migration remain open. Final combined checkpoint:75pass/1explicit Linux skip. No native build acceptance."
+      "note": "The integrated Linux fixture suite passes all 135 tests, including stage pre/postconditions and failure propagation controls. Native13 helper code remains disabled from the CLI until full book review, host/profile wiring and source verification finish. No whole-build or release verdict is claimed."
     },
     {
       "id": "H06",
@@ -157,9 +165,10 @@
       "test_command": "python -m unittest discover -s tup/tests -p 'test_driver*.py' -v",
       "evidence": [
         "receipts/native-dev-20261104/verification.json",
-        "receipts/native-dev-20261104/integration-windows.txt"
+        "receipts/native-dev-20261104/integration-windows.txt",
+        "receipts/native-dev-20261105/verification.json"
       ],
-      "note": "Driver protocol:38Windows fixture passes and1Linux-durability skip. Actual Linux fsync/syncfs, native LFS execution and full manifest closure remain required. Auxiliary event JSON must also be validated by release tooling. Old VM wrappers do not supply the new contract and are superseded, not repaired."
+      "note": "Linux fixtures exercise real sync/fsync operations plus injected write, flush, rename and interruption failures. Integrated suite: 135 passes, zero skips. Actual power-cut recovery and full native LFS execution remain unrun; the tested protocol is not a claim about every filesystem or storage failure."
     },
     {
       "id": "H07",
@@ -414,7 +423,7 @@
     },
     {
       "id": "H21",
-      "status": "open",
+      "status": "in_progress",
       "owner": "integration",
       "depends_on": [
         "H02",
@@ -425,8 +434,11 @@
       "acceptance": "Installer and installed TUP cold-boot with working connectivity, then recover from unplug/link/router interruption.",
       "implementation": [],
       "test_command": null,
-      "evidence": [],
-      "note": "Implementation and measured acceptance remain required. No native success claimed."
+      "evidence": [
+        "receipts/native-dev-20261105/verification.json",
+        "receipts/native-dev-20261105/network-hardware.json"
+      ],
+      "note": "New read-only hardware evidence: wired Realtek 8125 is now Up at 1 Gbps; USB 35bc:0102 maps to RTL8852CU in the installed vendor INF. The inspected Linux 6.18.60 archive lacks rtw8852cu.c, CONFIG_RTW89_8852CU and that USB ID in wireless driver source. Later upstream 6.19 contains the ID. Select and qualify a maintained backport or newer kernel for Wi-Fi; use the available wired path for initial native headless testing. No native network connection has passed."
     },
     {
       "id": "H22",
@@ -1007,13 +1019,16 @@
       "owner": "integration",
       "depends_on": [],
       "implementation": [
-        "native/BASELINE.md"
+        "native/BASELINE.md",
+        "extraction/13.1-systemd/README.md",
+        "native/profiles/lfs-13.1-systemd/README.md"
       ],
       "test_command": null,
       "evidence": [
-        "native/BASELINE.md"
+        "native/BASELINE.md",
+        "receipts/native-dev-20261105/verification.json"
       ],
-      "note": "Working production target: LFS13.1-systemd plus dated advisory updates. Research found94source/patch entries and changed chapter/test/service contracts. The current foundation intentionally refuses this unimplemented profile.",
+      "note": "The separate pinned 13.1-systemd book now inventories 143 pages, 640 blocks and 94 source entries. Offline extraction reproduces exact bytes; every command-bearing page refuses execution pending its named native override. Dormant audit helpers pass fixtures, but CLI activation, full execution review, source/advisory authentication and a real core build remain open. Historical book trees are preserved.",
       "finding": "The [LFS download page](https://www.linuxfromscratch.org/lfs/download.html), checked 2026-11-04, says the prior System V edition is no longer maintained. TUP extracts 12.4 SysV; the currently maintained stable book is 13.1-systemd. Updating only the kernel leaves the rest of the native base without a documented maintenance plan.",
       "required_change": "Stage 1 before a production build: choose and pin a maintained LFS baseline, audit each retained named override against its exact generated page, and review applicable advisories. Compare rebasing onto the maintained book with explicitly maintaining the SysV branch; preserve historical generated pages and receipts. Record the chosen init/service design and measure its cost.",
       "acceptance": "Source/book/deviation inventory agrees with the chosen version; no unresolved applicable high-impact advisory is waved through; clean build, boot, supervision, updates and rollback are tested on that exact baseline. An old successful receipt is not production approval."
