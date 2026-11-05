@@ -1,7 +1,30 @@
 {
-  "catalog_sha256": "5c67ecef1fc50913be2c2b00b9c25335f7ee4dc3c6d212a3fb64a09bebad6738",
-  "checked_at": "2026-11-05T08:40:29.936339+00:00",
-  "complete": false,
+  "accepted_exception_count": 11,
+  "advisory_review": {
+    "disposition_count": 102,
+    "lock_purpose": "build-only",
+    "release_eligible": false,
+    "release_gates": [
+      {
+        "advisories": [
+          "CVE-2025-66382"
+        ],
+        "id": "H55",
+        "required_evidence": [
+          "host XML exposure review",
+          "workload CPU/time containment demonstrated or qualified upstream fix"
+        ],
+        "status": "open"
+      }
+    ],
+    "review_sha256": "54c77ca572dffb63a1a0c595479fb090127420bc7d2574c95005ba00c578bfd2",
+    "snapshot_count": 100,
+    "status": "reviewed"
+  },
+  "authenticated_count": 83,
+  "catalog_sha256": "fe719a8ecbfaa5acea04293721a7d961f4f29ce5ca264fedc04f62a44214a115",
+  "checked_at": "2026-11-05T09:14:23.660801+00:00",
+  "complete": true,
   "schema": "tup-source-verification-v1",
   "sources": [
     {
@@ -20,7 +43,7 @@
         "status": "verified",
         "status_sha256": "0e675efd7fc7ec684b5d53c312b61219c66e4238caef255c74edb78e8afe6ab9",
         "trust_class": "distributor-openpgp-manifest",
-        "verifier_sha256": "14953ed8b4549020e185c0f7ab600bb9d0384457ea74da9d574e8d31139aff4f"
+        "verifier_sha256": "403e04c779ad9fab3895c405f8c53d35ab59fa8e3b8bbe3437f61bc41f468dd4"
       },
       "name": "acl-2.4.0.tar.xz",
       "sha256": "e661131456d2708a01c614a0f400e11d7d1bfaeb6f3e74b75bb980b72f0161a3",
@@ -28,14 +51,26 @@
       "status": "verified"
     },
     {
+      "authentication": {
+        "evidence_sha256": "8f0c6bc3de4692b3346ba06fb47c5414cb1024954a35fc02395efad78baaecb7",
+        "primary_fingerprint": "259B3792B3D6D319212CC4DCD5BF9FEB0313653A",
+        "signing_fingerprint": "259B3792B3D6D319212CC4DCD5BF9FEB0313653A",
+        "status": "verified",
+        "status_sha256": "a307b019f84ad9035b680f795079c28c38faa2b395c09c1928cb764bbab4d429",
+        "trust_class": "publisher-openpgp",
+        "verifier_sha256": "403e04c779ad9fab3895c405f8c53d35ab59fa8e3b8bbe3437f61bc41f468dd4"
+      },
       "name": "attr-2.6.0.tar.gz",
-      "reason": "no supported authentication evidence",
-      "status": "unresolved"
+      "sha256": "d42fa374513180bb48cb11a46696f488240e5124ff1e6ad88b0abff706985612",
+      "size": 506247,
+      "status": "verified"
     },
     {
       "authentication": {
         "assurance": "publisher HTTPS metadata; no signature verified",
         "evidence_sha256": "7669ba51ebda0abfa0565482da8ed6e0543ab64d003811381d4cd4b4d6f9c0d8",
+        "source_digest": "9fd672b1c8425fac2fa67fa0477b990987268b90ff36d5f016dae57be0d6b52e",
+        "source_digest_algorithm": "sha256",
         "status": "verified",
         "trust_class": "https-published-sha256"
       },
@@ -59,7 +94,7 @@
           "source_size": 1652392,
           "status_sha256": "0e675efd7fc7ec684b5d53c312b61219c66e4238caef255c74edb78e8afe6ab9",
           "trust_class": "distributor-openpgp-manifest",
-          "verifier_sha256": "14953ed8b4549020e185c0f7ab600bb9d0384457ea74da9d574e8d31139aff4f"
+          "verifier_sha256": "403e04c779ad9fab3895c405f8c53d35ab59fa8e3b8bbe3437f61bc41f468dd4"
         },
         "evidence_sha256": "45eb7552826717f36b40eb145d2ea1eaec29074cfa1b83294fdf3b7cb998e241",
         "primary_fingerprint": "17D3311B14BC0F248267BF020716748A30D155AD",
@@ -67,7 +102,7 @@
         "status": "verified",
         "status_sha256": "5bba53542155d64e1f5012000a60e951eca194ca4f1be9ce51c9b83ec91e4727",
         "trust_class": "publisher-openpgp",
-        "verifier_sha256": "14953ed8b4549020e185c0f7ab600bb9d0384457ea74da9d574e8d31139aff4f"
+        "verifier_sha256": "403e04c779ad9fab3895c405f8c53d35ab59fa8e3b8bbe3437f61bc41f468dd4"
       },
       "name": "automake-1.18.1.tar.xz",
       "sha256": "168aa363278351b89af56684448f525a5bce5079d0b6842bd910fdd3f1646887",
@@ -90,7 +125,7 @@
         "status": "verified",
         "status_sha256": "0e675efd7fc7ec684b5d53c312b61219c66e4238caef255c74edb78e8afe6ab9",
         "trust_class": "distributor-openpgp-manifest",
-        "verifier_sha256": "14953ed8b4549020e185c0f7ab600bb9d0384457ea74da9d574e8d31139aff4f"
+        "verifier_sha256": "403e04c779ad9fab3895c405f8c53d35ab59fa8e3b8bbe3437f61bc41f468dd4"
       },
       "name": "bash-5.3.tar.gz",
       "sha256": "0d5cd86965f869a26cf64f4b71be7b96f90a3ba8b3d74e27e8e9d9d5550f31ba",
@@ -113,7 +148,7 @@
         "status": "verified",
         "status_sha256": "0e675efd7fc7ec684b5d53c312b61219c66e4238caef255c74edb78e8afe6ab9",
         "trust_class": "distributor-openpgp-manifest",
-        "verifier_sha256": "14953ed8b4549020e185c0f7ab600bb9d0384457ea74da9d574e8d31139aff4f"
+        "verifier_sha256": "403e04c779ad9fab3895c405f8c53d35ab59fa8e3b8bbe3437f61bc41f468dd4"
       },
       "name": "bc-7.0.3.tar.xz",
       "sha256": "91eb74caed0ee6655b669711a4f350c25579778694df248e28363318e03c7fc4",
@@ -136,7 +171,7 @@
         "status": "verified",
         "status_sha256": "0e675efd7fc7ec684b5d53c312b61219c66e4238caef255c74edb78e8afe6ab9",
         "trust_class": "distributor-openpgp-manifest",
-        "verifier_sha256": "14953ed8b4549020e185c0f7ab600bb9d0384457ea74da9d574e8d31139aff4f"
+        "verifier_sha256": "403e04c779ad9fab3895c405f8c53d35ab59fa8e3b8bbe3437f61bc41f468dd4"
       },
       "name": "binutils-2.47.tar.xz",
       "sha256": "154ab23b60070e8f27013c22977f1129425d67d1e8acd6e13010e617811e4cff",
@@ -159,7 +194,7 @@
         "status": "verified",
         "status_sha256": "0e675efd7fc7ec684b5d53c312b61219c66e4238caef255c74edb78e8afe6ab9",
         "trust_class": "distributor-openpgp-manifest",
-        "verifier_sha256": "14953ed8b4549020e185c0f7ab600bb9d0384457ea74da9d574e8d31139aff4f"
+        "verifier_sha256": "403e04c779ad9fab3895c405f8c53d35ab59fa8e3b8bbe3437f61bc41f468dd4"
       },
       "name": "bison-3.8.2.tar.xz",
       "sha256": "9bba0214ccf7f1079c5d59210045227bcf619519840ebfa80cd3849cff5a5bf2",
@@ -182,7 +217,7 @@
         "status": "verified",
         "status_sha256": "0e675efd7fc7ec684b5d53c312b61219c66e4238caef255c74edb78e8afe6ab9",
         "trust_class": "distributor-openpgp-manifest",
-        "verifier_sha256": "14953ed8b4549020e185c0f7ab600bb9d0384457ea74da9d574e8d31139aff4f"
+        "verifier_sha256": "403e04c779ad9fab3895c405f8c53d35ab59fa8e3b8bbe3437f61bc41f468dd4"
       },
       "name": "bzip2-1.0.8.tar.gz",
       "sha256": "ab5a03176ee106d3f0fa90e381da478ddae405918153cca248e682cd0c4a2269",
@@ -197,7 +232,7 @@
         "status": "verified",
         "status_sha256": "e91a24b28fb21792c2a0b84890e2be57e8d05bf30dc2c7c91907490aa2c8062b",
         "trust_class": "publisher-openpgp",
-        "verifier_sha256": "14953ed8b4549020e185c0f7ab600bb9d0384457ea74da9d574e8d31139aff4f"
+        "verifier_sha256": "403e04c779ad9fab3895c405f8c53d35ab59fa8e3b8bbe3437f61bc41f468dd4"
       },
       "name": "coreutils-9.11.tar.xz",
       "sha256": "394024eda0a5955217ceda9cd1201e65dc8fa3aa29c2951135a49521d57c3cc3",
@@ -220,7 +255,7 @@
         "status": "verified",
         "status_sha256": "0e675efd7fc7ec684b5d53c312b61219c66e4238caef255c74edb78e8afe6ab9",
         "trust_class": "distributor-openpgp-manifest",
-        "verifier_sha256": "14953ed8b4549020e185c0f7ab600bb9d0384457ea74da9d574e8d31139aff4f"
+        "verifier_sha256": "403e04c779ad9fab3895c405f8c53d35ab59fa8e3b8bbe3437f61bc41f468dd4"
       },
       "name": "dbus-1.16.2.tar.xz",
       "sha256": "0ba2a1a4b16afe7bceb2c07e9ce99a8c2c3508e5dec290dbb643384bd6beb7e2",
@@ -231,6 +266,8 @@
       "authentication": {
         "assurance": "publisher HTTPS metadata; no signature verified",
         "evidence_sha256": "17a9c5da85aa97116d8cba96f4b16d6e7329b953709f5d33ee72537d5e79c364",
+        "source_digest": "87daefacd7958b4a69f88c6856dbd1634261963c414079d0c371f589cd66a2e3",
+        "source_digest_algorithm": "sha256",
         "status": "verified",
         "trust_class": "https-published-sha256"
       },
@@ -247,7 +284,7 @@
         "status": "verified",
         "status_sha256": "0b752ce86e501c90b30bdb4047de1240bf5cdae668256cafd206654c47b0f686",
         "trust_class": "publisher-openpgp",
-        "verifier_sha256": "14953ed8b4549020e185c0f7ab600bb9d0384457ea74da9d574e8d31139aff4f"
+        "verifier_sha256": "403e04c779ad9fab3895c405f8c53d35ab59fa8e3b8bbe3437f61bc41f468dd4"
       },
       "name": "diffutils-3.12.tar.xz",
       "sha256": "7c8b7f9fc8609141fdea9cece85249d308624391ff61dedaf528fcb337727dfd",
@@ -255,9 +292,18 @@
       "status": "verified"
     },
     {
+      "authentication": {
+        "assurance": "publisher HTTPS metadata; no signature verified",
+        "evidence_sha256": "c6e76b2ee87ca5f77995773ad3cedfcad8a892c521bb42d2ad691ca14616514e",
+        "source_digest": "2cec05f39c20ee621f14926195664e66e6017190ac8e4bbdb16d86082e43c5da",
+        "source_digest_algorithm": "sha256",
+        "status": "verified",
+        "trust_class": "https-published-sha256"
+      },
       "name": "e2fsprogs-1.47.4.tar.gz",
-      "reason": "no supported authentication evidence",
-      "status": "unresolved"
+      "sha256": "2cec05f39c20ee621f14926195664e66e6017190ac8e4bbdb16d86082e43c5da",
+      "size": 10106395,
+      "status": "verified"
     },
     {
       "authentication": {
@@ -275,7 +321,7 @@
         "status": "verified",
         "status_sha256": "0e675efd7fc7ec684b5d53c312b61219c66e4238caef255c74edb78e8afe6ab9",
         "trust_class": "distributor-openpgp-manifest",
-        "verifier_sha256": "14953ed8b4549020e185c0f7ab600bb9d0384457ea74da9d574e8d31139aff4f"
+        "verifier_sha256": "403e04c779ad9fab3895c405f8c53d35ab59fa8e3b8bbe3437f61bc41f468dd4"
       },
       "name": "elfutils-0.195.tar.bz2",
       "sha256": "37629fdf7f1f3dc2818e138fca2b8094177d6c2d0f701d3bb650a561218dc026",
@@ -286,6 +332,8 @@
       "authentication": {
         "assurance": "publisher HTTPS metadata; no signature verified",
         "evidence_sha256": "aff7789a4fa12b17f91790acddcaa1c48d32dd5eacb5d95972029a9a6e70f7e9",
+        "source_digest": "c624ba2998fc65df1163a49641ff3f9ab73138b11641d92c86bee0fb01b1bc7f",
+        "source_digest_algorithm": "sha256",
         "status": "verified",
         "trust_class": "https-published-sha256"
       },
@@ -310,7 +358,7 @@
         "status": "verified",
         "status_sha256": "0e675efd7fc7ec684b5d53c312b61219c66e4238caef255c74edb78e8afe6ab9",
         "trust_class": "distributor-openpgp-manifest",
-        "verifier_sha256": "14953ed8b4549020e185c0f7ab600bb9d0384457ea74da9d574e8d31139aff4f"
+        "verifier_sha256": "403e04c779ad9fab3895c405f8c53d35ab59fa8e3b8bbe3437f61bc41f468dd4"
       },
       "name": "expect5.45.4.tar.gz",
       "sha256": "49a7da83b0bdd9f46d04a04deec19c7767bb9a323e40c4781f89caf760b92c34",
@@ -333,7 +381,7 @@
         "status": "verified",
         "status_sha256": "0e675efd7fc7ec684b5d53c312b61219c66e4238caef255c74edb78e8afe6ab9",
         "trust_class": "distributor-openpgp-manifest",
-        "verifier_sha256": "14953ed8b4549020e185c0f7ab600bb9d0384457ea74da9d574e8d31139aff4f"
+        "verifier_sha256": "403e04c779ad9fab3895c405f8c53d35ab59fa8e3b8bbe3437f61bc41f468dd4"
       },
       "name": "file-5.48.tar.gz",
       "sha256": "ed14656883b23a364b4057c05595d93252da9bc473d30106519519d0da141283",
@@ -356,7 +404,7 @@
         "status": "verified",
         "status_sha256": "0e675efd7fc7ec684b5d53c312b61219c66e4238caef255c74edb78e8afe6ab9",
         "trust_class": "distributor-openpgp-manifest",
-        "verifier_sha256": "14953ed8b4549020e185c0f7ab600bb9d0384457ea74da9d574e8d31139aff4f"
+        "verifier_sha256": "403e04c779ad9fab3895c405f8c53d35ab59fa8e3b8bbe3437f61bc41f468dd4"
       },
       "name": "findutils-4.11.0.tar.xz",
       "sha256": "bfd19cb06cc71f3352d567e90284d8cdac02ac89774bbeadf0b533b0c11432fd",
@@ -379,7 +427,7 @@
         "status": "verified",
         "status_sha256": "0e675efd7fc7ec684b5d53c312b61219c66e4238caef255c74edb78e8afe6ab9",
         "trust_class": "distributor-openpgp-manifest",
-        "verifier_sha256": "14953ed8b4549020e185c0f7ab600bb9d0384457ea74da9d574e8d31139aff4f"
+        "verifier_sha256": "403e04c779ad9fab3895c405f8c53d35ab59fa8e3b8bbe3437f61bc41f468dd4"
       },
       "name": "flex-2.6.4.tar.gz",
       "sha256": "e87aae032bf07c26f85ac0ed3250998c37621d95f8bd748b31f15b33c45ee995",
@@ -390,6 +438,8 @@
       "authentication": {
         "assurance": "publisher HTTPS metadata; no signature verified",
         "evidence_sha256": "661a8286b9df029fa5152f5e1f04c271ccd16e53a362a76327b5eb5e0439755b",
+        "source_digest": "b6929defd93884b584d7c87829e0e7b5c26ed6be17b0b873979019314aa841c8",
+        "source_digest_algorithm": "sha256",
         "status": "verified",
         "trust_class": "https-published-sha256"
       },
@@ -414,7 +464,7 @@
         "status": "verified",
         "status_sha256": "0e675efd7fc7ec684b5d53c312b61219c66e4238caef255c74edb78e8afe6ab9",
         "trust_class": "distributor-openpgp-manifest",
-        "verifier_sha256": "14953ed8b4549020e185c0f7ab600bb9d0384457ea74da9d574e8d31139aff4f"
+        "verifier_sha256": "403e04c779ad9fab3895c405f8c53d35ab59fa8e3b8bbe3437f61bc41f468dd4"
       },
       "name": "gawk-5.4.1.tar.xz",
       "sha256": "07f6f7342b7febe4313fc2c2542ad93d64fe20ad8717200109f105a826f5fd37",
@@ -429,7 +479,7 @@
         "status": "verified",
         "status_sha256": "e84df4870523d135beca47bf5a593cbdbd9740da5118da1106f8f671ff3c9e11",
         "trust_class": "publisher-openpgp",
-        "verifier_sha256": "14953ed8b4549020e185c0f7ab600bb9d0384457ea74da9d574e8d31139aff4f"
+        "verifier_sha256": "403e04c779ad9fab3895c405f8c53d35ab59fa8e3b8bbe3437f61bc41f468dd4"
       },
       "name": "gcc-16.2.0.tar.xz",
       "sha256": "e6738e29597f733270731aa90600f37ffdc045079dfc27ec7e8192cc81085c3e",
@@ -440,6 +490,8 @@
       "authentication": {
         "assurance": "publisher HTTPS metadata; no signature verified",
         "evidence_sha256": "a6f292c7c0911f8a7b4a6dd0086e6822c707490b2b5f22268fdebf397a622650",
+        "source_digest": "6a24504a14de4a744103dcb936be976df6fbe88ccff26065e54c1c47946f4a5e",
+        "source_digest_algorithm": "sha256",
         "status": "verified",
         "trust_class": "https-published-sha256"
       },
@@ -452,6 +504,8 @@
       "authentication": {
         "assurance": "publisher HTTPS metadata; no signature verified",
         "evidence_sha256": "14ac65b743ed9783ed4b1375e22e62d6e3e985d93fabe3b72269caa0fdc43093",
+        "source_digest": "71132a3fb71e68245b8f2ac4e9e97137d3e5c02f415636eb508ae607bc01add7",
+        "source_digest_algorithm": "sha256",
         "status": "verified",
         "trust_class": "https-published-sha256"
       },
@@ -468,7 +522,7 @@
         "status": "verified",
         "status_sha256": "5350166a0b9e1251a6aa5f2fe267545b1559c95dcae33834d2f8235e7aeef5f7",
         "trust_class": "publisher-openpgp",
-        "verifier_sha256": "14953ed8b4549020e185c0f7ab600bb9d0384457ea74da9d574e8d31139aff4f"
+        "verifier_sha256": "403e04c779ad9fab3895c405f8c53d35ab59fa8e3b8bbe3437f61bc41f468dd4"
       },
       "name": "glibc-2.44.tar.xz",
       "sha256": "37f600f2bef3c5e8300147059568b2a2e40a7ad6ccc65ce942556d49429cc667",
@@ -491,7 +545,7 @@
         "status": "verified",
         "status_sha256": "0e675efd7fc7ec684b5d53c312b61219c66e4238caef255c74edb78e8afe6ab9",
         "trust_class": "distributor-openpgp-manifest",
-        "verifier_sha256": "14953ed8b4549020e185c0f7ab600bb9d0384457ea74da9d574e8d31139aff4f"
+        "verifier_sha256": "403e04c779ad9fab3895c405f8c53d35ab59fa8e3b8bbe3437f61bc41f468dd4"
       },
       "name": "gmp-6.3.0.tar.xz",
       "sha256": "a3c2b80201b89e68616f4ad30bc66aee4927c3ce50e33929ca819d5c43538898",
@@ -502,6 +556,8 @@
       "authentication": {
         "assurance": "publisher HTTPS metadata; no signature verified",
         "evidence_sha256": "7bd5a22ae162e6421a3a46932c6ba7062c4a6d595c5131ceb9b2b4d2f51a08f7",
+        "source_digest": "fd87e0aba7e43ae054837afd6cd4db03a3f2693deb3619085e6ed9d8d9604ad8",
+        "source_digest_algorithm": "sha256",
         "status": "verified",
         "trust_class": "https-published-sha256"
       },
@@ -518,7 +574,7 @@
         "status": "verified",
         "status_sha256": "7b72aa9825a68c16dc4b500fab045aa4ba83178a4067e541f0a37c8230572146",
         "trust_class": "publisher-openpgp",
-        "verifier_sha256": "14953ed8b4549020e185c0f7ab600bb9d0384457ea74da9d574e8d31139aff4f"
+        "verifier_sha256": "403e04c779ad9fab3895c405f8c53d35ab59fa8e3b8bbe3437f61bc41f468dd4"
       },
       "name": "grep-3.12.tar.xz",
       "sha256": "2649b27c0e90e632eadcd757be06c6e9a4f48d941de51e7c0f83ff76408a07b9",
@@ -529,6 +585,8 @@
       "authentication": {
         "assurance": "publisher HTTPS metadata; no signature verified",
         "evidence_sha256": "aeabce67de5c702f42eadb35a308ac5ab79c947d5226ef3a4b642a67f8d56473",
+        "source_digest": "74e2819795b6aff431aeac983d63a9c8968eeaba2a2eba7df8ba4c7b41e7cfd8",
+        "source_digest_algorithm": "sha256",
         "status": "verified",
         "trust_class": "https-published-sha256"
       },
@@ -553,7 +611,7 @@
         "status": "verified",
         "status_sha256": "0e675efd7fc7ec684b5d53c312b61219c66e4238caef255c74edb78e8afe6ab9",
         "trust_class": "distributor-openpgp-manifest",
-        "verifier_sha256": "14953ed8b4549020e185c0f7ab600bb9d0384457ea74da9d574e8d31139aff4f"
+        "verifier_sha256": "403e04c779ad9fab3895c405f8c53d35ab59fa8e3b8bbe3437f61bc41f468dd4"
       },
       "name": "grub-2.14.tar.xz",
       "sha256": "bc8d3c73535b8838d8c8e2654d73edc4e6ae8c8acdb45d5df5dc9a1547446d43",
@@ -568,7 +626,7 @@
         "status": "verified",
         "status_sha256": "fad594680aee70760eb840c7ae2ed3ad5fab512c7598319428cbeb0b76d47c02",
         "trust_class": "publisher-openpgp",
-        "verifier_sha256": "14953ed8b4549020e185c0f7ab600bb9d0384457ea74da9d574e8d31139aff4f"
+        "verifier_sha256": "403e04c779ad9fab3895c405f8c53d35ab59fa8e3b8bbe3437f61bc41f468dd4"
       },
       "name": "gzip-1.14.tar.xz",
       "sha256": "01a7b881bd220bfdf615f97b8718f80bdfd3f6add385b993dcf6efd14e8c0ac6",
@@ -579,6 +637,8 @@
       "authentication": {
         "assurance": "publisher HTTPS metadata; no signature verified",
         "evidence_sha256": "faff5942ce4b62d4d692c1b147656a200565f63b8104941d72a6a058d3bc6793",
+        "source_digest": "29270860664e324107537f32ea476a333ca52d71b59c74bc06ecc3b0fa9cf490",
+        "source_digest_algorithm": "sha256",
         "status": "verified",
         "trust_class": "https-published-sha256"
       },
@@ -591,6 +651,8 @@
       "authentication": {
         "assurance": "publisher HTTPS metadata; no signature verified",
         "evidence_sha256": "6d6f9dd302c8797f9cca0d854e3985cba6147f1d93440223c42364cac2290bb2",
+        "source_digest": "57b3cf4f77555992881e5ba2a09a63b05aa2c56342a60ed4305b5f45938390b5",
+        "source_digest_algorithm": "sha256",
         "status": "verified",
         "trust_class": "https-published-sha256"
       },
@@ -603,6 +665,8 @@
       "authentication": {
         "assurance": "publisher HTTPS metadata; no signature verified",
         "evidence_sha256": "2019626974fd151b76fcca74526261b7a955647cd641b5ceca053e21df719d80",
+        "source_digest": "fd9fa1b95809417157ca83dd72957e3261bdbce896353cb936f80af0b33a4b5c",
+        "source_digest_algorithm": "sha256",
         "status": "verified",
         "trust_class": "https-published-sha256"
       },
@@ -615,6 +679,8 @@
       "authentication": {
         "assurance": "publisher HTTPS metadata; no signature verified",
         "evidence_sha256": "76307ec34dc1b68bd43bf48f7559b3588ca3a2ab96e8442abc4e5575e41912cb",
+        "source_digest": "0137fb05990d35f1275a587e9aee6d56da821fc83491a0fb838183be43f66d6d",
+        "source_digest_algorithm": "sha256",
         "status": "verified",
         "trust_class": "https-published-sha256"
       },
@@ -627,6 +693,8 @@
       "authentication": {
         "assurance": "publisher HTTPS metadata; no signature verified",
         "evidence_sha256": "8f89aa8e89709aab4656f5c1be7fb2d7ad6ee0aceddbf0634692f58c26d2fe3d",
+        "source_digest": "6e5ca4f8d76ee9e3a8db700b667f13e12aac9933828a64e1aaad93d26be9b479",
+        "source_digest_algorithm": "sha256",
         "status": "verified",
         "trust_class": "https-published-sha256"
       },
@@ -639,6 +707,8 @@
       "authentication": {
         "assurance": "publisher HTTPS metadata; no signature verified",
         "evidence_sha256": "f45732aa4db86141a881d05e4936a512e60ad611545ac171e1a541847719af24",
+        "source_digest": "5a5d5073070cc7e0c7a7a3c6ec2a0e1780850c8b47b3e3892226b93ffcb9cb54",
+        "source_digest_algorithm": "sha256",
         "status": "verified",
         "trust_class": "https-published-sha256"
       },
@@ -663,7 +733,7 @@
         "status": "verified",
         "status_sha256": "0e675efd7fc7ec684b5d53c312b61219c66e4238caef255c74edb78e8afe6ab9",
         "trust_class": "distributor-openpgp-manifest",
-        "verifier_sha256": "14953ed8b4549020e185c0f7ab600bb9d0384457ea74da9d574e8d31139aff4f"
+        "verifier_sha256": "403e04c779ad9fab3895c405f8c53d35ab59fa8e3b8bbe3437f61bc41f468dd4"
       },
       "name": "less-704.tar.gz",
       "sha256": "20a0b0a2bb2525fa53c7eee9beb854b4c9cf172eabb209af7020743547bfe9fb",
@@ -674,6 +744,8 @@
       "authentication": {
         "assurance": "publisher HTTPS metadata; no signature verified",
         "evidence_sha256": "bd6053965ea3ceec8a991eb85f807aa5d5cfa86ba8b1190bdbf2c25718c8020e",
+        "source_digest": "0d621e562fd932ccf67b9660fb018e468a683d7b827541df27813228c996bb11",
+        "source_digest_algorithm": "sha256",
         "status": "verified",
         "trust_class": "https-published-sha256"
       },
@@ -686,6 +758,8 @@
       "authentication": {
         "assurance": "publisher HTTPS metadata; no signature verified",
         "evidence_sha256": "d8ebe8b803587ad80a0c3380bce390329bfd63932dada41c47ea731573992b1d",
+        "source_digest": "7da3e2d9a171eb0a038f592ecad3ff2bb2550f3496d87b3b29ad0cf4430c0db4",
+        "source_digest_algorithm": "sha256",
         "status": "verified",
         "trust_class": "https-published-sha256"
       },
@@ -710,7 +784,7 @@
         "status": "verified",
         "status_sha256": "0e675efd7fc7ec684b5d53c312b61219c66e4238caef255c74edb78e8afe6ab9",
         "trust_class": "distributor-openpgp-manifest",
-        "verifier_sha256": "14953ed8b4549020e185c0f7ab600bb9d0384457ea74da9d574e8d31139aff4f"
+        "verifier_sha256": "403e04c779ad9fab3895c405f8c53d35ab59fa8e3b8bbe3437f61bc41f468dd4"
       },
       "name": "libpipeline-1.5.8.tar.gz",
       "sha256": "1b1203ca152ccd63983c3f2112f7fe6fa5afd453218ede5153d1b31e11bb8405",
@@ -721,6 +795,8 @@
       "authentication": {
         "assurance": "publisher HTTPS metadata; no signature verified",
         "evidence_sha256": "333d5880792a13a9e6bbbcd38646c43a6d50f15c0d755c2e8041e89bf262480d",
+        "source_digest": "2ef1067c16c97db930fd740cc9bc3d3ba9a583804ae5ac42cc3e8719e49e191e",
+        "source_digest_algorithm": "sha256",
         "status": "verified",
         "trust_class": "https-published-sha256"
       },
@@ -733,6 +809,8 @@
       "authentication": {
         "assurance": "publisher HTTPS metadata; no signature verified",
         "evidence_sha256": "908d5ba5a5d9ed5a6a515f1bbf96b367c4b58131142776ff08c96f3b8db5ea2e",
+        "source_digest": "71513a31c01a428bccd5367a32fd95f115d6dac50fb5b60c779d5c7942aec071",
+        "source_digest_algorithm": "sha256",
         "status": "verified",
         "trust_class": "https-published-sha256"
       },
@@ -745,6 +823,8 @@
       "authentication": {
         "assurance": "publisher HTTPS metadata; no signature verified",
         "evidence_sha256": "678f5b8d9394061e70c322696e1c2d605f2ce2a1824c1accaf2072b1faf774bb",
+        "source_digest": "3c2f44ef6acc021a7ad444d9a2e6ec1ef488ff09368793d0004a6080f69d621e",
+        "source_digest_algorithm": "sha256",
         "status": "verified",
         "trust_class": "https-published-sha256"
       },
@@ -769,7 +849,7 @@
         "status": "verified",
         "status_sha256": "0e675efd7fc7ec684b5d53c312b61219c66e4238caef255c74edb78e8afe6ab9",
         "trust_class": "distributor-openpgp-manifest",
-        "verifier_sha256": "14953ed8b4549020e185c0f7ab600bb9d0384457ea74da9d574e8d31139aff4f"
+        "verifier_sha256": "403e04c779ad9fab3895c405f8c53d35ab59fa8e3b8bbe3437f61bc41f468dd4"
       },
       "name": "lz4-1.10.0.tar.gz",
       "sha256": "537512904744b35e232912055ccf8ec66d768639ff3abe5788d90d792ec5f48b",
@@ -780,6 +860,8 @@
       "authentication": {
         "assurance": "publisher HTTPS metadata; no signature verified",
         "evidence_sha256": "a3d16ded47a21c61df198549c6baf5342c145407bf75cc1c96561942b164064e",
+        "source_digest": "f25c6ab51548a73a75558742fb031e0625d6485fe5f9155949d6486a2408ab66",
+        "source_digest_algorithm": "sha256",
         "status": "verified",
         "trust_class": "https-published-sha256"
       },
@@ -789,9 +871,42 @@
       "status": "verified"
     },
     {
+      "authentication": {
+        "assurance": "Gentoo authenticates the Lzip reference; complete decompressed tar bytes agree. The selected gzip wrapper is not publisher-signed.",
+        "decompressor": {
+          "name": "lzip",
+          "sha256": "fb52c41132a98d22ea2b7969b268407ab5c272e7654ff78bf975f573357d48fd"
+        },
+        "evidence_sha256": "0854b47fb6c303d8acd53737016870a6441bff9f733b9d2b8f7f4718aa97181b",
+        "reference_authentication": {
+          "assurance": "Gentoo-signed snapshot authenticates exact upstream filename, size and SHA512; SHA256 pin is derived after verification",
+          "distributor": "Gentoo",
+          "evidence_sha256": "8f7aa739861fa021429a76805bee8c653a51c9ba27aed53b714e8a38ac7f694c",
+          "manifest_member": "gentoo-20261103/dev-build/make/Manifest",
+          "manifest_sha256": "820fe32ef3c31bde6b9a6d50bfa1e3d5d97729ca7c553479acc6f3de8e07ddc4",
+          "primary_fingerprint": "DCD05B71EAB94199527F44ACDB6B8C1F96D8BF6D",
+          "signing_fingerprint": "E1D6ABB63BFCFB4BA02FDF1CEC590EEAC9189250",
+          "snapshot_sha256": "923b3132d9214cee3f59fa2b56a3af27a0287c8587576c99ebcd5b24e537a194",
+          "source_digest": "591e9fab2f807bfda908f3376fdbf304c3377a6b15d13f3029456722972e361d205b692855de8ddbce64ff3f404873cbfb65f4097ca4a3b81029dc83bafcc67c",
+          "source_digest_algorithm": "sha512",
+          "source_size": 1305648,
+          "status": "verified",
+          "status_sha256": "0e675efd7fc7ec684b5d53c312b61219c66e4238caef255c74edb78e8afe6ab9",
+          "trust_class": "distributor-openpgp-manifest",
+          "verifier_sha256": "403e04c779ad9fab3895c405f8c53d35ab59fa8e3b8bbe3437f61bc41f468dd4"
+        },
+        "reference_name": "make-4.4.1.tar.lz",
+        "reference_sha256": "8814ba072182b605d156d7589c19a43b89fc58ea479b9355146160946f8cf6e9",
+        "source_size": 2348200,
+        "status": "verified",
+        "trust_class": "distributor-openpgp-tar-equivalence",
+        "uncompressed_sha256": "257100c00d7c33228e5581464deef42cb86e86250094ea2ddfe0034536e4c556",
+        "uncompressed_size": 9103360
+      },
       "name": "make-4.4.1.tar.gz",
-      "reason": "no supported authentication evidence",
-      "status": "unresolved"
+      "sha256": "dd16fb1d67bfab79a72f5e8390735c49e3e8e70b4945a15ab1f81ddb78658fb3",
+      "size": 2348200,
+      "status": "verified"
     },
     {
       "authentication": {
@@ -809,7 +924,7 @@
         "status": "verified",
         "status_sha256": "0e675efd7fc7ec684b5d53c312b61219c66e4238caef255c74edb78e8afe6ab9",
         "trust_class": "distributor-openpgp-manifest",
-        "verifier_sha256": "14953ed8b4549020e185c0f7ab600bb9d0384457ea74da9d574e8d31139aff4f"
+        "verifier_sha256": "403e04c779ad9fab3895c405f8c53d35ab59fa8e3b8bbe3437f61bc41f468dd4"
       },
       "name": "man-db-2.13.1.tar.xz",
       "sha256": "8afebb6f7eb6bb8542929458841f5c7e6f240e30c86358c1fbcefbea076c87d9",
@@ -820,6 +935,8 @@
       "authentication": {
         "assurance": "publisher HTTPS metadata; no signature verified",
         "evidence_sha256": "a63e671948b55586c096e502f82afe596184df63e251dbec0684e68dfb7405d3",
+        "source_digest": "c934fadc8b59748c68227a34f6581d2ddf8282b73cdcd52546c8cd88b74b24d1",
+        "source_digest_algorithm": "sha256",
         "status": "verified",
         "trust_class": "https-published-sha256"
       },
@@ -832,6 +949,8 @@
       "authentication": {
         "assurance": "publisher HTTPS metadata; no signature verified",
         "evidence_sha256": "a0606db6971ba0b85fadc911958aa4e38f036c4b1fb664ab8f9a3de951047bf9",
+        "source_digest": "722695808f4b6457b320fdc131280796bdceb04ab50fe1795cd540799ebe1698",
+        "source_digest_algorithm": "sha256",
         "status": "verified",
         "trust_class": "https-published-sha256"
       },
@@ -844,6 +963,8 @@
       "authentication": {
         "assurance": "publisher HTTPS metadata; no signature verified",
         "evidence_sha256": "9addac17c0d233961750db6eb922c2f43f985d4ced810ff7f7d0abb5c1ab4d67",
+        "source_digest": "88afe0c20e52030218924ac37d0c81c59b4b5f3ae3752c8c6d7470c7d365886c",
+        "source_digest_algorithm": "sha256",
         "status": "verified",
         "trust_class": "https-published-sha256"
       },
@@ -868,7 +989,7 @@
         "status": "verified",
         "status_sha256": "0e675efd7fc7ec684b5d53c312b61219c66e4238caef255c74edb78e8afe6ab9",
         "trust_class": "distributor-openpgp-manifest",
-        "verifier_sha256": "14953ed8b4549020e185c0f7ab600bb9d0384457ea74da9d574e8d31139aff4f"
+        "verifier_sha256": "403e04c779ad9fab3895c405f8c53d35ab59fa8e3b8bbe3437f61bc41f468dd4"
       },
       "name": "mpc-1.4.1.tar.xz",
       "sha256": "91204cd32f164bd3b7c992d4a6a8ce6519511aadab30f78b6982d0bf8d73e931",
@@ -891,7 +1012,7 @@
         "status": "verified",
         "status_sha256": "0e675efd7fc7ec684b5d53c312b61219c66e4238caef255c74edb78e8afe6ab9",
         "trust_class": "distributor-openpgp-manifest",
-        "verifier_sha256": "14953ed8b4549020e185c0f7ab600bb9d0384457ea74da9d574e8d31139aff4f"
+        "verifier_sha256": "403e04c779ad9fab3895c405f8c53d35ab59fa8e3b8bbe3437f61bc41f468dd4"
       },
       "name": "mpdecimal-4.0.1.tar.gz",
       "sha256": "96d33abb4bb0070c7be0fed4246cd38416188325f820468214471938545b1ac8",
@@ -902,6 +1023,8 @@
       "authentication": {
         "assurance": "publisher HTTPS metadata; no signature verified",
         "evidence_sha256": "851815e83966040830a96c10c84f70ad4afe3891e96c69a97b99e85827544893",
+        "source_digest": "b67ba0383ef7e8a8563734e2e889ef5ec3c3b898a01d00fa0a6869ad81c6ce01",
+        "source_digest_algorithm": "sha256",
         "status": "verified",
         "trust_class": "https-published-sha256"
       },
@@ -926,7 +1049,7 @@
         "status": "verified",
         "status_sha256": "0e675efd7fc7ec684b5d53c312b61219c66e4238caef255c74edb78e8afe6ab9",
         "trust_class": "distributor-openpgp-manifest",
-        "verifier_sha256": "14953ed8b4549020e185c0f7ab600bb9d0384457ea74da9d574e8d31139aff4f"
+        "verifier_sha256": "403e04c779ad9fab3895c405f8c53d35ab59fa8e3b8bbe3437f61bc41f468dd4"
       },
       "name": "ncurses-6.6.tar.gz",
       "sha256": "355b4cbbed880b0381a04c46617b7656e362585d52e9cf84a67e2009b749ff11",
@@ -949,7 +1072,7 @@
         "status": "verified",
         "status_sha256": "0e675efd7fc7ec684b5d53c312b61219c66e4238caef255c74edb78e8afe6ab9",
         "trust_class": "distributor-openpgp-manifest",
-        "verifier_sha256": "14953ed8b4549020e185c0f7ab600bb9d0384457ea74da9d574e8d31139aff4f"
+        "verifier_sha256": "403e04c779ad9fab3895c405f8c53d35ab59fa8e3b8bbe3437f61bc41f468dd4"
       },
       "name": "ninja-1.13.2.tar.gz",
       "sha256": "974d6b2f4eeefa25625d34da3cb36bdcebe7fbce40f4c16ac0835fd1c0cbae17",
@@ -960,6 +1083,8 @@
       "authentication": {
         "assurance": "publisher HTTPS metadata; no signature verified",
         "evidence_sha256": "2284c055af49285ecc40db9d03064cffbc5098914bf40bbf7c2c5e5e2d260090",
+        "source_digest": "325b5c806167c13b40b1ffeadfe0248197c00eccc4cf123ec1e28d2d2fd216d9",
+        "source_digest_algorithm": "sha256",
         "status": "verified",
         "trust_class": "https-published-sha256"
       },
@@ -972,6 +1097,8 @@
       "authentication": {
         "assurance": "publisher HTTPS metadata; no signature verified",
         "evidence_sha256": "8130602df97d0c09b5dd78a5ae203faf1fcc5bc19ff0bfd611bb58a19629b4a3",
+        "source_digest": "94edc256424af38762eb31306eed28beb9f0efc50a8837492c9d6fd6004aed79",
+        "source_digest_algorithm": "sha256",
         "status": "verified",
         "trust_class": "https-published-sha256"
       },
@@ -996,7 +1123,7 @@
         "status": "verified",
         "status_sha256": "0e675efd7fc7ec684b5d53c312b61219c66e4238caef255c74edb78e8afe6ab9",
         "trust_class": "distributor-openpgp-manifest",
-        "verifier_sha256": "14953ed8b4549020e185c0f7ab600bb9d0384457ea74da9d574e8d31139aff4f"
+        "verifier_sha256": "403e04c779ad9fab3895c405f8c53d35ab59fa8e3b8bbe3437f61bc41f468dd4"
       },
       "name": "patch-2.8.1.tar.xz",
       "sha256": "3240c7959c5347c8ed347e3c4201c0337bf4240d5cf09d68889e58eeaba30e17",
@@ -1007,6 +1134,8 @@
       "authentication": {
         "assurance": "publisher HTTPS metadata; no signature verified",
         "evidence_sha256": "61c79e2ada945a198a144827a6058bc73320773bcf895d9ed851453aa189600f",
+        "source_digest": "53c156e1ba416a20da8e65395daa132da0d80e76910424caca3fcdae7831d384",
+        "source_digest_algorithm": "sha256",
         "status": "verified",
         "trust_class": "https-published-sha256"
       },
@@ -1031,7 +1160,7 @@
         "status": "verified",
         "status_sha256": "0e675efd7fc7ec684b5d53c312b61219c66e4238caef255c74edb78e8afe6ab9",
         "trust_class": "distributor-openpgp-manifest",
-        "verifier_sha256": "14953ed8b4549020e185c0f7ab600bb9d0384457ea74da9d574e8d31139aff4f"
+        "verifier_sha256": "403e04c779ad9fab3895c405f8c53d35ab59fa8e3b8bbe3437f61bc41f468dd4"
       },
       "name": "perl-5.44.0.tar.xz",
       "sha256": "505cf43912e9480495c344c70260452e32aa2a73c546a026b3f100053b23ce91",
@@ -1054,7 +1183,7 @@
         "status": "verified",
         "status_sha256": "0e675efd7fc7ec684b5d53c312b61219c66e4238caef255c74edb78e8afe6ab9",
         "trust_class": "distributor-openpgp-manifest",
-        "verifier_sha256": "14953ed8b4549020e185c0f7ab600bb9d0384457ea74da9d574e8d31139aff4f"
+        "verifier_sha256": "403e04c779ad9fab3895c405f8c53d35ab59fa8e3b8bbe3437f61bc41f468dd4"
       },
       "name": "pkgconf-3.0.5.tar.xz",
       "sha256": "3acd3a8a3cce65a8d620321855d92fb602e026cbe8e13ee36bdec58483b59ace",
@@ -1062,9 +1191,18 @@
       "status": "verified"
     },
     {
+      "authentication": {
+        "assurance": "publisher HTTPS metadata; no signature verified",
+        "evidence_sha256": "741aabc70a074d21ab35ac76544fd4f23221e93a5acc7d9fff5b9d12881f072c",
+        "source_digest": "9d2021f47a4501c667862c9942a92d1953694b21d11bcd1702e83eb594e3d67d",
+        "source_digest_algorithm": "sha256",
+        "status": "verified",
+        "trust_class": "https-published-sha256"
+      },
       "name": "procps-ng-4.0.7.tar.xz",
-      "reason": "no supported authentication evidence",
-      "status": "unresolved"
+      "sha256": "9d2021f47a4501c667862c9942a92d1953694b21d11bcd1702e83eb594e3d67d",
+      "size": 1588352,
+      "status": "verified"
     },
     {
       "authentication": {
@@ -1082,7 +1220,7 @@
         "status": "verified",
         "status_sha256": "0e675efd7fc7ec684b5d53c312b61219c66e4238caef255c74edb78e8afe6ab9",
         "trust_class": "distributor-openpgp-manifest",
-        "verifier_sha256": "14953ed8b4549020e185c0f7ab600bb9d0384457ea74da9d574e8d31139aff4f"
+        "verifier_sha256": "403e04c779ad9fab3895c405f8c53d35ab59fa8e3b8bbe3437f61bc41f468dd4"
       },
       "name": "psmisc-23.7.tar.xz",
       "sha256": "58c55d9c1402474065adae669511c191de374b0871eec781239ab400b907c327",
@@ -1093,6 +1231,8 @@
       "authentication": {
         "assurance": "publisher HTTPS metadata; no signature verified",
         "evidence_sha256": "bbece21bdfc7738f614c814f49caae41962af8b98f8b369e6a19facdb70c0744",
+        "source_digest": "de414a57119abef52784d8993e341d53aed635fc2b05c2607d9f98a2c5b72032",
+        "source_digest_algorithm": "sha256",
         "status": "verified",
         "trust_class": "https-published-sha256"
       },
@@ -1117,7 +1257,7 @@
         "status": "verified",
         "status_sha256": "0e675efd7fc7ec684b5d53c312b61219c66e4238caef255c74edb78e8afe6ab9",
         "trust_class": "distributor-openpgp-manifest",
-        "verifier_sha256": "14953ed8b4549020e185c0f7ab600bb9d0384457ea74da9d574e8d31139aff4f"
+        "verifier_sha256": "403e04c779ad9fab3895c405f8c53d35ab59fa8e3b8bbe3437f61bc41f468dd4"
       },
       "name": "python-3.14.10-docs-html.tar.bz2",
       "sha256": "89cab64cef8703b043d2c9e8265373ebd3df94864c3c1bc0435eda0703b2812d",
@@ -1140,7 +1280,7 @@
         "status": "verified",
         "status_sha256": "0e675efd7fc7ec684b5d53c312b61219c66e4238caef255c74edb78e8afe6ab9",
         "trust_class": "distributor-openpgp-manifest",
-        "verifier_sha256": "14953ed8b4549020e185c0f7ab600bb9d0384457ea74da9d574e8d31139aff4f"
+        "verifier_sha256": "403e04c779ad9fab3895c405f8c53d35ab59fa8e3b8bbe3437f61bc41f468dd4"
       },
       "name": "readline-8.3.tar.gz",
       "sha256": "fe5383204467828cd495ee8d1d3c037a7eba1389c22bc6a041f627976f9061cc",
@@ -1155,7 +1295,7 @@
         "status": "verified",
         "status_sha256": "c8a485e5f2360ad9e5dac72c51a78bb275d415872f9e6e64b6c3fbce732ea722",
         "trust_class": "publisher-openpgp",
-        "verifier_sha256": "14953ed8b4549020e185c0f7ab600bb9d0384457ea74da9d574e8d31139aff4f"
+        "verifier_sha256": "403e04c779ad9fab3895c405f8c53d35ab59fa8e3b8bbe3437f61bc41f468dd4"
       },
       "name": "sed-4.10.tar.xz",
       "sha256": "b8e72182b2ec96a3574e2998c47b7aaa64cc20ce000d8e9ac313cc07cecf28c7",
@@ -1166,6 +1306,8 @@
       "authentication": {
         "assurance": "publisher HTTPS metadata; no signature verified",
         "evidence_sha256": "2898a8d8bd5e99aa7443443cbf96a398cca5d309726c537f30b57fcbf5a8feb3",
+        "source_digest": "f4695c21257f0d9b537ec2692c941d02ee143b7cc1276941349a546573b2ef73",
+        "source_digest_algorithm": "sha256",
         "status": "verified",
         "trust_class": "https-published-sha256"
       },
@@ -1178,6 +1320,8 @@
       "authentication": {
         "assurance": "publisher HTTPS metadata; no signature verified",
         "evidence_sha256": "23aa962aac38ca39a3307ea636f652458687197924559efe90e82b5371ccb254",
+        "source_digest": "b89f432b75ae55a2d852b446d0365484795fdf533ab97d550e325fa15594a224",
+        "source_digest_algorithm": "sha256",
         "status": "verified",
         "trust_class": "https-published-sha256"
       },
@@ -1187,9 +1331,25 @@
       "status": "verified"
     },
     {
+      "authentication": {
+        "assurance": "Exact filename, size and SHA512 published in maintained NetBSD pkgsrc over HTTPS. No publisher or distributor signature was verified.",
+        "distributor": "NetBSD pkgsrc",
+        "evidence_sha256": "dc101761ac1ffae2214c2b796d1d5a776359026aa4561869613ca40fdea7290a",
+        "material_sha256": "15f1e26b89c1468d2faef861760993e7a4ebf3baf276bb0c03037fdf8d052582",
+        "policy_sha256": "536e77f61dd24a3269888645aa33fb4d55dfe5aa3fa0bcf4ac79915da42f33d1",
+        "required_gates": [
+          "required-package-tests"
+        ],
+        "source_digest": "c24374e9393a943157f533f96e89e6c5743e5f5aad169d8393cff3088ca5ccbe5cc0561681ace49c349d0fe402298ee2624d319f422967247ce0792e3b3aa01e",
+        "source_digest_algorithm": "sha512",
+        "source_size": 3283177,
+        "status": "accepted-exception",
+        "trust_class": "reviewed-distributor-https-exception"
+      },
       "name": "sqlite-autoconf-3530400.tar.gz",
-      "reason": "no supported authentication evidence",
-      "status": "unresolved"
+      "sha256": "0e9483900e92cd5de8fd48d16bf9200145a61f7fd5be542a5ac81d8a9516eb9c",
+      "size": 3283177,
+      "status": "accepted-exception"
     },
     {
       "authentication": {
@@ -1207,7 +1367,7 @@
         "status": "verified",
         "status_sha256": "0e675efd7fc7ec684b5d53c312b61219c66e4238caef255c74edb78e8afe6ab9",
         "trust_class": "distributor-openpgp-manifest",
-        "verifier_sha256": "14953ed8b4549020e185c0f7ab600bb9d0384457ea74da9d574e8d31139aff4f"
+        "verifier_sha256": "403e04c779ad9fab3895c405f8c53d35ab59fa8e3b8bbe3437f61bc41f468dd4"
       },
       "name": "sqlite-doc-3530400.zip",
       "sha256": "a1d0f5de57485d062796ed7e67daff0758b50d00001a0f233a2c15aaf40bbdc8",
@@ -1230,7 +1390,7 @@
         "status": "verified",
         "status_sha256": "0e675efd7fc7ec684b5d53c312b61219c66e4238caef255c74edb78e8afe6ab9",
         "trust_class": "distributor-openpgp-manifest",
-        "verifier_sha256": "14953ed8b4549020e185c0f7ab600bb9d0384457ea74da9d574e8d31139aff4f"
+        "verifier_sha256": "403e04c779ad9fab3895c405f8c53d35ab59fa8e3b8bbe3437f61bc41f468dd4"
       },
       "name": "systemd-261.2.tar.gz",
       "sha256": "ed1059ff964f5df35b6056434cc17cc83f86dc913f10489948a0b19b6081c5ec",
@@ -1238,14 +1398,31 @@
       "status": "verified"
     },
     {
+      "authentication": {
+        "assurance": "LFS-generated systemd manual pages over official HTTPS; book publishes only MD5. No publisher signature or published strong digest established. Proposed bounded documentation-only exception; native install confinement still requires review.",
+        "evidence_sha256": "c2ddc9693afb4ac5f798be64306c01f2cd1261d8bdf790833ac0888bff730b77",
+        "install_destination": "/usr/share/man",
+        "inventory_sha256": "143c3b19265f108cdda081c2c522ee3a9a675f303e3d948fd8ebebc93bd70271",
+        "policy_sha256": "536e77f61dd24a3269888645aa33fb4d55dfe5aa3fa0bcf4ac79915da42f33d1",
+        "required_gates": [
+          "documentation-install-confinement",
+          "documentation-inventory"
+        ],
+        "source_size": 821528,
+        "status": "accepted-exception",
+        "trust_class": "reviewed-lfs-documentation-exception"
+      },
       "name": "systemd-man-pages-261.2.tar.xz",
-      "reason": "no supported authentication evidence",
-      "status": "unresolved"
+      "sha256": "9be13865c9c7f9fecba7b86fc5185aecef00164c87ed68b4f6884283aefebe50",
+      "size": 821528,
+      "status": "accepted-exception"
     },
     {
       "authentication": {
         "assurance": "publisher HTTPS metadata; no signature verified",
         "evidence_sha256": "ec09dd6070b0d7739b4f4d85f643407eb64e2bb88cf2920c22a823cc1906a088",
+        "source_digest": "4d62ff37342ec7aed748535323930c7cf94acf71c3591882b26a7ea50f3edc16",
+        "source_digest_algorithm": "sha256",
         "status": "verified",
         "trust_class": "https-published-sha256"
       },
@@ -1255,14 +1432,39 @@
       "status": "verified"
     },
     {
+      "authentication": {
+        "assurance": "Exact filename, size and SHA512 published in maintained NetBSD pkgsrc over HTTPS. No publisher or distributor signature was verified.",
+        "distributor": "NetBSD pkgsrc",
+        "evidence_sha256": "0c2264f6107750362a73fd447f364a94153208b0a6803cb34b14edd95fd86c1a",
+        "material_sha256": "8b513b08c3c2bc8c9ccb3fb09d3a54dac8f1da0e1ec18ca8f6e2c86f1945d17a",
+        "policy_sha256": "536e77f61dd24a3269888645aa33fb4d55dfe5aa3fa0bcf4ac79915da42f33d1",
+        "required_gates": [
+          "required-package-tests"
+        ],
+        "source_digest": "949a66a6db613f85fc84f1f60b1034812c15f6549786aca8143d938feaa81e7d84a155757d5a4e83671b148870dc67fea8435c3dbb14b6c94973c7a63358a001",
+        "source_digest_algorithm": "sha512",
+        "source_size": 11816279,
+        "status": "accepted-exception",
+        "trust_class": "reviewed-distributor-https-exception"
+      },
       "name": "tcl8.6.18-src.tar.gz",
-      "reason": "no supported authentication evidence",
-      "status": "unresolved"
+      "sha256": "14f9af32b1767ff718477a8f974ad03c34341097e6b43f4ce54644ee974e268e",
+      "size": 11816279,
+      "status": "accepted-exception"
     },
     {
+      "authentication": {
+        "assurance": "publisher HTTPS metadata; no signature verified",
+        "evidence_sha256": "ea5cbc7346695ac7b48c5135d679e961893e8b0fbc3e9c532e4135e835ff1812",
+        "source_digest": "bee2d83a19ce50624eeae951be29fe5f654b171357a6391123caf18107cec543",
+        "source_digest_algorithm": "sha256",
+        "status": "verified",
+        "trust_class": "https-published-sha256"
+      },
       "name": "tcl8.6.18-html.tar.gz",
-      "reason": "no supported authentication evidence",
-      "status": "unresolved"
+      "sha256": "bee2d83a19ce50624eeae951be29fe5f654b171357a6391123caf18107cec543",
+      "size": 1197786,
+      "status": "verified"
     },
     {
       "authentication": {
@@ -1280,7 +1482,7 @@
         "status": "verified",
         "status_sha256": "0e675efd7fc7ec684b5d53c312b61219c66e4238caef255c74edb78e8afe6ab9",
         "trust_class": "distributor-openpgp-manifest",
-        "verifier_sha256": "14953ed8b4549020e185c0f7ab600bb9d0384457ea74da9d574e8d31139aff4f"
+        "verifier_sha256": "403e04c779ad9fab3895c405f8c53d35ab59fa8e3b8bbe3437f61bc41f468dd4"
       },
       "name": "texinfo-7.3.tar.xz",
       "sha256": "51f74eb0f51cfa9873b85264dfdd5d46e8957ec95b88f0fb762f63d9e164c72e",
@@ -1288,14 +1490,25 @@
       "status": "verified"
     },
     {
+      "authentication": {
+        "assurance": "publisher HTTPS metadata; no signature verified",
+        "evidence_sha256": "ad9248e76bfd1fa9ffb66c09ef187ef478538f83d461f5e5db4bbdf15025b4e7",
+        "source_digest": "e0b4b7044b66fbc27bc21d13d18063abcdf78ab58d5ba5fd64bd1a88d86e9d495f45add4d8e65bb6c40249f9c94ca29b72c8ebba8d0e4c468f2965ac77932ef0",
+        "source_digest_algorithm": "sha512",
+        "status": "verified",
+        "trust_class": "https-published-sha512"
+      },
       "name": "tzdata2026c.tar.gz",
-      "reason": "no supported authentication evidence",
-      "status": "unresolved"
+      "sha256": "e4a178a4477f3d0ea77cc31828ff72aa38feff8d61aa13e7e99e142e9d902be4",
+      "size": 475694,
+      "status": "verified"
     },
     {
       "authentication": {
         "assurance": "publisher HTTPS metadata; no signature verified",
         "evidence_sha256": "2eb90673fde38abd664b687a8f619d9aea144beeca97c8885c403081aa1bf5c0",
+        "source_digest": "fbd62a100ab7bb8746ba0661255c3c48185b1e9021507c624da01fbc696330ec",
+        "source_digest_algorithm": "sha256",
         "status": "verified",
         "trust_class": "https-published-sha256"
       },
@@ -1305,14 +1518,34 @@
       "status": "verified"
     },
     {
-      "name": "vim-9.2.1201.tar.gz",
-      "reason": "no supported authentication evidence",
-      "status": "unresolved"
+      "authentication": {
+        "assurance": "Gentoo-signed snapshot authenticates exact upstream filename, size and SHA512; SHA256 pin is derived after verification",
+        "distributor": "Gentoo",
+        "evidence_sha256": "f42a8e7cd2c1a3821335ac5fce64468768d73aa271502b20bbbb83b36fd419ed",
+        "manifest_member": "gentoo-20261103/app-editors/vim/Manifest",
+        "manifest_sha256": "c532976afae8cf010b823748e60ff0d7e34436897644e9a8704e9137ea4bd8a7",
+        "primary_fingerprint": "DCD05B71EAB94199527F44ACDB6B8C1F96D8BF6D",
+        "signing_fingerprint": "E1D6ABB63BFCFB4BA02FDF1CEC590EEAC9189250",
+        "snapshot_sha256": "923b3132d9214cee3f59fa2b56a3af27a0287c8587576c99ebcd5b24e537a194",
+        "source_digest": "2ab35cb6bcc33e25b7e24d279e7b287f33b46abcbc74d2a43eaf4f7f0693cb195d76bc1ca7d8c763010e811ae803c7872814a9fbac448a501e01e9f5b8b5b472",
+        "source_digest_algorithm": "sha512",
+        "source_size": 20274358,
+        "status": "verified",
+        "status_sha256": "0e675efd7fc7ec684b5d53c312b61219c66e4238caef255c74edb78e8afe6ab9",
+        "trust_class": "distributor-openpgp-manifest",
+        "verifier_sha256": "403e04c779ad9fab3895c405f8c53d35ab59fa8e3b8bbe3437f61bc41f468dd4"
+      },
+      "name": "vim-9.2.1202.tar.gz",
+      "sha256": "9e97414b85bdcb2d28d5264c65dd730d86b9a75319b005c63da0bc130c715a2f",
+      "size": 20274358,
+      "status": "verified"
     },
     {
       "authentication": {
         "assurance": "publisher HTTPS metadata; no signature verified",
         "evidence_sha256": "86f6087ca40d71b29f75f774ec722a65ce06cb346e8a57231481475c5842014b",
+        "source_digest": "94800765601e9171bf5d58d066e640662842bcedcbab982b2c90787a2c987322",
+        "source_digest_algorithm": "sha256",
         "status": "verified",
         "trust_class": "https-published-sha256"
       },
@@ -1325,6 +1558,8 @@
       "authentication": {
         "assurance": "publisher HTTPS metadata; no signature verified",
         "evidence_sha256": "752ad76bf06edd9d2fb8ebc85ae40d3941344a1aadb94af0cda746e5acb32802",
+        "source_digest": "4ce24038fd4221e0d13bc1a2de7a4db56e90b92b3bf75321f6c14be73f65de4b",
+        "source_digest_algorithm": "sha256",
         "status": "verified",
         "trust_class": "https-published-sha256"
       },
@@ -1334,9 +1569,18 @@
       "status": "verified"
     },
     {
+      "authentication": {
+        "assurance": "publisher HTTPS metadata; no signature verified",
+        "evidence_sha256": "ef02d7a15b7d2d0dd9ac3def6171f83c8fb38eb7c3bc1162ab8282e254c4f44d",
+        "source_digest": "bb329a0a2cd0274d05519d61c667c062e06990d72e125ee2dfa8de64f0119d16",
+        "source_digest_algorithm": "sha256",
+        "status": "verified",
+        "trust_class": "https-published-sha256"
+      },
       "name": "zlib-1.3.2.tar.gz",
-      "reason": "no supported authentication evidence",
-      "status": "unresolved"
+      "sha256": "bb329a0a2cd0274d05519d61c667c062e06990d72e125ee2dfa8de64f0119d16",
+      "size": 1502830,
+      "status": "verified"
     },
     {
       "authentication": {
@@ -1354,7 +1598,7 @@
         "status": "verified",
         "status_sha256": "0e675efd7fc7ec684b5d53c312b61219c66e4238caef255c74edb78e8afe6ab9",
         "trust_class": "distributor-openpgp-manifest",
-        "verifier_sha256": "14953ed8b4549020e185c0f7ab600bb9d0384457ea74da9d574e8d31139aff4f"
+        "verifier_sha256": "403e04c779ad9fab3895c405f8c53d35ab59fa8e3b8bbe3437f61bc41f468dd4"
       },
       "name": "zstd-1.5.7.tar.gz",
       "sha256": "eb33e51f49a15e023950cd7825ca74a4a2b43db8354825ac24fc1b7ee09e6fa3",
@@ -1362,49 +1606,169 @@
       "status": "verified"
     },
     {
+      "authentication": {
+        "assurance": "Official HTTPS publisher transport and reviewed immutable Git/blob pins. The Git commit is unsigned; no publisher signature or independently published strong checksum authenticates these eight patches. This is an explicit lower-assurance provenance exception, not cryptographic publisher verification.",
+        "corroboration_sha256": "fb2162be4fe417b6f24f423d6ce3e32878646c80335152e6245c0e5c1df0ec6a",
+        "evidence_sha256": "e883eac03e9735ca11ae55cd26a22ac536829baaff92dfc8afff0e5de139abf9",
+        "git_blob": "c3b0230c9887bf9617bd358616f5f23b64f423a6",
+        "git_commit": "73171803a34ba79742605e7c4ed31fbdc6cedc07",
+        "policy_sha256": "85c9b35612c90dc4936acdfdf20e36f1b9f3939a49f5f79ef2bd195f14539ea7",
+        "required_gates": [
+          "selected-version-patch-application",
+          "required-package-tests"
+        ],
+        "status": "accepted-exception",
+        "trust_class": "reviewed-lfs-patch-exception"
+      },
       "name": "bzip2-1.0.8-install_docs-1.patch",
-      "reason": "no supported authentication evidence",
-      "status": "unresolved"
+      "sha256": "35e3bbd9642af51fef2a8a83afba040d272da42d7e3a251d8e43255a7b496702",
+      "size": 1684,
+      "status": "accepted-exception"
     },
     {
+      "authentication": {
+        "assurance": "Official HTTPS publisher transport and reviewed immutable Git/blob pins. The Git commit is unsigned; no publisher signature or independently published strong checksum authenticates these eight patches. This is an explicit lower-assurance provenance exception, not cryptographic publisher verification.",
+        "corroboration_sha256": "fb2162be4fe417b6f24f423d6ce3e32878646c80335152e6245c0e5c1df0ec6a",
+        "evidence_sha256": "e883eac03e9735ca11ae55cd26a22ac536829baaff92dfc8afff0e5de139abf9",
+        "git_blob": "18c83d50fd22a4feea0de296b8c38ce4ca45af39",
+        "git_commit": "73171803a34ba79742605e7c4ed31fbdc6cedc07",
+        "policy_sha256": "85c9b35612c90dc4936acdfdf20e36f1b9f3939a49f5f79ef2bd195f14539ea7",
+        "required_gates": [
+          "selected-version-patch-application",
+          "required-package-tests"
+        ],
+        "status": "accepted-exception",
+        "trust_class": "reviewed-lfs-patch-exception"
+      },
       "name": "coreutils-9.11-i18n-1.patch",
-      "reason": "no supported authentication evidence",
-      "status": "unresolved"
+      "sha256": "7c2aecf9ae24b87b019595e382b9f41d2c96de7f95abe95ad8cacc7e2ce1bbcc",
+      "size": 67821,
+      "status": "accepted-exception"
     },
     {
+      "authentication": {
+        "assurance": "Official HTTPS publisher transport and reviewed immutable Git/blob pins. The Git commit is unsigned; no publisher signature or independently published strong checksum authenticates these eight patches. This is an explicit lower-assurance provenance exception, not cryptographic publisher verification.",
+        "corroboration_sha256": "fb2162be4fe417b6f24f423d6ce3e32878646c80335152e6245c0e5c1df0ec6a",
+        "evidence_sha256": "e883eac03e9735ca11ae55cd26a22ac536829baaff92dfc8afff0e5de139abf9",
+        "git_blob": "7838746c6d94ee9f1ddc9b98965ada7f9b35b7a4",
+        "git_commit": "73171803a34ba79742605e7c4ed31fbdc6cedc07",
+        "policy_sha256": "85c9b35612c90dc4936acdfdf20e36f1b9f3939a49f5f79ef2bd195f14539ea7",
+        "required_gates": [
+          "selected-version-patch-application",
+          "required-package-tests"
+        ],
+        "status": "accepted-exception",
+        "trust_class": "reviewed-lfs-patch-exception"
+      },
       "name": "expect-5.45.4-gcc15-1.patch",
-      "reason": "no supported authentication evidence",
-      "status": "unresolved"
+      "sha256": "ab5fc0af9e2e0f80d7623c1a3a3dbeb1da3d8c9134276792199df401f9eb2cec",
+      "size": 12155,
+      "status": "accepted-exception"
     },
     {
+      "authentication": {
+        "assurance": "Official HTTPS publisher transport and reviewed immutable Git/blob pins. The Git commit is unsigned; no publisher signature or independently published strong checksum authenticates these eight patches. This is an explicit lower-assurance provenance exception, not cryptographic publisher verification.",
+        "corroboration_sha256": "fb2162be4fe417b6f24f423d6ce3e32878646c80335152e6245c0e5c1df0ec6a",
+        "evidence_sha256": "e883eac03e9735ca11ae55cd26a22ac536829baaff92dfc8afff0e5de139abf9",
+        "git_blob": "ac8dfe4b2a74d7652256f2d5c90961696786be20",
+        "git_commit": "73171803a34ba79742605e7c4ed31fbdc6cedc07",
+        "policy_sha256": "85c9b35612c90dc4936acdfdf20e36f1b9f3939a49f5f79ef2bd195f14539ea7",
+        "required_gates": [
+          "selected-version-patch-application",
+          "required-package-tests"
+        ],
+        "status": "accepted-exception",
+        "trust_class": "reviewed-lfs-patch-exception"
+      },
       "name": "glibc-2.44-upstream_fixes-3.patch",
-      "reason": "no supported authentication evidence",
-      "status": "unresolved"
+      "sha256": "cd3245887c9c2564ef18b8e9ed4046093a575fc91bce00fd82eb931102e4a30e",
+      "size": 275352,
+      "status": "accepted-exception"
     },
     {
+      "authentication": {
+        "assurance": "Official HTTPS publisher transport and reviewed immutable Git/blob pins. The Git commit is unsigned; no publisher signature or independently published strong checksum authenticates these eight patches. This is an explicit lower-assurance provenance exception, not cryptographic publisher verification.",
+        "corroboration_sha256": "fb2162be4fe417b6f24f423d6ce3e32878646c80335152e6245c0e5c1df0ec6a",
+        "evidence_sha256": "e883eac03e9735ca11ae55cd26a22ac536829baaff92dfc8afff0e5de139abf9",
+        "git_blob": "4ac8d106bbd57efd44e0d507442ab58121baaa99",
+        "git_commit": "73171803a34ba79742605e7c4ed31fbdc6cedc07",
+        "policy_sha256": "85c9b35612c90dc4936acdfdf20e36f1b9f3939a49f5f79ef2bd195f14539ea7",
+        "required_gates": [
+          "selected-version-patch-application",
+          "required-package-tests"
+        ],
+        "status": "accepted-exception",
+        "trust_class": "reviewed-lfs-patch-exception"
+      },
       "name": "glibc-fhs-1.patch",
-      "reason": "no supported authentication evidence",
-      "status": "unresolved"
+      "sha256": "643552db030e2f2d7ffde4f558e0f5f83d3fabf34a2e0e56ebdb49750ac27b0d",
+      "size": 2804,
+      "status": "accepted-exception"
     },
     {
+      "authentication": {
+        "assurance": "Official HTTPS publisher transport and reviewed immutable Git/blob pins. The Git commit is unsigned; no publisher signature or independently published strong checksum authenticates these eight patches. This is an explicit lower-assurance provenance exception, not cryptographic publisher verification.",
+        "corroboration_sha256": "fb2162be4fe417b6f24f423d6ce3e32878646c80335152e6245c0e5c1df0ec6a",
+        "evidence_sha256": "e883eac03e9735ca11ae55cd26a22ac536829baaff92dfc8afff0e5de139abf9",
+        "git_blob": "8fec17180e17d2e5021b35992a063c0f697c4e57",
+        "git_commit": "73171803a34ba79742605e7c4ed31fbdc6cedc07",
+        "policy_sha256": "85c9b35612c90dc4936acdfdf20e36f1b9f3939a49f5f79ef2bd195f14539ea7",
+        "required_gates": [
+          "selected-version-patch-application",
+          "required-package-tests"
+        ],
+        "status": "accepted-exception",
+        "trust_class": "reviewed-lfs-patch-exception"
+      },
       "name": "kbd-2.10.0-backspace-1.patch",
-      "reason": "no supported authentication evidence",
-      "status": "unresolved"
+      "sha256": "8be28dcb11420624a500f2ea4fe975f771174bffee50e54ec8cd295a2dec104e",
+      "size": 12640,
+      "status": "accepted-exception"
     },
     {
+      "authentication": {
+        "assurance": "Official HTTPS publisher transport and reviewed immutable Git/blob pins. The Git commit is unsigned; no publisher signature or independently published strong checksum authenticates these eight patches. This is an explicit lower-assurance provenance exception, not cryptographic publisher verification.",
+        "corroboration_sha256": "fb2162be4fe417b6f24f423d6ce3e32878646c80335152e6245c0e5c1df0ec6a",
+        "evidence_sha256": "e883eac03e9735ca11ae55cd26a22ac536829baaff92dfc8afff0e5de139abf9",
+        "git_blob": "0ab47088abf326d2be8c9273c6a94be1d5c03f88",
+        "git_commit": "73171803a34ba79742605e7c4ed31fbdc6cedc07",
+        "policy_sha256": "85c9b35612c90dc4936acdfdf20e36f1b9f3939a49f5f79ef2bd195f14539ea7",
+        "required_gates": [
+          "selected-version-patch-application",
+          "required-package-tests"
+        ],
+        "status": "accepted-exception",
+        "trust_class": "reviewed-lfs-patch-exception"
+      },
       "name": "Python-3.14.7-openssl_4-1.patch",
-      "reason": "no supported authentication evidence",
-      "status": "unresolved"
+      "sha256": "707a0c457192ac2f3b5b8a51481bc5ebd12db22d57c1dbe0256138ee6e070792",
+      "size": 38486,
+      "status": "accepted-exception"
     },
     {
+      "authentication": {
+        "assurance": "Official HTTPS publisher transport and reviewed immutable Git/blob pins. The Git commit is unsigned; no publisher signature or independently published strong checksum authenticates these eight patches. This is an explicit lower-assurance provenance exception, not cryptographic publisher verification.",
+        "corroboration_sha256": "fb2162be4fe417b6f24f423d6ce3e32878646c80335152e6245c0e5c1df0ec6a",
+        "evidence_sha256": "e883eac03e9735ca11ae55cd26a22ac536829baaff92dfc8afff0e5de139abf9",
+        "git_blob": "ac5d2b703b0df2451a9f98c8c11fb23e64dfa54b",
+        "git_commit": "73171803a34ba79742605e7c4ed31fbdc6cedc07",
+        "policy_sha256": "85c9b35612c90dc4936acdfdf20e36f1b9f3939a49f5f79ef2bd195f14539ea7",
+        "required_gates": [
+          "selected-version-patch-application",
+          "required-package-tests"
+        ],
+        "status": "accepted-exception",
+        "trust_class": "reviewed-lfs-patch-exception"
+      },
       "name": "tar-1.35-acl_fix-1.patch",
-      "reason": "no supported authentication evidence",
-      "status": "unresolved"
+      "sha256": "51cadccfcb2f29cfdb4ec18015360100aa167179a72ece040a6a8612aeec5081",
+      "size": 4333,
+      "status": "accepted-exception"
     }
   ],
   "verifier": {
     "name": "source_lock.py",
-    "python_version": "3.13.17",
-    "sha256": "87eda7dc8d1563e8b21750cbc4f785e7dcf6d9dc3691e821f39c864ea77ed797"
+    "python_version": "3.12.3",
+    "sha256": "37f39eb2a44b0ff93941fdc2c271ffaec2573a3647fe8cabcce42ee90bff760e"
   }
 }

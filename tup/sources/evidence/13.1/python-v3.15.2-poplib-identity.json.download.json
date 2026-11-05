@@ -1,0 +1,8 @@
+{
+  "meaning": "observed download bytes; not authentication",
+  "resolved_url": "https://api.github.com/repos/python/cpython/contents/Lib/poplib.py?ref=5e58eaad7c58df58dfa8ea549c87996e01dd1077",
+  "retrieved_at": "2026-11-05T09:09:23.529802+00:00",
+  "sha256": "06e6068a235f1c4f14daf2d0bf213137bd1a6bfade24ba980a2daf6bccf8f76f",
+  "size": 21237,
+  "url": "https://api.github.com/repos/python/cpython/contents/Lib/poplib.py?ref=5e58eaad7c58df58dfa8ea549c87996e01dd1077"
+}

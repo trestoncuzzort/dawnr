@@ -1,0 +1,1753 @@
+{
+  "catalog_sha256": "fe719a8ecbfaa5acea04293721a7d961f4f29ce5ca264fedc04f62a44214a115",
+  "files": [
+    {
+      "path": "cache/Python-3.14.10.tar.xz",
+      "sha256": "de414a57119abef52784d8993e341d53aed635fc2b05c2607d9f98a2c5b72032",
+      "size": 24240392
+    },
+    {
+      "path": "cache/Python-3.14.7-openssl_4-1.patch",
+      "sha256": "707a0c457192ac2f3b5b8a51481bc5ebd12db22d57c1dbe0256138ee6e070792",
+      "size": 38486
+    },
+    {
+      "path": "cache/acl-2.4.0.tar.xz",
+      "sha256": "e661131456d2708a01c614a0f400e11d7d1bfaeb6f3e74b75bb980b72f0161a3",
+      "size": 384828
+    },
+    {
+      "path": "cache/attr-2.6.0.tar.gz",
+      "sha256": "d42fa374513180bb48cb11a46696f488240e5124ff1e6ad88b0abff706985612",
+      "size": 506247
+    },
+    {
+      "path": "cache/autoconf-2.73.tar.xz",
+      "sha256": "9fd672b1c8425fac2fa67fa0477b990987268b90ff36d5f016dae57be0d6b52e",
+      "size": 1417428
+    },
+    {
+      "path": "cache/automake-1.18.1.tar.xz",
+      "sha256": "168aa363278351b89af56684448f525a5bce5079d0b6842bd910fdd3f1646887",
+      "size": 1652392
+    },
+    {
+      "path": "cache/bash-5.3.tar.gz",
+      "sha256": "0d5cd86965f869a26cf64f4b71be7b96f90a3ba8b3d74e27e8e9d9d5550f31ba",
+      "size": 11355854
+    },
+    {
+      "path": "cache/bc-7.0.3.tar.xz",
+      "sha256": "91eb74caed0ee6655b669711a4f350c25579778694df248e28363318e03c7fc4",
+      "size": 474800
+    },
+    {
+      "path": "cache/binutils-2.47.tar.xz",
+      "sha256": "154ab23b60070e8f27013c22977f1129425d67d1e8acd6e13010e617811e4cff",
+      "size": 29034716
+    },
+    {
+      "path": "cache/bison-3.8.2.tar.xz",
+      "sha256": "9bba0214ccf7f1079c5d59210045227bcf619519840ebfa80cd3849cff5a5bf2",
+      "size": 2817324
+    },
+    {
+      "path": "cache/bzip2-1.0.8-install_docs-1.patch",
+      "sha256": "35e3bbd9642af51fef2a8a83afba040d272da42d7e3a251d8e43255a7b496702",
+      "size": 1684
+    },
+    {
+      "path": "cache/bzip2-1.0.8.tar.gz",
+      "sha256": "ab5a03176ee106d3f0fa90e381da478ddae405918153cca248e682cd0c4a2269",
+      "size": 810029
+    },
+    {
+      "path": "cache/coreutils-9.11-i18n-1.patch",
+      "sha256": "7c2aecf9ae24b87b019595e382b9f41d2c96de7f95abe95ad8cacc7e2ce1bbcc",
+      "size": 67821
+    },
+    {
+      "path": "cache/coreutils-9.11.tar.xz",
+      "sha256": "394024eda0a5955217ceda9cd1201e65dc8fa3aa29c2951135a49521d57c3cc3",
+      "size": 6562420
+    },
+    {
+      "path": "cache/dbus-1.16.2.tar.xz",
+      "sha256": "0ba2a1a4b16afe7bceb2c07e9ce99a8c2c3508e5dec290dbb643384bd6beb7e2",
+      "size": 1115644
+    },
+    {
+      "path": "cache/dejagnu-1.6.3.tar.gz",
+      "sha256": "87daefacd7958b4a69f88c6856dbd1634261963c414079d0c371f589cd66a2e3",
+      "size": 622059
+    },
+    {
+      "path": "cache/diffutils-3.12.tar.xz",
+      "sha256": "7c8b7f9fc8609141fdea9cece85249d308624391ff61dedaf528fcb337727dfd",
+      "size": 1938800
+    },
+    {
+      "path": "cache/e2fsprogs-1.47.4.tar.gz",
+      "sha256": "2cec05f39c20ee621f14926195664e66e6017190ac8e4bbdb16d86082e43c5da",
+      "size": 10106395
+    },
+    {
+      "path": "cache/elfutils-0.195.tar.bz2",
+      "sha256": "37629fdf7f1f3dc2818e138fca2b8094177d6c2d0f701d3bb650a561218dc026",
+      "size": 12032640
+    },
+    {
+      "path": "cache/expat-2.10.0.tar.xz",
+      "sha256": "c624ba2998fc65df1163a49641ff3f9ab73138b11641d92c86bee0fb01b1bc7f",
+      "size": 543404
+    },
+    {
+      "path": "cache/expect-5.45.4-gcc15-1.patch",
+      "sha256": "ab5fc0af9e2e0f80d7623c1a3a3dbeb1da3d8c9134276792199df401f9eb2cec",
+      "size": 12155
+    },
+    {
+      "path": "cache/expect5.45.4.tar.gz",
+      "sha256": "49a7da83b0bdd9f46d04a04deec19c7767bb9a323e40c4781f89caf760b92c34",
+      "size": 632363
+    },
+    {
+      "path": "cache/file-5.48.tar.gz",
+      "sha256": "ed14656883b23a364b4057c05595d93252da9bc473d30106519519d0da141283",
+      "size": 2693209
+    },
+    {
+      "path": "cache/findutils-4.11.0.tar.xz",
+      "sha256": "bfd19cb06cc71f3352d567e90284d8cdac02ac89774bbeadf0b533b0c11432fd",
+      "size": 2451424
+    },
+    {
+      "path": "cache/flex-2.6.4.tar.gz",
+      "sha256": "e87aae032bf07c26f85ac0ed3250998c37621d95f8bd748b31f15b33c45ee995",
+      "size": 1419096
+    },
+    {
+      "path": "cache/flit_core-4.0.2.tar.gz",
+      "sha256": "b6929defd93884b584d7c87829e0e7b5c26ed6be17b0b873979019314aa841c8",
+      "size": 53083
+    },
+    {
+      "path": "cache/gawk-5.4.1.tar.xz",
+      "sha256": "07f6f7342b7febe4313fc2c2542ad93d64fe20ad8717200109f105a826f5fd37",
+      "size": 3838416
+    },
+    {
+      "path": "cache/gcc-16.2.0.tar.xz",
+      "sha256": "e6738e29597f733270731aa90600f37ffdc045079dfc27ec7e8192cc81085c3e",
+      "size": 107200820
+    },
+    {
+      "path": "cache/gdbm-1.26.tar.gz",
+      "sha256": "6a24504a14de4a744103dcb936be976df6fbe88ccff26065e54c1c47946f4a5e",
+      "size": 1226591
+    },
+    {
+      "path": "cache/gentoo-20261103.tar.xz",
+      "sha256": "923b3132d9214cee3f59fa2b56a3af27a0287c8587576c99ebcd5b24e537a194",
+      "size": 50754876
+    },
+    {
+      "path": "cache/gettext-1.0.tar.xz",
+      "sha256": "71132a3fb71e68245b8f2ac4e9e97137d3e5c02f415636eb508ae607bc01add7",
+      "size": 10721600
+    },
+    {
+      "path": "cache/glibc-2.44-upstream_fixes-3.patch",
+      "sha256": "cd3245887c9c2564ef18b8e9ed4046093a575fc91bce00fd82eb931102e4a30e",
+      "size": 275352
+    },
+    {
+      "path": "cache/glibc-2.44.tar.xz",
+      "sha256": "37f600f2bef3c5e8300147059568b2a2e40a7ad6ccc65ce942556d49429cc667",
+      "size": 20620544
+    },
+    {
+      "path": "cache/glibc-fhs-1.patch",
+      "sha256": "643552db030e2f2d7ffde4f558e0f5f83d3fabf34a2e0e56ebdb49750ac27b0d",
+      "size": 2804
+    },
+    {
+      "path": "cache/gmp-6.3.0.tar.xz",
+      "sha256": "a3c2b80201b89e68616f4ad30bc66aee4927c3ce50e33929ca819d5c43538898",
+      "size": 2094196
+    },
+    {
+      "path": "cache/gperf-3.3.tar.gz",
+      "sha256": "fd87e0aba7e43ae054837afd6cd4db03a3f2693deb3619085e6ed9d8d9604ad8",
+      "size": 1831294
+    },
+    {
+      "path": "cache/grep-3.12.tar.xz",
+      "sha256": "2649b27c0e90e632eadcd757be06c6e9a4f48d941de51e7c0f83ff76408a07b9",
+      "size": 1918448
+    },
+    {
+      "path": "cache/groff-1.24.1.tar.gz",
+      "sha256": "74e2819795b6aff431aeac983d63a9c8968eeaba2a2eba7df8ba4c7b41e7cfd8",
+      "size": 9005760
+    },
+    {
+      "path": "cache/grub-2.14.tar.xz",
+      "sha256": "bc8d3c73535b8838d8c8e2654d73edc4e6ae8c8acdb45d5df5dc9a1547446d43",
+      "size": 7725668
+    },
+    {
+      "path": "cache/gzip-1.14.tar.xz",
+      "sha256": "01a7b881bd220bfdf615f97b8718f80bdfd3f6add385b993dcf6efd14e8c0ac6",
+      "size": 885748
+    },
+    {
+      "path": "cache/iana-etc-20260805.tar.gz",
+      "sha256": "29270860664e324107537f32ea476a333ca52d71b59c74bc06ecc3b0fa9cf490",
+      "size": 610207
+    },
+    {
+      "path": "cache/inetutils-2.8.tar.gz",
+      "sha256": "57b3cf4f77555992881e5ba2a09a63b05aa2c56342a60ed4305b5f45938390b5",
+      "size": 2985957
+    },
+    {
+      "path": "cache/iproute2-7.1.0.tar.xz",
+      "sha256": "fd9fa1b95809417157ca83dd72957e3261bdbce896353cb936f80af0b33a4b5c",
+      "size": 964700
+    },
+    {
+      "path": "cache/jinja2-3.1.6.tar.gz",
+      "sha256": "0137fb05990d35f1275a587e9aee6d56da821fc83491a0fb838183be43f66d6d",
+      "size": 245115
+    },
+    {
+      "path": "cache/kbd-2.10.0-backspace-1.patch",
+      "sha256": "8be28dcb11420624a500f2ea4fe975f771174bffee50e54ec8cd295a2dec104e",
+      "size": 12640
+    },
+    {
+      "path": "cache/kbd-2.10.0.tar.xz",
+      "sha256": "6e5ca4f8d76ee9e3a8db700b667f13e12aac9933828a64e1aaad93d26be9b479",
+      "size": 1788500
+    },
+    {
+      "path": "cache/kmod-34.2.tar.xz",
+      "sha256": "5a5d5073070cc7e0c7a7a3c6ec2a0e1780850c8b47b3e3892226b93ffcb9cb54",
+      "size": 443748
+    },
+    {
+      "path": "cache/less-704.tar.gz",
+      "sha256": "20a0b0a2bb2525fa53c7eee9beb854b4c9cf172eabb209af7020743547bfe9fb",
+      "size": 996650
+    },
+    {
+      "path": "cache/libcap-2.78.tar.xz",
+      "sha256": "0d621e562fd932ccf67b9660fb018e468a683d7b827541df27813228c996bb11",
+      "size": 201040
+    },
+    {
+      "path": "cache/libffi-3.8.0.tar.gz",
+      "sha256": "7da3e2d9a171eb0a038f592ecad3ff2bb2550f3496d87b3b29ad0cf4430c0db4",
+      "size": 1581626
+    },
+    {
+      "path": "cache/libpipeline-1.5.8.tar.gz",
+      "sha256": "1b1203ca152ccd63983c3f2112f7fe6fa5afd453218ede5153d1b31e11bb8405",
+      "size": 1070254
+    },
+    {
+      "path": "cache/libtool-2.6.2.tar.xz",
+      "sha256": "2ef1067c16c97db930fd740cc9bc3d3ba9a583804ae5ac42cc3e8719e49e191e",
+      "size": 1093564
+    },
+    {
+      "path": "cache/libxcrypt-4.5.2.tar.xz",
+      "sha256": "71513a31c01a428bccd5367a32fd95f115d6dac50fb5b60c779d5c7942aec071",
+      "size": 669820
+    },
+    {
+      "path": "cache/linux-6.18.60.tar.xz",
+      "sha256": "3c2f44ef6acc021a7ad444d9a2e6ec1ef488ff09368793d0004a6080f69d621e",
+      "size": 154827264
+    },
+    {
+      "path": "cache/lz4-1.10.0.tar.gz",
+      "sha256": "537512904744b35e232912055ccf8ec66d768639ff3abe5788d90d792ec5f48b",
+      "size": 387114
+    },
+    {
+      "path": "cache/m4-1.4.21.tar.xz",
+      "sha256": "f25c6ab51548a73a75558742fb031e0625d6485fe5f9155949d6486a2408ab66",
+      "size": 2080016
+    },
+    {
+      "path": "cache/make-4.4.1.tar.gz",
+      "sha256": "dd16fb1d67bfab79a72f5e8390735c49e3e8e70b4945a15ab1f81ddb78658fb3",
+      "size": 2348200
+    },
+    {
+      "path": "cache/make-4.4.1.tar.lz",
+      "sha256": "8814ba072182b605d156d7589c19a43b89fc58ea479b9355146160946f8cf6e9",
+      "size": 1305648
+    },
+    {
+      "path": "cache/man-db-2.13.1.tar.xz",
+      "sha256": "8afebb6f7eb6bb8542929458841f5c7e6f240e30c86358c1fbcefbea076c87d9",
+      "size": 2110328
+    },
+    {
+      "path": "cache/man-pages-6.18.tar.xz",
+      "sha256": "c934fadc8b59748c68227a34f6581d2ddf8282b73cdcd52546c8cd88b74b24d1",
+      "size": 1902724
+    },
+    {
+      "path": "cache/markupsafe-3.0.3.tar.gz",
+      "sha256": "722695808f4b6457b320fdc131280796bdceb04ab50fe1795cd540799ebe1698",
+      "size": 80313
+    },
+    {
+      "path": "cache/meson-1.12.0.tar.gz",
+      "sha256": "88afe0c20e52030218924ac37d0c81c59b4b5f3ae3752c8c6d7470c7d365886c",
+      "size": 2518280
+    },
+    {
+      "path": "cache/mpc-1.4.1.tar.xz",
+      "sha256": "91204cd32f164bd3b7c992d4a6a8ce6519511aadab30f78b6982d0bf8d73e931",
+      "size": 531992
+    },
+    {
+      "path": "cache/mpdecimal-4.0.1.tar.gz",
+      "sha256": "96d33abb4bb0070c7be0fed4246cd38416188325f820468214471938545b1ac8",
+      "size": 316268
+    },
+    {
+      "path": "cache/mpfr-4.2.2.tar.xz",
+      "sha256": "b67ba0383ef7e8a8563734e2e889ef5ec3c3b898a01d00fa0a6869ad81c6ce01",
+      "size": 1505596
+    },
+    {
+      "path": "cache/ncurses-6.6.tar.gz",
+      "sha256": "355b4cbbed880b0381a04c46617b7656e362585d52e9cf84a67e2009b749ff11",
+      "size": 3791150
+    },
+    {
+      "path": "cache/ninja-1.13.2.tar.gz",
+      "sha256": "974d6b2f4eeefa25625d34da3cb36bdcebe7fbce40f4c16ac0835fd1c0cbae17",
+      "size": 292385
+    },
+    {
+      "path": "cache/openssl-4.0.3.tar.gz",
+      "sha256": "325b5c806167c13b40b1ffeadfe0248197c00eccc4cf123ec1e28d2d2fd216d9",
+      "size": 55235667
+    },
+    {
+      "path": "cache/packaging-26.3.tar.gz",
+      "sha256": "94edc256424af38762eb31306eed28beb9f0efc50a8837492c9d6fd6004aed79",
+      "size": 313412
+    },
+    {
+      "path": "cache/patch-2.8.1.tar.xz",
+      "sha256": "3240c7959c5347c8ed347e3c4201c0337bf4240d5cf09d68889e58eeaba30e17",
+      "size": 940364
+    },
+    {
+      "path": "cache/pcre2-10.49.tar.bz2",
+      "sha256": "53c156e1ba416a20da8e65395daa132da0d80e76910424caca3fcdae7831d384",
+      "size": 2185271
+    },
+    {
+      "path": "cache/perl-5.44.0.tar.xz",
+      "sha256": "505cf43912e9480495c344c70260452e32aa2a73c546a026b3f100053b23ce91",
+      "size": 14919940
+    },
+    {
+      "path": "cache/pkgconf-3.0.5.tar.xz",
+      "sha256": "3acd3a8a3cce65a8d620321855d92fb602e026cbe8e13ee36bdec58483b59ace",
+      "size": 426972
+    },
+    {
+      "path": "cache/procps-ng-4.0.7.tar.xz",
+      "sha256": "9d2021f47a4501c667862c9942a92d1953694b21d11bcd1702e83eb594e3d67d",
+      "size": 1588352
+    },
+    {
+      "path": "cache/psmisc-23.7.tar.xz",
+      "sha256": "58c55d9c1402474065adae669511c191de374b0871eec781239ab400b907c327",
+      "size": 432208
+    },
+    {
+      "path": "cache/python-3.14.10-docs-html.tar.bz2",
+      "sha256": "89cab64cef8703b043d2c9e8265373ebd3df94864c3c1bc0435eda0703b2812d",
+      "size": 8485984
+    },
+    {
+      "path": "cache/readline-8.3.tar.gz",
+      "sha256": "fe5383204467828cd495ee8d1d3c037a7eba1389c22bc6a041f627976f9061cc",
+      "size": 3419642
+    },
+    {
+      "path": "cache/sed-4.10.tar.xz",
+      "sha256": "b8e72182b2ec96a3574e2998c47b7aaa64cc20ce000d8e9ac313cc07cecf28c7",
+      "size": 1732800
+    },
+    {
+      "path": "cache/setuptools-84.0.0.tar.gz",
+      "sha256": "f4695c21257f0d9b537ec2692c941d02ee143b7cc1276941349a546573b2ef73",
+      "size": 1168449
+    },
+    {
+      "path": "cache/shadow-4.20.2.tar.xz",
+      "sha256": "b89f432b75ae55a2d852b446d0365484795fdf533ab97d550e325fa15594a224",
+      "size": 2291052
+    },
+    {
+      "path": "cache/sqlite-autoconf-3530400.tar.gz",
+      "sha256": "0e9483900e92cd5de8fd48d16bf9200145a61f7fd5be542a5ac81d8a9516eb9c",
+      "size": 3283177
+    },
+    {
+      "path": "cache/sqlite-doc-3530400.zip",
+      "sha256": "a1d0f5de57485d062796ed7e67daff0758b50d00001a0f233a2c15aaf40bbdc8",
+      "size": 11820412
+    },
+    {
+      "path": "cache/systemd-261.2.tar.gz",
+      "sha256": "ed1059ff964f5df35b6056434cc17cc83f86dc913f10489948a0b19b6081c5ec",
+      "size": 18456346
+    },
+    {
+      "path": "cache/systemd-man-pages-261.2.tar.xz",
+      "sha256": "9be13865c9c7f9fecba7b86fc5185aecef00164c87ed68b4f6884283aefebe50",
+      "size": 821528
+    },
+    {
+      "path": "cache/tar-1.35-acl_fix-1.patch",
+      "sha256": "51cadccfcb2f29cfdb4ec18015360100aa167179a72ece040a6a8612aeec5081",
+      "size": 4333
+    },
+    {
+      "path": "cache/tar-1.35.tar.xz",
+      "sha256": "4d62ff37342ec7aed748535323930c7cf94acf71c3591882b26a7ea50f3edc16",
+      "size": 2317208
+    },
+    {
+      "path": "cache/tcl8.6.18-html.tar.gz",
+      "sha256": "bee2d83a19ce50624eeae951be29fe5f654b171357a6391123caf18107cec543",
+      "size": 1197786
+    },
+    {
+      "path": "cache/tcl8.6.18-src.tar.gz",
+      "sha256": "14f9af32b1767ff718477a8f974ad03c34341097e6b43f4ce54644ee974e268e",
+      "size": 11816279
+    },
+    {
+      "path": "cache/texinfo-7.3.tar.xz",
+      "sha256": "51f74eb0f51cfa9873b85264dfdd5d46e8957ec95b88f0fb762f63d9e164c72e",
+      "size": 6940392
+    },
+    {
+      "path": "cache/tzdata2026c.tar.gz",
+      "sha256": "e4a178a4477f3d0ea77cc31828ff72aa38feff8d61aa13e7e99e142e9d902be4",
+      "size": 475694
+    },
+    {
+      "path": "cache/util-linux-2.42.4.tar.xz",
+      "sha256": "fbd62a100ab7bb8746ba0661255c3c48185b1e9021507c624da01fbc696330ec",
+      "size": 10729748
+    },
+    {
+      "path": "cache/vim-9.2.1202.tar.gz",
+      "sha256": "9e97414b85bdcb2d28d5264c65dd730d86b9a75319b005c63da0bc130c715a2f",
+      "size": 20274358
+    },
+    {
+      "path": "cache/wheel-0.48.0.tar.gz",
+      "sha256": "94800765601e9171bf5d58d066e640662842bcedcbab982b2c90787a2c987322",
+      "size": 66471
+    },
+    {
+      "path": "cache/xz-5.8.4.tar.xz",
+      "sha256": "4ce24038fd4221e0d13bc1a2de7a4db56e90b92b3bf75321f6c14be73f65de4b",
+      "size": 1567192
+    },
+    {
+      "path": "cache/zlib-1.3.2.tar.gz",
+      "sha256": "bb329a0a2cd0274d05519d61c667c062e06990d72e125ee2dfa8de64f0119d16",
+      "size": 1502830
+    },
+    {
+      "path": "cache/zstd-1.5.7.tar.gz",
+      "sha256": "eb33e51f49a15e023950cd7825ca74a4a2b43db8354825ac24fc1b7ee09e6fa3",
+      "size": 2434947
+    },
+    {
+      "path": "catalog-13.1.json",
+      "sha256": "fe719a8ecbfaa5acea04293721a7d961f4f29ce5ca264fedc04f62a44214a115",
+      "size": 224063
+    },
+    {
+      "path": "evidence/13.1/PYTHON-BACKPORT-REVIEW.json",
+      "sha256": "6672074b4b7827dbc299bb3257d0b01a45fe7afb87fc5d66a739212c9ece752a",
+      "size": 1440
+    },
+    {
+      "path": "evidence/13.1/attr-2.6.0.tar.gz.sig",
+      "sha256": "6b3c8b4aaad58aafbdd641c411064450cba8c6240f6e0758a36533c35d1b05d9",
+      "size": 862
+    },
+    {
+      "path": "evidence/13.1/attr-project.html",
+      "sha256": "c8676e3757674fb68082947d6e8699be0d00061913ff94688191a1e5582882e5",
+      "size": 14642
+    },
+    {
+      "path": "evidence/13.1/autoconf-2.73-announcement.html",
+      "sha256": "01c94b518c9e5b558e83ed3ca3a33b02128955cccb78ca9cadb53287b2e64f91",
+      "size": 15534
+    },
+    {
+      "path": "evidence/13.1/automake-1.18.1-announcement.html",
+      "sha256": "7371b873297c2b296b4ce0066f72dc721a3ae276445c49079aeebcbebe417574",
+      "size": 8376
+    },
+    {
+      "path": "evidence/13.1/automake-1.18.1.tar.xz.sig",
+      "sha256": "728ce05b02f123ea360ab9d168111bc98470afc7568253e93ee2a7582ef5ddb4",
+      "size": 488
+    },
+    {
+      "path": "evidence/13.1/coreutils-9.11-announcement.html",
+      "sha256": "b0cbb73ce4805a4ae0848a5b73898f61d1f5930e454dbb78d7eb064d404aa4f0",
+      "size": 12938
+    },
+    {
+      "path": "evidence/13.1/coreutils-9.11.tar.xz.sig",
+      "sha256": "e2b9f147338cb22e41be28dcf76cd87c5197be359cc42033e66488a4a6b5c024",
+      "size": 833
+    },
+    {
+      "path": "evidence/13.1/dejagnu-1.6.3-announcement.html",
+      "sha256": "f9f55f237a4be0be366e0850d6d4a09eddff3595f8ba9af7376867e71a6d041b",
+      "size": 14696
+    },
+    {
+      "path": "evidence/13.1/diffutils-3.12-announcement.html",
+      "sha256": "435694c1227145e0a2922ebe72fdaf0aa622e0046d5aa704775c0be3b384efa6",
+      "size": 8424
+    },
+    {
+      "path": "evidence/13.1/diffutils-3.12.tar.xz.sig",
+      "sha256": "ad05b321b2f23441275af68072123a5907b05ad989335a9f1f6e3781cb0846a6",
+      "size": 833
+    },
+    {
+      "path": "evidence/13.1/e2fsprogs-1.47.4-sha256sums.asc",
+      "sha256": "0259700d11fce6ef72001e131f1efd714815fef53559555f069539eee9a91cb7",
+      "size": 1062
+    },
+    {
+      "path": "evidence/13.1/expat-2.10.0-Changes",
+      "sha256": "b200119004e21b89102f35b551bcdd26a479d0b882c98435e6b53e08ca75dd39",
+      "size": 124207
+    },
+    {
+      "path": "evidence/13.1/expat-latest-release-2026-11-05.json",
+      "sha256": "b06f46ea1b6a11076023414cb47485a5132889f88d48a7d8e5c02e604d973206",
+      "size": 22754
+    },
+    {
+      "path": "evidence/13.1/expat-security-1076-2026-11-05.json",
+      "sha256": "b94a1f79d9a72af4f54c1a3034c046e19e56bc13e7225c80c5c31d8fea10869a",
+      "size": 4096
+    },
+    {
+      "path": "evidence/13.1/gcc-16.2.0.tar.xz.sig",
+      "sha256": "43d73202dcede15d31001c6ba0d28723014ef57e4dc815631772daadbe23bcd2",
+      "size": 310
+    },
+    {
+      "path": "evidence/13.1/gcc-mirrors.html",
+      "sha256": "7235342adb022666828ad687490b18008a9206ad024a01b88e20807c22d6425b",
+      "size": 5173
+    },
+    {
+      "path": "evidence/13.1/gcc-release-key-ubuntu.asc",
+      "sha256": "279524c4da639f4f40fd3c056010b4dbff3f90afec1dbe9bec3d5382c83af438",
+      "size": 23601
+    },
+    {
+      "path": "evidence/13.1/gdbm-1.26-announcement.html",
+      "sha256": "51fd5fe5b1171b88ba23782c681dec0eb582d93a2e056008bed31389921d5c99",
+      "size": 4476
+    },
+    {
+      "path": "evidence/13.1/gentoo-20261103.tar.xz.gpgsig",
+      "sha256": "4e08800e0e026829118786acc63e5ec3ca8ffdc4069252667642a6a5c5a4be22",
+      "size": 1000
+    },
+    {
+      "path": "evidence/13.1/gentoo-DCD05B71EAB94199527F44ACDB6B8C1F96D8BF6D.asc",
+      "sha256": "aec99650e40d8f21c792e9e8353d672a8676ae3cbe9e2c147ce42e0e46037189",
+      "size": 51740
+    },
+    {
+      "path": "evidence/13.1/gentoo-manifests/app-arch/bzip2/Manifest",
+      "sha256": "b5e60c32ad4639bff6ceb1070f6c80fb7245da1b0fd6f55f0efe697d34105ba1",
+      "size": 3683
+    },
+    {
+      "path": "evidence/13.1/gentoo-manifests/app-arch/lz4/Manifest",
+      "sha256": "51af7d70ae71276152adf6e27da2637cbdb465cedec27c61482f18c553072c0b",
+      "size": 1544
+    },
+    {
+      "path": "evidence/13.1/gentoo-manifests/app-arch/zstd/Manifest",
+      "sha256": "0151aa764a57cce65f050b2cc690e4174bcd687313e80eed5b8f4b24d83ee959",
+      "size": 2152
+    },
+    {
+      "path": "evidence/13.1/gentoo-manifests/app-doc/python-docs/Manifest",
+      "sha256": "26a6f4ba316a4cba2524db30b50cfd014ce445ea3ef0498217e2fc2f89d6d43d",
+      "size": 5958
+    },
+    {
+      "path": "evidence/13.1/gentoo-manifests/app-editors/vim/Manifest",
+      "sha256": "c532976afae8cf010b823748e60ff0d7e34436897644e9a8704e9137ea4bd8a7",
+      "size": 4611
+    },
+    {
+      "path": "evidence/13.1/gentoo-manifests/app-shells/bash/Manifest",
+      "sha256": "29c4ad2a4aff766eac325c56a55f97977e0d6582168472bceaf82aca189daf35",
+      "size": 158020
+    },
+    {
+      "path": "evidence/13.1/gentoo-manifests/dev-build/automake/Manifest",
+      "sha256": "bac647a153ec055b6d04d4ce5c8da9a80a428ec18fe90e80bae8ae3aedd02cd6",
+      "size": 5609
+    },
+    {
+      "path": "evidence/13.1/gentoo-manifests/dev-build/make/Manifest",
+      "sha256": "820fe32ef3c31bde6b9a6d50bfa1e3d5d97729ca7c553479acc6f3de8e07ddc4",
+      "size": 3068
+    },
+    {
+      "path": "evidence/13.1/gentoo-manifests/dev-build/ninja/Manifest",
+      "sha256": "788d4682b5fb27ace8408c4d342131c954ee39be18043d5d36b71c3734686013",
+      "size": 3367
+    },
+    {
+      "path": "evidence/13.1/gentoo-manifests/dev-db/sqlite/Manifest",
+      "sha256": "7cf2de6351c471510de977dc86ea3d09e4b40a30784b4019116c8677f22e2ccc",
+      "size": 3426
+    },
+    {
+      "path": "evidence/13.1/gentoo-manifests/dev-lang/perl/Manifest",
+      "sha256": "b5e7d5564d7ffce5d7e5330c701cbfbf30879c443d22472a0d37729f6bdf6850",
+      "size": 7863
+    },
+    {
+      "path": "evidence/13.1/gentoo-manifests/dev-libs/elfutils/Manifest",
+      "sha256": "edf5ee5995f2230f21d3973d4f0cdbc0e3b1c9a8df96c90c1f1d20673e2d9dee",
+      "size": 4968
+    },
+    {
+      "path": "evidence/13.1/gentoo-manifests/dev-libs/gmp/Manifest",
+      "sha256": "b74d0b0c6d51c7bf461a2fb52dca17705c156a239a5f569d99413d85f1fd5854",
+      "size": 2753
+    },
+    {
+      "path": "evidence/13.1/gentoo-manifests/dev-libs/libpipeline/Manifest",
+      "sha256": "1713a1363630bb4593833f23b7938505d77e56d76394b63bd08d4695c53da0c6",
+      "size": 1226
+    },
+    {
+      "path": "evidence/13.1/gentoo-manifests/dev-libs/mpc/Manifest",
+      "sha256": "5f84f9e15262669aabf08e6f764f8918585306da59028ef18c5ca8c77fff83d5",
+      "size": 1202
+    },
+    {
+      "path": "evidence/13.1/gentoo-manifests/dev-libs/mpdecimal/Manifest",
+      "sha256": "7fe39da05fd56a8883500fe55ce03810f0b5e0eb6cb353f40cf968d911ff6881",
+      "size": 1208
+    },
+    {
+      "path": "evidence/13.1/gentoo-manifests/dev-tcltk/expect/Manifest",
+      "sha256": "be1465d8e91783aa49f612cd19de1bbd069a8c9780a057f7df71c9431cbd3318",
+      "size": 3723
+    },
+    {
+      "path": "evidence/13.1/gentoo-manifests/dev-util/pkgconf/Manifest",
+      "sha256": "dec703dbdd0e7a008485af7ebaf6ad582e39fa95b4accd7826608699215f743c",
+      "size": 4580
+    },
+    {
+      "path": "evidence/13.1/gentoo-manifests/sci-calculators/bc-gh/Manifest",
+      "sha256": "5d9d4ea25c3fa67635d6cf0ea7689bbfd3c5a29e0d51b4aeff87f778a52b5acf",
+      "size": 2111
+    },
+    {
+      "path": "evidence/13.1/gentoo-manifests/sys-apps/acl/Manifest",
+      "sha256": "a1d2729b5f32c4b390691b18ccc3b384c1cef550d906a75e67216eeece967a75",
+      "size": 1506
+    },
+    {
+      "path": "evidence/13.1/gentoo-manifests/sys-apps/dbus/Manifest",
+      "sha256": "2dc52d04d012896e1e88dc5ee9d0390680cd1d50b091f46820ffb20b4ad07e89",
+      "size": 3015
+    },
+    {
+      "path": "evidence/13.1/gentoo-manifests/sys-apps/file/Manifest",
+      "sha256": "29d9731f28e19990443137f982f125e17288d5e81f8c42a88c6aaf71a5075038",
+      "size": 7056
+    },
+    {
+      "path": "evidence/13.1/gentoo-manifests/sys-apps/findutils/Manifest",
+      "sha256": "f59c48b87e5dad901a1cf2847d2852eedb81869767b5f710d1633b34884075dc",
+      "size": 2153
+    },
+    {
+      "path": "evidence/13.1/gentoo-manifests/sys-apps/gawk/Manifest",
+      "sha256": "aeebc962fa7a036fd3256d6d9e280ec817dd2cf67d343ab7ffc361a8996560ac",
+      "size": 4265
+    },
+    {
+      "path": "evidence/13.1/gentoo-manifests/sys-apps/less/Manifest",
+      "sha256": "7163255a911f8297f520bde98260f335ced7a1a644d465322610aa81c0371db5",
+      "size": 3288
+    },
+    {
+      "path": "evidence/13.1/gentoo-manifests/sys-apps/man-db/Manifest",
+      "sha256": "6881b952bb31c9717296c8d72092c300e152511f16f5b7dbf75d39413949bfb7",
+      "size": 3059
+    },
+    {
+      "path": "evidence/13.1/gentoo-manifests/sys-apps/systemd/Manifest",
+      "sha256": "991f5677d5762de0fa26fced80698f6cf6659639002a0f49060ff1d1368a99a9",
+      "size": 11991
+    },
+    {
+      "path": "evidence/13.1/gentoo-manifests/sys-apps/texinfo/Manifest",
+      "sha256": "a79de84a61099970c8af3f22df6101a0956a387a89d115d3e36ef612b66f412a",
+      "size": 3048
+    },
+    {
+      "path": "evidence/13.1/gentoo-manifests/sys-boot/grub/Manifest",
+      "sha256": "9859a5306ddf501346c9e15f6b61efe87790213bc039143e91003f174649f157",
+      "size": 9558
+    },
+    {
+      "path": "evidence/13.1/gentoo-manifests/sys-devel/binutils/Manifest",
+      "sha256": "d2c7f6175985c7a6f3b35595277792771041bbdacc5dc7bc554763b5290e8789",
+      "size": 22114
+    },
+    {
+      "path": "evidence/13.1/gentoo-manifests/sys-devel/bison/Manifest",
+      "sha256": "2cb5353eada55537cbabc63da2cbc4c7248aa3c1c526fe226ee2620c855d4c68",
+      "size": 1844
+    },
+    {
+      "path": "evidence/13.1/gentoo-manifests/sys-devel/flex/Manifest",
+      "sha256": "494671b3264ae1ed60f6fca5a7dd4f315f2b1c81fb0b2f1890dfde090cf09532",
+      "size": 2525
+    },
+    {
+      "path": "evidence/13.1/gentoo-manifests/sys-devel/patch/Manifest",
+      "sha256": "99bf7d60d6235ead245d4838987af43c3f2a4eec44e473c074e6c4ea39d8235b",
+      "size": 2421
+    },
+    {
+      "path": "evidence/13.1/gentoo-manifests/sys-libs/ncurses/Manifest",
+      "sha256": "94c441ad954dd6916d4793ab2ab1121b26a078bfa78c8a62bd1a5f5f6a0603c4",
+      "size": 79636
+    },
+    {
+      "path": "evidence/13.1/gentoo-manifests/sys-libs/readline/Manifest",
+      "sha256": "58036e4a8114646499de6b6e9b6c193e71cc80f07d2adb8570ea0c03e06cf4e5",
+      "size": 16989
+    },
+    {
+      "path": "evidence/13.1/gentoo-manifests/sys-process/psmisc/Manifest",
+      "sha256": "5ab0d3ecf60884df5236de3b4a1c94dc78f3363b27e6d6ad89a03667b004f739",
+      "size": 1816
+    },
+    {
+      "path": "evidence/13.1/gentoo-signatures.html",
+      "sha256": "45bd60413ed48a5729c832ab69b9a1c3f4812b4e0cfc2777491be5875c82e0b4",
+      "size": 17552
+    },
+    {
+      "path": "evidence/13.1/gettext-1.0-announcement.html",
+      "sha256": "8fdfb384daf8306154a84119cb5498766d0d15faa18ef03767b02bc54165e43c",
+      "size": 10448
+    },
+    {
+      "path": "evidence/13.1/github-Mic92-iana-etc-20260805.json",
+      "sha256": "2c47592c50300a713cec76c9f467e9cd9eee20776c5be812e37d57bccfadec58",
+      "size": 5199
+    },
+    {
+      "path": "evidence/13.1/github-PCRE2Project-pcre2-pcre2-10.49.json",
+      "sha256": "81a8939395b196b031289b433af5713c1c4c49a1d396a3ad235b405acee40ca6",
+      "size": 11859
+    },
+    {
+      "path": "evidence/13.1/github-besser82-libxcrypt-v4.5.2.json",
+      "sha256": "5ba2f3fe09ca83c3d8af820eba22e56ee9450a045db22d0002e6aa4a6f6fdb24",
+      "size": 8094
+    },
+    {
+      "path": "evidence/13.1/github-libffi-libffi-v3.8.0.json",
+      "sha256": "0af3ff1ae9aa8c6c8bf717284b5c59b430a9f209a2d36ba8cb5ec7d4d9d28a96",
+      "size": 9898
+    },
+    {
+      "path": "evidence/13.1/github-mesonbuild-meson-1.12.0.json",
+      "sha256": "1efabbf770bc1eb314b5bec217fdd6e22561c5c19b7a0f19d515f20bf99a8dc7",
+      "size": 9579
+    },
+    {
+      "path": "evidence/13.1/github-openssl-openssl-openssl-4.0.3.json",
+      "sha256": "eaeb828e9453406ecd637d26b17d169f78fde0360a01de7168b62a8095b22c60",
+      "size": 11560
+    },
+    {
+      "path": "evidence/13.1/github-shadow-maint-shadow-4.20.2.json",
+      "sha256": "202ef4c12569c1b551626b01afc52078e315cd8e2d01ec381075085246b3ca6c",
+      "size": 15120
+    },
+    {
+      "path": "evidence/13.1/github-tukaani-project-xz-v5.8.4.json",
+      "sha256": "67654e3e93fdeed6168542acc2bf174cfe23f5c30342fca7dea5cd1748708cb7",
+      "size": 24066
+    },
+    {
+      "path": "evidence/13.1/glibc-2.44.tar.xz.sig",
+      "sha256": "44aabe605a02a56959bab51b92d985945db66dbd0117debe3d741252b2133ec6",
+      "size": 870
+    },
+    {
+      "path": "evidence/13.1/glibc-current-book-page.html",
+      "sha256": "99d5517db6205bec0f7255f958594bc39eceb3f9a681e9e16cedd75772801f7c",
+      "size": 51196
+    },
+    {
+      "path": "evidence/13.1/glibc-release-key-current.asc",
+      "sha256": "7305140fd8333ceefcb1a3aa88e78a865672caff82b9f274083b1321f90d178c",
+      "size": 150328
+    },
+    {
+      "path": "evidence/13.1/gnu-automake-release-keys.asc",
+      "sha256": "2bb0a45a198b8294d1d87f0fe0586e493836cdbdeb7f99c4d92eae5fa38cd8f1",
+      "size": 255992
+    },
+    {
+      "path": "evidence/13.1/gnu-coreutils-release-keys.asc",
+      "sha256": "457a5fbd6934cf9534156a14dc108aad2dc3a054555d9ef4a0b046190f39cebc",
+      "size": 20290
+    },
+    {
+      "path": "evidence/13.1/gnu-diffutils-release-keys.asc",
+      "sha256": "0850b3f0df83d84c02a88fcdf28202c4a3d603bb972fe77d272ec33007c79359",
+      "size": 239722
+    },
+    {
+      "path": "evidence/13.1/gnu-grep-release-keys.asc",
+      "sha256": "e1063494e155af469f6a68ca04657652cd380998ca3f05c8b8b6dddb4c090a52",
+      "size": 239717
+    },
+    {
+      "path": "evidence/13.1/gnu-gzip-release-keys.asc",
+      "sha256": "c83f7e14dbd5b671563f06f1aeea0379977649ae9141700729e48af18c8781f2",
+      "size": 239717
+    },
+    {
+      "path": "evidence/13.1/gnu-libc-release-keys.asc",
+      "sha256": "7796bec530799756b2db150e1cdbb5d59541fc7233cd26b5706433cd801ac78f",
+      "size": 448574
+    },
+    {
+      "path": "evidence/13.1/gnu-sed-release-keys.asc",
+      "sha256": "5add9fb6d70353f2d421694ceb9e10092bee68d0af880527efa2251b29b5d2a8",
+      "size": 239716
+    },
+    {
+      "path": "evidence/13.1/gperf-3.3-announcement.html",
+      "sha256": "c69f300740a9e4589c465f64078090d79411603362e49746a503fb68a6b7a96b",
+      "size": 5503
+    },
+    {
+      "path": "evidence/13.1/grep-3.12-announcement.html",
+      "sha256": "fa80ed7ac6b7bdc2e7f3cd5797d927b35950d9f12db460f40c157897625e68c8",
+      "size": 8988
+    },
+    {
+      "path": "evidence/13.1/grep-3.12.tar.xz.sig",
+      "sha256": "62d4867d7cfff57a364b745866d798958a90286551fdf45d08df515fa8c79c25",
+      "size": 833
+    },
+    {
+      "path": "evidence/13.1/groff-1.24.1-announcement.html",
+      "sha256": "ac4c1b8eaec87aad3499fdc71ead0254c80a8f2dd7a301d866dbc33fe098799a",
+      "size": 8877
+    },
+    {
+      "path": "evidence/13.1/gzip-1.14-announcement.html",
+      "sha256": "0a21c743c1197f9dd8e5a599c1a3adbb6b36a9a95bc021c86f6b2055de750498",
+      "size": 9519
+    },
+    {
+      "path": "evidence/13.1/gzip-1.14.tar.xz.sig",
+      "sha256": "94634698bea42dad032a10fe66b8b38c4a2efacd36052410402c0c850faf1d1a",
+      "size": 833
+    },
+    {
+      "path": "evidence/13.1/iana-tz-announce-july-index.html",
+      "sha256": "4823075616a0380e76c1225f1fcd3a785449d1b1f48910cc67ebc9c9ebe8ab9d",
+      "size": 48137
+    },
+    {
+      "path": "evidence/13.1/inetutils-2.8-announcement.html",
+      "sha256": "1e11a0b2c21d660bac9f77c9ce64366df157fc4c2fce035c84d27ff1b688cd95",
+      "size": 14004
+    },
+    {
+      "path": "evidence/13.1/kernel-linux-docs-man-pages-sha256sums.asc",
+      "sha256": "db9ceffbb06cc7c06acf69b05598916c51fd6eb6fd36bd710573c9355cb373f3",
+      "size": 5988
+    },
+    {
+      "path": "evidence/13.1/kernel-linux-kernel-v6.x-sha256sums.asc",
+      "sha256": "09057481a7f58c55910a7194d57ee9247bbbbf81246f720263c3666598ff4b44",
+      "size": 257180
+    },
+    {
+      "path": "evidence/13.1/kernel-linux-libs-security-linux-privs-libcap2-sha256sums.asc",
+      "sha256": "fa84c9906cc850a744733a7a57427c011f9a9ba1c7e924d4a4a73dc8a45275f6",
+      "size": 14228
+    },
+    {
+      "path": "evidence/13.1/kernel-linux-utils-kbd-sha256sums.asc",
+      "sha256": "3149ebc1204f97049a8f38aee42bd8cdb2c9b1ecfe278b3d74c775746b824407",
+      "size": 8536
+    },
+    {
+      "path": "evidence/13.1/kernel-linux-utils-kernel-kmod-sha256sums.asc",
+      "sha256": "71476e88400003e244f2a73f39efd91804e095d76d9cfe4aa6eb7932b31110e8",
+      "size": 8173
+    },
+    {
+      "path": "evidence/13.1/kernel-linux-utils-net-iproute2-sha256sums.asc",
+      "sha256": "9d7af0551a3156e4a6f24074ab8d7881045ee6d598de67d9e7156a0e73d27db4",
+      "size": 17260
+    },
+    {
+      "path": "evidence/13.1/kernel-linux-utils-util-linux-v2.42-sha256sums.asc",
+      "sha256": "b0401bec5699c684edd8f7faeb0ff068686528c55c2d49d8424e3e9b90737d93",
+      "size": 3183
+    },
+    {
+      "path": "evidence/13.1/lfs-advisories-13.1-2026-11-05.html",
+      "sha256": "aa562da21adbfa442f88404b029242eea2d24ac04fa4b4eefff4eb819a304de1",
+      "size": 173704
+    },
+    {
+      "path": "evidence/13.1/lfs-patch-corroboration-13.1.json",
+      "sha256": "fb2162be4fe417b6f24f423d6ce3e32878646c80335152e6245c0e5c1df0ec6a",
+      "size": 8969
+    },
+    {
+      "path": "evidence/13.1/lfs-patch-provenance-review.json",
+      "sha256": "85c9b35612c90dc4936acdfdf20e36f1b9f3939a49f5f79ef2bd195f14539ea7",
+      "size": 9249
+    },
+    {
+      "path": "evidence/13.1/libtool-2.6.2-announcement.html",
+      "sha256": "359efce491303235cf598641c5f2b26bd3949d58237a6ce26e237d17fd567492",
+      "size": 13310
+    },
+    {
+      "path": "evidence/13.1/m4-1.4.21-announcement.html",
+      "sha256": "2c0f32548c78fe6bbd5da8be4e9a004f00d49839a6678318c03535597d9ad890",
+      "size": 9978
+    },
+    {
+      "path": "evidence/13.1/mpfr-4.2.2-announcement.html",
+      "sha256": "c7f1a0fc02b63a16532b8ca2f14788ad04193c926971a65e5786ec1e6d14a312",
+      "size": 8626
+    },
+    {
+      "path": "evidence/13.1/netbsd-2026Q3-sqlite3-distinfo",
+      "sha256": "15f1e26b89c1468d2faef861760993e7a4ebf3baf276bb0c03037fdf8d052582",
+      "size": 466
+    },
+    {
+      "path": "evidence/13.1/netbsd-tcl-distinfo",
+      "sha256": "8b513b08c3c2bc8c9ccb3fb09d3a54dac8f1da0e1ec18ca8f6e2c86f1945d17a",
+      "size": 1862
+    },
+    {
+      "path": "evidence/13.1/pypi-flit_core-4.0.2.json",
+      "sha256": "01e62ee667a85b11d5fa7c935cf714b34c2863b225f6b58499070e5dfab27185",
+      "size": 3183
+    },
+    {
+      "path": "evidence/13.1/pypi-jinja2-3.1.6.json",
+      "sha256": "1bc757d7065f3e67d3a49e72ebc731d0774055575732592eede9820c136329cc",
+      "size": 4925
+    },
+    {
+      "path": "evidence/13.1/pypi-markupsafe-3.0.3.json",
+      "sha256": "0de4f18187d0fc2318de8504c4178f2297bc7cfa7a55adfb6d013190aff8cff4",
+      "size": 80718
+    },
+    {
+      "path": "evidence/13.1/pypi-packaging-26.3.json",
+      "sha256": "4f190d2f0b312b3086058cee64ab4333bf3ce67fb78b4c2bdb43899049b29f4d",
+      "size": 5748
+    },
+    {
+      "path": "evidence/13.1/pypi-setuptools-84.0.0.json",
+      "sha256": "fc55c3c123a680b2f77f3071bc028741023be1c67f076b878907e5a3823b2dbd",
+      "size": 11090
+    },
+    {
+      "path": "evidence/13.1/pypi-wheel-0.48.0.json",
+      "sha256": "03f655da3a6dd010d9ac41d4771d5d973109cb662a1e10eb9d967535ffd145f8",
+      "size": 4390
+    },
+    {
+      "path": "evidence/13.1/python-3.14.10-security-backports.patch",
+      "sha256": "a850b836acef2d5b12591aaa6e70aafcc30ec80981823e79b5a657c77409c25b",
+      "size": 1040
+    },
+    {
+      "path": "evidence/13.1/python-31410.html",
+      "sha256": "836ec766c2baf1ac9814ff68090d6c463ec9b14242fb1d989e382c13bfec60db",
+      "size": 46491
+    },
+    {
+      "path": "evidence/13.1/python-v3.14.10-NEWS.rst",
+      "sha256": "eced8d06f825f9d068083b5e0b99dd2bac47190b54afd398f53b0f2b734e4aa5",
+      "size": 19525
+    },
+    {
+      "path": "evidence/13.1/python-v3.14.8-NEWS.rst",
+      "sha256": "39c47ab66955ae683f26f9a6d227e1f1977f1913ea58fe9a898fe4d906c70f5a",
+      "size": 47686
+    },
+    {
+      "path": "evidence/13.1/python-v3.14.9-NEWS.rst",
+      "sha256": "8ddb088cecb03099281f0aff13730cc6ffd450e97a3f0c36ef9bd7d52930c0b7",
+      "size": 25518
+    },
+    {
+      "path": "evidence/13.1/python-v3.15.2-commit.json",
+      "sha256": "c9d7ea357e1ab0be2f437b58bc396fbd65b7bc4fe883ea407b83dde282a3fe0d",
+      "size": 1126
+    },
+    {
+      "path": "evidence/13.1/python-v3.15.2-fileutils-identity.json",
+      "sha256": "36412953521e8dcbb1a1d972b065ba11b3cd1df6728cabea50c076e11bf7d825",
+      "size": 129467
+    },
+    {
+      "path": "evidence/13.1/python-v3.15.2-fileutils.c",
+      "sha256": "4952517b10127ae72eee69e885dc88fa95d1df76b08835872bc195e1738be2b7",
+      "size": 93257
+    },
+    {
+      "path": "evidence/13.1/python-v3.15.2-poplib-identity.json",
+      "sha256": "06e6068a235f1c4f14daf2d0bf213137bd1a6bfade24ba980a2daf6bccf8f76f",
+      "size": 21237
+    },
+    {
+      "path": "evidence/13.1/python-v3.15.2-poplib.py",
+      "sha256": "a6ffff188814b56d95b043c31d9e0dfee51ac6d6e92afe74ab070cb6136b076f",
+      "size": 14727
+    },
+    {
+      "path": "evidence/13.1/python-v3.15.2-ref.json",
+      "sha256": "d7de9f0c45afa3ce00f294578174e1e8973f5bb2339ba582912ca0a5169d61f1",
+      "size": 333
+    },
+    {
+      "path": "evidence/13.1/python-v3.15.2-tag.json",
+      "sha256": "f2de664919ddf365becd7decad1569073a82f61a7e92567aa0b3ab29673e152e",
+      "size": 683
+    },
+    {
+      "path": "evidence/13.1/remaining-source-provenance-review.json",
+      "sha256": "536e77f61dd24a3269888645aa33fb4d55dfe5aa3fa0bcf4ac79915da42f33d1",
+      "size": 4803
+    },
+    {
+      "path": "evidence/13.1/savannah-agruen-key.asc",
+      "sha256": "60198a7f90a522ea0196919ab53bdc947866dcf40caaedd969cf6d76d8ee8251",
+      "size": 9911
+    },
+    {
+      "path": "evidence/13.1/savannah-agruen.html",
+      "sha256": "520ed679af9a9381577191dfc6119404f3c57390c1c843b606e48fb07953c29f",
+      "size": 12271
+    },
+    {
+      "path": "evidence/13.1/sed-4.10-announcement.html",
+      "sha256": "cf8c4ddfcef854d1647e0f497b51e2d6204fc7aea8090585c38b76ffb646cc5a",
+      "size": 11061
+    },
+    {
+      "path": "evidence/13.1/sed-4.10.tar.xz.sig",
+      "sha256": "b43d0dae9cba8cc2adb268cc37e974d5811475ffd569d66c8963cfd5ae2e224e",
+      "size": 833
+    },
+    {
+      "path": "evidence/13.1/sourceforge-e2fsprogs1474.html",
+      "sha256": "4da1292493cc8cfb23bae171fed0f91d475ea18ce6c336ebf0718ce7a53fff6f",
+      "size": 111760
+    },
+    {
+      "path": "evidence/13.1/sourceforge-procps-production.html",
+      "sha256": "6c8914cd5df596b348931dfca0d2bde8a032cd8a6f3c05ec41c6c9d0b5d7abb2",
+      "size": 172402
+    },
+    {
+      "path": "evidence/13.1/sourceforge-tcl8618-files.html",
+      "sha256": "bbfdccfc18f94319ec05535c90ac7f63f9d6c8e244988e4cb4b2fe81d9ac8351",
+      "size": 133045
+    },
+    {
+      "path": "evidence/13.1/systemd-lfs-book131-packages.html",
+      "sha256": "13afe39a5f89b20ec10bda7e19c833c98975eb64feecf2bd4133a10c0c34653c",
+      "size": 71782
+    },
+    {
+      "path": "evidence/13.1/systemd-man-pages-261.2-inventory.json",
+      "sha256": "143c3b19265f108cdda081c2c522ee3a9a675f303e3d948fd8ebebc93bd70271",
+      "size": 293260
+    },
+    {
+      "path": "evidence/13.1/tar-1.35-announcement.html",
+      "sha256": "58b47d5dddb51c7ace38a2577b00d73120a78a62115bb0fb5acd3a96694232e4",
+      "size": 7265
+    },
+    {
+      "path": "evidence/13.1/wget-list-systemd",
+      "sha256": "2503a8ba321fce4cc4d6e0a8b6c3518703501f088dd1264fc9ec2a089751ab26",
+      "size": 6085
+    },
+    {
+      "path": "evidence/13.1/zlib-1.3.2-github-release.json",
+      "sha256": "4f8b82bf76a9024e8608d7f8656b6e3fdc5830c81da009036272b80c66f6fc07",
+      "size": 10825
+    },
+    {
+      "path": "source_lock.py",
+      "sha256": "37f39eb2a44b0ff93941fdc2c271ffaec2573a3647fe8cabcce42ee90bff760e",
+      "size": 45760
+    },
+    {
+      "path": "sources/source_lock.py",
+      "sha256": "37f39eb2a44b0ff93941fdc2c271ffaec2573a3647fe8cabcce42ee90bff760e",
+      "size": 45760
+    },
+    {
+      "path": "tests/test_source_lock.py",
+      "sha256": "2564244fbe82fe660d0045e24cb8b1ea4bf14f92a954dc0c83b125682255de8c",
+      "size": 19450
+    },
+    {
+      "path": "tests/test_source_policy.py",
+      "sha256": "c2af16d10456242db08c181b3badc7785a9acfba4f81c60199fd7cfa9b6dfb58",
+      "size": 16066
+    },
+    {
+      "path": "BOOK-SOURCE",
+      "sha256": "569c1156e20d0725dc9594022a3e440f5d6451cb400afa324415014dc9f1b42f",
+      "size": 701
+    }
+  ],
+  "schema": "tup-source-transfer-v1",
+  "sources": [
+    {
+      "name": "acl-2.4.0.tar.xz",
+      "sha256": "e661131456d2708a01c614a0f400e11d7d1bfaeb6f3e74b75bb980b72f0161a3",
+      "size": 384828,
+      "url": "https://download.savannah.gnu.org/releases/acl/acl-2.4.0.tar.xz"
+    },
+    {
+      "name": "attr-2.6.0.tar.gz",
+      "sha256": "d42fa374513180bb48cb11a46696f488240e5124ff1e6ad88b0abff706985612",
+      "size": 506247,
+      "url": "https://download.savannah.gnu.org/releases/attr/attr-2.6.0.tar.gz"
+    },
+    {
+      "name": "autoconf-2.73.tar.xz",
+      "sha256": "9fd672b1c8425fac2fa67fa0477b990987268b90ff36d5f016dae57be0d6b52e",
+      "size": 1417428,
+      "url": "https://ftp.gnu.org/gnu/autoconf/autoconf-2.73.tar.xz"
+    },
+    {
+      "name": "automake-1.18.1.tar.xz",
+      "sha256": "168aa363278351b89af56684448f525a5bce5079d0b6842bd910fdd3f1646887",
+      "size": 1652392,
+      "url": "https://ftp.gnu.org/gnu/automake/automake-1.18.1.tar.xz"
+    },
+    {
+      "name": "bash-5.3.tar.gz",
+      "sha256": "0d5cd86965f869a26cf64f4b71be7b96f90a3ba8b3d74e27e8e9d9d5550f31ba",
+      "size": 11355854,
+      "url": "https://ftp.gnu.org/gnu/bash/bash-5.3.tar.gz"
+    },
+    {
+      "name": "bc-7.0.3.tar.xz",
+      "sha256": "91eb74caed0ee6655b669711a4f350c25579778694df248e28363318e03c7fc4",
+      "size": 474800,
+      "url": "https://github.com/gavinhoward/bc/releases/download/7.0.3/bc-7.0.3.tar.xz"
+    },
+    {
+      "name": "binutils-2.47.tar.xz",
+      "sha256": "154ab23b60070e8f27013c22977f1129425d67d1e8acd6e13010e617811e4cff",
+      "size": 29034716,
+      "url": "https://sourceware.org/pub/binutils/releases/binutils-2.47.tar.xz"
+    },
+    {
+      "name": "bison-3.8.2.tar.xz",
+      "sha256": "9bba0214ccf7f1079c5d59210045227bcf619519840ebfa80cd3849cff5a5bf2",
+      "size": 2817324,
+      "url": "https://ftp.gnu.org/gnu/bison/bison-3.8.2.tar.xz"
+    },
+    {
+      "name": "bzip2-1.0.8.tar.gz",
+      "sha256": "ab5a03176ee106d3f0fa90e381da478ddae405918153cca248e682cd0c4a2269",
+      "size": 810029,
+      "url": "https://www.sourceware.org/pub/bzip2/bzip2-1.0.8.tar.gz"
+    },
+    {
+      "name": "coreutils-9.11.tar.xz",
+      "sha256": "394024eda0a5955217ceda9cd1201e65dc8fa3aa29c2951135a49521d57c3cc3",
+      "size": 6562420,
+      "url": "https://ftp.gnu.org/gnu/coreutils/coreutils-9.11.tar.xz"
+    },
+    {
+      "name": "dbus-1.16.2.tar.xz",
+      "sha256": "0ba2a1a4b16afe7bceb2c07e9ce99a8c2c3508e5dec290dbb643384bd6beb7e2",
+      "size": 1115644,
+      "url": "https://dbus.freedesktop.org/releases/dbus/dbus-1.16.2.tar.xz"
+    },
+    {
+      "name": "dejagnu-1.6.3.tar.gz",
+      "sha256": "87daefacd7958b4a69f88c6856dbd1634261963c414079d0c371f589cd66a2e3",
+      "size": 622059,
+      "url": "https://ftp.gnu.org/gnu/dejagnu/dejagnu-1.6.3.tar.gz"
+    },
+    {
+      "name": "diffutils-3.12.tar.xz",
+      "sha256": "7c8b7f9fc8609141fdea9cece85249d308624391ff61dedaf528fcb337727dfd",
+      "size": 1938800,
+      "url": "https://ftp.gnu.org/gnu/diffutils/diffutils-3.12.tar.xz"
+    },
+    {
+      "name": "e2fsprogs-1.47.4.tar.gz",
+      "sha256": "2cec05f39c20ee621f14926195664e66e6017190ac8e4bbdb16d86082e43c5da",
+      "size": 10106395,
+      "url": "https://downloads.sourceforge.net/project/e2fsprogs/e2fsprogs/v1.47.4/e2fsprogs-1.47.4.tar.gz"
+    },
+    {
+      "name": "elfutils-0.195.tar.bz2",
+      "sha256": "37629fdf7f1f3dc2818e138fca2b8094177d6c2d0f701d3bb650a561218dc026",
+      "size": 12032640,
+      "url": "https://sourceware.org/ftp/elfutils/0.195/elfutils-0.195.tar.bz2"
+    },
+    {
+      "name": "expat-2.10.0.tar.xz",
+      "sha256": "c624ba2998fc65df1163a49641ff3f9ab73138b11641d92c86bee0fb01b1bc7f",
+      "size": 543404,
+      "url": "https://github.com/libexpat/libexpat/releases/download/R_2_10_0/expat-2.10.0.tar.xz"
+    },
+    {
+      "name": "expect5.45.4.tar.gz",
+      "sha256": "49a7da83b0bdd9f46d04a04deec19c7767bb9a323e40c4781f89caf760b92c34",
+      "size": 632363,
+      "url": "https://prdownloads.sourceforge.net/expect/expect5.45.4.tar.gz"
+    },
+    {
+      "name": "file-5.48.tar.gz",
+      "sha256": "ed14656883b23a364b4057c05595d93252da9bc473d30106519519d0da141283",
+      "size": 2693209,
+      "url": "https://astron.com/pub/file/file-5.48.tar.gz"
+    },
+    {
+      "name": "findutils-4.11.0.tar.xz",
+      "sha256": "bfd19cb06cc71f3352d567e90284d8cdac02ac89774bbeadf0b533b0c11432fd",
+      "size": 2451424,
+      "url": "https://ftp.gnu.org/gnu/findutils/findutils-4.11.0.tar.xz"
+    },
+    {
+      "name": "flex-2.6.4.tar.gz",
+      "sha256": "e87aae032bf07c26f85ac0ed3250998c37621d95f8bd748b31f15b33c45ee995",
+      "size": 1419096,
+      "url": "https://github.com/westes/flex/releases/download/v2.6.4/flex-2.6.4.tar.gz"
+    },
+    {
+      "name": "flit_core-4.0.2.tar.gz",
+      "sha256": "b6929defd93884b584d7c87829e0e7b5c26ed6be17b0b873979019314aa841c8",
+      "size": 53083,
+      "url": "https://pypi.org/packages/source/f/flit-core/flit_core-4.0.2.tar.gz"
+    },
+    {
+      "name": "gawk-5.4.1.tar.xz",
+      "sha256": "07f6f7342b7febe4313fc2c2542ad93d64fe20ad8717200109f105a826f5fd37",
+      "size": 3838416,
+      "url": "https://ftp.gnu.org/gnu/gawk/gawk-5.4.1.tar.xz"
+    },
+    {
+      "name": "gcc-16.2.0.tar.xz",
+      "sha256": "e6738e29597f733270731aa90600f37ffdc045079dfc27ec7e8192cc81085c3e",
+      "size": 107200820,
+      "url": "https://ftp.gnu.org/gnu/gcc/gcc-16.2.0/gcc-16.2.0.tar.xz"
+    },
+    {
+      "name": "gdbm-1.26.tar.gz",
+      "sha256": "6a24504a14de4a744103dcb936be976df6fbe88ccff26065e54c1c47946f4a5e",
+      "size": 1226591,
+      "url": "https://ftp.gnu.org/gnu/gdbm/gdbm-1.26.tar.gz"
+    },
+    {
+      "name": "gettext-1.0.tar.xz",
+      "sha256": "71132a3fb71e68245b8f2ac4e9e97137d3e5c02f415636eb508ae607bc01add7",
+      "size": 10721600,
+      "url": "https://ftp.gnu.org/gnu/gettext/gettext-1.0.tar.xz"
+    },
+    {
+      "name": "glibc-2.44.tar.xz",
+      "sha256": "37f600f2bef3c5e8300147059568b2a2e40a7ad6ccc65ce942556d49429cc667",
+      "size": 20620544,
+      "url": "https://ftp.gnu.org/gnu/glibc/glibc-2.44.tar.xz"
+    },
+    {
+      "name": "gmp-6.3.0.tar.xz",
+      "sha256": "a3c2b80201b89e68616f4ad30bc66aee4927c3ce50e33929ca819d5c43538898",
+      "size": 2094196,
+      "url": "https://ftp.gnu.org/gnu/gmp/gmp-6.3.0.tar.xz"
+    },
+    {
+      "name": "gperf-3.3.tar.gz",
+      "sha256": "fd87e0aba7e43ae054837afd6cd4db03a3f2693deb3619085e6ed9d8d9604ad8",
+      "size": 1831294,
+      "url": "https://ftp.gnu.org/gnu/gperf/gperf-3.3.tar.gz"
+    },
+    {
+      "name": "grep-3.12.tar.xz",
+      "sha256": "2649b27c0e90e632eadcd757be06c6e9a4f48d941de51e7c0f83ff76408a07b9",
+      "size": 1918448,
+      "url": "https://ftp.gnu.org/gnu/grep/grep-3.12.tar.xz"
+    },
+    {
+      "name": "groff-1.24.1.tar.gz",
+      "sha256": "74e2819795b6aff431aeac983d63a9c8968eeaba2a2eba7df8ba4c7b41e7cfd8",
+      "size": 9005760,
+      "url": "https://ftp.gnu.org/gnu/groff/groff-1.24.1.tar.gz"
+    },
+    {
+      "name": "grub-2.14.tar.xz",
+      "sha256": "bc8d3c73535b8838d8c8e2654d73edc4e6ae8c8acdb45d5df5dc9a1547446d43",
+      "size": 7725668,
+      "url": "https://ftp.gnu.org/gnu/grub/grub-2.14.tar.xz"
+    },
+    {
+      "name": "gzip-1.14.tar.xz",
+      "sha256": "01a7b881bd220bfdf615f97b8718f80bdfd3f6add385b993dcf6efd14e8c0ac6",
+      "size": 885748,
+      "url": "https://ftp.gnu.org/gnu/gzip/gzip-1.14.tar.xz"
+    },
+    {
+      "name": "iana-etc-20260805.tar.gz",
+      "sha256": "29270860664e324107537f32ea476a333ca52d71b59c74bc06ecc3b0fa9cf490",
+      "size": 610207,
+      "url": "https://github.com/Mic92/iana-etc/releases/download/20260805/iana-etc-20260805.tar.gz"
+    },
+    {
+      "name": "inetutils-2.8.tar.gz",
+      "sha256": "57b3cf4f77555992881e5ba2a09a63b05aa2c56342a60ed4305b5f45938390b5",
+      "size": 2985957,
+      "url": "https://ftp.gnu.org/gnu/inetutils/inetutils-2.8.tar.gz"
+    },
+    {
+      "name": "iproute2-7.1.0.tar.xz",
+      "sha256": "fd9fa1b95809417157ca83dd72957e3261bdbce896353cb936f80af0b33a4b5c",
+      "size": 964700,
+      "url": "https://www.kernel.org/pub/linux/utils/net/iproute2/iproute2-7.1.0.tar.xz"
+    },
+    {
+      "name": "jinja2-3.1.6.tar.gz",
+      "sha256": "0137fb05990d35f1275a587e9aee6d56da821fc83491a0fb838183be43f66d6d",
+      "size": 245115,
+      "url": "https://pypi.org/packages/source/J/Jinja2/jinja2-3.1.6.tar.gz"
+    },
+    {
+      "name": "kbd-2.10.0.tar.xz",
+      "sha256": "6e5ca4f8d76ee9e3a8db700b667f13e12aac9933828a64e1aaad93d26be9b479",
+      "size": 1788500,
+      "url": "https://www.kernel.org/pub/linux/utils/kbd/kbd-2.10.0.tar.xz"
+    },
+    {
+      "name": "kmod-34.2.tar.xz",
+      "sha256": "5a5d5073070cc7e0c7a7a3c6ec2a0e1780850c8b47b3e3892226b93ffcb9cb54",
+      "size": 443748,
+      "url": "https://www.kernel.org/pub/linux/utils/kernel/kmod/kmod-34.2.tar.xz"
+    },
+    {
+      "name": "less-704.tar.gz",
+      "sha256": "20a0b0a2bb2525fa53c7eee9beb854b4c9cf172eabb209af7020743547bfe9fb",
+      "size": 996650,
+      "url": "https://www.greenwoodsoftware.com/less/less-704.tar.gz"
+    },
+    {
+      "name": "libcap-2.78.tar.xz",
+      "sha256": "0d621e562fd932ccf67b9660fb018e468a683d7b827541df27813228c996bb11",
+      "size": 201040,
+      "url": "https://www.kernel.org/pub/linux/libs/security/linux-privs/libcap2/libcap-2.78.tar.xz"
+    },
+    {
+      "name": "libffi-3.8.0.tar.gz",
+      "sha256": "7da3e2d9a171eb0a038f592ecad3ff2bb2550f3496d87b3b29ad0cf4430c0db4",
+      "size": 1581626,
+      "url": "https://github.com/libffi/libffi/releases/download/v3.8.0/libffi-3.8.0.tar.gz"
+    },
+    {
+      "name": "libpipeline-1.5.8.tar.gz",
+      "sha256": "1b1203ca152ccd63983c3f2112f7fe6fa5afd453218ede5153d1b31e11bb8405",
+      "size": 1070254,
+      "url": "https://download.savannah.gnu.org/releases/libpipeline/libpipeline-1.5.8.tar.gz"
+    },
+    {
+      "name": "libtool-2.6.2.tar.xz",
+      "sha256": "2ef1067c16c97db930fd740cc9bc3d3ba9a583804ae5ac42cc3e8719e49e191e",
+      "size": 1093564,
+      "url": "https://ftp.gnu.org/gnu/libtool/libtool-2.6.2.tar.xz"
+    },
+    {
+      "name": "libxcrypt-4.5.2.tar.xz",
+      "sha256": "71513a31c01a428bccd5367a32fd95f115d6dac50fb5b60c779d5c7942aec071",
+      "size": 669820,
+      "url": "https://github.com/besser82/libxcrypt/releases/download/v4.5.2/libxcrypt-4.5.2.tar.xz"
+    },
+    {
+      "name": "linux-6.18.60.tar.xz",
+      "sha256": "3c2f44ef6acc021a7ad444d9a2e6ec1ef488ff09368793d0004a6080f69d621e",
+      "size": 154827264,
+      "url": "https://cdn.kernel.org/pub/linux/kernel/v6.x/linux-6.18.60.tar.xz"
+    },
+    {
+      "name": "lz4-1.10.0.tar.gz",
+      "sha256": "537512904744b35e232912055ccf8ec66d768639ff3abe5788d90d792ec5f48b",
+      "size": 387114,
+      "url": "https://github.com/lz4/lz4/releases/download/v1.10.0/lz4-1.10.0.tar.gz"
+    },
+    {
+      "name": "m4-1.4.21.tar.xz",
+      "sha256": "f25c6ab51548a73a75558742fb031e0625d6485fe5f9155949d6486a2408ab66",
+      "size": 2080016,
+      "url": "https://ftp.gnu.org/gnu/m4/m4-1.4.21.tar.xz"
+    },
+    {
+      "name": "make-4.4.1.tar.gz",
+      "sha256": "dd16fb1d67bfab79a72f5e8390735c49e3e8e70b4945a15ab1f81ddb78658fb3",
+      "size": 2348200,
+      "url": "https://ftp.gnu.org/gnu/make/make-4.4.1.tar.gz"
+    },
+    {
+      "name": "man-db-2.13.1.tar.xz",
+      "sha256": "8afebb6f7eb6bb8542929458841f5c7e6f240e30c86358c1fbcefbea076c87d9",
+      "size": 2110328,
+      "url": "https://download.savannah.gnu.org/releases/man-db/man-db-2.13.1.tar.xz"
+    },
+    {
+      "name": "man-pages-6.18.tar.xz",
+      "sha256": "c934fadc8b59748c68227a34f6581d2ddf8282b73cdcd52546c8cd88b74b24d1",
+      "size": 1902724,
+      "url": "https://www.kernel.org/pub/linux/docs/man-pages/man-pages-6.18.tar.xz"
+    },
+    {
+      "name": "markupsafe-3.0.3.tar.gz",
+      "sha256": "722695808f4b6457b320fdc131280796bdceb04ab50fe1795cd540799ebe1698",
+      "size": 80313,
+      "url": "https://pypi.org/packages/source/M/MarkupSafe/markupsafe-3.0.3.tar.gz"
+    },
+    {
+      "name": "meson-1.12.0.tar.gz",
+      "sha256": "88afe0c20e52030218924ac37d0c81c59b4b5f3ae3752c8c6d7470c7d365886c",
+      "size": 2518280,
+      "url": "https://github.com/mesonbuild/meson/releases/download/1.12.0/meson-1.12.0.tar.gz"
+    },
+    {
+      "name": "mpc-1.4.1.tar.xz",
+      "sha256": "91204cd32f164bd3b7c992d4a6a8ce6519511aadab30f78b6982d0bf8d73e931",
+      "size": 531992,
+      "url": "https://ftp.gnu.org/gnu/mpc/mpc-1.4.1.tar.xz"
+    },
+    {
+      "name": "mpdecimal-4.0.1.tar.gz",
+      "sha256": "96d33abb4bb0070c7be0fed4246cd38416188325f820468214471938545b1ac8",
+      "size": 316268,
+      "url": "https://www.bytereef.org/software/mpdecimal/releases/mpdecimal-4.0.1.tar.gz"
+    },
+    {
+      "name": "mpfr-4.2.2.tar.xz",
+      "sha256": "b67ba0383ef7e8a8563734e2e889ef5ec3c3b898a01d00fa0a6869ad81c6ce01",
+      "size": 1505596,
+      "url": "https://ftp.gnu.org/gnu/mpfr/mpfr-4.2.2.tar.xz"
+    },
+    {
+      "name": "ncurses-6.6.tar.gz",
+      "sha256": "355b4cbbed880b0381a04c46617b7656e362585d52e9cf84a67e2009b749ff11",
+      "size": 3791150,
+      "url": "https://invisible-mirror.net/archives/ncurses/ncurses-6.6.tar.gz"
+    },
+    {
+      "name": "ninja-1.13.2.tar.gz",
+      "sha256": "974d6b2f4eeefa25625d34da3cb36bdcebe7fbce40f4c16ac0835fd1c0cbae17",
+      "size": 292385,
+      "url": "https://github.com/ninja-build/ninja/archive/v1.13.2/ninja-1.13.2.tar.gz"
+    },
+    {
+      "name": "openssl-4.0.3.tar.gz",
+      "sha256": "325b5c806167c13b40b1ffeadfe0248197c00eccc4cf123ec1e28d2d2fd216d9",
+      "size": 55235667,
+      "url": "https://github.com/openssl/openssl/releases/download/openssl-4.0.3/openssl-4.0.3.tar.gz"
+    },
+    {
+      "name": "packaging-26.3.tar.gz",
+      "sha256": "94edc256424af38762eb31306eed28beb9f0efc50a8837492c9d6fd6004aed79",
+      "size": 313412,
+      "url": "https://files.pythonhosted.org/packages/source/p/packaging/packaging-26.3.tar.gz"
+    },
+    {
+      "name": "patch-2.8.1.tar.xz",
+      "sha256": "3240c7959c5347c8ed347e3c4201c0337bf4240d5cf09d68889e58eeaba30e17",
+      "size": 940364,
+      "url": "https://ftp.gnu.org/gnu/patch/patch-2.8.1.tar.xz"
+    },
+    {
+      "name": "pcre2-10.49.tar.bz2",
+      "sha256": "53c156e1ba416a20da8e65395daa132da0d80e76910424caca3fcdae7831d384",
+      "size": 2185271,
+      "url": "https://github.com/PCRE2Project/pcre2/releases/download/pcre2-10.49/pcre2-10.49.tar.bz2"
+    },
+    {
+      "name": "perl-5.44.0.tar.xz",
+      "sha256": "505cf43912e9480495c344c70260452e32aa2a73c546a026b3f100053b23ce91",
+      "size": 14919940,
+      "url": "https://www.cpan.org/src/5.0/perl-5.44.0.tar.xz"
+    },
+    {
+      "name": "pkgconf-3.0.5.tar.xz",
+      "sha256": "3acd3a8a3cce65a8d620321855d92fb602e026cbe8e13ee36bdec58483b59ace",
+      "size": 426972,
+      "url": "https://distfiles.ariadne.space/pkgconf/pkgconf-3.0.5.tar.xz"
+    },
+    {
+      "name": "procps-ng-4.0.7.tar.xz",
+      "sha256": "9d2021f47a4501c667862c9942a92d1953694b21d11bcd1702e83eb594e3d67d",
+      "size": 1588352,
+      "url": "https://sourceforge.net/projects/procps-ng/files/Production/procps-ng-4.0.7.tar.xz"
+    },
+    {
+      "name": "psmisc-23.7.tar.xz",
+      "sha256": "58c55d9c1402474065adae669511c191de374b0871eec781239ab400b907c327",
+      "size": 432208,
+      "url": "https://sourceforge.net/projects/psmisc/files/psmisc/psmisc-23.7.tar.xz"
+    },
+    {
+      "name": "Python-3.14.10.tar.xz",
+      "sha256": "de414a57119abef52784d8993e341d53aed635fc2b05c2607d9f98a2c5b72032",
+      "size": 24240392,
+      "url": "https://www.python.org/ftp/python/3.14.10/Python-3.14.10.tar.xz"
+    },
+    {
+      "name": "python-3.14.10-docs-html.tar.bz2",
+      "sha256": "89cab64cef8703b043d2c9e8265373ebd3df94864c3c1bc0435eda0703b2812d",
+      "size": 8485984,
+      "url": "https://www.python.org/ftp/python/doc/3.14.10/python-3.14.10-docs-html.tar.bz2"
+    },
+    {
+      "name": "readline-8.3.tar.gz",
+      "sha256": "fe5383204467828cd495ee8d1d3c037a7eba1389c22bc6a041f627976f9061cc",
+      "size": 3419642,
+      "url": "https://ftp.gnu.org/gnu/readline/readline-8.3.tar.gz"
+    },
+    {
+      "name": "sed-4.10.tar.xz",
+      "sha256": "b8e72182b2ec96a3574e2998c47b7aaa64cc20ce000d8e9ac313cc07cecf28c7",
+      "size": 1732800,
+      "url": "https://ftp.gnu.org/gnu/sed/sed-4.10.tar.xz"
+    },
+    {
+      "name": "setuptools-84.0.0.tar.gz",
+      "sha256": "f4695c21257f0d9b537ec2692c941d02ee143b7cc1276941349a546573b2ef73",
+      "size": 1168449,
+      "url": "https://pypi.org/packages/source/s/setuptools/setuptools-84.0.0.tar.gz"
+    },
+    {
+      "name": "shadow-4.20.2.tar.xz",
+      "sha256": "b89f432b75ae55a2d852b446d0365484795fdf533ab97d550e325fa15594a224",
+      "size": 2291052,
+      "url": "https://github.com/shadow-maint/shadow/releases/download/4.20.2/shadow-4.20.2.tar.xz"
+    },
+    {
+      "name": "sqlite-autoconf-3530400.tar.gz",
+      "sha256": "0e9483900e92cd5de8fd48d16bf9200145a61f7fd5be542a5ac81d8a9516eb9c",
+      "size": 3283177,
+      "url": "https://sqlite.org/2026/sqlite-autoconf-3530400.tar.gz"
+    },
+    {
+      "name": "sqlite-doc-3530400.zip",
+      "sha256": "a1d0f5de57485d062796ed7e67daff0758b50d00001a0f233a2c15aaf40bbdc8",
+      "size": 11820412,
+      "url": "https://sqlite.org/2026/sqlite-doc-3530400.zip"
+    },
+    {
+      "name": "systemd-261.2.tar.gz",
+      "sha256": "ed1059ff964f5df35b6056434cc17cc83f86dc913f10489948a0b19b6081c5ec",
+      "size": 18456346,
+      "url": "https://github.com/systemd/systemd/archive/v261.2/systemd-261.2.tar.gz"
+    },
+    {
+      "name": "systemd-man-pages-261.2.tar.xz",
+      "sha256": "9be13865c9c7f9fecba7b86fc5185aecef00164c87ed68b4f6884283aefebe50",
+      "size": 821528,
+      "url": "https://anduin.linuxfromscratch.org/LFS/systemd-man-pages-261.2.tar.xz"
+    },
+    {
+      "name": "tar-1.35.tar.xz",
+      "sha256": "4d62ff37342ec7aed748535323930c7cf94acf71c3591882b26a7ea50f3edc16",
+      "size": 2317208,
+      "url": "https://ftp.gnu.org/gnu/tar/tar-1.35.tar.xz"
+    },
+    {
+      "name": "tcl8.6.18-src.tar.gz",
+      "sha256": "14f9af32b1767ff718477a8f974ad03c34341097e6b43f4ce54644ee974e268e",
+      "size": 11816279,
+      "url": "https://downloads.sourceforge.net/tcl/tcl8.6.18-src.tar.gz"
+    },
+    {
+      "name": "tcl8.6.18-html.tar.gz",
+      "sha256": "bee2d83a19ce50624eeae951be29fe5f654b171357a6391123caf18107cec543",
+      "size": 1197786,
+      "url": "https://downloads.sourceforge.net/tcl/tcl8.6.18-html.tar.gz"
+    },
+    {
+      "name": "texinfo-7.3.tar.xz",
+      "sha256": "51f74eb0f51cfa9873b85264dfdd5d46e8957ec95b88f0fb762f63d9e164c72e",
+      "size": 6940392,
+      "url": "https://ftp.gnu.org/gnu/texinfo/texinfo-7.3.tar.xz"
+    },
+    {
+      "name": "tzdata2026c.tar.gz",
+      "sha256": "e4a178a4477f3d0ea77cc31828ff72aa38feff8d61aa13e7e99e142e9d902be4",
+      "size": 475694,
+      "url": "https://www.iana.org/time-zones/repository/releases/tzdata2026c.tar.gz"
+    },
+    {
+      "name": "util-linux-2.42.4.tar.xz",
+      "sha256": "fbd62a100ab7bb8746ba0661255c3c48185b1e9021507c624da01fbc696330ec",
+      "size": 10729748,
+      "url": "https://www.kernel.org/pub/linux/utils/util-linux/v2.42/util-linux-2.42.4.tar.xz"
+    },
+    {
+      "name": "vim-9.2.1202.tar.gz",
+      "sha256": "9e97414b85bdcb2d28d5264c65dd730d86b9a75319b005c63da0bc130c715a2f",
+      "size": 20274358,
+      "url": "https://github.com/vim/vim/archive/v9.2.1202/vim-9.2.1202.tar.gz"
+    },
+    {
+      "name": "wheel-0.48.0.tar.gz",
+      "sha256": "94800765601e9171bf5d58d066e640662842bcedcbab982b2c90787a2c987322",
+      "size": 66471,
+      "url": "https://pypi.org/packages/source/w/wheel/wheel-0.48.0.tar.gz"
+    },
+    {
+      "name": "xz-5.8.4.tar.xz",
+      "sha256": "4ce24038fd4221e0d13bc1a2de7a4db56e90b92b3bf75321f6c14be73f65de4b",
+      "size": 1567192,
+      "url": "https://github.com/tukaani-project/xz/releases/download/v5.8.4/xz-5.8.4.tar.xz"
+    },
+    {
+      "name": "zlib-1.3.2.tar.gz",
+      "sha256": "bb329a0a2cd0274d05519d61c667c062e06990d72e125ee2dfa8de64f0119d16",
+      "size": 1502830,
+      "url": "https://zlib.net/fossils/zlib-1.3.2.tar.gz"
+    },
+    {
+      "name": "zstd-1.5.7.tar.gz",
+      "sha256": "eb33e51f49a15e023950cd7825ca74a4a2b43db8354825ac24fc1b7ee09e6fa3",
+      "size": 2434947,
+      "url": "https://github.com/facebook/zstd/releases/download/v1.5.7/zstd-1.5.7.tar.gz"
+    },
+    {
+      "name": "bzip2-1.0.8-install_docs-1.patch",
+      "sha256": "35e3bbd9642af51fef2a8a83afba040d272da42d7e3a251d8e43255a7b496702",
+      "size": 1684,
+      "url": "https://www.linuxfromscratch.org/patches/lfs/13.1/bzip2-1.0.8-install_docs-1.patch"
+    },
+    {
+      "name": "coreutils-9.11-i18n-1.patch",
+      "sha256": "7c2aecf9ae24b87b019595e382b9f41d2c96de7f95abe95ad8cacc7e2ce1bbcc",
+      "size": 67821,
+      "url": "https://www.linuxfromscratch.org/patches/lfs/13.1/coreutils-9.11-i18n-1.patch"
+    },
+    {
+      "name": "expect-5.45.4-gcc15-1.patch",
+      "sha256": "ab5fc0af9e2e0f80d7623c1a3a3dbeb1da3d8c9134276792199df401f9eb2cec",
+      "size": 12155,
+      "url": "https://www.linuxfromscratch.org/patches/lfs/13.1/expect-5.45.4-gcc15-1.patch"
+    },
+    {
+      "name": "glibc-2.44-upstream_fixes-3.patch",
+      "sha256": "cd3245887c9c2564ef18b8e9ed4046093a575fc91bce00fd82eb931102e4a30e",
+      "size": 275352,
+      "url": "https://www.linuxfromscratch.org/patches/downloads/glibc/glibc-2.44-upstream_fixes-3.patch"
+    },
+    {
+      "name": "glibc-fhs-1.patch",
+      "sha256": "643552db030e2f2d7ffde4f558e0f5f83d3fabf34a2e0e56ebdb49750ac27b0d",
+      "size": 2804,
+      "url": "https://www.linuxfromscratch.org/patches/lfs/13.1/glibc-fhs-1.patch"
+    },
+    {
+      "name": "kbd-2.10.0-backspace-1.patch",
+      "sha256": "8be28dcb11420624a500f2ea4fe975f771174bffee50e54ec8cd295a2dec104e",
+      "size": 12640,
+      "url": "https://www.linuxfromscratch.org/patches/lfs/13.1/kbd-2.10.0-backspace-1.patch"
+    },
+    {
+      "name": "Python-3.14.7-openssl_4-1.patch",
+      "sha256": "707a0c457192ac2f3b5b8a51481bc5ebd12db22d57c1dbe0256138ee6e070792",
+      "size": 38486,
+      "url": "https://www.linuxfromscratch.org/patches/lfs/13.1/Python-3.14.7-openssl_4-1.patch"
+    },
+    {
+      "name": "tar-1.35-acl_fix-1.patch",
+      "sha256": "51cadccfcb2f29cfdb4ec18015360100aa167179a72ece040a6a8612aeec5081",
+      "size": 4333,
+      "url": "https://www.linuxfromscratch.org/patches/lfs/13.1/tar-1.35-acl_fix-1.patch"
+    }
+  ],
+  "verification_archives": [
+    {
+      "name": "gentoo-20261103.tar.xz",
+      "purpose": "Retained Gentoo signed snapshot authenticating source Manifests; not a TUP build source.",
+      "sha256": "923b3132d9214cee3f59fa2b56a3af27a0287c8587576c99ebcd5b24e537a194",
+      "size": 50754876,
+      "url": "https://distfiles.gentoo.org/snapshots/gentoo-20261103.tar.xz"
+    },
+    {
+      "name": "make-4.4.1.tar.lz",
+      "purpose": "Signed-distributor reference for exact uncompressed Make tar comparison; not a selected build input.",
+      "sha256": "8814ba072182b605d156d7589c19a43b89fc58ea479b9355146160946f8cf6e9",
+      "size": 1305648,
+      "url": "https://mirrors.kernel.org/gnu/make/make-4.4.1.tar.lz"
+    }
+  ]
+}

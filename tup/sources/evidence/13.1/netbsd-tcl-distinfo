@@ -1,0 +1,24 @@
+$NetBSD: distinfo,v 1.92 2026/06/04 09:52:59 adam Exp $
+
+BLAKE2s (tcl8.6.18-src.tar.gz) = a37cc7b533404aa380843207c2b63e24206db21ca5bd3a4fb7d164e2dc60cbb3
+SHA512 (tcl8.6.18-src.tar.gz) = 949a66a6db613f85fc84f1f60b1034812c15f6549786aca8143d938feaa81e7d84a155757d5a4e83671b148870dc67fea8435c3dbb14b6c94973c7a63358a001
+Size (tcl8.6.18-src.tar.gz) = 11816279 bytes
+SHA1 (patch-generic_tclInt.h) = f41a50e6461d0afacd1c8656944403e438ea6baf
+SHA1 (patch-generic_tclPort.h) = 36ff05b22591d588952e55d0f13c2ef52e371d1e
+SHA1 (patch-generic_tclPosixStr.c) = 68da211865282fe7124cad71381658f8dfb986d6
+SHA1 (patch-pkgs_itcl4.3.7_configure) = e6b537541886ec1d8bc55ca55b17cc0827bde2f2
+SHA1 (patch-pkgs_sqlite3.53.0_Makefile.in) = 15ebdf41250f715edf648bae6ff1ffb8f9bd854d
+SHA1 (patch-pkgs_sqlite3.53.0_configure) = c9ebb3434232baf10e8ea45b490f22e4e1fcca6e
+SHA1 (patch-pkgs_tdbc1.1.13_configure) = f988d9614040427cc448d857bd3e0b6a3ea81f93
+SHA1 (patch-pkgs_tdbcmysql1.1.13_configure) = 3734fc81dbfcf1adb8b1ca943f8164b341325ad6
+SHA1 (patch-pkgs_tdbcodbc1.1.13_configure) = 50665f20ee61502bc8b35b49a643c157ad3279a3
+SHA1 (patch-pkgs_tdbcpostgres1.1.13_configure) = 98d78611d1cc0c45b319712e0dd19b51f11372ca
+SHA1 (patch-pkgs_thread2.8.13_configure) = a3e7e45330fcd6c7125c820081114fe332f9645e
+SHA1 (patch-tests_load.test) = 438695ab76e01646e49aadc01c44344a5495eabb
+SHA1 (patch-tests_pkgMkIndex.test) = 70d1042c1f4743052c5fa191fa7c4732a08e28a2
+SHA1 (patch-unix_Makefile.in) = e6ecbc7db3934ef4d7f0f24dd52c88ca0873289e
+SHA1 (patch-unix_configure) = 060a168ae3186e09c0afea41073de455eeb468b0
+SHA1 (patch-unix_tclConfig.sh.in) = 341ac4f1bbfb29551dea87ade98b3b7b59652a31
+SHA1 (patch-unix_tclUnixFCmd.c) = e715d9419a36a8414355252bb3da0ef48b07fe4f
+SHA1 (patch-unix_tclUnixInit.c) = 1ab04ae006bb300e1d0fba4d1c799b50147f733c
+SHA1 (patch-unix_tclUnixPort.h) = 9eff7a5d5842fe208b467fd2ad844192e2e6aec7

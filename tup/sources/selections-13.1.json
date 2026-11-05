@@ -57,9 +57,9 @@
     },
     "vim-9.2.1025.tar.gz": {
       "decision_source": "https://www.linuxfromscratch.org/advisories/",
-      "name": "vim-9.2.1201.tar.gz",
-      "reason": "sa-13.1-065 and sa-13.1-086 require script/plugin code-injection fixes through Vim 9.2.1201.",
-      "url": "https://github.com/vim/vim/archive/v9.2.1201/vim-9.2.1201.tar.gz"
+      "name": "vim-9.2.1202.tar.gz",
+      "reason": "Includes sa-13.1-065/086 fixes through1201 and the bounded1202 interface-cleanup fix; exact bytes authenticated by the signed Gentoo snapshot.",
+      "url": "https://github.com/vim/vim/archive/v9.2.1202/vim-9.2.1202.tar.gz"
     },
     "xz-5.8.3.tar.xz": {
       "decision_source": "https://tukaani.org/xz/",

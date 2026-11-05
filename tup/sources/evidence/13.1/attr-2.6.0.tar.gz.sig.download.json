@@ -1,0 +1,8 @@
+{
+  "meaning": "observed download bytes; not authentication",
+  "resolved_url": "https://nongnu.niranjan.co/attr/attr-2.6.0.tar.gz.sig",
+  "retrieved_at": "2026-11-05T08:45:57.459290+00:00",
+  "sha256": "6b3c8b4aaad58aafbdd641c411064450cba8c6240f6e0758a36533c35d1b05d9",
+  "size": 862,
+  "url": "https://download.savannah.nongnu.org/releases/attr/attr-2.6.0.tar.gz.sig"
+}

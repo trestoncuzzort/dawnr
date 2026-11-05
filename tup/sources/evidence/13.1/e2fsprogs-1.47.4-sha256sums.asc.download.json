@@ -1,0 +1,8 @@
+{
+  "meaning": "observed download bytes; not authentication",
+  "resolved_url": "https://www.kernel.org/pub/linux/kernel/people/tytso/e2fsprogs/v1.47.4/sha256sums.asc",
+  "retrieved_at": "2026-11-05T08:45:55.375519+00:00",
+  "sha256": "0259700d11fce6ef72001e131f1efd714815fef53559555f069539eee9a91cb7",
+  "size": 1062,
+  "url": "https://www.kernel.org/pub/linux/kernel/people/tytso/e2fsprogs/v1.47.4/sha256sums.asc"
+}

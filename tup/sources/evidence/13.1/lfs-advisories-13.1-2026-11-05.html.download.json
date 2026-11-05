@@ -1,0 +1,16 @@
+{
+  "meaning": "retained official advisory snapshot; dispositions are separate reviewed decisions",
+  "request": {
+    "fields": {
+      "desc": "true",
+      "release": "13.1",
+      "stype": "Book",
+      "submit": "Search"
+    },
+    "method": "POST"
+  },
+  "retrieved_at": "2026-11-05",
+  "sha256": "aa562da21adbfa442f88404b029242eea2d24ac04fa4b4eefff4eb819a304de1",
+  "size": 173704,
+  "url": "https://www.linuxfromscratch.org/advisories/index.php"
+}

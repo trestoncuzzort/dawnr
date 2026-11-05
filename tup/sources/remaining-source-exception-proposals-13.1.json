@@ -1,0 +1,55 @@
+{
+  "reviewed_at": "2026-11-05",
+  "schema": "tup-source-exception-proposals-v1",
+  "sources": [
+    {
+      "assurance": "Exact filename, size and SHA512 published in maintained NetBSD pkgsrc over HTTPS. No publisher or distributor signature was verified.",
+      "decision": "review-required",
+      "distributor": "NetBSD pkgsrc",
+      "material": {
+        "path": "netbsd-tcl-distinfo",
+        "sha256": "8b513b08c3c2bc8c9ccb3fb09d3a54dac8f1da0e1ec18ca8f6e2c86f1945d17a",
+        "url": "https://cdn.netbsd.org/pub/pkgsrc/current/pkgsrc/lang/tcl/distinfo"
+      },
+      "name": "tcl8.6.18-src.tar.gz",
+      "proposed_class": "reviewed-distributor-https-exception",
+      "published_sha512": "949a66a6db613f85fc84f1f60b1034812c15f6549786aca8143d938feaa81e7d84a155757d5a4e83671b148870dc67fea8435c3dbb14b6c94973c7a63358a001",
+      "sha256": "14f9af32b1767ff718477a8f974ad03c34341097e6b43f4ce54644ee974e268e",
+      "size": 11816279
+    },
+    {
+      "assurance": "Exact filename, size and SHA512 published in maintained NetBSD pkgsrc over HTTPS. No publisher or distributor signature was verified.",
+      "decision": "review-required",
+      "distributor": "NetBSD pkgsrc",
+      "material": {
+        "path": "netbsd-2026Q3-sqlite3-distinfo",
+        "sha256": "15f1e26b89c1468d2faef861760993e7a4ebf3baf276bb0c03037fdf8d052582",
+        "url": "https://cdn.netbsd.org/pub/pkgsrc/pkgsrc-2026Q3/pkgsrc/databases/sqlite3/distinfo"
+      },
+      "name": "sqlite-autoconf-3530400.tar.gz",
+      "proposed_class": "reviewed-distributor-https-exception",
+      "published_sha512": "c24374e9393a943157f533f96e89e6c5743e5f5aad169d8393cff3088ca5ccbe5cc0561681ace49c349d0fe402298ee2624d319f422967247ce0792e3b3aa01e",
+      "sha256": "0e9483900e92cd5de8fd48d16bf9200145a61f7fd5be542a5ac81d8a9516eb9c",
+      "size": 3283177
+    },
+    {
+      "assurance": "LFS-generated systemd manual pages over official HTTPS; book publishes only MD5. No publisher signature or published strong digest established. Proposed bounded documentation-only exception; native install confinement still requires review.",
+      "book_material": {
+        "path": "systemd-lfs-book131-packages.html",
+        "sha256": "13afe39a5f89b20ec10bda7e19c833c98975eb64feecf2bd4133a10c0c34653c",
+        "url": "https://www.linuxfromscratch.org/lfs/view/13.1-systemd/chapter03/packages.html"
+      },
+      "book_md5": "4c5533c1a2d0921dd4c5b5e6b8902570",
+      "decision": "review-required",
+      "inventory": {
+        "path": "systemd-man-pages-261.2-inventory.json",
+        "sha256": "143c3b19265f108cdda081c2c522ee3a9a675f303e3d948fd8ebebc93bd70271"
+      },
+      "name": "systemd-man-pages-261.2.tar.xz",
+      "proposed_class": "reviewed-lfs-documentation-exception",
+      "sha256": "9be13865c9c7f9fecba7b86fc5185aecef00164c87ed68b4f6884283aefebe50",
+      "size": 821528,
+      "url": "https://anduin.linuxfromscratch.org/LFS/systemd-man-pages-261.2.tar.xz"
+    }
+  ]
+}

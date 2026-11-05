@@ -1,0 +1,25 @@
+{
+  "files": {
+    "Lib/poplib.py": {
+      "function": "def _putcmd(self, line):",
+      "original_file_sha256": "527e714523264093910a0a0b1a55c6583f952835c89061537fc40ad98c347056",
+      "selected_file_sha256": "a6ffff188814b56d95b043c31d9e0dfee51ac6d6e92afe74ab070cb6136b076f",
+      "upstream_file_sha256": "a6ffff188814b56d95b043c31d9e0dfee51ac6d6e92afe74ab070cb6136b076f",
+      "upstream_url": "https://raw.githubusercontent.com/python/cpython/5e58eaad7c58df58dfa8ea549c87996e01dd1077/Lib/poplib.py"
+    },
+    "Python/fileutils.c": {
+      "function": "_Py_wrealpath(",
+      "original_file_sha256": "584cf309bc2048fed5909a6fe5ea96582a0da41cbddd285feea422c700bf0d7d",
+      "selected_file_sha256": "219f7bb3883bbdecccdbe611b112ff34e241eae46f496fa2a2606d0884b727d2",
+      "upstream_file_sha256": "4952517b10127ae72eee69e885dc88fa95d1df76b08835872bc195e1738be2b7",
+      "upstream_url": "https://raw.githubusercontent.com/python/cpython/5e58eaad7c58df58dfa8ea549c87996e01dd1077/Python/fileutils.c"
+    }
+  },
+  "patch_sha256": "a850b836acef2d5b12591aaa6e70aafcc30ec80981823e79b5a657c77409c25b",
+  "reviewed_at": "2026-11-05",
+  "schema": "tup-native-python-security-backports-v1",
+  "scope": "Two exact function changes; source archive authentication and compiled regression tests remain independent gates",
+  "source_version": "3.14.10",
+  "upstream_commit": "5e58eaad7c58df58dfa8ea549c87996e01dd1077",
+  "upstream_tag": "v3.15.2"
+}

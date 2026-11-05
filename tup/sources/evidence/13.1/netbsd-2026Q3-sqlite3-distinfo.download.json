@@ -1,0 +1,8 @@
+{
+  "meaning": "observed download bytes; not authentication",
+  "resolved_url": "https://cdn.netbsd.org/pub/pkgsrc/pkgsrc-2026Q3/pkgsrc/databases/sqlite3/distinfo",
+  "retrieved_at": "2026-11-05T08:57:44.097505+00:00",
+  "sha256": "15f1e26b89c1468d2faef861760993e7a4ebf3baf276bb0c03037fdf8d052582",
+  "size": 466,
+  "url": "https://cdn.netbsd.org/pub/pkgsrc/pkgsrc-2026Q3/pkgsrc/databases/sqlite3/distinfo"
+}

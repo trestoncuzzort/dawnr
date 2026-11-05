@@ -24,6 +24,26 @@ def sha(raw):
 
 
 class PublishedDigestTests(unittest.TestCase):
+    def test_sourceforge_exact_project_file_and_missing_digest(self):
+        item = {"name": "x", "path": "/Release/1", "full_path": "Release/1/x",
+                "type": "f", "sha256": "a" * 64}
+        def page(value):
+            return ("<script>net.sf.files = " + json.dumps({"x": value}) + ";</script>").encode()
+        selection = {"format": "sourceforge-files", "project_path": "Release/1"}
+        self.assertEqual(source.published_digest(page(item), selection, "x"), "a" * 64)
+        for change in ({"sha256": None}, {"path": "/Other"}, {"name": "other"}, {"type": "d"}):
+            with self.subTest(change=change), self.assertRaises(source.Refusal):
+                source.published_digest(page({**item, **change}), selection, "x")
+        with self.assertRaises(source.Refusal):
+            source.published_digest(page(item) * 2, selection, "x")
+
+    def test_sha512_announcement_has_explicit_algorithm_and_exact_filename(self):
+        raw = ("<p>SHA-512 checksums</p>\n" + "a" * 128 + "\n  x\n").encode()
+        self.assertEqual(source.published_digest(raw, {"format": "sha512-announcement"}, "x"), "a" * 128)
+        for modified, name in ((raw, "other"), (raw.replace(b"SHA-512", b"SHA-1"), "x"), (raw * 2, "x")):
+            with self.subTest(name=name), self.assertRaises(source.Refusal):
+                source.published_digest(modified, {"format": "sha512-announcement"}, name)
+
     def test_gnu_release_formats_bind_exact_filename(self):
         hexadecimal = "a" * 64
         b64 = base64.b64encode(bytes.fromhex(hexadecimal)).decode()

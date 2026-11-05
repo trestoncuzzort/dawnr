@@ -1,0 +1,8 @@
+{
+  "meaning": "observed download bytes; not authentication",
+  "resolved_url": "https://api.github.com/repos/python/cpython/git/ref/tags/v3.15.2",
+  "retrieved_at": "2026-11-05T08:53:38.888539+00:00",
+  "sha256": "d7de9f0c45afa3ce00f294578174e1e8973f5bb2339ba582912ca0a5169d61f1",
+  "size": 333,
+  "url": "https://api.github.com/repos/python/cpython/git/ref/tags/v3.15.2"
+}

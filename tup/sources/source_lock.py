@@ -24,6 +24,7 @@ import sys
 import tarfile
 import tempfile
 from datetime import datetime, timezone
+from html.parser import HTMLParser
 from pathlib import Path
 from urllib.parse import urlsplit
 
@@ -32,6 +33,11 @@ NAME = re.compile(r"[A-Za-z0-9][A-Za-z0-9_.+-]*")
 HEX256 = re.compile(r"[0-9a-f]{64}")
 FINGERPRINT = re.compile(r"[0-9A-F]{40}|[0-9A-F]{64}")
 GENTOO_PRIMARY = "DCD05B71EAB94199527F44ACDB6B8C1F96D8BF6D"
+PATCH_POLICY_SHA256 = "85c9b35612c90dc4936acdfdf20e36f1b9f3939a49f5f79ef2bd195f14539ea7"
+PATCH_CORROBORATION_SHA256 = "fb2162be4fe417b6f24f423d6ce3e32878646c80335152e6245c0e5c1df0ec6a"
+SOURCE_POLICY_SHA256 = "536e77f61dd24a3269888645aa33fb4d55dfe5aa3fa0bcf4ac79915da42f33d1"
+PYTHON_BACKPORT_SHA256 = "a850b836acef2d5b12591aaa6e70aafcc30ec80981823e79b5a657c77409c25b"
+PYTHON_BACKPORT_REVIEW_SHA256 = "6672074b4b7827dbc299bb3257d0b01a45fe7afb87fc5d66a739212c9ece752a"
 
 
 class Refusal(ValueError):
@@ -82,6 +88,246 @@ def material(root: Path, record: dict) -> Path:
     return path
 
 
+def review_record(root: Path, record: dict, approved: str) -> Path:
+    """Internal review evidence has no invented publisher URL or signature."""
+    if not isinstance(record, dict) or record.get("sha256") != approved:
+        raise Refusal("unapproved review policy identity")
+    path = local_file(root, record.get("path"))
+    if digest(path) != approved:
+        raise Refusal("review policy bytes changed")
+    return path
+
+
+def verify_patch_exception(archive: Path, auth: dict, evidence: Path) -> dict:
+    policy_path = review_record(evidence, auth.get("policy"), PATCH_POLICY_SHA256)
+    corroboration_path = review_record(evidence, auth.get("corroboration"),
+                                      PATCH_CORROBORATION_SHA256)
+    policy = json.loads(policy_path.read_bytes())
+    if (policy.get("schema") != "tup-reviewed-lfs-patch-exceptions-v1" or
+            policy.get("decision") != "approved-provenance-exception" or
+            policy.get("corroboration_sha256") != digest(corroboration_path)):
+        raise Refusal("patch policy does not approve this provenance review")
+    selected = [row for row in policy.get("patches", []) if row.get("name") == archive.name]
+    if len(selected) != 1 or selected[0].get("sha256") != digest(archive):
+        raise Refusal("patch is outside the exact approved name/digest set")
+    return {"trust_class": "reviewed-lfs-patch-exception", "status": "accepted-exception",
+            "policy_sha256": PATCH_POLICY_SHA256, "corroboration_sha256": PATCH_CORROBORATION_SHA256,
+            "git_commit": policy["commit"], "git_blob": selected[0]["git_blob"],
+            "required_gates": ["selected-version-patch-application", "required-package-tests"],
+            "assurance": policy["assurance"]}
+
+
+def documentation_members(archive: Path) -> list[dict]:
+    members, names = [], set()
+    with tarfile.open(archive) as bundle:
+        for entry in bundle:
+            name = entry.name.rstrip("/")
+            parts = name.split("/")
+            if (name in names or "\\" in name or any(ord(c) < 32 for c in name) or
+                    parts[0] != "systemd-man-pages-261.2" or any(p in {"", ".", ".."} for p in parts)):
+                raise Refusal("unsafe or duplicate documentation path")
+            names.add(name)
+            if entry.isdir():
+                if entry.mode not in {0o755, 0o775} or len(parts) > 2:
+                    raise Refusal("unsafe documentation directory")
+                content = None
+            elif entry.isfile():
+                if (entry.mode != 0o644 or len(parts) != 3 or not re.fullmatch(r"man[13578]", parts[1]) or
+                        not parts[2].endswith("." + parts[1][-1]) or entry.size > 4 * 1024 ** 2):
+                    raise Refusal("unexpected documentation file")
+                content = hashlib.sha256(bundle.extractfile(entry).read()).hexdigest()
+            else:
+                raise Refusal("documentation contains a link or special member")
+            members.append({"path": entry.name, "type": "directory" if entry.isdir() else "regular",
+                            "mode": oct(entry.mode), "size": entry.size, "sha256": content})
+            if len(members) > 2000:
+                raise Refusal("documentation inventory exceeds inspection budget")
+    return members
+
+
+def verify_source_exception(archive: Path, auth: dict, evidence: Path) -> dict:
+    policy_path = review_record(evidence, auth.get("policy"), SOURCE_POLICY_SHA256)
+    policy = json.loads(policy_path.read_bytes())
+    selected = [row for row in policy.get("sources", []) if row.get("name") == archive.name]
+    if (policy.get("decision") != "approved-exact-provenance-exceptions" or len(selected) != 1 or
+            selected[0].get("sha256") != digest(archive) or
+            selected[0].get("size") != archive.stat().st_size or
+            selected[0].get("proposed_class") != auth.get("method")):
+        raise Refusal("source is outside the exact approved provenance exception")
+    approved = selected[0]
+    details = {"status": "accepted-exception", "trust_class": auth["method"],
+               "policy_sha256": SOURCE_POLICY_SHA256, "source_size": archive.stat().st_size,
+               "assurance": approved["assurance"]}
+    if auth["method"] == "reviewed-distributor-https-exception":
+        if auth.get("material") != approved["material"]:
+            raise Refusal("unapproved distributor checksum material")
+        publication = material(evidence, auth["material"])
+        text = publication.read_text(encoding="utf-8")
+        name = re.escape(archive.name)
+        values = re.findall(r"^SHA512 \(" + name + r"\) = ([0-9a-f]{128})$", text, re.M)
+        sizes = re.findall(r"^Size \(" + name + r"\) = (\d+) bytes$", text, re.M)
+        with archive.open("rb") as stream:
+            actual = hashlib.file_digest(stream, "sha512").hexdigest()
+        if (values != [approved["published_sha512"]] or sizes != [str(approved["size"])] or
+                actual != values[0]):
+            raise Refusal("source differs from the exact distributor filename/size/SHA512")
+        details.update(distributor=approved["distributor"], material_sha256=digest(publication),
+                       source_digest_algorithm="sha512", source_digest=actual,
+                       required_gates=["required-package-tests"])
+    else:
+        if auth.get("inventory") != approved["inventory"] or auth.get("book_material") != approved["book_material"]:
+            raise Refusal("unapproved documentation inventory or origin evidence")
+        inventory = review_record(evidence, auth["inventory"], approved["inventory"]["sha256"])
+        recorded = json.loads(inventory.read_bytes())
+        material(evidence, auth["book_material"])
+        if (recorded.get("name") != archive.name or recorded.get("sha256") != digest(archive) or
+                recorded.get("unsafe_members") != [] or recorded.get("members") != documentation_members(archive)):
+            raise Refusal("documentation differs from the reviewed complete inventory")
+        details.update(inventory_sha256=digest(inventory), install_destination="/usr/share/man",
+                       required_gates=["documentation-install-confinement", "documentation-inventory"])
+    return details
+
+
+class AdvisoryTable(HTMLParser):
+    """Parse the LFS application's two-row advisory records, including its
+    unclosed header row. Cross-reference IDs in descriptions are not records.
+    """
+    def __init__(self):
+        super().__init__(convert_charrefs=True)
+        self.rows, self.cells, self.cell, self.links = [], [], None, []
+
+    def handle_starttag(self, tag, attrs):
+        if tag == "tr":
+            self.cells, self.cell, self.links = [], None, []
+        elif tag == "td":
+            self.cell = []
+        elif tag == "a" and self.cell is not None:
+            value = dict(attrs).get("href", "")
+            if https(value):
+                self.links.append(value)
+        elif tag in {"br", "p", "li"} and self.cell is not None:
+            self.cell.append(" ")
+
+    def handle_data(self, data):
+        if self.cell is not None:
+            self.cell.append(data)
+
+    def handle_endtag(self, tag):
+        if tag == "td" and self.cell is not None:
+            self.cells.append(" ".join("".join(self.cell).split()))
+            self.cell = None
+        elif tag == "tr" and self.cells:
+            self.rows.append((self.cells, self.links))
+            self.cells, self.links = [], []
+
+
+def advisory_inventory(raw: bytes) -> list[dict]:
+    parser = AdvisoryTable()
+    parser.feed(raw.decode("utf-8"))
+    inventory, pending = [], None
+    for cells, links in parser.rows:
+        if len(cells) == 4 and re.fullmatch(r"sa-13\.1-\d{3}", cells[0]):
+            if pending is not None:
+                raise Refusal("advisory snapshot is missing a description")
+            pending = dict(zip(("id", "package", "date", "severity"), cells))
+        elif pending is not None:
+            if len(cells) != 1 or not cells[0]:
+                raise Refusal("advisory snapshot has an invalid description row")
+            pending.update(description=cells[0], links=sorted(set(links)))
+            inventory.append(pending)
+            pending = None
+    ids = [row["id"] for row in inventory]
+    if pending is not None or not ids or len(ids) != len(set(ids)):
+        raise Refusal("advisory snapshot is empty, incomplete or has duplicate IDs")
+    return sorted(inventory, key=lambda row: row["id"])
+
+
+def verify_advisory_review(catalog: dict, evidence: Path) -> dict:
+    review = catalog.get("advisory_review", {})
+    if review.get("status") != "reviewed":
+        raise Refusal("dated advisory review is missing")
+    reviewed_at = review.get("reviewed_at", "")
+    if not re.fullmatch(r"\d{4}-\d{2}-\d{2}", reviewed_at):
+        raise Refusal("advisory review date must be an ISO calendar date")
+    datetime.strptime(reviewed_at, "%Y-%m-%d")
+    snapshot = material(evidence, review.get("snapshot"))
+    if (review["snapshot"]["url"] != "https://www.linuxfromscratch.org/advisories/index.php" or
+            review.get("request") != {"method": "POST", "fields": {
+                "stype": "Book", "release": "13.1", "desc": "true", "submit": "Search"}} or
+            review.get("material_sha256") != digest(snapshot)):
+        raise Refusal("advisory review does not bind the complete 13.1 query")
+    inventory = advisory_inventory(snapshot.read_bytes())
+    if review.get("inventory_sha256") != hashlib.sha256(encoded(inventory)).hexdigest():
+        raise Refusal("advisory inventory differs from the retained snapshot")
+    if any(row["date"] > reviewed_at for row in inventory):
+        raise Refusal("advisory review predates its evidence")
+    selected = {row["name"] for row in catalog["sources"]}
+    packages = review.get("package_sources", {})
+    mapped = [name for names in packages.values() for name in names]
+    if set(mapped) != selected or len(mapped) != len(set(mapped)):
+        raise Refusal("advisory package scope must cover every selected source exactly once")
+    dispositions = review.get("dispositions", [])
+    ids = [row.get("id") for row in dispositions]
+    if len(ids) != len(set(ids)):
+        raise Refusal("duplicate advisory disposition")
+    baseline = {row["id"]: row for row in inventory}
+    supplemental = {"upstream-expat-2.10.0", "upstream-expat-CVE-2025-66382"}
+    if set(ids) != set(baseline) | supplemental:
+        raise Refusal("advisory dispositions do not cover the complete snapshot and required upstream review")
+    deferred = False
+    for row in dispositions:
+        ident, package, decision = row["id"], row.get("package"), row.get("disposition")
+        if ident in baseline and package != baseline[ident]["package"]:
+            raise Refusal("advisory disposition package differs from the snapshot")
+        if ident in supplemental and package != "expat":
+            raise Refusal("unapproved supplemental advisory package")
+        if ident in {"sa-13.1-088", "sa-13.1-089"} and decision != "fixed-by-native-patch":
+            raise Refusal("selected Python requires the reviewed native security backport")
+        if not isinstance(row.get("reason"), str) or not row["reason"].strip():
+            raise Refusal("advisory disposition requires a reason")
+        references = row.get("evidence", [])
+        if decision != "not-in-base" and not references:
+            raise Refusal("affected-package disposition lacks evidence")
+        for reference in references:
+            material(evidence, reference)
+        affected = row.get("selected_sources", [])
+        if decision == "not-in-base":
+            if package in packages or affected:
+                raise Refusal("a base package cannot be dismissed as not-in-base")
+        elif decision in {"fixed-by-selection", "fixed-by-native-patch", "not-affected", "deferred-release-gate"}:
+            if (package not in packages or not affected or not set(affected) <= selected or
+                    not set(affected) & set(packages[package])):
+                raise Refusal("affected advisory does not identify its selected source")
+            if decision == "fixed-by-native-patch":
+                if (ident not in {"sa-13.1-088", "sa-13.1-089"} or package != "python" or
+                        affected != ["Python-3.14.10.tar.xz"]):
+                    raise Refusal("unapproved advisory native backport")
+                for field, expected, basename in (
+                    ("native_patch", PYTHON_BACKPORT_SHA256, "python-3.14.10-security-backports.patch"),
+                    ("native_review", PYTHON_BACKPORT_REVIEW_SHA256, "PYTHON-BACKPORT-REVIEW.json")):
+                    value = row.get(field, {})
+                    if (value.get("path") != "tup/native/profiles/lfs-13.1-systemd/" + basename or
+                            value.get("sha256") != expected):
+                        raise Refusal("advisory backport does not bind its reviewed repository input")
+                    review_record(evidence, {"path": basename, "sha256": value["sha256"]}, expected)
+            elif decision == "deferred-release-gate":
+                if (ident != "upstream-expat-CVE-2025-66382" or row.get("gate_id") != "H55" or
+                        affected != ["expat-2.10.0.tar.xz"]):
+                    raise Refusal("unknown advisory deferral cannot authorize a build-only lock")
+                deferred = True
+            elif ident == "upstream-expat-CVE-2025-66382":
+                raise Refusal("open Expat CPU DoS cannot be declared fixed or unaffected")
+        else:
+            raise Refusal("unresolved advisory disposition")
+    gates = [{"id": "H55", "status": "open", "advisories": ["CVE-2025-66382"],
+              "required_evidence": ["host XML exposure review",
+                                    "workload CPU/time containment demonstrated or qualified upstream fix"]}] if deferred else []
+    return {"status": "reviewed", "review_sha256": hashlib.sha256(encoded(review)).hexdigest(),
+            "snapshot_count": len(inventory), "disposition_count": len(dispositions),
+            "lock_purpose": "build-only" if deferred else "production",
+            "release_eligible": not deferred, "release_gates": gates}
+
+
 def published_digest(raw: bytes, selection: dict, source_name: str) -> str:
     """Select a digest for exactly one file from retained publisher metadata."""
     kind = selection.get("format")
@@ -89,6 +335,15 @@ def published_digest(raw: bytes, selection: dict, source_name: str) -> str:
     if name != source_name:
         raise Refusal("published digest must identify the selected source filename")
     values = []
+    if kind == "sha512-announcement":
+        text = html.unescape(re.sub(r"<[^>]*>", "", raw.decode("utf-8")))
+        if "SHA-512 checksums" not in text:
+            raise Refusal("announcement does not identify its digest algorithm")
+        values = re.findall(r"(?m)^[ \t]*([0-9a-f]{128})[ \t]*(?:\r?\n)?[ \t]+" +
+                            re.escape(name) + r"[ \t]*$", text)
+        if len(values) != 1:
+            raise Refusal("no unique published SHA512 for selected filename")
+        return values[0]
     if kind == "sha256sum":
         for line in raw.decode("utf-8").splitlines():
             match = re.fullmatch(r"([0-9a-fA-F]{64}) [ *](.+)", line)
@@ -129,6 +384,20 @@ def published_digest(raw: bytes, selection: dict, source_name: str) -> str:
                 value = asset.get("digest", "") or ""
                 if value.startswith("sha256:"):
                     values.append(value.removeprefix("sha256:").lower())
+    elif kind == "sourceforge-files":
+        # SourceForge publishes per-file metadata in a JSON assignment inside
+        # its official project file listing. Parse data; never evaluate JS.
+        text = raw.decode("utf-8")
+        assignments = re.findall(r"net\.sf\.files\s*=\s*(\{.*?\});", text, re.S)
+        if len(assignments) != 1:
+            raise Refusal("missing or ambiguous SourceForge file metadata")
+        artifact = json.loads(assignments[0]).get(name, {})
+        expected_path = selection.get("project_path")
+        if (not isinstance(expected_path, str) or artifact.get("name") != name or
+                artifact.get("full_path") != expected_path + "/" + name or
+                artifact.get("path") != "/" + expected_path or artifact.get("type") != "f"):
+            raise Refusal("SourceForge file identity mismatch")
+        values.append(artifact.get("sha256") or "")
     elif kind == "pypi-release":
         payload = json.loads(raw)
         if payload.get("info", {}).get("version") != selection.get("version"):
@@ -192,6 +461,12 @@ def gpg_path(path: Path, gpg: Path) -> str:
 def verify_pgp(archive: Path, auth: dict, evidence: Path, gpg: Path) -> dict:
     if gpg is None or not gpg.is_file():
         raise Refusal("OpenPGP verifier executable unavailable")
+    approval = auth.get("approval", {})
+    if not approval.get("reviewed_at") or not approval.get("basis"):
+        raise Refusal("OpenPGP key approval is missing its dated review")
+    material(evidence, approval.get("material"))
+    if approval.get("profile") is not None:
+        material(evidence, approval["profile"])
     key = material(evidence, auth.get("key"))
     signature = material(evidence, auth.get("signature"))
     primary = auth.get("primary_fingerprint", "")
@@ -332,6 +607,51 @@ def verify_distributor(archive: Path, auth: dict, cache: Path, evidence: Path,
             "assurance": "Gentoo-signed snapshot authenticates exact upstream filename, size and SHA512; SHA256 pin is derived after verification"}
 
 
+def stream_identity(stream, limit=64 * 1024 ** 2) -> tuple[int, str]:
+    size, hasher = 0, hashlib.sha256()
+    while chunk := stream.read(1024 * 1024):
+        size += len(chunk)
+        if size > limit:
+            raise Refusal("tar equivalence payload exceeds inspection budget")
+        hasher.update(chunk)
+    return size, hasher.hexdigest()
+
+
+def lzip_tar_identity(archive: Path, executable: Path | None) -> tuple[int, str, str]:
+    if executable is None or not executable.is_file():
+        raise Refusal("maintained lzip executable is required for tar equivalence")
+    with tempfile.TemporaryFile() as output:
+        result = subprocess.run([str(executable.resolve()), "--decompress", "--stdout", str(archive.resolve())],
+                                stdout=output, stderr=subprocess.PIPE, timeout=60)
+        if result.returncode:
+            raise Refusal("lzip rejected the authenticated reference archive")
+        output.seek(0)
+        size, value = stream_identity(output)
+    return size, value, digest(executable)
+
+
+def verify_tar_equivalence(archive: Path, auth: dict, cache: Path, evidence: Path,
+                           gpg: Path | None, context: dict) -> dict:
+    # This is the one reviewed compression alternative, not a general content
+    # equivalence claim. Every decompressed tar byte, including metadata, must
+    # agree; no files are extracted and no upstream scripts run.
+    reference = material(cache, auth.get("reference_archive"))
+    if (archive.name != "make-4.4.1.tar.gz" or reference.name != "make-4.4.1.tar.lz" or
+            auth.get("reference_authentication", {}).get("method") != "distributor-openpgp-manifest"):
+        raise Refusal("unapproved source tar equivalence")
+    authenticated = {**verify_distributor(reference, auth["reference_authentication"], cache, evidence, gpg, context),
+                     "status": "verified", "evidence_sha256": hashlib.sha256(encoded(auth["reference_authentication"])).hexdigest()}
+    size, value, verifier = lzip_tar_identity(reference, context.get("lzip"))
+    with gzip.open(archive, "rb") as stream:
+        if stream_identity(stream) != (size, value) or size == 0:
+            raise Refusal("source does not contain the exact authenticated tar bytes")
+    return {"trust_class": "distributor-openpgp-tar-equivalence", "reference_name": reference.name,
+            "reference_sha256": digest(reference), "reference_authentication": authenticated,
+            "uncompressed_sha256": value, "uncompressed_size": size, "source_size": archive.stat().st_size,
+            "decompressor": {"name": "lzip", "sha256": verifier},
+            "assurance": "Gentoo authenticates the Lzip reference; complete decompressed tar bytes agree. The selected gzip wrapper is not publisher-signed."}
+
+
 def verify_record(record: dict, cache: Path, evidence: Path, gpg: Path | None,
                   context: dict | None = None) -> dict:
     if record["disposition"] == "omit":
@@ -342,19 +662,31 @@ def verify_record(record: dict, cache: Path, evidence: Path, gpg: Path | None,
     actual = digest(archive)
     auth = record.get("authentication", {})
     method = auth.get("method")
-    if method == "https-published-sha256":
+    if method in {"https-published-sha256", "https-published-sha512"}:
         publication = material(evidence, auth.get("material"))
         expected = published_digest(publication.read_bytes(), auth.get("selection", {}), record["name"])
-        if actual != expected:
-            raise Refusal("archive differs from publisher SHA256")
-        details = {"trust_class": "https-published-sha256", "assurance": "publisher HTTPS metadata; no signature verified"}
+        algorithm = "sha256" if method.endswith("sha256") else "sha512"
+        if (algorithm == "sha512") != (auth.get("selection", {}).get("format") == "sha512-announcement"):
+            raise Refusal("published digest trust class and algorithm disagree")
+        with archive.open("rb") as stream:
+            published_actual = hashlib.file_digest(stream, algorithm).hexdigest()
+        if published_actual != expected:
+            raise Refusal("archive differs from publisher " + algorithm.upper())
+        details = {"trust_class": method, "assurance": "publisher HTTPS metadata; no signature verified",
+                   "source_digest_algorithm": algorithm, "source_digest": expected}
     elif method == "openpgp":
         details = verify_pgp(archive, auth, evidence, gpg)
     elif method == "distributor-openpgp-manifest":
         details = verify_distributor(archive, auth, cache, evidence, gpg, context if context is not None else {})
+    elif method == "distributor-openpgp-tar-equivalence":
+        details = verify_tar_equivalence(archive, auth, cache, evidence, gpg, context if context is not None else {})
+    elif method == "reviewed-lfs-patch-exception":
+        details = verify_patch_exception(archive, auth, evidence)
+    elif method in {"reviewed-distributor-https-exception", "reviewed-lfs-documentation-exception"}:
+        details = verify_source_exception(archive, auth, evidence)
     else:
         raise Refusal("no supported authentication evidence")
-    if auth.get("corroboration") is not None:
+    if method != "reviewed-lfs-patch-exception" and auth.get("corroboration") is not None:
         corroboration = auth["corroboration"]
         if corroboration.get("method") != "distributor-openpgp-manifest":
             raise Refusal("unsupported source corroboration")
@@ -362,19 +694,21 @@ def verify_record(record: dict, cache: Path, evidence: Path, gpg: Path | None,
             archive, corroboration, cache, evidence, gpg, context if context is not None else {})
     if record.get("sha256") is not None and record["sha256"] != actual:
         raise Refusal("archive differs from reviewed pin")
-    return {"name": record["name"], "status": "verified", "sha256": actual,
+    status = details.get("status", "verified")
+    return {"name": record["name"], "status": status, "sha256": actual,
             "size": archive.stat().st_size, "authentication": {
-                "status": "verified", "evidence_sha256": hashlib.sha256(encoded(auth)).hexdigest(),
+                "status": status, "evidence_sha256": hashlib.sha256(encoded(auth)).hexdigest(),
                 **details}}
 
 
-def verify_catalog(catalog: dict, cache: Path, evidence: Path, gpg: Path | None = None) -> dict:
+def verify_catalog(catalog: dict, cache: Path, evidence: Path, gpg: Path | None = None,
+                   lzip: Path | None = None) -> dict:
     validate_catalog(catalog, evidence)
     records = []
-    context = {"requested": {}}
+    context = {"requested": {}, "lzip": lzip}
     for record in catalog["sources"]:
         auth = record.get("authentication", {})
-        for item in (auth, auth.get("corroboration", {})):
+        for item in (auth, auth.get("corroboration", {}), auth.get("reference_authentication", {})):
             if item.get("method") == "distributor-openpgp-manifest":
                 identity = hashlib.sha256(encoded(item.get("snapshot", {}))).hexdigest()
                 context["requested"].setdefault(identity, set()).add(item.get("manifest_member"))
@@ -383,11 +717,18 @@ def verify_catalog(catalog: dict, cache: Path, evidence: Path, gpg: Path | None 
             records.append(verify_record(record, cache, evidence, gpg, context))
         except (Refusal, OSError, ValueError, subprocess.SubprocessError, tarfile.TarError) as exc:
             records.append({"name": record["name"], "status": "unresolved", "reason": str(exc)})
+    try:
+        advisory_status = verify_advisory_review(catalog, evidence)
+    except (Refusal, OSError, ValueError) as exc:
+        advisory_status = {"status": "unresolved", "reason": str(exc)}
     return {"schema": "tup-source-verification-v1", "catalog_sha256": hashlib.sha256(encoded(catalog)).hexdigest(),
             "verifier": {"name": "source_lock.py", "sha256": digest(Path(__file__).resolve()),
                          "python_version": sys.version.split()[0]},
             "checked_at": datetime.now(timezone.utc).isoformat(), "sources": records,
-            "complete": bool(records) and all(record["status"] == "verified" for record in records)}
+            "advisory_review": advisory_status,
+            "authenticated_count": sum(record["status"] == "verified" for record in records),
+            "accepted_exception_count": sum(record["status"] == "accepted-exception" for record in records),
+            "complete": bool(records) and all(record["status"] in {"verified", "accepted-exception"} for record in records)}
 
 
 def export_lock(catalog: dict, report: dict, book_source: Path) -> dict:
@@ -398,23 +739,20 @@ def export_lock(catalog: dict, report: dict, book_source: Path) -> dict:
     if (not report.get("complete") or not verified_names or
             len(verified_names) != len(set(verified_names)) or
             set(verified_names) != set(selected_names) or
-            any(row.get("status") != "verified" for row in report["sources"])):
+            any(row.get("status") not in {"verified", "accepted-exception"} for row in report["sources"])):
         raise Refusal("unverified candidate sources cannot enter a production lock")
     advisories = catalog.get("advisory_review", {})
-    if (advisories.get("status") != "reviewed" or not advisories.get("reviewed_at") or
-            not HEX256.fullmatch(advisories.get("material_sha256", "")) or
-            not advisories.get("dispositions")):
-        raise Refusal("dated advisory review is missing")
-    if any(row.get("disposition") not in {"fixed-by-selection", "not-affected", "not-in-base"}
-           for row in advisories.get("dispositions", [])):
-        raise Refusal("unresolved advisory disposition")
+    advisory_status = report.get("advisory_review", {})
+    if (advisory_status.get("status") != "reviewed" or
+            advisory_status.get("review_sha256") != hashlib.sha256(encoded(advisories)).hexdigest()):
+        raise Refusal("dated advisory review is missing or unresolved")
     results = {row["name"]: row for row in report["sources"]}
     sources = []
     for row in catalog["sources"]:
         if row["disposition"] == "omit":
             continue
         verified = results[row["name"]]
-        if verified.get("status") != "verified":
+        if verified.get("status") not in {"verified", "accepted-exception"}:
             raise Refusal("source lacks verification")
         sources.append({"name": row["name"], "url": row["url"], "sha256": verified["sha256"],
                         "authentication": verified["authentication"],
@@ -424,8 +762,13 @@ def export_lock(catalog: dict, report: dict, book_source: Path) -> dict:
             "source_verification": {"schema": "tup-source-verification-v1", "status": "complete",
                                     "report_sha256": hashlib.sha256(encoded(report)).hexdigest(),
                                     "verifier": report["verifier"],
+                                    "authenticated_count": report["authenticated_count"],
+                                    "accepted_exception_count": report["accepted_exception_count"],
                                     "source_count": len(sources), "checked_at": report["checked_at"]},
-            "provenance": "Each source verified against retained publisher evidence; trust class is recorded per source.",
+            "provenance": "Each source has verified authentication or a narrowly named reviewed provenance exception; assurance and remaining gates are recorded per source.",
+            "lock_purpose": advisory_status["lock_purpose"],
+            "release_eligible": advisory_status["release_eligible"],
+            "release_gates": advisory_status["release_gates"],
             "advisory_review": advisories, "sources": sources}
 
 
@@ -435,13 +778,14 @@ def main(argv=None) -> int:
     parser.add_argument("--cache", type=Path, required=True)
     parser.add_argument("--evidence", type=Path, required=True)
     parser.add_argument("--gpg", type=Path)
+    parser.add_argument("--lzip", type=Path)
     parser.add_argument("--report", type=Path, required=True)
     parser.add_argument("--export", type=Path)
     parser.add_argument("--book-source", type=Path)
     args = parser.parse_args(argv)
     try:
         catalog = json.loads(args.catalog.read_bytes())
-        report = verify_catalog(catalog, args.cache, args.evidence, args.gpg)
+        report = verify_catalog(catalog, args.cache, args.evidence, args.gpg, args.lzip)
         args.report.write_bytes(encoded(report))
         if args.export:
             if args.book_source is None:
@@ -449,7 +793,8 @@ def main(argv=None) -> int:
             lock = export_lock(catalog, report, args.book_source)
             args.export.write_bytes(encoded(lock))
         verified = sum(row["status"] == "verified" for row in report["sources"])
-        print(f"{verified}/{len(report['sources'])} sources verified; complete={report['complete']}")
+        print(f"{verified}/{len(report['sources'])} sources authenticated; "
+              f"{report['accepted_exception_count']} accepted exceptions; complete={report['complete']}")
         return 0 if report["complete"] else 1
     except (Refusal, OSError, ValueError) as exc:
         print(f"source verification refused: {exc}", file=sys.stderr)

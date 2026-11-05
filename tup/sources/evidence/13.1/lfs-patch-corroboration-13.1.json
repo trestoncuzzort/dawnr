@@ -1,0 +1,183 @@
+{
+  "schema": "tup-lfs-patch-corroboration-v1",
+  "checked_at": "2026-11-05",
+  "repository": "https://git.linuxfromscratch.org/patches.git",
+  "commit": "73171803a34ba79742605e7c4ed31fbdc6cedc07",
+  "commit_sha256": "32a1f3499b4c25da2b12f702445aa5c05bdbec178995afbfbe1f4d264ff9ea57",
+  "commit_has_gpgsig": false,
+  "patches": [
+    {
+      "name": "bzip2-1.0.8-install_docs-1.patch",
+      "transport_url": "https://www.linuxfromscratch.org/patches/lfs/13.1/bzip2-1.0.8-install_docs-1.patch",
+      "git_transport_url": "https://git.linuxfromscratch.org/patches.git",
+      "git_commit": "73171803a34ba79742605e7c4ed31fbdc6cedc07",
+      "git_path": "bzip2/bzip2-1.0.8-install_docs-1.patch",
+      "link_chain": [
+        {
+          "path": "bzip2/bzip2-1.0.8-install_docs-1.patch",
+          "mode": "120000",
+          "git_blob": "8cebb9f06301212145e057b9e3e029bc87827fdf",
+          "sha256": "7c3b8b0131d2bb123d3bbdfc5039edbebae16492f61276600594fe66955c5fae",
+          "symlink_target": "bzip2-1.0.6-install_docs-1.patch"
+        },
+        {
+          "path": "bzip2/bzip2-1.0.6-install_docs-1.patch",
+          "mode": "100644",
+          "git_blob": "c3b0230c9887bf9617bd358616f5f23b64f423a6",
+          "sha256": "35e3bbd9642af51fef2a8a83afba040d272da42d7e3a251d8e43255a7b496702"
+        }
+      ],
+      "sha256": "35e3bbd9642af51fef2a8a83afba040d272da42d7e3a251d8e43255a7b496702",
+      "size": 1684,
+      "assurance": "Official HTTPS transport and exact Git blob corroboration; no publisher signature or strong published digest established."
+    },
+    {
+      "name": "coreutils-9.11-i18n-1.patch",
+      "transport_url": "https://www.linuxfromscratch.org/patches/lfs/13.1/coreutils-9.11-i18n-1.patch",
+      "git_transport_url": "https://git.linuxfromscratch.org/patches.git",
+      "git_commit": "73171803a34ba79742605e7c4ed31fbdc6cedc07",
+      "git_path": "coreutils/coreutils-9.11-i18n-1.patch",
+      "link_chain": [
+        {
+          "path": "coreutils/coreutils-9.11-i18n-1.patch",
+          "mode": "100644",
+          "git_blob": "18c83d50fd22a4feea0de296b8c38ce4ca45af39",
+          "sha256": "7c2aecf9ae24b87b019595e382b9f41d2c96de7f95abe95ad8cacc7e2ce1bbcc"
+        }
+      ],
+      "sha256": "7c2aecf9ae24b87b019595e382b9f41d2c96de7f95abe95ad8cacc7e2ce1bbcc",
+      "size": 67821,
+      "assurance": "Official HTTPS transport and exact Git blob corroboration; no publisher signature or strong published digest established."
+    },
+    {
+      "name": "expect-5.45.4-gcc15-1.patch",
+      "transport_url": "https://www.linuxfromscratch.org/patches/lfs/13.1/expect-5.45.4-gcc15-1.patch",
+      "git_transport_url": "https://git.linuxfromscratch.org/patches.git",
+      "git_commit": "73171803a34ba79742605e7c4ed31fbdc6cedc07",
+      "git_path": "expect/expect-5.45.4-gcc15-1.patch",
+      "link_chain": [
+        {
+          "path": "expect/expect-5.45.4-gcc15-1.patch",
+          "mode": "100644",
+          "git_blob": "7838746c6d94ee9f1ddc9b98965ada7f9b35b7a4",
+          "sha256": "ab5fc0af9e2e0f80d7623c1a3a3dbeb1da3d8c9134276792199df401f9eb2cec"
+        }
+      ],
+      "sha256": "ab5fc0af9e2e0f80d7623c1a3a3dbeb1da3d8c9134276792199df401f9eb2cec",
+      "size": 12155,
+      "assurance": "Official HTTPS transport and exact Git blob corroboration; no publisher signature or strong published digest established."
+    },
+    {
+      "name": "glibc-2.44-upstream_fixes-3.patch",
+      "transport_url": "https://www.linuxfromscratch.org/patches/downloads/glibc/glibc-2.44-upstream_fixes-3.patch",
+      "git_transport_url": "https://git.linuxfromscratch.org/patches.git",
+      "git_commit": "73171803a34ba79742605e7c4ed31fbdc6cedc07",
+      "git_path": "glibc/glibc-2.44-upstream_fixes-3.patch",
+      "link_chain": [
+        {
+          "path": "glibc/glibc-2.44-upstream_fixes-3.patch",
+          "mode": "100644",
+          "git_blob": "ac8dfe4b2a74d7652256f2d5c90961696786be20",
+          "sha256": "cd3245887c9c2564ef18b8e9ed4046093a575fc91bce00fd82eb931102e4a30e"
+        }
+      ],
+      "sha256": "cd3245887c9c2564ef18b8e9ed4046093a575fc91bce00fd82eb931102e4a30e",
+      "size": 275352,
+      "assurance": "Official HTTPS transport and exact Git blob corroboration; no publisher signature or strong published digest established."
+    },
+    {
+      "name": "glibc-fhs-1.patch",
+      "transport_url": "https://www.linuxfromscratch.org/patches/lfs/13.1/glibc-fhs-1.patch",
+      "git_transport_url": "https://git.linuxfromscratch.org/patches.git",
+      "git_commit": "73171803a34ba79742605e7c4ed31fbdc6cedc07",
+      "git_path": "glibc/glibc-fhs-1.patch",
+      "link_chain": [
+        {
+          "path": "glibc/glibc-fhs-1.patch",
+          "mode": "120000",
+          "git_blob": "2b5290986b233cc2f0ff49f3249dfa4b27e5d3fc",
+          "sha256": "ea5295cccaf6a61483f5653c7863c47f469c3d287c3c2b504626dca637e7ae74",
+          "symlink_target": "glibc-2.17-fhs-1.patch"
+        },
+        {
+          "path": "glibc/glibc-2.17-fhs-1.patch",
+          "mode": "100644",
+          "git_blob": "4ac8d106bbd57efd44e0d507442ab58121baaa99",
+          "sha256": "643552db030e2f2d7ffde4f558e0f5f83d3fabf34a2e0e56ebdb49750ac27b0d"
+        }
+      ],
+      "sha256": "643552db030e2f2d7ffde4f558e0f5f83d3fabf34a2e0e56ebdb49750ac27b0d",
+      "size": 2804,
+      "assurance": "Official HTTPS transport and exact Git blob corroboration; no publisher signature or strong published digest established."
+    },
+    {
+      "name": "kbd-2.10.0-backspace-1.patch",
+      "transport_url": "https://www.linuxfromscratch.org/patches/lfs/13.1/kbd-2.10.0-backspace-1.patch",
+      "git_transport_url": "https://git.linuxfromscratch.org/patches.git",
+      "git_commit": "73171803a34ba79742605e7c4ed31fbdc6cedc07",
+      "git_path": "kbd/kbd-2.10.0-backspace-1.patch",
+      "link_chain": [
+        {
+          "path": "kbd/kbd-2.10.0-backspace-1.patch",
+          "mode": "120000",
+          "git_blob": "f6aa17a2e6b12b25b4214a90898911e55d7c1235",
+          "sha256": "c01ffb5edbccf3815936029dba915d1bd9c3992c5b5992169da8e103cfa249ed",
+          "symlink_target": "kbd-2.0.0-backspace-1.patch"
+        },
+        {
+          "path": "kbd/kbd-2.0.0-backspace-1.patch",
+          "mode": "100644",
+          "git_blob": "8fec17180e17d2e5021b35992a063c0f697c4e57",
+          "sha256": "8be28dcb11420624a500f2ea4fe975f771174bffee50e54ec8cd295a2dec104e"
+        }
+      ],
+      "sha256": "8be28dcb11420624a500f2ea4fe975f771174bffee50e54ec8cd295a2dec104e",
+      "size": 12640,
+      "assurance": "Official HTTPS transport and exact Git blob corroboration; no publisher signature or strong published digest established."
+    },
+    {
+      "name": "Python-3.14.7-openssl_4-1.patch",
+      "transport_url": "https://www.linuxfromscratch.org/patches/lfs/13.1/Python-3.14.7-openssl_4-1.patch",
+      "git_transport_url": "https://git.linuxfromscratch.org/patches.git",
+      "git_commit": "73171803a34ba79742605e7c4ed31fbdc6cedc07",
+      "git_path": "Python/Python-3.14.7-openssl_4-1.patch",
+      "link_chain": [
+        {
+          "path": "Python/Python-3.14.7-openssl_4-1.patch",
+          "mode": "120000",
+          "git_blob": "ae5d8744ab925134c15b9e23cf46e780fca73ad2",
+          "sha256": "9a88c2528dcb133993bc7d385ac1010d8bfb475b90c5547fbdf03b5411bba6cc",
+          "symlink_target": "Python-3.14.5-openssl_4-1.patch"
+        },
+        {
+          "path": "Python/Python-3.14.5-openssl_4-1.patch",
+          "mode": "100644",
+          "git_blob": "0ab47088abf326d2be8c9273c6a94be1d5c03f88",
+          "sha256": "707a0c457192ac2f3b5b8a51481bc5ebd12db22d57c1dbe0256138ee6e070792"
+        }
+      ],
+      "sha256": "707a0c457192ac2f3b5b8a51481bc5ebd12db22d57c1dbe0256138ee6e070792",
+      "size": 38486,
+      "assurance": "Official HTTPS transport and exact Git blob corroboration; no publisher signature or strong published digest established."
+    },
+    {
+      "name": "tar-1.35-acl_fix-1.patch",
+      "transport_url": "https://www.linuxfromscratch.org/patches/lfs/13.1/tar-1.35-acl_fix-1.patch",
+      "git_transport_url": "https://git.linuxfromscratch.org/patches.git",
+      "git_commit": "73171803a34ba79742605e7c4ed31fbdc6cedc07",
+      "git_path": "tar/tar-1.35-acl_fix-1.patch",
+      "link_chain": [
+        {
+          "path": "tar/tar-1.35-acl_fix-1.patch",
+          "mode": "100644",
+          "git_blob": "ac5d2b703b0df2451a9f98c8c11fb23e64dfa54b",
+          "sha256": "51cadccfcb2f29cfdb4ec18015360100aa167179a72ece040a6a8612aeec5081"
+        }
+      ],
+      "sha256": "51cadccfcb2f29cfdb4ec18015360100aa167179a72ece040a6a8612aeec5081",
+      "size": 4333,
+      "assurance": "Official HTTPS transport and exact Git blob corroboration; no publisher signature or strong published digest established."
+    }
+  ],
+  "status": "review-required"
+}

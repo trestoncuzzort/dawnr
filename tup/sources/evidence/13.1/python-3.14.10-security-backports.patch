@@ -1,0 +1,38 @@
+--- a/Lib/poplib.py
++++ b/Lib/poplib.py
+@@ -122,6 +122,8 @@
+     def _putcmd(self, line):
+         if self._debugging: print('*cmd*', repr(line))
+         line = bytes(line, self.encoding)
++        if re.search(b'[\x00-\x1F\x7F]', line):
++            raise ValueError('Control characters not allowed in commands')
+         self._putline(line)
+ 
+ 
+--- a/Python/fileutils.c
++++ b/Python/fileutils.c
+@@ -2146,7 +2146,6 @@
+               wchar_t *resolved_path, size_t resolved_path_len)
+ {
+     char *cpath;
+-    char cresolved_path[MAXPATHLEN];
+     wchar_t *wresolved_path;
+     char *res;
+     size_t r;
+@@ -2155,12 +2154,14 @@
+         errno = EINVAL;
+         return NULL;
+     }
+-    res = realpath(cpath, cresolved_path);
++    res = realpath(cpath, NULL);
+     PyMem_RawFree(cpath);
+     if (res == NULL)
+         return NULL;
+ 
+-    wresolved_path = Py_DecodeLocale(cresolved_path, &r);
++    wresolved_path = Py_DecodeLocale(res, &r);
++    free(res);
++
+     if (wresolved_path == NULL) {
+         errno = EINVAL;
+         return NULL;

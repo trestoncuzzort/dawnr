@@ -1,0 +1,8 @@
+{
+  "meaning": "observed download bytes; not authentication",
+  "resolved_url": "https://api.github.com/repos/python/cpython/git/commits/5e58eaad7c58df58dfa8ea549c87996e01dd1077",
+  "retrieved_at": "2026-11-05T09:09:23.501859+00:00",
+  "sha256": "c9d7ea357e1ab0be2f437b58bc396fbd65b7bc4fe883ea407b83dde282a3fe0d",
+  "size": 1126,
+  "url": "https://api.github.com/repos/python/cpython/git/commits/5e58eaad7c58df58dfa8ea549c87996e01dd1077"
+}

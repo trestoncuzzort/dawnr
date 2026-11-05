@@ -1,0 +1,8 @@
+{
+  "meaning": "observed download bytes; not authentication",
+  "resolved_url": "https://api.github.com/repos/python/cpython/contents/Python/fileutils.c?ref=5e58eaad7c58df58dfa8ea549c87996e01dd1077",
+  "retrieved_at": "2026-11-05T09:09:23.585712+00:00",
+  "sha256": "36412953521e8dcbb1a1d972b065ba11b3cd1df6728cabea50c076e11bf7d825",
+  "size": 129467,
+  "url": "https://api.github.com/repos/python/cpython/contents/Python/fileutils.c?ref=5e58eaad7c58df58dfa8ea549c87996e01dd1077"
+}

@@ -1,129 +1,137 @@
-# LFS 13.1 source verification checkpoint
+# LFS 13.1 source closure
 
-This is a candidate inventory, not an approved production lock. The dated
-`verification-13.1.json` records verification of **75 of 94** selected source
-archives and patches: 8 upstream OpenPGP signatures, 34 published HTTPS SHA256
-checks and 33 exact source matches through an authenticated Gentoo snapshot.
-Sigstore verification is not claimed. `advisory_review` remains unresolved, so
-production export is refused independently of source verification.
+`source-lock-13.1-build.json` authorizes a disposable native **build/test** from
+all 94 selected inputs. It is **not release approval**: `release_eligible` is
+false and Expat's unresolved CPU denial-of-service issue remains open as H55.
+The dated Linux report records 83 authenticated inputs and 11 separately
+accepted provenance exceptions. No observed download hash is presented as
+publisher authentication, and no Sigstore verification is claimed.
 
-`catalog-13.1.json` preserves every filename, URL and MD5 from the original
-13.1-systemd inventory, including the eight LFS patches. MD5 identifies the
-book input only; it never authenticates a file. The selected replacements and
-their reasons are in `selections-13.1.json`: Linux 6.18.60 LTS, Python 3.14.10
-and matching documentation, OpenSSL 4.0.3, Expat 2.10.0, util-linux 2.42.4,
-XZ 5.8.4, PCRE2 10.49, patch 2.8.1, Vim 9.2.1201 and revision 3 of the glibc
-upstream fixes patch. These are source candidates; build-command compatibility and complete
-security-advisory disposition are separate requirements.
+| Verification or explicit exception | Inputs |
+| --- | ---: |
+| Published publisher HTTPS SHA256 | 38 |
+| Published publisher HTTPS SHA512 | 1 |
+| Live upstream OpenPGP signature | 9 |
+| Live signed Gentoo snapshot and exact source Manifest | 34 |
+| Signed Gentoo reference and exact decompressed Make tar comparison | 1 |
+| Reviewed exact LFS patch provenance exception | 8 |
+| Reviewed exact NetBSD HTTPS checksum exception | 2 |
+| Reviewed exact LFS documentation exception | 1 |
 
-## What the tools check
+`catalog-13.1.json` retains every original filename, URL and MD5 from the
+13.1-systemd inventory. MD5 identifies a book input; it never authenticates
+one. Named replacements in `selections-13.1.json` are Linux 6.18.60 LTS,
+Python 3.14.10 and documentation, OpenSSL 4.0.3, Expat 2.10.0, util-linux
+2.42.4, XZ 5.8.4, PCRE2 10.49, patch 2.8.1, Vim 9.2.1202, and revision 3 of
+the glibc upstream fixes patch. Native recipe compatibility and package tests
+remain separate requirements.
 
-`acquire.py` downloads over HTTPS to a caller-selected private cache, with a
-per-file size limit, bounded concurrency and an observed-byte receipt. It
-never runs or unpacks upstream code. A download receipt is not authentication.
+## Evidence and trust boundaries
 
-`collect_evidence.py` obtains publisher metadata without deriving an expected
-hash from the downloaded archive. It retains exact metadata bytes and selects
-one filename and release tag/version. GitHub release asset digests, PyPI
-release metadata and kernel.org checksum lists are published HTTPS evidence.
-A checksum inside a signed `.asc` file still receives the weaker HTTPS class
-unless its signature is actually verified.
+`acquire.py` retrieves bounded HTTPS downloads into a private cache. Its
+observed-byte receipts identify downloads; they do not authenticate them.
+Publisher checksums come from retained release metadata, not the archive
+being checked. Exact filename and release identities must match. The weaker
+HTTPS classes explicitly make no signature claim, including checksum lists
+whose embedded signatures were not verified.
 
-`source_lock.py` compares the cached archive bytes with the selected published
-digest. It rejects missing or changed evidence, wrong or duplicate filename
-matches, altered archives, missing baseline entries and unresolved inputs.
-Its OpenPGP path invokes a supplied GPG executable with an isolated keyring,
-no automatic key retrieval, pinned key/signature material and an explicitly
-approved primary fingerprint. It accepts SHA256/384/512 signatures, verifies
-the machine-readable status and can check kernel signatures over decompressed
-tar bytes without extracting files. This path has been exercised on actual
-GNU releases and the Gentoo snapshot. A live negative control rejected a
-truncated snapshot using the real snapshot signature and approved key.
-Sigstore verification is not implemented and is never claimed.
+`source_lock.py` checks real bytes and refuses missing or changed material,
+wrong filenames, incomplete inventory, unapproved keys, weak signatures,
+unreviewed exceptions and incomplete advisory coverage. GPG runs with an
+isolated keyring, no automatic key retrieval, pinned key/signature material
+and dated approval evidence. Signatures must use SHA256, SHA384 or SHA512;
+expired-key status is refused. Actual GNU signatures and the Gentoo snapshot
+passed this path; a real truncated snapshot failed signature verification.
 
-The distinct `distributor-openpgp-manifest` class uses the official Gentoo
-ebuild repository key, primary fingerprint
-`DCD05B71EAB94199527F44ACDB6B8C1F96D8BF6D`, published in
-[Gentoo's signing-key documentation](https://www.gentoo.org/downloads/signatures/).
-The verifier authenticates the dated `gentoo-20261103.tar.xz` snapshot, checks
-that each retained package Manifest is exactly the member in that signed
-snapshot, then checks the upstream archive's exact filename, size and SHA512.
-The SHA256 lock pin is derived only after that verification. The complete
-snapshot stays in the private cache; its signature, key, approval page and
-selected Manifests are retained here. No snapshot member is extracted to a
-filesystem. GNU mirrors are reviewed delivery alternatives, while original
-upstream URLs remain in the catalog.
+The distributor trust root is Gentoo's ebuild repository primary fingerprint
+`DCD05B71EAB94199527F44ACDB6B8C1F96D8BF6D`, approved through its
+[official signing-key documentation](https://www.gentoo.org/downloads/signatures/).
+The verifier authenticates `gentoo-20261103.tar.xz`, binds each retained
+Manifest to its exact regular member in that signed snapshot, and compares
+the upstream archive's filename, size and SHA512. The derived SHA256 pin
+follows authentication. The full snapshot must remain available to reproduce
+this proof; large archives stay outside Git. No snapshot member is extracted.
 
-Automake 1.18.1 has an explicit provenance conflict: its historical release
-announcement's SHA256 differs from the current artifact. The actual release
-signature verifies under the primary named by that announcement, and the
-independently signed Gentoo Manifest agrees with the current bytes. Both
-checks are required. The failed historical checksum remains recorded under
-`integrity_review`; it is never presented as a passed checksum.
+Make's upstream signing key has expired. Its gzip source is instead checked
+against the signed distributor's `make-4.4.1.tar.lz`: maintained `lzip` decodes
+the reference, Python's gzip decoder reads the selected source, and every
+decompressed tar byte must agree. This uses the distinct
+`distributor-openpgp-tar-equivalence` class. Both compressed identities,
+common tar size/hash and decoder identity are retained. No source files or
+upstream scripts are executed during this check.
 
-The catalog, publisher URLs, approved fingerprints and advisory dispositions
-are reviewed trust inputs. Their stored hashes detect changes after review;
-they do not make an unreviewed publisher or key trustworthy. Retained evidence
-has Git text conversion disabled so checkout preserves its raw bytes.
+Two provenance discrepancies remain visible. Automake's historical checksum
+differs from the current artifact; its actual upstream signature and signed
+Gentoo Manifest must both pass. The e2fsprogs SourceForge and kernel.org gzip
+wrappers differ but contain identical complete tar bytes; selected bytes
+match SourceForge's separately published SHA256. Neither mismatching
+historical checksum is described as a passed check.
 
-## Reproduce the checkpoint
+Exact reviewed exception policy hashes are enforced in the verifier:
 
-Use Python 3.11 or newer. Run from the repository root and supply your own
-private cache path. No source archive belongs in this repository.
+- Eight LFS patches: official HTTPS plus reviewed unsigned Git commit/blob
+  linkage, with application and package-test gates still mandatory.
+- Tcl source and SQLite autoconf: exact filename, size and SHA512 from
+  maintained NetBSD pkgsrc over HTTPS. These are distributor checksum
+  exceptions, not publisher or distributor signatures.
+- LFS-generated systemd manuals: exact immutable archive and complete
+  1,256-member inventory, restricted to non-executable regular manual files
+  and directories. Every verification regenerates the inventory. Native
+  installation must confine output to `/usr/share/man`.
+
+Exceptions have `accepted-exception` status and separate counts. They cannot
+approve another name, digest, policy or executable package. Git text
+conversion is disabled for retained evidence. Catalog identities and trust
+anchors remain reviewed inputs, not self-authenticating declarations.
+
+## Advisory coverage and release gate
+
+The retained official POST response covers all 100 LFS 13.1 advisories through
+2026-11-05. The verifier reparses actual records, checks their exact inventory
+and package scope, and requires one disposition per record. Cross-reference
+IDs in descriptions are not counted as extra advisories. Two upstream Expat
+records cover the November 2 release and still-open CPU DoS.
+
+There are 84 `not-in-base`, 15 `fixed-by-selection`, two
+`fixed-by-native-patch` and one `deferred-release-gate` dispositions. Python
+records bind the exact native patch/review for POP3 command validation and
+allocation-based long-path resolution from immutable CPython 3.15.2 commit
+`5e58eaad7c58df58dfa8ea549c87996e01dd1077`; Python 3.14.10 alone does not fix
+those two issues. Native regression and package tests remain gates.
+
+H55 is the only permitted release deferral. Expat 2.10.0 does not fix
+CVE-2025-66382. Release requires host XML exposure review plus demonstrated
+workload CPU/time containment, or qualification of a real upstream fix.
+Unknown or unresolved deferrals cannot authorize export. Other packages need
+separate review if added to boot, remote-access, isolation or workload layers.
+Source closure does not establish kernel hardware support, secure remote
+operation or successful system tests.
+
+## Reproduce verification
+
+Use Python 3.11 or newer, GPG and maintained `lzip`. Run from the repository
+root with a private cache. Acquisition includes 94 selected inputs and two
+separate verification dependencies; no source archive belongs in Git.
 
 ```sh
-python3 tup/sources/acquire.py tup/sources/catalog-13.1.json \
-  --cache /private/source-cache --jobs 4
-python3 tup/sources/source_lock.py tup/sources/catalog-13.1.json \
-  --cache /private/source-cache --evidence tup/sources/evidence/13.1 \
-  --gpg /path/to/gpg --report /private/source-verification.json
+python3 tup/sources/acquire.py tup/sources/catalog-13.1.json --cache /private/source-cache --jobs 4
+python3 tup/sources/source_lock.py tup/sources/catalog-13.1.json --cache /private/source-cache --evidence tup/sources/evidence/13.1 --gpg /usr/bin/gpg --lzip /usr/bin/lzip --report /private/source-verification.json --book-source tup/book-x86_64-13.1-systemd/BOOK-SOURCE --export /private/source-lock-13.1-build.json
 python3 -m unittest discover -s tup/tests -p 'test_source*.py'
 ```
 
-The verifier returns nonzero until every record verifies. `--export` also
-requires `--book-source`, a complete source report and a dated advisory review
-with no unresolved dispositions. The CLI always re-verifies source bytes;
-it does not accept a previously generated report as authorization. Do not
-consume an output file after a failed command. A successful export preserves
-the native `tup-source-lock-v1` fields and adds:
+The CLI always re-verifies; an old report is not authorization. Do not consume
+outputs after a failed command. Export preserves native source-lock v1 and
+adds verification counts, per-input assurance, full dated advisory review,
+`lock_purpose`, `release_eligible` and named release gates.
+`transfer-manifest-13.1.json` inventories exact archives, verification
+dependencies and evidence for a separately hashed Linux transfer. Book
+provenance remains a separate review.
 
-- `source_verification`: schema, complete status, report hash, source count
-  and check time.
-- Per-source `authentication`: verified status, evidence hash, trust class
-  and verifier details; `verification_material` identifies retained material.
-- `advisory_review`: reviewed status, review date, material hash and explicit
-  `fixed-by-selection`, `not-affected` or `not-in-base` dispositions.
-
-## Remaining work
-
-The report names all 19 unresolved inputs. All 94 currently selected inputs
-are cached, as is the separate signed Gentoo verification snapshot. Download
-success and authentication counts are independent.
-
-- Complete the remaining 11 non-patch sources: attr, e2fsprogs, make,
-  procps-ng, SQLite autoconf, systemd man pages, Tcl source and documentation,
-  tzdata, Vim and zlib. Never infer trust solely from a key ID in a signature.
-- All eight LFS patches match exact official Git blobs, including reviewed
-  symlink resolution, at the commit in `lfs-patch-corroboration-13.1.json`.
-  That commit is unsigned, and no strong publisher checksum was established.
-  A narrowly named provenance exception still needs explicit review and
-  application evidence; these records remain unresolved, not authenticated.
-- Capture the current LFS advisory application response and review every
-  baseline-related advisory. In particular, independently resolve the Expat
-  issues mentioned by sa-13.1-045. Expat 2.10.0 adds four security fixes after
-  the current LFS advisory snapshot, but CVE-2025-66382 remains open upstream.
-  H55 must explicitly separate permission to build/test from release readiness;
-  it cannot be described as fixed. Bind the dated review and its complete
-  coverage to retained evidence before approving any lock export.
-- Confirm the Python OpenSSL patch applies to 3.14.10, review the glibc patch,
-  and complete native overrides. Book archive authentication is also separate:
-  the extractor's observed archive hash is not publisher authentication.
-
-Primary references: [LFS package inventory](https://www.linuxfromscratch.org/lfs/view/13.1-systemd/wget-list-systemd),
+Primary references: [LFS inventory](https://www.linuxfromscratch.org/lfs/view/13.1-systemd/wget-list-systemd),
 [LFS advisories](https://www.linuxfromscratch.org/advisories/),
 [GnuPG machine interface](https://www.gnupg.org/documentation/manuals/gnupg/Unattended-Usage-of-GPG.html),
 [GNU release security](https://www.gnu.org/software/security/),
-[kernel signature verification](https://www.kernel.org/signature.html),
-[PyPI JSON API](https://docs.pypi.org/api/json/),
-[Python Sigstore verification](https://www.python.org/downloads/metadata/sigstore/),
-and [GitHub source archive limits](https://docs.github.com/en/repositories/working-with-files/using-files/downloading-source-code-archives).
+[Gentoo Manifest format](https://devmanual-cdn.gentoo.org/general-concepts/manifest/index.html),
+[Lzip manual](https://www.nongnu.org/lzip/manual/lzip_manual.html),
+[NetBSD pkgsrc distribution](https://www.netbsd.org/docs/pkgsrc/getting.html),
+and [Expat open CPU issue](https://github.com/libexpat/libexpat/issues/1076).
