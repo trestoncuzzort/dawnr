@@ -82,7 +82,11 @@ case "$stage" in
     else
       mount -t tmpfs -o nosuid,nodev tmpfs "$root/dev/shm"
     fi
-    exec chroot "$root" /usr/bin/env -i HOME=/root TERM=dumb "${common[@]}" \
+    # The book enters the chroot from a root login, whose supplementary groups
+    # include group 0. A service unit starts with an empty list, and coreutils'
+    # chroot-credentials root test then sees "101" where it expects "101 0".
+    # "+0" is numeric, so no group database is consulted on either side.
+    exec chroot --groups=+0 "$root" /usr/bin/env -i HOME=/root TERM=dumb "${common[@]}" \
       PATH=/usr/bin:/usr/sbin LFS= TUP_NATIVE_CHROOT=1 \
       TUP_OVERRIDES=/tup-build/overrides TUP_BUILD_INPUTS=/tup-build/BUILD-INPUTS.json \
       /bin/bash --noprofile --norc /tup-build/driver.sh "/tup-build/book/$stage"

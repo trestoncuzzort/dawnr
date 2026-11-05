@@ -516,6 +516,18 @@ printf '%s\\n' "$TUP_PROFILE" "$TUP_TESTS" "$MAKEFLAGS" "$TESTSUITEFLAGS" "$NINJ
         command = [BASH, str(TUP / "native/run-stage.sh"), "ch05", str(root), "fixture", str(home), "8", "lfs-13.1-systemd"]
         return root, home, environment, command
 
+    def test_chroot_entry_and_keymap_check_match_how_the_target_runs(self):
+        # Both were measured in the rehearsal: with the empty supplementary group
+        # list of a service unit, coreutils' chroot-credentials root test fails;
+        # and upstream's qwerty/lt.map compiles only in the Unicode mode that
+        # systemd-vconsole-setup uses.
+        runner = (TUP / "native/run-stage.sh").read_text(encoding="utf-8")
+        self.assertEqual(runner.count("exec chroot "), 1)
+        self.assertIn('exec chroot --groups=+0 "$root" /usr/bin/env -i ', runner)
+        keymaps = (AUDIT.parent / "kbd-keymap-tests.sh").read_text(encoding="utf-8")
+        commands = [line.strip() for line in keymaps.splitlines() if line.strip().startswith("./src/loadkeys")]
+        self.assertEqual(commands, ['./src/loadkeys --unicode --bkeymap "data/keymaps/i386/$map" > "$output"'])
+
     @unittest.skipIf(os.name != "posix", "Linux runner with harmless account/driver stubs")
     def test_stage_runner_cleans_environment_and_bounds_build_and_test_jobs(self):
         root, home, environment, command = self.stage_fixture()
