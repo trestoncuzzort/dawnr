@@ -229,7 +229,34 @@ Each case is a unit test with zero write commands recorded.
   must be cleared by the owner by other means first. `apply` repeats the refusal
   from its own fresh read. There is no `--allow-windows` or similar: the only way
   past this refusal is not to point the installer at that disk. (The test that
-  proves it passes `--allow-windows` and expects an argument error.)
+  proves it passes `--allow-windows` and expects an argument error.) Windows that
+  only a *partition* node reveals (the table and `lsblk` say Linux, `0FC63DAF`, and
+  `wipefs` or `blkid` on `/dev/NAMEpN` reports BitLocker, ntfs, ReFS or exFAT) is
+  refused the same way, in `plan` and again in `apply`; the probes cover every node,
+  and a test that probes only the whole disk fails.
+- **A protective MBR with no readable GPT, always, with no flag.** When both GPT
+  headers are bad, or both entry arrays fail their CRC, the kernel shows no
+  partitions and nothing in the disk can be probed; the protective MBR (partition
+  type `ee`) is all that is left of what may be a Windows disk. `plan` and `apply`
+  refuse a disk when `sfdisk --dump` prints `label: dos` with a type `ee` partition,
+  when `blkid` or `lsblk` reports `PTTYPE` `PMBR`, or when `wipefs` reports a `PMBR`
+  signature on a node without a `gpt` signature on that node. The message says that
+  this installer never erases such a disk, that it may hide Windows partitions, and
+  that the owner must clear it by other means first. A healthy GPT disk is not
+  affected (`wipefs` lists `gpt` twice and `PMBR` on every one) and goes through the
+  rules above and below. The fixtures are the real output of util-linux 2.39.3 on 128 MiB
+  regular files, kept verbatim in the tests: one with LBA 1 and the last LBA zeroed,
+  one with both entry arrays inverted (the two print the same), and the healthy
+  tables; the protective MBR is
+  [UEFI 2.10 section 5.2.3](https://uefi.org/specs/UEFI/2.10/05_GUID_Partition_Table_Format.html).
+- **A `--state` directory or `plan --output` file in the wrong place**, in `plan` and
+  again in `apply`: on the target disk, on a disk that looks like Windows (or has a
+  protective MBR without a GPT) by the same evidence as above, or on a filesystem of
+  type `ntfs`, `ntfs3`, `fuseblk`, `fuse.ntfs-3g`, `exfat`, `vfat` or `msdos`. A volatile
+  filesystem (`tmpfs`, `ramfs`, or the live overlay whose upper layer is one) stays
+  allowed with the VOLATILE notice, and so does an ordinary Linux filesystem on another
+  disk that does not look like Windows. A mounted filesystem of the target is
+  refused earlier still, as "in use by this system".
 - A target that is not a kernel name below `/dev` (by-id symlinks, relative
   names, anything whose `realpath` differs), not a block device, a partition,
   loop, device-mapper, md, zram, nbd, floppy or optical device (`lsblk` TYPE and
@@ -313,7 +340,8 @@ disks report one.
    including the sample, and refuse on any difference from the plan (serial, WWN,
    size, sector size, table, any signature, any non-zero byte that moved, mounts,
    holders); refuse if `/dev/NAME` is not the planned device number; repeat the
-   Windows refusal on this fresh read; refuse on a wrong token; refuse if the set of
+   Windows and protective-MBR refusals on this fresh read; refuse a `--state` parent on a
+   Windows-style filesystem, on the target or on a Windows-looking disk; refuse on a wrong token; refuse if the set of
    disks in use changed or any safety check fails; refuse if the source mount
    changed.
 5. `mkdir` the state directory (0700), write and fsync `INTENT.json`.
@@ -344,13 +372,21 @@ disks report one.
     it exists, write its files (including `clock`) 0600, and read owner and mode of
     all of them back (root-owned, those modes, `etc/tup` closed to group and others).
 12. Write `EFI/BOOT/BOOTX64.EFI`, the kernel and `amd-ucode.img` on the ESP.
-13. `inventory()` of the root again: the only paths allowed to differ from the source are
-    `lost+found`, `etc`, `etc/fstab`, `boot`, `boot/efi`, and, with enrollment, `etc/tup`,
-    `etc/tup/enroll-input` and each file written. **These are allowed whether or not they
+13. Verify the root after the ESP files are written. Each file under `etc/tup/enroll-input`
+    is hashed again against the plan and owner and mode are read back a second time.
+    `inventory()` of the root is then compared with the inventory of the copy plus the
+    planned additions: the paths the installer touches are `etc`, `etc/fstab`, `boot`,
+    `boot/efi`, and, with enrollment, `etc/tup`, `etc/tup/enroll-input` and each file
+    written (`lost+found` is already in the copy). **They are allowed whether or not they
     existed in the source:** a directory that already exists (the image ships `/etc/tup`
     with `firewall.nft` and an empty `authorized_keys` directory) changes its mtime when
     a file is created in it, and the earlier version refused such a source only after
-    `sfdisk` had run. The fstab and every ESP file are read back and compared.
+    `sfdisk` had run. But a planned directory may differ only in its mtime (and takes the
+    planned mode), a planned file must be a root-owned regular file of the planned mode
+    and digest, and every other entry, so every name below a planned directory, must be
+    exactly as copied: a stray file in `etc`, `etc/tup` or `etc/tup/enroll-input`, or
+    a changed mode of any of them, is refused. (The earlier version exempted these paths
+    from every attribute.) The fstab and every ESP file are read back and compared.
 14. `sync`, unmount (ESP then root), `e2fsck -f -n`, `fsck.fat -n`, `blkid -p` and
     `sfdisk --json` once more, `sync`.
 15. Only now write `RECEIPT.json` (`tup.install-receipt.v1`): plan digest, target
@@ -388,8 +424,9 @@ unless the owner chooses another filesystem; surviving a power cut is not claime
 that the disk drifts away from the plan. `plan --state DIR` says in its summary whether
 DIR is on volatile storage (`tmpfs`, `ramfs`, or an overlay whose upper layer is one), the
 receipt records the same for the `--state` given to `apply`, and without `--state` the
-summary says that it does not know. Nothing refuses a volatile state directory, and the
-refusal decision never depends on the state directory.
+summary says that it does not know. Nothing refuses a volatile state directory; a state
+directory on the target, on a Windows-looking disk or on a Windows-style filesystem is
+refused (see "What it refuses").
 
 ## Why these choices
 
@@ -495,6 +532,11 @@ installer copies are the ones `plan()` of `enroll.py` reads, including `clock`.
 Not run: any write to a `/dev` node, a loop device, a mount of what the installer made, QEMU,
 Ventoy, the installed system booting, `tup-enroll.service` reading the new input directory,
 `04-installer.sh` in the layer runner, and the installer inside the TUP image.
+
+Not covered: the disk is re-read just before `sfdisk`, not held open, so a device that is
+renamed, swapped or replugged in the moments between that last recheck and `sfdisk` opening
+`/dev/NAME` is not caught (holding it open exclusively would make `sfdisk`'s re-read of the
+partition table fail).
 
 ## Not yet shown (what only a VM and then the desktop can show)
 

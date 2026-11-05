@@ -37,6 +37,47 @@ PCI = {"nvme0n1": "pci0000:00/0000:00:01.1/0000:01:00.0/nvme/nvme0", "sda": "pci
        "vda": "pci0000:00/0000:00:04.0/virtio1", "sdb": "pci0000:00/0000:00:14.0/usb1/1-1/1-1:1.0/host6/target6:0:0/6:0:0:0",
        "sdc": "pci0000:00/0000:00:14.0/usb1/1-2/1-2:1.0/host7/target7:0:0/7:0:0:0"}
 
+# Output of util-linux 2.39.3 (Ubuntu 24.04) on 128 MiB regular files after `sfdisk --wipe always`, kept verbatim except
+# that the image name stands where the device node goes. RECORDED_GPT_ZERO had LBA 1 and the last LBA zeroed (both GPT
+# headers gone), RECORDED_GPT_ARRAYS had both 32-sector entry arrays inverted (bad CRCs): the kernel would show no
+# partition on either, and the two print the same. RECORDED_GPT_WINDOWS and RECORDED_GPT_LINUX are the undamaged
+# tables: an ESP plus a Microsoft basic data partition, and one Linux filesystem partition.
+RECORDED_DAMAGED = {
+    "image": "g1.img",
+    "dump": ("label: dos\nlabel-id: 0x00000000\ndevice: g1.img\nunit: sectors\nsector-size: 512\n\n"
+             "g1.img1 : start=           1, size=      262143, type=ee\n"),
+    "blkid": "DEVNAME=g1.img\nPTTYPE=PMBR\n",
+    "wipefs": ('{\n   "signatures": [\n      {\n         "device": "g1.img",\n         "offset": "0x1fe",\n'
+               '         "type": "PMBR",\n         "uuid": null,\n         "label": null\n      }\n   ]\n}\n')}
+RECORDED_GPT_ZERO = RECORDED_DAMAGED
+RECORDED_GPT_ARRAYS = dict(RECORDED_DAMAGED, image="g2.img", dump=RECORDED_DAMAGED["dump"].replace("g1", "g2"),
+                           blkid=RECORDED_DAMAGED["blkid"].replace("g1", "g2"),
+                           wipefs=RECORDED_DAMAGED["wipefs"].replace("g1", "g2"))
+HEALTHY_WIPEFS = ('{\n   "signatures": [\n      {\n         "device": "IMG",\n         "offset": "0x200",\n'
+                  '         "type": "gpt",\n         "uuid": null,\n         "label": null\n      },{\n'
+                  '         "device": "IMG",\n         "offset": "0x7fffe00",\n         "type": "gpt",\n'
+                  '         "uuid": null,\n         "label": null\n      },{\n         "device": "IMG",\n'
+                  '         "offset": "0x1fe",\n         "type": "PMBR",\n         "uuid": null,\n         "label": null\n'
+                  '      }\n   ]\n}\n')
+RECORDED_GPT_WINDOWS = {
+    "image": "g3.img",
+    "dump": ("label: gpt\nlabel-id: 11111111-2222-3333-4444-555555555555\ndevice: g3.img\nunit: sectors\nfirst-lba: 2048\n"
+             "last-lba: 262110\nsector-size: 512\n\n"
+             "g3.img1 : start=        2048, size=       65536, type=C12A7328-F81F-11D2-BA4B-00A0C93EC93B, "
+             "uuid=D6213B41-E909-4A4A-8C0D-0D8EA14C1C6B\n"
+             "g3.img2 : start=       69632, size=      160000, type=EBD0A0A2-B9E5-4433-87C0-68B6B72699C7, "
+             "uuid=2BB499C8-66DC-4DA4-8852-FDC2874A48A7\n"),
+    "blkid": "DEVNAME=g3.img\nPTUUID=11111111-2222-3333-4444-555555555555\nPTTYPE=gpt\n",
+    "wipefs": HEALTHY_WIPEFS.replace("IMG", "g3.img")}
+RECORDED_GPT_LINUX = {
+    "image": "g4.img",
+    "dump": ("label: gpt\nlabel-id: 11111111-2222-3333-4444-555555555555\ndevice: g4.img\nunit: sectors\nfirst-lba: 2048\n"
+             "last-lba: 262110\nsector-size: 512\n\n"
+             "g4.img1 : start=        2048, size=      200000, type=0FC63DAF-8483-4772-8E79-3D69D8477DE4, "
+             "uuid=8DE798AA-F688-4D98-B911-EEC256B1D9D7\n"),
+    "blkid": "DEVNAME=g4.img\nPTUUID=11111111-2222-3333-4444-555555555555\nPTTYPE=gpt\n",
+    "wipefs": HEALTHY_WIPEFS.replace("IMG", "g4.img")}
+
 
 def part_name(disk_name, number):
     return f"{disk_name}p{number}" if disk_name[-1].isdigit() else f"{disk_name}{number}"
@@ -403,6 +444,26 @@ class Base(unittest.TestCase):
         self.host.blkid_out[part] = {"TYPE": "ext4", "UUID": "BB"}
         self.host.content[node] = {0: b"\x55" * 512}
 
+    def recorded(self, name, recording):
+        """The disk as the real tools reported it for the recorded image (see RECORDED_DAMAGED)."""
+        node, image = "/dev/" + name, recording["image"]
+        self.host.dump[node] = recording["dump"].replace(image, node)
+        self.host.blkid_out[node] = dict(line.split("=", 1) for line in recording["blkid"].replace(image, node).splitlines())
+        self.host.signatures[node] = [{key: item[key] for key in ("offset", "type", "uuid", "label")}
+                                      for item in json.loads(recording["wipefs"])["signatures"]]
+        self.host.content[node] = {0x1fe: b"\x55\xaa"}
+
+    def linux_with_windows_only_in_a_partition(self, name, probe):
+        """The table and lsblk say Linux (0FC63DAF) for the only partition; wipefs or blkid on that partition node
+        alone reports `kind`. Whatever probe is, nothing else on the disk shows it."""
+        self.linux_data(name)
+        node = "/dev/" + name
+        part = self.host.lsblk[node]["children"][0]
+        part["fstype"] = None
+        self.host.signatures[part["path"]] = []
+        self.host.blkid_out[part["path"]] = {}
+        probe(part["path"])
+
 
 class PlanTests(Base):
     def test_blank_nvme_plan_is_complete_and_wrote_nothing(self):
@@ -696,6 +757,185 @@ class PlanTests(Base):
         self.host.lsblk[node]["children"] = [
             node_json("sda1", "8:1", 1 << 20, kind="part", parttype="ebd0a0a2-b9e5-4433-87c0-68b6b72699c7")]
         self.refused("looks like a Windows disk", "/dev/sda", allow_existing=True)
+
+    def test_a_protective_mbr_without_a_readable_gpt_is_refused_outright(self):
+        """Both GPT headers zeroed, or both entry arrays corrupted: the kernel shows no partitions, so no probe can
+        find Windows, and the real tools' only trace is the protective MBR. Their recorded output is the fixture."""
+        for label, recording in (("both GPT headers zeroed", RECORDED_GPT_ZERO),
+                                 ("both entry arrays corrupted", RECORDED_GPT_ARRAYS)):
+            self.recorded("sda", recording)
+            for allow in (False, True):
+                with self.subTest(damage=label, allow_existing=allow):
+                    self.host.commands.clear()
+                    with self.assertRaises(Refusal) as caught:
+                        self.plan("/dev/sda", allow_existing=allow)
+                    message = str(caught.exception)
+                    for fragment in ("this installer never erases a disk that may hold Windows",
+                                     "protective MBR but no readable GPT", "may hide Windows partitions",
+                                     "must clear the disk by other means first", "has type ee", "blkid reports PTTYPE PMBR",
+                                     "wipefs reports a PMBR signature without a gpt signature"):
+                        self.assertIn(fragment, message)
+                    self.assertNotIn("Confirmation token", message)
+                    self.assertNotIn("--allow-existing was not given", message)
+                    self.assert_read_only()
+
+    def test_each_trace_of_a_protective_mbr_without_a_gpt_is_enough_on_its_own(self):
+        def only(name, **kept):
+            self.recorded("sda", RECORDED_DAMAGED)
+            node = "/dev/sda"
+            if "dump" not in kept:
+                self.host.dump[node] = None
+            if "blkid" not in kept:
+                self.host.blkid_out[node] = {}
+            if "wipefs" not in kept:
+                self.host.signatures[node] = []
+            self.host.lsblk[node]["pttype"] = "PMBR" if "lsblk" in kept else None
+        for trace in ("dump", "blkid", "wipefs", "lsblk"):
+            with self.subTest(trace=trace):
+                only("sda", **{trace: True})
+                self.refused("protective MBR but no readable GPT", "/dev/sda", allow_existing=True)
+        # A dos label with an ordinary Linux partition is not this refusal.
+        self.host.dump["/dev/sda"] = RECORDED_DAMAGED["dump"].replace("type=ee", "type=83").replace("g1.img", "/dev/sda")
+        self.host.blkid_out["/dev/sda"], self.host.signatures["/dev/sda"] = {}, []
+        self.host.lsblk["/dev/sda"]["pttype"] = None
+        self.plan("/dev/sda", allow_existing=True)
+
+    def test_a_healthy_gpt_is_handled_by_the_existing_rules_not_the_protective_mbr_rule(self):
+        # wipefs lists gpt (twice) and PMBR on every healthy GPT disk; that alone is not damage.
+        self.recorded("sda", RECORDED_GPT_LINUX)
+        self.assertEqual([item["type"] for item in self.host.signatures["/dev/sda"]], ["gpt", "gpt", "PMBR"])
+        self.refused("already holds data and --allow-existing was not given", "/dev/sda")
+        plan = self.plan("/dev/sda", allow_existing=True)
+        self.assertTrue(any("partition table gpt" in line for line in plan["destroys"]))
+        self.assertTrue(any("signature PMBR at offset 0x1fe" in line for line in plan["destroys"]))
+        self.assert_read_only()
+        # A healthy GPT that holds a Microsoft partition is the Windows refusal, not the protective MBR one.
+        self.recorded("sda", RECORDED_GPT_WINDOWS)
+        with self.assertRaises(Refusal) as caught:
+            self.plan("/dev/sda", allow_existing=True)
+        self.assertIn("looks like a Windows disk", str(caught.exception))
+        self.assertNotIn("protective MBR", str(caught.exception))
+
+    def windows_only_in_a_partition(self, name, kind, where):
+        def probe(node):
+            if where == "wipefs":
+                self.host.signatures[node] = [{"offset": "0x3", "type": kind, "uuid": None, "label": None}]
+            else:
+                self.host.blkid_out[node] = {"TYPE": kind}
+        self.linux_with_windows_only_in_a_partition(name, probe)
+
+    def test_windows_that_only_a_partition_node_reveals_is_refused_even_with_allow_existing(self):
+        for where in ("wipefs", "blkid"):
+            for kind in ("BitLocker", "ntfs", "ReFS", "exfat"):
+                with self.subTest(probe=where, kind=kind):
+                    self.windows_only_in_a_partition("sda", kind, where)
+                    node = self.host.lsblk["/dev/sda"]
+                    self.assertEqual(node["children"][0]["parttype"], "0fc63daf-8483-4772-8e79-3d69d8477de4")
+                    self.assertIn("type=0FC63DAF", self.host.dump["/dev/sda"])
+                    for allow in (False, True):
+                        self.host.commands.clear()
+                        with self.assertRaises(Refusal) as caught:
+                            self.plan("/dev/sda", allow_existing=allow)
+                        self.assertIn("never erases a disk that looks like Windows", str(caught.exception))
+                        self.assertIn(f"{kind} signature on /dev/sda1", str(caught.exception))
+                        self.assert_read_only()
+
+    def apply_refused_from_a_fresh_read(self, made, pattern):
+        plan_file = self.base / "stale-plan.json"
+        plan_file.write_text(json.dumps(made))
+        self.host.commands.clear()
+        token = disk.confirmation_token(made["target"]["identity"], made["digest"])
+        with self.assertRaisesRegex(Refusal, pattern):
+            disk.apply(self.host, plan_file, token, self.base / "state-fresh")
+        self.assertEqual(self.host.disk_writers(), [])
+        self.assertEqual(self.host.written, [])
+        self.assertFalse(os.path.lexists(self.base / "state-fresh"))
+
+    @unittest.skipUnless(POSIX, "apply needs POSIX")
+    def test_windows_that_only_a_partition_node_reveals_is_refused_again_in_apply(self):
+        for where in ("wipefs", "blkid"):
+            for kind in ("BitLocker", "ntfs", "ReFS", "exfat"):
+                with self.subTest(probe=where, kind=kind):
+                    self.windows_only_in_a_partition("nvme0n1", kind, where)
+                    with mock.patch.object(disk, "refuse_windows"):
+                        made = self.plan(allow_existing=True)  # a plan the refusal would never have produced
+                    self.apply_refused_from_a_fresh_read(made, rf"(?s)never erases a disk that looks like Windows.*{kind} signature")
+
+    @unittest.skipUnless(POSIX, "apply needs POSIX")
+    def test_a_protective_mbr_without_a_gpt_is_refused_again_in_apply(self):
+        for label, recording in (("headers", RECORDED_GPT_ZERO), ("arrays", RECORDED_GPT_ARRAYS)):
+            with self.subTest(damage=label):
+                self.recorded("nvme0n1", recording)
+                with mock.patch.object(disk, "refuse_unreadable_gpt"):
+                    made = self.plan(allow_existing=True)
+                self.apply_refused_from_a_fresh_read(made, "protective MBR but no readable GPT")
+
+    def add_mount(self, kind, partition=3, fuse_source=False):
+        """A filesystem of `kind` on partition `partition` of sda, mounted at /mnt/x."""
+        self.host.add_partition("sda", partition, 4096 * partition, 4096)
+        majmin = f"8:{partition}"
+        majmin = "0:72" if fuse_source else majmin  # fuseblk and ntfs-3g mounts have an anonymous device number
+        self.host.mount_rows.append(f"72 20 {majmin} / /mnt/x rw - {kind} /dev/sda{partition} rw")
+
+    def test_state_and_plan_file_may_not_be_on_a_windows_style_filesystem(self):
+        for kind in ("ntfs", "ntfs3", "exfat", "vfat", "msdos", "fuseblk", "fuse.ntfs-3g"):
+            with self.subTest(kind=kind):
+                self.setUp()
+                self.add_mount(kind, fuse_source=kind.startswith("fuse"))
+                for options in ({"state": "/mnt/x/st"}, {"output": "/mnt/x/plan.json"}):
+                    self.host.commands.clear()
+                    label = "--state" if "state" in options else "--output"
+                    self.refused(rf"{label} /mnt/x is on {re.escape(kind)}, a Windows-style filesystem", **options)
+
+    def test_state_and_plan_file_may_not_be_on_a_disk_that_looks_like_windows(self):
+        for label, prepare in (("ntfs", lambda: self.windows_ntfs("sda")),
+                               ("damaged gpt", lambda: self.recorded("sda", RECORDED_DAMAGED))):
+            with self.subTest(disk=label):
+                self.setUp()
+                prepare()
+                self.add_mount("ext4")  # a Linux filesystem, but on the disk that holds Windows
+                for options in ({"state": "/mnt/x/st"}, {"output": "/mnt/x/plan.json"}):
+                    self.host.commands.clear()
+                    name = "--state" if "state" in options else "--output"
+                    self.refused(rf"{name} /mnt/x is on ext4, on /dev/sda, which looks like a Windows disk", **options)
+
+    def test_state_and_plan_file_may_not_be_on_the_target_disk(self):
+        # A mounted filesystem of the target already makes the target "in use"; the placement check says it plainly.
+        self.host.mount_rows.append("73 20 259:3 / /mnt/x rw - ext4 /dev/nvme0n1p3 rw")
+        self.host.add_partition("nvme0n1", 3, 4096 * 3, 4096)
+        self.refused(r"in use by this system: ext4 mounted at /mnt/x", state="/mnt/x/st")
+        tools = disk.measure_tools(self.host)
+        for label in ("--state", "--output"):
+            with self.assertRaisesRegex(Refusal, rf"{label} /mnt/x is on ext4, which is on the target disk /dev/nvme0n1"):
+                disk.check_location(self.host, tools, label, "/mnt/x", "nvme0n1")
+
+    def test_ram_and_a_linux_filesystem_on_another_disk_remain_allowed_for_state_and_plan_file(self):
+        plan = self.plan(state="/root/st", output="/root/plan.json")
+        self.assertTrue(plan["state_directory"]["volatile"])
+        self.add_mount("ext4")  # sda is blank: an ordinary Linux filesystem on another disk
+        plan = self.plan(state="/mnt/x/st", output="/mnt/x/plan.json")
+        self.assertEqual(plan["state_directory"], {"path": "/mnt/x/st", "filesystem": "ext4", "volatile": False})
+        self.assert_read_only()
+
+    @unittest.skipUnless(POSIX, "apply needs POSIX")
+    def test_apply_refuses_a_state_directory_that_moved_onto_a_windows_filesystem_or_disk(self):
+        made = self.plan(state=str(self.base / "st"))
+        plan_file = self.base / "moved-plan.json"
+        plan_file.write_text(json.dumps(made))
+        token = disk.confirmation_token(made["target"]["identity"], made["digest"])
+        self.host.add_partition("sda", 3, 4096 * 3, 4096)
+        for kind, pattern, prepare in (("ntfs3", "Windows-style filesystem", lambda: None),
+                                       ("ext4", "which looks like a Windows disk", lambda: self.windows_ntfs("sda"))):
+            with self.subTest(kind=kind):
+                rows = list(self.host.mount_rows)
+                prepare()
+                self.host.mount_rows.append(f"74 20 8:3 / {self.base} rw - {kind} /dev/sda3 rw")
+                self.host.commands.clear()
+                with self.assertRaisesRegex(Refusal, pattern):
+                    disk.apply(self.host, plan_file, token, self.base / "moved-state")
+                self.assertEqual(self.host.disk_writers(), [])
+                self.assertFalse(os.path.lexists(self.base / "moved-state"))
+                self.host.mount_rows[:] = rows
 
     @unittest.skipUnless(POSIX, "apply needs POSIX")
     def test_a_windows_disk_is_refused_again_from_the_fresh_read_in_apply(self):
@@ -1163,7 +1403,15 @@ class ApplyTests(Base):
         def windows():
             self.windows_ntfs("nvme0n1")
 
-        for change in (serial, other_disk_answers_to_the_name, table, signature, data, mount, holder, windows):
+        def damaged_gpt():
+            self.recorded("nvme0n1", RECORDED_GPT_ZERO)
+
+        def state_on_a_windows_filesystem():
+            self.host.add_partition("sda", 3, 4096 * 3, 4096)
+            self.host.mount_rows.append(f"96 20 8:3 / {self.base} rw - ntfs3 /dev/sda3 rw")
+
+        for change in (serial, other_disk_answers_to_the_name, table, signature, data, mount, holder, windows,
+                       damaged_gpt, state_on_a_windows_filesystem):
             with self.subTest(change=change.__name__):
                 self.setUp()
                 self.host.hook = lambda host, argv, change=change: (
@@ -1339,6 +1587,55 @@ class ApplyTests(Base):
         with mock.patch.object(os, "chmod", lax):
             with self.assertRaisesRegex(Refusal, r"/etc/tup/enroll-input has owner \d+:\d+ mode 755"):
                 self.apply()
+        self.assertNotIn("e2fsck", self.host.names())
+
+    def tampering_after_the_esp_files(self, change):
+        """The root is changed right after the first ESP file is written: after configure-root, before verify-final."""
+        real, root = disk.write_atomic, self.state / "mnt/root"
+
+        def write(path, data, mode=0o600):
+            real(path, data, mode)
+            if Path(path).name == "BOOTX64.EFI":
+                change(root)
+        return mock.patch.object(disk, "write_atomic", write)
+
+    def test_verify_final_refuses_enrollment_content_strays_and_modes_changed_after_configure_root(self):
+        enroll = disk.ENROLL_TARGET
+        write_text = lambda relative: (lambda root: (root / relative).write_text("x"))
+        chmod = lambda relative, mode: (lambda root: os.chmod(root / relative, mode))
+        cases = (
+            ("enrollment file rewritten", lambda root: (root / enroll / "authorized_keys").write_bytes(OTHER_KEY),
+             r"/etc/tup/enroll-input/authorized_keys on the new root differs from the enrollment input of the plan"),
+            ("stray file in etc/tup", write_text("etc/tup/stray"), r"beyond the planned changes at: etc/tup/stray"),
+            ("stray file in enroll-input", write_text(f"{enroll}/id_rsa"), r"beyond the planned changes at: .*enroll-input/id_rsa"),
+            ("stray file in etc", write_text("etc/stray"), r"beyond the planned changes at: etc/stray"),
+            ("stray file in boot", write_text("boot/stray"), r"beyond the planned changes at: boot/stray"),
+            ("stray file in the root", write_text("stray"), r"beyond the planned changes at: \., stray"),
+            ("key file mode", chmod(f"{enroll}/authorized_keys", 0o666),
+             r"/etc/tup/enroll-input/authorized_keys has owner \d+:\d+ mode 666"),
+            ("enrollment directory mode", chmod(enroll, 0o755), r"/etc/tup/enroll-input has owner \d+:\d+ mode 755"),
+            ("etc/tup mode", chmod("etc/tup", 0o777), r"/etc/tup has owner \d+:\d+ mode 777"),
+            ("etc mode", chmod("etc", 0o777), r"beyond the planned changes at: etc"),
+            ("boot mode", chmod("boot", 0o777), r"beyond the planned changes at: boot"),
+            ("fstab mode", chmod("etc/fstab", 0o666), r"beyond the planned changes at: etc/fstab"),
+            ("os-release mode", chmod("etc/os-release", 0o666), r"beyond the planned changes at: etc/os-release"))
+        for label, change, pattern in cases:
+            with self.subTest(change=label):
+                self.setUp()
+                with self.tampering_after_the_esp_files(change), self.assertRaisesRegex(Refusal, pattern):
+                    self.apply()
+                self.assertNotIn("e2fsck", self.host.names())
+                self.assertFalse((self.state / "RECEIPT.json").exists())
+                self.assertEqual([row for row in self.host.mount_rows if str(self.state) in row], [])
+
+    def test_verify_final_refuses_a_stray_file_in_etc_tup_without_enrollment_too(self):
+        self.source_with_etc_tup()
+        made = self.plan()
+        self.plan_file.write_text(json.dumps(made))
+        self.token = disk.confirmation_token(made["target"]["identity"], made["digest"])
+        with self.tampering_after_the_esp_files(lambda root: (root / "etc/tup/stray").write_text("x")):
+            with self.assertRaisesRegex(Refusal, r"beyond the planned changes at: etc/tup, etc/tup/stray"):
+                self.apply()  # without enrollment even the mtime of etc/tup is unplanned
         self.assertNotIn("e2fsck", self.host.names())
 
     def test_apply_is_refused_if_the_installers_enrollment_check_changed(self):

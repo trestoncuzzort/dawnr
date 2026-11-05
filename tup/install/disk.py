@@ -10,7 +10,10 @@ plan   reads the target disk, the running system and the live root's read-only
        MiB. It writes nothing to the target. The summary it prints ends with
        the confirmation token. A disk that looks like Windows (NTFS, BitLocker,
        ReFS, exFAT, LDM or Storage Spaces, or a Microsoft partition type) is
-       refused outright: no flag overrides that.
+       refused outright: no flag overrides that. So is a disk with a protective
+       MBR but no readable GPT (a damaged GPT hides what the disk holds), and a
+       --state or --output on the target, on a Windows-looking disk or on a
+       Windows-style filesystem (NTFS, exFAT, FAT).
 apply  re-reads all of it, refuses on any difference from the plan, records its
        intent, then partitions (one sfdisk script), formats the two planned
        partitions, copies the lower root with cp -a, writes fstab, the
@@ -71,6 +74,9 @@ PSEUDO_FILESYSTEMS = {"tmpfs", "ramfs", "rootfs", "proc", "sysfs", "devtmpfs", "
                       "securityfs", "debugfs", "tracefs", "configfs", "fusectl", "mqueue", "hugetlbfs", "pstore", "bpf",
                       "binfmt_misc", "autofs", "efivarfs", "selinuxfs", "nsfs", "rpc_pipefs"}
 VOLATILE_FILESYSTEMS = {"tmpfs", "ramfs", "rootfs"}
+# Filesystems the state directory and the plan file are never put on: what Windows volumes and Windows-formatted sticks
+# are mounted as (fuseblk and fuse.ntfs-3g are ntfs-3g and exfat-fuse).
+WINDOWS_FILESYSTEMS = {"ntfs", "ntfs3", "fuseblk", "fuse.ntfs-3g", "exfat", "vfat", "msdos"}
 # util-linux 2.42.4 include/pt-gpt-partnames.h and include/pt-mbr-partnames.h (the tables fdisk and sfdisk print).
 WINDOWS_GPT = {"EBD0A0A2-B9E5-4433-87C0-68B6B72699C7": "Microsoft basic data",
                "E3C9E316-0B5C-4DB8-817D-F92DF00215AE": "Microsoft reserved",
@@ -369,6 +375,39 @@ def refuse_windows(identity, state):
         raise Refusal(f"{identity['path']} looks like a Windows disk and this installer never erases a disk that looks "
                       "like Windows, with or without --allow-existing. A disk like this must be cleared by the owner "
                       "by other means first. Found:\n  " + "\n  ".join(dict.fromkeys(found)))
+
+
+def protective_mbr_evidence(identity, state):
+    """A protective MBR (partition type ee) with no readable GPT behind it. When both GPT headers or both entry
+    arrays are damaged the kernel shows no partitions and nothing on the disk can be probed, so the protective MBR
+    is the only trace of what may be a Windows disk (UEFI 2.10 section 5.2.3 protective MBR; libblkid names it PMBR,
+    wipefs lists PMBR beside gpt on a healthy GPT disk, both recorded in the tests)."""
+    found = []
+    rows = (state["sfdisk_dump"] or "").splitlines()
+    label = next((row.split(":", 1)[1].strip() for row in rows if row.startswith("label:")), None)
+    for row in rows:
+        match = re.match(r"(/dev/\S+)\s*:.*\btype=([0-9A-Fa-f-]+)", row)
+        if label == "dos" and match and match[2].lower() in ("ee", "0xee"):
+            found.append(f"sfdisk reads a dos label whose partition {match[1]} has type ee (protective MBR)")
+    if str(identity["pttype"]).upper() == "PMBR":
+        found.append(f"lsblk reports PTTYPE PMBR on {identity['path']}")
+    for node, values in state["blkid"].items():
+        if str(values.get("PTTYPE")).upper() == "PMBR":
+            found.append(f"blkid reports PTTYPE PMBR on {node}")
+    for node, items in state["wipefs"].items():
+        kinds = {str(item["type"]).lower() for item in items}
+        if "pmbr" in kinds and "gpt" not in kinds:
+            found.append(f"wipefs reports a PMBR signature without a gpt signature on {node}")
+    return found
+
+
+def refuse_unreadable_gpt(identity, state):
+    found = protective_mbr_evidence(identity, state)
+    if found:
+        raise Refusal(f"{identity['path']} carries a protective MBR but no readable GPT, and this installer never erases "
+                      "a disk that may hold Windows, with or without --allow-existing. A protective MBR without a "
+                      "readable GPT may hide Windows partitions: a damaged GPT leaves no partition to probe. The owner "
+                      "must clear the disk by other means first. Found:\n  " + "\n  ".join(dict.fromkeys(found)))
 
 
 def existing_lines(identity, state):
@@ -777,8 +816,40 @@ def basis_digest(plan):
     return digest(canonical({key: value for key, value in plan.items() if key not in ("digest", "basis", "texts")}))
 
 
-def state_storage(host, path, depth=0):
+def state_storage(host, path):
     """(filesystem type, volatile) of the filesystem that holds `path`; an overlay is followed to its upper layer."""
+    row = storage_row(host, path)
+    return ("overlay", True) if row is None else (row["fstype"], row["fstype"] in VOLATILE_FILESYSTEMS)
+
+
+def check_location(host, tools, label, directory, kname):
+    """Where --state and the plan file may live. Not on the target disk, not on a Windows-style filesystem, not on a
+    disk that looks like Windows by the same evidence as the target; RAM (the live system's tmpfs) is allowed."""
+    row = storage_row(host, directory)
+    if row is None or row["fstype"] in VOLATILE_FILESYSTEMS:
+        return
+    where = f"{label} {directory} is on {row['fstype']}"
+    if row["fstype"] in WINDOWS_FILESYSTEMS:
+        raise Refusal(f"{where}, a Windows-style filesystem, and this installer never writes to one: it may be the "
+                      "owner's Windows volume. Use RAM (the live system's /root or /tmp) or a Linux filesystem on another disk.")
+    try:
+        disks = disks_for_row(host, row, set())
+    except OSError as error:
+        raise Refusal(f"cannot tell which disk holds {label} {directory}: {error}") from error
+    for name in sorted(disks):
+        if name == kname:
+            raise Refusal(f"{where}, which is on the target disk /dev/{kname} that the install erases")
+        identity, _ = read_identity(host, tools, "/dev/" + name)
+        state = read_state(host, tools, identity)
+        found = windows_evidence(identity, state) + protective_mbr_evidence(identity, state)
+        if found:
+            raise Refusal(f"{where}, on /dev/{name}, which looks like a Windows disk, and this installer never writes "
+                          "to a disk that looks like Windows. Found:\n  " + "\n  ".join(dict.fromkeys(found)))
+
+
+def storage_row(host, path, depth=0):
+    """The mount-table row of the filesystem that holds `path`, an overlay followed to its upper layer's row; None
+    for an overlay whose upper layer cannot be followed."""
     path = host.realpath(path)
     best = None
     for row in mount_table(host):
@@ -790,13 +861,11 @@ def state_storage(host, path, depth=0):
         raise Refusal(f"{path} is not below any mount in the mount table")
     if best["fstype"] == "overlay":
         upper = dict(option.partition("=")[::2] for option in best["super"].split(",")).get("upperdir")
-        if upper and depth < 4:
-            return state_storage(host, upper, depth + 1)
-        return "overlay", True
-    return best["fstype"], best["fstype"] in VOLATILE_FILESYSTEMS
+        return storage_row(host, upper, depth + 1) if upper and depth < 4 else None
+    return best
 
 
-def make_plan(host, *, target, source, esp_mib=512, enroll_input=None, allow_existing=False, state=None):
+def make_plan(host, *, target, source, esp_mib=512, enroll_input=None, allow_existing=False, state=None, output=None):
     """Build the plan. `host` is wrapped so that nothing but read-only commands can run."""
     host = Planning(host)
     if not isinstance(esp_mib, int) or not 64 <= esp_mib <= 8192:
@@ -809,6 +878,12 @@ def make_plan(host, *, target, source, esp_mib=512, enroll_input=None, allow_exi
     check_target(host, identity, mounted, use)
     state_read = read_state(host, tools, identity)
     refuse_windows(identity, state_read)  # no flag overrides this
+    refuse_unreadable_gpt(identity, state_read)  # nor this
+    state_facts = state_directory_facts(host, state)
+    if state_facts:
+        check_location(host, tools, "--state", posixpath.dirname(state_facts["path"]), identity["kname"])
+    if output is not None:
+        check_location(host, tools, "--output", posixpath.dirname(str(output)), identity["kname"])
     existing = existing_lines(identity, state_read)
     if existing and not allow_existing:
         raise Refusal(f"{target} already holds data and --allow-existing was not given. A Windows RAW report proves "
@@ -827,7 +902,7 @@ def make_plan(host, *, target, source, esp_mib=512, enroll_input=None, allow_exi
             "destroys": existing or ["nothing: the disk has no partition table and no signature"],
             "source": {"path": source, "mount": mount, **summary}, "kernel": kernel, "microcode": microcode,
             "enroll_input": enroll, "layout": layout, "tools": tools,
-            "installer": installer_digests(), "state_directory": state_directory_facts(host, state),
+            "installer": installer_digests(), "state_directory": state_facts,
             "root_bytes_needed": needed, "confirmation_basis": "serial" if identity["serial"] else "wwn"}
     plan["basis"] = basis_digest(plan)
     plan["texts"] = texts_for(plan)
@@ -900,6 +975,44 @@ def write_atomic(path, data, mode=0o600):
         os.fsync(stream.fileno())
     os.replace(temporary, path)
     sync_dir(path.parent)
+
+
+def read_back(root, expected):
+    """Owner and mode of each {relative: mode} read back from the new root: root:root because main() requires root.
+    A mode of None only means closed to group and other writers."""
+    for relative, mode in expected.items():
+        info = os.lstat(root / relative)
+        if (info.st_uid, info.st_gid) != (os.geteuid(), os.getegid()) or (
+                mode is None and info.st_mode & 0o022) or (mode is not None and stat.S_IMODE(info.st_mode) != mode):
+            raise Refusal(f"/{relative} has owner {info.st_uid}:{info.st_gid} mode {stat.S_IMODE(info.st_mode):o}, "
+                          "not the planned root-owned mode")
+
+
+def unplanned_changes(copied, final, directories, files, modes):
+    """Paths whose row in the final inventory is not what the copy plus the planned additions predicts. A planned
+    directory keeps its row except for its mtime (and takes `modes` when given; a new one is root-owned 0755);
+    a planned file is a root-owned regular file of the planned mode and digest; every other path, and so every
+    entry name below a planned directory, is exactly as copied."""
+    uid, gid = os.geteuid(), os.getegid()
+    def bare(row):
+        return {key: value for key, value in row.items() if key != "mtime_ns"}
+    wrong = []
+    for key in sorted(set(copied) | set(final)):
+        row, before = final.get(key), copied.get(key)
+        if key in files:
+            mode, sha = files[key]
+            ok = row is not None and row["type"] == "file" and "hardlink" not in row and (
+                row["mode"], row["uid"], row["gid"], row["sha256"]) == (mode, uid, gid, sha)
+        elif key in directories:
+            want = {"type": "directory", "mode": 0o755, "uid": uid, "gid": gid} if before is None else bare(before)
+            want = want | ({"mode": modes[key]} if key in modes else {})
+            ok = row is not None and (all(row.get(k) == v for k, v in want.items()) if before is None
+                                      else bare(row) == want)
+        else:
+            ok = row == before
+        if not ok:
+            wrong.append(key)
+    return wrong
 
 
 def load_plan(path):
@@ -1080,7 +1193,9 @@ def recheck(host, plan, tools, confirm, state_parent):
                       "that changed, or a previous attempt that wrote to it, needs a new plan with --allow-existing.")
     if host.block_devno(target) != identity["maj_min"]:
         raise Refusal(f"{target} is now device {host.block_devno(target)}, not the planned {identity['maj_min']}")
-    refuse_windows(identity, current)  # the same refusal as plan, from this fresh read
+    refuse_windows(identity, current)  # the same refusals as plan, from this fresh read
+    refuse_unreadable_gpt(identity, current)
+    check_location(host, tools, "--state", str(state_parent), identity["kname"])
     if not hmac.compare_digest(confirmation_token(identity, plan["digest"]).encode(), str(confirm).encode("utf-8", "replace")):
         raise Refusal("the confirmation token does not belong to this disk and plan; it is printed with the plan summary")
     use = disks_in_use(host, {"source": source})
@@ -1211,7 +1326,8 @@ def deploy(run, plan, tree, identity, started, storage):
     allowed = {"lost+found", "etc", "etc/fstab", "boot", "boot/efi"}
     write_atomic(root / "etc/fstab", plan["texts"]["fstab"].encode(), 0o644)
     if not (root / "boot/efi").is_dir():
-        (root / "boot/efi").mkdir(mode=0o755)
+        (root / "boot/efi").mkdir()
+        os.chmod(root / "boot/efi", 0o755)
     for relative in ("etc/machine-id", "var/lib/dbus/machine-id"):
         if os.path.lexists(root / relative) and (root / relative).read_bytes().strip():
             raise Refusal(f"the copied root carries a machine identity: {relative}")
@@ -1235,12 +1351,7 @@ def deploy(run, plan, tree, identity, started, storage):
             write_atomic(root / ENROLL_TARGET / name, data, 0o600)
             allowed.add(f"{ENROLL_TARGET}/{name}")
             expected[f"{ENROLL_TARGET}/{name}"] = 0o600
-        for relative, mode in expected.items():  # owner and mode, read back; root:root because main() requires root
-            info = os.lstat(root / relative)
-            if (info.st_uid, info.st_gid) != (os.geteuid(), os.getegid()) or (
-                    mode is None and info.st_mode & 0o022) or (mode is not None and stat.S_IMODE(info.st_mode) != mode):
-                raise Refusal(f"/{relative} has owner {info.st_uid}:{info.st_gid} mode {stat.S_IMODE(info.st_mode):o}, "
-                              "not the planned root-owned mode")
+        read_back(root, expected)
 
     run.journal("install-boot-files")
     for relative, data in boot_files.items():
@@ -1248,10 +1359,18 @@ def deploy(run, plan, tree, identity, started, storage):
         write_atomic(efi / relative, data, None)
 
     run.journal("verify-final")
+    if plan["enroll_input"]:
+        for name, sha in plan["enroll_input"]["files"].items():  # what enroll.py will read at the first boot
+            if file_hash(root / ENROLL_TARGET / name) != sha:
+                raise Refusal(f"/{ENROLL_TARGET}/{name} on the new root differs from the enrollment input of the plan")
+        read_back(root, expected)
     final = inventory(root)
-    if set(changed_paths(tree, final)) - allowed:
-        raise Refusal("the deployed root differs from the source beyond the planned changes at: "
-                      + ", ".join(sorted(set(changed_paths(tree, final)) - allowed)[:20]))
+    files = {"etc/fstab": (0o644, digest(plan["texts"]["fstab"].encode()))}
+    files |= {f"{ENROLL_TARGET}/{name}": (0o600, sha) for name, sha in (plan["enroll_input"] or {"files": {}})["files"].items()}
+    unplanned = unplanned_changes(copied, final, allowed - set(files) - {"lost+found"}, files,
+                                  {ENROLL_TARGET: 0o700})
+    if unplanned:
+        raise Refusal("the deployed root differs from the copy beyond the planned changes at: " + ", ".join(unplanned[:20]))
     if (root / "etc/fstab").read_bytes() != plan["texts"]["fstab"].encode():
         raise Refusal("fstab on disk is not the planned fstab")
     for relative, data in boot_files.items():
@@ -1320,7 +1439,7 @@ def main(argv=None, host=None):
         if args.action == "plan":
             made = make_plan(host, target=args.target, source=args.source, esp_mib=args.esp_mib,
                              enroll_input=args.enroll_input, allow_existing=args.allow_existing,
-                             state=args.state)
+                             state=args.state, output=os.path.abspath(args.output))
             fd = os.open(args.output, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
             with os.fdopen(fd, "w") as stream:
                 json.dump(made, stream, indent=2, sort_keys=True)
