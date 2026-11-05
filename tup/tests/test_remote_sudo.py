@@ -183,10 +183,10 @@ class SudoRecordTests(unittest.TestCase):
 
 class FiveSourceClosureTests(unittest.TestCase):
     def setUp(self):
-        self.first = {"status": "verified", "catalogs": {"source.json": "a" * 64},
+        self.first = {"status": "verified", "catalogs": {"source.json": "a" * 64}, "advisory_review_sha256": "c" * 64,
                       "sources": [verified(name) for name in sorted(four.NAMES)], "limitations": ["fixture"]}
         self.sudo = {"status": "verified", "catalogs": {"sudo-source.json": "b" * 64},
-                     "sources": [verified(layer.SUDO, PIN)]}
+                     "advisory_review_sha256": "d" * 64, "sources": [verified(layer.SUDO, PIN)]}
 
     def verify(self):
         with patch.object(four, "verify", return_value=self.first) as first, \
@@ -202,6 +202,10 @@ class FiveSourceClosureTests(unittest.TestCase):
         self.assertEqual([row["name"] for row in report["sources"]], sorted(four.NAMES) + [layer.SUDO])
         self.assertIs(report["remote"], self.first)
         self.assertEqual(set(report["catalogs"]), {"source.json", "sudo-source.json"})
+        # A caller of the four-source report finds the same keys here.
+        self.assertEqual((report["advisory_review_sha256"], report["sudo_advisory_review_sha256"]), ("c" * 64, "d" * 64))
+        self.assertLessEqual({"schema", "status", "release_eligible", "verifier_sha256", "sources", "limitations"},
+                             set(report))
         self.assertFalse(report["release_eligible"])
 
     def test_missing_extra_duplicate_or_unverified_source_refuses(self):

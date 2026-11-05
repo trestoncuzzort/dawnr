@@ -96,6 +96,8 @@
       }
     }
   ],
+  "advisory_review_sha256": "1002e585a65e1e7306f33a933a7a8a0a9fb28e1782ac9d18f5e12cec66ef6aad",
+  "sudo_advisory_review_sha256": "dfdd0cf0c8744df8be667af6b606576500472003842677a6b89ef3b57355b6e6",
   "remote": {
     "schema": "tup-remote-source-verification-v1",
     "status": "verified",

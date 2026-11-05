@@ -110,6 +110,9 @@ def verify(cache: Path, gpg: Path, remote: Path = HERE) -> dict:
             "scope": "five-remote-layer-sources", "release_eligible": False,
             "verifier_sha256": verifier.digest(Path(verifier.__file__)),
             "catalogs": {**first["catalogs"], **sudo["catalogs"]}, "sources": sources,
+            # Same key as the four-source report, so a caller can switch calls unchanged.
+            "advisory_review_sha256": first["advisory_review_sha256"],
+            "sudo_advisory_review_sha256": sudo["advisory_review_sha256"],
             "remote": first, "sudo": sudo,
             "limitations": first["limitations"]}
 
