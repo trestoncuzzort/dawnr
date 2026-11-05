@@ -522,7 +522,7 @@ installer copies are the ones `plan()` of `enroll.py` reads, including `clock`.
 
 | Ran | Where | Result |
 | --- | --- | --- |
-| `tests/test_install_disk.py` | Linux builder (Python 3.12, GRUB 2.14 tools on `PATH`) and Windows (Python 3.13) | 73 tests, none skipped on the builder; on Windows 32 run and 41 skip (apply, the real tools and the signal tests need POSIX). The whole suite on the builder: 561 tests, 1 skipped (the nft check-mode test, which needs an nft binary) |
+| `tests/test_install_disk.py` | Linux builder (Python 3.12, GRUB 2.14 tools on `PATH`) and Windows (Python 3.13) | 86 tests; on the builder 85 run and 1 skips (the `grub-script-check` test, GRUB's tools were not on `PATH` in the last run); on Windows 40 run and 46 skip (apply, the real tools and the signal tests need POSIX). The four files `test_install_disk.py`, `test_system_pages.py`, `test_target_layers.py` and `test_boot_dosfstools.py` pass on both; the whole suite was not rerun after the second-round changes |
 | `sfdisk` (util-linux 2.39.3) applies the generated script to a regular file; `sfdisk --json` shows the planned GUIDs, offsets and sizes; the last partition ends on a 1 MiB boundary inside the usable range | builder, regular file | pass; the 4096 byte sector layout is computed (4096 only by arithmetic, not by `sfdisk`) |
 | `mkfs.fat 4.2 -S 512` and `-S 4096` around the FAT32 floor | builder, regular files | 66591/66592 sectors (512) and 65695/65696 sectors (4096) are the last that warn and the first that do not; `disk.FAT32_FLOOR` |
 | `mkfs.ext4 -U -L`, `mkfs.fat -F 32 -i -n` on 64 MiB files; `blkid -p` reports the planned UUID, volume ID and label; `e2fsck -fn`, `fsck.fat -n` accept | builder | pass |
