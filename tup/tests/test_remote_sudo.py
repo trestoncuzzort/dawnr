@@ -1,4 +1,4 @@
-"""Sudo source record and five-source closure; no network, build or install.
+"""Sudo source record, five-source closure and target page; no network, build or install.
 
 Run: python -m unittest discover -s tup/tests -p 'test_remote_sudo.py' -v
 The retained publisher bytes are checked for real. Signature tests run the real
@@ -9,8 +9,10 @@ from __future__ import annotations
 
 import hashlib
 import json
+import os
 from pathlib import Path
 import shutil
+import subprocess
 import sys
 import tempfile
 import unittest
@@ -23,6 +25,8 @@ from remote import verify_sources as four
 from sources import source_lock as verifier
 
 REMOTE = TUP / "remote"
+PAGE = REMOTE / "pages/05-sudo.sh"
+BASH = os.environ.get("TUP_TEST_BASH") or shutil.which("bash")
 GPG = shutil.which("gpg")
 PIN = "4a38a1ab3adb1199257edc2a7c4a2bd714665eb605b04368843b06dada2cfcfb"
 
@@ -223,6 +227,75 @@ class FiveSourceClosureTests(unittest.TestCase):
         self.assertEqual(receipt["scope"], "four-remote-layer-sources")
         for name, expected in receipt["catalogs"].items():
             self.assertEqual(verifier.digest(REMOTE / name), expected, name)
+
+
+class SudoPageTests(unittest.TestCase):
+    def setUp(self):
+        self.raw = PAGE.read_bytes()
+        self.lines = self.raw.decode("ascii").split("\n")
+
+    def test_layer_page_contract(self):
+        self.assertNotIn(b"\r", self.raw)
+        self.assertEqual(self.lines[:3], ["#!/bin/bash", "# TUP_TARBALL=" + layer.SUDO, "source /tup-layer/common.sh"])
+        self.assertTrue(self.raw.endswith(b"\n"))
+        text = "\n".join(self.lines)
+        for required in ("--prefix=/usr", "--libexecdir=/usr/lib", "--with-secure-path", "--with-env-editor",
+                         "--docdir=/usr/share/doc/sudo-1.9.17p2", "--with-passprompt='[sudo] password for %p: '",
+                         "--without-pam", "--disable-openssl", 'make -j"$TUP_JOBS"',
+                         "make -j1 check", "/sources/log/sudo-make-check.log", "/usr/sbin/visudo -c"):
+            self.assertIn(required, text)
+        # The generic page installs no rule, account, service or PAM file.
+        for forbidden in ("systemctl", "> /etc/sudoers", "NOPASSWD", "useradd", "curl", "wget", "/etc/pam.d"):
+            self.assertNotIn(forbidden, text)
+        self.assertLess(self.lines.index("env LC_ALL=C make -j1 check > make-check.log 2>&1 || result=$?"),
+                        self.lines.index("make -j1 install"))
+
+    def block(self, first, last):
+        start = next(index for index, line in enumerate(self.lines) if line.startswith(first))
+        end = next(index for index in range(start, len(self.lines)) if self.lines[index] == last)
+        return "\n".join(self.lines[start:end + 1]) + "\n"
+
+    def run_bash(self, script, cwd):
+        return subprocess.run([BASH, "-c", "set -euo pipefail\n" + script], cwd=cwd, capture_output=True,
+                              text=True, timeout=60)
+
+    @unittest.skipUnless(BASH, "Bash is required to execute page fragments")
+    def test_page_is_valid_bash(self):
+        result = subprocess.run([BASH, "-n"], input=self.raw, capture_output=True, timeout=60)
+        self.assertEqual(result.returncode, 0, result.stderr)
+
+    @unittest.skipUnless(BASH, "Bash is required to execute page fragments")
+    def test_check_log_gate_refuses_hidden_failures_and_missing_suites(self):
+        gate = self.block("if grep -Eq 'FAIL$", "done")
+        clean = "".join(f"{suite}: {count} tests run, 0 errors, 100% success rate\n" for suite, count in
+                        (("check_addr", 9), ("sudoers", 174), ("testsudoers", 62), ("visudo", 20), ("cvtsudoers", 82)))
+        cases = {
+            "clean": (clean, 0),
+            "error-count": (clean.replace("visudo: 20 tests run, 0 errors, 100%", "visudo: 20 tests run, 1 errors, 95%"), 1),
+            "other-suite-error": (clean + "check_fill: 18 tests run, 2 errors, 88% success rate\n", 1),
+            "harness-fail-line": (clean + "sudoers/test2 (parse): FAIL\n", 1),
+            "suite-absent": (clean.replace("cvtsudoers: 82 tests run, 0 errors, 100% success rate\n", ""), 1),
+            "suite-ran-nothing": (clean.replace("testsudoers: 62 tests", "testsudoers: 0 tests"), 1),
+            "empty": ("", 1),
+        }
+        for name, (log, expected) in cases.items():
+            with self.subTest(name=name), tempfile.TemporaryDirectory() as temporary:
+                Path(temporary, "make-check.log").write_text(log, encoding="ascii", newline="\n")
+                result = self.run_bash(gate, temporary)
+                self.assertEqual(result.returncode, expected, result.stderr)
+
+    @unittest.skipUnless(BASH, "Bash is required to execute page fragments")
+    def test_default_policy_edit_disables_only_the_upstream_root_rule(self):
+        edit = next(line for line in self.lines if line.startswith("sed -i 's/^root ALL"))
+        upstream = ('Defaults!/usr/sbin/visudo env_keep += "SUDO_EDITOR EDITOR VISUAL"\n'
+                    'Defaults secure_path="/usr/sbin:/usr/bin"\n## User privilege specification\n##\n'
+                    "root ALL=(ALL:ALL) ALL\n# %wheel ALL=(ALL:ALL) ALL\n@includedir /etc/sudoers.d\n")
+        with tempfile.TemporaryDirectory() as temporary:
+            Path(temporary, "sudoers").write_text(upstream, encoding="ascii", newline="\n")
+            result = self.run_bash(edit.replace("/etc/sudoers", "sudoers"), temporary)
+            self.assertEqual(result.returncode, 0, result.stderr)
+            self.assertEqual(Path(temporary, "sudoers").read_bytes().decode("ascii"),
+                             upstream.replace("\nroot ALL", "\n# root ALL"))
 
 
 if __name__ == "__main__":

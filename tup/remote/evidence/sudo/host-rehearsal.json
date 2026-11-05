@@ -1,0 +1,270 @@
+{
+  "schema": "tup-remote-sudo-host-rehearsal-v1",
+  "status": "host-rehearsal-not-target-qualified",
+  "release_eligible": false,
+  "page_sha256": "36aea5c153acd64b12f395da8ac4691ca26b74963ce4f742a6cde904b1f27998",
+  "source_sha256": "4a38a1ab3adb1199257edc2a7c4a2bd714665eb605b04368843b06dada2cfcfb",
+  "source_verification_sha256": "bc8e9067b02ecedaf62e3d014d323a0ad1da7e49e51632913f021a3b655894c9",
+  "host": {
+    "distribution": "Ubuntu 24.04.5 LTS",
+    "machine": "x86_64",
+    "gcc": "gcc (Ubuntu 13.3.0-6ubuntu2~24.04.1) 13.3.0",
+    "glibc": "2.39",
+    "make": "GNU Make 4.3",
+    "pam_headers_present": false,
+    "user": "root",
+    "jobs": 1,
+    "priority": "nice 19",
+    "network_namespace": "host (not private)",
+    "chroot": false
+  },
+  "environment": {
+    "HOME": "${REHEARSAL_HOME}",
+    "TERM": "dumb",
+    "PATH": "/usr/bin:/usr/sbin",
+    "LC_ALL": "POSIX",
+    "LANG": "POSIX",
+    "TZ": "UTC",
+    "TUP_ARCH": "x86_64",
+    "TUP_JOBS": "1",
+    "MAKEFLAGS": "-j1",
+    "PYTHONDONTWRITEBYTECODE": "1"
+  },
+  "stages": [
+    {
+      "stage": "authentication",
+      "exit_code": 0,
+      "elapsed_seconds": 0.071,
+      "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "command": [
+        "/usr/bin/python3",
+        "${TUP}/remote/verify_layer_sources.py",
+        "--cache",
+        "${CACHE}",
+        "--gpg",
+        "/usr/bin/gpg",
+        "--sudo-only",
+        "--output",
+        "${REHEARSAL}/verified-source.json"
+      ]
+    },
+    {
+      "stage": "extract",
+      "exit_code": 0,
+      "elapsed_seconds": 0.143,
+      "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "command": [
+        "tar",
+        "--no-same-owner",
+        "-xzf",
+        "${CACHE}/sudo-1.9.17p2.tar.gz"
+      ]
+    },
+    {
+      "stage": "configure",
+      "exit_code": 0,
+      "elapsed_seconds": 8.133,
+      "log_sha256": "e63c8c4c1f683f2313c14c1b20c1ca414629d8d7550b585f376b2c7ed90c5b98",
+      "command": [
+        "/bin/bash",
+        "${REHEARSAL}/logs/configure.sh"
+      ]
+    },
+    {
+      "stage": "config-gate",
+      "exit_code": 0,
+      "elapsed_seconds": 0.003,
+      "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "command": [
+        "/bin/bash",
+        "${REHEARSAL}/logs/config-gate.sh"
+      ]
+    },
+    {
+      "stage": "make",
+      "exit_code": 0,
+      "elapsed_seconds": 33.467,
+      "log_sha256": "d1badb57114d5cb5fdf9145db887a31bc8f57ee5372579e0959183328e8dfded",
+      "command": [
+        "make",
+        "-j1"
+      ]
+    },
+    {
+      "stage": "make-check",
+      "exit_code": 0,
+      "elapsed_seconds": 11.466,
+      "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "command": [
+        "/bin/bash",
+        "${REHEARSAL}/logs/make-check.sh"
+      ]
+    },
+    {
+      "stage": "check-log-gate",
+      "exit_code": 0,
+      "elapsed_seconds": 0.005,
+      "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "command": [
+        "/bin/bash",
+        "${REHEARSAL}/logs/check-log-gate.sh"
+      ]
+    },
+    {
+      "stage": "install-staged",
+      "exit_code": 0,
+      "elapsed_seconds": 2.346,
+      "log_sha256": "5e4976d3a0117d17e7a5f86698f4c47220e7011672bf3593b2e614a35a9a9b6d",
+      "command": [
+        "make",
+        "-j1",
+        "install",
+        "DESTDIR=${REHEARSAL}/dest"
+      ]
+    },
+    {
+      "stage": "policy-edit",
+      "exit_code": 0,
+      "elapsed_seconds": 0.004,
+      "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "command": [
+        "/bin/bash",
+        "${REHEARSAL}/logs/policy-edit.sh"
+      ]
+    },
+    {
+      "stage": "visudo-check",
+      "exit_code": 0,
+      "elapsed_seconds": 0.001,
+      "log_sha256": "f55cb0a0065067ffb80672b7146256d19d1c5e5752cde5f70c448df9ba573073",
+      "command": [
+        "${REHEARSAL}/dest/usr/sbin/visudo",
+        "-c",
+        "-f",
+        "${REHEARSAL}/sudoers.staged"
+      ]
+    },
+    {
+      "stage": "cvtsudoers",
+      "exit_code": 0,
+      "elapsed_seconds": 0.001,
+      "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "command": [
+        "${REHEARSAL}/dest/usr/bin/cvtsudoers",
+        "-f",
+        "json",
+        "-o",
+        "sudoers-policy.json",
+        "${REHEARSAL}/sudoers.staged"
+      ]
+    },
+    {
+      "stage": "no-rule-check",
+      "exit_code": 0,
+      "elapsed_seconds": 0.014,
+      "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "command": [
+        "/usr/bin/python3",
+        "-I",
+        "${REHEARSAL}/logs/policy-check.py"
+      ]
+    },
+    {
+      "stage": "cvtsudoers-upstream-default",
+      "exit_code": 0,
+      "elapsed_seconds": 0.001,
+      "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "command": [
+        "${REHEARSAL}/dest/usr/bin/cvtsudoers",
+        "-f",
+        "json",
+        "-o",
+        "sudoers-policy.json",
+        "${REHEARSAL}/dest/etc/sudoers.dist"
+      ]
+    },
+    {
+      "stage": "no-rule-check-refuses-upstream-default",
+      "exit_code": 1,
+      "elapsed_seconds": 0.015,
+      "log_sha256": "098a8aca46c5f667e86afe371889f67f2dce0ac45a040e058698b4ad7262fc6b",
+      "command": [
+        "/usr/bin/python3",
+        "-I",
+        "${REHEARSAL}/logs/policy-check.py"
+      ]
+    }
+  ],
+  "configure_result": {
+    "HAVE_PAM": false,
+    "HAVE_OPENSSL": false,
+    "HAVE_GETSPNAM": true,
+    "HAVE_ZLIB_H": true,
+    "authentication_methods": "passwd",
+    "tls": "no"
+  },
+  "upstream_check": {
+    "log_sha256": "1c682c2e45dac7c7202582a17eec367824d8fe39a10960f84883d7acc8b46bef",
+    "log_bytes": 80756,
+    "suites": 45,
+    "tests_run": 1535,
+    "nonzero_error_suites": []
+  },
+  "staged_install": {
+    "sudo_mode_as_installed": "0o4755",
+    "sudo_mode_after_rehearsal": "0o755",
+    "files_outside_share_and_include": [
+      "etc/sudo.conf",
+      "etc/sudo_logsrvd.conf",
+      "etc/sudoers",
+      "etc/sudoers.dist",
+      "usr/bin/cvtsudoers",
+      "usr/bin/sudo",
+      "usr/bin/sudoedit",
+      "usr/bin/sudoreplay",
+      "usr/lib/sudo/audit_json.la",
+      "usr/lib/sudo/audit_json.so",
+      "usr/lib/sudo/group_file.la",
+      "usr/lib/sudo/group_file.so",
+      "usr/lib/sudo/libsudo_util.la",
+      "usr/lib/sudo/libsudo_util.so",
+      "usr/lib/sudo/libsudo_util.so.0",
+      "usr/lib/sudo/libsudo_util.so.0.0.0",
+      "usr/lib/sudo/sudo_intercept.la",
+      "usr/lib/sudo/sudo_intercept.so",
+      "usr/lib/sudo/sudo_noexec.la",
+      "usr/lib/sudo/sudo_noexec.so",
+      "usr/lib/sudo/sudoers.la",
+      "usr/lib/sudo/sudoers.so",
+      "usr/lib/sudo/system_group.la",
+      "usr/lib/sudo/system_group.so",
+      "usr/lib/tmpfiles.d/sudo.conf",
+      "usr/sbin/sudo_logsrvd",
+      "usr/sbin/sudo_sendlog",
+      "usr/sbin/visudo"
+    ],
+    "sudoers_active_lines": [
+      "Defaults!/usr/sbin/visudo env_keep += \"SUDO_EDITOR EDITOR VISUAL\"",
+      "Defaults secure_path=\"/usr/sbin:/usr/bin\"",
+      "@includedir /etc/sudoers.d"
+    ],
+    "sudoers_d_entries": [],
+    "tmpfiles": [
+      "d /run/sudo 0711 root root",
+      "D /run/sudo/ts 0700 root root"
+    ],
+    "needed_libraries": [
+      "libc.so.6",
+      "libcrypt.so.1",
+      "libsudo_util.so.0",
+      "libz.so.1"
+    ]
+  },
+  "not_rehearsed": [
+    "GCC 16.2, glibc 2.44 and the target's libxcrypt and zlib",
+    "the layer chroot, its private network namespace and minimal /dev",
+    "installation into the real /usr and /etc, including the setuid mode check on the installed path",
+    "the page's final 'sudo -V' and 'sudo -n /usr/bin/true' controls, which need the installed prefix",
+    "any login, authentication or privilege use"
+  ]
+}
