@@ -84,6 +84,14 @@ Current ownership, dependencies, implementation and verification status are in [
 
 ### Build and evidence
 
+Observed runtime finding on 2026-11-05 (H54): the first maintained-profile
+build passed both toolchain chapters, then the added temporary-Python regression
+invoked bare `./python` without the shared-library environment supplied by
+CPython's Makefile. It exited 127 before producing mandatory test evidence.
+Reuse upstream `RUNSHARED` and `PYTHON_FOR_BUILD`, reproduce the correction in an
+isolated copy, and retain the failed run/intent before a fresh build. This fix
+was not implemented when the owner paused for [Claude handoff](HANDOFF-CLAUDE.md).
+
 Additional finding on 2026-11-04: the [LFS download page](https://www.linuxfromscratch.org/lfs/download.html) says the prior System V edition is no longer maintained. The current TUP book remains useful historical source, but rebuilding it unchanged does not establish a maintained server baseline. H54 tracks this separately from kernel selection.
 
 | ID and kind | Evidence and consequence | Resolution and dependency | Passing test |

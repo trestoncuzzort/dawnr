@@ -1,0 +1,32 @@
+>>> ch07-inner/05-creatingdirs.sh (OVERRIDE x86_64/ch07/05-creatingdirs.sh)
+    ok in 1s
+>>> ch07-inner/06-createfiles.sh (OVERRIDE x86_64/ch07/06-createfiles.sh)
+    ok in 0s
+>>> ch07-inner/07-gettext.sh (OVERRIDE x86_64/ch07/07-gettext.sh)
+    ok in 165s
+>>> ch07-inner/08-bison.sh (OVERRIDE x86_64/ch07/08-bison.sh)
+    ok in 22s
+>>> ch07-inner/09-perl.sh (OVERRIDE x86_64/ch07/09-perl.sh)
+    ok in 61s
+>>> ch07-inner/10-zlib.sh (OVERRIDE x86_64/ch07/10-zlib.sh)
+    ok in 2s
+>>> ch07-inner/11-mpdecimal.sh (OVERRIDE x86_64/ch07/11-mpdecimal.sh)
+    ok in 4s
+>>> ch07-inner/12-Python.sh (OVERRIDE x86_64/ch07/12-Python.sh)
+!!! ch07-inner/12-Python.sh FAILED (exit 127, 55s), last lines of /sources/log/ch07-inner-12-Python.log:
+
+The necessary bits to build these optional modules were not found:
+_bz2                  _ctypes               _ctypes_test       
+_dbm                  _gdbm                 _hashlib           
+_ssl                  _tkinter              _uuid              
+_zstd                 readline                                 
+To find the necessary bits, look in configure.ac and config.log.
+
+Could not build the ssl module!
+Python requires a OpenSSL 1.1.1 or newer
+
+Checked 114 modules (36 built-in, 65 shared, 1 n/a on linux-x86_64, 1 disabled, 11 missing, 0 failed on import)
+./python: error while loading shared libraries: libpython3.14.so.1.0: cannot open shared object file: No such file or directory
+grep: /sources/log/native-suites/ch07-inner-12-Python-002/results/native-python-backports.trs: No such file or directory
+required suite result evidence is missing or reports failures
+    target may be partially modified; refusing automatic retry (intent retained).

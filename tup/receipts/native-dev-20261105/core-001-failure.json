@@ -1,0 +1,76 @@
+{
+  "schema": "tup-core-failure-observation-v1",
+  "observation_utc": "2026-11-05",
+  "source_commit": "cbabbd393a6d6d1470329d6b64defeafaf0f0392",
+  "source_lock_sha256": "8c46c28a74f760ddf62df17f34327ac24dde7b465ab7c1bf3b9dbc7551522a05",
+  "inputs_sha256": "aa8145166ceaac33cbea12edb15b1b08a1bf4143a1f49a95cf443334e11c4081",
+  "scope": "partial-native-core-build",
+  "status": "failed",
+  "work_paused_by_owner": true,
+  "complete_core": false,
+  "boot_tested": false,
+  "release_eligible": false,
+  "completed_stages": [
+    "ch05",
+    "ch06",
+    "ownership"
+  ],
+  "failed_stage": "ch07-inner",
+  "failed_page": "ch07-inner/12-Python.sh",
+  "failed_page_exit_code": 127,
+  "runner_exit_code": 2,
+  "observed_failure": "The custom security-regression command invoked bare ./python before installation; its shared libpython3.14.so.1.0 was not on the runtime library path. Required .trs evidence was not produced and the driver refused automatic retry.",
+  "diagnosis": "The built CPython Makefile supplies RUNSHARED and PYTHON_FOR_BUILD; upstream build commands used those variables successfully. The custom regression invocation did not.",
+  "proposed_fix_status": "unimplemented and untested at pause",
+  "original_log_sha256": {
+    "RUN-PLAN.json": "c329fe445f51ebfdd298fcf9963f3b961d7b91d928cf0d249e91891170de7fb6",
+    "resources.jsonl": "764cf4fbfd572c8d9a34550d2c27d862acddb4f9fa0aad989eebb68b970304fd",
+    "run.log": "d41fb285af72ff2db90a66580e710f07c3acdd88e8ee2e9f4a2ad51e3b8bf62e",
+    "ch05.log": "c0ed7222dec042fd503f7b278d89419bd0ec9c9ea61dafdb9618aeb90e3f5c27",
+    "ch05.json": "324e2b0cc79f6ab8ef87e797d07ce71b294ce86cf097cd853a660827ad58d874",
+    "ch06.log": "291624ac53d88d0dd38976eb7254e5b411b4cf3da1ec14e47320b59ed869b2d6",
+    "ch06.json": "756a9f07dc9e05c6bba5046d3f9d762219df1b6b1fd08705db0ffe477d41e6fb",
+    "ch07-inner.log": "a1fb2771ffec43d96122b296347e8d9eb802bf04b3620ad6f69b148f217a3e79",
+    "ch07-inner.json": "60b56759ac3dbb0b23af3058f93dad3bef90fdff3d4522ef55c609893032aef7",
+    "ch07-inner-12-Python.log": "0f2385ced7f2a4d3c3e1a800618f615f85970a6a9b59b59e126db1c7218ac9bf",
+    "driver-receipts.jsonl": "3b21309f2d2757463804710a1f16e5cce82279fba379ed003030a6fe127dbc78",
+    "BUILD-INPUTS.json": "aa8145166ceaac33cbea12edb15b1b08a1bf4143a1f49a95cf443334e11c4081"
+  },
+  "resources": {
+    "command_exit_code": 2,
+    "complete_resource_lifetime": true,
+    "final_cpu_stat": {
+      "burst_usec": 0,
+      "nice_usec": 4319284000,
+      "nr_bursts": 0,
+      "nr_periods": 19112,
+      "nr_throttled": 5141,
+      "system_usec": 1117436832,
+      "throttled_usec": 38551566,
+      "usage_usec": 5428914716,
+      "user_usec": 4311477884
+    },
+    "final_memory_events": {
+      "high": 0,
+      "low": 0,
+      "max": 63834,
+      "oom": 0,
+      "oom_group_kill": 0,
+      "oom_kill": 0
+    },
+    "max_memory_peak_bytes": 4294967296,
+    "max_observed_swap_bytes": 1366396928,
+    "max_processes": 30,
+    "minimum_host_available_kib": 1569924,
+    "remaining_tasks": 0,
+    "samples": 965,
+    "status": "command-exited",
+    "type": "summary",
+    "wall_seconds": 1929.15
+  },
+  "limits": [
+    "Partial failed build only; not a full-core resource qualification.",
+    "max_processes is the collector legacy name for task/thread count.",
+    "No original failed workspace, recipe or intent was modified for recovery."
+  ]
+}

@@ -43,9 +43,12 @@
         "receipts/native-dev-20261104/verification.json",
         "receipts/native-dev-20261105/verification.json",
         "receipts/native-dev-20261105/environment.json",
-        "receipts/native-dev-20261105/resource-collector-probe.json"
+        "receipts/native-dev-20261105/resource-collector-probe.json",
+        "receipts/native-dev-20261105/core-001-failure.json",
+        "receipts/native-dev-20261105/core-001-ch07-failure.log",
+        "HANDOFF-CLAUDE.md"
       ],
-      "note": "First core build started from frozen cbabbd39 after real Linux preflight/prepare; first Binutils stage completed. Four jobs, enforced 4 GiB memory/2 GiB swap/4 CPU quota. Collector actual tests passed aggregate memory, child failure, direct and descendant-cgroup leftover detection. Whole-build resource peaks and management responsiveness remain unqualified."
+      "note": "Run001 from frozen cbabbd39 passed ch05/ch06 but failed in the ch07 Python regression launcher. Observed 1929.15s, 4GiB peak charged memory, 1366396928 bytes maximum observed swap, zero OOM kills and zero remaining tasks. Limits were four jobs, 4GiB memory, 2GiB swap and four CPU quota. These partial-run measurements do not qualify a complete build. Owner paused for Claude handoff; no replacement build started."
     },
     {
       "id": "H02",
@@ -362,7 +365,7 @@
       "evidence": [
         "boot/README.md"
       ],
-      "note": "Ventoy handoff parsing and live-payload hook are implemented with negative fixtures. Actual Ventoy integration remains disabled/unqualified until real image runtime proof; no skip-marker shortcut or native boot success claimed."
+      "note": "Ventoy handoff parsing and live-payload hook are implemented with negative fixtures. Actual Ventoy integration remains disabled/unqualified until real image runtime proof; no skip-marker shortcut or native boot success claimed. Pause checkpoint: disposable Ventoy1.1.18 image reached a host GRUB EFI marker but halt timed out at60s; stored verdict FAILED. Image creation and byte-for-byte ISO recovery passed. This is not TUP live-root or shutdown qualification. Untracked runtime draft and private evidence are listed in HANDOFF-CLAUDE.md."
     },
     {
       "id": "H15",
@@ -1097,9 +1100,12 @@
         "native/BASELINE.md",
         "receipts/native-dev-20261105/verification.json",
         "native/profiles/lfs-13.1-systemd/PATCH-APPLICATION.json",
-        "native/profiles/lfs-13.1-systemd/PYTHON-BACKPORT-REGRESSIONS.json"
+        "native/profiles/lfs-13.1-systemd/PYTHON-BACKPORT-REGRESSIONS.json",
+        "receipts/native-dev-20261105/core-001-failure.json",
+        "receipts/native-dev-20261105/core-001-ch07-failure.log",
+        "HANDOFF-CLAUDE.md"
       ],
-      "note": "Maintained 13.1-systemd CLI enabled with 124 audited pages/580 blocks and 94 accepted source inputs. Original generated book bytes remain unchanged; exact overrides enforce package tests and security backports. First actual core build is running; completed core and boot acceptance remain open.",
+      "note": "Maintained 13.1-systemd CLI/profile has 124 audited pages/580 blocks and 94 accepted source inputs. Actual run001 passed ch05/ch06 and ch07 through mpdecimal, then bare ./python could not locate libpython3.14.so.1.0 during the mandatory backport regression. Upstream RUNSHARED/PYTHON_FOR_BUILD reuse is proposed but unimplemented. Failed intent/logs retained. Complete core and boot remain unqualified; work paused at owner request.",
       "finding": "The [LFS download page](https://www.linuxfromscratch.org/lfs/download.html), checked 2026-11-04, says the prior System V edition is no longer maintained. TUP extracts 12.4 SysV; the currently maintained stable book is 13.1-systemd. Updating only the kernel leaves the rest of the native base without a documented maintenance plan.",
       "required_change": "Stage 1 before a production build: choose and pin a maintained LFS baseline, audit each retained named override against its exact generated page, and review applicable advisories. Compare rebasing onto the maintained book with explicitly maintaining the SysV branch; preserve historical generated pages and receipts. Record the chosen init/service design and measure its cost.",
       "acceptance": "Source/book/deviation inventory agrees with the chosen version; no unresolved applicable high-impact advisory is waved through; clean build, boot, supervision, updates and rollback are tested on that exact baseline. An old successful receipt is not production approval."

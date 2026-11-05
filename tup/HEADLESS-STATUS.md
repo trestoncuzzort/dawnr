@@ -9,7 +9,35 @@ the owner's MacBook. Disposable TUP guests install workload tools through an
 in-guest package manager, keep running across remote disconnects, and discard
 their writable state on explicit finish. Only selected results persist.
 
-## Core build started: 2026-11-05
+## Paused for Claude handoff: 2026-11-05
+
+The owner requested a pause and a handoff to Claude; the automatic goal was
+cleared. See [HANDOFF-CLAUDE.md](HANDOFF-CLAUDE.md) for the current state and
+the exact next work. All worker lanes stopped; no task QEMU process or attached
+loop device remained at the pause audit.
+
+The first real core build **failed** during temporary Python's added regression
+check after chapters 5 and 6 passed. The bare `./python` invocation could not
+locate its shared libpython; upstream's Makefile supplies RUNSHARED for this.
+The proposed fix is unimplemented. The original workspace, failed intent and
+logs are preserved. No replacement build has started. The
+[failure receipt](receipts/native-dev-20261105/core-001-failure.json) and
+[original stage log](receipts/native-dev-20261105/core-001-ch07-failure.log)
+retain the failure and final resource observations.
+
+Integrated main d35a0ff3 passed **290 Linux tests, zero skips** before the pause:
+[receipt](receipts/native-dev-20261105/verification-d35a0ff3.json),
+[raw log](receipts/native-dev-20261105/integration-d35a0ff3-linux.txt).
+The disposable regular-file installer and isolated firewall probes passed their
+declared tests. A host-only Ventoy UEFI smoke reached its GRUB marker but timed
+out during halt; its stored verdict is FAILED. None is a complete TUP boot or
+remote-login result. Unfinished remote-target and runtime-test code remains in
+worker worktrees, with a private handoff snapshot.
+
+## Historical core build launch: 2026-11-05
+
+The following launch checkpoint predates the failure above.
+
 
 The first complete native-profile LFS build is running from frozen commit
 `cbabbd393a6d6d1470329d6b64defeafaf0f0392`. Preflight and fresh-root preparation
