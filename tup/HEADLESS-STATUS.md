@@ -77,14 +77,31 @@ package:
   keysym (40 of upstream's 203 maps fail that way). It now compiles in Unicode
   mode, which is what systemd uses; all 18 compile.
 
-None of this is a core result. **Authoritative core run 002 started on
-2026-11-05 from commit `2dac71ed`** with 6 GiB memory, 4 GiB swap and four
-jobs, with its prediction recorded beforehand. Run 001's workspace and
-evidence are untouched. Its outcome will be recorded here; until then no core
-exists.
+None of this is a core result.
 
-**Integrated on main and tested on Linux (432 tests: 431 pass, one opt-in
-test skipped):** the layer runner with three chapters (remote, boot, system); owner
+**Authoritative core run 002 failed.** It started on 2026-11-05 from commit
+`2dac71ed` with 6 GiB memory, 4 GiB swap and four jobs, passed chapters 5, 6
+and 7 (including the temporary Python regression that stopped run 001) and
+four chapter 8 pages, and then failed in the glibc suite: 6824 PASS, 2 FAIL.
+One failure is the reviewed `io/tst-lchmod`. The other, `stdlib/test-bz22786`,
+was killed by the test harness after 80 s; it allocates more than 2 GiB and
+takes about 5 s when memory is available. In that minute the builder's Windows
+host had between 12 and 250 MiB of free physical memory, a host call to the
+builder had just timed out, and a rehearsal packaging job was running beside
+the build. Running a second job beside the authoritative build was a mistake
+of operation, not a defect in a package. The workspace, evidence and failed
+intent of runs 001 and 002 are preserved.
+
+**Authoritative core run 003 started on 2026-11-05 from commit `05cc4d3e`**
+with the same limits. The glibc suite now runs with the timeout factor the
+LFS page uses for tests that time out (10 instead of 4), and the builder
+conditions are recorded with the run: its page cache is trimmed so the host
+keeps free memory, and no other build, packaging or VM test runs during its
+suites. Its first half hour did overlap with VM tests and took correspondingly
+long. Its outcome will be recorded here; until then no core exists.
+
+**Integrated on main and tested on Linux at every push (the whole suite
+passes; one opt-in test is skipped):** the layer runner with three chapters (remote, boot, system); owner
 enrollment at boot from a key on the boot stick, with the firewall loaded
 before the network and SSH off until a key is enrolled; the Ventoy live-boot
 hook and early AMD microcode in the image; and a kernel configuration
@@ -97,16 +114,51 @@ on the same machine reads as local time; the boot menu shows messages on the
 screen by default and takes no keyboard input from the serial port; and the
 graphics module whose firmware is not staged is not loaded automatically.
 
-**First run of the layer pages on a real root (a rehearsal root, so not a
-receipted layer):** libmnl, libnftnl and nftables built and installed; the
-OpenSSH page built and then stopped in its own program-list check, which read
-a make variable as text. That is fixed and a second run is in progress. The
-kernel, firmware, system pages, the image and any boot are still unrun.
+**The whole chain ran once on a rehearsal root.** A rehearsal root is the
+continued copy of failed run 001, so nothing below is a receipted layer, a
+release image or hardware evidence; it shows that the code path works.
 
-Still in progress on worker branches: corrections to the external-VM test
-tooling (its Ventoy fixture is now made by Ventoy's own installer, and the
-small GRUB-only Ventoy smoke that failed earlier passes on it under QEMU), an
-independent review of the live-boot code, and the disk installer.
+- Layers: the first run stopped in the OpenSSH page's own program-list check,
+  which read a make variable as text (fixed). The second run completed all
+  three chapters: libmnl, libnftnl, nftables, OpenSSH with its test suite,
+  sudo, the device-mapper tools, Linux 6.18.60 compiled by the target's GCC
+  16.2 from the retained configuration (both configuration checkers passed;
+  the only drift is compiler-capability symbols), the selected firmware, and
+  the three system pages under the target's own systemd and Python.
+- Image: the unmodified packager accepted that root and built a 1.17 GB ISO.
+  Its first attempt stopped in dracut, which asked the builder's own
+  `/lib/modules` whether the target's kernel modules exist; the packager now
+  names the target's module directory. An independent review also made it
+  refuse an initramfs when dracut logged an install error while exiting 0.
+- Boot and login, QEMU with OVMF, emulated CPU: **the ISO booted and passed
+  all 21 remote checks on its first run.** The kernel and dracut's own init
+  found the live root, systemd reached its default target with no failed
+  unit, enrollment created the owner account from a key on a `TUP-ENROLL`
+  volume, DHCP gave the address, the console showed the address, the state
+  and the host key fingerprint, and the test logged in as the owner with that
+  key. Root, password and unenrolled-key logins were refused, a changed host
+  key stopped the client, an SFTP round trip preserved its digest, the
+  firewall table was listed through sudo, and the guest powered off cleanly.
+- Ventoy, same ISO as a file on a stick made by Ventoy 1.1.18's own
+  installer (exFAT): Ventoy started the ISO's GRUB, the kernel command line
+  was the ISO's own, the hook read Ventoy's handoff variable, mounted the
+  stick's data partition read-only, attached the ISO read-only, the embedded
+  digest check passed, and enrollment read the key from `tup-enroll/` on the
+  stick itself. Two runs were made while a core build shared the builder,
+  and **both have a stored verdict of FAILED**: in the first, two SSH checks
+  ended in the client's connection timeout before any server answer (the
+  other 19 passed); in the second, all SSH checks passed but the serial
+  getty's device unit timed out during a five and a half minute emulated
+  boot, so no login prompt reached the serial log within the budget. The
+  checker now repeats a connection that timed out before the server's
+  banner; neither run is relabelled, and the Ventoy path has no passing run
+  yet.
+
+Still open before any hardware: a real core (run 003), layers and an image
+built from it, passing direct and Ventoy runs on a quiet builder, the disk
+installer (implemented on a branch; its second safety review found that a
+Windows disk with a damaged GPT would not be recognised, which is being
+fixed), and the owner's approval for any write to the USB stick or a disk.
 
 ## Paused for Claude handoff: 2026-11-05 (historical)
 
