@@ -50,33 +50,63 @@ they found, before any authoritative rebuild:
   for this exact toolchain (glibc `io/tst-lchmod` in any chroot, a gprofng
   test in binutils, a list in GCC). The gate now accepts only reviewed, exact
   result lines with a pass floor for those three suites
-  ([policy](native/profiles/lfs-13.1-systemd/suite-exceptions/README.md));
-  glibc's list holds the one line actually observed. Lists for binutils and
-  GCC do not exist until the rehearsal has observed those suites.
+  ([policy](native/profiles/lfs-13.1-systemd/suite-exceptions/README.md)).
+  Each list holds only lines the rehearsal observed: one for glibc, one for
+  binutils, 74 for GCC. Every one of them also occurs in the LFS editors' own
+  reference test logs for this book version; six of the GCC lines are not
+  named on the book page and are recorded as such.
 - tar's capability test compares against an obsolete `getcap` format and
   Python's suite enables network tests without a resolver; both are corrected
   in their audited blocks.
 
-In the rehearsal so far chapter 7 completed (the temporary Python regression
-recorded PASS) and chapter 8 is in progress: glibc built, ran 6,823 to 6,824
-passing tests across attempts and installed. Its recorded verdict in the
-last attempt is still *failed*, correctly, because of the two clock-induced
-failures; the next authoritative run must show them passing.
+**The rehearsal finished chapter 8.** All 81 pages built in 2 h 57 min with a
+peak of 5.85 GiB charged memory and no OOM kill. The full Python suite, tar,
+SQLite, GMP, MPFR, Tcl, Expect, bzip2 and the unprivileged coreutils suite
+passed their gates. Four suites did not, and each had a cause outside the
+package:
 
-**Integrated on main and tested on Linux (334 tests, zero skips):** the layer
-runner that exports a validated core and builds the remote and boot chapters
-in it; pages for libmnl, libnftnl, nftables, OpenSSH, sudo, the device-mapper
-part of LVM2, the kernel and the selected firmware; authenticated sudo
-1.9.17p2; and a kernel configuration extended for KVM guests, device
-assignment, sensors, watchdog and rescue filesystems, re-qualified by a
-committed script. All seven layer archives and sudo were re-authenticated by
-the real verifier in the builder. None of these pages has run in a target
-root yet.
+- glibc: the two clock-induced failures above (that attempt started before
+  the clock was fixed); its verdict stays *failed* in the rehearsal record.
+- binutils and GCC: only the reviewed lines, which had no lists yet.
+- coreutils as root: one `chroot` test expects root to have group 0 among its
+  supplementary groups, as after a login. A service unit has none. The runner
+  now enters the chroot with that group; the LFS reference log shows the test
+  passing.
+- kbd: the check of the 18 keymaps touched by the book's patch compiled them
+  in 8-bit mode, in which upstream's unpatched `lt.map` cannot resolve one
+  keysym (40 of upstream's 203 maps fail that way). It now compiles in Unicode
+  mode, which is what systemd uses; all 18 compile.
 
-Still in progress: owner enrollment at boot with the system configuration
-chapter, the Ventoy live-boot adapter, and an external-VM test that performs
-a real SSH login. The next authoritative core build starts when the rehearsal
-has passed every chapter 8 page.
+None of this is a core result. **Authoritative core run 002 started on
+2026-11-05 from commit `2dac71ed`** with 6 GiB memory, 4 GiB swap and four
+jobs, with its prediction recorded beforehand. Run 001's workspace and
+evidence are untouched. Its outcome will be recorded here; until then no core
+exists.
+
+**Integrated on main and tested on Linux (432 tests: 431 pass, one opt-in
+test skipped):** the layer runner with three chapters (remote, boot, system); owner
+enrollment at boot from a key on the boot stick, with the firewall loaded
+before the network and SSH off until a key is enrolled; the Ventoy live-boot
+hook and early AMD microcode in the image; and a kernel configuration
+extended for guests, resource limits, device assignment, sensors and rescue
+filesystems. Review of those branches changed four things before any boot:
+enrollment now looks where the Ventoy hook actually mounts the stick; time
+synchronization stays off until the owner says the hardware clock is in UTC,
+because a synchronized Linux rewrites the clock that a Windows installation
+on the same machine reads as local time; the boot menu shows messages on the
+screen by default and takes no keyboard input from the serial port; and the
+graphics module whose firmware is not staged is not loaded automatically.
+
+**First run of the layer pages on a real root (a rehearsal root, so not a
+receipted layer):** libmnl, libnftnl and nftables built and installed; the
+OpenSSH page built and then stopped in its own program-list check, which read
+a make variable as text. That is fixed and a second run is in progress. The
+kernel, firmware, system pages, the image and any boot are still unrun.
+
+Still in progress on worker branches: corrections to the external-VM test
+tooling (its Ventoy fixture is now made by Ventoy's own installer, and the
+small GRUB-only Ventoy smoke that failed earlier passes on it under QEMU), an
+independent review of the live-boot code, and the disk installer.
 
 ## Paused for Claude handoff: 2026-11-05 (historical)
 
