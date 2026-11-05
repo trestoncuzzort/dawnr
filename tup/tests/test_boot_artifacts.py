@@ -433,6 +433,12 @@ class PackagingTests(BootFixture):
         self.assertIn("--early-microcode", dracut)
         self.assertNotIn("--no-early-microcode", dracut)
         self.assertEqual(option("--fwdir"), os.path.join(root, "usr", "lib", "firmware"))
+        # Found by the first packaging of a real root: without --kmoddir dracut 112
+        # asks the builder's own /lib/modules whether "overlay" exists and refuses.
+        # The directory is the one check_kernel() inventories, and its last two
+        # parents must read lib/modules (dracut.sh checks the text).
+        self.assertEqual(option("--kmoddir"), os.path.join(root, "usr", "lib", "modules", self.release))
+        self.assertEqual(Path(option("--kmoddir")).parts[-3:-1], ("lib", "modules"))
         includes = {dracut[index + 2]: dracut[index + 1] for index, arg in enumerate(dracut) if arg == "--include"}
         self.assertEqual(set(includes), {"/etc/tup-live/root.sha256", *("/" + target for target in boot.HOOKS.values())})
         for target, source in includes.items():

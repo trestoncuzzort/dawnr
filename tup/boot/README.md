@@ -234,6 +234,22 @@ builder kernel's module tree. It is not a TUP root and nothing was booted.
   dmsquash-live`. Dracut's own `init.sh` runs the same hook stages and needs
   neither. The packager refuses an initramfs that lists `systemd` without
   `dracut-systemd`, and one that lacks dracut's own live scripts.
+- **Found on the first real root, which the stand-in could not show.** Dracut
+  decides whether a kernel module exists with
+  `modprobe -d "$drivers_dir/../../../" -S <release> --dry-run`
+  (`dracut-functions.sh` lines 772-776), and `drivers_dir` is set only by
+  `--kmoddir` (`dracut.sh` line 1148). Without that option the question goes
+  to the builder's own `/lib/modules`, sysroot or not. The stand-in used the
+  builder kernel's release, so it passed; the first packaging of a root with
+  the TUP kernel (a rehearsal root) stopped with `Module 'dmsquash-live'
+  depends on module 'overlayfs', which can't be installed`. `assemble.py` now
+  passes `--kmoddir <root>/usr/lib/modules/<release>`. Rerun by hand on that
+  root with the packager's exact command line plus this option, dracut exited
+  0 with no output and an empty log, and the resulting initramfs passed every
+  listing check: the eleven dracut modules, both hooks, the embedded digest
+  file, the programs the hooks run, the udev daemon as systemd's link to
+  `udevadm`, and an early cpio holding only the 128,644-byte AMD container.
+  It has not been booted.
 - With these changes the complete `assemble.py build` ran with the real tools
   on the stand-in: dracut printed no error, the ISO root holds `ventoy.dat`,
   both hooks and the digest are in the initramfs byte for byte, and the early

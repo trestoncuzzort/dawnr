@@ -389,7 +389,13 @@ def assemble(root, expected_path, core_spec, layer_receipt, tools_path, tools_sh
         conf = stage / "dracut.conf"
         conf.write_text('hostonly="no"\nhostonly_cmdline="no"\n', encoding="ascii", newline="\n")
         initrd = stage / "iso/boot/initramfs.img"
-        said = runner([command("dracut"), "--sysroot", root, "--kver", release, "--conf", conf,
+        # Dracut 112 asks "is this kernel module available" with
+        # modprobe -d "$drivers_dir/../../../" (dracut-functions.sh:772-776), and
+        # drivers_dir is set only by --kmoddir (dracut.sh:1148): without it the
+        # question goes to the builder's own /lib/modules even under --sysroot,
+        # and every module check fails for a kernel the builder does not have.
+        said = runner([command("dracut"), "--sysroot", root, "--kver", release,
+                       "--kmoddir", root / "usr/lib/modules" / release, "--conf", conf,
                 "--confdir", stage / "empty-conf.d", "--tmpdir", stage / "tmp", "--logfile", stage / "dracut.log",
                 "--no-hostonly", "--no-hostonly-cmdline", "--no-hostonly-default-device",
                 # --fwdir replaces the default search path, which also reads the
