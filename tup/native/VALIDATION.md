@@ -1,8 +1,8 @@
 # Native entrypoint fixture evidence
 
 2026-11-04: the prediction in `README.md` was checked with CPython 3.13.17 on
-Windows x86_64. The unittest suite ran **15 tests, 0 failures, 0 skips**, in
-0.287 seconds. Git for Windows Bash accepted both native shell files with
+Windows x86_64. After review guards were added, the unittest suite ran
+**17 tests, 0 failures, 0 skips**, in 0.390 seconds. Git for Windows Bash accepted both native shell files with
 `bash -n`. No LFS page, mount, format, boot or network operation ran.
 
 The fixtures accepted an unchanged pinned cache and checked refusals for
@@ -10,8 +10,10 @@ archive/lock/book tampering, wrong architecture, unsafe/duplicate source names,
 insecure source URLs, symlink archives, overlapping workspace paths, CRLF shell
 inputs, changed staged inputs, failed children, stale stage identities, changed
 logs, failed driver-validation commands and failed receipt persistence both
-before and after child execution. The native root-locking override is selected
-from an explicitly supplied book/profile snapshot.
+before and after child execution. Additional cases refuse an unlisted staged
+patch, changed source manifest, non-x86 book metadata, unsupported release and
+changed chapter-7 order even when eight numeric05-12 pages still match. The
+native root-locking override is selected from an explicit book/profile snapshot.
 
 Commands:
 

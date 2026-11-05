@@ -82,11 +82,19 @@ private mount/PID namespace that ends with the stage; there are no asynchronous
 marker-polling chains. The selected tests remain `glibc gcc binutils`; other
 suite skips stay in the driver's receipts and are not passes.
 
-`--book` selects an explicit extracted x86_64 book directory. The current host
-requirements check is labeled as the historical LFS 12.4 baseline; it does not
-approve that retired SysV release for production or establish compatibility
-with a replacement book. Review the maintained book/init policy before the
-production build. The source lock binds the selected book's exact identity.
+`--book` selects the location of the extracted x86_64 book. This initial unit
+accepts only the historical LFS 12.4 metadata and exact chapter 7 order. Other
+books, including 13.1, refuse until their changed packages/crossing are adapted
+and tested. This does not approve the retired SysV release for production;
+review the maintained book/init policy before the production build. The source
+lock binds the selected book's exact identity.
+
+Chapter 7 pages 2–4 are implemented by the ownership/environment/namespace
+crossing. Pages 5–12 are the explicit inner sequence. Page 13 combines optional
+space cleanup with exiting chroot, host unmounts and a backup; it is deliberately
+omitted here instead of executing host-side commands inside the target. The
+cross toolchain/docs can therefore remain until a separately receipted final
+cleanup is implemented. No completed full chapter-7 cleanup/backup is claimed.
 
 The source tree, full book/overrides/helpers, native scripts/profile, lock,
 archives, host toolchain identities and resource/test policy form one immutable
@@ -103,6 +111,9 @@ Completed stages require the same inputs, intact logs, and the driver's
 unmodified logs. A completion record is atomically renamed only after the
 child succeeded and its log was flushed. Persisting that record is itself a
 required operation. `root/sources/log` retains the per-page driver receipts.
+The exact ordered source pins are exported as
+`root/sources/SHA256-MANIFEST-NATIVE.txt`; altered manifests and any extra staged
+source file/directory refuse before a stage starts.
 No completion message means native boot/install readiness.
 
 An interrupted preparation, uncertain/failed stage, retained writer lock,

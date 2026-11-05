@@ -30,6 +30,11 @@ SHA256 = re.compile(r"[0-9a-f]{64}\Z")
 NAME = re.compile(r"[A-Za-z0-9][A-Za-z0-9._+-]*\Z")
 TESTS = "glibc gcc binutils"
 TUP = Path(__file__).resolve().parents[1]
+CH07_ORDER = (
+    "01-introduction.sh", "02-changingowner.sh", "03-kernfs.sh", "04-chroot.sh",
+    "05-creatingdirs.sh", "06-createfiles.sh", "07-gettext.sh", "08-bison.sh",
+    "09-perl.sh", "10-Python.sh", "11-texinfo.sh", "12-util-linux.sh", "13-cleanup.sh",
+)
 
 
 def digest(path: Path) -> str:
@@ -105,6 +110,13 @@ def load_lock(path: Path, expected_sha256: str, book: Path) -> dict:
         raise Refusal("source lock is not for x86_64")
     if lock.get("book_source_sha256") != digest(book / "BOOK-SOURCE"):
         raise Refusal("source lock belongs to a different book")
+    metadata = (book / "BOOK-SOURCE").read_text(encoding="utf-8").splitlines()
+    if [line for line in metadata if line.startswith("arch=")] != ["arch=x86_64"]:
+        raise Refusal("extracted book metadata is not unambiguously x86_64")
+    if [line for line in metadata if line.startswith("base=")] != [
+        "base=https://www.linuxfromscratch.org/lfs/view/12.4/"
+    ]:
+        raise Refusal("unsupported extracted book; this bootstrap currently covers LFS 12.4 only")
     if not isinstance(lock.get("provenance"), str) or not lock["provenance"].strip():
         raise Refusal("source lock must describe its authentication evidence")
     entries = lock.get("sources")
@@ -134,11 +146,25 @@ def load_lock(path: Path, expected_sha256: str, book: Path) -> dict:
     return lock
 
 
-def verify_sources(directory: Path, lock: dict) -> None:
+def manifest_bytes(lock: dict) -> bytes:
+    return "".join(f"{item['sha256']}  {item['name']}\n"
+                   for item in sorted(lock["sources"], key=lambda item: item["name"])).encode("ascii")
+
+
+def verify_sources(directory: Path, lock: dict, *, staged=False) -> None:
     for entry in lock["sources"]:
         path = directory / entry["name"]
         if path.is_symlink() or not path.is_file() or digest(path) != entry["sha256"]:
             raise Refusal(f"missing or mismatched source archive: {entry['name']}")
+    if staged:
+        allowed = {entry["name"] for entry in lock["sources"]} | {"log", "SHA256-MANIFEST-NATIVE.txt"}
+        if {path.name for path in directory.iterdir()} != allowed:
+            raise Refusal("unlisted or missing staged source entries; no unpinned patches are accepted")
+        manifest = directory / "SHA256-MANIFEST-NATIVE.txt"
+        if manifest.is_symlink() or manifest.read_bytes() != manifest_bytes(lock):
+            raise Refusal("staged source manifest changed")
+        if not (directory / "log").is_dir() or (directory / "log").is_symlink():
+            raise Refusal("staged log directory changed")
 
 
 def tree_files(directory: Path):
@@ -166,9 +192,9 @@ def input_map(source: Path, book: Path) -> dict[str, Path | bytes]:
     native_overrides = source / "native/profiles/x86_64/overrides"
     files.update({f"overrides/{name}": path for name, path in tree_files(native_overrides)})
     order = (book / "ch07/ORDER").read_text(encoding="utf-8").splitlines()
-    selected = [name for name in order if re.match(r"^(0[5-9]|1[0-2])-", name)]
-    if len(selected) != 8:
+    if tuple(order) != CH07_ORDER:
         raise Refusal("chapter 7 inner selection changed; review the chroot crossing")
+    selected = order[4:12]
     for name in selected:
         if not NAME.fullmatch(name):
             raise Refusal("unsafe book page name")
@@ -363,6 +389,7 @@ def prepare(args, files, lock, inputs, uid, gid):
     for entry in lock["sources"]:
         shutil.copyfile(args.source_cache / entry["name"], root / "sources" / entry["name"])
         (root / "sources" / entry["name"]).chmod(0o644)
+    (root / "sources/SHA256-MANIFEST-NATIVE.txt").write_bytes(manifest_bytes(lock))
     staged = root / "tup-build"
     for name, item in files.items():
         target = staged / name
@@ -370,7 +397,7 @@ def prepare(args, files, lock, inputs, uid, gid):
         target.write_bytes(item if isinstance(item, bytes) else item.read_bytes())
         target.chmod(0o755 if name.endswith(".sh") else 0o644)
     atomic_json(staged / "BUILD-INPUTS.json", inputs)
-    verify_sources(root / "sources", lock)
+    verify_sources(root / "sources", lock, staged=True)
     verify_staged(root, inputs)
     atomic_json(state / "BUILD.json", inputs)
     atomic_json(state / "preparing.json", {"status": "complete"})
@@ -439,7 +466,7 @@ def main(argv=None):
                 load_lock(args.source_lock, args.lock_sha256, args.book)
                 verify_host_tools(host)
                 verify_sources(args.source_cache, lock)
-                verify_sources(root / "sources", lock)
+                verify_sources(root / "sources", lock, staged=True)
                 require_identity(read_json(state / "BUILD.json"), build_identity(args, input_map(args.source, args.book), lock, host))
                 verify_staged(root, inputs)
                 runner = str(root / "tup-build/native/run-stage.sh")

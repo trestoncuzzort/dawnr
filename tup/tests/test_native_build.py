@@ -22,7 +22,8 @@ class NativeBuildTests(unittest.TestCase):
         self.base = Path(self.temporary.name)
         self.book = self.base / "book"
         self.book.mkdir()
-        (self.book / "BOOK-SOURCE").write_bytes(b"arch=x86_64\nbase=https://example.invalid/lfs/\n")
+        (self.book / "BOOK-SOURCE").write_bytes(
+            b"arch=x86_64\nbase=https://www.linuxfromscratch.org/lfs/view/12.4/\n")
         for chapter in ("ch05", "ch06", "ch07", "ch08"):
             (self.book / chapter).mkdir()
         (self.book / "ch05/01-package.sh").write_bytes(b"# TUP_TARBALL=fixture.tar.xz\ntrue\n")
@@ -98,6 +99,31 @@ class NativeBuildTests(unittest.TestCase):
         with self.assertRaisesRegex(build.Refusal, "mismatched source"):
             build.verify_sources(self.cache, self.lock)
 
+    def test_staged_extra_patch_and_changed_manifest_refuse(self):
+        (self.cache / "log").mkdir()
+        manifest = self.cache / "SHA256-MANIFEST-NATIVE.txt"
+        manifest.write_bytes(build.manifest_bytes(self.lock))
+        build.verify_sources(self.cache, self.lock, staged=True)
+        extra = self.cache / "untrusted.patch"
+        extra.write_bytes(b"unlisted patch")
+        with self.assertRaisesRegex(build.Refusal, "unlisted"):
+            build.verify_sources(self.cache, self.lock, staged=True)
+        extra.unlink()
+        manifest.write_bytes(b"changed manifest")
+        with self.assertRaisesRegex(build.Refusal, "manifest changed"):
+            build.verify_sources(self.cache, self.lock, staged=True)
+
+    def test_book_architecture_and_unsupported_release_refuse(self):
+        for metadata, reason in (
+            (b"arch=arm64\nbase=https://www.linuxfromscratch.org/lfs/view/12.4/\n", "x86_64"),
+            (b"arch=x86_64\nbase=https://www.linuxfromscratch.org/lfs/view/13.1-systemd/\n", "unsupported extracted book"),
+        ):
+            with self.subTest(metadata=metadata):
+                (self.book / "BOOK-SOURCE").write_bytes(metadata)
+                self.lock["book_source_sha256"] = build.digest(self.book / "BOOK-SOURCE")
+                with self.assertRaisesRegex(build.Refusal, reason):
+                    build.load_lock(self.lock_path, self.write_lock(), self.book)
+
     def test_workspace_cannot_overlap_source_or_cache(self):
         workspace = self.base / "build"
         workspace.mkdir()
@@ -122,7 +148,9 @@ class NativeBuildTests(unittest.TestCase):
             (source / name).mkdir(parents=True, exist_ok=True)
         (source / "buildlib/state.sh").write_bytes(b"true\n")
         (source / "native/profiles/x86_64/overrides/x86_64/ch08/shadow.sh").write_bytes(b"passwd -l root\n")
-        names = [f"{number:02}-fixture.sh" for number in range(5, 13)]
+        names = ["01-introduction.sh", "02-changingowner.sh", "03-kernfs.sh", "04-chroot.sh",
+                 "05-creatingdirs.sh", "06-createfiles.sh", "07-gettext.sh", "08-bison.sh",
+                 "09-perl.sh", "10-Python.sh", "11-texinfo.sh", "12-util-linux.sh", "13-cleanup.sh"]
         (self.book / "ch07/ORDER").write_bytes(("\n".join(names) + "\n").encode())
         for name in names:
             (self.book / "ch07" / name).write_bytes(b"true\n")
@@ -141,6 +169,11 @@ class NativeBuildTests(unittest.TestCase):
         (staged / "overrides/x86_64/ch08/shadow.sh").write_bytes(b"changed\n")
         with self.assertRaisesRegex(build.Refusal, "staged build input changed"):
             build.verify_staged(staged.parent, inputs)
+        # Still eight numeric05-12 pages, but a newly inserted package must not disappear.
+        changed = names[:-1] + ["13-new-package.sh", "14-cleanup.sh"]
+        (self.book / "ch07/ORDER").write_bytes(("\n".join(changed) + "\n").encode())
+        with self.assertRaisesRegex(build.Refusal, "chapter 7 inner selection changed"):
+            build.input_map(source, self.book)
 
     def test_failed_child_has_failed_receipt_and_no_successful_resume(self):
         command = [sys.executable, "-c", "print('controlled failure'); raise SystemExit(17)"]
