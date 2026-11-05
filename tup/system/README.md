@@ -134,6 +134,64 @@ root, because root itself is locked.
   not connect the machine directly to such a line.
 - **Wi-Fi is not configured.** Only wired Ethernet comes up.
 
+## Installing to a disk
+
+The live system can install itself onto one internal disk. Root is locked, so
+this is done as the enrolled owner with `sudo`. The installer is
+[`install/disk.py`](../install/disk.py), shipped as `/usr/sbin/tup-install`; the
+details, every refusal and the tests are in [`../install/README.md`](../install/README.md).
+**It has never run on a real disk, only against fakes and regular files; try it in a VM first.**
+
+1. Find the disk by its serial number, never by its name, and check its size:
+
+   ```sh
+   lsblk -dno PATH,SERIAL,SIZE,MODEL,TRAN
+   ```
+
+2. Make a plan. This only reads: it writes `plan.json` and prints a summary. To have the
+   installed system enroll you without the USB stick, give it a folder that holds your
+   `authorized_keys` (and `owner`, `listen`, `peer`, `clock` if you use them, nothing
+   else; macOS's `.DS_Store` and `._*` files are ignored and listed):
+
+   ```sh
+   sudo tup-install plan --target /dev/nvme0n1 --source /run/rootfsbase --output ~/plan.json \
+       --enroll-input ~/enroll-in --state /var/tmp/install-state
+   ```
+
+3. **Read the summary.** It names the disk by model, serial, WWN and size, shows the new
+   layout (a 512 MiB EFI partition, the rest ext4), what will be erased, the disks this
+   system is using (never written), the account and key fingerprint that will be enrolled,
+   and whether the state directory is in RAM. It ends with `Confirmation token: SERIAL-XXXXXXXX`.
+   If anything differs from what you expect, stop: nothing has been written yet.
+
+4. Apply it, typing the token:
+
+   ```sh
+   sudo tup-install apply --plan ~/plan.json --confirm SERIAL-XXXXXXXX --state /var/tmp/install-state
+   ```
+
+   It checks the disk against the plan, writes the partition table, formats, copies the
+   system, adds the boot files and verifies the result. Before the first write it looks at
+   the disk once more and refuses if anything changed. An interrupted run is never resumed:
+   make a new plan (with `--allow-existing`, which then lists what the failed run left).
+
+5. Power off, remove the USB stick and choose the new disk in the firmware boot menu. The
+   installer writes no firmware variable, so the firmware's own boot order decides.
+
+**What is refused.** A disk that holds data needs `--allow-existing`, and the summary then
+lists what will be destroyed. A disk with no table and no signature is treated as empty only
+if its first and last megabyte are all zero bytes; Windows reporting a disk as RAW says
+nothing about that. **A disk that looks like Windows is never erased, with or without any
+flag**: an NTFS, BitLocker, ReFS or exFAT signature, a Windows dynamic or Storage Spaces
+volume, or a Microsoft basic data, reserved or recovery partition makes `plan` and `apply`
+refuse. Such a disk must be cleared by you by other means first, so a mistyped `--target`
+cannot reach the Windows SSD. Also refused: the disk this system booted from or runs on, a
+partition, a mounted or swapped-on disk, a disk without a serial number, a disk too small, an
+unreadable enrollment input, and an enrollment input that the installed system would refuse
+at its first boot. The first boot of the installed system enrolls you from
+`/etc/tup/enroll-input` exactly as it would from a stick, and creates a new machine ID and new
+SSH host keys.
+
 ## What happens at boot
 
 | Unit | Ordered | What it does |
@@ -187,6 +245,8 @@ established traffic and Multicast DNS from private sources.
 | `02-network.sh` | `20-wired.network` (`Kind=!*`, `Type=ether`, `DHCP=yes`, `MulticastDNS=yes`, `ClientIdentifier=mac`), a resolved drop-in (`MulticastDNS=yes`, `LLMNR=no`), the `/etc/resolv.conf` stub link, journal size limits, `systemd-networkd-wait-online --any --timeout=30`, and the `systemd-timesyncd` drop-in that makes it wait for `/etc/tup/hardware-clock-utc` | [9.2](https://www.linuxfromscratch.org/lfs/view/13.1-systemd/chapter09/network.html); systemd 261.2 `network/89-ethernet.network.example`; [systemd.network](https://www.freedesktop.org/software/systemd/man/latest/systemd.network.html), [resolved.conf](https://www.freedesktop.org/software/systemd/man/latest/resolved.conf.html), [journald.conf](https://www.freedesktop.org/software/systemd/man/latest/journald.conf.html), [systemd-networkd-wait-online](https://www.freedesktop.org/software/systemd/man/latest/systemd-networkd-wait-online.service.html) |
 | `03-access.sh` | `/usr/lib/tup/remote/{policy,firewall,enroll}.py`, the four units, `/etc/tup/firewall.nft`, `/etc/issue`; enables the units and networkd, resolved and timesyncd with `systemctl --root=/`; asserts the generic final state | [agetty(8)](https://man7.org/linux/man-pages/man8/agetty.8.html) of util-linux 2.42.4, [systemctl(1)](https://www.freedesktop.org/software/systemd/man/latest/systemctl.html) |
 
+| `04-installer.sh` | `/usr/lib/tup-installer/tup/{install/disk.py,boot/__init__.py,boot/inputs.py}` (0755 for the script, 0644 for the modules) and the wrapper `/usr/sbin/tup-install`, which runs `python3 -I -B` on that explicit path; nothing is enabled or started | [`../install/README.md`](../install/README.md); [dosfstools](https://www.linuxfromscratch.org/blfs/view/13.1-systemd/postlfs/dosfstools.html) and [GRUB](https://www.linuxfromscratch.org/lfs/view/13.1-systemd/chapter08/grub.html) pages for the programs it needs |
+
 `ClientIdentifier=mac` is there because the image ships an empty machine-id and
 a live boot generates a new one each time. A machine-id based DHCP identifier
 would then change on every boot, and with it the address the router hands out.
@@ -205,6 +265,20 @@ differ from what they emit. It ends by asserting the conditions the packager's
 comment-only `/etc/fstab`, and no owner key, marker, sudo rule or login
 account. `/dev`, `/run` and `/tmp` are the runner's own mounts inside the
 chroot and remain the packager's check.
+
+`04-installer.sh` first refuses a root that lacks any program the installer
+runs (`sfdisk lsblk blkid wipefs blockdev findmnt udevadm mount umount mkfs.ext4
+e2fsck mkfs.fat fsck.fat grub-mkstandalone grub-script-check cp sync python3`; `partx` is not used),
+`/usr/lib/grub/x86_64-efi` or one of the GRUB modules the installed menu loads. It
+installs the three files, writes the wrapper, and runs the installed copy once
+with the target's own Python: it must import from `/usr/lib/tup-installer`, find every
+tool, load `enroll.py` from `/usr/lib/tup/remote`, and generate a boot menu that the
+target's `grub-script-check` accepts and that the target's `grub-mkstandalone` turns
+into an EFI image (temporary files only). It ends by checking that no bytecode
+exists beside the installer or the renderers and repeating the assertions of
+`03-access.sh` that a page adding files under `/usr` could break (empty machine-id,
+no host keys, no enrollment, a comment-only fstab). `dosfstools` (`mkfs.fat`,
+`fsck.fat`) comes from the boot chapter, page `04-dosfstools.sh`.
 
 The console text relies on agetty 2.41 or later reading `/run/issue.d/*.issue`
 after `/etc/issue` whether or not the latter exists, and on its `\4` and `\6`
@@ -273,6 +347,10 @@ DNS, a login, and the firewall against real traffic in this scope.
   equal to the one `ssh` prints on the Mac.
 - `ssh owner@tup.local` works; password login and root login are refused;
   `sudo -n true` works when sudo is installed.
+- `sudo tup-install plan --help` prints the usage, no `__pycache__` appears under
+  `/usr/lib/tup-installer`, and a plan for a scratch disk in a VM runs as described in
+  [`../install/README.md`](../install/README.md) (the page's own check ran only in the
+  layer runner's chroot, if at all; see that file for what has been shown).
 
 ## Not covered
 
