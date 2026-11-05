@@ -62,6 +62,28 @@ FAT32's 65525 floor; `mpartition` makes the table, `mformat -F` the filesystem).
 Enrollment on a whole-device FAT filesystem without a partition table is **not
 established** by any run, and `RESULT.json` says so.
 
+## Guest assumptions to verify at first boot
+
+The fixtures and checks above rely on these facts about the TUP guest. None has
+been observed in a running guest. The kernel configuration in the repository
+(`tup/hardware/linux-6.18.60-x86_64.config`) says `=y` for each driver below, which is a
+statement about a file and not about the kernel that gets built into the ISO.
+
+- The kernel drivers for `xhci` (`USB_XHCI_HCD`, `USB_XHCI_PCI`), `usb-storage`
+  (`USB_STORAGE`) and `exfat` (`EXFAT_FS`) are built in, not modules: nothing
+  loads a module before the Ventoy hook looks for the data partition.
+- The enrollment path under Ventoy is
+  `/run/initramfs/tup-ventoy/media/tup-enroll`, so the key is read from
+  `/run/initramfs/tup-ventoy/media/tup-enroll/authorized_keys` on the stick's exFAT
+  partition.
+- The direct kind (`tup-iso-ssh`) needs `virtio-blk` (the `TUP-ENROLL` volume),
+  `virtio-net` (the forwarded SSH port) and `vfat` (that volume's FAT32) in the
+  guest kernel as well.
+
+Once a guest runs, check them against `/lib/modules/$(uname -r)/modules.builtin`
+(built in) and `/proc/filesystems` (`exfat`, `vfat`), then correct this list from
+what is seen.
+
 ## Command lines
 
 Variables name private paths outside the repository. `TUP_VM_RUNS` is a
@@ -254,7 +276,14 @@ answers QMP (and, for one test, rebuilds the media while it runs). On the Linux
 test host they also build the enrollment image with the real mtools and
 ssh-keygen. The population step of `ventoy-image.py` is tested with a recording
 runner: the loop is proven before every mount, copy, sync and unmount, the copy
-is `--sparse=never`, and a failed copy still unmounts. They start no VM, loop
+is `--sparse=never`, and a failed copy still unmounts. The parts of `build()`
+that need no loop are separate functions with their own tests: `stick_files` (the
+file map: `ventoy/ventoy.json` naming the ISO and the menu timeout,
+`tup-enroll/authorized_keys`, optional `tup-enroll/owner`), `enroll_record` (the
+`ENROLL.json` dictionary; a round trip feeds the writer's output to
+`remote_check.adopt_ventoy_keys` on Linux, and a changed image digest, owner or
+key fingerprint is refused) and `require_whole_file` (a hole, as in block map
+`[30, 0, 32]`, or no extent refuses). They start no VM, loop
 device, mount or network listener, and a pass there says nothing about a real
 guest.
 
