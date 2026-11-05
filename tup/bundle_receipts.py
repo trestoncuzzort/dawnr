@@ -19,6 +19,10 @@ build against without trusting this script. Every number here is derived from
 those files, and the files' own hashes are printed so the derivation can be
 re-run.
 
+Receipts, driver.state and at least one nonempty source manifest are required.
+The state may be empty for a failed first page. Hashes and archived copies use
+the collected bytes; UTF-8 decoding is only for interpreting the evidence.
+
 WHAT THIS IS NOT: a proof the system is correct. It is a record of what was
 built, from which bytes, in what order and with what outcome: provenance, not
 verification. tup 0.1 is a WITNESSED system, not a verified one, and the
@@ -27,6 +31,7 @@ distinction is the whole point of keeping it.
 from __future__ import annotations
 
 import argparse
+import fnmatch
 import hashlib
 import json
 import re
@@ -43,14 +48,120 @@ REMOTE_LOG = "/mnt/lfs/sources/log"
 REMOTE_SRC = "/mnt/lfs/sources"
 
 
-def vm_read(path: str) -> str:
-    p = subprocess.run(["limactl", "shell", VM, "--", "cat", path],
-                       capture_output=True, text=True)
-    return p.stdout if p.returncode == 0 else ""
+class EvidenceError(ValueError):
+    """Required evidence is missing, unreadable or cannot be interpreted."""
 
 
-def sha256_text(s: str) -> str:
-    return hashlib.sha256(s.encode()).hexdigest()
+def vm_bytes(command: list[str], description: str) -> bytes:
+    # subprocess text mode translates CRLF before the caller can hash it.
+    p = subprocess.run(["limactl", "shell", VM, "--", *command], capture_output=True)
+    if p.returncode != 0:
+        raise EvidenceError(f"cannot collect {description}: remote exit {p.returncode}")
+    return p.stdout
+
+
+def vm_read(path: str, *, optional: bool = False) -> bytes | None:
+    if not optional:
+        return vm_bytes(["cat", "--", path], path)
+    # A successful, framed response distinguishes an absent optional note from
+    # a failed read/transport. Do not turn arbitrary command failures into absence.
+    raw = vm_bytes(["sh", "-c",
+                    'if [ -e "$1" ] || [ -L "$1" ]; then '
+                    'printf 1; cat -- "$1"; else printf 0; fi',
+                    "tup-read", path], path)
+    if raw == b"0":
+        return None
+    if raw.startswith(b"1"):
+        return raw[1:]
+    raise EvidenceError(f"invalid optional-file response for {path}")
+
+
+def local_read(path: Path, *, optional: bool = False) -> bytes | None:
+    try:
+        return path.read_bytes()
+    except FileNotFoundError:
+        if optional and not path.is_symlink():
+            return None
+        raise EvidenceError(f"missing evidence: {path.name}") from None
+    except OSError as exc:
+        raise EvidenceError(f"cannot read {path.name}: {exc}") from exc
+
+
+def evidence_text(raw: bytes, name: str) -> str:
+    try:
+        return raw.decode("utf-8")
+    except UnicodeError as exc:
+        raise EvidenceError(f"{name}: invalid UTF-8 evidence") from exc
+
+
+def read_manifests(local: str | None) -> list[tuple[str, bytes]]:
+    """Collect each manifest once; order is UTF-8 basename bytes on every host."""
+    if local:
+        # A copied log directory may contain its manifests; otherwise they live
+        # beside it on the build disk. Never mix these two source directories.
+        for directory in (Path(local), Path(local).parent):
+            found = [p for p in directory.iterdir()
+                     if fnmatch.fnmatchcase(p.name, "SHA256-MANIFEST-*.txt")]
+            if found:
+                return [(p.name, local_read(p)) for p in
+                        sorted(found, key=lambda p: p.name.encode("utf-8"))]
+    else:
+        listing = vm_bytes(["sh", "-c",
+                            'cd "$1" || exit; '
+                            'for path in SHA256-MANIFEST-*.txt; do '
+                            '[ -e "$path" ] || [ -L "$path" ] || continue; '
+                            'printf "%s\\0" "$path"; done',
+                            "tup-manifests", REMOTE_SRC], "manifest list")
+        if listing:
+            if not listing.endswith(b"\0"):
+                raise EvidenceError("invalid remote manifest list")
+            names = [evidence_text(name, "manifest filename")
+                     for name in listing[:-1].split(b"\0")]
+            if (len(set(names)) != len(names) or
+                    any("/" in name or not fnmatch.fnmatchcase(name, "SHA256-MANIFEST-*.txt")
+                        for name in names)):
+                raise EvidenceError("invalid remote manifest filename")
+            return [(name, vm_read(f"{REMOTE_SRC}/{name}"))
+                    for name in sorted(names, key=lambda name: name.encode("utf-8"))]
+    raise EvidenceError("no source manifests found (SHA256-MANIFEST-*.txt)")
+
+
+def parse_receipts(raw: bytes) -> list[dict]:
+    rows = []
+    # JSONL is separated by LF, not by every Unicode line-separator character.
+    for number, line in enumerate(evidence_text(raw, "receipts.jsonl").split("\n"), 1):
+        if not line.strip():
+            continue
+        try:
+            row = json.loads(line)
+        except ValueError as exc:
+            raise EvidenceError(f"receipts.jsonl:{number}: invalid JSON") from exc
+        if not isinstance(row, dict):
+            raise EvidenceError(f"receipts.jsonl:{number}: expected a JSON object")
+        rows.append(row)
+    if not rows:
+        raise EvidenceError("receipts.jsonl: no receipt records found")
+    return rows
+
+
+def manifest_entries(parts: list[tuple[str, bytes]]) -> list[str]:
+    entries = []
+    for name, raw in parts:
+        lines = [line.removesuffix("\r") for line in evidence_text(raw, name).split("\n")
+                 if line.strip()]
+        if not lines:
+            raise EvidenceError(f"{name}: empty source manifest")
+        # GNU sha256sum's untagged format, including its escaped-filename prefix.
+        # Validate the record shape; no tarball bytes are available to verify.
+        for number, line in enumerate(lines, 1):
+            if not re.fullmatch(r"\\?[0-9a-fA-F]{64} [ *].+", line):
+                raise EvidenceError(f"{name}:{number}: invalid SHA-256 manifest entry")
+        entries.extend(lines)
+    return entries
+
+
+def sha256_bytes(raw: bytes) -> str:
+    return hashlib.sha256(raw).hexdigest()
 
 
 # Everything rendered below came out of the build's own files: a page name out
@@ -153,35 +264,25 @@ def main() -> int:
     ap.add_argument("--local", help="read the log dir from a local path instead")
     args = ap.parse_args()
 
-    def read(name: str, base: str = REMOTE_LOG) -> str:
+    def read(name: str, *, optional: bool = False) -> bytes | None:
         if args.local:
-            p = Path(args.local) / name
-            return p.read_text(encoding="utf-8") if p.exists() else ""
-        return vm_read(f"{base}/{name}")
+            return local_read(Path(args.local) / name, optional=optional)
+        return vm_read(f"{REMOTE_LOG}/{name}", optional=optional)
 
-    receipts_raw = read("receipts.jsonl")
-    state_raw = read("driver.state")
-    manifest_raw = ""
-    if not args.local:
-        ls = subprocess.run(["limactl", "shell", VM, "--", "sh", "-c",
-                             f"cat {REMOTE_SRC}/SHA256-MANIFEST-*.txt"],
-                            capture_output=True, text=True)
-        manifest_raw = ls.stdout
-    else:
-        # the manifest lives beside the log dir on the build disk; the x86_64
-        # orchestrator copies it into the log dir it hands over
-        for d in (Path(args.local), Path(args.local).parent):
-            found = sorted(d.glob("SHA256-MANIFEST-*.txt"))
-            if found:
-                manifest_raw = "".join(f.read_text(encoding="utf-8") for f in found)
-                break
-    prov_note = read("PROVENANCE-NOTE-bootscripts.txt")
-
-    if not receipts_raw.strip():
-        print("no receipts found; is the build VM running?")
+    try:
+        receipts_raw = read("receipts.jsonl")
+        state_raw = read("driver.state")
+        manifest_parts = read_manifests(args.local)
+        manifest_raw = b"".join(raw for _, raw in manifest_parts)
+        prov_raw = read("PROVENANCE-NOTE-bootscripts.txt", optional=True)
+        rows = parse_receipts(receipts_raw)
+        state_text = evidence_text(state_raw, "driver.state")
+        tarballs = manifest_entries(manifest_parts)
+        prov_note = (evidence_text(prov_raw, "PROVENANCE-NOTE-bootscripts.txt")
+                     if prov_raw is not None else "")
+    except (EvidenceError, OSError, UnicodeError) as exc:
+        print(f"cannot bundle evidence: {exc}", file=sys.stderr)
         return 1
-
-    rows = [json.loads(l) for l in receipts_raw.splitlines() if l.strip()]
     # THREE different kinds of line carry a "page" key, and they name different
     # things: a build receipt names "ch08/05-glibc.sh", a test result names
     # "ch08/05-glibc", a skip record names the bare suite "zlib". Only the
@@ -204,15 +305,13 @@ def main() -> int:
     skipped_tests = sorted({r["page"] for r in rows if r.get("tests_skipped")})
     total = sum(r.get("seconds", 0) for r in rows)   # history: every attempt costs time
     by_ch = Counter(r["page"].split("/")[0] for r in built)
-    state_pages = {l.strip() for l in state_raw.splitlines() if "/" in l}
+    state_pages = {l.strip() for l in state_text.splitlines() if "/" in l}
     receipt_pages = {r["page"] for r in built}
     only_state = sorted(state_pages - receipt_pages)
     only_receipts = sorted(receipt_pages - state_pages)
     slowest = sorted(built, key=lambda r: -r.get("seconds", 0))[:10]
-    tarballs = [l for l in manifest_raw.splitlines() if l.strip()]
 
     stamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
-    OUT.mkdir(exist_ok=True)
     dest = OUT / f"BUILD-{stamp}.md"
     L: list[str] = []
     w = L.append
@@ -233,7 +332,7 @@ def main() -> int:
     w(f"- pages completed: **{len(built)}**"
       + (f" (plus {len(failed)} failed page(s), listed below)" if failed else ""))
     w(f"- machine time in builds: **{human(total)}**")
-    w(f"- source tarballs hashed: **{len(tarballs)}**")
+    w(f"- source manifest entries: **{len(tarballs)}**")
     w(f"- chapters: " + ", ".join(f"{md_cell(c)} ({n})" for c, n in sorted(by_ch.items())))
     w("")
     w("## Test policy, as executed")
@@ -305,17 +404,32 @@ def main() -> int:
         w("")
     w("## Evidence hashes")
     w("")
-    w("Every number above derives from these files; hash them on the build")
-    w("machine to confirm this report was generated from them.")
+    w("These hashes identify the original bytes collected, before UTF-8 parsing.")
+    w("Hash the preserved copies or the unchanged source files to compare them.")
+    w("This does not authenticate the source or verify the tarballs named within.")
     w("")
-    w(f"- `receipts.jsonl` sha256 `{sha256_text(receipts_raw)}`"
+    w(f"- `receipts.jsonl` sha256 `{sha256_bytes(receipts_raw)}`"
       f" ({len(rows)} lines)")
-    w(f"- `driver.state` sha256 `{sha256_text(state_raw)}`"
-      f" ({len(state_raw.splitlines())} lines)")
-    w(f"- `SHA256-MANIFEST` sha256 `{sha256_text(manifest_raw)}`"
-      f" ({len(tarballs)} entries)")
+    w(f"- `driver.state` sha256 `{sha256_bytes(state_raw)}`"
+      f" ({len(state_text.splitlines())} lines; copy `driver-state-{stamp}.txt`)")
+    w(f"- `SHA256-MANIFEST` sha256 `{sha256_bytes(manifest_raw)}`"
+      f" ({len(tarballs)} entries; {len(manifest_raw)} bytes)")
+    if prov_raw is not None:
+        w(f"- `PROVENANCE-NOTE-bootscripts.txt` sha256 `{sha256_bytes(prov_raw)}`"
+          f" (copy `provenance-note-{stamp}.txt`)")
     w("")
-    w("## Source manifest (first 20 of the tarballs this system was built from)")
+    w("The manifest aggregate is the exact concatenation of the files below in")
+    w("UTF-8 basename byte order, with no inserted separators. Its hash")
+    w("does not bind filenames or file boundaries; the component hashes and byte")
+    w("counts identify those separately. Entries are parsed per component, even")
+    w("when a component has no final newline. A previously combined input is")
+    w("identified as supplied; this report cannot recover its original components.")
+    w("")
+    for number, (name, raw) in enumerate(manifest_parts, 1):
+        w(f"{number}. {md_code(name)} sha256 `{sha256_bytes(raw)}`"
+          f" ({len(raw)} bytes; copy `manifest-components-{stamp}/{number}.txt`)")
+    w("")
+    w("## Source manifest (first 20 recorded entries)")
     w("")
     fence = md_fence("\n".join(tarballs[:20]))
     w(fence)
@@ -325,11 +439,25 @@ def main() -> int:
         w(f"... {len(tarballs)-20} more")
     w(fence)
 
-    dest.write_text("\n".join(L) + "\n", encoding="utf-8")
-    (OUT / f"receipts-{stamp}.jsonl").write_text(receipts_raw, encoding="utf-8")
-    (OUT / f"SHA256-MANIFEST-{stamp}.txt").write_text(manifest_raw, encoding="utf-8")
+    # Preserve evidence as bytes on every host; text writes can translate LF.
+    # Finish the copies before emitting the report that refers to them.
+    try:
+        OUT.mkdir(exist_ok=True)
+        (OUT / f"receipts-{stamp}.jsonl").write_bytes(receipts_raw)
+        (OUT / f"driver-state-{stamp}.txt").write_bytes(state_raw)
+        (OUT / f"SHA256-MANIFEST-{stamp}.txt").write_bytes(manifest_raw)
+        components = OUT / f"manifest-components-{stamp}"
+        components.mkdir(exist_ok=True)
+        for number, (_, raw) in enumerate(manifest_parts, 1):
+            (components / f"{number}.txt").write_bytes(raw)
+        if prov_raw is not None:
+            (OUT / f"provenance-note-{stamp}.txt").write_bytes(prov_raw)
+        dest.write_text("\n".join(L) + "\n", encoding="utf-8")
+    except OSError as exc:
+        print(f"cannot write evidence bundle: {exc}", file=sys.stderr)
+        return 1
     print(f"wrote {dest.relative_to(HERE.parent)}")
-    print(f"  {len(built)} pages, {human(total)} of builds, {len(tarballs)} tarballs")
+    print(f"  {len(built)} pages, {human(total)} of builds, {len(tarballs)} manifest entries")
     return 0
 
 
