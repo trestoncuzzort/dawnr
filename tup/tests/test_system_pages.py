@@ -118,6 +118,19 @@ class SystemPagesTests(unittest.TestCase):
         self.assertNotRegex(page, r"(?m)^\s*(Name|MACAddress|Address|Gateway|DNS)=")  # Nothing machine-specific.
         self.assertIn("https://www.linuxfromscratch.org/lfs/view/13.1-systemd/chapter09/network.html", page)
 
+    def test_time_synchronization_waits_for_the_owners_word_about_the_hardware_clock(self):
+        # A synchronized clock is copied to the hardware clock as UTC; a Windows
+        # installation on the same machine keeps local time there.
+        page = (PAGES / "02-network.sh").read_text(encoding="ascii")
+        self.assertIn('systemd-timesyncd.service.d/10-tup-hardware-clock.conf << "EOF"\n[Unit]\n'
+                      "ConditionPathExists=/" + enroll.CLOCK + "\nEOF\n", page)
+        access = (PAGES / "03-access.sh").read_text(encoding="ascii")
+        final = access.split("# Final state of a generic image", 1)[1]
+        self.assertIn("[ ! -e /" + enroll.CLOCK + " ] || fail", final)
+        self.assertIn("grep -qx 'ConditionPathExists=/" + enroll.CLOCK + "'", final)
+        # Enrollment decides before the service's condition is evaluated in the same boot.
+        self.assertIn("systemd-timesyncd.service", setting(unit("tup-enroll.service"), "Before")[0].split())
+
     def test_access_page_installs_and_enables_exactly_what_the_units_need(self):
         page = (PAGES / "03-access.sh").read_text(encoding="ascii")
         self.assertEqual(sorted(path.name for path in UNITS.iterdir()), UNIT_NAMES)

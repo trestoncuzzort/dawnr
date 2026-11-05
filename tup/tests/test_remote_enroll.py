@@ -31,7 +31,7 @@ def public_key(seed: int, comment: bytes = b"") -> bytes:
 KEY, OTHER_KEY, HOST_KEY = public_key(1, b" owner@laptop"), public_key(2), public_key(100, b" root@fixture")
 HOST_FINGERPRINT = policy.public_keys(HOST_KEY)[1][0]
 DEFAULT_FIREWALL = firewall.render(None, None, scope=firewall.UNENROLLED)["firewall.nft"]
-LABEL, ISOSCAN, LIVE = enroll.INPUT_DIRECTORIES
+LABEL, VENTOY, ISOSCAN, LIVE, INSTALLED = enroll.INPUT_DIRECTORIES
 POSIX = unittest.skipUnless(os.name == "posix", "enrollment needs Linux ownership, modes and symlinks")
 
 
@@ -148,12 +148,13 @@ class EnrollmentTests(Fixture):
         tools = Tools(self.root)
         result = enroll.apply(self.root, tools)
         self.assertEqual(result["state"], "enrolled")
-        self.assertEqual(tools.names(), ["ssh-keygen -A", "sshd", "visudo", "nft -c", "useradd", "nft -f"])
+        # The firewall is committed from the staged file before the account exists.
+        self.assertEqual(tools.names(), ["ssh-keygen -A", "sshd", "visudo", "nft -c", "nft -f", "useradd"])
         self.assertFalse(any(tools.marker_seen), "the marker must not exist while any tool still runs")
-        staged = [argv[-1] for argv in tools.calls[1:4]]
+        staged = [argv[-1] for argv in tools.calls[1:5]]
         self.assertTrue(all(Path(path).name.endswith(".tup-new") for path in staged), staged)
-        self.assertEqual(tools.calls[5][1:], ["-f", str(self.root / enroll.FIREWALL)])
-        useradd = tools.calls[4]
+        self.assertEqual(tools.calls[4][1:], ["-f", str(self.root / "etc/tup/.firewall.nft.tup-new")])
+        useradd = tools.calls[5]
         self.assertEqual(useradd[1:], ["--create-home", "--home-dir", "/home/owner", "--shell", "/bin/bash",
                                        "--user-group", "--password", "*", "--comment", "TUP owner", "owner"])
         expected = {
@@ -176,6 +177,8 @@ class EnrollmentTests(Fixture):
         self.assertEqual((record["owner"], record["scope"], record["sudo"]), ("owner", "private-networks", "passwordless-all"))
         self.assertEqual(record["listen_addresses"], ["0.0.0.0", "::"])
         self.assertEqual(record["input"], "/run/initramfs/isoscan/tup-enroll")
+        self.assertEqual(record["hardware_clock"], "untouched")
+        self.assertFalse(os.path.lexists(self.root / enroll.CLOCK))
         self.assertEqual(record["input_files"], {"authorized_keys": hashlib.sha256(KEY).hexdigest()})
         self.assertEqual(record["owner_key_fingerprints"], policy.public_keys(KEY)[1])
         self.assertEqual(record["host_key_fingerprints"], {"ssh_host_ed25519_key.pub": HOST_FINGERPRINT})
@@ -192,7 +195,7 @@ class EnrollmentTests(Fixture):
         self.give(authorized_keys=KEY, owner=b"alice\r\n", listen=b"10.0.2.15\nfd00::15\n", peer=b"10.0.2.2\n\nfd00::2\n")
         tools = Tools(self.root)
         record = enroll.apply(self.root, tools)["record"]
-        self.assertEqual(tools.names(), ["ssh-keygen -A", "sshd", "nft -c", "useradd", "nft -f"])
+        self.assertEqual(tools.names(), ["ssh-keygen -A", "sshd", "nft -c", "nft -f", "useradd"])
         self.assertEqual((record["owner"], record["scope"], record["sudo"]), ("alice", "exact", "absent"))
         self.assertEqual(record["listen_addresses"], ["10.0.2.15", "fd00::15"])
         self.assertEqual(record["owner_peer_addresses"], ["10.0.2.2", "fd00::2"])
@@ -228,14 +231,45 @@ class EnrollmentTests(Fixture):
         self.assertEqual(enroll.apply(self.root, tools), {"state": "no-input", "without_keys": ["/" + LIVE]})
         self.assertEqual((tools.calls, snapshot(self.root)), ([], before))
 
-    def test_search_order_is_label_then_iso_host_filesystem_then_live_medium(self):
+    def test_search_order_is_label_then_boot_media_then_the_installed_copy(self):
+        self.assertEqual(enroll.INPUT_DIRECTORIES, (
+            "run/tup-enroll/tup-enroll", "run/initramfs/tup-ventoy/media/tup-enroll",
+            "run/initramfs/isoscan/tup-enroll", "run/initramfs/live/tup-enroll", "etc/tup/enroll-input"))
+        self.give(INSTALLED, authorized_keys=OTHER_KEY)
+        self.assertEqual(enroll.locate(self.root), (INSTALLED, []))
         self.give(LIVE, authorized_keys=OTHER_KEY)
+        self.assertEqual(enroll.locate(self.root), (LIVE, []))
         self.give(ISOSCAN, authorized_keys=KEY)
         self.assertEqual(enroll.locate(self.root), (ISOSCAN, []))
+        # Where boot/ventoy-live.sh leaves the stick's data partition mounted.
+        self.give(VENTOY, authorized_keys=KEY, owner=b"ventoy\n")
+        self.assertEqual(enroll.locate(self.root), (VENTOY, []))
         self.give(LABEL, authorized_keys=OTHER_KEY, owner=b"labelled\n")
         record = enroll.apply(self.root, Tools(self.root))["record"]
         self.assertEqual((record["input"], record["owner"]), ("/run/tup-enroll/tup-enroll", "labelled"))
         self.assertEqual(record["owner_key_fingerprints"], policy.public_keys(OTHER_KEY)[1])
+
+    def test_the_ventoy_data_partition_and_the_installed_copy_enroll(self):
+        for location, expected in ((VENTOY, "/run/initramfs/tup-ventoy/media/tup-enroll"), (INSTALLED, "/etc/tup/enroll-input")):
+            with self.subTest(location=location):
+                self.setUp()
+                self.give(location, authorized_keys=KEY)
+                record = enroll.apply(self.root, Tools(self.root))["record"]
+                self.assertEqual((record["input"], record["owner"]), (expected, "owner"))
+
+    def test_time_synchronization_needs_the_owners_word_that_the_hardware_clock_is_utc(self):
+        self.give(authorized_keys=KEY, clock=b"utc\r\n")
+        record = enroll.apply(self.root, Tools(self.root))["record"]
+        self.assertEqual(record["hardware_clock"], "utc")
+        self.assertEqual((self.root / enroll.CLOCK).read_bytes(), b"utc\n")
+        self.assertEqual(stat.S_IMODE((self.root / enroll.CLOCK).lstat().st_mode), 0o644)
+        self.assertEqual(record["files"]["/" + enroll.CLOCK], hashlib.sha256(b"utc\n").hexdigest())
+        for content in (b"", b"UTC\n", b"local\n", b"utc\nutc\n", b"America/Los_Angeles\n", b"\xff"):
+            with self.subTest(content=content):
+                self.setUp()
+                self.give(authorized_keys=KEY, clock=content)
+                self.assertEqual(self.refused().calls, [])
+                self.assertFalse(os.path.lexists(self.root / enroll.CLOCK))
 
     def test_invalid_input_applies_nothing(self):
         rsa = b"ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQC7 owner@laptop\n"
@@ -316,11 +350,17 @@ class EnrollmentTests(Fixture):
                 self.setUp()
                 self.give(authorized_keys=KEY)
                 tools = self.refused(Tools(self.root, **unexpected), "expected unprivileged account")
-                self.assertNotIn("nft -f", tools.names())
                 self.assertFalse(os.path.lexists(self.root / enroll.SSHD_CONFIG))
+        # A firewall the kernel will not commit stops enrollment before the
+        # account exists, so the next attempt is not refused for adopting one.
         self.setUp()
         self.give(authorized_keys=KEY)
-        self.refused(Tools(self.root, fail={"nft -f"}), "could not load")
+        tools = self.refused(Tools(self.root, fail={"nft -f"}), "could not load")
+        self.assertEqual(tools.names()[-2:], ["nft -c", "nft -f"])
+        self.assertNotIn("owner", (self.root / "etc/passwd").read_text())
+        self.assertEqual((self.root / enroll.FIREWALL).read_bytes(), DEFAULT_FIREWALL)
+        for relative in (enroll.SSHD_CONFIG, "etc/tup/authorized_keys", "home/owner"):
+            self.assertFalse(os.path.lexists(self.root / relative), relative)
 
     def test_symlinks_are_never_followed_out_of_the_root(self):
         traps = {

@@ -17,7 +17,8 @@ done
 [ -x /usr/lib/systemd/systemd-networkd-wait-online ] || fail "systemd-networkd-wait-online is not where its unit expects it"
 
 mkdir -pv /etc/systemd/network /etc/systemd/resolved.conf.d /etc/systemd/journald.conf.d \
-          /etc/systemd/system/systemd-networkd-wait-online.service.d
+          /etc/systemd/system/systemd-networkd-wait-online.service.d \
+          /etc/systemd/system/systemd-timesyncd.service.d
 
 # The match is upstream's example for "all physical ethernet links"; Wi-Fi
 # links have type wlan and virtual links have a kind, so neither matches.
@@ -66,9 +67,22 @@ ExecStart=
 ExecStart=/usr/lib/systemd/systemd-networkd-wait-online --any --timeout=30
 EOF
 
+# Once the system clock is synchronized, Linux on x86 copies it to the hardware
+# clock about every eleven minutes, as UTC (kernel/time/ntp.c sync_hw_clock;
+# arch/x86/Kconfig selects GENERIC_CMOS_UPDATE, so no option turns it off). A
+# desktop that also boots Windows keeps local time in that clock, and Windows
+# would then be wrong by its UTC offset. systemd-timesyncd therefore starts
+# only once the owner has said the hardware clock is in UTC: enrollment input
+# "clock" containing "utc" creates this file, as does creating it by hand.
+cat > /etc/systemd/system/systemd-timesyncd.service.d/10-tup-hardware-clock.conf << "EOF"
+[Unit]
+ConditionPathExists=/etc/tup/hardware-clock-utc
+EOF
+
 [ "$(readlink /etc/resolv.conf)" = ../run/systemd/resolve/stub-resolv.conf ] || fail "/etc/resolv.conf is not the resolved stub link"
 for file in /etc/systemd/network/20-wired.network /etc/systemd/resolved.conf.d/10-tup.conf \
             /etc/systemd/journald.conf.d/10-tup-size.conf \
+            /etc/systemd/system/systemd-timesyncd.service.d/10-tup-hardware-clock.conf \
             /etc/systemd/system/systemd-networkd-wait-online.service.d/10-tup-bounded.conf; do
   [ -f "$file" ] && [ ! -L "$file" ] && [ -s "$file" ] || fail "$file was not written as a regular file"
 done

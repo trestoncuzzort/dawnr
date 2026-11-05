@@ -90,6 +90,12 @@ if [ -e /etc/fstab ] && grep -qEv '^[[:space:]]*(#|$)' /etc/fstab; then fail "/e
 [ ! -e /etc/tup/owner-enrolled.json ] || fail "the image must not be enrolled"
 [ -z "$(ls -A /etc/tup/authorized_keys)" ] || fail "the image must not contain owner keys"
 [ ! -e /etc/sudoers.d/10-tup-owner ] || fail "the image must not contain an owner sudo rule"
+# Time synchronization is enabled but conditional (02-network.sh): the generic
+# image must not claim that some machine's hardware clock is in UTC.
+[ ! -e /etc/tup/hardware-clock-utc ] || fail "the image must not declare the hardware clock to be UTC"
+grep -qx 'ConditionPathExists=/etc/tup/hardware-clock-utc' \
+  /etc/systemd/system/systemd-timesyncd.service.d/10-tup-hardware-clock.conf \
+  || fail "systemd-timesyncd would start without the owner's word about the hardware clock"
 if awk -F: '$3 >= 1000 && $3 != 65534 { found = 1 } END { exit !found }' /etc/passwd; then
   fail "the image must not contain a login account"
 fi

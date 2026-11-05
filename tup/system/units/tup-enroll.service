@@ -3,7 +3,7 @@ Description=TUP owner enrollment from the boot media
 Documentation=file:///usr/lib/tup/remote/enroll.py
 DefaultDependencies=no
 After=local-fs.target systemd-udevd.service systemd-udev-trigger.service
-Before=tup-firewall.service tup-sshd.service tup-console-status.service shutdown.target
+Before=tup-firewall.service tup-sshd.service tup-console-status.service systemd-timesyncd.service shutdown.target
 Conflicts=shutdown.target
 # Enrollment is applied exactly once; the marker is written last.
 ConditionPathExists=!/etc/tup/owner-enrolled.json

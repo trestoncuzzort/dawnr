@@ -29,11 +29,17 @@ from remote import firewall, policy
 from remote.policy import Refusal
 
 # Search order. The first is a filesystem labelled TUP-ENROLL that the unit
-# mounts read-only; the others are the USB filesystem holding the ISO file
-# (Ventoy boot) and the live medium itself, as mounted by the initramfs.
-INPUT_DIRECTORIES = ("run/tup-enroll/tup-enroll", "run/initramfs/isoscan/tup-enroll",
-                     "run/initramfs/live/tup-enroll")
+# mounts read-only. The next three are the boot media as the initramfs leaves
+# them: the Ventoy data partition that holds the ISO file (boot/ventoy-live.sh
+# mounts it read-only there), the filesystem dracut's own iso-scan would hold,
+# and the live medium itself. The last lies inside an installed root, where the
+# installer copies the input it was given so the first boot needs no stick.
+INPUT_DIRECTORIES = ("run/tup-enroll/tup-enroll", "run/initramfs/tup-ventoy/media/tup-enroll",
+                     "run/initramfs/isoscan/tup-enroll", "run/initramfs/live/tup-enroll",
+                     "etc/tup/enroll-input")
 MARKER = "etc/tup/owner-enrolled.json"
+# systemd-timesyncd starts only when this file exists (system/pages/02-network.sh).
+CLOCK = "etc/tup/hardware-clock-utc"
 HOST_KEY = "etc/ssh/ssh_host_ed25519_key.pub"
 SSHD_CONFIG = "etc/ssh/sshd_config"
 FIREWALL = "etc/tup/firewall.nft"
@@ -102,7 +108,8 @@ def locate(root: Path) -> tuple[str | None, list[str]]:
 def plan(directory: Path) -> dict:
     """Validate the whole input and render every file. Changes nothing."""
     raw = {name: read_regular(directory / name, limit, "enrollment input " + name)
-           for name, limit in (("authorized_keys", 16384), ("owner", 256), ("listen", 4096), ("peer", 4096))}
+           for name, limit in (("authorized_keys", 16384), ("owner", 256), ("listen", 4096), ("peer", 4096),
+                               ("clock", 64))}
     if raw["authorized_keys"] is None:
         raise Refusal("enrollment input authorized_keys is missing")
     _, fingerprints = policy.public_keys(raw["authorized_keys"])
@@ -123,8 +130,16 @@ def plan(directory: Path) -> dict:
         # Later boots of a persistent root wait for the network before binding.
         # The boot that applies this has already loaded the image's unit.
         files["etc/systemd/system/tup-sshd.service"] = (access["tup-sshd.service"], 0o644)
+    # Once the clock is synchronized the kernel copies it, as UTC, to the
+    # hardware clock. A machine that also boots Windows keeps local time there,
+    # so synchronization waits for the owner's word that the clock is in UTC.
+    clock = text_lines(raw["clock"], "enrollment input clock")
+    if clock is not None and clock != ["utc"]:
+        raise Refusal("enrollment input clock may only hold the word utc")
+    if clock:
+        files[CLOCK] = (b"utc\n", 0o644)
     return {"owner": owner, "scope": scope, "listen": listen or [], "peer": peer or [],
-            "fingerprints": fingerprints, "files": files,
+            "fingerprints": fingerprints, "files": files, "clock": "utc" if clock else "untouched",
             "inputs": {name: hashlib.sha256(data).hexdigest() for name, data in raw.items() if data is not None}}
 
 
@@ -180,7 +195,7 @@ def run_command(argv: list[str]) -> tuple[int, bytes]:
 
 
 def apply(root: Path = Path("/"), run=None) -> dict:
-    """Enroll once. A Refusal means no marker; before useradd it means no change."""
+    """Enroll once. A Refusal means no marker; before useradd it means no file changed."""
     if os.name != "posix":
         raise Refusal("enrollment applies on Linux, where ownership and modes can be checked")
     root = Path(root)
@@ -246,6 +261,12 @@ def apply(root: Path = Path("/"), run=None) -> dict:
         # Check mode sends the batch to the kernel without committing it.
         if run([tools["nft"], "-c", "-f", str(staged[FIREWALL])])[0]:
             raise Refusal("nft rejected the staged firewall")
+        # Commit it before the account exists. A kernel that passes the check
+        # but refuses the commit must not leave an account without a marker,
+        # which no later attempt would adopt. Nothing listens yet, and
+        # tup-firewall.service loads whatever is installed after this unit.
+        if run([tools["nft"], "-f", str(staged[FIREWALL])])[0]:
+            raise Refusal("nft could not load the staged firewall")
 
         # Everything that can be checked has been. From here the system changes.
         if run([tools["useradd"], "--create-home", "--home-dir", f"/home/{owner}", "--shell", "/bin/bash",
@@ -266,8 +287,6 @@ def apply(root: Path = Path("/"), run=None) -> dict:
         made.clear()
         for directory in sorted({inside(root, name).parent for name in files}):
             sync_directory(directory)
-        if run([tools["nft"], "-f", str(inside(root, FIREWALL))])[0]:
-            raise Refusal("nft could not load the installed firewall")
         record = {
             "schema": "tup-owner-enrolled-v1", "owner": owner, "scope": scope, "port": 22,
             "listen_addresses": todo["listen"] or list(policy.WILDCARD_LISTENERS),
@@ -276,7 +295,7 @@ def apply(root: Path = Path("/"), run=None) -> dict:
             "host_key_fingerprints": {Path(HOST_KEY).name: host_fingerprint},
             "account": {"uid": int(account[2]), "gid": int(account[3]), "home": account[5], "shell": account[6]},
             "files": {"/" + relative: hashlib.sha256(data).hexdigest() for relative, (data, _) in files.items()},
-            "sudo": "passwordless-all" if sudo else "absent",
+            "sudo": "passwordless-all" if sudo else "absent", "hardware_clock": todo["clock"],
         }
         staged[MARKER] = stage(marker, policy.canonical(record), 0o644)
         os.replace(staged.pop(MARKER), marker)

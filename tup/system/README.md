@@ -58,7 +58,9 @@ be checked on the first real boot is listed under
 
    `ssh` prints the host key fingerprint the first time. Type `yes` only if it
    is the same as the one on the console. If `tup.local` does not resolve, use
-   the IPv4 address shown on the console.
+   the IPv4 address shown on the console. If the connection hangs instead, the
+   router probably hands out public IPv6 addresses, which the firewall does not
+   admit: use `ssh -4 owner@tup.local` or the IPv4 address.
 
 Only plain `ssh-ed25519` public keys are accepted, one to eight lines. Options
 in front of a key, other key types and private keys are refused, and a refusal
@@ -70,11 +72,39 @@ Optional files in the same folder:
 | File | Meaning |
 | --- | --- |
 | `owner` | One line: the account name instead of `owner`. |
-| `listen` and `peer` | One IP address per line, both files together. Selects the exact scope: sshd binds only the `listen` addresses and the firewall admits only the `peer` addresses. |
+| `listen` and `peer` | One IP address per line, both files together. Selects the exact scope: sshd binds only the `listen` addresses and the firewall admits only the `peer` addresses. Meant for an installed system; see [Not covered](#not-covered) for a live boot. |
+| `clock` | One line, the word `utc`: the hardware clock of this machine holds UTC, so time synchronization may run. See [The hardware clock](#the-hardware-clock) before adding it on a machine that also boots Windows. |
 
-Instead of the Ventoy stick, any filesystem labelled `TUP-ENROLL` with a
-`tup-enroll` folder works, for example a second USB stick. It is mounted
-read-only and has priority.
+Instead of the Ventoy stick, a filesystem labelled `TUP-ENROLL` with a
+`tup-enroll` folder works, for example a second USB stick formatted in Disk
+Utility as MS-DOS (FAT) or ExFAT with that name. It is mounted read-only and
+has priority. A stick formatted as APFS or Mac OS Extended cannot be read.
+
+### The hardware clock
+
+Windows keeps local time in the hardware clock; Linux expects UTC there. Once
+a Linux system has synchronized its clock over the network, the kernel copies
+the time back to the hardware clock, as UTC, about every eleven minutes, and
+Windows then shows a time that is wrong by the local UTC offset until its own
+clock is set again. To avoid changing a clock that Windows relies on, **time
+synchronization is off until the owner says the hardware clock is in UTC**.
+Until then TUP reads the hardware clock as if it were UTC and never writes it,
+so its own time is off by that same offset: fine for SSH, but timestamps are
+wrong and a few TLS connections may fail.
+
+There are two ways to get correct time:
+
+- Make Windows keep UTC in the hardware clock (the documented registry value
+  `RealTimeIsUniversal`), then put a file named `clock` containing `utc` in
+  the `tup-enroll` folder. This is the arrangement that keeps both systems
+  right.
+- Or accept that Windows will show the wrong time after each TUP session and
+  add the same `clock` file.
+
+On an enrolled system the same effect comes from
+`sudo touch /etc/tup/hardware-clock-utc` followed by
+`sudo systemctl restart systemd-timesyncd`. A hardware clock in local time
+with TUP set to the matching time zone is not implemented.
 
 ### What the owner account is
 
@@ -108,15 +138,20 @@ root, because root itself is locked.
 
 | Unit | Ordered | What it does |
 | --- | --- | --- |
-| `tup-enroll.service` | after local filesystems, before the three units below | Skipped when `/etc/tup/owner-enrolled.json` exists. Waits at most five seconds for a filesystem labelled `TUP-ENROLL`, mounts it read-only at `/run/tup-enroll`, then runs `enroll.py`. No input is a normal boot. A refusal fails this unit only. |
+| `tup-enroll.service` | after local filesystems, before the units below | Skipped when `/etc/tup/owner-enrolled.json` exists. Waits at most five seconds for a filesystem labelled `TUP-ENROLL`, mounts it read-only at `/run/tup-enroll`, then runs `enroll.py`. No input is a normal boot. A refusal fails this unit only. |
 | `tup-firewall.service` | before `network-pre.target` | `nft -f /etc/tup/firewall.nft`, enrolled or not. |
 | `tup-sshd.service` | after the firewall | Starts only if the marker exists (`ConditionPathExists`) and the firewall unit is active (`Requires`). |
 | `tup-console-status.service` | before `getty-pre.target` | Writes `/run/issue.d/50-tup.issue`, which agetty prints above the login prompt. |
-| `systemd-networkd`, `systemd-resolved`, `systemd-timesyncd` | after the firewall | DHCP on every physical Ethernet link, DNS, the Multicast DNS name `tup.local`, time. |
+| `systemd-networkd`, `systemd-resolved` | after the firewall | DHCP on every physical Ethernet link, DNS, the Multicast DNS name `tup.local`. |
+| `systemd-timesyncd` | after enrollment | Starts only if `/etc/tup/hardware-clock-utc` exists (`ConditionPathExists` in a drop-in). |
 
 `enroll.py` searches, in this order, `/run/tup-enroll/tup-enroll`,
-`/run/initramfs/isoscan/tup-enroll` (the USB filesystem that holds the ISO
-under Ventoy) and `/run/initramfs/live/tup-enroll`. The first directory that
+`/run/initramfs/tup-ventoy/media/tup-enroll` (the Ventoy data partition that
+holds the ISO file, where [`boot/ventoy-live.sh`](../boot/ventoy-live.sh)
+leaves it mounted read-only), `/run/initramfs/isoscan/tup-enroll` (where
+dracut's own ISO scan would leave it), `/run/initramfs/live/tup-enroll` and
+`/etc/tup/enroll-input` (inside an installed root, for an installer that
+copies its input there). The first directory that
 contains `authorized_keys` is the input; an invalid input is refused, not
 skipped in favour of the next. It then
 
@@ -126,17 +161,19 @@ skipped in favour of the next. It then
    or `/etc/tup` is writable by anyone but root. Up to here nothing changed;
 2. writes the new files beside their destinations, generates host keys with
    `ssh-keygen -A`, and checks the staged files with the real tools:
-   `sshd -T -f` through `policy.check_effective`, `visudo -cf`, `nft -c -f`;
-3. creates the account with `useradd`, renames the files into place, loads the
-   firewall with `nft -f`;
+   `sshd -T -f` through `policy.check_effective`, `visudo -cf`, `nft -c -f`,
+   and then loads the staged firewall for real with `nft -f`, so a table the
+   kernel will not commit stops enrollment while no account exists;
+3. creates the account with `useradd` and renames the files into place;
 4. writes the marker last, with fsync and rename. It records the scope, the
    input location, key fingerprints and the SHA256 of every installed file.
 
-A failure in step 2 removes the staged files and leaves the default firewall in
-place. A failure in step 3 or 4 leaves no marker, so sshd does not start, but
-the account may already exist; on a persistent root the next attempt then
-refuses because it never adopts an existing account. That state needs repair
-from an installer or rescue environment. On a live boot a reboot is enough.
+A failure in step 2 removes the staged files; `tup-firewall.service` runs after
+this unit and loads the installed default table again. A failure in step 3 or
+4 leaves no marker, so sshd does not start, but the account may already exist;
+on a persistent root the next attempt then refuses because it never adopts an
+existing account. That state needs repair from an installer or rescue
+environment. On a live boot a reboot is enough.
 
 The default `/etc/tup/firewall.nft` is the private-networks table without its
 two SSH accept rules: inbound is dropped except loopback, ICMP, DHCP replies,
@@ -147,7 +184,7 @@ established traffic and Multicast DNS from private sources.
 | Page | Files | Source |
 | --- | --- | --- |
 | `01-identity.sh` | `/etc/os-release` (`ID=tup`, `VERSION_ID=13.1`), `/etc/hostname` (`tup`), `/etc/locale.conf` (`C.UTF-8`), `/etc/profile`, `/etc/inputrc`, `/etc/shells`, and a drop-in that keeps boot messages on tty1 | LFS 13.1-systemd [11.1](https://www.linuxfromscratch.org/lfs/view/13.1-systemd/chapter11/theend.html), [9.2](https://www.linuxfromscratch.org/lfs/view/13.1-systemd/chapter09/network.html), [9.7](https://www.linuxfromscratch.org/lfs/view/13.1-systemd/chapter09/locale.html), [9.8](https://www.linuxfromscratch.org/lfs/view/13.1-systemd/chapter09/inputrc.html), [9.9](https://www.linuxfromscratch.org/lfs/view/13.1-systemd/chapter09/etcshells.html), [9.10](https://www.linuxfromscratch.org/lfs/view/13.1-systemd/chapter09/systemd-custom.html); the book's blocks are copied verbatim and a test compares them |
-| `02-network.sh` | `20-wired.network` (`Kind=!*`, `Type=ether`, `DHCP=yes`, `MulticastDNS=yes`, `ClientIdentifier=mac`), a resolved drop-in (`MulticastDNS=yes`, `LLMNR=no`), the `/etc/resolv.conf` stub link, journal size limits, and `systemd-networkd-wait-online --any --timeout=30` | [9.2](https://www.linuxfromscratch.org/lfs/view/13.1-systemd/chapter09/network.html); systemd 261.2 `network/89-ethernet.network.example`; [systemd.network](https://www.freedesktop.org/software/systemd/man/latest/systemd.network.html), [resolved.conf](https://www.freedesktop.org/software/systemd/man/latest/resolved.conf.html), [journald.conf](https://www.freedesktop.org/software/systemd/man/latest/journald.conf.html), [systemd-networkd-wait-online](https://www.freedesktop.org/software/systemd/man/latest/systemd-networkd-wait-online.service.html) |
+| `02-network.sh` | `20-wired.network` (`Kind=!*`, `Type=ether`, `DHCP=yes`, `MulticastDNS=yes`, `ClientIdentifier=mac`), a resolved drop-in (`MulticastDNS=yes`, `LLMNR=no`), the `/etc/resolv.conf` stub link, journal size limits, `systemd-networkd-wait-online --any --timeout=30`, and the `systemd-timesyncd` drop-in that makes it wait for `/etc/tup/hardware-clock-utc` | [9.2](https://www.linuxfromscratch.org/lfs/view/13.1-systemd/chapter09/network.html); systemd 261.2 `network/89-ethernet.network.example`; [systemd.network](https://www.freedesktop.org/software/systemd/man/latest/systemd.network.html), [resolved.conf](https://www.freedesktop.org/software/systemd/man/latest/resolved.conf.html), [journald.conf](https://www.freedesktop.org/software/systemd/man/latest/journald.conf.html), [systemd-networkd-wait-online](https://www.freedesktop.org/software/systemd/man/latest/systemd-networkd-wait-online.service.html) |
 | `03-access.sh` | `/usr/lib/tup/remote/{policy,firewall,enroll}.py`, the four units, `/etc/tup/firewall.nft`, `/etc/issue`; enables the units and networkd, resolved and timesyncd with `systemctl --root=/`; asserts the generic final state | [agetty(8)](https://man7.org/linux/man-pages/man8/agetty.8.html) of util-linux 2.42.4, [systemctl(1)](https://www.freedesktop.org/software/systemd/man/latest/systemctl.html) |
 
 `ClientIdentifier=mac` is there because the image ships an empty machine-id and
@@ -221,10 +258,15 @@ DNS, a login, and the firewall against real traffic in this scope.
   configured; without input nothing listens on port 22. The kernel needs
   nf_tables with conntrack, limit, counter and interval-set support for it.
 - The export passes `check_offline_root()`. The book's D-Bus page links
-  `/var/lib/dbus/machine-id` to `/etc/machine-id`, and that check refuses a
-  symbolic link there; this chapter does not touch it.
-- The initramfs leaves the ISO-holding filesystem mounted at
-  `/run/initramfs/isoscan`, and the kernel can mount FAT and exFAT.
+  `/var/lib/dbus/machine-id` to `/etc/machine-id`; the check accepts exactly
+  that link and nothing else there, and this chapter does not touch it.
+- Under Ventoy the initramfs leaves the stick's data partition mounted
+  read-only at `/run/initramfs/tup-ventoy/media` after the switch to the real
+  root, and the kernel can mount FAT and exFAT.
+- Without the `clock` input `systemd-timesyncd` shows an unmet condition, not
+  a failed unit, and the hardware clock keeps Windows' local time across a
+  session (`hwclock --show`, then the time Windows shows after the next
+  restart). With it, time synchronizes.
 - `/` and `/etc` on the live overlay are root-owned and not group-writable
   (sshd `StrictModes` and the enrollment preflight both require it).
 - The console shows the state, an address through `\4`, and a fingerprint
@@ -240,7 +282,8 @@ DNS, a login, and the firewall against real traffic in this scope.
   until the next boot. Enrollment installs an override unit that waits, which
   takes effect from the following boot of a persistent root. Prefer the
   default scope on a live boot.
-- The hardware clock. TUP runs in UTC; once time is synchronized the kernel may
-  write UTC to a clock that a dual-booted Windows expects in local time.
+- A hardware clock kept in local time with a matching time zone in TUP. The
+  only supported choices are an unsynchronized system (the default) and a
+  hardware clock in UTC; see [The hardware clock](#the-hardware-clock).
 - Host key persistence on a live boot, key rotation, revocation, more than one
   owner, Wi-Fi, and any overlay or VPN.
