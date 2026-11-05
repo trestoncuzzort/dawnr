@@ -1,0 +1,48 @@
+{
+  "schema": "tup-remote-source-v1",
+  "architecture": "x86_64",
+  "version": "10.6p1",
+  "archive": {
+    "name": "openssh-10.6p1.tar.gz",
+    "url": "https://ftp.openbsd.org/pub/OpenBSD/OpenSSH/portable/openssh-10.6p1.tar.gz",
+    "disposition": "retain",
+    "authentication": {
+      "method": "openpgp",
+      "primary_fingerprint": "7168B983815A5EEF59A4ADFD2A3F414E736060BA",
+      "primary_fingerprint_source": "https://www.openssh.org/portable.html",
+      "payload": "archive",
+      "key": {
+        "path": "RELEASE_KEY.asc",
+        "url": "https://ftp.openbsd.org/pub/OpenBSD/OpenSSH/RELEASE_KEY.asc",
+        "resolved_url": "https://ftp.openbsd.org/pub/OpenBSD/OpenSSH/RELEASE_KEY.asc",
+        "sha256": "c4a6f4692c9b8e75ec096add049fe0314b3ceff9410321f1e85907cf7a864269",
+        "size_bytes": 22720
+      },
+      "signature": {
+        "path": "openssh-10.6p1.tar.gz.asc",
+        "url": "https://ftp.openbsd.org/pub/OpenBSD/OpenSSH/portable/openssh-10.6p1.tar.gz.asc",
+        "resolved_url": "https://ftp.openbsd.org/pub/OpenBSD/OpenSSH/portable/openssh-10.6p1.tar.gz.asc",
+        "sha256": "1f8fd46ddb5ec95f5bc9e0d7b0fc34ccea3ef8f94a8e3a5d3911434cce7027cf",
+        "size_bytes": 833
+      }
+    }
+  },
+  "verification": {
+    "name": "openssh-10.6p1.tar.gz",
+    "status": "verified",
+    "sha256": "a9dc9565dffe8640f64d863cd29a32bc4a3dbdec0566a7fc44c5d6ee767d5f39",
+    "size": 2355244,
+    "authentication": {
+      "status": "verified",
+      "evidence_sha256": "9b54c163fea4ed11674de86433f73d1fbdd4b14fd44fa166fac8d44e7cd48824",
+      "trust_class": "publisher-openpgp",
+      "primary_fingerprint": "7168B983815A5EEF59A4ADFD2A3F414E736060BA",
+      "signing_fingerprint": "7168B983815A5EEF59A4ADFD2A3F414E736060BA",
+      "verifier_sha256": "403e04c779ad9fab3895c405f8c53d35ab59fa8e3b8bbe3437f61bc41f468dd4",
+      "status_sha256": "5449fb51173bf3f1a309f84124efbbe4194de8655f314aed252dde30915d5421"
+    }
+  },
+  "verification_source": "tup/sources/source_lock.py",
+  "release_notes": "https://www.openssh.org/txt/release-10.6",
+  "status": "source-authenticated-not-built"
+}

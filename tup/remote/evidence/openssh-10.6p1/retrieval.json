@@ -1,0 +1,20 @@
+{
+  "openssh-10.6p1.tar.gz": {
+    "url": "https://ftp.openbsd.org/pub/OpenBSD/OpenSSH/portable/openssh-10.6p1.tar.gz",
+    "resolved_url": "https://ftp.openbsd.org/pub/OpenBSD/OpenSSH/portable/openssh-10.6p1.tar.gz",
+    "sha256": "a9dc9565dffe8640f64d863cd29a32bc4a3dbdec0566a7fc44c5d6ee767d5f39",
+    "size_bytes": 2355244
+  },
+  "openssh-10.6p1.tar.gz.asc": {
+    "url": "https://ftp.openbsd.org/pub/OpenBSD/OpenSSH/portable/openssh-10.6p1.tar.gz.asc",
+    "resolved_url": "https://ftp.openbsd.org/pub/OpenBSD/OpenSSH/portable/openssh-10.6p1.tar.gz.asc",
+    "sha256": "1f8fd46ddb5ec95f5bc9e0d7b0fc34ccea3ef8f94a8e3a5d3911434cce7027cf",
+    "size_bytes": 833
+  },
+  "RELEASE_KEY.asc": {
+    "url": "https://ftp.openbsd.org/pub/OpenBSD/OpenSSH/RELEASE_KEY.asc",
+    "resolved_url": "https://ftp.openbsd.org/pub/OpenBSD/OpenSSH/RELEASE_KEY.asc",
+    "sha256": "c4a6f4692c9b8e75ec096add049fe0314b3ceff9410321f1e85907cf7a864269",
+    "size_bytes": 22720
+  }
+}

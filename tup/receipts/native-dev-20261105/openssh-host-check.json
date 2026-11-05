@@ -1,0 +1,30 @@
+{
+  "schema": "tup-remote-host-check-v1",
+  "status": "host-configuration-checked",
+  "target_build": false,
+  "daemon_started": false,
+  "remote_login_tested": false,
+  "source_sha256": "a9dc9565dffe8640f64d863cd29a32bc4a3dbdec0566a7fc44c5d6ee767d5f39",
+  "initial_failure": "No host key supplied; target host key absent on build host.",
+  "harness_failure": "Old check expected lowercase keywords; OpenSSH10.6 emits canonical mixed case. Checker fixed to parse keyword case-insensitively.",
+  "configuration_exit_code": 0,
+  "effective_config_sha256": "d6bd93466eb3b2cac28019e78f20d46e33dd5e96c46839a2a58f17107e89ef99",
+  "sshd_sha256": "ec2b8e61802d94adc5023cba54572675e63d558cb9a07c8175258808dee08ce3",
+  "checker_sha256": "dd035a132780e6b7a341788d171270953d02e07fea4f33f0a252aa4a070d07a2",
+  "limitations": [
+    "Ubuntu compiler and OpenSSL3; TUP compiler/OpenSSL4 build not tested.",
+    "PAM and GSSAPI disabled at compile time; explicit no directives warn unsupported.",
+    "Temporary host key supplied via command line; target first-boot generation not exercised."
+  ],
+  "runtime": {
+    "python": "3.12.3",
+    "kernel": "6.18.54.1-microsoft-standard-WSL2",
+    "architecture": "x86_64",
+    "compiler": "gcc (Ubuntu 13.3.0-6ubuntu2~24.04.1) 13.3.0"
+  },
+  "build_logs": {
+    "stage-0.log": "4ff5880dcff892d5aed5f25b86cfc0008297ac2b77880efbcd65d45c33835e53",
+    "stage-1.log": "01c78415c6db1e6f9727922f21ef6451a2d71ce694fec4b55eb2a25ed35a1832"
+  },
+  "review_date": "2026-11-05"
+}
