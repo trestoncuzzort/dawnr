@@ -1,0 +1,10 @@
+01-introduction.sh
+02-network.sh
+03-udev.sh
+04-symlinks.sh
+05-clock.sh
+06-console.sh
+07-locale.sh
+08-inputrc.sh
+09-etcshells.sh
+10-systemd-custom.sh

@@ -1,0 +1,6 @@
+01-introduction.sh
+02-binutils-pass1.sh
+03-gcc-pass1.sh
+04-linux-headers.sh
+05-glibc.sh
+06-gcc-libstdc++.sh

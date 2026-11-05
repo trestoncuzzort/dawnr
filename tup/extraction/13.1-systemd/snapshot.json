@@ -1,0 +1,9 @@
+{
+  "authentication": "observed-integrity",
+  "authentication_note": "SHA256 computed from retrieved HTTPS bytes; no independently verified publisher checksum or signature for this book snapshot.",
+  "fetched_utc": "2026-11-05T07:54:45.964842+00:00",
+  "resolved_url": "https://www.linuxfromscratch.org/lfs/downloads/13.1-systemd/LFS-BOOK-13.1.tar.xz",
+  "sha256": "090b2b127ac35634269d610e2649dab031fd8a5aa9acfaf10a3c971deda5ed89",
+  "size_bytes": 259932,
+  "url": "https://www.linuxfromscratch.org/lfs/downloads/13.1-systemd/LFS-BOOK-13.1.tar.xz"
+}

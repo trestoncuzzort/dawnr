@@ -1,0 +1,13 @@
+arch=x86_64
+version=13.1
+init=systemd
+profile=lfs-13.1-systemd
+base=https://www.linuxfromscratch.org/lfs/view/13.1-systemd/
+snapshot_url=https://www.linuxfromscratch.org/lfs/downloads/13.1-systemd/LFS-BOOK-13.1.tar.xz
+snapshot_sha256=090b2b127ac35634269d610e2649dab031fd8a5aa9acfaf10a3c971deda5ed89
+snapshot_metadata_sha256=9c17e3ba19145bb2ba3c7b9063739df9b0681e60d0e743676137b32ee52c1aab
+audit_profile_sha256=99f971a1092d2c1e3354efc8c4345c96022990ca681866ec0e46d90043693abd
+authentication=observed-integrity
+wget_list=wget-list-systemd
+wget_list_sha256=2503a8ba321fce4cc4d6e0a8b6c3518703501f088dd1264fc9ec2a089751ab26
+extractor_sha256=bbce250022be5c899c0d334f8205e8f705b29762fc1b0f82385df26715f7672a
