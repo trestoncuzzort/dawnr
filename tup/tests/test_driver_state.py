@@ -182,8 +182,8 @@ class DriverStateTests(unittest.TestCase):
         self.refused()
         self.assertEqual(self.executions(), ["ran"])
 
-    def archive(self, content: bytes):
-        with tarfile.open(self.sources / "demo.tar", "w") as archive:
+    def archive(self, content: bytes, name="demo.tar"):
+        with tarfile.open(self.sources / name, "w") as archive:
             entry = tarfile.TarInfo("demo/input")
             entry.size = len(content)
             archive.addfile(entry, io.BytesIO(content))
@@ -195,6 +195,66 @@ class DriverStateTests(unittest.TestCase):
         self.archive(b"second")
         self.refused()
         self.assertEqual(self.executions(), ["ran"])
+
+    def test_override_archive_replaces_book_source_and_binds_resume(self):
+        self.page("01-demo.sh", '# TUP_TARBALL=old.tar\nexit 99\n')
+        override = self.overrides / "demo.sh"
+        override.write_text('#!/bin/bash\n# TUP_TARBALL=updated.tar\ncat input >> "$LFS/sources/ran"\n',
+                            encoding="utf-8", newline="\n")
+        override.chmod(0o755)
+        self.archive(b"updated\n", "updated.tar")
+        # The original archive is deliberately absent: it is not executed.
+        self.successful()
+        self.assertEqual(self.executions(), ["updated"])
+        receipt = self.receipt_rows()[-1]
+        self.assertEqual(receipt["package"], "updated.tar")
+        self.assertEqual(receipt["tarball_sha256"], hashlib.sha256((self.sources / "updated.tar").read_bytes()).hexdigest())
+        self.archive(b"changed\n", "updated.tar")
+        self.refused()
+        self.assertEqual(self.executions(), ["updated"])
+
+    def test_override_architecture_precedence(self):
+        self.page("01-demo.sh", '# TUP_TARBALL=book.tar\nexit 99\n')
+        override = self.overrides / "demo.sh"
+        override.write_text('#!/bin/bash\n# TUP_TARBALL=generic.tar\n# TUP_TARBALL_x86_64=native.tar\n'
+                            '# TUP_TARBALL_arm64=arm.tar\ncat input >> "$LFS/sources/ran"\n',
+                            encoding="utf-8", newline="\n")
+        override.chmod(0o755)
+        self.archive(b"native\n", "native.tar")
+        self.successful()
+        self.assertEqual(self.executions(), ["native"])
+        self.assertEqual(self.receipt_rows()[-1]["package"], "native.tar")
+
+    def test_nonmatching_override_architecture_falls_back_to_book(self):
+        self.page("01-demo.sh", '# TUP_TARBALL_x86_64=book.tar\nexit 99\n')
+        override = self.overrides / "demo.sh"
+        override.write_text('#!/bin/bash\n# TUP_TARBALL_arm64=arm.tar\n'
+                            'cat input >> "$LFS/sources/ran"\n', encoding="utf-8", newline="\n")
+        override.chmod(0o755)
+        self.archive(b"book\n", "book.tar")
+        self.successful()
+        self.assertEqual(self.executions(), ["book"])
+        self.assertEqual(self.receipt_rows()[-1]["package"], "book.tar")
+
+    def test_ambiguous_selected_override_metadata_refuses(self):
+        self.page("01-demo.sh", '# TUP_TARBALL=book.tar\nexit 99\n')
+        override = self.overrides / "demo.sh"
+        override.write_text('#!/bin/bash\n# TUP_TARBALL=one.tar\n# TUP_TARBALL=two.tar\n'
+                            'printf "ran\\n" >> "$LFS/sources/ran"\n', encoding="utf-8", newline="\n")
+        override.chmod(0o755)
+        self.refused()
+        self.assertEqual(self.executions(), [])
+
+    def test_duplicate_and_unsafe_archive_metadata_refuse_before_execution(self):
+        for metadata in (
+            '# TUP_TARBALL=demo.tar\n# TUP_TARBALL=demo.tar\n',
+            '# TUP_TARBALL_x86_64=demo.tar\n# TUP_TARBALL_x86_64=other.tar\n',
+            '# TUP_TARBALL=../demo.tar\n', '# TUP_TARBALL=\n',
+        ):
+            with self.subTest(metadata=metadata):
+                self.page("01-demo.sh", metadata + 'printf "ran\\n" >> "$LFS/sources/ran"\n')
+                self.refused()
+                self.assertEqual(self.executions(), [])
 
     def test_legacy_state_and_receipts_are_preserved_but_not_resumed(self):
         state = b"ch05/01-demo.sh\n"

@@ -128,8 +128,29 @@ tup_receipt_skip_tests() {
 export -f tup_tests_enabled tup_receipt_skip_tests tup_json_str
 export RECEIPTS
 
+tup_archive_metadata() {
+  local file=$1 line key value fallback='' arch_pkg=''
+  local -A seen=()
+  while IFS= read -r line || [ -n "$line" ]; do
+    case "$line" in
+      '# TUP_TARBALL'*)
+        [[ $line =~ ^#[[:space:]]TUP_TARBALL(_[a-zA-Z0-9_]+)?=[a-zA-Z0-9][a-zA-Z0-9._+-]*$ ]] \
+          || tup_die "malformed or unsafe archive metadata in $file"
+        key=${line%%=*}; value=${line#*=}
+        [ -z "${seen[$key]+x}" ] || tup_die "duplicate archive metadata in $file"
+        seen[$key]=1
+        case "$key" in
+          '# TUP_TARBALL') fallback=$value ;;
+          "# TUP_TARBALL_$TUP_ARCH") arch_pkg=$value ;;
+        esac
+        ;;
+    esac
+  done < "$file"
+  printf '%s' "${arch_pkg:-$fallback}"
+}
+
 tup_resolve_page() {
-  local script=$1 cand line fallback='' arch_pkg=''
+  local script=$1 cand override_pkg=''
   id="$CH/$script"
   page="${script%.sh}"
   src="$CHDIR/$script"
@@ -149,16 +170,14 @@ tup_resolve_page() {
   done
   export TUP_PAGE="$CHDIR/$script" TUP_PAGE_ID="$CH/$page"
   [ -z "$ov" ] || src=$ov
-  # A page may name one tarball per arch (# TUP_TARBALL_x86_64=..., the
-  # prebuilt Node and Lean in the layers do); the arch-specific line wins,
-  # the plain one is the fallback.
-  while IFS= read -r line || [ -n "$line" ]; do
-    case "$line" in
-      "# TUP_TARBALL_$TUP_ARCH="*) [ -n "$arch_pkg" ] || arch_pkg=${line#*=} ;;
-      '# TUP_TARBALL='*) [ -n "$fallback" ] || fallback=${line#*=} ;;
-    esac
-  done < "$CHDIR/$script"
-  pkg=${arch_pkg:-$fallback}
+  # A reviewed override can select an advisory-fixed source without editing
+  # the extracted book. Validate both metadata sets; an architecture-specific
+  # declaration wins within a file, and a selected override wins over the book.
+  pkg=$(tup_archive_metadata "$CHDIR/$script") || exit 1
+  if [ -n "$ov" ]; then
+    override_pkg=$(tup_archive_metadata "$ov") || exit 1
+    [ -z "$override_pkg" ] || pkg=$override_pkg
+  fi
   shash=$(tup_sha256 "$src") || exit 1
   thash=''; tb_json=null
   if [ -n "$pkg" ]; then
