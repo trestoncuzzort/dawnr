@@ -5,17 +5,22 @@ Run: python -m unittest discover -s tup/tests -p 'test_install_disk.py' -v
 """
 from __future__ import annotations
 
+import base64
 import hashlib
 import json
 import os
 from pathlib import Path
+import re
 import shutil
+import signal
 import struct
+import sys
 import subprocess
 import tempfile
 import unittest
+from unittest import mock
 
-from tup.boot import inputs
+from tup.boot import assemble, inputs
 from tup.boot.inputs import Refusal
 from tup.install import disk
 
@@ -23,6 +28,10 @@ POSIX = os.name == "posix" and hasattr(os, "geteuid")
 SOURCE_DEV = "7:1"
 RELEASE = "6.18.60-tup-test"
 MICROCODE = b"DMA\0" + bytes(range(60))
+# A real Ed25519 public key blob, so that enroll.py's own plan() accepts it.
+KEY_BLOB = struct.pack(">I", 11) + b"ssh-ed25519" + struct.pack(">I", 32) + bytes(range(1, 33))
+KEY = b"ssh-ed25519 " + base64.b64encode(KEY_BLOB) + b"\n"
+OTHER_KEY = b"ssh-ed25519 " + base64.b64encode(struct.pack(">I", 11) + b"ssh-ed25519" + struct.pack(">I", 32) + bytes(range(2, 34))) + b"\n"
 SERIALS = {"nvme0n1": "S5GXNX0R123456A", "sda": "WD-WX11A2345678", "vda": "virtio-0001", "sdc": "USB0001", "sdb": "VENTOY0001"}
 PCI = {"nvme0n1": "pci0000:00/0000:00:01.1/0000:01:00.0/nvme/nvme0", "sda": "pci0000:00/0000:00:17.0/ata1/host0/target0:0:0/0:0:0:0",
        "vda": "pci0000:00/0000:00:04.0/virtio1", "sdb": "pci0000:00/0000:00:14.0/usb1/1-1/1-1:1.0/host6/target6:0:0/6:0:0:0",
@@ -53,6 +62,7 @@ class FakeHost(disk.Host):
         self.lsblk, self.dump, self.signatures, self.blkid_out = {}, {}, {}, {}
         self.mounts, self.swaps, self.written, self.counter, self.hook = [], [], [], 0, None
         self.table_json = {}
+        self.detached, self.reads, self.content = [], [], {}
         self.source, self.state_parent = source, state_parent
         self.fail, self.sfdisk_error = None, {}
         self.add_disk("sdb", "8:16", 64 << 30)  # the Ventoy stick that booted this system
@@ -66,6 +76,7 @@ class FakeHost(disk.Host):
         self.mount_rows = [
             "20 1 0:40 / / rw - overlay LiveOS_rootfs rw,lowerdir=/run/rootfsbase,upperdir=/run/overlayfs,workdir=/run/ovlwork",
             "21 20 0:25 / /run rw - tmpfs tmpfs rw,mode=755",
+            "26 20 0:6 / /dev rw - devtmpfs devtmpfs rw,size=4096k",
             "22 20 7:0 / /run/initramfs/live ro - iso9660 /dev/loop0 ro",
             "23 20 7:1 / /run/rootfsbase ro - squashfs /dev/loop1 ro",
             "24 20 8:17 / /run/initramfs/tup-ventoy/media ro - exfat /dev/sdb1 ro"]
@@ -93,7 +104,8 @@ class FakeHost(disk.Host):
         path = f"{base}/{name}"
         self.dirs[base].append(name)
         self.dirs[path] = []
-        self.files.update({path + "/partition": f"{number}\n", path + "/start": f"{start}\n", path + "/size": f"{size}\n"})
+        self.files.update({path + "/partition": f"{number}\n", path + "/start": f"{start}\n", path + "/size": f"{size}\n",
+                           path + "/dev": f"{major}:{minor}\n"})
         self.links[f"/sys/class/block/{name}"] = path
         self.links[f"/sys/dev/block/{major}:{minor}"] = path
         self.devnos["/dev/" + name] = f"{major}:{minor}"
@@ -142,13 +154,28 @@ class FakeHost(disk.Host):
         return str(path) in self.nodes
 
     def fs_devno(self, path):
+        """st_dev: the filesystem the path lives on. A device node lives on devtmpfs, not on the device it names."""
+        if str(path) in self.nodes:
+            return "0:6"
         try:
             return self.devnos[str(path)]
         except KeyError:
             raise FileNotFoundError(str(path)) from None
 
     def block_devno(self, path):
+        """st_rdev: the device a block special file names."""
+        if str(path) not in self.nodes:
+            raise FileNotFoundError(str(path))
         return self.devnos[str(path)]
+
+    def read_block(self, path, offset, length):
+        self.reads.append((str(path), offset, length))
+        data = bytearray(length)
+        for at, blob in self.content.get(str(path), {}).items():
+            low, high = max(at, offset), min(at + len(blob), offset + length)
+            if low < high:
+                data[low - offset:high - offset] = blob[low - at:high - at]
+        return bytes(data)
 
     def which(self, name):
         return "/usr/sbin/" + name
@@ -168,9 +195,10 @@ class FakeHost(disk.Host):
         return hashlib.sha256(b"seed%d" % self.counter).digest()[:count] if count <= 32 else b""
 
     # --- tools
-    def run(self, argv, stdin=None, timeout=900):
+    def run(self, argv, stdin=None, timeout=900, detached=False):
         argv = [str(a) for a in argv]
         self.commands.append((argv, stdin))
+        self.detached.append((argv, detached))
         if self.hook:
             self.hook(self, argv)
         name, args = Path(argv[0]).name, argv[1:]
@@ -253,7 +281,43 @@ class FakeHost(disk.Host):
 
     # --- helpers for assertions
     def mutating(self):
-        return [argv for argv, _ in self.commands if not disk.read_only_command(argv)]
+        return [argv for argv, _ in self.commands if not read_only_literal(argv)]
+
+    def disk_writers(self):
+        """Commands that can write the target or a filesystem on it, by an independent literal list."""
+        return [argv for argv, stdin in self.commands
+                if not is_version_probe(argv)
+                and (Path(argv[0]).name in ("mkfs.fat", "mkfs.ext4", "cp", "mount", "wipefs")
+                    and not (Path(argv[0]).name == "wipefs" and argv[1:3] == ["--no-act", "--json"]))
+                or (Path(argv[0]).name == "sfdisk" and (stdin is not None or "--lock" in argv))]
+
+    def names(self):
+        """Basenames of every command that is not a tool-version probe."""
+        return [Path(argv[0]).name for argv, _ in self.commands if not is_version_probe(argv)]
+
+
+def is_version_probe(argv):
+    return argv[1:] in (["--version"], ["--help"], ["-V"])
+
+
+# The read-only shapes, copied literally and kept apart from disk.read_only_command on purpose: a mistake in the
+# production predicate must not hide a write from every refusal test.
+LSBLK_LITERAL = ("--json --bytes -o NAME,KNAME,PATH,MAJ:MIN,TYPE,MODEL,SERIAL,WWN,SIZE,LOG-SEC,PHY-SEC,TRAN,RM,HOTPLUG,RO,"
+                 "PTTYPE,PTUUID,FSTYPE,UUID,PARTUUID,PARTTYPE,PARTLABEL,LABEL,MOUNTPOINTS,VENDOR,REV ")
+READ_ONLY_LITERAL = (
+    ("lsblk", re.compile(re.escape(LSBLK_LITERAL) + r"/dev/[A-Za-z0-9._-]+")),
+    ("sfdisk", re.compile(r"--(dump|json) /dev/[A-Za-z0-9._-]+")),
+    ("blkid", re.compile(r"-p -o export /dev/[A-Za-z0-9._-]+")),
+    ("wipefs", re.compile(r"--no-act --json /dev/[A-Za-z0-9._-]+")))
+VERSION_TOOLS = {"lsblk", "sfdisk", "blkid", "wipefs", "udevadm", "mkfs.fat", "fsck.fat", "mkfs.ext4", "e2fsck", "mount",
+                 "umount", "cp", "sync", "grub-mkstandalone", "grub-script-check"}
+
+
+def read_only_literal(argv):
+    name, args = Path(argv[0]).name, argv[1:]
+    if args in (["--version"], ["--help"], ["-V"]):
+        return name in VERSION_TOOLS
+    return any(name == tool and pattern.fullmatch(" ".join(args)) for tool, pattern in READ_ONLY_LITERAL)
 
 
 def build_source(base):
@@ -317,16 +381,35 @@ class Base(unittest.TestCase):
                       label="Windows")]
         self.host.lsblk[node]["pttype"] = "gpt"
         self.host.dump[node] = (f"label: gpt\nlabel-id: 1111\ndevice: {node}\nunit: sectors\n\n"
-                                f"{node}1 : start=2048, size=204800, type=C12A7328\n{node}2 : start=206848, size=125000000, type=EBD0A0A2\n")
+                                f"{node}1 : start=2048, size=204800, type=C12A7328-F81F-11D2-BA4B-00A0C93EC93B\n"
+                                f"{node}2 : start=206848, size=125000000, type=EBD0A0A2-B9E5-4433-87C0-68B6B72699C7\n")
         self.host.signatures[node] = [{"offset": "0x200", "type": "gpt", "uuid": None, "label": None}]
         self.host.signatures[node + "p2" if name[-1].isdigit() else node + "2"] = [
             {"offset": "0x3", "type": "ntfs", "uuid": "AA", "label": "Windows"}]
+
+
+    def linux_data(self, name):
+        """An old Linux install: a GPT with an ext4 partition. Existing data, but nothing that looks like Windows."""
+        node = "/dev/" + name
+        part = node + ("p1" if name[-1].isdigit() else "1")
+        self.host.lsblk[node]["children"] = [
+            node_json(part_name(name, 1), "8:1", 10 << 30, kind="part", fstype="ext4", partlabel="root", label="old",
+                      parttype="0fc63daf-8483-4772-8e79-3d69d8477de4")]
+        self.host.lsblk[node]["pttype"] = "gpt"
+        self.host.dump[node] = (f"label: gpt\nlabel-id: 2222\ndevice: {node}\nunit: sectors\n\n"
+                                f"{part} : start=2048, size=20971520, type=0FC63DAF-8483-4772-8E79-3D69D8477DE4\n")
+        self.host.signatures[node] = [{"offset": "0x200", "type": "gpt", "uuid": None, "label": None}]
+        self.host.signatures[part] = [{"offset": "0x438", "type": "ext4", "uuid": "BB", "label": "old"}]
+        self.host.blkid_out[part] = {"TYPE": "ext4", "UUID": "BB"}
+        self.host.content[node] = {0: b"\x55" * 512}
 
 
 class PlanTests(Base):
     def test_blank_nvme_plan_is_complete_and_wrote_nothing(self):
         plan = self.plan()
         self.assert_read_only()
+        # The only look at the disk's bytes: its first and last MiB, through the host's read-only open.
+        self.assertEqual(self.host.reads, [("/dev/nvme0n1", 0, 1 << 20), ("/dev/nvme0n1", (64 << 30) - (1 << 20), 1 << 20)])
         target, layout = plan["target"], plan["layout"]
         self.assertEqual((target["identity"]["serial"], target["identity"]["wwn"], target["identity"]["tran"]),
                          ("S5GXNX0R123456A", "eui.0025385b71234567", "nvme"))
@@ -364,18 +447,34 @@ class PlanTests(Base):
             f"UUID={layout['root']['uuid']}  /  ext4  defaults,errors=remount-ro  0  1\n"
             f"UUID={layout['esp']['uuid']}  /boot/efi  vfat  "
             "umask=0077,rw,relatime,codepage=437,iocharset=iso8859-1,nofail,x-systemd.device-timeout=10s  0  2\n"))
+        linux = f"    linux /tup/vmlinuz-{RELEASE} root=PARTUUID={root['guid']} rootwait ro systemd.gpt_auto=0 "
         self.assertEqual(texts["grub_cfg"], (
             f"# TUP boot menu, written by tup/install/disk.py for plan {plan['basis'][:12]}\n"
-            "set timeout=3\nset default=tup\ninsmod part_gpt\ninsmod fat\ninsmod search\ninsmod linux\n"
+            "set default=tup\nset timeout=3\n"
+            "serial --unit=0 --speed=115200 --word=8 --parity=no --stop=1\n"
+            "terminal_input console\nterminal_output console serial\n"
+            "insmod part_gpt\ninsmod fat\ninsmod search\ninsmod linux\n"
             f"search --no-floppy --fs-uuid --set=root {layout['esp']['uuid'].lower()}\n"
-            "menuentry 'TUP' --id tup {\n"
-            f"    linux /tup/vmlinuz-{RELEASE} root=PARTUUID={root['guid']} rootwait ro console=tty0 console=ttyS0,115200n8\n"
-            "    initrd /tup/amd-ucode.img\n}\n"
-            "menuentry 'TUP rescue target' --id tup-rescue {\n"
-            f"    linux /tup/vmlinuz-{RELEASE} root=PARTUUID={root['guid']} rootwait ro console=tty0 console=ttyS0,115200n8"
-            " systemd.unit=rescue.target\n    initrd /tup/amd-ucode.img\n}\n"))
-        for forbidden in ("serial", "terminal_input", "terminal_output", "usb_keyboard"):
+            "insmod smbios\nsmbios --type 1 --get-string 4 --set tup_system_manufacturer\n"
+            'if [ "$tup_system_manufacturer" = "QEMU" ]; then\n    set default=tup-serial\nfi\n'
+            "menuentry 'TUP (boot messages on the screen)' --id tup {\n"
+            + linux + "console=ttyS0,115200n8 console=tty0\n    initrd /tup/amd-ucode.img\n}\n"
+            "menuentry 'TUP (diagnostics on the serial port)' --id tup-serial {\n"
+            + linux + "console=tty0 console=ttyS0,115200n8 systemd.log_target=console\n    initrd /tup/amd-ucode.img\n}\n"))
+        # The policy of tup/boot/assemble.py grub_config(), not a copy of its text: input from the local console only,
+        # the screen the default, the serial entry chosen for QEMU, and no entry that needs a root password.
+        main = assemble.grub_config("TUP_" + "A" * 24)
+        for line in ("terminal_input console", "terminal_output console serial",
+                     "serial --unit=0 --speed=115200 --word=8 --parity=no --stop=1", "insmod smbios",
+                     "smbios --type 1 --get-string 4 --set tup_system_manufacturer",
+                     'if [ "$tup_system_manufacturer" = "QEMU" ]; then'):
+            self.assertIn(line + "\n", main)
+            self.assertIn(line + "\n", texts["grub_cfg"])
+        self.assertIn("console=ttyS0,115200n8 console=tty0\n", main)
+        self.assertIn("console=tty0 console=ttyS0,115200n8 systemd.log_target=console\n", main)
+        for forbidden in ("rescue", "emergency", "terminal_input serial", "terminal_input console serial", "usb_keyboard"):
             self.assertNotIn(forbidden, texts["grub_cfg"])
+        self.assertEqual(texts["grub_cfg"].count("systemd.gpt_auto=0"), 2)
 
     def test_every_transport_plans_without_writes(self):
         for name, tran in (("nvme0n1", "nvme"), ("sda", "sata"), ("vda", "virtio"), ("sdc", "usb")):
@@ -450,6 +549,54 @@ class PlanTests(Base):
         host.swaps.append("/swapfile")
         self.refused("swap area /swapfile")
 
+    def test_a_loop_device_over_a_block_special_file_is_attributed_to_that_disk(self):
+        # st_dev of /dev/nvme0n1 is the devtmpfs (0:6); the disk is its st_rdev (259:0).
+        host = self.host
+        self.assertEqual((host.fs_devno("/dev/nvme0n1"), host.block_devno("/dev/nvme0n1")), ("0:6", "259:0"))
+        host.add_loop("loop5", "7:5", "/dev/nvme0n1")
+        self.assertEqual(disk.disks_behind(host, "loop5", set()), {"nvme0n1"})
+        host.mount_rows.append("60 20 7:5 / /mnt/loopfs rw - ext4 /dev/loop5 rw")
+        self.refused(r"in use by this system: ext4 mounted at /mnt/loopfs")
+        # Through a partition node and a second loop on top of the first.
+        host.add_partition("nvme0n1", 1, 2048, 2048)
+        host.add_loop("loop6", "7:6", "/dev/nvme0n1p1")
+        self.assertEqual(disk.disks_behind(host, "loop6", set()), {"nvme0n1"})
+
+    def test_anonymous_mounts_with_a_dev_source_are_attributed_and_unknown_ones_refuse(self):
+        host = self.host
+        host.add_partition("sda", 2, 4096, 4096)
+        for kind in ("fuseblk", "btrfs", "fuse.ntfs-3g"):
+            with self.subTest(kind=kind):
+                host.mount_rows.append(f"61 20 0:61 / /mnt/win rw - {kind} /dev/sda2 rw")
+                self.refused(rf"in use by this system: {re.escape(kind)} mounted at /mnt/win", "/dev/sda", allow_existing=True)
+                host.mount_rows.pop()
+        # A source that is not under /dev, on a filesystem that is not a known pseudo one: no guess.
+        for kind, source in (("nfs4", "server:/export"), ("fuse.sshfs", "user@host:/"), ("9p", "drvfs")):
+            with self.subTest(kind=kind):
+                host.mount_rows.append(f"62 20 0:62 / /mnt/net rw - {kind} {source} rw")
+                self.refused(rf"{re.escape(kind)} mounted at /mnt/net has an anonymous device number", "/dev/sda",
+                             allow_existing=True)
+                host.mount_rows.pop()
+        # A /dev source that does not exist refuses too, and the pseudo filesystems are harmless.
+        host.mount_rows.append("63 20 0:63 / /mnt/gone rw - btrfs /dev/nowhere rw")
+        self.refused("cannot tell which disk holds btrfs mounted at /mnt/gone", "/dev/sda", allow_existing=True)
+        host.mount_rows.pop()
+        for kind in sorted(disk.PSEUDO_FILESYSTEMS):
+            host.mount_rows.append(f"64 20 0:64 / /mnt/pseudo rw - {kind} {kind} rw")
+        self.plan("/dev/sda", allow_existing=True)
+        # The live system's own anonymous mounts, as dracut leaves them.
+        self.assertEqual(self.plan()["target"]["disks_in_use"], ["sdb"])
+
+    def test_files_on_anonymous_filesystems_resolve_through_the_mount_table(self):
+        host = self.host
+        host.add_partition("nvme0n1", 1, 2048, 2048)
+        host.mount_rows.append("65 20 0:65 / /data rw - btrfs /dev/nvme0n1p1 rw")
+        host.devnos["/data/swapfile"] = "0:65"
+        host.swaps.append("/data/swapfile")
+        self.refused("swap area /data/swapfile")
+        host.devnos["/data/swapfile"] = "0:99"
+        self.refused("device 0:99 is not in the mount table")
+
     def test_refuses_mounted_partitions_holders_and_unresolvable_backing_files(self):
         node = self.host.lsblk["/dev/nvme0n1"]
         node["children"] = [node_json("nvme0n1p1", "259:1", 1 << 20, kind="part", mounts=("/mnt/data",))]
@@ -483,18 +630,126 @@ class PlanTests(Base):
         self.refused("already carries owner enrollment state")
 
     def test_existing_data_needs_allow_existing_and_is_described(self):
-        self.windows_ntfs("sda")
+        self.linux_data("sda")
         with self.assertRaises(Refusal) as caught:
             self.plan("/dev/sda")
         message = str(caught.exception)
-        for fragment in ("--allow-existing", "RAW report proves nothing", "partition table gpt", "ntfs", "Windows"):
+        for fragment in ("--allow-existing", "RAW report proves nothing", "partition table gpt", "ext4"):
             self.assertIn(fragment, message)
         self.assert_read_only()
         plan = self.plan("/dev/sda", allow_existing=True)
         self.assertTrue(plan["allow_existing"])
-        self.assertTrue(any("ntfs" in line for line in plan["destroys"]))
+        self.assertTrue(any("ext4" in line for line in plan["destroys"]))
         self.assertIn("this will ERASE", disk.summary_text(plan))
         self.assert_read_only()
+
+    def test_a_disk_that_looks_like_windows_is_refused_with_and_without_allow_existing(self):
+        self.windows_ntfs("sda")
+        for allow in (False, True):
+            with self.subTest(allow_existing=allow):
+                with self.assertRaises(Refusal) as caught:
+                    self.plan("/dev/sda", allow_existing=allow)
+                message = str(caught.exception)
+                for fragment in ("never erases a disk that looks like Windows", "cleared by the owner by other means first",
+                                 "ntfs signature", "Microsoft basic data", "EBD0A0A2-B9E5-4433-87C0-68B6B72699C7"):
+                    self.assertIn(fragment, message)
+                self.assertNotIn("Confirmation token", message)
+                self.assert_read_only()
+
+    def test_every_windows_signature_and_partition_type_is_refused_on_its_own(self):
+        node = "/dev/sda"
+        gpt = "label: gpt\nlabel-id: 3333\ndevice: /dev/sda\nunit: sectors\n\n/dev/sda1 : start=2048, size=2048, type={}\n"
+        dos = "label: dos\nlabel-id: 0x3333\ndevice: /dev/sda\nunit: sectors\n\n/dev/sda1 : start=2048, size=2048, type={}\n"
+        # util-linux 2.42.4 include/pt-gpt-partnames.h and include/pt-mbr-partnames.h, copied literally.
+        for guid in ("EBD0A0A2-B9E5-4433-87C0-68B6B72699C7", "E3C9E316-0B5C-4DB8-817D-F92DF00215AE",
+                     "DE94BBA4-06D1-4D40-A16A-BFD50179D6AC", "5808C8AA-7E8F-42E0-85D2-E1E90434CFB3",
+                     "AF9B60A0-1431-4F62-BC68-3311714A69AD", "E75CAF8F-F680-4CEE-AFA3-B001E56EFC2D"):
+            with self.subTest(gpt=guid):
+                self.host.dump[node] = gpt.format(guid)
+                self.refused("looks like a Windows disk", "/dev/sda", allow_existing=True)
+        self.host.dump[node] = gpt.format("0FC63DAF-8483-4772-8E79-3D69D8477DE4")
+        self.plan("/dev/sda", allow_existing=True)  # a Linux filesystem partition is not Windows
+        for code in ("7", "27", "42", "07"):
+            with self.subTest(mbr=code):
+                self.host.dump[node] = dos.format(code)
+                self.refused("looks like a Windows disk", "/dev/sda", allow_existing=True)
+        self.host.dump[node] = dos.format("83")
+        self.plan("/dev/sda", allow_existing=True)
+        self.host.dump[node] = None
+        for kind in ("ntfs", "BitLocker", "ReFS", "exfat", "NTFS"):
+            with self.subTest(wipefs=kind):
+                self.host.signatures[node] = [{"offset": "0x3", "type": kind, "uuid": None, "label": None}]
+                self.refused("looks like a Windows disk", "/dev/sda", allow_existing=True)
+        self.host.signatures[node] = []
+        for kind in ("ntfs", "BitLocker", "ReFS", "exfat"):
+            with self.subTest(blkid=kind):
+                self.host.blkid_out[node] = {"TYPE": kind}
+                self.refused("looks like a Windows disk", "/dev/sda", allow_existing=True)
+        self.host.blkid_out[node] = {}
+        for kind in ("ntfs", "BitLocker"):
+            with self.subTest(lsblk=kind):
+                self.host.lsblk[node]["fstype"] = kind
+                self.refused("looks like a Windows disk", "/dev/sda", allow_existing=True)
+        self.host.lsblk[node]["fstype"] = None
+        self.host.lsblk[node]["children"] = [node_json("sda1", "8:1", 1 << 20, kind="part", parttype="0x7")]
+        self.refused("looks like a Windows disk", "/dev/sda", allow_existing=True)
+        self.host.lsblk[node]["children"] = [
+            node_json("sda1", "8:1", 1 << 20, kind="part", parttype="ebd0a0a2-b9e5-4433-87c0-68b6b72699c7")]
+        self.refused("looks like a Windows disk", "/dev/sda", allow_existing=True)
+
+    @unittest.skipUnless(POSIX, "apply needs POSIX")
+    def test_a_windows_disk_is_refused_again_from_the_fresh_read_in_apply(self):
+        self.windows_ntfs("sda")
+        with mock.patch.object(disk, "refuse_windows"):
+            made = self.plan("/dev/sda", allow_existing=True)  # a plan that the refusal would never have produced
+        plan_file = self.base / "windows-plan.json"
+        plan_file.write_text(json.dumps(made))
+        self.host.commands.clear()
+        token = disk.confirmation_token(made["target"]["identity"], made["digest"])
+        with self.assertRaisesRegex(Refusal, "never erases a disk that looks like Windows"):
+            disk.apply(self.host, plan_file, token, self.base / "state-w")
+        self.assertEqual(self.host.disk_writers(), [])
+        self.assertEqual(self.host.written, [])
+        self.assertFalse(os.path.lexists(self.base / "state-w"))
+
+    def test_unsigned_non_zero_data_is_existing_data_and_says_where(self):
+        mib, size = 1 << 20, 64 << 30
+        for where, offset, name in (("head", 700_000, "first MiB"), ("tail", size - 5, "last MiB"), ("head", 0, "first MiB")):
+            with self.subTest(where=where, offset=offset):
+                self.host.content["/dev/nvme0n1"] = {offset: b"\x01"}
+                with self.assertRaises(Refusal) as caught:
+                    self.plan()
+                message = str(caught.exception)
+                self.assertIn("--allow-existing", message)
+                self.assertIn("unrecognised non-zero data in the " + where, message)
+                self.assertIn(f"first non-zero byte at offset {offset}", message)
+                self.assert_read_only()
+                plan = self.plan(allow_existing=True)
+                self.assertIn("unrecognised non-zero data", plan["destroys"][0])
+                self.assertIn("unrecognised non-zero data", disk.summary_text(plan))
+        # Everything in between the two samples is not looked at; an all-zero sample is blank.
+        self.host.content["/dev/nvme0n1"] = {mib + 10: b"\x01", size - mib - 10: b"\x01"}
+        self.assertEqual(self.plan()["destroys"], ["nothing: the disk has no partition table and no signature"])
+
+    def test_a_sample_that_cannot_be_read_or_changes_is_not_blank(self):
+        def broken(path, offset, length):
+            raise PermissionError("denied")
+        self.host.read_block = broken
+        self.refused("cannot read the head of /dev/nvme0n1")
+        self.host.read_block = lambda path, offset, length: b"\0" * (length - 1)
+        self.refused("short read")
+
+    def test_lsblk_is_a_cross_check_for_existing_data(self):
+        for key, value in (("pttype", "gpt"), ("ptuuid", "abcd"), ("fstype", "ext4"), ("uuid", "u-1"), ("partuuid", "p-1"),
+                           ("label", "old")):
+            with self.subTest(key=key):
+                self.host.lsblk["/dev/nvme0n1"][key] = value
+                with self.assertRaises(Refusal) as caught:
+                    self.plan()
+                self.assertIn(f"lsblk on /dev/nvme0n1: {key}={value}", str(caught.exception))
+                self.host.lsblk["/dev/nvme0n1"][key] = None
+        self.host.lsblk["/dev/nvme0n1"]["children"] = [node_json("nvme0n1p1", "259:1", 1 << 20, kind="part")]
+        self.refused("already holds data")
 
     def test_any_single_signature_counts_as_data(self):
         for node, sigs, blk in (("/dev/vda", [{"offset": "0x438", "type": "ext4", "uuid": "U", "label": None}], {}),
@@ -534,15 +789,82 @@ class PlanTests(Base):
     def test_enroll_input_is_validated_and_hashed(self):
         keys = self.base / "enroll"
         keys.mkdir()
-        (keys / "authorized_keys").write_bytes(b"ssh-ed25519 AAAA example\n")
+        (keys / "authorized_keys").write_bytes(KEY)
         (keys / "owner").write_bytes(b"alex\n")
         plan = self.plan(enroll_input=keys)
         self.assertEqual(plan["enroll_input"]["files"]["owner"], inputs.digest(b"alex\n"))
+        accepted = plan["enroll_input"]["accepted"]
+        self.assertEqual((accepted["owner"], accepted["scope"], accepted["clock"]), ("alex", "private-networks", "untouched"))
+        self.assertRegex(accepted["fingerprints"][0], r"^SHA256:[A-Za-z0-9+/]{43}$")
+        summary = disk.summary_text(plan)
+        self.assertIn("owner alex, scope private-networks", summary)
+        self.assertIn(accepted["fingerprints"][0], summary)
         (keys / "id_rsa").write_text("private")
         self.refused("only", enroll_input=keys)
         (keys / "id_rsa").unlink()
         (keys / "authorized_keys").unlink()
         self.refused("authorized_keys", enroll_input=keys)
+
+    def test_enroll_input_takes_the_clock_file_and_refuses_every_other_name(self):
+        keys = self.base / "enroll"
+        keys.mkdir()
+        (keys / "authorized_keys").write_bytes(KEY)
+        (keys / "clock").write_bytes(b"utc\n")
+        plan = self.plan(enroll_input=keys)
+        self.assertEqual(sorted(plan["enroll_input"]["files"]), ["authorized_keys", "clock"])
+        self.assertEqual(plan["enroll_input"]["accepted"]["clock"], "utc")
+        for name in ("notes.txt", "authorized_keys.pub", "id_ed25519", ".hidden", "DS_Store", "._"[:1] + "x"):
+            with self.subTest(name=name):
+                (keys / name).write_text("x")
+                self.refused("other names found: \\['" + re.escape(name) + "'\\]", enroll_input=keys)
+                (keys / name).unlink()
+        (keys / "sub").mkdir()
+        self.refused("other names found: \\['sub'\\]", enroll_input=keys)
+        (keys / "sub").rmdir()
+        # Only macOS metadata is ignored, never copied, and the plan and the summary say so.
+        (keys / ".DS_Store").write_bytes(b"\0\0")
+        (keys / "._authorized_keys").write_bytes(b"\0\0")
+        plan = self.plan(enroll_input=keys)
+        self.assertEqual(plan["enroll_input"]["ignored"], [".DS_Store", "._authorized_keys"])
+        self.assertEqual(sorted(plan["enroll_input"]["files"]), ["authorized_keys", "clock"])
+        self.assertIn("ignored, not copied (macOS metadata): .DS_Store, ._authorized_keys", disk.summary_text(plan))
+
+    def test_enroll_input_that_the_installed_system_would_refuse_is_refused_now(self):
+        keys = self.base / "enroll"
+        keys.mkdir()
+        (keys / "authorized_keys").write_bytes(b"ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQ example\n")
+        self.refused("would refuse this enrollment input at its first boot", enroll_input=keys)
+        (keys / "authorized_keys").write_bytes(KEY)
+        (keys / "clock").write_bytes(b"local\n")
+        self.refused("clock may only hold the word utc", enroll_input=keys)
+        (keys / "clock").unlink()
+        (keys / "listen").write_bytes(b"192.168.1.5\n")
+        self.refused("needs both a listen and a peer", enroll_input=keys)
+
+    def test_the_summary_says_when_the_state_directory_is_in_ram(self):
+        plan = self.plan()
+        self.assertIsNone(plan["state_directory"])
+        self.assertIn("not given to plan", disk.summary_text(plan))
+        ram = self.plan(state="/root/install-state")  # the live root is an overlay whose upper layer is a tmpfs
+        self.assertEqual(ram["state_directory"], {"path": "/root/install-state", "filesystem": "tmpfs", "volatile": True})
+        self.assertIn("/root/install-state is on VOLATILE storage (tmpfs)", disk.summary_text(ram))
+        self.host.mount_rows.append("70 20 8:2 / /var/persist rw - ext4 /dev/sda2 rw")
+        self.host.add_partition("sda", 2, 4096, 4096)
+        disk_state = self.plan(state="/var/persist/install-state")
+        self.assertEqual(disk_state["state_directory"]["volatile"], False)
+        self.assertIn("is on ext4, which is not RAM", disk.summary_text(disk_state))
+        self.assertEqual(self.plan(state="/run/x")["state_directory"]["filesystem"], "tmpfs")
+        self.refused("--state must be an absolute path", state="relative")
+
+    def test_an_esp_too_small_for_fat32_on_the_disks_sectors_is_refused(self):
+        self.host.lsblk["/dev/nvme0n1"].update({"log-sec": 4096, "phy-sec": 4096})
+        for esp_mib in (64, 128, 256):
+            with self.subTest(esp_mib=esp_mib):
+                self.refused(rf"an ESP of {esp_mib} MiB on 4096-byte sectors has fewer than 65525 FAT32 clusters.*--esp-mib 257 or more",
+                             esp_mib=esp_mib)
+        self.assertEqual(self.plan(esp_mib=257)["layout"]["partitions"][0]["size"], 257 * 256)
+        self.host.lsblk["/dev/nvme0n1"].update({"log-sec": 512, "phy-sec": 512})
+        self.assertEqual(self.plan(esp_mib=64)["layout"]["partitions"][0]["size"], 64 * 2048)
 
 
 @unittest.skipUnless(POSIX, "apply needs POSIX directory sync and modes")
@@ -553,7 +875,7 @@ class ApplyTests(Base):
         self.state = self.base / "state"
         self.enroll = self.base / "enroll"
         self.enroll.mkdir()
-        (self.enroll / "authorized_keys").write_bytes(b"ssh-ed25519 AAAA example\n")
+        (self.enroll / "authorized_keys").write_bytes(KEY)
         self.make_plan()
 
     def make_plan(self, target="/dev/nvme0n1", **kwargs):
@@ -586,6 +908,11 @@ class ApplyTests(Base):
             (tool("grub-script-check"), str(self.state / "boot/grub.cfg")),
             (tool("grub-mkstandalone"), "-O", "x86_64-efi", "--fonts=", "--themes=", "--locales=", "-o",
              str(self.state / "boot/BOOTX64.EFI"), f"boot/grub/grub.cfg={self.state / 'boot/grub.cfg'}"),
+            # The second look at the disk, with nothing else between it and the write.
+            (tool("lsblk"), "--json", "--bytes", "-o", disk.LSBLK_COLUMNS, "/dev/nvme0n1"),
+            (sfdisk, "--dump", "/dev/nvme0n1"),
+            (tool("wipefs"), "--no-act", "--json", "/dev/nvme0n1"),
+            (tool("blkid"), "-p", "-o", "export", "/dev/nvme0n1"),
             (sfdisk, "--lock", "--wipe", "always", "--wipe-partitions", "always", "/dev/nvme0n1"),
             (tool("udevadm"), "settle", "--timeout=60"),
             (sfdisk, "--json", "/dev/nvme0n1"),
@@ -619,7 +946,7 @@ class ApplyTests(Base):
         self.assertTrue((root / "boot/efi").is_dir())
         self.assertEqual(oct((root / disk.ENROLL_TARGET).stat().st_mode & 0o777), "0o700")
         self.assertEqual(oct((root / disk.ENROLL_TARGET / "authorized_keys").stat().st_mode & 0o777), "0o600")
-        self.assertEqual((root / disk.ENROLL_TARGET / "authorized_keys").read_text(), "ssh-ed25519 AAAA example\n")
+        self.assertEqual((root / disk.ENROLL_TARGET / "authorized_keys").read_bytes(), KEY)
         self.assertEqual((esp / f"tup/vmlinuz-{RELEASE}").read_bytes(), (self.source / f"boot/vmlinuz-{RELEASE}").read_bytes())
         self.assertEqual(disk.parse_microcode_cpio((esp / "tup/amd-ucode.img").read_bytes())
                          ["kernel/x86/microcode/AuthenticAMD.bin"], (0o100644, MICROCODE))
@@ -631,6 +958,7 @@ class ApplyTests(Base):
         self.assertNotEqual(receipt["deployed_inventory_sha256"], receipt["copy_inventory_sha256"])  # fstab, enrollment
         self.assertEqual(receipt["planned_changes"], ["boot", "boot/efi", "etc", "etc/fstab", "etc/tup", "etc/tup/enroll-input",
                                                       "etc/tup/enroll-input/authorized_keys", "lost+found"])
+        self.assertEqual(receipt["state_directory"], {"path": str(self.state), "filesystem": "tmpfs", "volatile": True})
         self.assertEqual([p["node"] for p in receipt["created"]["partitions"]], ["/dev/nvme0n1p1", "/dev/nvme0n1p2"])
         self.assertEqual(set(receipt["bootloader"]), {"EFI/BOOT/BOOTX64.EFI", f"tup/vmlinuz-{RELEASE}", "tup/amd-ucode.img", "grub.cfg"})
         self.assertFalse(receipt["boot_tested"])
@@ -699,7 +1027,7 @@ class ApplyTests(Base):
             (self.source / f"boot/vmlinuz-{RELEASE}").write_bytes(b"x")
 
         def enroll_input():
-            (self.enroll / "authorized_keys").write_bytes(b"ssh-ed25519 BBBB other\n")
+            (self.enroll / "authorized_keys").write_bytes(OTHER_KEY)
 
         def tool():
             self.host.sha256 = lambda path: "0" * 64
@@ -765,24 +1093,22 @@ class ApplyTests(Base):
                     self.setUp()
                     original, seen = self.host.run, []
 
-                    def run(argv, stdin=None, timeout=900, original=original, seen=seen, index=index, fault=fault):
+                    def run(argv, stdin=None, timeout=900, detached=False, original=original, seen=seen, index=index,
+                            fault=fault):
                         seen.append(argv)
                         if len(seen) - 1 == index:
                             if fault == "interrupt":
                                 raise disk.Interrupted("signal 15")
                             return 1, "", "injected failure"
-                        return original(argv, stdin, timeout)
+                        return original(argv, stdin, timeout, detached)
                     self.host.run = run
                     with self.assertRaises((Refusal, KeyboardInterrupt)):
                         self.apply()
                     left = [row for row in self.host.mount_rows if str(self.state) in row]
-                    if Path(seen[index][0]).name == "umount" and seen[index][1].startswith("/"):
-                        self.assertTrue(left)  # the unmount itself failed: reported, not hidden
-                    else:
-                        self.assertEqual(left, [])
+                    self.assertEqual(left, [])  # also when an unmount itself failed: the cleanup tries it again
                     if self.state.exists():
                         self.assertTrue((self.state / "FAILED.json").exists())
-                    if not any(Path(a[0]).name == "sfdisk" and not disk.read_only_command(a) for a in seen[:index + 1]):
+                    if not any(Path(a[0]).name == "sfdisk" and "--lock" in a for a in seen[:index + 1]):
                         self.assertEqual(self.host.written, [])
 
     def test_unmount_failure_is_reported_loudly(self):
@@ -806,6 +1132,223 @@ class ApplyTests(Base):
         with self.assertRaisesRegex(Refusal, "new directory below an existing directory"):
             self.apply(state=self.base / "missing" / "state")
         self.assertEqual(self.host.mutating(), [])
+
+    def test_a_change_after_the_first_recheck_is_caught_before_the_first_write(self):
+        """The slow work (source inventory, grub-script-check, grub-mkstandalone) happens between apply's first look
+        at the disk and its first write. The disk is looked at again right before the write."""
+        node, base = "/dev/nvme0n1", self.host.links["/sys/class/block/nvme0n1"]
+
+        def serial():
+            self.host.lsblk[node]["serial"] = "SWAPPED"
+
+        def other_disk_answers_to_the_name():
+            self.host.devnos[node] = "259:7"  # lsblk still says 259:0: the node is no longer that device
+
+        def table():
+            self.host.dump[node] = "label: gpt\nlabel-id: 1\n"
+
+        def signature():
+            self.host.signatures[node] = [{"offset": "0x438", "type": "ext4", "uuid": "U", "label": None}]
+
+        def data():
+            self.host.content[node] = {4096: b"\x01"}
+
+        def mount():
+            self.host.add_partition("nvme0n1", 1, 2048, 2048)
+            self.host.mount_rows.append("40 20 259:1 / /mnt rw - ext4 /dev/nvme0n1p1 rw")
+
+        def holder():
+            self.host.dirs[base + "/holders"] = ["dm-0"]
+
+        def windows():
+            self.windows_ntfs("nvme0n1")
+
+        for change in (serial, other_disk_answers_to_the_name, table, signature, data, mount, holder, windows):
+            with self.subTest(change=change.__name__):
+                self.setUp()
+                self.host.hook = lambda host, argv, change=change: (
+                    change() if Path(argv[0]).name == "grub-script-check" and not is_version_probe(argv) else None)
+                with self.assertRaises(Refusal):
+                    self.apply()
+                names = self.host.names()
+                self.assertIn("grub-script-check", names)  # the change really came after the slow work began
+                self.assertIn("grub-mkstandalone", names)
+                self.assertEqual(self.host.written, [])
+                self.assertEqual(self.host.disk_writers(), [])
+                self.assertTrue((self.state / "FAILED.json").exists())
+
+    def test_nothing_but_reads_of_the_disk_sit_between_the_last_check_and_the_write(self):
+        self.apply()
+        argvs = [argv for argv, _ in self.host.commands]
+        write = next(i for i, argv in enumerate(argvs) if Path(argv[0]).name == "sfdisk" and "--lock" in argv)
+        last_slow = max(i for i, argv in enumerate(argvs[:write]) if Path(argv[0]).name == "grub-mkstandalone")
+        between = argvs[last_slow + 1:write]
+        self.assertEqual([Path(argv[0]).name for argv in between], ["lsblk", "sfdisk", "wipefs", "blkid"])
+        self.assertTrue(all(read_only_literal(argv) for argv in between))
+
+    def test_only_the_write_steps_run_in_their_own_session(self):
+        self.apply()
+        for argv, detached in self.host.detached:
+            if is_version_probe(argv):
+                continue
+            name = Path(argv[0]).name
+            self.assertEqual(detached, name in ("mkfs.fat", "mkfs.ext4", "cp") or (name == "sfdisk" and "--lock" in argv), argv)
+        self.assertTrue(any(detached for _, detached in self.host.detached))
+
+    def test_a_new_partition_node_is_checked_against_sysfs_before_each_mkfs(self):
+        def run_with(trigger, change):
+            self.setUp()
+            fired = []
+
+            def hook(host, argv):
+                if not fired and not is_version_probe(argv) and trigger(argv):
+                    fired.append(argv)
+                    change()
+            self.host.hook = hook
+            with self.assertRaisesRegex(Refusal, "not the block device|cannot confirm"):
+                self.apply()
+            self.assertTrue(fired)
+            return self.host.names()
+
+        name = lambda argv: Path(argv[0]).name
+        # The nodes appear with the wrong device number straight after the table is written.
+        names = run_with(lambda a: name(a) == "udevadm" and self.host.written,
+                         lambda: self.host.devnos.__setitem__("/dev/nvme0n1p2", "8:99"))
+        self.assertNotIn("mkfs.fat", names)
+        # The ESP node is swapped after the table was read back and before mkfs.fat.
+        names = run_with(lambda a: name(a) == "sfdisk" and "--json" in a and self.host.written,
+                         lambda: self.host.devnos.__setitem__("/dev/nvme0n1p1", "8:99"))
+        self.assertNotIn("mkfs.fat", names)
+        # The root node is swapped while mkfs.fat runs: mkfs.ext4 must not.
+        names = run_with(lambda a: name(a) == "mkfs.fat",
+                         lambda: self.host.devnos.__setitem__("/dev/nvme0n1p2", "8:99"))
+        self.assertIn("mkfs.fat", names)
+        self.assertNotIn("mkfs.ext4", names)
+        # sysfs now reports another extent for the root partition.
+        names = run_with(lambda a: name(a) == "mkfs.fat", lambda: self.host.files.__setitem__(
+            self.host.links["/sys/class/block/nvme0n1p2"] + "/size", "1\n"))
+        self.assertNotIn("mkfs.ext4", names)
+        # sysfs no longer reaches the node's device number through the new partition.
+        names = run_with(lambda a: name(a) == "mkfs.fat", lambda: self.host.links.__setitem__("/sys/dev/block/259:2", "/x"))
+        self.assertNotIn("mkfs.ext4", names)
+        self.assertEqual(self.host.mount_rows, [row for row in self.host.mount_rows if str(self.state) not in row])
+
+    def test_a_signal_just_after_mount_returns_still_unmounts(self):
+        original = self.host.run
+
+        def run(argv, stdin=None, timeout=900, detached=False):
+            result = original(argv, stdin, timeout, detached)
+            if Path(argv[0]).name == "mount" and "ext4" in argv:
+                raise disk.Interrupted("signal 15")  # the mount happened; the installer never saw it return
+            return result
+        self.host.run = run
+        with self.assertRaises(disk.Interrupted):
+            self.apply()
+        self.assertEqual([row for row in self.host.mount_rows if str(self.state) in row], [])
+        self.assertIn("umount", self.host.names())
+
+    def test_cleanup_unmounts_anything_below_the_state_directory_even_if_not_recorded(self):
+        stray = f"95 20 8:99 / {self.state}/mnt/stray rw - ext4 /dev/sdz1 rw"
+
+        def hook(host, argv):
+            if Path(argv[0]).name == "cp" and argv[1] == "-a":
+                host.mount_rows.append(stray)
+                raise disk.Interrupted("signal 15")
+        self.host.hook = hook
+        with self.assertRaises(disk.Interrupted):
+            self.apply()
+        self.assertEqual([row for row in self.host.mount_rows if str(self.state) in row], [])
+        unmounted = [argv[-1] for argv, _ in self.host.commands if Path(argv[0]).name == "umount" and not is_version_probe(argv)]
+        self.assertEqual(unmounted[:3], [f"{self.state}/mnt/stray", f"{self.state}/mnt/esp", f"{self.state}/mnt/root"])
+
+    def test_signals_are_ignored_while_the_cleanup_unmounts_and_restored_after(self):
+        seen = {}
+        original = self.host.run
+
+        def run(argv, stdin=None, timeout=900, detached=False):
+            if Path(argv[0]).name == "umount" and not is_version_probe(argv):
+                seen.setdefault("during", []).append([signal.getsignal(n) for n in (signal.SIGINT, signal.SIGTERM, signal.SIGHUP)])
+            if Path(argv[0]).name == "cp" and argv[1] == "-a":
+                raise Refusal("injected failure")
+            return original(argv, stdin, timeout, detached)
+        self.host.run = run
+        before = [signal.getsignal(n) for n in (signal.SIGINT, signal.SIGTERM, signal.SIGHUP)]
+        with self.assertRaisesRegex(Refusal, "injected failure"):
+            self.apply()
+        self.assertTrue(seen["during"])
+        for handlers in seen["during"]:
+            self.assertEqual(handlers, [signal.SIG_IGN] * 3)
+        self.assertEqual([signal.getsignal(n) for n in (signal.SIGINT, signal.SIGTERM, signal.SIGHUP)], before)
+
+    def source_with_etc_tup(self, mode=0o755):
+        tup = self.source / "etc/tup"
+        (tup / "authorized_keys").mkdir(parents=True)
+        (tup / "firewall.nft").write_bytes(b"table inet tup_host { }\n")
+        os.chmod(tup / "firewall.nft", 0o600)
+        (tup / "enroll-input").mkdir()
+        os.chmod(tup / "enroll-input", mode)
+        os.chmod(tup, 0o755)
+
+    def test_a_source_that_already_ships_etc_tup_installs_and_enrolls(self):
+        """The live image ships /etc/tup (firewall.nft, an empty authorized_keys directory) and may ship an empty
+        etc/tup/enroll-input: writing the enrollment files changes those directories' mtimes."""
+        self.source_with_etc_tup(mode=0o755)
+        (self.enroll / "clock").write_bytes(b"utc\n")
+        self.make_plan()
+        receipt = self.apply()
+        root = self.state / "mnt/root"
+        self.assertEqual(stat_mode(root / disk.ENROLL_TARGET), 0o700)
+        self.assertEqual(stat_mode(root / "etc/tup"), 0o755)
+        for name in ("authorized_keys", "clock"):
+            self.assertEqual(stat_mode(root / disk.ENROLL_TARGET / name), 0o600)
+        self.assertEqual((root / disk.ENROLL_TARGET / "clock").read_bytes(), b"utc\n")
+        self.assertEqual((root / "etc/tup/firewall.nft").read_bytes(), b"table inet tup_host { }\n")
+        self.assertTrue((root / "etc/tup/authorized_keys").is_dir())
+        self.assertEqual(receipt["planned_changes"], [
+            "boot", "boot/efi", "etc", "etc/fstab", "etc/tup", "etc/tup/enroll-input", "etc/tup/enroll-input/authorized_keys",
+            "etc/tup/enroll-input/clock", "lost+found"])
+
+    def test_a_source_that_ships_etc_tup_installs_without_enrollment_too(self):
+        self.source_with_etc_tup()
+        made = self.plan()
+        self.plan_file.write_text(json.dumps(made))
+        self.token = disk.confirmation_token(made["target"]["identity"], made["digest"])
+        receipt = self.apply()
+        self.assertEqual(receipt["planned_changes"], ["boot", "boot/efi", "etc", "etc/fstab", "lost+found"])
+
+    def test_a_source_with_enrollment_input_or_an_untrustworthy_etc_tup_is_refused_early(self):
+        self.source_with_etc_tup()
+        (self.source / disk.ENROLL_TARGET / "authorized_keys").write_bytes(KEY)
+        with self.assertRaisesRegex(Refusal, "carries enrollment input"):
+            self.plan()
+        (self.source / disk.ENROLL_TARGET / "authorized_keys").unlink()
+        os.chmod(self.source / "etc/tup", 0o775)
+        with self.assertRaisesRegex(Refusal, "etc/tup .* not a real directory owned by the installer"):
+            self.plan()
+        self.assertEqual(self.host.written, [])
+
+    def test_a_planted_enrollment_directory_that_is_not_what_the_installer_made_is_refused(self):
+        """Owner and mode are read back after the files are written; this is the check that would catch a
+        copy that came out different (here: the installer's check run against a doctored directory mode)."""
+        self.source_with_etc_tup()
+        self.make_plan()
+        real_chmod = os.chmod
+
+        def lax(path, mode, *args, **kwargs):
+            real_chmod(path, 0o755 if str(path).endswith("enroll-input") else mode, *args, **kwargs)
+        with mock.patch.object(os, "chmod", lax):
+            with self.assertRaisesRegex(Refusal, r"/etc/tup/enroll-input has owner \d+:\d+ mode 755"):
+                self.apply()
+        self.assertNotIn("e2fsck", self.host.names())
+
+    def test_apply_is_refused_if_the_installers_enrollment_check_changed(self):
+        module = disk.enroll_module()[0]
+        with mock.patch.object(disk, "enroll_module", return_value=(module, Path(disk.__file__))):
+            self.refused_apply("installer changed since the plan")
+
+
+def stat_mode(path):
+    return os.stat(path).st_mode & 0o777
 
 
 @unittest.skipUnless(POSIX, "main needs POSIX")
@@ -858,10 +1401,71 @@ class CommandLineTests(Base):
         self.assertIn("INTERRUPTED (signal 15)", err)
         self.assertEqual(self.host.written, [])
 
+    def test_a_windows_disk_exits_2_with_and_without_the_flag_and_no_flag_overrides_it(self):
+        self.windows_ntfs("sda")
+        for extra in ((), ("--allow-existing",)):
+            code, out, err = self.run_main("plan", "--target", "/dev/sda", "--source", str(self.source), "--output",
+                                           str(self.base / "w.json"), *extra)
+            self.assertEqual((code, out), (2, ""))
+            self.assertIn("never erases a disk that looks like Windows", err)
+            self.assertFalse((self.base / "w.json").exists())
+        with self.assertRaises(SystemExit) as caught:
+            self.run_main("plan", "--target", "/dev/sda", "--source", str(self.source), "--output", str(self.base / "w.json"),
+                          "--allow-windows")
+        self.assertEqual(caught.exception.code, 2)
+
+    def test_plan_prints_where_the_state_will_live(self):
+        code, out, err = self.run_main("plan", "--target", "/dev/nvme0n1", "--source", str(self.source), "--output",
+                                       str(self.base / "s.json"), "--state", "/root/st")
+        self.assertEqual((code, err), (0, ""))
+        self.assertIn("/root/st is on VOLATILE storage (tmpfs)", out)
+
     def test_requires_root(self):
-        from unittest import mock
         with mock.patch.object(os, "geteuid", return_value=1000), mock.patch.object(disk, "check_platform"):
             self.assertEqual(disk.main(["plan", "--target", "/dev/sda", "--source", "/x", "--output", "/x"], host=self.host), 2)
+
+
+@unittest.skipUnless(POSIX, "needs POSIX sessions and pread")
+class HostTests(unittest.TestCase):
+    """The real Host on harmless commands and regular files."""
+
+    def test_read_block_reads_a_range_and_is_a_read_only_open(self):
+        with tempfile.TemporaryDirectory() as temp:
+            image = Path(temp) / "disk.img"
+            image.write_bytes(b"abcdefghij" * 10)
+            self.assertEqual(disk.Host().read_block(str(image), 5, 12), b"fghijabcdefg")
+            self.assertEqual(disk.Host().read_block(str(image), 95, 50), b"fghij")  # short at the end: caller checks
+            os.chmod(image, 0o444)
+            self.assertEqual(disk.Host().read_block(str(image), 0, 3), b"abc")
+            with self.assertRaises(FileNotFoundError):
+                disk.Host().read_block(str(Path(temp) / "missing"), 0, 1)
+
+    def test_detached_commands_get_their_own_session_and_the_others_do_not(self):
+        code = "import os; print(os.getsid(0) == os.getpid())"
+        host = disk.Host()
+        self.assertEqual(host.run([sys.executable, "-c", code], detached=True)[1], "True\n")
+        self.assertEqual(host.run([sys.executable, "-c", code])[1], "False\n")
+
+    def test_a_signal_during_a_detached_command_waits_for_it_but_kills_an_ordinary_one(self):
+        class Signalled(KeyboardInterrupt):
+            pass
+
+        def raise_it(number, frame):
+            raise Signalled()
+        script = "import sys,time; time.sleep(1.0); open(sys.argv[1], 'w').write('finished')"
+        with tempfile.TemporaryDirectory() as temp:
+            previous = signal.signal(signal.SIGALRM, raise_it)
+            try:
+                for detached, finished in ((True, True), (False, False)):
+                    marker = Path(temp) / f"marker-{detached}"
+                    signal.setitimer(signal.ITIMER_REAL, 0.3)
+                    with self.assertRaises(Signalled):
+                        disk.Host().run([sys.executable, "-c", script, str(marker)], detached=detached)
+                    signal.setitimer(signal.ITIMER_REAL, 0)
+                    self.assertEqual(marker.exists(), finished, f"detached={detached}")
+            finally:
+                signal.setitimer(signal.ITIMER_REAL, 0)
+                signal.signal(signal.SIGALRM, previous)
 
 
 class GeneratedFileTests(unittest.TestCase):
@@ -955,6 +1559,28 @@ class RealToolTests(unittest.TestCase):
                 found = dict(line.split("=", 1) for line in subprocess.run(
                     ["blkid", "-p", "-o", "export", str(esp)], capture_output=True, text=True, check=True).stdout.splitlines())
                 self.assertEqual((found["TYPE"], found["UUID"], found["LABEL"]), ("vfat", layout["esp"]["uuid"], "TUP-ESP"))
+
+    @unittest.skipUnless(shutil.which("mkfs.fat"), "needs dosfstools")
+    def test_the_fat32_floor_is_exactly_where_mkfs_fat_stops_warning(self):
+        """mkfs.fat 4.2 succeeds below 65525 clusters and only prints a warning; disk.FAT32_FLOOR is the measured edge."""
+        for sector, floor in disk.FAT32_FLOOR.items():
+            for sectors, warns in ((floor - 1, True), (floor, False), (disk.MIB // sector * 512, False)):
+                with self.subTest(sector=sector, sectors=sectors), tempfile.TemporaryDirectory() as temp:
+                    image = Path(temp) / "esp.img"
+                    with open(image, "wb") as stream:
+                        stream.truncate(sectors * sector)
+                    done = subprocess.run(["mkfs.fat", "-F", "32", "-S", str(sector), "-i", "7C0FFEE5", "-n", "TUP-ESP",
+                                           str(image)], capture_output=True, text=True)
+                    self.assertEqual(done.returncode, 0, done.stderr)
+                    self.assertEqual("suggested minimum" in done.stderr, warns, done.stderr)
+        # Every size the installer will plan is at or above the floor.
+        for sector in (512, 4096):
+            smallest = next(mib for mib in range(64, 8193) if mib * disk.MIB // sector >= disk.FAT32_FLOOR[sector])
+            layout = disk.make_layout({"log_sec": sector, "size_bytes": 64 << 30}, smallest, lambda n: b"\x07" * n)
+            self.assertGreaterEqual(layout["partitions"][0]["size"], disk.FAT32_FLOOR[sector])
+            if smallest > 64:
+                with self.assertRaises(Refusal):
+                    disk.make_layout({"log_sec": sector, "size_bytes": 64 << 30}, smallest - 1, lambda n: b"\x07" * n)
 
     @unittest.skipUnless(shutil.which("grub-script-check"), "needs GRUB's grub-script-check")
     def test_grub_cfg_passes_grub_script_check(self):
