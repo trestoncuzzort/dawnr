@@ -54,7 +54,7 @@ class FakeHost(disk.Host):
         self.mounts, self.swaps, self.written, self.counter, self.hook = [], [], [], 0, None
         self.table_json = {}
         self.source, self.state_parent = source, state_parent
-        self.fail = None
+        self.fail, self.sfdisk_error = None, {}
         self.add_disk("sdb", "8:16", 64 << 30)  # the Ventoy stick that booted this system
         self.files["/sys/class/block/sdb"] = None
         for number, (start, size) in enumerate(((2048, 100 << 11), (2048 + (100 << 11), 32768)), 1):
@@ -183,6 +183,8 @@ class FakeHost(disk.Host):
 
     def tool_sfdisk(self, args, stdin):
         node = args[-1]
+        if "--dump" in args and node in self.sfdisk_error:
+            return self.sfdisk_error[node]
         if "--dump" in args:
             if self.dump.get(node) is None:
                 return 1, "", f"sfdisk: {node}: does not contain a recognized partition table\n"
@@ -501,6 +503,13 @@ class PlanTests(Base):
             self.host.lsblk["/dev/vda"]["serial"] = "virtio-0001"
             self.refused("already holds data", "/dev/vda")
 
+    def test_a_damaged_partition_table_is_data_not_an_error_and_not_blank(self):
+        self.host.sfdisk_error["/dev/nvme0n1"] = (1, "", "sfdisk: /dev/nvme0n1: failed to read the GPT: bad CRC\n")
+        self.refused("cannot read: sfdisk --dump failed")
+        plan = self.plan(allow_existing=True)
+        self.assertIn("a partition table that sfdisk cannot read", plan["destroys"][0])
+        self.assert_read_only()
+
     def test_a_disk_without_serial_or_wwn_cannot_be_named(self):
         self.host.lsblk["/dev/vda"]["serial"] = None
         self.refused("neither a serial nor a WWN", "/dev/vda")
@@ -779,6 +788,12 @@ class ApplyTests(Base):
     def test_unmount_failure_is_reported_loudly(self):
         self.host.tool_umount = lambda args, stdin: (32, "", "target is busy")
         with self.assertRaisesRegex(Refusal, "could not unmount everything"):
+            self.apply()
+
+    def test_a_state_directory_with_unreadable_intent_is_still_refused(self):
+        self.state.mkdir()
+        (self.state / "INTENT.json").write_text("{not json")
+        with self.assertRaisesRegex(Refusal, "INTENT.json is unreadable"):
             self.apply()
 
     def test_apply_refuses_any_existing_state_directory_without_touching_the_disk(self):

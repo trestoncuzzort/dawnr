@@ -232,12 +232,9 @@ def read_state(host, tools, identity):
     """The partition table dump and every signature of the disk and of each partition on it."""
     nodes = [identity["path"]] + [child["path"] for child in descendants(identity)]
     code, out, err = host.run([tools["sfdisk"]["path"], "--dump", identity["path"]])
-    if code == 0:
-        dump = out
-    elif code == 1 and "does not contain a recognized partition table" in err:
-        dump = None
-    else:
-        raise Refusal(f"sfdisk --dump failed ({code}): {err.strip()}")
+    dump, unreadable = (out, None) if code == 0 else (None, None)
+    if code and not (code == 1 and "does not contain a recognized partition table" in err):
+        unreadable = f"sfdisk --dump failed ({code}): {err.strip()}"  # a damaged table is still data
     wipefs, blkid = {}, {}
     for node in nodes:
         found = run_json(host, tools, "wipefs", "--no-act", "--json", node)["signatures"]
@@ -246,12 +243,14 @@ def read_state(host, tools, identity):
         if code not in (0, 2):
             raise Refusal(f"blkid -p failed on {node} ({code}): {err.strip()}")
         blkid[node] = dict(line.split("=", 1) for line in out.splitlines() if "=" in line) if code == 0 else {}
-    return {"sfdisk_dump": dump, "wipefs": wipefs, "blkid": blkid}
+    return {"sfdisk_dump": dump, "sfdisk_unreadable": unreadable, "wipefs": wipefs, "blkid": blkid}
 
 
 def existing_lines(identity, state):
     """What a write would destroy, in words."""
     lines = []
+    if state["sfdisk_unreadable"]:
+        lines.append("a partition table that sfdisk cannot read: " + state["sfdisk_unreadable"])
     if state["sfdisk_dump"]:
         rows = state["sfdisk_dump"].splitlines()
         header = {k: v.strip() for k, _, v in (row.partition(":") for row in rows if row[:1].isalpha() and ": " in row)}
@@ -755,11 +754,14 @@ class Run:
 def refuse_existing_state(state):
     detail = ""
     if (state / "INTENT.json").is_file():
-        record = json.loads((state / "INTENT.json").read_text())
-        progress = state / "PROGRESS.jsonl"
-        lines = progress.read_text().splitlines() if progress.is_file() else []
-        detail = (f" It recorded intent for plan {record.get('plan_sha256')} on {record.get('target')}, started "
-                  f"{record.get('started_at')}; last journal entry: {lines[-1] if lines else 'none'}.")
+        try:
+            record = json.loads((state / "INTENT.json").read_text())
+            progress = state / "PROGRESS.jsonl"
+            lines = progress.read_text().splitlines() if progress.is_file() else []
+            detail = (f" It recorded intent for plan {record.get('plan_sha256')} on {record.get('target')}, started "
+                      f"{record.get('started_at')}; last journal entry: {lines[-1] if lines else 'none'}.")
+        except (OSError, ValueError, AttributeError):
+            detail = " Its INTENT.json is unreadable."
     raise Refusal(f"state directory {state} already exists: apply never resumes and never reuses a state directory."
                   f"{detail} The disk may be half-written. Make a NEW plan with --allow-existing and a new --state.")
 
