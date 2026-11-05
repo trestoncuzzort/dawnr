@@ -295,11 +295,13 @@ terms to accompany the binary. The staged files remain separate from the kernel.
 
 ## Remaining runtime gates
 
-The current boot assembler explicitly passes `--no-early-microcode`. A later
-boot-layer change must enable early loading after staging the authenticated AMD
-input, inspect `kernel/x86/microcode/AuthenticAMD.bin` in the generated initrd,
-and verify the actual CPU model/stepping and boot-time revision result. This
-profile does not modify boot packaging or load microcode on the builder.
+The boot assembler now passes `--early-microcode` with the firmware directory
+pinned to the export, refuses an export whose `amd-ucode` directory is not
+exactly this family 19h container, and compares
+`kernel/x86/microcode/AuthenticAMD.bin` in the generated initrd with the staged
+file (see `../boot/README.md`). The actual CPU model/stepping and boot-time
+revision result still have to be observed on the desktop. This profile does not
+load microcode on the builder.
 
 Next build the kernel/modules against the completed TUP core, install the matching
 module/firmware inputs into a separate export, and test virtio networking plus
