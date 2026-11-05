@@ -116,6 +116,11 @@ required operation. `root/sources/log` retains the per-page driver receipts.
 The exact ordered source pins are exported as
 `root/sources/SHA256-MANIFEST-NATIVE.txt`; altered manifests and any extra staged
 source file/directory refuse before a stage starts.
+
+The maintained 13.1 migration currently has only guarded block-audit and source
+export validation helpers. Its CLI profile, complete reviewed block audit and
+runtime wiring are not enabled. See the exact
+[profile checkpoint](profiles/lfs-13.1-systemd/README.md) for remaining work.
 No completion message means native boot/install readiness.
 
 An interrupted preparation, uncertain/failed stage, retained writer lock,

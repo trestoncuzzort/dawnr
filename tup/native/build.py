@@ -15,6 +15,7 @@ import os
 from pathlib import Path
 import platform
 import re
+import shlex
 import shutil
 import subprocess
 import sys
@@ -30,12 +31,27 @@ STAGES = ("ch05", "ch06", "ownership", "ch07-inner", "ch08")
 SHA256 = re.compile(r"[0-9a-f]{64}\Z")
 NAME = re.compile(r"[A-Za-z0-9][A-Za-z0-9._+-]*\Z")
 TESTS = "glibc gcc binutils"
+NATIVE13_TESTS = "glibc gcc binutils gmp mpfr"
 TUP = Path(__file__).resolve().parents[1]
 CH07_ORDER = (
     "01-introduction.sh", "02-changingowner.sh", "03-kernfs.sh", "04-chroot.sh",
     "05-creatingdirs.sh", "06-createfiles.sh", "07-gettext.sh", "08-bison.sh",
     "09-perl.sh", "10-Python.sh", "11-texinfo.sh", "12-util-linux.sh", "13-cleanup.sh",
 )
+CH07_ORDER_13 = (
+    "01-introduction.sh", "02-changingowner.sh", "03-kernfs.sh", "04-chroot.sh",
+    "05-creatingdirs.sh", "06-createfiles.sh", "07-gettext.sh", "08-bison.sh",
+    "09-perl.sh", "10-zlib.sh", "11-mpdecimal.sh", "12-Python.sh", "13-texinfo.sh",
+    "14-util-linux.sh", "15-cleanup.sh",
+)
+PROFILES = {
+    "lfs-12.4-sysv": {"version": "12.4", "init": "sysv", "base": "https://www.linuxfromscratch.org/lfs/view/12.4/",
+                       "book": "book-x86_64", "chapter7": CH07_ORDER, "tests": TESTS,
+                       "gcc_max": (15, 2, 0), "ld_max": (2, 45, 0), "kernel_min": (5, 4)},
+    "lfs-13.1-systemd": {"version": "13.1", "init": "systemd", "base": "https://www.linuxfromscratch.org/lfs/view/13.1-systemd/",
+                          "book": "book-x86_64-13.1-systemd", "chapter7": CH07_ORDER_13, "tests": NATIVE13_TESTS,
+                          "gcc_max": (16, 2, 0), "ld_max": (2, 47, 0), "kernel_min": (5, 10)},
+}
 
 
 def digest(path: Path) -> str:
@@ -99,7 +115,43 @@ def validate_workspace(workspace: Path, source: Path, cache: Path) -> None:
         raise Refusal("create an empty dedicated workspace directory first")
 
 
-def load_lock(path: Path, expected_sha256: str, book: Path) -> dict:
+def metadata_for_book(book: Path, profile: str) -> dict:
+    policy = PROFILES[profile]
+    metadata = {}
+    for line in (book / "BOOK-SOURCE").read_text(encoding="utf-8").splitlines():
+        if "=" not in line:
+            raise Refusal("malformed extracted book metadata")
+        key, value = line.split("=", 1)
+        if key in metadata:
+            raise Refusal("ambiguous extracted book metadata")
+        metadata[key] = value
+    if metadata.get("arch") != "x86_64":
+        raise Refusal("extracted book metadata is not unambiguously x86_64")
+    if metadata.get("base") != policy["base"]:
+        raise Refusal("unsupported extracted book for the explicitly selected native profile")
+    if profile == "lfs-13.1-systemd":
+        for key, value in (("version", "13.1"), ("init", "systemd"), ("profile", profile)):
+            if metadata.get(key) != value:
+                raise Refusal(f"book/profile identity mismatch: {key}")
+        for key in ("snapshot_sha256", "audit_profile_sha256"):
+            if not SHA256.fullmatch(metadata.get(key, "")):
+                raise Refusal(f"missing exact book input digest: {key}")
+    return metadata
+
+
+def archive_metadata(data: bytes) -> str:
+    values = {}
+    for line in data.decode("utf-8").splitlines():
+        if line.startswith("# TUP_TARBALL"):
+            match = re.fullmatch(r"# TUP_TARBALL(_[A-Za-z0-9_]+)?=([A-Za-z0-9][A-Za-z0-9._+-]*)", line)
+            if not match or match.group(1) in values:
+                raise Refusal("duplicate, malformed or unsafe archive metadata")
+            values[match.group(1)] = match.group(2)
+    return values.get("_x86_64", values.get(None, ""))
+
+
+def load_lock(path: Path, expected_sha256: str, book: Path, *,
+              profile="lfs-12.4-sysv", effective_inputs=None) -> dict:
     if not SHA256.fullmatch(expected_sha256):
         raise Refusal("an independently authenticated source-lock SHA256 is required")
     if not path.is_file() or path.is_symlink() or digest(path) != expected_sha256:
@@ -111,13 +163,7 @@ def load_lock(path: Path, expected_sha256: str, book: Path) -> dict:
         raise Refusal("source lock is not for x86_64")
     if lock.get("book_source_sha256") != digest(book / "BOOK-SOURCE"):
         raise Refusal("source lock belongs to a different book")
-    metadata = (book / "BOOK-SOURCE").read_text(encoding="utf-8").splitlines()
-    if [line for line in metadata if line.startswith("arch=")] != ["arch=x86_64"]:
-        raise Refusal("extracted book metadata is not unambiguously x86_64")
-    if [line for line in metadata if line.startswith("base=")] != [
-        "base=https://www.linuxfromscratch.org/lfs/view/12.4/"
-    ]:
-        raise Refusal("unsupported extracted book; this bootstrap currently covers LFS 12.4 only")
+    metadata_for_book(book, profile)
     if not isinstance(lock.get("provenance"), str) or not lock["provenance"].strip():
         raise Refusal("source lock must describe its authentication evidence")
     entries = lock.get("sources")
@@ -135,12 +181,40 @@ def load_lock(path: Path, expected_sha256: str, book: Path) -> dict:
         if not isinstance(entry.get("url"), str) or not entry["url"].startswith("https://"):
             raise Refusal(f"source URL must use HTTPS: {name}")
         names.add(name)
+    if profile == "lfs-13.1-systemd":
+        verification = lock.get("source_verification", {})
+        if (not isinstance(verification, dict) or verification.get("schema") != "tup-source-verification-v1" or verification.get("status") != "complete"
+                or verification.get("source_count") != len(entries)
+                or not SHA256.fullmatch(verification.get("report_sha256", ""))):
+            raise Refusal("native13 requires a complete exported source-verification report")
+        for entry in entries:
+            auth = entry.get("authentication", {})
+            if (not isinstance(auth, dict) or auth.get("status") != "verified" or not SHA256.fullmatch(auth.get("evidence_sha256", ""))
+                    or auth.get("trust_class") not in {"publisher-openpgp", "https-published-sha256"}):
+                raise Refusal(f"unverified source authentication: {entry['name']}")
+        advisory = lock.get("advisory_review", {})
+        if not isinstance(advisory, dict):
+            raise Refusal("native13 advisory review must be a structured object")
+        dispositions = advisory.get("dispositions")
+        if (advisory.get("status") != "reviewed" or not SHA256.fullmatch(advisory.get("material_sha256", ""))
+                or not isinstance(dispositions, list) or not dispositions
+                or any(not isinstance(item, dict) or item.get("disposition") not in {"fixed-by-selection", "not-affected", "not-in-base"}
+                       for item in dispositions)):
+            raise Refusal("native13 requires a complete reviewed advisory disposition")
+        if effective_inputs is None:
+            raise Refusal("native13 source validation requires audited effective recipes")
     required = set()
     for chapter in ("ch05", "ch06", "ch07", "ch08"):
         for page in (book / chapter).glob("*.sh"):
-            for line in page.read_text(encoding="utf-8").splitlines():
-                if line.startswith(("# TUP_TARBALL=", "# TUP_TARBALL_x86_64=")):
-                    required.add(line.split("=", 1)[1])
+            archive = archive_metadata(page.read_bytes())
+            if effective_inputs is not None:
+                key = f"overrides/x86_64/{chapter}/{page.name}"
+                override = effective_inputs.get(key)
+                if override is not None:
+                    replacement = archive_metadata(override if isinstance(override, bytes) else override.read_bytes())
+                    archive = replacement or archive
+            if archive:
+                required.add(archive)
     missing = required - names
     if missing:
         raise Refusal("source lock omits book archives: " + ", ".join(sorted(missing)))
@@ -182,20 +256,170 @@ def tree_files(directory: Path):
             raise Refusal(f"special file in build inputs: {path.name}")
 
 
-def input_map(source: Path, book: Path) -> dict[str, Path | bytes]:
+def raw_blocks(page: bytes) -> dict[str, bytes]:
+    """Read only delimiter-bound original commands, never extractor wrappers."""
+    blocks = {}
+    active = None
+    body = []
+    for line in page.splitlines(keepends=True):
+        start = re.fullmatch(rb"# TUP_BLOCK_BEGIN=([0-9]{3})\n", line)
+        end = re.fullmatch(rb"# TUP_BLOCK_END=([0-9]{3})\n", line)
+        if start:
+            key = start.group(1).decode("ascii")
+            if active is not None or key in blocks:
+                raise Refusal("ambiguous native book block delimiters")
+            active, body = key, []
+        elif end:
+            if active != end.group(1).decode("ascii"):
+                raise Refusal("mismatched native book block delimiters")
+            rendered = b"".join(body)
+            if not rendered.endswith(b"\n"):
+                raise Refusal("native book block lacks its formatter newline")
+            # Extraction hashes the displayed command text, then adds exactly
+            # one newline before END. Remove that separator only; preserve all
+            # actual command whitespace to match EXTRACTION.json block hashes.
+            blocks[active] = rendered[:-1]
+            active = None
+        elif active is not None:
+            body.append(line)
+        elif line.startswith((b"# TUP_BLOCK_BEGIN", b"# TUP_BLOCK_END")):
+            raise Refusal("malformed native book block delimiter")
+    if active is not None:
+        raise Refusal("unterminated native book block")
+    return blocks
+
+
+def render_native_page(key: str, original: bytes, plan: dict) -> bytes:
+    """Compile an explicit reviewed block plan into a named Bash override."""
+    if not isinstance(plan, dict):
+        raise Refusal(f"native13 page audit must be a structured object: {key}")
+    if hashlib.sha256(original).hexdigest() != plan.get("page_sha256"):
+        raise Refusal(f"native13 page changed since block audit: {key}")
+    blocks = raw_blocks(original)
+    decisions = plan.get("blocks")
+    if (not isinstance(decisions, list) or any(not isinstance(item, dict) for item in decisions)
+            or [item.get("id") for item in decisions] != list(blocks)):
+        raise Refusal(f"native13 audit does not cover each block in order: {key}")
+    archive = plan.get("archive")
+    if archive is not None and (not isinstance(archive, str) or not NAME.fullmatch(archive)):
+        raise Refusal(f"invalid native13 archive selection: {key}")
+    expected_profile = "native-x86_64-lfs-13.1-systemd-core"
+    lines = ["#!/bin/bash", "# Generated from the versioned native13 block audit; original book is unchanged.",
+             *([f"# TUP_TARBALL_x86_64={archive}"] if archive else []),
+             "set -eEuo pipefail", "umask 022",
+             f'[ "${{TUP_PROFILE:-}}" = {shlex.quote(expected_profile)} ] || exit 96',
+             '[[ "${TUP_JOBS:-}" =~ ^[1-9][0-9]*$ ]] || exit 96',
+             'declare -F tup_json_str >/dev/null || exit 96',
+             'native_page_hash=$(sha256sum -- "$TUP_PAGE")',
+             f'[ "${{native_page_hash%% *}}" = {shlex.quote(plan["page_sha256"])} ] || exit 96']
+    if key.startswith(("ch05/", "ch06/")):
+        lines += ['[ "${TUP_NATIVE_CHROOT:-}" = 0 ] && [[ "$LFS" = /* && "$LFS" != / ]] || exit 96',
+                  '[ "$CONFIG_SITE" = "$LFS/usr/share/config.site" ] || exit 96']
+    else:
+        lines += ['[ "${TUP_NATIVE_CHROOT:-}" = 1 ] && [ "$LFS" = "" ] || exit 96',
+                  '[ -s /tup-build/BUILD-INPUTS.json ] || exit 96']
+    lines += [
+        'native_block=none; native_suite=0',
+        'native_event() {',
+        '  printf \'{"page":%s,"native_block":%s,"native_status":%s,"reason":%s}\\n\' \\',
+        '    "$(tup_json_str "$TUP_PAGE_ID")" "$(tup_json_str "$native_block")" \\',
+        '    "$(tup_json_str "$1")" "$(tup_json_str "$2")" >> "${RECEIPTS:?}"',
+        '}',
+        'native_failed() {',
+        '  local rc=$?; trap - ERR',
+        '  [ "$native_suite" = 0 ] || native_event suite-failed "exit=$rc" || exit 125',
+        '  exit "$rc"',
+        '}',
+        'trap native_failed ERR',
+    ]
+    for item in decisions:
+        block = blocks[item["id"]]
+        if hashlib.sha256(block).hexdigest() != item.get("sha256"):
+            raise Refusal(f"native13 block changed: {key}/{item['id']}")
+        action, reason = item.get("action"), item.get("reason")
+        if action not in {"run", "run-suite", "run-build-test", "skip-suite", "omit", "replace", "replace-suite", "delegate"}:
+            raise Refusal(f"unclassified native13 block: {key}/{item['id']}")
+        if not isinstance(reason, str) or not reason:
+            raise Refusal(f"native13 block has no review reason: {key}/{item['id']}")
+        kind = item.get("classification")
+        if kind == "test" and action not in {"run-suite", "replace-suite", "skip-suite"}:
+            raise Refusal(f"native13 test block has no explicit suite disposition: {key}/{item['id']}")
+        if kind == "build-test" and action not in {"run-build-test", "replace-suite"}:
+            raise Refusal(f"native13 combined build/test cannot be skipped: {key}/{item['id']}")
+        lines += [f"native_block={item['id']}; native_suite=0"]
+        if action in {"skip-suite", "omit", "delegate"}:
+            status = {"skip-suite": "suite-skipped", "omit": "omitted", "delegate": "delegated"}[action]
+            lines += [f"native_event {status} {shlex.quote(reason)}"]
+            if action == "skip-suite":
+                lines += ['tup_receipt_skip_tests "$TUP_PAGE_ID"']
+            if action == "delegate":
+                lines += ["echo 'native stage belongs to host orchestration; refusing page execution' >&2", "exit 97"]
+            continue
+        if action in {"run-suite", "run-build-test", "replace-suite"}:
+            lines += ["native_suite=1", f"native_event suite-started {shlex.quote(reason)}"]
+        if action in {"replace", "replace-suite"}:
+            replacement = item.get("replacement")
+            if not isinstance(replacement, str) or not replacement.strip():
+                raise Refusal(f"native13 replacement body missing: {key}/{item['id']}")
+            lines += [f"native_event changed {shlex.quote(reason)}", replacement.rstrip("\n")]
+        else:
+            lines += [block.decode("utf-8")]
+        if action in {"run-suite", "run-build-test", "replace-suite"}:
+            lines += ["native_event suite-passed 'command exited zero'", "native_suite=0"]
+    return ("\n".join(lines) + "\n").encode("utf-8")
+
+
+def native13_overrides(source: Path, book: Path) -> dict[str, bytes]:
+    path = source / "native/profiles/lfs-13.1-systemd/AUDIT.json"
+    audit = read_json(path)
+    if (audit.get("schema") != "tup-native-block-audit-v1" or audit.get("profile") != "lfs-13.1-systemd"
+            or audit.get("book_source_sha256") != digest(book / "BOOK-SOURCE")):
+        raise Refusal("native13 block audit does not match the selected book snapshot")
+    orders, plans = audit.get("orders", {}), audit.get("pages", {})
+    expected_pages = set()
+    result = {}
+    for chapter in ("ch05", "ch06", "ch07", "ch08"):
+        names = (book / chapter / "ORDER").read_text(encoding="utf-8").splitlines()
+        if orders.get(chapter) != names or any(not NAME.fullmatch(name) for name in names):
+            raise Refusal(f"native13 chapter order differs from reviewed profile: {chapter}")
+        for name in names:
+            key = f"{chapter}/{name}"
+            expected_pages.add(key)
+            if key not in plans:
+                raise Refusal(f"missing native13 page audit: {key}")
+            result[f"overrides/x86_64/{key}"] = render_native_page(key, (book / key).read_bytes(), plans[key])
+    if set(plans) != expected_pages:
+        raise Refusal("native13 page audit includes unselected or missing pages")
+    required_suites = audit.get("required_suites")
+    if required_suites != ["glibc", "gcc", "binutils", "gmp", "mpfr"]:
+        raise Refusal("native13 critical suite policy changed without implementation review")
+    for package in required_suites:
+        matching = [value for key, value in plans.items() if re.fullmatch(r"ch08/[0-9]+-" + package + r"\.sh", key)]
+        if len(matching) != 1:
+            raise Refusal(f"native13 required suite page missing: {package}")
+        tests = [item for item in matching[0]["blocks"] if item.get("classification") == "test"]
+        if not tests or any(item["action"] not in {"run-suite", "replace-suite"} for item in tests):
+            raise Refusal(f"native13 required suite omitted: {package}")
+    return result
+
+
+def input_map(source: Path, book: Path, *, profile="lfs-12.4-sysv") -> dict[str, Path | bytes]:
     files = {"driver.sh": source / "driver.sh"}
     files.update({f"book/{name}": path for name, path in tree_files(book)})
-    for relative in ("overrides", "buildlib", "native"):
+    for relative in (("overrides", "buildlib", "native") if profile == "lfs-12.4-sysv" else ("buildlib", "native")):
         files.update({f"{relative}/{name}": path for name, path in tree_files(source / relative)})
     if not any(name.startswith("buildlib/") for name in files):
         raise Refusal("input-aware driver helpers have not been integrated")
     # The native override wins the existing x86_64 lookup before shared overrides.
-    native_overrides = source / "native/profiles/x86_64/overrides"
-    files.update({f"overrides/{name}": path for name, path in tree_files(native_overrides)})
+    if profile == "lfs-12.4-sysv":
+        native_overrides = source / "native/profiles/x86_64/overrides"
+        files.update({f"overrides/{name}": path for name, path in tree_files(native_overrides)})
+    else:
+        files.update(native13_overrides(source, book))
     order = (book / "ch07/ORDER").read_text(encoding="utf-8").splitlines()
-    if tuple(order) != CH07_ORDER:
+    if tuple(order) != PROFILES[profile]["chapter7"]:
         raise Refusal("chapter 7 inner selection changed; review the chroot crossing")
-    selected = order[4:12]
+    selected = order[4:12] if profile == "lfs-12.4-sysv" else order[4:]
     for name in selected:
         if not NAME.fullmatch(name):
             raise Refusal("unsafe book page name")

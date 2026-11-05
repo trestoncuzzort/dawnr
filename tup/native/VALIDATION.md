@@ -41,3 +41,26 @@ without replay on a completed stage. The added integration checks also require
 Bash >= 4.4 and GNU coreutils >= 8.24, inventory `sync`, and allow bounded
 15-minute full-chapter validation rather than the 60-second tool-probe limit.
 Actual Linux durability and timing still require Linux runs.
+
+## Guarded 13.1 helper checkpoint
+
+2026-11-05: the combined native fixture suite ran **31 tests, 0 failures,
+0 skips** in 1.015 seconds with CPython 3.13.17 and Git for Windows Bash. The new
+cases exercise delimiter-bound raw block selection, explicit Ninja test skips,
+nonzero suite failure receipts, refusal to skip mixed build/test blocks,
+root-lock replacement with a harmless command stub, wrong build-context
+refusal, changed/incomplete block plans, ambiguous delimiters, archive
+selection parity and unresolved source/advisory export refusal. The
+formatter-newline regression preserves all other command bytes. An independent
+read of the new extraction found exact digest agreement for **640 blocks
+across 143 pages**, using `EXTRACTION.json` as the expected digest inventory.
+
+Five additional driver protocol cases passed for replacement archives and
+metadata ambiguity. Those Windows driver tests use the documented sync shim;
+they do not establish Linux filesystem durability.
+
+The 13.1 CLI remains disabled and no reviewed production `AUDIT.json` exists.
+No new LFS page, mount or real package command ran in these fixtures. The
+remaining activation and source/patch review work is named in the profile
+checkpoint; none of H03/H54 or the native build/boot gates is closed by this
+helper implementation.
