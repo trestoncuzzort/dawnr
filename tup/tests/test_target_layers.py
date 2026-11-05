@@ -86,7 +86,46 @@ class LayerChapterTests(unittest.TestCase):
     def test_selected_archives_are_exactly_the_reviewed_layer_inputs(self):
         self.assertEqual(target.chapter_archives(TUP, ["remote", "boot"]), [
             "libmnl-1.0.5.tar.bz2", "libnftnl-1.3.2.tar.xz", "nftables-1.1.7.tar.xz", "openssh-10.6p1.tar.gz",
-            "sudo-1.9.17p2.tar.gz", "LVM2.2.03.42.tgz", "linux-6.18.60.tar.xz", "linux-firmware-20261019.tar.xz"])
+            "sudo-1.9.17p2.tar.gz", "LVM2.2.03.42.tgz", "linux-6.18.60.tar.xz", "linux-firmware-20261019.tar.xz",
+            "dosfstools-4.2.tar.gz"])
+        # The system chapter builds nothing from an archive.
+        self.assertEqual(target.chapter_archives(TUP, ["system"]), [])
+
+    def test_dosfstools_is_authenticated_with_its_retained_record_and_the_installer_is_staged(self):
+        from unittest import mock
+        record = target.load_json(TUP / "boot/dosfstools-source.json")
+        self.assertEqual(record["name"], "dosfstools-4.2.tar.gz")
+        self.assertIn("04-dosfstools.sh", target.chapter_pages(TUP, "boot"))
+        kernel = b"kernel archive fixture"
+        with tempfile.TemporaryDirectory() as temporary:
+            cache = Path(temporary)
+            (cache / target.KERNEL_ARCHIVE).write_bytes(kernel)
+            lock = cache / "core-lock.json"
+            lock.write_text(target.json.dumps({"sources": [{"name": target.KERNEL_ARCHIVE, "sha256": target.digest(kernel),
+                                                            "authentication": {"status": "verified"}}]}))
+            calls = []
+
+            def verify_record(record, cache_dir, evidence, gpg):
+                calls.append((record["name"], evidence))
+                return {"name": record["name"], "status": "verified", "sha256": record["sha256"]}
+            remote = {"sources": [], "advisory_review_sha256": "a" * 64, "sudo_advisory_review_sha256": "b" * 64}
+            with mock.patch.object(target, "verify_remote", return_value=remote),                     mock.patch.object(target.verifier, "verify_record", verify_record):
+                result = target.verify_sources(cache, Path("gpg"), lock, ["dosfstools-4.2.tar.gz"])
+        self.assertIn(("dosfstools-4.2.tar.gz", TUP / "boot/evidence"), calls)
+        self.assertEqual([row["name"] for row in result["sources"]], ["dosfstools-4.2.tar.gz"])
+        self.assertTrue(any("dosfstools" in text for text in result["limitations"]))
+
+    @unittest.skipUnless(os.name == "posix", "inventory of the staged tree needs Linux")
+    def test_the_installer_and_its_two_boot_modules_are_staged_for_the_layer_runner(self):
+        self.assertIn("install", target.HELPERS)
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            stage, _ = target.stage_inputs(root, root / "cache", {"sources": []}, ["system"])
+            base = stage / "tup"
+            for relative in ("install/disk.py", "boot/__init__.py", "boot/inputs.py", "remote/enroll.py"):
+                self.assertTrue((base / relative).is_file(), relative)
+            self.assertEqual(sorted(path.name for path in (base / "boot").iterdir() if path.is_dir()), [])
+            self.assertFalse(list(base.rglob("__pycache__")))
 
     def test_openssh_page_lets_make_expand_its_own_program_list(self):
         # Found by the first run on a real root: the Makefile's TARGETS ends with

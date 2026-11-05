@@ -22,7 +22,7 @@ from sources import source_lock as verifier
 
 BOOT = TUP / "boot"
 EVIDENCE = BOOT / "evidence"
-PAGE = BOOT / "staged-pages/04-dosfstools.sh"
+PAGE = BOOT / "pages/04-dosfstools.sh"
 BASH = os.environ.get("TUP_TEST_BASH") or shutil.which("bash")
 RECORD = json.loads((BOOT / "dosfstools-source.json").read_bytes())
 CACHE_ONLY = {"gentoo-20261103.tar.xz"}

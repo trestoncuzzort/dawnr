@@ -33,7 +33,7 @@ KERNEL_ARCHIVE = "linux-6.18.60.tar.xz"
 DEVICE_MAPPER_ARCHIVE = "LVM2.2.03.42.tgz"
 # Chapter name -> repository directory holding ORDER and its pages.
 CHAPTERS = {"remote": "remote/pages", "boot": "boot/pages", "system": "system/pages"}
-HELPERS = ("boot", "hardware", "remote", "system")
+HELPERS = ("boot", "hardware", "install", "remote", "system")
 EXCLUDED = ("sources", "tools", "tup-build", "dev", "proc", "sys", "run", "tmp")
 STAGE = "tup-layer"
 
@@ -81,6 +81,8 @@ def verify_sources(cache: Path, gpg: Path, core_lock: Path, wanted: list[str], s
             results[record["name"]] = verifier.verify_record(record, cache, source / "boot/evidence", gpg)
     firmware = load_json(source / "hardware/firmware-source.json")
     results[firmware["name"]] = verifier.verify_record(firmware, cache, source / "hardware/evidence", gpg)
+    dosfstools = load_json(source / "boot/dosfstools-source.json")  # needs the signed Gentoo snapshot in the cache too
+    results[dosfstools["name"]] = verifier.verify_record(dosfstools, cache, source / "boot/evidence", gpg)
     # The kernel archive is a core-lock input; reuse that authentication and pin.
     kernel = [row for row in load_json(core_lock)["sources"] if row["name"] == KERNEL_ARCHIVE]
     if len(kernel) != 1 or kernel[0]["authentication"].get("status") != "verified":
@@ -99,7 +101,7 @@ def verify_sources(cache: Path, gpg: Path, core_lock: Path, wanted: list[str], s
             "core_source_lock_sha256": file_hash(core_lock),
             "sources": [results[name] for name in wanted],
             "limitations": ["Source verification does not establish target compilation, boot or remote access",
-                            "LVM2 and linux-firmware have no separate advisory review yet"]}
+                            "LVM2, linux-firmware and dosfstools have no separate advisory review yet"]}
 
 
 def check_export(root: Path):
