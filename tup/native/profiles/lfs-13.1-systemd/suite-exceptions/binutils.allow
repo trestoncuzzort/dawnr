@@ -1,0 +1,25 @@
+# Reviewed required-suite exceptions for binutils 2.47 built in the LFS chroot
+# with the chapter 6 compiler. Format and review rules: README.md in this
+# directory.
+#
+# Basis: The LFS 13.1-systemd binutils page states "One test related to gprofng
+#   is known to fail." It does not name the test.
+#   https://www.linuxfromscratch.org/lfs/view/13.1-systemd/chapter08/binutils.html
+#   In the observed run exactly one result in the whole suite is not a pass,
+#   and it is in gprofng: gprofng.display/gp-gmon.exp builds a small program
+#   with "gcc -pg", converts its gmon.out with "gprofng display gmon" (which
+#   exits 0) and then requires "+-<Total>", "+-main" and "+-gethrtime" in the
+#   "gprofng display text -calltree" output of the converted experiment. The
+#   retained gprofng.log records "No calltree for" that conversion. The other
+#   gprofng programs' results (mttest, synprog, gp-archive, gp-collect-app_F,
+#   setpath_map) pass, and jsynprog is unsupported because no Java is present.
+#   Why the converted call tree lacks those nodes in this environment has not
+#   been traced; no upstream report naming this test was found on 2026-11-05.
+#   The gmon converter is not used by any TUP build or runtime step.
+# Observed: rehearsal attempt 03 on 2026-11-05, an isolated continuation of
+#   failed core run 001 with this page's recipe unchanged, four test jobs:
+#   5966 expected passes in six summaries (ld 3304, gas 2098, binutils 351,
+#   libsframe 168, libctf 40, gprofng 5), 1 unexpected failure, 59 expected
+#   failures, 46 unsupported, 7 untested, no XPASS, UNRESOLVED or ERROR.
+@min-pass 5900
+FAIL: tmpdir/gp-gmon
