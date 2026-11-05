@@ -52,6 +52,9 @@ NATIVE13_SUITES = {
     "sqlite": ("ch08/52-sqlite.sh", "003"),
 }
 TUP = Path(__file__).resolve().parents[1]
+# Suites whose harness names every non-pass result; required-suite.sh accepts
+# reviewed suite-exceptions/<package>.allow lists for these and no others.
+REVIEWED_EXCEPTION_SUITES = ("glibc", "gcc", "binutils")
 
 # Exact lower-assurance exceptions approved in the committed provenance review.
 LFS_PATCH_POLICY = "85c9b35612c90dc4936acdfdf20e36f1b9f3939a49f5f79ef2bd195f14539ea7"
@@ -866,6 +869,21 @@ def verify_suite_evidence(root: Path, *, require_complete=False) -> dict:
             expected[match[2]] = match[1]
         if set(expected) != set(files) or any(digest(files[name]) != value for name, value in expected.items()):
             raise Refusal("retained required suite files are missing, changed or unlisted")
+        # Named non-pass results are acceptable only as the exact reviewed list
+        # staged with this build; a failed command needs at least one of them.
+        reviewed, command_exit = record.get("reviewed_exceptions", 0), record.get("command_exit_code", 0)
+        if type(reviewed) is not int or type(command_exit) is not int or reviewed < 0:
+            raise Refusal("invalid required suite exception record")
+        if reviewed:
+            allow = root / "tup-build/native/profiles/lfs-13.1-systemd/suite-exceptions" / (package + ".allow")
+            observed, unexplained = files.get("nonpass.observed"), files.get("nonpass.unexplained")
+            if (package not in REVIEWED_EXCEPTION_SUITES or allow.is_symlink() or not allow.is_file()
+                    or record.get("exceptions_sha256") != digest(allow) or observed is None or unexplained is None
+                    or len(observed.read_text(encoding="utf-8").splitlines()) != reviewed
+                    or unexplained.stat().st_size):
+                raise Refusal("required suite exceptions differ from the reviewed staged list")
+        elif command_exit != 0 or record.get("exceptions_sha256") is not None:
+            raise Refusal("required suite command failed without reviewed exceptions")
         suites[package] = record
     if require_complete and set(suites) != set(NATIVE13_SUITES):
         raise Refusal("not every required native13 suite has retained passing evidence")

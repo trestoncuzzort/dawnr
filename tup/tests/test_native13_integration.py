@@ -116,18 +116,29 @@ class Native13IntegrationTests(unittest.TestCase):
             self.assertIn("RUNSHARED is empty", refused.stderr)
             self.assertFalse((self.directory / output).exists())
 
-    def judge(self, package, summaries, console=""):
+    def judge(self, package, summaries, console="", exceptions=None):
         if not BASH:
             self.skipTest("Bash is required for result-gate fixtures")
         results = self.directory / "results"
         results.mkdir(exist_ok=True)
         for child in results.iterdir():
             shutil.rmtree(child) if child.is_dir() else child.unlink()
+        for stale in self.directory.glob("nonpass.*"):
+            stale.unlink()
         for name, value in summaries.items():
             (results / name).parent.mkdir(parents=True, exist_ok=True)
             (results / name).write_text(value, encoding="utf-8")
         (self.directory / "command.console").write_text(console, encoding="utf-8")
         helper = TUP / "native/profiles/lfs-13.1-systemd/required-suite.sh"
+        if exceptions is not None:
+            # The helper finds reviewed lists beside itself; give a fixture copy its own.
+            profile = self.directory / "profile"
+            shutil.rmtree(profile, ignore_errors=True)
+            (profile / "suite-exceptions").mkdir(parents=True)
+            shutil.copyfile(helper, profile / "required-suite.sh")
+            helper = profile / "required-suite.sh"
+            for name, value in exceptions.items():
+                (profile / "suite-exceptions" / name).write_text(value, encoding="utf-8", newline="\n")
         return subprocess.run([BASH, "-c", 'set -euo pipefail; source "$1"; native_judge_suite "$2" "$3"',
                                "suite-fixture", shell_path(helper), package, shell_path(self.directory)],
                               text=True, capture_output=True, timeout=30)
@@ -150,6 +161,117 @@ class Native13IntegrationTests(unittest.TestCase):
         self.assertEqual(self.judge("gcc", results).returncode, 0)
         del results["libstdc++.sum"]
         self.assertNotEqual(self.judge("gcc", results).returncode, 0)
+
+    def test_reviewed_exception_accepts_only_the_exact_named_result(self):
+        allow = {"glibc.allow": "# reviewed fixture\n@min-pass 2\nFAIL: io/tst-lchmod\n"}
+        passing = "PASS: one\nPASS: two\nFAIL: io/tst-lchmod\nXFAIL: expected\nUNSUPPORTED: optional\n"
+        self.assertEqual(self.judge("glibc", {"tests.sum": passing}, exceptions=allow).returncode, 0)
+        self.assertEqual((self.directory / "nonpass.observed").read_text(), "FAIL: io/tst-lchmod\n")
+        self.assertEqual((self.directory / "nonpass.unexplained").read_text(), "")
+        expected = hashlib.sha256(allow["glibc.allow"].encode()).hexdigest()
+        # GNU sha256sum separates digest and name with two spaces, or " *" in binary mode.
+        self.assertEqual((self.directory / "nonpass.exceptions.sha256").read_text().split(" ", 1)[0], expected)
+        for extra in ("FAIL: io/tst-lchmod2\n", "FAIL: io/tst-lchmo\n", "XPASS: io/tst-lchmod\n",
+                      "FAIL: io/tst-lchmod \n", "ERROR: io/tst-other\n", "UNRESOLVED: io/tst-other\n"):
+            with self.subTest(extra=extra):
+                self.assertNotEqual(self.judge("glibc", {"tests.sum": passing + extra}, exceptions=allow).returncode, 0)
+                self.assertEqual((self.directory / "nonpass.unexplained").read_text(), extra)
+        # The same summary without a reviewed list, or with one for another package, still refuses.
+        self.assertNotEqual(self.judge("glibc", {"tests.sum": passing}).returncode, 0)
+        self.assertNotEqual(self.judge("glibc", {"tests.sum": passing}, exceptions={"gcc.allow": allow["glibc.allow"]}).returncode, 0)
+
+    def test_reviewed_exception_requires_positive_coverage_and_a_single_floor(self):
+        summary = "PASS: one\nPASS: two\nFAIL: io/tst-lchmod\n"
+        for text in ("@min-pass 3\nFAIL: io/tst-lchmod\n", "FAIL: io/tst-lchmod\n", "@min-pass 0\nFAIL: io/tst-lchmod\n",
+                     "@min-pass 1\n@min-pass 2\nFAIL: io/tst-lchmod\n", "@min-pass two\nFAIL: io/tst-lchmod\n"):
+            with self.subTest(text=text):
+                self.assertNotEqual(self.judge("glibc", {"tests.sum": summary}, exceptions={"glibc.allow": text}).returncode, 0)
+        # glibc lists each result in tests.sum and again in a per-directory summary:
+        # a repeated line is one result, for the exception count and for the floor.
+        repeated = {"tests.sum": summary, "io/subdir-tests.sum": summary}
+        self.assertEqual(self.judge("glibc", repeated, exceptions={"glibc.allow": "@min-pass 2\nFAIL: io/tst-lchmod\n"}).returncode, 0)
+        self.assertEqual((self.directory / "nonpass.observed").read_text(), "FAIL: io/tst-lchmod\n")
+        self.assertNotEqual(self.judge("glibc", repeated, exceptions={"glibc.allow": "@min-pass 3\nFAIL: io/tst-lchmod\n"}).returncode, 0)
+        # Automake .trs verdicts carry no test name, so those suites cannot use a reviewed list.
+        self.assertNotEqual(self.judge("gmp", {"one.trs": ":test-result: PASS\n", "two.trs": ":test-result: FAIL\n"},
+                                       exceptions={"gmp.allow": "@min-pass 1\n:test-result: FAIL\n"}).returncode, 0)
+
+    def test_reviewed_exception_must_account_for_every_dejagnu_total(self):
+        allow = {"gcc.allow": "@min-pass 30\nFAIL: gcc.target/i386/pr115102.c scan-assembler-times bswap 1\n"
+                              "XPASS: gcc.dg/plugin/crash-test-nested-ice.c (test for excess errors)\n"}
+        clean = {name: "# of expected passes\t12\n" for name in ("g++.sum", "libstdc++.sum")}
+        failing = ("PASS: first\nFAIL: gcc.target/i386/pr115102.c scan-assembler-times bswap 1\n"
+                   "# of expected passes\t12\n# of unexpected failures\t1\n")
+        self.assertEqual(self.judge("gcc", dict(clean, **{"gcc.sum": failing}), exceptions=allow).returncode, 0)
+        # A total that the named lines do not explain, in either direction, refuses.
+        hidden = failing.replace("unexpected failures\t1", "unexpected failures\t2")
+        self.assertNotEqual(self.judge("gcc", dict(clean, **{"gcc.sum": hidden}), exceptions=allow).returncode, 0)
+        uncounted = failing + "XPASS: gcc.dg/plugin/crash-test-nested-ice.c (test for excess errors)\n"
+        self.assertNotEqual(self.judge("gcc", dict(clean, **{"gcc.sum": uncounted}), exceptions=allow).returncode, 0)
+        counted = uncounted + "# of unexpected successes\t1\n"
+        self.assertEqual(self.judge("gcc", dict(clean, **{"gcc.sum": counted}), exceptions=allow).returncode, 0)
+        self.assertEqual(len((self.directory / "nonpass.observed").read_text().splitlines()), 2)
+        # A count with no named result cannot be reviewed line by line.
+        nameless = "# of expected passes\t12\n# of unexpected failures\t1\n"
+        self.assertNotEqual(self.judge("gcc", dict(clean, **{"gcc.sum": nameless}), exceptions=allow).returncode, 0)
+        # The reviewed exception does not replace the per-component positive results.
+        self.assertNotEqual(self.judge("gcc", {"gcc.sum": failing, "g++.sum": clean["g++.sum"]}, exceptions=allow).returncode, 0)
+        low = dict(allow, **{"gcc.allow": allow["gcc.allow"].replace("@min-pass 30", "@min-pass 37")})
+        self.assertNotEqual(self.judge("gcc", dict(clean, **{"gcc.sum": failing}), exceptions=low).returncode, 0)
+
+    def test_committed_exception_lists_are_exact_lines_with_one_floor_and_a_recorded_basis(self):
+        directory = AUDIT.parent / "suite-exceptions"
+        lists = sorted(directory.glob("*.allow"))
+        self.assertTrue({path.stem for path in lists} <= set(build.REVIEWED_EXCEPTION_SUITES))
+        for path in lists:
+            raw = path.read_bytes()
+            lines = raw.decode("utf-8").splitlines()
+            with self.subTest(path=path.name):
+                self.assertNotIn(b"\r", raw)
+                self.assertEqual(sum(line.startswith("@min-pass ") for line in lines), 1)
+                self.assertEqual([line for line in lines if line.startswith("@") and not line.startswith("@min-pass ")], [])
+                results = [line for line in lines if line and not line.startswith(("#", "@"))]
+                self.assertEqual(len(results), len(set(results)))
+                for line in results:
+                    self.assertRegex(line, r"^(FAIL|XPASS|UNRESOLVED|ERROR): \S")
+                    self.assertEqual(line, line.rstrip())
+                # Every list states where its entries were observed and why they are expected.
+                self.assertTrue(any(line.startswith("# Basis:") for line in lines))
+                self.assertTrue(any(line.startswith("# Observed:") for line in lines))
+
+    def test_reviewed_exception_receipt_is_bound_to_the_staged_list(self):
+        root = self.directory / "root"
+        log = root / "sources/log"
+        evidence = log / "native-suites/ch08-05-glibc-006"
+        evidence.mkdir(parents=True)
+        staged = root / "tup-build/native/profiles/lfs-13.1-systemd/suite-exceptions"
+        staged.mkdir(parents=True)
+        (staged / "glibc.allow").write_bytes(b"@min-pass 1\nFAIL: io/tst-lchmod\n")
+        (evidence / "nonpass.observed").write_bytes(b"FAIL: io/tst-lchmod\n")
+        (evidence / "nonpass.unexplained").write_bytes(b"")
+        manifest = evidence / "files.sha256"
+
+        def receipt(**changes):
+            manifest.write_bytes("".join(f"{build.digest(path)}  {path.name}\n" for path in sorted(evidence.iterdir())
+                                         if path.name != "files.sha256").encode())
+            row = {"package": "glibc", "status": "passed", "exit_code": 0, "directory": "native-suites/ch08-05-glibc-006",
+                   "manifest_sha256": build.digest(manifest), "command_exit_code": 2, "reviewed_exceptions": 1,
+                   "exceptions_sha256": build.digest(staged / "glibc.allow")}
+            row.update(changes)
+            (log / "receipts.jsonl").write_bytes(build.encoded({"native_suite_evidence": row}).replace(b"\n", b"") + b"\n")
+
+        receipt()
+        self.assertEqual(build.verify_suite_evidence(root)["glibc"]["reviewed_exceptions"], 1)
+        for changes in ({"exceptions_sha256": "0" * 64}, {"reviewed_exceptions": 2}, {"reviewed_exceptions": "1"},
+                        {"reviewed_exceptions": 0}, {"reviewed_exceptions": 0, "exceptions_sha256": None}):
+            with self.subTest(changes=changes):
+                receipt(**changes)
+                with self.assertRaisesRegex(build.Refusal, "exception"):
+                    build.verify_suite_evidence(root)
+        (evidence / "nonpass.unexplained").write_bytes(b"FAIL: other\n")
+        receipt()
+        with self.assertRaisesRegex(build.Refusal, "differ from the reviewed staged list"):
+            build.verify_suite_evidence(root)
 
     def test_retained_suite_manifest_detects_tamper_and_extra_files(self):
         root = self.directory / "root"

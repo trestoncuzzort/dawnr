@@ -1,6 +1,44 @@
 # Sourced by the reviewed native13 recipes. Bash and temporary coreutils only.
-# No failure allowlist: a failed required suite stops the build for review.
+# A failed required suite stops the build for review. The only accepted
+# non-pass results are complete result lines listed in a reviewed
+# suite-exceptions/<package>.allow file for exactly this package version;
+# see suite-exceptions/README.md for what such a review must contain.
 # https://www.linuxfromscratch.org/lfs/view/13.1-systemd/chapter08/glibc.html
+native_reviewed_exceptions() {
+  local package=$1 directory=$2 allow floor status=0
+  # Only harnesses that name every non-pass result on its own line.
+  case "$package" in glibc|gcc|binutils) ;; *) return 98 ;; esac
+  allow=$(dirname -- "${BASH_SOURCE[0]}")/suite-exceptions/$package.allow
+  [ -f "$allow" ] && [ ! -L "$allow" ] || return 98
+  grep -E '^(FAIL|XPASS|UNRESOLVED|ERROR): ' "$directory/summary.results" > "$directory/nonpass.unsorted" || status=$?
+  [ "$status" -le 1 ] || return 125
+  # glibc repeats each result in its aggregate and per-directory summaries.
+  LC_ALL=C sort -u "$directory/nonpass.unsorted" > "$directory/nonpass.observed" || return 125
+  rm -- "$directory/nonpass.unsorted" || return 125
+  # A failure count without named results cannot be reviewed line by line.
+  [ -s "$directory/nonpass.observed" ] || return 98
+  status=0
+  grep -v -E '^(#|@|[[:space:]]*$)' "$allow" > "$directory/nonpass.reviewed" || status=$?
+  [ "$status" -le 1 ] || return 125
+  status=0
+  LC_ALL=C grep -F -x -v -f "$directory/nonpass.reviewed" "$directory/nonpass.observed" > "$directory/nonpass.unexplained" || status=$?
+  [ "$status" -le 1 ] || return 125
+  [ ! -s "$directory/nonpass.unexplained" ] || return 98
+  # DejaGnu totals must be fully accounted for by the named lines just reviewed.
+  awk '/^FAIL: / { fail++ } /^XPASS: / { xpass++ } /^UNRESOLVED: / { unresolved++ }
+       /^# of unexpected failures[[:space:]]/ { cfail += $NF; counted = 1 }
+       /^# of unexpected successes[[:space:]]/ { cxpass += $NF; counted = 1 }
+       /^# of unresolved testcases[[:space:]]/ { cunresolved += $NF; counted = 1 }
+       END { exit (counted && (fail != cfail || xpass != cxpass || unresolved != cunresolved)) }' \
+    "$directory/summary.results" || return 98
+  # Positive coverage: an exception never excuses a suite that mostly did not run.
+  floor=$(sed -n 's/^@min-pass[[:space:]]\{1,\}\([1-9][0-9]*\)$/\1/p' "$allow") || return 125
+  [[ $floor =~ ^[1-9][0-9]*$ ]] || return 98
+  awk -v floor="$floor" '/^PASS: / { if (!seen[$0]++) lines++ } /^# of expected passes[[:space:]]/ { counted += $NF }
+       END { exit !((counted > 0 ? counted : lines) >= floor) }' "$directory/summary.results" || return 98
+  sha256sum -- "$allow" > "$directory/nonpass.exceptions.sha256" || return 125
+}
+
 native_judge_suite() {
   local package=$1 directory=$2 file summary result rc=0
   local -a summary_names=()
@@ -57,7 +95,11 @@ native_judge_suite() {
   rm -- "$directory/summary-files.list" || return 125
   grep -Eq '^(PASS:|:test-result: PASS|# of expected passes[[:space:]]+[1-9])' "$directory/summary.results" || return 98
   grep -Eq '^(FAIL:|XPASS:|UNRESOLVED:|ERROR:|:test-result: (FAIL|XPASS|ERROR)|# of (unexpected failures|unexpected successes|unresolved testcases)[[:space:]]+[1-9])' "$directory/summary.results" || rc=$?
-  [ "$rc" = 1 ] || return 98
+  case "$rc" in
+    1) ;;  # No non-pass result at all.
+    0) native_reviewed_exceptions "$package" "$directory" || return 98 ;;
+    *) return 98 ;;
+  esac
   for summary in "${summary_names[@]}"; do
     result=$(find "$directory/results" -name "$summary" -type f -print) || return 125
     # Exactly one result for each required compiler/linker component.
@@ -99,7 +141,17 @@ native_required_suite() {
   # Exact current-version result formats. A zero make status without positive
   # evidence, or with FAIL/XPASS/UNRESOLVED, cannot be a passing receipt.
   native_judge_suite "$package" "$directory" || missing=1
+  local command_rc=$rc reviewed=0 exceptions=null
+  if [ "$missing" = 0 ] && [ -s "$directory/nonpass.observed" ]; then
+    # The judge accepted every named non-pass result as a reviewed exception.
+    # Only then is a non-zero status of the suite command itself explained.
+    reviewed=$(wc -l < "$directory/nonpass.observed") || return 125
+    exceptions=$(cut -d' ' -f1 "$directory/nonpass.exceptions.sha256") || return 125
+    exceptions=$(tup_json_str "$exceptions")
+    rc=0
+  fi
   [ "$missing" = 0 ] || { echo 'required suite result evidence is missing or reports failures' >&2; [ "$rc" != 0 ] || rc=98; }
+  [ "$missing" != 0 ] || [ "$rc" = 0 ] || echo 'required suite command failed without a reviewed, named result' >&2
   printf '%s\n' "$rc" > "$directory/verdict.exit"
   (
     cd "$directory" || exit 1
@@ -115,8 +167,9 @@ native_required_suite() {
     sqlite) coverage=local-built-binary-regressions ;;
   esac
   [ "$rc" != 0 ] || status=passed
-  printf '{"native_suite_evidence":{"package":%s,"status":%s,"exit_code":%s,"directory":%s,"manifest_sha256":%s,"coverage":%s}}\n' \
+  printf '{"native_suite_evidence":{"package":%s,"status":%s,"exit_code":%s,"directory":%s,"manifest_sha256":%s,"coverage":%s,"command_exit_code":%s,"reviewed_exceptions":%s,"exceptions_sha256":%s}}\n' \
     "$(tup_json_str "$package")" "$(tup_json_str "$status")" "$rc" \
-    "$(tup_json_str "$relative")" "$(tup_json_str "${result%% *}")" "$(tup_json_str "$coverage")" >> "$RECEIPTS" || return 125
+    "$(tup_json_str "$relative")" "$(tup_json_str "${result%% *}")" "$(tup_json_str "$coverage")" \
+    "$command_rc" "$reviewed" "$exceptions" >> "$RECEIPTS" || return 125
   return "$rc"
 }

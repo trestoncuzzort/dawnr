@@ -5,3 +5,6 @@
 *.py text eol=lf
 # GNU make recipes need their exact LF line endings and leading tabs.
 *.mk text eol=lf
+# Reviewed result lines are compared byte for byte inside the Linux build.
+suite-exceptions/*.allow text eol=lf
+suite-exceptions/*.md text eol=lf

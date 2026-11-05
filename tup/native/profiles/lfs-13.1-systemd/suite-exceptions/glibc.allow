@@ -1,0 +1,21 @@
+# Reviewed required-suite exceptions for glibc 2.44 (with upstream_fixes-3) built
+# in the LFS chroot. Format and review rules: README.md in this directory.
+#
+# Basis: The LFS 13.1-systemd glibc page states "io/tst-lchmod is known to fail
+#   in the LFS chroot environment."
+#   https://www.linuxfromscratch.org/lfs/view/13.1-systemd/chapter08/glibc.html
+#   The retained output shows why: after its lchmod and fchmodat checks pass,
+#   the test enters a private mount namespace and compares its open file
+#   descriptors with a snapshot taken earlier. Inside a chroot the kernel then
+#   reports the /proc/self/fd link targets as paths outside the chroot
+#   ("Differences found in descriptor set": descriptors 1 and 2 changed from
+#   /sources/... to the builder's path of the same files), and the test counts
+#   that as a failure. The chmod behaviour under test is not what fails.
+# Observed: rehearsal attempt 02 on 2026-11-05, an isolated continuation of
+#   failed core run 001 with unchanged recipes for this page, four test jobs:
+#   6824 PASS, 2 FAIL, 537 UNSUPPORTED, 16 XFAIL, no XPASS. The second failure
+#   in that run, stdlib/test-bz22786, was a 20 s timeout while the build cgroup
+#   was pinned at its memory limit; it passed in 5 s when measured with room
+#   and is deliberately not listed here. It has to pass.
+@min-pass 6800
+FAIL: io/tst-lchmod

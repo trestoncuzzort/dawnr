@@ -18,7 +18,9 @@ identity is `native-x86_64-lfs-13.1-systemd-core`.
   jobs. Preserve their console, .log/.sum/.out/.trs/.test-result files before
   package cleanup. Require zero command status, positive machine-readable
   results, no FAIL/XPASS/UNRESOLVED/ERROR verdict, and the expected GCC/binutils
-  component summaries. Coreutils root and unprivileged phases retain separate
+  component summaries. The only accepted departure is a reviewed, exact
+  exception line with a pass floor (see below); it also explains a non-zero
+  status of that suite's command. Coreutils root and unprivileged phases retain separate
   records; stale root Automake verdicts are removed before the latter phase.
   Tcl/Expect use their Tcl summaries, tar/kbd Autotest summaries, and Python
   JUnit results. Every other optional suite is recorded as skipped.
@@ -47,12 +49,28 @@ identity is `native-x86_64-lfs-13.1-systemd-core`.
   test blocks. The latter is a post-boot procedure and is never run by this
   builder. Optional suites and post-boot gates remain untested, not passed.
 
-The strict required-suite policy deliberately has **no known-failure allowlist**.
-The book documents some glibc/GCC/binutils failures in chroot or on particular
-hardware. A real run encountering one stops with all evidence retained. Any
-current-version exception must be reviewed against that run and encoded with
-positive coverage checks; a historical record-only success is not accepted.
+The required-suite gate accepts no failure by default. The book documents some
+glibc/GCC/binutils failures in chroot or on particular hardware; a run that
+meets an unreviewed one stops with all evidence retained. Reviewed
+current-version exceptions live in [suite-exceptions/](suite-exceptions/README.md):
+exact result lines, each with its basis and the real run in which it was
+observed, plus a pass floor taken from that run. They exist only for the three
+suites whose harness names every non-pass result (glibc, binutils, GCC), and
+the receipt binds the list's digest. A historical record-only success is not
+accepted. Known failures of the other suites are corrected or explicitly
+deselected in the audited block with the reason recorded: tar's capability
+test compares against an obsolete `getcap` output format and has that one
+expected string corrected, and Python's network-resource tests are declared
+unavailable because the build has no network or resolver.
 Do not delete an intent and replay a partly installed page.
+
+glibc's suite runs with `TIMEOUTFACTOR=4`, the variable glibc's own test
+driver reads to scale timeouts. The build cgroup is CPU-limited and was
+measurably throttled, and one memory-heavy test timed out while the cgroup
+was pinned at its memory limit. Two glibc tests each build strings larger than
+2 GiB on purpose (`libio/tst-asprintf-null`, `stdlib/test-bz22786`); together
+they peaked at 4.74 GiB in an isolated measurement, so a 4 GiB build budget
+cannot run this suite. The run plan states the budget actually used.
 
 ## Selected sources and patch review
 
