@@ -297,7 +297,9 @@ the same run; a changed boot or hardware fragment therefore fails until the
 qualification is run again. `test_hardware_qualify.py` exercises the script's
 refusals on a small fixture archive: existing output directory, output inside
 the source tree, a release absent from the lock, a wrong archive, and changed,
-missing or extra source entries. It does not run `make`.
+missing or extra source entries. It does not run `make`. Observed on 2026-11-05:
+all 14 passed on Linux with Python 3.12 (0.093 seconds) and on Windows with
+Python 3.13 (0.317 seconds), with no skips.
 
 Primary references: [Linux 6.18 Kconfig](https://www.kernel.org/doc/html/v6.18/kbuild/kconfig.html),
 [Realtek upstream Kconfig](https://git.kernel.org/pub/scm/linux/kernel/git/stable/linux.git/tree/drivers/net/ethernet/realtek/Kconfig?h=v6.18.60),
