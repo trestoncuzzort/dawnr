@@ -9,7 +9,76 @@ the owner's MacBook. Disposable TUP guests install workload tools through an
 in-guest package manager, keep running across remote disconnects, and discard
 their writable state on explicit finish. Only selected results persist.
 
-## Paused for Claude handoff: 2026-11-05
+## Resumed: 2026-11-05
+
+The owner resumed the work the same day. Nothing below is a completed core,
+a boot or a login; it records what was fixed, what a rehearsal measured and
+what is still running.
+
+**Run 001's blocker is fixed and demonstrated.** In an isolated copy of the
+failed root, inside its chroot with the target loader, the bare `./python`
+call reproduced exit 127 and the replacement through CPython's own
+`$(RUNSHARED) $(PYTHON_FOR_BUILD)` variables passed both backport
+regressions while mapping the build tree's `libpython`. The original
+workspace hashed identically before and after the copy.
+
+**A rehearsal replaces rebuild-per-failure.** The driver rightly refuses to
+resume a failed page, so every later defect would have cost a full rebuild.
+Instead a copy of failed run 001 is being continued page by page with the
+unchanged driver, a fresh ledger and required suites judged but not fatal.
+It is explicitly non-authoritative: nothing from it is validated, exported
+or counted as a pass. A read-only review of every never-executed chapter 8
+page ran beside it, with each serious finding checked independently. Together
+they found, before any authoritative rebuild:
+
+- The 4 GiB build budget cannot run glibc's suite. Two tests build strings
+  above 2 GiB on purpose and peaked at 4.74 GiB together in an isolated
+  measurement; the first rehearsal attempt was killed by the cgroup's
+  group OOM policy at 4 GiB plus 2 GiB swap. With 6 GiB both pass.
+- The builder's wall clock was being stepped about every 32 seconds: an NTP
+  client inside the builder and the hypervisor's own time synchronization
+  disagreed by about 0.67 s. Two glibc timing tests failed in one attempt
+  because of it, and timestamp-driven builds were exposed. The in-guest
+  client is now stopped for build windows and the run helper refuses to
+  start while it is active.
+- An unattended package upgrade was scheduled inside the build window and
+  would have invalidated the inventoried host tools; those timers are stopped.
+- The glibc timeout diagnostic could not survive a clean suite (the page's
+  ERR trap ignores `set +e`); fixed, with a test that executes the audited
+  block under the real prologue.
+- The zero-tolerance suite gate meets failures that the LFS book documents
+  for this exact toolchain (glibc `io/tst-lchmod` in any chroot, a gprofng
+  test in binutils, a list in GCC). The gate now accepts only reviewed, exact
+  result lines with a pass floor for those three suites
+  ([policy](native/profiles/lfs-13.1-systemd/suite-exceptions/README.md));
+  glibc's list holds the one line actually observed. Lists for binutils and
+  GCC do not exist until the rehearsal has observed those suites.
+- tar's capability test compares against an obsolete `getcap` format and
+  Python's suite enables network tests without a resolver; both are corrected
+  in their audited blocks.
+
+In the rehearsal so far chapter 7 completed (the temporary Python regression
+recorded PASS) and chapter 8 is in progress: glibc built, ran 6,823 to 6,824
+passing tests across attempts and installed. Its recorded verdict in the
+last attempt is still *failed*, correctly, because of the two clock-induced
+failures; the next authoritative run must show them passing.
+
+**Integrated on main and tested on Linux (334 tests, zero skips):** the layer
+runner that exports a validated core and builds the remote and boot chapters
+in it; pages for libmnl, libnftnl, nftables, OpenSSH, sudo, the device-mapper
+part of LVM2, the kernel and the selected firmware; authenticated sudo
+1.9.17p2; and a kernel configuration extended for KVM guests, device
+assignment, sensors, watchdog and rescue filesystems, re-qualified by a
+committed script. All seven layer archives and sudo were re-authenticated by
+the real verifier in the builder. None of these pages has run in a target
+root yet.
+
+Still in progress: owner enrollment at boot with the system configuration
+chapter, the Ventoy live-boot adapter, and an external-VM test that performs
+a real SSH login. The next authoritative core build starts when the rehearsal
+has passed every chapter 8 page.
+
+## Paused for Claude handoff: 2026-11-05 (historical)
 
 The owner requested a pause and a handoff to Claude; the automatic goal was
 cleared. See [HANDOFF-CLAUDE.md](HANDOFF-CLAUDE.md) for the current state and
