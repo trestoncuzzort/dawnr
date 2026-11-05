@@ -1294,7 +1294,7 @@
           "classification": "build-test",
           "id": "002",
           "reason": "Required selected-package test phase; retain positive results, upstream skips, and all failure output. A zero exit without expected result evidence refuses completion.",
-          "replacement": "native_required_suite python-temporary bash -euo pipefail -c 'make\n./python /tup-build/native/profiles/lfs-13.1-systemd/python-backport-tests.py --output native-python-backports.trs'\n",
+          "replacement": "native_required_suite python-temporary bash -euo pipefail -c 'make\nmake -f Makefile -f /tup-build/native/profiles/lfs-13.1-systemd/python-built.mk tup-backport-regressions'\n",
           "sha256": "d05aa2a15fb3c40efeeb03bec445393f00074484cf01c8fb2da90ca6695a5531"
         },
         {
@@ -3807,7 +3807,7 @@
           "classification": "test",
           "id": "004",
           "reason": "Required selected-package test phase; retain positive results, upstream skips, and all failure output. A zero exit without expected result evidence refuses completion.",
-          "replacement": "native_required_suite Python bash -euo pipefail -c './python /tup-build/native/profiles/lfs-13.1-systemd/python-backport-tests.py --output native-python-backports.trs\nmake -j\"$TUP_TEST_JOBS\" test TESTOPTS=\"-j$TUP_TEST_JOBS --timeout 1200 --junit-xml=$PWD/native-python.xml\"\n./python /tup-build/native/profiles/lfs-13.1-systemd/python-suite-results.py native-python.xml native-python-full.trs'\n",
+          "replacement": "native_required_suite Python bash -euo pipefail -c 'make -f Makefile -f /tup-build/native/profiles/lfs-13.1-systemd/python-built.mk tup-backport-regressions\nmake -j\"$TUP_TEST_JOBS\" test TESTOPTS=\"-j$TUP_TEST_JOBS --timeout 1200 --junit-xml=$PWD/native-python.xml\"\nmake -f Makefile -f /tup-build/native/profiles/lfs-13.1-systemd/python-built.mk tup-suite-results'\n",
           "sha256": "a04bb0d7fa91adba4cf702418563722cb7d46c27ccc2610147285f3cc3613ff7"
         },
         {

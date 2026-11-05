@@ -75,6 +75,47 @@ class Native13IntegrationTests(unittest.TestCase):
         with patch.object(build, "read_json", return_value=audit), self.assertRaisesRegex(build.Refusal, "required suite omitted"):
             build.native13_overrides(TUP, BOOK)
 
+    def test_unpackaged_python_uses_cpython_runshared_instead_of_bare_interpreter(self):
+        # Core run 001: a bare ./python exited 127 before installation because
+        # the loader could not find the build tree's libpython. After the
+        # temporary Python is installed, the same spelling would silently load
+        # that older library while judging the final interpreter.
+        files = build.input_map(TUP, BOOK, profile="lfs-13.1-systemd")
+        helper_name = "native/profiles/lfs-13.1-systemd/python-built.mk"
+        self.assertIn(helper_name, files)
+        helper = (TUP / helper_name).read_bytes()
+        self.assertNotIn(b"\r", helper)
+        for target in (b"tup-backport-regressions", b"tup-suite-results"):
+            self.assertRegex(helper, rb"(?m)^" + target + rb": tup-built-library\n\t\$\(RUNSHARED\) \$\(PYTHON_FOR_BUILD\) \$\(TUP_NATIVE13\)/")
+        select = b"-f Makefile -f /tup-build/" + helper_name.encode() + b" "
+        temporary, final = files["overrides/x86_64/ch07/12-Python.sh"], files["overrides/x86_64/ch08/54-Python.sh"]
+        for page in (temporary, final):
+            self.assertNotRegex(page, rb"(?m)(^|[\s;&|'\"(])\./python(\s|$)")
+            self.assertIn(select + b"tup-backport-regressions", page)
+        self.assertIn(select + b"tup-suite-results", final)
+        self.assertNotIn(b"tup-suite-results", temporary)
+
+    def test_built_python_helper_applies_generated_variables_and_refuses_empty_library_path(self):
+        make = shutil.which("make")
+        if os.name == "nt" or not make:
+            self.skipTest("GNU make on a POSIX host is required for the recipe fixture")
+        helper = TUP / "native/profiles/lfs-13.1-systemd/python-built.mk"
+        (self.directory / "Makefile").write_text(
+            "RUNSHARED=       TUP_FIXTURE_LIBRARY=build-tree\nPYTHON_FOR_BUILD=" + shutil.which("python3") + " -E\n", encoding="utf-8")
+        script = "import os, sys\nopen(sys.argv[-1], 'x').write(os.environ.get('TUP_FIXTURE_LIBRARY', 'missing'))\n"
+        (self.directory / "python-backport-tests.py").write_text(script, encoding="utf-8")
+        (self.directory / "python-suite-results.py").write_text(script, encoding="utf-8")
+        command = [make, "-f", "Makefile", "-f", str(helper), f"TUP_NATIVE13={self.directory}"]
+        for target, output in (("tup-backport-regressions", "native-python-backports.trs"),
+                               ("tup-suite-results", "native-python-full.trs")):
+            subprocess.run([*command, target], cwd=self.directory, check=True, capture_output=True, timeout=30)
+            self.assertEqual((self.directory / output).read_text(encoding="utf-8"), "build-tree")
+            (self.directory / output).unlink()
+            refused = subprocess.run([*command, "RUNSHARED=", target], cwd=self.directory, capture_output=True, text=True, timeout=30)
+            self.assertNotEqual(refused.returncode, 0)
+            self.assertIn("RUNSHARED is empty", refused.stderr)
+            self.assertFalse((self.directory / output).exists())
+
     def judge(self, package, summaries, console=""):
         if not BASH:
             self.skipTest("Bash is required for result-gate fixtures")

@@ -3,3 +3,5 @@
 *.json -text
 *.sh text eol=lf
 *.py text eol=lf
+# GNU make recipes need their exact LF line endings and leading tabs.
+*.mk text eol=lf
