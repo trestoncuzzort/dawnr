@@ -43,6 +43,14 @@ SAFE_PATH = re.compile(r"/[A-Za-z0-9._/+-]+")
 # sshd's default PATH is the BLFS /usr/bin; ip and nft live in /usr/sbin.
 GUEST_PATH = "PATH=/usr/sbin:/usr/bin; export PATH; "
 PAUSE = 5
+# The client gave up before the server said anything. QEMU's user network accepts
+# the forwarded connection at once, so this is the guest, or the emulation under a
+# loaded host, being slow; it says nothing about the server's policy. Only such an
+# attempt is repeated, a bounded number of times, and every repeat is recorded.
+# Seen once in two Ventoy runs: two consecutive checks timed out at the banner and
+# the same checks answered in 3 s in the next run of the same image.
+TRANSPORT_TIMEOUT = re.compile(rb"Connection timed out during banner exchange|Connection to [0-9.]+ port [0-9]+ timed out")
+TRANSPORT_RETRIES = 2
 # Recorded by verify(), in this order, then folded with the two groups conclude() adds.
 SSH_CHECKS = (
     "owner_key_login", "known_hosts_created", "guest_uname", "guest_id",
@@ -256,13 +264,20 @@ class Session:
         self.known_hosts = self.remote / "known_hosts"
         self.outputs = self.remote / "checks"
         self.outputs.mkdir(mode=0o700)
-        self.checks, self.sequence = [], 0
+        self.checks, self.sequence, self.transport_retries = [], 0, []
 
-    def call(self, label, argv, timeout, env=None):
+    def call(self, label, argv, timeout, env=None, retries=TRANSPORT_RETRIES):
         """Run a command and keep both streams, whatever the verdict turns out to be."""
         self.sequence += 1
-        result = self.run(argv, timeout, env or host_environment())
-        result["argv"] = argv
+        attempts = 0
+        while True:
+            attempts += 1
+            result = self.run(argv, timeout, env or host_environment())
+            if attempts > retries or not transport_timeout(result):
+                break
+            self.transport_retries.append({"check": label, "attempt": attempts, "seconds": result["seconds"]})
+            self.sleep(PAUSE)
+        result["argv"], result["attempts"] = argv, attempts
         for stream in ("stdout", "stderr"):
             name = f"{self.sequence:02d}-{label}.{stream}"
             (self.outputs / name).write_bytes(result[stream])
@@ -270,17 +285,20 @@ class Session:
         return result
 
     def ssh(self, label, command, *, user=None, key="owner_key", strict="yes", known_hosts=None,
-            password=False, timeout=120, env=None):
+            password=False, timeout=120, env=None, retries=TRANSPORT_RETRIES):
         argv = [self.tools["ssh"], "-F", "none", "-T", "-i", str(self.remote / key),
                 *client_options(self.port, known_hosts or self.known_hosts, strict, password),
                 "-l", user or self.owner, HOST, command]
-        return self.call(label, argv, timeout, env)
+        return self.call(label, argv, timeout, env, retries)
 
     def add(self, name, passed, detail, result=None, status=None):
         item = {"name": name, "status": status or ("pass" if passed else "fail"), "detail": detail}
         if result is not None:
             item.update({key: result[key] for key in
                          ("argv", "returncode", "seconds", "timed_out", "stdout_file", "stderr_file")})
+            if result.get("attempts", 1) > 1:  # The verdict is the last attempt's; say that there were more.
+                item["attempts"] = result["attempts"]
+                item["detail"] += f" (attempt {result['attempts']}; earlier ones timed out before the server answered)"
         self.checks.append(item)
         return item["status"] == "pass"
 
@@ -289,7 +307,8 @@ class Session:
         deadline, attempts, started = self.clock() + budget, 0, self.clock()
         while True:
             attempts += 1
-            result = self.ssh(label, "echo " + MARKER, strict=strict, timeout=60)
+            # This loop is the retry; an attempt that times out is counted here like any other.
+            result = self.ssh(label, "echo " + MARKER, strict=strict, timeout=60, retries=0)
             ok = result["returncode"] == 0 and result["stdout"].strip() == MARKER.encode()
             if ok or self.clock() + PAUSE >= deadline:
                 break
@@ -300,6 +319,12 @@ class Session:
 
 def text(result, stream="stdout"):
     return result[stream].decode("utf-8", "replace")
+
+
+def transport_timeout(result):
+    """The client's own connection timeout, with nothing received and nothing printed."""
+    return (result["returncode"] == 255 and not result["timed_out"] and not result["stdout"]
+            and TRANSPORT_TIMEOUT.search(result["stderr"]) is not None)
 
 
 def denied(result):
@@ -489,7 +514,8 @@ def verify(output, port, owner, wait, tools=TOOLS, run=execute, clock=time.monot
     requested, method = request_poweroff(session, sudo, output / "qmp.sock", powerdown)
     report = {"schema": "tup.runtime-remote-checks.v1", "owner": session.owner, "port": session.port,
               "host": HOST, "sudo_present": sudo if ok else None, "host_key": key,
-              "poweroff_method": method, "poweroff_requested": requested, "checks": session.checks}
+              "poweroff_method": method, "poweroff_requested": requested, "checks": session.checks,
+              "transport_retries": session.transport_retries}
     (remote / "CHECKS.json").write_bytes(canonical(report))
     return report
 
@@ -542,6 +568,7 @@ def conclude(output, kind, media_sha256, memory_mib, cpus, port, boot_verdict, v
         "media_sha256": media_sha256, "memory_mib": memory_mib, "vcpus": cpus,
         "sudo_present": report.get("sudo_present"), "host_key": report.get("host_key"),
         "poweroff_method": report.get("poweroff_method"), "private_keys_removed": removed,
+        "transport_retries": report.get("transport_retries", []),
         "scope": {
             "environment": "external-vm", "emulator": "qemu", "accelerator": "tcg", "kvm": False,
             "firmware": "OVMF", "hardware_tested": False, "physical_boot_tested": False,

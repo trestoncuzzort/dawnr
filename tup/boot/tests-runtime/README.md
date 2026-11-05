@@ -177,7 +177,15 @@ installer" as unverified.
 | `host_inputs_unchanged` | after QEMU is gone, the media digest and every pinned tool still match; `uefi.sh` runs its cleanup and these rechecks **before** `remote_check.py conclude`, so `RESULT.json` can never say VERIFIED for a run the wrapper then rejects. The recheck output is `host-recheck.txt` |
 
 A missing tool, a timeout, a check that was not reached and a second result in
-one directory are failures or refusals, never skips. The private test keys of
+one directory are failures or refusals, never skips. One kind of timeout is
+tried again before it counts: when the client's own 20 s connection timeout
+expires before the server has sent its banner ("Connection timed out during
+banner exchange"), nothing has been learned about the server, so that
+connection is repeated at most twice, five seconds apart. Every repeat is
+listed in `transport_retries` of `RESULT.json` and the check says which attempt
+its verdict comes from. Anything the server answered, a refusal, a reset or a
+closed connection, is never repeated, and a check whose server never answers
+still fails. The private test keys of
 the run are deleted when the result is written (the Ventoy image's own
 `enroll-keys/owner_key` stays beside the image; it is a throwaway key whose only
 use is that image, so delete the directory with it).

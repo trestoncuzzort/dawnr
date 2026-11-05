@@ -91,6 +91,8 @@ class Guest:
         self.host_blob, self.ignore_host_key, self.corrupt, self.timeout_on = key_blob(7), False, False, None
         self.address = "10.0.2.15"
         self.cmdline = "BOOT_IMAGE=/boot/vmlinuz root=live:LABEL=TUP quiet console=ttyS0,115200n8"
+        # "sftp" or "<user>:<command>" fragments mapped to how many connections stall at the banner.
+        self.banner_stalls = {}
 
     def __call__(self, argv, timeout, env=None):
         self.calls.append(argv)
@@ -102,6 +104,14 @@ class Guest:
         if self.down_for > 0:
             self.down_for -= 1
             return result(255, err=b"kex_exchange_identification: Connection closed by remote host\n")
+        which = ("sftp" if Path(argv[0]).name == "sftp" else
+                 argv[argv.index("-l") + 1] + ":" + argv[-1].removeprefix(remote_check.GUEST_PATH))
+        for fragment, left in self.banner_stalls.items():
+            if left > 0 and fragment in which:
+                self.banner_stalls[fragment] = left - 1
+                # What OpenSSH 9.6 printed when the forwarded guest sent no banner within ConnectTimeout.
+                return result(255, err=b"Connection timed out during banner exchange\n"
+                                       b"Connection to 127.0.0.1 port 22022 timed out\n")
         known = Path(options["UserKnownHostsFile"])
         entry = f"[127.0.0.1]:{options['Port']} ssh-ed25519 {self.host_blob}\n".encode()
         if not known.exists():
@@ -225,6 +235,55 @@ class RemoteVerdictTests(ScriptedRun):
         _, checks = self.verify()
         self.assertEqual(self.failed(checks), [])
         self.assertIn("4 attempt(s)", checks["owner_key_login"]["detail"])
+
+    def test_a_connection_that_times_out_before_the_banner_is_retried_and_recorded(self):
+        # Observed under a loaded emulator: two consecutive checks got no banner within
+        # the client's timeout, and the same checks answered in 3 s on the next run.
+        self.guest.banner_stalls = {"sftp": 1, "root:": 2}
+        report, checks = self.verify()
+        self.assertEqual(self.failed(checks), [])
+        self.assertEqual((checks["sftp_round_trip_sha256"]["attempts"], checks["root_login_refused"]["attempts"]), (2, 3))
+        self.assertIn("attempt 3", checks["root_login_refused"]["detail"])
+        self.assertNotIn("attempts", checks["guest_uname"])
+        self.assertEqual([(item["check"], item["attempt"]) for item in report["transport_retries"]],
+                         [("sftp_round_trip", 1), ("root_login", 1), ("root_login", 2)])
+        result = self.conclude()
+        self.assertTrue(result["passed"])
+        self.assertEqual(len(result["transport_retries"]), 3)
+
+    def test_a_check_whose_server_never_answers_fails_after_the_bounded_retries(self):
+        self.guest.banner_stalls = {"root:": 10**6}
+        report, checks = self.verify()
+        # No answer is not a refusal: the check fails, after exactly three connections.
+        self.assertEqual(self.failed(checks), ["root_login_refused"])
+        self.assertEqual(checks["root_login_refused"]["attempts"], remote_check.TRANSPORT_RETRIES + 1)
+        self.assertEqual(sum("root" == argv[argv.index("-l") + 1] for argv in self.guest.calls if "-l" in argv), 3)
+        self.assertFalse(self.conclude()["passed"])
+
+    def test_only_a_transport_timeout_is_retried_never_an_answer_from_the_server(self):
+        self.guest.root_reset = True  # The server answered by resetting: one connection, a failed check.
+        _, checks = self.verify()
+        self.assertEqual(self.failed(checks), ["root_login_refused"])
+        self.assertNotIn("attempts", checks["root_login_refused"])
+        self.assertEqual(sum("root" == argv[argv.index("-l") + 1] for argv in self.guest.calls if "-l" in argv), 1)
+        for stderr in (b"owner@127.0.0.1: Permission denied (publickey).\n", b"Host key verification failed.\n",
+                       b"kex_exchange_identification: Connection closed by remote host\n", b""):
+            self.assertFalse(remote_check.transport_timeout(
+                {"returncode": 255, "stdout": b"", "stderr": stderr, "timed_out": False}))
+        timeout = b"Connection timed out during banner exchange\nConnection to 127.0.0.1 port 2223 timed out\n"
+        self.assertTrue(remote_check.transport_timeout(
+            {"returncode": 255, "stdout": b"", "stderr": timeout, "timed_out": False}))
+        # Output from the server, another exit status or the harness's own kill is not a transport timeout.
+        for changed in ({"stdout": b"x"}, {"returncode": 1}, {"timed_out": True}):
+            self.assertFalse(remote_check.transport_timeout(
+                {"returncode": 255, "stdout": b"", "stderr": timeout, "timed_out": False, **changed}))
+
+    def test_the_first_login_counts_banner_timeouts_in_its_own_bounded_loop(self):
+        self.guest.banner_stalls = {"owner:echo": 2}
+        report, checks = self.verify()
+        self.assertEqual(self.failed(checks), [])
+        self.assertIn("3 attempt(s)", checks["owner_key_login"]["detail"])
+        self.assertEqual(report["transport_retries"], [])
 
     def test_guest_that_never_answers_fails_every_check_and_skips_none(self):
         self.guest.down_for = 10**6
