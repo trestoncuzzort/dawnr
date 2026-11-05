@@ -1,0 +1,8 @@
+{
+  "meaning": "observed download bytes; not authentication",
+  "resolved_url": "https://savannah.gnu.org/project/release-gpgkeys.php?group=gzip&download=1",
+  "retrieved_at": "2026-11-05T08:19:02.053256+00:00",
+  "sha256": "c83f7e14dbd5b671563f06f1aeea0379977649ae9141700729e48af18c8781f2",
+  "size": 239717,
+  "url": "https://savannah.gnu.org/project/release-gpgkeys.php?group=gzip&download=1"
+}

@@ -1,0 +1,352 @@
+<!-- MHonArc v2.6.19+ -->
+<!--X-Subject: [coreutils&#45;announce] coreutils&#45;9.11 released [stable] -->
+<!--X-From-R13: Báqenvt Penql &#60;BNqenvtPenql.pbz> -->
+<!--X-Date: Mon, 20 Apr 2026 10:17:01 &#45;0400 -->
+<!--X-Message-Id: 1d28cb2b&#45;6582&#45;49d9&#45;8323&#45;b1827a74f15b@draigBrady.com -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!doctype html public "-//W3C//DTD HTML//EN">
+<html>
+<head>
+<title>[coreutils-announce] coreutils-9.11 released [stable]</title>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<center>
+<table border=0 cellspacing=2 cellpadding=0 bgcolor="#000000">
+<tr><td><table border=0 bgcolor="#FFFFCC">
+<tr><td><big><b>coreutils-announce</b></big></td></tr></table></tr></table>
+<div class="nowrap">
+<small>[<a href="../"
+>Top</a>][<a href="/archive/html">All Lists</a>]</small>
+</div>
+<form method="get" action="/archive/cgi-bin/namazu.cgi">
+<input type="text" name="query" size="30">
+<input type="submit" name="submit" value="Search">
+<input type="hidden" name="idxname" value="coreutils-announce">
+<a href="/archive/cgi-bin/namazu.cgi?idxname=coreutils-announce">Advanced</a>
+</form>
+
+</center>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<hr>
+[Date Prev][Date Next][Thread Prev][Thread Next][<a
+href="index.html#00000">Date Index</a>][<a
+href="threads.html#00000">Thread Index</a>]
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h2>[coreutils-announce] coreutils-9.11 released [stable]</h2>
+<hr>
+<table border=0>
+<tbody>
+<tr>
+<td align="right" valign="top">
+<b>From</b>: </td>
+<td align="left">
+Pádraig Brady</td>
+</tr>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+
+<tr>
+<td align="right" valign="top">
+<b>Subject</b>: </td>
+<td align="left">
+[coreutils-announce] coreutils-9.11 released [stable]</td>
+</tr>
+
+<tr>
+<td align="right" valign="top">
+<b>Date</b>: </td>
+<td align="left">
+Mon, 20 Apr 2026 15:16:38 +0100</td>
+</tr>
+
+<tr>
+<td align="right" valign="top">
+<b>User-agent</b>: </td>
+<td align="left">
+Mozilla Thunderbird Beta</td>
+</tr>
+
+</tbody>
+</table>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+<hr>
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">
+This is to announce coreutils-9.11, a stable release.
+
+Notable changes include:
+
+ - cut(1), nl(1), and un/expand(1) are multi-byte character aware
+ - cut(1) supports new -w, -F, -O options for better compatibility
+ - cat(1) and yes(1) use zero-copy I/O on Linux (up to 15x faster)
+ - cksum --check uses more defensive file name quoting
+ - date(1) now parses dot delimited dd.mm.yy format
+ - shuf -i operates up to 2x faster by using unlocked stdio
+ - wc -l operates up to 4.5x faster on hosts with neon instructions
+ - wc -m is up to 2.6x faster when processing multi-byte characters
+
+There have also been many bug fixes and other changes
+as summarized in the NEWS below.
+
+There have been 306 commits by 12 people in the 10 weeks since 9.10
+Thanks to everyone who has contributed!
+
+  Bruno Haible (2)                Paul Eggert (15)
+  Chris Down (2)                  Pádraig Brady (156)
+  Collin Funk (91)                Sam James (1)
+  Dr. David Alan Gilbert (1)      Sylvestre Ledru (17)
+  Gabriel (1)                     Weixie Cui (2)
+  Lukáš Zaoral (2)                oech3 (19)
+
+Pádraig [on behalf of the coreutils maintainers]
+==================================================================
+
+Here is the GNU coreutils home page:
+    <a  rel="nofollow" href="https://gnu.org/s/coreutils/">https://gnu.org/s/coreutils/</a>
+
+Here are the compressed sources:
+  <a  rel="nofollow" href="https://ftp.gnu.org/gnu/coreutils/coreutils-9.11.tar.gz">https://ftp.gnu.org/gnu/coreutils/coreutils-9.11.tar.gz</a>   (16MB)
+  <a  rel="nofollow" href="https://ftp.gnu.org/gnu/coreutils/coreutils-9.11.tar.xz">https://ftp.gnu.org/gnu/coreutils/coreutils-9.11.tar.xz</a>   (6.3MB)
+
+Here are the GPG detached signatures:
+  <a  rel="nofollow" href="https://ftp.gnu.org/gnu/coreutils/coreutils-9.11.tar.gz.sig">https://ftp.gnu.org/gnu/coreutils/coreutils-9.11.tar.gz.sig</a>
+  <a  rel="nofollow" href="https://ftp.gnu.org/gnu/coreutils/coreutils-9.11.tar.xz.sig">https://ftp.gnu.org/gnu/coreutils/coreutils-9.11.tar.xz.sig</a>
+
+Use a mirror for higher download bandwidth:
+  <a  rel="nofollow" href="https://www.gnu.org/order/ftp.html">https://www.gnu.org/order/ftp.html</a>
+
+Here are the SHA256 and SHA3-256 checksums:
+
+  SHA256 (coreutils-9.11.tar.gz) = IDO4owScBr/0mp486nK99Gg7zQy+uXUhHdVtuvi3Nq4=
+  SHA3-256 (coreutils-9.11.tar.gz) = 
+TwFrSgPuppf+jNggT+aXj037UfVVS2BmYBxXiPLYKxs=
+  SHA256 (coreutils-9.11.tar.xz) = OUAk7aCllVIXztqc0SAeZdyPo6opwpURNaSVIdV8PMM=
+  SHA3-256 (coreutils-9.11.tar.xz) = 
+RkpNMip8O4ly+z3Fef9X20AsotbT1ycBZ5UbG84SiNM=
+
+Verify the base64 SHA256 checksum with 'cksum -a sha256 --check'
+from coreutils-9.2 or OpenBSD's cksum since 2007.
+
+Verify the base64 SHA3-256 checksum with 'cksum -a sha3 --check'
+from coreutils-9.8.
+
+Use a .sig file to verify that the corresponding file (without the
+.sig suffix) is intact.  First, be sure to download both the .sig file
+and the corresponding tarball.  Then, run a command like this:
+
+  gpg --verify coreutils-9.11.tar.gz.sig
+
+The signature should match the fingerprint of the following key:
+
+  pub   rsa4096/0xDF6FD971306037D9 2011-09-23 [SC]
+        Key fingerprint = 6C37 DC12 121A 5006 BC1D  B804 DF6F D971 3060 37D9
+  uid                   [ultimate] Pádraig Brady &lt;P@draigBrady.com&gt;
+  uid                   [ultimate] Pádraig Brady &lt;pixelbeat@gnu.org&gt;
+
+If that command fails because you don't have the required public key,
+or that public key has expired, try the following commands to retrieve
+or refresh it, and then rerun the 'gpg --verify' command.
+
+  gpg --locate-external-key P@draigBrady.com
+
+  gpg --recv-keys DF6FD971306037D9
+
+  wget -q -O- 
+'<a  rel="nofollow" href="https://savannah.gnu.org/project/release-gpgkeys.php?group=coreutils&amp;download=1">https://savannah.gnu.org/project/release-gpgkeys.php?group=coreutils&amp;download=1</a>'
+ | gpg --import -
+
+As a last resort to find the key, you can try the official GNU
+keyring:
+
+  wget -q <a  rel="nofollow" href="https://ftp.gnu.org/gnu/gnu-keyring.gpg">https://ftp.gnu.org/gnu/gnu-keyring.gpg</a>
+  gpg --keyring gnu-keyring.gpg --verify coreutils-9.11.tar.gz.sig
+
+This release is based on the coreutils git repository, available as
+
+  git clone <a  rel="nofollow" href="https://https.git.savannah.gnu.org/git/coreutils.git">https://https.git.savannah.gnu.org/git/coreutils.git</a>
+
+with commit c01fd163a47468a8296fb369f5233853bb551bb6 tagged as v9.11.
+
+For a summary of changes and contributors, see:
+
+  <a  rel="nofollow" href="https://gitweb.git.savannah.gnu.org/gitweb/?p=coreutils.git;a=shortlog;h=v9.11">https://gitweb.git.savannah.gnu.org/gitweb/?p=coreutils.git;a=shortlog;h=v9.11</a>
+
+or run this command from a git-cloned coreutils directory:
+
+  git shortlog v9.10..v9.11
+
+This release was bootstrapped with the following tools:
+  Autoconf 2.73.1-b400b
+  Automake 1.18.1
+  Gnulib 2026-04-19 fb7312fa8d3df29f0ca0678f669b9a5b88a078ec
+  Bison 3.8.2
+
+NEWS
+
+* Noteworthy changes in release 9.11 (2026-04-20) [stable]
+
+** Bug fixes
+
+  'dd' now always diagnoses partial writes correctly upon write failure.
+  Previously it may have indicated that only full writes were performed.
+  [This bug was present in &quot;the beginning&quot;.]
+
+  'fold' will no longer truncate output when encountering 0xFF bytes.
+  [bug introduced in coreutils-9.8]
+
+  'fold' is again responsive to its input.  Previously it would have delayed
+  processing until 256KiB was read from the input.
+  [bug introduced in coreutils-9.8]
+
+  'kill --help' now has links to valid anchors in the html manual.
+  [bug introduced in coreutils-9.10]
+
+  When configured with --enable-systemd, the commands 'pinky',
+  'uptime', 'users', and 'who' no longer consider the systemd session
+  classes 'greeter', 'lock-screen', 'background', 'background-light',
+  and 'none' to be users.
+  [bug introduced in coreutils-9.4]
+
+  'pwd' on ancient systems will no longer overflow a buffer
+  when operating in deep paths longer than twice the system PATH_MAX.
+  [bug introduced in coreutils-9.6]
+
+  'stat --printf=%%N' no longer performs unnecessary checks of the QUOTING_STYLE
+  environment variable.
+  [bug introduced in coreutils-8.26]
+
+  'timeout' no longer exits abruptly when its parent is the init process, e.g.,
+  when started by the entrypoint of a container.
+  [bug introduced in coreutils-9.10]
+
+** New Features
+
+  'cut' now supports multi-byte input and delimiters.  Consequently
+  the -c option is now honored, and no longer an alias for -b, and
+  the -n option is now honored, and no longer ignored.
+  Also the -d option supports multi-byte delimiters.
+
+  'cut' adds new options for better compatibility:
+  The -w,--whitespace-delimited option was added to support blank aligned fields
+  and for better compatibility with FreeBSD/macOS.
+  The -O option was added as an alias for the --output-delimiter option,
+  for better compatibility with busybox/toybox.
+  The -F option was added as an alias for -w -O ' '
+  for better compatibility with busybox/toybox.
+
+  'date --date' now parses dot delimited dd.mm.yy format common in Europe.
+  This is in addition to the already supported mm/dd/yy and yy-mm-dd formats.
+
+** Changes in behavior
+
+  'cksum --check' now uses shell quoting when required, to more robustly
+  escape file names output in diagnostics.
+  This also affects md5sum, sha*sum, and b2sum.
+
+** Improvements
+
+  'cat' now uses zero-copy I/O on Linux when appropriate, to improve throughput.
+  E.g., throughput improved 6x from 12.9GiB/s to 81.8GiB/s on a Power10 system.
+
+  'df --local' recognises more file system types as remote.
+  Specifically: autofs, ncpfs, smb, smb2, gfs, gfs2, userlandfs.
+
+  'df' improves duplicate mount suppression, by checking each mount against
+  all previously kept entries for the same device, not just the latest one.
+
+  'expand' and 'unexpand' now support multi-byte characters.
+
+  'groups' and 'id' will now exit sooner after a write error,
+  which is significant when listing information for many users.
+
+  'install' now allows the combination of the --compare and
+  --preserve-timestamps options.
+
+  'fold', 'join', 'numfmt', 'uniq' now use more consistent blank character
+  determination on non GLIBC platforms.  For example \u3000 (ideographic space)
+  will be considered a blank character on all platforms.
+
+  'nl' now supports multi-byte --section-delimiter characters.
+
+  'shuf -i' now operates up to two times faster on systems with unlocked stdio
+  functions.
+
+  'tac' will now exit sooner after a write error, which is significant when
+  operating on a file with many lines.
+
+  'timeout' now properly detects when it is reparented by a subreaper process on
+  Linux instead of init, e.g., the 'systemd --user' process.
+
+  'wc -l' now operates up to four and a half times faster on hosts that support
+  Neon instructions.
+
+  'wc -m' now operates up to 2.6 times faster on GLIBC when processing
+  non-ASCII UTF-8 characters.
+
+  'yes' now uses zero-copy I/O on Linux to significantly increase throughput.
+  E.g., throughput improved 15x from 11.6GiB/s to 175GiB/s on a Power10 system.
+
+** Build-related
+
+  ./configure --enable-single-binary=hardlinks is now supported on systems
+  with dash as the system shell at /bin/sh.
+  [issue introduced in coreutils-9.10]
+
+  The test suite may have failed with a &quot;Hangup&quot; error if run non-interactively.
+  [issue introduced in coreutils-9.10]
+
+-
+Also posted at <a  rel="nofollow" href="https://savannah.gnu.org/news/?id=10884">https://savannah.gnu.org/news/?id=10884</a>
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+<hr>
+<form method="post" action="/mp/yyz.py" enctype="multipart/form-data">
+<input type="hidden" name="a" value="P">
+<input type="hidden" name="b" value="[coreutils-announce] coreutils-9.11 released [stable]">
+<input type="hidden" name="d" value="1d28cb2b-6582-49d9-8323-b1827a74f15b@draigBrady.com">
+<input type="hidden" name="c" value="draigBrady.com">
+<center>reply via email to<br><input type="submit" value=" Pádraig Brady "></center>
+</form>
+<hr>
+<table width="100%">
+<tr><td align="left">[Prev in Thread]</td>
+<td align="center"><b>Current Thread</b></td>
+<td align="right">[Next in Thread]</td></tr></table>
+<ul>
+<li><font color="#666666"><strong>[coreutils-announce] coreutils-9.11 released [stable]</strong>,
+<em>Pádraig Brady</em></font>&nbsp;<b>&lt;=</b>
+</ul>
+
+<hr>
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+<ul>
+<li>Index(es):
+<ul>
+<li><a href="index.html#00000"><strong>Date</strong></a></li>
+<li><a href="threads.html#00000"><strong>Thread</strong></a></li>
+</ul>
+</li>
+</ul>
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+</body>
+</html>

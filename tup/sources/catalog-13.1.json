@@ -15,8 +15,48 @@
   "sources": [
     {
       "authentication": {
-        "method": "unresolved",
-        "reason": "No publisher SHA256 or signature verified yet."
+        "distributor": "Gentoo",
+        "manifest": {
+          "path": "gentoo-manifests/sys-apps/acl/Manifest",
+          "sha256": "a1d2729b5f32c4b390691b18ccc3b384c1cef550d906a75e67216eeece967a75",
+          "url": "https://distfiles.gentoo.org/snapshots/gentoo-20261103.tar.xz"
+        },
+        "manifest_member": "gentoo-20261103/sys-apps/acl/Manifest",
+        "method": "distributor-openpgp-manifest",
+        "reviewed_exception": {
+          "reason": "Use an independently authenticated maintained distributor Manifest where complete strong upstream authentication has not been established; exact upstream archive bytes must match.",
+          "reviewed_at": "2026-11-05"
+        },
+        "snapshot": {
+          "authentication": {
+            "approval": {
+              "basis": "Official Gentoo signing-key documentation identifies this ebuild repository primary.",
+              "material": {
+                "path": "gentoo-signatures.html",
+                "sha256": "45bd60413ed48a5729c832ab69b9a1c3f4812b4e0cfc2777491be5875c82e0b4",
+                "url": "https://www.gentoo.org/downloads/signatures/"
+              },
+              "reviewed_at": "2026-11-05"
+            },
+            "key": {
+              "path": "gentoo-DCD05B71EAB94199527F44ACDB6B8C1F96D8BF6D.asc",
+              "sha256": "aec99650e40d8f21c792e9e8353d672a8676ae3cbe9e2c147ce42e0e46037189",
+              "url": "https://keys.gentoo.org/pks/lookup?op=get&search=0xDCD05B71EAB94199527F44ACDB6B8C1F96D8BF6D"
+            },
+            "method": "openpgp",
+            "primary_fingerprint": "DCD05B71EAB94199527F44ACDB6B8C1F96D8BF6D",
+            "signature": {
+              "path": "gentoo-20261103.tar.xz.gpgsig",
+              "sha256": "4e08800e0e026829118786acc63e5ec3ca8ffdc4069252667642a6a5c5a4be22",
+              "url": "https://distfiles.gentoo.org/snapshots/gentoo-20261103.tar.xz.gpgsig"
+            }
+          },
+          "material": {
+            "path": "gentoo-20261103.tar.xz",
+            "sha256": "923b3132d9214cee3f59fa2b56a3af27a0287c8587576c99ebcd5b24e537a194",
+            "url": "https://distfiles.gentoo.org/snapshots/gentoo-20261103.tar.xz"
+          }
+        }
       },
       "baseline_name": "acl-2.4.0.tar.xz",
       "book_md5": "e289f370161698a96f50b2a3fdadf411",
@@ -24,6 +64,7 @@
       "disposition": "retain",
       "name": "acl-2.4.0.tar.xz",
       "reason": "Retain the pinned book input.",
+      "sha256": "e661131456d2708a01c614a0f400e11d7d1bfaeb6f3e74b75bb980b72f0161a3",
       "url": "https://download.savannah.gnu.org/releases/acl/acl-2.4.0.tar.xz"
     },
     {
@@ -41,47 +82,225 @@
     },
     {
       "authentication": {
-        "method": "unresolved",
-        "reason": "No publisher SHA256 or signature verified yet."
+        "material": {
+          "path": "autoconf-2.73-announcement.html",
+          "sha256": "01c94b518c9e5b558e83ed3ca3a33b02128955cccb78ca9cadb53287b2e64f91",
+          "url": "https://lists.gnu.org/archive/html/info-gnu/2026-03/msg00008.html"
+        },
+        "method": "https-published-sha256",
+        "selection": {
+          "format": "gnu-announcement"
+        }
       },
       "baseline_name": "autoconf-2.73.tar.xz",
       "book_md5": "9cbad9a116ef845bafeed8e7bc771bf4",
       "book_url": "https://ftpmirror.gnu.org/autoconf/autoconf-2.73.tar.xz",
       "disposition": "retain",
+      "download_urls": [
+        "https://mirrors.kernel.org/gnu/autoconf/autoconf-2.73.tar.xz",
+        "https://ftp.gnu.org/gnu/autoconf/autoconf-2.73.tar.xz"
+      ],
       "name": "autoconf-2.73.tar.xz",
       "reason": "Retain the pinned book input.",
+      "sha256": "9fd672b1c8425fac2fa67fa0477b990987268b90ff36d5f016dae57be0d6b52e",
       "url": "https://ftp.gnu.org/gnu/autoconf/autoconf-2.73.tar.xz"
     },
     {
       "authentication": {
-        "method": "unresolved",
-        "reason": "No publisher SHA256 or signature verified yet."
+        "approval": {
+          "basis": "Project release announcement publishes the approved fingerprint; project-specific GNU release keyring supplies its key.",
+          "material": {
+            "path": "automake-1.18.1-announcement.html",
+            "sha256": "7371b873297c2b296b4ce0066f72dc721a3ae276445c49079aeebcbebe417574",
+            "url": "https://lists.gnu.org/archive/html/info-gnu/2025-06/msg00007.html"
+          },
+          "reviewed_at": "2026-11-05"
+        },
+        "corroboration": {
+          "distributor": "Gentoo",
+          "manifest": {
+            "path": "gentoo-manifests/dev-build/automake/Manifest",
+            "sha256": "bac647a153ec055b6d04d4ce5c8da9a80a428ec18fe90e80bae8ae3aedd02cd6",
+            "url": "https://distfiles.gentoo.org/snapshots/gentoo-20261103.tar.xz"
+          },
+          "manifest_member": "gentoo-20261103/dev-build/automake/Manifest",
+          "method": "distributor-openpgp-manifest",
+          "reviewed_exception": {
+            "reason": "Use an independently authenticated maintained distributor Manifest where complete strong upstream authentication has not been established; exact upstream archive bytes must match.",
+            "reviewed_at": "2026-11-05"
+          },
+          "snapshot": {
+            "authentication": {
+              "approval": {
+                "basis": "Official Gentoo signing-key documentation identifies this ebuild repository primary.",
+                "material": {
+                  "path": "gentoo-signatures.html",
+                  "sha256": "45bd60413ed48a5729c832ab69b9a1c3f4812b4e0cfc2777491be5875c82e0b4",
+                  "url": "https://www.gentoo.org/downloads/signatures/"
+                },
+                "reviewed_at": "2026-11-05"
+              },
+              "key": {
+                "path": "gentoo-DCD05B71EAB94199527F44ACDB6B8C1F96D8BF6D.asc",
+                "sha256": "aec99650e40d8f21c792e9e8353d672a8676ae3cbe9e2c147ce42e0e46037189",
+                "url": "https://keys.gentoo.org/pks/lookup?op=get&search=0xDCD05B71EAB94199527F44ACDB6B8C1F96D8BF6D"
+              },
+              "method": "openpgp",
+              "primary_fingerprint": "DCD05B71EAB94199527F44ACDB6B8C1F96D8BF6D",
+              "signature": {
+                "path": "gentoo-20261103.tar.xz.gpgsig",
+                "sha256": "4e08800e0e026829118786acc63e5ec3ca8ffdc4069252667642a6a5c5a4be22",
+                "url": "https://distfiles.gentoo.org/snapshots/gentoo-20261103.tar.xz.gpgsig"
+              }
+            },
+            "material": {
+              "path": "gentoo-20261103.tar.xz",
+              "sha256": "923b3132d9214cee3f59fa2b56a3af27a0287c8587576c99ebcd5b24e537a194",
+              "url": "https://distfiles.gentoo.org/snapshots/gentoo-20261103.tar.xz"
+            }
+          }
+        },
+        "key": {
+          "path": "gnu-automake-release-keys.asc",
+          "sha256": "2bb0a45a198b8294d1d87f0fe0586e493836cdbdeb7f99c4d92eae5fa38cd8f1",
+          "url": "https://savannah.gnu.org/project/release-gpgkeys.php?group=automake&download=1"
+        },
+        "method": "openpgp",
+        "primary_fingerprint": "17D3311B14BC0F248267BF020716748A30D155AD",
+        "signature": {
+          "path": "automake-1.18.1.tar.xz.sig",
+          "sha256": "728ce05b02f123ea360ab9d168111bc98470afc7568253e93ee2a7582ef5ddb4",
+          "url": "https://mirrors.kernel.org/gnu/automake/automake-1.18.1.tar.xz.sig"
+        }
       },
       "baseline_name": "automake-1.18.1.tar.xz",
       "book_md5": "cea31dbf1120f890cbf2a3032cfb9a68",
       "book_url": "https://ftpmirror.gnu.org/automake/automake-1.18.1.tar.xz",
       "disposition": "retain",
+      "download_urls": [
+        "https://mirrors.kernel.org/gnu/automake/automake-1.18.1.tar.xz",
+        "https://ftp.gnu.org/gnu/automake/automake-1.18.1.tar.xz"
+      ],
+      "integrity_review": {
+        "announcement_sha256": "7a658b0e322d75d841e3b7b1b92f8061c5ad947207f8919dec5f9361be4c21bc",
+        "decision": "Accept the actual upstream signature under the announcement-approved primary and independent signed Gentoo corroboration. The conflicting historical announcement digest did not pass and is not used as an authenticator.",
+        "material": {
+          "path": "automake-1.18.1-announcement.html",
+          "sha256": "7371b873297c2b296b4ce0066f72dc721a3ae276445c49079aeebcbebe417574",
+          "url": "https://lists.gnu.org/archive/html/info-gnu/2025-06/msg00007.html"
+        },
+        "reason": "Historical release-announcement SHA256 conflicts with current validly signed upstream artifact; independently signed Gentoo Manifest agrees with current bytes. Integrator review pending.",
+        "reviewed_at": "2026-11-05",
+        "signed_archive_sha256": "168aa363278351b89af56684448f525a5bce5079d0b6842bd910fdd3f1646887",
+        "status": "accepted-provenance-conflict"
+      },
       "name": "automake-1.18.1.tar.xz",
       "reason": "Retain the pinned book input.",
+      "sha256": "168aa363278351b89af56684448f525a5bce5079d0b6842bd910fdd3f1646887",
       "url": "https://ftp.gnu.org/gnu/automake/automake-1.18.1.tar.xz"
     },
     {
       "authentication": {
-        "method": "unresolved",
-        "reason": "No publisher SHA256 or signature verified yet."
+        "distributor": "Gentoo",
+        "manifest": {
+          "path": "gentoo-manifests/app-shells/bash/Manifest",
+          "sha256": "29c4ad2a4aff766eac325c56a55f97977e0d6582168472bceaf82aca189daf35",
+          "url": "https://distfiles.gentoo.org/snapshots/gentoo-20261103.tar.xz"
+        },
+        "manifest_member": "gentoo-20261103/app-shells/bash/Manifest",
+        "method": "distributor-openpgp-manifest",
+        "reviewed_exception": {
+          "reason": "Use an independently authenticated maintained distributor Manifest where complete strong upstream authentication has not been established; exact upstream archive bytes must match.",
+          "reviewed_at": "2026-11-05"
+        },
+        "snapshot": {
+          "authentication": {
+            "approval": {
+              "basis": "Official Gentoo signing-key documentation identifies this ebuild repository primary.",
+              "material": {
+                "path": "gentoo-signatures.html",
+                "sha256": "45bd60413ed48a5729c832ab69b9a1c3f4812b4e0cfc2777491be5875c82e0b4",
+                "url": "https://www.gentoo.org/downloads/signatures/"
+              },
+              "reviewed_at": "2026-11-05"
+            },
+            "key": {
+              "path": "gentoo-DCD05B71EAB94199527F44ACDB6B8C1F96D8BF6D.asc",
+              "sha256": "aec99650e40d8f21c792e9e8353d672a8676ae3cbe9e2c147ce42e0e46037189",
+              "url": "https://keys.gentoo.org/pks/lookup?op=get&search=0xDCD05B71EAB94199527F44ACDB6B8C1F96D8BF6D"
+            },
+            "method": "openpgp",
+            "primary_fingerprint": "DCD05B71EAB94199527F44ACDB6B8C1F96D8BF6D",
+            "signature": {
+              "path": "gentoo-20261103.tar.xz.gpgsig",
+              "sha256": "4e08800e0e026829118786acc63e5ec3ca8ffdc4069252667642a6a5c5a4be22",
+              "url": "https://distfiles.gentoo.org/snapshots/gentoo-20261103.tar.xz.gpgsig"
+            }
+          },
+          "material": {
+            "path": "gentoo-20261103.tar.xz",
+            "sha256": "923b3132d9214cee3f59fa2b56a3af27a0287c8587576c99ebcd5b24e537a194",
+            "url": "https://distfiles.gentoo.org/snapshots/gentoo-20261103.tar.xz"
+          }
+        }
       },
       "baseline_name": "bash-5.3.tar.gz",
       "book_md5": "977c8c0c5ae6309191e7768e28ebc951",
       "book_url": "https://ftpmirror.gnu.org/bash/bash-5.3.tar.gz",
       "disposition": "retain",
+      "download_urls": [
+        "https://mirrors.kernel.org/gnu/bash/bash-5.3.tar.gz",
+        "https://ftp.gnu.org/gnu/bash/bash-5.3.tar.gz"
+      ],
       "name": "bash-5.3.tar.gz",
       "reason": "Retain the pinned book input.",
+      "sha256": "0d5cd86965f869a26cf64f4b71be7b96f90a3ba8b3d74e27e8e9d9d5550f31ba",
       "url": "https://ftp.gnu.org/gnu/bash/bash-5.3.tar.gz"
     },
     {
       "authentication": {
-        "method": "unresolved",
-        "reason": "No publisher SHA256 or signature verified yet."
+        "distributor": "Gentoo",
+        "manifest": {
+          "path": "gentoo-manifests/sci-calculators/bc-gh/Manifest",
+          "sha256": "5d9d4ea25c3fa67635d6cf0ea7689bbfd3c5a29e0d51b4aeff87f778a52b5acf",
+          "url": "https://distfiles.gentoo.org/snapshots/gentoo-20261103.tar.xz"
+        },
+        "manifest_member": "gentoo-20261103/sci-calculators/bc-gh/Manifest",
+        "method": "distributor-openpgp-manifest",
+        "reviewed_exception": {
+          "reason": "Use an independently authenticated maintained distributor Manifest where complete strong upstream authentication has not been established; exact upstream archive bytes must match.",
+          "reviewed_at": "2026-11-05"
+        },
+        "snapshot": {
+          "authentication": {
+            "approval": {
+              "basis": "Official Gentoo signing-key documentation identifies this ebuild repository primary.",
+              "material": {
+                "path": "gentoo-signatures.html",
+                "sha256": "45bd60413ed48a5729c832ab69b9a1c3f4812b4e0cfc2777491be5875c82e0b4",
+                "url": "https://www.gentoo.org/downloads/signatures/"
+              },
+              "reviewed_at": "2026-11-05"
+            },
+            "key": {
+              "path": "gentoo-DCD05B71EAB94199527F44ACDB6B8C1F96D8BF6D.asc",
+              "sha256": "aec99650e40d8f21c792e9e8353d672a8676ae3cbe9e2c147ce42e0e46037189",
+              "url": "https://keys.gentoo.org/pks/lookup?op=get&search=0xDCD05B71EAB94199527F44ACDB6B8C1F96D8BF6D"
+            },
+            "method": "openpgp",
+            "primary_fingerprint": "DCD05B71EAB94199527F44ACDB6B8C1F96D8BF6D",
+            "signature": {
+              "path": "gentoo-20261103.tar.xz.gpgsig",
+              "sha256": "4e08800e0e026829118786acc63e5ec3ca8ffdc4069252667642a6a5c5a4be22",
+              "url": "https://distfiles.gentoo.org/snapshots/gentoo-20261103.tar.xz.gpgsig"
+            }
+          },
+          "material": {
+            "path": "gentoo-20261103.tar.xz",
+            "sha256": "923b3132d9214cee3f59fa2b56a3af27a0287c8587576c99ebcd5b24e537a194",
+            "url": "https://distfiles.gentoo.org/snapshots/gentoo-20261103.tar.xz"
+          }
+        }
       },
       "baseline_name": "bc-7.0.3.tar.xz",
       "book_md5": "ad4db5a0eb4fdbb3f6813be4b6b3da74",
@@ -89,12 +308,53 @@
       "disposition": "retain",
       "name": "bc-7.0.3.tar.xz",
       "reason": "Retain the pinned book input.",
+      "sha256": "91eb74caed0ee6655b669711a4f350c25579778694df248e28363318e03c7fc4",
       "url": "https://github.com/gavinhoward/bc/releases/download/7.0.3/bc-7.0.3.tar.xz"
     },
     {
       "authentication": {
-        "method": "unresolved",
-        "reason": "No publisher SHA256 or signature verified yet."
+        "distributor": "Gentoo",
+        "manifest": {
+          "path": "gentoo-manifests/sys-devel/binutils/Manifest",
+          "sha256": "d2c7f6175985c7a6f3b35595277792771041bbdacc5dc7bc554763b5290e8789",
+          "url": "https://distfiles.gentoo.org/snapshots/gentoo-20261103.tar.xz"
+        },
+        "manifest_member": "gentoo-20261103/sys-devel/binutils/Manifest",
+        "method": "distributor-openpgp-manifest",
+        "reviewed_exception": {
+          "reason": "Use an independently authenticated maintained distributor Manifest where complete strong upstream authentication has not been established; exact upstream archive bytes must match.",
+          "reviewed_at": "2026-11-05"
+        },
+        "snapshot": {
+          "authentication": {
+            "approval": {
+              "basis": "Official Gentoo signing-key documentation identifies this ebuild repository primary.",
+              "material": {
+                "path": "gentoo-signatures.html",
+                "sha256": "45bd60413ed48a5729c832ab69b9a1c3f4812b4e0cfc2777491be5875c82e0b4",
+                "url": "https://www.gentoo.org/downloads/signatures/"
+              },
+              "reviewed_at": "2026-11-05"
+            },
+            "key": {
+              "path": "gentoo-DCD05B71EAB94199527F44ACDB6B8C1F96D8BF6D.asc",
+              "sha256": "aec99650e40d8f21c792e9e8353d672a8676ae3cbe9e2c147ce42e0e46037189",
+              "url": "https://keys.gentoo.org/pks/lookup?op=get&search=0xDCD05B71EAB94199527F44ACDB6B8C1F96D8BF6D"
+            },
+            "method": "openpgp",
+            "primary_fingerprint": "DCD05B71EAB94199527F44ACDB6B8C1F96D8BF6D",
+            "signature": {
+              "path": "gentoo-20261103.tar.xz.gpgsig",
+              "sha256": "4e08800e0e026829118786acc63e5ec3ca8ffdc4069252667642a6a5c5a4be22",
+              "url": "https://distfiles.gentoo.org/snapshots/gentoo-20261103.tar.xz.gpgsig"
+            }
+          },
+          "material": {
+            "path": "gentoo-20261103.tar.xz",
+            "sha256": "923b3132d9214cee3f59fa2b56a3af27a0287c8587576c99ebcd5b24e537a194",
+            "url": "https://distfiles.gentoo.org/snapshots/gentoo-20261103.tar.xz"
+          }
+        }
       },
       "baseline_name": "binutils-2.47.tar.xz",
       "book_md5": "d772acfbd55a81644e9fe7b8189cd2a5",
@@ -102,25 +362,111 @@
       "disposition": "retain",
       "name": "binutils-2.47.tar.xz",
       "reason": "Retain the pinned book input.",
+      "sha256": "154ab23b60070e8f27013c22977f1129425d67d1e8acd6e13010e617811e4cff",
       "url": "https://sourceware.org/pub/binutils/releases/binutils-2.47.tar.xz"
     },
     {
       "authentication": {
-        "method": "unresolved",
-        "reason": "No publisher SHA256 or signature verified yet."
+        "distributor": "Gentoo",
+        "manifest": {
+          "path": "gentoo-manifests/sys-devel/bison/Manifest",
+          "sha256": "2cb5353eada55537cbabc63da2cbc4c7248aa3c1c526fe226ee2620c855d4c68",
+          "url": "https://distfiles.gentoo.org/snapshots/gentoo-20261103.tar.xz"
+        },
+        "manifest_member": "gentoo-20261103/sys-devel/bison/Manifest",
+        "method": "distributor-openpgp-manifest",
+        "reviewed_exception": {
+          "reason": "Use an independently authenticated maintained distributor Manifest where complete strong upstream authentication has not been established; exact upstream archive bytes must match.",
+          "reviewed_at": "2026-11-05"
+        },
+        "snapshot": {
+          "authentication": {
+            "approval": {
+              "basis": "Official Gentoo signing-key documentation identifies this ebuild repository primary.",
+              "material": {
+                "path": "gentoo-signatures.html",
+                "sha256": "45bd60413ed48a5729c832ab69b9a1c3f4812b4e0cfc2777491be5875c82e0b4",
+                "url": "https://www.gentoo.org/downloads/signatures/"
+              },
+              "reviewed_at": "2026-11-05"
+            },
+            "key": {
+              "path": "gentoo-DCD05B71EAB94199527F44ACDB6B8C1F96D8BF6D.asc",
+              "sha256": "aec99650e40d8f21c792e9e8353d672a8676ae3cbe9e2c147ce42e0e46037189",
+              "url": "https://keys.gentoo.org/pks/lookup?op=get&search=0xDCD05B71EAB94199527F44ACDB6B8C1F96D8BF6D"
+            },
+            "method": "openpgp",
+            "primary_fingerprint": "DCD05B71EAB94199527F44ACDB6B8C1F96D8BF6D",
+            "signature": {
+              "path": "gentoo-20261103.tar.xz.gpgsig",
+              "sha256": "4e08800e0e026829118786acc63e5ec3ca8ffdc4069252667642a6a5c5a4be22",
+              "url": "https://distfiles.gentoo.org/snapshots/gentoo-20261103.tar.xz.gpgsig"
+            }
+          },
+          "material": {
+            "path": "gentoo-20261103.tar.xz",
+            "sha256": "923b3132d9214cee3f59fa2b56a3af27a0287c8587576c99ebcd5b24e537a194",
+            "url": "https://distfiles.gentoo.org/snapshots/gentoo-20261103.tar.xz"
+          }
+        }
       },
       "baseline_name": "bison-3.8.2.tar.xz",
       "book_md5": "c28f119f405a2304ff0a7ccdcc629713",
       "book_url": "https://ftpmirror.gnu.org/bison/bison-3.8.2.tar.xz",
       "disposition": "retain",
+      "download_urls": [
+        "https://mirrors.kernel.org/gnu/bison/bison-3.8.2.tar.xz",
+        "https://ftp.gnu.org/gnu/bison/bison-3.8.2.tar.xz"
+      ],
       "name": "bison-3.8.2.tar.xz",
       "reason": "Retain the pinned book input.",
+      "sha256": "9bba0214ccf7f1079c5d59210045227bcf619519840ebfa80cd3849cff5a5bf2",
       "url": "https://ftp.gnu.org/gnu/bison/bison-3.8.2.tar.xz"
     },
     {
       "authentication": {
-        "method": "unresolved",
-        "reason": "No publisher SHA256 or signature verified yet."
+        "distributor": "Gentoo",
+        "manifest": {
+          "path": "gentoo-manifests/app-arch/bzip2/Manifest",
+          "sha256": "b5e60c32ad4639bff6ceb1070f6c80fb7245da1b0fd6f55f0efe697d34105ba1",
+          "url": "https://distfiles.gentoo.org/snapshots/gentoo-20261103.tar.xz"
+        },
+        "manifest_member": "gentoo-20261103/app-arch/bzip2/Manifest",
+        "method": "distributor-openpgp-manifest",
+        "reviewed_exception": {
+          "reason": "Use an independently authenticated maintained distributor Manifest where complete strong upstream authentication has not been established; exact upstream archive bytes must match.",
+          "reviewed_at": "2026-11-05"
+        },
+        "snapshot": {
+          "authentication": {
+            "approval": {
+              "basis": "Official Gentoo signing-key documentation identifies this ebuild repository primary.",
+              "material": {
+                "path": "gentoo-signatures.html",
+                "sha256": "45bd60413ed48a5729c832ab69b9a1c3f4812b4e0cfc2777491be5875c82e0b4",
+                "url": "https://www.gentoo.org/downloads/signatures/"
+              },
+              "reviewed_at": "2026-11-05"
+            },
+            "key": {
+              "path": "gentoo-DCD05B71EAB94199527F44ACDB6B8C1F96D8BF6D.asc",
+              "sha256": "aec99650e40d8f21c792e9e8353d672a8676ae3cbe9e2c147ce42e0e46037189",
+              "url": "https://keys.gentoo.org/pks/lookup?op=get&search=0xDCD05B71EAB94199527F44ACDB6B8C1F96D8BF6D"
+            },
+            "method": "openpgp",
+            "primary_fingerprint": "DCD05B71EAB94199527F44ACDB6B8C1F96D8BF6D",
+            "signature": {
+              "path": "gentoo-20261103.tar.xz.gpgsig",
+              "sha256": "4e08800e0e026829118786acc63e5ec3ca8ffdc4069252667642a6a5c5a4be22",
+              "url": "https://distfiles.gentoo.org/snapshots/gentoo-20261103.tar.xz.gpgsig"
+            }
+          },
+          "material": {
+            "path": "gentoo-20261103.tar.xz",
+            "sha256": "923b3132d9214cee3f59fa2b56a3af27a0287c8587576c99ebcd5b24e537a194",
+            "url": "https://distfiles.gentoo.org/snapshots/gentoo-20261103.tar.xz"
+          }
+        }
       },
       "baseline_name": "bzip2-1.0.8.tar.gz",
       "book_md5": "67e051268d0c475ea773822f7500d0e5",
@@ -128,25 +474,90 @@
       "disposition": "retain",
       "name": "bzip2-1.0.8.tar.gz",
       "reason": "Retain the pinned book input.",
+      "sha256": "ab5a03176ee106d3f0fa90e381da478ddae405918153cca248e682cd0c4a2269",
       "url": "https://www.sourceware.org/pub/bzip2/bzip2-1.0.8.tar.gz"
     },
     {
       "authentication": {
-        "method": "unresolved",
-        "reason": "No publisher SHA256 or signature verified yet."
+        "approval": {
+          "basis": "Project release announcement publishes the approved fingerprint; project-specific GNU release keyring supplies its key.",
+          "material": {
+            "path": "coreutils-9.11-announcement.html",
+            "sha256": "b0cbb73ce4805a4ae0848a5b73898f61d1f5930e454dbb78d7eb064d404aa4f0",
+            "url": "https://lists.gnu.org/archive/html/coreutils-announce/2026-04/msg00000.html"
+          },
+          "reviewed_at": "2026-11-05"
+        },
+        "key": {
+          "path": "gnu-coreutils-release-keys.asc",
+          "sha256": "457a5fbd6934cf9534156a14dc108aad2dc3a054555d9ef4a0b046190f39cebc",
+          "url": "https://savannah.gnu.org/project/release-gpgkeys.php?group=coreutils&download=1"
+        },
+        "method": "openpgp",
+        "primary_fingerprint": "6C37DC12121A5006BC1DB804DF6FD971306037D9",
+        "signature": {
+          "path": "coreutils-9.11.tar.xz.sig",
+          "sha256": "e2b9f147338cb22e41be28dcf76cd87c5197be359cc42033e66488a4a6b5c024",
+          "url": "https://mirrors.kernel.org/gnu/coreutils/coreutils-9.11.tar.xz.sig"
+        }
       },
       "baseline_name": "coreutils-9.11.tar.xz",
       "book_md5": "e52e9857e4aa9ae38ef32f8ed6a27604",
       "book_url": "https://ftpmirror.gnu.org/coreutils/coreutils-9.11.tar.xz",
       "disposition": "retain",
+      "download_urls": [
+        "https://mirrors.kernel.org/gnu/coreutils/coreutils-9.11.tar.xz",
+        "https://ftp.gnu.org/gnu/coreutils/coreutils-9.11.tar.xz"
+      ],
       "name": "coreutils-9.11.tar.xz",
       "reason": "Retain the pinned book input.",
+      "sha256": "394024eda0a5955217ceda9cd1201e65dc8fa3aa29c2951135a49521d57c3cc3",
       "url": "https://ftp.gnu.org/gnu/coreutils/coreutils-9.11.tar.xz"
     },
     {
       "authentication": {
-        "method": "unresolved",
-        "reason": "No publisher SHA256 or signature verified yet."
+        "distributor": "Gentoo",
+        "manifest": {
+          "path": "gentoo-manifests/sys-apps/dbus/Manifest",
+          "sha256": "2dc52d04d012896e1e88dc5ee9d0390680cd1d50b091f46820ffb20b4ad07e89",
+          "url": "https://distfiles.gentoo.org/snapshots/gentoo-20261103.tar.xz"
+        },
+        "manifest_member": "gentoo-20261103/sys-apps/dbus/Manifest",
+        "method": "distributor-openpgp-manifest",
+        "reviewed_exception": {
+          "reason": "Use an independently authenticated maintained distributor Manifest where complete strong upstream authentication has not been established; exact upstream archive bytes must match.",
+          "reviewed_at": "2026-11-05"
+        },
+        "snapshot": {
+          "authentication": {
+            "approval": {
+              "basis": "Official Gentoo signing-key documentation identifies this ebuild repository primary.",
+              "material": {
+                "path": "gentoo-signatures.html",
+                "sha256": "45bd60413ed48a5729c832ab69b9a1c3f4812b4e0cfc2777491be5875c82e0b4",
+                "url": "https://www.gentoo.org/downloads/signatures/"
+              },
+              "reviewed_at": "2026-11-05"
+            },
+            "key": {
+              "path": "gentoo-DCD05B71EAB94199527F44ACDB6B8C1F96D8BF6D.asc",
+              "sha256": "aec99650e40d8f21c792e9e8353d672a8676ae3cbe9e2c147ce42e0e46037189",
+              "url": "https://keys.gentoo.org/pks/lookup?op=get&search=0xDCD05B71EAB94199527F44ACDB6B8C1F96D8BF6D"
+            },
+            "method": "openpgp",
+            "primary_fingerprint": "DCD05B71EAB94199527F44ACDB6B8C1F96D8BF6D",
+            "signature": {
+              "path": "gentoo-20261103.tar.xz.gpgsig",
+              "sha256": "4e08800e0e026829118786acc63e5ec3ca8ffdc4069252667642a6a5c5a4be22",
+              "url": "https://distfiles.gentoo.org/snapshots/gentoo-20261103.tar.xz.gpgsig"
+            }
+          },
+          "material": {
+            "path": "gentoo-20261103.tar.xz",
+            "sha256": "923b3132d9214cee3f59fa2b56a3af27a0287c8587576c99ebcd5b24e537a194",
+            "url": "https://distfiles.gentoo.org/snapshots/gentoo-20261103.tar.xz"
+          }
+        }
       },
       "baseline_name": "dbus-1.16.2.tar.xz",
       "book_md5": "97832e6f0a260936d28536e5349c22e5",
@@ -154,32 +565,69 @@
       "disposition": "retain",
       "name": "dbus-1.16.2.tar.xz",
       "reason": "Retain the pinned book input.",
+      "sha256": "0ba2a1a4b16afe7bceb2c07e9ce99a8c2c3508e5dec290dbb643384bd6beb7e2",
       "url": "https://dbus.freedesktop.org/releases/dbus/dbus-1.16.2.tar.xz"
     },
     {
       "authentication": {
-        "method": "unresolved",
-        "reason": "No publisher SHA256 or signature verified yet."
+        "material": {
+          "path": "dejagnu-1.6.3-announcement.html",
+          "sha256": "f9f55f237a4be0be366e0850d6d4a09eddff3595f8ba9af7376867e71a6d041b",
+          "url": "https://lists.gnu.org/archive/html/info-gnu/2021-06/msg00009.html"
+        },
+        "method": "https-published-sha256",
+        "selection": {
+          "format": "gnu-announcement"
+        }
       },
       "baseline_name": "dejagnu-1.6.3.tar.gz",
       "book_md5": "68c5208c58236eba447d7d6d1326b821",
       "book_url": "https://ftpmirror.gnu.org/dejagnu/dejagnu-1.6.3.tar.gz",
       "disposition": "retain",
+      "download_urls": [
+        "https://mirrors.kernel.org/gnu/dejagnu/dejagnu-1.6.3.tar.gz",
+        "https://ftp.gnu.org/gnu/dejagnu/dejagnu-1.6.3.tar.gz"
+      ],
       "name": "dejagnu-1.6.3.tar.gz",
       "reason": "Retain the pinned book input.",
+      "sha256": "87daefacd7958b4a69f88c6856dbd1634261963c414079d0c371f589cd66a2e3",
       "url": "https://ftp.gnu.org/gnu/dejagnu/dejagnu-1.6.3.tar.gz"
     },
     {
       "authentication": {
-        "method": "unresolved",
-        "reason": "No publisher SHA256 or signature verified yet."
+        "approval": {
+          "basis": "Project release announcement publishes the approved fingerprint; project-specific GNU release keyring supplies its key.",
+          "material": {
+            "path": "diffutils-3.12-announcement.html",
+            "sha256": "435694c1227145e0a2922ebe72fdaf0aa622e0046d5aa704775c0be3b384efa6",
+            "url": "https://lists.gnu.org/archive/html/info-gnu/2025-04/msg00005.html"
+          },
+          "reviewed_at": "2026-11-05"
+        },
+        "key": {
+          "path": "gnu-diffutils-release-keys.asc",
+          "sha256": "0850b3f0df83d84c02a88fcdf28202c4a3d603bb972fe77d272ec33007c79359",
+          "url": "https://savannah.gnu.org/project/release-gpgkeys.php?group=diffutils&download=1"
+        },
+        "method": "openpgp",
+        "primary_fingerprint": "155D3FC500C834486D1EEA677FD9FCCB000BEEEE",
+        "signature": {
+          "path": "diffutils-3.12.tar.xz.sig",
+          "sha256": "ad05b321b2f23441275af68072123a5907b05ad989335a9f1f6e3781cb0846a6",
+          "url": "https://mirrors.kernel.org/gnu/diffutils/diffutils-3.12.tar.xz.sig"
+        }
       },
       "baseline_name": "diffutils-3.12.tar.xz",
       "book_md5": "d1b18b20868fb561f77861cd90b05de4",
       "book_url": "https://ftpmirror.gnu.org/diffutils/diffutils-3.12.tar.xz",
       "disposition": "retain",
+      "download_urls": [
+        "https://mirrors.kernel.org/gnu/diffutils/diffutils-3.12.tar.xz",
+        "https://ftp.gnu.org/gnu/diffutils/diffutils-3.12.tar.xz"
+      ],
       "name": "diffutils-3.12.tar.xz",
       "reason": "Retain the pinned book input.",
+      "sha256": "7c8b7f9fc8609141fdea9cece85249d308624391ff61dedaf528fcb337727dfd",
       "url": "https://ftp.gnu.org/gnu/diffutils/diffutils-3.12.tar.xz"
     },
     {
@@ -197,8 +645,48 @@
     },
     {
       "authentication": {
-        "method": "unresolved",
-        "reason": "No publisher SHA256 or signature verified yet."
+        "distributor": "Gentoo",
+        "manifest": {
+          "path": "gentoo-manifests/dev-libs/elfutils/Manifest",
+          "sha256": "edf5ee5995f2230f21d3973d4f0cdbc0e3b1c9a8df96c90c1f1d20673e2d9dee",
+          "url": "https://distfiles.gentoo.org/snapshots/gentoo-20261103.tar.xz"
+        },
+        "manifest_member": "gentoo-20261103/dev-libs/elfutils/Manifest",
+        "method": "distributor-openpgp-manifest",
+        "reviewed_exception": {
+          "reason": "Use an independently authenticated maintained distributor Manifest where complete strong upstream authentication has not been established; exact upstream archive bytes must match.",
+          "reviewed_at": "2026-11-05"
+        },
+        "snapshot": {
+          "authentication": {
+            "approval": {
+              "basis": "Official Gentoo signing-key documentation identifies this ebuild repository primary.",
+              "material": {
+                "path": "gentoo-signatures.html",
+                "sha256": "45bd60413ed48a5729c832ab69b9a1c3f4812b4e0cfc2777491be5875c82e0b4",
+                "url": "https://www.gentoo.org/downloads/signatures/"
+              },
+              "reviewed_at": "2026-11-05"
+            },
+            "key": {
+              "path": "gentoo-DCD05B71EAB94199527F44ACDB6B8C1F96D8BF6D.asc",
+              "sha256": "aec99650e40d8f21c792e9e8353d672a8676ae3cbe9e2c147ce42e0e46037189",
+              "url": "https://keys.gentoo.org/pks/lookup?op=get&search=0xDCD05B71EAB94199527F44ACDB6B8C1F96D8BF6D"
+            },
+            "method": "openpgp",
+            "primary_fingerprint": "DCD05B71EAB94199527F44ACDB6B8C1F96D8BF6D",
+            "signature": {
+              "path": "gentoo-20261103.tar.xz.gpgsig",
+              "sha256": "4e08800e0e026829118786acc63e5ec3ca8ffdc4069252667642a6a5c5a4be22",
+              "url": "https://distfiles.gentoo.org/snapshots/gentoo-20261103.tar.xz.gpgsig"
+            }
+          },
+          "material": {
+            "path": "gentoo-20261103.tar.xz",
+            "sha256": "923b3132d9214cee3f59fa2b56a3af27a0287c8587576c99ebcd5b24e537a194",
+            "url": "https://distfiles.gentoo.org/snapshots/gentoo-20261103.tar.xz"
+          }
+        }
       },
       "baseline_name": "elfutils-0.195.tar.bz2",
       "book_md5": "3e8ef51c43beceddbbb74879549cf72c",
@@ -206,34 +694,75 @@
       "disposition": "retain",
       "name": "elfutils-0.195.tar.bz2",
       "reason": "Retain the pinned book input.",
+      "sha256": "37629fdf7f1f3dc2818e138fca2b8094177d6c2d0f701d3bb650a561218dc026",
       "url": "https://sourceware.org/ftp/elfutils/0.195/elfutils-0.195.tar.bz2"
     },
     {
       "authentication": {
         "material": {
-          "path": "github-libexpat-libexpat-R_2_9_0.json",
-          "sha256": "df9edfc5507855180ea056838e42c28378a57a566ec5d4a96c34c606a9a48cb3",
-          "url": "https://api.github.com/repos/libexpat/libexpat/releases/tags/R_2_9_0"
+          "path": "expat-latest-release-2026-11-05.json",
+          "sha256": "b06f46ea1b6a11076023414cb47485a5132889f88d48a7d8e5c02e604d973206",
+          "url": "https://api.github.com/repos/libexpat/libexpat/releases/latest"
         },
         "method": "https-published-sha256",
         "selection": {
           "format": "github-release",
-          "tag": "R_2_9_0"
+          "tag": "R_2_10_0"
         }
       },
       "baseline_name": "expat-2.8.3.tar.xz",
       "book_md5": "1747f5a57b191f0373baeb5adc8078ca",
       "book_url": "https://github.com/libexpat/libexpat/releases/download/R_2_8_3/expat-2.8.3.tar.xz",
       "disposition": "replace",
-      "name": "expat-2.9.0.tar.xz",
-      "reason": "LFS sa-13.1-022, sa-13.1-045 and sa-13.1-064 identify fixes through Expat 2.9.0; unresolved upstream issues require separate disposition.",
-      "sha256": "1e6371862cc31999b368c3b89b49994f0677e1bab5f1b2b85ae3741f5d803051",
-      "url": "https://github.com/libexpat/libexpat/releases/download/R_2_9_0/expat-2.9.0.tar.xz"
+      "name": "expat-2.10.0.tar.xz",
+      "reason": "Security fixes through Expat 2.10.0 (2026-11-02). The still-open CVE-2025-66382 CPU DoS is separately gated by H55.",
+      "sha256": "c624ba2998fc65df1163a49641ff3f9ab73138b11641d92c86bee0fb01b1bc7f",
+      "url": "https://github.com/libexpat/libexpat/releases/download/R_2_10_0/expat-2.10.0.tar.xz"
     },
     {
       "authentication": {
-        "method": "unresolved",
-        "reason": "No publisher SHA256 or signature verified yet."
+        "distributor": "Gentoo",
+        "manifest": {
+          "path": "gentoo-manifests/dev-tcltk/expect/Manifest",
+          "sha256": "be1465d8e91783aa49f612cd19de1bbd069a8c9780a057f7df71c9431cbd3318",
+          "url": "https://distfiles.gentoo.org/snapshots/gentoo-20261103.tar.xz"
+        },
+        "manifest_member": "gentoo-20261103/dev-tcltk/expect/Manifest",
+        "method": "distributor-openpgp-manifest",
+        "reviewed_exception": {
+          "reason": "Use an independently authenticated maintained distributor Manifest where complete strong upstream authentication has not been established; exact upstream archive bytes must match.",
+          "reviewed_at": "2026-11-05"
+        },
+        "snapshot": {
+          "authentication": {
+            "approval": {
+              "basis": "Official Gentoo signing-key documentation identifies this ebuild repository primary.",
+              "material": {
+                "path": "gentoo-signatures.html",
+                "sha256": "45bd60413ed48a5729c832ab69b9a1c3f4812b4e0cfc2777491be5875c82e0b4",
+                "url": "https://www.gentoo.org/downloads/signatures/"
+              },
+              "reviewed_at": "2026-11-05"
+            },
+            "key": {
+              "path": "gentoo-DCD05B71EAB94199527F44ACDB6B8C1F96D8BF6D.asc",
+              "sha256": "aec99650e40d8f21c792e9e8353d672a8676ae3cbe9e2c147ce42e0e46037189",
+              "url": "https://keys.gentoo.org/pks/lookup?op=get&search=0xDCD05B71EAB94199527F44ACDB6B8C1F96D8BF6D"
+            },
+            "method": "openpgp",
+            "primary_fingerprint": "DCD05B71EAB94199527F44ACDB6B8C1F96D8BF6D",
+            "signature": {
+              "path": "gentoo-20261103.tar.xz.gpgsig",
+              "sha256": "4e08800e0e026829118786acc63e5ec3ca8ffdc4069252667642a6a5c5a4be22",
+              "url": "https://distfiles.gentoo.org/snapshots/gentoo-20261103.tar.xz.gpgsig"
+            }
+          },
+          "material": {
+            "path": "gentoo-20261103.tar.xz",
+            "sha256": "923b3132d9214cee3f59fa2b56a3af27a0287c8587576c99ebcd5b24e537a194",
+            "url": "https://distfiles.gentoo.org/snapshots/gentoo-20261103.tar.xz"
+          }
+        }
       },
       "baseline_name": "expect5.45.4.tar.gz",
       "book_md5": "00fce8de158422f5ccd2666512329bd2",
@@ -241,12 +770,53 @@
       "disposition": "retain",
       "name": "expect5.45.4.tar.gz",
       "reason": "Retain the pinned book input.",
+      "sha256": "49a7da83b0bdd9f46d04a04deec19c7767bb9a323e40c4781f89caf760b92c34",
       "url": "https://prdownloads.sourceforge.net/expect/expect5.45.4.tar.gz"
     },
     {
       "authentication": {
-        "method": "unresolved",
-        "reason": "No publisher SHA256 or signature verified yet."
+        "distributor": "Gentoo",
+        "manifest": {
+          "path": "gentoo-manifests/sys-apps/file/Manifest",
+          "sha256": "29d9731f28e19990443137f982f125e17288d5e81f8c42a88c6aaf71a5075038",
+          "url": "https://distfiles.gentoo.org/snapshots/gentoo-20261103.tar.xz"
+        },
+        "manifest_member": "gentoo-20261103/sys-apps/file/Manifest",
+        "method": "distributor-openpgp-manifest",
+        "reviewed_exception": {
+          "reason": "Use an independently authenticated maintained distributor Manifest where complete strong upstream authentication has not been established; exact upstream archive bytes must match.",
+          "reviewed_at": "2026-11-05"
+        },
+        "snapshot": {
+          "authentication": {
+            "approval": {
+              "basis": "Official Gentoo signing-key documentation identifies this ebuild repository primary.",
+              "material": {
+                "path": "gentoo-signatures.html",
+                "sha256": "45bd60413ed48a5729c832ab69b9a1c3f4812b4e0cfc2777491be5875c82e0b4",
+                "url": "https://www.gentoo.org/downloads/signatures/"
+              },
+              "reviewed_at": "2026-11-05"
+            },
+            "key": {
+              "path": "gentoo-DCD05B71EAB94199527F44ACDB6B8C1F96D8BF6D.asc",
+              "sha256": "aec99650e40d8f21c792e9e8353d672a8676ae3cbe9e2c147ce42e0e46037189",
+              "url": "https://keys.gentoo.org/pks/lookup?op=get&search=0xDCD05B71EAB94199527F44ACDB6B8C1F96D8BF6D"
+            },
+            "method": "openpgp",
+            "primary_fingerprint": "DCD05B71EAB94199527F44ACDB6B8C1F96D8BF6D",
+            "signature": {
+              "path": "gentoo-20261103.tar.xz.gpgsig",
+              "sha256": "4e08800e0e026829118786acc63e5ec3ca8ffdc4069252667642a6a5c5a4be22",
+              "url": "https://distfiles.gentoo.org/snapshots/gentoo-20261103.tar.xz.gpgsig"
+            }
+          },
+          "material": {
+            "path": "gentoo-20261103.tar.xz",
+            "sha256": "923b3132d9214cee3f59fa2b56a3af27a0287c8587576c99ebcd5b24e537a194",
+            "url": "https://distfiles.gentoo.org/snapshots/gentoo-20261103.tar.xz"
+          }
+        }
       },
       "baseline_name": "file-5.48.tar.gz",
       "book_md5": "423686e97f731d8c24e9cd1a22b03dec",
@@ -254,25 +824,111 @@
       "disposition": "retain",
       "name": "file-5.48.tar.gz",
       "reason": "Retain the pinned book input.",
+      "sha256": "ed14656883b23a364b4057c05595d93252da9bc473d30106519519d0da141283",
       "url": "https://astron.com/pub/file/file-5.48.tar.gz"
     },
     {
       "authentication": {
-        "method": "unresolved",
-        "reason": "No publisher SHA256 or signature verified yet."
+        "distributor": "Gentoo",
+        "manifest": {
+          "path": "gentoo-manifests/sys-apps/findutils/Manifest",
+          "sha256": "f59c48b87e5dad901a1cf2847d2852eedb81869767b5f710d1633b34884075dc",
+          "url": "https://distfiles.gentoo.org/snapshots/gentoo-20261103.tar.xz"
+        },
+        "manifest_member": "gentoo-20261103/sys-apps/findutils/Manifest",
+        "method": "distributor-openpgp-manifest",
+        "reviewed_exception": {
+          "reason": "Use an independently authenticated maintained distributor Manifest where complete strong upstream authentication has not been established; exact upstream archive bytes must match.",
+          "reviewed_at": "2026-11-05"
+        },
+        "snapshot": {
+          "authentication": {
+            "approval": {
+              "basis": "Official Gentoo signing-key documentation identifies this ebuild repository primary.",
+              "material": {
+                "path": "gentoo-signatures.html",
+                "sha256": "45bd60413ed48a5729c832ab69b9a1c3f4812b4e0cfc2777491be5875c82e0b4",
+                "url": "https://www.gentoo.org/downloads/signatures/"
+              },
+              "reviewed_at": "2026-11-05"
+            },
+            "key": {
+              "path": "gentoo-DCD05B71EAB94199527F44ACDB6B8C1F96D8BF6D.asc",
+              "sha256": "aec99650e40d8f21c792e9e8353d672a8676ae3cbe9e2c147ce42e0e46037189",
+              "url": "https://keys.gentoo.org/pks/lookup?op=get&search=0xDCD05B71EAB94199527F44ACDB6B8C1F96D8BF6D"
+            },
+            "method": "openpgp",
+            "primary_fingerprint": "DCD05B71EAB94199527F44ACDB6B8C1F96D8BF6D",
+            "signature": {
+              "path": "gentoo-20261103.tar.xz.gpgsig",
+              "sha256": "4e08800e0e026829118786acc63e5ec3ca8ffdc4069252667642a6a5c5a4be22",
+              "url": "https://distfiles.gentoo.org/snapshots/gentoo-20261103.tar.xz.gpgsig"
+            }
+          },
+          "material": {
+            "path": "gentoo-20261103.tar.xz",
+            "sha256": "923b3132d9214cee3f59fa2b56a3af27a0287c8587576c99ebcd5b24e537a194",
+            "url": "https://distfiles.gentoo.org/snapshots/gentoo-20261103.tar.xz"
+          }
+        }
       },
       "baseline_name": "findutils-4.11.0.tar.xz",
       "book_md5": "512c6875ed84034dca240c4bc9380b96",
       "book_url": "https://ftpmirror.gnu.org/findutils/findutils-4.11.0.tar.xz",
       "disposition": "retain",
+      "download_urls": [
+        "https://mirrors.kernel.org/gnu/findutils/findutils-4.11.0.tar.xz",
+        "https://ftp.gnu.org/gnu/findutils/findutils-4.11.0.tar.xz"
+      ],
       "name": "findutils-4.11.0.tar.xz",
       "reason": "Retain the pinned book input.",
+      "sha256": "bfd19cb06cc71f3352d567e90284d8cdac02ac89774bbeadf0b533b0c11432fd",
       "url": "https://ftp.gnu.org/gnu/findutils/findutils-4.11.0.tar.xz"
     },
     {
       "authentication": {
-        "method": "unresolved",
-        "reason": "No publisher SHA256 or signature verified yet."
+        "distributor": "Gentoo",
+        "manifest": {
+          "path": "gentoo-manifests/sys-devel/flex/Manifest",
+          "sha256": "494671b3264ae1ed60f6fca5a7dd4f315f2b1c81fb0b2f1890dfde090cf09532",
+          "url": "https://distfiles.gentoo.org/snapshots/gentoo-20261103.tar.xz"
+        },
+        "manifest_member": "gentoo-20261103/sys-devel/flex/Manifest",
+        "method": "distributor-openpgp-manifest",
+        "reviewed_exception": {
+          "reason": "Use an independently authenticated maintained distributor Manifest where complete strong upstream authentication has not been established; exact upstream archive bytes must match.",
+          "reviewed_at": "2026-11-05"
+        },
+        "snapshot": {
+          "authentication": {
+            "approval": {
+              "basis": "Official Gentoo signing-key documentation identifies this ebuild repository primary.",
+              "material": {
+                "path": "gentoo-signatures.html",
+                "sha256": "45bd60413ed48a5729c832ab69b9a1c3f4812b4e0cfc2777491be5875c82e0b4",
+                "url": "https://www.gentoo.org/downloads/signatures/"
+              },
+              "reviewed_at": "2026-11-05"
+            },
+            "key": {
+              "path": "gentoo-DCD05B71EAB94199527F44ACDB6B8C1F96D8BF6D.asc",
+              "sha256": "aec99650e40d8f21c792e9e8353d672a8676ae3cbe9e2c147ce42e0e46037189",
+              "url": "https://keys.gentoo.org/pks/lookup?op=get&search=0xDCD05B71EAB94199527F44ACDB6B8C1F96D8BF6D"
+            },
+            "method": "openpgp",
+            "primary_fingerprint": "DCD05B71EAB94199527F44ACDB6B8C1F96D8BF6D",
+            "signature": {
+              "path": "gentoo-20261103.tar.xz.gpgsig",
+              "sha256": "4e08800e0e026829118786acc63e5ec3ca8ffdc4069252667642a6a5c5a4be22",
+              "url": "https://distfiles.gentoo.org/snapshots/gentoo-20261103.tar.xz.gpgsig"
+            }
+          },
+          "material": {
+            "path": "gentoo-20261103.tar.xz",
+            "sha256": "923b3132d9214cee3f59fa2b56a3af27a0287c8587576c99ebcd5b24e537a194",
+            "url": "https://distfiles.gentoo.org/snapshots/gentoo-20261103.tar.xz"
+          }
+        }
       },
       "baseline_name": "flex-2.6.4.tar.gz",
       "book_md5": "2882e3179748cc9f9c23ec593d6adc8d",
@@ -280,6 +936,7 @@
       "disposition": "retain",
       "name": "flex-2.6.4.tar.gz",
       "reason": "Retain the pinned book input.",
+      "sha256": "e87aae032bf07c26f85ac0ed3250998c37621d95f8bd748b31f15b33c45ee995",
       "url": "https://github.com/westes/flex/releases/download/v2.6.4/flex-2.6.4.tar.gz"
     },
     {
@@ -306,145 +963,425 @@
     },
     {
       "authentication": {
-        "method": "unresolved",
-        "reason": "No publisher SHA256 or signature verified yet."
+        "distributor": "Gentoo",
+        "manifest": {
+          "path": "gentoo-manifests/sys-apps/gawk/Manifest",
+          "sha256": "aeebc962fa7a036fd3256d6d9e280ec817dd2cf67d343ab7ffc361a8996560ac",
+          "url": "https://distfiles.gentoo.org/snapshots/gentoo-20261103.tar.xz"
+        },
+        "manifest_member": "gentoo-20261103/sys-apps/gawk/Manifest",
+        "method": "distributor-openpgp-manifest",
+        "reviewed_exception": {
+          "reason": "Use an independently authenticated maintained distributor Manifest where complete strong upstream authentication has not been established; exact upstream archive bytes must match.",
+          "reviewed_at": "2026-11-05"
+        },
+        "snapshot": {
+          "authentication": {
+            "approval": {
+              "basis": "Official Gentoo signing-key documentation identifies this ebuild repository primary.",
+              "material": {
+                "path": "gentoo-signatures.html",
+                "sha256": "45bd60413ed48a5729c832ab69b9a1c3f4812b4e0cfc2777491be5875c82e0b4",
+                "url": "https://www.gentoo.org/downloads/signatures/"
+              },
+              "reviewed_at": "2026-11-05"
+            },
+            "key": {
+              "path": "gentoo-DCD05B71EAB94199527F44ACDB6B8C1F96D8BF6D.asc",
+              "sha256": "aec99650e40d8f21c792e9e8353d672a8676ae3cbe9e2c147ce42e0e46037189",
+              "url": "https://keys.gentoo.org/pks/lookup?op=get&search=0xDCD05B71EAB94199527F44ACDB6B8C1F96D8BF6D"
+            },
+            "method": "openpgp",
+            "primary_fingerprint": "DCD05B71EAB94199527F44ACDB6B8C1F96D8BF6D",
+            "signature": {
+              "path": "gentoo-20261103.tar.xz.gpgsig",
+              "sha256": "4e08800e0e026829118786acc63e5ec3ca8ffdc4069252667642a6a5c5a4be22",
+              "url": "https://distfiles.gentoo.org/snapshots/gentoo-20261103.tar.xz.gpgsig"
+            }
+          },
+          "material": {
+            "path": "gentoo-20261103.tar.xz",
+            "sha256": "923b3132d9214cee3f59fa2b56a3af27a0287c8587576c99ebcd5b24e537a194",
+            "url": "https://distfiles.gentoo.org/snapshots/gentoo-20261103.tar.xz"
+          }
+        }
       },
       "baseline_name": "gawk-5.4.1.tar.xz",
       "book_md5": "d379c2110e7a3e15347dd5559a41ad64",
       "book_url": "https://ftpmirror.gnu.org/gawk/gawk-5.4.1.tar.xz",
       "disposition": "retain",
+      "download_urls": [
+        "https://mirrors.kernel.org/gnu/gawk/gawk-5.4.1.tar.xz",
+        "https://ftp.gnu.org/gnu/gawk/gawk-5.4.1.tar.xz"
+      ],
       "name": "gawk-5.4.1.tar.xz",
       "reason": "Retain the pinned book input.",
+      "sha256": "07f6f7342b7febe4313fc2c2542ad93d64fe20ad8717200109f105a826f5fd37",
       "url": "https://ftp.gnu.org/gnu/gawk/gawk-5.4.1.tar.xz"
     },
     {
       "authentication": {
-        "method": "unresolved",
-        "reason": "No publisher SHA256 or signature verified yet."
+        "approval": {
+          "basis": "GCC publishes signing fingerprint 7F74F97C103468EE5D750B583AB00996FC26A641; GPG validates its binding to this primary.",
+          "material": {
+            "path": "gcc-mirrors.html",
+            "sha256": "7235342adb022666828ad687490b18008a9206ad024a01b88e20807c22d6425b",
+            "url": "https://gcc.gnu.org/mirrors.html"
+          },
+          "reviewed_at": "2026-11-05"
+        },
+        "key": {
+          "path": "gcc-release-key-ubuntu.asc",
+          "sha256": "279524c4da639f4f40fd3c056010b4dbff3f90afec1dbe9bec3d5382c83af438",
+          "url": "https://keyserver.ubuntu.com/pks/lookup?op=get&search=0x13975A70E63C361C73AE69EF6EEB81F8981C74C7"
+        },
+        "method": "openpgp",
+        "primary_fingerprint": "13975A70E63C361C73AE69EF6EEB81F8981C74C7",
+        "signature": {
+          "path": "gcc-16.2.0.tar.xz.sig",
+          "sha256": "43d73202dcede15d31001c6ba0d28723014ef57e4dc815631772daadbe23bcd2",
+          "url": "https://mirrors.kernel.org/gnu/gcc/gcc-16.2.0/gcc-16.2.0.tar.xz.sig"
+        },
+        "signing_fingerprint": "7F74F97C103468EE5D750B583AB00996FC26A641"
       },
       "baseline_name": "gcc-16.2.0.tar.xz",
       "book_md5": "19b777fb19ea4982731392481306f0d3",
       "book_url": "https://ftpmirror.gnu.org/gcc/gcc-16.2.0/gcc-16.2.0.tar.xz",
       "disposition": "retain",
+      "download_urls": [
+        "https://mirrors.kernel.org/gnu/gcc/gcc-16.2.0/gcc-16.2.0.tar.xz",
+        "https://ftp.gnu.org/gnu/gcc/gcc-16.2.0/gcc-16.2.0.tar.xz"
+      ],
       "name": "gcc-16.2.0.tar.xz",
       "reason": "Retain the pinned book input.",
+      "sha256": "e6738e29597f733270731aa90600f37ffdc045079dfc27ec7e8192cc81085c3e",
       "url": "https://ftp.gnu.org/gnu/gcc/gcc-16.2.0/gcc-16.2.0.tar.xz"
     },
     {
       "authentication": {
-        "method": "unresolved",
-        "reason": "No publisher SHA256 or signature verified yet."
+        "material": {
+          "path": "gdbm-1.26-announcement.html",
+          "sha256": "51fd5fe5b1171b88ba23782c681dec0eb582d93a2e056008bed31389921d5c99",
+          "url": "https://lists.gnu.org/archive/html/info-gnu/2025-07/msg00012.html"
+        },
+        "method": "https-published-sha256",
+        "selection": {
+          "format": "gnu-announcement"
+        }
       },
       "baseline_name": "gdbm-1.26.tar.gz",
       "book_md5": "aaa600665bc89e2febb3c7bd90679115",
       "book_url": "https://ftpmirror.gnu.org/gdbm/gdbm-1.26.tar.gz",
       "disposition": "retain",
+      "download_urls": [
+        "https://mirrors.kernel.org/gnu/gdbm/gdbm-1.26.tar.gz",
+        "https://ftp.gnu.org/gnu/gdbm/gdbm-1.26.tar.gz"
+      ],
       "name": "gdbm-1.26.tar.gz",
       "reason": "Retain the pinned book input.",
+      "sha256": "6a24504a14de4a744103dcb936be976df6fbe88ccff26065e54c1c47946f4a5e",
       "url": "https://ftp.gnu.org/gnu/gdbm/gdbm-1.26.tar.gz"
     },
     {
       "authentication": {
-        "method": "unresolved",
-        "reason": "No publisher SHA256 or signature verified yet."
+        "material": {
+          "path": "gettext-1.0-announcement.html",
+          "sha256": "8fdfb384daf8306154a84119cb5498766d0d15faa18ef03767b02bc54165e43c",
+          "url": "https://lists.gnu.org/archive/html/info-gnu/2026-01/msg00007.html"
+        },
+        "method": "https-published-sha256",
+        "selection": {
+          "format": "gnu-announcement"
+        }
       },
       "baseline_name": "gettext-1.0.tar.xz",
       "book_md5": "dc8b2911535929cec1e263706b0a13a1",
       "book_url": "https://ftpmirror.gnu.org/gettext/gettext-1.0.tar.xz",
       "disposition": "retain",
+      "download_urls": [
+        "https://mirrors.kernel.org/gnu/gettext/gettext-1.0.tar.xz",
+        "https://ftp.gnu.org/gnu/gettext/gettext-1.0.tar.xz"
+      ],
       "name": "gettext-1.0.tar.xz",
       "reason": "Retain the pinned book input.",
+      "sha256": "71132a3fb71e68245b8f2ac4e9e97137d3e5c02f415636eb508ae607bc01add7",
       "url": "https://ftp.gnu.org/gnu/gettext/gettext-1.0.tar.xz"
     },
     {
       "authentication": {
-        "method": "unresolved",
-        "reason": "No publisher SHA256 or signature verified yet."
+        "approval": {
+          "basis": "GNU libc project release keyring binds this primary; refreshed self-signed key material extends expiry.",
+          "material": {
+            "path": "gnu-libc-release-keys.asc",
+            "sha256": "7796bec530799756b2db150e1cdbb5d59541fc7233cd26b5706433cd801ac78f",
+            "url": "https://savannah.gnu.org/project/release-gpgkeys.php?group=libc&download=1"
+          },
+          "reviewed_at": "2026-11-05"
+        },
+        "key": {
+          "path": "glibc-release-key-current.asc",
+          "sha256": "7305140fd8333ceefcb1a3aa88e78a865672caff82b9f274083b1321f90d178c",
+          "url": "https://keys.openpgp.org/vks/v1/by-fingerprint/35B17DF5752577CA0C541CEB94BFDF4484AD142F"
+        },
+        "method": "openpgp",
+        "primary_fingerprint": "35B17DF5752577CA0C541CEB94BFDF4484AD142F",
+        "signature": {
+          "path": "glibc-2.44.tar.xz.sig",
+          "sha256": "44aabe605a02a56959bab51b92d985945db66dbd0117debe3d741252b2133ec6",
+          "url": "https://mirrors.kernel.org/gnu/glibc/glibc-2.44.tar.xz.sig"
+        }
       },
       "baseline_name": "glibc-2.44.tar.xz",
       "book_md5": "7677da43ef759c68e005f5d4c37986a6",
       "book_url": "https://ftpmirror.gnu.org/glibc/glibc-2.44.tar.xz",
       "disposition": "retain",
+      "download_urls": [
+        "https://mirrors.kernel.org/gnu/glibc/glibc-2.44.tar.xz",
+        "https://ftp.gnu.org/gnu/glibc/glibc-2.44.tar.xz"
+      ],
       "name": "glibc-2.44.tar.xz",
       "reason": "Retain the pinned book input.",
+      "sha256": "37f600f2bef3c5e8300147059568b2a2e40a7ad6ccc65ce942556d49429cc667",
       "url": "https://ftp.gnu.org/gnu/glibc/glibc-2.44.tar.xz"
     },
     {
       "authentication": {
-        "method": "unresolved",
-        "reason": "No publisher SHA256 or signature verified yet."
+        "distributor": "Gentoo",
+        "manifest": {
+          "path": "gentoo-manifests/dev-libs/gmp/Manifest",
+          "sha256": "b74d0b0c6d51c7bf461a2fb52dca17705c156a239a5f569d99413d85f1fd5854",
+          "url": "https://distfiles.gentoo.org/snapshots/gentoo-20261103.tar.xz"
+        },
+        "manifest_member": "gentoo-20261103/dev-libs/gmp/Manifest",
+        "method": "distributor-openpgp-manifest",
+        "reviewed_exception": {
+          "reason": "Use an independently authenticated maintained distributor Manifest where complete strong upstream authentication has not been established; exact upstream archive bytes must match.",
+          "reviewed_at": "2026-11-05"
+        },
+        "snapshot": {
+          "authentication": {
+            "approval": {
+              "basis": "Official Gentoo signing-key documentation identifies this ebuild repository primary.",
+              "material": {
+                "path": "gentoo-signatures.html",
+                "sha256": "45bd60413ed48a5729c832ab69b9a1c3f4812b4e0cfc2777491be5875c82e0b4",
+                "url": "https://www.gentoo.org/downloads/signatures/"
+              },
+              "reviewed_at": "2026-11-05"
+            },
+            "key": {
+              "path": "gentoo-DCD05B71EAB94199527F44ACDB6B8C1F96D8BF6D.asc",
+              "sha256": "aec99650e40d8f21c792e9e8353d672a8676ae3cbe9e2c147ce42e0e46037189",
+              "url": "https://keys.gentoo.org/pks/lookup?op=get&search=0xDCD05B71EAB94199527F44ACDB6B8C1F96D8BF6D"
+            },
+            "method": "openpgp",
+            "primary_fingerprint": "DCD05B71EAB94199527F44ACDB6B8C1F96D8BF6D",
+            "signature": {
+              "path": "gentoo-20261103.tar.xz.gpgsig",
+              "sha256": "4e08800e0e026829118786acc63e5ec3ca8ffdc4069252667642a6a5c5a4be22",
+              "url": "https://distfiles.gentoo.org/snapshots/gentoo-20261103.tar.xz.gpgsig"
+            }
+          },
+          "material": {
+            "path": "gentoo-20261103.tar.xz",
+            "sha256": "923b3132d9214cee3f59fa2b56a3af27a0287c8587576c99ebcd5b24e537a194",
+            "url": "https://distfiles.gentoo.org/snapshots/gentoo-20261103.tar.xz"
+          }
+        }
       },
       "baseline_name": "gmp-6.3.0.tar.xz",
       "book_md5": "956dc04e864001a9c22429f761f2c283",
       "book_url": "https://ftpmirror.gnu.org/gmp/gmp-6.3.0.tar.xz",
       "disposition": "retain",
+      "download_urls": [
+        "https://mirrors.kernel.org/gnu/gmp/gmp-6.3.0.tar.xz",
+        "https://ftp.gnu.org/gnu/gmp/gmp-6.3.0.tar.xz"
+      ],
       "name": "gmp-6.3.0.tar.xz",
       "reason": "Retain the pinned book input.",
+      "sha256": "a3c2b80201b89e68616f4ad30bc66aee4927c3ce50e33929ca819d5c43538898",
       "url": "https://ftp.gnu.org/gnu/gmp/gmp-6.3.0.tar.xz"
     },
     {
       "authentication": {
-        "method": "unresolved",
-        "reason": "No publisher SHA256 or signature verified yet."
+        "material": {
+          "path": "gperf-3.3-announcement.html",
+          "sha256": "c69f300740a9e4589c465f64078090d79411603362e49746a503fb68a6b7a96b",
+          "url": "https://lists.gnu.org/archive/html/info-gnu/2025-04/msg00013.html"
+        },
+        "method": "https-published-sha256",
+        "selection": {
+          "format": "gnu-announcement"
+        }
       },
       "baseline_name": "gperf-3.3.tar.gz",
       "book_md5": "31753b021ea78a21f154bf9eecb8b079",
       "book_url": "https://ftpmirror.gnu.org/gperf/gperf-3.3.tar.gz",
       "disposition": "retain",
+      "download_urls": [
+        "https://mirrors.kernel.org/gnu/gperf/gperf-3.3.tar.gz",
+        "https://ftp.gnu.org/gnu/gperf/gperf-3.3.tar.gz"
+      ],
       "name": "gperf-3.3.tar.gz",
       "reason": "Retain the pinned book input.",
+      "sha256": "fd87e0aba7e43ae054837afd6cd4db03a3f2693deb3619085e6ed9d8d9604ad8",
       "url": "https://ftp.gnu.org/gnu/gperf/gperf-3.3.tar.gz"
     },
     {
       "authentication": {
-        "method": "unresolved",
-        "reason": "No publisher SHA256 or signature verified yet."
+        "approval": {
+          "basis": "Project release announcement publishes the approved fingerprint; project-specific GNU release keyring supplies its key.",
+          "material": {
+            "path": "grep-3.12-announcement.html",
+            "sha256": "fa80ed7ac6b7bdc2e7f3cd5797d927b35950d9f12db460f40c157897625e68c8",
+            "url": "https://lists.gnu.org/archive/html/info-gnu/2025-04/msg00008.html"
+          },
+          "reviewed_at": "2026-11-05"
+        },
+        "key": {
+          "path": "gnu-grep-release-keys.asc",
+          "sha256": "e1063494e155af469f6a68ca04657652cd380998ca3f05c8b8b6dddb4c090a52",
+          "url": "https://savannah.gnu.org/project/release-gpgkeys.php?group=grep&download=1"
+        },
+        "method": "openpgp",
+        "primary_fingerprint": "155D3FC500C834486D1EEA677FD9FCCB000BEEEE",
+        "signature": {
+          "path": "grep-3.12.tar.xz.sig",
+          "sha256": "62d4867d7cfff57a364b745866d798958a90286551fdf45d08df515fa8c79c25",
+          "url": "https://mirrors.kernel.org/gnu/grep/grep-3.12.tar.xz.sig"
+        }
       },
       "baseline_name": "grep-3.12.tar.xz",
       "book_md5": "5d9301ed9d209c4a88c8d3a6fd08b9ac",
       "book_url": "https://ftpmirror.gnu.org/grep/grep-3.12.tar.xz",
       "disposition": "retain",
+      "download_urls": [
+        "https://mirrors.kernel.org/gnu/grep/grep-3.12.tar.xz",
+        "https://ftp.gnu.org/gnu/grep/grep-3.12.tar.xz"
+      ],
       "name": "grep-3.12.tar.xz",
       "reason": "Retain the pinned book input.",
+      "sha256": "2649b27c0e90e632eadcd757be06c6e9a4f48d941de51e7c0f83ff76408a07b9",
       "url": "https://ftp.gnu.org/gnu/grep/grep-3.12.tar.xz"
     },
     {
       "authentication": {
-        "method": "unresolved",
-        "reason": "No publisher SHA256 or signature verified yet."
+        "material": {
+          "path": "groff-1.24.1-announcement.html",
+          "sha256": "ac4c1b8eaec87aad3499fdc71ead0254c80a8f2dd7a301d866dbc33fe098799a",
+          "url": "https://lists.gnu.org/archive/html/info-gnu/2026-03/msg00005.html"
+        },
+        "method": "https-published-sha256",
+        "selection": {
+          "format": "gnu-announcement"
+        }
       },
       "baseline_name": "groff-1.24.1.tar.gz",
       "book_md5": "d9d996af3d05ebab934380be708ea584",
       "book_url": "https://ftpmirror.gnu.org/groff/groff-1.24.1.tar.gz",
       "disposition": "retain",
+      "download_urls": [
+        "https://mirrors.kernel.org/gnu/groff/groff-1.24.1.tar.gz",
+        "https://ftp.gnu.org/gnu/groff/groff-1.24.1.tar.gz"
+      ],
       "name": "groff-1.24.1.tar.gz",
       "reason": "Retain the pinned book input.",
+      "sha256": "74e2819795b6aff431aeac983d63a9c8968eeaba2a2eba7df8ba4c7b41e7cfd8",
       "url": "https://ftp.gnu.org/gnu/groff/groff-1.24.1.tar.gz"
     },
     {
       "authentication": {
-        "method": "unresolved",
-        "reason": "No publisher SHA256 or signature verified yet."
+        "distributor": "Gentoo",
+        "manifest": {
+          "path": "gentoo-manifests/sys-boot/grub/Manifest",
+          "sha256": "9859a5306ddf501346c9e15f6b61efe87790213bc039143e91003f174649f157",
+          "url": "https://distfiles.gentoo.org/snapshots/gentoo-20261103.tar.xz"
+        },
+        "manifest_member": "gentoo-20261103/sys-boot/grub/Manifest",
+        "method": "distributor-openpgp-manifest",
+        "reviewed_exception": {
+          "reason": "Use an independently authenticated maintained distributor Manifest where complete strong upstream authentication has not been established; exact upstream archive bytes must match.",
+          "reviewed_at": "2026-11-05"
+        },
+        "snapshot": {
+          "authentication": {
+            "approval": {
+              "basis": "Official Gentoo signing-key documentation identifies this ebuild repository primary.",
+              "material": {
+                "path": "gentoo-signatures.html",
+                "sha256": "45bd60413ed48a5729c832ab69b9a1c3f4812b4e0cfc2777491be5875c82e0b4",
+                "url": "https://www.gentoo.org/downloads/signatures/"
+              },
+              "reviewed_at": "2026-11-05"
+            },
+            "key": {
+              "path": "gentoo-DCD05B71EAB94199527F44ACDB6B8C1F96D8BF6D.asc",
+              "sha256": "aec99650e40d8f21c792e9e8353d672a8676ae3cbe9e2c147ce42e0e46037189",
+              "url": "https://keys.gentoo.org/pks/lookup?op=get&search=0xDCD05B71EAB94199527F44ACDB6B8C1F96D8BF6D"
+            },
+            "method": "openpgp",
+            "primary_fingerprint": "DCD05B71EAB94199527F44ACDB6B8C1F96D8BF6D",
+            "signature": {
+              "path": "gentoo-20261103.tar.xz.gpgsig",
+              "sha256": "4e08800e0e026829118786acc63e5ec3ca8ffdc4069252667642a6a5c5a4be22",
+              "url": "https://distfiles.gentoo.org/snapshots/gentoo-20261103.tar.xz.gpgsig"
+            }
+          },
+          "material": {
+            "path": "gentoo-20261103.tar.xz",
+            "sha256": "923b3132d9214cee3f59fa2b56a3af27a0287c8587576c99ebcd5b24e537a194",
+            "url": "https://distfiles.gentoo.org/snapshots/gentoo-20261103.tar.xz"
+          }
+        }
       },
       "baseline_name": "grub-2.14.tar.xz",
       "book_md5": "383f9effad01c235d2535357ff717543",
       "book_url": "https://ftpmirror.gnu.org/grub/grub-2.14.tar.xz",
       "disposition": "retain",
+      "download_urls": [
+        "https://mirrors.kernel.org/gnu/grub/grub-2.14.tar.xz",
+        "https://ftp.gnu.org/gnu/grub/grub-2.14.tar.xz"
+      ],
       "name": "grub-2.14.tar.xz",
       "reason": "Retain the pinned book input.",
+      "sha256": "bc8d3c73535b8838d8c8e2654d73edc4e6ae8c8acdb45d5df5dc9a1547446d43",
       "url": "https://ftp.gnu.org/gnu/grub/grub-2.14.tar.xz"
     },
     {
       "authentication": {
-        "method": "unresolved",
-        "reason": "No publisher SHA256 or signature verified yet."
+        "approval": {
+          "basis": "Project release announcement publishes the approved fingerprint; project-specific GNU release keyring supplies its key.",
+          "material": {
+            "path": "gzip-1.14-announcement.html",
+            "sha256": "0a21c743c1197f9dd8e5a599c1a3adbb6b36a9a95bc021c86f6b2055de750498",
+            "url": "https://lists.gnu.org/archive/html/info-gnu/2025-04/msg00007.html"
+          },
+          "reviewed_at": "2026-11-05"
+        },
+        "key": {
+          "path": "gnu-gzip-release-keys.asc",
+          "sha256": "c83f7e14dbd5b671563f06f1aeea0379977649ae9141700729e48af18c8781f2",
+          "url": "https://savannah.gnu.org/project/release-gpgkeys.php?group=gzip&download=1"
+        },
+        "method": "openpgp",
+        "primary_fingerprint": "155D3FC500C834486D1EEA677FD9FCCB000BEEEE",
+        "signature": {
+          "path": "gzip-1.14.tar.xz.sig",
+          "sha256": "94634698bea42dad032a10fe66b8b38c4a2efacd36052410402c0c850faf1d1a",
+          "url": "https://mirrors.kernel.org/gnu/gzip/gzip-1.14.tar.xz.sig"
+        }
       },
       "baseline_name": "gzip-1.14.tar.xz",
       "book_md5": "4bf5a10f287501ee8e8ebe00ef62b2c2",
       "book_url": "https://ftpmirror.gnu.org/gzip/gzip-1.14.tar.xz",
       "disposition": "retain",
+      "download_urls": [
+        "https://mirrors.kernel.org/gnu/gzip/gzip-1.14.tar.xz",
+        "https://ftp.gnu.org/gnu/gzip/gzip-1.14.tar.xz"
+      ],
       "name": "gzip-1.14.tar.xz",
       "reason": "Retain the pinned book input.",
+      "sha256": "01a7b881bd220bfdf615f97b8718f80bdfd3f6add385b993dcf6efd14e8c0ac6",
       "url": "https://ftp.gnu.org/gnu/gzip/gzip-1.14.tar.xz"
     },
     {
@@ -471,15 +1408,27 @@
     },
     {
       "authentication": {
-        "method": "unresolved",
-        "reason": "No publisher SHA256 or signature verified yet."
+        "material": {
+          "path": "inetutils-2.8-announcement.html",
+          "sha256": "1e11a0b2c21d660bac9f77c9ce64366df157fc4c2fce035c84d27ff1b688cd95",
+          "url": "https://lists.gnu.org/archive/html/info-gnu/2026-04/msg00012.html"
+        },
+        "method": "https-published-sha256",
+        "selection": {
+          "format": "gnu-announcement"
+        }
       },
       "baseline_name": "inetutils-2.8.tar.gz",
       "book_md5": "f0f9ad13045a67da9c882148f9efae6b",
       "book_url": "https://ftpmirror.gnu.org/inetutils/inetutils-2.8.tar.gz",
       "disposition": "retain",
+      "download_urls": [
+        "https://mirrors.kernel.org/gnu/inetutils/inetutils-2.8.tar.gz",
+        "https://ftp.gnu.org/gnu/inetutils/inetutils-2.8.tar.gz"
+      ],
       "name": "inetutils-2.8.tar.gz",
       "reason": "Retain the pinned book input.",
+      "sha256": "57b3cf4f77555992881e5ba2a09a63b05aa2c56342a60ed4305b5f45938390b5",
       "url": "https://ftp.gnu.org/gnu/inetutils/inetutils-2.8.tar.gz"
     },
     {
@@ -569,8 +1518,48 @@
     },
     {
       "authentication": {
-        "method": "unresolved",
-        "reason": "No publisher SHA256 or signature verified yet."
+        "distributor": "Gentoo",
+        "manifest": {
+          "path": "gentoo-manifests/sys-apps/less/Manifest",
+          "sha256": "7163255a911f8297f520bde98260f335ced7a1a644d465322610aa81c0371db5",
+          "url": "https://distfiles.gentoo.org/snapshots/gentoo-20261103.tar.xz"
+        },
+        "manifest_member": "gentoo-20261103/sys-apps/less/Manifest",
+        "method": "distributor-openpgp-manifest",
+        "reviewed_exception": {
+          "reason": "Use an independently authenticated maintained distributor Manifest where complete strong upstream authentication has not been established; exact upstream archive bytes must match.",
+          "reviewed_at": "2026-11-05"
+        },
+        "snapshot": {
+          "authentication": {
+            "approval": {
+              "basis": "Official Gentoo signing-key documentation identifies this ebuild repository primary.",
+              "material": {
+                "path": "gentoo-signatures.html",
+                "sha256": "45bd60413ed48a5729c832ab69b9a1c3f4812b4e0cfc2777491be5875c82e0b4",
+                "url": "https://www.gentoo.org/downloads/signatures/"
+              },
+              "reviewed_at": "2026-11-05"
+            },
+            "key": {
+              "path": "gentoo-DCD05B71EAB94199527F44ACDB6B8C1F96D8BF6D.asc",
+              "sha256": "aec99650e40d8f21c792e9e8353d672a8676ae3cbe9e2c147ce42e0e46037189",
+              "url": "https://keys.gentoo.org/pks/lookup?op=get&search=0xDCD05B71EAB94199527F44ACDB6B8C1F96D8BF6D"
+            },
+            "method": "openpgp",
+            "primary_fingerprint": "DCD05B71EAB94199527F44ACDB6B8C1F96D8BF6D",
+            "signature": {
+              "path": "gentoo-20261103.tar.xz.gpgsig",
+              "sha256": "4e08800e0e026829118786acc63e5ec3ca8ffdc4069252667642a6a5c5a4be22",
+              "url": "https://distfiles.gentoo.org/snapshots/gentoo-20261103.tar.xz.gpgsig"
+            }
+          },
+          "material": {
+            "path": "gentoo-20261103.tar.xz",
+            "sha256": "923b3132d9214cee3f59fa2b56a3af27a0287c8587576c99ebcd5b24e537a194",
+            "url": "https://distfiles.gentoo.org/snapshots/gentoo-20261103.tar.xz"
+          }
+        }
       },
       "baseline_name": "less-704.tar.gz",
       "book_md5": "c4c9eea5b1862783b078c67ca67c9185",
@@ -578,6 +1567,7 @@
       "disposition": "retain",
       "name": "less-704.tar.gz",
       "reason": "Retain the pinned book input.",
+      "sha256": "20a0b0a2bb2525fa53c7eee9beb854b4c9cf172eabb209af7020743547bfe9fb",
       "url": "https://www.greenwoodsoftware.com/less/less-704.tar.gz"
     },
     {
@@ -625,8 +1615,48 @@
     },
     {
       "authentication": {
-        "method": "unresolved",
-        "reason": "No publisher SHA256 or signature verified yet."
+        "distributor": "Gentoo",
+        "manifest": {
+          "path": "gentoo-manifests/dev-libs/libpipeline/Manifest",
+          "sha256": "1713a1363630bb4593833f23b7938505d77e56d76394b63bd08d4695c53da0c6",
+          "url": "https://distfiles.gentoo.org/snapshots/gentoo-20261103.tar.xz"
+        },
+        "manifest_member": "gentoo-20261103/dev-libs/libpipeline/Manifest",
+        "method": "distributor-openpgp-manifest",
+        "reviewed_exception": {
+          "reason": "Use an independently authenticated maintained distributor Manifest where complete strong upstream authentication has not been established; exact upstream archive bytes must match.",
+          "reviewed_at": "2026-11-05"
+        },
+        "snapshot": {
+          "authentication": {
+            "approval": {
+              "basis": "Official Gentoo signing-key documentation identifies this ebuild repository primary.",
+              "material": {
+                "path": "gentoo-signatures.html",
+                "sha256": "45bd60413ed48a5729c832ab69b9a1c3f4812b4e0cfc2777491be5875c82e0b4",
+                "url": "https://www.gentoo.org/downloads/signatures/"
+              },
+              "reviewed_at": "2026-11-05"
+            },
+            "key": {
+              "path": "gentoo-DCD05B71EAB94199527F44ACDB6B8C1F96D8BF6D.asc",
+              "sha256": "aec99650e40d8f21c792e9e8353d672a8676ae3cbe9e2c147ce42e0e46037189",
+              "url": "https://keys.gentoo.org/pks/lookup?op=get&search=0xDCD05B71EAB94199527F44ACDB6B8C1F96D8BF6D"
+            },
+            "method": "openpgp",
+            "primary_fingerprint": "DCD05B71EAB94199527F44ACDB6B8C1F96D8BF6D",
+            "signature": {
+              "path": "gentoo-20261103.tar.xz.gpgsig",
+              "sha256": "4e08800e0e026829118786acc63e5ec3ca8ffdc4069252667642a6a5c5a4be22",
+              "url": "https://distfiles.gentoo.org/snapshots/gentoo-20261103.tar.xz.gpgsig"
+            }
+          },
+          "material": {
+            "path": "gentoo-20261103.tar.xz",
+            "sha256": "923b3132d9214cee3f59fa2b56a3af27a0287c8587576c99ebcd5b24e537a194",
+            "url": "https://distfiles.gentoo.org/snapshots/gentoo-20261103.tar.xz"
+          }
+        }
       },
       "baseline_name": "libpipeline-1.5.8.tar.gz",
       "book_md5": "17ac6969b2015386bcb5d278a08a40b5",
@@ -634,19 +1664,32 @@
       "disposition": "retain",
       "name": "libpipeline-1.5.8.tar.gz",
       "reason": "Retain the pinned book input.",
+      "sha256": "1b1203ca152ccd63983c3f2112f7fe6fa5afd453218ede5153d1b31e11bb8405",
       "url": "https://download.savannah.gnu.org/releases/libpipeline/libpipeline-1.5.8.tar.gz"
     },
     {
       "authentication": {
-        "method": "unresolved",
-        "reason": "No publisher SHA256 or signature verified yet."
+        "material": {
+          "path": "libtool-2.6.2-announcement.html",
+          "sha256": "359efce491303235cf598641c5f2b26bd3949d58237a6ce26e237d17fd567492",
+          "url": "https://lists.gnu.org/archive/html/info-gnu/2026-07/msg00003.html"
+        },
+        "method": "https-published-sha256",
+        "selection": {
+          "format": "gnu-announcement"
+        }
       },
       "baseline_name": "libtool-2.6.2.tar.xz",
       "book_md5": "87743862e6cabfb9e76651bc64e31e5c",
       "book_url": "https://ftpmirror.gnu.org/libtool/libtool-2.6.2.tar.xz",
       "disposition": "retain",
+      "download_urls": [
+        "https://mirrors.kernel.org/gnu/libtool/libtool-2.6.2.tar.xz",
+        "https://ftp.gnu.org/gnu/libtool/libtool-2.6.2.tar.xz"
+      ],
       "name": "libtool-2.6.2.tar.xz",
       "reason": "Retain the pinned book input.",
+      "sha256": "2ef1067c16c97db930fd740cc9bc3d3ba9a583804ae5ac42cc3e8719e49e191e",
       "url": "https://ftp.gnu.org/gnu/libtool/libtool-2.6.2.tar.xz"
     },
     {
@@ -694,8 +1737,48 @@
     },
     {
       "authentication": {
-        "method": "unresolved",
-        "reason": "No publisher SHA256 or signature verified yet."
+        "distributor": "Gentoo",
+        "manifest": {
+          "path": "gentoo-manifests/app-arch/lz4/Manifest",
+          "sha256": "51af7d70ae71276152adf6e27da2637cbdb465cedec27c61482f18c553072c0b",
+          "url": "https://distfiles.gentoo.org/snapshots/gentoo-20261103.tar.xz"
+        },
+        "manifest_member": "gentoo-20261103/app-arch/lz4/Manifest",
+        "method": "distributor-openpgp-manifest",
+        "reviewed_exception": {
+          "reason": "Use an independently authenticated maintained distributor Manifest where complete strong upstream authentication has not been established; exact upstream archive bytes must match.",
+          "reviewed_at": "2026-11-05"
+        },
+        "snapshot": {
+          "authentication": {
+            "approval": {
+              "basis": "Official Gentoo signing-key documentation identifies this ebuild repository primary.",
+              "material": {
+                "path": "gentoo-signatures.html",
+                "sha256": "45bd60413ed48a5729c832ab69b9a1c3f4812b4e0cfc2777491be5875c82e0b4",
+                "url": "https://www.gentoo.org/downloads/signatures/"
+              },
+              "reviewed_at": "2026-11-05"
+            },
+            "key": {
+              "path": "gentoo-DCD05B71EAB94199527F44ACDB6B8C1F96D8BF6D.asc",
+              "sha256": "aec99650e40d8f21c792e9e8353d672a8676ae3cbe9e2c147ce42e0e46037189",
+              "url": "https://keys.gentoo.org/pks/lookup?op=get&search=0xDCD05B71EAB94199527F44ACDB6B8C1F96D8BF6D"
+            },
+            "method": "openpgp",
+            "primary_fingerprint": "DCD05B71EAB94199527F44ACDB6B8C1F96D8BF6D",
+            "signature": {
+              "path": "gentoo-20261103.tar.xz.gpgsig",
+              "sha256": "4e08800e0e026829118786acc63e5ec3ca8ffdc4069252667642a6a5c5a4be22",
+              "url": "https://distfiles.gentoo.org/snapshots/gentoo-20261103.tar.xz.gpgsig"
+            }
+          },
+          "material": {
+            "path": "gentoo-20261103.tar.xz",
+            "sha256": "923b3132d9214cee3f59fa2b56a3af27a0287c8587576c99ebcd5b24e537a194",
+            "url": "https://distfiles.gentoo.org/snapshots/gentoo-20261103.tar.xz"
+          }
+        }
       },
       "baseline_name": "lz4-1.10.0.tar.gz",
       "book_md5": "dead9f5f1966d9ae56e1e32761e4e675",
@@ -703,19 +1786,32 @@
       "disposition": "retain",
       "name": "lz4-1.10.0.tar.gz",
       "reason": "Retain the pinned book input.",
+      "sha256": "537512904744b35e232912055ccf8ec66d768639ff3abe5788d90d792ec5f48b",
       "url": "https://github.com/lz4/lz4/releases/download/v1.10.0/lz4-1.10.0.tar.gz"
     },
     {
       "authentication": {
-        "method": "unresolved",
-        "reason": "No publisher SHA256 or signature verified yet."
+        "material": {
+          "path": "m4-1.4.21-announcement.html",
+          "sha256": "2c0f32548c78fe6bbd5da8be4e9a004f00d49839a6678318c03535597d9ad890",
+          "url": "https://lists.gnu.org/archive/html/info-gnu/2026-02/msg00004.html"
+        },
+        "method": "https-published-sha256",
+        "selection": {
+          "format": "gnu-announcement"
+        }
       },
       "baseline_name": "m4-1.4.21.tar.xz",
       "book_md5": "8051eef7239b2f187791f2ab0034d6b7",
       "book_url": "https://ftpmirror.gnu.org/m4/m4-1.4.21.tar.xz",
       "disposition": "retain",
+      "download_urls": [
+        "https://mirrors.kernel.org/gnu/m4/m4-1.4.21.tar.xz",
+        "https://ftp.gnu.org/gnu/m4/m4-1.4.21.tar.xz"
+      ],
       "name": "m4-1.4.21.tar.xz",
       "reason": "Retain the pinned book input.",
+      "sha256": "f25c6ab51548a73a75558742fb031e0625d6485fe5f9155949d6486a2408ab66",
       "url": "https://ftp.gnu.org/gnu/m4/m4-1.4.21.tar.xz"
     },
     {
@@ -727,14 +1823,58 @@
       "book_md5": "c8469a3713cbbe04d955d4ae4be23eeb",
       "book_url": "https://ftpmirror.gnu.org/make/make-4.4.1.tar.gz",
       "disposition": "retain",
+      "download_urls": [
+        "https://mirrors.kernel.org/gnu/make/make-4.4.1.tar.gz",
+        "https://ftp.gnu.org/gnu/make/make-4.4.1.tar.gz"
+      ],
       "name": "make-4.4.1.tar.gz",
       "reason": "Retain the pinned book input.",
       "url": "https://ftp.gnu.org/gnu/make/make-4.4.1.tar.gz"
     },
     {
       "authentication": {
-        "method": "unresolved",
-        "reason": "No publisher SHA256 or signature verified yet."
+        "distributor": "Gentoo",
+        "manifest": {
+          "path": "gentoo-manifests/sys-apps/man-db/Manifest",
+          "sha256": "6881b952bb31c9717296c8d72092c300e152511f16f5b7dbf75d39413949bfb7",
+          "url": "https://distfiles.gentoo.org/snapshots/gentoo-20261103.tar.xz"
+        },
+        "manifest_member": "gentoo-20261103/sys-apps/man-db/Manifest",
+        "method": "distributor-openpgp-manifest",
+        "reviewed_exception": {
+          "reason": "Use an independently authenticated maintained distributor Manifest where complete strong upstream authentication has not been established; exact upstream archive bytes must match.",
+          "reviewed_at": "2026-11-05"
+        },
+        "snapshot": {
+          "authentication": {
+            "approval": {
+              "basis": "Official Gentoo signing-key documentation identifies this ebuild repository primary.",
+              "material": {
+                "path": "gentoo-signatures.html",
+                "sha256": "45bd60413ed48a5729c832ab69b9a1c3f4812b4e0cfc2777491be5875c82e0b4",
+                "url": "https://www.gentoo.org/downloads/signatures/"
+              },
+              "reviewed_at": "2026-11-05"
+            },
+            "key": {
+              "path": "gentoo-DCD05B71EAB94199527F44ACDB6B8C1F96D8BF6D.asc",
+              "sha256": "aec99650e40d8f21c792e9e8353d672a8676ae3cbe9e2c147ce42e0e46037189",
+              "url": "https://keys.gentoo.org/pks/lookup?op=get&search=0xDCD05B71EAB94199527F44ACDB6B8C1F96D8BF6D"
+            },
+            "method": "openpgp",
+            "primary_fingerprint": "DCD05B71EAB94199527F44ACDB6B8C1F96D8BF6D",
+            "signature": {
+              "path": "gentoo-20261103.tar.xz.gpgsig",
+              "sha256": "4e08800e0e026829118786acc63e5ec3ca8ffdc4069252667642a6a5c5a4be22",
+              "url": "https://distfiles.gentoo.org/snapshots/gentoo-20261103.tar.xz.gpgsig"
+            }
+          },
+          "material": {
+            "path": "gentoo-20261103.tar.xz",
+            "sha256": "923b3132d9214cee3f59fa2b56a3af27a0287c8587576c99ebcd5b24e537a194",
+            "url": "https://distfiles.gentoo.org/snapshots/gentoo-20261103.tar.xz"
+          }
+        }
       },
       "baseline_name": "man-db-2.13.1.tar.xz",
       "book_md5": "b6335533cbeac3b24cd7be31fdee8c83",
@@ -742,6 +1882,7 @@
       "disposition": "retain",
       "name": "man-db-2.13.1.tar.xz",
       "reason": "Retain the pinned book input.",
+      "sha256": "8afebb6f7eb6bb8542929458841f5c7e6f240e30c86358c1fbcefbea076c87d9",
       "url": "https://download.savannah.gnu.org/releases/man-db/man-db-2.13.1.tar.xz"
     },
     {
@@ -811,21 +1952,106 @@
     },
     {
       "authentication": {
-        "method": "unresolved",
-        "reason": "No publisher SHA256 or signature verified yet."
+        "distributor": "Gentoo",
+        "manifest": {
+          "path": "gentoo-manifests/dev-libs/mpc/Manifest",
+          "sha256": "5f84f9e15262669aabf08e6f764f8918585306da59028ef18c5ca8c77fff83d5",
+          "url": "https://distfiles.gentoo.org/snapshots/gentoo-20261103.tar.xz"
+        },
+        "manifest_member": "gentoo-20261103/dev-libs/mpc/Manifest",
+        "method": "distributor-openpgp-manifest",
+        "reviewed_exception": {
+          "reason": "Use an independently authenticated maintained distributor Manifest where complete strong upstream authentication has not been established; exact upstream archive bytes must match.",
+          "reviewed_at": "2026-11-05"
+        },
+        "snapshot": {
+          "authentication": {
+            "approval": {
+              "basis": "Official Gentoo signing-key documentation identifies this ebuild repository primary.",
+              "material": {
+                "path": "gentoo-signatures.html",
+                "sha256": "45bd60413ed48a5729c832ab69b9a1c3f4812b4e0cfc2777491be5875c82e0b4",
+                "url": "https://www.gentoo.org/downloads/signatures/"
+              },
+              "reviewed_at": "2026-11-05"
+            },
+            "key": {
+              "path": "gentoo-DCD05B71EAB94199527F44ACDB6B8C1F96D8BF6D.asc",
+              "sha256": "aec99650e40d8f21c792e9e8353d672a8676ae3cbe9e2c147ce42e0e46037189",
+              "url": "https://keys.gentoo.org/pks/lookup?op=get&search=0xDCD05B71EAB94199527F44ACDB6B8C1F96D8BF6D"
+            },
+            "method": "openpgp",
+            "primary_fingerprint": "DCD05B71EAB94199527F44ACDB6B8C1F96D8BF6D",
+            "signature": {
+              "path": "gentoo-20261103.tar.xz.gpgsig",
+              "sha256": "4e08800e0e026829118786acc63e5ec3ca8ffdc4069252667642a6a5c5a4be22",
+              "url": "https://distfiles.gentoo.org/snapshots/gentoo-20261103.tar.xz.gpgsig"
+            }
+          },
+          "material": {
+            "path": "gentoo-20261103.tar.xz",
+            "sha256": "923b3132d9214cee3f59fa2b56a3af27a0287c8587576c99ebcd5b24e537a194",
+            "url": "https://distfiles.gentoo.org/snapshots/gentoo-20261103.tar.xz"
+          }
+        }
       },
       "baseline_name": "mpc-1.4.1.tar.xz",
       "book_md5": "40c5fba305125279ea46041160e81daf",
       "book_url": "https://ftpmirror.gnu.org/mpc/mpc-1.4.1.tar.xz",
       "disposition": "retain",
+      "download_urls": [
+        "https://mirrors.kernel.org/gnu/mpc/mpc-1.4.1.tar.xz",
+        "https://ftp.gnu.org/gnu/mpc/mpc-1.4.1.tar.xz"
+      ],
       "name": "mpc-1.4.1.tar.xz",
       "reason": "Retain the pinned book input.",
+      "sha256": "91204cd32f164bd3b7c992d4a6a8ce6519511aadab30f78b6982d0bf8d73e931",
       "url": "https://ftp.gnu.org/gnu/mpc/mpc-1.4.1.tar.xz"
     },
     {
       "authentication": {
-        "method": "unresolved",
-        "reason": "No publisher SHA256 or signature verified yet."
+        "distributor": "Gentoo",
+        "manifest": {
+          "path": "gentoo-manifests/dev-libs/mpdecimal/Manifest",
+          "sha256": "7fe39da05fd56a8883500fe55ce03810f0b5e0eb6cb353f40cf968d911ff6881",
+          "url": "https://distfiles.gentoo.org/snapshots/gentoo-20261103.tar.xz"
+        },
+        "manifest_member": "gentoo-20261103/dev-libs/mpdecimal/Manifest",
+        "method": "distributor-openpgp-manifest",
+        "reviewed_exception": {
+          "reason": "Use an independently authenticated maintained distributor Manifest where complete strong upstream authentication has not been established; exact upstream archive bytes must match.",
+          "reviewed_at": "2026-11-05"
+        },
+        "snapshot": {
+          "authentication": {
+            "approval": {
+              "basis": "Official Gentoo signing-key documentation identifies this ebuild repository primary.",
+              "material": {
+                "path": "gentoo-signatures.html",
+                "sha256": "45bd60413ed48a5729c832ab69b9a1c3f4812b4e0cfc2777491be5875c82e0b4",
+                "url": "https://www.gentoo.org/downloads/signatures/"
+              },
+              "reviewed_at": "2026-11-05"
+            },
+            "key": {
+              "path": "gentoo-DCD05B71EAB94199527F44ACDB6B8C1F96D8BF6D.asc",
+              "sha256": "aec99650e40d8f21c792e9e8353d672a8676ae3cbe9e2c147ce42e0e46037189",
+              "url": "https://keys.gentoo.org/pks/lookup?op=get&search=0xDCD05B71EAB94199527F44ACDB6B8C1F96D8BF6D"
+            },
+            "method": "openpgp",
+            "primary_fingerprint": "DCD05B71EAB94199527F44ACDB6B8C1F96D8BF6D",
+            "signature": {
+              "path": "gentoo-20261103.tar.xz.gpgsig",
+              "sha256": "4e08800e0e026829118786acc63e5ec3ca8ffdc4069252667642a6a5c5a4be22",
+              "url": "https://distfiles.gentoo.org/snapshots/gentoo-20261103.tar.xz.gpgsig"
+            }
+          },
+          "material": {
+            "path": "gentoo-20261103.tar.xz",
+            "sha256": "923b3132d9214cee3f59fa2b56a3af27a0287c8587576c99ebcd5b24e537a194",
+            "url": "https://distfiles.gentoo.org/snapshots/gentoo-20261103.tar.xz"
+          }
+        }
       },
       "baseline_name": "mpdecimal-4.0.1.tar.gz",
       "book_md5": "3d4412579b1edc1047efab151889cca9",
@@ -833,25 +2059,78 @@
       "disposition": "retain",
       "name": "mpdecimal-4.0.1.tar.gz",
       "reason": "Retain the pinned book input.",
+      "sha256": "96d33abb4bb0070c7be0fed4246cd38416188325f820468214471938545b1ac8",
       "url": "https://www.bytereef.org/software/mpdecimal/releases/mpdecimal-4.0.1.tar.gz"
     },
     {
       "authentication": {
-        "method": "unresolved",
-        "reason": "No publisher SHA256 or signature verified yet."
+        "material": {
+          "path": "mpfr-4.2.2-announcement.html",
+          "sha256": "c7f1a0fc02b63a16532b8ca2f14788ad04193c926971a65e5786ec1e6d14a312",
+          "url": "https://lists.gnu.org/archive/html/info-gnu/2025-03/msg00007.html"
+        },
+        "method": "https-published-sha256",
+        "selection": {
+          "format": "gnu-announcement"
+        }
       },
       "baseline_name": "mpfr-4.2.2.tar.xz",
       "book_md5": "7c32c39b8b6e3ae85f25156228156061",
       "book_url": "https://ftpmirror.gnu.org/mpfr/mpfr-4.2.2.tar.xz",
       "disposition": "retain",
+      "download_urls": [
+        "https://mirrors.kernel.org/gnu/mpfr/mpfr-4.2.2.tar.xz",
+        "https://ftp.gnu.org/gnu/mpfr/mpfr-4.2.2.tar.xz"
+      ],
       "name": "mpfr-4.2.2.tar.xz",
       "reason": "Retain the pinned book input.",
+      "sha256": "b67ba0383ef7e8a8563734e2e889ef5ec3c3b898a01d00fa0a6869ad81c6ce01",
       "url": "https://ftp.gnu.org/gnu/mpfr/mpfr-4.2.2.tar.xz"
     },
     {
       "authentication": {
-        "method": "unresolved",
-        "reason": "No publisher SHA256 or signature verified yet."
+        "distributor": "Gentoo",
+        "manifest": {
+          "path": "gentoo-manifests/sys-libs/ncurses/Manifest",
+          "sha256": "94c441ad954dd6916d4793ab2ab1121b26a078bfa78c8a62bd1a5f5f6a0603c4",
+          "url": "https://distfiles.gentoo.org/snapshots/gentoo-20261103.tar.xz"
+        },
+        "manifest_member": "gentoo-20261103/sys-libs/ncurses/Manifest",
+        "method": "distributor-openpgp-manifest",
+        "reviewed_exception": {
+          "reason": "Use an independently authenticated maintained distributor Manifest where complete strong upstream authentication has not been established; exact upstream archive bytes must match.",
+          "reviewed_at": "2026-11-05"
+        },
+        "snapshot": {
+          "authentication": {
+            "approval": {
+              "basis": "Official Gentoo signing-key documentation identifies this ebuild repository primary.",
+              "material": {
+                "path": "gentoo-signatures.html",
+                "sha256": "45bd60413ed48a5729c832ab69b9a1c3f4812b4e0cfc2777491be5875c82e0b4",
+                "url": "https://www.gentoo.org/downloads/signatures/"
+              },
+              "reviewed_at": "2026-11-05"
+            },
+            "key": {
+              "path": "gentoo-DCD05B71EAB94199527F44ACDB6B8C1F96D8BF6D.asc",
+              "sha256": "aec99650e40d8f21c792e9e8353d672a8676ae3cbe9e2c147ce42e0e46037189",
+              "url": "https://keys.gentoo.org/pks/lookup?op=get&search=0xDCD05B71EAB94199527F44ACDB6B8C1F96D8BF6D"
+            },
+            "method": "openpgp",
+            "primary_fingerprint": "DCD05B71EAB94199527F44ACDB6B8C1F96D8BF6D",
+            "signature": {
+              "path": "gentoo-20261103.tar.xz.gpgsig",
+              "sha256": "4e08800e0e026829118786acc63e5ec3ca8ffdc4069252667642a6a5c5a4be22",
+              "url": "https://distfiles.gentoo.org/snapshots/gentoo-20261103.tar.xz.gpgsig"
+            }
+          },
+          "material": {
+            "path": "gentoo-20261103.tar.xz",
+            "sha256": "923b3132d9214cee3f59fa2b56a3af27a0287c8587576c99ebcd5b24e537a194",
+            "url": "https://distfiles.gentoo.org/snapshots/gentoo-20261103.tar.xz"
+          }
+        }
       },
       "baseline_name": "ncurses-6.6.tar.gz",
       "book_md5": "dd45bf6854430af403452a7a6a40652c",
@@ -859,12 +2138,53 @@
       "disposition": "retain",
       "name": "ncurses-6.6.tar.gz",
       "reason": "Retain the pinned book input.",
+      "sha256": "355b4cbbed880b0381a04c46617b7656e362585d52e9cf84a67e2009b749ff11",
       "url": "https://invisible-mirror.net/archives/ncurses/ncurses-6.6.tar.gz"
     },
     {
       "authentication": {
-        "method": "unresolved",
-        "reason": "No publisher SHA256 or signature verified yet."
+        "distributor": "Gentoo",
+        "manifest": {
+          "path": "gentoo-manifests/dev-build/ninja/Manifest",
+          "sha256": "788d4682b5fb27ace8408c4d342131c954ee39be18043d5d36b71c3734686013",
+          "url": "https://distfiles.gentoo.org/snapshots/gentoo-20261103.tar.xz"
+        },
+        "manifest_member": "gentoo-20261103/dev-build/ninja/Manifest",
+        "method": "distributor-openpgp-manifest",
+        "reviewed_exception": {
+          "reason": "Use an independently authenticated maintained distributor Manifest where complete strong upstream authentication has not been established; exact upstream archive bytes must match.",
+          "reviewed_at": "2026-11-05"
+        },
+        "snapshot": {
+          "authentication": {
+            "approval": {
+              "basis": "Official Gentoo signing-key documentation identifies this ebuild repository primary.",
+              "material": {
+                "path": "gentoo-signatures.html",
+                "sha256": "45bd60413ed48a5729c832ab69b9a1c3f4812b4e0cfc2777491be5875c82e0b4",
+                "url": "https://www.gentoo.org/downloads/signatures/"
+              },
+              "reviewed_at": "2026-11-05"
+            },
+            "key": {
+              "path": "gentoo-DCD05B71EAB94199527F44ACDB6B8C1F96D8BF6D.asc",
+              "sha256": "aec99650e40d8f21c792e9e8353d672a8676ae3cbe9e2c147ce42e0e46037189",
+              "url": "https://keys.gentoo.org/pks/lookup?op=get&search=0xDCD05B71EAB94199527F44ACDB6B8C1F96D8BF6D"
+            },
+            "method": "openpgp",
+            "primary_fingerprint": "DCD05B71EAB94199527F44ACDB6B8C1F96D8BF6D",
+            "signature": {
+              "path": "gentoo-20261103.tar.xz.gpgsig",
+              "sha256": "4e08800e0e026829118786acc63e5ec3ca8ffdc4069252667642a6a5c5a4be22",
+              "url": "https://distfiles.gentoo.org/snapshots/gentoo-20261103.tar.xz.gpgsig"
+            }
+          },
+          "material": {
+            "path": "gentoo-20261103.tar.xz",
+            "sha256": "923b3132d9214cee3f59fa2b56a3af27a0287c8587576c99ebcd5b24e537a194",
+            "url": "https://distfiles.gentoo.org/snapshots/gentoo-20261103.tar.xz"
+          }
+        }
       },
       "baseline_name": "ninja-1.13.2.tar.gz",
       "book_md5": "76c00637fde44909cd7d56f8d73f2042",
@@ -872,6 +2192,7 @@
       "disposition": "retain",
       "name": "ninja-1.13.2.tar.gz",
       "reason": "Retain the pinned book input.",
+      "sha256": "974d6b2f4eeefa25625d34da3cb36bdcebe7fbce40f4c16ac0835fd1c0cbae17",
       "url": "https://github.com/ninja-build/ninja/archive/v1.13.2/ninja-1.13.2.tar.gz"
     },
     {
@@ -920,43 +2241,128 @@
     },
     {
       "authentication": {
-        "method": "unresolved",
-        "reason": "No publisher SHA256 or signature verified yet."
+        "distributor": "Gentoo",
+        "manifest": {
+          "path": "gentoo-manifests/sys-devel/patch/Manifest",
+          "sha256": "99bf7d60d6235ead245d4838987af43c3f2a4eec44e473c074e6c4ea39d8235b",
+          "url": "https://distfiles.gentoo.org/snapshots/gentoo-20261103.tar.xz"
+        },
+        "manifest_member": "gentoo-20261103/sys-devel/patch/Manifest",
+        "method": "distributor-openpgp-manifest",
+        "reviewed_exception": {
+          "reason": "Use an independently authenticated maintained distributor Manifest where complete strong upstream authentication has not been established; exact upstream archive bytes must match.",
+          "reviewed_at": "2026-11-05"
+        },
+        "snapshot": {
+          "authentication": {
+            "approval": {
+              "basis": "Official Gentoo signing-key documentation identifies this ebuild repository primary.",
+              "material": {
+                "path": "gentoo-signatures.html",
+                "sha256": "45bd60413ed48a5729c832ab69b9a1c3f4812b4e0cfc2777491be5875c82e0b4",
+                "url": "https://www.gentoo.org/downloads/signatures/"
+              },
+              "reviewed_at": "2026-11-05"
+            },
+            "key": {
+              "path": "gentoo-DCD05B71EAB94199527F44ACDB6B8C1F96D8BF6D.asc",
+              "sha256": "aec99650e40d8f21c792e9e8353d672a8676ae3cbe9e2c147ce42e0e46037189",
+              "url": "https://keys.gentoo.org/pks/lookup?op=get&search=0xDCD05B71EAB94199527F44ACDB6B8C1F96D8BF6D"
+            },
+            "method": "openpgp",
+            "primary_fingerprint": "DCD05B71EAB94199527F44ACDB6B8C1F96D8BF6D",
+            "signature": {
+              "path": "gentoo-20261103.tar.xz.gpgsig",
+              "sha256": "4e08800e0e026829118786acc63e5ec3ca8ffdc4069252667642a6a5c5a4be22",
+              "url": "https://distfiles.gentoo.org/snapshots/gentoo-20261103.tar.xz.gpgsig"
+            }
+          },
+          "material": {
+            "path": "gentoo-20261103.tar.xz",
+            "sha256": "923b3132d9214cee3f59fa2b56a3af27a0287c8587576c99ebcd5b24e537a194",
+            "url": "https://distfiles.gentoo.org/snapshots/gentoo-20261103.tar.xz"
+          }
+        }
       },
       "baseline_name": "patch-2.8.tar.xz",
       "book_md5": "149327a021d41c8f88d034eab41c039f",
       "book_url": "https://ftpmirror.gnu.org/patch/patch-2.8.tar.xz",
-      "disposition": "retain",
-      "name": "patch-2.8.tar.xz",
-      "reason": "Retain the pinned book input.",
-      "url": "https://ftp.gnu.org/gnu/patch/patch-2.8.tar.xz"
+      "disposition": "replace",
+      "download_urls": [
+        "https://mirrors.kernel.org/gnu/patch/patch-2.8.1.tar.xz",
+        "https://ftp.gnu.org/gnu/patch/patch-2.8.1.tar.xz"
+      ],
+      "name": "patch-2.8.1.tar.xz",
+      "reason": "sa-13.1-087 requires the reverse-apply path traversal fix in GNU patch 2.8.1.",
+      "sha256": "3240c7959c5347c8ed347e3c4201c0337bf4240d5cf09d68889e58eeaba30e17",
+      "url": "https://ftp.gnu.org/gnu/patch/patch-2.8.1.tar.xz"
     },
     {
       "authentication": {
         "material": {
-          "path": "github-PCRE2Project-pcre2-pcre2-10.47.json",
-          "sha256": "80cf6d354a5df18b885e3b2dd6ebe2aaa6eb443a1c2d2c4932d22e0ea972e66c",
-          "url": "https://api.github.com/repos/PCRE2Project/pcre2/releases/tags/pcre2-10.47"
+          "path": "github-PCRE2Project-pcre2-pcre2-10.49.json",
+          "sha256": "81a8939395b196b031289b433af5713c1c4c49a1d396a3ad235b405acee40ca6",
+          "url": "https://api.github.com/repos/PCRE2Project/pcre2/releases/tags/pcre2-10.49"
         },
         "method": "https-published-sha256",
         "selection": {
           "format": "github-release",
-          "tag": "pcre2-10.47"
+          "tag": "pcre2-10.49"
         }
       },
       "baseline_name": "pcre2-10.47.tar.bz2",
       "book_md5": "aded5840ab5a7d772dd4e16fc294b665",
       "book_url": "https://github.com/PCRE2Project/pcre2/releases/download/pcre2-10.47/pcre2-10.47.tar.bz2",
-      "disposition": "retain",
-      "name": "pcre2-10.47.tar.bz2",
-      "reason": "Retain the pinned book input.",
-      "sha256": "47fe8c99461250d42f89e6e8fdaeba9da057855d06eb7fc08d9ca03fd08d7bc7",
-      "url": "https://github.com/PCRE2Project/pcre2/releases/download/pcre2-10.47/pcre2-10.47.tar.bz2"
+      "disposition": "replace",
+      "name": "pcre2-10.49.tar.bz2",
+      "reason": "sa-13.1-023 and sa-13.1-047 require fixes through PCRE2 10.49.",
+      "sha256": "53c156e1ba416a20da8e65395daa132da0d80e76910424caca3fcdae7831d384",
+      "url": "https://github.com/PCRE2Project/pcre2/releases/download/pcre2-10.49/pcre2-10.49.tar.bz2"
     },
     {
       "authentication": {
-        "method": "unresolved",
-        "reason": "No publisher SHA256 or signature verified yet."
+        "distributor": "Gentoo",
+        "manifest": {
+          "path": "gentoo-manifests/dev-lang/perl/Manifest",
+          "sha256": "b5e7d5564d7ffce5d7e5330c701cbfbf30879c443d22472a0d37729f6bdf6850",
+          "url": "https://distfiles.gentoo.org/snapshots/gentoo-20261103.tar.xz"
+        },
+        "manifest_member": "gentoo-20261103/dev-lang/perl/Manifest",
+        "method": "distributor-openpgp-manifest",
+        "reviewed_exception": {
+          "reason": "Use an independently authenticated maintained distributor Manifest where complete strong upstream authentication has not been established; exact upstream archive bytes must match.",
+          "reviewed_at": "2026-11-05"
+        },
+        "snapshot": {
+          "authentication": {
+            "approval": {
+              "basis": "Official Gentoo signing-key documentation identifies this ebuild repository primary.",
+              "material": {
+                "path": "gentoo-signatures.html",
+                "sha256": "45bd60413ed48a5729c832ab69b9a1c3f4812b4e0cfc2777491be5875c82e0b4",
+                "url": "https://www.gentoo.org/downloads/signatures/"
+              },
+              "reviewed_at": "2026-11-05"
+            },
+            "key": {
+              "path": "gentoo-DCD05B71EAB94199527F44ACDB6B8C1F96D8BF6D.asc",
+              "sha256": "aec99650e40d8f21c792e9e8353d672a8676ae3cbe9e2c147ce42e0e46037189",
+              "url": "https://keys.gentoo.org/pks/lookup?op=get&search=0xDCD05B71EAB94199527F44ACDB6B8C1F96D8BF6D"
+            },
+            "method": "openpgp",
+            "primary_fingerprint": "DCD05B71EAB94199527F44ACDB6B8C1F96D8BF6D",
+            "signature": {
+              "path": "gentoo-20261103.tar.xz.gpgsig",
+              "sha256": "4e08800e0e026829118786acc63e5ec3ca8ffdc4069252667642a6a5c5a4be22",
+              "url": "https://distfiles.gentoo.org/snapshots/gentoo-20261103.tar.xz.gpgsig"
+            }
+          },
+          "material": {
+            "path": "gentoo-20261103.tar.xz",
+            "sha256": "923b3132d9214cee3f59fa2b56a3af27a0287c8587576c99ebcd5b24e537a194",
+            "url": "https://distfiles.gentoo.org/snapshots/gentoo-20261103.tar.xz"
+          }
+        }
       },
       "baseline_name": "perl-5.44.0.tar.xz",
       "book_md5": "55761cf1543af326492fd194647796d1",
@@ -964,12 +2370,53 @@
       "disposition": "retain",
       "name": "perl-5.44.0.tar.xz",
       "reason": "Retain the pinned book input.",
+      "sha256": "505cf43912e9480495c344c70260452e32aa2a73c546a026b3f100053b23ce91",
       "url": "https://www.cpan.org/src/5.0/perl-5.44.0.tar.xz"
     },
     {
       "authentication": {
-        "method": "unresolved",
-        "reason": "No publisher SHA256 or signature verified yet."
+        "distributor": "Gentoo",
+        "manifest": {
+          "path": "gentoo-manifests/dev-util/pkgconf/Manifest",
+          "sha256": "dec703dbdd0e7a008485af7ebaf6ad582e39fa95b4accd7826608699215f743c",
+          "url": "https://distfiles.gentoo.org/snapshots/gentoo-20261103.tar.xz"
+        },
+        "manifest_member": "gentoo-20261103/dev-util/pkgconf/Manifest",
+        "method": "distributor-openpgp-manifest",
+        "reviewed_exception": {
+          "reason": "Use an independently authenticated maintained distributor Manifest where complete strong upstream authentication has not been established; exact upstream archive bytes must match.",
+          "reviewed_at": "2026-11-05"
+        },
+        "snapshot": {
+          "authentication": {
+            "approval": {
+              "basis": "Official Gentoo signing-key documentation identifies this ebuild repository primary.",
+              "material": {
+                "path": "gentoo-signatures.html",
+                "sha256": "45bd60413ed48a5729c832ab69b9a1c3f4812b4e0cfc2777491be5875c82e0b4",
+                "url": "https://www.gentoo.org/downloads/signatures/"
+              },
+              "reviewed_at": "2026-11-05"
+            },
+            "key": {
+              "path": "gentoo-DCD05B71EAB94199527F44ACDB6B8C1F96D8BF6D.asc",
+              "sha256": "aec99650e40d8f21c792e9e8353d672a8676ae3cbe9e2c147ce42e0e46037189",
+              "url": "https://keys.gentoo.org/pks/lookup?op=get&search=0xDCD05B71EAB94199527F44ACDB6B8C1F96D8BF6D"
+            },
+            "method": "openpgp",
+            "primary_fingerprint": "DCD05B71EAB94199527F44ACDB6B8C1F96D8BF6D",
+            "signature": {
+              "path": "gentoo-20261103.tar.xz.gpgsig",
+              "sha256": "4e08800e0e026829118786acc63e5ec3ca8ffdc4069252667642a6a5c5a4be22",
+              "url": "https://distfiles.gentoo.org/snapshots/gentoo-20261103.tar.xz.gpgsig"
+            }
+          },
+          "material": {
+            "path": "gentoo-20261103.tar.xz",
+            "sha256": "923b3132d9214cee3f59fa2b56a3af27a0287c8587576c99ebcd5b24e537a194",
+            "url": "https://distfiles.gentoo.org/snapshots/gentoo-20261103.tar.xz"
+          }
+        }
       },
       "baseline_name": "pkgconf-3.0.5.tar.xz",
       "book_md5": "18c528161e6b04ae36dc981af8c4d97e",
@@ -977,6 +2424,7 @@
       "disposition": "retain",
       "name": "pkgconf-3.0.5.tar.xz",
       "reason": "Retain the pinned book input.",
+      "sha256": "3acd3a8a3cce65a8d620321855d92fb602e026cbe8e13ee36bdec58483b59ace",
       "url": "https://distfiles.ariadne.space/pkgconf/pkgconf-3.0.5.tar.xz"
     },
     {
@@ -994,8 +2442,48 @@
     },
     {
       "authentication": {
-        "method": "unresolved",
-        "reason": "No publisher SHA256 or signature verified yet."
+        "distributor": "Gentoo",
+        "manifest": {
+          "path": "gentoo-manifests/sys-process/psmisc/Manifest",
+          "sha256": "5ab0d3ecf60884df5236de3b4a1c94dc78f3363b27e6d6ad89a03667b004f739",
+          "url": "https://distfiles.gentoo.org/snapshots/gentoo-20261103.tar.xz"
+        },
+        "manifest_member": "gentoo-20261103/sys-process/psmisc/Manifest",
+        "method": "distributor-openpgp-manifest",
+        "reviewed_exception": {
+          "reason": "Use an independently authenticated maintained distributor Manifest where complete strong upstream authentication has not been established; exact upstream archive bytes must match.",
+          "reviewed_at": "2026-11-05"
+        },
+        "snapshot": {
+          "authentication": {
+            "approval": {
+              "basis": "Official Gentoo signing-key documentation identifies this ebuild repository primary.",
+              "material": {
+                "path": "gentoo-signatures.html",
+                "sha256": "45bd60413ed48a5729c832ab69b9a1c3f4812b4e0cfc2777491be5875c82e0b4",
+                "url": "https://www.gentoo.org/downloads/signatures/"
+              },
+              "reviewed_at": "2026-11-05"
+            },
+            "key": {
+              "path": "gentoo-DCD05B71EAB94199527F44ACDB6B8C1F96D8BF6D.asc",
+              "sha256": "aec99650e40d8f21c792e9e8353d672a8676ae3cbe9e2c147ce42e0e46037189",
+              "url": "https://keys.gentoo.org/pks/lookup?op=get&search=0xDCD05B71EAB94199527F44ACDB6B8C1F96D8BF6D"
+            },
+            "method": "openpgp",
+            "primary_fingerprint": "DCD05B71EAB94199527F44ACDB6B8C1F96D8BF6D",
+            "signature": {
+              "path": "gentoo-20261103.tar.xz.gpgsig",
+              "sha256": "4e08800e0e026829118786acc63e5ec3ca8ffdc4069252667642a6a5c5a4be22",
+              "url": "https://distfiles.gentoo.org/snapshots/gentoo-20261103.tar.xz.gpgsig"
+            }
+          },
+          "material": {
+            "path": "gentoo-20261103.tar.xz",
+            "sha256": "923b3132d9214cee3f59fa2b56a3af27a0287c8587576c99ebcd5b24e537a194",
+            "url": "https://distfiles.gentoo.org/snapshots/gentoo-20261103.tar.xz"
+          }
+        }
       },
       "baseline_name": "psmisc-23.7.tar.xz",
       "book_md5": "53eae841735189a896d614cba440eb10",
@@ -1003,12 +2491,21 @@
       "disposition": "retain",
       "name": "psmisc-23.7.tar.xz",
       "reason": "Retain the pinned book input.",
+      "sha256": "58c55d9c1402474065adae669511c191de374b0871eec781239ab400b907c327",
       "url": "https://sourceforge.net/projects/psmisc/files/psmisc/psmisc-23.7.tar.xz"
     },
     {
       "authentication": {
-        "method": "unresolved",
-        "reason": "No publisher SHA256 or signature verified yet."
+        "material": {
+          "path": "python-31410.html",
+          "sha256": "836ec766c2baf1ac9814ff68090d6c463ec9b14242fb1d989e382c13bfec60db",
+          "url": "https://www.python.org/downloads/release/python-31410/"
+        },
+        "method": "https-published-sha256",
+        "selection": {
+          "artifact_url": "https://www.python.org/ftp/python/3.14.10/Python-3.14.10.tar.xz",
+          "format": "html-table"
+        }
       },
       "baseline_name": "Python-3.14.7.tar.xz",
       "book_md5": "a4c4c2991b4126e227073c2d9445f432",
@@ -1016,12 +2513,53 @@
       "disposition": "replace",
       "name": "Python-3.14.10.tar.xz",
       "reason": "Latest security-fixed patch release in the book's existing Python minor branch; covers 3.14.8, 3.14.9 and 3.14.10 fixes without a minor ABI change.",
+      "sha256": "de414a57119abef52784d8993e341d53aed635fc2b05c2607d9f98a2c5b72032",
       "url": "https://www.python.org/ftp/python/3.14.10/Python-3.14.10.tar.xz"
     },
     {
       "authentication": {
-        "method": "unresolved",
-        "reason": "No publisher SHA256 or signature verified yet."
+        "distributor": "Gentoo",
+        "manifest": {
+          "path": "gentoo-manifests/app-doc/python-docs/Manifest",
+          "sha256": "26a6f4ba316a4cba2524db30b50cfd014ce445ea3ef0498217e2fc2f89d6d43d",
+          "url": "https://distfiles.gentoo.org/snapshots/gentoo-20261103.tar.xz"
+        },
+        "manifest_member": "gentoo-20261103/app-doc/python-docs/Manifest",
+        "method": "distributor-openpgp-manifest",
+        "reviewed_exception": {
+          "reason": "Use an independently authenticated maintained distributor Manifest where complete strong upstream authentication has not been established; exact upstream archive bytes must match.",
+          "reviewed_at": "2026-11-05"
+        },
+        "snapshot": {
+          "authentication": {
+            "approval": {
+              "basis": "Official Gentoo signing-key documentation identifies this ebuild repository primary.",
+              "material": {
+                "path": "gentoo-signatures.html",
+                "sha256": "45bd60413ed48a5729c832ab69b9a1c3f4812b4e0cfc2777491be5875c82e0b4",
+                "url": "https://www.gentoo.org/downloads/signatures/"
+              },
+              "reviewed_at": "2026-11-05"
+            },
+            "key": {
+              "path": "gentoo-DCD05B71EAB94199527F44ACDB6B8C1F96D8BF6D.asc",
+              "sha256": "aec99650e40d8f21c792e9e8353d672a8676ae3cbe9e2c147ce42e0e46037189",
+              "url": "https://keys.gentoo.org/pks/lookup?op=get&search=0xDCD05B71EAB94199527F44ACDB6B8C1F96D8BF6D"
+            },
+            "method": "openpgp",
+            "primary_fingerprint": "DCD05B71EAB94199527F44ACDB6B8C1F96D8BF6D",
+            "signature": {
+              "path": "gentoo-20261103.tar.xz.gpgsig",
+              "sha256": "4e08800e0e026829118786acc63e5ec3ca8ffdc4069252667642a6a5c5a4be22",
+              "url": "https://distfiles.gentoo.org/snapshots/gentoo-20261103.tar.xz.gpgsig"
+            }
+          },
+          "material": {
+            "path": "gentoo-20261103.tar.xz",
+            "sha256": "923b3132d9214cee3f59fa2b56a3af27a0287c8587576c99ebcd5b24e537a194",
+            "url": "https://distfiles.gentoo.org/snapshots/gentoo-20261103.tar.xz"
+          }
+        }
       },
       "baseline_name": "python-3.14.7-docs-html.tar.bz2",
       "book_md5": "bdf55dddc02a76961d61730f06d18849",
@@ -1029,32 +2567,102 @@
       "disposition": "replace",
       "name": "python-3.14.10-docs-html.tar.bz2",
       "reason": "Documentation must match selected Python patch release.",
+      "sha256": "89cab64cef8703b043d2c9e8265373ebd3df94864c3c1bc0435eda0703b2812d",
       "url": "https://www.python.org/ftp/python/doc/3.14.10/python-3.14.10-docs-html.tar.bz2"
     },
     {
       "authentication": {
-        "method": "unresolved",
-        "reason": "No publisher SHA256 or signature verified yet."
+        "distributor": "Gentoo",
+        "manifest": {
+          "path": "gentoo-manifests/sys-libs/readline/Manifest",
+          "sha256": "58036e4a8114646499de6b6e9b6c193e71cc80f07d2adb8570ea0c03e06cf4e5",
+          "url": "https://distfiles.gentoo.org/snapshots/gentoo-20261103.tar.xz"
+        },
+        "manifest_member": "gentoo-20261103/sys-libs/readline/Manifest",
+        "method": "distributor-openpgp-manifest",
+        "reviewed_exception": {
+          "reason": "Use an independently authenticated maintained distributor Manifest where complete strong upstream authentication has not been established; exact upstream archive bytes must match.",
+          "reviewed_at": "2026-11-05"
+        },
+        "snapshot": {
+          "authentication": {
+            "approval": {
+              "basis": "Official Gentoo signing-key documentation identifies this ebuild repository primary.",
+              "material": {
+                "path": "gentoo-signatures.html",
+                "sha256": "45bd60413ed48a5729c832ab69b9a1c3f4812b4e0cfc2777491be5875c82e0b4",
+                "url": "https://www.gentoo.org/downloads/signatures/"
+              },
+              "reviewed_at": "2026-11-05"
+            },
+            "key": {
+              "path": "gentoo-DCD05B71EAB94199527F44ACDB6B8C1F96D8BF6D.asc",
+              "sha256": "aec99650e40d8f21c792e9e8353d672a8676ae3cbe9e2c147ce42e0e46037189",
+              "url": "https://keys.gentoo.org/pks/lookup?op=get&search=0xDCD05B71EAB94199527F44ACDB6B8C1F96D8BF6D"
+            },
+            "method": "openpgp",
+            "primary_fingerprint": "DCD05B71EAB94199527F44ACDB6B8C1F96D8BF6D",
+            "signature": {
+              "path": "gentoo-20261103.tar.xz.gpgsig",
+              "sha256": "4e08800e0e026829118786acc63e5ec3ca8ffdc4069252667642a6a5c5a4be22",
+              "url": "https://distfiles.gentoo.org/snapshots/gentoo-20261103.tar.xz.gpgsig"
+            }
+          },
+          "material": {
+            "path": "gentoo-20261103.tar.xz",
+            "sha256": "923b3132d9214cee3f59fa2b56a3af27a0287c8587576c99ebcd5b24e537a194",
+            "url": "https://distfiles.gentoo.org/snapshots/gentoo-20261103.tar.xz"
+          }
+        }
       },
       "baseline_name": "readline-8.3.tar.gz",
       "book_md5": "25a73bfb2a3ad7146c5e9d4408d9f6cd",
       "book_url": "https://ftpmirror.gnu.org/readline/readline-8.3.tar.gz",
       "disposition": "retain",
+      "download_urls": [
+        "https://mirrors.kernel.org/gnu/readline/readline-8.3.tar.gz",
+        "https://ftp.gnu.org/gnu/readline/readline-8.3.tar.gz"
+      ],
       "name": "readline-8.3.tar.gz",
       "reason": "Retain the pinned book input.",
+      "sha256": "fe5383204467828cd495ee8d1d3c037a7eba1389c22bc6a041f627976f9061cc",
       "url": "https://ftp.gnu.org/gnu/readline/readline-8.3.tar.gz"
     },
     {
       "authentication": {
-        "method": "unresolved",
-        "reason": "No publisher SHA256 or signature verified yet."
+        "approval": {
+          "basis": "Project release announcement publishes the approved fingerprint; project-specific GNU release keyring supplies its key.",
+          "material": {
+            "path": "sed-4.10-announcement.html",
+            "sha256": "cf8c4ddfcef854d1647e0f497b51e2d6204fc7aea8090585c38b76ffb646cc5a",
+            "url": "https://lists.gnu.org/archive/html/info-gnu/2026-04/msg00009.html"
+          },
+          "reviewed_at": "2026-11-05"
+        },
+        "key": {
+          "path": "gnu-sed-release-keys.asc",
+          "sha256": "5add9fb6d70353f2d421694ceb9e10092bee68d0af880527efa2251b29b5d2a8",
+          "url": "https://savannah.gnu.org/project/release-gpgkeys.php?group=sed&download=1"
+        },
+        "method": "openpgp",
+        "primary_fingerprint": "155D3FC500C834486D1EEA677FD9FCCB000BEEEE",
+        "signature": {
+          "path": "sed-4.10.tar.xz.sig",
+          "sha256": "b43d0dae9cba8cc2adb268cc37e974d5811475ffd569d66c8963cfd5ae2e224e",
+          "url": "https://mirrors.kernel.org/gnu/sed/sed-4.10.tar.xz.sig"
+        }
       },
       "baseline_name": "sed-4.10.tar.xz",
       "book_md5": "c70dc5372db95c816442ffedf77a0d0f",
       "book_url": "https://ftpmirror.gnu.org/sed/sed-4.10.tar.xz",
       "disposition": "retain",
+      "download_urls": [
+        "https://mirrors.kernel.org/gnu/sed/sed-4.10.tar.xz",
+        "https://ftp.gnu.org/gnu/sed/sed-4.10.tar.xz"
+      ],
       "name": "sed-4.10.tar.xz",
       "reason": "Retain the pinned book input.",
+      "sha256": "b8e72182b2ec96a3574e2998c47b7aaa64cc20ce000d8e9ac313cc07cecf28c7",
       "url": "https://ftp.gnu.org/gnu/sed/sed-4.10.tar.xz"
     },
     {
@@ -1116,8 +2724,48 @@
     },
     {
       "authentication": {
-        "method": "unresolved",
-        "reason": "No publisher SHA256 or signature verified yet."
+        "distributor": "Gentoo",
+        "manifest": {
+          "path": "gentoo-manifests/dev-db/sqlite/Manifest",
+          "sha256": "7cf2de6351c471510de977dc86ea3d09e4b40a30784b4019116c8677f22e2ccc",
+          "url": "https://distfiles.gentoo.org/snapshots/gentoo-20261103.tar.xz"
+        },
+        "manifest_member": "gentoo-20261103/dev-db/sqlite/Manifest",
+        "method": "distributor-openpgp-manifest",
+        "reviewed_exception": {
+          "reason": "Use an independently authenticated maintained distributor Manifest where complete strong upstream authentication has not been established; exact upstream archive bytes must match.",
+          "reviewed_at": "2026-11-05"
+        },
+        "snapshot": {
+          "authentication": {
+            "approval": {
+              "basis": "Official Gentoo signing-key documentation identifies this ebuild repository primary.",
+              "material": {
+                "path": "gentoo-signatures.html",
+                "sha256": "45bd60413ed48a5729c832ab69b9a1c3f4812b4e0cfc2777491be5875c82e0b4",
+                "url": "https://www.gentoo.org/downloads/signatures/"
+              },
+              "reviewed_at": "2026-11-05"
+            },
+            "key": {
+              "path": "gentoo-DCD05B71EAB94199527F44ACDB6B8C1F96D8BF6D.asc",
+              "sha256": "aec99650e40d8f21c792e9e8353d672a8676ae3cbe9e2c147ce42e0e46037189",
+              "url": "https://keys.gentoo.org/pks/lookup?op=get&search=0xDCD05B71EAB94199527F44ACDB6B8C1F96D8BF6D"
+            },
+            "method": "openpgp",
+            "primary_fingerprint": "DCD05B71EAB94199527F44ACDB6B8C1F96D8BF6D",
+            "signature": {
+              "path": "gentoo-20261103.tar.xz.gpgsig",
+              "sha256": "4e08800e0e026829118786acc63e5ec3ca8ffdc4069252667642a6a5c5a4be22",
+              "url": "https://distfiles.gentoo.org/snapshots/gentoo-20261103.tar.xz.gpgsig"
+            }
+          },
+          "material": {
+            "path": "gentoo-20261103.tar.xz",
+            "sha256": "923b3132d9214cee3f59fa2b56a3af27a0287c8587576c99ebcd5b24e537a194",
+            "url": "https://distfiles.gentoo.org/snapshots/gentoo-20261103.tar.xz"
+          }
+        }
       },
       "baseline_name": "sqlite-doc-3530400.zip",
       "book_md5": "2cd5b168d0e5c5ae2b99beb3a4269a73",
@@ -1125,12 +2773,53 @@
       "disposition": "retain",
       "name": "sqlite-doc-3530400.zip",
       "reason": "Retain the pinned book input.",
+      "sha256": "a1d0f5de57485d062796ed7e67daff0758b50d00001a0f233a2c15aaf40bbdc8",
       "url": "https://sqlite.org/2026/sqlite-doc-3530400.zip"
     },
     {
       "authentication": {
-        "method": "unresolved",
-        "reason": "No publisher SHA256 or signature verified yet."
+        "distributor": "Gentoo",
+        "manifest": {
+          "path": "gentoo-manifests/sys-apps/systemd/Manifest",
+          "sha256": "991f5677d5762de0fa26fced80698f6cf6659639002a0f49060ff1d1368a99a9",
+          "url": "https://distfiles.gentoo.org/snapshots/gentoo-20261103.tar.xz"
+        },
+        "manifest_member": "gentoo-20261103/sys-apps/systemd/Manifest",
+        "method": "distributor-openpgp-manifest",
+        "reviewed_exception": {
+          "reason": "Use an independently authenticated maintained distributor Manifest where complete strong upstream authentication has not been established; exact upstream archive bytes must match.",
+          "reviewed_at": "2026-11-05"
+        },
+        "snapshot": {
+          "authentication": {
+            "approval": {
+              "basis": "Official Gentoo signing-key documentation identifies this ebuild repository primary.",
+              "material": {
+                "path": "gentoo-signatures.html",
+                "sha256": "45bd60413ed48a5729c832ab69b9a1c3f4812b4e0cfc2777491be5875c82e0b4",
+                "url": "https://www.gentoo.org/downloads/signatures/"
+              },
+              "reviewed_at": "2026-11-05"
+            },
+            "key": {
+              "path": "gentoo-DCD05B71EAB94199527F44ACDB6B8C1F96D8BF6D.asc",
+              "sha256": "aec99650e40d8f21c792e9e8353d672a8676ae3cbe9e2c147ce42e0e46037189",
+              "url": "https://keys.gentoo.org/pks/lookup?op=get&search=0xDCD05B71EAB94199527F44ACDB6B8C1F96D8BF6D"
+            },
+            "method": "openpgp",
+            "primary_fingerprint": "DCD05B71EAB94199527F44ACDB6B8C1F96D8BF6D",
+            "signature": {
+              "path": "gentoo-20261103.tar.xz.gpgsig",
+              "sha256": "4e08800e0e026829118786acc63e5ec3ca8ffdc4069252667642a6a5c5a4be22",
+              "url": "https://distfiles.gentoo.org/snapshots/gentoo-20261103.tar.xz.gpgsig"
+            }
+          },
+          "material": {
+            "path": "gentoo-20261103.tar.xz",
+            "sha256": "923b3132d9214cee3f59fa2b56a3af27a0287c8587576c99ebcd5b24e537a194",
+            "url": "https://distfiles.gentoo.org/snapshots/gentoo-20261103.tar.xz"
+          }
+        }
       },
       "baseline_name": "systemd-261.2.tar.gz",
       "book_md5": "e3f04ccc83a28ec5e80c5432bb8329f5",
@@ -1138,6 +2827,7 @@
       "disposition": "retain",
       "name": "systemd-261.2.tar.gz",
       "reason": "Retain the pinned book input.",
+      "sha256": "ed1059ff964f5df35b6056434cc17cc83f86dc913f10489948a0b19b6081c5ec",
       "url": "https://github.com/systemd/systemd/archive/v261.2/systemd-261.2.tar.gz"
     },
     {
@@ -1155,15 +2845,27 @@
     },
     {
       "authentication": {
-        "method": "unresolved",
-        "reason": "No publisher SHA256 or signature verified yet."
+        "material": {
+          "path": "tar-1.35-announcement.html",
+          "sha256": "58b47d5dddb51c7ace38a2577b00d73120a78a62115bb0fb5acd3a96694232e4",
+          "url": "https://lists.gnu.org/archive/html/info-gnu/2023-07/msg00005.html"
+        },
+        "method": "https-published-sha256",
+        "selection": {
+          "format": "gnu-announcement"
+        }
       },
       "baseline_name": "tar-1.35.tar.xz",
       "book_md5": "a2d8042658cfd8ea939e6d911eaf4152",
       "book_url": "https://ftpmirror.gnu.org/tar/tar-1.35.tar.xz",
       "disposition": "retain",
+      "download_urls": [
+        "https://mirrors.kernel.org/gnu/tar/tar-1.35.tar.xz",
+        "https://ftp.gnu.org/gnu/tar/tar-1.35.tar.xz"
+      ],
       "name": "tar-1.35.tar.xz",
       "reason": "Retain the pinned book input.",
+      "sha256": "4d62ff37342ec7aed748535323930c7cf94acf71c3591882b26a7ea50f3edc16",
       "url": "https://ftp.gnu.org/gnu/tar/tar-1.35.tar.xz"
     },
     {
@@ -1194,15 +2896,60 @@
     },
     {
       "authentication": {
-        "method": "unresolved",
-        "reason": "No publisher SHA256 or signature verified yet."
+        "distributor": "Gentoo",
+        "manifest": {
+          "path": "gentoo-manifests/sys-apps/texinfo/Manifest",
+          "sha256": "a79de84a61099970c8af3f22df6101a0956a387a89d115d3e36ef612b66f412a",
+          "url": "https://distfiles.gentoo.org/snapshots/gentoo-20261103.tar.xz"
+        },
+        "manifest_member": "gentoo-20261103/sys-apps/texinfo/Manifest",
+        "method": "distributor-openpgp-manifest",
+        "reviewed_exception": {
+          "reason": "Use an independently authenticated maintained distributor Manifest where complete strong upstream authentication has not been established; exact upstream archive bytes must match.",
+          "reviewed_at": "2026-11-05"
+        },
+        "snapshot": {
+          "authentication": {
+            "approval": {
+              "basis": "Official Gentoo signing-key documentation identifies this ebuild repository primary.",
+              "material": {
+                "path": "gentoo-signatures.html",
+                "sha256": "45bd60413ed48a5729c832ab69b9a1c3f4812b4e0cfc2777491be5875c82e0b4",
+                "url": "https://www.gentoo.org/downloads/signatures/"
+              },
+              "reviewed_at": "2026-11-05"
+            },
+            "key": {
+              "path": "gentoo-DCD05B71EAB94199527F44ACDB6B8C1F96D8BF6D.asc",
+              "sha256": "aec99650e40d8f21c792e9e8353d672a8676ae3cbe9e2c147ce42e0e46037189",
+              "url": "https://keys.gentoo.org/pks/lookup?op=get&search=0xDCD05B71EAB94199527F44ACDB6B8C1F96D8BF6D"
+            },
+            "method": "openpgp",
+            "primary_fingerprint": "DCD05B71EAB94199527F44ACDB6B8C1F96D8BF6D",
+            "signature": {
+              "path": "gentoo-20261103.tar.xz.gpgsig",
+              "sha256": "4e08800e0e026829118786acc63e5ec3ca8ffdc4069252667642a6a5c5a4be22",
+              "url": "https://distfiles.gentoo.org/snapshots/gentoo-20261103.tar.xz.gpgsig"
+            }
+          },
+          "material": {
+            "path": "gentoo-20261103.tar.xz",
+            "sha256": "923b3132d9214cee3f59fa2b56a3af27a0287c8587576c99ebcd5b24e537a194",
+            "url": "https://distfiles.gentoo.org/snapshots/gentoo-20261103.tar.xz"
+          }
+        }
       },
       "baseline_name": "texinfo-7.3.tar.xz",
       "book_md5": "915a09fcdfc2bf0f5ecf9e556d5698ff",
       "book_url": "https://ftpmirror.gnu.org/texinfo/texinfo-7.3.tar.xz",
       "disposition": "retain",
+      "download_urls": [
+        "https://mirrors.kernel.org/gnu/texinfo/texinfo-7.3.tar.xz",
+        "https://ftp.gnu.org/gnu/texinfo/texinfo-7.3.tar.xz"
+      ],
       "name": "texinfo-7.3.tar.xz",
       "reason": "Retain the pinned book input.",
+      "sha256": "51f74eb0f51cfa9873b85264dfdd5d46e8957ec95b88f0fb762f63d9e164c72e",
       "url": "https://ftp.gnu.org/gnu/texinfo/texinfo-7.3.tar.xz"
     },
     {
@@ -1242,15 +2989,15 @@
     {
       "authentication": {
         "method": "unresolved",
-        "reason": "No publisher SHA256 or signature verified yet."
+        "reason": "Replacement source authentication pending."
       },
       "baseline_name": "vim-9.2.1025.tar.gz",
       "book_md5": "060c9c0d7e2bdb5e5d80daad596cae02",
       "book_url": "https://github.com/vim/vim/archive/v9.2.1025/vim-9.2.1025.tar.gz",
-      "disposition": "retain",
-      "name": "vim-9.2.1025.tar.gz",
-      "reason": "Retain the pinned book input.",
-      "url": "https://github.com/vim/vim/archive/v9.2.1025/vim-9.2.1025.tar.gz"
+      "disposition": "replace",
+      "name": "vim-9.2.1201.tar.gz",
+      "reason": "sa-13.1-065 and sa-13.1-086 require script/plugin code-injection fixes through Vim 9.2.1201.",
+      "url": "https://github.com/vim/vim/archive/v9.2.1201/vim-9.2.1201.tar.gz"
     },
     {
       "authentication": {
@@ -1311,8 +3058,48 @@
     },
     {
       "authentication": {
-        "method": "unresolved",
-        "reason": "No publisher SHA256 or signature verified yet."
+        "distributor": "Gentoo",
+        "manifest": {
+          "path": "gentoo-manifests/app-arch/zstd/Manifest",
+          "sha256": "0151aa764a57cce65f050b2cc690e4174bcd687313e80eed5b8f4b24d83ee959",
+          "url": "https://distfiles.gentoo.org/snapshots/gentoo-20261103.tar.xz"
+        },
+        "manifest_member": "gentoo-20261103/app-arch/zstd/Manifest",
+        "method": "distributor-openpgp-manifest",
+        "reviewed_exception": {
+          "reason": "Use an independently authenticated maintained distributor Manifest where complete strong upstream authentication has not been established; exact upstream archive bytes must match.",
+          "reviewed_at": "2026-11-05"
+        },
+        "snapshot": {
+          "authentication": {
+            "approval": {
+              "basis": "Official Gentoo signing-key documentation identifies this ebuild repository primary.",
+              "material": {
+                "path": "gentoo-signatures.html",
+                "sha256": "45bd60413ed48a5729c832ab69b9a1c3f4812b4e0cfc2777491be5875c82e0b4",
+                "url": "https://www.gentoo.org/downloads/signatures/"
+              },
+              "reviewed_at": "2026-11-05"
+            },
+            "key": {
+              "path": "gentoo-DCD05B71EAB94199527F44ACDB6B8C1F96D8BF6D.asc",
+              "sha256": "aec99650e40d8f21c792e9e8353d672a8676ae3cbe9e2c147ce42e0e46037189",
+              "url": "https://keys.gentoo.org/pks/lookup?op=get&search=0xDCD05B71EAB94199527F44ACDB6B8C1F96D8BF6D"
+            },
+            "method": "openpgp",
+            "primary_fingerprint": "DCD05B71EAB94199527F44ACDB6B8C1F96D8BF6D",
+            "signature": {
+              "path": "gentoo-20261103.tar.xz.gpgsig",
+              "sha256": "4e08800e0e026829118786acc63e5ec3ca8ffdc4069252667642a6a5c5a4be22",
+              "url": "https://distfiles.gentoo.org/snapshots/gentoo-20261103.tar.xz.gpgsig"
+            }
+          },
+          "material": {
+            "path": "gentoo-20261103.tar.xz",
+            "sha256": "923b3132d9214cee3f59fa2b56a3af27a0287c8587576c99ebcd5b24e537a194",
+            "url": "https://distfiles.gentoo.org/snapshots/gentoo-20261103.tar.xz"
+          }
+        }
       },
       "baseline_name": "zstd-1.5.7.tar.gz",
       "book_md5": "780fc1896922b1bc52a4e90980cdda48",
@@ -1320,6 +3107,7 @@
       "disposition": "retain",
       "name": "zstd-1.5.7.tar.gz",
       "reason": "Retain the pinned book input.",
+      "sha256": "eb33e51f49a15e023950cd7825ca74a4a2b43db8354825ac24fc1b7ee09e6fa3",
       "url": "https://github.com/facebook/zstd/releases/download/v1.5.7/zstd-1.5.7.tar.gz"
     },
     {
@@ -1364,15 +3152,15 @@
     {
       "authentication": {
         "method": "unresolved",
-        "reason": "No publisher SHA256 or signature verified yet."
+        "reason": "Replacement source authentication pending."
       },
       "baseline_name": "glibc-2.44-upstream_fixes-1.patch",
       "book_md5": "990574184b25aa3029a2444e81865098",
       "book_url": "https://www.linuxfromscratch.org/patches/lfs/13.1/glibc-2.44-upstream_fixes-1.patch",
-      "disposition": "retain",
-      "name": "glibc-2.44-upstream_fixes-1.patch",
-      "reason": "Retain the pinned book input.",
-      "url": "https://www.linuxfromscratch.org/patches/lfs/13.1/glibc-2.44-upstream_fixes-1.patch"
+      "disposition": "replace",
+      "name": "glibc-2.44-upstream_fixes-3.patch",
+      "reason": "Current LFS glibc instructions select revision 3 for the six sa-13.1-043 security fixes; revision 1 does not establish closure.",
+      "url": "https://www.linuxfromscratch.org/patches/downloads/glibc/glibc-2.44-upstream_fixes-3.patch"
     },
     {
       "authentication": {
@@ -1425,6 +3213,14 @@
       "name": "tar-1.35-acl_fix-1.patch",
       "reason": "Retain the pinned book input.",
       "url": "https://www.linuxfromscratch.org/patches/lfs/13.1/tar-1.35-acl_fix-1.patch"
+    }
+  ],
+  "verification_archives": [
+    {
+      "name": "gentoo-20261103.tar.xz",
+      "purpose": "Retained Gentoo signed snapshot authenticating source Manifests; not a TUP build source.",
+      "sha256": "923b3132d9214cee3f59fa2b56a3af27a0287c8587576c99ebcd5b24e537a194",
+      "url": "https://distfiles.gentoo.org/snapshots/gentoo-20261103.tar.xz"
     }
   ]
 }

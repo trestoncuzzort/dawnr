@@ -1,0 +1,8 @@
+{
+  "meaning": "observed download bytes; not authentication",
+  "resolved_url": "https://keyserver.ubuntu.com/pks/lookup?op=get&search=0x13975A70E63C361C73AE69EF6EEB81F8981C74C7",
+  "retrieved_at": "2026-11-05T08:26:07.575285+00:00",
+  "sha256": "279524c4da639f4f40fd3c056010b4dbff3f90afec1dbe9bec3d5382c83af438",
+  "size": 23601,
+  "url": "https://keyserver.ubuntu.com/pks/lookup?op=get&search=0x13975A70E63C361C73AE69EF6EEB81F8981C74C7"
+}

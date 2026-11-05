@@ -1,0 +1,8 @@
+{
+  "meaning": "observed download bytes; not authentication",
+  "resolved_url": "https://savannah.gnu.org/project/release-gpgkeys.php?group=automake&download=1",
+  "retrieved_at": "2026-11-05T08:19:00.875692+00:00",
+  "sha256": "2bb0a45a198b8294d1d87f0fe0586e493836cdbdeb7f99c4d92eae5fa38cd8f1",
+  "size": 255992,
+  "url": "https://savannah.gnu.org/project/release-gpgkeys.php?group=automake&download=1"
+}

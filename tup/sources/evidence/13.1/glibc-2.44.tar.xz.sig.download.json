@@ -1,0 +1,8 @@
+{
+  "meaning": "observed download bytes; not authentication",
+  "resolved_url": "https://mirrors.kernel.org/gnu/glibc/glibc-2.44.tar.xz.sig",
+  "retrieved_at": "2026-11-05T08:14:43.753327+00:00",
+  "sha256": "44aabe605a02a56959bab51b92d985945db66dbd0117debe3d741252b2133ec6",
+  "size": 870,
+  "url": "https://mirrors.kernel.org/gnu/glibc/glibc-2.44.tar.xz.sig"
+}

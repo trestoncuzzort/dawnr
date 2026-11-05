@@ -1,0 +1,8 @@
+{
+  "meaning": "observed download bytes; not authentication",
+  "resolved_url": "https://mirrors.kernel.org/gnu/automake/automake-1.18.1.tar.xz.sig",
+  "retrieved_at": "2026-11-05T08:14:35.211883+00:00",
+  "sha256": "728ce05b02f123ea360ab9d168111bc98470afc7568253e93ee2a7582ef5ddb4",
+  "size": 488,
+  "url": "https://mirrors.kernel.org/gnu/automake/automake-1.18.1.tar.xz.sig"
+}

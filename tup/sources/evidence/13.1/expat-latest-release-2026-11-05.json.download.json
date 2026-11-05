@@ -1,0 +1,8 @@
+{
+  "meaning": "observed download bytes; not authentication",
+  "resolved_url": "https://api.github.com/repos/libexpat/libexpat/releases/latest",
+  "retrieved_at": "2026-11-05T08:36:05.926379+00:00",
+  "sha256": "b06f46ea1b6a11076023414cb47485a5132889f88d48a7d8e5c02e604d973206",
+  "size": 22754,
+  "url": "https://api.github.com/repos/libexpat/libexpat/releases/latest"
+}

@@ -1,49 +1,73 @@
 {
-  "schema": "tup-source-selections-v1",
-  "reviewed_at": "2026-11-05",
   "book_version": "13.1-systemd",
   "replacements": {
-    "linux-7.1.8.tar.xz": {
-      "name": "linux-6.18.60.tar.xz",
-      "url": "https://cdn.kernel.org/pub/linux/kernel/v6.x/linux-6.18.60.tar.xz",
-      "reason": "Selected maintained longterm branch for native kernel and API headers; native profile integration remains required.",
-      "decision_source": "https://www.kernel.org/releases.json"
-    },
     "Python-3.14.7.tar.xz": {
+      "decision_source": "https://www.python.org/downloads/release/python-31410/",
       "name": "Python-3.14.10.tar.xz",
-      "url": "https://www.python.org/ftp/python/3.14.10/Python-3.14.10.tar.xz",
       "reason": "Latest security-fixed patch release in the book's existing Python minor branch; covers 3.14.8, 3.14.9 and 3.14.10 fixes without a minor ABI change.",
-      "decision_source": "https://www.python.org/downloads/release/python-31410/"
-    },
-    "python-3.14.7-docs-html.tar.bz2": {
-      "name": "python-3.14.10-docs-html.tar.bz2",
-      "url": "https://www.python.org/ftp/python/doc/3.14.10/python-3.14.10-docs-html.tar.bz2",
-      "reason": "Documentation must match selected Python patch release.",
-      "decision_source": "https://www.python.org/downloads/release/python-31410/"
-    },
-    "openssl-4.0.1.tar.gz": {
-      "name": "openssl-4.0.3.tar.gz",
-      "url": "https://github.com/openssl/openssl/releases/download/openssl-4.0.3/openssl-4.0.3.tar.gz",
-      "reason": "LFS sa-13.1-021 and sa-13.1-046 require fixes through OpenSSL 4.0.3.",
-      "decision_source": "https://www.openssl-library.org/source/"
+      "url": "https://www.python.org/ftp/python/3.14.10/Python-3.14.10.tar.xz"
     },
     "expat-2.8.3.tar.xz": {
-      "name": "expat-2.9.0.tar.xz",
-      "url": "https://github.com/libexpat/libexpat/releases/download/R_2_9_0/expat-2.9.0.tar.xz",
-      "reason": "LFS sa-13.1-022, sa-13.1-045 and sa-13.1-064 identify fixes through Expat 2.9.0; unresolved upstream issues require separate disposition.",
-      "decision_source": "https://github.com/libexpat/libexpat/blob/R_2_9_0/expat/Changes"
+      "decision_source": "https://github.com/libexpat/libexpat/releases/tag/R_2_10_0",
+      "name": "expat-2.10.0.tar.xz",
+      "reason": "Security fixes through Expat 2.10.0 (2026-11-02). The still-open CVE-2025-66382 CPU DoS is separately gated by H55.",
+      "url": "https://github.com/libexpat/libexpat/releases/download/R_2_10_0/expat-2.10.0.tar.xz"
+    },
+    "glibc-2.44-upstream_fixes-1.patch": {
+      "decision_source": "https://www.linuxfromscratch.org/lfs/view/development/chapter08/glibc.html",
+      "name": "glibc-2.44-upstream_fixes-3.patch",
+      "reason": "Current LFS glibc instructions select revision 3 for the six sa-13.1-043 security fixes; revision 1 does not establish closure.",
+      "url": "https://www.linuxfromscratch.org/patches/downloads/glibc/glibc-2.44-upstream_fixes-3.patch"
+    },
+    "linux-7.1.8.tar.xz": {
+      "decision_source": "https://www.kernel.org/releases.json",
+      "name": "linux-6.18.60.tar.xz",
+      "reason": "Selected maintained longterm branch for native kernel and API headers; native profile integration remains required.",
+      "url": "https://cdn.kernel.org/pub/linux/kernel/v6.x/linux-6.18.60.tar.xz"
+    },
+    "openssl-4.0.1.tar.gz": {
+      "decision_source": "https://www.openssl-library.org/source/",
+      "name": "openssl-4.0.3.tar.gz",
+      "reason": "LFS sa-13.1-021 and sa-13.1-046 require fixes through OpenSSL 4.0.3.",
+      "url": "https://github.com/openssl/openssl/releases/download/openssl-4.0.3/openssl-4.0.3.tar.gz"
+    },
+    "patch-2.8.tar.xz": {
+      "decision_source": "https://www.linuxfromscratch.org/advisories/",
+      "name": "patch-2.8.1.tar.xz",
+      "reason": "sa-13.1-087 requires the reverse-apply path traversal fix in GNU patch 2.8.1.",
+      "url": "https://ftp.gnu.org/gnu/patch/patch-2.8.1.tar.xz"
+    },
+    "pcre2-10.47.tar.bz2": {
+      "decision_source": "https://github.com/PCRE2Project/pcre2/releases/tag/pcre2-10.49",
+      "name": "pcre2-10.49.tar.bz2",
+      "reason": "sa-13.1-023 and sa-13.1-047 require fixes through PCRE2 10.49.",
+      "url": "https://github.com/PCRE2Project/pcre2/releases/download/pcre2-10.49/pcre2-10.49.tar.bz2"
+    },
+    "python-3.14.7-docs-html.tar.bz2": {
+      "decision_source": "https://www.python.org/downloads/release/python-31410/",
+      "name": "python-3.14.10-docs-html.tar.bz2",
+      "reason": "Documentation must match selected Python patch release.",
+      "url": "https://www.python.org/ftp/python/doc/3.14.10/python-3.14.10-docs-html.tar.bz2"
     },
     "util-linux-2.42.2.tar.xz": {
+      "decision_source": "https://www.linuxfromscratch.org/advisories/",
       "name": "util-linux-2.42.4.tar.xz",
-      "url": "https://www.kernel.org/pub/linux/utils/util-linux/v2.42/util-linux-2.42.4.tar.xz",
       "reason": "LFS sa-13.1-048 identifies fixes completed in util-linux 2.42.4.",
-      "decision_source": "https://www.linuxfromscratch.org/advisories/"
+      "url": "https://www.kernel.org/pub/linux/utils/util-linux/v2.42/util-linux-2.42.4.tar.xz"
+    },
+    "vim-9.2.1025.tar.gz": {
+      "decision_source": "https://www.linuxfromscratch.org/advisories/",
+      "name": "vim-9.2.1201.tar.gz",
+      "reason": "sa-13.1-065 and sa-13.1-086 require script/plugin code-injection fixes through Vim 9.2.1201.",
+      "url": "https://github.com/vim/vim/archive/v9.2.1201/vim-9.2.1201.tar.gz"
     },
     "xz-5.8.3.tar.xz": {
+      "decision_source": "https://tukaani.org/xz/",
       "name": "xz-5.8.4.tar.xz",
-      "url": "https://github.com/tukaani-project/xz/releases/download/v5.8.4/xz-5.8.4.tar.xz",
       "reason": "LFS sa-13.1-024 identifies the legacy-decoder memory-safety fix in XZ 5.8.4.",
-      "decision_source": "https://tukaani.org/xz/"
+      "url": "https://github.com/tukaani-project/xz/releases/download/v5.8.4/xz-5.8.4.tar.xz"
     }
-  }
+  },
+  "reviewed_at": "2026-11-05",
+  "schema": "tup-source-selections-v1"
 }

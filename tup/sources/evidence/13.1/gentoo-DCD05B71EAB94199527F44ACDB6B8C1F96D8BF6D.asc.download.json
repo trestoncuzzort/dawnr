@@ -1,0 +1,8 @@
+{
+  "meaning": "observed download bytes; not authentication",
+  "resolved_url": "https://keys.gentoo.org/pks/lookup?op=get&search=0xDCD05B71EAB94199527F44ACDB6B8C1F96D8BF6D",
+  "retrieved_at": "2026-11-05T08:28:03.133109+00:00",
+  "sha256": "aec99650e40d8f21c792e9e8353d672a8676ae3cbe9e2c147ce42e0e46037189",
+  "size": 51740,
+  "url": "https://keys.gentoo.org/pks/lookup?op=get&search=0xDCD05B71EAB94199527F44ACDB6B8C1F96D8BF6D"
+}

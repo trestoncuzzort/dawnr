@@ -1,0 +1,8 @@
+{
+  "meaning": "observed download bytes; not authentication",
+  "resolved_url": "https://mirrors.kernel.org/gnu/grep/grep-3.12.tar.xz.sig",
+  "retrieved_at": "2026-11-05T08:14:43.762036+00:00",
+  "sha256": "62d4867d7cfff57a364b745866d798958a90286551fdf45d08df515fa8c79c25",
+  "size": 833,
+  "url": "https://mirrors.kernel.org/gnu/grep/grep-3.12.tar.xz.sig"
+}

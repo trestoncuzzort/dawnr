@@ -69,6 +69,33 @@ def fetch(url: str, destination: Path, *, maximum=512 * 1024 * 1024, body=None) 
         temporary.unlink(missing_ok=True)
 
 
+def acquire_record(record: dict, cache: Path) -> dict:
+    name = record["name"]
+    if not NAME.fullmatch(name):
+        raise Refusal("unsafe source basename")
+    urls = record.get("download_urls", [record["url"]])
+    if not isinstance(urls, list) or not urls or any(not https(url) for url in urls):
+        raise Refusal("download locations must be reviewed HTTPS URLs")
+    if record["url"] not in urls:
+        raise Refusal("download locations must preserve the upstream source URL")
+    path = cache / name
+    receipt = path.with_name(name + ".download.json")
+    if path.exists():
+        if not receipt.is_file():
+            raise Refusal("unreceipted cache entry; inspect before replacing")
+        previous = json.loads(receipt.read_bytes()).get("url")
+        if previous not in urls:
+            raise Refusal("cached source came from an unreviewed download location")
+        return fetch(previous, path)
+    failures = []
+    for url in urls:
+        try:
+            return fetch(url, path)
+        except (OSError, ValueError) as exc:
+            failures.append(str(exc))
+    raise Refusal("all reviewed download locations failed: " + " | ".join(failures))
+
+
 def main(argv=None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("catalog", type=Path)
@@ -79,15 +106,14 @@ def main(argv=None) -> int:
     if not 1 <= args.jobs <= 6:
         parser.error("--jobs must be between 1 and 6")
     catalog = json.loads(args.catalog.read_bytes())
-    records = [record for record in catalog["sources"] if record.get("disposition") != "omit"
+    inputs = catalog["sources"] + catalog.get("verification_archives", [])
+    records = [record for record in inputs if record.get("disposition") != "omit"
                and (not args.names or record["name"] in args.names)]
     errors = []
 
     def collect(record):
         name = record["name"]
-        if not NAME.fullmatch(name):
-            raise Refusal("unsafe source basename")
-        receipt = fetch(record["url"], args.cache / name)
+        receipt = acquire_record(record, args.cache)
         return name, receipt["size"]
 
     with concurrent.futures.ThreadPoolExecutor(max_workers=args.jobs) as pool:

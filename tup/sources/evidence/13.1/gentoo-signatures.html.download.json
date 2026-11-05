@@ -1,0 +1,8 @@
+{
+  "meaning": "observed download bytes; not authentication",
+  "resolved_url": "https://www.gentoo.org/downloads/signatures/",
+  "retrieved_at": "2026-11-05T08:26:55.291937+00:00",
+  "sha256": "45bd60413ed48a5729c832ab69b9a1c3f4812b4e0cfc2777491be5875c82e0b4",
+  "size": 17552,
+  "url": "https://www.gentoo.org/downloads/signatures/"
+}

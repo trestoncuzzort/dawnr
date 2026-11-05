@@ -1,0 +1,8 @@
+{
+  "meaning": "observed download bytes; not authentication",
+  "resolved_url": "https://mirrors.kernel.org/gnu/coreutils/coreutils-9.11.tar.xz.sig",
+  "retrieved_at": "2026-11-05T08:14:38.629991+00:00",
+  "sha256": "e2b9f147338cb22e41be28dcf76cd87c5197be359cc42033e66488a4a6b5c024",
+  "size": 833,
+  "url": "https://mirrors.kernel.org/gnu/coreutils/coreutils-9.11.tar.xz.sig"
+}

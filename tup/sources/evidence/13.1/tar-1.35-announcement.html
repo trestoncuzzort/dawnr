@@ -1,0 +1,222 @@
+<!-- MHonArc v2.6.19+ -->
+<!--X-Subject: tar&#45;1.35 released [stable] -->
+<!--X-From-R13: "Eretrl Bbmalnxbss" &#60;tenlNtah.bet.hn> -->
+<!--X-Date: Tue, 18 Jul 2023 09:53:52 &#45;0400 -->
+<!--X-Message-Id: 20230718101416.24098@pirx.gnu.org.ua -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!doctype html public "-//W3C//DTD HTML//EN">
+<html>
+<head>
+<title>tar-1.35 released [stable]</title>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<center>
+<table border=0 cellspacing=2 cellpadding=0 bgcolor="#000000">
+<tr><td><table border=0 bgcolor="#FFFFCC">
+<tr><td><big><b>info-gnu</b></big></td></tr></table></tr></table>
+<div class="nowrap">
+<small>[<a href="../"
+>Top</a>][<a href="/archive/html">All Lists</a>]</small>
+</div>
+<form method="get" action="/archive/cgi-bin/namazu.cgi">
+<input type="text" name="query" size="30">
+<input type="submit" name="submit" value="Search">
+<input type="hidden" name="idxname" value="info-gnu">
+<a href="/archive/cgi-bin/namazu.cgi?idxname=info-gnu">Advanced</a>
+</form>
+
+</center>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<hr>
+[<a href="msg00004.html">Date Prev</a>][<a href="msg00006.html">Date Next</a>][<a href="msg00004.html">Thread Prev</a>][<a href="msg00006.html">Thread Next</a>][<a
+href="index.html#00005">Date Index</a>][<a
+href="threads.html#00005">Thread Index</a>]
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h2>tar-1.35 released [stable]</h2>
+<hr>
+<table border=0>
+<tbody>
+<tr>
+<td align="right" valign="top">
+<b>From</b>: </td>
+<td align="left">
+Sergey Poznyakoff</td>
+</tr>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+
+<tr>
+<td align="right" valign="top">
+<b>Subject</b>: </td>
+<td align="left">
+tar-1.35 released [stable]</td>
+</tr>
+
+<tr>
+<td align="right" valign="top">
+<b>Date</b>: </td>
+<td align="left">
+Tue, 18 Jul 2023 10:14:16 +0200</td>
+</tr>
+
+<tr>
+<td align="right" valign="top">
+<b>User-agent</b>: </td>
+<td align="left">
+MH (GNU Mailutils 3.15)</td>
+</tr>
+
+</tbody>
+</table>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+<hr>
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre>Hello,
+
+Please be informed that GNU tar version 1.35 is available for
+download.  This is mainly a bug-fixing release.  See below for a list
+of noteworthy changes.
+
+Here are the compressed sources:
+  <a  rel="nofollow" href="https://ftp.gnu.org/gnu/tar/tar-1.35.tar.gz">https://ftp.gnu.org/gnu/tar/tar-1.35.tar.gz</a>   (4.5MB)
+  <a  rel="nofollow" href="https://ftp.gnu.org/gnu/tar/tar-1.35.tar.bz2">https://ftp.gnu.org/gnu/tar/tar-1.35.tar.bz2</a>   (3.2MB)
+  <a  rel="nofollow" href="https://ftp.gnu.org/gnu/tar/tar-1.35.tar.xz">https://ftp.gnu.org/gnu/tar/tar-1.35.tar.xz</a>   (2.3MB)
+
+Here are the GPG detached signatures:
+  <a  rel="nofollow" href="https://ftp.gnu.org/gnu/tar/tar-1.35.tar.gz.sig">https://ftp.gnu.org/gnu/tar/tar-1.35.tar.gz.sig</a>
+  <a  rel="nofollow" href="https://ftp.gnu.org/gnu/tar/tar-1.35.tar.bz2.sig">https://ftp.gnu.org/gnu/tar/tar-1.35.tar.bz2.sig</a>
+  <a  rel="nofollow" href="https://ftp.gnu.org/gnu/tar/tar-1.35.tar.xz.sig">https://ftp.gnu.org/gnu/tar/tar-1.35.tar.xz.sig</a>
+
+Use a mirror for higher download bandwidth:
+  <a  rel="nofollow" href="https://www.gnu.org/order/ftp.html">https://www.gnu.org/order/ftp.html</a>
+
+Here are the SHA1 and SHA256 checksums:
+
+92848830c920cbaa44abc3ab70e02b0ce8f1e212  tar-1.35.tar.gz
+FNVeMgY+qVJuBX+/Nfyr1TN452l4fv95GcN1WwLStX4  tar-1.35.tar.gz
+7fa54d8fe267bb9c5aa3baee29b0654a3e35b32a  tar-1.35.tar.bz2
+ftuIhqPcaUIKFEbh4tBhkitkLxz2MtLND57n5pB3WYU  tar-1.35.tar.bz2
+6b9824c92deddbd7021801515270211f5252fbd8  tar-1.35.tar.xz
+TWL/NzQux67XSFNTI5MMfPlKz3HDWRiCsmp+pQ8+3BY  tar-1.35.tar.xz
+
+The SHA256 checksum is base64 encoded, instead of the
+hexadecimal encoding that most checksum tools default to.
+
+Noteworthy changes in this release:
+
+* Fail when building GNU tar, if the platform supports 64-bit time_t
+  but the build uses only 32-bit time_t.
+
+* Leave the devmajor and devminor fields empty (rather than zero) for
+  non-special files, as this is more compatible with traditional tar.
+
+* Bug fixes
+
+** Fix interaction of --update with --wildcards.
+
+** When extracting archives into an empty directory, do not create
+   hard links to files outside that directory. 
+
+** Handle partial reads from regular files.
+
+** Warn &quot;file changed as we read it&quot; less often.
+   Formerly, tar warned if the file's size or ctime changed.
+   However, this generated a false positive if tar read a file
+   while another process hard-linked to it, changing its ctime.
+   Now, tar warns if the file's size, mtime, user ID, group ID,
+   or mode changes.  Although neither heuristic is perfect,
+   the new one should work better in practice.
+
+** Fix --ignore-failed-read to ignore file-changed read errors
+   as far as exit status is concerned.  You can now suppress file-changed
+   issues entirely with --ignore-failed-read --warning=no-file-changed.
+
+** Fix --remove-files to not remove a file that changed while we read it.
+
+** Fix --atime-preserve=replace to not fail if there was no need to replace,
+   either because we did not read the file, or the atime did not change.
+
+** Fix race when creating a parent directory while another process is
+   also doing so.
+
+** Fix handling of prefix keywords not followed by &quot;.&quot; in pax headers.
+
+** Fix handling of out-of-range sparse entries in pax headers.
+
+** Fix handling of --transform='s/s/@/2'.
+
+** Fix treatment of options ending in / in files-from list.
+
+** Fix crash on 'tar --checkpoint-action exec=\&quot;'.
+
+** Fix low-memory crash when reading incremental dumps.
+
+** Fix --exclude-vcs-ignores memory allocation misuse.
+
+Regards,
+Sergey
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+<hr>
+<form method="post" action="/mp/yyz.py" enctype="multipart/form-data">
+<input type="hidden" name="a" value="gray">
+<input type="hidden" name="b" value="tar-1.35 released [stable]">
+<input type="hidden" name="d" value="20230718101416.24098@pirx.gnu.org.ua">
+<input type="hidden" name="c" value="gnu.org.ua">
+<center>reply via email to<br><input type="submit" value=" Sergey Poznyakoff "></center>
+</form>
+<hr>
+<table width="100%">
+<tr><td align="left">[Prev in Thread]</td>
+<td align="center"><b>Current Thread</b></td>
+<td align="right">[Next in Thread]</td></tr></table>
+<ul>
+<li><font color="#666666"><strong>tar-1.35 released [stable]</strong>,
+<em>Sergey Poznyakoff</em></font>&nbsp;<b>&lt;=</b>
+</ul>
+
+<hr>
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+<ul>
+<li>Prev by Date:
+<strong><a href="msg00004.html">GNU Shepherd 0.10.2 released</a></strong>
+</li>
+<li>Next by Date:
+<strong><a href="msg00006.html">GCC 13.2 Released</a></strong>
+</li>
+<li>Previous by thread:
+<strong><a href="msg00004.html">GNU Shepherd 0.10.2 released</a></strong>
+</li>
+<li>Next by thread:
+<strong><a href="msg00006.html">GCC 13.2 Released</a></strong>
+</li>
+<li>Index(es):
+<ul>
+<li><a href="index.html#00005"><strong>Date</strong></a></li>
+<li><a href="threads.html#00005"><strong>Thread</strong></a></li>
+</ul>
+</li>
+</ul>
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+</body>
+</html>

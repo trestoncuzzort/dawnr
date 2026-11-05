@@ -1,0 +1,8 @@
+{
+  "meaning": "observed download bytes; not authentication",
+  "resolved_url": "https://mirrors.kernel.org/gnu/diffutils/diffutils-3.12.tar.xz.sig",
+  "retrieved_at": "2026-11-05T08:14:38.635114+00:00",
+  "sha256": "ad05b321b2f23441275af68072123a5907b05ad989335a9f1f6e3781cb0846a6",
+  "size": 833,
+  "url": "https://mirrors.kernel.org/gnu/diffutils/diffutils-3.12.tar.xz.sig"
+}

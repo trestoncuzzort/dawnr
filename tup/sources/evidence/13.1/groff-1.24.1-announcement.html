@@ -1,0 +1,266 @@
+<!-- MHonArc v2.6.19+ -->
+<!--X-Subject: groff 1.24.1 released -->
+<!--X-From-R13: "U. Penaqra Dbovafba" &#60;t.oenaqra.ebovafbaNtznvy.pbz> -->
+<!--X-Date: Sat, 14 Mar 2026 16:15:17 &#45;0400 -->
+<!--X-Message-Id: 20260314193005.v3rbph3hcks2oltm@illithid -->
+<!--X-Content-Type: multipart/signed -->
+<!--X-Derived: pgpRHr2h3pXQY.pgp -->
+<!--X-Head-End-->
+<!doctype html public "-//W3C//DTD HTML//EN">
+<html>
+<head>
+<title>groff 1.24.1 released</title>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<center>
+<table border=0 cellspacing=2 cellpadding=0 bgcolor="#000000">
+<tr><td><table border=0 bgcolor="#FFFFCC">
+<tr><td><big><b>info-gnu</b></big></td></tr></table></tr></table>
+<div class="nowrap">
+<small>[<a href="../"
+>Top</a>][<a href="/archive/html">All Lists</a>]</small>
+</div>
+<form method="get" action="/archive/cgi-bin/namazu.cgi">
+<input type="text" name="query" size="30">
+<input type="submit" name="submit" value="Search">
+<input type="hidden" name="idxname" value="info-gnu">
+<a href="/archive/cgi-bin/namazu.cgi?idxname=info-gnu">Advanced</a>
+</form>
+
+</center>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<hr>
+[<a href="msg00004.html">Date Prev</a>][<a href="msg00006.html">Date Next</a>][<a href="msg00004.html">Thread Prev</a>][<a href="msg00006.html">Thread Next</a>][<a
+href="index.html#00005">Date Index</a>][<a
+href="threads.html#00005">Thread Index</a>]
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h2>groff 1.24.1 released</h2>
+<hr>
+<table border=0>
+<tbody>
+<tr>
+<td align="right" valign="top">
+<b>From</b>: </td>
+<td align="left">
+G. Branden Robinson</td>
+</tr>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+
+<tr>
+<td align="right" valign="top">
+<b>Subject</b>: </td>
+<td align="left">
+groff 1.24.1 released</td>
+</tr>
+
+<tr>
+<td align="right" valign="top">
+<b>Date</b>: </td>
+<td align="left">
+Sat, 14 Mar 2026 14:30:05 -0500</td>
+</tr>
+
+</tbody>
+</table>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+<hr>
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre>We are pleased to announce the availability of groff 1.24.1.  Obtain
+it from the GNU mirror network,
+
+  <a  rel="nofollow" href="https://ftpmirror.gnu.org/groff/groff-1.24.1.tar.gz">https://ftpmirror.gnu.org/groff/groff-1.24.1.tar.gz</a>
+
+or, if the network is for some reason inoperative, directly from GNU.
+
+  <a  rel="nofollow" href="https://ftp.gnu.org/gnu/groff/groff-1.24.1.tar.gz">https://ftp.gnu.org/gnu/groff/groff-1.24.1.tar.gz</a> ]]
+
+Ensure the integrity of your download by checking this source code
+archive's cryptographic signature; see &quot;Obtaining groff&quot; below.
+
+
+What is groff?
+==============
+
+groff (GNU roff) is a typesetting system that reads plain text input
+that includes formatting commands to produce output in PostScript,
+PDF, HTML, or DVI formats or for display to a terminal.  Formatting
+commands can be low-level typesetting primitives, macros from a
+supplied package, or user-defined macros.  All three approaches can be
+combined.
+
+A reimplementation and extension of troff and other programs from AT&amp;T
+Unix, groff is widely available on POSIX and other systems owing to its
+long association with Unix manuals, including man pages.  It and its
+predecessor have produced several best-selling software engineering
+texts.  groff can create typographically sophisticated documents while
+consuming minimal system resources.
+
+  <a  rel="nofollow" href="https://www.gnu.org/software/groff/">https://www.gnu.org/software/groff/</a>
+
+
+Changes
+=======
+
+This release corrects bugs in the groff 1.24.0 release that regressed
+working 1.23.0 features, adds automated test scripts, revises unclear or
+misleading diagnostic messages, and improves documentation.  There are
+no new features.
+
+Details
+-------
+
+Since groff 1.24.0 was released on 28 February 2026, 3 people have
+authored a total of 60 commits.
+
+$ git shortlog --summary 1.24.0..1.24.1
+     2  Deri James
+    57  G. Branden Robinson
+     1  Rocket Ma
+
+The most noteworthy of the foregoing commits are as follows.
+
+f9420c7b0 tmac/troffrc: Fix misleading diagnostic message.
+ba0908298 [troff]: Improve error diagnostic.
+c71b99984 Use sequential tag names to avoid possible random duplicates.
+9c4e2c8c6 [troff]: Fix Savannah #68132.
+45afde2cb [troff]: Regression-test Savannah #68132.
+37f0060be groff(7): Document `.S` register as reserved.
+b9d07e0cf eqn(1): Add &quot;roff interface&quot; subsection.
+eee74c1a8 [eqn]: Fix Savannah #68115.
+6e467c234 [eqn]: Regression-test Savannah #68115.
+
+Another way of capturing the amount of revision is as follows.
+
+$ git diff --stat 1.24.0 1.24.1 | tail -n 1
+ 87 files changed, 784 insertions(+), 282 deletions(-)
+
+
+Obtaining groff
+===============
+
+Here are the compressed sources and a GPG detached signature[*].
+  <a  rel="nofollow" href="https://ftp.gnu.org/gnu/groff/groff-1.24.1.tar.gz">https://ftp.gnu.org/gnu/groff/groff-1.24.1.tar.gz</a>
+  <a  rel="nofollow" href="https://ftp.gnu.org/gnu/groff/groff-1.24.1.tar.gz.sig">https://ftp.gnu.org/gnu/groff/groff-1.24.1.tar.gz.sig</a>
+
+Use a mirror for higher download bandwidth.
+  <a  rel="nofollow" href="https://ftpmirror.gnu.org/groff/groff-1.24.1.tar.gz">https://ftpmirror.gnu.org/groff/groff-1.24.1.tar.gz</a>
+  <a  rel="nofollow" href="https://ftpmirror.gnu.org/groff/groff-1.24.1.tar.gz.sig">https://ftpmirror.gnu.org/groff/groff-1.24.1.tar.gz.sig</a>
+
+Here are the SHA-1 and SHA-256 checksums.
+
+6bba283f8b55b74bbcafd56653876ec5d567de63  groff-1.24.1.tar.gz
+dOKBl5W2r/QxrqyYPWOpyJaO6roqLrp9+LpMe0Hnz9g=  groff-1.24.1.tar.gz
+
+The SHA-256 checksum is encoded in Base64 instead of the hexadecimal
+form that most checksum tools default to.  The mechanism follows.
+
+sha256sum &lt; groff-1.24.1.tar.gz | cut -f1 -d\  | xxd -r -p | base64
+
+(Because &quot;base64&quot; reads from a pipe, it doesn't know the file name, and
+so the file name will not appear in the output.)
+
+[*] Use a .sig file to verify that the corresponding file (without the
+    .sig suffix) is intact.  First, be sure to download both the .sig
+    file and the corresponding archive.  Then, verify the archive.
+
+      gpg --verify groff-1.24.1.tar.gz{.sig,}
+
+    If that command fails because you don't have the required public
+    key, you can import it.
+
+      wget -O 108747.asc \
+        '<a  rel="nofollow" href="https://savannah.gnu.org/people/viewgpg.php?user_id=108747">https://savannah.gnu.org/people/viewgpg.php?user_id=108747</a>'
+      gpg --import 108747.asc
+
+    Re-run the 'gpg --verify' command above again subsequently.
+
+
+Caveats
+=======
+
+o GNU tools, or otherwise POSIX-conforming ones, are generally required
+  to build on Solaris 10 or 11.  See the &quot;PROBLEMS&quot; file in the
+  distribution archive.
+
+o Solaris 10 has known problems with automated tests; see the &quot;PROBLEMS&quot;
+  file in the distribution archive.
+
+
+Acknowledgements
+================
+
+We'd like to thank the following people for helping ensure the quality
+of this release.
+
+Bjarni Ingi Gislason
+Clem Cole
+Dave Kemper
+Peng Zhang
+Rocket Ma
+</pre>
+<p><strong><a href="pgpRHr2h3pXQY.pgp" ><img src="/icons/generic.png" align="left" border=0 alt="Attachment:" width="20" height="22"></a>
+<a href="pgpRHr2h3pXQY.pgp" ><tt>signature.asc</tt></a></strong><br>
+<em>Description:</em> PGP signature</p>
+
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+<hr>
+<form method="post" action="/mp/yyz.py" enctype="multipart/form-data">
+<input type="hidden" name="a" value="g.branden.robinson">
+<input type="hidden" name="b" value="groff 1.24.1 released">
+<input type="hidden" name="d" value="20260314193005.v3rbph3hcks2oltm@illithid">
+<input type="hidden" name="c" value="gmail.com">
+<center>reply via email to<br><input type="submit" value=" G. Branden Robinson "></center>
+</form>
+<hr>
+<table width="100%">
+<tr><td align="left">[Prev in Thread]</td>
+<td align="center"><b>Current Thread</b></td>
+<td align="right">[Next in Thread]</td></tr></table>
+<ul>
+<li><font color="#666666"><strong>groff 1.24.1 released</strong>,
+<em>G. Branden Robinson</em></font>&nbsp;<b>&lt;=</b>
+</ul>
+
+<hr>
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+<ul>
+<li>Prev by Date:
+<strong><a href="msg00004.html">GNU G-Golf 0.8.4 release</a></strong>
+</li>
+<li>Next by Date:
+<strong><a href="msg00006.html">hello-2.12.3 released [stable]</a></strong>
+</li>
+<li>Previous by thread:
+<strong><a href="msg00004.html">GNU G-Golf 0.8.4 release</a></strong>
+</li>
+<li>Next by thread:
+<strong><a href="msg00006.html">hello-2.12.3 released [stable]</a></strong>
+</li>
+<li>Index(es):
+<ul>
+<li><a href="index.html#00005"><strong>Date</strong></a></li>
+<li><a href="threads.html#00005"><strong>Thread</strong></a></li>
+</ul>
+</li>
+</ul>
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+</body>
+</html>

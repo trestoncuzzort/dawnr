@@ -9,9 +9,11 @@ The catalog and its trust anchors are reviewed inputs, not self-authenticating.
 from __future__ import annotations
 
 import argparse
+import base64
 import bz2
 import gzip
 import hashlib
+import html
 import json
 import lzma
 import os
@@ -19,6 +21,7 @@ import re
 import shutil
 import subprocess
 import sys
+import tarfile
 import tempfile
 from datetime import datetime, timezone
 from pathlib import Path
@@ -28,6 +31,7 @@ CATALOG_SCHEMA = "tup-source-catalog-v1"
 NAME = re.compile(r"[A-Za-z0-9][A-Za-z0-9_.+-]*")
 HEX256 = re.compile(r"[0-9a-f]{64}")
 FINGERPRINT = re.compile(r"[0-9A-F]{40}|[0-9A-F]{64}")
+GENTOO_PRIMARY = "DCD05B71EAB94199527F44ACDB6B8C1F96D8BF6D"
 
 
 class Refusal(ValueError):
@@ -95,6 +99,27 @@ def published_digest(raw: bytes, selection: dict, source_name: str) -> str:
         value = raw.decode("ascii").strip()
         if HEX256.fullmatch(value.lower()):
             values.append(value.lower())
+    elif kind == "gnu-announcement":
+        text = html.unescape(re.sub(r"<[^>]*>", "", raw.decode("utf-8")))
+        escaped = re.escape(name)
+        # GNU release announcements use named File blocks, BSD checksum
+        # notation, or checksum lists. Only SHA256 fields are selected.
+        blocks = re.split(r"(?m)^[ \t]*File:[ \t]*", text)[1:]
+        for block in blocks:
+            lines = block.splitlines()
+            if lines and lines[0].strip() == name:
+                values += re.findall(r"\bSHA256 sum:\s*([0-9a-fA-F]{64})(?![0-9a-fA-F])", block)
+        patterns = [r"(?m)^[ \t]*SHA256 \(" + escaped + r"\)\s*=\s*([A-Za-z0-9+/=]+)[ \t]*$",
+                    r"(?m)^[ \t]*([A-Za-z0-9+/]{43}=?|[0-9a-fA-F]{64})[ \t]+(?:\r?\n)?" + escaped + r"[ \t]*$"]
+        for pattern in patterns:
+            for value in re.findall(pattern, text):
+                if HEX256.fullmatch(value.lower()):
+                    values.append(value.lower())
+                else:
+                    decoded = base64.b64decode(value + "=" * (-len(value) % 4), validate=True)
+                    if len(decoded) != 32:
+                        raise Refusal("invalid GNU SHA256 checksum length")
+                    values.append(decoded.hex())
     elif kind == "github-release":
         payload = json.loads(raw)
         if payload.get("tag_name") != selection.get("tag"):
@@ -120,7 +145,12 @@ def published_digest(raw: bytes, selection: dict, source_name: str) -> str:
             raise Refusal("HTML digest selection requires an artifact URL")
         for row in re.findall(r"<tr\b[^>]*>(.*?)</tr>", text, re.S | re.I):
             if re.search(r'href=["\']' + re.escape(url) + r'["\']', row):
-                values += re.findall(r"(?<![0-9a-fA-F])([0-9a-fA-F]{64})(?![0-9a-fA-F])", row)
+                codes = re.findall(r"<code\b[^>]*>(.*?)</code>", row, re.S | re.I)
+                # Python splits its displayed checksum across spans and <wbr>.
+                # Join text only inside code elements in this exact file row.
+                for code in codes or [row]:
+                    value = html.unescape(re.sub(r"<[^>]*>", "", code) if codes else code)
+                    values += re.findall(r"(?<![0-9a-fA-F])([0-9a-fA-F]{64})(?![0-9a-fA-F])", value)
     else:
         raise Refusal("unsupported published-digest format")
     if len(values) != 1 or not HEX256.fullmatch(values[0].lower()):
@@ -149,6 +179,16 @@ def approved_signature(stdout: bytes, returncode: int, primary: str) -> str:
     return fields[0]
 
 
+def gpg_path(path: Path, gpg: Path) -> str:
+    """Git for Windows GPG requires MSYS paths for its home directory."""
+    absolute = path.resolve()
+    if os.name == "nt" and (gpg.parent / "msys-2.0.dll").is_file():
+        if len(absolute.drive) != 2 or absolute.drive[1] != ":":
+            raise Refusal("MSYS GPG requires a local drive path")
+        return "/" + absolute.drive[0].lower() + absolute.as_posix()[2:]
+    return str(absolute)
+
+
 def verify_pgp(archive: Path, auth: dict, evidence: Path, gpg: Path) -> dict:
     if gpg is None or not gpg.is_file():
         raise Refusal("OpenPGP verifier executable unavailable")
@@ -159,10 +199,10 @@ def verify_pgp(archive: Path, auth: dict, evidence: Path, gpg: Path) -> dict:
         raise Refusal("no approved primary fingerprint")
     with tempfile.TemporaryDirectory(prefix="tup-source-gpg-") as temporary:
         home = Path(temporary)
-        command = [str(gpg), "--homedir", str(home), "--no-options", "--batch",
+        command = [str(gpg), "--no-options", "--homedir", gpg_path(home, gpg), "--batch",
                    "--no-auto-key-retrieve", "--auto-key-locate", "clear"]
-        env = dict(os.environ, GNUPGHOME=str(home))
-        imported = subprocess.run(command + ["--import", str(key)], capture_output=True, env=env, timeout=60)
+        env = dict(os.environ, GNUPGHOME=gpg_path(home, gpg))
+        imported = subprocess.run(command + ["--import", gpg_path(key, gpg)], capture_output=True, env=env, timeout=60)
         if imported.returncode:
             raise Refusal("cannot import approved publisher key material")
         payload = archive
@@ -175,9 +215,11 @@ def verify_pgp(archive: Path, auth: dict, evidence: Path, gpg: Path) -> dict:
                 shutil.copyfileobj(source, target, length=1024 * 1024)
         elif auth.get("payload", "archive") != "archive":
             raise Refusal("unsupported signed payload")
-        checked = subprocess.run(command + ["--status-fd", "1", "--verify", str(signature), str(payload)],
+        checked = subprocess.run(command + ["--status-fd", "1", "--verify", gpg_path(signature, gpg), gpg_path(payload, gpg)],
                                  capture_output=True, env=env, timeout=120)
         signer = approved_signature(checked.stdout, checked.returncode, primary)
+        if auth.get("signing_fingerprint") is not None and signer != auth["signing_fingerprint"]:
+            raise Refusal("signature is not from the approved signing fingerprint")
     return {"trust_class": "publisher-openpgp", "primary_fingerprint": primary,
             "signing_fingerprint": signer, "verifier_sha256": digest(gpg),
             "status_sha256": hashlib.sha256(checked.stdout).hexdigest()}
@@ -211,9 +253,91 @@ def validate_catalog(catalog: dict, evidence: Path) -> None:
         names.add(name)
 
 
-def verify_record(record: dict, cache: Path, evidence: Path, gpg: Path | None) -> dict:
+def gentoo_manifest_entry(raw: bytes, name: str) -> tuple[int, str]:
+    entries = []
+    for line in raw.decode("utf-8").splitlines():
+        fields = line.split()
+        if len(fields) >= 2 and fields[:2] == ["DIST", name]:
+            if len(fields) < 5 or (len(fields) - 3) % 2 or not fields[2].isdigit():
+                raise Refusal("malformed Gentoo DIST entry")
+            pairs = list(zip(fields[3::2], fields[4::2]))
+            if len({algorithm for algorithm, _ in pairs}) != len(pairs):
+                raise Refusal("duplicate Gentoo digest algorithm")
+            expected = dict(pairs).get("SHA512", "")
+            if not re.fullmatch(r"[0-9a-f]{128}", expected):
+                raise Refusal("Gentoo DIST entry lacks a strong SHA512")
+            entries.append((int(fields[2]), expected))
+    if len(entries) != 1:
+        raise Refusal("missing or ambiguous exact filename in Gentoo Manifest")
+    return entries[0]
+
+
+def snapshot_manifests(path: Path, requested: set[str]) -> dict[str, bytes]:
+    """Read only named regular-file Manifests; never extract archive paths."""
+    found = {}
+    with tarfile.open(path, mode="r|xz") as archive:
+        for number, member in enumerate(archive):
+            if number > 250000 or member.offset_data + member.size > 2 * 1024 ** 3:
+                raise Refusal("distributor snapshot exceeds inspection budget")
+            if member.name not in requested:
+                continue
+            if member.name in found or not member.isfile() or member.size > 4 * 1024 ** 2:
+                raise Refusal("ambiguous or unsafe Manifest member")
+            found[member.name] = archive.extractfile(member).read()
+    if set(found) != requested:
+        raise Refusal("signed snapshot does not contain every requested Manifest")
+    return found
+
+
+def verify_distributor(archive: Path, auth: dict, cache: Path, evidence: Path,
+                       gpg: Path | None, context: dict) -> dict:
+    if auth.get("distributor") != "Gentoo":
+        raise Refusal("unapproved distributor trust root")
+    snapshot = auth.get("snapshot", {})
+    signature = snapshot.get("authentication", {})
+    if (signature.get("method") != "openpgp" or signature.get("primary_fingerprint") != GENTOO_PRIMARY or
+            signature.get("payload", "archive") != "archive"):
+        raise Refusal("unapproved Gentoo snapshot authentication")
+    approval = material(evidence, signature.get("approval", {}).get("material"))
+    if (signature["approval"]["material"]["url"] != "https://www.gentoo.org/downloads/signatures/" or
+            GENTOO_PRIMARY not in approval.read_text(encoding="utf-8")):
+        raise Refusal("Gentoo primary fingerprint lacks official approval material")
+    member = auth.get("manifest_member", "")
+    if (not isinstance(member, str) or not member.endswith("/Manifest") or
+            any(not NAME.fullmatch(part) for part in member.split("/"))):
+        raise Refusal("unsafe Gentoo Manifest member name")
+    retained = material(evidence, auth.get("manifest"))
+    identity = hashlib.sha256(encoded(snapshot)).hexdigest()
+    verified = context.setdefault("snapshots", {})
+    if identity not in verified:
+        bundle = material(cache, snapshot.get("material"))
+        details = verify_pgp(bundle, signature, evidence, gpg)
+        requested = context.get("requested", {}).get(identity, {member})
+        manifests = snapshot_manifests(bundle, requested)
+        verified[identity] = (details, manifests)
+    details, manifests = verified[identity]
+    if member not in manifests or retained.read_bytes() != manifests[member]:
+        raise Refusal("retained Manifest is not linked to the authenticated snapshot")
+    size, expected = gentoo_manifest_entry(manifests[member], archive.name)
+    if archive.stat().st_size != size:
+        raise Refusal("source size differs from authenticated distributor Manifest")
+    with archive.open("rb") as stream:
+        actual = hashlib.file_digest(stream, "sha512").hexdigest()
+    if actual != expected:
+        raise Refusal("source SHA512 differs from authenticated distributor Manifest")
+    return {**details, "trust_class": "distributor-openpgp-manifest", "distributor": "Gentoo",
+            "snapshot_sha256": snapshot["material"]["sha256"], "manifest_member": member,
+            "manifest_sha256": digest(retained), "source_digest_algorithm": "sha512",
+            "source_digest": expected, "source_size": size,
+            "assurance": "Gentoo-signed snapshot authenticates exact upstream filename, size and SHA512; SHA256 pin is derived after verification"}
+
+
+def verify_record(record: dict, cache: Path, evidence: Path, gpg: Path | None,
+                  context: dict | None = None) -> dict:
     if record["disposition"] == "omit":
         return {"name": record["name"], "status": "omitted", "reason": record["reason"]}
+    if record.get("integrity_review", {}).get("status") == "unresolved":
+        raise Refusal("conflicting source evidence requires explicit integrity review")
     archive = local_file(cache, record["name"])
     actual = digest(archive)
     auth = record.get("authentication", {})
@@ -226,8 +350,16 @@ def verify_record(record: dict, cache: Path, evidence: Path, gpg: Path | None) -
         details = {"trust_class": "https-published-sha256", "assurance": "publisher HTTPS metadata; no signature verified"}
     elif method == "openpgp":
         details = verify_pgp(archive, auth, evidence, gpg)
+    elif method == "distributor-openpgp-manifest":
+        details = verify_distributor(archive, auth, cache, evidence, gpg, context if context is not None else {})
     else:
         raise Refusal("no supported authentication evidence")
+    if auth.get("corroboration") is not None:
+        corroboration = auth["corroboration"]
+        if corroboration.get("method") != "distributor-openpgp-manifest":
+            raise Refusal("unsupported source corroboration")
+        details["corroboration"] = verify_distributor(
+            archive, corroboration, cache, evidence, gpg, context if context is not None else {})
     if record.get("sha256") is not None and record["sha256"] != actual:
         raise Refusal("archive differs from reviewed pin")
     return {"name": record["name"], "status": "verified", "sha256": actual,
@@ -239,10 +371,17 @@ def verify_record(record: dict, cache: Path, evidence: Path, gpg: Path | None) -
 def verify_catalog(catalog: dict, cache: Path, evidence: Path, gpg: Path | None = None) -> dict:
     validate_catalog(catalog, evidence)
     records = []
+    context = {"requested": {}}
+    for record in catalog["sources"]:
+        auth = record.get("authentication", {})
+        for item in (auth, auth.get("corroboration", {})):
+            if item.get("method") == "distributor-openpgp-manifest":
+                identity = hashlib.sha256(encoded(item.get("snapshot", {}))).hexdigest()
+                context["requested"].setdefault(identity, set()).add(item.get("manifest_member"))
     for record in catalog["sources"]:
         try:
-            records.append(verify_record(record, cache, evidence, gpg))
-        except (Refusal, OSError, ValueError, subprocess.SubprocessError) as exc:
+            records.append(verify_record(record, cache, evidence, gpg, context))
+        except (Refusal, OSError, ValueError, subprocess.SubprocessError, tarfile.TarError) as exc:
             records.append({"name": record["name"], "status": "unresolved", "reason": str(exc)})
     return {"schema": "tup-source-verification-v1", "catalog_sha256": hashlib.sha256(encoded(catalog)).hexdigest(),
             "verifier": {"name": "source_lock.py", "sha256": digest(Path(__file__).resolve()),

@@ -3,4 +3,4 @@
 *.md text eol=lf
 # Retained publisher metadata is a raw-byte verification input, including its
 # original whitespace. Never normalize it to satisfy code style checks.
-evidence/** -text -whitespace
+evidence/** -text -whitespace -diff

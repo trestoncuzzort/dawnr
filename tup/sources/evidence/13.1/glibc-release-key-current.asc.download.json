@@ -1,0 +1,8 @@
+{
+  "meaning": "observed download bytes; not authentication",
+  "resolved_url": "https://keys.openpgp.org/vks/v1/by-fingerprint/35B17DF5752577CA0C541CEB94BFDF4484AD142F",
+  "retrieved_at": "2026-11-05T08:20:52.585272+00:00",
+  "sha256": "7305140fd8333ceefcb1a3aa88e78a865672caff82b9f274083b1321f90d178c",
+  "size": 150328,
+  "url": "https://keys.openpgp.org/vks/v1/by-fingerprint/35B17DF5752577CA0C541CEB94BFDF4484AD142F"
+}

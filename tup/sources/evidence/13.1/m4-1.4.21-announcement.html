@@ -1,0 +1,283 @@
+<!-- MHonArc v2.6.19+ -->
+<!--X-Subject: m4&#45;1.4.21 released [stable] -->
+<!--X-From-R13: Sevp Pynxr &#60;roynxrNerqung.pbz> -->
+<!--X-Date: Fri, 06 Feb 2026 20:33:07 &#45;0500 -->
+<!--X-Message-Id: aYZMMVa3MW1ZNJ81@redhat.com -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!doctype html public "-//W3C//DTD HTML//EN">
+<html>
+<head>
+<title>m4-1.4.21 released [stable]</title>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<center>
+<table border=0 cellspacing=2 cellpadding=0 bgcolor="#000000">
+<tr><td><table border=0 bgcolor="#FFFFCC">
+<tr><td><big><b>info-gnu</b></big></td></tr></table></tr></table>
+<div class="nowrap">
+<small>[<a href="../"
+>Top</a>][<a href="/archive/html">All Lists</a>]</small>
+</div>
+<form method="get" action="/archive/cgi-bin/namazu.cgi">
+<input type="text" name="query" size="30">
+<input type="submit" name="submit" value="Search">
+<input type="hidden" name="idxname" value="info-gnu">
+<a href="/archive/cgi-bin/namazu.cgi?idxname=info-gnu">Advanced</a>
+</form>
+
+</center>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<hr>
+[<a href="msg00003.html">Date Prev</a>][<a href="msg00005.html">Date Next</a>][<a href="msg00003.html">Thread Prev</a>][<a href="msg00005.html">Thread Next</a>][<a
+href="index.html#00004">Date Index</a>][<a
+href="threads.html#00004">Thread Index</a>]
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h2>m4-1.4.21 released [stable]</h2>
+<hr>
+<table border=0>
+<tbody>
+<tr>
+<td align="right" valign="top">
+<b>From</b>: </td>
+<td align="left">
+Eric Blake</td>
+</tr>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+
+<tr>
+<td align="right" valign="top">
+<b>Subject</b>: </td>
+<td align="left">
+m4-1.4.21 released [stable]</td>
+</tr>
+
+<tr>
+<td align="right" valign="top">
+<b>Date</b>: </td>
+<td align="left">
+Fri, 6 Feb 2026 14:23:35 -0600</td>
+</tr>
+
+<tr>
+<td align="right" valign="top">
+<b>User-agent</b>: </td>
+<td align="left">
+NeoMutt/20251211</td>
+</tr>
+
+</tbody>
+</table>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+<hr>
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre>This is to announce m4-1.4.21, a stable release.
+
+This release is being made mainly to cater to recent glibc changes in
+light of the C23 language standard.  However, it also includes fixes
+for some corner-case bugs in eval and when using the defn macro on
+builtins.
+
+There have been 19 commits by 2 people in the 39 weeks since 1.4.20.
+
+See the NEWS below for a brief summary.
+
+Thanks to everyone who has contributed!
+The following people contributed changes to this release:
+
+  Eric Blake (14)
+  Paul Eggert (5)
+
+Eric Blake
+ [on behalf of the m4 maintainers]
+==================================================================
+
+Here is the GNU m4 home page:
+    <a  rel="nofollow" href="https://gnu.org/s/m4/">https://gnu.org/s/m4/</a>
+
+Here are the compressed sources:
+  <a  rel="nofollow" href="https://ftpmirror.gnu.org/m4/m4-1.4.21.tar.gz">https://ftpmirror.gnu.org/m4/m4-1.4.21.tar.gz</a>   (3.4MB)
+  <a  rel="nofollow" href="https://ftpmirror.gnu.org/m4/m4-1.4.21.tar.bz2">https://ftpmirror.gnu.org/m4/m4-1.4.21.tar.bz2</a>   (2.5MB)
+  <a  rel="nofollow" href="https://ftpmirror.gnu.org/m4/m4-1.4.21.tar.xz">https://ftpmirror.gnu.org/m4/m4-1.4.21.tar.xz</a>   (2.0MB)
+
+Here are the GPG detached signatures:
+  <a  rel="nofollow" href="https://ftpmirror.gnu.org/m4/m4-1.4.21.tar.gz.sig">https://ftpmirror.gnu.org/m4/m4-1.4.21.tar.gz.sig</a>
+  <a  rel="nofollow" href="https://ftpmirror.gnu.org/m4/m4-1.4.21.tar.bz2.sig">https://ftpmirror.gnu.org/m4/m4-1.4.21.tar.bz2.sig</a>
+  <a  rel="nofollow" href="https://ftpmirror.gnu.org/m4/m4-1.4.21.tar.xz.sig">https://ftpmirror.gnu.org/m4/m4-1.4.21.tar.xz.sig</a>
+
+Use a mirror for higher download bandwidth:
+  <a  rel="nofollow" href="https://www.gnu.org/order/ftp.html">https://www.gnu.org/order/ftp.html</a>
+
+Here are the SHA256 and SHA3-256 checksums:
+
+  File: m4-1.4.21.tar.gz
+  SHA256 sum:   38ae59f7a30bf9c108193cc5c25fbb06014f21e230c7ede2eff614f7b7c37ed8
+  SHA3-256 sum: 15e3726714fd70bfe4436a4f3214bbc007cb88eaaf00a119d302fb2c2cb3e60d
+
+  File: m4-1.4.21.tar.bz2
+  SHA256 sum:   dc487e11d2f0c9e01555bb1af26be4eae983ec8f0726746505b4327186eb21fc
+  SHA3-256 sum: bf7ce4a68d060833e75741523d3d65a7eca329ace27689f5979a2803a42b9aae
+
+  File: m4-1.4.21.tar.xz
+  SHA256 sum:   f25c6ab51548a73a75558742fb031e0625d6485fe5f9155949d6486a2408ab66
+  SHA3-256 sum: 17470ef40b4c09ef424e76e1418ffba4a2eb5b68ad9ca23cbd2659461468afed
+
+Verify the SHA256 checksum with either sha256sum, sha256, or
+'shasum -a 256'.
+
+Verify the SHA3-256 checksum with 'cksum -a sha3 -l 256 --base64'
+from coreutils-9.8.
+
+Use a .sig file to verify that the corresponding file (without the
+.sig suffix) is intact.  First, be sure to download both the .sig file
+and the corresponding tarball.  Then, run a command like this:
+
+  gpg --verify m4-1.4.21.tar.gz.sig
+
+The signature should match the fingerprint of the following key:
+
+  pub   rsa2048/0xA7A16B4A2527436A 2010-04-16 [SC]
+        Key fingerprint = 71C2 CC22 B1C4 6029 27D2  F3AA A7A1 6B4A 2527 436A
+  uid                   [ unknown] Eric Blake &lt;eblake@redhat.com&gt;
+  uid                   [ unknown] Eric Blake (Free Software Programmer) 
+&lt;ebb9@byu.net&gt;
+  uid                   [ unknown] [jpeg image of size 6874]
+        Key fingerprint = 4441 8D9D 02D6 9912 052A  708E D205 1C2F D2E4 726C
+  
+  pub   rsa2048/0xA7A16B4A2527436A 2010-04-16 [SC]
+        Key fingerprint = 71C2 CC22 B1C4 6029 27D2  F3AA A7A1 6B4A 2527 436A
+  uid                   [ unknown] Eric Blake (Free Software Programmer) 
+&lt;ebb9@byu.net&gt;
+  uid                   [ unknown] Eric Blake &lt;eblake@redhat.com&gt;
+  uid                   [ unknown] [jpeg image of size 6874]
+        Key fingerprint = 4441 8D9D 02D6 9912 052A  708E D205 1C2F D2E4 726C
+
+If that command fails because you don't have the required public key,
+or that public key has expired, try the following commands to retrieve
+or refresh it, and then rerun the 'gpg --verify' command.
+
+  gpg --locate-external-key eblake@redhat.com
+
+  gpg --recv-keys A7A16B4A2527436A
+
+  wget -q -O- 
+'<a  rel="nofollow" href="https://savannah.gnu.org/project/release-gpgkeys.php?group=m4&amp;download=1">https://savannah.gnu.org/project/release-gpgkeys.php?group=m4&amp;download=1</a>' | 
+gpg --import -
+
+As a last resort to find the key, you can try the official GNU
+keyring:
+
+  wget -q <a  rel="nofollow" href="https://ftp.gnu.org/gnu/gnu-keyring.gpg">https://ftp.gnu.org/gnu/gnu-keyring.gpg</a>
+  gpg --keyring gnu-keyring.gpg --verify m4-1.4.21.tar.gz.sig
+
+This release is based on the m4 git repository, available as
+
+  git clone <a  rel="nofollow" href="https://https.git.savannah.gnu.org/git/m4.git">https://https.git.savannah.gnu.org/git/m4.git</a>
+
+with commit fe2f13ab9ab9b3e712c6529f0b2a49a81feb6ce2 tagged as v1.4.21.
+
+For a summary of changes and contributors, see:
+
+  <a  rel="nofollow" href="https://gitweb.git.savannah.gnu.org/gitweb/?p=m4.git;a=shortlog;h=v1.4.21">https://gitweb.git.savannah.gnu.org/gitweb/?p=m4.git;a=shortlog;h=v1.4.21</a>
+
+or run this command from a git-cloned m4 directory:
+
+  git shortlog v1.4.20..v1.4.21
+
+This release was bootstrapped with the following tools:
+  Autoconf 2.72.90
+  Automake 1.18.1
+  Gnulib 2026-02-03 c6842ec25c6d5b1596da4eb6b68603f9578b23e9
+
+NEWS
+
+* Noteworthy changes in release 1.4.21 (2026-02-06) [stable]
+
+** Fix the `eval' builtin to reject input like `0x' that C does not
+   accept as an integer literal, rather than silently treating it as zero
+   (present since &quot;the beginning&quot;).
+
+** Fix the `define' and `pushdef' builtins to always warn when attempting
+   to concatenate the result of using the `defn' macro on a builtin macro
+   with anything else.  This is a counterpart to the change in m4 1.4.11
+   that issues a warning when `defn' with multiple arguments attempts to
+   perform concatenation.  Attempting to use the output of `defn' anywhere
+   other than a lone argument during macro definition has never been
+   portable, but now the outcome is always the remaining text, rather
+   than being dependent on whether `defn' was used before or after the
+   other text (present since &quot;the beginning&quot;).
+
+** Port to glibc 2.43, which implements functions like strchr as macros
+   when compiled with a C23 compiler.
+
+
+-- 
+Eric Blake, Principal Software Engineer
+Red Hat, Inc.
+Virtualization:  qemu.org | libguestfs.org
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+<hr>
+<form method="post" action="/mp/yyz.py" enctype="multipart/form-data">
+<input type="hidden" name="a" value="eblake">
+<input type="hidden" name="b" value="m4-1.4.21 released [stable]">
+<input type="hidden" name="d" value="aYZMMVa3MW1ZNJ81@redhat.com">
+<input type="hidden" name="c" value="redhat.com">
+<center>reply via email to<br><input type="submit" value=" Eric Blake "></center>
+</form>
+<hr>
+<table width="100%">
+<tr><td align="left">[Prev in Thread]</td>
+<td align="center"><b>Current Thread</b></td>
+<td align="right">[Next in Thread]</td></tr></table>
+<ul>
+<li><font color="#666666"><strong>m4-1.4.21 released [stable]</strong>,
+<em>Eric Blake</em></font>&nbsp;<b>&lt;=</b>
+</ul>
+
+<hr>
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+<ul>
+<li>Prev by Date:
+<strong><a href="msg00003.html">pies-1.9 released [stable]</a></strong>
+</li>
+<li>Next by Date:
+<strong><a href="msg00005.html">GNU G-Golf 0.8.3 release</a></strong>
+</li>
+<li>Previous by thread:
+<strong><a href="msg00003.html">pies-1.9 released [stable]</a></strong>
+</li>
+<li>Next by thread:
+<strong><a href="msg00005.html">GNU G-Golf 0.8.3 release</a></strong>
+</li>
+<li>Index(es):
+<ul>
+<li><a href="index.html#00004"><strong>Date</strong></a></li>
+<li><a href="threads.html#00004"><strong>Thread</strong></a></li>
+</ul>
+</li>
+</ul>
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+</body>
+</html>

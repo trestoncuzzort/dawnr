@@ -1,0 +1,8 @@
+{
+  "meaning": "observed download bytes; not authentication",
+  "resolved_url": "https://mirrors.kernel.org/gnu/gzip/gzip-1.14.tar.xz.sig",
+  "retrieved_at": "2026-11-05T08:14:48.242678+00:00",
+  "sha256": "94634698bea42dad032a10fe66b8b38c4a2efacd36052410402c0c850faf1d1a",
+  "size": 833,
+  "url": "https://mirrors.kernel.org/gnu/gzip/gzip-1.14.tar.xz.sig"
+}

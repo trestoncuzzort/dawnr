@@ -1,0 +1,402 @@
+<!-- MHonArc v2.6.19+ -->
+<!--X-Subject: autoconf&#45;2.73 released [stable] -->
+<!--X-From-R13: "Lnpx Irvaoret" &#60;mnpxNbjysbyvb.bet> -->
+<!--X-Date: Fri, 20 Mar 2026 16:57:18 &#45;0400 -->
+<!--X-Message-Id: e5156c02&#45;369c&#45;4609&#45;9a40&#45;3f2b1b1121cc@app.fastmail.com -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!doctype html public "-//W3C//DTD HTML//EN">
+<html>
+<head>
+<title>autoconf-2.73 released [stable]</title>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<center>
+<table border=0 cellspacing=2 cellpadding=0 bgcolor="#000000">
+<tr><td><table border=0 bgcolor="#FFFFCC">
+<tr><td><big><b>info-gnu</b></big></td></tr></table></tr></table>
+<div class="nowrap">
+<small>[<a href="../"
+>Top</a>][<a href="/archive/html">All Lists</a>]</small>
+</div>
+<form method="get" action="/archive/cgi-bin/namazu.cgi">
+<input type="text" name="query" size="30">
+<input type="submit" name="submit" value="Search">
+<input type="hidden" name="idxname" value="info-gnu">
+<a href="/archive/cgi-bin/namazu.cgi?idxname=info-gnu">Advanced</a>
+</form>
+
+</center>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<hr>
+[<a href="msg00007.html">Date Prev</a>][<a href="msg00009.html">Date Next</a>][<a href="msg00007.html">Thread Prev</a>][<a href="msg00009.html">Thread Next</a>][<a
+href="index.html#00008">Date Index</a>][<a
+href="threads.html#00008">Thread Index</a>]
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h2>autoconf-2.73 released [stable]</h2>
+<hr>
+<table border=0>
+<tbody>
+<tr>
+<td align="right" valign="top">
+<b>From</b>: </td>
+<td align="left">
+Zack Weinberg</td>
+</tr>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+
+<tr>
+<td align="right" valign="top">
+<b>Subject</b>: </td>
+<td align="left">
+autoconf-2.73 released [stable]</td>
+</tr>
+
+<tr>
+<td align="right" valign="top">
+<b>Date</b>: </td>
+<td align="left">
+Fri, 20 Mar 2026 15:47:42 -0400</td>
+</tr>
+
+</tbody>
+</table>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+<hr>
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre>-----BEGIN PGP SIGNED MESSAGE-----
+Hash: SHA256
+
+
+This is to announce the new stable release 2.73 of autoconf.
+
+Autoconf 2.73 is largely a bug-fix release; the most important change
+is improved support for the 2024 revision of the C standard (commonly
+known as &quot;C23&quot;) and for compilers that default to that revision.  We
+have also improved support for GNU Gettext and other major third-party
+extensions to the Autotools.
+
+See the NEWS excerpt below for details, and for a brief summary of
+other important changes since autoconf 2.72.
+
+There have been 140 commits by 17 people in the 117 weeks since 2.72.
+Thanks to everyone who has contributed!
+The following people contributed changes to this release:
+
+  Alyssa Ross (1)
+  Basil L. Contovounesios (1)
+  Bruno Haible (9)
+  Christian Feld (1)
+  Jack Kelly (1)
+  Jan André Reuter (1)
+  Jim Meyering (1)
+  Jose E. Marchesi (2)
+  KO Myung-Hun (1)
+  Luke Mewburn (1)
+  Markus Mützel (1)
+  Paul Eggert (78)
+  R. Diez (1)
+  Sevan Janiyan (1)
+  Vincent Lefevre (1)
+  Yann E. MORIN (1)
+  Zack Weinberg (38)
+
+zw
+ [on behalf of the autoconf maintainers]
+==================================================================
+
+Here is the GNU autoconf home page:
+    <a  rel="nofollow" href="https://gnu.org/s/autoconf/">https://gnu.org/s/autoconf/</a>
+
+Here are the compressed sources:
+  <a  rel="nofollow" href="https://ftpmirror.gnu.org/autoconf/autoconf-2.73.tar.gz">https://ftpmirror.gnu.org/autoconf/autoconf-2.73.tar.gz</a>   (2.1MB)
+  <a  rel="nofollow" href="https://ftpmirror.gnu.org/autoconf/autoconf-2.73.tar.xz">https://ftpmirror.gnu.org/autoconf/autoconf-2.73.tar.xz</a>   (1.4MB)
+
+Here are the GPG detached signatures:
+  <a  rel="nofollow" href="https://ftpmirror.gnu.org/autoconf/autoconf-2.73.tar.gz.sig">https://ftpmirror.gnu.org/autoconf/autoconf-2.73.tar.gz.sig</a>
+  <a  rel="nofollow" href="https://ftpmirror.gnu.org/autoconf/autoconf-2.73.tar.xz.sig">https://ftpmirror.gnu.org/autoconf/autoconf-2.73.tar.xz.sig</a>
+
+Use a mirror for higher download bandwidth:
+  <a  rel="nofollow" href="https://www.gnu.org/order/ftp.html">https://www.gnu.org/order/ftp.html</a>
+
+Here are the SHA256 and SHA3-256 checksums:
+
+  File: autoconf-2.73.tar.gz
+  SHA256 sum:   259ddfa3bddc799cfb81489cc0f17dfdf1bd6d1505dda53c0f45ff60d6a4f9a7
+  SHA3-256 sum: 579c11ccc501739b1e18379f02bb265141c7fd96fcc7c64141b537b88bc3c702
+
+  File: autoconf-2.73.tar.xz
+  SHA256 sum:   9fd672b1c8425fac2fa67fa0477b990987268b90ff36d5f016dae57be0d6b52e
+  SHA3-256 sum: ecb840ea12c3e2b85cd9855be0537e18aa0073793e3ca82e3845d6372385d9dc
+
+Verify the SHA256 checksum with either sha256sum, sha256, or
+'shasum -a 256'.
+
+Verify the SHA3-256 checksum with 'cksum -a sha3 -l 256 --base64'
+from coreutils-9.8.
+
+Use a .sig file to verify that the corresponding file (without the
+.sig suffix) is intact.  First, be sure to download both the .sig file
+and the corresponding tarball.  Then, run a command like this:
+
+  gpg --verify autoconf-2.73.tar.gz.sig
+
+The signature should match the fingerprint of the following key:
+
+  pub   rsa4096 2010-01-14 [SC]
+        82F8 54F3 CE73 174B 8B63  1740 91FC C32B 6769 AA64
+  uid   Zack Weinberg &lt;zackw@panix.com&gt;
+        0323 4CDF AE7F F845 09F2  D636 82D9 DA1C DEBD E0EA
+
+If that command fails because you don't have the required public key,
+or that public key has expired, try the following commands to retrieve
+or refresh it, and then rerun the 'gpg --verify' command.
+
+  gpg --locate-external-key zackw@panix.com
+
+  gpg --recv-keys 91FCC32B6769AA64
+
+  wget -q -O- 
+'<a  rel="nofollow" href="https://savannah.gnu.org/project/release-gpgkeys.php?group=autoconf&amp;download=1">https://savannah.gnu.org/project/release-gpgkeys.php?group=autoconf&amp;download=1</a>'
+ | gpg --import -
+
+As a last resort to find the key, you can try the official GNU
+keyring:
+
+  wget -q <a  rel="nofollow" href="https://ftp.gnu.org/gnu/gnu-keyring.gpg">https://ftp.gnu.org/gnu/gnu-keyring.gpg</a>
+  gpg --keyring gnu-keyring.gpg --verify autoconf-2.73.tar.gz.sig
+
+This release is based on the autoconf git repository, available as
+
+  git clone <a  rel="nofollow" href="https://https.git.savannah.gnu.org/git/autoconf.git">https://https.git.savannah.gnu.org/git/autoconf.git</a>
+
+with commit 44d712a26b0e14931bf2df57e2c9b80a2747dfce tagged as v2.73.
+
+For a summary of changes and contributors, see:
+
+  <a  rel="nofollow" href="https://gitweb.git.savannah.gnu.org/gitweb/?p=autoconf.git;a=shortlog;h=v2.73">https://gitweb.git.savannah.gnu.org/gitweb/?p=autoconf.git;a=shortlog;h=v2.73</a>
+
+or run this command from a git-cloned autoconf directory:
+
+  git shortlog v2.72..v2.73
+
+This release was bootstrapped with the following tools:
+  Automake 1.18.1
+
+NEWS
+
+* Noteworthy changes in release 2.73 (2026-03-20) [release]
+
+** New features
+
+*** autoreconf has a new option to exclude certain steps
+
+  autoreconf --exclude &lt;tool&gt;[,&lt;tool&gt;[,…]] tells autoreconf not to
+  run any of the listed tools, even if it appears to be necessary.
+  This is useful, for example, in situations where autoreconf’s
+  heuristics for when to run each tool are incorrect.  (All such
+  situations are considered bugs; please report them.)  It may also
+  be useful in “bootstrap” scripts that can use autoreconf for most
+  of the work but need to take manual control over execution of some
+  of the tools.
+
+  In older versions of Autoconf, it is possible to get the same effect
+  by setting TOOL=true in the environment for each tool that should not
+  be run.
+
+  Patch originally developed by the OpenEmbedded project.
+
+** Notable bug fixes
+
+*** AC_PROG_GO and AC_PROG_A68 now honor GOFLAGS and A68FLAGS set by the user
+
+*** AC_C_FLEXIBLE_ARRAY_MEMBER and AC_PROG_LEX handle Solaris 10 better
+
+*** autoheader takes more care not to overwrite hand-written config.h.in
+  Before overwriting an existing config.h.in, autoheader now checks
+  for the marker comment on the first line that indicates it was
+  generated by autoheader.  It can be forced to overwrite a
+  config.h.in that doesn’t have that marker by using the new option
+  --replace-handwritten.
+
+*** AC_OUTPUT issues an error if called with more than three arguments
+  All prior versions of GNU autoconf ignore extra arguments to AC_OUTPUT.
+  However, some software’s configure scripts expect a modified version
+  of autoconf in which a fourth argument does something useful.
+  The error is intended to stop redistributors of those programs
+  from regenerating the configure script with a version of autoconf
+  that does not have those modifications, as this is likely to produce
+  a broken configure script.
+
+* Noteworthy changes in release 2.72.90 (2026-02-03) [beta]
+
+** Backward incompatibilities
+
+*** AC_PROG_CC now prefers C23 if available.
+  Older code may need to be updated, as C23 has removed old-style
+  (K&amp;R) function definitions and declarations, now uses type-generic
+  functions for strchr and similar functions, and has new keywords
+  alignas, alignof, bool, constexpr, false, nullptr, static_assert,
+  thread_local, true, typeof, typeof_unqual.
+
+  The shell variable $ac_prog_cc_stdc can now take the value ‘c23’.
+  Configure scripts may need to be adjusted to handle this.  It is
+  likely to be more future-proof to check this variable for values
+  that indicate the compiler is too *old*.
+
+*** AC_PROG_CC no longer checks __STDC__ or variable length arrays (VLAs).
+  This ports better to MSVC, which does not define __STDC__ and does
+  not support VLAs.  Although C99 requires VLAs, they are optional in
+  C11 and later.  Programs can use AC_C_VARARRAYS and __STDC_NO_VLA__
+  to use VLAs if available.
+
+*** AC_PROG_CXX no longer attempts to switch to C++98 or C++11.
+  Instead, it uses the compiler's default, which you can override
+  by configuring with something like CXX='g++ -std=gnu++11'.
+  This reverts to Autoconf 2.69 behavior, and also fixes a bug where
+  AC_PROG_CXX rejected C++20 compilers.
+
+** New features
+
+*** autoheader and autoreconf preserve hand-written template files
+  If ‘config.h.in’ (or whatever your primary configuration header
+  template’s name is) already exists, and does not begin with a
+  comment line indicating it was generated by autoheader, autoheader
+  and autoreconf will now leave it alone instead of replacing it.
+  You can force them to replace the template anyway with the new
+  command line option, --replace-handwritten.  (This is separate
+  from --force because --force is specifically about updating files
+  even if they don’t appear to be _out of date_.)
+
+  We invite feedback on whether the new option should also apply to
+  other existing files that might or might not be machine-generated,
+  most importantly aclocal.m4 and Makefile.in.
+
+*** Programs now recognize #elifdef and #elifndef.
+  The autom4te, autoscan and ifnames programs now recognize the two
+  preprocessor directives, which were introduced in C23 and C++23.
+
+*** Support for the Algol 68 programming language has been added.
+  The new macro AC_LANG_A68 sets variables A68 and A68FLAGS.
+
+*** AC_PROG_AWK now also checks for busybox awk.
+
+*** AC_USE_SYSTEM_EXTENSIONS now defines _COSMO_SOURCE for Cosmopolitan Libc.
+
+** Notable bug fixes
+
+*** AC_CHECK_DECL and AC_CHECK_DECLS will, on macOS, now report &quot;no&quot; for
+  functions that are declared as existing in future macOS versions only.
+
+*** AC_DEFINE_UNQUOTED no longer mishandles double-quotes inside $(...)
+  and ${...}.
+
+*** AC_DEFINE and similar macros no longer emit trailing whitespace.
+  This pacifies the -Wtrailing-whitespace introduced in GCC 15.
+
+*** AC_FUNC_STRNLEN now detects Android 5.0's broken strnlen.
+
+*** AC_PROG_OBJC now finds the GNU Objective-C compiler, as packaged in
+  EPEL 9, by default, without the user having to set the OBJC variable.
+
+*** Autoconf no longer generates ${1+&quot;$@&quot;} in scripts, working around
+  a bug in AIX 7.2 ksh93.
+
+*** config.status now fails with a diagnostic if awk is missing,
+  rather than misbehaving.
+
+*** autoreconf handles projects using GNU Gettext and/or gtk-doc better.
+  A variety of situations where autoreconf would try to run the
+  'autopoint' and/or 'gtkdocize' tools when it shouldn't have,
+  or *wouldn't* run them when it *should* have, have been corrected.
+  See &lt;<a  rel="nofollow" href="https://savannah.gnu.org/support/index.php?111273">https://savannah.gnu.org/support/index.php?111273</a>&gt;,
+  &lt;<a  rel="nofollow" href="https://savannah.gnu.org/support/index.php?111272">https://savannah.gnu.org/support/index.php?111272</a>&gt;,
+  &lt;<a  rel="nofollow" href="https://savannah.gnu.org/support/index.php?111271">https://savannah.gnu.org/support/index.php?111271</a>&gt;,
+  &lt;<a  rel="nofollow" href="https://savannah.gnu.org/support/index.php?110503">https://savannah.gnu.org/support/index.php?110503</a>&gt;.
+
+*** autoconf no longer installs a file named &quot;version.m4&quot;.
+  This eliminates an annoying (but harmless) warning produced by
+  Autoconf 2.72 when projects contain their own &quot;version.m4&quot;.
+
+-----BEGIN PGP SIGNATURE-----
+
+iQJPBAEBCAA5FiEEgvhU885zF0uLYxdAkfzDK2dpqmQFAmm9oLwbFIAAAAAABAAO
+bWFudTIsMi41KzEuMTEsMiwyAAoJEJH8wytnaapkXGQQAJrG5wV4Se4tbsU230FM
+0NFN/lcPGYlwqP72JCSLxpjqNK6H2c/3dsgAKPNgMIzhWH1QX/g2i1nYgiZik4jZ
+D2T7yE4+WHAGjUSTcKt1FPlq3RviNgVU5UwnCL6C9XiBksZytIiyva8z5Ym4ds4i
+4O12/jpFvxr/cvYlZ/Xqwn7BJjVH7FL2qZNb5cjpv0iZ3laaWbICHnrtfodZHXah
+qYtX5yaLtEtSxqO1NflTBUpcFrF++iOHkbXPymsS+1vrW8nEPbbWZmhy6Eu/jD2b
+5pYO+/A5f06zaf4oJLYjzAY2CCkTNnc6F0saUrwLD20ke4oR24rds4gTCFDariNE
+9MFalH4mGTkwFiZ4yMMEX5PuioJnlMd794nbXNL0m38jdI3j7aYu/PPZXwwx4RUS
+6vO6Sh/THj3FAn6Qsuv5tM4pl38a9Mdgp3jWtC0VXA4ohFyL2iVIvusERtPLZKfd
+2gHtfKQ/BA8GRG57CniOAHiEuH/UOjWRqvpo8f6GAZ5KuzbFU/i2qP+eOpEm29dV
+kiTfiu6LE3/BnyClVfvUs0pcRIxTvE0LxqcIXG0rgYRCP58SThdu7dt12nwXe3W3
+yFoKpsKuhnmQ3+juusurDdReaIjNDvFHIRKocderHQCnk68Nv3o+72zHVpdws1S/
+IvB69RPXB4m+ImDh1krcgBNF
+=uu8V
+-----END PGP SIGNATURE-----
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+<hr>
+<form method="post" action="/mp/yyz.py" enctype="multipart/form-data">
+<input type="hidden" name="a" value="zack">
+<input type="hidden" name="b" value="autoconf-2.73 released [stable]">
+<input type="hidden" name="d" value="e5156c02-369c-4609-9a40-3f2b1b1121cc@app.fastmail.com">
+<input type="hidden" name="c" value="owlfolio.org">
+<center>reply via email to<br><input type="submit" value=" Zack Weinberg "></center>
+</form>
+<hr>
+<table width="100%">
+<tr><td align="left">[Prev in Thread]</td>
+<td align="center"><b>Current Thread</b></td>
+<td align="right">[Next in Thread]</td></tr></table>
+<ul>
+<li><font color="#666666"><strong>autoconf-2.73 released [stable]</strong>,
+<em>Zack Weinberg</em></font>&nbsp;<b>&lt;=</b>
+</ul>
+
+<hr>
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+<ul>
+<li>Prev by Date:
+<strong><a href="msg00007.html">GNUnet 0.27.0 released</a></strong>
+</li>
+<li>Next by Date:
+<strong><a href="msg00009.html">GNU G-Golf 0.8.5 release</a></strong>
+</li>
+<li>Previous by thread:
+<strong><a href="msg00007.html">GNUnet 0.27.0 released</a></strong>
+</li>
+<li>Next by thread:
+<strong><a href="msg00009.html">GNU G-Golf 0.8.5 release</a></strong>
+</li>
+<li>Index(es):
+<ul>
+<li><a href="index.html#00008"><strong>Date</strong></a></li>
+<li><a href="threads.html#00008"><strong>Thread</strong></a></li>
+</ul>
+</li>
+</ul>
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+</body>
+</html>

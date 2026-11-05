@@ -1,0 +1,8 @@
+{
+  "meaning": "observed download bytes; not authentication",
+  "resolved_url": "https://savannah.gnu.org/project/release-gpgkeys.php?group=libc&download=1",
+  "retrieved_at": "2026-11-05T08:19:01.618041+00:00",
+  "sha256": "7796bec530799756b2db150e1cdbb5d59541fc7233cd26b5706433cd801ac78f",
+  "size": 448574,
+  "url": "https://savannah.gnu.org/project/release-gpgkeys.php?group=libc&download=1"
+}

@@ -1,0 +1,8 @@
+{
+  "meaning": "observed download bytes; not authentication",
+  "resolved_url": "https://savannah.gnu.org/project/release-gpgkeys.php?group=coreutils&download=1",
+  "retrieved_at": "2026-11-05T08:19:00.981244+00:00",
+  "sha256": "457a5fbd6934cf9534156a14dc108aad2dc3a054555d9ef4a0b046190f39cebc",
+  "size": 20290,
+  "url": "https://savannah.gnu.org/project/release-gpgkeys.php?group=coreutils&download=1"
+}

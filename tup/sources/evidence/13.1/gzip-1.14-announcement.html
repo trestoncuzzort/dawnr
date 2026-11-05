@@ -1,0 +1,275 @@
+<!-- MHonArc v2.6.19+ -->
+<!--X-Subject: gzip&#45;1.14 released [stable] -->
+<!--X-From-R13: Xvz [rlrevat &#60;wvzNzrlrevat.arg> -->
+<!--X-Date: Thu, 10 Apr 2025 09:03:12 &#45;0400 -->
+<!--X-Message-Id: m21pu0tytw.fsf@meyering.net -->
+<!--X-Content-Type: multipart/signed -->
+<!--X-Derived: pgpkcwpRE3MNL.pgp -->
+<!--X-Head-End-->
+<!doctype html public "-//W3C//DTD HTML//EN">
+<html>
+<head>
+<title>gzip-1.14 released [stable]</title>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<center>
+<table border=0 cellspacing=2 cellpadding=0 bgcolor="#000000">
+<tr><td><table border=0 bgcolor="#FFFFCC">
+<tr><td><big><b>info-gnu</b></big></td></tr></table></tr></table>
+<div class="nowrap">
+<small>[<a href="../"
+>Top</a>][<a href="/archive/html">All Lists</a>]</small>
+</div>
+<form method="get" action="/archive/cgi-bin/namazu.cgi">
+<input type="text" name="query" size="30">
+<input type="submit" name="submit" value="Search">
+<input type="hidden" name="idxname" value="info-gnu">
+<a href="/archive/cgi-bin/namazu.cgi?idxname=info-gnu">Advanced</a>
+</form>
+
+</center>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<hr>
+[<a href="msg00006.html">Date Prev</a>][<a href="msg00008.html">Date Next</a>][<a href="msg00006.html">Thread Prev</a>][<a href="msg00008.html">Thread Next</a>][<a
+href="index.html#00007">Date Index</a>][<a
+href="threads.html#00007">Thread Index</a>]
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h2>gzip-1.14 released [stable]</h2>
+<hr>
+<table border=0>
+<tbody>
+<tr>
+<td align="right" valign="top">
+<b>From</b>: </td>
+<td align="left">
+Jim Meyering</td>
+</tr>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+
+<tr>
+<td align="right" valign="top">
+<b>Subject</b>: </td>
+<td align="left">
+gzip-1.14 released [stable]</td>
+</tr>
+
+<tr>
+<td align="right" valign="top">
+<b>Date</b>: </td>
+<td align="left">
+Wed, 09 Apr 2025 21:39:07 -0700</td>
+</tr>
+
+</tbody>
+</table>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+<hr>
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre>This is to announce gzip-1.14, a stable release.
+
+Most notable: &quot;gzip -d&quot; is up to 40% faster on x86_64 CPUs with pclmul
+support. Why? Because about half of its time was spent computing a CRC
+checksum, and that code is far more efficient now.  Even on 10-year-old
+CPUs lacking pclmul support, it's ~20% faster.  Thanks to Lasse Collin
+for alerting me to this very early on, to Sam Russell for contributing
+gnulib's new crc module and to Bruno Haible and everyone else who keeps
+the bar so high for all of gnulib. And as usual, thanks to Paul Eggert
+for many contributions everywhere.
+
+There have been 58 commits by 7 people in the 85 weeks since 1.13.
+
+See the NEWS below for a brief summary.
+
+Thanks to everyone who has contributed!
+The following people contributed changes to this release:
+
+  Bruno Haible (1)
+  Collin Funk (4)
+  Jim Meyering (26)
+  Lasse Collin (1)
+  Paul Eggert (24)
+  Sam Russell (1)
+  Simon Josefsson (1)
+
+Jim
+ [on behalf of the gzip maintainers]
+==================================================================
+
+Here is the GNU gzip home page:
+    <a  rel="nofollow" href="https://gnu.org/s/gzip/">https://gnu.org/s/gzip/</a>
+
+Here are the compressed sources:
+  <a  rel="nofollow" href="https://ftp.gnu.org/gnu/gzip/gzip-1.14.tar.gz">https://ftp.gnu.org/gnu/gzip/gzip-1.14.tar.gz</a>   (1.4MB)
+  <a  rel="nofollow" href="https://ftp.gnu.org/gnu/gzip/gzip-1.14.tar.xz">https://ftp.gnu.org/gnu/gzip/gzip-1.14.tar.xz</a>   (868KB)
+
+Here are the GPG detached signatures:
+  <a  rel="nofollow" href="https://ftp.gnu.org/gnu/gzip/gzip-1.14.tar.gz.sig">https://ftp.gnu.org/gnu/gzip/gzip-1.14.tar.gz.sig</a>
+  <a  rel="nofollow" href="https://ftp.gnu.org/gnu/gzip/gzip-1.14.tar.xz.sig">https://ftp.gnu.org/gnu/gzip/gzip-1.14.tar.xz.sig</a>
+
+Use a mirror for higher download bandwidth:
+  <a  rel="nofollow" href="https://www.gnu.org/order/ftp.html">https://www.gnu.org/order/ftp.html</a>
+
+Here are the SHA1 and SHA256 checksums:
+
+  27f9847892a1c59b9527469a8a3e5d635057fbdd  gzip-1.14.tar.gz
+  YT1upE8SSNc3DHzN7uDdABegnmw53olLPG8D+YEZHGs=  gzip-1.14.tar.gz
+  05f44a8a589df0171e75769e3d11f8b11d692f58  gzip-1.14.tar.xz
+  Aae4gb0iC/32Ffl7hxj4C9/T9q3ThbmT3Pbv0U6MCsY=  gzip-1.14.tar.xz
+
+Verify the base64 SHA256 checksum with cksum -a sha256 --check
+from coreutils-9.2 or OpenBSD's cksum since 2007.
+
+Use a .sig file to verify that the corresponding file (without the
+.sig suffix) is intact.  First, be sure to download both the .sig file
+and the corresponding tarball.  Then, run a command like this:
+
+  gpg --verify gzip-1.14.tar.gz.sig
+
+The signature should match the fingerprint of the following key:
+
+  pub   rsa4096/0x7FD9FCCB000BEEEE 2010-06-14 [SCEA]
+        Key fingerprint = 155D 3FC5 00C8 3448 6D1E  EA67 7FD9 FCCB 000B EEEE
+  uid                   [ unknown] Jim Meyering &lt;jim@meyering.net&gt;
+  uid                   [ unknown] Jim Meyering &lt;meyering@fb.com&gt;
+  uid                   [ unknown] Jim Meyering &lt;meyering@gnu.org&gt;
+
+If that command fails because you don't have the required public key,
+or that public key has expired, try the following commands to retrieve
+or refresh it, and then rerun the 'gpg --verify' command.
+
+  gpg --locate-external-key jim@meyering.net
+
+  gpg --recv-keys 7FD9FCCB000BEEEE
+
+  wget -q -O- 
+'<a  rel="nofollow" href="https://savannah.gnu.org/project/release-gpgkeys.php?group=gzip&amp;download=1">https://savannah.gnu.org/project/release-gpgkeys.php?group=gzip&amp;download=1</a>' | 
+gpg --import -
+
+As a last resort to find the key, you can try the official GNU
+keyring:
+
+  wget -q <a  rel="nofollow" href="https://ftp.gnu.org/gnu/gnu-keyring.gpg">https://ftp.gnu.org/gnu/gnu-keyring.gpg</a>
+  gpg --keyring gnu-keyring.gpg --verify gzip-1.14.tar.gz.sig
+
+This release is based on the gzip git repository, available as
+
+  git clone <a  rel="nofollow" href="https://git.savannah.gnu.org/git/gzip.git">https://git.savannah.gnu.org/git/gzip.git</a>
+
+with commit fbc4883eb9c304a04623ac506dd5cf5450d055f1 tagged as v1.14.
+
+For a summary of changes and contributors, see:
+
+  <a  rel="nofollow" href="https://git.sv.gnu.org/gitweb/?p=gzip.git;a=shortlog;h=v1.14">https://git.sv.gnu.org/gitweb/?p=gzip.git;a=shortlog;h=v1.14</a>
+
+or run this command from a git-cloned gzip directory:
+
+  git shortlog v1.13..v1.14
+
+This release was bootstrapped with the following tools:
+  Autoconf 2.72.76-2f64
+  Automake 1.17.0.91
+  Gnulib 2025-01-31 553ab924d2b68d930fae5d3c6396502a57852d23
+
+NEWS
+
+* Noteworthy changes in release 1.14 (2025-04-09) [stable]
+
+** Bug fixes
+
+  'gzip -d' no longer omits the last partial output buffer when the
+  input ends unexpectedly on an IBM Z platform.
+  [bug introduced in gzip-1.11]
+
+  'gzip -l' no longer misreports lengths of multimember inputs.
+  [bug introduced in gzip-1.12]
+
+  'gzip -S' now rejects suffixes containing '/'.
+  [bug present since the beginning]
+
+** Changes in behavior
+
+  The GZIP environment variable is now silently ignored except for the
+  options -1 (--fast) through -9 (--best), --rsyncable, and --synchronous.
+  This brings gzip into line with more-cautious compressors like zstd
+  that limit environment variables' effect to relatively innocuous
+  performance issues.  You can continue to use scripts to specify
+  whatever gzip options you like.
+
+  'zmore' is no longer installed on platforms lacking 'more'.
+
+** Performance improvements
+
+  gzip now decompresses significantly faster by computing CRCs via a
+  slice by 8 algorithm, and faster yet on x86-64 platforms that
+  support pclmul instructions.
+
+
+
+Also posted at <a  rel="nofollow" href="https://savannah.gnu.org/news/?id=10752">https://savannah.gnu.org/news/?id=10752</a>
+</pre>
+<p><strong><a href="pgpkcwpRE3MNL.pgp" ><img src="/icons/generic.png" align="left" border=0 alt="Attachment:" width="20" height="22"></a>
+<a href="pgpkcwpRE3MNL.pgp" ><tt>signature.asc</tt></a></strong><br>
+<em>Description:</em> PGP signature</p>
+
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+<hr>
+<form method="post" action="/mp/yyz.py" enctype="multipart/form-data">
+<input type="hidden" name="a" value="jim">
+<input type="hidden" name="b" value="gzip-1.14 released [stable]">
+<input type="hidden" name="d" value="m21pu0tytw.fsf@meyering.net">
+<input type="hidden" name="c" value="meyering.net">
+<center>reply via email to<br><input type="submit" value=" Jim Meyering "></center>
+</form>
+<hr>
+<table width="100%">
+<tr><td align="left">[Prev in Thread]</td>
+<td align="center"><b>Current Thread</b></td>
+<td align="right">[Next in Thread]</td></tr></table>
+<ul>
+<li><font color="#666666"><strong>gzip-1.14 released [stable]</strong>,
+<em>Jim Meyering</em></font>&nbsp;<b>&lt;=</b>
+</ul>
+
+<hr>
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+<ul>
+<li>Prev by Date:
+<strong><a href="msg00006.html">coreutils-9.7 released [stable]</a></strong>
+</li>
+<li>Next by Date:
+<strong><a href="msg00008.html">grep-3.12 released [stable]</a></strong>
+</li>
+<li>Previous by thread:
+<strong><a href="msg00006.html">coreutils-9.7 released [stable]</a></strong>
+</li>
+<li>Next by thread:
+<strong><a href="msg00008.html">grep-3.12 released [stable]</a></strong>
+</li>
+<li>Index(es):
+<ul>
+<li><a href="index.html#00007"><strong>Date</strong></a></li>
+<li><a href="threads.html#00007"><strong>Thread</strong></a></li>
+</ul>
+</li>
+</ul>
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+</body>
+</html>

@@ -1,13 +1,31 @@
 {
-  "catalog_sha256": "9ab1fddbbd83b9c40ce77596310df8a6e403a1d12ca302efcf1318775822ec9e",
-  "checked_at": "2026-11-05T08:09:53.447983+00:00",
+  "catalog_sha256": "5c67ecef1fc50913be2c2b00b9c25335f7ee4dc3c6d212a3fb64a09bebad6738",
+  "checked_at": "2026-11-05T08:40:29.936339+00:00",
   "complete": false,
   "schema": "tup-source-verification-v1",
   "sources": [
     {
+      "authentication": {
+        "assurance": "Gentoo-signed snapshot authenticates exact upstream filename, size and SHA512; SHA256 pin is derived after verification",
+        "distributor": "Gentoo",
+        "evidence_sha256": "3d3411abcd66ddb1778dc039039b3bd464479ce9de98fe814310f83826d88092",
+        "manifest_member": "gentoo-20261103/sys-apps/acl/Manifest",
+        "manifest_sha256": "a1d2729b5f32c4b390691b18ccc3b384c1cef550d906a75e67216eeece967a75",
+        "primary_fingerprint": "DCD05B71EAB94199527F44ACDB6B8C1F96D8BF6D",
+        "signing_fingerprint": "E1D6ABB63BFCFB4BA02FDF1CEC590EEAC9189250",
+        "snapshot_sha256": "923b3132d9214cee3f59fa2b56a3af27a0287c8587576c99ebcd5b24e537a194",
+        "source_digest": "d81737abe566310a1a9de207cbf204449bd55ce5b549c6613e5f474a6592e03fac7c80826ddce7543a954d32b99d8b5e25c5e3dcc5fab7b1b381627cc1240de6",
+        "source_digest_algorithm": "sha512",
+        "source_size": 384828,
+        "status": "verified",
+        "status_sha256": "0e675efd7fc7ec684b5d53c312b61219c66e4238caef255c74edb78e8afe6ab9",
+        "trust_class": "distributor-openpgp-manifest",
+        "verifier_sha256": "14953ed8b4549020e185c0f7ab600bb9d0384457ea74da9d574e8d31139aff4f"
+      },
       "name": "acl-2.4.0.tar.xz",
-      "reason": "no supported authentication evidence",
-      "status": "unresolved"
+      "sha256": "e661131456d2708a01c614a0f400e11d7d1bfaeb6f3e74b75bb980b72f0161a3",
+      "size": 384828,
+      "status": "verified"
     },
     {
       "name": "attr-2.6.0.tar.gz",
@@ -15,59 +33,226 @@
       "status": "unresolved"
     },
     {
+      "authentication": {
+        "assurance": "publisher HTTPS metadata; no signature verified",
+        "evidence_sha256": "7669ba51ebda0abfa0565482da8ed6e0543ab64d003811381d4cd4b4d6f9c0d8",
+        "status": "verified",
+        "trust_class": "https-published-sha256"
+      },
       "name": "autoconf-2.73.tar.xz",
-      "reason": "no supported authentication evidence",
-      "status": "unresolved"
+      "sha256": "9fd672b1c8425fac2fa67fa0477b990987268b90ff36d5f016dae57be0d6b52e",
+      "size": 1417428,
+      "status": "verified"
     },
     {
+      "authentication": {
+        "corroboration": {
+          "assurance": "Gentoo-signed snapshot authenticates exact upstream filename, size and SHA512; SHA256 pin is derived after verification",
+          "distributor": "Gentoo",
+          "manifest_member": "gentoo-20261103/dev-build/automake/Manifest",
+          "manifest_sha256": "bac647a153ec055b6d04d4ce5c8da9a80a428ec18fe90e80bae8ae3aedd02cd6",
+          "primary_fingerprint": "DCD05B71EAB94199527F44ACDB6B8C1F96D8BF6D",
+          "signing_fingerprint": "E1D6ABB63BFCFB4BA02FDF1CEC590EEAC9189250",
+          "snapshot_sha256": "923b3132d9214cee3f59fa2b56a3af27a0287c8587576c99ebcd5b24e537a194",
+          "source_digest": "8baa16831416a953a743f4e3c0f55cea5ebefe0f5a7a0e390581981d4461d02dc9038415124e974b2ec390c40daaa241802cd7d42c6fafb793f87cf355db2a61",
+          "source_digest_algorithm": "sha512",
+          "source_size": 1652392,
+          "status_sha256": "0e675efd7fc7ec684b5d53c312b61219c66e4238caef255c74edb78e8afe6ab9",
+          "trust_class": "distributor-openpgp-manifest",
+          "verifier_sha256": "14953ed8b4549020e185c0f7ab600bb9d0384457ea74da9d574e8d31139aff4f"
+        },
+        "evidence_sha256": "45eb7552826717f36b40eb145d2ea1eaec29074cfa1b83294fdf3b7cb998e241",
+        "primary_fingerprint": "17D3311B14BC0F248267BF020716748A30D155AD",
+        "signing_fingerprint": "17D3311B14BC0F248267BF020716748A30D155AD",
+        "status": "verified",
+        "status_sha256": "5bba53542155d64e1f5012000a60e951eca194ca4f1be9ce51c9b83ec91e4727",
+        "trust_class": "publisher-openpgp",
+        "verifier_sha256": "14953ed8b4549020e185c0f7ab600bb9d0384457ea74da9d574e8d31139aff4f"
+      },
       "name": "automake-1.18.1.tar.xz",
-      "reason": "no supported authentication evidence",
-      "status": "unresolved"
+      "sha256": "168aa363278351b89af56684448f525a5bce5079d0b6842bd910fdd3f1646887",
+      "size": 1652392,
+      "status": "verified"
     },
     {
+      "authentication": {
+        "assurance": "Gentoo-signed snapshot authenticates exact upstream filename, size and SHA512; SHA256 pin is derived after verification",
+        "distributor": "Gentoo",
+        "evidence_sha256": "25fd37ba0f39cb8d05faa3b8e0d2fe5f270c3ac0523bfc6af4e4696241ca093c",
+        "manifest_member": "gentoo-20261103/app-shells/bash/Manifest",
+        "manifest_sha256": "29c4ad2a4aff766eac325c56a55f97977e0d6582168472bceaf82aca189daf35",
+        "primary_fingerprint": "DCD05B71EAB94199527F44ACDB6B8C1F96D8BF6D",
+        "signing_fingerprint": "E1D6ABB63BFCFB4BA02FDF1CEC590EEAC9189250",
+        "snapshot_sha256": "923b3132d9214cee3f59fa2b56a3af27a0287c8587576c99ebcd5b24e537a194",
+        "source_digest": "426702c8b0fb9e0c9956259973ce5b657890fd47f4f807a64febf20077bb48d0b91474ed6e843d2ef277186b46c5fffa79b808da9b48d4ec027d5e2de1b28ed8",
+        "source_digest_algorithm": "sha512",
+        "source_size": 11355854,
+        "status": "verified",
+        "status_sha256": "0e675efd7fc7ec684b5d53c312b61219c66e4238caef255c74edb78e8afe6ab9",
+        "trust_class": "distributor-openpgp-manifest",
+        "verifier_sha256": "14953ed8b4549020e185c0f7ab600bb9d0384457ea74da9d574e8d31139aff4f"
+      },
       "name": "bash-5.3.tar.gz",
-      "reason": "no supported authentication evidence",
-      "status": "unresolved"
+      "sha256": "0d5cd86965f869a26cf64f4b71be7b96f90a3ba8b3d74e27e8e9d9d5550f31ba",
+      "size": 11355854,
+      "status": "verified"
     },
     {
+      "authentication": {
+        "assurance": "Gentoo-signed snapshot authenticates exact upstream filename, size and SHA512; SHA256 pin is derived after verification",
+        "distributor": "Gentoo",
+        "evidence_sha256": "02d53ac4ce08a057c1cd5d44ebb54e32640e8c52c45d85c83aed5ca0378531a7",
+        "manifest_member": "gentoo-20261103/sci-calculators/bc-gh/Manifest",
+        "manifest_sha256": "5d9d4ea25c3fa67635d6cf0ea7689bbfd3c5a29e0d51b4aeff87f778a52b5acf",
+        "primary_fingerprint": "DCD05B71EAB94199527F44ACDB6B8C1F96D8BF6D",
+        "signing_fingerprint": "E1D6ABB63BFCFB4BA02FDF1CEC590EEAC9189250",
+        "snapshot_sha256": "923b3132d9214cee3f59fa2b56a3af27a0287c8587576c99ebcd5b24e537a194",
+        "source_digest": "40bd059eda5df30fe41a4683a51727af7c9d0df48eb795c3c0afff0740cb4b4e719a6135203ebacb27617d9721a78c24f3ec3107c676aafa2808f73313084cd7",
+        "source_digest_algorithm": "sha512",
+        "source_size": 474800,
+        "status": "verified",
+        "status_sha256": "0e675efd7fc7ec684b5d53c312b61219c66e4238caef255c74edb78e8afe6ab9",
+        "trust_class": "distributor-openpgp-manifest",
+        "verifier_sha256": "14953ed8b4549020e185c0f7ab600bb9d0384457ea74da9d574e8d31139aff4f"
+      },
       "name": "bc-7.0.3.tar.xz",
-      "reason": "no supported authentication evidence",
-      "status": "unresolved"
+      "sha256": "91eb74caed0ee6655b669711a4f350c25579778694df248e28363318e03c7fc4",
+      "size": 474800,
+      "status": "verified"
     },
     {
+      "authentication": {
+        "assurance": "Gentoo-signed snapshot authenticates exact upstream filename, size and SHA512; SHA256 pin is derived after verification",
+        "distributor": "Gentoo",
+        "evidence_sha256": "707c45ab9c343873ee3a0d59d89b198329946adcb508ee1e09c5be3a4b7d3d55",
+        "manifest_member": "gentoo-20261103/sys-devel/binutils/Manifest",
+        "manifest_sha256": "d2c7f6175985c7a6f3b35595277792771041bbdacc5dc7bc554763b5290e8789",
+        "primary_fingerprint": "DCD05B71EAB94199527F44ACDB6B8C1F96D8BF6D",
+        "signing_fingerprint": "E1D6ABB63BFCFB4BA02FDF1CEC590EEAC9189250",
+        "snapshot_sha256": "923b3132d9214cee3f59fa2b56a3af27a0287c8587576c99ebcd5b24e537a194",
+        "source_digest": "3126a1064374d8da40d4d70630c204ed1e75d542c447d53fca9778c7ceff095c28e9b445e15a313fef9729082d7966471ee6b5b715d479aa6d568528743e1d98",
+        "source_digest_algorithm": "sha512",
+        "source_size": 29034716,
+        "status": "verified",
+        "status_sha256": "0e675efd7fc7ec684b5d53c312b61219c66e4238caef255c74edb78e8afe6ab9",
+        "trust_class": "distributor-openpgp-manifest",
+        "verifier_sha256": "14953ed8b4549020e185c0f7ab600bb9d0384457ea74da9d574e8d31139aff4f"
+      },
       "name": "binutils-2.47.tar.xz",
-      "reason": "no supported authentication evidence",
-      "status": "unresolved"
+      "sha256": "154ab23b60070e8f27013c22977f1129425d67d1e8acd6e13010e617811e4cff",
+      "size": 29034716,
+      "status": "verified"
     },
     {
+      "authentication": {
+        "assurance": "Gentoo-signed snapshot authenticates exact upstream filename, size and SHA512; SHA256 pin is derived after verification",
+        "distributor": "Gentoo",
+        "evidence_sha256": "f4381087d6c118a8eceaf06ba7a9a3f9a5acc7d545d20c3510add9bca35648c4",
+        "manifest_member": "gentoo-20261103/sys-devel/bison/Manifest",
+        "manifest_sha256": "2cb5353eada55537cbabc63da2cbc4c7248aa3c1c526fe226ee2620c855d4c68",
+        "primary_fingerprint": "DCD05B71EAB94199527F44ACDB6B8C1F96D8BF6D",
+        "signing_fingerprint": "E1D6ABB63BFCFB4BA02FDF1CEC590EEAC9189250",
+        "snapshot_sha256": "923b3132d9214cee3f59fa2b56a3af27a0287c8587576c99ebcd5b24e537a194",
+        "source_digest": "d4d23af6671406e97257892f90651b67f2ab95219831372be032190b7156c10a3435d457857e677445df8b2327aacccc15344acbbc3808a6f332a93cce23b444",
+        "source_digest_algorithm": "sha512",
+        "source_size": 2817324,
+        "status": "verified",
+        "status_sha256": "0e675efd7fc7ec684b5d53c312b61219c66e4238caef255c74edb78e8afe6ab9",
+        "trust_class": "distributor-openpgp-manifest",
+        "verifier_sha256": "14953ed8b4549020e185c0f7ab600bb9d0384457ea74da9d574e8d31139aff4f"
+      },
       "name": "bison-3.8.2.tar.xz",
-      "reason": "no supported authentication evidence",
-      "status": "unresolved"
+      "sha256": "9bba0214ccf7f1079c5d59210045227bcf619519840ebfa80cd3849cff5a5bf2",
+      "size": 2817324,
+      "status": "verified"
     },
     {
+      "authentication": {
+        "assurance": "Gentoo-signed snapshot authenticates exact upstream filename, size and SHA512; SHA256 pin is derived after verification",
+        "distributor": "Gentoo",
+        "evidence_sha256": "1bae4a1f05823655de8dd124f67570fdfa75a1c443cb4a5cd45b2a11eba98b8f",
+        "manifest_member": "gentoo-20261103/app-arch/bzip2/Manifest",
+        "manifest_sha256": "b5e60c32ad4639bff6ceb1070f6c80fb7245da1b0fd6f55f0efe697d34105ba1",
+        "primary_fingerprint": "DCD05B71EAB94199527F44ACDB6B8C1F96D8BF6D",
+        "signing_fingerprint": "E1D6ABB63BFCFB4BA02FDF1CEC590EEAC9189250",
+        "snapshot_sha256": "923b3132d9214cee3f59fa2b56a3af27a0287c8587576c99ebcd5b24e537a194",
+        "source_digest": "083f5e675d73f3233c7930ebe20425a533feedeaaa9d8cc86831312a6581cefbe6ed0d08d2fa89be81082f2a5abdabca8b3c080bf97218a1bd59dc118a30b9f3",
+        "source_digest_algorithm": "sha512",
+        "source_size": 810029,
+        "status": "verified",
+        "status_sha256": "0e675efd7fc7ec684b5d53c312b61219c66e4238caef255c74edb78e8afe6ab9",
+        "trust_class": "distributor-openpgp-manifest",
+        "verifier_sha256": "14953ed8b4549020e185c0f7ab600bb9d0384457ea74da9d574e8d31139aff4f"
+      },
       "name": "bzip2-1.0.8.tar.gz",
-      "reason": "no supported authentication evidence",
-      "status": "unresolved"
+      "sha256": "ab5a03176ee106d3f0fa90e381da478ddae405918153cca248e682cd0c4a2269",
+      "size": 810029,
+      "status": "verified"
     },
     {
+      "authentication": {
+        "evidence_sha256": "6202c1bf5ca2d7157aa18ba558b50480298189eb982330e6c531505551ec9295",
+        "primary_fingerprint": "6C37DC12121A5006BC1DB804DF6FD971306037D9",
+        "signing_fingerprint": "6C37DC12121A5006BC1DB804DF6FD971306037D9",
+        "status": "verified",
+        "status_sha256": "e91a24b28fb21792c2a0b84890e2be57e8d05bf30dc2c7c91907490aa2c8062b",
+        "trust_class": "publisher-openpgp",
+        "verifier_sha256": "14953ed8b4549020e185c0f7ab600bb9d0384457ea74da9d574e8d31139aff4f"
+      },
       "name": "coreutils-9.11.tar.xz",
-      "reason": "no supported authentication evidence",
-      "status": "unresolved"
+      "sha256": "394024eda0a5955217ceda9cd1201e65dc8fa3aa29c2951135a49521d57c3cc3",
+      "size": 6562420,
+      "status": "verified"
     },
     {
+      "authentication": {
+        "assurance": "Gentoo-signed snapshot authenticates exact upstream filename, size and SHA512; SHA256 pin is derived after verification",
+        "distributor": "Gentoo",
+        "evidence_sha256": "20145b17e84ae9140abfcd947c9949d0e700fc7fe963e547f6dc04ecba3df782",
+        "manifest_member": "gentoo-20261103/sys-apps/dbus/Manifest",
+        "manifest_sha256": "2dc52d04d012896e1e88dc5ee9d0390680cd1d50b091f46820ffb20b4ad07e89",
+        "primary_fingerprint": "DCD05B71EAB94199527F44ACDB6B8C1F96D8BF6D",
+        "signing_fingerprint": "E1D6ABB63BFCFB4BA02FDF1CEC590EEAC9189250",
+        "snapshot_sha256": "923b3132d9214cee3f59fa2b56a3af27a0287c8587576c99ebcd5b24e537a194",
+        "source_digest": "5c26f52d85984bb9ae1dde8d7e73921eacbdf020a61ff15f00a4c240cb38a121553ee04bd66e62b28425ff9bc50f4f5e15135166573ac0888332a01a0db1faa2",
+        "source_digest_algorithm": "sha512",
+        "source_size": 1115644,
+        "status": "verified",
+        "status_sha256": "0e675efd7fc7ec684b5d53c312b61219c66e4238caef255c74edb78e8afe6ab9",
+        "trust_class": "distributor-openpgp-manifest",
+        "verifier_sha256": "14953ed8b4549020e185c0f7ab600bb9d0384457ea74da9d574e8d31139aff4f"
+      },
       "name": "dbus-1.16.2.tar.xz",
-      "reason": "no supported authentication evidence",
-      "status": "unresolved"
+      "sha256": "0ba2a1a4b16afe7bceb2c07e9ce99a8c2c3508e5dec290dbb643384bd6beb7e2",
+      "size": 1115644,
+      "status": "verified"
     },
     {
+      "authentication": {
+        "assurance": "publisher HTTPS metadata; no signature verified",
+        "evidence_sha256": "17a9c5da85aa97116d8cba96f4b16d6e7329b953709f5d33ee72537d5e79c364",
+        "status": "verified",
+        "trust_class": "https-published-sha256"
+      },
       "name": "dejagnu-1.6.3.tar.gz",
-      "reason": "no supported authentication evidence",
-      "status": "unresolved"
+      "sha256": "87daefacd7958b4a69f88c6856dbd1634261963c414079d0c371f589cd66a2e3",
+      "size": 622059,
+      "status": "verified"
     },
     {
+      "authentication": {
+        "evidence_sha256": "e71420c290c766872fa07709147cb811db4ceb58f752e60d3fa90f5f9e83251e",
+        "primary_fingerprint": "155D3FC500C834486D1EEA677FD9FCCB000BEEEE",
+        "signing_fingerprint": "155D3FC500C834486D1EEA677FD9FCCB000BEEEE",
+        "status": "verified",
+        "status_sha256": "0b752ce86e501c90b30bdb4047de1240bf5cdae668256cafd206654c47b0f686",
+        "trust_class": "publisher-openpgp",
+        "verifier_sha256": "14953ed8b4549020e185c0f7ab600bb9d0384457ea74da9d574e8d31139aff4f"
+      },
       "name": "diffutils-3.12.tar.xz",
-      "reason": "no supported authentication evidence",
-      "status": "unresolved"
+      "sha256": "7c8b7f9fc8609141fdea9cece85249d308624391ff61dedaf528fcb337727dfd",
+      "size": 1938800,
+      "status": "verified"
     },
     {
       "name": "e2fsprogs-1.47.4.tar.gz",
@@ -75,41 +260,131 @@
       "status": "unresolved"
     },
     {
+      "authentication": {
+        "assurance": "Gentoo-signed snapshot authenticates exact upstream filename, size and SHA512; SHA256 pin is derived after verification",
+        "distributor": "Gentoo",
+        "evidence_sha256": "97989e9213d56ae52e53d881a4b849b97afdcf50e71c5cb6e9eb4dcc75480717",
+        "manifest_member": "gentoo-20261103/dev-libs/elfutils/Manifest",
+        "manifest_sha256": "edf5ee5995f2230f21d3973d4f0cdbc0e3b1c9a8df96c90c1f1d20673e2d9dee",
+        "primary_fingerprint": "DCD05B71EAB94199527F44ACDB6B8C1F96D8BF6D",
+        "signing_fingerprint": "E1D6ABB63BFCFB4BA02FDF1CEC590EEAC9189250",
+        "snapshot_sha256": "923b3132d9214cee3f59fa2b56a3af27a0287c8587576c99ebcd5b24e537a194",
+        "source_digest": "e1e1fdf4f7f72bf520deb0103bb8fd208dc247bab14af100c6fb56d38c0ef6c6d54ff5bd15b84e4f70e2b2ea481e5999fea2842360f8932a861122df79b5fc8f",
+        "source_digest_algorithm": "sha512",
+        "source_size": 12032640,
+        "status": "verified",
+        "status_sha256": "0e675efd7fc7ec684b5d53c312b61219c66e4238caef255c74edb78e8afe6ab9",
+        "trust_class": "distributor-openpgp-manifest",
+        "verifier_sha256": "14953ed8b4549020e185c0f7ab600bb9d0384457ea74da9d574e8d31139aff4f"
+      },
       "name": "elfutils-0.195.tar.bz2",
-      "reason": "no supported authentication evidence",
-      "status": "unresolved"
+      "sha256": "37629fdf7f1f3dc2818e138fca2b8094177d6c2d0f701d3bb650a561218dc026",
+      "size": 12032640,
+      "status": "verified"
     },
     {
       "authentication": {
         "assurance": "publisher HTTPS metadata; no signature verified",
-        "evidence_sha256": "dd1241e864a9c4e2fe6304bcada198978eb2e31b6f320644497b3e2173adee0f",
+        "evidence_sha256": "aff7789a4fa12b17f91790acddcaa1c48d32dd5eacb5d95972029a9a6e70f7e9",
         "status": "verified",
         "trust_class": "https-published-sha256"
       },
-      "name": "expat-2.9.0.tar.xz",
-      "sha256": "1e6371862cc31999b368c3b89b49994f0677e1bab5f1b2b85ae3741f5d803051",
-      "size": 534052,
+      "name": "expat-2.10.0.tar.xz",
+      "sha256": "c624ba2998fc65df1163a49641ff3f9ab73138b11641d92c86bee0fb01b1bc7f",
+      "size": 543404,
       "status": "verified"
     },
     {
+      "authentication": {
+        "assurance": "Gentoo-signed snapshot authenticates exact upstream filename, size and SHA512; SHA256 pin is derived after verification",
+        "distributor": "Gentoo",
+        "evidence_sha256": "a9741ede03deed8b85a557529b3138981552c756b0e24e62e7f88b15c0a67f37",
+        "manifest_member": "gentoo-20261103/dev-tcltk/expect/Manifest",
+        "manifest_sha256": "be1465d8e91783aa49f612cd19de1bbd069a8c9780a057f7df71c9431cbd3318",
+        "primary_fingerprint": "DCD05B71EAB94199527F44ACDB6B8C1F96D8BF6D",
+        "signing_fingerprint": "E1D6ABB63BFCFB4BA02FDF1CEC590EEAC9189250",
+        "snapshot_sha256": "923b3132d9214cee3f59fa2b56a3af27a0287c8587576c99ebcd5b24e537a194",
+        "source_digest": "a8dc25e8175f67e029e15cbcfca1705165c1c4cb2dd37eaaaebffb61e3ba132d9519cd73ca5add4c3358a2b0b7a91e878279e8d0b72143ff2c287fce07e4659a",
+        "source_digest_algorithm": "sha512",
+        "source_size": 632363,
+        "status": "verified",
+        "status_sha256": "0e675efd7fc7ec684b5d53c312b61219c66e4238caef255c74edb78e8afe6ab9",
+        "trust_class": "distributor-openpgp-manifest",
+        "verifier_sha256": "14953ed8b4549020e185c0f7ab600bb9d0384457ea74da9d574e8d31139aff4f"
+      },
       "name": "expect5.45.4.tar.gz",
-      "reason": "no supported authentication evidence",
-      "status": "unresolved"
+      "sha256": "49a7da83b0bdd9f46d04a04deec19c7767bb9a323e40c4781f89caf760b92c34",
+      "size": 632363,
+      "status": "verified"
     },
     {
+      "authentication": {
+        "assurance": "Gentoo-signed snapshot authenticates exact upstream filename, size and SHA512; SHA256 pin is derived after verification",
+        "distributor": "Gentoo",
+        "evidence_sha256": "78e85b48333be62c2f3bd3ee67ceb01b0fc2a70d4cca34bd69a897837369e3f0",
+        "manifest_member": "gentoo-20261103/sys-apps/file/Manifest",
+        "manifest_sha256": "29d9731f28e19990443137f982f125e17288d5e81f8c42a88c6aaf71a5075038",
+        "primary_fingerprint": "DCD05B71EAB94199527F44ACDB6B8C1F96D8BF6D",
+        "signing_fingerprint": "E1D6ABB63BFCFB4BA02FDF1CEC590EEAC9189250",
+        "snapshot_sha256": "923b3132d9214cee3f59fa2b56a3af27a0287c8587576c99ebcd5b24e537a194",
+        "source_digest": "9672504f9473e41ed047bb019f1a003965b3f12e16b77d090e819e094805e42d66d07582402eb9df6be98932161ee6a014a549dbcca9cef10c236b0a3a71a642",
+        "source_digest_algorithm": "sha512",
+        "source_size": 2693209,
+        "status": "verified",
+        "status_sha256": "0e675efd7fc7ec684b5d53c312b61219c66e4238caef255c74edb78e8afe6ab9",
+        "trust_class": "distributor-openpgp-manifest",
+        "verifier_sha256": "14953ed8b4549020e185c0f7ab600bb9d0384457ea74da9d574e8d31139aff4f"
+      },
       "name": "file-5.48.tar.gz",
-      "reason": "no supported authentication evidence",
-      "status": "unresolved"
+      "sha256": "ed14656883b23a364b4057c05595d93252da9bc473d30106519519d0da141283",
+      "size": 2693209,
+      "status": "verified"
     },
     {
+      "authentication": {
+        "assurance": "Gentoo-signed snapshot authenticates exact upstream filename, size and SHA512; SHA256 pin is derived after verification",
+        "distributor": "Gentoo",
+        "evidence_sha256": "7a0476291139e902160a7a5c4c2a793a17e08a3d09862341638a2a0775b1903d",
+        "manifest_member": "gentoo-20261103/sys-apps/findutils/Manifest",
+        "manifest_sha256": "f59c48b87e5dad901a1cf2847d2852eedb81869767b5f710d1633b34884075dc",
+        "primary_fingerprint": "DCD05B71EAB94199527F44ACDB6B8C1F96D8BF6D",
+        "signing_fingerprint": "E1D6ABB63BFCFB4BA02FDF1CEC590EEAC9189250",
+        "snapshot_sha256": "923b3132d9214cee3f59fa2b56a3af27a0287c8587576c99ebcd5b24e537a194",
+        "source_digest": "1b667c5363b599135ceabab6b4b5388dbee6de4e7fa301f5dfefc854473e442fbfe7dda93a28a70505c026987acd375d13169f76d18da49d29c1fb2e09c83fef",
+        "source_digest_algorithm": "sha512",
+        "source_size": 2451424,
+        "status": "verified",
+        "status_sha256": "0e675efd7fc7ec684b5d53c312b61219c66e4238caef255c74edb78e8afe6ab9",
+        "trust_class": "distributor-openpgp-manifest",
+        "verifier_sha256": "14953ed8b4549020e185c0f7ab600bb9d0384457ea74da9d574e8d31139aff4f"
+      },
       "name": "findutils-4.11.0.tar.xz",
-      "reason": "no supported authentication evidence",
-      "status": "unresolved"
+      "sha256": "bfd19cb06cc71f3352d567e90284d8cdac02ac89774bbeadf0b533b0c11432fd",
+      "size": 2451424,
+      "status": "verified"
     },
     {
+      "authentication": {
+        "assurance": "Gentoo-signed snapshot authenticates exact upstream filename, size and SHA512; SHA256 pin is derived after verification",
+        "distributor": "Gentoo",
+        "evidence_sha256": "f28f8f93a434b8efed7687dd3892edd09aa2ce212f94eae9e1d3888491fa48ab",
+        "manifest_member": "gentoo-20261103/sys-devel/flex/Manifest",
+        "manifest_sha256": "494671b3264ae1ed60f6fca5a7dd4f315f2b1c81fb0b2f1890dfde090cf09532",
+        "primary_fingerprint": "DCD05B71EAB94199527F44ACDB6B8C1F96D8BF6D",
+        "signing_fingerprint": "E1D6ABB63BFCFB4BA02FDF1CEC590EEAC9189250",
+        "snapshot_sha256": "923b3132d9214cee3f59fa2b56a3af27a0287c8587576c99ebcd5b24e537a194",
+        "source_digest": "e9785f3d620a204b7d20222888917dc065c2036cae28667065bf7862dfa1b25235095a12fd04efdbd09bfd17d3452e6b9ef953a8c1137862ff671c97132a082e",
+        "source_digest_algorithm": "sha512",
+        "source_size": 1419096,
+        "status": "verified",
+        "status_sha256": "0e675efd7fc7ec684b5d53c312b61219c66e4238caef255c74edb78e8afe6ab9",
+        "trust_class": "distributor-openpgp-manifest",
+        "verifier_sha256": "14953ed8b4549020e185c0f7ab600bb9d0384457ea74da9d574e8d31139aff4f"
+      },
       "name": "flex-2.6.4.tar.gz",
-      "reason": "no supported authentication evidence",
-      "status": "unresolved"
+      "sha256": "e87aae032bf07c26f85ac0ed3250998c37621d95f8bd748b31f15b33c45ee995",
+      "size": 1419096,
+      "status": "verified"
     },
     {
       "authentication": {
@@ -124,59 +399,181 @@
       "status": "verified"
     },
     {
+      "authentication": {
+        "assurance": "Gentoo-signed snapshot authenticates exact upstream filename, size and SHA512; SHA256 pin is derived after verification",
+        "distributor": "Gentoo",
+        "evidence_sha256": "8e2b61c9ae374a4f0a24775a7b954806791993ce716773f8c98b1a6ede259185",
+        "manifest_member": "gentoo-20261103/sys-apps/gawk/Manifest",
+        "manifest_sha256": "aeebc962fa7a036fd3256d6d9e280ec817dd2cf67d343ab7ffc361a8996560ac",
+        "primary_fingerprint": "DCD05B71EAB94199527F44ACDB6B8C1F96D8BF6D",
+        "signing_fingerprint": "E1D6ABB63BFCFB4BA02FDF1CEC590EEAC9189250",
+        "snapshot_sha256": "923b3132d9214cee3f59fa2b56a3af27a0287c8587576c99ebcd5b24e537a194",
+        "source_digest": "a1e79b71e13ce7d5487f89fb62125ec873dc89e0a3ff37ebdff017fdd6dfd38b1eaa95fedcf773c037ae84c95f0ea0817d53bc1c14b4284568f87606da6aa152",
+        "source_digest_algorithm": "sha512",
+        "source_size": 3838416,
+        "status": "verified",
+        "status_sha256": "0e675efd7fc7ec684b5d53c312b61219c66e4238caef255c74edb78e8afe6ab9",
+        "trust_class": "distributor-openpgp-manifest",
+        "verifier_sha256": "14953ed8b4549020e185c0f7ab600bb9d0384457ea74da9d574e8d31139aff4f"
+      },
       "name": "gawk-5.4.1.tar.xz",
-      "reason": "missing evidence: gawk-5.4.1.tar.xz",
-      "status": "unresolved"
+      "sha256": "07f6f7342b7febe4313fc2c2542ad93d64fe20ad8717200109f105a826f5fd37",
+      "size": 3838416,
+      "status": "verified"
     },
     {
+      "authentication": {
+        "evidence_sha256": "491ab28c34288e3667868a0fc53b8beeb6cbd39e1b2669c64b586be388a46a02",
+        "primary_fingerprint": "13975A70E63C361C73AE69EF6EEB81F8981C74C7",
+        "signing_fingerprint": "7F74F97C103468EE5D750B583AB00996FC26A641",
+        "status": "verified",
+        "status_sha256": "e84df4870523d135beca47bf5a593cbdbd9740da5118da1106f8f671ff3c9e11",
+        "trust_class": "publisher-openpgp",
+        "verifier_sha256": "14953ed8b4549020e185c0f7ab600bb9d0384457ea74da9d574e8d31139aff4f"
+      },
       "name": "gcc-16.2.0.tar.xz",
-      "reason": "missing evidence: gcc-16.2.0.tar.xz",
-      "status": "unresolved"
+      "sha256": "e6738e29597f733270731aa90600f37ffdc045079dfc27ec7e8192cc81085c3e",
+      "size": 107200820,
+      "status": "verified"
     },
     {
+      "authentication": {
+        "assurance": "publisher HTTPS metadata; no signature verified",
+        "evidence_sha256": "a6f292c7c0911f8a7b4a6dd0086e6822c707490b2b5f22268fdebf397a622650",
+        "status": "verified",
+        "trust_class": "https-published-sha256"
+      },
       "name": "gdbm-1.26.tar.gz",
-      "reason": "missing evidence: gdbm-1.26.tar.gz",
-      "status": "unresolved"
+      "sha256": "6a24504a14de4a744103dcb936be976df6fbe88ccff26065e54c1c47946f4a5e",
+      "size": 1226591,
+      "status": "verified"
     },
     {
+      "authentication": {
+        "assurance": "publisher HTTPS metadata; no signature verified",
+        "evidence_sha256": "14ac65b743ed9783ed4b1375e22e62d6e3e985d93fabe3b72269caa0fdc43093",
+        "status": "verified",
+        "trust_class": "https-published-sha256"
+      },
       "name": "gettext-1.0.tar.xz",
-      "reason": "missing evidence: gettext-1.0.tar.xz",
-      "status": "unresolved"
+      "sha256": "71132a3fb71e68245b8f2ac4e9e97137d3e5c02f415636eb508ae607bc01add7",
+      "size": 10721600,
+      "status": "verified"
     },
     {
+      "authentication": {
+        "evidence_sha256": "fb4fbc34f65d594547ef328fba5a227c1f226e4f6ce1baba18f4b048e31ec609",
+        "primary_fingerprint": "35B17DF5752577CA0C541CEB94BFDF4484AD142F",
+        "signing_fingerprint": "FD19E6D31B192EE4DC63EAD3DC2B16215ED5412A",
+        "status": "verified",
+        "status_sha256": "5350166a0b9e1251a6aa5f2fe267545b1559c95dcae33834d2f8235e7aeef5f7",
+        "trust_class": "publisher-openpgp",
+        "verifier_sha256": "14953ed8b4549020e185c0f7ab600bb9d0384457ea74da9d574e8d31139aff4f"
+      },
       "name": "glibc-2.44.tar.xz",
-      "reason": "missing evidence: glibc-2.44.tar.xz",
-      "status": "unresolved"
+      "sha256": "37f600f2bef3c5e8300147059568b2a2e40a7ad6ccc65ce942556d49429cc667",
+      "size": 20620544,
+      "status": "verified"
     },
     {
+      "authentication": {
+        "assurance": "Gentoo-signed snapshot authenticates exact upstream filename, size and SHA512; SHA256 pin is derived after verification",
+        "distributor": "Gentoo",
+        "evidence_sha256": "26c5b02d1f919b52d65093ccf1e758813136617b0e1b4610fa887fc8e3666b89",
+        "manifest_member": "gentoo-20261103/dev-libs/gmp/Manifest",
+        "manifest_sha256": "b74d0b0c6d51c7bf461a2fb52dca17705c156a239a5f569d99413d85f1fd5854",
+        "primary_fingerprint": "DCD05B71EAB94199527F44ACDB6B8C1F96D8BF6D",
+        "signing_fingerprint": "E1D6ABB63BFCFB4BA02FDF1CEC590EEAC9189250",
+        "snapshot_sha256": "923b3132d9214cee3f59fa2b56a3af27a0287c8587576c99ebcd5b24e537a194",
+        "source_digest": "e85a0dab5195889948a3462189f0e0598d331d3457612e2d3350799dba2e244316d256f8161df5219538eb003e4b5343f989aaa00f96321559063ed8c8f29fd2",
+        "source_digest_algorithm": "sha512",
+        "source_size": 2094196,
+        "status": "verified",
+        "status_sha256": "0e675efd7fc7ec684b5d53c312b61219c66e4238caef255c74edb78e8afe6ab9",
+        "trust_class": "distributor-openpgp-manifest",
+        "verifier_sha256": "14953ed8b4549020e185c0f7ab600bb9d0384457ea74da9d574e8d31139aff4f"
+      },
       "name": "gmp-6.3.0.tar.xz",
-      "reason": "missing evidence: gmp-6.3.0.tar.xz",
-      "status": "unresolved"
+      "sha256": "a3c2b80201b89e68616f4ad30bc66aee4927c3ce50e33929ca819d5c43538898",
+      "size": 2094196,
+      "status": "verified"
     },
     {
+      "authentication": {
+        "assurance": "publisher HTTPS metadata; no signature verified",
+        "evidence_sha256": "7bd5a22ae162e6421a3a46932c6ba7062c4a6d595c5131ceb9b2b4d2f51a08f7",
+        "status": "verified",
+        "trust_class": "https-published-sha256"
+      },
       "name": "gperf-3.3.tar.gz",
-      "reason": "missing evidence: gperf-3.3.tar.gz",
-      "status": "unresolved"
+      "sha256": "fd87e0aba7e43ae054837afd6cd4db03a3f2693deb3619085e6ed9d8d9604ad8",
+      "size": 1831294,
+      "status": "verified"
     },
     {
+      "authentication": {
+        "evidence_sha256": "7b09cc7a4208b64478ec171edaa96586b0492436713ac0ee7739e3e5179093ae",
+        "primary_fingerprint": "155D3FC500C834486D1EEA677FD9FCCB000BEEEE",
+        "signing_fingerprint": "155D3FC500C834486D1EEA677FD9FCCB000BEEEE",
+        "status": "verified",
+        "status_sha256": "7b72aa9825a68c16dc4b500fab045aa4ba83178a4067e541f0a37c8230572146",
+        "trust_class": "publisher-openpgp",
+        "verifier_sha256": "14953ed8b4549020e185c0f7ab600bb9d0384457ea74da9d574e8d31139aff4f"
+      },
       "name": "grep-3.12.tar.xz",
-      "reason": "missing evidence: grep-3.12.tar.xz",
-      "status": "unresolved"
+      "sha256": "2649b27c0e90e632eadcd757be06c6e9a4f48d941de51e7c0f83ff76408a07b9",
+      "size": 1918448,
+      "status": "verified"
     },
     {
+      "authentication": {
+        "assurance": "publisher HTTPS metadata; no signature verified",
+        "evidence_sha256": "aeabce67de5c702f42eadb35a308ac5ab79c947d5226ef3a4b642a67f8d56473",
+        "status": "verified",
+        "trust_class": "https-published-sha256"
+      },
       "name": "groff-1.24.1.tar.gz",
-      "reason": "missing evidence: groff-1.24.1.tar.gz",
-      "status": "unresolved"
+      "sha256": "74e2819795b6aff431aeac983d63a9c8968eeaba2a2eba7df8ba4c7b41e7cfd8",
+      "size": 9005760,
+      "status": "verified"
     },
     {
+      "authentication": {
+        "assurance": "Gentoo-signed snapshot authenticates exact upstream filename, size and SHA512; SHA256 pin is derived after verification",
+        "distributor": "Gentoo",
+        "evidence_sha256": "42ea476e6a02213f8eace167ded1420b01f2f4e55b27d999524aeedf68d213b0",
+        "manifest_member": "gentoo-20261103/sys-boot/grub/Manifest",
+        "manifest_sha256": "9859a5306ddf501346c9e15f6b61efe87790213bc039143e91003f174649f157",
+        "primary_fingerprint": "DCD05B71EAB94199527F44ACDB6B8C1F96D8BF6D",
+        "signing_fingerprint": "E1D6ABB63BFCFB4BA02FDF1CEC590EEAC9189250",
+        "snapshot_sha256": "923b3132d9214cee3f59fa2b56a3af27a0287c8587576c99ebcd5b24e537a194",
+        "source_digest": "5008e3b70072798d2b34301219fe174cc6bcfead40a9ab25fe32f30c62a392ffb7bf2eb629d481f4a6c19c2925324af3f08d7043e62623e746be2d8b3cbd1182",
+        "source_digest_algorithm": "sha512",
+        "source_size": 7725668,
+        "status": "verified",
+        "status_sha256": "0e675efd7fc7ec684b5d53c312b61219c66e4238caef255c74edb78e8afe6ab9",
+        "trust_class": "distributor-openpgp-manifest",
+        "verifier_sha256": "14953ed8b4549020e185c0f7ab600bb9d0384457ea74da9d574e8d31139aff4f"
+      },
       "name": "grub-2.14.tar.xz",
-      "reason": "missing evidence: grub-2.14.tar.xz",
-      "status": "unresolved"
+      "sha256": "bc8d3c73535b8838d8c8e2654d73edc4e6ae8c8acdb45d5df5dc9a1547446d43",
+      "size": 7725668,
+      "status": "verified"
     },
     {
+      "authentication": {
+        "evidence_sha256": "017c6b7be4da92a074c4e087182f2c71886ef857aa6bd2a7585abd81e23ad793",
+        "primary_fingerprint": "155D3FC500C834486D1EEA677FD9FCCB000BEEEE",
+        "signing_fingerprint": "155D3FC500C834486D1EEA677FD9FCCB000BEEEE",
+        "status": "verified",
+        "status_sha256": "fad594680aee70760eb840c7ae2ed3ad5fab512c7598319428cbeb0b76d47c02",
+        "trust_class": "publisher-openpgp",
+        "verifier_sha256": "14953ed8b4549020e185c0f7ab600bb9d0384457ea74da9d574e8d31139aff4f"
+      },
       "name": "gzip-1.14.tar.xz",
-      "reason": "missing evidence: gzip-1.14.tar.xz",
-      "status": "unresolved"
+      "sha256": "01a7b881bd220bfdf615f97b8718f80bdfd3f6add385b993dcf6efd14e8c0ac6",
+      "size": 885748,
+      "status": "verified"
     },
     {
       "authentication": {
@@ -191,9 +588,16 @@
       "status": "verified"
     },
     {
+      "authentication": {
+        "assurance": "publisher HTTPS metadata; no signature verified",
+        "evidence_sha256": "6d6f9dd302c8797f9cca0d854e3985cba6147f1d93440223c42364cac2290bb2",
+        "status": "verified",
+        "trust_class": "https-published-sha256"
+      },
       "name": "inetutils-2.8.tar.gz",
-      "reason": "missing evidence: inetutils-2.8.tar.gz",
-      "status": "unresolved"
+      "sha256": "57b3cf4f77555992881e5ba2a09a63b05aa2c56342a60ed4305b5f45938390b5",
+      "size": 2985957,
+      "status": "verified"
     },
     {
       "authentication": {
@@ -244,9 +648,27 @@
       "status": "verified"
     },
     {
+      "authentication": {
+        "assurance": "Gentoo-signed snapshot authenticates exact upstream filename, size and SHA512; SHA256 pin is derived after verification",
+        "distributor": "Gentoo",
+        "evidence_sha256": "010c5af96c40f0e311b50c7762db4357451e1ad5f9e5910e0f09b5982a9649b1",
+        "manifest_member": "gentoo-20261103/sys-apps/less/Manifest",
+        "manifest_sha256": "7163255a911f8297f520bde98260f335ced7a1a644d465322610aa81c0371db5",
+        "primary_fingerprint": "DCD05B71EAB94199527F44ACDB6B8C1F96D8BF6D",
+        "signing_fingerprint": "E1D6ABB63BFCFB4BA02FDF1CEC590EEAC9189250",
+        "snapshot_sha256": "923b3132d9214cee3f59fa2b56a3af27a0287c8587576c99ebcd5b24e537a194",
+        "source_digest": "c6a933dd6dc058f912de524fc4e71614deb3873e4d8e3830d7cfc0e45dca8f4e8671d1e63d6099ebc9cd224f52e8dbdb4fe00a89a00d33e937fd9b852ad3609c",
+        "source_digest_algorithm": "sha512",
+        "source_size": 996650,
+        "status": "verified",
+        "status_sha256": "0e675efd7fc7ec684b5d53c312b61219c66e4238caef255c74edb78e8afe6ab9",
+        "trust_class": "distributor-openpgp-manifest",
+        "verifier_sha256": "14953ed8b4549020e185c0f7ab600bb9d0384457ea74da9d574e8d31139aff4f"
+      },
       "name": "less-704.tar.gz",
-      "reason": "no supported authentication evidence",
-      "status": "unresolved"
+      "sha256": "20a0b0a2bb2525fa53c7eee9beb854b4c9cf172eabb209af7020743547bfe9fb",
+      "size": 996650,
+      "status": "verified"
     },
     {
       "authentication": {
@@ -273,14 +695,39 @@
       "status": "verified"
     },
     {
+      "authentication": {
+        "assurance": "Gentoo-signed snapshot authenticates exact upstream filename, size and SHA512; SHA256 pin is derived after verification",
+        "distributor": "Gentoo",
+        "evidence_sha256": "6fe5eb4ecdb636054fceb6a7cdaaf9b8bc6a81570c50c09f3964cc87cfa2839c",
+        "manifest_member": "gentoo-20261103/dev-libs/libpipeline/Manifest",
+        "manifest_sha256": "1713a1363630bb4593833f23b7938505d77e56d76394b63bd08d4695c53da0c6",
+        "primary_fingerprint": "DCD05B71EAB94199527F44ACDB6B8C1F96D8BF6D",
+        "signing_fingerprint": "E1D6ABB63BFCFB4BA02FDF1CEC590EEAC9189250",
+        "snapshot_sha256": "923b3132d9214cee3f59fa2b56a3af27a0287c8587576c99ebcd5b24e537a194",
+        "source_digest": "0ae94df4bd508f0e664fa5430687d64904c60d69d9565c18cacb70251f8653cb7c571325d1406c859fdd149048adce8c4b3bf028573064496d7da3436e27b9b0",
+        "source_digest_algorithm": "sha512",
+        "source_size": 1070254,
+        "status": "verified",
+        "status_sha256": "0e675efd7fc7ec684b5d53c312b61219c66e4238caef255c74edb78e8afe6ab9",
+        "trust_class": "distributor-openpgp-manifest",
+        "verifier_sha256": "14953ed8b4549020e185c0f7ab600bb9d0384457ea74da9d574e8d31139aff4f"
+      },
       "name": "libpipeline-1.5.8.tar.gz",
-      "reason": "no supported authentication evidence",
-      "status": "unresolved"
+      "sha256": "1b1203ca152ccd63983c3f2112f7fe6fa5afd453218ede5153d1b31e11bb8405",
+      "size": 1070254,
+      "status": "verified"
     },
     {
+      "authentication": {
+        "assurance": "publisher HTTPS metadata; no signature verified",
+        "evidence_sha256": "333d5880792a13a9e6bbbcd38646c43a6d50f15c0d755c2e8041e89bf262480d",
+        "status": "verified",
+        "trust_class": "https-published-sha256"
+      },
       "name": "libtool-2.6.2.tar.xz",
-      "reason": "missing evidence: libtool-2.6.2.tar.xz",
-      "status": "unresolved"
+      "sha256": "2ef1067c16c97db930fd740cc9bc3d3ba9a583804ae5ac42cc3e8719e49e191e",
+      "size": 1093564,
+      "status": "verified"
     },
     {
       "authentication": {
@@ -307,24 +754,67 @@
       "status": "verified"
     },
     {
+      "authentication": {
+        "assurance": "Gentoo-signed snapshot authenticates exact upstream filename, size and SHA512; SHA256 pin is derived after verification",
+        "distributor": "Gentoo",
+        "evidence_sha256": "1adece34517db273bff6a8e691b2bf21b45d247dbc315a4feedc1ce5c69d4b90",
+        "manifest_member": "gentoo-20261103/app-arch/lz4/Manifest",
+        "manifest_sha256": "51af7d70ae71276152adf6e27da2637cbdb465cedec27c61482f18c553072c0b",
+        "primary_fingerprint": "DCD05B71EAB94199527F44ACDB6B8C1F96D8BF6D",
+        "signing_fingerprint": "E1D6ABB63BFCFB4BA02FDF1CEC590EEAC9189250",
+        "snapshot_sha256": "923b3132d9214cee3f59fa2b56a3af27a0287c8587576c99ebcd5b24e537a194",
+        "source_digest": "8c4ceb217e6dc8e7e0beba99adc736aca8963867bcf9f970d621978ba11ce92855912f8b66138037a1d2ae171e8e17beb7be99281fea840106aa60373c455b28",
+        "source_digest_algorithm": "sha512",
+        "source_size": 387114,
+        "status": "verified",
+        "status_sha256": "0e675efd7fc7ec684b5d53c312b61219c66e4238caef255c74edb78e8afe6ab9",
+        "trust_class": "distributor-openpgp-manifest",
+        "verifier_sha256": "14953ed8b4549020e185c0f7ab600bb9d0384457ea74da9d574e8d31139aff4f"
+      },
       "name": "lz4-1.10.0.tar.gz",
-      "reason": "no supported authentication evidence",
-      "status": "unresolved"
+      "sha256": "537512904744b35e232912055ccf8ec66d768639ff3abe5788d90d792ec5f48b",
+      "size": 387114,
+      "status": "verified"
     },
     {
+      "authentication": {
+        "assurance": "publisher HTTPS metadata; no signature verified",
+        "evidence_sha256": "a3d16ded47a21c61df198549c6baf5342c145407bf75cc1c96561942b164064e",
+        "status": "verified",
+        "trust_class": "https-published-sha256"
+      },
       "name": "m4-1.4.21.tar.xz",
-      "reason": "missing evidence: m4-1.4.21.tar.xz",
-      "status": "unresolved"
+      "sha256": "f25c6ab51548a73a75558742fb031e0625d6485fe5f9155949d6486a2408ab66",
+      "size": 2080016,
+      "status": "verified"
     },
     {
       "name": "make-4.4.1.tar.gz",
-      "reason": "missing evidence: make-4.4.1.tar.gz",
+      "reason": "no supported authentication evidence",
       "status": "unresolved"
     },
     {
+      "authentication": {
+        "assurance": "Gentoo-signed snapshot authenticates exact upstream filename, size and SHA512; SHA256 pin is derived after verification",
+        "distributor": "Gentoo",
+        "evidence_sha256": "e926012283ee48c025f42723f2ed8a5ad32e0bb91152fa85501c782007cfde8e",
+        "manifest_member": "gentoo-20261103/sys-apps/man-db/Manifest",
+        "manifest_sha256": "6881b952bb31c9717296c8d72092c300e152511f16f5b7dbf75d39413949bfb7",
+        "primary_fingerprint": "DCD05B71EAB94199527F44ACDB6B8C1F96D8BF6D",
+        "signing_fingerprint": "E1D6ABB63BFCFB4BA02FDF1CEC590EEAC9189250",
+        "snapshot_sha256": "923b3132d9214cee3f59fa2b56a3af27a0287c8587576c99ebcd5b24e537a194",
+        "source_digest": "9b39f512fe940e648ca7f47803f42e473064253b67eb96995d28da30fd322de31a4466bf821e9391e6041af2318a6d2c2d74102b73f4b42a63966b41d2df0578",
+        "source_digest_algorithm": "sha512",
+        "source_size": 2110328,
+        "status": "verified",
+        "status_sha256": "0e675efd7fc7ec684b5d53c312b61219c66e4238caef255c74edb78e8afe6ab9",
+        "trust_class": "distributor-openpgp-manifest",
+        "verifier_sha256": "14953ed8b4549020e185c0f7ab600bb9d0384457ea74da9d574e8d31139aff4f"
+      },
       "name": "man-db-2.13.1.tar.xz",
-      "reason": "no supported authentication evidence",
-      "status": "unresolved"
+      "sha256": "8afebb6f7eb6bb8542929458841f5c7e6f240e30c86358c1fbcefbea076c87d9",
+      "size": 2110328,
+      "status": "verified"
     },
     {
       "authentication": {
@@ -363,29 +853,108 @@
       "status": "verified"
     },
     {
+      "authentication": {
+        "assurance": "Gentoo-signed snapshot authenticates exact upstream filename, size and SHA512; SHA256 pin is derived after verification",
+        "distributor": "Gentoo",
+        "evidence_sha256": "68d9ae145ead6b7ce10effd92aee9bac95503c6b5a609e9e55c08574af86c23a",
+        "manifest_member": "gentoo-20261103/dev-libs/mpc/Manifest",
+        "manifest_sha256": "5f84f9e15262669aabf08e6f764f8918585306da59028ef18c5ca8c77fff83d5",
+        "primary_fingerprint": "DCD05B71EAB94199527F44ACDB6B8C1F96D8BF6D",
+        "signing_fingerprint": "E1D6ABB63BFCFB4BA02FDF1CEC590EEAC9189250",
+        "snapshot_sha256": "923b3132d9214cee3f59fa2b56a3af27a0287c8587576c99ebcd5b24e537a194",
+        "source_digest": "cdfbe64e80e30df64dbd536e8104a6bb10471582415d5b45a1dd30eb2a312781b38389a9531243413c14e0f88866a35159b20e77900718f28c1030253a1305b9",
+        "source_digest_algorithm": "sha512",
+        "source_size": 531992,
+        "status": "verified",
+        "status_sha256": "0e675efd7fc7ec684b5d53c312b61219c66e4238caef255c74edb78e8afe6ab9",
+        "trust_class": "distributor-openpgp-manifest",
+        "verifier_sha256": "14953ed8b4549020e185c0f7ab600bb9d0384457ea74da9d574e8d31139aff4f"
+      },
       "name": "mpc-1.4.1.tar.xz",
-      "reason": "missing evidence: mpc-1.4.1.tar.xz",
-      "status": "unresolved"
+      "sha256": "91204cd32f164bd3b7c992d4a6a8ce6519511aadab30f78b6982d0bf8d73e931",
+      "size": 531992,
+      "status": "verified"
     },
     {
+      "authentication": {
+        "assurance": "Gentoo-signed snapshot authenticates exact upstream filename, size and SHA512; SHA256 pin is derived after verification",
+        "distributor": "Gentoo",
+        "evidence_sha256": "4a21e6427ae4d15937fe3360df48b47def1762f4ba57106b10cc9e672016c8e3",
+        "manifest_member": "gentoo-20261103/dev-libs/mpdecimal/Manifest",
+        "manifest_sha256": "7fe39da05fd56a8883500fe55ce03810f0b5e0eb6cb353f40cf968d911ff6881",
+        "primary_fingerprint": "DCD05B71EAB94199527F44ACDB6B8C1F96D8BF6D",
+        "signing_fingerprint": "E1D6ABB63BFCFB4BA02FDF1CEC590EEAC9189250",
+        "snapshot_sha256": "923b3132d9214cee3f59fa2b56a3af27a0287c8587576c99ebcd5b24e537a194",
+        "source_digest": "431fa8ab90d6b8cdecc38b1618fd89d040185dec3c1150203e20f40f10a16160058f6b8abddd000f6ecb74f4dc42d9fef8111444f1496ab34c34f6b814ed32b7",
+        "source_digest_algorithm": "sha512",
+        "source_size": 316268,
+        "status": "verified",
+        "status_sha256": "0e675efd7fc7ec684b5d53c312b61219c66e4238caef255c74edb78e8afe6ab9",
+        "trust_class": "distributor-openpgp-manifest",
+        "verifier_sha256": "14953ed8b4549020e185c0f7ab600bb9d0384457ea74da9d574e8d31139aff4f"
+      },
       "name": "mpdecimal-4.0.1.tar.gz",
-      "reason": "no supported authentication evidence",
-      "status": "unresolved"
+      "sha256": "96d33abb4bb0070c7be0fed4246cd38416188325f820468214471938545b1ac8",
+      "size": 316268,
+      "status": "verified"
     },
     {
+      "authentication": {
+        "assurance": "publisher HTTPS metadata; no signature verified",
+        "evidence_sha256": "851815e83966040830a96c10c84f70ad4afe3891e96c69a97b99e85827544893",
+        "status": "verified",
+        "trust_class": "https-published-sha256"
+      },
       "name": "mpfr-4.2.2.tar.xz",
-      "reason": "missing evidence: mpfr-4.2.2.tar.xz",
-      "status": "unresolved"
+      "sha256": "b67ba0383ef7e8a8563734e2e889ef5ec3c3b898a01d00fa0a6869ad81c6ce01",
+      "size": 1505596,
+      "status": "verified"
     },
     {
+      "authentication": {
+        "assurance": "Gentoo-signed snapshot authenticates exact upstream filename, size and SHA512; SHA256 pin is derived after verification",
+        "distributor": "Gentoo",
+        "evidence_sha256": "2a84ed84ff6c76bd46f84876c2b0d9893a9dbf74b493d96402e490982a02a759",
+        "manifest_member": "gentoo-20261103/sys-libs/ncurses/Manifest",
+        "manifest_sha256": "94c441ad954dd6916d4793ab2ab1121b26a078bfa78c8a62bd1a5f5f6a0603c4",
+        "primary_fingerprint": "DCD05B71EAB94199527F44ACDB6B8C1F96D8BF6D",
+        "signing_fingerprint": "E1D6ABB63BFCFB4BA02FDF1CEC590EEAC9189250",
+        "snapshot_sha256": "923b3132d9214cee3f59fa2b56a3af27a0287c8587576c99ebcd5b24e537a194",
+        "source_digest": "02647baae53abc844fbadee5b0a2187ad073125c4e8950df6d1c4feb781cb74ba64fb838cedfee2c246c39932187f6775b1df124f18b99a4233f0d98c72191de",
+        "source_digest_algorithm": "sha512",
+        "source_size": 3791150,
+        "status": "verified",
+        "status_sha256": "0e675efd7fc7ec684b5d53c312b61219c66e4238caef255c74edb78e8afe6ab9",
+        "trust_class": "distributor-openpgp-manifest",
+        "verifier_sha256": "14953ed8b4549020e185c0f7ab600bb9d0384457ea74da9d574e8d31139aff4f"
+      },
       "name": "ncurses-6.6.tar.gz",
-      "reason": "no supported authentication evidence",
-      "status": "unresolved"
+      "sha256": "355b4cbbed880b0381a04c46617b7656e362585d52e9cf84a67e2009b749ff11",
+      "size": 3791150,
+      "status": "verified"
     },
     {
+      "authentication": {
+        "assurance": "Gentoo-signed snapshot authenticates exact upstream filename, size and SHA512; SHA256 pin is derived after verification",
+        "distributor": "Gentoo",
+        "evidence_sha256": "096d6bb56cb9223cd1070013287fd304086ccc4fe18fb7fb363679143d5fbbaa",
+        "manifest_member": "gentoo-20261103/dev-build/ninja/Manifest",
+        "manifest_sha256": "788d4682b5fb27ace8408c4d342131c954ee39be18043d5d36b71c3734686013",
+        "primary_fingerprint": "DCD05B71EAB94199527F44ACDB6B8C1F96D8BF6D",
+        "signing_fingerprint": "E1D6ABB63BFCFB4BA02FDF1CEC590EEAC9189250",
+        "snapshot_sha256": "923b3132d9214cee3f59fa2b56a3af27a0287c8587576c99ebcd5b24e537a194",
+        "source_digest": "c0b401b4db91a2eea01a474ee979b2c6f1daa97b4c8d1f856871ce5f6d567c4b26d6246bc57e2a5f914329302abcd9c00ab0d4394a25f2ad502b6b00a07903d2",
+        "source_digest_algorithm": "sha512",
+        "source_size": 292385,
+        "status": "verified",
+        "status_sha256": "0e675efd7fc7ec684b5d53c312b61219c66e4238caef255c74edb78e8afe6ab9",
+        "trust_class": "distributor-openpgp-manifest",
+        "verifier_sha256": "14953ed8b4549020e185c0f7ab600bb9d0384457ea74da9d574e8d31139aff4f"
+      },
       "name": "ninja-1.13.2.tar.gz",
-      "reason": "no supported authentication evidence",
-      "status": "unresolved"
+      "sha256": "974d6b2f4eeefa25625d34da3cb36bdcebe7fbce40f4c16ac0835fd1c0cbae17",
+      "size": 292385,
+      "status": "verified"
     },
     {
       "authentication": {
@@ -412,31 +981,85 @@
       "status": "verified"
     },
     {
-      "name": "patch-2.8.tar.xz",
-      "reason": "missing evidence: patch-2.8.tar.xz",
-      "status": "unresolved"
+      "authentication": {
+        "assurance": "Gentoo-signed snapshot authenticates exact upstream filename, size and SHA512; SHA256 pin is derived after verification",
+        "distributor": "Gentoo",
+        "evidence_sha256": "0841fc97436f251ddd29c034d22890e78a044a992f940e551224782a12d0490f",
+        "manifest_member": "gentoo-20261103/sys-devel/patch/Manifest",
+        "manifest_sha256": "99bf7d60d6235ead245d4838987af43c3f2a4eec44e473c074e6c4ea39d8235b",
+        "primary_fingerprint": "DCD05B71EAB94199527F44ACDB6B8C1F96D8BF6D",
+        "signing_fingerprint": "E1D6ABB63BFCFB4BA02FDF1CEC590EEAC9189250",
+        "snapshot_sha256": "923b3132d9214cee3f59fa2b56a3af27a0287c8587576c99ebcd5b24e537a194",
+        "source_digest": "344cad0f3a19a651c8f0188c89402018c65406b106adecdfec52df4359046ca5d86a70ce8d7943f8c41deed79918291b0a86bfa57dcec2c0aa2b4bbca6edc698",
+        "source_digest_algorithm": "sha512",
+        "source_size": 940364,
+        "status": "verified",
+        "status_sha256": "0e675efd7fc7ec684b5d53c312b61219c66e4238caef255c74edb78e8afe6ab9",
+        "trust_class": "distributor-openpgp-manifest",
+        "verifier_sha256": "14953ed8b4549020e185c0f7ab600bb9d0384457ea74da9d574e8d31139aff4f"
+      },
+      "name": "patch-2.8.1.tar.xz",
+      "sha256": "3240c7959c5347c8ed347e3c4201c0337bf4240d5cf09d68889e58eeaba30e17",
+      "size": 940364,
+      "status": "verified"
     },
     {
       "authentication": {
         "assurance": "publisher HTTPS metadata; no signature verified",
-        "evidence_sha256": "08ff111c448c363ff4aa1efba6675386cec2dd8d4d0f921600a1400a339c03fc",
+        "evidence_sha256": "61c79e2ada945a198a144827a6058bc73320773bcf895d9ed851453aa189600f",
         "status": "verified",
         "trust_class": "https-published-sha256"
       },
-      "name": "pcre2-10.47.tar.bz2",
-      "sha256": "47fe8c99461250d42f89e6e8fdaeba9da057855d06eb7fc08d9ca03fd08d7bc7",
-      "size": 2145789,
+      "name": "pcre2-10.49.tar.bz2",
+      "sha256": "53c156e1ba416a20da8e65395daa132da0d80e76910424caca3fcdae7831d384",
+      "size": 2185271,
       "status": "verified"
     },
     {
+      "authentication": {
+        "assurance": "Gentoo-signed snapshot authenticates exact upstream filename, size and SHA512; SHA256 pin is derived after verification",
+        "distributor": "Gentoo",
+        "evidence_sha256": "80c36746746e20a7c67a3f0fd554a5ac9281637f21e4cf8366cac04126615f47",
+        "manifest_member": "gentoo-20261103/dev-lang/perl/Manifest",
+        "manifest_sha256": "b5e7d5564d7ffce5d7e5330c701cbfbf30879c443d22472a0d37729f6bdf6850",
+        "primary_fingerprint": "DCD05B71EAB94199527F44ACDB6B8C1F96D8BF6D",
+        "signing_fingerprint": "E1D6ABB63BFCFB4BA02FDF1CEC590EEAC9189250",
+        "snapshot_sha256": "923b3132d9214cee3f59fa2b56a3af27a0287c8587576c99ebcd5b24e537a194",
+        "source_digest": "734d00d00678add11544e8f483bf953e61ae391aa6a2bba61ec4e7727275e243cc411525d30e6a73f70ccc0603ebe85bc0c6dd69b0106a6162e21a4595d11075",
+        "source_digest_algorithm": "sha512",
+        "source_size": 14919940,
+        "status": "verified",
+        "status_sha256": "0e675efd7fc7ec684b5d53c312b61219c66e4238caef255c74edb78e8afe6ab9",
+        "trust_class": "distributor-openpgp-manifest",
+        "verifier_sha256": "14953ed8b4549020e185c0f7ab600bb9d0384457ea74da9d574e8d31139aff4f"
+      },
       "name": "perl-5.44.0.tar.xz",
-      "reason": "no supported authentication evidence",
-      "status": "unresolved"
+      "sha256": "505cf43912e9480495c344c70260452e32aa2a73c546a026b3f100053b23ce91",
+      "size": 14919940,
+      "status": "verified"
     },
     {
+      "authentication": {
+        "assurance": "Gentoo-signed snapshot authenticates exact upstream filename, size and SHA512; SHA256 pin is derived after verification",
+        "distributor": "Gentoo",
+        "evidence_sha256": "fe31032e8878c88d96a9473e49cfe42cace0d3544cdf4da5edf84eaebd03d737",
+        "manifest_member": "gentoo-20261103/dev-util/pkgconf/Manifest",
+        "manifest_sha256": "dec703dbdd0e7a008485af7ebaf6ad582e39fa95b4accd7826608699215f743c",
+        "primary_fingerprint": "DCD05B71EAB94199527F44ACDB6B8C1F96D8BF6D",
+        "signing_fingerprint": "E1D6ABB63BFCFB4BA02FDF1CEC590EEAC9189250",
+        "snapshot_sha256": "923b3132d9214cee3f59fa2b56a3af27a0287c8587576c99ebcd5b24e537a194",
+        "source_digest": "5f4559697ec1849771eefaeb77a3fea7caa638b83d381e6e2f913e3f053fa1ae796f18e4360d3a37bc1a17999f043ea244e91cadd5f3c170d50c48088e4c1a55",
+        "source_digest_algorithm": "sha512",
+        "source_size": 426972,
+        "status": "verified",
+        "status_sha256": "0e675efd7fc7ec684b5d53c312b61219c66e4238caef255c74edb78e8afe6ab9",
+        "trust_class": "distributor-openpgp-manifest",
+        "verifier_sha256": "14953ed8b4549020e185c0f7ab600bb9d0384457ea74da9d574e8d31139aff4f"
+      },
       "name": "pkgconf-3.0.5.tar.xz",
-      "reason": "no supported authentication evidence",
-      "status": "unresolved"
+      "sha256": "3acd3a8a3cce65a8d620321855d92fb602e026cbe8e13ee36bdec58483b59ace",
+      "size": 426972,
+      "status": "verified"
     },
     {
       "name": "procps-ng-4.0.7.tar.xz",
@@ -444,29 +1067,100 @@
       "status": "unresolved"
     },
     {
+      "authentication": {
+        "assurance": "Gentoo-signed snapshot authenticates exact upstream filename, size and SHA512; SHA256 pin is derived after verification",
+        "distributor": "Gentoo",
+        "evidence_sha256": "6f9bd03c5b013bffffcd7507fe01265bdd2bb124a6ffe6942c71ebee186e7af4",
+        "manifest_member": "gentoo-20261103/sys-process/psmisc/Manifest",
+        "manifest_sha256": "5ab0d3ecf60884df5236de3b4a1c94dc78f3363b27e6d6ad89a03667b004f739",
+        "primary_fingerprint": "DCD05B71EAB94199527F44ACDB6B8C1F96D8BF6D",
+        "signing_fingerprint": "E1D6ABB63BFCFB4BA02FDF1CEC590EEAC9189250",
+        "snapshot_sha256": "923b3132d9214cee3f59fa2b56a3af27a0287c8587576c99ebcd5b24e537a194",
+        "source_digest": "8180d24355b3b0f3102044916d078b1aa9a1af3d84f1e14db79e33e505390167012adbb1a8a5f47a692f3a14aba1eb5f1f8f37f328392e8635b89966af9b2128",
+        "source_digest_algorithm": "sha512",
+        "source_size": 432208,
+        "status": "verified",
+        "status_sha256": "0e675efd7fc7ec684b5d53c312b61219c66e4238caef255c74edb78e8afe6ab9",
+        "trust_class": "distributor-openpgp-manifest",
+        "verifier_sha256": "14953ed8b4549020e185c0f7ab600bb9d0384457ea74da9d574e8d31139aff4f"
+      },
       "name": "psmisc-23.7.tar.xz",
-      "reason": "no supported authentication evidence",
-      "status": "unresolved"
+      "sha256": "58c55d9c1402474065adae669511c191de374b0871eec781239ab400b907c327",
+      "size": 432208,
+      "status": "verified"
     },
     {
+      "authentication": {
+        "assurance": "publisher HTTPS metadata; no signature verified",
+        "evidence_sha256": "bbece21bdfc7738f614c814f49caae41962af8b98f8b369e6a19facdb70c0744",
+        "status": "verified",
+        "trust_class": "https-published-sha256"
+      },
       "name": "Python-3.14.10.tar.xz",
-      "reason": "no supported authentication evidence",
-      "status": "unresolved"
+      "sha256": "de414a57119abef52784d8993e341d53aed635fc2b05c2607d9f98a2c5b72032",
+      "size": 24240392,
+      "status": "verified"
     },
     {
+      "authentication": {
+        "assurance": "Gentoo-signed snapshot authenticates exact upstream filename, size and SHA512; SHA256 pin is derived after verification",
+        "distributor": "Gentoo",
+        "evidence_sha256": "1b4f8d759d21f0c01ef60d330a59c801cddf06dc1aa5a93499833ffb0665eae8",
+        "manifest_member": "gentoo-20261103/app-doc/python-docs/Manifest",
+        "manifest_sha256": "26a6f4ba316a4cba2524db30b50cfd014ce445ea3ef0498217e2fc2f89d6d43d",
+        "primary_fingerprint": "DCD05B71EAB94199527F44ACDB6B8C1F96D8BF6D",
+        "signing_fingerprint": "E1D6ABB63BFCFB4BA02FDF1CEC590EEAC9189250",
+        "snapshot_sha256": "923b3132d9214cee3f59fa2b56a3af27a0287c8587576c99ebcd5b24e537a194",
+        "source_digest": "06cbcfe40fb8c0e0ddaa1577a5e2d9338cc613f70798816d56dd313ee18be76a16ee0071d8b258ae592f117cde3fe246cfb885db02d19014227d8864e157e29f",
+        "source_digest_algorithm": "sha512",
+        "source_size": 8485984,
+        "status": "verified",
+        "status_sha256": "0e675efd7fc7ec684b5d53c312b61219c66e4238caef255c74edb78e8afe6ab9",
+        "trust_class": "distributor-openpgp-manifest",
+        "verifier_sha256": "14953ed8b4549020e185c0f7ab600bb9d0384457ea74da9d574e8d31139aff4f"
+      },
       "name": "python-3.14.10-docs-html.tar.bz2",
-      "reason": "no supported authentication evidence",
-      "status": "unresolved"
+      "sha256": "89cab64cef8703b043d2c9e8265373ebd3df94864c3c1bc0435eda0703b2812d",
+      "size": 8485984,
+      "status": "verified"
     },
     {
+      "authentication": {
+        "assurance": "Gentoo-signed snapshot authenticates exact upstream filename, size and SHA512; SHA256 pin is derived after verification",
+        "distributor": "Gentoo",
+        "evidence_sha256": "17255bc6666e5e12763644600742d2a930709a76eb7062fe9bb0de56219a87e3",
+        "manifest_member": "gentoo-20261103/sys-libs/readline/Manifest",
+        "manifest_sha256": "58036e4a8114646499de6b6e9b6c193e71cc80f07d2adb8570ea0c03e06cf4e5",
+        "primary_fingerprint": "DCD05B71EAB94199527F44ACDB6B8C1F96D8BF6D",
+        "signing_fingerprint": "E1D6ABB63BFCFB4BA02FDF1CEC590EEAC9189250",
+        "snapshot_sha256": "923b3132d9214cee3f59fa2b56a3af27a0287c8587576c99ebcd5b24e537a194",
+        "source_digest": "513002753dcf5db9213dbbb61d51217245f6a40d33b1dd45238e8062dfa8eef0c890b87a5548e11db959e842724fb572c4d3d7fb433773762a63c30efe808344",
+        "source_digest_algorithm": "sha512",
+        "source_size": 3419642,
+        "status": "verified",
+        "status_sha256": "0e675efd7fc7ec684b5d53c312b61219c66e4238caef255c74edb78e8afe6ab9",
+        "trust_class": "distributor-openpgp-manifest",
+        "verifier_sha256": "14953ed8b4549020e185c0f7ab600bb9d0384457ea74da9d574e8d31139aff4f"
+      },
       "name": "readline-8.3.tar.gz",
-      "reason": "missing evidence: readline-8.3.tar.gz",
-      "status": "unresolved"
+      "sha256": "fe5383204467828cd495ee8d1d3c037a7eba1389c22bc6a041f627976f9061cc",
+      "size": 3419642,
+      "status": "verified"
     },
     {
+      "authentication": {
+        "evidence_sha256": "367099298329657b243aa4d6ec33f73b33a3f601a75bbdb4cd14d1e1be690310",
+        "primary_fingerprint": "155D3FC500C834486D1EEA677FD9FCCB000BEEEE",
+        "signing_fingerprint": "155D3FC500C834486D1EEA677FD9FCCB000BEEEE",
+        "status": "verified",
+        "status_sha256": "c8a485e5f2360ad9e5dac72c51a78bb275d415872f9e6e64b6c3fbce732ea722",
+        "trust_class": "publisher-openpgp",
+        "verifier_sha256": "14953ed8b4549020e185c0f7ab600bb9d0384457ea74da9d574e8d31139aff4f"
+      },
       "name": "sed-4.10.tar.xz",
-      "reason": "missing evidence: sed-4.10.tar.xz",
-      "status": "unresolved"
+      "sha256": "b8e72182b2ec96a3574e2998c47b7aaa64cc20ce000d8e9ac313cc07cecf28c7",
+      "size": 1732800,
+      "status": "verified"
     },
     {
       "authentication": {
@@ -498,14 +1192,50 @@
       "status": "unresolved"
     },
     {
+      "authentication": {
+        "assurance": "Gentoo-signed snapshot authenticates exact upstream filename, size and SHA512; SHA256 pin is derived after verification",
+        "distributor": "Gentoo",
+        "evidence_sha256": "7d5466dacccbebf827caf2c3214aad1310eb6d0138acba7d5afb242bcb1c6c9c",
+        "manifest_member": "gentoo-20261103/dev-db/sqlite/Manifest",
+        "manifest_sha256": "7cf2de6351c471510de977dc86ea3d09e4b40a30784b4019116c8677f22e2ccc",
+        "primary_fingerprint": "DCD05B71EAB94199527F44ACDB6B8C1F96D8BF6D",
+        "signing_fingerprint": "E1D6ABB63BFCFB4BA02FDF1CEC590EEAC9189250",
+        "snapshot_sha256": "923b3132d9214cee3f59fa2b56a3af27a0287c8587576c99ebcd5b24e537a194",
+        "source_digest": "b0a07be9b7110f141ebf87c6ded540b61e8bc734dd953d94fd363e79f60460f754ed8dbaa0daa8ec81315dcab6edc7b4c253139627af33092eae49cc8f9cf058",
+        "source_digest_algorithm": "sha512",
+        "source_size": 11820412,
+        "status": "verified",
+        "status_sha256": "0e675efd7fc7ec684b5d53c312b61219c66e4238caef255c74edb78e8afe6ab9",
+        "trust_class": "distributor-openpgp-manifest",
+        "verifier_sha256": "14953ed8b4549020e185c0f7ab600bb9d0384457ea74da9d574e8d31139aff4f"
+      },
       "name": "sqlite-doc-3530400.zip",
-      "reason": "no supported authentication evidence",
-      "status": "unresolved"
+      "sha256": "a1d0f5de57485d062796ed7e67daff0758b50d00001a0f233a2c15aaf40bbdc8",
+      "size": 11820412,
+      "status": "verified"
     },
     {
+      "authentication": {
+        "assurance": "Gentoo-signed snapshot authenticates exact upstream filename, size and SHA512; SHA256 pin is derived after verification",
+        "distributor": "Gentoo",
+        "evidence_sha256": "dba193cdd3ad07987556ebaecb9844ff4ee1843962097bfc26319ab07d6361fe",
+        "manifest_member": "gentoo-20261103/sys-apps/systemd/Manifest",
+        "manifest_sha256": "991f5677d5762de0fa26fced80698f6cf6659639002a0f49060ff1d1368a99a9",
+        "primary_fingerprint": "DCD05B71EAB94199527F44ACDB6B8C1F96D8BF6D",
+        "signing_fingerprint": "E1D6ABB63BFCFB4BA02FDF1CEC590EEAC9189250",
+        "snapshot_sha256": "923b3132d9214cee3f59fa2b56a3af27a0287c8587576c99ebcd5b24e537a194",
+        "source_digest": "876f043970cb65b39ae15fba39f23bf94c7c3d80569503d6e8ea2c8013c30ee40ce43cb55cbcb1cf14d5c3021aafc09c0f67473bbf742d8964bf9fa30693b971",
+        "source_digest_algorithm": "sha512",
+        "source_size": 18456346,
+        "status": "verified",
+        "status_sha256": "0e675efd7fc7ec684b5d53c312b61219c66e4238caef255c74edb78e8afe6ab9",
+        "trust_class": "distributor-openpgp-manifest",
+        "verifier_sha256": "14953ed8b4549020e185c0f7ab600bb9d0384457ea74da9d574e8d31139aff4f"
+      },
       "name": "systemd-261.2.tar.gz",
-      "reason": "no supported authentication evidence",
-      "status": "unresolved"
+      "sha256": "ed1059ff964f5df35b6056434cc17cc83f86dc913f10489948a0b19b6081c5ec",
+      "size": 18456346,
+      "status": "verified"
     },
     {
       "name": "systemd-man-pages-261.2.tar.xz",
@@ -513,9 +1243,16 @@
       "status": "unresolved"
     },
     {
+      "authentication": {
+        "assurance": "publisher HTTPS metadata; no signature verified",
+        "evidence_sha256": "ec09dd6070b0d7739b4f4d85f643407eb64e2bb88cf2920c22a823cc1906a088",
+        "status": "verified",
+        "trust_class": "https-published-sha256"
+      },
       "name": "tar-1.35.tar.xz",
-      "reason": "missing evidence: tar-1.35.tar.xz",
-      "status": "unresolved"
+      "sha256": "4d62ff37342ec7aed748535323930c7cf94acf71c3591882b26a7ea50f3edc16",
+      "size": 2317208,
+      "status": "verified"
     },
     {
       "name": "tcl8.6.18-src.tar.gz",
@@ -528,9 +1265,27 @@
       "status": "unresolved"
     },
     {
+      "authentication": {
+        "assurance": "Gentoo-signed snapshot authenticates exact upstream filename, size and SHA512; SHA256 pin is derived after verification",
+        "distributor": "Gentoo",
+        "evidence_sha256": "f4aafc3c3df5fcef7a3a7a6a60e4276db6d7aa732d0280851938d566fc91fc77",
+        "manifest_member": "gentoo-20261103/sys-apps/texinfo/Manifest",
+        "manifest_sha256": "a79de84a61099970c8af3f22df6101a0956a387a89d115d3e36ef612b66f412a",
+        "primary_fingerprint": "DCD05B71EAB94199527F44ACDB6B8C1F96D8BF6D",
+        "signing_fingerprint": "E1D6ABB63BFCFB4BA02FDF1CEC590EEAC9189250",
+        "snapshot_sha256": "923b3132d9214cee3f59fa2b56a3af27a0287c8587576c99ebcd5b24e537a194",
+        "source_digest": "fb1a16df67f870e79c31f4b96d8431d9c944eb84e5aa71e9d94890417ce63047918d55620fa63bd582232c47e9b412a6f95a11a2479f53f40e92e49bc018d926",
+        "source_digest_algorithm": "sha512",
+        "source_size": 6940392,
+        "status": "verified",
+        "status_sha256": "0e675efd7fc7ec684b5d53c312b61219c66e4238caef255c74edb78e8afe6ab9",
+        "trust_class": "distributor-openpgp-manifest",
+        "verifier_sha256": "14953ed8b4549020e185c0f7ab600bb9d0384457ea74da9d574e8d31139aff4f"
+      },
       "name": "texinfo-7.3.tar.xz",
-      "reason": "missing evidence: texinfo-7.3.tar.xz",
-      "status": "unresolved"
+      "sha256": "51f74eb0f51cfa9873b85264dfdd5d46e8957ec95b88f0fb762f63d9e164c72e",
+      "size": 6940392,
+      "status": "verified"
     },
     {
       "name": "tzdata2026c.tar.gz",
@@ -550,7 +1305,7 @@
       "status": "verified"
     },
     {
-      "name": "vim-9.2.1025.tar.gz",
+      "name": "vim-9.2.1201.tar.gz",
       "reason": "no supported authentication evidence",
       "status": "unresolved"
     },
@@ -584,9 +1339,27 @@
       "status": "unresolved"
     },
     {
+      "authentication": {
+        "assurance": "Gentoo-signed snapshot authenticates exact upstream filename, size and SHA512; SHA256 pin is derived after verification",
+        "distributor": "Gentoo",
+        "evidence_sha256": "0b8f4911b780b16faf8f5629935789c7dab15ca434a729ee8da68f986a6d32e0",
+        "manifest_member": "gentoo-20261103/app-arch/zstd/Manifest",
+        "manifest_sha256": "0151aa764a57cce65f050b2cc690e4174bcd687313e80eed5b8f4b24d83ee959",
+        "primary_fingerprint": "DCD05B71EAB94199527F44ACDB6B8C1F96D8BF6D",
+        "signing_fingerprint": "E1D6ABB63BFCFB4BA02FDF1CEC590EEAC9189250",
+        "snapshot_sha256": "923b3132d9214cee3f59fa2b56a3af27a0287c8587576c99ebcd5b24e537a194",
+        "source_digest": "b4de208f179b68d4c6454139ca60d66ed3ef3893a560d6159a056640f83d3ee67cdf6ffb88971cdba35449dba4b597eaa8b4ae908127ef7fd58c89f40bf9a705",
+        "source_digest_algorithm": "sha512",
+        "source_size": 2434947,
+        "status": "verified",
+        "status_sha256": "0e675efd7fc7ec684b5d53c312b61219c66e4238caef255c74edb78e8afe6ab9",
+        "trust_class": "distributor-openpgp-manifest",
+        "verifier_sha256": "14953ed8b4549020e185c0f7ab600bb9d0384457ea74da9d574e8d31139aff4f"
+      },
       "name": "zstd-1.5.7.tar.gz",
-      "reason": "no supported authentication evidence",
-      "status": "unresolved"
+      "sha256": "eb33e51f49a15e023950cd7825ca74a4a2b43db8354825ac24fc1b7ee09e6fa3",
+      "size": 2434947,
+      "status": "verified"
     },
     {
       "name": "bzip2-1.0.8-install_docs-1.patch",
@@ -604,7 +1377,7 @@
       "status": "unresolved"
     },
     {
-      "name": "glibc-2.44-upstream_fixes-1.patch",
+      "name": "glibc-2.44-upstream_fixes-3.patch",
       "reason": "no supported authentication evidence",
       "status": "unresolved"
     },
@@ -632,6 +1405,6 @@
   "verifier": {
     "name": "source_lock.py",
     "python_version": "3.13.17",
-    "sha256": "15281583691bcfb90ef2863fde10ca61baa72a571ef0ad966e038dec3dddde84"
+    "sha256": "87eda7dc8d1563e8b21750cbc4f785e7dcf6d9dc3691e821f39c864ea77ed797"
   }
 }

@@ -1,0 +1,346 @@
+<!-- MHonArc v2.6.19+ -->
+<!--X-Subject: [ANNOUNCE] DejaGnu 1.6.3 released -->
+<!--X-From-R13: Xnpbo Pnpuzrlre &#60;wpoNtah.bet> -->
+<!--X-Date: Thu, 17 Jun 2021 09:40:59 &#45;0400 -->
+<!--X-Message-Id: ypupmwlf893.fsf@fencepost.gnu.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!doctype html public "-//W3C//DTD HTML//EN">
+<html>
+<head>
+<title>[ANNOUNCE] DejaGnu 1.6.3 released</title>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<center>
+<table border=0 cellspacing=2 cellpadding=0 bgcolor="#000000">
+<tr><td><table border=0 bgcolor="#FFFFCC">
+<tr><td><big><b>info-gnu</b></big></td></tr></table></tr></table>
+<div class="nowrap">
+<small>[<a href="../"
+>Top</a>][<a href="/archive/html">All Lists</a>]</small>
+</div>
+<form method="get" action="/archive/cgi-bin/namazu.cgi">
+<input type="text" name="query" size="30">
+<input type="submit" name="submit" value="Search">
+<input type="hidden" name="idxname" value="info-gnu">
+<a href="/archive/cgi-bin/namazu.cgi?idxname=info-gnu">Advanced</a>
+</form>
+
+</center>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<hr>
+[<a href="msg00008.html">Date Prev</a>][<a href="msg00010.html">Date Next</a>][<a href="msg00008.html">Thread Prev</a>][<a href="msg00010.html">Thread Next</a>][<a
+href="index.html#00009">Date Index</a>][<a
+href="threads.html#00009">Thread Index</a>]
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h2>[ANNOUNCE] DejaGnu 1.6.3 released</h2>
+<hr>
+<table border=0>
+<tbody>
+<tr>
+<td align="right" valign="top">
+<b>From</b>: </td>
+<td align="left">
+Jacob Bachmeyer</td>
+</tr>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+
+<tr>
+<td align="right" valign="top">
+<b>Subject</b>: </td>
+<td align="left">
+[ANNOUNCE] DejaGnu 1.6.3 released</td>
+</tr>
+
+<tr>
+<td align="right" valign="top">
+<b>Date</b>: </td>
+<td align="left">
+Thu, 17 Jun 2021 00:03:04 -0400</td>
+</tr>
+
+</tbody>
+</table>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+<hr>
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre>After a long delay, a new maintainer, and a lengthy release candidate
+series spanning nearly three full months, we are pleased to announce the
+&quot;Three Decades of DejaGnu&quot; release of DejaGnu 1.6.3.
+
+
+What is DejaGnu?
+----------------
+
+DejaGnu is a framework for testing other programs, with a variety of
+features developed to support testing the GNU development toolchain.
+DejaGnu supports both system testing and unit testing.
+
+
+Where to Get DejaGnu
+--------------------
+
+DejaGnu is available from ftp.gnu.org and its many mirrors in the directory
+/gnu/dejagnu.
+
+Information about DejaGnu is available on the Web at
+&lt;URL:<a  rel="nofollow" href="http://www.gnu.org/software/dejagnu/">http://www.gnu.org/software/dejagnu/</a>&gt;.
+
+The 1.6.3 release files have the following checksums:
+
+$ sha1sum dejagnu-1.6.3.*
+390b586609bb23c807218eda493f428c4a913bc1  dejagnu-1.6.3.tar.gz
+9efbaa9aca020e82d46e988308d181a6b93c40ae  dejagnu-1.6.3.tar.gz.sig
+$ sha256sum dejagnu-1.6.3.*
+87daefacd7958b4a69f88c6856dbd1634261963c414079d0c371f589cd66a2e3  
+dejagnu-1.6.3.tar.gz
+a3b76186ee99b65f46f30b8973a93e33175efa2cc07090858d48d67f678f3288  
+dejagnu-1.6.3.tar.gz.sig
+
+
+Major Changes in This Release
+-----------------------------
+
+This version collects the development work done over the past two years,
+fixing numerous bugs, adding new commands under the &quot;testsuite&quot; and
+&quot;testcase&quot; multiplex entrypoints, and significantly improving the manual.
+
+According to Rob Savoye, the development of DejaGnu began in 1991.  The
+ChangeLog supports this, with the oldest entries from mid-1992 implying an
+already wide-ranging code base.  One of these early entries mentions
+changing the executable name from &quot;DejaGnu&quot; to the current &quot;runtest&quot;.  In
+an example of coming full circle, this release now adds a &quot;dejagnu&quot; command
+as a multiplex launcher for various auxiliary commands other than actually
+running tests.
+
+Two files removed in this release were the last non-trivial code files in
+DejaGnu that did not have proper GPL notices:
+
+The contrib/compare_tests script had been imported many years ago from GCC,
+where upstream development has continued, leaving our version as a fossil.
+
+The test script testsuite/runtest.libs/load_lib.exp was also found to be
+inadequate as it fails to expose the mishandling of the libdirs list and
+will be replaced in 1.6.4 using the new internal unit test infrastructure.
+
+Notable visible changes (from NEWS) are:
+
+ 1. The internal proc 'is_remote' has been renamed to 'isremote' for
+    consistency with the other similar procs (eg, istarget). Testsuites
+    should use this proc. The 'is_remote' proc is deprecated.
+ 2. runtest now accepts --local_init and --global_init options to override
+    the default of reading &quot;site.exp&quot;.  See the manual for details.
+ 3. runtest now responds consistently to all Tcl errors and generates an
+    UNRESOLVED result when a test script aborts.  Previously, calling an
+    undefined procedure would cause the test run to abort while other Tcl
+    errors produced only an easily-ignored message.
+ 4. runtest now collects Tcl errors encountered during a test run and prints
+    the collected errors a second time at the end of the test run after the
+    summary.  Separator lines containing more than 10 hyphens are included.
+ 5. A utility procedure relative_filename has been added.  This procedure
+    computes a relative file name to a given destination from a given base.
+ 6. The utility procedure 'grep' now accepts a '-n' option that
+    includes line numbers in the output, consistent with GNU grep.
+ 7. The target_compile procedure now accepts a &quot;linker=&quot; option that
+    overrides the compiler selection when producing an executable.
+ 8. The internal default_target_compile procedure now supports compiling
+    sources in Go (using GCC Go) and Rust.
+ 9. The host_execute procedure no longer insists that the executable be in
+    the current directory if the file exists under the given name.
+10. The host_execute procedure now reads input to end-of-file, to ensure
+    that the child process will be able to complete instead of being cut
+    short by a SIGPIPE under unpredictable unfavorable timing scenarios.
+11. The match patterns in the host_execute procedure have been revised to
+    fix timing issues causing test names to be truncated.
+12. The host_execute procedure is no longer sensitive to the value of the
+    &quot;text&quot; global variable.
+13. A new multiplex procedure &quot;testsuite&quot; is added for commands retrieving
+    or providing information about the current testsuite.
+14. A command &quot;testsuite file&quot; is added to replace the use of the &quot;*dir&quot;
+    variables in test scripts.
+15. A command &quot;testsuite can call&quot; is added to report the availability of
+    multiplexed API calls.
+16. A new multiplex procedure &quot;testcase&quot; is added for commands examining or
+    manipulating the dynamic state of ongoing testing.
+17. A command &quot;testcase group&quot; is provided for reporting test groups to the
+    DejaGnu core.  Currently, the usage of this command is validated, but
+    it will affect at least XML output in a future release of DejaGnu.
+18. A shell command &quot;dejagnu&quot; is added as a place to hang various
+    auxiliary commands not directly involved with running tests. The
+    &quot;runtest&quot; command will remain for that purpose for the foreseeable
+    future.
+19. The first auxiliary command is added: &quot;report card&quot;. The &quot;dejagnu
+    report card&quot; command reads DejaGnu summary files and produces a compact
+    tabular summary across multiple tools.
+20. A Tcl namespace is now used for some internal procedures and variables.
+    The Tcl namespace ::dejagnu and all child namespaces are entirely
+    internal and should not be mentioned in testsuite code.  Its contents
+    are subject to change without notice, even on point releases.
+21. The DejaGnu testsuite no longer searches for a nearby Expect executable
+    in the location where it would have been located in the old Cygnus tree
+    layout.  If you want to use a special Expect other than the system
+    Expect, specify EXPECT=/name/of/expect to &quot;runtest&quot; or &quot;make check&quot;.
+
+See the ChangeLog and Git history for full details.
+
+
+Known Bugs in This Release
+--------------------------
+
+These bugs were reported after the 1.6.3 code freeze and are not
+sufficiently serious to justify lifting the freeze prior to the release:
+
+PR44462 DejaGnu performs an internal check on the compiler that is only
+        valid if the compiler is GCC without first checking that the
+        compiler actually is GCC.  (get_multilibs procedure)
+
+PR44545 Older versions of MacOS X have a deficient system Awk which is not
+        detected by configure or at runtime.  This causes the report-card
+        tests to crash with Expect/Tcl errors.  The dejagnu-report-card
+        tool is unlikely to work on these systems, but the main DejaGnu
+        testing framework should still be usable.
+
+        Reported by Fred Wright on Apple Darwin 8.11.0 PowerPC, but other
+        tests performed on Apple Darwin 9.8.0 were reported to pass on both
+        PowerPC and x86.
+
+PR44545 BSD make does not appear to support exporting variables to the
+        environment and configure does not detect this situation.  The
+        solution is to install GNU make, often packaged as &quot;gmake&quot; in BSD
+        system distributions, and set MAKE=gmake when running configure.
+
+PR44602 DejaGnu will fail to load if installed in a directory with spaces
+        in the full absolute file name.  Similar problems will occur if the
+        testsuite is in such a directory.
+
+PR47385 An undocumented DejaGnu procedure (findfile) can return the name of
+        a directory despite its own name.  Since directories are files in
+        POSIX and this procedure is undocumented, the best fix is unclear.
+
+PR47385 The which procedure in utils.exp can incorrectly return the name of
+        a directory for which search permission is available.  This is a
+        clear bug because this procedure is documented as searching for
+        executable files.  (In POSIX, the same permission bit is used for
+        execute permission on files and search permission on directories.)
+
+        Reported by Rainer Orth, who happened to have an environment that
+        tickled this bug in the DejaGnu testsuite.  The testsuite in 1.6.3
+        works around this issue, for which the root causes are listed as a
+        known bug in 1.6.3.
+
+Other minor known bugs, not currently in the bug tracker, include incorrect
+handling of the libdirs variable and thread-safety issues with dejagnu.h
+
+
+Future Directions
+-----------------
+
+Monkeypatching the framework is not and never was supported.  Such
+monkeypatches may break without warning and broken monkeypatches are bugs
+in the testsuite using them, not the framework.  Efforts will be made to
+upstream any useful features currently monkeypatched or otherwise to assist
+in getting Free testsuites out of this trap.  This release obsoletes a
+monkeypatch on default_target_compile that GDB has carried for some years;
+1.6.4 will begin efforts towards providing extensibility to prevent similar
+issues in the future.
+
+The 1.6.4 release is expected to fix all of the known bugs in 1.6.3, but
+PR44545 may be treated as a documentation issue if a direct technical
+solution proves infeasible.
+
+The 1.6.4 release is expected to include some additional build support code
+to pass the *_triplet variables obtained by configure into the testsuite.
+This support will eventually be upstreamed to Automake and become the new
+default behavior.
+
+The 1.6.4 release is expected to focus on improvements to unit test and
+target support.  The current implementation of the default_target_compile
+procedure is dangerously close to unmaintainable spaghetti; a rewrite is
+planned.  Supporting infrastructure for this rewrite may also enable
+significant changes to the board_info internals; these will not affect the
+existing API, but the internal arrays may disappear in a future release.
+
+As advance notice, some of the changes currently planned for 1.7 are:
+
+    - a radically revised XML output format, currently in development on
+      the &quot;psql&quot; branch in the Git repository
+
+    - log file messages generated by the framework will be tagged with the
+      name of the procedure that called into the logging subsystem
+
+    - default processing will be moved out of the various *_hook
+      procedures; sites overriding these procedures will need to update
+      their site configuration files when installing 1.7
+
+    - DejaGnu 1.7 will no longer override the ::unknown procedure to detect
+      calls to undefined procedures; this mechanism is obsoleted by general
+      error handling improvements in 1.6.3 but will be retained until 1.7
+
+    - {^Totals} and {\d{2}(:.{2}){2}} patterns will be removed from the
+      pattern list in host_execute; this may affect some unit tests
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+<hr>
+<form method="post" action="/mp/yyz.py" enctype="multipart/form-data">
+<input type="hidden" name="a" value="jcb">
+<input type="hidden" name="b" value="[ANNOUNCE] DejaGnu 1.6.3 released">
+<input type="hidden" name="d" value="ypupmwlf893.fsf@fencepost.gnu.org">
+<input type="hidden" name="c" value="gnu.org">
+<center>reply via email to<br><input type="submit" value=" Jacob Bachmeyer "></center>
+</form>
+<hr>
+<table width="100%">
+<tr><td align="left">[Prev in Thread]</td>
+<td align="center"><b>Current Thread</b></td>
+<td align="right">[Next in Thread]</td></tr></table>
+<ul>
+<li><font color="#666666"><strong>[ANNOUNCE] DejaGnu 1.6.3 released</strong>,
+<em>Jacob Bachmeyer</em></font>&nbsp;<b>&lt;=</b>
+</ul>
+
+<hr>
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+<ul>
+<li>Prev by Date:
+<strong><a href="msg00008.html">gdbm-1.20 released [stable]</a></strong>
+</li>
+<li>Next by Date:
+<strong><a href="msg00010.html">GNU mtools 4.0.30 released</a></strong>
+</li>
+<li>Previous by thread:
+<strong><a href="msg00008.html">gdbm-1.20 released [stable]</a></strong>
+</li>
+<li>Next by thread:
+<strong><a href="msg00010.html">GNU mtools 4.0.30 released</a></strong>
+</li>
+<li>Index(es):
+<ul>
+<li><a href="index.html#00009"><strong>Date</strong></a></li>
+<li><a href="threads.html#00009"><strong>Thread</strong></a></li>
+</ul>
+</li>
+</ul>
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+</body>
+</html>

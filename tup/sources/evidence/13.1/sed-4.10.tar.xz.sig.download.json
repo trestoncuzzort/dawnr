@@ -1,0 +1,8 @@
+{
+  "meaning": "observed download bytes; not authentication",
+  "resolved_url": "https://mirrors.kernel.org/gnu/sed/sed-4.10.tar.xz.sig",
+  "retrieved_at": "2026-11-05T08:14:52.817839+00:00",
+  "sha256": "b43d0dae9cba8cc2adb268cc37e974d5811475ffd569d66c8963cfd5ae2e224e",
+  "size": 833,
+  "url": "https://mirrors.kernel.org/gnu/sed/sed-4.10.tar.xz.sig"
+}

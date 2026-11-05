@@ -1,0 +1,8 @@
+{
+  "meaning": "observed download bytes; not authentication",
+  "resolved_url": "https://distfiles.gentoo.org/snapshots/gentoo-20261103.tar.xz.gpgsig",
+  "retrieved_at": "2026-11-05T08:27:35.944939+00:00",
+  "sha256": "4e08800e0e026829118786acc63e5ec3ca8ffdc4069252667642a6a5c5a4be22",
+  "size": 1000,
+  "url": "https://distfiles.gentoo.org/snapshots/gentoo-20261103.tar.xz.gpgsig"
+}

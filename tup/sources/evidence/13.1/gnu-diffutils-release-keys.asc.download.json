@@ -1,0 +1,8 @@
+{
+  "meaning": "observed download bytes; not authentication",
+  "resolved_url": "https://savannah.gnu.org/project/release-gpgkeys.php?group=diffutils&download=1",
+  "retrieved_at": "2026-11-05T08:19:01.222498+00:00",
+  "sha256": "0850b3f0df83d84c02a88fcdf28202c4a3d603bb972fe77d272ec33007c79359",
+  "size": 239722,
+  "url": "https://savannah.gnu.org/project/release-gpgkeys.php?group=diffutils&download=1"
+}
