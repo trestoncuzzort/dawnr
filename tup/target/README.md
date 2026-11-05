@@ -64,7 +64,11 @@ signed Gentoo snapshot used by the distributor-authenticated records (the
 Gentoo snapshot also authenticates dosfstools). The `boot` chapter needs
 `dosfstools-4.2.tar.gz` (320917 bytes, SHA256
 `64926eebf90092dca21b14259a5301b7b98e7b1943e8a201c7d726084809b527`) and its
-detached `dosfstools-4.2.tar.gz.sig` there. Each
+detached `dosfstools-4.2.tar.gz.sig` there. **Every layer run needs
+`dosfstools-4.2.tar.gz`, `dosfstools-4.2.tar.gz.sig` and `gentoo-20261103.tar.xz` in the
+cache, whatever chapters `--chapters` selects:** `verify_sources()` verifies the dosfstools
+record unconditionally, like LVM2 and linux-firmware, so a run for `remote` or `system` alone
+is refused without them. Each
 archive is authenticated again on every run: the five remote archives through
 [`remote/verify_layer_sources.py`](../remote/verify_layer_sources.py), LVM2,
 linux-firmware and dosfstools through their retained records and

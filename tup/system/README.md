@@ -164,13 +164,28 @@ details, every refusal and the tests are in [`../install/README.md`](../install/
    and whether the state directory is in RAM. It ends with `Confirmation token: SERIAL-XXXXXXXX`.
    If anything differs from what you expect, stop: nothing has been written yet.
 
-4. Apply it, typing the token:
+4. Apply it, typing the token. Start it detached, so that a dropped SSH session (a sleeping
+   laptop, Wi-Fi) cannot interrupt it half way through the copy, and follow its log:
 
    ```sh
-   sudo tup-install apply --plan ~/plan.json --confirm SERIAL-XXXXXXXX --state /var/tmp/install-state
+   sudo setsid -f tup-install apply --plan ~/plan.json --confirm SERIAL-XXXXXXXX \
+       --state /var/tmp/install-state > ~/apply.log 2>&1
+   tail -f ~/apply.log
    ```
 
-   It checks the disk against the plan, writes the partition table, formats, copies the
+   `setsid -f` gives the installer its own session, so the hangup of a dropped SSH session
+   does not reach it; your shell opens `~/apply.log`, so the log is in your home. The log
+   stays empty until the installer ends, then holds `installed ...: receipt ...` or the
+   reason it refused (press Ctrl-C to stop following; the install goes on). The progress is
+   in `/var/tmp/install-state/PROGRESS.jsonl` (`sudo tail -f` it). Expect the summary of
+   step 3 to call the state directory VOLATILE: the live system's root is a RAM overlay and
+   there is no persistent storage to give it, so the intent record and journal do not
+   survive a reboot, and after a power cut only the disk itself shows that a write started.
+   Run in the foreground instead, a dropped session is converted into an interruption: the
+   installer finishes the `cp` or `mkfs` it is in, unmounts and stops with the disk
+   half-written, and you need a new plan. (This command line has not been run on the image;
+   the VM plan in [`../install/README.md`](../install/README.md) is the first run.)
+   Apply checks the disk against the plan, writes the partition table, formats, copies the
    system, adds the boot files and verifies the result. Before the first write it looks at
    the disk once more and refuses if anything changed. An interrupted run is never resumed:
    make a new plan (with `--allow-existing`, which then lists what the failed run left).
@@ -185,7 +200,10 @@ nothing about that. **A disk that looks like Windows is never erased, with or wi
 flag**: an NTFS, BitLocker, ReFS or exFAT signature, a Windows dynamic or Storage Spaces
 volume, or a Microsoft basic data, reserved or recovery partition makes `plan` and `apply`
 refuse. Such a disk must be cleared by you by other means first, so a mistyped `--target`
-cannot reach the Windows SSD. Also refused: the disk this system booted from or runs on, a
+cannot reach the Windows SSD. The same holds for a disk with a protective MBR but no
+readable GPT (a damaged GPT hides what the disk holds), and for a `--state` directory or
+`plan --output` file on the target, on such a disk or on an NTFS, exFAT or FAT filesystem.
+Also refused: the disk this system booted from or runs on, a
 partition, a mounted or swapped-on disk, a disk without a serial number, a disk too small, an
 unreadable enrollment input, and an enrollment input that the installed system would refuse
 at its first boot. The first boot of the installed system enrolls you from
@@ -244,7 +262,6 @@ established traffic and Multicast DNS from private sources.
 | `01-identity.sh` | `/etc/os-release` (`ID=tup`, `VERSION_ID=13.1`), `/etc/hostname` (`tup`), `/etc/locale.conf` (`C.UTF-8`), `/etc/profile`, `/etc/inputrc`, `/etc/shells`, a drop-in that keeps boot messages on tty1, and `/etc/modprobe.d/tup-graphics.conf` (`blacklist amdgpu`: the module is built but none of its firmware is staged, so it must not take the screen away from the firmware framebuffer on its own) | LFS 13.1-systemd [11.1](https://www.linuxfromscratch.org/lfs/view/13.1-systemd/chapter11/theend.html), [9.2](https://www.linuxfromscratch.org/lfs/view/13.1-systemd/chapter09/network.html), [9.7](https://www.linuxfromscratch.org/lfs/view/13.1-systemd/chapter09/locale.html), [9.8](https://www.linuxfromscratch.org/lfs/view/13.1-systemd/chapter09/inputrc.html), [9.9](https://www.linuxfromscratch.org/lfs/view/13.1-systemd/chapter09/etcshells.html), [9.10](https://www.linuxfromscratch.org/lfs/view/13.1-systemd/chapter09/systemd-custom.html); the book's blocks are copied verbatim and a test compares them |
 | `02-network.sh` | `20-wired.network` (`Kind=!*`, `Type=ether`, `DHCP=yes`, `MulticastDNS=yes`, `ClientIdentifier=mac`), a resolved drop-in (`MulticastDNS=yes`, `LLMNR=no`), the `/etc/resolv.conf` stub link, journal size limits, `systemd-networkd-wait-online --any --timeout=30`, and the `systemd-timesyncd` drop-in that makes it wait for `/etc/tup/hardware-clock-utc` | [9.2](https://www.linuxfromscratch.org/lfs/view/13.1-systemd/chapter09/network.html); systemd 261.2 `network/89-ethernet.network.example`; [systemd.network](https://www.freedesktop.org/software/systemd/man/latest/systemd.network.html), [resolved.conf](https://www.freedesktop.org/software/systemd/man/latest/resolved.conf.html), [journald.conf](https://www.freedesktop.org/software/systemd/man/latest/journald.conf.html), [systemd-networkd-wait-online](https://www.freedesktop.org/software/systemd/man/latest/systemd-networkd-wait-online.service.html) |
 | `03-access.sh` | `/usr/lib/tup/remote/{policy,firewall,enroll}.py`, the four units, `/etc/tup/firewall.nft`, `/etc/issue`; enables the units and networkd, resolved and timesyncd with `systemctl --root=/`; asserts the generic final state | [agetty(8)](https://man7.org/linux/man-pages/man8/agetty.8.html) of util-linux 2.42.4, [systemctl(1)](https://www.freedesktop.org/software/systemd/man/latest/systemctl.html) |
-
 | `04-installer.sh` | `/usr/lib/tup-installer/tup/{install/disk.py,boot/__init__.py,boot/inputs.py}` (0755 for the script, 0644 for the modules) and the wrapper `/usr/sbin/tup-install`, which runs `python3 -I -B` on that explicit path; nothing is enabled or started | [`../install/README.md`](../install/README.md); [dosfstools](https://www.linuxfromscratch.org/blfs/view/13.1-systemd/postlfs/dosfstools.html) and [GRUB](https://www.linuxfromscratch.org/lfs/view/13.1-systemd/chapter08/grub.html) pages for the programs it needs |
 
 `ClientIdentifier=mac` is there because the image ships an empty machine-id and

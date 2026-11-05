@@ -109,7 +109,8 @@ class LayerChapterTests(unittest.TestCase):
                 calls.append((record["name"], evidence))
                 return {"name": record["name"], "status": "verified", "sha256": record["sha256"]}
             remote = {"sources": [], "advisory_review_sha256": "a" * 64, "sudo_advisory_review_sha256": "b" * 64}
-            with mock.patch.object(target, "verify_remote", return_value=remote),                     mock.patch.object(target.verifier, "verify_record", verify_record):
+            with (mock.patch.object(target, "verify_remote", return_value=remote),
+                  mock.patch.object(target.verifier, "verify_record", verify_record)):
                 result = target.verify_sources(cache, Path("gpg"), lock, ["dosfstools-4.2.tar.gz"])
         self.assertIn(("dosfstools-4.2.tar.gz", TUP / "boot/evidence"), calls)
         self.assertEqual([row["name"] for row in result["sources"]], ["dosfstools-4.2.tar.gz"])
