@@ -1,0 +1,6 @@
+interface:
+  display_name: "Fetch Before Fic"
+  short_description: "Find and reuse proven solutions before building"
+  default_prompt: "Use $fetch-before-fic to find and reuse an existing implementation before writing custom code."
+policy:
+  allow_implicit_invocation: true
