@@ -1,0 +1,48 @@
+{
+  "schema": 1,
+  "observation_local_date": "2026-11-04",
+  "purpose": "Disposable Linux preparation host; not native TUP acceptance",
+  "platform": {
+    "os": "Windows 11 IoT Enterprise LTSC",
+    "architecture": "x86_64",
+    "cpu_cores": 12,
+    "cpu_threads": 24,
+    "visible_memory_bytes": 16275718144
+  },
+  "python": {
+    "version": "3.13.17",
+    "archive_sha256": "b26ca4b4ee51e157836049934d2b8eabd55939be296f3130254251b6df96ec2f",
+    "expected_hash_source": "https://www.python.org/ftp/python/3.13.17/windows-3.13.17.json",
+    "authenticode": "Valid",
+    "publisher": "Python Software Foundation",
+    "version_command_passed": true
+  },
+  "wsl": {
+    "version": "3.0.3.0",
+    "kernel_version": "6.18.54.1-1",
+    "msi_sha256": "ae977286974255bd26bf925f00f40f5692c6b2084155cbc0563c09aea091f211",
+    "expected_hash_source": "https://api.github.com/repos/microsoft/WSL/releases/tags/3.0.3",
+    "authenticode": "Valid",
+    "publisher": "Microsoft Corporation",
+    "installer_exit": 0,
+    "version_command_passed": true,
+    "linux_distribution_ready": false,
+    "restart_required": true,
+    "features_enabled": [
+      "VirtualMachinePlatform",
+      "Microsoft-Windows-Subsystem-Linux"
+    ],
+    "configured_memory_gib": 6,
+    "configured_processors": 8,
+    "configured_swap_gib": 4,
+    "initial_make_jobs": 4
+  },
+  "physical_media_mutated": false,
+  "pending": [
+    "Windows restart",
+    "Disposable Linux distribution",
+    "Linux ext4 and host-requirements checks",
+    "Maintained LFS baseline and authenticated sources",
+    "Linux fixtures and actual resource measurements"
+  ]
+}

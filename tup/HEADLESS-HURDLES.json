@@ -1,0 +1,961 @@
+{
+  "schema": 1,
+  "updated_utc": "2026-11-05",
+  "goal": "HEADLESS-GOAL.md",
+  "baseline": "a403386720e9ee67789b5ee0b92e303a972c8a34",
+  "status_values": [
+    "open",
+    "in_progress",
+    "implemented_unverified",
+    "verified",
+    "blocked"
+  ],
+  "rules": [
+    "A code change does not establish native runtime acceptance.",
+    "Store private machine identity and provisioning outside this public checkout.",
+    "Physical erasure requires completed disposable installation tests and exact target confirmation."
+  ],
+  "hurdles": [
+    {
+      "id": "H01",
+      "status": "in_progress",
+      "owner": "integration",
+      "depends_on": [],
+      "finding": "[buildvm/vm.sh](buildvm/vm.sh), line 41, defaults to 64 vCPUs/96G RAM. Build legs use all available processors. That exceeds this desktop's roughly 16 GB memory. A Linux chroot/mount build host is not yet established.",
+      "required_change": "Stage 0: budget RAM, disk and jobs; make host resources configurable; provide a native-root build entry point with disposable bootstrap options.",
+      "acceptance": "A complete build fits declared resources; peak consumption is recorded; management remains responsive.",
+      "implementation": [
+        "native/"
+      ],
+      "test_command": null,
+      "evidence": [
+        "receipts/native-dev-20261104/environment.json"
+      ],
+      "note": "WSL MSI installed and Windows features enabled; restart required. No Linux distribution or LFS build has run. Builder cap6GiB/8vCPU/4GiBswap; initial jobs4."
+    },
+    {
+      "id": "H02",
+      "status": "open",
+      "owner": "integration",
+      "depends_on": [
+        "H01",
+        "H03",
+        "H54"
+      ],
+      "finding": "[x86 kernel page](book-x86_64/ch10/03-kernel.sh) pins Linux 6.16.1. The production maintenance and advisory policy is absent.",
+      "required_change": "Stage 1: select a currently maintained kernel after driver/toolchain review, and record changes from the historical book. Review [kernel maintenance](https://www.kernel.org/releases.html) and [LFS/BLFS advisories](https://www.linuxfromscratch.org/advisories/).",
+      "acceptance": "Kernel/config/source versions are pinned; applicable advisories have dispositions; update and rollback tests use the selected supported line.",
+      "implementation": [],
+      "test_command": null,
+      "evidence": [],
+      "note": "Implementation and measured acceptance remain required. No native success claimed."
+    },
+    {
+      "id": "H03",
+      "status": "in_progress",
+      "owner": "integration",
+      "depends_on": [
+        "H54"
+      ],
+      "finding": "[vm.sh](buildvm/vm.sh), lines 69-74, can merely record a scaffold hash without checking the publisher. [prepare-host.sh](buildvm/prepare-host.sh) accepts a named source mismatch; agent recipes contain a recorded-at-fetch CA bundle and unpinned npm installation. Hashing fetched bytes alone does not authenticate them.",
+      "required_change": "Stage 1: define verified pins and reviewed exceptions for bootstrap, sources, firmware, CA material and dependencies. Hash transitive book/scripts/config inputs as well as the outer override.",
+      "acceptance": "Missing or mismatched expected inputs fail; a dependency change changes build identity and cannot silently reuse old outputs.",
+      "implementation": [
+        "native/"
+      ],
+      "test_command": null,
+      "evidence": [],
+      "note": "Implementation and measured acceptance remain required. No native success claimed."
+    },
+    {
+      "id": "H04",
+      "status": "in_progress",
+      "owner": "build_state",
+      "depends_on": [
+        "H03"
+      ],
+      "finding": "[driver.sh](driver.sh), line 116, skips completed page IDs before rechecking changed inputs. [build-x86_64.sh](buildvm/build-x86_64.sh), lines 42-48, can skip source push/preparation based on PREPARED.txt.",
+      "required_change": "Stage 1: input-addressed resume state and downstream invalidation across source, book, override, profile, manifest and configuration changes.",
+      "acceptance": "Changed input rebuilds affected stages or refuses stale state; identical input resumes; a stale marker cannot authorize a new build.",
+      "implementation": [
+        "driver.sh",
+        "buildlib/"
+      ],
+      "test_command": null,
+      "evidence": [],
+      "note": "Implementation and measured acceptance remain required. No native success claimed."
+    },
+    {
+      "id": "H05",
+      "status": "in_progress",
+      "owner": "native_build",
+      "depends_on": [
+        "H04",
+        "H06"
+      ],
+      "finding": "[build-x86_64.sh](buildvm/build-x86_64.sh), line 19 and lines 67-82, lacks robust stage/pipeline failure propagation; the release call is followed by an unconditional completion message.",
+      "required_change": "Stage 1: explicit status checks, pipeline handling, run-specific markers and bounded waits.",
+      "acceptance": "Inject failures in startup, collection, inventory and release: nonzero final exit, no current completion marker or publishable artifact.",
+      "implementation": [
+        "native/"
+      ],
+      "test_command": null,
+      "evidence": [],
+      "note": "Implementation and measured acceptance remain required. No native success claimed."
+    },
+    {
+      "id": "H06",
+      "status": "in_progress",
+      "owner": "build_state",
+      "depends_on": [],
+      "finding": "[driver.sh](driver.sh), lines 284-290, appends receipt and state without checking every write result.",
+      "required_change": "Stage 1: fail closed and atomically persist a consistent page result; define receipt/state ordering and recovery.",
+      "acceptance": "Full-disk and unwritable-ledger fixtures prevent a successful page/chapter verdict and preserve diagnosable state.",
+      "implementation": [
+        "driver.sh",
+        "buildlib/"
+      ],
+      "test_command": null,
+      "evidence": [],
+      "note": "Implementation and measured acceptance remain required. No native success claimed."
+    },
+    {
+      "id": "H07",
+      "status": "verified",
+      "owner": "receipt_integrity",
+      "depends_on": [],
+      "finding": "[bundle_receipts.py](bundle_receipts.py), lines 52-53 and 311-315, hashes decoded/re-encoded text.",
+      "required_change": "Stage 1: hash original bytes; parse separately; define combined-manifest identity explicitly.",
+      "acceptance": "LF, CRLF and non-ASCII fixtures produce the same digest as directly hashing each original evidence file.",
+      "implementation": [
+        "bundle_receipts.py",
+        "tests/test_bundle_receipts.py",
+        "commit:0a94efb9"
+      ],
+      "test_command": "python -m unittest discover -s tup/tests -p test_bundle_receipts.py -v",
+      "evidence": [
+        "receipts/native-dev-20261104/verification.json"
+      ],
+      "note": "H07 byte-hashing acceptance verified by 18 focused Windows fixtures; root reran successfully. Remote collection uses mocks; live Linux/remote transport and broader artifact binding are not claimed."
+    },
+    {
+      "id": "H08",
+      "status": "open",
+      "owner": "integration",
+      "depends_on": [
+        "H03",
+        "H06",
+        "H07",
+        "H09"
+      ],
+      "finding": "[release.sh](release.sh), lines 215-221, chooses inventory by timestamp and lists available layer receipts rather than proving their membership in the artifact.",
+      "required_change": "Stage 1: generate and bind the exact final payload/image inventory and selected layer receipts to the released artifact digest.",
+      "acceptance": "Stale/unrelated/failed inventories are rejected; the final image matches its declared file inventory.",
+      "implementation": [],
+      "test_command": null,
+      "evidence": [],
+      "note": "Implementation and measured acceptance remain required. No native success claimed."
+    },
+    {
+      "id": "H09",
+      "status": "in_progress",
+      "owner": "native_build",
+      "depends_on": [
+        "H04",
+        "H05",
+        "H06"
+      ],
+      "finding": "[layer builder](layers/agent/build.sh), lines 34-36, warns on an unfinished base but continues; the same pattern exists in the other layers. This snapshot has no TUP-specific regression suite covering these deployment paths.",
+      "required_change": "Stage 1: strict base/layer prerequisite manifests and focused tests; retain override/placeholder checks and named test skips.",
+      "acceptance": "Incomplete bases fail; the old failure paths have reproducing tests; skipped tests are explicitly reported and cannot satisfy required gates.",
+      "implementation": [
+        "native/"
+      ],
+      "test_command": null,
+      "evidence": [],
+      "note": "Implementation and measured acceptance remain required. No native success claimed."
+    },
+    {
+      "id": "H10",
+      "status": "open",
+      "owner": "integration",
+      "depends_on": [
+        "H02",
+        "H11",
+        "H12"
+      ],
+      "finding": "[x86 GRUB override](overrides/x86_64/ch10/grub.sh), lines 21-33, installs i386-pc BIOS GRUB to /dev/vdb, uses MBR assumptions and boots /dev/vda1. The desktop is UEFI.",
+      "required_change": "Stage 2: native x86_64-efi GRUB, GPT/ESP, necessary EFI kernel support, boot entry and documented fallback. Follow [BLFS EFI setup](https://www.linuxfromscratch.org/blfs/view/12.4/postlfs/grub-setup.html).",
+      "acceptance": "Native UEFI boot from the installed disk with the USB removed; bootloader/kernel/initramfs are loaded from installed artifacts.",
+      "implementation": [],
+      "test_command": null,
+      "evidence": [],
+      "note": "Implementation and measured acceptance remain required. No native success claimed."
+    },
+    {
+      "id": "H11",
+      "status": "open",
+      "owner": "integration",
+      "depends_on": [
+        "H12"
+      ],
+      "finding": "[fstab override](overrides/x86_64/ch10/fstab.sh), line 13, fixes root to /dev/vda1. [prepare-host.sh](buildvm/prepare-host.sh), lines 31-32, constructs a partition name by appending 1, which is wrong for NVMe naming.",
+      "required_change": "Stages 2-3: discover partitions, use persistent identifiers, and coordinate kernel root parameters with initramfs. Filesystem root=UUID needs suitable early userspace; do not assume it is resolved by the kernel alone.",
+      "acceptance": "Boot and install succeed with reordered disks and representative SATA/NVMe devices; no hardcoded vda/vdb path reaches a physical apply operation.",
+      "implementation": [],
+      "test_command": null,
+      "evidence": [],
+      "note": "Implementation and measured acceptance remain required. No native success claimed."
+    },
+    {
+      "id": "H12",
+      "status": "open",
+      "owner": "integration",
+      "depends_on": [
+        "H01",
+        "H02",
+        "H03"
+      ],
+      "finding": "[kernel override](overrides/x86_64/ch10/kernel.sh), lines 18-68, deliberately guarantees a small QEMU-oriented option set. Actual AHCI/NVMe/USB/NIC/firmware behavior is untested.",
+      "required_change": "Stage 2: separate native installer/installed profiles; include required EFI/GPT, storage, USB, filesystems, modules and firmware. Build in essential drivers or load them correctly in initramfs.",
+      "acceptance": "Both live and installed systems enumerate the intended hardware and explain a deliberately missing-driver/root failure in rescue output.",
+      "implementation": [],
+      "test_command": null,
+      "evidence": [],
+      "note": "Implementation and measured acceptance remain required. No native success claimed."
+    },
+    {
+      "id": "H13",
+      "status": "open",
+      "owner": "integration",
+      "depends_on": [
+        "H08",
+        "H10",
+        "H11",
+        "H12"
+      ],
+      "finding": "[release.sh](release.sh), lines 194-206, emits qcow2/VMDK/VDI. No native installer ISO or live-root workflow was found.",
+      "required_change": "Stage 2: package EFI boot files, kernel, live initramfs/root, installer, rescue tools and verified payload into an actual ISO. [GRUB ISO tooling](https://www.gnu.org/software/grub/manual/grub/html_node/Invoking-grub_002dmkrescue.html) supplies packaging, not the live OS.",
+      "acceptance": "Inspect boot entries, hash the ISO, boot it and run its installer. Renaming/converting a VM disk alone does not pass.",
+      "implementation": [],
+      "test_command": null,
+      "evidence": [],
+      "note": "Implementation and measured acceptance remain required. No native success claimed."
+    },
+    {
+      "id": "H14",
+      "status": "open",
+      "owner": "integration",
+      "depends_on": [
+        "H13",
+        "H15"
+      ],
+      "finding": "Ventoy firmware handoff does not implement TUP's live-root discovery. A custom ISO cannot assume /dev/sr0.",
+      "required_change": "Stage 2: implement documented USB-filesystem plus loop mounting or Ventoy mapping/device-mapper; include EFI-variable access and chosen filesystem support. [ISO mounting](https://www.ventoy.net/en/doc_compatible_mount.html), [UEFI handoff](https://www.ventoy.net/en/doc_compatible_pass.html).",
+      "acceptance": "The exact ISO boots through a pinned Ventoy version, including a supported subdirectory/path test, and finds and verifies its actual live payload.",
+      "implementation": [],
+      "test_command": null,
+      "evidence": [],
+      "note": "Implementation and measured acceptance remain required. No native success claimed."
+    },
+    {
+      "id": "H15",
+      "status": "open",
+      "owner": "integration",
+      "depends_on": [
+        "H12",
+        "H13"
+      ],
+      "finding": "A ventoy.dat marker tells Ventoy to skip its hooks; it does not add compatibility. The BLFS initramfs example is not a finished live installer and omits encrypted/network root support.",
+      "required_change": "Stage 2: design live-root versus installed-root paths explicitly; add necessary loop/ISO/compressed-root/overlay support, recovery tools and memory limits. Add the marker only after implementation works. [Marker semantics](https://www.ventoy.net/en/doc_compatible_mark.html), [BLFS initramfs](https://www.linuxfromscratch.org/blfs/view/12.4/postlfs/initramfs.html).",
+      "acceptance": "Direct ISO boot and Ventoy boot both work within the RAM budget; missing/corrupt live media yields useful rescue behavior without writing a target disk.",
+      "implementation": [],
+      "test_command": null,
+      "evidence": [],
+      "note": "Implementation and measured acceptance remain required. No native success claimed."
+    },
+    {
+      "id": "H16",
+      "status": "open",
+      "owner": "integration",
+      "depends_on": [
+        "H13",
+        "H14",
+        "H17",
+        "H18",
+        "H51"
+      ],
+      "finding": "The attached USB currently has a single FAT32 partition and has not been witnessed as Ventoy media. FAT32 limits individual large artifacts; its contents and erase target are not settled.",
+      "required_change": "Stage 4 after disposable installation tests: inspect and select the USB privately, obtain exact-target approval, install a pinned Ventoy build, choose a supported filesystem and verify copied ISO bytes.",
+      "acceptance": "Ventoy starts on the actual desktop and the copied ISO digest matches; preserved media/data are accounted for.",
+      "implementation": [],
+      "test_command": null,
+      "evidence": [],
+      "note": "Implementation and measured acceptance remain required. No native success claimed."
+    },
+    {
+      "id": "H17",
+      "status": "open",
+      "owner": "integration",
+      "depends_on": [
+        "H13",
+        "H18"
+      ],
+      "finding": "The VM preparation script formats a non-ext4 target and is not a physical installer. Both internal drives have similar capacities; Windows RAW does not establish emptiness.",
+      "required_change": "Stage 3: separate plan/apply installer; stable identity checks, mounted/root/source-media exclusion, correct partition discovery, and final exact-target confirmation.",
+      "acceptance": "Wrong, ambiguous, mounted, source or changed targets and declined plans cause zero writes; non-target disks remain unchanged.",
+      "implementation": [],
+      "test_command": null,
+      "evidence": [],
+      "note": "Implementation and measured acceptance remain required. No native success claimed."
+    },
+    {
+      "id": "H18",
+      "status": "open",
+      "owner": "integration",
+      "depends_on": [
+        "H08",
+        "H13"
+      ],
+      "finding": "Payload deployment, interrupted installs and reruns have no native contract. Extracting a rootfs requires ownership, modes, symlinks, capabilities and trusted paths to survive.",
+      "required_change": "Stage 3: verify payload before changes; define install state and commit point; preserve metadata; validate target root and boot artifacts; make interruption recoverable.",
+      "acceptance": "Tamper/traversal fixtures fail; low disk and interrupted operations cannot claim success; rerun/recovery works and the final tree matches its manifest.",
+      "implementation": [],
+      "test_command": null,
+      "evidence": [],
+      "note": "Implementation and measured acceptance remain required. No native success claimed."
+    },
+    {
+      "id": "H19",
+      "status": "open",
+      "owner": "integration",
+      "depends_on": [
+        "H10",
+        "H13"
+      ],
+      "finding": "Secure Boot is off now. BLFS's EFI recipe alone supplies no verified boot chain. Ventoy's current default can bypass downstream EFI verification.",
+      "required_change": "Stage 2 policy and Stage 5 qualification: choose installer and installed-system trust policies separately. If verified boot is required, implement signing/enrollment and kernel/module/initramfs policy. [Ventoy policy](https://www.ventoy.net/en/doc_secure.html).",
+      "acceptance": "Record effective firmware policy; trusted images boot and modified protected artifacts fail when verification is claimed. Ventoy enrollment alone cannot satisfy this gate.",
+      "implementation": [],
+      "test_command": null,
+      "evidence": [],
+      "note": "Implementation and measured acceptance remain required. No native success claimed."
+    },
+    {
+      "id": "H20",
+      "status": "open",
+      "owner": "integration",
+      "depends_on": [
+        "H10",
+        "H11",
+        "H12",
+        "H32"
+      ],
+      "finding": "Encryption and unattended boot have competing requirements: a locally entered root passphrase prevents unattended reboot.",
+      "required_change": "Before production installation: choose authenticated early remote unlock or measured/TPM-bound unlock with recovery if encrypted unattended boot is required. Local operator unlock is an explicit reduced-availability choice; keep the unattended gate unmet unless the owner knowingly revises that scope. [BLFS cryptsetup](https://www.linuxfromscratch.org/blfs/view/12.4/postlfs/cryptsetup.html).",
+      "acceptance": "Cold boot and recovery require no local intervention under the unattended policy. Update, changed-measurement/lost-network and recovery-key tests prove the selected encryption/unlock behavior.",
+      "implementation": [],
+      "test_command": null,
+      "evidence": [],
+      "note": "Implementation and measured acceptance remain required. No native success claimed."
+    },
+    {
+      "id": "H21",
+      "status": "open",
+      "owner": "integration",
+      "depends_on": [
+        "H02",
+        "H12"
+      ],
+      "finding": "Active USB Wi-Fi is 35bc:0102; disconnected Ethernet is 10ec:8125. Windows names and device IDs do not prove a Linux driver, firmware or WPA setup works.",
+      "required_change": "Stages 0 and 4: identify actual Linux bindings/firmware and available interfaces. Establish wired management if available; otherwise validate the actual USB Wi-Fi path.",
+      "acceptance": "Installer and installed TUP cold-boot with working connectivity, then recover from unplug/link/router interruption.",
+      "implementation": [],
+      "test_command": null,
+      "evidence": [],
+      "note": "Implementation and measured acceptance remain required. No native success claimed."
+    },
+    {
+      "id": "H22",
+      "status": "open",
+      "owner": "integration",
+      "depends_on": [
+        "H21"
+      ],
+      "finding": "[network override](overrides/ch09/network.sh), lines 7-18, hardcodes eth0 and QEMU address/gateway/DNS values.",
+      "required_change": "Stages 2-4: native interface identification, DHCP or explicit provisioning, DNS, time synchronization, radio credentials and retry behavior.",
+      "acceptance": "Address, routing, DNS and time become correct without local login; lease renewal and delayed-network recovery pass.",
+      "implementation": [],
+      "test_command": null,
+      "evidence": [],
+      "note": "Implementation and measured acceptance remain required. No native success claimed."
+    },
+    {
+      "id": "H23",
+      "status": "open",
+      "owner": "integration",
+      "depends_on": [
+        "H03",
+        "H24"
+      ],
+      "finding": "[shadow override](overrides/ch08/shadow.sh), line 8, sets root:tup; the agent account is a locked local su target. Disposable build SSH disables host-key verification, which must not become production client policy.",
+      "required_change": "Stage 3: enroll the owner key and trusted server fingerprint, use strict client host-key verification, non-root management, controlled privilege escalation, unique host keys and documented rotation/recovery. Remove shared credentials before enabling listeners.",
+      "acceptance": "Owner key succeeds; unknown keys and root/password/keyboard-interactive SSH fail; separate installs have different keys; a substituted server key is rejected by the Mac.",
+      "implementation": [],
+      "test_command": null,
+      "evidence": [],
+      "note": "Implementation and measured acceptance remain required. No native success claimed."
+    },
+    {
+      "id": "H24",
+      "status": "open",
+      "owner": "integration",
+      "depends_on": [
+        "H03",
+        "H22",
+        "H25"
+      ],
+      "finding": "Target OpenSSH/VPN/firewall recipes are absent. Build-VM SSH connects to Ubuntu, not installed TUP.",
+      "required_change": "Stages 2-4: receipted OpenSSH and selected private-access layer. Use [BLFS OpenSSH](https://www.linuxfromscratch.org/blfs/view/12.4/postlfs/openssh.html); account for its stock bootscript's ListenAddress limitation.",
+      "acceptance": "Validate effective sshd configuration; connect/transfer/reboot/reconnect from the client; test late overlay availability and denied authentication.",
+      "implementation": [],
+      "test_command": null,
+      "evidence": [],
+      "note": "Implementation and measured acceptance remain required. No native success claimed."
+    },
+    {
+      "id": "H25",
+      "status": "open",
+      "owner": "integration",
+      "depends_on": [
+        "H09",
+        "H54"
+      ],
+      "finding": "The historical TUP base is SysV-based; copied systemd units are not service integration. Startup order and process recovery are unimplemented, and H54 requires a maintained baseline/init decision.",
+      "required_change": "Stages 2-5: integrate dependency-aware startup/supervision with the init selected under H54, persistent state, logging, bounded retries and safe shutdown. Establish firewall policy before remote listeners. If SysV is retained, provide actual SysV integration rather than copying systemd units.",
+      "acceptance": "Cold boot, service kill/restart, failed DNS/time and late-network tests produce one working service instance and honest failure reporting.",
+      "implementation": [],
+      "test_command": null,
+      "evidence": [],
+      "note": "Implementation and measured acceptance remain required. No native success claimed."
+    },
+    {
+      "id": "H26",
+      "status": "open",
+      "owner": "integration",
+      "depends_on": [
+        "H22",
+        "H23",
+        "H24",
+        "H27"
+      ],
+      "finding": "Internet topology, CGNAT and overlay-control preference are unknown. WireGuard keepalive maintains mappings but is not a universal rendezvous service. Tailscale static Linux support is best-effort for untested distributions.",
+      "required_change": "Stages 0 and 4: choose and pin a measured private-access transport. Document endpoint/relay requirements, key lifecycle and expiry/recovery. [WireGuard](https://www.wireguard.com/quickstart/), [Tailscale static build](https://tailscale.com/docs/install/static).",
+      "acceptance": "A fresh external-network Mac connection works after reboot; direct/relayed mode and throughput are recorded. Revocation rejects new access and terminates existing sessions/forwards; rotation preserves authorized owner access.",
+      "implementation": [],
+      "test_command": null,
+      "evidence": [],
+      "note": "Implementation and measured acceptance remain required. No native success claimed."
+    },
+    {
+      "id": "H27",
+      "status": "open",
+      "owner": "integration",
+      "depends_on": [
+        "H12",
+        "H22",
+        "H25"
+      ],
+      "finding": "Overlay membership does not isolate LAN traffic or guests. Overlay and host firewall scripts can change each other's effective policy.",
+      "required_change": "Stages 4-6: explicit host/guest IPv4 and IPv6 allowlists, restrictive overlay policy and a tested firewall integration. [Tailscale policy](https://tailscale.com/docs/features/access-control/acls), [firewall mode](https://tailscale.com/docs/features/firewall-mode).",
+      "acceptance": "Test LAN, external, guest and revoked-client sources before/after boot, service restart and firewall reload; forbidden paths remain closed.",
+      "implementation": [],
+      "test_command": null,
+      "evidence": [],
+      "note": "Implementation and measured acceptance remain required. No native success claimed."
+    },
+    {
+      "id": "H28",
+      "status": "open",
+      "owner": "integration",
+      "depends_on": [
+        "H23",
+        "H24",
+        "H27"
+      ],
+      "finding": "Owner administration, user workload access, SSH forwarding and privileged control sockets need distinct authority.",
+      "required_change": "Stages 4-6: owner-only management, least-privilege user operations and no unrestricted host-file/device/VMM control for tenants. [OpenSSH policy options](https://man.openbsd.org/sshd_config).",
+      "acceptance": "Non-owner attempts to attach a host disk, inspect another user's job, forward into management or open a privileged control endpoint fail and are logged.",
+      "implementation": [],
+      "test_command": null,
+      "evidence": [],
+      "note": "Implementation and measured acceptance remain required. No native success claimed."
+    },
+    {
+      "id": "H29",
+      "status": "open",
+      "owner": "integration",
+      "depends_on": [
+        "H25",
+        "H28"
+      ],
+      "finding": "A detached terminal does not provide checkpointed reboot recovery.",
+      "required_change": "Stage 5: provide interactive session persistence plus supervised workers, job identity, exit status, retained logs and application checkpoints. [tmux behavior](https://github.com/tmux/tmux/wiki/Getting-Started) is only part of this contract.",
+      "acceptance": "Disconnect/reconnect preserves a running job; guest/host reboot resumes a supported checkpoint or reports a recoverable failure without duplicate success.",
+      "implementation": [],
+      "test_command": null,
+      "evidence": [],
+      "note": "Implementation and measured acceptance remain required. No native success claimed."
+    },
+    {
+      "id": "H30",
+      "status": "open",
+      "owner": "integration",
+      "depends_on": [
+        "H08",
+        "H23",
+        "H25",
+        "H32"
+      ],
+      "finding": "Native authenticated updates and rollback are absent. Runtime changes can invalidate receipts or break the only network path.",
+      "required_change": "Stage 5: versioned/pinned update artifacts, authenticated manifests, OS/runtime-state separation, known-good boot state and timed network-config rollback requiring a fresh connection to commit.",
+      "acceptance": "Tampered update fails; deliberately bad kernel/network update rolls back; the booted version and inventory are reported accurately.",
+      "implementation": [],
+      "test_command": null,
+      "evidence": [],
+      "note": "Implementation and measured acceptance remain required. No native success claimed."
+    },
+    {
+      "id": "H31",
+      "status": "open",
+      "owner": "integration",
+      "depends_on": [
+        "H25",
+        "H29"
+      ],
+      "finding": "Health visibility, log retention, thermal/power behavior and watchdog support on this host are unestablished.",
+      "required_change": "Stage 5: bounded logs, disk-space/memory/thermal checks and a minimal health interface; use a watchdog only after actual driver tests. [Kernel watchdog](https://docs.kernel.org/watchdog/watchdog-api.html).",
+      "acceptance": "Exhaust log budget and crash a supervised service without losing management; report actual thermal/throttling behavior under the declared load.",
+      "implementation": [],
+      "test_command": null,
+      "evidence": [],
+      "note": "Implementation and measured acceptance remain required. No native success claimed."
+    },
+    {
+      "id": "H32",
+      "status": "open",
+      "owner": "integration",
+      "depends_on": [
+        "H10",
+        "H13",
+        "H21",
+        "H22"
+      ],
+      "finding": "SSH cannot repair broken firmware boot or its own unavailable network. AC-power restore and an independent console path are untested.",
+      "required_change": "Before leaving the machine unattended: prove Ventoy/local rescue and decide whether independent console/power access is required. Validate board power-restore settings deliberately.",
+      "acceptance": "Recover an unbootable candidate and broken network through the stated route. Controlled cold-boot/power-restore tests use disposable or safely checkpointed data.",
+      "implementation": [],
+      "test_command": null,
+      "evidence": [],
+      "note": "Implementation and measured acceptance remain required. No native success claimed."
+    },
+    {
+      "id": "H33",
+      "status": "open",
+      "owner": "integration",
+      "depends_on": [
+        "H23",
+        "H30",
+        "H32"
+      ],
+      "finding": "The pre-migration backup statement does not define ongoing TUP/guest backups or restoration.",
+      "required_change": "Stage 5: separate backup destination, retention, encrypted-secret recovery and restore ownership. Do not equate a snapshot with an independent backup.",
+      "acceptance": "Restore files and a representative whole guest into an isolated destination; verify contents and run the restored workload.",
+      "implementation": [],
+      "test_command": null,
+      "evidence": [],
+      "note": "Implementation and measured acceptance remain required. No native success claimed."
+    },
+    {
+      "id": "H34",
+      "status": "open",
+      "owner": "integration",
+      "depends_on": [
+        "H03",
+        "H09",
+        "H35",
+        "H36"
+      ],
+      "finding": "[train manifest](layers/train/MANIFEST) describes cp314/aarch64 CPU wheels; [x86 Python](book-x86_64/ch08/51-Python.sh) builds Python 3.13.7; [torch recipe](layers/train/pages/01-torch.sh) installs CPU-only torch.",
+      "required_change": "Stage 5: architecture/Python-ABI-resolved dependency manifests and a distinct GPU-capable compute layer. Preserve a small CPU fixture for basic checks.",
+      "acceptance": "The fresh x86_64 environment resolves only matching pinned artifacts; a real tensor computation runs on the RTX 4080 and synchronizes successfully.",
+      "implementation": [],
+      "test_command": null,
+      "evidence": [],
+      "note": "Implementation and measured acceptance remain required. No native success claimed."
+    },
+    {
+      "id": "H35",
+      "status": "open",
+      "owner": "integration",
+      "depends_on": [],
+      "finding": "[locallm recipe](layers/train/pages/02-locallm.sh), line 5, embeds shell redirection in Python source and names model_def although the tracked module is model.py.",
+      "required_change": "Stage 5: valid import smoke checks against the current package surface and explicit dependencies.",
+      "acceptance": "Fresh-environment imports pass; missing dependency fixtures fail rather than being ignored.",
+      "implementation": [],
+      "test_command": null,
+      "evidence": [],
+      "note": "Implementation and measured acceptance remain required. No native success claimed."
+    },
+    {
+      "id": "H36",
+      "status": "open",
+      "owner": "integration",
+      "depends_on": [
+        "H03",
+        "H35"
+      ],
+      "finding": "[training witness](layers/train/pages/03-witness.sh), lines 6-9, refers to an absent corpus.txt, masks pipeline status and does not check its stated finite-loss/checkpoint conditions.",
+      "required_change": "Stage 5: tiny versioned fixture, preserved process result, finite-loss/run-metadata checks, readable checkpoint and retained evidence.",
+      "acceptance": "Deliberate failure, NaN and missing/corrupt checkpoint fail; independent CPU and GPU witnesses pass.",
+      "implementation": [],
+      "test_command": null,
+      "evidence": [],
+      "note": "Implementation and measured acceptance remain required. No native success claimed."
+    },
+    {
+      "id": "H37",
+      "status": "open",
+      "owner": "integration",
+      "depends_on": [
+        "H02",
+        "H03",
+        "H12",
+        "H30"
+      ],
+      "finding": "Custom LFS is not automatically a qualified NVIDIA/CUDA platform; kernel, compiler, libc, module and toolkit compatibility must be established.",
+      "required_change": "Stage 5: pin a tested compatibility matrix and receipted driver/runtime install, module rebuild and rollback. [NVIDIA Linux requirements](https://docs.nvidia.com/cuda/cuda-installation-guide-linux/).",
+      "acceptance": "Native device discovery, compiled CUDA sample and representative dawnr inference/training pass before and after an update/rollback.",
+      "implementation": [],
+      "test_command": null,
+      "evidence": [],
+      "note": "Implementation and measured acceptance remain required. No native success claimed."
+    },
+    {
+      "id": "H38",
+      "status": "open",
+      "owner": "integration",
+      "depends_on": [
+        "H01",
+        "H29",
+        "H31",
+        "H34",
+        "H37"
+      ],
+      "finding": "Minimal base footprint does not establish maximum usable workload throughput. Sustained saturation can starve remote control on a 16 GB machine.",
+      "required_change": "Stages 5-7: measure baseline and isolated workloads using identical inputs; set CPU/RAM/I/O/disk budgets and management reserve before tuning.",
+      "acceptance": "Record correctness, time, throughput, peak memory, GPU use and management latency; owner can log in and terminate a saturated job within declared limits.",
+      "implementation": [],
+      "test_command": null,
+      "evidence": [],
+      "note": "Implementation and measured acceptance remain required. No native success claimed."
+    },
+    {
+      "id": "H39",
+      "status": "open",
+      "owner": "integration",
+      "depends_on": [
+        "H38",
+        "H40"
+      ],
+      "finding": "Resource controls, concurrency admission and disk/log limits are not yet implemented for guests/jobs. Ballooning cannot be relied on to reclaim memory from a hostile guest.",
+      "required_change": "Stage 6: on-demand guests and explicit budgets including VMM/locked-memory overhead; CPU/process/memory/I/O/runtime limits and queue admission. Use [cgroup v2](https://docs.kernel.org/admin-guide/cgroup-v2.html) for Linux-hosted processes. Xen domU CPU/RAM also need Xen scheduler/domain limits; dom0 cgroups govern only dom0/backend processes.",
+      "acceptance": "Memory, fork/process, CPU, disk-fill and I/O pressure affect the offending allocation; an over-budget additional job is refused and management remains usable.",
+      "implementation": [],
+      "test_command": null,
+      "evidence": [],
+      "note": "Implementation and measured acceptance remain required. No native success claimed."
+    },
+    {
+      "id": "H40",
+      "status": "open",
+      "owner": "integration",
+      "depends_on": [
+        "H02",
+        "H12",
+        "H28",
+        "H42"
+      ],
+      "finding": "Removing the QEMU guest assumption does not itself create compartments. The final VMM choice remains open and must honor the QEMU-free deployed requirement.",
+      "required_change": "After Stage 5: evaluate KVM plus [Cloud Hypervisor](https://github.com/cloud-hypervisor/cloud-hypervisor) or [Xen PVH](https://handbook.xenproject.org/users/concepts.html) with TUP domains. Basic Xen PVH can avoid a device model; HVM and some PVH virtio configurations use QEMU, so inspect the actual configuration.",
+      "acceptance": "Two TUP guests start with the selected hardware-virtualization path; deployed binaries/services/process dependencies contain no required QEMU device model.",
+      "implementation": [],
+      "test_command": null,
+      "evidence": [],
+      "note": "Implementation and measured acceptance remain required. No native success claimed."
+    },
+    {
+      "id": "H41",
+      "status": "open",
+      "owner": "integration",
+      "depends_on": [
+        "H40",
+        "H45"
+      ],
+      "finding": "Separate processes or containers do not provide separate guest kernels. Separate VMs alone do not reproduce Qubes' driver domains, policy and controlled cross-domain communication.",
+      "required_change": "Stage 6: document trusted components, management/network/storage paths and the intended security boundary; state which [Qubes architecture](https://doc.qubes-os.org/en/latest/developer/system/architecture.html) properties are implemented.",
+      "acceptance": "Every allowed crossing has a corresponding policy/test; hostile guest actions cannot access tested host/peer resources. No claim of Qubes-equivalent security without equivalent evidence.",
+      "implementation": [],
+      "test_command": null,
+      "evidence": [],
+      "note": "Implementation and measured acceptance remain required. No native success claimed."
+    },
+    {
+      "id": "H42",
+      "status": "open",
+      "owner": "integration",
+      "depends_on": [
+        "H02",
+        "H12"
+      ],
+      "finding": "Firmware virtualization in Windows does not prove usable native KVM/Xen, AMD IOMMU, interrupt remapping or safe device groups.",
+      "required_change": "Stages 0 and 6: native probes, required kernel/toolstack configuration and device-group ownership checks. Never treat unsafe no-IOMMU or ACS-override splitting as hardware isolation. [Linux VFIO](https://www.kernel.org/doc/html/latest/driver-api/vfio.html).",
+      "acceptance": "Record actual accelerator/groups; unavailable acceleration or unsuitable mixed-owner groups refuse the requested workload/assignment.",
+      "implementation": [],
+      "test_command": null,
+      "evidence": [],
+      "note": "Implementation and measured acceptance remain required. No native success claimed."
+    },
+    {
+      "id": "H43",
+      "status": "open",
+      "owner": "integration",
+      "depends_on": [
+        "H37",
+        "H40",
+        "H42",
+        "H47"
+      ],
+      "finding": "GPU reset, all PCI functions, host display routing and repeated reassignment are untested. One successful CUDA run does not establish safe handoff.",
+      "required_change": "Stage 6 after native GPU success: use integrated graphics for host/recovery if supported; assign complete suitable groups and validate reset. If reset fails, keep a fixed GPU trust domain or require a power cycle for a trust change.",
+      "acceptance": "Repeat start/job/crash/shutdown/reset/reassign cycles with logged device errors and continuous owner access.",
+      "implementation": [],
+      "test_command": null,
+      "evidence": [],
+      "note": "Implementation and measured acceptance remain required. No native success claimed."
+    },
+    {
+      "id": "H44",
+      "status": "open",
+      "owner": "integration",
+      "depends_on": [
+        "H37",
+        "H38",
+        "H43"
+      ],
+      "finding": "RTX 4080 is absent from official [vGPU](https://docs.nvidia.com/vgpu/gpus-supported-by-vgpu.html) and [MIG](https://docs.nvidia.com/datacenter/tesla/mig-user-guide/supported-gpus.html) support lists. [Multiuser MPS](https://docs.nvidia.com/deploy/mps/architecture.html) is not a substitute for tenant isolation.",
+      "required_change": "Stage 6: use exclusive GPU ownership/queuing or a restricted trusted GPU service with a declared trust boundary. Do not promise hardware GPU slices or arbitrary mutually untrusted CUDA in one shared service.",
+      "acceptance": "Concurrent exclusive requests serialize/refuse as specified; unsupported partitioning is not advertised; cancellation/fault tests match the stated trust boundary.",
+      "implementation": [],
+      "test_command": null,
+      "evidence": [],
+      "note": "Implementation and measured acceptance remain required. No native success claimed."
+    },
+    {
+      "id": "H45",
+      "status": "open",
+      "owner": "integration",
+      "depends_on": [
+        "H28",
+        "H40"
+      ],
+      "finding": "A VMM control API/socket can expose host-equivalent authority; compiling a VMM on LFS does not automatically confine it.",
+      "required_change": "Stage 6: dedicated low-privilege identities, selected MAC/seccomp/namespace/device controls, narrow job broker and documented boot/shutdown supervision.",
+      "acceptance": "A tenant cannot specify arbitrary host paths/devices or access another guest's control API; effective identities, profiles and exposures are recorded.",
+      "implementation": [],
+      "test_command": null,
+      "evidence": [],
+      "note": "Implementation and measured acceptance remain required. No native success claimed."
+    },
+    {
+      "id": "H46",
+      "status": "open",
+      "owner": "integration",
+      "depends_on": [
+        "H27",
+        "H40",
+        "H45"
+      ],
+      "finding": "Shared bridges or NAT do not automatically isolate tenants or protect the home LAN.",
+      "required_change": "Stage 6: explicit guest/host/peer/LAN/management network policy, IPv4/IPv6, anti-spoofing, DNS and egress controls.",
+      "acceptance": "Exercise a source/destination/service matrix from each guest; denied paths stay denied across reboot and guest lifecycle changes.",
+      "implementation": [],
+      "test_command": null,
+      "evidence": [],
+      "note": "Implementation and measured acceptance remain required. No native success claimed."
+    },
+    {
+      "id": "H47",
+      "status": "open",
+      "owner": "integration",
+      "depends_on": [
+        "H12",
+        "H21",
+        "H32",
+        "H42"
+      ],
+      "finding": "USB device assignment and whole-controller assignment have different trust and availability effects. The active Wi-Fi device may share a controller with installation or recovery devices.",
+      "required_change": "Stage 6 only if driver-domain isolation is required: map controller topology, keep a recovery route, and validate the chosen VMM's device support. [Qubes device handling](https://doc.qubes-os.org/en/latest/user/security-in-qubes/device-handling-security.html).",
+      "acceptance": "Controller moves do not unexpectedly remove owner connectivity, keyboard or rescue media; crash/restart of a network compartment has demonstrated recovery.",
+      "implementation": [],
+      "test_command": null,
+      "evidence": [],
+      "note": "Implementation and measured acceptance remain required. No native success claimed."
+    },
+    {
+      "id": "H48",
+      "status": "open",
+      "owner": "integration",
+      "depends_on": [
+        "H08",
+        "H23",
+        "H30",
+        "H33",
+        "H40",
+        "H45"
+      ],
+      "finding": "Cloned guests can inherit credentials and writable templates can contaminate other workloads. Disposable session completion, interrupted cleanup and persistent-data boundaries are not implemented.",
+      "required_change": "Stage 6: immutable versioned templates, separate private data, disposable overlays, unique per-instance identities and explicit file exchange. Explicit finish stops the guest, revokes its access and discards writable state; disconnect preserves the running session. Recover unfinished cleanup after host restart. Describe logical discard honestly; secure erasure would additionally require a tested per-instance encryption/key-lifetime design.",
+      "acceptance": "Two clones have different keys/identity; writes cannot alter the template or peer; install/write/finish/recreate removes disposable packages/files/credentials; only selected persistent results remain. Host and peer stay running; disconnect/reconnect preserves work; interrupted cleanup cannot reuse contaminated state.",
+      "implementation": [],
+      "test_command": null,
+      "evidence": [],
+      "note": "Implementation and measured acceptance remain required. No native success claimed."
+    },
+    {
+      "id": "H49",
+      "status": "open",
+      "owner": "integration",
+      "depends_on": [
+        "H02",
+        "H03",
+        "H40",
+        "H41"
+      ],
+      "finding": "VM boundaries do not eliminate all shared-CPU side channels. Firmware/microcode and SMT/core-sharing policy are unrecorded.",
+      "required_change": "Stage 6: document threat scope, relevant mitigations and whether mutually untrusted jobs share physical cores; measure selected scheduling cost. [Kernel core scheduling](https://www.kernel.org/doc/html/latest/admin-guide/hw-vuln/core-scheduling.html).",
+      "acceptance": "Effective mitigation and placement state are recorded; isolation claims stay within tested scope and measured performance budgets.",
+      "implementation": [],
+      "test_command": null,
+      "evidence": [],
+      "note": "Implementation and measured acceptance remain required. No native success claimed."
+    },
+    {
+      "id": "H50",
+      "status": "open",
+      "owner": "integration",
+      "depends_on": [
+        "H23",
+        "H26",
+        "H28",
+        "H29",
+        "H39",
+        "H41",
+        "H46",
+        "H48",
+        "H49"
+      ],
+      "finding": "Owner use, invited users and anonymous/public compute are different operating policies. Removing an SSH key alone does not terminate existing sessions or jobs.",
+      "required_change": "Stage 6: implement test identities, quotas, revocation, retention and cancellation. Define whether revoked running/queued jobs are terminated or retained for owner administration. Choose public admission/abuse controls explicitly before enabling it.",
+      "acceptance": "Two test users are isolated; revocation rejects new access, ends existing sessions/forwards and enforces the declared job policy without disrupting the owner. No public management endpoint is created.",
+      "implementation": [],
+      "test_command": null,
+      "evidence": [],
+      "note": "Implementation and measured acceptance remain required. No native success claimed."
+    },
+    {
+      "id": "H51",
+      "status": "open",
+      "owner": "integration",
+      "depends_on": [
+        "H10",
+        "H11",
+        "H12",
+        "H13",
+        "H14",
+        "H17",
+        "H18",
+        "H22",
+        "H23",
+        "H24"
+      ],
+      "finding": "[boot_verdict.sh](boot_verdict.sh), lines 43-79, deliberately does not log in. Current x86 witnesses use a VM/BIOS-oriented path and cannot establish installed UEFI hardware behavior.",
+      "required_change": "Stages 2-7: retain the narrow historical witness and add ISO, Ventoy, native-install, remote, workload and recovery suites. Optional x86 VM runs must identify firmware, accelerator and device models.",
+      "acceptance": "Every readiness claim is backed by its own test. A login prompt or VM test never satisfies a missing hardware, remote or recovery gate.",
+      "implementation": [],
+      "test_command": null,
+      "evidence": [],
+      "note": "Implementation and measured acceptance remain required. No native success claimed."
+    },
+    {
+      "id": "H52",
+      "status": "open",
+      "owner": "integration",
+      "depends_on": [
+        "H26",
+        "H29",
+        "H30",
+        "H31",
+        "H32",
+        "H33",
+        "H38",
+        "H41",
+        "H44",
+        "H46",
+        "H48",
+        "H50",
+        "H51",
+        "H53"
+      ],
+      "finding": "Actual MacBook handoff, long-running reliability and realistic failure recovery have not been exercised. Home power/ISP availability remains an external dependency.",
+      "required_change": "Stage 7: declare supported operating conditions and thresholds before qualification. Run the matrix below and log every new hurdle.",
+      "acceptance": "Fresh external-network Mac login after native reboot, representative correct work, reconnect, rollback/restore and a completed soak report; no mandatory item remains merely assumed.",
+      "implementation": [],
+      "test_command": null,
+      "evidence": [],
+      "note": "Implementation and measured acceptance remain required. No native success claimed."
+    },
+    {
+      "id": "H53",
+      "status": "open",
+      "owner": "integration",
+      "depends_on": [
+        "H03",
+        "H39",
+        "H40",
+        "H45",
+        "H48"
+      ],
+      "implementation": [],
+      "test_command": null,
+      "evidence": [],
+      "note": "Implementation and measured acceptance remain required.",
+      "finding": "LFS does not supply the requested disposable-instance package manager or a verified package repository policy. On-demand dependencies can increase disk/RAM use, introduce incompatible GPU/runtime components or escape the intended persistence boundary.",
+      "required_change": "Stage 6 after native workload success: integrate a maintained package manager inside TUP guests, pin and authenticate bootstrap/repository inputs, record exact package closures and keep writes inside each instance. Evaluate [Nix on non-systemd Linux](https://nix.dev/manual/nix/stable/installation/installing-binary) as an initial candidate without replacing TUP with NixOS. Declare supported package/GPU compatibility and resource limits; no host package daemon socket or writable host store is exposed.",
+      "acceptance": "A fresh guest installs and runs representative compiler, Python and CLI workloads; the selected GPU workload passes in its declared GPU domain. Bad signatures/hashes and disk exhaustion fail safely. Finish/recreate removes installed packages and private state while host/template/peer inventories remain unchanged and saved results survive only where explicitly selected."
+    },
+    {
+      "id": "H54",
+      "status": "in_progress",
+      "owner": "integration",
+      "depends_on": [],
+      "implementation": [],
+      "test_command": null,
+      "evidence": [],
+      "note": "Implementation and measured acceptance remain required.",
+      "finding": "The [LFS download page](https://www.linuxfromscratch.org/lfs/download.html), checked 2026-11-04, says the prior System V edition is no longer maintained. TUP extracts 12.4 SysV; the currently maintained stable book is 13.1-systemd. Updating only the kernel leaves the rest of the native base without a documented maintenance plan.",
+      "required_change": "Stage 1 before a production build: choose and pin a maintained LFS baseline, audit each retained named override against its exact generated page, and review applicable advisories. Compare rebasing onto the maintained book with explicitly maintaining the SysV branch; preserve historical generated pages and receipts. Record the chosen init/service design and measure its cost.",
+      "acceptance": "Source/book/deviation inventory agrees with the chosen version; no unresolved applicable high-impact advisory is waved through; clean build, boot, supervision, updates and rollback are tested on that exact baseline. An old successful receipt is not production approval."
+    }
+  ]
+}

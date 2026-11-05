@@ -1,0 +1,29 @@
+{
+  "schema": 1,
+  "observation_local_date": "2026-11-04",
+  "component": "H07 receipt original-byte hashing",
+  "source_commit": "af26b54d051bd28cc060d4147c3bad8b78b3cacd",
+  "integration_commit": "0a94efb9",
+  "runtime": "CPython3.13.17 on Windows x86_64",
+  "command": "python -m unittest discover -s tup/tests -p test_bundle_receipts.py -v",
+  "baseline": {
+    "tests": 12,
+    "failures": 17,
+    "errors": 8,
+    "local_log_sha256": "de715cac9b152ac6f8f6fca545acef1d53017092b90a77fb399bb934d7ec3f71"
+  },
+  "fixed": {
+    "tests": 18,
+    "passed": 18,
+    "failures": 0,
+    "errors": 0,
+    "exit_code": 0,
+    "local_log_sha256": "773730bb7b34c26e70dd8fa38a0463606aeca3bdd4803f44f471161c9ffed2b0",
+    "integration_rerun_passed": true
+  },
+  "limits": [
+    "Local raw logs retained outside public repository because PowerShell adds private runtime paths.",
+    "Remote transport tested with binary subprocess mocks.",
+    "No Linux/native build, boot or artifact qualification implied."
+  ]
+}
