@@ -1,0 +1,82 @@
+{
+  "retained": {
+    "dosfstools-4.2.tar.gz.sig": {
+      "url": "https://github.com/dosfstools/dosfstools/releases/download/v4.2/dosfstools-4.2.tar.gz.sig",
+      "resolved_host": "release-assets.githubusercontent.com",
+      "sha256": "90f58a303fd7c55e02370357054f7207f05c3736f23d9a82cfb4a10acd7d55f9",
+      "size_bytes": 566,
+      "retained_as": "dosfstools-4.2.tar.gz.sig"
+    },
+    "andreas-bombe-25714AECDBFDACEE1CE95FE77F6022516E869F64.asc": {
+      "url": "https://db.debian.org/fetchkey.cgi?fingerprint=25714AECDBFDACEE1CE95FE77F6022516E869F64",
+      "resolved_host": "db.debian.org",
+      "sha256": "405ef1aa0d9de6bbaade245f536f793d37cee5adb67c61a651e686d775144006",
+      "size_bytes": 215977,
+      "retained_as": "andreas-bombe-25714AECDBFDACEE1CE95FE77F6022516E869F64.asc"
+    },
+    "github-andreasbombe-gpg-keys.json": {
+      "url": "https://api.github.com/users/andreasbombe/gpg_keys",
+      "resolved_host": "api.github.com",
+      "sha256": "ce52788810a0e9f0b1e2833a078d6441999915b2b1d40f316b7262cd07da5679",
+      "size_bytes": 3680,
+      "retained_as": "github-andreasbombe-gpg-keys.json"
+    },
+    "github-release-latest.json": {
+      "url": "https://api.github.com/repos/dosfstools/dosfstools/releases/latest",
+      "resolved_host": "api.github.com",
+      "sha256": "fd52905e697a2eb2261b634190fbe7b3cb956e96457f66ddee3ab2257bb70ab5",
+      "size_bytes": 15465,
+      "retained_as": "github-release-latest.json"
+    },
+    "github-security-advisories.json": {
+      "url": "https://api.github.com/repos/dosfstools/dosfstools/security-advisories",
+      "resolved_host": "api.github.com",
+      "sha256": "2ba33ca0557f1bb5b7ba88d67f9d0093c7185a36ec51fe2b7bd9372d3e001d6d",
+      "size_bytes": 5,
+      "retained_as": "github-security-advisories.json"
+    },
+    "blfs-13.1-dosfstools.html": {
+      "url": "https://www.linuxfromscratch.org/blfs/view/13.1-systemd/postlfs/dosfstools.html",
+      "resolved_host": "www.linuxfromscratch.org",
+      "sha256": "ca506954442ed911e5783c60b5cda632b9cd8d54ced5affde6c5081e72843f20",
+      "size_bytes": 9314,
+      "retained_as": "blfs-13.1-dosfstools.html"
+    },
+    "arch-dosfstools-PKGBUILD": {
+      "url": "https://gitlab.archlinux.org/archlinux/packaging/packages/dosfstools/-/raw/main/PKGBUILD",
+      "resolved_host": "gitlab.archlinux.org",
+      "sha256": "5dc313544ba86893de17a07d1959c9a8675edd1d184ebdb30fe5fafbce630138",
+      "size_bytes": 1169,
+      "retained_as": "arch-dosfstools-PKGBUILD"
+    },
+    "debian-security-tracker-dosfstools.html": {
+      "url": "https://security-tracker.debian.org/tracker/source-package/dosfstools",
+      "resolved_host": "security-tracker.debian.org",
+      "sha256": "4452b149d555d8b8d96073724d16992082e6a774e60a858319ea3fb3130af8ca",
+      "size_bytes": 2275,
+      "retained_as": "debian-security-tracker-dosfstools.html"
+    }
+  },
+  "cache_only": {
+    "dosfstools-4.2.tar.gz": {
+      "url": "https://github.com/dosfstools/dosfstools/releases/download/v4.2/dosfstools-4.2.tar.gz",
+      "resolved_host": "release-assets.githubusercontent.com",
+      "sha256": "64926eebf90092dca21b14259a5301b7b98e7b1943e8a201c7d726084809b527",
+      "size_bytes": 320917
+    }
+  },
+  "observed_not_retained": {
+    "github-issue-211.json": {
+      "url": "https://api.github.com/repos/dosfstools/dosfstools/issues/211",
+      "resolved_host": "api.github.com",
+      "sha256": "85051b6feb8d3abc97ea6efde7a1dc90e944f28e1667071165ae8c40e6303856",
+      "size_bytes": 2876
+    },
+    "upstream-v4.2-mkfs.fat.8.in": {
+      "url": "https://raw.githubusercontent.com/dosfstools/dosfstools/v4.2/manpages/mkfs.fat.8.in",
+      "resolved_host": "raw.githubusercontent.com",
+      "sha256": "4c8be249a2d93ab64745d976df5319cdedbef0b9b46d578af4836b182208e026",
+      "size_bytes": 12636
+    }
+  }
+}

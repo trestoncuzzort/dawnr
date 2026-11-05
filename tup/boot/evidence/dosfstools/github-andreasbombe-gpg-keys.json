@@ -1,0 +1,72 @@
+[
+  {
+    "id": 29399,
+    "primary_key_id": null,
+    "key_id": "7F6022516E869F64",
+    "raw_key": null,
+    "public_key": "xsFNBFLq66gBEADNFu54V6/a/+YIjB7eX+msZoSwsCU4DvPtfJ5m4o8nuGSu2Z+c4CAbqWK1yKKRSZFGxzckwIVrjHeXXYCio/+Znt1c+h8bd+TWuXFpByL3pwKXJlie+jn+HsDtvZh8vU3LMqZiiWxsYZnY9uwAayKZSGtJuKFwPPizNqM4AvH1pg8k5s0W/sKuDyNrgKGH0Uo++8B+kETPl6UN/Re3urBPCqN62/43ZKwlVb4OxjmEbA3P+EAVuisbipfVCwZCAECwcjnv3k77HON6XDmMQwnVnz39wa1P7dl2SAAqqHZoYFpSfv8kzoZgz3UBCpO7dnCA1DkZWNZbqFqs2knEPjH7vsIqoBfx7guPVnkeV1SggyTx43NJFl7nVDV+MMlHKn8KpWXSFgy9NlOXlXKthjHoe8KBPqB19mCwTnwSNaTW2MfNbnA4sC2wLA3uf3kn36nbCPg4GdK4sq40Ev35P6ma0ZdDxg05QhZgvn1g7f26X9wLX7sfdGJY9/Z1swKDwXtIyyI5PWkur7/NjT9pOGQMt0xOh5+ZUHo3u/d1lmjjexjydeJSbySom/YKOoobaziPHQLt6Hilbwq+oQgr5kCa4nZK7DIMjGf7LtVuERZWVoKCyQuHk2wMHMa2OO9wF6FSaMFTyA3arQH8LpFZ8cgQ3W92kNiUBx7Pikph6VsjrQARAQAB",
+    "emails": [
+      {
+        "email": "aeb@debian.org",
+        "verified": true
+      },
+      {
+        "email": "andreas.bombe@gmail.com",
+        "verified": true
+      },
+      {
+        "email": "andreas.bombe@mytum.de",
+        "verified": true
+      }
+    ],
+    "subkeys": [
+      {
+        "id": 29400,
+        "primary_key_id": 29399,
+        "key_id": "0890DE8408CA4ED9",
+        "raw_key": null,
+        "public_key": "zsFNBFLq66gBEAC8jfxYRG5s/qLw92+526uFCBSwTm7IGS/Q5VC2SGm/EswCH6lYuAPKSNOJhOsXpQpHo3Ubk8OyIUx5q0yfmA83hvKafiqTXWA/waF0tjzBie/hO62YVQz6/YJQTNhy5bznwWtf49Fyqm9IYiWmFJJ9FI7Xv7UiMupQwNlv1jBdMefUwHfV30bHLfRAu0Ga38fqhns8LBKFxZSwBfgF7YluTUyuP68a1RirzyUsfmfJj+X7u78L2dSUHa/ya3+CkaAbP1Vh9OqFPHuGdTUPUjLAb6VkqMZrvCzVPLqVKKlBX5k+I49Upr/mMntwZr+aZM5B5sns1XgteKVsotch1BOf8dzoSDJEEHjZnxrfReHhuT0Cf/3Npd+LGz4B4+0CLXfwv0niUn4gSZHfZgtJURmsWiU93bwvs8wNc7cDp7BzBJ6DVB2d+QoMdQjDDxAh8Qb45If6G6VXrTTTETsaq7WHKEVTst8KC0YnTYZhEY9QRQBGbbkLziZAQA/e/5Gn+hxJd+Uzd7ge2tmWkR9pyJ5pqUSu1nBLnbPGQ06os1SoUQLrqNhV3SCehjimfw9sNyDiiZWVNhxUg/FoUjkeIseXiQaGk7YOuILQR5jldJkgvk0+qYnrr6TB0esfTwAc6OUOWTTXq24RJ3WFz+T17zbwAaRiSvzxyWDyF+eA6bJhYQARAQAB",
+        "emails": [
+
+        ],
+        "subkeys": [
+
+        ],
+        "can_sign": false,
+        "can_encrypt_comms": true,
+        "can_encrypt_storage": true,
+        "can_certify": false,
+        "created_at": "2016-04-13T22:29:34.000Z",
+        "expires_at": null,
+        "revoked": false
+      },
+      {
+        "id": 29401,
+        "primary_key_id": 29399,
+        "key_id": "3164705B1DA31D4C",
+        "raw_key": null,
+        "public_key": "zsFNBFLq+ukBEADjPm7SFqgKR156Pztj3P8GuFqY6gHPTuIMkaIkFOX1ToZ8JMQJo9rTrjfFSt33JAoJkjmbaQiS+yhjkTAiIdXL10Q4/cUjvcvXYUH6t0iFa2XkyAtn2B7asBedrzAPlFnBNZ7lcRnU472SmdUSsjUn6+0rFFtI7C25lyZCHqhf8VoogxxpLyQFhzgFZQvy/6iR6oHMtkcujXry8szPL2AxIa/aEJHf5T31ytviIiknLWUnADihZRzZwoexwcqSoXu5683afghTDocbDii9BDy4wxdyCCbnACdm6hqaEwS2XwstYnAQLTKi2mYN5ixh78XABmVl41oitOMHhENaHs1aGayd213XXEos2xXHZFGPZ2xbWN79MBX2jMPsKKf6nj6V1RLEzkKt/oLR+pmocfUZhK4JvRi6ln+gtG2boXLzAJkLR/4WXSWRrSAi7GhtwktWvMW2TAdfV4jJW5vp7RxU+3ANZHQ8F4yjsGn57XGBH522ykwIcpAnir3dvhqg1F0VoRdBf5msRzJKLeGoeGnFjc03GY5XYKzHFhLfmhmDBZCix8NTGQwbucX8RQzp7lRAgNZypCRFElZOF+hySpa8Ao2aOHZUu8VOEfzrw2FBM11isOKHycfff5MNqRPnbb17ofJVK5CqWY8C9Ieo72hpgYi2QjWiUkrmzCWmmmVPLQARAQAB",
+        "emails": [
+
+        ],
+        "subkeys": [
+
+        ],
+        "can_sign": true,
+        "can_encrypt_comms": false,
+        "can_encrypt_storage": false,
+        "can_certify": false,
+        "created_at": "2016-04-13T22:29:34.000Z",
+        "expires_at": null,
+        "revoked": false
+      }
+    ],
+    "can_sign": true,
+    "can_encrypt_comms": false,
+    "can_encrypt_storage": false,
+    "can_certify": true,
+    "created_at": "2016-04-13T22:29:34.000Z",
+    "expires_at": "2017-01-30T01:20:46.000Z",
+    "revoked": false
+  }
+]

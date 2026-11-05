@@ -1,0 +1,225 @@
+{
+  "schema": "tup-boot-dosfstools-host-rehearsal-v1",
+  "status": "host-rehearsal-not-target-qualified",
+  "release_eligible": false,
+  "page_sha256": "77330fc89b06825f8aa8961211d76308085947877deef7458f65303fc519f75e",
+  "source_sha256": "64926eebf90092dca21b14259a5301b7b98e7b1943e8a201c7d726084809b527",
+  "host": {
+    "distribution": "Ubuntu 24.04.5 LTS",
+    "machine": "x86_64",
+    "gcc": "gcc (Ubuntu 13.3.0-6ubuntu2~24.04.1) 13.3.0",
+    "glibc": "2.39",
+    "make": "GNU Make 4.3",
+    "xxd": "xxd 2023-10-25 by Juergen Weigert et al.",
+    "blkid": "blkid from util-linux 2.39.3  (libblkid 2.39.3, 04-Dec-2023)",
+    "user": "root",
+    "jobs": 1,
+    "priority": "nice 19",
+    "network_namespace": "host (not private)",
+    "chroot": false
+  },
+  "environment": {
+    "HOME": "${REHEARSAL_HOME}",
+    "TERM": "dumb",
+    "PATH": "/usr/bin:/usr/sbin",
+    "LC_ALL": "POSIX",
+    "LANG": "POSIX",
+    "TZ": "UTC",
+    "TUP_ARCH": "x86_64",
+    "TUP_JOBS": "1",
+    "MAKEFLAGS": "-j1",
+    "PYTHONDONTWRITEBYTECODE": "1"
+  },
+  "stages": [
+    {
+      "stage": "extract",
+      "exit_code": 0,
+      "elapsed_seconds": 0.064,
+      "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "command": [
+        "tar",
+        "--no-same-owner",
+        "-xzf",
+        "${CACHE}/dosfstools-4.2.tar.gz"
+      ]
+    },
+    {
+      "stage": "xxd-gate",
+      "exit_code": 0,
+      "elapsed_seconds": 0.004,
+      "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "command": [
+        "/bin/bash",
+        "${REHEARSAL}/logs/xxd-gate.sh"
+      ]
+    },
+    {
+      "stage": "configure",
+      "exit_code": 0,
+      "elapsed_seconds": 2.722,
+      "log_sha256": "d8b89366e815fee10ebb214289d0c65c6a3aac4340409cbe08edcdc0561507a7",
+      "command": [
+        "/bin/bash",
+        "${REHEARSAL}/logs/configure.sh"
+      ]
+    },
+    {
+      "stage": "make",
+      "exit_code": 0,
+      "elapsed_seconds": 2.673,
+      "log_sha256": "ba262ebf6aaf0261b06c15ed4d8ebd9c3ebd29e50323e81b7e922548e799119d",
+      "command": [
+        "make",
+        "-j1"
+      ]
+    },
+    {
+      "stage": "make-check",
+      "exit_code": 0,
+      "elapsed_seconds": 36.798,
+      "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "command": [
+        "/bin/bash",
+        "${REHEARSAL}/logs/make-check.sh"
+      ]
+    },
+    {
+      "stage": "check-summary-gate",
+      "exit_code": 0,
+      "elapsed_seconds": 0.019,
+      "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "command": [
+        "/bin/bash",
+        "${REHEARSAL}/logs/check-summary-gate.sh"
+      ]
+    },
+    {
+      "stage": "install-staged",
+      "exit_code": 0,
+      "elapsed_seconds": 0.114,
+      "log_sha256": "55b86f58be4ca3da115ec571d06c5595ee0826d8ff598b1b2659bf05cca9501b",
+      "command": [
+        "make",
+        "-j1",
+        "install",
+        "DESTDIR=${REHEARSAL}/dest"
+      ]
+    },
+    {
+      "stage": "control-image",
+      "exit_code": 0,
+      "elapsed_seconds": 0.064,
+      "log_sha256": "3b0fbd400a469b29faf2ddedba07b5795fb8b03ddabbfc78254abd5ea4d8311b",
+      "command": [
+        "/bin/bash",
+        "${REHEARSAL}/logs/control-image.sh"
+      ]
+    },
+    {
+      "stage": "version",
+      "exit_code": 0,
+      "elapsed_seconds": 0.008,
+      "log_sha256": "6d02481b60c12a4c3addd9abd6a4ac01b6c968d63c02b62761816d30235dd06b",
+      "command": [
+        "/bin/bash",
+        "${REHEARSAL}/logs/version.sh"
+      ]
+    },
+    {
+      "stage": "check-summary-gate-refuses-skipped-suite",
+      "exit_code": 1,
+      "elapsed_seconds": 0.004,
+      "log_sha256": "3d063f72cb9c77674452a3f0b8bb18aec0ba290d8e150d0f5d404def3f45da4f",
+      "command": [
+        "/bin/bash",
+        "${REHEARSAL}/logs/check-summary-gate-refuses-skipped-suite.sh"
+      ]
+    }
+  ],
+  "upstream_check": {
+    "log_sha256": "62a4b3a89abfacddb97c7725181f73b283822397b1afdab36e31a1c5fcc34b44",
+    "log_bytes": 11990,
+    "summary": {
+      "TOTAL": 40,
+      "PASS": 39,
+      "SKIP": 0,
+      "XFAIL": 1,
+      "FAIL": 0,
+      "XPASS": 0,
+      "ERROR": 0
+    },
+    "expected_failure": [
+      "check-huge.fsck"
+    ]
+  },
+  "staged_install": {
+    "files": [
+      "usr/sbin/dosfsck",
+      "usr/sbin/dosfslabel",
+      "usr/sbin/fatlabel",
+      "usr/sbin/fsck.fat",
+      "usr/sbin/fsck.msdos",
+      "usr/sbin/fsck.vfat",
+      "usr/sbin/mkdosfs",
+      "usr/sbin/mkfs.fat",
+      "usr/sbin/mkfs.msdos",
+      "usr/sbin/mkfs.vfat",
+      "usr/share/doc/dosfstools-4.2/ANNOUNCE.mkdosfs",
+      "usr/share/doc/dosfstools-4.2/COPYING",
+      "usr/share/doc/dosfstools-4.2/ChangeLog",
+      "usr/share/doc/dosfstools-4.2/ChangeLog.dosfsck",
+      "usr/share/doc/dosfstools-4.2/ChangeLog.dosfstools-2.x",
+      "usr/share/doc/dosfstools-4.2/ChangeLog.mkdosfs",
+      "usr/share/doc/dosfstools-4.2/NEWS",
+      "usr/share/doc/dosfstools-4.2/README",
+      "usr/share/doc/dosfstools-4.2/README.dosfsck",
+      "usr/share/doc/dosfstools-4.2/README.dosfstools-2.x",
+      "usr/share/doc/dosfstools-4.2/README.mkdosfs",
+      "usr/share/doc/dosfstools-4.2/TODO.dosfstools-2.x",
+      "usr/share/man/man8/dosfsck.8",
+      "usr/share/man/man8/dosfslabel.8",
+      "usr/share/man/man8/fatlabel.8",
+      "usr/share/man/man8/fsck.fat.8",
+      "usr/share/man/man8/fsck.msdos.8",
+      "usr/share/man/man8/fsck.vfat.8",
+      "usr/share/man/man8/mkdosfs.8",
+      "usr/share/man/man8/mkfs.fat.8",
+      "usr/share/man/man8/mkfs.msdos.8",
+      "usr/share/man/man8/mkfs.vfat.8"
+    ],
+    "compat_links": {
+      "dosfsck": "fsck.fat",
+      "dosfslabel": "fatlabel",
+      "fsck.msdos": "fsck.fat",
+      "fsck.vfat": "fsck.fat",
+      "mkdosfs": "mkfs.fat",
+      "mkfs.msdos": "mkfs.fat",
+      "mkfs.vfat": "mkfs.fat"
+    },
+    "needed_libraries": [
+      "libc.so.6"
+    ]
+  },
+  "control_image": {
+    "blkid": [
+      "DEVNAME=control.img",
+      "LABEL_FATBOOT=TUP-ESP",
+      "LABEL=TUP-ESP",
+      "UUID=7C0F-FEE5",
+      "VERSION=FAT32",
+      "FSBLOCKSIZE=512",
+      "BLOCK_SIZE=512",
+      "FSSIZE=67108864",
+      "TYPE=vfat",
+      "USAGE=filesystem"
+    ],
+    "mkfs_help_first_line": "Usage: ${REHEARSAL}/dest/usr/sbin/mkfs.fat [OPTIONS] TARGET [BLOCKS]"
+  },
+  "not_rehearsed": [
+    "GCC 16.2, glibc 2.44 and the target's vim (xxd) and util-linux (blkid)",
+    "the layer chroot, its private network namespace and minimal /dev",
+    "installation into the real /usr, the page's installed-path and compatibility-link checks",
+    "mkfs.fat on a block device or partition of any kind",
+    "any use of the result as an EFI System Partition"
+  ]
+}

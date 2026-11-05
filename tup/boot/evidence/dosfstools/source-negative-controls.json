@@ -1,0 +1,68 @@
+{
+  "schema": "tup-boot-dosfstools-source-controls-v1",
+  "status": "passed",
+  "baseline": {
+    "name": "dosfstools-4.2.tar.gz",
+    "status": "verified",
+    "sha256": "64926eebf90092dca21b14259a5301b7b98e7b1943e8a201c7d726084809b527"
+  },
+  "cases": [
+    {
+      "case": "tampered-archive",
+      "detail": "byte 160458 of 320917 XOR 0x01; reviewed pin and Gentoo corroboration removed so only the signature can refuse",
+      "status": "refused-as-required",
+      "refusal": "OpenPGP signature verification failed"
+    },
+    {
+      "case": "tampered-archive-with-pin",
+      "detail": "same modified archive with the reviewed pin and the corroboration kept",
+      "status": "refused-as-required",
+      "refusal": "OpenPGP signature verification failed"
+    },
+    {
+      "case": "wrong-key-material",
+      "detail": "key file replaced by the retained LVM2 maintainer key, pinned consistently",
+      "status": "refused-as-required",
+      "refusal": "OpenPGP signature verification failed"
+    },
+    {
+      "case": "wrong-approved-primary",
+      "detail": "approves the signing subkey's fingerprint as if it were the primary",
+      "status": "refused-as-required",
+      "refusal": "signature is not from the approved primary fingerprint"
+    },
+    {
+      "case": "wrong-approved-signer",
+      "detail": "approves the encryption subkey as the signing fingerprint",
+      "status": "refused-as-required",
+      "refusal": "signature is not from the approved signing fingerprint"
+    },
+    {
+      "case": "missing-signature",
+      "detail": "detached signature removed",
+      "status": "refused-as-required",
+      "refusal": "missing evidence: dosfstools/dosfstools-4.2.tar.gz.sig"
+    },
+    {
+      "case": "changed-key-bytes",
+      "detail": "one byte appended to the retained key file, pin unchanged",
+      "status": "refused-as-required",
+      "refusal": "verification material SHA256 mismatch"
+    },
+    {
+      "case": "manifest-not-from-snapshot",
+      "detail": "retained Gentoo Manifest edited and pinned consistently; the publisher signature itself is valid",
+      "status": "refused-as-required",
+      "refusal": "retained Manifest is not linked to the authenticated snapshot"
+    },
+    {
+      "case": "corroboration-names-another-package",
+      "detail": "corroboration points at the signed Manifest of sys-fs/squashfs-tools",
+      "status": "refused-as-required",
+      "refusal": "retained Manifest is not linked to the authenticated snapshot"
+    }
+  ],
+  "verifier_sha256": "37f39eb2a44b0ff93941fdc2c271ffaec2573a3647fe8cabcce42ee90bff760e",
+  "gpg_sha256": "403e04c779ad9fab3895c405f8c53d35ab59fa8e3b8bbe3437f61bc41f468dd4",
+  "archive_sha256": "64926eebf90092dca21b14259a5301b7b98e7b1943e8a201c7d726084809b527"
+}

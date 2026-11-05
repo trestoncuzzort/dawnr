@@ -1,0 +1,131 @@
+{
+  "advisory_note": {
+    "distributor_tracker": {
+      "open_issues": [],
+      "path": "dosfstools/debian-security-tracker-dosfstools.html",
+      "resolved_before_4_0": [
+        "CVE-2015-8872",
+        "CVE-2016-4804"
+      ],
+      "sha256": "4452b149d555d8b8d96073724d16992082e6a774e60a858319ea3fb3130af8ca",
+      "url": "https://security-tracker.debian.org/tracker/source-package/dosfstools"
+    },
+    "lfs_13_1_snapshot": {
+      "path": "tup/remote/evidence/netfilter/lfs-13.1-advisories.html",
+      "records_naming_dosfstools": [],
+      "sha256": "aa562da21adbfa442f88404b029242eea2d24ac04fa4b4eefff4eb819a304de1",
+      "url": "https://www.linuxfromscratch.org/advisories/index.php"
+    },
+    "limitations": [
+      "Three listings were read on one date; none is a complete vulnerability database.",
+      "mkfs.fat runs once, as root, on a partition the installer has just created; fsck.fat on a hostile filesystem is outside this note."
+    ],
+    "reviewed_at": "2026-11-05",
+    "status": "noted-no-open-record-found; not an advisory review that can open or close a release gate",
+    "upstream_repository_advisories": {
+      "path": "dosfstools/github-security-advisories.json",
+      "published": [],
+      "sha256": "2ba33ca0557f1bb5b7ba88d67f9d0093c7185a36ec51fe2b7bd9372d3e001d6d",
+      "url": "https://api.github.com/repos/dosfstools/dosfstools/security-advisories"
+    }
+  },
+  "architecture": "x86_64",
+  "authentication": {
+    "additional_review": {
+      "path": "dosfstools/arch-dosfstools-PKGBUILD",
+      "sha256": "5dc313544ba86893de17a07d1959c9a8675edd1d184ebdb30fe5fafbce630138",
+      "url": "https://gitlab.archlinux.org/archlinux/packaging/packages/dosfstools/-/raw/main/PKGBUILD"
+    },
+    "approval": {
+      "basis": "Upstream publishes the detached signature but no key file. The retained release record shows the signature asset was uploaded by the GitHub account andreasbombe, which therefore has write access to the upstream repository. That account registers public-key packets whose computed OpenPGP v4 fingerprints are exactly this primary and this signing subkey, with a GitHub-verified address of the maintainer the upstream manual pages name. GitHub serves only bare packets, so the importable key with user IDs and current expiry is the copy the Debian developer database publishes for the same primary fingerprint; Arch Linux pins the same primary for this archive. A Gentoo-signed Manifest corroborates the exact bytes independently of this key.",
+      "material": {
+        "path": "dosfstools/github-andreasbombe-gpg-keys.json",
+        "sha256": "ce52788810a0e9f0b1e2833a078d6441999915b2b1d40f316b7262cd07da5679",
+        "url": "https://api.github.com/users/andreasbombe/gpg_keys"
+      },
+      "profile": {
+        "path": "dosfstools/github-release-latest.json",
+        "sha256": "fd52905e697a2eb2261b634190fbe7b3cb956e96457f66ddee3ab2257bb70ab5",
+        "url": "https://api.github.com/repos/dosfstools/dosfstools/releases/latest"
+      },
+      "reviewed_at": "2026-11-05"
+    },
+    "corroboration": {
+      "distributor": "Gentoo",
+      "manifest": {
+        "path": "dosfstools/gentoo-manifests/sys-fs/dosfstools/Manifest",
+        "sha256": "90bc365eca2bc5168a8017d26ea861d9d482ae05c1984aebe923ddd262170c68",
+        "url": "https://distfiles.gentoo.org/snapshots/gentoo-20261103.tar.xz"
+      },
+      "manifest_member": "gentoo-20261103/sys-fs/dosfstools/Manifest",
+      "method": "distributor-openpgp-manifest",
+      "snapshot": {
+        "authentication": {
+          "approval": {
+            "basis": "Official Gentoo signing-key documentation identifies this ebuild repository primary.",
+            "material": {
+              "path": "gentoo-signatures.html",
+              "sha256": "45bd60413ed48a5729c832ab69b9a1c3f4812b4e0cfc2777491be5875c82e0b4",
+              "url": "https://www.gentoo.org/downloads/signatures/"
+            },
+            "reviewed_at": "2026-11-05"
+          },
+          "key": {
+            "path": "gentoo-DCD05B71EAB94199527F44ACDB6B8C1F96D8BF6D.asc",
+            "sha256": "aec99650e40d8f21c792e9e8353d672a8676ae3cbe9e2c147ce42e0e46037189",
+            "url": "https://keys.gentoo.org/pks/lookup?op=get&search=0xDCD05B71EAB94199527F44ACDB6B8C1F96D8BF6D"
+          },
+          "method": "openpgp",
+          "primary_fingerprint": "DCD05B71EAB94199527F44ACDB6B8C1F96D8BF6D",
+          "signature": {
+            "path": "gentoo-20261103.tar.xz.gpgsig",
+            "sha256": "4e08800e0e026829118786acc63e5ec3ca8ffdc4069252667642a6a5c5a4be22",
+            "url": "https://distfiles.gentoo.org/snapshots/gentoo-20261103.tar.xz.gpgsig"
+          }
+        },
+        "material": {
+          "path": "gentoo-20261103.tar.xz",
+          "sha256": "923b3132d9214cee3f59fa2b56a3af27a0287c8587576c99ebcd5b24e537a194",
+          "url": "https://distfiles.gentoo.org/snapshots/gentoo-20261103.tar.xz"
+        }
+      }
+    },
+    "key": {
+      "path": "dosfstools/andreas-bombe-25714AECDBFDACEE1CE95FE77F6022516E869F64.asc",
+      "sha256": "405ef1aa0d9de6bbaade245f536f793d37cee5adb67c61a651e686d775144006",
+      "url": "https://db.debian.org/fetchkey.cgi?fingerprint=25714AECDBFDACEE1CE95FE77F6022516E869F64"
+    },
+    "method": "openpgp",
+    "payload": "archive",
+    "primary_fingerprint": "25714AECDBFDACEE1CE95FE77F6022516E869F64",
+    "signature": {
+      "path": "dosfstools/dosfstools-4.2.tar.gz.sig",
+      "sha256": "90f58a303fd7c55e02370357054f7207f05c3736f23d9a82cfb4a10acd7d55f9",
+      "url": "https://github.com/dosfstools/dosfstools/releases/download/v4.2/dosfstools-4.2.tar.gz.sig"
+    },
+    "signing_fingerprint": "FDF277140B6DF9E8CDC8A9823164705B1DA31D4C"
+  },
+  "disposition": "retain",
+  "name": "dosfstools-4.2.tar.gz",
+  "reason": "mkfs.fat creates the EFI System Partition for tup/install/disk.py; source authenticated only, no target build performed.",
+  "release_eligible": false,
+  "reviewed_at": "2026-11-05",
+  "schema": "tup-boot-dosfstools-source-v1",
+  "selection": {
+    "blfs_page": {
+      "path": "dosfstools/blfs-13.1-dosfstools.html",
+      "sha256": "ca506954442ed911e5783c60b5cda632b9cd8d54ced5affde6c5081e72843f20",
+      "url": "https://www.linuxfromscratch.org/blfs/view/13.1-systemd/postlfs/dosfstools.html"
+    },
+    "blfs_recipe": "https://www.linuxfromscratch.org/blfs/view/13.1-systemd/postlfs/dosfstools.html",
+    "blfs_version": "4.2",
+    "reason": "BLFS 13.1-systemd names 4.2 and the upstream release API returns v4.2 as the latest release on the review date, so no newer release exists that could fix a published problem.",
+    "upstream_latest_published": "2021-01-31",
+    "upstream_latest_release": "v4.2"
+  },
+  "sha256": "64926eebf90092dca21b14259a5301b7b98e7b1943e8a201c7d726084809b527",
+  "status": "source-authenticated-not-built",
+  "url": "https://github.com/dosfstools/dosfstools/releases/download/v4.2/dosfstools-4.2.tar.gz",
+  "verifier": "tup/sources/source_lock.py verify_record, evidence root tup/boot/evidence",
+  "version": "4.2"
+}

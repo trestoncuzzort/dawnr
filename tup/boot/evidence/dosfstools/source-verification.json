@@ -1,0 +1,46 @@
+{
+  "schema": "tup-boot-dosfstools-source-verification-v1",
+  "status": "verified",
+  "scope": "dosfstools-esp-formatting-source",
+  "release_eligible": false,
+  "command": "source_lock.verify_record(record, cache, tup/boot/evidence, /usr/bin/gpg)",
+  "verifier_sha256": "37f39eb2a44b0ff93941fdc2c271ffaec2573a3647fe8cabcce42ee90bff760e",
+  "record_sha256": "ea160282fdfad20c9992d391205ef476b5a9738a191785ccca144369cb35c65c",
+  "gpg_version": "gpg (GnuPG) 2.4.4",
+  "sources": [
+    {
+      "name": "dosfstools-4.2.tar.gz",
+      "status": "verified",
+      "sha256": "64926eebf90092dca21b14259a5301b7b98e7b1943e8a201c7d726084809b527",
+      "size": 320917,
+      "authentication": {
+        "status": "verified",
+        "evidence_sha256": "79820060acc4381e6b0948d8582de6336301a600a19c0fc5044e0e59fbf3b8d0",
+        "trust_class": "publisher-openpgp",
+        "primary_fingerprint": "25714AECDBFDACEE1CE95FE77F6022516E869F64",
+        "signing_fingerprint": "FDF277140B6DF9E8CDC8A9823164705B1DA31D4C",
+        "verifier_sha256": "403e04c779ad9fab3895c405f8c53d35ab59fa8e3b8bbe3437f61bc41f468dd4",
+        "status_sha256": "7225ac6c2a6a5241c5ad723c79492bc5bba4761997b7b88027bfdaf6c2fd474b",
+        "corroboration": {
+          "trust_class": "distributor-openpgp-manifest",
+          "primary_fingerprint": "DCD05B71EAB94199527F44ACDB6B8C1F96D8BF6D",
+          "signing_fingerprint": "E1D6ABB63BFCFB4BA02FDF1CEC590EEAC9189250",
+          "verifier_sha256": "403e04c779ad9fab3895c405f8c53d35ab59fa8e3b8bbe3437f61bc41f468dd4",
+          "status_sha256": "0e675efd7fc7ec684b5d53c312b61219c66e4238caef255c74edb78e8afe6ab9",
+          "distributor": "Gentoo",
+          "snapshot_sha256": "923b3132d9214cee3f59fa2b56a3af27a0287c8587576c99ebcd5b24e537a194",
+          "manifest_member": "gentoo-20261103/sys-fs/dosfstools/Manifest",
+          "manifest_sha256": "90bc365eca2bc5168a8017d26ea861d9d482ae05c1984aebe923ddd262170c68",
+          "source_digest_algorithm": "sha512",
+          "source_digest": "3cc0808edb4432428df8a67da4bb314fd1f27adc4a05754c1a492091741a7b6875ebd9f6a509cc4c5ad85643fc40395b6e0cadee548b25cc439cc9b725980156",
+          "source_size": 320917,
+          "assurance": "Gentoo-signed snapshot authenticates exact upstream filename, size and SHA512; SHA256 pin is derived after verification"
+        }
+      }
+    }
+  ],
+  "limitations": [
+    "Source verification does not establish target compilation or a working mkfs.fat",
+    "The key was approved through the maintainer's GitHub account and the Debian developer database; upstream itself publishes no key file"
+  ]
+}
