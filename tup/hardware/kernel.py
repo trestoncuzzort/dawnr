@@ -47,6 +47,16 @@ USB_NET_ZAURUS USB_NET_AX8817X""".split()
 # and acpi-cpufreq takes over. A compute host must scale with load by default.
 BUILTIN += ["CPU_FREQ_DEFAULT_GOV_SCHEDUTIL"]
 OFF += ["CPU_FREQ_DEFAULT_GOV_USERSPACE"]
+# Later stages in HEADLESS-GOAL.md need these, and most are bools that only a
+# kernel rebuild could add: CPU quotas for guest and job cgroups (H39), core
+# scheduling between mutually untrusted guests (H49), IPv6 policy routing for
+# an overlay network (H26), the nftables netdev and bridge families for guest
+# anti-spoofing (H46), the legacy VGA ranges of an assigned graphics card
+# (H43), and huge pages on request (madvise) for guests and compute jobs.
+BUILTIN += """CFS_BANDWIDTH SCHED_CORE IPV6_MULTIPLE_TABLES NF_TABLES_NETDEV VFIO_PCI_VGA
+TRANSPARENT_HUGEPAGE TRANSPARENT_HUGEPAGE_MADVISE""".split()
+MODULES += ["NF_TABLES_BRIDGE", "NFT_BRIDGE_META"]
+OFF += ["TRANSPARENT_HUGEPAGE_ALWAYS"]
 
 
 def fragment():

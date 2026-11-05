@@ -128,6 +128,24 @@ VFIO container; `IOMMUFD` stays off).
   `PVH=y` alone provides the x86/HVM direct-boot entry; a Xen decision under H40
   needs its own configuration run.
 
+- **Later-stage options were added before the first kernel build** so that
+  reaching those stages does not cost a rebuild; none is exercised yet.
+  `CFS_BANDWIDTH` (selects `GROUP_SCHED_BANDWIDTH`) gives guest and job cgroups
+  the `cpu.max` quota that H39 needs. `SCHED_CORE` provides
+  [core scheduling](https://docs.kernel.org/admin-guide/hw-vuln/core-scheduling.html)
+  for H49; it does nothing until a task sets a cookie. `IPV6_MULTIPLE_TABLES`
+  gives IPv6 the policy routing that IPv4 already had, which overlay transports
+  under H26 rely on. `NF_TABLES_NETDEV` (built in) and `NF_TABLES_BRIDGE` with
+  `NFT_BRIDGE_META` (modules; they select `NETFILTER_FAMILY_BRIDGE`) are the
+  nftables families that can filter a guest's frames by interface and source
+  address for H46; their optional expressions (`NFT_DUP_NETDEV`,
+  `NFT_FWD_NETDEV`, `NFT_FIB_NETDEV`, `NFT_REJECT_NETDEV`, `NFT_BRIDGE_REJECT`)
+  stayed off. `VFIO_PCI_VGA` exposes the legacy VGA ranges of an assigned
+  graphics card for H43. `TRANSPARENT_HUGEPAGE` is on in `madvise` mode only:
+  a guest memory mapping or a compute job can ask for huge pages, nothing gets
+  them by default, and `TRANSPARENT_HUGEPAGE_ALWAYS` is refused by the checker.
+  Kconfig also turned on `THP_SWAP`, `MM_ID` and `ARCH_ENABLE_THP_MIGRATION`.
+
 ### What the source says about this board, unprobed
 
 - `nct6775-core.c` has the `nct6799` chip kind, and `nct6775-platform.c` lists
@@ -152,8 +170,8 @@ VFIO container; `IOMMUFD` stays off).
 ### Size of the change
 
 Counted with `grep -c '=m$'` and `grep -c '=y$'` on the two retained
-configurations: **12 to 103 module symbols** and 1695 to 1766 built-in symbols
-(5653 to 5893 lines). The only earlier setting that changed is the default
+configurations: **12 to 105 module symbols** and 1695 to 1782 built-in symbols
+(5653 to 5916 lines). The only earlier setting that changed is the default
 governor choice described above; nothing else was removed or demoted. The
 count includes two live-boot additions made in the boot floor
 ([`boot/inputs.py`](../boot/inputs.py)) in the same qualification run:

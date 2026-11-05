@@ -31,7 +31,10 @@ class HardwareKernelTests(unittest.TestCase):
                               ("IRQ_REMAP", "y"), ("PVH", "y"), ("NVME_HWMON", "y"), ("KVM_AMD", "m"),
                               ("VFIO_PCI", "m"), ("VFIO_IOMMU_TYPE1", "m"), ("WIREGUARD", "m"),
                               ("NFT_REJECT_INET", "m"), ("DM_CRYPT", "m"), ("SP5100_TCO", "m"),
-                              ("SENSORS_NCT6775", "m"), ("USB_RTL8152", "m"), ("DRM_AMDGPU", "m")):
+                              ("SENSORS_NCT6775", "m"), ("USB_RTL8152", "m"), ("DRM_AMDGPU", "m"),
+                              ("CFS_BANDWIDTH", "y"), ("SCHED_CORE", "y"), ("IPV6_MULTIPLE_TABLES", "y"),
+                              ("NF_TABLES_NETDEV", "y"), ("NF_TABLES_BRIDGE", "m"), ("VFIO_PCI_VGA", "y"),
+                              ("TRANSPARENT_HUGEPAGE_MADVISE", "y")):
             self.assertIn(f"CONFIG_{symbol}={value}\n", self.original)
             self.path.write_text(self.original.replace(f"CONFIG_{symbol}={value}\n", f"# CONFIG_{symbol} is not set\n"))
             with self.subTest(symbol=symbol), self.assertRaises(kernel.Refusal):
@@ -55,6 +58,8 @@ class HardwareKernelTests(unittest.TestCase):
                 ("MODULE_SIG_FORCE", "CONFIG_MODULES=y\n", "CONFIG_MODULES=y\nCONFIG_MODULE_SIG_FORCE=y\n"),
                 ("DRM_NOUVEAU", unset.format("DRM_NOUVEAU"), "CONFIG_DRM_NOUVEAU=m\n"),
                 ("VFIO_NOIOMMU", unset.format("VFIO_NOIOMMU"), "CONFIG_VFIO_NOIOMMU=y\n"),
+                ("TRANSPARENT_HUGEPAGE_ALWAYS", unset.format("TRANSPARENT_HUGEPAGE_ALWAYS"),
+                 "CONFIG_TRANSPARENT_HUGEPAGE_ALWAYS=y\n"),
                 ("EXTRA_FIRMWARE", 'CONFIG_EXTRA_FIRMWARE=""\n', 'CONFIG_EXTRA_FIRMWARE="amdgpu/gc_10_3_6_me.bin"\n')):
             self.assertIn(old, self.original)
             self.path.write_text(self.original.replace(old, new))
