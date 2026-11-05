@@ -88,6 +88,26 @@ class LayerChapterTests(unittest.TestCase):
             "libmnl-1.0.5.tar.bz2", "libnftnl-1.3.2.tar.xz", "nftables-1.1.7.tar.xz", "openssh-10.6p1.tar.gz",
             "sudo-1.9.17p2.tar.gz", "LVM2.2.03.42.tgz", "linux-6.18.60.tar.xz", "linux-firmware-20261019.tar.xz"])
 
+    def test_openssh_page_lets_make_expand_its_own_program_list(self):
+        # Found by the first run on a real root: the Makefile's TARGETS ends with
+        # $(SK_STANDALONE), which is empty here; reading the line as text kept that
+        # word and the page then looked for a program of that name.
+        page = (TUP / "remote/pages/04-openssh.sh").read_text(encoding="utf-8")
+        expansion = "--eval='tup-print-targets: ; @echo $(TARGETS)' tup-print-targets"
+        self.assertIn("targets=$(make --no-print-directory -s " + expansion + ")\n", page)
+        self.assertNotIn("sed -n 's/^TARGETS=", page)
+        make = shutil.which("make")
+        if os.name != "posix" or not make:
+            self.skipTest("GNU make on Linux is needed to run the expansion")
+        with tempfile.TemporaryDirectory() as temporary:
+            (Path(temporary) / "Makefile").write_text(
+                "EXEEXT=\nSK_STANDALONE=\nTARGETS=ssh$(EXEEXT) sshd${EXEEXT} ssh-sk-helper$(EXEEXT) $(SK_STANDALONE)\n",
+                encoding="utf-8")
+            result = subprocess.run([make, "--no-print-directory", "-s",
+                                     "--eval=tup-print-targets: ; @echo $(TARGETS)", "tup-print-targets"],
+                                    cwd=temporary, capture_output=True, text=True, timeout=30)
+        self.assertEqual((result.returncode, result.stdout.split()), (0, ["ssh", "sshd", "ssh-sk-helper"]))
+
     def test_order_and_page_set_disagreement_refuses(self):
         with tempfile.TemporaryDirectory() as temporary:
             source = Path(temporary)

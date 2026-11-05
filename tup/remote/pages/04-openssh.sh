@@ -23,8 +23,11 @@ install -d -o root -g sys -m 0700 /var/lib/sshd
 make -j"$TUP_JOBS"
 # Programs that "make install-nokeys" copies; they must not change while the
 # suite runs as another user inside this tree.
-# Take the list from the generated Makefile's own TARGETS rather than restate it.
-read -r -a programs <<< "$(sed -n 's/^TARGETS=//p' Makefile | sed -e 's/\$[({]EXEEXT[)}]//g')"
+# Take the list from the generated Makefile's own TARGETS rather than restate
+# it, and let make expand it: it names variables (EXEEXT, SK_STANDALONE) that
+# are empty in this configuration, which a textual read leaves in the list.
+targets=$(make --no-print-directory -s --eval='tup-print-targets: ; @echo $(TARGETS)' tup-print-targets)
+read -r -a programs <<< "$targets"
 [ "${#programs[@]}" -ge 10 ] || { echo 'unexpected OpenSSH TARGETS list' >&2; exit 1; }
 for program in "${programs[@]}"; do [ -x "$program" ] || { echo "expected built program is absent: $program" >&2; exit 1; }; done
 sha256sum -- "${programs[@]}" > /sources/log/openssh-built-programs.sha256
