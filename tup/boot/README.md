@@ -281,14 +281,30 @@ requires exactly `early_cpio` and an `AuthenticAMD.bin` with the staged SHA256.
 That establishes what the image contains. Whether this CPU's model and stepping
 take an update from it is a boot-time observation.
 
+**Boot menu and consoles.** The last `console=` on the kernel command line
+becomes `/dev/console`, where systemd writes its status lines and dracut opens
+its emergency shell. The menu therefore has two entries with the same live
+parameters. The default, for a desktop, ends with `console=tty0` and has no
+shell tracing. The second, for a test VM that is read through its serial port,
+ends with `console=ttyS0,115200n8` and adds `rd.debug` and
+`systemd.log_target=console`. GRUB selects the second by itself when the
+firmware's SMBIOS system manufacturer is `QEMU`
+([`smbios`](https://www.gnu.org/software/grub/manual/grub/html_node/smbios.html)
+command; the module is in the pinned GRUB 2.14 set); if the command is
+unavailable the screen entry stays the default. GRUB writes to the serial port
+but takes input only from the local console: with serial input enabled, noise
+on an absent or unconnected UART could stop the three-second countdown of a
+headless boot. The generated file passes the pinned `grub-script-check`. Which
+entry a real QEMU and the real desktop take is a boot-time observation.
+
 Serial output is 115200 8N1 on ttyS0. The first
 test should use a disposable UEFI VM, a private copy of the firmware-variable
 image, 4 GiB RAM, 4 vCPUs and no network. Record the exact ISO/firmware/runner hashes,
 accelerator and device models. An external VM remains only a test tool.
 
 Capture the serial stream to a host log. Dracut diagnostics are
-`/run/initramfs/rdsosreport.txt` inside the failed guest; `rd.shell rd.debug` is
-enabled for this test artifact. The live pre-pivot hook refuses missing/corrupt
+`/run/initramfs/rdsosreport.txt` inside the failed guest; `rd.shell` is on in
+both entries and `rd.debug` in the serial one. The live pre-pivot hook refuses missing/corrupt
 SquashFS bytes. This verifies media integrity before switching root; it does not
 authenticate the unsigned kernel/initramfs, and it runs after filesystem parsing.
 It is not dm-verity, Secure Boot or protection from hostile replacement media.

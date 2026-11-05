@@ -218,6 +218,32 @@ class InputRefusalTests(BootFixture):
                 else:
                     path.write_bytes(previous)
 
+    def test_only_the_books_dbus_link_to_the_one_machine_identity_is_accepted(self):
+        legacy = self.root / "var/lib/dbus/machine-id"
+        self.write(legacy, b"")
+        inputs.check_offline_root(self.root)  # An empty regular file carries no identity.
+        legacy.write_bytes(b"0123456789abcdef0123456789abcdef\n")
+        with self.assertRaisesRegex(inputs.Refusal, "identity"):
+            inputs.check_offline_root(self.root)
+        legacy.unlink()
+        if os.name != "posix":
+            self.skipTest("the link cases need Linux symlinks")
+        # ch08 D-Bus: ln -sfv /etc/machine-id /var/lib/dbus
+        legacy.symlink_to("/etc/machine-id")
+        inputs.check_offline_root(self.root)
+        for target in ("/etc/hostname", "../../../etc/machine-id", "/etc/machine-id/", "machine-id"):
+            with self.subTest(target=target):
+                legacy.unlink()
+                legacy.symlink_to(target)
+                with self.assertRaisesRegex(inputs.Refusal, "identity link"):
+                    inputs.check_offline_root(self.root)
+        legacy.unlink()
+        # The identity file itself and the directory above the link stay link-free.
+        (self.root / "etc/machine-id").unlink()
+        (self.root / "etc/machine-id").symlink_to("/run/machine-id")
+        with self.assertRaisesRegex(inputs.Refusal, "symbolic link"):
+            inputs.check_offline_root(self.root)
+
     def test_populated_runtime_directory_is_not_silently_excluded(self):
         self.write(self.root / "proc/cpuinfo", b"unwanted mounted content")
         with self.assertRaisesRegex(inputs.Refusal, "proc"):
@@ -355,17 +381,41 @@ class PackagingTests(BootFixture):
 
     def test_live_command_line_uses_the_spellings_dracut_112_implements(self):
         label = "TUP_" + "A" * 24
-        words = next(line for line in boot.grub_config(label).splitlines() if line.lstrip().startswith("linux ")).split()
-        for word in ("root=live:LABEL=" + label, "ro", "rd.live.image", "rd.live.dir=LiveOS", "rd.live.squashimg=squashfs.img",
-                     "rd.overlay=tmpfs:size=512M,nr_inodes=100000", "rd.live.ram=0", "rd.retry=90", "rd.shell", "rd.debug"):
-            self.assertIn(word, words)
-        # dmsquash-live-root.sh reads "tmpfs" as a device to search for a persistent
-        # overlay, finds none and then waits for Enter; a headless boot would hang there.
-        self.assertIn("rd.live.overlay.nouserconfirmprompt", words)
-        self.assertEqual([word for word in words if word.startswith(("rd.overlay", "rd.live.overlay"))],
-                         ["rd.overlay=tmpfs:size=512M,nr_inodes=100000", "rd.live.overlay.nouserconfirmprompt"])
-        self.assertFalse({word.split("=")[0] for word in words} & {"rd.live.overlay", "rd.live.overlay.overlayfs",
-                                                                   "rd.live.overlay.size", "iso-scan/filename"})
+        entries = [line.split() for line in boot.grub_config(label).splitlines() if line.lstrip().startswith("linux ")]
+        self.assertEqual(len(entries), 2)
+        for words in entries:
+            for word in ("root=live:LABEL=" + label, "ro", "rd.live.image", "rd.live.dir=LiveOS", "rd.live.squashimg=squashfs.img",
+                         "rd.overlay=tmpfs:size=512M,nr_inodes=100000", "rd.live.ram=0", "rd.retry=90", "rd.shell"):
+                self.assertIn(word, words)
+            # dmsquash-live-root.sh reads "tmpfs" as a device to search for a persistent
+            # overlay, finds none and then waits for Enter; a headless boot would hang there.
+            self.assertIn("rd.live.overlay.nouserconfirmprompt", words)
+            self.assertEqual([word for word in words if word.startswith(("rd.overlay", "rd.live.overlay"))],
+                             ["rd.overlay=tmpfs:size=512M,nr_inodes=100000", "rd.live.overlay.nouserconfirmprompt"])
+            self.assertFalse({word.split("=")[0] for word in words} & {"rd.live.overlay", "rd.live.overlay.overlayfs",
+                                                                       "rd.live.overlay.size", "iso-scan/filename"})
+
+    def test_a_desktop_boots_to_its_screen_and_a_qemu_test_machine_to_its_serial_port(self):
+        grub = boot.grub_config("TUP_" + "A" * 24)
+        screen, serial = [line.split() for line in grub.splitlines() if line.lstrip().startswith("linux ")]
+        # The last console= is /dev/console, where systemd and the emergency shell write.
+        self.assertEqual([word for word in screen if word.startswith("console=")], ["console=ttyS0,115200n8", "console=tty0"])
+        self.assertEqual([word for word in serial if word.startswith("console=")], ["console=tty0", "console=ttyS0,115200n8"])
+        # Shell tracing at 115200 baud would slow a desktop boot; only the test entry has it.
+        self.assertNotIn("rd.debug", screen)
+        self.assertNotIn("systemd.log_target=console", screen)
+        self.assertIn("rd.debug", serial)
+        lines = [line.strip() for line in grub.splitlines()]
+        self.assertEqual(lines[:2], ["set default=0", "set timeout=3"])
+        # Noise on an absent UART must never reach GRUB as a key press.
+        self.assertIn("terminal_input console", lines)
+        self.assertNotIn("serial", " ".join(line for line in lines if line.startswith("terminal_input")))
+        self.assertIn("terminal_output console serial", lines)
+        selection = lines[lines.index("insmod smbios"):lines.index("fi") + 1]
+        self.assertEqual(selection, ["insmod smbios", "smbios --type 1 --get-string 4 --set tup_system_manufacturer",
+                                     'if [ "$tup_system_manufacturer" = "QEMU" ]; then', "set default=1", "fi"])
+        self.assertLess(lines.index("fi"), next(i for i, line in enumerate(lines) if line.startswith("menuentry")))
+        self.assertEqual(sum(line.startswith("menuentry ") for line in lines), 2)
 
     def test_dracut_runs_its_own_init_with_host_files_spelled_through_the_sysroot(self):
         self.build()

@@ -203,16 +203,35 @@ def describe(root, release, core_spec, layer_receipt, tools_path, tools_sha256):
 def grub_config(label):
     if not re.fullmatch(r"TUP_[A-F0-9]{24}", label):
         raise Refusal("unsafe ISO label")
+    live = (f'linux /boot/vmlinuz root=live:LABEL={label} ro rd.live.image rd.live.dir=LiveOS '
+            f'rd.live.squashimg=squashfs.img rd.overlay=tmpfs:size={POLICY["overlay_mib"]}M,nr_inodes=100000 '
+            'rd.live.overlay.nouserconfirmprompt rd.live.ram=0 rd.luks=0 rd.lvm=0 rd.md=0 rd.shell rd.retry=90')
+    # The last console= is /dev/console: systemd's status lines and dracut's
+    # emergency shell appear only there. A desktop is watched on its screen; a
+    # QEMU test machine is read through its serial port. The firmware's SMBIOS
+    # system manufacturer tells them apart (GRUB manual, "smbios"); if the
+    # command is unavailable the default stays the screen entry.
+    # The serial port is an output only: with "terminal_input serial", noise on
+    # an absent or unconnected UART could stop the countdown of a headless boot.
     return f'''set default=0
 set timeout=3
 serial --unit=0 --speed=115200 --word=8 --parity=no --stop=1
-terminal_input console serial
+terminal_input console
 terminal_output console serial
 insmod iso9660
 insmod search_label
 search --no-floppy --label --set=root {label}
-menuentry 'TUP x86_64 UEFI disposable test' {{
-    linux /boot/vmlinuz root=live:LABEL={label} ro rd.live.image rd.live.dir=LiveOS rd.live.squashimg=squashfs.img rd.overlay=tmpfs:size={POLICY["overlay_mib"]}M,nr_inodes=100000 rd.live.overlay.nouserconfirmprompt rd.live.ram=0 rd.luks=0 rd.lvm=0 rd.md=0 rd.shell rd.debug rd.retry=90 console=tty0 console=ttyS0,115200n8 systemd.log_target=console
+insmod smbios
+smbios --type 1 --get-string 4 --set tup_system_manufacturer
+if [ "$tup_system_manufacturer" = "QEMU" ]; then
+    set default=1
+fi
+menuentry 'TUP live (boot messages on the screen)' {{
+    {live} console=ttyS0,115200n8 console=tty0
+    initrd /boot/initramfs.img
+}}
+menuentry 'TUP live (diagnostics on the serial port)' {{
+    {live} rd.debug console=tty0 console=ttyS0,115200n8 systemd.log_target=console
     initrd /boot/initramfs.img
 }}
 '''
