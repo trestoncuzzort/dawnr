@@ -1,0 +1,157 @@
+{
+  "schema": "tup-cgroup-collector-probe-v1",
+  "date": "2026-11-05",
+  "observer_sha256": "9f99f0ce42e0b4b4c8a0f7b4631c35c42d276b47c0b24dafaad7095c38e34b36",
+  "results": [
+    {
+      "case": "memory",
+      "unit_exit_code": 0,
+      "collector": {
+        "command_exit_code": 0,
+        "complete_resource_lifetime": true,
+        "final_cpu_stat": {
+          "burst_usec": 0,
+          "nice_usec": 0,
+          "nr_bursts": 0,
+          "nr_periods": 53,
+          "nr_throttled": 0,
+          "system_usec": 47654,
+          "throttled_usec": 0,
+          "usage_usec": 5055387,
+          "user_usec": 5007733
+        },
+        "final_memory_events": {
+          "high": 0,
+          "low": 0,
+          "max": 0,
+          "oom": 0,
+          "oom_group_kill": 0,
+          "oom_kill": 0
+        },
+        "max_memory_peak_bytes": 96251904,
+        "max_observed_swap_bytes": 0,
+        "max_processes": 2,
+        "minimum_host_available_kib": 5424852,
+        "remaining_tasks": 0,
+        "samples": 22,
+        "status": "command-exited",
+        "type": "summary",
+        "wall_seconds": 5.291
+      },
+      "raw_log_sha256": "8cc8d0e7ff2912d830cfa7ec77189a5204f75f1e5b2d56fc71ba9d6dcec527a2"
+    },
+    {
+      "case": "child-failure",
+      "unit_exit_code": 7,
+      "collector": {
+        "command_exit_code": 7,
+        "complete_resource_lifetime": true,
+        "final_cpu_stat": {
+          "burst_usec": 0,
+          "nice_usec": 0,
+          "nr_bursts": 0,
+          "nr_periods": 2,
+          "nr_throttled": 0,
+          "system_usec": 4819,
+          "throttled_usec": 0,
+          "usage_usec": 34742,
+          "user_usec": 29922
+        },
+        "final_memory_events": {
+          "high": 0,
+          "low": 0,
+          "max": 0,
+          "oom": 0,
+          "oom_group_kill": 0,
+          "oom_kill": 0
+        },
+        "max_memory_peak_bytes": 12115968,
+        "max_observed_swap_bytes": 0,
+        "max_processes": 2,
+        "minimum_host_available_kib": 5510660,
+        "remaining_tasks": 0,
+        "samples": 2,
+        "status": "command-exited",
+        "type": "summary",
+        "wall_seconds": 0.252
+      },
+      "raw_log_sha256": "281cb7bdd86e77f9dbbb0990c2b521b2d46aaaf32fabcae20f3889abe6999d00"
+    },
+    {
+      "case": "leftover-child",
+      "unit_exit_code": 2,
+      "collector": {
+        "command_exit_code": 0,
+        "complete_resource_lifetime": false,
+        "final_cpu_stat": {
+          "burst_usec": 0,
+          "nice_usec": 0,
+          "nr_bursts": 0,
+          "nr_periods": 2,
+          "nr_throttled": 0,
+          "system_usec": 8607,
+          "throttled_usec": 0,
+          "usage_usec": 38733,
+          "user_usec": 30126
+        },
+        "final_memory_events": {
+          "high": 0,
+          "low": 0,
+          "max": 0,
+          "oom": 0,
+          "oom_group_kill": 0,
+          "oom_kill": 0
+        },
+        "max_memory_peak_bytes": 13434880,
+        "max_observed_swap_bytes": 0,
+        "max_processes": 3,
+        "minimum_host_available_kib": 5502644,
+        "remaining_tasks": 1,
+        "samples": 2,
+        "status": "command-left-processes",
+        "type": "summary",
+        "wall_seconds": 0.254
+      },
+      "raw_log_sha256": "c4c4eed46e60d0828c0de1af9011c75597c3768eb6a5a7c1459d83b5eae047b6"
+    },
+    {
+      "case": "nested-leftover",
+      "unit_exit_code": 2,
+      "collector": {
+        "command_exit_code": 0,
+        "complete_resource_lifetime": false,
+        "final_cpu_stat": {
+          "burst_usec": 0,
+          "nice_usec": 0,
+          "nr_bursts": 0,
+          "nr_periods": 3,
+          "nr_throttled": 0,
+          "system_usec": 8928,
+          "throttled_usec": 0,
+          "usage_usec": 40178,
+          "user_usec": 31249
+        },
+        "final_memory_events": {
+          "high": 0,
+          "low": 0,
+          "max": 0,
+          "oom": 0,
+          "oom_group_kill": 0,
+          "oom_kill": 0
+        },
+        "max_memory_peak_bytes": 14221312,
+        "max_observed_swap_bytes": 0,
+        "max_processes": 3,
+        "minimum_host_available_kib": 5494848,
+        "remaining_tasks": 1,
+        "samples": 2,
+        "status": "command-left-processes",
+        "type": "summary",
+        "wall_seconds": 0.251
+      },
+      "raw_log_sha256": "f6938a1d78a1cb47367871e4ce50a48b1e5e0c82a7d43968b3396bf5bf4c9681"
+    }
+  ],
+  "scope": "instrument and child-exit controls only; no actual LFS build or hardware stress qualification",
+  "prior_failed_probe": "External observer missed final counters after systemd removed the cgroup; supervised collector now remains inside until final counters are persisted."
+}
