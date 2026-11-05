@@ -1,7 +1,7 @@
 {
   "architecture": "x86_64",
-  "checked_at": "2026-11-05T09:52:54.549679+00:00",
-  "config_sha256": "08938add1ba30999c8a90edde32cf07ef938c3c6724e5afdd4bb8add0b0fc8a9",
+  "checked_at": "2026-11-05T11:10:12.410908+00:00",
+  "config_sha256": "5bef98396fa21ba247c29313f8c6a13175aaf6b8a5e92c137febf0b2de3f5986",
   "device_driver_qualified": false,
   "environment": {
     "ARCH": "x86_64",
@@ -15,17 +15,17 @@
     "boot_fragment_sha256": "2aaa17f6714e1ff6fa4c80c9e6f4d79c24df9063ed6f76873b74e824325eaf7a",
     "boot_helper_sha256": "e6497aa86fb32a584b516e5630ff30ad17212939f158e8dffcad099c9cbeeea7",
     "defconfig_sha256": "f157c1c162578abba4d6e9490aef0588e26aaa2331f47023fda03c42e7c66f02",
-    "hardware_fragment_sha256": "f4a0127ae18a20dbaf7dd8da7c9bb61d189a74881fe93fdb695ef5e6579fdb0f",
-    "hardware_helper_sha256": "bf5229c3aa98aeb2ea01a05905dada6613d97d212603c8934280152ef83d0fd0",
+    "hardware_fragment_sha256": "11748c38ba736b1d88e0f617cf3d8618d0f071f7683a989255f9bb012958a226",
+    "hardware_helper_sha256": "666c8c15d2a870ea573e14e8622ec34a5e13a10d982d7c551dbd78d21c66c52c",
     "merge_config_sha256": "fecdeb0747c88f818f0d5d39333b948cdf83d9aca11c422253da17f5cc36e6f1"
   },
   "jobs": 1,
   "kernel_archive_sha256": "3c2f44ef6acc021a7ad444d9a2e6ec1ef488ff09368793d0004a6080f69d621e",
   "kernel_compiled": false,
   "logs": {
-    "defconfig.log": "09c8e6821b5a409a2fde09306925da1e90e0b5a670cadb1b57fa973ed4faabcd",
-    "merge.log": "30e206a35432090d8c9449fed270a1ad864d057d3ffe9f83ff255739cc5b8320",
-    "olddefconfig.log": "67b2fe5dd658d14f2fe739959cbae704bc623d84d2908f1442ddf56882fe282e"
+    "defconfig.log": "ccc18301d5f7fb221ff34eb2f0ac2cceca4590eb43e507f77d389f5b97ab0817",
+    "merge.log": "994a0d51ccd6228064207b1166056412fe015fd6bcfa5b344dc59b42a406a7f8",
+    "olddefconfig.log": "6a4230941c0ea2b713649326195547cfc6c477a458adb3f128d60a02df13fd6a"
   },
   "schema": "tup-hardware-kconfig-qualification-v1",
   "source_release": "6.18.60",
