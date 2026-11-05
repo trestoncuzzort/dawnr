@@ -1,0 +1,136 @@
+{
+  "schema": "tup-core-failure-observation-v1",
+  "observation_utc": "2026-11-05",
+  "run": "002",
+  "source_commit": "2dac71ed6fae7a1112d923f71ec6cc4dde38158e",
+  "source_lock_sha256": "8c46c28a74f760ddf62df17f34327ac24dde7b465ab7c1bf3b9dbc7551522a05",
+  "inputs_sha256": "9d0535e987aab12e0b8f36b4e364be07fe95356756c0c9e781d9f077f7d9aacf",
+  "scope": "partial-native-core-build",
+  "status": "failed",
+  "complete_core": false,
+  "boot_tested": false,
+  "release_eligible": false,
+  "launched_utc": "2026-11-05T15:11:23Z",
+  "limits_applied": {
+    "memory_max_bytes": 6442450944,
+    "swap_max_bytes": 4294967296,
+    "cpu_quota_percent": 800,
+    "compiler_jobs": 4,
+    "tasks_max": 4096
+  },
+  "prediction_recorded_before_run": {
+    "recorded_before_run": true,
+    "outcome": "ch05 through ch08 complete with exit 0",
+    "suites": {
+      "glibc": "accepted with exactly one reviewed exception, FAIL: io/tst-lchmod",
+      "binutils": "accepted with exactly one reviewed exception, FAIL: tmpdir/gp-gmon",
+      "gcc": "accepted with up to the 74 reviewed lines; 511259 expected passes",
+      "coreutils-root": "passes now that the chroot is entered with supplementary group 0",
+      "kbd": "upstream suite passes and the 18 patched keymaps compile in Unicode mode",
+      "others": "pass as in rehearsal attempt 03"
+    },
+    "wall_seconds": [
+      12600,
+      17000
+    ],
+    "peak_charged_memory_bytes_at_most": 6442450944,
+    "oom_kills": 0,
+    "basis": "rehearsal attempt 03 (non-authoritative continuation of run 001): ch08 in 10616 s at CPUQuota 800%, peak 6279434240 bytes, no OOM; run 001 reached ch07 Python in 1929 s",
+    "known_risks": [
+      "an intermittent glibc timing test under load would stop the run; none is listed",
+      "g++.dg/gomp/deprecate-1.C is documented as failing sometimes and is not listed because it was not observed",
+      "the coreutils check-root and kbd corrections were verified by direct commands in the rehearsal root, not by a build"
+    ]
+  },
+  "completed_stages": [
+    "ch05",
+    "ch06",
+    "ownership",
+    "ch07-inner"
+  ],
+  "failed_stage": "ch08",
+  "failed_page": "ch08/05-glibc.sh",
+  "failed_page_exit_code": 2,
+  "runner_exit_code": 2,
+  "pages_completed_in_failed_stage": 4,
+  "suite_result": {
+    "PASS": 6824,
+    "FAIL": 2,
+    "UNSUPPORTED": 537,
+    "XFAIL": 16,
+    "reviewed_exception_observed": [
+      "FAIL: io/tst-lchmod"
+    ],
+    "unexplained": [
+      "FAIL: stdlib/test-bz22786"
+    ]
+  },
+  "observed_failure": "The glibc suite's harness killed stdlib/test-bz22786 after 80 s (TIMEOUTFACTOR=4 times its 20 s limit): last output 2026-11-05T16:56:26Z, killed 16:57:46Z. The required-suite gate refused the unreviewed failure and the driver refused automatic retry.",
+  "diagnosis": "The test allocates more than 2 GiB and took about 5 s in an isolated measurement with memory available. Measured from the Windows host between 16:50 and 16:57 UTC: 12 to 250 MiB of free physical memory, heavy paging, and one host call to the builder timed out. A rehearsal packaging job (SquashFS of a 3 GiB root and full-tree hashing) and agents' unit tests ran in the same builder beside the build. Inside the builder a stall probe at 16:56 showed no scheduling stall. The slowness is attributed to host memory exhaustion while a second job shared the builder; that attribution is an inference from these measurements, not an isolated experiment.",
+  "operator_error": "Running rehearsal work beside the authoritative build during its suites.",
+  "correction": "Commit 05cc4d3e: TIMEOUTFACTOR=10 for the glibc suite (the factor the LFS glibc page uses for timed-out tests). Builder conditions for the next run: page cache trimmed so the host keeps free memory; no other build, packaging or VM test during the suites.",
+  "original_log_sha256": {
+    "BUILD-INPUTS.json": "9d0535e987aab12e0b8f36b4e364be07fe95356756c0c9e781d9f077f7d9aacf",
+    "BUILD.json": "9d0535e987aab12e0b8f36b4e364be07fe95356756c0c9e781d9f077f7d9aacf",
+    "RUN-PLAN.json": "ca777c8d9a72d02c3d4f95fc25cf9407e52a7707b78b257a694cc6a42456068c",
+    "ch05.json": "918dc03796a3b7056a37bd63451a44c19e8592ed10347d469ea308ceebe56579",
+    "ch05.log": "da7000718e5efb2628d4e148d8cbda628eb4556d3e9aea894daeb90ba15469ab",
+    "ch06.json": "84f7368820512fc95dac1b0113064c3f9522d1e664cd5d6cb5381362dafdf7df",
+    "ch06.log": "629b84d232ea126cb421ee4964f3c440a0e92028573bd92276229f2d9bb5f392",
+    "ch07-inner.json": "06c238bc8451c7a3c2742072ac65b6bc52188c4a58d35c6db540bafc916cd957",
+    "ch07-inner.log": "0386cbf6a2e2774d9540cfa4f948b1e833fa46d7fe552e8e7880b2d3332c6124",
+    "ch08-05-glibc.log": "4ac3ea3862ff727e3b94f039c558c57e959f87ce6e944e86a9fee23a4dd3246b",
+    "ch08.json": "b8786801d9cd77f7519e80844ab4a68761e340842d021f6afa09f4c8f1ba6143",
+    "ch08.log": "ca382e85c9cbf4919e6c00a2df8b0a3579ab49c82d00359c66647c791754edbf",
+    "driver-driver.state": "6878feae55a07d724582d8513c7d6177f6bbfda44d8836144e258230c3572e93",
+    "driver-receipts.jsonl": "b96ce0ff5ee23b889aaf9dc2b963298ca6a180d0ade909fb98357a5cfc760cec",
+    "glibc-suite/files.sha256": "14c4665f487ac98b935d3626e7a1a727adf153baec23aedd2b5484ba17b97805",
+    "glibc-suite/nonpass.observed": "c8450b43b368242d75fb97ef0b838b5b3818f761e4565332839a820868a11107",
+    "glibc-suite/nonpass.unexplained": "88b410498de5a03cc289619873261e318c33c06664ff4a307497a959b847ffac",
+    "glibc-suite/stdlib/test-bz22786.out": "10c774c188883476ca9ee6274d72d590475b4611f144e282fcbf09ec62a2a500",
+    "glibc-suite/summary.results": "a52224a6f99d64d370bf763392fec472038154f3a6704debe8fc8bcb23a40326",
+    "glibc-suite/tests.sum": "e539ba4a7aac429372d9690311ee9f1e7913ab4c6732532b73625756c4d37c2c",
+    "ownership.json": "5dcbbbd73e5812c0de1b38bab9ae855005af94bfa7f84a81dd21663f28e0b15e",
+    "ownership.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "preparing.json": "c53e9111a25e1bc7a3e3d99467432279ee5267848114b84deb069d59b0f8429d",
+    "resources.jsonl": "91c2f7fe4a06fdce9b31edbd39dbed872cb734e2b3c7a58ac6aaa11d3fad57b9",
+    "run.log": "d032f7296bed536315f26c761514f147f35da85ef5a5bd9715435efdfbeb8a69"
+  },
+  "resources": {
+    "command_exit_code": 2,
+    "complete_resource_lifetime": true,
+    "final_cpu_stat": {
+      "burst_usec": 0,
+      "nice_usec": 7767636000,
+      "nr_bursts": 0,
+      "nr_periods": 69483,
+      "nr_throttled": 1353,
+      "system_usec": 9125029627,
+      "throttled_usec": 320277725,
+      "usage_usec": 17778427688,
+      "user_usec": 8653398061
+    },
+    "final_memory_events": {
+      "high": 0,
+      "low": 0,
+      "max": 777,
+      "oom": 0,
+      "oom_group_kill": 0,
+      "oom_kill": 0
+    },
+    "max_memory_peak_bytes": 6442450944,
+    "max_observed_swap_bytes": 29208576,
+    "max_processes": 487,
+    "minimum_host_available_kib": 2680784,
+    "remaining_tasks": 0,
+    "samples": 3577,
+    "status": "command-exited",
+    "type": "summary",
+    "wall_seconds": 7193.859
+  },
+  "limits": [
+    "Partial failed build only; not a full-core resource qualification.",
+    "max_processes is the collector legacy name for task/thread count.",
+    "No original failed workspace, recipe or intent was modified; run 003 uses a new workspace."
+  ]
+}

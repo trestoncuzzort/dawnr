@@ -90,7 +90,9 @@ host had between 12 and 250 MiB of free physical memory, a host call to the
 builder had just timed out, and a rehearsal packaging job was running beside
 the build. Running a second job beside the authoritative build was a mistake
 of operation, not a defect in a package. The workspace, evidence and failed
-intent of runs 001 and 002 are preserved.
+intent of runs 001 and 002 are preserved; the
+[failure receipt](receipts/native-dev-20261105/core-002-failure.json) binds
+the original logs by digest and records the resource summary.
 
 **Authoritative core run 003 started on 2026-11-05 from commit `05cc4d3e`**
 with the same limits. The glibc suite now runs with the timeout factor the
