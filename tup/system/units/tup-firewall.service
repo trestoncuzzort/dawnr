@@ -1,0 +1,17 @@
+[Unit]
+Description=TUP host firewall
+DefaultDependencies=no
+Wants=network-pre.target
+Before=network-pre.target tup-sshd.service shutdown.target
+After=local-fs.target
+Conflicts=shutdown.target
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/usr/sbin/nft -f /etc/tup/firewall.nft
+ExecReload=/usr/sbin/nft -f /etc/tup/firewall.nft
+# Deliberately retain kernel rules when the unit stops. Requires= stops SSH.
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,23 @@
+[Unit]
+Description=TUP owner SSH access
+After=network.target tup-firewall.service
+Requires=tup-firewall.service
+ConditionPathExists=/etc/tup/owner-enrolled.json
+StartLimitIntervalSec=60
+StartLimitBurst=5
+
+[Service]
+Type=simple
+ExecStartPre=/usr/bin/ssh-keygen -A
+ExecStartPre=/usr/sbin/sshd -t -f /etc/ssh/sshd_config
+ExecStart=/usr/sbin/sshd -D -e -f /etc/ssh/sshd_config
+ExecReload=/usr/sbin/sshd -t -f /etc/ssh/sshd_config
+ExecReload=/usr/bin/kill -HUP $MAINPID
+KillMode=control-group
+TimeoutStopSec=30
+Restart=on-failure
+RestartSec=5
+UMask=0077
+
+[Install]
+WantedBy=multi-user.target

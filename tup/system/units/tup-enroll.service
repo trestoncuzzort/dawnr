@@ -1,0 +1,25 @@
+[Unit]
+Description=TUP owner enrollment from the boot media
+Documentation=file:///usr/lib/tup/remote/enroll.py
+DefaultDependencies=no
+After=local-fs.target systemd-udevd.service systemd-udev-trigger.service
+Before=tup-firewall.service tup-sshd.service tup-console-status.service shutdown.target
+Conflicts=shutdown.target
+# Enrollment is applied exactly once; the marker is written last.
+ConditionPathExists=!/etc/tup/owner-enrolled.json
+
+[Service]
+Type=oneshot
+# An optional filesystem labelled TUP-ENROLL gets a short, bounded wait. Both
+# steps may fail: the boot media itself is searched next, and no input at all
+# is a normal boot without SSH.
+ExecStartPre=-/usr/bin/udevadm wait --timeout=5 /dev/disk/by-label/TUP-ENROLL
+ExecStartPre=-/usr/bin/mount --mkdir -o ro,nosuid,nodev,noexec /dev/disk/by-label/TUP-ENROLL /run/tup-enroll
+ExecStart=/usr/bin/python3 -I -B /usr/lib/tup/remote/enroll.py
+ExecStopPost=-/usr/bin/umount /run/tup-enroll
+TimeoutStartSec=180
+StandardOutput=journal+console
+StandardError=journal+console
+
+[Install]
+WantedBy=multi-user.target

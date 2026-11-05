@@ -1,0 +1,15 @@
+[Unit]
+Description=TUP enrollment status for the local console
+Documentation=file:///usr/lib/tup/remote/enroll.py
+After=tup-enroll.service
+# agetty reads /run/issue.d/*.issue after /etc/issue (util-linux 2.41 and later).
+Wants=getty-pre.target
+Before=getty-pre.target
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/usr/bin/python3 -I -B /usr/lib/tup/remote/enroll.py --console-status
+
+[Install]
+WantedBy=multi-user.target
