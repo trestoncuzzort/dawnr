@@ -242,7 +242,8 @@ def write_private_directory(destination: Path, outputs: dict[str, bytes]) -> Non
     if os.name != "posix":
         raise Refusal("write enrollment on Linux, where ownership and mode can be checked")
     destination = destination.absolute()
-    if any(name not in {"sshd_config", "authorized_keys", "tup-sshd.service", "ENROLLMENT-PLAN.json"}
+    if any(name not in {"sshd_config", "authorized_keys", "tup-sshd.service", "ENROLLMENT-PLAN.json",
+                        "firewall.nft", "tup-firewall.service", "FIREWALL-PLAN.json"}
            for name in outputs):
         raise Refusal("unexpected enrollment output name")
     parent = destination.parent

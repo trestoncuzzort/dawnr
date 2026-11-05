@@ -1,0 +1,3072 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1//EN"
+    "http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html;charset=iso-8859-1" />
+    <title>Security Advisories</title>
+    <link rel="stylesheet" type="text/css" href="/css/main.css" />
+  </head>
+  <body>
+    <div id="banner">
+      <a href="/index.html">
+<!--
+        <img src="/images/lfs-logo.png" 
+        alt="Linux From Scratch | Your Distro, Your Rules" /> 
+-->
+<!--  High res image, but it needs size/location help.  
+      The old image was 192x75, but the new image has a ratio of 2 (1024x512).
+-->
+     <img src="/images/linux-from-scratch.png" height="96" width="192"
+          alt="Linux From Scratch | Your Distro, Your Rules" />
+      </a>
+    </div>
+    
+    <!-- SiteSearch Google -->
+    <form id ="search" method="get" action="https://www.google.com/custom">
+      <p>
+         <input type="hidden" name="client" value="pub-1920546463376456" />
+         <input type="hidden" name="forid" value="1" />
+         <input type="hidden" name="ie" value="ISO-8859-1" />
+         <input type="hidden" name="oe" value="ISO-8859-1" />
+         <input type="hidden" name="safe" value="active" />
+         <input type="hidden" name="cof"
+          value="GALT:#008000;GL:1;DIV:#336699;VLC:663399;AH:center;BGC:FFFFFF;LBGC:336699;ALC:0000FF;LC:0000FF;T:000000;GFNT:0000FF;GIMP:0000FF;LH:50;LW:128;L:http://www.linuxfromscratch.org/images/lfs-logo.png;S:http://www.linuxfromscratch.org;FORID:1" />
+         <input type="hidden" name="hl" value="en" />
+         <input type="hidden" name="domains" value="linuxfromscratch.org" />
+         <input type="text" name="q" size="31" maxlength="255" id="sbi" />
+      </p>
+      <p>
+         <input type="submit" name="sa" value="Google Search" id="sbb" />
+         <input type="radio" name="sitesearch" value="" id="ss0" />
+         <label for="ss0" title="Search the Web">Web</label>
+         <input type="radio" name="sitesearch" value="linuxfromscratch.org" 
+                checked="checked" id="ss1" />
+         <label for="ss1" title="Search www.linuxfromscratch.org">LFS</label>
+      </p>
+    </form> 
+
+   <!-- Search Mailing Lists -->
+<!--
+   <form id="search" method="get" action="http://search.linuxfromscratch.org/index.cgi">
+     <p>
+      <label title="Enter your search terms">
+        <input type="text" name="query" size="31" maxlength="255" accesskey="s" />
+      </label>
+      <label title="Submit the search terms">
+        <input type="submit" value="Search" />
+      </label>
+     </p>
+   </form>
+-->
+    <div class="navbar">
+      <ul id="menu">
+        <li><a id="patches" href="/patches/">Patches</a></li>
+        <li><a id="hints" href="/hints/">Hints</a></li>
+        <li><a id="slfs" href="/slfs/">SLFS</a></li>
+        <li><a id="glfs" href="/glfs/">GLFS</a></li>
+        <li><a id="mlfs" href="/mlfs/">MLFS</a></li>
+        <li><a id="alfs" href="/alfs/">ALFS</a></li>
+        <li><a id="blfs" href="/blfs/">BLFS</a></li>
+        <li><a id="lfs" href="/lfs/">LFS</a></li>
+      </ul>
+    </div>
+
+<!--       <li><a id="livecd" href="/livecd/">LiveCD</a></li> -->
+<!--        <li><a id="hlfs" href="/hlfs/">HLFS</a></li> -->
+<!--        <li><a id="clfs" href="https://trac.clfs.org/">CLFS</a></li>-->
+    <div id="leftmenu">
+      <ul id="leftmenulist">
+        <li><a href="/">Home</a></li>
+        <li><a href="/news.html">News</a></li>
+        <li><a href="/support.html">Support</a></li>
+        <li><a href="/advisories">Advisories</a></li>
+        <li><a href="/faq">General FAQ</a></li>
+        <li><a href="/mail.html">Mailing Lists</a></li>
+        <li><a href="https://wiki.linuxfromscratch.org/lfs/">Wiki</a></li>
+        <li><a href="/search.html">Search</a></li>
+        <li><a href="/credits.html">Credits</a></li>
+        <li><a href="/contribute.html">Contribute</a></li>
+        <li><a href="/mirrors.html">Website Mirrors</a></li>
+        <li><a href="/sitemap.html">Site Map</a></li>
+      </ul>
+    </div>
+<div class='main'>
+<h2>Linux From Scratch Security Advisories</h2>
+<form method='post' action='/advisories/index.php'>
+  <p>In the fields below, select the type of search:</p>
+  <ul>
+    <li>Selecting the desired version will display all advisories
+        associated with that LFS/BLFS release.</li>
+    <li>Selecting 'Package Name' will display all the advisories associated with
+        all versions of the input package name. Package names may only 
+        contain alphanumeric characters plus hyphens and underscores. 
+        All other characters will be rejected. Partial names are accepted.</li>
+    <!--<li>Selecting 'Description' will search the descriptions of all packages 
+        for the input text and show maching advisories.  Do not use 
+        punctuation characters.</li>-->
+    <li>Selecting 'All Advisories' will show all the advisories in the database.  
+        This could be quite long.</li>
+    <li>If the 'Severity' box is checked, the results of a search will limit
+        the output to advisories with the selected severity level.</li>
+  </ul>
+
+  <p>Search by:</p>
+
+  <table style="margin-left: auto; margin-right:auto;">
+  <tr>
+      <td style="align: left; font-weight: bold">
+        <input type="radio" id="book" name="stype" value="Book" style="margin: 0; vertical-align: top" checked=checked /> 
+        Version</td>
+
+      <td><select name="release"><option selected='selected'>13.1</option>
+<option>13.0</option>
+<option>12.4</option>
+<option>12.3</option>
+<option>12.2</option>
+<option>12.1</option>
+<option>12.0</option>
+<option>11.3</option>
+<option>11.2</option>
+<option>11.1</option>
+<option>11.0</option>
+<option>10.1</option>
+<option>10.0</option>
+          </select>
+      </td>
+  </tr>
+
+  <tr>
+      <td style="align: left; font-weight: bold">
+        <input type="radio" id="pname" name="stype" value="package" style="margin: 0; vertical-align: top"  />
+        Package Name</td>
+     
+      <td><input type="text" name="package" size="12" maxlength="30" value=""
+                 style='color: black;'/></td>
+  </tr>
+
+<!--  <tr>
+      <td style="align: left; font-weight: bold">
+        <input type="radio" id="descrip" name="stype" value="descr" style="margin: 0; vertical-align: top"  />
+        Description</td>
+
+      <td><input type="text" name="search" size="12" maxlength="30" 
+                 value="" style='color: black;'/> </td>
+  </tr>-->
+
+  <tr>
+      <td style="align: left; font-weight: bold">
+        <input type="radio" id="all" name="stype" value='all' style="margin: 0; vertical-align: top"  />
+        All Advisories</td>
+  </tr>
+ 
+  <tr style="border: 1px solid red">
+      <td style="align: left; font-weight: bold; padding-top: 0.0em;">
+        <input type="checkbox" id="severity" name="severity" value="true" 
+               style="margin: 1em; vertical-align: middle;"  />
+        <!--<div style="margin-top: 0.9em; margin-right: 2em; float: right;">Severity</div>-->
+        <span style="">Severity</span>
+      </td>
+
+      <td style="padding-top: 0.0em;">
+          <select name="level">
+            <option >Critical</option>
+            <option >High</option>
+            <option selected='selected'>Medium</option>
+            <option >Low</option>
+          </select>
+      </td>
+  </tr>
+
+  <tr>
+      <td style="align: left; font-weight: bold;">
+        <input type="checkbox" id="desc" name="desc" value="true" 
+               style="margin: 1em; vertical-align: top" checked='checked' />
+        <div style="margin-top: 0.9em; margin-right: 2em; float: right;">Show Descriptions</div>
+      </td>
+  </tr>
+
+
+  <tr>
+      <th colspan="2" class="button" style="padding-top: 1em">
+           <input type="submit" name='submit' value="Search" style="color: black" /></th>
+  </tr>
+  </table>
+
+  </form>
+<div><table style='margin-left: auto; margin-right: auto; margin-top: 2em;'>
+<tr><th style='text-align:left;'>ID</th>
+                          <th style='text-align:left;'>Package</th>
+                          <th style='text-align:left;'>DateID</th>
+                          <th style='text-align:left;'>Severity</th>
+<tr><td>sa-13.1-100</td> 
+           <td>libarchive</td> 
+           <td>2026-10-31</td> 
+           <td>Medium</td></tr>
+<tr><td colspan='4'><p>libarchive 3.8.11 fixes several security issues, most of which can be
+triggered by processing a crafted archive. No CVEs have been assigned.
+A malformed ISO 9660 image with Joliet extensions could cause unbounded
+recursion and a crash, a crafted RAR archive could cause excessive memory
+allocation for a stored symbolic link, and a crafted XAR archive could
+trigger an integer overflow that caused its table of contents to be
+processed twice. When skipping stored entries in a streamed ZIP archive,
+file contents could be mistaken for the end of the entry, causing
+libarchive to interpret the rest of the archive differently from other
+tools. A memory leak when parsing ISO 9660 Rock Ridge entries was also
+fixed.</p>
+
+<p>The XAR reader no longer cleans up the global libxml2 state, which
+could cause crashes or use-after-free errors in applications that also
+use libxml2 themselves. An integer overflow in wide string allocation
+that could lead to a heap buffer overflow on 32-bit systems, and a crash
+when an extended attribute changes while it is being read, were also
+fixed. In addition, bsdunzip no longer crashes when reading an archive
+from standard input. Update to libarchive-3.8.11 or later.</p></td></tr>
+<tr><td>sa-13.1-099</td> 
+           <td>libslirp</td> 
+           <td>2026-10-31</td> 
+           <td>Medium</td></tr>
+<tr><td colspan='4'><p>libslirp 4.9.7 fixes several security issues that can be triggered by
+a guest using user-mode networking (for example, QEMU's user networking
+or rootless Podman containers). No CVEs have been assigned. The most
+serious is an out-of-bounds heap read in icmp_forward_error() that could
+disclose memory from the host process to the guest in ICMP error
+messages.</p>
+
+<p>A guest could also crash the host process by corrupting the packet
+queue in if_output() when one connection generates a large amount of
+traffic, exhaust host memory by repeatedly sending IPv6 pings to the
+virtual gateway because of a memory leak, and add ARP or NDP entries for
+multicast addresses and for libslirp's own addresses. Update to
+libslirp-4.9.7 or later.</p></td></tr>
+<tr><td>sa-13.1-098</td> 
+           <td>fribidi</td> 
+           <td>2026-10-31</td> 
+           <td>Medium</td></tr>
+<tr><td colspan='4'><p>fribidi 1.0.18 fixes several security issues that were found by an
+automated scan. No CVEs have been assigned. The most serious is an
+out-of-bounds write in fribidi_remove_bidi_marks() when the position maps
+returned by one call are passed to a later call. Text consisting of many
+back-to-back isolates, or of deeply nested isolates containing brackets,
+could also take quadratic time to process, allowing a denial of service in
+any application that uses fribidi (for example, through Pango) to display
+untrusted text.</p>
+
+<p>Other fixes include an integer overflow in the run-pool allocation on
+32-bit systems that could lead to a heap buffer overflow, crashes caused
+by unchecked memory allocations, an out-of-bounds read in the CapRTL
+decoder on platforms where char is unsigned, and stack buffer overflows in
+the fribidi and fribidi-caprtl2utf8 programs when producing UTF-8 output.
+This release also brings bidirectional text handling closer to the Unicode
+standard, which may change the output for unusual input. Update to
+fribidi-1.0.18 or later.</p></td></tr>
+<tr><td>sa-13.1-097</td> 
+           <td>aspell</td> 
+           <td>2026-10-31</td> 
+           <td>Medium</td></tr>
+<tr><td colspan='4'><p>aspell 0.60.8.3 fixes four security vulnerabilities that can be triggered 
+when processing crafted dictionary or word list files. 
+<a href="https://www.cve.org/CVERecord?id=CVE-2026-103658">CVE-2026-103658</a> 
+is an integer overflow in String::reserve() that leads to a heap buffer 
+overflow when loading a crafted compiled dictionary, which may allow 
+arbitrary code execution. 
+<a href="https://www.cve.org/CVERecord?id=CVE-2026-75818">CVE-2026-75818</a> 
+is a heap buffer overflow in prezip-bin when decompressing a crafted file, 
+<a href="https://www.cve.org/CVERecord?id=CVE-2026-75819">CVE-2026-75819</a> 
+is an out-of-bounds read caused by unvalidated offsets in a compiled 
+dictionary header, and 
+<a href="https://www.cve.org/CVERecord?id=CVE-2026-75820">CVE-2026-75820</a> 
+is heap corruption caused by truncating the length of very long words in a 
+personal word list. Several other memory safety problems in the handling of 
+affix, character map, and phonetic data files were also fixed. Update to 
+aspell-0.60.8.3 or later.</p>
+
+</td></tr>
+<tr><td>sa-13.1-096</td> 
+           <td>libjpeg-turbo</td> 
+           <td>2026-10-29</td> 
+           <td>Medium</td></tr>
+<tr><td colspan='4'><p>libjpeg-turbo-3.2.1 fixes several security vulnerabilities. A division by 
+zero could occur when loading a non-grayscale indexed-color PNG image with an 
+unspecified pixel format, causing a crash. A buffer overrun could occur when 
+partially decompressing a crafted 4:2:0 JPEG image using merged upsampling 
+and very small crop regions, and the RGB565 color converter could overrun its 
+buffers when decompressing multiple scanlines at once. On 32-bit systems, an 
+integer overflow could lead to a buffer overrun when loading packed-pixel 
+images with more than 2^31 components. A use-after-free could occur when the 
+same undersized destination buffer was used for multiple simultaneous 
+transform operations. The TurboJPEG API was also hardened against reuse after 
+a failed header decompression, which could lead to undersized buffers, and 
+against applying one-pass quantization or RGB565 conversion to 12-bit JPEG 
+images, which could overrun a color index array. If you use libjpeg-turbo, 
+you should update to libjpeg-turbo-3.2.1. 
+<a href="https://www.cve.org/CVERecord?id=CVE-2026-75466">CVE-2026-75466</a>.</p>
+
+</td></tr>
+<tr><td>sa-13.1-095</td> 
+           <td>libheif</td> 
+           <td>2026-10-29</td> 
+           <td>High</td></tr>
+<tr><td colspan='4'><p>libheif-1.23.7 fixes sixteen security vulnerabilities that can be 
+triggered by processing a crafted HEIF or AVIF image. Fourteen of them are 
+rated high by upstream. They include a heap buffer overflow when padding an 
+image to an inconsistent size, a heap use-after-free when grid tiles are 
+decoded in parallel (only in libheif-1.23.6), a use-after-free or double 
+free caused by a stale handle in heif_context_encode_thumbnail(), an 
+out-of-bounds read in the OpenH264 decoder plugin, and two ways to bypass 
+the coded-size check in the AV1 decoding path. Many of the remaining issues 
+allow a denial of service through excessive CPU usage (from derived images, 
+large numbers of coded pictures, transformation or colr associations, 
+samples that produce no output, many chunks and stsc entries, and cyclic 
+Exif IFD pointers), and a deadlock can occur during parallel grid decoding. 
+In addition, the gdk-pixbuf loader could crash on certain files, and the 
+heif-dec and heif-info utilities mishandled some sample entries. If you use 
+libheif, you should update to libheif-1.23.7 as soon as possible.</p>
+<p> 
+<a href="https://github.com/strukturag/libheif/security/advisories/GHSA-xwcv-cp39-m2w4">GHSA-xwcv-c
+p39-m2w4</a>, 
+<a href="https://github.com/strukturag/libheif/security/advisories/GHSA-jx54-6rm6-2cgj">GHSA-jx54-6
+rm6-2cgj</a>, 
+<a href="https://github.com/strukturag/libheif/security/advisories/GHSA-fpr5-xpfr-vcq3">GHSA-fpr5-x
+pfr-vcq3</a>, 
+<a href="https://github.com/strukturag/libheif/security/advisories/GHSA-35mc-3887-rr37">GHSA-35mc-3
+887-rr37</a>, 
+<a href="https://github.com/strukturag/libheif/security/advisories/GHSA-hpg4-g2gc-pq42">GHSA-hpg4-g
+2gc-pq42</a>, 
+<a href="https://github.com/strukturag/libheif/security/advisories/GHSA-9rpf-2x22-78m9">GHSA-9rpf-2
+x22-78m9</a>, 
+<a href="https://github.com/strukturag/libheif/security/advisories/GHSA-48p4-gj45-w9v6">GHSA-48p4-g
+j45-w9v6</a>, 
+<a href="https://github.com/strukturag/libheif/security/advisories/GHSA-2g6j-vhr6-6wrj">GHSA-2g6j-v
+hr6-6wrj</a>, 
+<a href="https://github.com/strukturag/libheif/security/advisories/GHSA-7qm8-hj35-269r">GHSA-7qm8-h
+j35-269r</a>, 
+<a href="https://github.com/strukturag/libheif/security/advisories/GHSA-hhg3-fxg7-3gxw">GHSA-hhg3-f
+xg7-3gxw</a>, 
+<a href="https://github.com/strukturag/libheif/security/advisories/GHSA-73j7-gvm9-x8q6">GHSA-73j7-g
+vm9-x8q6</a>, 
+<a href="https://github.com/strukturag/libheif/security/advisories/GHSA-74mj-m37q-h3q9">GHSA-74mj-m
+37q-h3q9</a>, 
+<a href="https://github.com/strukturag/libheif/security/advisories/GHSA-rcqc-842v-m26h">GHSA-rcqc-8
+42v-m26h</a>, 
+<a href="https://github.com/strukturag/libheif/security/advisories/GHSA-pfcm-ffqg-84hx">GHSA-pfcm-f
+fqg-84hx</a>, 
+<a href="https://github.com/strukturag/libheif/security/advisories/GHSA-gff5-3vgr-p8h2">GHSA-gff5-3
+vgr-p8h2</a>, 
+<a href="https://github.com/strukturag/libheif/security/advisories/GHSA-r9cg-w542-g7hj">GHSA-r9cg-w
+542-g7hj</a>.</p>
+
+</td></tr>
+<tr><td>sa-13.1-094</td> 
+           <td>thunderbird</td> 
+           <td>2026-10-29</td> 
+           <td>High</td></tr>
+<tr><td colspan='4'><p>Thunderbird-153.6.0esr fixes nine security vulnerabilities specific to 
+Thunderbird, in addition to the vulnerabilities it shares with Firefox 
+(see advisory sa-13.1-093). Displaying a crafted message could cause 
+Thunderbird to load an attacker-chosen URL through an OpenPGP key 
+attachment, and replying to a crafted message could include the content of 
+other messages in the reply, disclosing them to the attacker. Calendar 
+discovery, RSS feed subscriptions and Matrix chat sessions could be 
+redirected to local files or network shares, and the restriction on remote 
+UNC paths in mailbox: URLs could be bypassed. A request forgery issue was 
+also fixed in the handling of news: links. In addition, an integer overflow 
+in the libmime buffer handling could lead to heap corruption while 
+processing a crafted message, and a use-after-free in S/MIME decryption 
+could occur while the security device password prompt was displayed. If you 
+use Thunderbird, you should update to thunderbird-153.6.0esr as soon as 
+possible.</p> 
+<p>
+<a href="https://www.cve.org/CVERecord?id=CVE-2026-118174">CVE-2026-118174</a>, 
+<a href="https://www.cve.org/CVERecord?id=CVE-2026-118175">CVE-2026-118175</a>, 
+<a href="https://www.cve.org/CVERecord?id=CVE-2026-118176">CVE-2026-118176</a>, 
+<a href="https://www.cve.org/CVERecord?id=CVE-2026-118177">CVE-2026-118177</a>, 
+<a href="https://www.cve.org/CVERecord?id=CVE-2026-118178">CVE-2026-118178</a>, 
+<a href="https://www.cve.org/CVERecord?id=CVE-2026-118179">CVE-2026-118179</a>, 
+<a href="https://www.cve.org/CVERecord?id=CVE-2026-118180">CVE-2026-118180</a>, 
+<a href="https://www.cve.org/CVERecord?id=CVE-2026-110247">CVE-2026-110247</a>, 
+<a href="https://www.cve.org/CVERecord?id=CVE-2026-113869">CVE-2026-113869</a>.</p>
+
+</td></tr>
+<tr><td>sa-13.1-093</td> 
+           <td>firefox</td> 
+           <td>2026-10-29</td> 
+           <td>Critical</td></tr>
+<tr><td colspan='4'><p>Firefox-153.6.0esr fixes 145 security vulnerabilities, 95 of which 
+Mozilla rates as high impact, 44 as moderate, and 6 as low. Most of them 
+are use-after-free errors, invalid pointer uses, and incorrect boundary 
+conditions throughout the browser, including the DOM, Layout, SVG, XML, 
+XSLT, CSS parsing, Graphics (Canvas2D, WebRender and WebGL), Audio/Video, 
+WebRTC, Networking, and the JavaScript engine and its JIT compiler. These 
+can lead to crashes and potentially to arbitrary code execution when a 
+user visits a crafted web page. Several of the vulnerabilities allow a 
+compromised content process to escape the sandbox (in the DOM: Navigation, 
+Form Manager, DOM: Networking, Storage: Quota Manager, Print Preview, 
+Graphics, CanvasWebGL, WebRender and Widget components), and others allow 
+privilege escalation (in the Networking, Canvas2D, WebRTC: Networking, 
+Toolkit and UI Events components). Other issues include same-origin policy 
+bypasses in the DOM: Navigation, CSS and Address Bar components, a JIT 
+miscompilation in the JavaScript engine and in WebAssembly, information 
+disclosure through uninitialized memory in the Audio/Video, Canvas2D and 
+Networking components, site isolation bypasses in the HTTP, Service Worker 
+and Navigation code, a cryptographic issue in WebRTC networking, a spoofing 
+issue, and race conditions in the IPC and accessibility code. One of the 
+moderate vulnerabilities (in the DLL Services component) only affects 
+Windows. If you use Firefox, you should update to firefox-153.6.0esr as 
+soon as possible.</p>
+<p>
+
+
+<a href="https://www.cve.org/CVERecord?id=CVE-2026-117860">CVE-2026-117860</a>, 
+<a href="https://www.cve.org/CVERecord?id=CVE-2026-117861">CVE-2026-117861</a>, 
+<a href="https://www.cve.org/CVERecord?id=CVE-2026-117862">CVE-2026-117862</a>, 
+<a href="https://www.cve.org/CVERecord?id=CVE-2026-117863">CVE-2026-117863</a>, 
+<a href="https://www.cve.org/CVERecord?id=CVE-2026-117864">CVE-2026-117864</a>, 
+<a href="https://www.cve.org/CVERecord?id=CVE-2026-117865">CVE-2026-117865</a>, 
+<a href="https://www.cve.org/CVERecord?id=CVE-2026-117866">CVE-2026-117866</a>, 
+<a href="https://www.cve.org/CVERecord?id=CVE-2026-117867">CVE-2026-117867</a>, 
+<a href="https://www.cve.org/CVERecord?id=CVE-2026-117868">CVE-2026-117868</a>, 
+<a href="https://www.cve.org/CVERecord?id=CVE-2026-117869">CVE-2026-117869</a>, 
+<a href="https://www.cve.org/CVERecord?id=CVE-2026-117870">CVE-2026-117870</a>, 
+<a href="https://www.cve.org/CVERecord?id=CVE-2026-117871">CVE-2026-117871</a>, 
+<a href="https://www.cve.org/CVERecord?id=CVE-2026-117872">CVE-2026-117872</a>, 
+<a href="https://www.cve.org/CVERecord?id=CVE-2026-117873">CVE-2026-117873</a>, 
+<a href="https://www.cve.org/CVERecord?id=CVE-2026-117874">CVE-2026-117874</a>, 
+<a href="https://www.cve.org/CVERecord?id=CVE-2026-117875">CVE-2026-117875</a>, 
+<a href="https://www.cve.org/CVERecord?id=CVE-2026-117876">CVE-2026-117876</a>, 
+<a href="https://www.cve.org/CVERecord?id=CVE-2026-117877">CVE-2026-117877</a>, 
+<a href="https://www.cve.org/CVERecord?id=CVE-2026-117878">CVE-2026-117878</a>, 
+<a href="https://www.cve.org/CVERecord?id=CVE-2026-117879">CVE-2026-117879</a>, 
+<a href="https://www.cve.org/CVERecord?id=CVE-2026-117880">CVE-2026-117880</a>, 
+<a href="https://www.cve.org/CVERecord?id=CVE-2026-117881">CVE-2026-117881</a>, 
+<a href="https://www.cve.org/CVERecord?id=CVE-2026-117882">CVE-2026-117882</a>, 
+<a href="https://www.cve.org/CVERecord?id=CVE-2026-117883">CVE-2026-117883</a>, 
+<a href="https://www.cve.org/CVERecord?id=CVE-2026-117884">CVE-2026-117884</a>, 
+<a href="https://www.cve.org/CVERecord?id=CVE-2026-117885">CVE-2026-117885</a>, 
+<a href="https://www.cve.org/CVERecord?id=CVE-2026-117886">CVE-2026-117886</a>, 
+<a href="https://www.cve.org/CVERecord?id=CVE-2026-117887">CVE-2026-117887</a>, 
+<a href="https://www.cve.org/CVERecord?id=CVE-2026-117888">CVE-2026-117888</a>, 
+<a href="https://www.cve.org/CVERecord?id=CVE-2026-117889">CVE-2026-117889</a>, 
+<a href="https://www.cve.org/CVERecord?id=CVE-2026-117890">CVE-2026-117890</a>, 
+<a href="https://www.cve.org/CVERecord?id=CVE-2026-117891">CVE-2026-117891</a>, 
+<a href="https://www.cve.org/CVERecord?id=CVE-2026-117892">CVE-2026-117892</a>, 
+<a href="https://www.cve.org/CVERecord?id=CVE-2026-117893">CVE-2026-117893</a>, 
+<a href="https://www.cve.org/CVERecord?id=CVE-2026-117894">CVE-2026-117894</a>, 
+<a href="https://www.cve.org/CVERecord?id=CVE-2026-117895">CVE-2026-117895</a>, 
+<a href="https://www.cve.org/CVERecord?id=CVE-2026-117896">CVE-2026-117896</a>, 
+<a href="https://www.cve.org/CVERecord?id=CVE-2026-117897">CVE-2026-117897</a>, 
+<a href="https://www.cve.org/CVERecord?id=CVE-2026-117898">CVE-2026-117898</a>, 
+<a href="https://www.cve.org/CVERecord?id=CVE-2026-117899">CVE-2026-117899</a>, 
+<a href="https://www.cve.org/CVERecord?id=CVE-2026-117900">CVE-2026-117900</a>, 
+<a href="https://www.cve.org/CVERecord?id=CVE-2026-117901">CVE-2026-117901</a>, 
+<a href="https://www.cve.org/CVERecord?id=CVE-2026-117902">CVE-2026-117902</a>, 
+<a href="https://www.cve.org/CVERecord?id=CVE-2026-117903">CVE-2026-117903</a>, 
+<a href="https://www.cve.org/CVERecord?id=CVE-2026-117904">CVE-2026-117904</a>, 
+<a href="https://www.cve.org/CVERecord?id=CVE-2026-117905">CVE-2026-117905</a>, 
+<a href="https://www.cve.org/CVERecord?id=CVE-2026-117906">CVE-2026-117906</a>,
+<a href="https://www.cve.org/CVERecord?id=CVE-2026-117907">CVE-2026-117907</a>, 
+<a href="https://www.cve.org/CVERecord?id=CVE-2026-117908">CVE-2026-117908</a>, 
+<a href="https://www.cve.org/CVERecord?id=CVE-2026-117909">CVE-2026-117909</a>, 
+<a href="https://www.cve.org/CVERecord?id=CVE-2026-117910">CVE-2026-117910</a>, 
+<a href="https://www.cve.org/CVERecord?id=CVE-2026-117911">CVE-2026-117911</a>, 
+<a href="https://www.cve.org/CVERecord?id=CVE-2026-117912">CVE-2026-117912</a>, 
+<a href="https://www.cve.org/CVERecord?id=CVE-2026-117913">CVE-2026-117913</a>, 
+<a href="https://www.cve.org/CVERecord?id=CVE-2026-117914">CVE-2026-117914</a>, 
+<a href="https://www.cve.org/CVERecord?id=CVE-2026-117915">CVE-2026-117915</a>, 
+<a href="https://www.cve.org/CVERecord?id=CVE-2026-117916">CVE-2026-117916</a>, 
+<a href="https://www.cve.org/CVERecord?id=CVE-2026-117917">CVE-2026-117917</a>, 
+<a href="https://www.cve.org/CVERecord?id=CVE-2026-117918">CVE-2026-117918</a>, 
+<a href="https://www.cve.org/CVERecord?id=CVE-2026-117919">CVE-2026-117919</a>, 
+<a href="https://www.cve.org/CVERecord?id=CVE-2026-117920">CVE-2026-117920</a>, 
+<a href="https://www.cve.org/CVERecord?id=CVE-2026-117921">CVE-2026-117921</a>, 
+<a href="https://www.cve.org/CVERecord?id=CVE-2026-117922">CVE-2026-117922</a>, 
+<a href="https://www.cve.org/CVERecord?id=CVE-2026-117923">CVE-2026-117923</a>, 
+<a href="https://www.cve.org/CVERecord?id=CVE-2026-117924">CVE-2026-117924</a>, 
+<a href="https://www.cve.org/CVERecord?id=CVE-2026-117925">CVE-2026-117925</a>, 
+<a href="https://www.cve.org/CVERecord?id=CVE-2026-117926">CVE-2026-117926</a>, 
+<a href="https://www.cve.org/CVERecord?id=CVE-2026-117927">CVE-2026-117927</a>, 
+<a href="https://www.cve.org/CVERecord?id=CVE-2026-117928">CVE-2026-117928</a>, 
+<a href="https://www.cve.org/CVERecord?id=CVE-2026-117929">CVE-2026-117929</a>, 
+<a href="https://www.cve.org/CVERecord?id=CVE-2026-117930">CVE-2026-117930</a>, 
+<a href="https://www.cve.org/CVERecord?id=CVE-2026-117931">CVE-2026-117931</a>, 
+<a href="https://www.cve.org/CVERecord?id=CVE-2026-117932">CVE-2026-117932</a>, 
+<a href="https://www.cve.org/CVERecord?id=CVE-2026-117933">CVE-2026-117933</a>, 
+<a href="https://www.cve.org/CVERecord?id=CVE-2026-117934">CVE-2026-117934</a>, 
+<a href="https://www.cve.org/CVERecord?id=CVE-2026-117935">CVE-2026-117935</a>, 
+<a href="https://www.cve.org/CVERecord?id=CVE-2026-117936">CVE-2026-117936</a>, 
+<a href="https://www.cve.org/CVERecord?id=CVE-2026-117937">CVE-2026-117937</a>, 
+<a href="https://www.cve.org/CVERecord?id=CVE-2026-117938">CVE-2026-117938</a>, 
+<a href="https://www.cve.org/CVERecord?id=CVE-2026-117939">CVE-2026-117939</a>, 
+<a href="https://www.cve.org/CVERecord?id=CVE-2026-117940">CVE-2026-117940</a>, 
+<a href="https://www.cve.org/CVERecord?id=CVE-2026-117941">CVE-2026-117941</a>, 
+<a href="https://www.cve.org/CVERecord?id=CVE-2026-117942">CVE-2026-117942</a>, 
+<a href="https://www.cve.org/CVERecord?id=CVE-2026-117943">CVE-2026-117943</a>, 
+<a href="https://www.cve.org/CVERecord?id=CVE-2026-117944">CVE-2026-117944</a>, 
+<a href="https://www.cve.org/CVERecord?id=CVE-2026-117945">CVE-2026-117945</a>, 
+<a href="https://www.cve.org/CVERecord?id=CVE-2026-117946">CVE-2026-117946</a>, 
+<a href="https://www.cve.org/CVERecord?id=CVE-2026-117947">CVE-2026-117947</a>, 
+<a href="https://www.cve.org/CVERecord?id=CVE-2026-117948">CVE-2026-117948</a>, 
+<a href="https://www.cve.org/CVERecord?id=CVE-2026-117949">CVE-2026-117949</a>,
+<a href="https://www.cve.org/CVERecord?id=CVE-2026-117950">CVE-2026-117950</a>, 
+<a href="https://www.cve.org/CVERecord?id=CVE-2026-117951">CVE-2026-117951</a>, 
+<a href="https://www.cve.org/CVERecord?id=CVE-2026-117952">CVE-2026-117952</a>, 
+<a href="https://www.cve.org/CVERecord?id=CVE-2026-117953">CVE-2026-117953</a>, 
+<a href="https://www.cve.org/CVERecord?id=CVE-2026-117954">CVE-2026-117954</a>, 
+<a href="https://www.cve.org/CVERecord?id=CVE-2026-117955">CVE-2026-117955</a>, 
+<a href="https://www.cve.org/CVERecord?id=CVE-2026-100801">CVE-2026-100801</a>, 
+<a href="https://www.cve.org/CVERecord?id=CVE-2026-117956">CVE-2026-117956</a>, 
+<a href="https://www.cve.org/CVERecord?id=CVE-2026-117957">CVE-2026-117957</a>, 
+<a href="https://www.cve.org/CVERecord?id=CVE-2026-117958">CVE-2026-117958</a>, 
+<a href="https://www.cve.org/CVERecord?id=CVE-2026-117959">CVE-2026-117959</a>, 
+<a href="https://www.cve.org/CVERecord?id=CVE-2026-117960">CVE-2026-117960</a>, 
+<a href="https://www.cve.org/CVERecord?id=CVE-2026-117961">CVE-2026-117961</a>, 
+<a href="https://www.cve.org/CVERecord?id=CVE-2026-117962">CVE-2026-117962</a>, 
+<a href="https://www.cve.org/CVERecord?id=CVE-2026-117963">CVE-2026-117963</a>, 
+<a href="https://www.cve.org/CVERecord?id=CVE-2026-117964">CVE-2026-117964</a>, 
+<a href="https://www.cve.org/CVERecord?id=CVE-2026-117965">CVE-2026-117965</a>, 
+<a href="https://www.cve.org/CVERecord?id=CVE-2026-117966">CVE-2026-117966</a>, 
+<a href="https://www.cve.org/CVERecord?id=CVE-2026-117967">CVE-2026-117967</a>, 
+<a href="https://www.cve.org/CVERecord?id=CVE-2026-117968">CVE-2026-117968</a>, 
+<a href="https://www.cve.org/CVERecord?id=CVE-2026-117969">CVE-2026-117969</a>, 
+<a href="https://www.cve.org/CVERecord?id=CVE-2026-117970">CVE-2026-117970</a>, 
+<a href="https://www.cve.org/CVERecord?id=CVE-2026-117971">CVE-2026-117971</a>, 
+<a href="https://www.cve.org/CVERecord?id=CVE-2026-117972">CVE-2026-117972</a>, 
+<a href="https://www.cve.org/CVERecord?id=CVE-2026-117973">CVE-2026-117973</a>, 
+<a href="https://www.cve.org/CVERecord?id=CVE-2026-117974">CVE-2026-117974</a>, 
+<a href="https://www.cve.org/CVERecord?id=CVE-2026-117975">CVE-2026-117975</a>, 
+<a href="https://www.cve.org/CVERecord?id=CVE-2026-117976">CVE-2026-117976</a>, 
+<a href="https://www.cve.org/CVERecord?id=CVE-2026-117977">CVE-2026-117977</a>, 
+<a href="https://www.cve.org/CVERecord?id=CVE-2026-117978">CVE-2026-117978</a>, 
+<a href="https://www.cve.org/CVERecord?id=CVE-2026-117979">CVE-2026-117979</a>, 
+<a href="https://www.cve.org/CVERecord?id=CVE-2026-117980">CVE-2026-117980</a>, 
+<a href="https://www.cve.org/CVERecord?id=CVE-2026-117981">CVE-2026-117981</a>, 
+<a href="https://www.cve.org/CVERecord?id=CVE-2026-117982">CVE-2026-117982</a>, 
+<a href="https://www.cve.org/CVERecord?id=CVE-2026-117983">CVE-2026-117983</a>, 
+<a href="https://www.cve.org/CVERecord?id=CVE-2026-117984">CVE-2026-117984</a>, 
+<a href="https://www.cve.org/CVERecord?id=CVE-2026-117985">CVE-2026-117985</a>, 
+<a href="https://www.cve.org/CVERecord?id=CVE-2026-117986">CVE-2026-117986</a>, 
+<a href="https://www.cve.org/CVERecord?id=CVE-2026-117987">CVE-2026-117987</a>, 
+<a href="https://www.cve.org/CVERecord?id=CVE-2026-117988">CVE-2026-117988</a>, 
+<a href="https://www.cve.org/CVERecord?id=CVE-2026-117989">CVE-2026-117989</a>, 
+<a href="https://www.cve.org/CVERecord?id=CVE-2026-117990">CVE-2026-117990</a>, 
+<a href="https://www.cve.org/CVERecord?id=CVE-2026-117991">CVE-2026-117991</a>, 
+<a href="https://www.cve.org/CVERecord?id=CVE-2026-117992">CVE-2026-117992</a>, 
+<a href="https://www.cve.org/CVERecord?id=CVE-2026-117993">CVE-2026-117993</a>, 
+<a href="https://www.cve.org/CVERecord?id=CVE-2026-117994">CVE-2026-117994</a>, 
+<a href="https://www.cve.org/CVERecord?id=CVE-2026-117995">CVE-2026-117995</a>, 
+<a href="https://www.cve.org/CVERecord?id=CVE-2026-117996">CVE-2026-117996</a>,
+<a href="https://www.cve.org/CVERecord?id=CVE-2026-117997">CVE-2026-117997</a>, 
+<a href="https://www.cve.org/CVERecord?id=CVE-2026-117998">CVE-2026-117998</a>, 
+<a href="https://www.cve.org/CVERecord?id=CVE-2026-117999">CVE-2026-117999</a>, 
+<a href="https://www.cve.org/CVERecord?id=CVE-2026-118000">CVE-2026-118000</a>, 
+<a href="https://www.cve.org/CVERecord?id=CVE-2026-118002">CVE-2026-118002</a>, 
+<a href="https://www.cve.org/CVERecord?id=CVE-2026-118003">CVE-2026-118003</a>, 
+<a href="https://www.cve.org/CVERecord?id=CVE-2026-118004">CVE-2026-118004</a>.</p>
+
+
+
+
+</td></tr>
+<tr><td>sa-13.1-092</td> 
+           <td>libslirp</td> 
+           <td>2026-10-29</td> 
+           <td>Medium</td></tr>
+<tr><td colspan='4'><p>libslirp-4.9.6 fixes several security issues that can be triggered by a 
+guest virtual machine or container using user-mode networking. The ICMP 
+echo reply length was not updated to match the data actually received, 
+which could leak the host's real IP address to the guest under some 
+conditions. The TFTP server did not check the space available in the reply 
+buffer, completing the fix for a heap buffer overflow that could be 
+triggered when the host is configured with a small interface MTU. The TFTP 
+server could also read before the start of a buffer when given an empty 
+filename. In addition, packets with invalid ("martian") addresses are now 
+rejected. 
+<a href="https://www.cve.org/CVERecord?id=CVE-2026-115449">CVE-2026-115449</a>, 
+<a href="https://www.cve.org/CVERecord?id=CVE-2026-95508">CVE-2026-95508</a>.</p>
+
+</td></tr>
+<tr><td>sa-13.1-091</td> 
+           <td>glib-networking</td> 
+           <td>2026-10-29</td> 
+           <td>Medium</td></tr>
+<tr><td colspan='4'><p>glib-networking-2.90.1 fixes five security vulnerabilities. Three of 
+them can affect BLFS systems built with the default GnuTLS backend: a 
+remote TLS peer can cause unbounded memory growth by sending many TLS 1.3 
+session tickets, or by sending application data during the handshake, 
+leading to a denial of service; and the client session cache key was not 
+updated after a certificate property changed, which could allow resuming 
+a stale TLS session. A fourth issue only affects the optional OpenSSL 
+backend, which failed to validate the certificate purpose, allowing an 
+Extended Key Usage bypass. The fifth issue only affects macOS. 
+<a href="https://www.cve.org/CVERecord?id=CVE-2026-103963">CVE-2026-103963</a>, 
+<a href="https://www.cve.org/CVERecord?id=CVE-2026-113624">CVE-2026-113624</a>, 
+<a href="https://www.cve.org/CVERecord?id=CVE-2026-113623">CVE-2026-113623</a>, 
+<a href="https://www.cve.org/CVERecord?id=CVE-2026-113622">CVE-2026-113622</a>, 
+<a href="https://www.cve.org/CVERecord?id=CVE-2026-112963">CVE-2026-112963</a>.</p>
+
+</td></tr>
+<tr><td>sa-13.1-090</td> 
+           <td>samba</td> 
+           <td>2026-10-29</td> 
+           <td>High</td></tr>
+<tr><td colspan='4'><p>Samba-4.25.1 fixes an access control bypass in the experimental 
+vfs_ceph_rgw module, which was introduced in Samba-4.25.0. When a client 
+opens an existing file using different letter case, the module fails to 
+look up the file case-insensitively and treats the request as a file 
+creation, skipping the access check. An authenticated user can use this 
+to read or overwrite restricted files on shares that use vfs_ceph_rgw. 
+This module requires Ceph libraries that are not part of BLFS, so 
+BLFS installations are unlikely to be affected. Only Samba-4.25.0 is 
+vulnerable. This update also fixes a crash in vfs_acl_xattr and a 
+build failure on i686. 
+<a href="https://www.cve.org/CVERecord?id=CVE-2026-109411">CVE-2026-109411</a>.</p>
+
+</td></tr>
+<tr><td>sa-13.1-089</td> 
+           <td>python</td> 
+           <td>2026-10-27</td> 
+           <td>Medium</td></tr>
+<tr><td colspan='4'><p>Python 3.15.2 contains several security fixes that are not present in 
+Python 3.14.8. The most significant is a race condition in the cleanup of 
+tempfile.TemporaryDirectory: an attacker who can modify the directory tree 
+while it is being removed can replace a directory with a symbolic link, 
+causing files outside of the temporary directory to be deleted or to have 
+their permissions changed with the privileges of the process performing 
+the cleanup.</p> 
+
+<p>Several issues in the tarfile module's extraction filters have also been 
+fixed. When extracting a link fell back to extracting an archive member, 
+the filter could be bypassed, and the tar filter did not reject link 
+members that resolve to the destination directory itself. Additionally, 
+http.cookiejar accepted cookies with a negative Version attribute without 
+checking their domain against the request host, poplib did not reject 
+control characters in POP3 commands, allowing command injection, and a 
+buffer overflow could occur when resolving very long paths. 
+The ssl module now also refuses certificate chains that contain 
+compromised eMudhra intermediate CA keys.</p> 
+
+<p>If you use Python to process untrusted tar archives, HTTP cookies, or
+POP3 connections, or run Python programs that use temporary directories
+on multi-user systems, update to Python 3.15.2 or later. For more details,
+see <a href="https://www.cve.org/CVERecord?id=CVE-2026-12345">CVE-2026-12345</a>,
+<a href="https://www.cve.org/CVERecord?id=CVE-2026-114583">CVE-2026-114583</a>, and
+<a href="https://www.cve.org/CVERecord?id=CVE-2026-115557">CVE-2026-115557</a>.</p></td></tr>
+<tr><td>sa-13.1-088</td> 
+           <td>python</td> 
+           <td>2026-10-27</td> 
+           <td>Medium</td></tr>
+<tr><td colspan='4'><p>Python 3.15.2 contains several security fixes that are not present in 
+Python 3.14.8. The most significant is a race condition in the cleanup of 
+tempfile.TemporaryDirectory: an attacker who can modify the directory tree 
+while it is being removed can replace a directory with a symbolic link, 
+causing files outside of the temporary directory to be deleted or to have 
+their permissions changed with the privileges of the process performing 
+the cleanup.</p> 
+
+<p>Several issues in the tarfile module's extraction filters have also been 
+fixed. When extracting a link fell back to extracting an archive member, 
+the filter could be bypassed, and the tar filter did not reject link 
+members that resolve to the destination directory itself. Additionally, 
+http.cookiejar accepted cookies with a negative Version attribute without 
+checking their domain against the request host, poplib did not reject 
+control characters in POP3 commands, allowing command injection, and a 
+buffer overflow could occur when resolving very long paths. 
+The ssl module now also refuses certificate chains that contain 
+compromised eMudhra intermediate CA keys.</p> 
+
+<p>If you use Python to process untrusted tar archives, HTTP cookies, or 
+POP3 connections, or run Python programs that use temporary directories 
+on multi-user systems, update to Python 3.15.2 or later. For more details, 
+see <a href="https://www.cve.org/CVERecord?id=CVE-2026-12345">CVE-2026-12345</a>.</p>
+
+</td></tr>
+<tr><td>sa-13.1-087</td> 
+           <td>patch</td> 
+           <td>2026-10-27</td> 
+           <td>Medium</td></tr>
+<tr><td colspan='4'><p>GNU patch 2.8.1 fixes a path-traversal vulnerability that allowed a 
+crafted patch to create files outside of the source tree. When 
+reverse-applying a patch that deletes a file, patch recreated that file 
+without checking whether its pathname was safe, so an attacker who 
+convinces a user or an automated workflow to apply a malicious patch in 
+reverse could write to any location the user has write access to. This 
+update also fixes a null pointer dereference and an infinite loop that 
+could be triggered by malformed patches, and a symbolic-link resolution 
+error that could cause patch to modify the wrong file. If you use patch 
+to apply patches from untrusted sources, update to patch-2.8.1 or later. 
+For more details, see 
+<a href="https://www.cve.org/CVERecord?id=CVE-2026-115207">CVE-2026-115207</a>.</p>
+
+</td></tr>
+<tr><td>sa-13.1-086</td> 
+           <td>vim</td> 
+           <td>2026-10-27</td> 
+           <td>Medium</td></tr>
+<tr><td colspan='4'><p>Vim 9.2.1201 fixes a code-injection vulnerability in the Rust cargo 
+quickfix plugin. When a user ran :make in a Rust buffer inside a crafted 
+directory tree, such as a cloned repository, a directory name containing 
+a "|" character could execute arbitrary Ex commands, and therefore 
+arbitrary shell commands, as the user running Vim. A CVE has been 
+requested but not yet assigned. This update also adds shell escaping of 
+file names in the gnat and cppcheck compiler plugins, and fixes several 
+memory-safety bugs in Vim9 script handling. For more details, see 
+<a href="https://github.com/vim/vim/security/advisories/GHSA-x2w5-pj55-7hpc">GHSA-x2w5-pj55-7hpc</a
+>.</p>
+
+</td></tr>
+<tr><td>sa-13.1-085</td> 
+           <td>make-ca</td> 
+           <td>2026-10-26</td> 
+           <td>Critical</td></tr>
+<tr><td colspan='4'><p>The private keys of eight eMudhra intermediate CA certificates have been compromised. An attacker with the private key of any of the compromised intermediate CAs could impersonate any website or service. For details, see <a>https://emudhra.we-have-a-problem.com/</a>.</p>
+<p>In BLFS, we use a centralized set of CA certificates, provided by Mozilla. Mozilla has released a new CA bundle which fixes the issue. You should install this new set as soon as possible by running <code>make-ca -g -f</code>.</p></td></tr>
+<tr><td>sa-13.1-084</td> 
+           <td>7zip</td> 
+           <td>2026-10-23</td> 
+           <td>Medium</td></tr>
+<tr><td colspan='4'><p>7-Zip 26.05 fixes several security vulnerabilities, none of which have
+been assigned CVE numbers yet. Upstream has not described these issues,
+but examination of the source code changes shows fixes for out-of-bounds
+reads in the NTFS and VDI disk image handlers when processing specially
+crafted files, along with substantial rewrites of the Z (Unix compress)
+and Shrink decoders and the Mach-O handler. Previous releases of 7-Zip
+have fixed similar issues in archive handlers that could lead to remote
+code execution when a crafted archive is opened. The severity of these
+issues is Medium, and all users of 7-Zip should update to 26.05 as soon
+as possible.</p></td></tr>
+<tr><td>sa-13.1-083</td> 
+           <td>node</td> 
+           <td>2026-10-23</td> 
+           <td>High</td></tr>
+<tr><td colspan='4'><p>Node.js 26.12.1 fixes nine security vulnerabilities in Node.js itself. 
+The most serious are in TLS certificate hostname verification, where 
+non-canonical IP address strings (such as octal or hexadecimal notation) 
+and hostnames containing fullwidth Unicode digits could be matched against 
+certificates issued for a different host, allowing a server to be 
+impersonated  
+(<a href="https://www.cve.org/CVERecord?id=CVE-2026-106069">CVE-2026-106069</a>, 
+<a href="https://www.cve.org/CVERecord?id=CVE-2026-105483">CVE-2026-105483</a>, and  
+<a href="https://www.cve.org/CVERecord?id=CVE-2026-106072">CVE-2026-106072</a>).  
+In addition, DNS resolution truncated hostnames containing NUL characters,  
+allowing a different name to be resolved than the one that was checked against an allowlist 
+(<a href="https://www.cve.org/CVERecord?id=CVE-2026-105482">CVE-2026-105482</a>), and  
+an HTTP keep-alive client could accept a response 
+that a server wrote to an idle connection before the request was sent 
+(<a href="https://www.cve.org/CVERecord?id=CVE-2026-105481">CVE-2026-105481</a>).  
+Other fixes address repeated random values from crypto.randomUUID() and  
+crypto.randomInt() in startup snapshots and single executable applications  
+(<a href="https://www.cve.org/CVERecord?id=CVE-2026-106074">CVE-2026-106074</a>),  
+disclosure of data from the wrong file position in ZipFile  
+(<a href="https://www.cve.org/CVERecord?id=CVE-2026-106070">CVE-2026-106070</a>), and  
+Permission Model bypasses through wildcard paths and fs.realpathSync()  
+(<a href="https://www.cve.org/CVERecord?id=CVE-2026-106071">CVE-2026-106071</a> and  
+<a href="https://www.cve.org/CVERecord?id=CVE-2026-106073">CVE-2026-106073</a>).</p> 
+
+<p>The Node.js release also addresses a critical vulnerability in the 
+Brotli decoder  
+(<a href="https://www.cve.org/CVERecord?id=CVE-2026-111497">CVE-2026-111497</a>).  
+Node.js as built in BLFS uses the system 
+brotli library, so this issue is fixed by updating brotli to 1.2.1, which 
+is required for this update. See advisory sa-13.1-082 for details.</p> 
+
+<p>The severity of these issues is High, and all users of Node.js should 
+update to 26.12.1 and brotli to 1.2.1 as soon as possible.</p>
+
+</td></tr>
+<tr><td>sa-13.1-082</td> 
+           <td>brotli</td> 
+           <td>2026-10-23</td> 
+           <td>Critical</td></tr>
+<tr><td colspan='4'><p>brotli 1.2.1 fixes a critical vulnerability in the Brotli decoder
+(<a href="https://www.cve.org/CVERecord?id=CVE-2026-111497">CVE-2026-111497</a>).
+An unchecked return value allows a specially crafted compressed stream to
+write out of bounds and corrupt the decoder's internal state, which can be
+used to disclose memory contents, cause a denial of service, or execute
+arbitrary code. Any application that decompresses untrusted Brotli data
+is affected, including HTTP clients and servers that support Brotli
+content encoding and programs that load WOFF2 fonts. This issue affects
+brotli 1.0.3 through 1.2.0. The severity of this issue is Critical, and
+all users of brotli should update to 1.2.1 as soon as possible.</p></td></tr>
+<tr><td>sa-13.1-081</td> 
+           <td>bind</td> 
+           <td>2026-10-23</td> 
+           <td>High</td></tr>
+<tr><td colspan='4'><p>BIND 9.20.30 fixes four security vulnerabilities in the named server.
+The most serious is a memory corruption issue in GSS-TSIG handling, where
+concurrent messages signed with the same key could corrupt internal state
+and potentially allow remote code execution on servers that use GSS-TSIG
+for Kerberos-authenticated dynamic updates
+(<a href="https://www.cve.org/CVERecord?id=CVE-2026-94300">CVE-2026-94300</a>).
+A remote attacker could also send specially crafted messages with excessive
+name compression to cause excessive CPU and memory consumption
+(<a href="https://www.cve.org/CVERecord?id=CVE-2026-19630">CVE-2026-19630</a>),
+and named could crash when a redirect zone is used together with strict
+QNAME minimization
+(<a href="https://www.cve.org/CVERecord?id=CVE-2026-96888">CVE-2026-96888</a>)
+or when certain Response Policy Zone configurations receive specific query
+patterns
+(<a href="https://www.cve.org/CVERecord?id=CVE-2026-97313">CVE-2026-97313</a>).
+No workarounds are available for any of these issues. The severity of
+these issues is High, and all users of BIND should update to 9.20.30 as
+soon as possible.</p></td></tr>
+<tr><td>sa-13.1-080</td> 
+           <td>php</td> 
+           <td>2026-10-23</td> 
+           <td>Critical</td></tr>
+<tr><td colspan='4'><p>PHP 8.5.12 fixes two critical vulnerabilities in the PHP core that allow
+unauthenticated remote code execution. When an out-of-memory condition
+occurred during request initialization, PHP could leave an incomplete request
+state behind that was later used during shutdown
+(<a href="https://www.cve.org/CVERecord?id=CVE-2026-109618">CVE-2026-109618</a>).
+In addition, a global state that pointed into request memory was not always
+cleared between requests, allowing a later request handled by the same
+worker process to trigger a use-after-free
+(<a href="https://www.cve.org/CVERecord?id=CVE-2026-109619">CVE-2026-109619</a>).
+Working exploits have been demonstrated over HTTP against PHP running under
+Apache with mod_php, and CVE-2026-109619 has also been exploited against
+PHP-FPM. There is no configuration workaround for either issue. This
+release also fixes many other memory safety issues, including several
+use-after-free conditions and heap buffer overflows in various extensions.
+The severity of these issues is Critical, and all users of PHP should
+update to 8.5.12 as soon as possible.</p></td></tr>
+<tr><td>sa-13.1-079</td> 
+           <td>c-ares</td> 
+           <td>2026-10-23</td> 
+           <td>Medium</td></tr>
+<tr><td colspan='4'><p>c-ares 1.34.9 fixes eleven security vulnerabilities, none of which have
+been assigned CVE numbers. When more than one DNS server was configured,
+c-ares could accept a DNS reply from a server other than the one that was
+queried, allowing a malicious server or an off-path attacker to inject
+forged answers into the cache and bypass DNS cookie protection
+(<a href="https://github.com/c-ares/c-ares/security/advisories/GHSA-fqh5-3x7m-wp44">
+GHSA-fqh5-3x7m-wp44</a>).
+The remaining issues are use-after-free conditions, memory corruption, and
+a buffer overflow that can occur when lookups are cancelled, servers are
+changed, or channels are shut down from callbacks or other threads, as well
+as the disclosure of uninitialized memory when resolving numeric IPv6
+addresses. See the
+<a href="https://github.com/c-ares/c-ares/releases/tag/v1.34.9">release
+notes</a> for the full list of advisories. The severity of these issues is
+Medium, and all users of c-ares should update to 1.34.9 as soon as
+possible.</p></td></tr>
+<tr><td>sa-13.1-078</td> 
+           <td>nss</td> 
+           <td>2026-10-23</td> 
+           <td>High</td></tr>
+<tr><td colspan='4'><p>NSS 3.131.1 removes three eMudhra emSign root certificates (emSign Root
+CA - G3, emSign Root CA - C1, and emSign ECC Root CA - C3) from its
+built-in certificate store
+(<a href="https://bugzilla.mozilla.org/show_bug.cgi?id=2084101">Bug 2084101</a>
+and <a href="https://bugzilla.mozilla.org/show_bug.cgi?id=2083709">Bug 2083709</a>).
+Intermediate certificates issued under these roots were revoked after their
+private key was compromised, so the compromised key could be used to issue
+certificates that would be trusted by applications using NSS, allowing
+man-in-the-middle attacks. No CVE has been assigned to this issue. Because
+the system certificate store created by make-ca is generated from the NSS
+certificate data, users must also run <command>make-ca -g</command> as the
+root user after updating NSS. The severity of this issue is High, and all
+users of NSS should update to 3.131.1 as soon as possible.</p></td></tr>
+<tr><td>sa-13.1-077</td> 
+           <td>certifi</td> 
+           <td>2026-10-23</td> 
+           <td>Critical</td></tr>
+<tr><td colspan='4'><p>certifi 2026.10.19 removes the emSign root certificates from its
+bundled certificate store. Intermediate certificates issued under these
+roots were revoked after their private key was compromised, so the
+compromised key could be used to issue certificates that would be trusted
+by Python applications using certifi, allowing man-in-the-middle attacks
+(<a href="https://github.com/advisories/GHSA-6q48-6c7w-9gw2">GHSA-6q48-6c7w-9gw2</a>).
+No CVE has been assigned to this issue. The severity of this issue is
+Critical, and all users of certifi should update to 2026.10.19 as soon as
+possible.</p></td></tr>
+<tr><td>sa-13.1-076</td> 
+           <td>libcupsfilters</td> 
+           <td>2026-10-23</td> 
+           <td>Medium</td></tr>
+<tr><td colspan='4'><p>libcupsfilters 2.1.2 fixes four security vulnerabilities that can be
+triggered by submitting a specially crafted print job. A PDF file with
+excessively large page dimensions could cause an out-of-bounds write in the
+PDF to raster filter
+(<a href="https://www.cve.org/CVERecord?id=CVE-2025-64503">CVE-2025-64503</a>),
+and a TIFF image with an unexpected color space or bit depth could cause a
+heap buffer overflow
+(<a href="https://www.cve.org/CVERecord?id=CVE-2025-57812">CVE-2025-57812</a>).
+Malformed PNG or JPEG images could abort the filter process
+(<a href="https://www.cve.org/CVERecord?id=CVE-2026-64612">CVE-2026-64612</a>),
+and a malformed printer device ID could cause an infinite loop
+(<a href="https://www.cve.org/CVERecord?id=CVE-2026-64611">CVE-2026-64611</a>).
+This release also fixes several crashes found during a security audit.
+The severity of these issues is Medium, and all users of libcupsfilters
+should update to 2.1.2 as soon as possible.</p></td></tr>
+<tr><td>sa-13.1-075</td> 
+           <td>xorg-libraries</td> 
+           <td>2026-10-23</td> 
+           <td>Medium</td></tr>
+<tr><td colspan='4'><p>Updates to five X.Org client libraries fix 17 security vulnerabilities. 
+Most of them can be triggered by a malicious or compromised X server, or by 
+anything that can forge replies and events sent to an X client, and can 
+result in crashes or the disclosure of memory contents in the client. The 
+most serious are an out-of-bounds write in the XKB action parser in libX11 
+(<a href="https://www.cve.org/CVERecord?id=CVE-2026-88806">CVE-2026-88806</a>)  
+and two heap buffer overflows in XGetDeviceControl() in libXi  
+(<a href="https://www.cve.org/CVERecord?id=CVE-2026-109089">CVE-2026-109089</a> and  
+<a href="https://www.cve.org/CVERecord?id=CVE-2026-109090">CVE-2026-109090</a>),  
+which could potentially be used to execute code in the client.</p> 
+
+<p>libX11 1.8.14 also fixes out-of-bounds reads in the XIM attribute 
+parser, the XIM trigger-key parser, and the byte-oriented codeset parser 
+(<a href="https://www.cve.org/CVERecord?id=CVE-2026-94283">CVE-2026-94283</a>, 
+<a href="https://www.cve.org/CVERecord?id=CVE-2026-94284">CVE-2026-94284</a>, and  
+<a href="https://www.cve.org/CVERecord?id=CVE-2026-94285">CVE-2026-94285</a>).  
+libXi 1.8.4 fixes seven out-of-bounds reads when parsing input device replies and events 
+(<a href="https://www.cve.org/CVERecord?id=CVE-2026-93541">CVE-2026-93541</a>, 
+<a href="https://www.cve.org/CVERecord?id=CVE-2026-93542">CVE-2026-93542</a>, 
+<a href="https://www.cve.org/CVERecord?id=CVE-2026-93543">CVE-2026-93543</a>, 
+<a href="https://www.cve.org/CVERecord?id=CVE-2026-93544">CVE-2026-93544</a>, 
+<a href="https://www.cve.org/CVERecord?id=CVE-2026-93545">CVE-2026-93545</a>, 
+<a href="https://www.cve.org/CVERecord?id=CVE-2026-94281">CVE-2026-94281</a>, 
+and <a href="https://www.cve.org/CVERecord?id=CVE-2026-94282">CVE-2026-94282</a>).  
+libXrender 0.9.13 fixes an out-of-bounds read when parsing XRenderQueryFormats replies 
+(<a href="https://www.cve.org/CVERecord?id=CVE-2026-88807">CVE-2026-88807</a>).  
+libXtst 1.2.6 fixes an out-of-bounds read and an infinite 
+loop in RECORD reply handling  
+(<a href="https://www.cve.org/CVERecord?id=CVE-2026-94286">CVE-2026-94286</a> and  
+<a href="https://www.cve.org/CVERecord?id=CVE-2026-109088">CVE-2026-109088</a>).  
+libXpm 3.5.20 fixes a denial of service caused by an unsigned integer underflow  
+when writing XPM files  
+(<a href="https://www.cve.org/CVERecord?id=CVE-2026-94287">CVE-2026-94287</a>).</p> 
+
+<p>See the  
+<a href="https://lists.x.org/archives/xorg-announce/2026-October/003752.html">X.Org 
+advisory</a> for more details. The severity of these issues is Medium, and 
+all users of these libraries should update to libX11-1.8.14, libXi-1.8.4, 
+libXpm-3.5.20, libXrender-0.9.13, and libXtst-1.2.6 as soon as possible.</p>
+
+</td></tr>
+<tr><td>sa-13.1-074</td> 
+           <td>nmap</td> 
+           <td>2026-10-23</td> 
+           <td>Medium</td></tr>
+<tr><td colspan='4'><p>Nmap 7.992 fixes several security vulnerabilities, none of which have
+been assigned CVE numbers. Most of them can be triggered by a malicious
+host that is being scanned. These include two use-after-free conditions in
+the massdns parallel DNS resolver, unbounded memory consumption and
+infinite loops in several NSE scripts and libraries (some of which could
+not be interrupted by the --script-timeout or --host-timeout options), and
+unverified redirects in the anyconnect and upnp libraries. The afp library
+used a hardcoded Diffie-Hellman private exponent, which allowed an attacker
+who captured network traffic to decrypt the credentials being sent, and the
+predictable random number seed used by NSE could reveal the ASLR base
+address of the Nmap process. In addition, Ncat in listen mode could
+terminate the shell that started it. See the
+<a href="https://nmap.org/changelog.html">Nmap changelog</a> for more
+details. The severity of these issues is Medium, and all users of Nmap
+should update to 7.992 as soon as possible.</p></td></tr>
+<tr><td>sa-13.1-073</td> 
+           <td>cifs-utils</td> 
+           <td>2026-10-23</td> 
+           <td>High</td></tr>
+<tr><td colspan='4'><p>cifs-utils 7.9 fixes a mount option injection vulnerability in mount.cifs
+(<a href="https://www.cve.org/CVERecord?id=CVE-2026-104715">CVE-2026-104715</a>).
+The username and domain values read from a credentials file were added to
+the mount options without being validated, so a value containing commas
+could inject additional mount options into a mount performed by root. A
+local user who can modify a credentials file used by a privileged mount
+(for example, from /etc/fstab, autofs, or a systemd mount unit) can use
+this to mount a share with root-owned setuid files and gain root
+privileges. A proof-of-concept exploit is publicly available. This issue
+affects cifs-utils 4.2 through 7.8. The severity of this issue is High,
+and all users of cifs-utils should update to 7.9 as soon as possible.</p></td></tr>
+<tr><td>sa-13.1-072</td> 
+           <td>polkit</td> 
+           <td>2026-10-23</td> 
+           <td>Medium</td></tr>
+<tr><td colspan='4'><p>polkit 128 fixes several security vulnerabilities in the authentication
+helper and the authorization daemon. A local user could cause a denial of
+service by sending an excessively long input to the setuid
+polkit-agent-helper-1 program
+(<a href="https://www.cve.org/CVERecord?id=CVE-2026-4897">CVE-2026-4897</a>),
+and the initial fix for that issue introduced a one-byte out-of-bounds read
+(<a href="https://www.cve.org/CVERecord?id=CVE-2026-85498">CVE-2026-85498</a>).
+In addition, temporary administrator authorizations cached with
+auth_admin_keep remained valid after the approving administrator was
+removed from the administrator group, allowing a non-administrator to
+continue performing privileged actions for a limited time. This release
+also fixes a use-after-free in the authentication agent's session handling
+and prevents unsanitized values from authorization requests from being
+written to the system log. The severity of these issues is Medium, and all
+users of polkit should update to 128 as soon as possible.</p></td></tr>
+<tr><td>sa-13.1-071</td> 
+           <td>libarchive</td> 
+           <td>2026-10-23</td> 
+           <td>Medium</td></tr>
+<tr><td colspan='4'><p>libarchive 3.8.10 fixes several security vulnerabilities, none of which
+have been assigned CVE numbers. These include an out-of-bounds read in the
+RAR5 reader when processing symbolic link targets
+(<a href="https://github.com/libarchive/libarchive/pull/3600">PR #3600</a>),
+a heap buffer overflow during filename character set conversion
+(<a href="https://github.com/libarchive/libarchive/pull/3528">PR #3528</a>),
+use-after-free conditions when a seek fails or when reading multi-volume
+archives
+(<a href="https://github.com/libarchive/libarchive/pull/3394">PR #3394</a>
+and <a href="https://github.com/libarchive/libarchive/pull/3447">PR #3447</a>),
+and a heap buffer overflow in the compress writer when a write fails
+(<a href="https://github.com/libarchive/libarchive/pull/3664">PR #3664</a>).
+Other fixes address infinite loops in the XAR and ISO 9660 readers and
+excessive memory consumption in the RAR5 and ZIP readers, all of which can
+be triggered by specially crafted archives. The severity of these issues is
+Medium, and all users of libarchive should update to 3.8.10 as soon as
+possible.</p></td></tr>
+<tr><td>sa-13.1-070</td> 
+           <td>curl</td> 
+           <td>2026-10-23</td> 
+           <td>High</td></tr>
+<tr><td colspan='4'><p>curl 8.23.0 fixes 21 security vulnerabilities. The most serious is a 
+use-after-free in HTTP/2 uploads, which can be triggered by a malicious 
+server that resets the stream during an upload. The curl developers have 
+shown that this can be turned into remote code execution under specific 
+conditions  
+(<a href="https://www.cve.org/CVERecord?id=CVE-2026-92392">CVE-2026-92392</a>).  
+This issue affects curl 8.12.0 and later.</p> 
+
+<p>The remaining 20 issues are rated Low by the curl developers. Several 
+of them can leak credentials: passwords can be exposed through 
+CURLINFO_EFFECTIVE_URL, a malicious HTTP proxy can obtain the credentials 
+meant for the origin server, and Negotiate (Kerberos) credentials can be 
+sent to a different origin after a redirect or through connection reuse 
+(<a href="https://www.cve.org/CVERecord?id=CVE-2026-94266">CVE-2026-94266</a>, 
+<a href="https://www.cve.org/CVERecord?id=CVE-2026-86414">CVE-2026-86414</a>, 
+<a href="https://www.cve.org/CVERecord?id=CVE-2026-94265">CVE-2026-94265</a>, 
+<a href="https://www.cve.org/CVERecord?id=CVE-2026-86413">CVE-2026-86413</a>, 
+and <a href="https://www.cve.org/CVERecord?id=CVE-2026-87861">CVE-2026-87861</a>).  
+Connections could be reused with the wrong local interface or client certificate  
+(<a href="https://www.cve.org/CVERecord?id=CVE-2026-107929">CVE-2026-107929</a> and  
+<a href="https://www.cve.org/CVERecord?id=CVE-2026-86415">CVE-2026-86415</a>), and  
+SSH host verification could be bypassed when following a redirect to SFTP or 
+SCP, or when a known-hosts callback misreports a mismatched key as missing 
+(<a href="https://www.cve.org/CVERecord?id=CVE-2026-86410">CVE-2026-86410</a> and  
+<a href="https://www.cve.org/CVERecord?id=CVE-2026-87865">CVE-2026-87865</a>).  
+Servers could also erase or corrupt the cookie jar and HSTS cache  
+(<a href="https://www.cve.org/CVERecord?id=CVE-2026-92386">CVE-2026-92386</a>, 
+<a href="https://www.cve.org/CVERecord?id=CVE-2026-86412">CVE-2026-86412</a>, 
+<a href="https://www.cve.org/CVERecord?id=CVE-2026-87862">CVE-2026-87862</a>, 
+and <a href="https://www.cve.org/CVERecord?id=CVE-2026-87863">CVE-2026-87863</a>),  
+cause an infinite loop or a stack overflow  
+(<a href="https://www.cve.org/CVERecord?id=CVE-2026-92387">CVE-2026-92387</a> and  
+<a href="https://www.cve.org/CVERecord?id=CVE-2026-92391">CVE-2026-92391</a>),  
+mix up FTP wildcard downloads or TFTP transfers  
+(<a href="https://www.cve.org/CVERecord?id=CVE-2026-92388">CVE-2026-92388</a> and  
+<a href="https://www.cve.org/CVERecord?id=CVE-2026-92389">CVE-2026-92389</a>),  
+or bypass the no-clobber protection for files saved with -J  
+(<a href="https://www.cve.org/CVERecord?id=CVE-2026-92390">CVE-2026-92390</a>).  
+Two further issues only affect builds that use GnuTLS or wolfSSL  
+(<a href="https://www.cve.org/CVERecord?id=CVE-2026-107928">CVE-2026-107928</a> and  
+<a href="https://www.cve.org/CVERecord?id=CVE-2026-87866">CVE-2026-87866</a>).</p> 
+
+<p>See the <a href="https://curl.se/docs/security.html">curl security 
+page</a> for more details. The severity of these issues is High, and all 
+users of curl should update to 8.23.0 as soon as possible.</p>
+
+
+
+</td></tr>
+<tr><td>sa-13.1-069</td> 
+           <td>thunderbird</td> 
+           <td>2026-10-23</td> 
+           <td>High</td></tr>
+<tr><td colspan='4'><p>Thunderbird 153.5.0esr and 153.5.1esr fix 66 security vulnerabilities. 
+Most of them are shared with Firefox, because Thunderbird uses the same 
+browser engine. These include sandbox escapes, use-after-free conditions, 
+and JIT miscompilations that can be exploited through HTML email or web 
+content. See advisory sa-13.1-068 for details on the 61 shared issues.</p> 
+
+<p>Five issues are specific to Thunderbird. The account password could be 
+sent unencrypted during Exchange account setup 
+(<a href="https://www.cve.org/CVERecord?id=CVE-2026-113866">CVE-2026-113866</a>). 
+The POP3 and SMTP NTLM authentication code could disclose uninitialized 
+memory and read out of bounds 
+(<a href="https://www.cve.org/CVERecord?id=CVE-2026-113868">CVE-2026-113868</a>). 
+A stanza injection issue in XMPP chat could allow a remote attacker to 
+inject messages or commands 
+(<a href="https://www.cve.org/CVERecord?id=CVE-2026-113867">CVE-2026-113867</a>). 
+A privilege escalation issue was fixed in the Application Update component 
+(<a href="https://www.cve.org/CVERecord?id=CVE-2026-109704">CVE-2026-109704</a>), 
+and a denial of service issue was fixed in Exchange email support 
+(<a href="https://www.cve.org/CVERecord?id=CVE-2026-110249">CVE-2026-110249</a>).</p> 
+
+<p>See the Mozilla advisories 
+(<a href="https://www.mozilla.org/en-US/security/advisories/mfsa2026-110/">MFSA 2026-110</a> 
+and 
+<a href="https://www.mozilla.org/en-US/security/advisories/mfsa2026-115/">MFSA 2026-115</a>) 
+for more details. The severity of these issues is High, and all users of 
+Thunderbird should update to 153.5.1esr as soon as possible.</p>
+</td></tr>
+<tr><td>sa-13.1-068</td> 
+           <td>firefox</td> 
+           <td>2026-10-23</td> 
+           <td>High</td></tr>
+<tr><td colspan='4'><p>Firefox 153.5.0esr fixes 60 security vulnerabilities, and Firefox 
+153.5.1esr fixes one more. Mozilla rates 28 of these issues as High, 26 as 
+Moderate, and 6 as Low. Many of them can be exploited by visiting a 
+specially crafted web page.</p> 
+
+<p>Several of the High severity issues allow a compromised content process 
+to escape the sandbox, through use-after-free conditions, incorrect boundary 
+conditions, and uninitialized memory in the Networking and Graphics components 
+(<a href="https://www.cve.org/CVERecord?id=CVE-2026-109705">CVE-2026-109705</a>, 
+<a href="https://www.cve.org/CVERecord?id=CVE-2026-109707">CVE-2026-109707</a>, 
+<a href="https://www.cve.org/CVERecord?id=CVE-2026-109708">CVE-2026-109708</a>, 
+and <a href="https://www.cve.org/CVERecord?id=CVE-2026-109712">CVE-2026-109712</a>). An additional 
+issue in the process 
+sandboxing code can lead to information disclosure and privilege escalation 
+(<a href="https://www.cve.org/CVERecord?id=CVE-2026-109709">CVE-2026-109709</a>).</p>
+
+<p>Other High severity issues are use-after-free conditions in many 
+components, including IndexedDB, text and canvas rendering, WebGL, crash 
+reporting, WebIDL bindings, XML, the DOM, SVG, audio and video, animations, 
+streams, and the JIT compiler 
+(<a href="https://www.cve.org/CVERecord?id=CVE-2026-109706">CVE-2026-109706</a>, 
+<a href="https://www.cve.org/CVERecord?id=CVE-2026-109710">CVE-2026-109710</a>, 
+<a href="https://www.cve.org/CVERecord?id=CVE-2026-109711">CVE-2026-109711</a>, 
+<a href="https://www.cve.org/CVERecord?id=CVE-2026-109713">CVE-2026-109713</a>, 
+<a href="https://www.cve.org/CVERecord?id=CVE-2026-109717">CVE-2026-109717</a>, 
+<a href="https://www.cve.org/CVERecord?id=CVE-2026-109718">CVE-2026-109718</a>, 
+<a href="https://www.cve.org/CVERecord?id=CVE-2026-109719">CVE-2026-109719</a>, 
+<a href="https://www.cve.org/CVERecord?id=CVE-2026-109724">CVE-2026-109724</a>, 
+<a href="https://www.cve.org/CVERecord?id=CVE-2026-109725">CVE-2026-109725</a>, 
+<a href="https://www.cve.org/CVERecord?id=CVE-2026-109726">CVE-2026-109726</a>, 
+<a href="https://www.cve.org/CVERecord?id=CVE-2026-109727">CVE-2026-109727</a>, 
+<a href="https://www.cve.org/CVERecord?id=CVE-2026-109728">CVE-2026-109728</a>, 
+<a href="https://www.cve.org/CVERecord?id=CVE-2026-109729">CVE-2026-109729</a>, 
+and <a href="https://www.cve.org/CVERecord?id=CVE-2026-109732">CVE-2026-109732</a>). 
+Further High severity issues are JIT miscompilations and incorrect boundary 
+conditions in the JavaScript engine and WebAssembly 
+(<a href="https://www.cve.org/CVERecord?id=CVE-2026-109715">CVE-2026-109715</a>, 
+<a href="https://www.cve.org/CVERecord?id=CVE-2026-109716">CVE-2026-109716</a>, 
+<a href="https://www.cve.org/CVERecord?id=CVE-2026-109720">CVE-2026-109720</a>, 
+<a href="https://www.cve.org/CVERecord?id=CVE-2026-109721">CVE-2026-109721</a>, 
+<a href="https://www.cve.org/CVERecord?id=CVE-2026-109722">CVE-2026-109722</a>, 
+and <a href="https://www.cve.org/CVERecord?id=CVE-2026-109733">CVE-2026-109733</a>), and integer ov
+erflows and 
+incorrect boundary conditions in text layout and graphics 
+(<a href="https://www.cve.org/CVERecord?id=CVE-2026-109723">CVE-2026-109723</a>, 
+<a href="https://www.cve.org/CVERecord?id=CVE-2026-109730">CVE-2026-109730</a>, 
+and <a href="https://www.cve.org/CVERecord?id=CVE-2026-109731">CVE-2026-109731</a>). These are the 
+types of flaws that can 
+typically be used to execute arbitrary code.</p>
+
+<p>The Moderate severity issues include additional sandbox escapes 
+(<a href="https://www.cve.org/CVERecord?id=CVE-2026-109745">CVE-2026-109745</a> and <a href="https:
+//www.cve.org/CVERecord?id=CVE-2026-109757">CVE-2026-109757</a>; <a href="https://www.cve.org/CVERe
+cord?id=CVE-2026-109740">CVE-2026-109740</a> only affects Windows), use-after-free 
+conditions (<a href="https://www.cve.org/CVERecord?id=CVE-2026-109738">CVE-2026-109738</a>, 
+<a href="https://www.cve.org/CVERecord?id=CVE-2026-109741">CVE-2026-109741</a>, 
+<a href="https://www.cve.org/CVERecord?id=CVE-2026-109752">CVE-2026-109752</a>, 
+and <a href="https://www.cve.org/CVERecord?id=CVE-2026-109765">CVE-2026-109765</a>), privilege esca
+lation 
+(<a href="https://www.cve.org/CVERecord?id=CVE-2026-109743">CVE-2026-109743</a> and <a href="https:
+//www.cve.org/CVERecord?id=CVE-2026-109756">CVE-2026-109756</a>), information disclosure, including
+in the PDF viewer 
+(<a href="https://www.cve.org/CVERecord?id=CVE-2026-109742">CVE-2026-109742</a>, 
+<a href="https://www.cve.org/CVERecord?id=CVE-2026-109751">CVE-2026-109751</a>, 
+and <a href="https://www.cve.org/CVERecord?id=CVE-2026-109767">CVE-2026-109767</a>), a site isolati
+on issue (<a href="https://www.cve.org/CVERecord?id=CVE-2026-109759">CVE-2026-109759</a>), 
+memory corruption issues in layout, the editor, and SVG 
+(<a href="https://www.cve.org/CVERecord?id=CVE-2026-109736">CVE-2026-109736</a>, 
+<a href="https://www.cve.org/CVERecord?id=CVE-2026-109753">CVE-2026-109753</a>, 
+<a href="https://www.cve.org/CVERecord?id=CVE-2026-109754">CVE-2026-109754</a>, 
+and <a href="https://www.cve.org/CVERecord?id=CVE-2026-109762">CVE-2026-109762</a>), a flaw in file
+handling in the DOM 
+(<a href="https://www.cve.org/CVERecord?id=CVE-2026-109744">CVE-2026-109744</a>), and a number of s
+ecurity mitigation bypasses in the DOM, 
+networking, file handling, and enterprise policy code 
+(<a href="https://www.cve.org/CVERecord?id=CVE-2026-109734">CVE-2026-109734</a>, 
+<a href="https://www.cve.org/CVERecord?id=CVE-2026-109737">CVE-2026-109737</a>, 
+<a href="https://www.cve.org/CVERecord?id=CVE-2026-109760">CVE-2026-109760</a>, 
+<a href="https://www.cve.org/CVERecord?id=CVE-2026-109763">CVE-2026-109763</a>, 
+<a href="https://www.cve.org/CVERecord?id=CVE-2026-109764">CVE-2026-109764</a>, 
+<a href="https://www.cve.org/CVERecord?id=CVE-2026-109766">CVE-2026-109766</a>, 
+<a href="https://www.cve.org/CVERecord?id=CVE-2026-109782">CVE-2026-109782</a>, 
+and <a href="https://www.cve.org/CVERecord?id=CVE-2026-109783">CVE-2026-109783</a>).</p>
+
+<p>The Low severity issues are a spoofing issue in Web Serial 
+(<a href="https://www.cve.org/CVERecord?id=CVE-2026-109770">CVE-2026-109770</a>), denial of service
+in WebRTC and printing 
+(<a href="https://www.cve.org/CVERecord?id=CVE-2026-109775">CVE-2026-109775</a> and <a href="https:
+//www.cve.org/CVERecord?id=CVE-2026-109781">CVE-2026-109781</a>), a race condition in XPCOM (<a hre
+f="https://www.cve.org/CVERecord?id=CVE-2026-109776">CVE-2026-109776</a>), 
+information disclosure in IndexedDB (<a href="https://www.cve.org/CVERecord?id=CVE-2026-109777">CVE
+-2026-109777</a>), and privilege 
+escalation in WebExtensions (<a href="https://www.cve.org/CVERecord?id=CVE-2026-109778">CVE-2026-10
+9778</a>).</p> 
+
+<p>Firefox 153.5.1esr fixes a cryptographic issue in the code that 
+manages security block-lists and allow-lists (<a href="https://www.cve.org/CVERecord?id=CVE-2026-11
+3470">CVE-2026-113470</a>).</p> 
+
+<p>See the Mozilla advisories 
+(<a href="https://www.mozilla.org/en-US/security/advisories/mfsa2026-108/">MFSA 2026-108</a> 
+and 
+<a href="https://www.mozilla.org/en-US/security/advisories/mfsa2026-112/">MFSA 2026-112</a>) 
+for more details. The severity of these issues is High, and all users of 
+Firefox should update to 153.5.1esr as soon as possible.</p>
+
+
+
+</td></tr>
+<tr><td>sa-13.1-067</td> 
+           <td>freerdp</td> 
+           <td>2026-10-23</td> 
+           <td>High</td></tr>
+<tr><td colspan='4'><p>FreeRDP 3.32.2 fixes 45 security vulnerabilities. The most serious 
+(<a href="https://github.com/FreeRDP/FreeRDP/security/advisories/GHSA-jq25-3374-4262">GHSA-jq25-337
+4-4262</a>) 
+is an incomplete fix for an earlier certificate validation flaw, which allows 
+a man-in-the-middle attacker to impersonate an RDP server without the user 
+being warned. Other fixes address use-after-free conditions in USB 
+redirection, the proxy, and the gateway code, a heap over-read during 
+clipboard image conversion, and a large number of denial of service issues 
+that allow a malicious server or gateway to crash or hang the client, or a 
+malicious client to disrupt the shadow server or proxy. None of these issues 
+have been assigned CVE numbers yet. See the 
+<a href="https://github.com/FreeRDP/FreeRDP/releases/tag/3.32.2">release 
+notes</a> for the full list of advisories. Note that a heap buffer overflow in 
+PNG conversion 
+(<a href="https://www.cve.org/CVERecord?id=CVE-2026-109256">CVE-2026-109256</a>) 
+remains unfixed in this release. The severity of these issues is High, and 
+all users of FreeRDP should update to 3.32.2 as soon as possible.</p>
+</td></tr>
+<tr><td>sa-13.1-066</td> 
+           <td>freetype</td> 
+           <td>2026-10-23</td> 
+           <td>Medium</td></tr>
+<tr><td colspan='4'><p>FreeType 2.15.0 fixes two security vulnerabilities. The first
+(<a href="https://www.cve.org/CVERecord?id=CVE-2026-50811">CVE-2026-50811</a>)
+is an out-of-bounds read in the TrueType variable font code, introduced in
+FreeType 2.14.0. The second
+(<a href="https://www.cve.org/CVERecord?id=CVE-2026-95512">CVE-2026-95512</a>)
+is a denial of service in the CID font loader that can be triggered by opening
+a specially crafted CID-keyed font. A proof-of-concept exploit is publicly
+available for CVE-2026-50811. The severity of these issues is Medium, and all
+users of FreeType should update to 2.15.0 as soon as possible.</p></td></tr>
+<tr><td>sa-13.1-065</td> 
+           <td>vim</td> 
+           <td>2026-10-15</td> 
+           <td>High</td></tr>
+<tr><td colspan='4'><p>Vim 9.2.1178 and later fixes two code injection vulnerabilities in the scripts 
+shipped with Vim. The more serious, 
+<a href="https://github.com/vim/vim/security/advisories/GHSA-x2w5-pj55-7hpc">GHSA-x2w5-pj55-7hpc</a>, 
+is in the R Markdown syntax file, which reads the language name of each 
+fenced code block so it can load that language's highlighting. A crafted 
+language name could get past the script's input cleanup and reach a function 
+that invokes the shell. As a result, simply opening a malicious 
+<filename>.Rmd</filename> or <filename>.qmd</filename> file with syntax 
+highlighting enabled could run arbitrary commands as the user.</p> 
+
+<p>The second, 
+<a href="https://github.com/vim/vim/security/advisories/GHSA-4xgr-vqh2-xfx8">GHSA-4xgr-vqh2-xfx8</a>, 
+is in the Ruby omni-completion script, which passed text taken from the 
+buffer to Ruby's <code>eval()</code> to work out a variable's class. If a 
+user requested completion in a crafted Ruby file, arbitrary Ruby code could 
+run. This only affects Vim built with Ruby support. Both issues were fixed 
+in patches 
+<a href="https://github.com/vim/vim/commit/05d704d2856dbb75e95bd33cf222c2e6264fff8b">9.2.1177</a> 
+and 
+<a href="https://github.com/vim/vim/commit/7670338d8b695c476de868dabd34d68d6de2443b">9.2.1178</a>.<
+/p>
+
+</td></tr>
+<tr><td>sa-13.1-064</td> 
+           <td>expat</td> 
+           <td>2026-10-15</td> 
+           <td>Low</td></tr>
+<tr><td colspan='4'><p>Expat 2.9.0 fixes two security vulnerabilities, neither of which can be 
+triggered by a malicious XML document alone. The first, 
+<a href="https://www.cve.org/CVERecord?id=CVE-2026-102633">CVE-2026-102633</a>, 
+is an integer overflow in the internal <code>expat_realloc()</code> function. 
+The check that guarded against overflow when adding header and padding space 
+to an allocation size was only an assertion. Assertions are removed from 
+release builds, which left the check out on 32-bit systems that request 
+extremely large allocations. The check is now always performed.</p> 
+
+<p>The second, 
+<a href="https://www.cve.org/CVERecord?id=CVE-2026-77214">CVE-2026-77214</a>, 
+is in <code>XML_ParseBuffer()</code>. If an application passed a length 
+larger than the space remaining in the buffer obtained from 
+<code>XML_GetBuffer()</code>, Expat read past the end of the heap buffer, 
+which could cause a crash or expose memory contents. Such lengths are now 
+rejected with an error. Other robustness fixes include 
+<a href="https://github.com/libexpat/libexpat/pull/1387">handling a failed 
+allocation in XML_ParserReset()</a>. See the 
+<a href="https://github.com/libexpat/libexpat/blob/R_2_9_0/expat/Changes">Changes 
+file</a> for details.</p>
+
+</td></tr>
+<tr><td>sa-13.1-063</td> 
+           <td>aspell</td> 
+           <td>2026-10-12</td> 
+           <td>Medium</td></tr>
+<tr><td colspan='4'><p>Aspell 0.60.8.2 has three memory safety vulnerabilities, all reported by 
+the AFINE Team and fixed upstream after the 0.60.8.2 release. The first, 
+<a href="https://www.cve.org/CVERecord?id=CVE-2026-75818">CVE-2026-75818</a>, 
+is in the <command>prezip-bin</command> program, which compresses and 
+decompresses word lists. When it processed a malformed compressed word list, 
+it noticed that the input was bad but kept advancing past the end of the 
+string, causing an out-of-bounds memory access. The second, 
+<a href="https://www.cve.org/CVERecord?id=CVE-2026-75819">CVE-2026-75819</a>, 
+occurs because the offsets in the header of a compiled (read-only) dictionary 
+were never checked against the size of the dictionary data. A crafted 
+dictionary file could make Aspell read outside the memory-mapped file and 
+crash, or possibly disclose memory contents.</p> 
+
+<p>The third issue, 
+<a href="https://www.cve.org/CVERecord?id=CVE-2026-75820">CVE-2026-75820</a>, 
+is in the code that adds words to a personal dictionary. The word length is 
+stored in a single byte, so a word longer than 255 characters had its length 
+silently truncated, leading to memory corruption. Applications that let 
+users add words from documents they are editing could trigger this. Words 
+longer than 250 characters are now rejected. All three issues need 
+specially crafted input and are most likely to cause a crash.  
+</p> 
+
+<p>Apply the patch at   
+<a href="https://www.linuxfromscratch.org/patches/downloads/aspell/aspell-0.60.8.2-security_fixes-1.patch">https://www.linuxfromscratch.org/patches/downloads/aspell/aspell-0.60.8.2-security_fixes-1.patch</a> to correct the problems.</p>
+
+</td></tr>
+<tr><td>sa-13.1-062</td> 
+           <td>mutt</td> 
+           <td>2026-10-11</td> 
+           <td>Medium</td></tr>
+<tr><td colspan='4'><p>Mutt-2.4.3 fixes two security issues. No CVE identifiers have been
+assigned.</p>
+
+<p>The more serious one is a heap buffer overflow in the code that converts
+a message between character sets
+(<a href="https://gitlab.com/muttmua/mutt/-/commit/7752d93f26f8f1384905fad874afff5abb0f3e54">commit
+7752d93f</a>). A crafted list of character sets containing an empty entry
+caused Mutt to write past the end of an allocated array, and the amount of
+data written is not limited. This could crash Mutt and possibly allow
+arbitrary code execution. It can only be triggered when the user reuses a
+crafted received message as the template for a new message with the
+resend-message function. Upstream recommends that all users apply this
+fix.</p>
+
+<p>The second issue caused Mutt to mark a message as having a good
+signature in the message index when the signature could not actually be
+verified
+(<a href="https://gitlab.com/muttmua/mutt/-/commit/4364e5b06facebc4fb3d5a60207a2d42e543b729">commit
+4364e5b0</a>). A forged message could therefore appear to be correctly
+signed.</p></td></tr>
+<tr><td>sa-13.1-061</td> 
+           <td>gstreamer</td> 
+           <td>2026-10-09</td> 
+           <td>High</td></tr>
+<tr><td colspan='4'><p>The GStreamer-1.28.8 stack fixes eleven security vulnerabilities. Only 
+one has a CVE identifier. See the 
+<a href="https://gstreamer.freedesktop.org/security/">GStreamer security 
+page</a> for details.</p> 
+
+<p>Four can lead to arbitrary code execution. 
+<a href="https://www.cve.org/CVERecord?id=CVE-2026-86476">CVE-2026-86476</a> 
+is an out-of-bounds read and write when deserializing media metadata in 
+gstreamer and gst-plugins-base. A heap buffer overflow in the RTP audio 
+depayloaders 
+(<a href="https://gstreamer.freedesktop.org/security/sa-2026-0088.html">SA-2026-0088</a>) 
+can be triggered by a malicious RTSP server. A stack buffer overflow in the 
+closed caption elements 
+(<a href="https://gstreamer.freedesktop.org/security/sa-2026-0085.html">SA-2026-0085</a>) 
+is triggered by oversized caption data. A crafted project file can make 
+gst-editing-services create arbitrary elements 
+(<a href="https://gstreamer.freedesktop.org/security/sa-2026-0090.html">SA-2026-0090</a>).</p> 
+
+<p>The other seven are out-of-bounds reads, excessive memory use, and 
+crashes. They affect the Matroska, ASF, and SVG decoders, the H.265 RTP 
+depayloader, RTCP handling, the RTSP server, and caps parsing in the core 
+library. A crafted media file or a malicious network stream can be used to 
+crash an application or disclose memory. All components of the stack 
+should be updated.</p>
+
+</td></tr>
+<tr><td>sa-13.1-060</td> 
+           <td>7zip</td> 
+           <td>2026-10-07</td> 
+           <td>Medium</td></tr>
+<tr><td colspan='4'><p>7zip-26.04 fixes several security vulnerabilities. Upstream
+documentation is scanty: the
+<a href="https://github.com/ip7z/7zip/releases">release notes</a> only say
+that "some bugs and vulnerabilities were fixed", and no CVE identifiers
+have been published. The description below is based on a comparison of the
+source code with the previous release. These issues are rated Medium.</p>
+
+<p>Most of the changes add missing checks to the code that reads archives
+and disk images. WIM handling now limits memory use, validates file names,
+and checks that resources do not overlap. NTFS image handling has new
+checks in decompression and attribute parsing. VHD image handling now
+checks that reads stay inside the file. ISO directory records and Zip64
+offsets and sizes that are out of range are now rejected. An integer
+overflow that could bypass the memory limit in the multithreaded XZ decoder
+is also fixed.</p>
+
+<p>These problems can be triggered when a user opens or extracts a crafted
+archive or disk image. The likely results are a crash or excessive memory
+use, and memory corruption cannot be ruled out.</p></td></tr>
+<tr><td>sa-13.1-059</td> 
+           <td>xwayland</td> 
+           <td>2026-10-07</td> 
+           <td>High</td></tr>
+<tr><td colspan='4'><p>Xwayland-24.1.14 fixes twelve security vulnerabilities. An X11 program
+connected to Xwayland can use most of them to crash it or run arbitrary
+code in it. Xwayland runs with the privileges of the user, so this mainly
+allows a sandboxed or untrusted X11 program to escape its confinement. See
+the
+<a href="https://lists.x.org/archives/xorg-announce/2026-October/003747.html">X.Org
+security advisory</a> for details.</p>
+<p>Also see advisory sa-13.1-058.</p></td></tr>
+<tr><td>sa-13.1-058</td> 
+           <td>xorg-server</td> 
+           <td>2026-10-07</td> 
+           <td>High</td></tr>
+<tr><td colspan='4'><p>Xorg-Server-21.1.25 fixes twelve security vulnerabilities. A program 
+connected to the X server can use most of them to crash the server or run 
+arbitrary code in it. Where the server runs as root, this allows a local 
+user to gain root privileges. See the 
+<a href="https://lists.x.org/archives/xorg-announce/2026-October/003747.html">X.Org 
+security advisory</a> for details.</p> 
+
+<p>Seven are heap buffer overflows or out-of-bounds writes, in GLX 
+(<a href="https://www.cve.org/CVERecord?id=CVE-2026-93517">CVE-2026-93517</a>), 
+XKB 
+(<a href="https://www.cve.org/CVERecord?id=CVE-2026-93518">CVE-2026-93518</a>, 
+<a href="https://www.cve.org/CVERecord?id=CVE-2026-93520">CVE-2026-93520</a>), 
+XFixes 
+(<a href="https://www.cve.org/CVERecord?id=CVE-2026-93519">CVE-2026-93519</a>), 
+RandR 
+(<a href="https://www.cve.org/CVERecord?id=CVE-2026-93521">CVE-2026-93521</a>), 
+Glamor 
+(<a href="https://www.cve.org/CVERecord?id=CVE-2026-93522">CVE-2026-93522</a>), 
+and XInput2 
+(<a href="https://www.cve.org/CVERecord?id=CVE-2026-93523">CVE-2026-93523</a>).</p> 
+
+<p>Three are use-after-free bugs, in the Present extension 
+(<a href="https://www.cve.org/CVERecord?id=CVE-2026-93515">CVE-2026-93515</a>), 
+XInput passive grabs 
+(<a href="https://www.cve.org/CVERecord?id=CVE-2026-93516">CVE-2026-93516</a>), 
+and gesture handling 
+(<a href="https://www.cve.org/CVERecord?id=CVE-2026-93536">CVE-2026-93536</a>). 
+The remaining two are in XKB: a double free 
+(<a href="https://www.cve.org/CVERecord?id=CVE-2026-88812">CVE-2026-88812</a>) 
+and an out-of-bounds read 
+(<a href="https://www.cve.org/CVERecord?id=CVE-2026-93524">CVE-2026-93524</a>).</p>
+
+</td></tr>
+<tr><td>sa-13.1-057</td> 
+           <td>openssh</td> 
+           <td>2026-10-07</td> 
+           <td>Medium</td></tr>
+<tr><td colspan='4'><p>OpenSSH-10.6p1 fixes several security issues. No CVE identifiers have 
+been assigned. See the 
+<a href="https://www.openssh.org/releasenotes.html">release notes</a> for 
+details.</p> 
+
+<p>In sshd, GSSAPI credentials are now stored only after authentication 
+succeeds, and GSSAPI state is reset before each authentication attempt. 
+Options set to "none" inside a Match block, such as 
+AuthorizedPrincipalsFile, were treated as a file name and so were not 
+disabled. The "restrict" keyword in authorized_keys now fully applies to 
+tunnel forwarding.</p> 
+
+<p>In the clients, a malicious server could direct a recursive sftp 
+download to write outside the target directory. User names containing "$" 
+or a backslash given on the ssh command line could inject shell commands 
+through ProxyCommand or Match exec, and are now refused. ssh-keygen 
+mishandled daylight saving time, so certificate expiry times could be 
+wrong by one or two hours.</p> 
+
+<p>For both ssh and sshd, part of the compression algorithm is disabled to 
+prevent recovery of plaintext from other channels of a compressed 
+connection, and decompressed data is now limited to the maximum packet 
+size. Compression is less effective as a result.</p>
+
+</td></tr>
+<tr><td>sa-13.1-056</td> 
+           <td>libheif</td> 
+           <td>2026-10-07</td> 
+           <td>Medium</td></tr>
+<tr><td colspan='4'><p>libheif-1.23.6 fixes eleven security vulnerabilities, four of them 
+rated High by upstream. No CVE identifiers have been assigned yet. See the 
+<a href="https://github.com/strukturag/libheif/releases/tag/v1.23.6">release 
+notes</a> for the full list.</p> 
+
+<p>Three issues affect libheif as built in BLFS. 
+<a href="https://github.com/strukturag/libheif/security/advisories/GHSA-8p2c-9wv4-rx4p">GHSA-8p2c-9
+wv4-rx4p</a> 
+(Medium) is a NULL pointer dereference when reading a crafted image 
+sequence. 
+<a href="https://github.com/strukturag/libheif/security/advisories/GHSA-vv35-6hxg-95x8">GHSA-vv35-6
+hxg-95x8</a> 
+(Medium) allows the bit depth reported for an image to differ from that of 
+the decoded data, which can mislead an application about buffer sizes. 
+<a href="https://github.com/strukturag/libheif/security/advisories/GHSA-hvwh-xpj6-ph5x">GHSA-hvwh-x
+pj6-ph5x</a> 
+(Low) is a use-after-free in heif-enc.</p> 
+
+<p>A heap out-of-bounds read in colour conversion with libsharpyuv 
+(<a href="https://github.com/strukturag/libheif/security/advisories/GHSA-q7mw-2fmm-5q94">GHSA-q7mw-
+2fmm-5q94</a>, 
+High) is present, but the known way to trigger it from a crafted file needs 
+decoders that BLFS does not build. The other High rated issues are memory 
+and CPU exhaustion in the uncompressed codec and the OpenJPEG decoder 
+plugin. They, and two issues in the FFmpeg decoder plugin, only apply if 
+those components are enabled.</p>
+
+</td></tr>
+<tr><td>sa-13.1-055</td> 
+           <td>cups</td> 
+           <td>2026-10-05</td> 
+           <td>Medium</td></tr>
+<tr><td colspan='4'><p>CUPS-2.4.20 fixes thirteen security vulnerabilities, all rated Medium or 
+Low. Most are missing input checks in the scheduler, cupsd. 
+<a href="https://www.cve.org/CVERecord?id=CVE-2026-55480">CVE-2026-55480</a> 
+(Medium, 5.7) occurs because temporary PPD files were not opened in 
+exclusive mode. 
+<a href="https://www.cve.org/CVERecord?id=CVE-2026-61702">CVE-2026-61702</a> 
+(Medium, 5.3) is a missing check of the language value in a request. 
+<a href="https://www.cve.org/CVERecord?id=CVE-2026-87875">CVE-2026-87875</a> 
+(Medium, 4.3) is incorrect handling of UTF-32 values in 
+cupsUTF32toUTF8().</p> 
+
+<p>The Low rated issues with a CVE are unsanitized IPP attribute strings in 
+the backend 
+(<a href="https://www.cve.org/CVERecord?id=CVE-2026-55453">CVE-2026-55453</a>), 
+user names not treated as case-sensitive for quotas and policies 
+(<a href="https://www.cve.org/CVERecord?id=CVE-2026-87876">CVE-2026-87876</a>), 
+unsanitized fax numbers 
+(<a href="https://www.cve.org/CVERecord?id=CVE-2026-55467">CVE-2026-55467</a>), 
+and an unsanitized recipient address passed to sendmail by the mailto 
+notifier 
+(<a href="https://www.cve.org/CVERecord?id=CVE-2026-105326">CVE-2026-105326</a>).</p> 
+
+<p>Six further issues have no CVE yet. They include two scheduler crashes, 
+job attributes that were not filtered from print requests, and a race in 
+the scheduler's startup permission checks. See the 
+<a href="https://github.com/OpenPrinting/cups/security/advisories">CUPS 
+security advisories</a> page for details.</p>
+
+</td></tr>
+<tr><td>sa-13.1-054</td> 
+           <td>libsoup</td> 
+           <td>2026-10-03</td> 
+           <td>High</td></tr>
+<tr><td colspan='4'><p>libsoup-3.8.0 and the 3.7 development releases before it fix eleven 
+security vulnerabilities. In WebSocket handling, 
+<a href="https://www.cve.org/CVERecord?id=CVE-2026-15709">CVE-2026-15709</a> 
+allows unbounded memory use when a compressed message is inflated, 
+<a href="https://www.cve.org/CVERecord?id=CVE-2026-15711">CVE-2026-15711</a> 
+allows oversized control frames, and 
+<a href="https://www.cve.org/CVERecord?id=CVE-2026-0716">CVE-2026-0716</a> 
+is an out-of-bounds read. 
+<a href="https://www.cve.org/CVERecord?id=CVE-2026-66337">CVE-2026-66337</a> 
+is an out-of-bounds read in multipart handling.</p> 
+
+<p>Three issues expose credentials or private data. 
+<a href="https://www.cve.org/CVERecord?id=CVE-2026-66339">CVE-2026-66339</a> 
+sends proxy credentials through a CONNECT tunnel to the destination server. 
+<a href="https://www.cve.org/CVERecord?id=CVE-2026-12547">CVE-2026-12547</a> 
+could send cached proxy credentials to a different proxy. 
+<a href="https://www.cve.org/CVERecord?id=CVE-2026-15713">CVE-2026-15713</a> 
+stores authenticated responses in shared caches.</p> 
+
+<p>The others are a missing nonce check in Digest authentication 
+(<a href="https://www.cve.org/CVERecord?id=CVE-2026-3099">CVE-2026-3099</a>), 
+excessively long NTLM passwords 
+(<a href="https://www.cve.org/CVERecord?id=CVE-2026-0719">CVE-2026-0719</a>), 
+CRLF injection through the HTTP method 
+(<a href="https://www.cve.org/CVERecord?id=CVE-2026-3633">CVE-2026-3633</a>), 
+and an HTTP/2 body length error 
+(<a href="https://www.cve.org/CVERecord?id=CVE-2026-85534">CVE-2026-85534</a>). 
+The server code is also hardened against HTTP request smuggling.</p>
+
+</td></tr>
+<tr><td>sa-13.1-053</td> 
+           <td>libpng</td> 
+           <td>2026-10-03</td> 
+           <td>Medium</td></tr>
+<tr><td colspan='4'><p>libpng-1.6.59 fixes one security vulnerability, rated Medium by
+upstream.
+<a href="https://www.cve.org/CVERecord?id=CVE-2026-46675">CVE-2026-46675</a>
+is a use-after-free in png_read_end(). When decompression of a zTXt, iTXt,
+or iCCP chunk ended early, libpng left its zlib stream pointing into an
+input buffer that could later be freed. A subsequent call to png_read_end()
+then read from the freed memory. A crafted PNG file could use this to
+crash an application, or possibly to disclose or corrupt memory. Only
+applications that call png_read_end() before reading the image rows are
+affected.</p>
+
+<p>This release also prevents a double free of internal buffers after a
+memory allocation failure. Upstream describes this as hardening. It cannot
+be triggered by a PNG file alone.</p></td></tr>
+<tr><td>sa-13.1-052</td> 
+           <td>freerdp</td> 
+           <td>2026-10-03</td> 
+           <td>High</td></tr>
+<tr><td colspan='4'><p>FreeRDP-3.32.1 fixes six security vulnerabilities reported through
+GitHub security advisories. No CVE identifiers have been assigned yet, and
+upstream has published details for only one of them so far.
+<a href="https://github.com/FreeRDP/FreeRDP/security/advisories/GHSA-9qqc-m43j-g4r2">GHSA-9qqc-m43j-g4r2</a>
+(Moderate, CVSS 5.3) is a missing size check in the USB redirection
+channel. A malicious or compromised RDP server can use it to crash the
+client.</p>
+
+<p>The other five will appear on the
+<a href="https://github.com/FreeRDP/FreeRDP/security/advisories">FreeRDP
+security advisories</a> page. The changes in this release add input
+validation in the graphics pipeline, including limits on surface
+dimensions and checks for integer overflow. They also tighten length
+checks across the redirection channels, validate H.264 decoding and camera
+redirection requests, and correct a bitmap size check that could never
+trigger. Most of these protect a client that connects to a malicious RDP
+server.</p>
+
+<p>This release also fixes a regression in FreeRDP-3.32.0 that broke copy
+and paste of larger data. See the
+<a href="https://github.com/FreeRDP/FreeRDP/releases/tag/3.32.1">release
+notes</a> for details.</p></td></tr>
+<tr><td>sa-13.1-051</td> 
+           <td>thunderbird</td> 
+           <td>2026-10-03</td> 
+           <td>Low</td></tr>
+<tr><td colspan='4'><p>Thunderbird-153.4.0esr fixes 63 security vulnerabilities, 34 of them 
+rated High. Most are shared with Firefox and, according to Mozilla, cannot 
+generally be exploited through email because scripting is disabled when 
+reading mail. They are a risk when Thunderbird displays web content. See 
+<a href="https://www.mozilla.org/en-US/security/advisories/mfsa2026-103/">MFSA 
+2026-103</a> for the full list.</p> 
+
+<p><a href="https://www.cve.org/CVERecord?id=CVE-2026-103500">CVE-2026-103500</a> 
+(Low) is specific to Thunderbird. Opening an email of 2 GB or larger could 
+cause a heap buffer overflow.</p> 
+
+<p>Several of the shared issues are in code that Thunderbird uses to 
+display HTML messages and fetch remote content, and do not obviously 
+require scripting. These include a use-after-free in text and font layout 
+(<a href="https://www.cve.org/CVERecord?id=CVE-2026-100784">CVE-2026-100784</a>) 
+and in CSS parsing 
+(<a href="https://www.cve.org/CVERecord?id=CVE-2026-100815">CVE-2026-100815</a>), 
+memory errors in audio and video playback 
+(<a href="https://www.cve.org/CVERecord?id=CVE-2026-100756">CVE-2026-100756</a>, 
+<a href="https://www.cve.org/CVERecord?id=CVE-2026-100783">CVE-2026-100783</a>), 
+and networking issues 
+(<a href="https://www.cve.org/CVERecord?id=CVE-2026-100767">CVE-2026-100767</a>, 
+<a href="https://www.cve.org/CVERecord?id=CVE-2026-96869">CVE-2026-96869</a>, 
+<a href="https://www.cve.org/CVERecord?id=CVE-2026-100822">CVE-2026-100822</a>).</p>
+
+</td></tr>
+<tr><td>sa-13.1-050</td> 
+           <td>spidermonkey</td> 
+           <td>2026-10-03</td> 
+           <td>High</td></tr>
+<tr><td colspan='4'><p>SpiderMonkey from Firefox-140.17.0esr fixes four security
+vulnerabilities, all rated High and all in the WebAssembly code of the
+JavaScript engine.
+<a href="https://www.cve.org/CVERecord?id=CVE-2026-100769">CVE-2026-100769</a>
+and <a href="https://www.cve.org/CVERecord?id=CVE-2026-100776">CVE-2026-100776</a>
+are use-after-free bugs.
+<a href="https://www.cve.org/CVERecord?id=CVE-2026-100788">CVE-2026-100788</a>
+is the use of an invalid pointer.
+<a href="https://www.cve.org/CVERecord?id=CVE-2026-100792">CVE-2026-100792</a>
+is a JIT miscompilation. Each could be used to crash the program using the
+engine, or possibly to run arbitrary code.</p>
+
+<p>To exploit these, an attacker must get the engine to run crafted
+WebAssembly code. In BLFS, SpiderMonkey is used by GJS, which normally runs
+locally installed code such as GNOME Shell and its extensions, so the
+exposure is lower than in a web browser. See
+<a href="https://www.mozilla.org/en-US/security/advisories/mfsa2026-99/">MFSA
+2026-99</a> for details.</p></td></tr>
+<tr><td>sa-13.1-049</td> 
+           <td>firefox</td> 
+           <td>2026-10-03</td> 
+           <td>High</td></tr>
+<tr><td colspan='4'><p>Firefox-153.4.0esr fixes 62 security vulnerabilities: 34 rated High, 20 
+Moderate, and 8 Low. Nearly half are use-after-free bugs in the DOM, 
+WebAssembly, Canvas2D, XSLT, graphics, storage, and networking code, which 
+a malicious web page could use to crash the browser or run arbitrary code. 
+Fourteen are sandbox escapes, which allow a compromised content process to 
+break out into the rest of the browser. One of these is in the GTK widget 
+code used on Linux. The remaining issues include privilege escalation, 
+uninitialized memory reads, information disclosure, same-origin policy and 
+site isolation bypasses, spoofing, and denial of service. None is reported 
+as exploited in the wild. See 
+<a href="https://www.mozilla.org/en-US/security/advisories/mfsa2026-100/">MFSA 
+2026-100</a> for details.</p>
+
+</td></tr>
+<tr><td>sa-13.1-048</td> 
+           <td>util-linux</td> 
+           <td>2026-10-02</td> 
+           <td>High</td></tr>
+<tr><td colspan='4'><p>Util-linux-2.42.3 and 2.42.4 fix four security vulnerabilities. Three
+are in mount, and they apply when mount is installed setuid root and
+/etc/fstab has entries that ordinary users may mount.
+<a href="https://www.cve.org/CVERecord?id=CVE-2026-76642">CVE-2026-76642</a>
+(High, CVSS 7.8) occurs because post-mount hooks, such as X-mount.owner and
+X-mount.mode, still ran after an external mount helper failed. This made
+privileged changes to the filesystem already at the mount point.
+<a href="https://www.cve.org/CVERecord?id=CVE-2026-78410">CVE-2026-78410</a>
+is a race on the mount source path that lets a local attacker use symbolic
+links to redirect a privileged mount or ownership change to an arbitrary
+path.
+<a href="https://www.cve.org/CVERecord?id=CVE-2026-78409">CVE-2026-78409</a>
+allows X-mount.subdir to follow symbolic links out of the mounted tree.</p>
+
+<p><a href="https://www.cve.org/CVERecord?id=CVE-2026-78408">CVE-2026-78408</a>
+is a file descriptor leak in nsenter and unshare. An additional fix for
+<a href="https://www.cve.org/CVERecord?id=CVE-2024-28085">CVE-2024-28085</a>
+prevents wall and write from passing terminal escape sequences in the
+hostname of their banner. Out-of-bounds writes in more and pg, and an
+out-of-bounds read in the libblkid ISO9660 probe, are also fixed.</p>
+
+<p>Version 2.42.4 completes these fixes. It prevents a local user from
+replacing an fstab mount point with a symbolic link to redirect the mount,
+for example onto /etc. As a result, a symbolic link in the mount point path
+of an fstab entry no longer works for non-root users.</p></td></tr>
+<tr><td>sa-13.1-047</td> 
+           <td>pcre2</td> 
+           <td>2026-10-02</td> 
+           <td>High</td></tr>
+<tr><td colspan='4'><p>PCRE2-10.49 is a security-only release that fixes one vulnerability,
+rated High by upstream (CVSS 7.6).
+<a href="https://www.cve.org/CVERecord?id=CVE-2026-103111">CVE-2026-103111</a>
+is an out-of-bounds write during JIT-compiled matching. A regular expression
+that needs an unusually large amount of JIT stack, such as one with a very
+large number of capturing groups, could cause writes outside the memory of a
+growable JIT stack. This can crash the process or corrupt memory, and could
+lead to arbitrary code execution.</p>
+
+<p>An application is only affected if it matches patterns supplied by an
+attacker and provides its own growable JIT stack with
+pcre2_jit_stack_create() and pcre2_jit_stack_assign(). Applications that
+use the default machine stack, or do not use JIT matching, are not
+affected.</p></td></tr>
+<tr><td>sa-13.1-046</td> 
+           <td>openssl</td> 
+           <td>2026-10-02</td> 
+           <td>High</td></tr>
+<tr><td colspan='4'><p>OpenSSL-4.0.3 fixes 14 security vulnerabilities. The most serious is 
+<a href="https://www.cve.org/CVERecord?id=CVE-2026-84782">CVE-2026-84782</a> 
+(High). When a DTLS handshake message is retransmitted after a suspended 
+write, OpenSSL can read past the message buffer. This can disclose heap 
+memory to the peer or crash the process. 
+<a href="https://www.cve.org/CVERecord?id=CVE-2026-84783">CVE-2026-84783</a> 
+(Moderate) is a use-after-free in the X.509 extension cache. A remote peer 
+could crash a multi-threaded TLS client, or a multi-threaded server that 
+requests client certificates.</p> 
+
+<p>The remaining issues are rated Low. Five affect the QUIC implementation 
+and allow denial of service through memory or CPU exhaustion, or traffic 
+amplification: 
+<a href="https://www.cve.org/CVERecord?id=CVE-2026-35191">CVE-2026-35191</a>, 
+<a href="https://www.cve.org/CVERecord?id=CVE-2026-42772">CVE-2026-42772</a>, 
+<a href="https://www.cve.org/CVERecord?id=CVE-2026-54873">CVE-2026-54873</a>, 
+<a href="https://www.cve.org/CVERecord?id=CVE-2026-75804">CVE-2026-75804</a>, 
+and <a href="https://www.cve.org/CVERecord?id=CVE-2026-84784">CVE-2026-84784</a>. 
+Three are timing side channels that could lead to private key recovery for 
+ECDSA on non-NIST curves and for SM2: 
+<a href="https://www.cve.org/CVERecord?id=CVE-2026-54872">CVE-2026-54872</a>, 
+<a href="https://www.cve.org/CVERecord?id=CVE-2026-54875">CVE-2026-54875</a> 
+(ARM64 and RISC-V only), and 
+<a href="https://www.cve.org/CVERecord?id=CVE-2026-77696">CVE-2026-77696</a>.</p> 
+
+<p><a href="https://www.cve.org/CVERecord?id=CVE-2026-72897">CVE-2026-72897</a> 
+is an out-of-bounds access in TLS servers that call SSL_set_SSL_CTX() during 
+a handshake, as servers selecting a context by server name do. 
+<a href="https://www.cve.org/CVERecord?id=CVE-2026-35189">CVE-2026-35189</a> 
+causes excessive memory use when processing a crafted certificate. 
+<a href="https://www.cve.org/CVERecord?id=CVE-2026-75806">CVE-2026-75806</a> 
+allows one unauthenticated datagram to terminate a DTLS 1.2 association. 
+<a href="https://www.cve.org/CVERecord?id=CVE-2026-75805">CVE-2026-75805</a> 
+is a NULL pointer dereference in the CMP client.</p> 
+
+<p>This release also fixes EVP_DecryptFinal() reporting success after an 
+AES-SIV authentication failure, and an HTTPS to HTTP downgrade through a 
+relative redirect in OSSL_HTTP_get().</p>
+
+
+
+
+</td></tr>
+<tr><td>sa-13.1-045</td> 
+           <td>expat</td> 
+           <td>2026-10-02</td> 
+           <td>Critical</td></tr>
+<tr><td colspan='4'><p>Expat-2.8.5 fixes one security vulnerability, rated Critical by upstream 
+(CVSS 9.8). 
+<a href="https://www.cve.org/CVERecord?id=CVE-2026-93990">CVE-2026-93990</a> 
+occurs because Expat accepted a UTF-16 high surrogate that was not followed 
+by a low surrogate. Malformed UTF-16 text could therefore pass through the 
+parser and reach the application using Expat, which expects the parser to 
+have validated it. The damage depends on how the application handles the 
+malformed text. Expat now rejects such input with an invalid token error. 
+Only documents encoded in UTF-16 are affected. This issue is similar to 
+CVE-2022-25235.</p> 
+
+<p>Upstream notes that Expat still has unfixed security issues, including 
+<a href="https://www.cve.org/CVERecord?id=CVE-2025-66382">CVE-2025-66382</a>, 
+a denial of service that affects all releases, and 
+<a href="https://www.cve.org/CVERecord?id=CVE-2026-66046">CVE-2026-66046</a>. 
+No fixes are available for these yet. See 
+<a href="https://github.com/libexpat/libexpat/issues/1160">libexpat issue 
+#1160</a> for the current status.</p>
+
+
+
+</td></tr>
+<tr><td>sa-13.1-044</td> 
+           <td>python</td> 
+           <td>2026-10-02</td> 
+           <td>Critical</td></tr>
+<tr><td colspan='4'><p>Python-3.14.8 fixes eight security vulnerabilities. The most serious is 
+<a href="https://www.cve.org/CVERecord?id=CVE-2026-19445">CVE-2026-19445</a> 
+(Critical, CVSS 9.2), a use-after-free in the ssl module. A remote, 
+unauthenticated TLS client can crash a server, or make it call through 
+freed memory, if the server's sni_callback switches the connection to 
+another SSLContext and the original context is no longer referenced. 
+<a href="https://www.cve.org/CVERecord?id=CVE-2026-19553">CVE-2026-19553</a> 
+affects SSLContext.wrap_bio() and asyncio. When no server_hostname was 
+passed, the TLS handshake completed without verifying the identity of the 
+peer, even with check_hostname enabled.</p> 
+
+<p><a href="https://www.cve.org/CVERecord?id=CVE-2026-19672">CVE-2026-19672</a> 
+and <a href="https://www.cve.org/CVERecord?id=CVE-2026-82049">CVE-2026-82049</a> 
+are bypasses of the tarfile extraction filters. A crafted archive could 
+create directories outside the destination directory, or use a hard link to 
+a symbolic link to expose files outside it. 
+<a href="https://www.cve.org/CVERecord?id=CVE-2026-15310">CVE-2026-15310</a> 
+is a denial of service in zipfile, where a small bzip2, LZMA, or Zstandard 
+compressed member could expand into an unbounded memory allocation.</p> 
+
+<p><a href="https://www.cve.org/CVERecord?id=CVE-2026-15806">CVE-2026-15806</a> 
+caused urllib.request to send credentials stored for an HTTPS URL to the 
+matching HTTP URL, exposing them in clear text. 
+<a href="https://www.cve.org/CVERecord?id=CVE-2026-17084">CVE-2026-17084</a> 
+restricts the stringprep module and the IDNA codec to the Unicode codepoint 
+attributes defined in RFC 3454. 
+<a href="https://www.cve.org/CVERecord?id=CVE-2026-93990">CVE-2026-93990</a> 
+is fixed by updating the bundled copy of Expat to 2.8.5. It does not apply 
+when Python is built with --with-system-expat, but the system Expat should 
+then be version 2.8.5 or later.</p> 
+
+<p>This release also fixes a crash when formatting a float or complex number 
+with a precision close to INT_MAX.</p>
+
+</td></tr>
+<tr><td>sa-13.1-043</td> 
+           <td>glibc</td> 
+           <td>2026-10-02</td> 
+           <td>High</td></tr>
+<tr><td colspan='4'><p>The glibc-2.44 upstream fixes patch addresses six security vulnerabilities.
+The most serious is
+<a href="https://www.cve.org/CVERecord?id=CVE-2026-19499">CVE-2026-19499</a>
+(High, CVSS 7.7), a buffer overflow in strfmon() and strfmon_l() when a
+right-justified monetary value is formatted into a buffer that is too
+small.</p>
+
+<p>The others are rated Medium.
+<a href="https://www.cve.org/CVERecord?id=CVE-2026-19542">CVE-2026-19542</a>
+is a stack-based out-of-bounds write in tdelete() when it rebalances very
+large binary search trees.
+<a href="https://www.cve.org/CVERecord?id=CVE-2026-18374">CVE-2026-18374</a>
+is a heap buffer overflow in fopen() when the mode string contains an empty
+",ccs=" character set.
+<a href="https://www.cve.org/CVERecord?id=CVE-2026-77117">CVE-2026-77117</a>
+and <a href="https://www.cve.org/CVERecord?id=CVE-2026-80489">CVE-2026-80489</a>
+cause an infinite loop in iconv() when it converts crafted SHIFT_JISX0213 or
+EUC-JISX0213 text, which can hang applications that convert untrusted
+input.
+<a href="https://www.cve.org/CVERecord?id=CVE-2026-8674">CVE-2026-8674</a>
+is an assertion failure in the DNS stub resolver. A very long search domain
+in /etc/resolv.conf, for example one supplied by a DHCP server, or in the
+LOCALDOMAIN environment variable makes every program that performs DNS
+lookups abort.</p></td></tr>
+<tr><td>sa-13.1-042</td> 
+           <td>epiphany</td> 
+           <td>2026-09-26</td> 
+           <td>Medium</td></tr>
+<tr><td colspan='4'><p>Epiphany-51.1 fixes a vulnerability that allows a malicious website to
+read local files.
+<a href="https://www.cve.org/CVERecord?id=CVE-2026-94291">CVE-2026-94291</a>
+occurs because Epiphany's internal view-source:, ephy-reader: (reader
+mode), and about: URI schemes could be embedded in an iframe by any web
+page. By framing a view-source: or reader mode view of a local file, a
+website could get the contents of files on the user's system. The fix
+registers these schemes as display-isolated, so ordinary web content can
+no longer load them. Upstream has not published a CVSS score, but because
+the attack only requires the victim to visit a malicious page, it should
+be considered at least Medium in severity (an estimated 6.5).</p>
+
+<p>This release also hardens several dialogs against Pango markup
+injection. These include bookmarks, saved passwords, the privacy report,
+site permissions, search engines, extensions, and synced tabs. Names and
+titles from websites or synchronized data could previously inject
+formatting into Epiphany's user interface.</p></td></tr>
+<tr><td>sa-13.1-041</td> 
+           <td>freerdp</td> 
+           <td>2026-09-26</td> 
+           <td>Critical</td></tr>
+<tr><td colspan='4'><p>FreeRDP-3.32.0 fixes 62 security vulnerabilities reported through
+GitHub security advisories. Upstream has not yet published the details or
+assigned CVE identifiers. The 
+<a href="https://github.com/FreeRDP/FreeRDP/releases/tag/3.32.0">release
+notes</a> say they will appear on the
+<a href="https://github.com/FreeRDP/FreeRDP/security/advisories">FreeRDP
+security advisories</a> page in the coming weeks. The fixes cover
+protocol negotiation and RDSTLS authentication, the RD Gateway client,
+NTLM and Kerberos authentication, licensing, graphics and audio codecs,
+and the clipboard, smartcard, and other redirection channels. Many of them
+fix memory-safety bugs such as buffer overflows, integer underflows,
+out-of-bounds reads, and NULL pointer dereferences. Some of these can be
+triggered by a malicious RDP server when a client connects, or by a
+malicious client before it authenticates to a FreeRDP-based server.
+Previous releases with similar fixes included vulnerabilities rated
+Critical, leading to crashes or possible remote code execution.</p>
+
+<p>This release also changes the default target certificate policy of
+freerdp-proxy from accept-unless-denied to deny-unless-accepted. Users of
+the proxy may need to update its configuration file.</p>
+
+<p>All users should update to FreeRDP-3.32.0 or later.</p></td></tr>
+<tr><td>sa-13.1-040</td> 
+           <td>php</td> 
+           <td>2026-09-26</td> 
+           <td>High</td></tr>
+<tr><td colspan='4'><p>PHP-8.5.11 fixes an access control bypass in the FastCGI code used by
+PHP-FPM and php-cgi.
+<a href="https://www.cve.org/CVERecord?id=CVE-2026-91768">CVE-2026-91768</a>
+occurs because the check for the listen.allowed_clients setting compared
+only the first 96 bits of a client's IPv6 address. As a result, an entry
+permitting a single IPv6 address also admitted every host in the same /96
+range. An attacker on the same network segment could connect directly to
+the FastCGI socket and supply their own FastCGI parameters, which can be
+used to run arbitrary PHP code as the pool user. Upstream rates this issue
+as Medium (CVSS 6.5), but the potential for code execution makes it High in
+practice. Only installations where PHP-FPM listens on an IPv6 TCP socket and
+relies on listen.allowed_clients are affected. Unix socket and IPv4-only
+configurations are not affected.</p>
+
+<p>This release also adds range checking for numeric user and group IDs in
+the PHP-FPM configuration. Previously, out-of-range values were silently
+truncated. Upstream does not consider this a security issue.</p></td></tr>
+<tr><td>sa-13.1-039</td> 
+           <td>parted</td> 
+           <td>2026-09-26</td> 
+           <td>High</td></tr>
+<tr><td colspan='4'><p>Parted-3.8 fixes two heap buffer overflows in the FAT filesystem resize
+code in libparted-fs-resize. 
+<a href="https://www.cve.org/CVERecord?id=CVE-2026-89088">CVE-2026-89088</a>
+is in duplicate_legacy_root_dir(). A crafted FAT12/16 root directory entry
+count makes it read more sectors than its buffer can hold.
+<a href="https://www.cve.org/CVERecord?id=CVE-2026-89085">CVE-2026-89085</a>
+is in _init_fats() and fat_table_read(). Crafted FAT32 metadata can cause a
+zero-sized allocation that is then written past. Both require resizing a
+maliciously crafted FAT filesystem through the libparted-fs-resize API. The
+parted program itself does not resize filesystems and is not affected.</p>
+
+<p>The same release also protects against a 4 KiB buffer overflow in
+directory traversal on deeply nested FAT directories. It fixes a stack
+overflow in the parted "print" command for disks with more than 99 GPT
+partitions. It also adds checks that prevent size calculations from
+overflowing in 32-bit builds.</p>
+
+<p>These fixes are implemented as assertions, which are only compiled in
+when debugging support is enabled (the default). Building parted with
+--disable-debug removes this protection.</p></td></tr>
+<tr><td>sa-13.1-038</td> 
+           <td>wireshark</td> 
+           <td>2026-09-24</td> 
+           <td>High</td></tr>
+<tr><td colspan='4'><p>wireshark-4.6.9 fixes 19 security vulnerabilities that can be triggered by 
+malformed packets captured from the network or by a crafted capture file. Most 
+cause Wireshark or tshark to crash, loop indefinitely, or leak memory, 
+resulting in a denial of service. They affect numerous protocol dissectors, 
+including ZigBee ZCL, SCTP, SPDY, CSN.1, MBIM, IEEE 802.11, USB HID, X11, and 
+TIFF, as well as several capture file parsers and the sharkd utility: 
+<a href="https://nvd.nist.gov/vuln/detail/CVE-2026-95386">CVE-2026-95386</a>, 
+<a href="https://nvd.nist.gov/vuln/detail/CVE-2026-95387">CVE-2026-95387</a>, 
+<a href="https://nvd.nist.gov/vuln/detail/CVE-2026-95388">CVE-2026-95388</a>, 
+<a href="https://nvd.nist.gov/vuln/detail/CVE-2026-95389">CVE-2026-95389</a>, 
+<a href="https://nvd.nist.gov/vuln/detail/CVE-2026-95390">CVE-2026-95390</a>, 
+<a href="https://nvd.nist.gov/vuln/detail/CVE-2026-95391">CVE-2026-95391</a>, 
+<a href="https://nvd.nist.gov/vuln/detail/CVE-2026-95392">CVE-2026-95392</a>, 
+<a href="https://nvd.nist.gov/vuln/detail/CVE-2026-95393">CVE-2026-95393</a>, 
+<a href="https://nvd.nist.gov/vuln/detail/CVE-2026-95394">CVE-2026-95394</a>, 
+<a href="https://nvd.nist.gov/vuln/detail/CVE-2026-95395">CVE-2026-95395</a>, 
+<a href="https://nvd.nist.gov/vuln/detail/CVE-2026-96415">CVE-2026-96415</a>, 
+<a href="https://nvd.nist.gov/vuln/detail/CVE-2026-96416">CVE-2026-96416</a>, 
+<a href="https://nvd.nist.gov/vuln/detail/CVE-2026-96417">CVE-2026-96417</a>, 
+<a href="https://nvd.nist.gov/vuln/detail/CVE-2026-96418">CVE-2026-96418</a>, 
+<a href="https://nvd.nist.gov/vuln/detail/CVE-2026-96420">CVE-2026-96420</a>, 
+<a href="https://nvd.nist.gov/vuln/detail/CVE-2026-96421">CVE-2026-96421</a>, 
+<a href="https://nvd.nist.gov/vuln/detail/CVE-2026-96422">CVE-2026-96422</a>, and 
+<a href="https://nvd.nist.gov/vuln/detail/CVE-2026-96423">CVE-2026-96423</a>.</p> 
+
+<p>A more serious flaw in profile import, 
+<a href="https://nvd.nist.gov/vuln/detail/CVE-2026-96419">CVE-2026-96419</a>, 
+could allow arbitrary code execution if a user imports a malicious 
+configuration profile.</p> 
+
+<p>This release also fixes several memory corruption bugs that do not yet have 
+CVE identifiers, including integer overflows in the LBMC, LoRaWAN, and SMB 
+code reported as possible remote code execution vulnerabilities.</p> 
+
+<p>Users should update and avoid opening untrusted capture files or profiles 
+with older versions.</p>
+
+</td></tr>
+<tr><td>sa-13.1-037</td> 
+           <td>xdg-dbus-proxy</td> 
+           <td>2026-09-24</td> 
+           <td>Medium</td></tr>
+<tr><td colspan='4'><p>xdg-dbus-proxy-0.1.9 fixes a security vulnerability, 
+<a href="https://nvd.nist.gov/vuln/detail/CVE-2026-94422">CVE-2026-94422</a>, 
+that allows a malicious sandboxed application to bypass the D-Bus message 
+filtering used by Flatpak and other sandboxing tools, resulting in a sandbox 
+escape.</p> 
+
+<p>The proxy did not verify that messages presented as replies were genuine. 
+A sandboxed application could send a method call or signal carrying a reply 
+serial number and have it treated as a reply to an earlier request, or send a 
+forged reply to an unrelated peer that had never contacted it. Either 
+technique could be used to send unauthorized messages to services outside the 
+sandbox or to trick another application into acting on false data, which, 
+depending on the application, could lead to arbitrary code execution as the 
+user. The proxy now only accepts genuine method returns and errors as 
+replies, and only when they are sent to the peer that made the original 
+call.</p> 
+
+<p>After updating, restart any running Flatpak applications, or log out and 
+back in, so that the new proxy is used.</p>
+
+</td></tr>
+<tr><td>sa-13.1-036</td> 
+           <td>ntfs</td> 
+           <td>2026-09-24</td> 
+           <td>Medium</td></tr>
+<tr><td colspan='4'><p>ntfs-3g-2026.9.18 fixes eight security vulnerabilities that can be 
+triggered by a corrupt or maliciously crafted NTFS filesystem. Most are heap 
+buffer overflows or heap corruption problems in the code that parses NTFS 
+metadata, which could allow an attacker to crash ntfs-3g or potentially 
+execute arbitrary code. If ntfs-3g is installed setuid root so that 
+unprivileged users can mount NTFS volumes, a local user could potentially 
+use these flaws to gain root privileges.</p> 
+
+<p>The issues affect index handling
+(<a href="https://github.com/tuxera/ntfs-3g/security/advisories/GHSA-r6xj-6488-p8mv">GHSA-r6xj-6488-p8mv</a>),
+runlist decoding
+(<a href="https://github.com/tuxera/ntfs-3g/security/advisories/GHSA-mc3c-983p-wqm8">GHSA-mc3c-983p-wqm8</a>),
+attribute lists
+(<a href="https://github.com/tuxera/ntfs-3g/security/advisories/GHSA-wf3w-fjjg-x4w3">GHSA-wf3w-fjjg-x4w3</a>),
+WSL extended attributes
+(<a href="https://github.com/tuxera/ntfs-3g/security/advisories/GHSA-2c97-47cr-9xr8">GHSA-2c97-47cr-9xr8</a>),
+the $LogFile restart area
+(<a href="https://github.com/tuxera/ntfs-3g/security/advisories/GHSA-xrvx-6jrp-4q3x">GHSA-xrvx-6jrp-4q3x</a>),
+and security descriptor processing
+(<a href="https://github.com/tuxera/ntfs-3g/security/advisories/GHSA-x98j-3g35-f59x">GHSA-x98j-3g35-f59x</a>,
+<a href="https://github.com/tuxera/ntfs-3g/security/advisories/GHSA-pc48-m7cx-qf72">GHSA-pc48-m7cx-qf72</a>).
+A flaw in inode extent handling can also cause a denial of service
+(<a href="https://github.com/tuxera/ntfs-3g/security/advisories/GHSA-jcjj-9262-6j6p">GHSA-jcjj-9262-6j6p</a>).
+CVE identifiers have been requested but not yet assigned.</p>
+
+<p>Users should update before mounting untrusted NTFS media.</p>
+
+
+</td></tr>
+<tr><td>sa-13.1-035</td> 
+           <td>libslirp</td> 
+           <td>2026-09-24</td> 
+           <td>High</td></tr>
+<tr><td colspan='4'><p>libslirp-4.9.5 fixes two security vulnerabilities that can be triggered 
+by a malicious guest in a virtual machine or container using libslirp for 
+networking (for example, QEMU user-mode networking or slirp4netns).</p> 
+
+<p>The more serious issue, 
+href="https://nvd.nist.gov/vuln/detail/CVE-2026-95508">CVE-2026-95508</a>, 
+is a heap-based buffer overflow in the DHCPv6 response builder. A 
+guest-supplied DHCPv6 CLIENTID option can overflow the reply buffer with 
+attacker-controlled data, resulting in a denial of service and potentially 
+arbitrary code execution in the host process. This issue only occurs when the 
+interface MTU has been configured below 1280 bytes; the default MTU is not 
+affected. A similar flaw involving the TFTP blksize option is covered by the 
+same CVE but may not be fixed in this release.</p> 
+
+<p>The second issue, 
+href="https://nvd.nist.gov/vuln/detail/CVE-2026-95507">CVE-2026-95507</a>, 
+is an out-of-bounds read in the NC-SI emulation code when processing 
+truncated OEM commands, which could crash the host process or disclose a 
+small amount of host memory to the guest.</p> 
+
+<p>After updating, restart any running QEMU or slirp4netns processes so that 
+the new library is used.</p>
+
+</td></tr>
+<tr><td>sa-13.1-034</td> 
+           <td>libheif</td> 
+           <td>2026-09-22</td> 
+           <td>High</td></tr>
+<tr><td colspan='4'><p>libheif 1.23.5 is a security release; one issue is rated high, so upgrading  
+is recommended for all users. The high-severity fix (<a 
+href="https://github.com/strukturag/libheif/security/advisories/GHSA-v8qw-hwjv-44hw">GHSA-v8qw-hwjv-
+44hw</a>) 
+addresses memory exhaustion caused by a mismatch between a container's declared 
+image size and the actual bitstream size, letting a small file trigger 
+multi-gigabyte allocations. Three medium-severity issues were also fixed: a 
+heap use-after-free/double-free when encoding TAI timestamps (<a 
+href="https://github.com/strukturag/libheif/security/advisories/GHSA-qwpf-5wf7-r996">GHSA-qwpf-5wf7-
+r996</a>), 
+memory amplification from JPEG 2000 palette boxes with zero columns (<a 
+href="https://github.com/strukturag/libheif/security/advisories/GHSA-9c75-9g8r-4728">GHSA-9c75-9g8r-
+4728</a>), 
+and a heap out-of-bounds read during alpha compositing of images with 
+mixed-bit-depth color planes (<a 
+href="https://github.com/strukturag/libheif/security/advisories/GHSA-r7gr-2xm2-23wf">GHSA-r7gr-2xm2-
+23wf</a>).</p> 
+
+<p>Two low-severity issues round out the release: an unbounded JPEG 2000  
+reference-grid check in the OpenJPEG plugin (<a 
+href="https://github.com/strukturag/libheif/security/advisories/GHSA-q492-cfcm-895h">GHSA-q492-cfcm-
+895h</a>) 
+and an out-of-bounds read reachable only through direct API misuse (<a 
+href="https://github.com/strukturag/libheif/security/advisories/GHSA-qfj5-c4pq-q998">GHSA-qfj5-c4pq-
+q998</a>). 
+CVE numbers were not yet assigned at release time.</p>
+
+</td></tr>
+<tr><td>sa-13.1-033</td> 
+           <td>thunderbird</td> 
+           <td>2026-09-20</td> 
+           <td>High</td></tr>
+<tr><td colspan='4'><p> Thunderbird 153.3.0esr addresses 66 security issues. Three are specific to 
+Thunderbird's own mail handling: an ambiguous mail-header parsing flaw (<a 
+href="https://www.mozilla.org/en-US/security/advisories/mfsa2026-92/#CVE-2026-92238">CVE-2026-92
+238</a>), 
+a buffer overrun in the IMAP client (<a 
+href="https://www.mozilla.org/en-US/security/advisories/mfsa2026-92/#CVE-2026-92239">CVE-2026-92
+239</a>), 
+and an out-of-bounds read in the IMAP response parser (<a 
+href="https://www.mozilla.org/en-US/security/advisories/mfsa2026-92/#CVE-2026-92240">CVE-2026-92
+240</a>). 
+</p> 
+
+<p> The remaining 63 are shared Gecko-platform fixes matching those in Firefox 
+ESR 140.16.  Most severe are numerous use-after-free bugs across DOM subsystems 
+(HTML Parser, XML, SVG, Navigation, Networking, Streams) and Web Codecs, along 
+with privilege-escalation flaws in CanvasWebGL, WebExtensions, and WebRender, 
+plus sandbox escapes in Graphics and DOM: Core & HTML (<a 
+href="https://www.mozilla.org/en-US/security/advisories/mfsa2026-92/#CVE-2026-92005">CVE-2026-92
+005</a>–<a 
+href="https://www.mozilla.org/en-US/security/advisories/mfsa2026-92/#CVE-2026-92029">92029</a>).
+Additional moderate- and low-severity issues cover mitigation bypasses, 
+information disclosure, race conditions, and further sandbox-escape and  
+use-after-free bugs across Graphics, Networking, WebRTC, and Windows-specific 
+widget code.  </p>
+
+</td></tr>
+<tr><td>sa-13.1-032</td> 
+           <td>exim</td> 
+           <td>2026-09-19</td> 
+           <td>High</td></tr>
+<tr><td colspan='4'><p> Exim 4.100.1 is a security-only release fixing four vulnerabilities. Two 
+involve the PROXY protocol: an out-of-bounds read while parsing v1 headers 
+(GCVE-25-2026-09-50-1), and a v2 header parsing bug where an uninitialized 
+length field could leak memory contents to an attacker, though this requires a 
+buggy or compromised proxy (GCVE-25-2026-09-55-1). A third issue is a  
+use-after-free in the GnuTLS-linked build, triggered when a client closes the  
+connection early during TLS session startup (GCVE-25-2026-09-51-1); since it 
+needs no special configuration or authentication, this is likely the most 
+broadly exploitable of the four.  </p> 
+
+<p> The fourth fix extends mitigations against SMTP smuggling attacks, building 
+on the earlier fix for CVE-2023-51766, to close additional variants of 
+message-injection sequences that the original patch did not fully cover 
+(GCVE-25-2026-09-56-1). No CVSS scores have been published for these four 
+identifiers, which use the newer GCVE numbering scheme rather than traditional 
+CVE IDs.  </p>
+
+</td></tr>
+<tr><td>sa-13.1-031</td> 
+           <td>bind</td> 
+           <td>2026-09-19</td> 
+           <td>High</td></tr>
+<tr><td colspan='4'><p> BIND 9.20.29 (2026-09-16) addresses 14 vulnerabilities. Five allow denial 
+of service via crashes, including <a 
+href="https://kb.isc.org/docs/cve-2026-77692">CVE-2026-77692</a>, an 
+unauthenticated crash triggerable over DNS-over-HTTPS with a malformed SIG(0)  
+request, and <a 
+href="https://kb.isc.org/docs/cve-2026-76163">CVE-2026-76163</a>, triggered by 
+a single TKEY query. Others crash validating resolvers via crafted or cached 
+responses: <a href="https://kb.isc.org/docs/cve-2026-19667">CVE-2026-19667</a>, 
+<a href="https://kb.isc.org/docs/cve-2026-19666">CVE-2026-19666</a>, <a 
+href="https://kb.isc.org/docs/cve-2026-80274">CVE-2026-80274</a>, and <a 
+href="https://kb.isc.org/docs/cve-2026-19662">CVE-2026-19662</a>.  </p> 
+
+<p> Four issues enable resource exhaustion via SVCB/HTTPS alias chains, 
+oversized key-tag sets, or repeated SOA/CNAME/DNAME records (<a 
+href="https://kb.isc.org/docs/cve-2026-81563">CVE-2026-81563</a>, <a 
+href="https://kb.isc.org/docs/cve-2026-81736">CVE-2026-81736</a>, <a 
+href="https://kb.isc.org/docs/cve-2026-19668">CVE-2026-19668</a>, <a 
+href="https://kb.isc.org/docs/cve-2026-75029">CVE-2026-75029</a>). The 
+remaining four concern data integrity: forged NXDOMAIN or unsigned-delegation 
+acceptance (<a 
+href="https://kb.isc.org/docs/cve-2026-19941">CVE-2026-19941</a>, <a 
+href="https://kb.isc.org/docs/cve-2026-77119">CVE-2026-77119</a>), premature 
+serving of unauthenticated IXFR zone data (<a 
+href="https://kb.isc.org/docs/cve-2026-19033">CVE-2026-19033</a>), and  
+out-of-zone delegation answers from malformed zones (<a 
+href="https://kb.isc.org/docs/cve-2026-78301">CVE-2026-78301</a>). No exploits 
+are known in the wild, and no workarounds exist for any of the 14.  </p>
+
+</td></tr>
+<tr><td>sa-13.1-030</td> 
+           <td>stunnel</td> 
+           <td>2026-09-19</td> 
+           <td>High</td></tr>
+<tr><td colspan='4'><p> stunnel 5.81 (2026-09-16, urgency: High) addresses three security issues, 
+none of which have been assigned CVE identifiers. First, it fixes truncation 
+and out-of-bounds reads that occurred when inheriting binary session ticket 
+keys containing embedded null bytes. Second, it 
+prevents OCSP stapling response failures from terminating the running daemon, 
+closing off a remotely triggerable denial-of-service condition. Third, it 
+rejects excessively nested configuration file <code>include</code> directives  
+instead of allowing them to recurse and exhaust the process stack, which could 
+otherwise be abused for a stack-exhaustion crash.  </p> 
+
+<p> The release also includes several related bugfixes: a crash when parsing 
+empty ASCII PSK secrets, a memory leak following 
+DTLS listener poll errors and timeouts, and memory leaks during NTLM HTTP proxy 
+negotiation. Additionally, early startup logging was fixed to no longer occur 
+before thread-lock initialization, removing a potential race condition at 
+process startup.  </p>
+
+</td></tr>
+<tr><td>sa-13.1-029</td> 
+           <td>spidermonkey</td> 
+           <td>2026-09-19</td> 
+           <td>High</td></tr>
+<tr><td colspan='4'><p> Firefox and Firefox ESR 140.16 address 26 security issues disclosed in <a 
+href="https://www.mozilla.org/en-US/security/advisories/mfsa2026-92/">MFSA 
+2026-92</a>, most rated High impact. The majority are memory-safety flaws — 
+use-after-free bugs in the <a 
+href="https://www.mozilla.org/en-US/security/advisories/mfsa2026-92/#CVE-2026-92021">JavaScript 
+JIT engine (CVE-2026-92021)</a>, <a 
+href="https://www.mozilla.org/en-US/security/advisories/mfsa2026-92/#CVE-2026-92005">Web 
+Codecs (CVE-2026-92005)</a>, <a 
+href="https://www.mozilla.org/en-US/security/advisories/mfsa2026-92/#CVE-2026-92016">accessibili
+ty 
+APIs (CVE-2026-92016)</a>, and several DOM subsystems (HTML Parser, XML, SVG, 
+Navigation, Networking, Streams — <a 
+href="https://www.mozilla.org/en-US/security/advisories/mfsa2026-92/#CVE-2026-92022">CVE-2026-92
+022</a> 
+through <a 
+href="https://www.mozilla.org/en-US/security/advisories/mfsa2026-92/#CVE-2026-92029">CVE-2026-92
+029</a>). 
+</p>  
+
+<p> A cluster of boundary-condition bugs in <b>WebGL/Graphics</b> (<a 
+href="https://www.mozilla.org/en-US/security/advisories/mfsa2026-92/#CVE-2026-92006">CVE-2026-92006</a>–<a 
+href="https://www.mozilla.org/en-US/security/advisories/mfsa2026-92/#CVE-2026-92014">92014</a>, 
+<a  
+href="https://www.mozilla.org/en-US/security/advisories/mfsa2026-92/#CVE-2026-92020">92020</a>) 
+could enable privilege escalation, and a <a 
+href="https://www.mozilla.org/en-US/security/advisories/mfsa2026-92/#CVE-2026-92018">DOM 
+sandbox escape (CVE-2026-92018)</a> and <a 
+href="https://www.mozilla.org/en-US/security/advisories/mfsa2026-92/#CVE-2026-92015">WebExtensio
+ns 
+privilege escalation (CVE-2026-92015)</a> were also fixed. Two 
+moderate-severity issues covered information disclosure and a mitigation 
+bypass.  </p>
+
+</td></tr>
+<tr><td>sa-13.1-028</td> 
+           <td>gvfs</td> 
+           <td>2026-09-19</td> 
+           <td>High</td></tr>
+<tr><td colspan='4'><p>Gvfs 1.62.0 fixes <a  
+href="https://security-tracker.debian.org/tracker/CVE-2026-88924">CVE-2026-88924</a>, 
+a privilege-escalation flaw in the admin backend: <code>gvfsd-admin</code> 
+changed ownership of a private D-Bus socket via a link-following 
+<code>chown()</code> on a path in a user-controlled directory, letting a local 
+attacker race the operation with a symlink to a root-owned file (such as 
+<code>/etc/pam.d/su</code>) and gain root. The fix sets socket ownership before 
+creation, closing the race window.</p> <p>The preceding 1.61.90 release, 
+bundled into 1.62.0, hardened input validation across the AFP, DAV, FTP, MTP, 
+and SFTP backends — addressing unchecked server-supplied lengths in read paths 
+that could otherwise corrupt heap memory, crash daemons, or leak memory 
+contents (matching the pattern of several CVEs reported against these  
+backends), and fixed related crashes in the MTP, OneDrive, and SMB backends. It 
+also added clearing of password strings from memory before freeing, reducing 
+exposure of credentials in memory dumps.</p> <p>Earlier still, 1.61.1 fixed a 
+DAV redirect-handling bug that could allow an HTTPS-to-HTTP downgrade and 
+credential leakage when following a malicious server's redirect.</p>
+
+</td></tr>
+<tr><td>sa-13.1-027</td> 
+           <td>epiphany</td> 
+           <td>2026-09-19</td> 
+           <td>High</td></tr>
+<tr><td colspan='4'><p>Epiphany 51.0 fixes three security issues with assigned CVEs, plus related  
+hardening. <a 
+href="https://nvd.nist.gov/vuln/detail/CVE-2026-18487">CVE-2026-18487</a> 
+allowed address-bar host spoofing: a crafted URL like 
+<code>https://trusted.com:80@attacker.com/</code> displayed the trusted host 
+while actually navigating to the attacker's site, enabling convincing phishing 
+pages (Medium severity, requires a user click).</p> <p>Two more severe issues 
+were fixed in the 51.rc pre-release and carried into 51.0. <a 
+href="https://bugzilla.redhat.com/show_bug.cgi?id=2520893">CVE-2026-77682</a> 
+was a JavaScript code-injection flaw in form autofill, caused by building a CSS 
+selector from an untrusted element <code>id</code> without sanitizing it, 
+allowing a malicious page to run arbitrary JS (High severity). <a 
+href="https://app.opencve.io/cve/CVE-2026-77679">CVE-2026-77679</a> was a Zip 
+Slip path-traversal bug in WebExtension (<code>.xpi</code>) extraction, where 
+archive entries containing <code>../</code> sequences could overwrite arbitrary 
+user files such as <code>~/.bashrc</code> or SSH authorized keys, leading to 
+persistent code execution.</p> <p>Additional fixes addressed a 
+<code>data:</code> URI icon-handling code-injection issue and an 
+XSS/HTML-injection flaw in the browser's error page, both hardening against 
+untrusted content being trusted or executed.</p>
+
+</td></tr>
+<tr><td>sa-13.1-026</td> 
+           <td>firefox</td> 
+           <td>2026-09-15</td> 
+           <td>High</td></tr>
+<tr><td colspan='4'><p>Firefox ESR 153.3, released September 15, 2026, addresses 63 security  
+vulnerabilities across three severity tiers. Mozilla notes it has changed its 
+disclosure practice and now issues a separate CVE for every internally found 
+memory-safety bug rather than bundling them, which accounts for the unusually 
+large count.</p> 
+
+<p>Seventeen issues are rated <strong>high impact</strong>, including a cluster  
+of eight related privilege-escalation flaws from incorrect boundary conditions 
+in the Graphics: CanvasWebGL component (<a 
+href="https://bugzilla.mozilla.org/show_bug.cgi?id=2057121">CVE-2026-92006</a> 
+through <a 
+href="https://bugzilla.mozilla.org/show_bug.cgi?id=2058078">CVE-2026-92013</a>), 
+a use-after-free in Web Codecs (<a 
+href="https://bugzilla.mozilla.org/show_bug.cgi?id=2056051">CVE-2026-92005</a>), 
+sandbox escapes in Graphics and DOM: Core & HTML (<a 
+href="https://bugzilla.mozilla.org/show_bug.cgi?id=2061245">CVE-2026-92035</a>, 
+<a 
+href="https://bugzilla.mozilla.org/show_bug.cgi?id=2064287">CVE-2026-92018</a>), 
+and several further use-after-free bugs spanning the HTML Parser, XML, SVG, DOM 
+Navigation, Networking, and DOM Streams components.</p> 
+
+<p>About nineteen <strong>moderate-impact</strong> issues were fixed, largely  
+use-after-free, privilege-escalation, and sandbox-escape bugs in Graphics, 
+WebRTC, Win32 widget code, DevTools, and Enterprise Policies — notably <a 
+href="https://bugzilla.mozilla.org/show_bug.cgi?id=2062551">CVE-2026-92054</a>, 
+a Memory-component privilege escalation reported by a researcher at OpenAI.</p> 
+
+<p>The remaining seventeen issues are rated <strong>low impact</strong>, mostly  
+sandbox-escape bugs in Win32 widget code, information-disclosure and spoofing 
+issues in Networking and DOM Navigation, and denial-of-service bugs in SVG and 
+Security components.</p> 
+
+<p>Across the advisory, Graphics-related code (especially CanvasWebGL and Win32  
+widget handling) is the most heavily represented area, and most high-severity 
+issues were discovered internally by Mozilla rather than external 
+researchers.</p>
+
+</td></tr>
+<tr><td>sa-13.1-025</td> 
+           <td>glib-networking</td> 
+           <td>2026-09-14</td> 
+           <td>Medium</td></tr>
+<tr><td colspan='4'><p>glib-networking's most notable recent fix (2.90.0) addresses <a  
+href="https://access.redhat.com/security/cve/cve-2026-10028">CVE-2026-10028</a>, 
+an infinite loop in the GnuTLS backend's certificate chain verification. When 
+building the in-memory certificate chain, issuer links between peer-supplied  
+certificates are established via <code>gnutls_x509_crt_check_issuer()</code> 
+with no cycle detection; a maliciously crafted chain with circular issuer 
+relationships causes unbounded traversal during verification, consuming 
+excessive CPU and resulting in denial of service for the affected process.</p> 
+
+<p>Also relevant are two OpenSSL-backend issues, <a  
+href="https://ubuntu.com/security/CVE-2025-60018">CVE-2025-60018</a> and <a 
+href="https://security-tracker.debian.org/tracker/CVE-2025-60019">CVE-2025-60019</a>: 
+the backend failed to check the return value of <code>BIO_write()</code>, 
+causing an out-of-bounds read, and failed to check memory-allocation return 
+values elsewhere, risking a write to invalid memory under an out-of-memory 
+condition. Since most distributions build glib-networking with the GnuTLS 
+backend only, these OpenSSL-specific issues affect a narrower set of 
+deployments that explicitly enable that backend.</p>
+
+</td></tr>
+<tr><td>sa-13.1-024</td> 
+           <td>xz</td> 
+           <td>2026-09-14</td> 
+           <td>Medium</td></tr>
+<tr><td colspan='4'><p>XZ Utils 5.8.4 fixes a single memory-safety vulnerability, tracked as <a  
+href="https://tukaani.org/xz/invalid-write-after-reinit.html">GHSA-5qpq-xqfv-j9pg</a> 
+(CVE pending at release), affecting all XZ Utils versions since 5.0.0. The bug 
+occurs in <code>lzma_alone_decoder()</code>, <code>lzma_lzip_decoder()</code>, 
+<code>lzma_auto_decoder()</code> (for .lzma/.lz files), and 
+<code>lzma_microlzma_decoder()</code>. When a decoder is reinitialized and 
+reused on the same <code>lzma_stream</code> object, and an intervening decode 
+attempt fails with <code>LZMA_MEM_ERROR</code>, a subsequent reinitialization 
+and decode using the same dictionary size can trigger an invalid memory write, 
+at minimum causing a crash. Decoders for the standard .xz format and raw 
+streams are not affected — only the legacy .lzma, .lz, and MicroLZMA code 
+paths.</p> 
+
+<p>The fix has also been backported to the older v5.2, v5.4, and v5.6 branches,  
+though no new point releases will be made from them. The release additionally 
+bundles two non-security correctness fixes: 
+<code>lzma_stream_buffer_decode()</code> returning the wrong error code for 
+truncated input, and a performance issue in <code>lzma_index_cat()</code> 
+affecting concatenated .xz files. This issue is unrelated to the 2024 XZ Utils 
+backdoor (CVE-2024-3094).</p>
+
+</td></tr>
+<tr><td>sa-13.1-023</td> 
+           <td>pcre2</td> 
+           <td>2026-09-14</td> 
+           <td>High</td></tr>
+<tr><td colspan='4'><p>PCRE2 10.48 fixes seven vulnerabilities, primarily memory-safety issues  
+reachable through untrusted patterns or subject strings. <a 
+href="https://github.com/advisories/GHSA-2p8c-ff85-vh9x">GHSA-2p8c-ff85-vh9x</a> 
+fixed an out-of-bounds read when a pattern JIT-compiled for one match mode was 
+matched in another mode against invalid UTF input. <a 
+href="https://github.com/advisories/GHSA-q8g2-wprr-34m9">GHSA-q8g2-wprr-34m9</a> 
+addressed an out-of-bounds heap write in <code>pcre2_convert()</code> on 32-bit 
+platforms, and <a 
+href="https://nvd.nist.gov/vuln/detail/CVE-2026-86145">CVE-2026-86145</a> 
+(GHSA-3r4p-g7gg-ppmf) fixed an out-of-bounds write in DFA matching under a heap 
+limit, along with related integer overflows causing workspace 
+under-allocation.</p> 
+
+<p><a  
+href="https://github.com/advisories/GHSA-fmgr-6ggq-9859">GHSA-fmgr-6ggq-9859</a> 
+added bounds checks for integer overflows during pattern compilation on 32-bit 
+CPUs that could cause under-allocation and out-of-bounds writes. <a 
+href="https://github.com/advisories/GHSA-9qww-pwc4-77qq">GHSA-9qww-pwc4-77qq</a> 
+fixed two out-of-bounds reads when scanning backwards through invalid UTF data. 
+A further fix (issue #937) resolved a memory leak and invalid free in 
+<code>pcre2_jit_match()</code> when reusing match data from 
+<code>PCRE2_COPY_MATCHED_SUBJECT</code>. Finally, <a 
+href="https://github.com/advisories/GHSA-q7rw-r7qq-2hx6">GHSA-q7rw-r7qq-2hx6</a> 
+(low severity) fixed exposure of two uninitialized bytes via 
+<code>pcre2_serialize_encode()</code>.</p>
+
+</td></tr>
+<tr><td>sa-13.1-022</td> 
+           <td>expat</td> 
+           <td>2026-09-14</td> 
+           <td>High</td></tr>
+<tr><td colspan='4'><p>Expat 2.8.4 is a security release addressing four vulnerabilities, all  
+denial-of-service risks rather than memory-corruption or code-execution bugs. 
+The most notable, <a 
+href="https://nvd.nist.gov/vuln/detail/CVE-2026-66046">CVE-2026-66046</a> and 
+<a 
+href="https://nvd.nist.gov/vuln/detail/CVE-2026-76641</a>">CVE-2026-76641</a> 
+(CVSS 7.5), fixed quadratic-runtime behavior in attribute <code>isCdata</code> 
+lookups, where a moderately sized crafted document with many attributes could 
+cause disproportionate CPU consumption; the fix replaces a linear scan with a 
+hash-table lookup.</p> 
+
+<p><a href="https://nvd.nist.gov/vuln/detail/CVE-2026-76957">CVE-2026-76957</a>  
+hardens custom encoding callbacks against unsafe parser re-entry, related to a  
+family of earlier re-entrancy issues fixed in Expat 2.8.2. <a 
+href="https://nvd.nist.gov/vuln/detail/CVE-2026-76956">CVE-2026-76956</a> (CVSS 
+5.9) corrected inverted return-value handling for <code>getentropy()</code>, 
+which could cause weak entropy to be used for internal hash seeding in 
+configurations relying on it, enabling hash-flooding denial-of-service 
+attacks.</p> 
+
+<p>None of the four issues allow remote code execution; all are  
+availability-impacting.</p>
+
+</td></tr>
+<tr><td>sa-13.1-021</td> 
+           <td>openssl</td> 
+           <td>2026-09-14</td> 
+           <td>Medium</td></tr>
+<tr><td colspan='4'><p>OpenSSL 4.0.2 is a security patch release fixing eleven CVEs, the most  
+severe rated Moderate, with no remote code execution paths. Three Moderate 
+issues were addressed: a QUIC server double-free on malformed INITIAL packets 
+(<a href="https://www.cve.org/CVERecord?id=CVE-2026-18798">CVE-2026-18798</a>), 
+a CMS heap buffer overflow during key unwrapping (<a 
+href="https://www.cve.org/CVERecord?id=CVE-2026-63072">CVE-2026-63072</a>), and 
+an invalid pointer dereference in CMP protection verification (<a 
+href="https://www.cve.org/CVERecord?id=CVE-2026-63076">CVE-2026-63076</a>).</p> 
+
+<p>The remaining Low-severity fixes cover an AEAD tag-verification bypass on  
+empty ciphertexts (<a 
+href="https://www.cve.org/CVERecord?id=CVE-2026-75803">CVE-2026-75803</a>), a 
+NULL dereference in raw public key handling (<a 
+href="https://www.cve.org/CVERecord?id=CVE-2026-14457">CVE-2026-14457</a>), a 
+DTLS memory-amplification denial of service (<a 
+href="https://www.cve.org/CVERecord?id=CVE-2026-54874">CVE-2026-54874</a>), a 
+CMP format-string crash (<a 
+href="https://www.cve.org/CVERecord?id=CVE-2026-63073">CVE-2026-63073</a>), 
+unbounded CMP extraCerts cache growth (<a 
+href="https://www.cve.org/CVERecord?id=CVE-2026-63074">CVE-2026-63074</a>), 
+QUIC ACK-only packet memory retention (<a 
+href="https://www.cve.org/CVERecord?id=CVE-2026-63075">CVE-2026-63075</a>), 
+unbounded QUIC channel queue growth (<a 
+href="https://www.cve.org/CVERecord?id=CVE-2026-14456">CVE-2026-14456</a>), and 
+a client-side memory leak in OCSP response checking (<a 
+href="https://www.cve.org/CVERecord?id=CVE-2026-54876">CVE-2026-54876</a>).</p>
+
+</td></tr>
+<tr><td>sa-13.1-020</td> 
+           <td>glib2</td> 
+           <td>2026-09-13</td> 
+           <td>Medium</td></tr>
+<tr><td colspan='4'>In GLib 2.90.0 a Heap Overflow on GLib through _xdg_mime_magic_parse_magic_line() in gio/xdgmime/xdgmimemagic.c via Incorrect Byte-Swap Pointer Arithmetic on MIME magic content in user- writable XDG data location was fixed</td></tr>
+<tr><td>sa-13.1-019</td> 
+           <td>gimp</td> 
+           <td>2026-09-12</td> 
+           <td>High</td></tr>
+<tr><td colspan='4'><p>GIMP 3.2.6 is a security-focused maintenance release that patches 28  
+vulnerabilities, all located in the application's file-format import/export 
+plug-ins rather than its core. Most are memory-safety issues in native parsing 
+code &mdash; integer overflows leading to undersized buffer allocations, and 
+subsequent heap or stack buffer overflows &mdash; affecting loaders for <a 
+href="https://nvd.nist.gov/vuln/detail/CVE-2026-18301">PSD</a>, <a 
+href="https://nvd.nist.gov/vuln/detail/CVE-2026-18302">TIFF</a>, <a 
+href="https://nvd.nist.gov/vuln/detail/CVE-2026-18306">SGI</a>, and <a 
+href="https://nvd.nist.gov/vuln/detail/CVE-2026-18309">APNG</a> images. 
+Additional fixes address an unsigned-integer underflow enabling arbitrary  
+writes in the <a href="https://nvd.nist.gov/vuln/detail/CVE-2026-59090">PSD 
+plug-in</a>, a heap overflow in the <a  
+href="https://nvd.nist.gov/vuln/detail/CVE-2026-59087">Seattle Film Works 
+loader</a>, an overflow-driven heap corruption in <a 
+href="https://nvd.nist.gov/vuln/detail/CVE-2026-66758">FITS/cfitsio</a> 
+pixel-row handling, a signed-integer overflow causing denial of service in <a 
+href="https://nvd.nist.gov/vuln/detail/CVE-2026-59088">FLI file processing</a>, 
+and an out-of-bounds read in the <a 
+href="https://nvd.nist.gov/vuln/detail/CVE-2026-66759">ICNS plug-in</a> that 
+can leak heap memory as pixel data.</p> 
+
+<p>All issues require a user to open a maliciously crafted image file; none are  
+remotely exploitable without user interaction, and none affect GIMP's core 
+engine, GEGL, or its scripting interfaces. Users who process files from 
+untrusted sources should update promptly.</p>
+
+</td></tr>
+<tr><td>sa-13.1-018</td> 
+           <td>libheif</td> 
+           <td>2026-09-09</td> 
+           <td>Critical</td></tr>
+<tr><td colspan='4'><p>libheif 1.23.4 (released September 6, 2026) is a security and bugfix  
+release; three of the fixed issues are rated High severity, and CVE numbers had 
+not yet been assigned at release time. The detailed advisory, <a 
+href="https://github.com/strukturag/libheif/security/advisories/GHSA-vg7w-rp49-4fc2">GHSA-vg7w-rp4
+9-4fc2</a>,  
+addresses a missing enforcement of the <code>max_items</code> security limit on 
+the child boxes of the <code>iinf</code> box. A crafted HEIF file could declare  
+an unbounded number of items, causing the per-item <code>iref</code> reference 
+scan to run in quadratic time — an algorithmic-complexity denial-of-service. 
+The fix checks the limit before parsing child boxes, bounds the declared item 
+count by the remaining input size, and reports a short read as an error instead 
+of silently returning fewer items than declared.</p> 
+
+<p>This release continues an active run of libheif security patches: 1.23.3  
+fixed a Critical heap buffer overflow in the uncompressed (unci) decoder and a  
+High-severity decoder deadlock; 1.23.2 fixed two Critical issues, including one 
+with a confirmed working code-execution exploit via derived-item (iden/auxl) 
+pixel-plane handling. Users running any 1.23.x release prior to 1.23.4 are 
+strongly encouraged to upgrade.</p> 
+~                                             
+</td></tr>
+<tr><td>sa-13.1-017</td> 
+           <td>fuse3</td> 
+           <td>2026-09-09</td> 
+           <td>High</td></tr>
+<tr><td colspan='4'><p>libfuse 3.18.3 (September 9, 2026) addresses a cluster of security issues,  
+none of which have CVE identifiers assigned. The most significant change 
+disables <code>fuse_session_custom_io()</code> by default (requiring an 
+explicit <code>-Denable-custom-io=true</code> build flag), since a custom I/O 
+peer need not be the kernel and could forge requests that libfuse parses 
+without bounds checks, crashing or corrupting the filesystem process. The 
+remaining fixes harden <code>fusermount3</code> and its mount-handling library 
+against symlink races and privilege-escalation paths: the mountpoint is now  
+resolved once via an <code>O_PATH|O_NOFOLLOW</code> descriptor to prevent 
+symlink-swap redirection, the auto-unmount probe runs as the calling user 
+instead of with elevated privileges, and unmount/mount argument vectors are 
+terminated with <code>--</code> so a caller-controlled <code>fsname</code> can 
+no longer inject positional operands into a setuid-root  
+<code>mount(8)</code>/<code>umount(8)</code> call. Additional fixes add 
+<code>UMOUNT_NOFOLLOW</code> on relevant unmount paths, check an unchecked 
+<code>fstat()</code> return value, fix an out-of-bounds read at index -1 in 
+<code>get_mnt_opts()</code>, and fix a pointer underflow when trimming 
+<code>fuse.conf</code> lines.</p> 
+
+<p>A non-security correctness fix also relays KILLPRIV_V2 suid/sgid-clearing  
+flags to filesystems via a new <code>fuse_file_info::kill_suidgid</code> field, 
+which requires filesystems and the runtime library both be built against 
+3.18.3.</p>
+
+</td></tr>
+<tr><td>sa-13.1-016</td> 
+           <td>gstreamer</td> 
+           <td>2026-09-09</td> 
+           <td>High</td></tr>
+<tr><td colspan='4'><p>GStreamer 1.28.7 (released September 7, 2026) addresses five security  
+advisories. <a 
+href="https://gstreamer.freedesktop.org/security/sa-2026-0082.html">GStreamer-SA-2026-0082 
+(CVE-2026-85150)</a> is a NULL pointer dereference when parsing the RTSP 
+Authorization header, allowing a crash via malformed requests. <a  
+href="https://gstreamer.freedesktop.org/security/sa-2026-0081.html">GStreamer-SA-2026-0081</a> 
+covers out-of-bounds reads and writes in the FFmpeg-based audio encoder/decoder 
+when handling excessive channel counts, risking memory corruption from crafted 
+streams. <a 
+href="https://gstreamer.freedesktop.org/security/sa-2026-0080.html">GStreamer-SA-2026-0080</a> 
+is a credential-leakage issue in souphttpsrc, where authentication credentials 
+could be forwarded across cross-origin HTTP redirects, exposing them to 
+untrusted servers.</p> 
+
+<p><a  
+href="https://gstreamer.freedesktop.org/security/sa-2026-0079.html">GStreamer-SA-2026-0079</a> 
+fixes an integer overflow and out-of-bounds read in the MOV/MP4 demuxer's 
+closed-caption parser, triggerable by a malformed file. <a 
+href="https://gstreamer.freedesktop.org/security/sa-2026-0074.html">GStreamer-SA-2026-0074</a> 
+addresses unbounded source-table growth in RTP session management, where  
+packets from many distinct sources could exhaust memory (mitigated by limiting 
+tracked remote sources in rtprecv). Only CVE-2026-85150 currently has an 
+assigned CVE ID; the remaining advisories are tracked via GStreamer's internal 
+SA numbering pending CVE assignment.</p>
+
+</td></tr>
+<tr><td>sa-13.1-015</td> 
+           <td>libpcap</td> 
+           <td>2026-09-09</td> 
+           <td>Medium</td></tr>
+<tr><td colspan='4'><p>libpcap 1.10.7 (released September 5, 2026) fixes seven vulnerabilities, all  
+Medium severity, in the BPF filter interpreter and remote-capture (rpcap) code. 
+<a href="https://www.cve.org/CVERecord?id=CVE-2026-0799">CVE-2026-0799</a> 
+allows an unvalidated scratch-memory register index in a crafted filter to 
+read/write process memory far outside bounds. <a 
+href="https://www.cve.org/CVERecord?id=CVE-2026-31912">CVE-2026-31912</a> stems 
+from the interpreter failing to detect the end of a filter program or invalid 
+jump targets, risking out-of-bounds reads. <a 
+href="https://www.cve.org/CVERecord?id=CVE-2026-31911">CVE-2026-31911</a> lets 
+a crafted filter with an invalid opcode trigger an abort(), crashing the  
+process. <a 
+href="https://www.cve.org/CVERecord?id=CVE-2026-6244">CVE-2026-6244</a> is a 
+divide-by-zero in the div/mod ALU instructions, and <a 
+href="https://www.cve.org/CVERecord?id=CVE-2026-6554">CVE-2026-6554</a> 
+involves mishandling of the jump offset in the "ja L" instruction, both 
+crash-capable.</p> 
+
+<p>On the remote-capture side, <a  
+href="https://www.cve.org/CVERecord?id=CVE-2026-18313">CVE-2026-18313</a> lets 
+rpcapd allocate up to 65,536 bytes per UPDATEFILTER request without adequate 
+limits, enabling resource exhaustion, while <a 
+href="https://www.cve.org/CVERecord?id=CVE-2026-18238">CVE-2026-18238</a> is a 
+memory-safety flaw in the rpcap client's handling of PACKET messages from a 
+remote daemon. All issues are triggered via crafted filter programs or rpcap 
+messages, primarily causing denial of service or out-of-bounds memory access 
+rather than confirmed code execution.</p>
+
+</td></tr>
+<tr><td>sa-13.1-014</td> 
+           <td>7zip</td> 
+           <td>2026-09-09</td> 
+           <td>Medium</td></tr>
+<tr><td colspan='4'><p>7-Zip 26.03 (released September 2026) addresses one named security issue, <a  
+href="https://nvd.nist.gov/vuln/detail/CVE-2026-58052">CVE-2026-58052</a>, a 
+Mark-of-the-Web (MotW) preservation failure. The flaw is in the guard that 
+suppresses an archive-supplied Zone.Identifier stream during extraction: it 
+matched only the exact literal name, so a crafted archive (e.g., RAR5) could 
+bypass it and strip the Internet-zone marker from extracted files. Without 
+MotW, Windows SmartScreen and Office Protected View do not warn the user, 
+making this an effective technique for delivering phishing payloads that open 
+without any security prompt. The issue is rated Medium severity, requiring only 
+that a user extract the malicious archive, with no elevated privileges needed. 
+It affects Windows only, since MotW relies on NTFS alternate data streams.</p> 
+
+<p>7-Zip's release notes list only this one CVE for 26.03, alongside  
+unspecified general bug and vulnerability fixes. This follows a series of 
+memory-safety CVEs patched in the prior 26.01 and 26.02 releases, none of which 
+are re-listed as being addressed again in 26.03.</p>
+
+</td></tr>
+<tr><td>sa-13.1-013</td> 
+           <td>libxml2</td> 
+           <td>2026-09-09</td> 
+           <td>High</td></tr>
+<tr><td colspan='4'><p>libxml2 2.15.4 addresses a single security issue, <a  
+href="https://nvd.nist.gov/vuln/detail/CVE-2026-86138">CVE-2026-86138</a>, an 
+integer overflow leading to a heap-based buffer overflow in the 
+<code>xmlDictAddQString</code> function in <code>dict.c</code>. This function 
+is part of libxml2's internal string-dictionary subsystem, used to intern 
+qualified (prefix:local) names encountered while parsing XML. Because 
+buffer-size calculations for these interned strings were not properly checked 
+for overflow, a specially crafted XML document could trigger an undersized 
+allocation followed by an out-of-bounds heap write, resulting in memory 
+corruption. Depending on heap layout, exploitation could cause a crash (denial 
+of service) or potentially more serious impact.</p> 
+
+<p>The issue affects all libxml2 versions prior to 2.15.4 and is fixed by  
+adding proper integer-overflow checks and boundary validation before the buffer 
+is allocated. No other CVEs are associated with this specific point release, 
+making it a narrowly scoped security patch rather than a broader maintenance 
+release.</p>
+
+</td></tr>
+<tr><td>sa-13.1-012</td> 
+           <td>libde265</td> 
+           <td>2026-09-09</td> 
+           <td>Medium</td></tr>
+<tr><td colspan='4'><p>libde265 1.1.2 (released September 2, 2026) is a security and bugfix release  
+addressing two medium-severity memory-safety issues, both reported before CVE 
+numbers were assigned. The first, <a 
+href="https://github.com/strukturag/libde265/security/advisories/GHSA-xp3h-6f5r-8cxp">GHSA-xp3h-6f5r-8cxp</a>, 
+is a heap use-after-free and double-free in multi-threaded (WPP) decoding: a 
+crafted stream that repeated or rewound its slice_segment_address within a 
+picture caused already-finished CTB rows to be re-run, breaking the ordered 
+CABAC context handoff and freeing the shared context table twice. It is fixed 
+by rejecting out-of-order slice segments and resetting WPP row progress per 
+segment. The second, <a 
+href="https://github.com/strukturag/libde265/security/advisories/GHSA-mm7m-v26f-wf8x">GHSA-mm7m-v26f-wf8x</a>, 
+is a heap use-after-free after de265_reset(), where a dangling 
+previous-slice-header pointer was read by a dependent slice pushed after the 
+reset.</p> 
+
+<p>The release also adds hardening not tied to a CVE: rejection of NAL units  
+shorter than the required header (avoiding a NULL-destination memcpy), a 
+corrected SEI payload-size overflow guard that previously never triggered, and  
+atomic per-CTB progress tracking to eliminate data races detected under 
+multi-threaded decoding.</p>
+
+
+</td></tr>
+<tr><td>sa-13.1-011</td> 
+           <td>curl</td> 
+           <td>2026-09-09</td> 
+           <td>Medium</td></tr>
+<tr><td colspan='4'><p>curl 8.22.0 (released September 2, 2026) addressed nine security issues in  
+curl/libcurl and one in the wcurl wrapper script. The most notable is <a 
+href="https://curl.se/docs/CVE-2026-19931.html">CVE-2026-19931</a> (Medium), a 
+Negotiate-authentication flaw allowing connection reuse across different users. 
+The remaining issues are rated Low, including <a  
+href="https://curl.se/docs/CVE-2026-13608.html">CVE-2026-13608</a> (OpenLDAP 
+SASL authentication bypass via MITM), <a 
+href="https://curl.se/docs/CVE-2026-18924.html">CVE-2026-18924</a> (HTTP/2 
+server push use-after-free), and two OpenSSL-related flaws: <a 
+href="https://curl.se/docs/CVE-2026-80229.html">CVE-2026-80229</a> (provider 
+use-after-free) and <a 
+href="https://curl.se/docs/CVE-2026-80230.html">CVE-2026-80230</a> (public-key 
+pinning bypass).</p> 
+
+<p>Also fixed: <a  
+href="https://curl.se/docs/CVE-2026-80231.html">CVE-2026-80231</a> (native CA 
+store connection reuse), <a 
+href="https://curl.se/docs/CVE-2026-80255.html">CVE-2026-80255</a> (secure 
+cookie attribute bypass), <a 
+href="https://curl.se/docs/CVE-2026-82208.html">CVE-2026-82208</a> (wolfSSL 
+CA-cache overriding verification callback), and <a 
+href="https://curl.se/docs/CVE-2026-82209.html">CVE-2026-82209</a> (cookie 
+leakage across Public Suffix List boundaries). The wcurl script separately 
+received <a href="https://curl.se/docs/CVE-2026-80256.html">CVE-2026-80256</a>, 
+a backslash-handling bypass. No active exploitation has been reported for any 
+of these issues.</p>
+
+</td></tr>
+<tr><td>sa-13.1-010</td> 
+           <td>net-dns</td> 
+           <td>2026-09-09</td> 
+           <td>High</td></tr>
+<tr><td colspan='4'><p>Net::DNS 1.57 fixes <a  
+href="https://seclists.org/oss-sec/2026/q3/636">CVE-2026-81928</a>, a 
+memory-exhaustion denial-of-service caused by unbounded recursion in 
+<code>Net::DNS::RR::TSIG::sig_data()</code>. When re-encoding a previously 
+decoded message, <code>sig_data</code> strips TSIG records only from the 
+additional section; a TSIG record placed in the answer or authority section 
+survives and is signed again, causing encoding to recurse into itself with no 
+termination condition. The decoder detects such a misplaced TSIG and logs a 
+"misplaced or corrupt TSIG" warning, but does not reject the message as RFC 
+8945 §5.2 requires, leaving the malformed record in place. The bug triggers 
+only when the TSIG carries an empty MAC and only in code that re-encodes a 
+decoded message, such as a DNS forwarder or proxy; each recursive cycle 
+re-encodes the whole message, so under 100 bytes on the wire can exhaust 
+available memory and crash the process.</p>  
+
+<p>Note that two other recent CVEs 
+sometimes associated with Net::DNS — an eval-injection flaw in EDNS 
+EXTENDED-ERROR parsing and a stack-exhaustion DoS via chained compression 
+pointers — were already resolved in the prior 1.56 release, not in 1.57.</p>
+
+
+</td></tr>
+<tr><td>sa-13.1-009</td> 
+           <td>exiv2</td> 
+           <td>2026-09-09</td> 
+           <td>Medium</td></tr>
+<tr><td colspan='4'><p>Exiv2 0.28.9, released August 30, 2026, fixes one moderate- and six  
+low-severity vulnerabilities. The most notable is <a 
+href="https://github.com/Exiv2/exiv2/security/advisories/GHSA-3695-mjv8-3r52">CVE-2026-68546</a>, 
+an out-of-bounds write in <code>RemoteIo::Impl::populateBlocks()</code>, 
+triggered when Exiv2 reads metadata from a remote URL rather than a local file. 
+Related low-severity issues in the same URL-handling code include an 
+out-of-bounds read (<a 
+href="https://github.com/Exiv2/exiv2/security/advisories/GHSA-jcgh-p9v3-pw6j">CVE-2026-68547</a>) 
+and an out-of-bounds write in <code>RemoteIo::mmap()</code> (<a 
+href="https://github.com/Exiv2/exiv2/security/advisories/GHSA-vg6c-9f6h-4x5q">GHSA-vg6c-9f6h-4x5q<
+/a>).</p> 
+
+<p>Other fixes address an out-of-bounds read in the CRW parser (<a 
+href="https://github.com/Exiv2/exiv2/security/advisories/GHSA-hxph-pv7w-8649">CVE-2026-49275</a>),
+an infinite-loop denial of service in 
+<code>QuickTimeVideo::userDataDecoder()</code> triggered by crafted MOV files 
+(<a 
+href="https://github.com/Exiv2/exiv2/security/advisories/GHSA-fgw8-p7pr-37cp">GHSA-fgw8-p7pr-37cp<
+/a>), 
+and excessive memory allocation in <code>PgfImage::readMetadata()</code> from 
+crafted PGF files (<a 
+href="https://github.com/Exiv2/exiv2/security/advisories/GHSA-pwvq-9w4q-786w">GHSA-pwvq-9w4q-786w<
+/a>). 
+The maintainers also announced plans to more systematically address 
+recursive-parsing stack-exhaustion issues in the upcoming 0.29.0 release.</p>
+
+</td></tr>
+<tr><td>sa-13.1-008</td> 
+           <td>dovecot</td> 
+           <td>2026-09-08</td> 
+           <td>High</td></tr>
+<tr><td colspan='4'><p> 
+Dovecot 2.4.5 is a major security release, fixing roughly 18&ndash;22 CVEs 
+according to downstream advisories. The issues span authentication bypass 
+(including a trusted-network/proxy check that could be skipped via forged 
+forwarded fields, and a SCRAM/CRAM channel-binding bypass allowing 
+information disclosure), email spoofing caused by improperly handled SMTP 
+message data, and several denial-of-service flaws — including excessive 
+CPU or memory consumption from crafted Sieve <code>contains</code> 
+matching, IMAP command bracing, NOOP parsing, and pre-authentication 
+managesieve input. It also addresses an information leak in IMAP COMPRESS 
+traffic, issues in OAuth2 authentication checks, and problems in dsync 
+mailbox synchronization. 
+</p> 
+
+<p> 
+Specific identifiers referenced by vendor advisories include 
+<a href="https://www.suse.com/security/cve/CVE-2026-27852.html">CVE-2026-27852</a>, 
+<a href="https://www.suse.com/security/cve/CVE-2026-33263.html">CVE-2026-33263</a>, 
+<a href="https://www.suse.com/security/cve/CVE-2026-33604.html">CVE-2026-33604</a> 
+through <a href="https://www.suse.com/security/cve/CVE-2026-33607.html">CVE-2026-33607</a>, 
+<a href="https://www.suse.com/security/cve/CVE-2026-40014.html">CVE-2026-40014</a>, 
+<a href="https://www.suse.com/security/cve/CVE-2026-40015.html">CVE-2026-40015</a>, 
+<a href="https://www.suse.com/security/cve/CVE-2026-40017.html">CVE-2026-40017</a>, 
+<a href="https://www.suse.com/security/cve/CVE-2026-40019.html">CVE-2026-40019</a>, 
+<a href="https://www.suse.com/security/cve/CVE-2026-42007.html">CVE-2026-42007</a>, 
+and <a href="https://www.suse.com/security/cve/CVE-2026-42391.html">CVE-2026-42391</a> 
+through <a href="https://www.suse.com/security/cve/CVE-2026-42395.html">CVE-2026-42395</a>, 
+among others. 
+</p>
+
+</td></tr>
+<tr><td>sa-13.1-007</td> 
+           <td>libslirp</td> 
+           <td>2026-09-08</td> 
+           <td>Medium</td></tr>
+<tr><td colspan='4'><p> 
+libslirp 4.9.4 is a maintenance release; it does not introduce a dedicated 
+security fix of its own, but it carries forward the fix for 
+<a href="https://nvd.nist.gov/vuln/detail/CVE-2026-9539">CVE-2026-9539</a>, 
+which was resolved upstream in v4.9.2 and remains present in 4.9.4. This 
+issue was an out-of-bounds heap read and integer underflow in the TCP 
+urgent-data handling routine (<code>sosendoob()</code> in 
+<code>src/socket.c</code>). A privileged guest VM attacker (root or 
+CAP_NET_RAW) could send crafted TCP segments with manipulated URG flags and 
+urgent pointers to trigger the underflow, causing libslirp to read past the 
+intended buffer and leak large amounts of host-process heap memory back to 
+the guest. It was rated CVSS 3.1 6.5 (Medium) and fixed by capping the 
+urgent-data count to what is actually available in the socket buffer, 
+rather than trusting the guest-supplied urgent pointer. 
+</p> 
+<p> 
+Versions 4.9.3 and 4.9.4 themselves are described by downstream packagers 
+as minor releases with no new CVEs attributed to them. No other 
+security-relevant changes were found documented for 4.9.4. 
+</p>
+
+</td></tr>
+<tr><td>sa-13.1-006</td> 
+           <td>bubblewrap</td> 
+           <td>2026-09-08</td> 
+           <td>High</td></tr>
+<tr><td colspan='4'><p>bubblewrap 0.12.0 (released August 26, 2026) fixes a symlink traversal  
+vulnerability tracked as <a 
+href="https://github.com/containers/bubblewrap/security/advisories/GHSA-pxhw-h44j-8pfx">GHSA-pxhw-
+h44j-8pfx</a> 
+(a CVE has been requested but not yet assigned). During sandbox setup, 
+bubblewrap could follow a symlink in attacker-controlled content that pointed 
+back out to the host filesystem, causing files or directories intended for 
+inside the sandbox to instead be created on the host — before the sandboxed 
+process ever runs. This affects Flatpak and similar frameworks when processing 
+a malicious or compromised app; created files are limited to the privileges of 
+the user invoking bubblewrap, so the issue does not enable privilege 
+escalation, but it does allow attacker-directed writes to arbitrary host paths 
+reachable by that user.</p>  
+
+<p>The fix uses <code>openat2()</code> with 
+<code>RESOLVE_IN_ROOT</code> (with a fallback for systems lacking it) to 
+correctly resolve absolute symlinks during setup. Notably, the fix could only 
+be implemented in 0.12.0 and has no backport to older release branches, so 
+upgrading is the only remediation. This release also removes support for 
+building a setuid bubblewrap, since modern Linux distributions now generally 
+support unprivileged user namespaces, further reducing historical attack 
+surface.</p>
+
+</td></tr>
+<tr><td>sa-13.1-005</td> 
+           <td>libaom</td> 
+           <td>2026-09-08</td> 
+           <td>High</td></tr>
+<tr><td colspan='4'><p>libaom 3.15.0 (released August 25, 2026) addresses several security issues,  
+with the release notes stating it "includes the fixes for all the security  
+issues found by AI tools recently." The most significant is <a 
+href="https://www.suse.com/security/cve/CVE-2026-56209">CVE-2026-56209</a> 
+(CVSS 7.1, High), a bounds-check bypass in the SVC layer-ID control where a 
+layer-count desync re-enabled out-of-bounds read/write access to encoder layer 
+context structures; this release completes a previously incomplete fix for the 
+issue, closing a path attackers could use for denial of service or potential 
+code execution in network-facing encoders using SVC.</p> <p>A second flaw, 
+tracked as CVE-2026-13906, addresses a potential heap out-of-bounds read in the 
+motion estimation code caused by a stale stride value.</p> <p>Several 
+additional memory-safety issues were fixed without CVE assignment: a heap 
+double-free in multi-threaded encoding via aliased macroblock data, a heap 
+buffer overflow in TXB context handling during SVC encoding with mismatched 
+buffer sizes, a division-by-zero crash in the SVC encoder, a null-pointer/SEGV 
+on failed encoder initialization, and undefined behavior from a NaN-to-integer 
+conversion in noise model parameter handling. Most of these cluster around SVC 
+encoding paths, suggesting concentrated fuzzing or review in that area this 
+release cycle.</p>
+
+</td></tr>
+<tr><td>sa-13.1-004</td> 
+           <td>libheif</td> 
+           <td>2026-09-08</td> 
+           <td>Critical</td></tr>
+<tr><td colspan='4'><p>libheif 1.23.3, released September 1, 2026 as a dedicated security release,  
+fixes ten security issues in the HEIF/AVIF decoder. The most severe is a 
+<strong>critical</strong> heap buffer write overflow in the uncompressed 
+(<code>unci</code>) mixed-interleave decoder (<a 
+href="https://github.com/strukturag/libheif/security/advisories/GHSA-x8r2-mggj-j6wr">GHSA-x8r2-mgg
+j-j6wr</a>),  
+where a crafted file controls both the overflow length and the bytes written — 
+the reason maintainers urged all users to upgrade.</p> <p>Three 
+<strong>high</strong>-severity issues were also fixed: a decoder deadlock via 
+an uncovered alpha-image reference cycle (<a 
+href="https://github.com/strukturag/libheif/security/advisories/GHSA-8fmq-r4pf-7m57">GHSA-8fmq-r4p
+f-7m57</a>), 
+a heap out-of-bounds read leaking memory into decoded YCbCr-to-RGB output (<a 
+href="https://github.com/strukturag/libheif/security/advisories/GHSA-w7mc-p8jc-p853">GHSA-w7mc-p8j
+c-p853</a>), 
+and a buffer overflow plus double-free in the SVT-AV1 encoder plugin (<a 
+href="https://github.com/strukturag/libheif/security/advisories/GHSA-4jqm-2x34-6f6r">GHSA-4jqm-2x3
+4-6f6r</a>).</p> 
+<p>Five <strong>medium</strong>-severity fixes address further out-of-bounds 
+reads and incomplete prior patches, including <a 
+href="https://www.cve.org/CVERecord?id=CVE-2026-84451">CVE-2026-84451</a> and 
+<a href="https://www.cve.org/CVERecord?id=CVE-2026-84450">CVE-2026-84450</a>, 
+plus null-pointer and allocation issues in example tools and bindings. One 
+<strong>low</strong>-severity undefined-behavior fix rounds out the list. Most 
+CVE identifiers were still pending assignment at release time.</p>
+
+
+</td></tr>
+<tr><td>sa-13.1-003</td> 
+           <td>webkitgtk</td> 
+           <td>2026-09-08</td> 
+           <td>High</td></tr>
+<tr><td colspan='4'><p>WebKitGTK 2.52.6 addresses security issues from advisory <a  
+href="https://webkitgtk.org/security/WSA-2026-0005.html">WSA-2026-0005</a>, 
+covering nine CVEs. Most are memory-safety bugs in web content processing — 
+including use-after-free issues (<a 
+href="https://www.cve.org/CVERecord?id=CVE-2026-64783">CVE-2026-64783</a>, <a 
+href="https://www.cve.org/CVERecord?id=CVE-2026-64787">CVE-2026-64787</a>), an 
+out-of-bounds access (<a 
+href="https://www.cve.org/CVERecord?id=CVE-2026-64719">CVE-2026-64719</a>), 
+general memory corruption (<a 
+href="https://www.cve.org/CVERecord?id=CVE-2026-64757">CVE-2026-64757</a>), and 
+improved memory handling (<a 
+href="https://www.cve.org/CVERecord?id=CVE-2026-28984">CVE-2026-28984</a>) —  
+whose primary observed impact is an unexpected crash or process 
+termination.</p> <p>The remaining fixes address policy and isolation bypasses 
+rather than crashes: <a 
+href="https://www.cve.org/CVERecord?id=CVE-2026-43804">CVE-2026-43804</a> 
+allowed a website visit to trigger an app denial-of-service; <a 
+href="https://www.cve.org/CVERecord?id=CVE-2026-64713">CVE-2026-64713</a> let 
+sites detect whether a user had visited a given link; <a 
+href="https://www.cve.org/CVERecord?id=CVE-2026-64728">CVE-2026-64728</a> 
+permitted malicious content to violate iframe sandboxing; and <a 
+href="https://www.cve.org/CVERecord?id=CVE-2026-64730">CVE-2026-64730</a> 
+enabled UI spoofing from framed content.</p> <p>Each was fixed through improved 
+memory handling, state management, bounds checking, or validation, as 
+appropriate. Users are advised to upgrade to 2.52.6.</p>
+
+</td></tr>
+<tr><td>sa-13.1-002</td> 
+           <td>uri</td> 
+           <td>2026-09-08</td> 
+           <td>Medium</td></tr>
+<tr><td colspan='4'><p>URI 5.36 (released 2026-08-19) fixes a single security issue, <a  
+href="https://cve.org/CVERecord?id=CVE-2026-19953">CVE-2026-19953</a>. The 
+module's internal <code>URI::_idna</code> nameprep routine lowercased hostname 
+labels but never applied Unicode Normalization Form C (NFC) before punycode  
+encoding, even though RFC 5891 requires NFC normalization prior to IDNA A-label 
+conversion.</p> <p>As a result, a hostname label that wasn't already in NFC 
+could be encoded to a non-standard A-label that differs from — and doesn't 
+round-trip to — the label a spec-compliant client would produce. For example, a 
+precomposed Devanagari sequence encoded to <code>xn--72b5c</code> without 
+normalization but to <code>xn--11b2fg</code> with it.</p> <p>This is a 
+host-confusion vulnerability: code that extracts <code>host()</code> from a 
+<code>URI</code> object built from untrusted input and uses it for security 
+decisions (allow/deny lists, SSRF filters, cache keys, deduplication) could see 
+a different host value than what an RFC-compliant HTTP client or resolver would 
+actually contact — enabling filter bypass or SSRF.</p> <p>The fix applies 
+proper NFC normalization in nameprep before A-label generation, aligning URI's 
+host encoding with standard IDNA behavior.  
+</p> 
+
+
+</td></tr>
+<tr><td>sa-13.1-001</td> 
+           <td>kea</td> 
+           <td>2026-09-07</td> 
+           <td>High</td></tr>
+<tr><td colspan='4'><p>
+Upgrading from Kea 3.0.0 to 3.2.0 pulls in fixes for three high-severity
+(CVSS 7.5) remote denial-of-service vulnerabilities that were patched in the
+intervening 3.0.x point releases. All three allow an unauthenticated remote
+party to crash a Kea daemon; none permit code execution or data compromise.
+</p>
+<p>
+<a href="https://kb.isc.org/docs/cve-2025-40779">CVE-2025-40779</a> (fixed in 3.0.1)
+crashes <code>kea-dhcp4</code> when a unicast client sends specific DHCPv4
+options and Kea cannot find a matching subnet. 
+<a href="https://kb.isc.org/docs/cve-2025-11232">CVE-2025-11232</a> (fixed in 3.0.2)
+crashes <code>kea-dhcp4</code> via crafted hostname option content when
+default hostname-sanitization settings are combined with a non-empty
+<code>ddns-qualifying-suffix</code>.
+<a href="https://kb.isc.org/docs/cve-2026-3608">CVE-2026-3608</a> (fixed in 3.0.3)
+triggers a stack overflow in <code>kea-ctrl-agent</code>,
+<code>kea-dhcp-ddns</code>, <code>kea-dhcp4</code>, or <code>kea-dhcp6</code>
+via deeply nested JSON sent to any API socket or HA listener; requiring
+mutual-TLS client certificates on those sockets mitigates it.
+</p>
+<p>
+Kea 3.2.0 itself carries no new CVE; it is a feature release (Control Agent
+removal, RADIUS/TLS, interface refactor) plus incidental hardening, including
+stricter config-file validation, tighter default file/package permissions,
+and a safer default for the HA listener's command restrictions.
+</p></td></tr>
+</table></div>       <br />
+      <div id="footer">
+       <p>&copy; 1998-2026 Gerard Beekmans. Website design by Jeremy Huntwork &amp;
+                 Matthew Burgess.</p>
+      </div>
+     </div>
+  </body>
+</html>
+

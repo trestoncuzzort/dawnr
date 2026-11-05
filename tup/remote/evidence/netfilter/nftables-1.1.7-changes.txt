@@ -1,0 +1,194 @@
+Adrian Moisey (1):
+      netlink_linearize: size nat register allocation by address expression
+
+Alan Ross (1):
+      main: refuse to run under file capabilities
+
+Alexandre Knecht (4):
+      parser_json: support handle for rule positioning in explicit JSON format
+      tests: shell: add JSON test for all object types
+      tests: shell: add JSON test for handle-based rule positioning
+      doc: clarify JSON rule positioning with handle field
+
+Andrii Melnychenko (2):
+      tests: shell: Refactored nat_ftp, added rulesets and testcase functions
+      tests: shell: Added SNAT/DNAT only cases for nat_ftp
+
+Avinash Duduskar (1):
+      datatype: accept a numeric cgroupsv2 id on input
+
+Avinash H. Duduskar (1):
+      doc: note meta cgroup returns zero on cgroupv2-only hosts
+
+Cory Snider (1):
+      mnl: support RLIMIT_NOFILE soft limit > FD_SETSIZE
+
+Fernando Fernandez Mancera (1):
+      src: add connlimit stateful object support
+
+Florian Westphal (43):
+      tests: shell: bad_rule_graphs: add chain linked from different hooks
+      tests: shell: add small packetpath test for bitmap set type
+      tests: shell: add small packetpath test for hash and rbtree types
+      parser: move qualified meta expression parsing to flex/bison
+      monitor: fix memleak in setelem cb
+      tests: shell: add test case for interval set with timeout and aborted transaction
+      tests: shell: named_limits: minor tweak to ease debugging
+      tests: shell: add regression test for catchall chain count restore
+      tests: shell: extend interval overlap test
+      tests: shell: set_flush_add_atomic_rbtree: tweak test to make it fail again
+      Revert "main: refuse to run under file capabilities"
+      mnl: restore nft monitor to working state
+      tests: shell: add rbtree reload test case
+      better reload tests for rbtree, pipapo
+      parser_bison: add range check for synproxy wscale
+      doc: ct count should be restricted via new
+      tests: shell: fix a myriad of issues
+      tests: shell: add a few more json dump files
+      tests: shell: add test case for basechain abort path
+      tests: py: don't use a fixed filename
+      tests: shell: add test case for on-demand-gc without commit callback
+      tests: shell: add test for buggy catchall element abort path
+      tests: py: print the file name as intended
+      tests: shell: add fwd to/fwd ip to test cases
+      tests: py: osf is ip-only
+      evaluate: remove zero shift expressions at eval stage
+      tests: shell: add test case for netdev + dormant table
+      tools: match_nomatch: fix spurious failure in nomatch test
+      src: don't write to possible rodata location
+      tests: shell: add a test case for last expression
+      tests: shell: add a test case for dup expression
+      tests: shell: add socket expression test
+      parser_json: fix map/set type confusion crash in map statement parser
+      tests: shell: add check for map+ratelimit+mark
+      tests: shell: add stateless nat test case
+      tests: shell: add simple 'ct count' test case
+      tests: shell: rate_limit: also check byte-based limit
+      tests: shell: add two missing dump files
+      tests: shell: add two more TEST_REQUIRES tags
+      tests: shell: add tunnel vxlan test
+      tests: shell: add template match bug test
+      tests: shell: add regression test for 'ip fwd to' stack recursion
+      tests: shell: add packetpath test for nft ct expectation support
+
+Jan Kończak (1):
+      parser_bison: on syntax errors, output expected tokens
+
+Jan Palus (1):
+      build: fix ./configure with non-bash shell
+
+Jeremy Sowden (5):
+      doc: fix typo in man-page
+      build: simplify the instantation of nftversion.h
+      build: generate build time-stamp once at configure
+      build: support `SOURCE_DATE_EPOCH` for build time-stamp
+      tests: py: use `os.unshare` Python function
+
+Niklas Fiekas (1):
+      json: output set/map element count
+
+Omkhar Arasaratnam (1):
+      parser_json: initialize geneve options list for empty tunnel array
+
+Pablo Neira Ayuso (38):
+      tests: shell: cover for large interval sets with create command
+      mnl: restore create element command with large batches
+      tests: shell: add open interval overlap tests
+      tests: shell: double chain update with same device
+      src: normalize set element with EXPR_MAPPING
+      src: allocate EXPR_SET_ELEM for EXPR_SET in embedded set declaration in sets
+      src: assert on EXPR_SET only contains EXPR_SET_ELEM in the expressions list
+      evaluate: simplify sets as set elems evaluation
+      evaluate: clean up expr_evaluate_set()
+      segtree: rename set_elem_add() to set_elem_expr_add()
+      src: move flags from EXPR_SET_ELEM to key
+      src: remove EXPR_SET_ELEM in range_expr_value_{low,high}()
+      src: use key location to prepare removal of EXPR_SET_ELEM
+      intervals: remove interval_expr_key()
+      src: move __set_expr_add() to src/intervals.c
+      segtree: remove EXPR_VALUE from expr_value()
+      segtree: more assert on EXPR_SET_ELEM
+      segtree: remove dead code in set_expr_add_splice()
+      segtree: disentangle concat_range_aggregate()
+      segtree: replace default case by specific types in get_set_intervals()
+      segtree: consolidate calls to expr_value() to fetch the element key
+      segtree: use set->key->byteorder instead of expr->byteorder
+      evaluate: remove check for constant expression in set/map statement
+      evaluate: skip EXPR_SET_ELEM in error path of set statements
+      json: complete multi-statement set element support
+      Tree-wide use of python3
+      main: consolidate EPERM to non-root users
+      cache: honor -c/--check for reset commands
+      segtree: fix get element command with open intervals
+      tests: shell: expand get command test with open intervals
+      mergesort: use lhs expression when sorting concatenation
+      segtree: basic support for binary operations in concatenated set ranges
+      tests: shell: add flush set after expiration
+      tests: shell: skip if arping is not available
+      segtree: assert on value expressions
+      Revert "segtree: basic support for binary operations in concatenated set ranges"
+      segtree: postpone bitmask to symbol conversion for interval sets
+      build: Bump version to 1.1.7
+
+Phil Sutter (54):
+      tests: monitor: Fix for out-of-path call
+      parser_bison: Introduce tokens for monitor events
+      parser_bison: Introduce tokens for chain types
+      parser_bison: Introduce tokens for osf ttl values
+      parser_bison: Introduce tokens for log levels
+      parser_bison: Introduce bytes_unit
+      scanner: Introduce SCANSTATE_RATE
+      tests: json_echo: Drop rule handle before multi-add
+      segtree: Fix range aggregation on Big Endian
+      mergesort: Fix sorting of string values
+      mergesort: Align concatenation sort order with Big Endian
+      intervals: Convert byte order implicitly
+      expression: Set range expression 'len' field
+      netlink: Introduce struct nft_data_linearize::byteorder
+      netlink: Introduce struct nft_data_linearize::sizes
+      netlink: Make use of nftnl_{expr,set_elem}_set_imm()
+      tests: py: tools: Add regen_payloads.sh
+      tests: py: Update payload records
+      utils: Introduce expr_print_debug()
+      Makefile.am: Drop pointless per-project AM_CPPFLAGS
+      tests: py: Adjust payloads to changed userdata printing
+      doc: nft.8: Describe iface_type data type
+      tests: shell: Add a simple test for nftrace
+      xt: Print comment match data as well
+      tests: shell: Add a basic test for src/xt.c
+      Makefile: Pass PKG_CONFIG_PATH to internal builds
+      configure: Implement --enable-profiling option
+      Revert "tests: py: use `os.unshare` Python function"
+      cache: Include chains, flowtables and objects in netlink debug output
+      cache: Respect family in all list commands
+      cache: Relax chain_cache_dump filter application
+      cache: Filter for table when listing sets or maps
+      cache: Filter for table when listing flowtables
+      parser: Support table spec in 'list chains' command
+      segtree: Fix for variable-sized object may not be initialized
+      mnl: Fix ordering of hooks in 'list hooks' output
+      scanner: Accept all statements' first words in all scopes
+      tests: shell: packetpath/ct_count: Add missing socat feature test
+      profiling: Include unistd.h to avoid compiler warnings
+      intervals: Fix for inconsistent union field use
+      tests: shell: Run tests with a fixed TZ
+      tests: py: Fix --keep test runner option
+      json: Introduce tunnel_obj_print_json()
+      parser_json: Introduce json_parse_tunnel()
+      rule: Turn obj_print_comment() into obj_print_header()
+      rule: Introduce tunnel_obj_print_data()
+      src: Avoid variable declarations in switch cases
+      netlink: Call tunnel getters unconditionally
+      parser_bison: Fix for bison < 3.6
+      gitignore: Only ignore top level *.m4
+      m4: Add missing AX_PROG_BISON macro
+      tests: shell: Use --numeric-protocol for dumps
+      tests: shell: Convert dumps to numeric protocols
+      libnftables: Drop symbol nft_bison_have_extended_errors
+
+PrittSpadeLord (1):
+      doc: minor spelling and grammar fixes in doc
+
+Yi Chen (1):
+      test: shell: run-test.sh: introduce NFT_TEST_EXCLUDES
+

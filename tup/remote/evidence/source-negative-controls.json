@@ -1,0 +1,21 @@
+{
+  "schema": "tup-remote-live-source-controls-v1",
+  "status": "passed",
+  "cases": [
+    {
+      "case": "tampered-archive",
+      "status": "refused-as-required"
+    },
+    {
+      "case": "missing-signature",
+      "status": "refused-as-required"
+    },
+    {
+      "case": "wrong-approved-primary",
+      "status": "refused-as-required"
+    }
+  ],
+  "verifier_sha256": "37f39eb2a44b0ff93941fdc2c271ffaec2573a3647fe8cabcce42ee90bff760e",
+  "gpg_sha256": "14953ed8b4549020e185c0f7ab600bb9d0384457ea74da9d574e8d31139aff4f",
+  "archive_sha256": "a6fbf060d8d4fff001517a2b94f356bb4366bfbf0ba366366f9d27cc38caa58f"
+}

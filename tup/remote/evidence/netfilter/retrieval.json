@@ -1,0 +1,90 @@
+[
+  {
+    "path": "netfilter-about.html",
+    "url": "https://www.netfilter.org/about.html",
+    "resolved_url": "https://www.netfilter.org/about.html",
+    "sha256": "4505c59509ce6dcfb791223ff193d75367d74d8d6fdc30661f4ade2a03a048e7",
+    "size": 43071,
+    "retrieved_at": "2026-11-05T09:26:53.118700+00:00"
+  },
+  {
+    "path": "netfilter-current-key.asc",
+    "url": "https://www.netfilter.org/files/coreteam-gpg-key-0xD70D1A666ACF2B21.txt",
+    "resolved_url": "https://www.netfilter.org/files/coreteam-gpg-key-0xD70D1A666ACF2B21.txt",
+    "sha256": "961f5e8d3dcffab4c04c891a3f26e27bedf49301e53cbf83660001de3d9390c8",
+    "size": 3931,
+    "retrieved_at": "2026-11-05T09:26:52.937281+00:00"
+  },
+  {
+    "path": "nftables-downloads.html",
+    "url": "https://www.netfilter.org/projects/nftables/downloads.html",
+    "resolved_url": "https://www.netfilter.org/projects/nftables/downloads.html",
+    "sha256": "977a8538a37abad457f64e60b23258e4a6e3f7a05f92bd2bda92caa39d9539f0",
+    "size": 52281,
+    "retrieved_at": "2026-11-05T09:26:53.118794+00:00"
+  },
+  {
+    "path": "nftables-1.1.7.tar.xz",
+    "url": "https://www.netfilter.org/projects/nftables/files/nftables-1.1.7.tar.xz",
+    "resolved_url": "https://www.netfilter.org/projects/nftables/files/nftables-1.1.7.tar.xz",
+    "sha256": "a6fbf060d8d4fff001517a2b94f356bb4366bfbf0ba366366f9d27cc38caa58f",
+    "size": 1062488,
+    "retrieved_at": "2026-11-05T09:26:53.536660+00:00"
+  },
+  {
+    "path": "nftables-1.1.7.tar.xz.sig",
+    "url": "https://www.netfilter.org/projects/nftables/files/nftables-1.1.7.tar.xz.sig",
+    "resolved_url": "https://www.netfilter.org/projects/nftables/files/nftables-1.1.7.tar.xz.sig",
+    "sha256": "097e969941997612b10ff5c1cb57db08419f54d822d81048d9b49a14da0666ee",
+    "size": 566,
+    "retrieved_at": "2026-11-05T09:26:53.262313+00:00"
+  },
+  {
+    "path": "libnftnl-downloads.html",
+    "url": "https://www.netfilter.org/projects/libnftnl/downloads.html",
+    "resolved_url": "https://www.netfilter.org/projects/libnftnl/downloads.html",
+    "sha256": "50dbc7202f97fc138ea0677c59f09c6198104d083d40ad36ec862b75a7fed530",
+    "size": 44570,
+    "retrieved_at": "2026-11-05T09:26:53.631925+00:00"
+  },
+  {
+    "path": "libnftnl-1.3.2.tar.xz",
+    "url": "https://www.netfilter.org/projects/libnftnl/files/libnftnl-1.3.2.tar.xz",
+    "resolved_url": "https://www.netfilter.org/projects/libnftnl/files/libnftnl-1.3.2.tar.xz",
+    "sha256": "c97abc3409f8fa396b4462b2bb7f147a3a47a4ddc97cfa0b2f18890c9cfde8b0",
+    "size": 349268,
+    "retrieved_at": "2026-11-05T09:26:53.842661+00:00"
+  },
+  {
+    "path": "libnftnl-1.3.2.tar.xz.sig",
+    "url": "https://www.netfilter.org/projects/libnftnl/files/libnftnl-1.3.2.tar.xz.sig",
+    "resolved_url": "https://www.netfilter.org/projects/libnftnl/files/libnftnl-1.3.2.tar.xz.sig",
+    "sha256": "8412a7ccd9e37e44d26ff49f437a5ac1f7711e080fe574deb48ad2671f927b72",
+    "size": 566,
+    "retrieved_at": "2026-11-05T09:26:53.581725+00:00"
+  },
+  {
+    "path": "libmnl-downloads.html",
+    "url": "https://www.netfilter.org/projects/libmnl/downloads.html",
+    "resolved_url": "https://www.netfilter.org/projects/libmnl/downloads.html",
+    "sha256": "a1dc87da21837913ab4133aa049affc3990befa5f3103fc8ab14edfc2447ea25",
+    "size": 23435,
+    "retrieved_at": "2026-11-05T09:26:53.956430+00:00"
+  },
+  {
+    "path": "libmnl-1.0.5.tar.bz2",
+    "url": "https://www.netfilter.org/projects/libmnl/files/libmnl-1.0.5.tar.bz2",
+    "resolved_url": "https://www.netfilter.org/projects/libmnl/files/libmnl-1.0.5.tar.bz2",
+    "sha256": "274b9b919ef3152bfb3da3a13c950dd60d6e2bcd54230ffeca298d03b40d0525",
+    "size": 314791,
+    "retrieved_at": "2026-11-05T09:26:54.316922+00:00"
+  },
+  {
+    "path": "libmnl-1.0.5.tar.bz2.sig",
+    "url": "https://www.netfilter.org/projects/libmnl/files/libmnl-1.0.5.tar.bz2.sig",
+    "resolved_url": "https://www.netfilter.org/projects/libmnl/files/libmnl-1.0.5.tar.bz2.sig",
+    "sha256": "5b838ee2b10da2e23b95a665fe4831dc54c62376362f6de2bed8004d60ae2ffb",
+    "size": 566,
+    "retrieved_at": "2026-11-05T09:26:53.949387+00:00"
+  }
+]

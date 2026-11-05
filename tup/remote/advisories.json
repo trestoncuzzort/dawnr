@@ -1,0 +1,80 @@
+{
+  "schema": "tup-remote-advisory-review-v1",
+  "reviewed_at": "2026-11-05",
+  "request": {
+    "method": "POST",
+    "fields": {
+      "stype": "Book",
+      "release": "13.1",
+      "desc": "true",
+      "submit": "Search"
+    }
+  },
+  "snapshot": {
+    "path": "lfs-13.1-advisories.html",
+    "url": "https://www.linuxfromscratch.org/advisories/index.php",
+    "sha256": "aa562da21adbfa442f88404b029242eea2d24ac04fa4b4eefff4eb819a304de1"
+  },
+  "inventory_sha256": "0924e0d0d47b12c3b7046e53501e87ad674a044e20f147d07a0f1dc6909f69f2",
+  "inventory_count": 100,
+  "selected_advisories": [
+    {
+      "id": "sa-13.1-057",
+      "package": "openssh",
+      "date": "2026-10-07",
+      "severity": "Medium",
+      "description": "OpenSSH-10.6p1 fixes several security issues. No CVE identifiers have been assigned. See the release notes for details. In sshd, GSSAPI credentials are now stored only after authentication succeeds, and GSSAPI state is reset before each authentication attempt. Options set to \"none\" inside a Match block, such as AuthorizedPrincipalsFile, were treated as a file name and so were not disabled. The \"restrict\" keyword in authorized_keys now fully applies to tunnel forwarding. In the clients, a malicious server could direct a recursive sftp download to write outside the target directory. User names containing \"$\" or a backslash given on the ssh command line could inject shell commands through ProxyCommand or Match exec, and are now refused. ssh-keygen mishandled daylight saving time, so certificate expiry times could be wrong by one or two hours. For both ssh and sshd, part of the compression algorithm is disabled to prevent recovery of plaintext from other channels of a compressed connection, and decompressed data is now limited to the maximum packet size. Compression is less effective as a result.",
+      "links": [
+        "https://www.openssh.org/releasenotes.html"
+      ]
+    }
+  ],
+  "dispositions": [
+    {
+      "id": "sa-13.1-057",
+      "package": "openssh",
+      "disposition": "fixed-by-selection",
+      "selected_sources": [
+        "openssh-10.6p1.tar.gz"
+      ]
+    }
+  ],
+  "upstream_material": [
+    {
+      "path": "openssh-release-10.6.txt",
+      "url": "https://www.openssh.org/txt/release-10.6",
+      "sha256": "292e2b2f0d314d9ff575417a5453f0823e6bc2adf018a5f8d50ec11f5665f388"
+    },
+    {
+      "path": "nftables-1.1.7-changes.txt",
+      "url": "https://www.netfilter.org/projects/nftables/files/changes-nftables-1.1.7.txt",
+      "sha256": "9f2c1fc0830aec555758b504bc54ededcab8a3fc4309708be3387625a670837f"
+    },
+    {
+      "path": "nftables-downloads.html",
+      "url": "https://www.netfilter.org/projects/nftables/downloads.html",
+      "sha256": "977a8538a37abad457f64e60b23258e4a6e3f7a05f92bd2bda92caa39d9539f0"
+    },
+    {
+      "path": "libnftnl-downloads.html",
+      "url": "https://www.netfilter.org/projects/libnftnl/downloads.html",
+      "sha256": "50dbc7202f97fc138ea0677c59f09c6198104d083d40ad36ec862b75a7fed530"
+    },
+    {
+      "path": "libmnl-downloads.html",
+      "url": "https://www.netfilter.org/projects/libmnl/downloads.html",
+      "sha256": "a1dc87da21837913ab4133aa049affc3990befa5f3103fc8ab14edfc2447ea25"
+    }
+  ],
+  "scope": [
+    "openssh",
+    "nftables",
+    "libnftnl",
+    "libmnl"
+  ],
+  "limitations": [
+    "No selected libmnl/libnftnl/nftables userspace advisory appears in the complete 13.1 query; that is not proof of absence of vulnerabilities.",
+    "Kernel nf_tables advisories and OpenSSL/GMP/libc dependencies retain the core source-lock and maintained kernel review.",
+    "Host and target runtime qualification, firewall exposure matrix and H55 release gate remain required."
+  ]
+}

@@ -100,3 +100,63 @@ Configuration semantics follow the
 [OpenSSH manual](https://man.openbsd.org/sshd_config). In particular, most
 keywords take their first supplied value; this layer replaces a reviewed full
 configuration instead of appending options to an unknown file.
+
+## Firewall sources and working probe
+
+`firewall-sources.json` selects nftables 1.1.7, libnftnl 1.3.2 and libmnl 1.0.5.
+The first two verified under the current Netfilter release primary
+`8C5F7146A1757A65E2422A94D70D1A666ACF2B21`, using the complete key published on
+the [official key page](https://www.netfilter.org/about.html#pgp). That page
+explicitly revokes the older key used for libmnl's signature. Libmnl instead
+verified against its exact filename, size and SHA512 in the authenticated
+Gentoo snapshot already used for the core. The old signature is retained as
+historical evidence and is not treated as valid current authorization.
+
+`verify_sources.py` calls the existing `sources/source_lock.py` verifier for all
+four remote sources; a previous success receipt never bypasses verification.
+It also checks the full dated LFS 13.1 advisory query. Its selected advisory,
+`sa-13.1-057`, is fixed by OpenSSH 10.6p1. Core library and kernel advisories
+retain their separate source-lock dispositions and release gates.
+
+```sh
+python3 tup/remote/verify_sources.py --cache "$REMOTE_SOURCE_CACHE" \
+  --gpg /usr/bin/gpg --output "$REMOTE_VERIFICATION_OUTPUT"
+```
+
+The [host build receipt](evidence/firewall-host-build.json) records an isolated
+Ubuntu build and all 32 libnftnl tests passing. That probe uses nftables'
+supported mini-GMP option because the host lacks GMP development headers;
+the target recipe will use the core's GMP. No JSON, interactive CLI, iptables
+compatibility, Python binding or upstream service is installed by this layer.
+Those features are unnecessary for the selected policy. The release archive's
+`INSTALL` and `configure.ac` define these supported options.
+
+`firewall.py` renders a private nftables policy for exact listener and peer IP
+addresses. Input and forwarding default to drop; outbound host traffic remains
+allowed. The policy permits loopback, required ICMP/neighbor discovery, DHCP
+replies and established return traffic. SSH has a separate peer gate **before**
+the general established-connection rule, so removing a peer also blocks its
+existing SSH flow. Key revocation still requires terminating the corresponding
+SSH sessions; changing a key file alone does not do that. This host policy is
+not a tenant-network isolation implementation.
+
+The selected table is replaced with one [atomic nft transaction](https://wiki.nftables.org/wiki-nftables/index.php/Atomic_rule_replacement).
+Other tables are preserved. A missing policy fails service startup, and stopping
+the firewall unit retains the kernel's rules while SSH's dependency stops
+access. No service is enabled by rendering. Overlay integration and a tested
+network-change rollback remain required before unattended use.
+
+```sh
+python3 tup/remote/firewall.py --listen "$TUP_MANAGEMENT_ADDRESS" \
+  --peer "$TUP_OWNER_PEER_ADDRESS" --output "$TUP_FIREWALL_OUTPUT"
+sudo python3 tup/remote/probe_firewall.py --nft "$AUTHENTICATED_PROBE_NFT"
+```
+
+The probe automatically creates private network, PID and mount namespaces and
+disposable IPv4/IPv6 peers. [Its result](evidence/firewall-probe.json) proves
+allowed and denied TCP paths, repeated rule loading, preservation of another
+table, malformed-batch rollback, and rejection of an established flow after
+peer removal. Its listeners are confined to those namespaces. The target kernel,
+DHCP, physical network, SSH authentication, service lifecycle and private
+transport are still unqualified. The full upstream nftables kernel suite also
+remains unrun; these bounded probes do not stand in for that suite.

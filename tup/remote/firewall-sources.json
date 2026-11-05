@@ -1,0 +1,177 @@
+{
+  "schema": "tup-remote-firewall-sources-v1",
+  "architecture": "x86_64",
+  "status": "source-authenticated-not-built",
+  "release_eligible": false,
+  "reviewed_at": "2026-11-05",
+  "verifier": "tup/sources/source_lock.py",
+  "verifier_sha256": "37f39eb2a44b0ff93941fdc2c271ffaec2573a3647fe8cabcce42ee90bff760e",
+  "sources": [
+    {
+      "name": "nftables-1.1.7.tar.xz",
+      "url": "https://www.netfilter.org/projects/nftables/files/nftables-1.1.7.tar.xz",
+      "disposition": "retain",
+      "sha256": "a6fbf060d8d4fff001517a2b94f356bb4366bfbf0ba366366f9d27cc38caa58f",
+      "authentication": {
+        "method": "openpgp",
+        "primary_fingerprint": "8C5F7146A1757A65E2422A94D70D1A666ACF2B21",
+        "payload": "archive",
+        "key": {
+          "path": "netfilter-current-key.asc",
+          "url": "https://www.netfilter.org/files/coreteam-gpg-key-0xD70D1A666ACF2B21.txt",
+          "sha256": "961f5e8d3dcffab4c04c891a3f26e27bedf49301e53cbf83660001de3d9390c8"
+        },
+        "signature": {
+          "path": "nftables-1.1.7.tar.xz.sig",
+          "url": "https://www.netfilter.org/projects/nftables/files/nftables-1.1.7.tar.xz.sig",
+          "sha256": "097e969941997612b10ff5c1cb57db08419f54d822d81048d9b49a14da0666ee"
+        },
+        "approval": {
+          "reviewed_at": "2026-11-05",
+          "basis": "Official Netfilter about page publishes the complete current signing key and links this key file, valid through 2028-10-12; full primary fingerprint computed from that official key, not accepted from a signature issuer ID.",
+          "material": {
+            "path": "netfilter-about.html",
+            "url": "https://www.netfilter.org/about.html",
+            "sha256": "4505c59509ce6dcfb791223ff193d75367d74d8d6fdc30661f4ade2a03a048e7"
+          }
+        }
+      }
+    },
+    {
+      "name": "libnftnl-1.3.2.tar.xz",
+      "url": "https://www.netfilter.org/projects/libnftnl/files/libnftnl-1.3.2.tar.xz",
+      "disposition": "retain",
+      "sha256": "c97abc3409f8fa396b4462b2bb7f147a3a47a4ddc97cfa0b2f18890c9cfde8b0",
+      "authentication": {
+        "method": "openpgp",
+        "primary_fingerprint": "8C5F7146A1757A65E2422A94D70D1A666ACF2B21",
+        "payload": "archive",
+        "key": {
+          "path": "netfilter-current-key.asc",
+          "url": "https://www.netfilter.org/files/coreteam-gpg-key-0xD70D1A666ACF2B21.txt",
+          "sha256": "961f5e8d3dcffab4c04c891a3f26e27bedf49301e53cbf83660001de3d9390c8"
+        },
+        "signature": {
+          "path": "libnftnl-1.3.2.tar.xz.sig",
+          "url": "https://www.netfilter.org/projects/libnftnl/files/libnftnl-1.3.2.tar.xz.sig",
+          "sha256": "8412a7ccd9e37e44d26ff49f437a5ac1f7711e080fe574deb48ad2671f927b72"
+        },
+        "approval": {
+          "reviewed_at": "2026-11-05",
+          "basis": "Official Netfilter about page publishes the complete current signing key and links this key file, valid through 2028-10-12; full primary fingerprint computed from that official key, not accepted from a signature issuer ID.",
+          "material": {
+            "path": "netfilter-about.html",
+            "url": "https://www.netfilter.org/about.html",
+            "sha256": "4505c59509ce6dcfb791223ff193d75367d74d8d6fdc30661f4ade2a03a048e7"
+          }
+        }
+      }
+    },
+    {
+      "name": "libmnl-1.0.5.tar.bz2",
+      "url": "https://www.netfilter.org/projects/libmnl/files/libmnl-1.0.5.tar.bz2",
+      "disposition": "retain",
+      "sha256": "274b9b919ef3152bfb3da3a13c950dd60d6e2bcd54230ffeca298d03b40d0525",
+      "authentication": {
+        "distributor": "Gentoo",
+        "manifest": {
+          "path": "gentoo-manifests/net-libs/libmnl/Manifest",
+          "url": "https://distfiles.gentoo.org/snapshots/gentoo-20261103.tar.xz",
+          "sha256": "48e656e2c720b0a2dedf01e6e15c0566503d526115beebf8fd2711763910a430"
+        },
+        "manifest_member": "gentoo-20261103/net-libs/libmnl/Manifest",
+        "method": "distributor-openpgp-manifest",
+        "reviewed_exception": {
+          "reason": "Use an independently authenticated maintained distributor Manifest where complete strong upstream authentication has not been established; exact upstream archive bytes must match.",
+          "reviewed_at": "2026-11-05"
+        },
+        "snapshot": {
+          "authentication": {
+            "approval": {
+              "basis": "Official Gentoo signing-key documentation identifies this ebuild repository primary.",
+              "material": {
+                "path": "gentoo-signatures.html",
+                "sha256": "45bd60413ed48a5729c832ab69b9a1c3f4812b4e0cfc2777491be5875c82e0b4",
+                "url": "https://www.gentoo.org/downloads/signatures/"
+              },
+              "reviewed_at": "2026-11-05"
+            },
+            "key": {
+              "path": "gentoo-DCD05B71EAB94199527F44ACDB6B8C1F96D8BF6D.asc",
+              "sha256": "aec99650e40d8f21c792e9e8353d672a8676ae3cbe9e2c147ce42e0e46037189",
+              "url": "https://keys.gentoo.org/pks/lookup?op=get&search=0xDCD05B71EAB94199527F44ACDB6B8C1F96D8BF6D"
+            },
+            "method": "openpgp",
+            "primary_fingerprint": "DCD05B71EAB94199527F44ACDB6B8C1F96D8BF6D",
+            "signature": {
+              "path": "gentoo-20261103.tar.xz.gpgsig",
+              "sha256": "4e08800e0e026829118786acc63e5ec3ca8ffdc4069252667642a6a5c5a4be22",
+              "url": "https://distfiles.gentoo.org/snapshots/gentoo-20261103.tar.xz.gpgsig"
+            }
+          },
+          "material": {
+            "path": "gentoo-20261103.tar.xz",
+            "sha256": "923b3132d9214cee3f59fa2b56a3af27a0287c8587576c99ebcd5b24e537a194",
+            "url": "https://distfiles.gentoo.org/snapshots/gentoo-20261103.tar.xz"
+          }
+        }
+      },
+      "signature_limitation": "The project explicitly revoked the older primary used for this upstream signature. It is retained as historical material but does not authorize these bytes; the independently signed Gentoo snapshot authenticates the exact archive instead."
+    }
+  ],
+  "verification": [
+    {
+      "name": "nftables-1.1.7.tar.xz",
+      "status": "verified",
+      "sha256": "a6fbf060d8d4fff001517a2b94f356bb4366bfbf0ba366366f9d27cc38caa58f",
+      "size": 1062488,
+      "authentication": {
+        "status": "verified",
+        "evidence_sha256": "34d784dfa8fc600373542860d0c5b9cd5067b5f985afc6e7452dc22fc9899212",
+        "trust_class": "publisher-openpgp",
+        "primary_fingerprint": "8C5F7146A1757A65E2422A94D70D1A666ACF2B21",
+        "signing_fingerprint": "8C5F7146A1757A65E2422A94D70D1A666ACF2B21",
+        "verifier_sha256": "14953ed8b4549020e185c0f7ab600bb9d0384457ea74da9d574e8d31139aff4f",
+        "status_sha256": "0bd5323bd5bc1224bec56cc1879b20929b9bc687f1bc2162b37530884da6f550"
+      }
+    },
+    {
+      "name": "libnftnl-1.3.2.tar.xz",
+      "status": "verified",
+      "sha256": "c97abc3409f8fa396b4462b2bb7f147a3a47a4ddc97cfa0b2f18890c9cfde8b0",
+      "size": 349268,
+      "authentication": {
+        "status": "verified",
+        "evidence_sha256": "c03d7dd29e624a4544bfe359b4bb9ad0a4f71bd7e8ff017f5654b57f7b0ce5f5",
+        "trust_class": "publisher-openpgp",
+        "primary_fingerprint": "8C5F7146A1757A65E2422A94D70D1A666ACF2B21",
+        "signing_fingerprint": "8C5F7146A1757A65E2422A94D70D1A666ACF2B21",
+        "verifier_sha256": "14953ed8b4549020e185c0f7ab600bb9d0384457ea74da9d574e8d31139aff4f",
+        "status_sha256": "4aa75e100ac54cd0a53211ffd7acac509e3de3f8fceb8a8a346b9cb19a869612"
+      }
+    },
+    {
+      "name": "libmnl-1.0.5.tar.bz2",
+      "status": "verified",
+      "sha256": "274b9b919ef3152bfb3da3a13c950dd60d6e2bcd54230ffeca298d03b40d0525",
+      "size": 314791,
+      "authentication": {
+        "status": "verified",
+        "evidence_sha256": "31241b234cd4c4e5454cecb4af9114906176cc446135bd22146add45b8047ba6",
+        "trust_class": "distributor-openpgp-manifest",
+        "primary_fingerprint": "DCD05B71EAB94199527F44ACDB6B8C1F96D8BF6D",
+        "signing_fingerprint": "E1D6ABB63BFCFB4BA02FDF1CEC590EEAC9189250",
+        "verifier_sha256": "14953ed8b4549020e185c0f7ab600bb9d0384457ea74da9d574e8d31139aff4f",
+        "status_sha256": "0e675efd7fc7ec684b5d53c312b61219c66e4238caef255c74edb78e8afe6ab9",
+        "distributor": "Gentoo",
+        "snapshot_sha256": "923b3132d9214cee3f59fa2b56a3af27a0287c8587576c99ebcd5b24e537a194",
+        "manifest_member": "gentoo-20261103/net-libs/libmnl/Manifest",
+        "manifest_sha256": "48e656e2c720b0a2dedf01e6e15c0566503d526115beebf8fd2711763910a430",
+        "source_digest_algorithm": "sha512",
+        "source_digest": "16fa48e74c9da7724a85c655dfb0abd8369392627934639d65de951543e1447ac3e048d231248f1ce8861443c2ef62654a85a81feeedbbffaf2e5744f6cf4c9f",
+        "source_size": 314791,
+        "assurance": "Gentoo-signed snapshot authenticates exact upstream filename, size and SHA512; SHA256 pin is derived after verification"
+      }
+    }
+  ]
+}

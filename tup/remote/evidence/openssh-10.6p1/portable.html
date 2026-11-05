@@ -1,0 +1,907 @@
+<!--
+	DO NOT EDIT MANUALLY!  This is generated from:
+
+	www/build/mirrors/openssh-portable.html.head
+	www/build/mirrors/openssh-portable.html.mid1
+	www/build/mirrors/openssh-portable.html.end
+
+	See comments in www/build/mirrors.dat for details.
+-->
+
+<!doctype html>
+<html lang=en>
+<meta charset=utf-8>
+
+<title>OpenSSH: Portable Release</title>
+<meta name="description" content="the OpenSSH project portable version page">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="canonical" href="https://www.openssh.org/portable.html">
+<link rel="stylesheet" type="text/css" href="openbsd.css">
+
+<h2 id=OpenBSD>
+<a href="/">
+<i>Open</i><b>SSH</b></a>
+Portable Release
+</h2>
+<hr>
+
+<p>
+Normal OpenSSH development produces a very small, secure, and easy to
+maintain version for the OpenBSD project.
+<a href="history.html#portable">The OpenSSH Portability Team</a>
+takes that pure version and adds portability code so that OpenSSH can
+run on many other operating systems. (Unfortunately, in particular
+since OpenSSH does authentication, it runs into a <strong>*lot*</strong>
+of differences between Unix operating systems.)
+
+<p>
+The OpenSSH provided here is designed to run on the following Unix
+operating systems:
+
+<ul>
+<li>AIX
+<li>HP-UX
+<li>Irix
+<li>Linux
+<li>NeXT
+<li>SCO
+<li>SNI/Reliant Unix
+<li>Solaris
+<li>Digital Unix/Tru64/OSF
+<li>macOS
+<li>Cygwin
+<li>... and more are being added all the time.
+</ul>
+
+<p>
+The portable OpenSSH follows development of the official version, but
+releases are not synchronized. Portable releases are marked with a 'p'
+(e.g. 4.0p1). The official OpenBSD source will never use the 'p' suffix,
+but will instead increment the version number when it hits 'stable
+spots' in development.
+
+<p id="downloads">
+The following files describe the development efforts of the OpenSSH
+portability development team. The release files are signed with the PGP
+public key contained in the file <a
+href="https://ftp.openbsd.org/pub/OpenBSD/OpenSSH/RELEASE_KEY.asc"
+>RELEASE_KEY.asc</a> on the ftp site. This key is also available through the
+<a href="https://pgp.mit.edu/">key server network</a> and has a fingerprint
+of 7168B983815A5EEF59A4ADFD2A3F414E736060BA.
+
+<ul>
+<li><a href="https://ftp.openbsd.org/pub/OpenBSD/OpenSSH/portable/ChangeLog">
+	Portability ChangeLog</a>
+<li><a href="https://ftp.openbsd.org/pub/OpenBSD/OpenSSH/portable/INSTALL">
+	Installation instructions</a>
+</ul>
+
+<h2 id="reportbug">Reporting bugs</h2>
+<p>
+Bugs in OpenSSH Portable can be reported via the channels described in
+<a href="report.html">Problem reports</a>.
+Note that many operating system vendors modify the OpenSSH that they
+ship; in those cases you should report problems to those vendors,
+unless the problem can also be reproduced with an unmodified OpenSSH.
+
+<h2 id="cvs"><span id="git"></span>Developers</h2>
+<p>
+Bleeding-edge nightly snapshots are available
+<a href="https://www.mindrot.org/openssh_snap/">here</a>.
+Portable OpenSSH's source tree is also available by git:
+
+<ul>
+<li><code>git://anongit.mindrot.org/openssh.git</code> (clone only)
+<li><code>https://anongit.mindrot.org/openssh.git</code> (web and clone)
+</ul>
+
+<p>
+This repository is provided and maintained
+by <a href="mailto:djm@openbsd.org">Damien Miller</a>. It is also mirrored at
+<a href="https://github.com/openssh/openssh-portable">GitHub</a>.
+
+<h2 id="building">Building</h2>
+<p>
+Once checked out, the <code>configure</code> file needs to be created by
+running <code>autoreconf</code> from the <a
+href="https://www.gnu.org/software/autoconf/"> autoconf</a> package
+(the required version is listed in the INSTALL file).  It will also need to
+be run again if any changes are made to the <code>configure.ac</code> file.
+
+<p>
+Developers are asked to read and follow
+<a href="https://man.openbsd.org/style">these guidelines</a>
+when submitting code. Patches should be sent in unified diff format.
+
+<h2>
+Download
+</h2>
+
+<hr>
+
+<strong>Index</strong><br>
+<a href="#http">HTTP mirrors</a><br>
+<a href="#ftp">FTP mirrors</a><br>
+<a href="#rsync">RSYNC mirrors</a><br>
+
+<hr>
+<h3 id="http">HTTP</h3>
+<p>
+In the HTTP directory you will find tarballs of the current version
+and diffs against the OpenBSD source.
+Historical versions are available in the <em>old/</em> directory.
+
+<table>
+    <tr>
+	<td>
+	<strong>Fastly (CDN)</strong>
+	</td><td>
+	<a href="https://cdn.openbsd.org/pub/OpenBSD/OpenSSH/portable/" rel="nofollow">
+	https://cdn.openbsd.org/pub/OpenBSD/OpenSSH/portable/</a>
+	</td>
+    </tr><tr>
+	<td>
+	<strong>Cloudflare (CDN)</strong>
+	</td><td>
+	<a href="https://cloudflare.cdn.openbsd.org/pub/OpenBSD/OpenSSH/portable/" rel="nofollow">
+	https://cloudflare.cdn.openbsd.org/pub/OpenBSD/OpenSSH/portable/</a>
+	</td>
+    </tr><tr>
+	<td>
+	<strong>LeaseWeb (CDN)</strong>
+	</td><td>
+	<a href="https://mirror.leaseweb.com/pub/OpenBSD/OpenSSH/portable/" rel="nofollow">
+	https://mirror.leaseweb.com/pub/OpenBSD/OpenSSH/portable/</a>
+	</td>
+    </tr><tr>
+	<td>
+	<strong>PlanetUnix (CDN)</strong>
+	</td><td>
+	<a href="https://mirror.planetunix.net/pub/OpenBSD/OpenSSH/portable/" rel="nofollow">
+	https://mirror.planetunix.net/pub/OpenBSD/OpenSSH/portable/</a>
+	</td>
+    </tr><tr>
+	<td>
+	<strong>AS250.net (CDN)</strong>
+	</td><td>
+	<a href="https://openbsd.as250.net/pub/OpenBSD/OpenSSH/portable/" rel="nofollow">
+	https://openbsd.as250.net/pub/OpenBSD/OpenSSH/portable/</a>
+	</td>
+    </tr><tr><td colspan=2><br></td></tr>
+    <tr>
+	<td>
+	<strong>Australia (Canberra)</strong>
+	</td><td>
+	<a href="https://mirror.aarnet.edu.au/pub/OpenBSD/OpenSSH/portable/" rel="nofollow">
+	https://mirror.aarnet.edu.au/pub/OpenBSD/OpenSSH/portable/</a>
+	</td>
+    </tr><tr>
+	<td>
+	<strong>Brazil (Curitiba)</strong>
+	</td><td>
+	<a href="https://openbsd.c3sl.ufpr.br/pub/OpenBSD/OpenSSH/portable/" rel="nofollow">
+	https://openbsd.c3sl.ufpr.br/pub/OpenBSD/OpenSSH/portable/</a>
+	</td>
+    </tr><tr>
+	<td>
+	<strong>Bulgaria (Sofia)</strong>
+	</td><td>
+	<a href="https://openbsd.ipacct.com/pub/OpenBSD/OpenSSH/portable/" rel="nofollow">
+	https://openbsd.ipacct.com/pub/OpenBSD/OpenSSH/portable/</a>
+	</td>
+    </tr><tr>
+	<td>
+	<strong>Bulgaria (Sofia)</strong>
+	</td><td>
+	<a href="https://mirror.telepoint.bg/pub/OpenBSD/OpenSSH/portable/" rel="nofollow">
+	https://mirror.telepoint.bg/pub/OpenBSD/OpenSSH/portable/</a>
+	</td>
+    </tr><tr>
+	<td>
+	<strong>Canada (Alberta)</strong>
+	</td><td>
+	<a href="https://ftp.OpenBSD.org/pub/OpenBSD/OpenSSH/portable/" rel="nofollow">
+	https://ftp.OpenBSD.org/pub/OpenBSD/OpenSSH/portable/</a>
+	</td>
+    </tr><tr>
+	<td>
+	<strong>Canada (Toronto, ON)</strong>
+	</td><td>
+	<a href="https://openbsd.cs.toronto.edu/pub/OpenBSD/OpenSSH/portable/" rel="nofollow">
+	https://openbsd.cs.toronto.edu/pub/OpenBSD/OpenSSH/portable/</a>
+	</td>
+    </tr><tr>
+	<td>
+	<strong>China</strong>
+	</td><td>
+	<a href="https://mirrors.aliyun.com/pub/OpenBSD/OpenSSH/portable/" rel="nofollow">
+	https://mirrors.aliyun.com/pub/OpenBSD/OpenSSH/portable/</a>
+	</td>
+    </tr><tr>
+	<td>
+	<strong>Costa Rica</strong>
+	</td><td>
+	<a href="https://mirrors.ucr.ac.cr/pub/OpenBSD/OpenSSH/portable/" rel="nofollow">
+	https://mirrors.ucr.ac.cr/pub/OpenBSD/OpenSSH/portable/</a>
+	</td>
+    </tr><tr>
+	<td>
+	<strong>Denmark (Aalborg)</strong>
+	</td><td>
+	<a href="https://mirrors.dotsrc.org/pub/OpenBSD/OpenSSH/portable/" rel="nofollow">
+	https://mirrors.dotsrc.org/pub/OpenBSD/OpenSSH/portable/</a>
+	</td>
+    </tr><tr>
+	<td>
+	<strong>Denmark (Copenhagen)</strong>
+	</td><td>
+	<a href="https://mirror.group.one/pub/OpenBSD/OpenSSH/portable/" rel="nofollow">
+	https://mirror.group.one/pub/OpenBSD/OpenSSH/portable/</a>
+	</td>
+    </tr><tr>
+	<td>
+	<strong>France (Paris)</strong>
+	</td><td>
+	<a href="https://ftp.fr.openbsd.org/pub/OpenBSD/OpenSSH/portable/" rel="nofollow">
+	https://ftp.fr.openbsd.org/pub/OpenBSD/OpenSSH/portable/</a>
+	</td>
+    </tr><tr>
+	<td>
+	<strong>France (Paris)</strong>
+	</td><td>
+	<a href="https://ftp.lip6.fr/pub/OpenBSD/OpenSSH/portable/" rel="nofollow">
+	https://ftp.lip6.fr/pub/OpenBSD/OpenSSH/portable/</a>
+	</td>
+    </tr><tr>
+	<td>
+	<strong>France (Lyon)</strong>
+	</td><td>
+	<a href="https://mirror.ibcp.fr/pub/OpenBSD/OpenSSH/portable/" rel="nofollow">
+	https://mirror.ibcp.fr/pub/OpenBSD/OpenSSH/portable/</a>
+	</td>
+    </tr><tr>
+	<td>
+	<strong>Germany (Berlin)</strong>
+	</td><td>
+	<a href="https://ftp.spline.de/pub/OpenBSD/OpenSSH/portable/" rel="nofollow">
+	https://ftp.spline.de/pub/OpenBSD/OpenSSH/portable/</a>
+	</td>
+    </tr><tr>
+	<td>
+	<strong>Germany (Aachen)</strong>
+	</td><td>
+	<a href="https://ftp.halifax.rwth-aachen.de/pub/OpenBSD/OpenSSH/portable/" rel="nofollow">
+	https://ftp.halifax.rwth-aachen.de/pub/OpenBSD/OpenSSH/portable/</a>
+	</td>
+    </tr><tr>
+	<td>
+	<strong>Germany (Hamburg)</strong>
+	</td><td>
+	<a href="https://artfiles.org/openbsd/OpenSSH/portable/" rel="nofollow">
+	https://artfiles.org/openbsd/OpenSSH/portable/</a>
+	</td>
+    </tr><tr>
+	<td>
+	<strong>Germany (Frankfurt)</strong>
+	</td><td>
+	<a href="https://ftp.hostserver.de/pub/OpenBSD/OpenSSH/portable/" rel="nofollow">
+	https://ftp.hostserver.de/pub/OpenBSD/OpenSSH/portable/</a>
+	</td>
+    </tr><tr>
+	<td>
+	<strong>Germany (Erlangen)</strong>
+	</td><td>
+	<a href="https://ftp.fau.de/pub/OpenBSD/OpenSSH/portable/" rel="nofollow">
+	https://ftp.fau.de/pub/OpenBSD/OpenSSH/portable/</a>
+	</td>
+    </tr><tr>
+	<td>
+	<strong>Germany (Falkenstein)</strong>
+	</td><td>
+	<a href="https://mirror.junda.nl/pub/OpenBSD/OpenSSH/portable/" rel="nofollow">
+	https://mirror.junda.nl/pub/OpenBSD/OpenSSH/portable/</a>
+	</td>
+    </tr><tr>
+	<td>
+	<strong>Greece (Heraklion)</strong>
+	</td><td>
+	<a href="https://ftp.cc.uoc.gr/pub/OpenBSD/OpenSSH/portable/" rel="nofollow">
+	https://ftp.cc.uoc.gr/pub/OpenBSD/OpenSSH/portable/</a>
+	</td>
+    </tr><tr>
+	<td>
+	<strong>Japan (Nomi, Ishikawa)</strong>
+	</td><td>
+	<a href="https://ftp.jaist.ac.jp/pub/OpenBSD/OpenSSH/portable/" rel="nofollow">
+	https://ftp.jaist.ac.jp/pub/OpenBSD/OpenSSH/portable/</a>
+	</td>
+    </tr><tr>
+	<td>
+	<strong>Lithuania (Kaunas)</strong>
+	</td><td>
+	<a href="https://mirror.litnet.lt/pub/OpenBSD/OpenSSH/portable/" rel="nofollow">
+	https://mirror.litnet.lt/pub/OpenBSD/OpenSSH/portable/</a>
+	</td>
+    </tr><tr>
+	<td>
+	<strong>Moldova (Chisinau)</strong>
+	</td><td>
+	<a href="https://mirror.ihost.md/pub/OpenBSD/OpenSSH/portable/" rel="nofollow">
+	https://mirror.ihost.md/pub/OpenBSD/OpenSSH/portable/</a>
+	</td>
+    </tr><tr>
+	<td>
+	<strong>The Netherlands (Utrecht)</strong>
+	</td><td>
+	<a href="https://ftp.nluug.nl/pub/OpenBSD/OpenSSH/portable/" rel="nofollow">
+	https://ftp.nluug.nl/pub/OpenBSD/OpenSSH/portable/</a>
+	</td>
+    </tr><tr>
+	<td>
+	<strong>The Netherlands (Ede)</strong>
+	</td><td>
+	<a href="https://ftp.bit.nl/pub/OpenBSD/OpenSSH/portable/" rel="nofollow">
+	https://ftp.bit.nl/pub/OpenBSD/OpenSSH/portable/</a>
+	</td>
+    </tr><tr>
+	<td>
+	<strong>The Netherlands (Amsterdam)</strong>
+	</td><td>
+	<a href="https://mirror.laylo.nl/pub/OpenBSD/OpenSSH/portable/" rel="nofollow">
+	https://mirror.laylo.nl/pub/OpenBSD/OpenSSH/portable/</a>
+	</td>
+    </tr><tr>
+	<td>
+	<strong>New Zealand (Anycast within NZ)</strong>
+	</td><td>
+	<a href="https://mirror.fsmg.org.nz/pub/OpenBSD/OpenSSH/portable/" rel="nofollow">
+	https://mirror.fsmg.org.nz/pub/OpenBSD/OpenSSH/portable/</a>
+	</td>
+    </tr><tr>
+	<td>
+	<strong>Norway (Oslo)</strong>
+	</td><td>
+	<a href="https://ftp.eu.openbsd.org/pub/OpenBSD/OpenSSH/portable/" rel="nofollow">
+	https://ftp.eu.openbsd.org/pub/OpenBSD/OpenSSH/portable/</a>
+	</td>
+    </tr><tr>
+	<td>
+	<strong>Poland (Warsaw)</strong>
+	</td><td>
+	<a href="https://ftp.icm.edu.pl/pub/OpenBSD/OpenSSH/portable/" rel="nofollow">
+	https://ftp.icm.edu.pl/pub/OpenBSD/OpenSSH/portable/</a>
+	</td>
+    </tr><tr>
+	<td>
+	<strong>Poland (Poznan)</strong>
+	</td><td>
+	<a href="https://ftp.psnc.pl/pub/OpenBSD/OpenSSH/portable/" rel="nofollow">
+	https://ftp.psnc.pl/pub/OpenBSD/OpenSSH/portable/</a>
+	</td>
+    </tr><tr>
+	<td>
+	<strong>Portugal (Lisbon)</strong>
+	</td><td>
+	<a href="https://ftp.rnl.tecnico.ulisboa.pt/pub/OpenBSD/OpenSSH/portable/" rel="nofollow">
+	https://ftp.rnl.tecnico.ulisboa.pt/pub/OpenBSD/OpenSSH/portable/</a>
+	</td>
+    </tr><tr>
+	<td>
+	<strong>Romania (Bucharest)</strong>
+	</td><td>
+	<a href="https://mirrors.chroot.ro/pub/OpenBSD/OpenSSH/portable/" rel="nofollow">
+	https://mirrors.chroot.ro/pub/OpenBSD/OpenSSH/portable/</a>
+	</td>
+    </tr><tr>
+	<td>
+	<strong>Romania (Bucharest)</strong>
+	</td><td>
+	<a href="https://mirrors.pidginhost.com/pub/OpenBSD/OpenSSH/portable/" rel="nofollow">
+	https://mirrors.pidginhost.com/pub/OpenBSD/OpenSSH/portable/</a>
+	</td>
+    </tr><tr>
+	<td>
+	<strong>Russia (Moscow)</strong>
+	</td><td>
+	<a href="https://mirror.yandex.ru/pub/OpenBSD/OpenSSH/portable/" rel="nofollow">
+	https://mirror.yandex.ru/pub/OpenBSD/OpenSSH/portable/</a>
+	</td>
+    </tr><tr>
+	<td>
+	<strong>Singapore</strong>
+	</td><td>
+	<a href="https://mirror.freedif.org/pub/OpenBSD/OpenSSH/portable/" rel="nofollow">
+	https://mirror.freedif.org/pub/OpenBSD/OpenSSH/portable/</a>
+	</td>
+    </tr><tr>
+	<td>
+	<strong>Sweden (Link&ouml;ping)</strong>
+	</td><td>
+	<a href="https://ftp.lysator.liu.se/pub/OpenBSD/OpenSSH/portable/" rel="nofollow">
+	https://ftp.lysator.liu.se/pub/OpenBSD/OpenSSH/portable/</a>
+	</td>
+    </tr><tr>
+	<td>
+	<strong>Switzerland (Linthal, GL)</strong>
+	</td><td>
+	<a href="https://mirror.ungleich.ch/pub/OpenBSD/OpenSSH/portable/" rel="nofollow">
+	https://mirror.ungleich.ch/pub/OpenBSD/OpenSSH/portable/</a>
+	</td>
+    </tr><tr>
+	<td>
+	<strong>United Kingdom (Kent)</strong>
+	</td><td>
+	<a href="https://www.mirrorservice.org/pub/OpenBSD/OpenSSH/portable/" rel="nofollow">
+	https://www.mirrorservice.org/pub/OpenBSD/OpenSSH/portable/</a>
+	</td>
+    </tr><tr>
+	<td>
+	<strong>United Kingdom (Oxford)</strong>
+	</td><td>
+	<a href="https://mirror.ox.ac.uk/pub/OpenBSD/OpenSSH/portable/" rel="nofollow">
+	https://mirror.ox.ac.uk/pub/OpenBSD/OpenSSH/portable/</a>
+	</td>
+    </tr><tr>
+	<td>
+	<strong>USA (San Francisco, CA)</strong>
+	</td><td>
+	<a href="https://mirrors.sonic.net/pub/OpenBSD/OpenSSH/portable/" rel="nofollow">
+	https://mirrors.sonic.net/pub/OpenBSD/OpenSSH/portable/</a>
+	</td>
+    </tr><tr>
+	<td>
+	<strong>USA (Berkeley, CA)</strong>
+	</td><td>
+	<a href="https://mirrors.ocf.berkeley.edu/pub/OpenBSD/OpenSSH/portable/" rel="nofollow">
+	https://mirrors.ocf.berkeley.edu/pub/OpenBSD/OpenSSH/portable/</a>
+	</td>
+    </tr><tr>
+	<td>
+	<strong>USA (Arlington Heights, IL)</strong>
+	</td><td>
+	<a href="https://mirrors.gigenet.com/pub/OpenBSD/OpenSSH/portable/" rel="nofollow">
+	https://mirrors.gigenet.com/pub/OpenBSD/OpenSSH/portable/</a>
+	</td>
+    </tr><tr>
+	<td>
+	<strong>USA (West Lafayette, IN)</strong>
+	</td><td>
+	<a href="https://plug-mirror.rcac.purdue.edu/pub/OpenBSD/OpenSSH/portable/" rel="nofollow">
+	https://plug-mirror.rcac.purdue.edu/pub/OpenBSD/OpenSSH/portable/</a>
+	</td>
+    </tr><tr>
+	<td>
+	<strong>USA (Cambridge, MA)</strong>
+	</td><td>
+	<a href="https://mirrors.mit.edu/pub/OpenBSD/OpenSSH/portable/" rel="nofollow">
+	https://mirrors.mit.edu/pub/OpenBSD/OpenSSH/portable/</a>
+	</td>
+    </tr><tr>
+	<td>
+	<strong>USA (Piscataway, NJ)</strong>
+	</td><td>
+	<a href="https://openbsd.mirror.constant.com/pub/OpenBSD/OpenSSH/portable/" rel="nofollow">
+	https://openbsd.mirror.constant.com/pub/OpenBSD/OpenSSH/portable/</a>
+	</td>
+    </tr><tr>
+	<td>
+	<strong>USA (New York, NY)</strong>
+	</td><td>
+	<a href="https://ftp.usa.openbsd.org/pub/OpenBSD/OpenSSH/portable/" rel="nofollow">
+	https://ftp.usa.openbsd.org/pub/OpenBSD/OpenSSH/portable/</a>
+	</td>
+    </tr>
+<tr><td colspan=2><br></td></tr>
+    <tr>
+	<td>
+	<strong>Philippines (Cebu)</strong>
+	</td><td>
+	<a href="http://mirror.rise.ph/pub/OpenBSD/OpenSSH/portable/" rel="nofollow">
+	http://mirror.rise.ph/pub/OpenBSD/OpenSSH/portable/</a>
+	</td>
+    </tr><tr>
+	<td>
+	<strong>Russia (Moscow)</strong>
+	</td><td>
+	<a href="http://mirror.mephi.ru/pub/OpenBSD/OpenSSH/portable/" rel="nofollow">
+	http://mirror.mephi.ru/pub/OpenBSD/OpenSSH/portable/</a>
+	</td>
+    </tr>
+</table>
+
+<hr>
+<h3 id="ftp">FTP</h3>
+
+<p>
+In the FTP directory you will find tarballs of the current version,
+diffs against the OpenBSD source and supporting documentation.
+Historical versions are available in the <i>old/</i> directory.
+
+<table>
+    <tr>
+	<td>
+	<strong>PlanetUnix (CDN)</strong>
+	</td><td>
+	<a href="ftp://mirror.planetunix.net/pub/OpenBSD/OpenSSH/portable/" rel="nofollow">
+	ftp://mirror.planetunix.net/pub/OpenBSD/OpenSSH/portable/</a>
+	</td>
+    </tr><tr>
+	<td>
+	<strong>Brazil (Curitiba)</strong>
+	</td><td>
+	<a href="ftp://openbsd.c3sl.ufpr.br/pub/OpenBSD/OpenSSH/portable/" rel="nofollow">
+	ftp://openbsd.c3sl.ufpr.br/pub/OpenBSD/OpenSSH/portable/</a>
+	</td>
+    </tr><tr>
+	<td>
+	<strong>Bulgaria (Sofia)</strong>
+	</td><td>
+	<a href="ftp://openbsd.ipacct.com/pub/OpenBSD/OpenSSH/portable/" rel="nofollow">
+	ftp://openbsd.ipacct.com/pub/OpenBSD/OpenSSH/portable/</a>
+	</td>
+    </tr><tr>
+	<td>
+	<strong>Bulgaria (Sofia)</strong>
+	</td><td>
+	<a href="ftp://mirror.telepoint.bg/pub/OpenBSD/OpenSSH/portable/" rel="nofollow">
+	ftp://mirror.telepoint.bg/pub/OpenBSD/OpenSSH/portable/</a>
+	</td>
+    </tr><tr>
+	<td>
+	<strong>Canada (Toronto, ON)</strong>
+	</td><td>
+	<a href="ftp://openbsd.cs.toronto.edu/pub/OpenBSD/OpenSSH/portable/" rel="nofollow">
+	ftp://openbsd.cs.toronto.edu/pub/OpenBSD/OpenSSH/portable/</a>
+	</td>
+    </tr><tr>
+	<td>
+	<strong>Denmark (Aalborg)</strong>
+	</td><td>
+	<a href="ftp://mirrors.dotsrc.org/pub/OpenBSD/OpenSSH/portable/" rel="nofollow">
+	ftp://mirrors.dotsrc.org/pub/OpenBSD/OpenSSH/portable/</a>
+	</td>
+    </tr><tr>
+	<td>
+	<strong>France (Paris)</strong>
+	</td><td>
+	<a href="ftp://ftp2.fr.openbsd.org/pub/OpenBSD/OpenSSH/portable/" rel="nofollow">
+	ftp://ftp2.fr.openbsd.org/pub/OpenBSD/OpenSSH/portable/</a>
+	</td>
+    </tr><tr>
+	<td>
+	<strong>Germany (Berlin)</strong>
+	</td><td>
+	<a href="ftp://ftp.spline.de/pub/OpenBSD/OpenSSH/portable/" rel="nofollow">
+	ftp://ftp.spline.de/pub/OpenBSD/OpenSSH/portable/</a>
+	</td>
+    </tr><tr>
+	<td>
+	<strong>Greece (Heraklion)</strong>
+	</td><td>
+	<a href="ftp://ftp.cc.uoc.gr/pub/OpenBSD/OpenSSH/portable/" rel="nofollow">
+	ftp://ftp.cc.uoc.gr/pub/OpenBSD/OpenSSH/portable/</a>
+	</td>
+    </tr><tr>
+	<td>
+	<strong>Japan (Nomi, Ishikawa)</strong>
+	</td><td>
+	<a href="ftp://ftp.jaist.ac.jp/pub/OpenBSD/OpenSSH/portable/" rel="nofollow">
+	ftp://ftp.jaist.ac.jp/pub/OpenBSD/OpenSSH/portable/</a>
+	</td>
+    </tr><tr>
+	<td>
+	<strong>Lithuania (Kaunas)</strong>
+	</td><td>
+	<a href="ftp://mirror.litnet.lt/pub/OpenBSD/OpenSSH/portable/" rel="nofollow">
+	ftp://mirror.litnet.lt/pub/OpenBSD/OpenSSH/portable/</a>
+	</td>
+    </tr><tr>
+	<td>
+	<strong>The Netherlands (Utrecht)</strong>
+	</td><td>
+	<a href="ftp://ftp.nluug.nl/pub/OpenBSD/OpenSSH/portable/" rel="nofollow">
+	ftp://ftp.nluug.nl/pub/OpenBSD/OpenSSH/portable/</a>
+	</td>
+    </tr><tr>
+	<td>
+	<strong>The Netherlands (Ede)</strong>
+	</td><td>
+	<a href="ftp://ftp.bit.nl/pub/OpenBSD/OpenSSH/portable/" rel="nofollow">
+	ftp://ftp.bit.nl/pub/OpenBSD/OpenSSH/portable/</a>
+	</td>
+    </tr><tr>
+	<td>
+	<strong>Norway (Oslo)</strong>
+	</td><td>
+	<a href="ftp://ftp.eu.openbsd.org/pub/OpenBSD/OpenSSH/portable/" rel="nofollow">
+	ftp://ftp.eu.openbsd.org/pub/OpenBSD/OpenSSH/portable/</a>
+	</td>
+    </tr><tr>
+	<td>
+	<strong>Philippines (Cebu)</strong>
+	</td><td>
+	<a href="ftp://mirror.rise.ph/pub/OpenBSD/OpenSSH/portable/" rel="nofollow">
+	ftp://mirror.rise.ph/pub/OpenBSD/OpenSSH/portable/</a>
+	</td>
+    </tr><tr>
+	<td>
+	<strong>Poland (Warsaw)</strong>
+	</td><td>
+	<a href="ftp://ftp.icm.edu.pl/pub/OpenBSD/OpenSSH/portable/" rel="nofollow">
+	ftp://ftp.icm.edu.pl/pub/OpenBSD/OpenSSH/portable/</a>
+	</td>
+    </tr><tr>
+	<td>
+	<strong>Romania (Bucharest)</strong>
+	</td><td>
+	<a href="ftp://mirrors.chroot.ro/pub/OpenBSD/OpenSSH/portable/" rel="nofollow">
+	ftp://mirrors.chroot.ro/pub/OpenBSD/OpenSSH/portable/</a>
+	</td>
+    </tr><tr>
+	<td>
+	<strong>Romania (Bucharest)</strong>
+	</td><td>
+	<a href="ftp://mirrors.pidginhost.com/pub/OpenBSD/OpenSSH/portable/" rel="nofollow">
+	ftp://mirrors.pidginhost.com/pub/OpenBSD/OpenSSH/portable/</a>
+	</td>
+    </tr><tr>
+	<td>
+	<strong>Russia (Moscow)</strong>
+	</td><td>
+	<a href="ftp://mirror.yandex.ru/pub/OpenBSD/OpenSSH/portable/" rel="nofollow">
+	ftp://mirror.yandex.ru/pub/OpenBSD/OpenSSH/portable/</a>
+	</td>
+    </tr><tr>
+	<td>
+	<strong>Russia (Moscow)</strong>
+	</td><td>
+	<a href="ftp://mirror.mephi.ru/pub/OpenBSD/OpenSSH/portable/" rel="nofollow">
+	ftp://mirror.mephi.ru/pub/OpenBSD/OpenSSH/portable/</a>
+	</td>
+    </tr><tr>
+	<td>
+	<strong>Sweden (Link&ouml;ping)</strong>
+	</td><td>
+	<a href="ftp://ftp.lysator.liu.se/pub/OpenBSD/OpenSSH/portable/" rel="nofollow">
+	ftp://ftp.lysator.liu.se/pub/OpenBSD/OpenSSH/portable/</a>
+	</td>
+    </tr><tr>
+	<td>
+	<strong>United Kingdom (Kent)</strong>
+	</td><td>
+	<a href="ftp://ftp.mirrorservice.org/pub/OpenBSD/OpenSSH/portable/" rel="nofollow">
+	ftp://ftp.mirrorservice.org/pub/OpenBSD/OpenSSH/portable/</a>
+	</td>
+    </tr><tr>
+	<td>
+	<strong>United Kingdom (Oxford)</strong>
+	</td><td>
+	<a href="ftp://mirror.ox.ac.uk/pub/OpenBSD/OpenSSH/portable/" rel="nofollow">
+	ftp://mirror.ox.ac.uk/pub/OpenBSD/OpenSSH/portable/</a>
+	</td>
+    </tr><tr>
+	<td>
+	<strong>USA (San Francisco, CA)</strong>
+	</td><td>
+	<a href="ftp://mirrors.sonic.net/pub/OpenBSD/OpenSSH/portable/" rel="nofollow">
+	ftp://mirrors.sonic.net/pub/OpenBSD/OpenSSH/portable/</a>
+	</td>
+    </tr><tr>
+	<td>
+	<strong>USA (Cambridge, MA)</strong>
+	</td><td>
+	<a href="ftp://mirrors.mit.edu/pub/OpenBSD/OpenSSH/portable/" rel="nofollow">
+	ftp://mirrors.mit.edu/pub/OpenBSD/OpenSSH/portable/</a>
+	</td>
+    </tr><tr>
+	<td>
+	<strong>USA (New York, NY)</strong>
+	</td><td>
+	<a href="ftp://ftp.usa.openbsd.org/pub/OpenBSD/OpenSSH/portable/" rel="nofollow">
+	ftp://ftp.usa.openbsd.org/pub/OpenBSD/OpenSSH/portable/</a>
+	</td>
+    </tr>
+</table>
+
+<hr>
+
+<h3 id="rsync">rsync</h3>
+
+<p>
+This is a list of currently known rsync mirrors:
+
+<table>
+    <tr>
+	<td>
+	<strong>LeaseWeb (CDN)</strong>
+	</td><td>
+	rsync://mirror.leaseweb.com/openbsd/OpenSSH/portable/
+	</td>
+    </tr><tr>
+	<td>
+	<strong>PlanetUnix (CDN)</strong>
+	</td><td>
+	rsync://mirror.planetunix.net/OpenBSD/OpenSSH/portable/
+	</td>
+    </tr><tr>
+	<td>
+	<strong>Australia (Canberra)</strong>
+	</td><td>
+	rsync://mirror.aarnet.edu.au/openbsd/OpenSSH/portable/
+	</td>
+    </tr><tr>
+	<td>
+	<strong>Brazil (Curitiba)</strong>
+	</td><td>
+	rsync://openbsd.c3sl.ufpr.br/openbsd/OpenSSH/portable/
+	</td>
+    </tr><tr>
+	<td>
+	<strong>Bulgaria (Sofia)</strong>
+	</td><td>
+	rsync://openbsd.ipacct.com/OpenBSD/OpenSSH/portable/
+	</td>
+    </tr><tr>
+	<td>
+	<strong>Bulgaria (Sofia)</strong>
+	</td><td>
+	rsync://mirror.telepoint.bg/OpenBSD/OpenSSH/portable/
+	</td>
+    </tr><tr>
+	<td>
+	<strong>Canada (Toronto, ON)</strong>
+	</td><td>
+	rsync://openbsd.cs.toronto.edu/openbsd/OpenSSH/portable/
+	</td>
+    </tr><tr>
+	<td>
+	<strong>Denmark (Copenhagen)</strong>
+	</td><td>
+	rsync://mirror.group.one/openbsd/OpenSSH/portable/
+	</td>
+    </tr><tr>
+	<td>
+	<strong>France (Paris)</strong>
+	</td><td>
+	rsync://ftp.fr.openbsd.org/OpenBSD/OpenSSH/portable/
+	</td>
+    </tr><tr>
+	<td>
+	<strong>France (Paris)</strong>
+	</td><td>
+	rsync://ftp2.fr.openbsd.org/OpenBSD/OpenSSH/portable/
+	</td>
+    </tr><tr>
+	<td>
+	<strong>Germany (Berlin)</strong>
+	</td><td>
+	rsync://ftp.spline.de/OpenBSD/OpenSSH/portable/
+	</td>
+    </tr><tr>
+	<td>
+	<strong>Germany (Aachen)</strong>
+	</td><td>
+	rsync://ftp.halifax.rwth-aachen.de/openbsd/OpenSSH/portable/
+	</td>
+    </tr><tr>
+	<td>
+	<strong>Germany (Frankfurt)</strong>
+	</td><td>
+	rsync://ftp.hostserver.de/OpenBSD/OpenSSH/portable/
+	</td>
+    </tr><tr>
+	<td>
+	<strong>Germany (Erlangen)</strong>
+	</td><td>
+	rsync://ftp.fau.de/openbsd/OpenSSH/portable/
+	</td>
+    </tr><tr>
+	<td>
+	<strong>Japan (Nomi, Ishikawa)</strong>
+	</td><td>
+	rsync://ftp.jaist.ac.jp/pub/OpenBSD/OpenSSH/portable/
+	</td>
+    </tr><tr>
+	<td>
+	<strong>Japan (Wako-City, Saitama)</strong>
+	</td><td>
+	rsync://ftp.riken.jp/openbsd/OpenSSH/portable/
+	</td>
+    </tr><tr>
+	<td>
+	<strong>Lithuania (Kaunas)</strong>
+	</td><td>
+	rsync://mirror.litnet.lt/OpenBSD/OpenSSH/portable/
+	</td>
+    </tr><tr>
+	<td>
+	<strong>Moldova (Chisinau)</strong>
+	</td><td>
+	rsync://mirror.ihost.md/openbsd/OpenSSH/portable/
+	</td>
+    </tr><tr>
+	<td>
+	<strong>The Netherlands (Utrecht)</strong>
+	</td><td>
+	rsync://ftp.nluug.nl/openbsd/OpenSSH/portable/
+	</td>
+    </tr><tr>
+	<td>
+	<strong>The Netherlands (Ede)</strong>
+	</td><td>
+	rsync://ftp.bit.nl/mirror/OpenBSD/OpenSSH/portable/
+	</td>
+    </tr><tr>
+	<td>
+	<strong>New Zealand (Anycast within NZ)</strong>
+	</td><td>
+	rsync://mirror.fsmg.org.nz/openbsd/OpenSSH/portable/
+	</td>
+    </tr><tr>
+	<td>
+	<strong>Norway (Oslo)</strong>
+	</td><td>
+	rsync://ftp.eu.openbsd.org/OpenBSD/OpenSSH/portable/
+	</td>
+    </tr><tr>
+	<td>
+	<strong>Poland (Warsaw)</strong>
+	</td><td>
+	rsync://ftp.icm.edu.pl/pub/OpenBSD/OpenSSH/portable/
+	</td>
+    </tr><tr>
+	<td>
+	<strong>Portugal (Lisbon)</strong>
+	</td><td>
+	rsync://ftp.rnl.tecnico.ulisboa.pt/pub/OpenBSD/OpenSSH/portable/
+	</td>
+    </tr><tr>
+	<td>
+	<strong>Romania (Bucharest)</strong>
+	</td><td>
+	rsync://mirrors.pidginhost.com/OpenBSD/OpenSSH/portable/
+	</td>
+    </tr><tr>
+	<td>
+	<strong>Russia (Moscow)</strong>
+	</td><td>
+	rsync://mirror.mephi.ru/OpenBSD/OpenSSH/portable/
+	</td>
+    </tr><tr>
+	<td>
+	<strong>Sweden (Link&ouml;ping)</strong>
+	</td><td>
+	rsync://ftp.lysator.liu.se/OpenBSD/OpenSSH/portable/
+	</td>
+    </tr><tr>
+	<td>
+	<strong>United Kingdom (Kent)</strong>
+	</td><td>
+	rsync://rsync.mirrorservice.org/ftp.openbsd.org/pub/OpenBSD/OpenSSH/portable/
+	</td>
+    </tr><tr>
+	<td>
+	<strong>USA (Berkeley, CA)</strong>
+	</td><td>
+	rsync://mirrors.ocf.berkeley.edu/openbsd/OpenSSH/portable/
+	</td>
+    </tr><tr>
+	<td>
+	<strong>USA (West Lafayette, IN)</strong>
+	</td><td>
+	rsync://plug-mirror.rcac.purdue.edu/openbsd/OpenSSH/portable/
+	</td>
+    </tr><tr>
+	<td>
+	<strong>USA (Piscataway, NJ)</strong>
+	</td><td>
+	rsync://openbsd.mirror.constant.com/openbsd/OpenSSH/portable/
+	</td>
+    </tr><tr>
+	<td>
+	<strong>USA (New York, NY)</strong>
+	</td><td>
+	rsync://ftp.usa.openbsd.org/ftp/OpenSSH/portable/
+	</td>
+    </tr>
+</table>

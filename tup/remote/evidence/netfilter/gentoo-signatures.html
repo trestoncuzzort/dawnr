@@ -1,0 +1,389 @@
+<!DOCTYPE html>
+<html lang="en-US" dir="ltr">
+  <head>
+  <meta charset="utf-8">
+  <title>Release media signatures – Gentoo Linux</title>
+  
+  <meta name="theme-color" content="#54487a">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta property="og:title" content="Release media signatures – Gentoo Linux">
+  <meta property="og:image" content="https://www.gentoo.org/assets/img/og-image.jpg">
+  <meta property="og:description" content="News and information from Gentoo Linux">
+  <meta name="twitter:image" content="https://www.gentoo.org/assets/img/logo/gentoo-g.png">
+  <link rel="apple-touch-icon" href="https://www.gentoo.org/assets/img/logo/icon-192.png">
+  <link rel="icon" sizes="192x192" href="https://www.gentoo.org/assets/img/logo/icon-192.png">
+  <link href="https://assets.gentoo.org/tyrian/v1/bootstrap.min.css" rel="stylesheet" media="screen">
+  <link href="https://assets.gentoo.org/tyrian/v1/tyrian.min.css" rel="stylesheet" media="screen">
+  <link href="/assets/css/screen.css" rel="stylesheet" media="screen">
+  
+  <link rel="icon" href="/favicon.ico" type="image/x-icon">
+  <link rel="search" type="application/opensearchdescription+xml" href="https://www.gentoo.org/search/www-gentoo-org.xml" title="Gentoo Website">
+  <link rel="search" type="application/opensearchdescription+xml" href="https://www.gentoo.org/search/forums-gentoo-org.xml" title="Gentoo Forums">
+  <link rel="search" type="application/opensearchdescription+xml" href="https://www.gentoo.org/search/bugs-gentoo-org.xml" title="Gentoo Bugzilla">
+  <link rel="search" type="application/opensearchdescription+xml" href="https://www.gentoo.org/search/packages-gentoo-org.xml" title="Gentoo Packages">
+  <link rel="search" type="application/opensearchdescription+xml" href="https://www.gentoo.org/search/archives-gentoo-org.xml" title="Gentoo List Archives">
+  
+</head>
+
+  <body class="">
+    <header>
+  <div class="site-title">
+    <div class="container">
+      <div class="row">
+        <div class="site-title-buttons">
+          <div class="btn-group btn-group-sm">
+            <a href="https://get.gentoo.org/" role="button" class="btn get-gentoo"><span class="fa fa-fw fa-download"></span> <strong>Get Gentoo!</strong></a>
+            <div class="btn-group btn-group-sm">
+              <a class="btn gentoo-org-sites dropdown-toggle" data-toggle="dropdown" data-target="#" href="#">
+                <span class="fa fa-fw fa-map-o"></span> <span class="hidden-xs">gentoo.org sites</span> <span class="caret"></span>
+              </a>
+              <ul class="dropdown-menu dropdown-menu-right">
+                <li><a href="https://www.gentoo.org/" title="Gentoo's main website"><span class="fa fa-home fa-fw"></span> gentoo.org</a></li>
+                <li><a href="https://wiki.gentoo.org/" title="Find and contribute documentation"><span class="fa fa-file-text-o fa-fw"></span> Wiki</a></li>
+                <li><a href="https://bugs.gentoo.org/" title="Discover and report issues with Gentoo"><span class="fa fa-bug fa-fw"></span> Bugs</a></li>
+                <li><a href="https://packages.gentoo.org/" title="Find software to install"><span class="fa fa-hdd-o fa-fw"></span> Packages</a></li>
+                <li><a href="https://forums.gentoo.org/" title="Discuss with the community"><span class="fa fa-comments-o fa-fw"></span> Forums</a></li>
+                <li class="divider"></li>
+                <li><a href="https://planet.gentoo.org/" title="Find out what's going on in the dev community"><span class="fa fa-rss fa-fw"></span> Planet</a></li>
+                <li><a href="https://archives.gentoo.org/" title="Read up on past discussions"><span class="fa fa-archive fa-fw"></span> Archives</a></li>
+                <li><a href="https://devmanual.gentoo.org/" title="Read the development guide"><span class="fa fa-book fa-fw"></span> Devmanual</a></li>
+                <li><a href="https://gitweb.gentoo.org/" title="Browse our source code in Gitweb"><span class="fa fa-code fa-fw"></span> Gitweb</a></li>
+                <li class="divider"></li>
+                <li><a href="https://infra-status.gentoo.org/" title="Get updates on the services provided by the Gentoo infra team"><span class="fa fa-server fa-fw"></span> Infra status</a></li>
+              </ul>
+            </div>
+          </div>
+        </div>
+        <div class="logo">
+          <a href="/" title="Back to the homepage" class="site-logo">
+            <img src="https://assets.gentoo.org/tyrian/v1/site-logo.png" alt="Gentoo Linux logo" srcset="https://assets.gentoo.org/tyrian/v1/site-logo.svg">
+          </a>
+          
+        </div>
+      </div>
+    </div>
+  </div>
+  <nav class="tyrian-navbar" role="navigation">
+    <div class="container">
+      <div class="row">
+        <div class="navbar-header">
+          <button type="button" class="navbar-toggle" data-toggle="collapse" data-target=".navbar-main-collapse">
+            <span class="sr-only">Toggle navigation</span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+          </button>
+        </div>
+        <div class="collapse navbar-collapse navbar-main-collapse">
+          <ul class="nav navbar-nav">
+            <li class=""><a href="/">Home</a></li>
+<li class=""><a href="/get-started/">Get started</a></li>
+<li class="active"><a href="/downloads/">Downloads</a></li>
+<li class=""><a href="/inside-gentoo/">Inside Gentoo</a></li>
+<li class=""><a href="/support/">Support</a></li>
+<li class=""><a href="/get-involved/">Get involved</a></li>
+
+          </ul>
+          <ul class="nav navbar-nav navbar-right">
+            <li class=""><a href="/donate/"><span class="fa fa-heart" style="color:#d9534f;"></span> Donate</a></li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </nav>
+  
+  <nav class="navbar navbar-grey navbar-stick" role="navigation">
+    <div class="container">
+      <div class="row">
+        <div class="navbar-header">
+          <button type="button" class="navbar-toggle" data-toggle="collapse" data-target=".navbar-secondary-collapse">
+              <span class="sr-only">Toggle secondary navigation</span>
+              <span class="icon-bar"></span>
+              <span class="icon-bar"></span>
+              <span class="icon-bar"></span>
+          </button>
+        </div>
+        <div class="collapse navbar-collapse navbar-secondary-collapse">
+          <ul class="nav navbar-nav">
+            <li class=""><a href="/downloads/alpha/">alpha</a></li>
+<li class=""><a href="/downloads/amd64/">amd64</a></li>
+<li class=""><a href="/downloads/arm/">arm</a></li>
+<li class=""><a href="/downloads/arm64/">arm64</a></li>
+<li class=""><a href="/downloads/hppa/">hppa</a></li>
+<li class=""><a href="/downloads/loong/">loong</a></li>
+<li class=""><a href="/downloads/m68k/">m68k</a></li>
+<li class=""><a href="/downloads/mips/">mips</a></li>
+<li class=""><a href="/downloads/ppc/">ppc</a></li>
+<li class=""><a href="/downloads/riscv/">riscv</a></li>
+<li class=""><a href="/downloads/s390/">s390</a></li>
+<li class=""><a href="/downloads/sparc/">sparc</a></li>
+<li class=""><a href="/downloads/x86/">x86</a></li>
+
+          </ul>
+        </div>
+      </div>
+    </div>
+  </nav>
+  
+</header>
+
+
+    <div class="container">
+      <div class="row">
+        <div id="content" class="col-md-12">
+          <h1 class="first-header">Release media signatures</h1>
+
+<p>
+  Our current releases are signed with either of these keys <strong>or any sub keys:</strong>
+</p>
+
+<br>
+
+<table class="table table-striped">
+  <tr>
+    <th>Key fingerprint</th>
+    <th>Gentoo package</th>
+    <th>Description</th>
+    <th>Created</th>
+    <th>Expiry</th>
+  </tr>
+  <tr>
+    <td><kbd>13EBBDBEDE7A12775DFDB1BABB572E0E2D182910</kbd></td>
+    <td>sec-keys/openpgp-keys-gentoo-release</td>
+    <td>Gentoo Linux Release Engineering (Automated Weekly Release Key)</td>
+    <td>2009-08-25</td>
+    <td>2028-07-01</td>
+  </tr>
+  <tr>
+    <td><kbd>DCD05B71EAB94199527F44ACDB6B8C1F96D8BF6D</kbd></td>
+    <td>sec-keys/openpgp-keys-gentoo-release</td>
+    <td>Gentoo ebuild repository signing key (Automated Signing Key)</td>
+    <td>2011-11-25</td>
+    <td>2028-07-01</td>
+  </tr>
+  <tr>
+    <td><kbd>EF9538C9E8E64311A52CDEDFA13D0EF1914E7A72</kbd></td>
+    <td>sec-keys/openpgp-keys-gentoo-release</td>
+    <td><a rel='external' href='https://github.com/gentoo-mirror/'>Gentoo repository mirrors (GitHub)</a> (automated git signing key)</td>
+    <td>2018-05-28</td>
+    <td>2028-07-01</td>
+  </tr>
+  <tr>
+    <td><kbd>D99EAC7379A850BCE47DA5F29E6438C817072058</kbd></td> <!-- TODO: not in L2 path -->
+    <td>sec-keys/openpgp-keys-gentoo-release</td>
+    <td>Gentoo Linux Release Engineering (Gentoo Linux Release Signing Key)</td>
+    <td>2004-07-20</td>
+    <td>2027-06-01</td>
+  </tr>
+  <tr>
+    <td><kbd>ABD00913019D6354BA1D9A132839FE0D796198B1</kbd></td>
+    <td>sec-keys/openpgp-keys-gentoo-auth</td>
+    <td>Gentoo Authority Key L1</td>
+    <td>2019-04-01</td>
+    <td>2028-07-01</td>
+  </tr>
+  <tr>
+    <td><kbd>18F703D702B1B9591373148C55D3238EC050396E</kbd></td>
+    <td>sec-keys/openpgp-keys-gentoo-auth</td>
+    <td>Gentoo Authority Key L2 for Services</td>
+    <td>2019-04-01</td>
+    <td>2028-07-01</td>
+  </tr>
+  <tr>
+    <td><kbd>2C13823B8237310FA213034930D132FF0FF50EEB</kbd></td>
+    <td>sec-keys/openpgp-keys-gentoo-auth</td>
+    <td>Gentoo Authority Key L2 for Developers</td>
+    <td>2019-04-01</td>
+    <td>2028-07-01</td>
+  </tr>
+  <tr>
+    <td><kbd>ABA5E4E7F4E407ABE9CA7EC7422C9066E21F705A</kbd></td>
+    <td>sec-keys/openpgp-keys-gentoo-infrastructure</td>
+    <td>Gentoo Authority Key L2 for Infrastructure</td>
+    <td>2024-04-19</td>
+    <td>2028-07-01</td>
+  </tr>
+</table>
+
+<br>
+
+<div class="panel panel-default">
+  <div class="panel-heading">
+    <h3 class="panel-title"><span class="fa fa-fw fa-check-circle-o"></span> Verifying files</h3>
+  </div>
+  <div class="panel-body">
+    <p>To verify downloaded files are not tampered with, the <tt>.asc</tt> signature file matching the release and the matching key from the table above are needed.</p>
+
+    <p>Fetch the key:</p>
+
+    <p><kbd>gpg --keyserver hkps://keys.gentoo.org --recv-keys &lt;key fingerprint&gt;</kbd></p>
+
+    <p>Alternatively, use WKD:</p>
+
+    <p><kbd>gpg --auto-key-locate=clear,nodefault,wkd --locate-key &lt;key email&gt;</kbd></p>
+
+    <p>Alternatively, fetch a bundle containing all listed keys:</p>
+
+    <p><kbd>wget -O - https://qa-reports.gentoo.org/output/service-keys.gpg | gpg --import</kbd></p>
+
+    <p>Alternatively, use the Gentoo <tt>sec-keys/openpgp-keys-gentoo-release</tt> package:</p>
+
+    <p><kbd>gpg --import /usr/share/openpgp-keys/gentoo-release.asc</kbd></p>
+
+    <p>Verify the signature:</p>
+
+    <p><kbd>gpg --verify &lt;foo.asc&gt; foo</kbd></p>
+
+    <br>
+
+    <div class="alert alert-info">
+      Detailed instructions are available in the <a href="https://wiki.gentoo.org/wiki/Handbook:Main_Page" class="alert-link">Gentoo Handbook</a>.
+    </div>
+  </div>
+</div>
+
+        </div>
+      </div>
+    </div>
+
+    <footer>
+  <div class="container">
+    <div class="row">
+      <div class="col-xs-12 col-md-offset-2 col-md-7">
+        
+      </div>
+      <div class="col-xs-12 col-md-3">
+        <h3 class="footerhead">Questions or comments?</h3>
+        Please feel free to <a href="/inside-gentoo/contact/">contact us</a>.
+      </div>
+    </div>
+  </div>
+  <div class="container-sitemap">
+    <div class="container">
+      <div class="row row-sitemap hidden-sm hidden-xs">
+  <div class="col-xs-12 col-sm-4 col-md-2">
+    <h3 class="footerhead"><a href="/">Home</a></h3>
+    <ul class="sitemap">
+    <li class=""><a href="/news/">News</a></li>
+
+    </ul>
+  </div>
+  <div class="col-xs-12 col-sm-4 col-md-2">
+    <h3 class="footerhead"><a href="/get-started/">Get Started</a></h3>
+    <ul class="sitemap">
+    <li class=""><a href="/get-started/about/">About Gentoo</a></li>
+<li class=""><a href="/get-started/philosophy/">Philosophy</a></li>
+<li class=""><a href="/get-started/screenshots/">Screenshots</a></li>
+<li class=""><a href="https://wiki.gentoo.org/wiki/FAQ">FAQ <span class="fa fa-fw fa-external-link-square external-link" title="This link will leave www.gentoo.org."></span></a></li>
+
+    </ul>
+  </div>
+  <div class="col-xs-12 col-sm-4 col-md-2">
+    <h3 class="footerhead"><a href="/downloads/">Downloads</a></h3>
+    <ul class="sitemap">
+    <li class=""><a href="/downloads/alpha/">alpha</a></li>
+<li class=""><a href="/downloads/amd64/">amd64</a></li>
+<li class=""><a href="/downloads/arm/">arm</a></li>
+<li class=""><a href="/downloads/arm64/">arm64</a></li>
+<li class=""><a href="/downloads/hppa/">hppa</a></li>
+<li class=""><a href="/downloads/loong/">loong</a></li>
+<li class=""><a href="/downloads/m68k/">m68k</a></li>
+<li class=""><a href="/downloads/mips/">mips</a></li>
+<li class=""><a href="/downloads/ppc/">ppc</a></li>
+<li class=""><a href="/downloads/riscv/">riscv</a></li>
+<li class=""><a href="/downloads/s390/">s390</a></li>
+<li class=""><a href="/downloads/sparc/">sparc</a></li>
+<li class=""><a href="/downloads/x86/">x86</a></li>
+
+    </ul>
+  </div>
+  <div class="col-xs-12 col-sm-4 col-md-2">
+    <h3 class="footerhead"><a href="/inside-gentoo/">Inside Gentoo</a></h3>
+    <ul class="sitemap">
+    <li class=""><a href="/inside-gentoo/developers/">Developers</a></li>
+<li class=""><a href="https://wiki.gentoo.org/wiki/Project:Gentoo">Projects <span class="fa fa-fw fa-external-link-square external-link" title="This link will leave www.gentoo.org."></span></a></li>
+<li class=""><a href="/glep/">GLEPs</a></li>
+<li class=""><a href="/inside-gentoo/artwork/">Artwork</a></li>
+<li class=""><a href="/inside-gentoo/foundation/">Gentoo Foundation</a></li>
+<li class=""><a href="/inside-gentoo/sponsors/">Sponsors</a></li>
+<li class=""><a href="/inside-gentoo/stores/">Stores</a></li>
+<li class=""><a href="/inside-gentoo/contact/">Contact</a></li>
+
+    </ul>
+  </div>
+  <div class="col-xs-12 col-sm-4 col-md-2">
+    <h3 class="footerhead"><a href="/support/">Support</a></h3>
+    <ul class="sitemap">
+    <li class=""><a href="/support/consulting/">Consulting</a></li>
+<li class=""><a href="/support/documentation/">Documentation</a></li>
+<li class=""><a href="https://packages.gentoo.org/">Package database <span class="fa fa-fw fa-external-link-square external-link" title="This link will leave www.gentoo.org."></span></a></li>
+<li class=""><a href="/support/news-items/">Repository news items</a></li>
+<li class=""><a href="/support/security/">Security</a></li>
+<li class=""><a href="/support/use-flags/">USE flags</a></li>
+<li class=""><a href="/support/rsync-mirrors/">rsync mirrors</a></li>
+
+    </ul>
+  </div>
+  <div class="col-xs-12 col-sm-4 col-md-2">
+    <h3 class="footerhead"><a href="/get-involved/">Get Involved</a></h3>
+    <ul class="sitemap">
+    <li class=""><a href="/get-involved/irc-channels/">IRC channels</a></li>
+<li class=""><a href="https://forums.gentoo.org/">Forums <span class="fa fa-fw fa-external-link-square external-link" title="This link will leave www.gentoo.org."></span></a></li>
+<li class=""><a href="/get-involved/mailing-lists/">Mailing lists</a></li>
+<li class=""><a href="/get-involved/contribute/">Contribute</a></li>
+<li class=""><a href="/get-involved/become-developer/">Become a developer</a></li>
+<li class=""><a href="/get-involved/get-code/">Get the code</a></li>
+
+    </ul>
+  </div>
+</div>
+    </div>
+  </div>
+  <div class="container">
+    <div class="row">
+      <div class="col-xs-3 col-md-2">
+        <ul class="footerlinks three-icons">
+          <li><a href="https://twitter.com/gentoo" title="@Gentoo on Twitter"><span class="fa fa-twitter fa-fw"></span></a></li>
+          <li><a href="https://www.facebook.com/gentoo.org" title="Gentoo on Facebook"><span class="fa fa-facebook fa-fw"></span></a></li>
+          <li><a rel="me" href="https://fosstodon.org/@gentoo" title="Gentoo on Mastodon">m</a></li>
+          <li><a href="/feeds/news.xml" title="RSS feed for Gentoo News"><span class="fa fa-rss fa-fw"></span></a></li>
+        </ul>
+      <div>
+        <div class="sitemap text-center">
+          <a href="https://wiki.gentoo.org/wiki/Foundation:Privacy_Policy">Privacy Policy</a>
+        </div>
+      </div>
+      </div>
+      <div class="col-xs-8 col-md-8">
+        <strong>&copy; 2001-2026 Gentoo Authors</strong><br>
+        <small>
+          Gentoo is a trademark of the Gentoo Foundation, Inc. and of Förderverein Gentoo e.V.
+          The contents of this document, unless otherwise expressly stated, are licensed under the
+          <a href="https://creativecommons.org/licenses/by-sa/4.0/" rel="license">CC-BY-SA-4.0</a> license.
+          The <a href="/inside-gentoo/foundation/name-logo-guidelines.html">Gentoo Name and Logo Usage Guidelines</a> apply.
+        </small>
+      </div>
+      <div class="col-xs-1 col-md-1">
+        <strong class="text-dark">Version</strong><br />
+        <small>
+          <a class="text-dark" href="https://gitweb.gentoo.org/sites/www.git/commit/?id=a963a5f
+">a963a5f
+</a>
+        </small>
+        <strong class="text-dark">Generated</strong><br />
+        <small>
+          <span class="text-dark">Generated: 2026-11-05T08:15:20Z</span>
+        </small>
+      </div>
+    </div>
+  </div>
+</footer>
+
+
+    <script src="https://assets.gentoo.org/tyrian/v1/jquery.min.js"></script>
+    <script src="https://assets.gentoo.org/tyrian/v1/bootstrap.min.js"></script>
+    
+    
+  </body>
+</html>

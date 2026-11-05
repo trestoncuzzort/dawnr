@@ -1,0 +1,21 @@
+{
+  "schema": "tup-firewall-probe-v1",
+  "status": "passed",
+  "release_eligible": false,
+  "checks": [
+    "unfiltered IPv4/IPv6 listeners reachable",
+    "check-only, repeated load and unrelated-table preservation",
+    "IPv4/IPv6 owner admitted; other peer and other listening port denied",
+    "malformed batch refused with working policy preserved",
+    "peer removal blocks existing SSH flow and new flows; replacement peer admitted"
+  ],
+  "nft_sha256": "dc840289ec090508c77c2be256c4a528045a3293ae20794c6c07e451d7d198e5",
+  "policy_sha256": "300706ebd4c3af037e538f8cb34dbc65d57c33c8b910522b4729f02be3a18e86",
+  "limitations": [
+    "Disposable network namespaces on the build-host kernel",
+    "TCP fixture only; no SSH daemon, owner authentication or target boot",
+    "No physical DHCP, overlay transport or service lifecycle qualification"
+  ],
+  "probe_script_sha256": "ad61693595fd8d72aa4930cf0ed895dbb6694f54f712d04ddc51237798d75dfe",
+  "renderer_sha256": "8f30bcc6ab53a10f6b00b9ff2545837d297691fea2564cf3f647d731eb85596f"
+}

@@ -24,6 +24,15 @@
         "resolved_url": "https://ftp.openbsd.org/pub/OpenBSD/OpenSSH/portable/openssh-10.6p1.tar.gz.asc",
         "sha256": "1f8fd46ddb5ec95f5bc9e0d7b0fc34ccea3ef8f94a8e3a5d3911434cce7027cf",
         "size_bytes": 833
+      },
+      "approval": {
+        "reviewed_at": "2026-11-05",
+        "basis": "Official portable OpenSSH page publishes the exact release-key primary fingerprint.",
+        "material": {
+          "path": "portable.html",
+          "url": "https://www.openssh.org/portable.html",
+          "sha256": "5618b1179a113132e1a65ddfefb9750854a498b4f6458aacc4fc6666b627746b"
+        }
       }
     }
   },
@@ -34,11 +43,11 @@
     "size": 2355244,
     "authentication": {
       "status": "verified",
-      "evidence_sha256": "9b54c163fea4ed11674de86433f73d1fbdd4b14fd44fa166fac8d44e7cd48824",
+      "evidence_sha256": "529ca8948e5fc3f4ff280ea5a646bbc2724d36d93b1b8f5667a0934048542719",
       "trust_class": "publisher-openpgp",
       "primary_fingerprint": "7168B983815A5EEF59A4ADFD2A3F414E736060BA",
       "signing_fingerprint": "7168B983815A5EEF59A4ADFD2A3F414E736060BA",
-      "verifier_sha256": "403e04c779ad9fab3895c405f8c53d35ab59fa8e3b8bbe3437f61bc41f468dd4",
+      "verifier_sha256": "14953ed8b4549020e185c0f7ab600bb9d0384457ea74da9d574e8d31139aff4f",
       "status_sha256": "5449fb51173bf3f1a309f84124efbbe4194de8655f314aed252dde30915d5421"
     }
   },
