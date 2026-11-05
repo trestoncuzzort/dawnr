@@ -700,16 +700,22 @@ def read_source(source):
                            "image_sha256": kernel["image_sha256"]}, microcode
 
 
-def enroll_module():
+def enroll_path():
     """tup/remote/enroll.py, the code that reads this input on the installed system's first boot: the repository's
-    copy when run from a checkout, else the one the image installs. Loaded, not reimplemented."""
+    copy when run from a checkout, else the one the image installs."""
     for candidate in (Path(__file__).resolve().parents[1] / "remote/enroll.py", Path("/usr/lib/tup/remote/enroll.py")):
         if candidate.is_file():
-            spec = importlib.util.spec_from_file_location("tup_installer_enroll", candidate)
-            module = importlib.util.module_from_spec(spec)
-            spec.loader.exec_module(module)
-            return module, candidate
+            return candidate
     raise Refusal("remote/enroll.py is not available, so the enrollment input cannot be checked")
+
+
+def enroll_module():
+    """(module, path) of enroll.py: loaded, not reimplemented."""
+    path = enroll_path()
+    spec = importlib.util.spec_from_file_location("tup_installer_enroll", path)
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module, path
 
 
 def read_enroll(directory):
@@ -750,7 +756,7 @@ def texts_for(plan):
 
 def installer_digests():
     return {"disk_py_sha256": file_hash(__file__), "inputs_py_sha256": file_hash(inputs.__file__),
-            "enroll_py_sha256": file_hash(enroll_module()[1])}
+            "enroll_py_sha256": file_hash(enroll_path())}
 
 
 def state_directory_facts(host, state):

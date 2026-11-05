@@ -838,7 +838,7 @@ class PlanTests(Base):
         (keys / "clock").write_bytes(b"local\n")
         self.refused("clock may only hold the word utc", enroll_input=keys)
         (keys / "clock").unlink()
-        (keys / "listen").write_bytes(b"192.168.1.5\n")
+        (keys / "listen").write_bytes(b"192.0.2.5\n")
         self.refused("needs both a listen and a peer", enroll_input=keys)
 
     def test_the_summary_says_when_the_state_directory_is_in_ram(self):
@@ -1342,8 +1342,7 @@ class ApplyTests(Base):
         self.assertNotIn("e2fsck", self.host.names())
 
     def test_apply_is_refused_if_the_installers_enrollment_check_changed(self):
-        module = disk.enroll_module()[0]
-        with mock.patch.object(disk, "enroll_module", return_value=(module, Path(disk.__file__))):
+        with mock.patch.object(disk, "enroll_path", return_value=Path(disk.__file__)):
             self.refused_apply("installer changed since the plan")
 
 
