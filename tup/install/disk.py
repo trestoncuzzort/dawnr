@@ -779,7 +779,7 @@ def apply(host, plan_path, confirm, state):
     if (identity, current) != (plan["target"]["identity"], plan["target"]["state"]):
         raise Refusal(f"{target} differs from the plan ({describe_difference(plan, identity, current)}). A disk "
                       "that changed, or a previous attempt that wrote to it, needs a new plan with --allow-existing.")
-    if not hmac.compare_digest(confirmation_token(identity, plan["digest"]), confirm):
+    if not hmac.compare_digest(confirmation_token(identity, plan["digest"]).encode(), str(confirm).encode("utf-8", "replace")):
         raise Refusal("the confirmation token does not belong to this disk and plan; it is printed with the plan summary")
     use = disks_in_use(host, {"source": source})
     if sorted(use) != plan["target"]["disks_in_use"]:
@@ -976,9 +976,12 @@ def main(argv=None, host=None):
                 stream.write("\n")
             print(summary_text(made), end="")
         else:
-            signal.signal(signal.SIGTERM, terminate)
-            signal.signal(signal.SIGHUP, terminate)
-            receipt = apply(host, args.plan, args.confirm, args.state)
+            previous = {number: signal.signal(number, terminate) for number in (signal.SIGTERM, signal.SIGHUP)}
+            try:
+                receipt = apply(host, args.plan, args.confirm, args.state)
+            finally:
+                for number, handler in previous.items():
+                    signal.signal(number, handler)
             print(f"installed {receipt['target']['path']}: receipt {args.state / 'RECEIPT.json'}")
     except Refusal as error:
         print(f"REFUSED: {error}", file=sys.stderr)

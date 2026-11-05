@@ -644,7 +644,7 @@ class ApplyTests(Base):
 
     def test_the_token_is_bound_to_this_disk_and_plan(self):
         wrong = [self.token[:-1] + ("0" if self.token[-1] != "0" else "1"), "WD-WX11A2345678-" + self.made["digest"][:8],
-                 "", "S5GXNX0R123456A", self.token.lower()]
+                 "", "S5GXNX0R123456A", self.token.lower(), "S5GXNX0R123456A-éééééééé"]
         for token in wrong:
             with self.subTest(token=token):
                 self.refused_apply("confirmation token", token=token)
@@ -791,6 +791,62 @@ class ApplyTests(Base):
         with self.assertRaisesRegex(Refusal, "new directory below an existing directory"):
             self.apply(state=self.base / "missing" / "state")
         self.assertEqual(self.host.mutating(), [])
+
+
+@unittest.skipUnless(POSIX, "main needs POSIX")
+class CommandLineTests(Base):
+    def run_main(self, *argv):
+        import contextlib
+        import io
+        from unittest import mock
+        out, err = io.StringIO(), io.StringIO()
+        with mock.patch.object(os, "geteuid", return_value=0), mock.patch.object(disk, "check_platform"), \
+                contextlib.redirect_stdout(out), contextlib.redirect_stderr(err):
+            code = disk.main(list(argv), host=self.host)
+        return code, out.getvalue(), err.getvalue()
+
+    def test_plan_then_apply_through_the_command_line(self):
+        plan = self.base / "p.json"
+        code, out, err = self.run_main("plan", "--target", "/dev/nvme0n1", "--source", str(self.source), "--output", str(plan))
+        self.assertEqual((code, err), (0, ""))
+        self.assertEqual(oct(plan.stat().st_mode & 0o777), "0o600")
+        token = out.splitlines()[-1].removeprefix("Confirmation token: ")
+        self.assertRegex(token, r"^S5GXNX0R123456A-[0-9a-f]{8}$")
+        self.assertTrue(disk.load_plan(plan)["digest"].startswith(token.split("-")[-1]))
+        code, out, err = self.run_main("plan", "--target", "/dev/nvme0n1", "--source", str(self.source), "--output", str(plan))
+        self.assertEqual(code, 1)  # an existing output file is never overwritten
+        self.assertIn("FAILED", err)
+        code, out, err = self.run_main("apply", "--plan", str(plan), "--confirm", "nope", "--state", str(self.base / "st"))
+        self.assertEqual((code, out), (2, ""))
+        self.assertIn("REFUSED: the confirmation token", err)
+        code, out, err = self.run_main("apply", "--plan", str(plan), "--confirm", token, "--state", str(self.base / "st"))
+        self.assertEqual((code, err), (0, ""))
+        self.assertIn("receipt", out)
+
+    def test_refusal_exits_2_and_a_signal_exits_143_with_a_message(self):
+        self.host.lsblk["/dev/sdb"] = node_json("sdb", "8:16", 64 << 30, serial="VENTOY0001", tran="usb", rm=True)
+        self.host.dump["/dev/sdb"], self.host.signatures["/dev/sdb"], self.host.blkid_out["/dev/sdb"] = None, [], {}
+        code, out, err = self.run_main("plan", "--target", "/dev/sdb", "--source", str(self.source), "--output", str(self.base / "x.json"))
+        self.assertEqual(code, 2)
+        self.assertIn("tup-ventoy/media", err)
+        self.assertFalse((self.base / "x.json").exists())
+
+        def hook(host, argv):
+            if disk.Path(argv[0]).name == "sfdisk" and "--lock" in argv:
+                raise disk.Interrupted("signal 15")
+        plan = self.base / "p.json"
+        self.run_main("plan", "--target", "/dev/nvme0n1", "--source", str(self.source), "--output", str(plan))
+        token = disk.confirmation_token(json.loads(plan.read_text())["target"]["identity"], json.loads(plan.read_text())["digest"])
+        self.host.hook = hook
+        code, out, err = self.run_main("apply", "--plan", str(plan), "--confirm", token, "--state", str(self.base / "st"))
+        self.assertEqual(code, 143)
+        self.assertIn("INTERRUPTED (signal 15)", err)
+        self.assertEqual(self.host.written, [])
+
+    def test_requires_root(self):
+        from unittest import mock
+        with mock.patch.object(os, "geteuid", return_value=1000), mock.patch.object(disk, "check_platform"):
+            self.assertEqual(disk.main(["plan", "--target", "/dev/sda", "--source", "/x", "--output", "/x"], host=self.host), 2)
 
 
 class GeneratedFileTests(unittest.TestCase):
