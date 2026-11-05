@@ -107,6 +107,33 @@ def populate(partition, mountpoint, iso, name, small_files, guard, run, block_ma
     return report, back, steps, (block, *extents(mapped))
 
 
+def stick_files(iso_name, keys=None, owner=None):
+    """What goes on the data partition besides the ISO, as {path relative to the partition: bytes}.
+
+    The ISO itself sits at the top level under iso_name. Headless boot needs no key press: Ventoy's
+    documented control plugin names the image to start. The owner's key is at tup-enroll/authorized_keys.
+    """
+    files = {"ventoy/ventoy.json": canonical({"control": [
+        {"VTOY_DEFAULT_IMAGE": "/" + iso_name}, {"VTOY_MENU_TIMEOUT": "2"}, {"VTOY_SECONDARY_TIMEOUT": "2"}]})}
+    if keys is not None:
+        files["tup-enroll/authorized_keys"] = keys
+        if owner is not None:
+            files["tup-enroll/owner"] = (owner + "\n").encode()
+    return files
+
+
+def enroll_record(image_sha256, owner, keys, fingerprint):
+    """The ENROLL.json dictionary that remote_check.adopt_ventoy_keys reads back beside the image."""
+    return {"schema": "tup.runtime-ventoy-enroll.v1", "image_sha256": image_sha256, "owner": owner,
+            "authorized_keys_sha256": digest(keys), "owner_key_fingerprint": fingerprint}
+
+
+def require_whole_file(count, holes):
+    """Refuse a block map (see extents) with a hole or no extent at all: Ventoy's GRUB cannot read such a file."""
+    if holes or not count:
+        raise Refusal("the ISO on the data partition has holes (block map: %d extents, %d holes)" % (count, holes))
+
+
 def real_run(argv, **keywords):
     done = subprocess.run(argv, check=True, capture_output=True, text=True, timeout=600, **keywords)
     return done.stdout
@@ -164,19 +191,14 @@ def build(cache, iso, expected, output, prefix, size_gib, workspace, authorized_
     with tarfile.open(cache / record["name"]) as archive:
         archive.extractall(output / "upstream", filter="data")
     upstream = output / "upstream/ventoy-1.1.18"
-    # Headless boot needs no key press: Ventoy's documented control plugin names the image to start.
-    files = {"ventoy/ventoy.json": canonical({"control": [
-        {"VTOY_DEFAULT_IMAGE": "/" + iso.name}, {"VTOY_MENU_TIMEOUT": "2"}, {"VTOY_SECONDARY_TIMEOUT": "2"}]})}
     enrollment = None
     if generate_key:
         folder = output / "enroll-keys"
         folder.mkdir(mode=0o700)
         remote_check.generate_key(remote_check.TOOLS, remote_check.execute, folder / "owner_key")
         keys = public_keys((folder / "owner_key.pub").read_bytes())[0]
+    files = stick_files(iso.name, keys, owner)
     if keys is not None:
-        files["tup-enroll/authorized_keys"] = keys
-        if owner is not None:
-            files["tup-enroll/owner"] = (owner + "\n").encode()
         enrollment = {"files": sorted(f for f in files if f.startswith("tup-enroll/")),
                       "authorized_keys_sha256": digest(keys), "owner": owner,
                       "keys": "generated test key" if generate_key else "supplied public keys"}
@@ -237,8 +259,7 @@ def build(cache, iso, expected, output, prefix, size_gib, workspace, authorized_
         (output / "filefrag.txt").write_text(report)
         (output / "populate-steps.json").write_bytes(canonical(steps))
         (output / "iso-block-map.json").write_bytes(canonical({"block_bytes": block, "extents": count, "holes": holes}))
-        if holes or not count:
-            raise Refusal("the ISO on the data partition has holes (block map: %d extents, %d holes)" % (count, holes))
+        require_whole_file(count, holes)
         expect = {iso.name: expected, **{name: digest(data) for name, data in files.items()}}
         if back != expect:
             raise Refusal("files read back from the data partition differ from what was written")
@@ -256,10 +277,9 @@ def build(cache, iso, expected, output, prefix, size_gib, workspace, authorized_
                   "physical_devices_written": False, "tup_boot_tested": False, "release_eligible": False}
         (output / "RESULT.json").write_bytes(canonical(result))
         if generate_key:
-            (output / "enroll-keys/ENROLL.json").write_bytes(canonical({
-                "schema": "tup.runtime-ventoy-enroll.v1", "image_sha256": result["image_sha256"],
-                "owner": owner, "authorized_keys_sha256": enrollment["authorized_keys_sha256"],
-                "owner_key_fingerprint": public_keys((output / "enroll-keys/owner_key.pub").read_bytes())[1][0]}))
+            (output / "enroll-keys/ENROLL.json").write_bytes(canonical(enroll_record(
+                result["image_sha256"], owner, keys,
+                public_keys((output / "enroll-keys/owner_key.pub").read_bytes())[1][0])))
         return result
     except BaseException as error:
         (output / "FAILED.txt").write_text(str(error) + "\n")

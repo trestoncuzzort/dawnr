@@ -4,6 +4,7 @@ No VM, loop device, mount or network listener is used here. The scripted client
 stands in for ssh and sftp so that every pass/fail rule is exercised, including
 the ones a healthy guest never triggers. It is not evidence about a real guest.
 """
+import ast
 import base64
 import importlib.util
 import json
@@ -654,6 +655,108 @@ class VentoyFixtureTests(unittest.TestCase):
                                  ([0, 0], (0, 2)), ([], (0, 0)), ([9, 10, 0, 0, 20, 21], (2, 2))):
             with self.subTest(blocks=blocks):
                 self.assertEqual(ventoy_image.extents(blocks), expected)
+
+    def test_the_stick_carries_the_key_at_the_enrollment_path_and_the_iso_at_the_top_level(self):
+        keys = f"ssh-ed25519 {key_blob(5)}\n".encode()
+        self.assertEqual(sorted(ventoy_image.stick_files("tup.iso")), ["ventoy/ventoy.json"])
+        files = ventoy_image.stick_files("tup.iso", keys)
+        self.assertEqual(sorted(files), ["tup-enroll/authorized_keys", "ventoy/ventoy.json"])
+        self.assertEqual(files["tup-enroll/authorized_keys"], keys)
+        files = ventoy_image.stick_files("tup.iso", keys, "mac-owner")
+        self.assertEqual(sorted(files), ["tup-enroll/authorized_keys", "tup-enroll/owner", "ventoy/ventoy.json"])
+        self.assertEqual(files["tup-enroll/owner"], b"mac-owner\n")
+        self.assertNotIn("tup.iso", files)  # The ISO is copied by populate() to the top level, never into this map.
+        control = json.loads(files["ventoy/ventoy.json"])["control"]
+        self.assertIn({"VTOY_DEFAULT_IMAGE": "/tup.iso"}, control)  # The leading slash is the top level.
+        self.assertIn({"VTOY_MENU_TIMEOUT": "2"}, control)
+        self.assertEqual(json.loads(ventoy_image.stick_files("a-b.iso")["ventoy/ventoy.json"])["control"][0],
+                         {"VTOY_DEFAULT_IMAGE": "/a-b.iso"})
+
+    def test_the_iso_is_copied_to_the_top_level_under_its_own_name(self):
+        calls = []
+
+        def run(argv, **keywords):
+            calls.append(argv)
+            if argv[0] == "/usr/bin/cp":
+                shutil.copyfile(argv[-2], argv[-1])
+            return ""
+        self.populate(run, lambda path: (512, [1]), [])
+        copied = next(argv for argv in calls if argv[0] == "/usr/bin/cp")
+        self.assertEqual(Path(copied[-1]), self.directory / "mnt" / "probe.iso")
+
+    def test_a_block_map_with_a_hole_or_no_extent_is_refused(self):
+        for blocks in ([30, 0, 32], [0, 31, 32], [30, 31, 0], [0], []):
+            with self.subTest(blocks=blocks), self.assertRaisesRegex(Refusal, r"holes \(block map: \d+ extents, \d+ holes\)"):
+                ventoy_image.require_whole_file(*ventoy_image.extents(blocks))
+        with self.assertRaisesRegex(Refusal, r"block map: 2 extents, 1 holes"):
+            ventoy_image.require_whole_file(*ventoy_image.extents([30, 0, 32]))
+        for blocks in ([30, 31, 32], [30], [30, 31, 40, 41]):  # Fragments are slow for GRUB but not holes.
+            with self.subTest(blocks=blocks):
+                ventoy_image.require_whole_file(*ventoy_image.extents(blocks))
+
+    def test_build_calls_the_pure_functions_the_tests_above_cover(self):
+        # build() needs root, a loop device and Ventoy's installer, so no unit test runs it past its
+        # argument refusals. This only proves it still goes through the tested functions.
+        tree = ast.parse((RUNTIME / "ventoy-image.py").read_text())
+        function = next(node for node in tree.body if isinstance(node, ast.FunctionDef) and node.name == "build")
+        called = {node.func.id for node in ast.walk(function) if isinstance(node, ast.Call) and isinstance(node.func, ast.Name)}
+        self.assertLessEqual({"stick_files", "enroll_record", "require_whole_file", "populate"}, called)
+
+    def test_a_hole_found_by_populate_reaches_the_refusal_build_applies(self):
+        def run(argv, **keywords):
+            if argv[0] == "/usr/bin/cp":
+                shutil.copyfile(argv[-2], argv[-1])
+            return ""
+        *_, (block, count, holes) = self.populate(run, lambda path: (512, [30, 0, 32]), [])
+        self.assertEqual((count, holes), (2, 1))
+        with self.assertRaises(Refusal):
+            ventoy_image.require_whole_file(count, holes)
+
+    def ventoy_enrollment(self, owner=None, sha="c" * 64):
+        """The writer's ENROLL.json beside the key pair, as build() leaves them (the private half is a stand-in)."""
+        keys, fingerprints = remote_check.public_keys(f"ssh-ed25519 {key_blob(6)}\n".encode())
+        folder = self.directory / "enroll-keys"
+        folder.mkdir(mode=0o700)
+        (folder / "owner_key.pub").write_bytes(keys)
+        (folder / "owner_key").write_bytes(b"stand-in private key\n")
+        (folder / "owner_key").chmod(0o600)
+        record = ventoy_image.enroll_record(sha, owner, keys, fingerprints[0])
+        (folder / "ENROLL.json").write_bytes(remote_check.canonical(record))
+        remote = self.directory / "remote"
+        remote.mkdir(exist_ok=True)
+        return folder, remote, keys, fingerprints[0], record
+
+    @unittest.skipUnless(hasattr(os, "geteuid"), "enrollment keys are read on the Linux test host")
+    def test_the_enrollment_record_the_writer_makes_is_accepted_by_the_reader(self):
+        for owner, explicit in ((None, False), ("mac-owner", True)):
+            with self.subTest(owner=owner):
+                folder, remote, keys, fingerprint, record = self.ventoy_enrollment(owner)
+                self.assertEqual(sorted(record), ["authorized_keys_sha256", "image_sha256", "owner",
+                                                  "owner_key_fingerprint", "schema"])
+                adopted = remote_check.adopt_ventoy_keys(folder, remote, "c" * 64, owner, explicit)
+                self.assertEqual(adopted, (keys, [fingerprint]))
+                self.assertEqual((remote / "owner_key").read_bytes(), b"stand-in private key\n")
+                self.assertEqual(remote_check.digest(ventoy_image.stick_files("t.iso", keys, owner)["tup-enroll/authorized_keys"]),
+                                 record["authorized_keys_sha256"])  # What the stick holds is what the record names.
+                shutil.rmtree(folder)
+                shutil.rmtree(remote)
+
+    @unittest.skipUnless(hasattr(os, "geteuid"), "enrollment keys are read on the Linux test host")
+    def test_a_changed_image_digest_owner_or_key_fingerprint_is_refused_by_the_reader(self):
+        folder, remote, keys, fingerprint, record = self.ventoy_enrollment("mac-owner")
+        for sha, owner, explicit, message in (("d" * 64, "mac-owner", True, "not made for this Ventoy image"),
+                                              ("c" * 64, "other", True, "enrolls owner 'mac-owner'"),
+                                              ("c" * 64, None, False, "enrolls owner 'mac-owner'")):
+            with self.subTest(sha=sha[:1], owner=owner), self.assertRaisesRegex(Refusal, message):
+                remote_check.adopt_ventoy_keys(folder, remote, sha, owner, explicit)
+        for change, message in (({"owner_key_fingerprint": "SHA256:" + "A" * 43}, "differs from the one written"),
+                                ({"authorized_keys_sha256": "0" * 64}, "differs from the one written"),
+                                ({"image_sha256": "d" * 64}, "not made for this Ventoy image"),
+                                ({"owner": None}, "enrolls owner None")):
+            (folder / "ENROLL.json").write_bytes(remote_check.canonical({**record, **change}))
+            with self.subTest(change=change), self.assertRaisesRegex(Refusal, message):
+                remote_check.adopt_ventoy_keys(folder, remote, "c" * 64, "mac-owner", True)
+        self.assertEqual(list(remote.iterdir()), [])  # Nothing was adopted.
 
     def populate(self, run, block_map, calls):
         mountpoint = self.directory / "mnt"
