@@ -16,15 +16,28 @@ their writable state on explicit finish. Only selected results persist.
 - Receipt-byte fix integrated at `0a94efb9`: 18 focused Python tests pass on
   Windows. Original-byte hashes, CRLF/non-ASCII copies, component manifests and
   missing-evidence refusal are covered. Live Linux/remote collection is not.
-- Driver state/receipt transactions and the native target-root entrypoint are
-  separate implementation lanes. Their results must be integrated and tested
-  together before any LFS build is approved.
+- Native target-root preparation and chapter 5-8 orchestration were integrated
+  at `54bb1b27` and `9f1e9d10`; `2ec3f725` adds full stage postconditions and the
+  driver's stronger host-tool requirements.
+- Input-bound driver resume and atomic receipt/state transactions were
+  integrated at `b44f7113`. Changed, legacy, failed or uncertain state refuses
+  automatic replay. No old QEMU wrapper can authorize the new native path.
+- Final integration run: **76 tests, 75 passed, 1 skipped**, in 168.885 seconds
+  on Windows Python 3.13.17 with Git Bash. The skipped test needs real Linux
+  filesystem durability; Windows driver fixtures use a test-only sync adapter.
+  Bash syntax and whitespace checks pass. Evidence is in
+  [verification.json](receipts/native-dev-20261104/verification.json) and
+  [the sanitized test output](receipts/native-dev-20261104/integration-windows.txt).
+  Actual Linux namespace/durability behavior, source authentication and a
+  complete LFS build remain unverified.
 - H53 records the new disposable-instance package-manager requirement. Nix is a
   candidate because upstream supports non-systemd Linux installation; it has
   not been installed or selected as a qualified TUP component.
-- H54 records upstream retirement of the maintained SysV book. The historical
-  12.4 book is not automatically a safe production baseline. Maintenance and
-  override migration remain open.
+- H54 records upstream retirement of the maintained SysV book. The working
+  production choice is 13.1-systemd plus reviewed advisory updates; migration
+  and qualification remain open. [The baseline note](native/BASELINE.md) records
+  the extraction, source-verification, test-policy and service changes needed.
+  The initial builder refuses this new book until that migration is complete.
 
 ## Build environment
 
@@ -37,6 +50,9 @@ WSL 3.0.3 was installed from the official Microsoft release after checking the
 published SHA256 and Authenticode publisher. The installer returned zero. The
 required Windows features were enabled without restarting. WSL still reports
 that a Windows restart is required; no Linux distribution/build has run yet.
+The owner explicitly requested a reboot after the checkpoint is saved. Verify
+runtime state after returning; installation success does not prove the restart
+or distribution setup has occurred.
 The initial disposable-builder budget is 6 GiB RAM, 8 virtual CPUs, 4 GiB swap
 and four compiler jobs. These are preparation limits, not final native-host
 performance claims. Build files must live on a Linux filesystem, not DrvFs.

@@ -32,7 +32,7 @@ Hardware observations came from read-only Windows CIM, storage, network and firm
 | --- | --- | --- |
 | Processor | AMD Ryzen 9 7900X; 12 physical cores, 24 logical processors; firmware virtualization reported enabled | Native Linux KVM/IOMMU behavior, mitigations and usable device groups |
 | Memory | 16 GB class; Windows exposes about 15.16 GiB usable physical memory | Idle TUP cost, build peaks, workload peaks and safe guest concurrency |
-| Graphics | NVIDIA RTX 4080 and integrated AMD Radeon graphics | Linux driver/firmware compatibility, VRAM inventory, display routing, reset and passthrough |
+| Graphics | NVIDIA RTX 4080 and integrated AMD Radeon graphics; NVIDIA's Windows probe reports 16,376 MiB VRAM and driver 610.88 | Linux driver/firmware compatibility, native VRAM behavior, display routing, reset and passthrough |
 | Board | ASUS TUF GAMING X670E-PLUS WIFI | Firmware revision, power-restore behavior, useful onboard devices and recovery options |
 | Boot | UEFI; Secure Boot currently disabled | Chosen production boot-authentication policy |
 | Internal storage | Two approximately 512 GB devices: SATA Lexar NM100 containing Windows/GPT; NVMe WD SN740 reported RAW by Windows | Private stable identifiers, existing signatures, health, selected target and storage roles; RAW is not evidence of an empty disk |
@@ -75,6 +75,8 @@ Native installation is the critical path. Isolation research can proceed in para
 ## Hurdle register
 
 All entries start **open**. **Static** means visible in the audited source, not reproduced in a running build. **Probe** means actual hardware or runtime evidence is required. **Design** means a decision and implementation are missing. Stage numbers above express dependencies; later work cannot silently stand in for an earlier gate.
+
+Current ownership, dependencies, implementation and verification status are in [HEADLESS-HURDLES.json](HEADLESS-HURDLES.json), with the latest checkpoint in [HEADLESS-STATUS.md](HEADLESS-STATUS.md). H53 adds the requested disposable-instance package manager; H54 and [the native baseline note](native/BASELINE.md) track the maintained-LFS migration.
 
 ### Build and evidence
 

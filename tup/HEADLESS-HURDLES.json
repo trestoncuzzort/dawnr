@@ -25,13 +25,23 @@
       "required_change": "Stage 0: budget RAM, disk and jobs; make host resources configurable; provide a native-root build entry point with disposable bootstrap options.",
       "acceptance": "A complete build fits declared resources; peak consumption is recorded; management remains responsive.",
       "implementation": [
-        "native/"
+        "commit:2ec3f725",
+        "commit:54bb1b27",
+        "commit:9f1e9d10",
+        "commit:b44f7113",
+        "native/",
+        "native/README.md",
+        "native/build.py",
+        "native/run-stage.sh",
+        "tests/test_native_build.py"
       ],
-      "test_command": null,
+      "test_command": "python -m unittest discover -s tup/tests -p test_native_build.py -v",
       "evidence": [
-        "receipts/native-dev-20261104/environment.json"
+        "native/VALIDATION.md",
+        "receipts/native-dev-20261104/environment.json",
+        "receipts/native-dev-20261104/verification.json"
       ],
-      "note": "WSL MSI installed and Windows features enabled; restart required. No Linux distribution or LFS build has run. Builder cap6GiB/8vCPU/4GiBswap; initial jobs4."
+      "note": "WSL MSI installed and Windows features enabled; restart required. No Linux distribution or LFS build has run. Builder cap6GiB/8vCPU/4GiBswap; initial jobs4. Native foundation has19portable fixture passes; whole build, Linux execution, source authentication and production book migration remain open. Final combined checkpoint:75pass/1explicit Linux skip. No native build acceptance."
     },
     {
       "id": "H02",
@@ -61,16 +71,27 @@
       "required_change": "Stage 1: define verified pins and reviewed exceptions for bootstrap, sources, firmware, CA material and dependencies. Hash transitive book/scripts/config inputs as well as the outer override.",
       "acceptance": "Missing or mismatched expected inputs fail; a dependency change changes build identity and cannot silently reuse old outputs.",
       "implementation": [
-        "native/"
+        "commit:2ec3f725",
+        "commit:54bb1b27",
+        "commit:9f1e9d10",
+        "commit:b44f7113",
+        "native/",
+        "native/README.md",
+        "native/build.py",
+        "native/run-stage.sh",
+        "tests/test_native_build.py"
       ],
-      "test_command": null,
-      "evidence": [],
-      "note": "Implementation and measured acceptance remain required. No native success claimed."
+      "test_command": "python -m unittest discover -s tup/tests -p test_native_build.py -v",
+      "evidence": [
+        "native/VALIDATION.md",
+        "receipts/native-dev-20261104/verification.json"
+      ],
+      "note": "Implementation and measured acceptance remain required. No native success claimed. Native foundation has19portable fixture passes; whole build, Linux execution, source authentication and production book migration remain open. Final combined checkpoint:75pass/1explicit Linux skip. No native build acceptance."
     },
     {
       "id": "H04",
-      "status": "in_progress",
-      "owner": "build_state",
+      "status": "implemented_unverified",
+      "owner": "integration",
       "depends_on": [
         "H03"
       ],
@@ -79,11 +100,16 @@
       "acceptance": "Changed input rebuilds affected stages or refuses stale state; identical input resumes; a stale marker cannot authorize a new build.",
       "implementation": [
         "driver.sh",
-        "buildlib/"
+        "buildlib/driver-state.sh",
+        "tests/test_driver_state.py",
+        "commit:b44f7113"
       ],
-      "test_command": null,
-      "evidence": [],
-      "note": "Implementation and measured acceptance remain required. No native success claimed."
+      "test_command": "python -m unittest discover -s tup/tests -p 'test_driver*.py' -v",
+      "evidence": [
+        "receipts/native-dev-20261104/verification.json",
+        "receipts/native-dev-20261104/integration-windows.txt"
+      ],
+      "note": "Driver protocol:38Windows fixture passes and1Linux-durability skip. Actual Linux fsync/syncfs, native LFS execution and full manifest closure remain required. Auxiliary event JSON must also be validated by release tooling. Old VM wrappers do not supply the new contract and are superseded, not repaired."
     },
     {
       "id": "H05",
@@ -97,27 +123,43 @@
       "required_change": "Stage 1: explicit status checks, pipeline handling, run-specific markers and bounded waits.",
       "acceptance": "Inject failures in startup, collection, inventory and release: nonzero final exit, no current completion marker or publishable artifact.",
       "implementation": [
-        "native/"
+        "commit:2ec3f725",
+        "commit:54bb1b27",
+        "commit:9f1e9d10",
+        "commit:b44f7113",
+        "native/",
+        "native/README.md",
+        "native/build.py",
+        "native/run-stage.sh",
+        "tests/test_native_build.py"
       ],
-      "test_command": null,
-      "evidence": [],
-      "note": "Implementation and measured acceptance remain required. No native success claimed."
+      "test_command": "python -m unittest discover -s tup/tests -p test_native_build.py -v",
+      "evidence": [
+        "native/VALIDATION.md",
+        "receipts/native-dev-20261104/verification.json"
+      ],
+      "note": "Implementation and measured acceptance remain required. No native success claimed. Native foundation has19portable fixture passes; whole build, Linux execution, source authentication and production book migration remain open. Final combined checkpoint:75pass/1explicit Linux skip. No native build acceptance."
     },
     {
       "id": "H06",
-      "status": "in_progress",
-      "owner": "build_state",
+      "status": "implemented_unverified",
+      "owner": "integration",
       "depends_on": [],
       "finding": "[driver.sh](driver.sh), lines 284-290, appends receipt and state without checking every write result.",
       "required_change": "Stage 1: fail closed and atomically persist a consistent page result; define receipt/state ordering and recovery.",
       "acceptance": "Full-disk and unwritable-ledger fixtures prevent a successful page/chapter verdict and preserve diagnosable state.",
       "implementation": [
         "driver.sh",
-        "buildlib/"
+        "buildlib/driver-state.sh",
+        "tests/test_driver_state.py",
+        "commit:b44f7113"
       ],
-      "test_command": null,
-      "evidence": [],
-      "note": "Implementation and measured acceptance remain required. No native success claimed."
+      "test_command": "python -m unittest discover -s tup/tests -p 'test_driver*.py' -v",
+      "evidence": [
+        "receipts/native-dev-20261104/verification.json",
+        "receipts/native-dev-20261104/integration-windows.txt"
+      ],
+      "note": "Driver protocol:38Windows fixture passes and1Linux-durability skip. Actual Linux fsync/syncfs, native LFS execution and full manifest closure remain required. Auxiliary event JSON must also be validated by release tooling. Old VM wrappers do not supply the new contract and are superseded, not repaired."
     },
     {
       "id": "H07",
@@ -169,11 +211,22 @@
       "required_change": "Stage 1: strict base/layer prerequisite manifests and focused tests; retain override/placeholder checks and named test skips.",
       "acceptance": "Incomplete bases fail; the old failure paths have reproducing tests; skipped tests are explicitly reported and cannot satisfy required gates.",
       "implementation": [
-        "native/"
+        "commit:2ec3f725",
+        "commit:54bb1b27",
+        "commit:9f1e9d10",
+        "commit:b44f7113",
+        "native/",
+        "native/README.md",
+        "native/build.py",
+        "native/run-stage.sh",
+        "tests/test_native_build.py"
       ],
-      "test_command": null,
-      "evidence": [],
-      "note": "Implementation and measured acceptance remain required. No native success claimed."
+      "test_command": "python -m unittest discover -s tup/tests -p test_native_build.py -v",
+      "evidence": [
+        "native/VALIDATION.md",
+        "receipts/native-dev-20261104/verification.json"
+      ],
+      "note": "Implementation and measured acceptance remain required. No native success claimed. Native foundation has19portable fixture passes; whole build, Linux execution, source authentication and production book migration remain open. Final combined checkpoint:75pass/1explicit Linux skip. No native build acceptance."
     },
     {
       "id": "H10",
@@ -401,10 +454,14 @@
       "finding": "[shadow override](overrides/ch08/shadow.sh), line 8, sets root:tup; the agent account is a locked local su target. Disposable build SSH disables host-key verification, which must not become production client policy.",
       "required_change": "Stage 3: enroll the owner key and trusted server fingerprint, use strict client host-key verification, non-root management, controlled privilege escalation, unique host keys and documented rotation/recovery. Remove shared credentials before enabling listeners.",
       "acceptance": "Owner key succeeds; unknown keys and root/password/keyboard-interactive SSH fail; separate installs have different keys; a substituted server key is rejected by the Mac.",
-      "implementation": [],
+      "implementation": [
+        "native/profiles/x86_64/overrides/x86_64/ch08/shadow.sh"
+      ],
       "test_command": null,
-      "evidence": [],
-      "note": "Implementation and measured acceptance remain required. No native success claimed."
+      "evidence": [
+        "native/VALIDATION.md"
+      ],
+      "note": "Native profile locks root instead of assigning a shared password. Actual locked-account behavior, owner enrollment, unique host keys and strict remote verification remain unrun."
     },
     {
       "id": "H24",
@@ -949,10 +1006,14 @@
       "status": "in_progress",
       "owner": "integration",
       "depends_on": [],
-      "implementation": [],
+      "implementation": [
+        "native/BASELINE.md"
+      ],
       "test_command": null,
-      "evidence": [],
-      "note": "Implementation and measured acceptance remain required.",
+      "evidence": [
+        "native/BASELINE.md"
+      ],
+      "note": "Working production target: LFS13.1-systemd plus dated advisory updates. Research found94source/patch entries and changed chapter/test/service contracts. The current foundation intentionally refuses this unimplemented profile.",
       "finding": "The [LFS download page](https://www.linuxfromscratch.org/lfs/download.html), checked 2026-11-04, says the prior System V edition is no longer maintained. TUP extracts 12.4 SysV; the currently maintained stable book is 13.1-systemd. Updating only the kernel leaves the rest of the native base without a documented maintenance plan.",
       "required_change": "Stage 1 before a production build: choose and pin a maintained LFS baseline, audit each retained named override against its exact generated page, and review applicable advisories. Compare rebasing onto the maintained book with explicitly maintaining the SysV branch; preserve historical generated pages and receipts. Record the chosen init/service design and measure its cost.",
       "acceptance": "Source/book/deviation inventory agrees with the chosen version; no unresolved applicable high-impact advisory is waved through; clean build, boot, supervision, updates and rollback are tested on that exact baseline. An old successful receipt is not production approval."

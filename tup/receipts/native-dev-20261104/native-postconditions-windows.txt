@@ -1,0 +1,30 @@
+test_book_architecture_and_unsupported_release_refuse (test_native_build.NativeBuildTests.test_book_architecture_and_unsupported_release_refuse) ... ok
+test_child_success_cannot_commit_changed_transitive_input (test_native_build.NativeBuildTests.test_child_success_cannot_commit_changed_transitive_input) ... ch08: running; log <TEMP>\tup-native-fixture-8nv6pvyl\state\ch08.log
+ok
+test_completed_stage_rechecks_postconditions_without_replay (test_native_build.NativeBuildTests.test_completed_stage_rechecks_postconditions_without_replay) ... ch05: running; log <TEMP>\tup-native-fixture-ajhc9njb\state\ch05.log
+ok
+test_crlf_build_scripts_refuse_without_normalizing_evidence (test_native_build.NativeBuildTests.test_crlf_build_scripts_refuse_without_normalizing_evidence) ... ok
+test_explicit_book_and_native_override_are_bound_and_staged_changes_refuse (test_native_build.NativeBuildTests.test_explicit_book_and_native_override_are_bound_and_staged_changes_refuse) ... ok
+test_failed_child_has_failed_receipt_and_no_successful_resume (test_native_build.NativeBuildTests.test_failed_child_has_failed_receipt_and_no_successful_resume) ... ch05: running; log <TEMP>\tup-native-fixture-3gyrh1de\state\ch05.log
+ok
+test_input_change_cannot_be_authorized_by_stage_marker (test_native_build.NativeBuildTests.test_input_change_cannot_be_authorized_by_stage_marker) ... ok
+test_non_linux_and_arm_hosts_refuse (test_native_build.NativeBuildTests.test_non_linux_and_arm_hosts_refuse) ... ok
+test_observed_lock_changes_do_not_update_expected_pin (test_native_build.NativeBuildTests.test_observed_lock_changes_do_not_update_expected_pin) ... ok
+test_pinned_original_bytes_accept_and_tampered_archive_refuses (test_native_build.NativeBuildTests.test_pinned_original_bytes_accept_and_tampered_archive_refuses) ... ok
+test_receipt_failure_after_execution_retains_uncertain_intent (test_native_build.NativeBuildTests.test_receipt_failure_after_execution_retains_uncertain_intent) ... ch05: running; log <TEMP>\tup-native-fixture-qhglc6m8\state\ch05.log
+ok
+test_receipt_fsync_failure_prevents_child_execution (test_native_build.NativeBuildTests.test_receipt_fsync_failure_prevents_child_execution) ... ok
+test_source_lock_cannot_be_reused_with_changed_book (test_native_build.NativeBuildTests.test_source_lock_cannot_be_reused_with_changed_book) ... ok
+test_source_symlink_refuses_even_when_content_matches (test_native_build.NativeBuildTests.test_source_symlink_refuses_even_when_content_matches) ... ok
+test_source_traversal_duplicate_and_insecure_url_refuse (test_native_build.NativeBuildTests.test_source_traversal_duplicate_and_insecure_url_refuse) ... ok
+test_staged_extra_patch_and_changed_manifest_refuse (test_native_build.NativeBuildTests.test_staged_extra_patch_and_changed_manifest_refuse) ... ok
+test_success_requires_same_inputs_unchanged_log_and_ledger_validation (test_native_build.NativeBuildTests.test_success_requires_same_inputs_unchanged_log_and_ledger_validation) ... ch05: running; log <TEMP>\tup-native-fixture-jxcoe830\state\ch05.log
+ch05: verified prior stage receipt
+ok
+test_workspace_cannot_overlap_source_or_cache (test_native_build.NativeBuildTests.test_workspace_cannot_overlap_source_or_cache) ... ok
+test_wrong_architecture_and_missing_book_archive_refuse (test_native_build.NativeBuildTests.test_wrong_architecture_and_missing_book_archive_refuse) ... ok
+
+----------------------------------------------------------------------
+Ran 19 tests in 0.476s
+
+OK

@@ -44,5 +44,13 @@
     "Linux ext4 and host-requirements checks",
     "Maintained LFS baseline and authenticated sources",
     "Linux fixtures and actual resource measurements"
-  ]
+  ],
+  "windows_gpu_probe": {
+    "command": "nvidia-smi --query-gpu=name,memory.total,driver_version --format=csv,noheader",
+    "name": "NVIDIA GeForce RTX 4080",
+    "memory_total_mib": 16376,
+    "driver_version": "610.88",
+    "exit_code": 0,
+    "scope": "Read-only Windows inventory; native Linux CUDA and passthrough untested."
+  }
 }

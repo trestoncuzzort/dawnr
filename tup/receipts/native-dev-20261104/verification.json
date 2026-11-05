@@ -25,5 +25,68 @@
     "Local raw logs retained outside public repository because PowerShell adds private runtime paths.",
     "Remote transport tested with binary subprocess mocks.",
     "No Linux/native build, boot or artifact qualification implied."
-  ]
+  ],
+  "receipt_native_integration": {
+    "commits": [
+      "0a94efb9",
+      "54bb1b27",
+      "9f1e9d10"
+    ],
+    "command": "python -m unittest discover -s tup/tests -v",
+    "predicted_pass": 35,
+    "tests": 35,
+    "passed": 35,
+    "skipped": 0,
+    "failures": 0,
+    "exit_code": 0,
+    "raw_local_log_sha256": "23463e034c593051076a6a989651248d24d49179fa12b153ec64d67db9f60ac5",
+    "public_log": "receipt-native-windows.txt",
+    "public_log_sha256": "dc81c6384f409f6ab097b1bc84db7fe8aad0d5714dd473cec3b64649d4139da2",
+    "redaction": "Windows temporary directory prefix replaced with <TEMP>; CRLF rendered as LF. No test result lines removed. Original raw log retained privately and identified by raw_local_log_sha256.",
+    "scope": "Portable fixture integration only; no actual Linux execution."
+  },
+  "native_postconditions": {
+    "commit": "2ec3f725",
+    "command": "python -m unittest discover -s tup/tests -p test_native_build.py -v",
+    "baseline_repro": {
+      "child_changed_pinned_patch": true,
+      "child_exit_code": 0,
+      "stage_was_marked_complete": true
+    },
+    "predicted_pass": 19,
+    "tests": 19,
+    "passed": 19,
+    "failures": 0,
+    "exit_code": 0,
+    "raw_local_log_sha256": "3d42a19fd3c171f879c3affc22c73332431779691c2f920a57e2a2c1a1245b5e",
+    "public_log": "native-postconditions-windows.txt",
+    "public_log_sha256": "faf165cce153e0cddec758630a589f642417cdecc89f6635d1f18258e7817b90",
+    "redaction": "Windows temporary directory prefix replaced with <TEMP>; CRLF rendered as LF. No test result lines removed. Original raw log retained privately and identified by raw_local_log_sha256.",
+    "scope": "Portable fixtures; actual Linux postconditions remain unrun."
+  },
+  "complete_checkpoint_integration": {
+    "tested_head": "b44f7113",
+    "command": "TUP_TEST_BASH=<Git Bash> python -m unittest discover -s tup/tests -v",
+    "runtime": "CPython3.13.17 Windows x86_64 +Git for Windows Bash",
+    "prediction": {
+      "tests": 76,
+      "pass": 75,
+      "skip": 1
+    },
+    "tests": 76,
+    "passed": 75,
+    "skipped": 1,
+    "failures": 0,
+    "errors": 0,
+    "seconds": 168.885,
+    "exit_code": 0,
+    "raw_local_log_sha256": "bd63e2f2691ab77cdcb1098fe72a992ebfa659645bef759822062ce101553246",
+    "public_log": "integration-windows.txt",
+    "public_log_sha256": "f826577c5425a83ec9ab1747e36701f137705493d23e2db325bea1852f3bb1b4",
+    "redaction": "Windows temporary directory prefix replaced with <TEMP>; CRLF rendered as LF. No test result lines removed. Original raw log retained privately and identified by raw_local_log_sha256.",
+    "skip_reason": "Linux filesystem durability requires real GNU sync; Windows fixtures use a test-only protocol adapter.",
+    "shell_syntax_passed": true,
+    "whitespace_check_passed": true,
+    "native_build_or_boot_claimed": false
+  }
 }
