@@ -181,10 +181,18 @@ def check_offline_root(root):
         path = root_path(root, name)
         if path.is_symlink() or (path.exists() and (not path.is_dir() or any(path.iterdir()))):
             raise Refusal(f"offline root must have empty/absent {name}")
-    for name in ("etc/machine-id", "var/lib/dbus/machine-id"):
-        path = root_path(root, name)
-        if path.is_symlink() or (path.exists() and path.read_bytes().strip()):
-            raise Refusal("live template must not contain a cloned machine identity")
+    identity = root_path(root, "etc/machine-id")
+    if identity.exists() and identity.read_bytes().strip():
+        raise Refusal("live template must not contain a cloned machine identity")
+    # The LFS D-Bus page links /var/lib/dbus/machine-id to /etc/machine-id, so
+    # both names are the one file checked above. Any other link, or a file
+    # with content, would be a second identity.
+    legacy = root_path(root, "var/lib/dbus") / "machine-id"
+    if legacy.is_symlink():
+        if os.readlink(legacy) != "/etc/machine-id":
+            raise Refusal("live template has a machine identity link that is not the book's /etc/machine-id")
+    elif legacy.exists() and legacy.read_bytes().strip():
+        raise Refusal("live template must not contain a cloned machine identity")
     ssh = root_path(root, "etc/ssh")
     if ssh.exists() and list(ssh.glob("ssh_host_*_key")):
         raise Refusal("live template contains private SSH host keys")
