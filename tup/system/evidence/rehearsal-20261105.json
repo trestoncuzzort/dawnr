@@ -1,0 +1,89 @@
+{
+  "schema": "tup-system-rehearsal-v1",
+  "status": "rehearsed-not-booted",
+  "date": "2026-11-05",
+  "tree": "704a0e2ff03f094baf3beea9375996ab46edb180",
+  "kind": "Plain chroot without mounts, built under a scratch directory from the Ubuntu 24.04 builder's own binaries. Not the layer runner, not a TUP root, not a boot.",
+  "inputs_sha256": {
+    "remote/enroll.py": "ecda0e828da9b4dea2ccbf082dd5e0128280434d0db715b9875034b8c522d446",
+    "remote/firewall.py": "f53b141fb80d5a2d09d63e575578fa91e63f6701db98b28c3815f95c12b04c23",
+    "remote/policy.py": "acc345a043f8d6762c6dd4e826a764111c581aa59f46cb8bfe0aa2e578f67d50",
+    "system/firewall.nft": "fc1a23d46b4f00506b9bd167a7bffa632fd07c39f70aa6079367af43ec6ae356",
+    "system/issue": "48e3ddd35834f887f9820dac34c1d86efc2f5fd3baf8c4c643c0d8d50e591690",
+    "system/pages/01-identity.sh": "bf3c36aefef352fe172812fe8fd2863f5d2b7da89a33a4012ff54b14ede2dd76",
+    "system/pages/02-network.sh": "3733912ebebe61e253af70f9dd17ecb11293e6d93da60f724fe468c3dbf9dc71",
+    "system/pages/03-access.sh": "cc0d0911419bc2e630f939789b15872ef33e54ed9ddfeca7bf3c78b919e8d43b",
+    "system/pages/ORDER": "c0095535d4c2351afc442645c30ed3933ef5abec5a3b90d5e79a5f075c91ba17",
+    "system/units/tup-console-status.service": "37c9bee19e10b232bbfbdfdab1ffbc7adb6c1198cf7c8b8abd4118dd17d1f75e",
+    "system/units/tup-enroll.service": "5208b5420ebcb29943c1a62cdeb7f5509769482ba519a9bc90363b663ee7754f",
+    "system/units/tup-firewall.service": "8d50dfb6068a65730b073e0bf71816948c0f283765df2ab288528ef1ba6fbe58",
+    "system/units/tup-sshd.service": "14e256f88838385530d2ecde80e07bf930b842fd7e06145c096a175d2fd9287c"
+  },
+  "host_tools": {
+    "bash": "5.2.21",
+    "coreutils": "9.4",
+    "gawk": "5.2.1",
+    "python": "3.12.3",
+    "systemd": "255.4",
+    "shadow": "4.13",
+    "sudo": "1.9.15p5",
+    "openssh": "10.6p1, the authenticated host build of remote/evidence/policy-check.json",
+    "sshd_sha256": "ec2b8e61802d94adc5023cba54572675e63d558cb9a07c8175258808dee08ce3",
+    "ssh_keygen_sha256": "195967f2618c49df4f4c2838e727c90f4e7f1a5b399075e97d00e10a56d6e69c",
+    "nftables": "1.1.7, the authenticated host build of remote/evidence/firewall-host-build.json",
+    "nft_sha256": "dc840289ec090508c77c2be256c4a528045a3293ae20794c6c07e451d7d198e5",
+    "kernel": "6.18 (WSL2)"
+  },
+  "pages": {
+    "fixture": "Root imitating the core and remote chapters: locked root, empty machine-id, sshd uid 50, iana-etc protocols, the host's systemd unit directory, stub executables for sshd, ssh-keygen, nft, useradd, udevadm, mount, umount, kill, agetty and dmsetup, a stub /tup-layer/common.sh with set -euo pipefail, inherit_errexit and umask 022.",
+    "invocation": "As driver.sh does: the documented chroot environment, cwd /sources, stdin /dev/null, bash -e -o pipefail <page>.",
+    "first_run_exit": {"01-identity.sh": 0, "02-network.sh": 0, "03-access.sh": 0},
+    "second_run_exit": {"01-identity.sh": 0, "02-network.sh": 0, "03-access.sh": 0},
+    "enabled": ["systemd-networkd.service", "systemd-resolved.service", "systemd-timesyncd.service", "tup-console-status.service", "tup-enroll.service", "tup-firewall.service", "tup-sshd.service"],
+    "check_offline_root": "accepted after removing /tup-layer and the stand-in /dev/null; the three ELF checks saw fixture binaries",
+    "refused_by_03_access": [
+      "SSH host key present",
+      "machine-id set",
+      "root unlocked",
+      "two root entries in shadow",
+      "account with uid 1000",
+      "fstab with a mount",
+      "os-release ID other than tup",
+      "owner key in /etc/tup/authorized_keys",
+      "enrollment marker present",
+      "sshd missing",
+      "tup-sshd.service differing from the renderer",
+      "default firewall replaced by the private-networks table",
+      "/etc/protocols missing",
+      "sudo installed with a sudoers file that does not include /etc/sudoers.d"
+    ],
+    "accepted_by_03_access": ["comment-only fstab", "sudo installed with sudoers.d included"]
+  },
+  "enrollment": {
+    "fixture": "The page result plus real tools copied in with their libraries. The OpenSSH host build has its own sysconfdir and privilege separation user and directory; the chroot provides them. /usr/sbin/nft is a wrapper: check mode runs the real nft, a load is recorded and not performed, because a chroot shares the builder's network namespace.",
+    "invocation": "python3 -I -B /usr/lib/tup/remote/enroll.py as root in the chroot, default command runner.",
+    "private_networks": {
+      "exit": 0,
+      "real_commands": ["ssh-keygen -A", "sshd -T -f <staged>", "visudo -c -f <staged>", "nft -c -f <staged>", "useradd"],
+      "not_performed": ["nft -f /etc/tup/firewall.nft"],
+      "account": "owner:x:1000:1000:TUP owner:/home/owner:/bin/bash, shadow field *",
+      "modes": {"/etc/tup/authorized_keys/owner": "644", "/etc/ssh/sshd_config": "600", "/etc/tup/firewall.nft": "600", "/etc/sudoers.d/10-tup-owner": "440", "/etc/tup/owner-enrolled.json": "644"},
+      "marker": "file hashes equal the installed files; host key fingerprint equals ssh-keygen -lf",
+      "second_run": "exit 0, 'already enrolled; nothing changed', tree digest unchanged",
+      "console_status": "exit 0; ENROLLED text with the ssh-keygen -lf fingerprint"
+    },
+    "exact": {"exit": 0, "listen": "10.0.2.15", "peer": "10.0.2.2", "override_unit": "installed, orders after network-online.target"},
+    "refused": [
+      {"input": "an RSA public key", "exit": 1, "tree": "unchanged; no tool ran"},
+      {"input": "valid key, sshd wrapper appending a listener to sshd -T output", "exit": 1, "tree": "no account, staged files removed, default firewall in place, no load attempted"},
+      {"input": "valid key, root without /etc/protocols", "exit": 1, "tree": "nft -c -f refused the staged table: 'Could not resolve protocol name' for ipv6-icmp"}
+    ]
+  },
+  "limitations": [
+    "Ubuntu's bash, coreutils, gawk, Python 3.12, systemd 255 and shadow 4.13, not TUP's Python 3.14, systemd 261.2, util-linux 2.42.4 and shadow 4.20.2.",
+    "OpenSSH and nftables host builds, not the target builds against OpenSSL 4 and the target kernel.",
+    "No /proc, /sys or device nodes in the chroot; the layer runner provides them.",
+    "No unit started, no udev wait or mount of a TUP-ENROLL filesystem, no firewall table loaded, no daemon, no login.",
+    "The helper scripts stayed outside the repository because they name builder paths."
+  ]
+}

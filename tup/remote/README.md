@@ -12,7 +12,9 @@ fixes newer than the BLFS 13.1 book's OpenSSH 10.5p1 recipe.
 output. It accepts one named normal account, one to eight Ed25519 public keys,
 and explicit private or loopback IP listeners. Comments are removed from keys.
 Malformed SSH wire encodings, private-key files, authorized_keys options,
-wildcards, public listeners and configuration injection are refused.
+wildcards, public listeners and configuration injection are refused. A second,
+explicitly selected scope for a DHCP home LAN is described under
+[Two scopes](#two-scopes); it changes none of the above for the default scope.
 
 The policy requires public-key authentication, disables root/password/keyboard
 interactive login, and reads owner keys from the root-controlled
@@ -39,11 +41,12 @@ are refused. A failed write may leave a partial private directory; it is never
 an applied enrollment or a successful installation marker.
 
 The generated unit requires `tup-firewall.service` and an applied owner
-enrollment marker. Those prerequisites are not implemented by this renderer,
-so the unit must not be enabled yet. It generates unique host keys at first
-start using `ssh-keygen -A` and then checks configuration before listening.
-Generic images must contain neither host private keys nor owner enrollment.
-Do not mask failure with a shared key or a default password.
+enrollment marker. The renderers still provide neither; `enroll.py` (below)
+writes the marker on the target, and the [system chapter](../system/README.md)
+installs and enables the private-networks units. The unit generates unique
+host keys at first start using `ssh-keygen -A` and then checks configuration
+before listening. Generic images must contain neither host private keys nor
+owner enrollment. Do not mask failure with a shared key or a default password.
 
 The eventual account must have a valid home/shell and an explicit administration
 policy. With portable OpenSSH on Linux, a shadow password beginning with `!`
@@ -59,6 +62,97 @@ reload uses SIGHUP. Durable workloads must run in separately supervised service
 cgroups so an access-service restart does not become a job-lifetime policy.
 This follows [systemd's process-killing interface](https://www.freedesktop.org/software/systemd/man/latest/systemd.kill.html).
 The stop behavior still needs a target service test with real sessions.
+
+## Two scopes
+
+The scope is always chosen explicitly; nothing infers it from an address.
+
+| | `exact` (the default of both renderers) | `private-networks` |
+| --- | --- | --- |
+| For | Addresses known in advance: a static LAN address or an overlay | A DHCP home LAN where neither end's address is known when the image is built |
+| sshd `ListenAddress` | Each given private or loopback address | `0.0.0.0` and `::` |
+| `tup-sshd.service` | `Wants=` and `After=network-online.target` | `After=network.target` only; it never waits for an address |
+| Firewall, new SSH | Given peer addresses to given listener addresses | Any source in `10.0.0.0/8`, `172.16.0.0/12`, `192.168.0.0/16`, `100.64.0.0/10`, `fc00::/7` or `fe80::/10` |
+| Multicast DNS | Not admitted | UDP 5353 from the same sources |
+| Command line | `--listen` (and `--peer` for the firewall) | `--private-networks`, mutually exclusive with `--listen` and `--peer` |
+
+A listener bound to one address stops being reachable when a DHCP lease
+arrives late or changes, and a unit ordered after `network-online.target`
+would delay or lose SSH for the same reason. In the private-networks scope
+sshd therefore binds both wildcards, as
+[`ListenAddress`](https://man.openbsd.org/sshd_config#ListenAddress) permits,
+and the firewall decides who may connect. `sshd -T` prints those listeners as
+`0.0.0.0:22` and `[::]:22`; `check_effective(..., scope="private-networks")`
+requires exactly those two and refuses any other, missing or additional
+listener. The exact scope still refuses wildcard, public, multicast and
+link-local listeners, and neither scope accepts the other's `sshd -T` output.
+
+The source list is `policy.PRIVATE_NETWORKS` without loopback (loopback is
+admitted by interface, not by address) plus IPv6 link-local. These are the
+[RFC 1918](https://www.rfc-editor.org/rfc/rfc1918) and
+[RFC 4193](https://www.rfc-editor.org/rfc/rfc4193) private ranges, the
+[RFC 6598](https://www.rfc-editor.org/rfc/rfc6598) shared range that overlay
+networks use, and [RFC 4291](https://www.rfc-editor.org/rfc/rfc4291)
+link-local. A provider can also route the shared range on its own network, so
+this scope is for a machine behind a home router, not one attached directly to
+such a line. Admission by source prefix is not authentication: every host on
+the LAN reaches port 22, and only the enrolled key gets further.
+
+In nftables the sources are one anonymous set of prefixes per address family
+([sets](https://wiki.nftables.org/wiki-nftables/index.php/Sets),
+[nft(8)](https://www.netfilter.org/projects/nftables/manpage.html)). Answers to
+a multicast query do not match the query's conntrack entry, so
+[Multicast DNS](https://www.rfc-editor.org/rfc/rfc6762) needs its own accept
+rule; systemd-resolved is the responder for the host's `.local` name.
+
+`firewall.py --unenrolled` renders the image's default table: the
+private-networks table without its two SSH accept rules, so the SSH chain
+drops every source. The firewall unit is byte-identical in all three cases.
+Exact-scope output is byte-identical to the renderer before the second scope
+existed; both test files pin its SHA256.
+
+## Enrollment at boot
+
+`enroll.py` is the apply step. `tup-enroll.service` runs it as root on the
+target before the firewall and sshd units; it is not a build-host tool and its
+command line takes no root directory. The owner-facing steps are in the
+[system chapter](../system/README.md#enrolling-from-a-macbook).
+
+Input is a directory named `tup-enroll` containing `authorized_keys`, searched
+for on a filesystem labelled `TUP-ENROLL`, then on the USB filesystem that
+holds the ISO, then on the live medium. `owner` optionally names the account;
+`listen` and `peer` together select the exact scope, otherwise the scope is
+private-networks. Every value goes through the same `policy.py` and
+`firewall.py` validation as the command-line renderers.
+
+It then checks before it changes. New files are written beside their
+destinations and checked there by the real tools: `sshd -T -f` with
+`check_effective`, `visudo -cf`, and `nft -c -f`, which validates through the
+kernel without committing. Only then does it run `useradd`, rename the files
+into place, load the table with `nft -f` and, last, write
+`/etc/tup/owner-enrolled.json` with fsync and rename. The marker records the
+scope, the input location, the owner and host key fingerprints and the SHA256
+of each installed file. With the marker present a second run changes nothing.
+
+The account gets a home directory, `/bin/bash` and the shadow password field
+`*`. That matches no password, and portable OpenSSH on Linux treats only a
+leading `!` as a locked account (`platform_locked_account()` in 10.6p1), so
+public-key login works in a build without PAM. `useradd` otherwise writes `!`.
+If `/usr/bin/sudo` and `/usr/sbin/visudo` exist, the owner gets
+`NOPASSWD: ALL`; the account is then root-equivalent for anyone holding an
+enrolled private key. Without sudo the marker says so and no rule is written.
+
+Refusals: any invalid input; an existing account, group or home directory of
+that name (never adopted); a symbolic link anywhere on a path it reads or
+writes below the root; a directory on the key file's path that someone other
+than root can write, which sshd `StrictModes` would reject later anyway.
+Before `useradd` a refusal leaves the system as it was, apart from host keys.
+After it, a failure leaves no marker and therefore no listener, but the
+account can remain and blocks the next attempt on a persistent root.
+
+`apply()` takes the root directory and a command runner as parameters. The
+tests use both to run the whole sequence against a temporary tree without
+root; with real commands any root other than `/` is refused.
 
 ## Evidence and remaining work
 
@@ -78,6 +172,28 @@ negative controls. The existing OpenSSH 10.6p1 binary also passed global and
 IPv4/IPv6 connection-context checks; [the receipt](evidence/policy-check.json)
 records its exact binary and the explicit extra test-key adjustment. These
 configuration checks do not test actual authentication or service shutdown.
+
+For the private-networks scope the same OpenSSH 10.6p1 host binary accepted
+the rendered configuration with `sshd -T` and a temporary host key. It printed
+`ListenAddress 0.0.0.0:22` and `ListenAddress [::]:22`; `check_effective`
+accepted that output in the private-networks scope and refused it in the exact
+scope, and the reverse. `ssh-keygen -lf` printed the same fingerprint that
+`policy.public_keys` computes for the host public key, which is what the
+marker records. The nftables 1.1.7 host build accepted the exact,
+private-networks and unenrolled tables with `nft -c -f` and rejected a damaged
+one; check mode loads nothing. Running `test_remote_firewall.py` as root with
+`TUP_TEST_NFT` set to an nft binary repeats that check. The exact `useradd`
+arguments were run by Ubuntu's shadow 4.13 against a prefix directory and
+produced the `*` shadow field; Ubuntu's visudo 1.9.15 accepted the sudo rule.
+The unit tests run enrollment against a temporary root with every command
+replaced by a fixture. Beyond that, `enroll.py` ran once with its default
+runner and these real tools inside a plain chroot built from the builder's
+Ubuntu binaries; [the receipt](../system/evidence/rehearsal-20261105.json)
+lists what it produced, the three refusals, and the one step that was recorded
+instead of performed, the firewall load. It also showed a dependency of the
+existing table: nft resolves `ipv6-icmp` through `/etc/protocols` and rejects
+the table when that file is absent. Nothing in this paragraph is a target
+build, a daemon, a loaded rule or a login.
 
 This host build uses Ubuntu's compiler and OpenSSL 3. It does not establish
 compatibility with TUP's compiler, OpenSSL 4 or target service environment.
@@ -132,7 +248,8 @@ Those features are unnecessary for the selected policy. The release archive's
 `INSTALL` and `configure.ac` define these supported options.
 
 `firewall.py` renders a private nftables policy for exact listener and peer IP
-addresses. Input and forwarding default to drop; outbound host traffic remains
+addresses, or for the private-networks and unenrolled cases described under
+[Two scopes](#two-scopes). Input and forwarding default to drop; outbound host traffic remains
 allowed. The policy permits loopback, required ICMP/neighbor discovery, DHCP
 replies and established return traffic. SSH has a separate peer gate **before**
 the general established-connection rule, so removing a peer also blocks its
