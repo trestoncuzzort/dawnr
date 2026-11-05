@@ -160,3 +160,86 @@ peer removal. Its listeners are confined to those namespaces. The target kernel,
 DHCP, physical network, SSH authentication, service lifecycle and private
 transport are still unqualified. The full upstream nftables kernel suite also
 remains unrun; these bounded probes do not stand in for that suite.
+
+## Owner administration: sudo source and target page
+
+Root stays locked and the owner logs in with a key only, so administration
+needs sudo. `sudo-source.json` selects sudo **1.9.17p2**: it is the version in
+the [BLFS 13.1-systemd recipe](https://www.linuxfromscratch.org/blfs/view/13.1-systemd/postlfs/sudo.html)
+and the current stable release on the
+[upstream download page](https://www.sudo.ws/getting/download/); no newer
+source archive was listed upstream on 2026-11-05. The two newest upstream
+[advisories](https://www.sudo.ws/security/advisories/), CVE-2025-32462 and
+CVE-2025-32463, are fixed in 1.9.17p1. All 33 upstream advisories were read;
+the other 31 name fixed releases no newer than 1.9.13p2. The complete LFS 13.1
+advisory query, re-fetched byte-identical to the retained snapshot, has no sudo
+record. `sudo-advisories.json` records these dispositions. This is a review of
+published advisories, not a claim that no vulnerability exists.
+
+The archive is authenticated by its detached OpenPGP signature, not by a
+computed hash. The download page states that every source distribution is
+signed with the maintainer's key and publishes the current signing fingerprint
+`59D1E9CCBA2B376704FDD35BA9F4C021CEA470FB`; that page, the official `PGPKEYS`
+file and the signature are retained in `evidence/sudo/`. `PGPKEYS` also holds
+the superseded 1024-bit DSA key, which is not approved. The existing
+`sources/source_lock.py` verifier accepted the real archive with `/usr/bin/gpg`
+([result](evidence/sudo/source-verification.json)) and
+[refused](evidence/sudo/source-negative-controls.json) one modified archive
+byte, another publisher's key file, approval of the old DSA primary and a
+missing signature. The digest published on the retained download page equals
+the pin; that is corroboration only.
+
+`verify_layer_sources.py` is the one call for the layer runner. It runs
+`verify_sources.py`'s four-source check unchanged, then the sudo record and its
+advisory review, and refuses unless exactly those five archives verify. The
+four-source catalogs, checks and receipts are untouched.
+
+```sh
+python3 tup/remote/verify_layer_sources.py --cache "$REMOTE_SOURCE_CACHE" \
+  --gpg /usr/bin/gpg --output "$REMOTE_VERIFICATION_OUTPUT"
+```
+
+`pages/05-sudo.sh` follows the BLFS recipe: `--prefix=/usr`,
+`--libexecdir=/usr/lib`, `--with-env-editor`, the book's `--docdir` and
+password prompt, bounded `make -j"$TUP_JOBS"`, and upstream `make check` with
+its log kept as `/sources/log/sudo-make-check.log`. It differs from the book
+in five stated ways:
+
+- `--without-pam`: the target has no Linux-PAM. Sudo's `configure.ac` then
+  skips PAM detection on Linux and builds its shadow `passwd` method. No
+  `/etc/pam.d/sudo` is written.
+- `--disable-openssl`: sudo uses OpenSSL only for log-server TLS and optional
+  SHA-2; its bundled SHA-2 is used instead. The book's OpenSSL 4 `sed` on
+  `lib/iolog/hostcheck.c` is not applied because that code is compiled only
+  with `HAVE_OPENSSL`. `sudo_logsrvd` and `sudo_sendlog` are still installed,
+  without TLS, and are not enabled.
+- `--with-secure-path=/usr/sbin:/usr/bin`: the value the book sets afterwards
+  in `/etc/sudoers.d/00-sudo`. The generic image keeps that directory empty.
+- `--enable-tmpfiles.d=/usr/lib/tmpfiles.d`: stated instead of autodetected.
+- `make -j1 install`: serialized; the book's plain `make install` would
+  inherit the layer's `MAKEFLAGS`.
+
+The page fails if `config.h` enables PAM or OpenSSL, if `make check` fails, if
+its log reports any error or lacks the four sudoers policy suites, if a
+sudoers policy already exists, or if installed modes differ. The installed
+`/etc/sudoers` is upstream's default with `@includedir /etc/sudoers.d`; its
+only active rule, `root ALL=(ALL:ALL) ALL`, is commented out, so the generic
+image grants nothing. `visudo -c` must pass, upstream's `cvtsudoers` must
+report no user specification, `sudo -V` must load the installed policy plugin,
+and `sudo -n /usr/bin/true` as root must be refused by rule.
+
+Enrollment, a separate component, writes the only rule as
+`/etc/sudoers.d/10-tup-owner` (root-owned, mode 0440, checked with
+`visudo -c`). Every password on the target is locked and there is no PAM, so
+that rule must use `NOPASSWD`; a rule that asks for a password can never
+succeed. Root running `sudo` is refused too unless enrollment adds a root rule.
+
+A [host rehearsal](evidence/sudo/host-rehearsal.json) ran the page's own
+configure command, gates and policy edit on Ubuntu 24.04 (GCC 13.3, glibc
+2.39, no PAM headers) with one job at lowest priority: configure 8 s, build
+33 s, `make check` 11 s with 1,535 tests in 45 suites and no error, and a
+staged `DESTDIR` install whose edited sudoers passed `visudo -c` and the
+no-rule check while the unedited upstream default was refused. This proves
+nothing about the target: GCC 16.2, glibc 2.44, the layer chroot, the real
+install paths, the final `sudo -V` and denial controls, and any actual
+privilege use remain untested until the layer runs and the machine boots.
