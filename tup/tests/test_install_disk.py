@@ -1342,7 +1342,14 @@ class ApplyTests(Base):
         self.assertNotIn("e2fsck", self.host.names())
 
     def test_apply_is_refused_if_the_installers_enrollment_check_changed(self):
-        with mock.patch.object(disk, "enroll_path", return_value=Path(disk.__file__)):
+        """A different enroll.py (here a working copy with one more comment line) is a different installer."""
+        copy = self.base / "other-tup" / "remote"
+        copy.mkdir(parents=True)
+        for name in ("enroll.py", "policy.py", "firewall.py"):
+            shutil.copyfile(Path(disk.__file__).parents[1] / "remote" / name, copy / name)
+        with open(copy / "enroll.py", "a") as stream:
+            stream.write("# changed after the plan\n")
+        with mock.patch.object(disk, "enroll_path", return_value=copy / "enroll.py"):
             self.refused_apply("installer changed since the plan")
 
 
