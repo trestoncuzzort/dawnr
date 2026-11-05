@@ -1,3 +1,6 @@
 *.py text eol=lf
 *.sh text eol=lf
 *.md text eol=lf
+*.json -text
+# Authentication evidence retains exact publisher bytes, including whitespace.
+evidence/** -text -whitespace

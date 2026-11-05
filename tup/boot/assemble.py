@@ -24,11 +24,13 @@ from tup.boot.inputs import (Refusal, canonical, check_kernel, check_offline_roo
 
 HERE = Path(__file__).resolve().parent
 TOOLS = {"mksquashfs", "dracut", "lsinitrd", "grub-mkrescue", "grub-script-check", "xorriso"}
+GRUB_TEXT_OPTIONS = ("--fonts=", "--themes=", "--locales=")
 POLICY = {"schema": "tup.live-policy.v1", "architecture": "x86_64", "init": "systemd",
           "firmware": "x86_64-efi", "dracut_version": "112", "grub_version": "2.14",
           "systemd_version": "261",
           "squashfs_compression": "zstd", "overlay_mib": 512,
           "root_discovery": "unique-content-label", "ventoy": "unqualified-no-marker",
+          "grub_assets": "text-console-without-fonts-themes-locales",
           "secure_boot": "unsigned-test-artifact", "installer": False}
 
 
@@ -62,6 +64,11 @@ def check_tools(path, expected):
         raise Refusal("explicit hashed x86_64-efi GRUB modules are required")
     for name in ("modinfo.sh", "normal.mod", "linux.mod", "iso9660.mod", "search_label.mod"):
         file_hash(modules / name)
+    font = lock.get("grub_label_font", {})
+    font_path = Path(font.get("path", ""))
+    if not font_path.is_absolute():
+        raise Refusal("explicit hashed GRUB EFI label font is required")
+    checked_file(font_path, font.get("sha256"))
     return lock
 
 
@@ -324,7 +331,9 @@ def assemble(root, expected_path, core_spec, layer_receipt, tools_path, tools_sh
         if embedded_hook.strip() != (HERE / "verify-live.sh").read_text().strip():
             raise Refusal("initramfs payload-verification hook was not embedded")
         iso = stage / "tup-x86_64-uefi-test.iso"
-        runner([command("grub-mkrescue"), "--directory=" + lock["grub_modules"], "--output=" + str(iso),
+        runner([command("grub-mkrescue"), *GRUB_TEXT_OPTIONS,
+                "--directory=" + lock["grub_modules"], "--output=" + str(iso),
+                "--label-font=" + lock["grub_label_font"]["path"],
                 "--xorriso=" + command("xorriso"), stage / "iso", "-volid", label], cwd=stage, env=env, log=log)
         report = runner([command("xorriso"), "-indev", iso, "-report_el_torito", "plain"], cwd=stage, env=env, log=log)
         if not re.search(r"El Torito boot img\s*:\s*\d+\s+UEFI\b", report):

@@ -1,0 +1,187 @@
+{
+  "assemble_helper_sha256": "dde8260e621a879b9f848806a329fb34404d1656d4b6115e8c03268d867f24b4",
+  "build_logs": {
+    "dracut.log": "0dd97f0c9cba374a48a8a036abb87aba26e44ffdc7291b805ddc6de8a803ce13",
+    "grub.log": "0db6de08a11d372f9a9e55a5f7a6a033e062868cd335abaabccbe22610e1fa18",
+    "host-packages.log": "f077d3e7eb8b2c3aad75f0195c1559dcda72b49b928805786aaa37d9f95623df",
+    "squashfs.log": "60b8eaa042e9112c4785785706e1b87649f1cfe1dc93738161d7632730ac81d7"
+  },
+  "builder": "Ubuntu24.04 x86_64; GCC13.3.0; two compile jobs",
+  "claims": {
+    "ISO_booted": false,
+    "TUP_root_consumed": false,
+    "TUP_sysroot_dracut_tested": false,
+    "Ventoy_tested": false,
+    "kernel_built": false,
+    "release_eligible": false,
+    "reproducible_images_proven": false
+  },
+  "host_build_receipt_sha256": "5e5b9e18ac8ff89fd9ed58c4e076ac635098611b2eb219df2cc76f0bbf176466",
+  "host_catalog_sha256": "ac8e4892c4165cd20f943ec695e5cac07aefc306c231030f9b30274a8e764619",
+  "host_package_inventory_sha256": "1886b1d3075377679cf1139308cf242f1947a2b9a8bd39d4cb6f1e9a108fbfca",
+  "host_source_verification": {
+    "catalog_sha256": "ac8e4892c4165cd20f943ec695e5cac07aefc306c231030f9b30274a8e764619",
+    "checked_at": "2026-11-05T09:17:46.859770+00:00",
+    "sources": [
+      {
+        "authentication": {
+          "assurance": "Gentoo-signed snapshot authenticates exact upstream filename, size and SHA512; SHA256 pin is derived after verification",
+          "distributor": "Gentoo",
+          "evidence_sha256": "42ea476e6a02213f8eace167ded1420b01f2f4e55b27d999524aeedf68d213b0",
+          "manifest_member": "gentoo-20261103/sys-boot/grub/Manifest",
+          "manifest_sha256": "9859a5306ddf501346c9e15f6b61efe87790213bc039143e91003f174649f157",
+          "primary_fingerprint": "DCD05B71EAB94199527F44ACDB6B8C1F96D8BF6D",
+          "signing_fingerprint": "E1D6ABB63BFCFB4BA02FDF1CEC590EEAC9189250",
+          "snapshot_sha256": "923b3132d9214cee3f59fa2b56a3af27a0287c8587576c99ebcd5b24e537a194",
+          "source_digest": "5008e3b70072798d2b34301219fe174cc6bcfead40a9ab25fe32f30c62a392ffb7bf2eb629d481f4a6c19c2925324af3f08d7043e62623e746be2d8b3cbd1182",
+          "source_digest_algorithm": "sha512",
+          "source_size": 7725668,
+          "status": "verified",
+          "status_sha256": "0e675efd7fc7ec684b5d53c312b61219c66e4238caef255c74edb78e8afe6ab9",
+          "trust_class": "distributor-openpgp-manifest",
+          "verifier_sha256": "403e04c779ad9fab3895c405f8c53d35ab59fa8e3b8bbe3437f61bc41f468dd4"
+        },
+        "name": "grub-2.14.tar.xz",
+        "sha256": "bc8d3c73535b8838d8c8e2654d73edc4e6ae8c8acdb45d5df5dc9a1547446d43",
+        "size": 7725668,
+        "status": "verified"
+      },
+      {
+        "authentication": {
+          "corroboration": {
+            "assurance": "Gentoo-signed snapshot authenticates exact upstream filename, size and SHA512; SHA256 pin is derived after verification",
+            "distributor": "Gentoo",
+            "manifest_member": "gentoo-20261103/sys-kernel/dracut/Manifest",
+            "manifest_sha256": "3519633acaea3d26de192a7ccf954a51556ddddfda4760f7f45e58c712fd73ca",
+            "primary_fingerprint": "DCD05B71EAB94199527F44ACDB6B8C1F96D8BF6D",
+            "signing_fingerprint": "E1D6ABB63BFCFB4BA02FDF1CEC590EEAC9189250",
+            "snapshot_sha256": "923b3132d9214cee3f59fa2b56a3af27a0287c8587576c99ebcd5b24e537a194",
+            "source_digest": "37a3f15db68ab7a9a9ad3ba5fee36559d20692cba714234737d559c453568dbde632c6c0f197c3e531d62ba6ff632af21b52da614182327d00ca088b820b53c9",
+            "source_digest_algorithm": "sha512",
+            "source_size": 601803,
+            "status_sha256": "0e675efd7fc7ec684b5d53c312b61219c66e4238caef255c74edb78e8afe6ab9",
+            "trust_class": "distributor-openpgp-manifest",
+            "verifier_sha256": "403e04c779ad9fab3895c405f8c53d35ab59fa8e3b8bbe3437f61bc41f468dd4"
+          },
+          "evidence_sha256": "0a09e7b36856ef35d13a92f39e13cd470c5f1ea56d0f4edfeec1206fc7e2de79",
+          "primary_fingerprint": "2B6250C4DC6D13D85AE220FDC5EC6EF7E1EA6B86",
+          "signing_fingerprint": "2B6250C4DC6D13D85AE220FDC5EC6EF7E1EA6B86",
+          "status": "verified",
+          "status_sha256": "fec4d1178e46efcffa6e120b7d1b925cee35a1d6f5f7fb92d0d25f701d1fa0ab",
+          "trust_class": "publisher-openpgp",
+          "verifier_sha256": "403e04c779ad9fab3895c405f8c53d35ab59fa8e3b8bbe3437f61bc41f468dd4"
+        },
+        "name": "dracut-112.tar.gz",
+        "sha256": "839d21eb4bd27bb0ee40d74c9da46df088c2e1425fcd8c3ea62b7e3a3dd28a91",
+        "size": 601803,
+        "status": "verified"
+      },
+      {
+        "authentication": {
+          "assurance": "publisher HTTPS metadata; no signature verified",
+          "corroboration": {
+            "assurance": "Gentoo-signed snapshot authenticates exact upstream filename, size and SHA512; SHA256 pin is derived after verification",
+            "distributor": "Gentoo",
+            "manifest_member": "gentoo-20261103/sys-fs/squashfs-tools/Manifest",
+            "manifest_sha256": "9824dcf85283cbe1110911dd237005272b821b721d9303f0192d540952405eb6",
+            "primary_fingerprint": "DCD05B71EAB94199527F44ACDB6B8C1F96D8BF6D",
+            "signing_fingerprint": "E1D6ABB63BFCFB4BA02FDF1CEC590EEAC9189250",
+            "snapshot_sha256": "923b3132d9214cee3f59fa2b56a3af27a0287c8587576c99ebcd5b24e537a194",
+            "source_digest": "d24f1c8611dc7dcb17b81f3a34ee8c0d3484141c70ebe7c77c91c966e76cddc671e24d3f4a471ddc819c4708480cdd179168fe2bca8a09e97cebf0da9ef83b1c",
+            "source_digest_algorithm": "sha512",
+            "source_size": 412571,
+            "status_sha256": "0e675efd7fc7ec684b5d53c312b61219c66e4238caef255c74edb78e8afe6ab9",
+            "trust_class": "distributor-openpgp-manifest",
+            "verifier_sha256": "403e04c779ad9fab3895c405f8c53d35ab59fa8e3b8bbe3437f61bc41f468dd4"
+          },
+          "evidence_sha256": "eb3de3bbf056a34671aa117aaf0d06fd83b056633f574a73ce51d138721629d7",
+          "status": "verified",
+          "trust_class": "https-published-sha256"
+        },
+        "name": "squashfs-tools-4.7.5.tar.gz",
+        "sha256": "547b7b7f4d2e44bf91b6fc554664850c69563701deab9fd9cd7e21f694c88ea6",
+        "size": 412571,
+        "status": "verified"
+      }
+    ],
+    "verifier_sha256": "87eda7dc8d1563e8b21750cbc4f785e7dcf6d9dc3691e821f39c864ea77ed797"
+  },
+  "inputs_helper_sha256": "53e4646da0792b5b891b8f2724b8b76938361d126542949f6eb9c55722fc6767",
+  "measured_at": "2026-11-05",
+  "prior_failures": [
+    {
+      "completion_receipt_published": false,
+      "qualification_log_sha256": "9e03fbe6daf777049e71e9073945238f71e63ab04baea290515bdeb0427f1e59",
+      "reason": "GRUB default unicode.pf2 missing"
+    },
+    {
+      "completion_receipt_published": false,
+      "qualification_log_sha256": "faab62880ea9459ae9b0f1efeffe80c2360738f674173f5d6e01daae011655a3",
+      "reason": "GRUB still renders EFI media label even with empty --fonts/--themes/--locales"
+    }
+  ],
+  "qualification": {
+    "booted": false,
+    "dracut_target_sysroot": "not-tested-with-TUP",
+    "efi_el_torito": "present",
+    "efi_iso_sha256": "895b477135527d8dd77dfebc082959af22b4b3162d2698feb86e107249b675f5",
+    "log_sha256": "f2d5bbab0bcf105f283b5101fa6f4ad2be7a9a845cdb68c60fe0c84361adf536",
+    "squashfs_metadata_roundtrip": "passed",
+    "squashfs_sha256": "b47a42fe160af8a546dfef9acf9d377358cd9da891c006859034854741cd94e7",
+    "versions": {
+      "dracut": "112",
+      "grub-mkrescue": "2.14",
+      "mksquashfs": "4.7.5"
+    }
+  },
+  "recipe_sha256": "e0369206b35745c11806887abf5b930cff98e9619c8f5d60d45c0b8b74526fd6",
+  "schema": "tup.boot-host-qualification.v1",
+  "status": "host-tools-qualified",
+  "target_source_verification": {
+    "catalog_sha256": "db116615b263036b548613ec853642cd0c6f10d4264d9919dbfdf67a56f925a2",
+    "device_tests_run": false,
+    "schema": "tup.boot-target-source-verification.v1",
+    "sources": [
+      {
+        "authentication": {
+          "assurance": "Gentoo-signed snapshot authenticates exact upstream filename, size and SHA512; SHA256 pin is derived after verification",
+          "distributor": "Gentoo",
+          "evidence_sha256": "c17357437506881ed73c4b4139fcb96061fa196217dc6d115fb83bc53ededc51",
+          "manifest_member": "gentoo-20261103/dev-libs/libaio/Manifest",
+          "manifest_sha256": "8af8b955d5a2c153ee8c560dd3d8bc667756a562cfd0bdc3ce4a130ffb9bbae3",
+          "primary_fingerprint": "DCD05B71EAB94199527F44ACDB6B8C1F96D8BF6D",
+          "signing_fingerprint": "E1D6ABB63BFCFB4BA02FDF1CEC590EEAC9189250",
+          "snapshot_sha256": "923b3132d9214cee3f59fa2b56a3af27a0287c8587576c99ebcd5b24e537a194",
+          "source_digest": "65c30a102433bf8386581b03fc706d84bd341be249fbdee11a032b237a7b239e8c27413504fef15e2797b1acd67f752526637005889590ecb380e2e120ab0b71",
+          "source_digest_algorithm": "sha512",
+          "source_size": 49980,
+          "status": "verified",
+          "status_sha256": "0e675efd7fc7ec684b5d53c312b61219c66e4238caef255c74edb78e8afe6ab9",
+          "trust_class": "distributor-openpgp-manifest",
+          "verifier_sha256": "403e04c779ad9fab3895c405f8c53d35ab59fa8e3b8bbe3437f61bc41f468dd4"
+        },
+        "name": "libaio-0.3.113.tar.gz",
+        "sha256": "2c44d1c5fd0d43752287c9ae1eb9c023f04ef848ea8d4aafa46e9aedb678200b",
+        "size": 49980,
+        "status": "verified"
+      },
+      {
+        "authentication": {
+          "evidence_sha256": "9736a02fc295fc63e0b9ae86614f86367db434f4f56866e186d001323e9fdc10",
+          "primary_fingerprint": "D501A478440AE2FD130A1BE8B9112431E509039F",
+          "signing_fingerprint": "D501A478440AE2FD130A1BE8B9112431E509039F",
+          "status": "verified",
+          "status_sha256": "0aa93ffde3e36f75bea4126a070360806cbfa4729278cf2d70696af49a1ccaa5",
+          "trust_class": "publisher-openpgp",
+          "verifier_sha256": "403e04c779ad9fab3895c405f8c53d35ab59fa8e3b8bbe3437f61bc41f468dd4"
+        },
+        "name": "LVM2.2.03.42.tgz",
+        "sha256": "352703ef5b72ebb22d4f250284a29b89fe64d4049c6bf64c693f9af486c8081e",
+        "size": 3117082,
+        "status": "verified"
+      }
+    ],
+    "target_built": false
+  },
+  "tools_lock_sha256": "4cfcd8b07b0742939ac4213408ab9902d0d79bd97273794846b89756319dc701"
+}

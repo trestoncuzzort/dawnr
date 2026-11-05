@@ -81,6 +81,9 @@ class BootFixture(unittest.TestCase):
             self.write(dracut / name, b"fixture\n")
         self.tools["support_trees"].append({"path": str(dracut), "sha256": inputs.tree_hash(dracut)})
         self.tools["dracut_base"] = str(dracut)
+        font = prefix / "share/grub/themes/starfield/dejavu_12.pf2"
+        self.write(font, b"fixture label font\n")
+        self.tools["grub_label_font"] = {"path": str(font), "sha256": inputs.file_hash(font)}
         self.tools_path = self.base / "tools.json"
         self.write_json(self.tools_path, self.tools)
         self.tools_hash = inputs.file_hash(self.tools_path)
@@ -227,6 +230,16 @@ class InputRefusalTests(BootFixture):
         with self.assertRaisesRegex(inputs.Refusal, "receipt"):
             self.build()
 
+    def test_missing_or_tampered_efi_label_font_refuses_before_tools(self):
+        font = Path(self.tools["grub_label_font"]["path"])
+        font.write_bytes(b"unreviewed font")
+        with self.assertRaisesRegex(inputs.Refusal, "digest mismatch"):
+            self.build()
+        font.unlink()
+        with self.assertRaises(FileNotFoundError):
+            self.build()
+        self.assertEqual(self.commands, [])
+
     @unittest.skipUnless(hasattr(os, "setxattr"), "Linux xattr fixture")
     def test_changed_xattr_is_not_hidden_by_identical_file_bytes(self):
         path = self.root / "usr/bin/bash"
@@ -273,6 +286,19 @@ class InputRefusalTests(BootFixture):
 
 
 class PackagingTests(BootFixture):
+    def test_headless_grub_accepts_a_host_without_optional_fonts(self):
+        # GRUB 2.14 always renders an EFI/Mac media label, even with --fonts=.
+        # Use its authenticated bundled DejaVu font, not an implicit Unifont.
+        def no_graphical_assets(command, **kwargs):
+            if Path(command[0]).name == "grub-mkrescue":
+                if "--fonts=" not in command:
+                    raise inputs.Refusal("cannot open unicode.pf2")
+                self.assertIn("--themes=", command)
+                self.assertIn("--locales=", command)
+                self.assertTrue(any(str(arg).startswith("--label-font=") for arg in command))
+            return self.runner(command, **kwargs)
+        self.build(no_graphical_assets)
+
     def test_real_failed_child_keeps_output_and_propagates_status(self):
         log = self.base / "child.log"
         with self.assertRaisesRegex(inputs.Refusal, r"failed \(7\)"):

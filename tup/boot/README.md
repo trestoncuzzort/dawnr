@@ -57,21 +57,16 @@ strings. Its caller supplies a separately reviewed expected lock SHA256.
 signature verifier. Runtime libraries and helper programs still belong in that
 host environment review. This is not a hermetic-build claim.
 
-Build steps after the source gates pass, in fresh source directories:
+The executable, offline host builder is `host_tools.py`; [HOST-TOOLS.md](HOST-TOOLS.md)
+records its authentication, build and qualification procedure. It reuses the
+source verifier, stages every upstream install, pins the resulting prefix and
+tests the real SquashFS/GRUB tools. Dracut's systemd unit, shell-completion and
+pkg-config directories are explicitly kept under the private prefix. Rust cpio
+is disabled to avoid an unpinned Cargo dependency. This host-only operation
+does not install dracut or GRUB services into the preparation host or TUP.
 
-- Host dracut 112: `./configure --prefix=/opt/tup-boot-host --sysconfdir=/opt/tup-boot-host/etc --disable-documentation --disable-dracut-cpio --configprofile=generic`,
-  then `make -j4` and `make install`. Provide the host libkmod development files;
-  disabling the optional Rust cpio backend avoids an unpinned Cargo dependency.
-  Pin the resulting framework, including its `dracut.conf.d` files and compiled
-  helpers. The generic module choice is explicit in `assemble.py`.
-- Host GRUB 2.14: clear `CFLAGS CPPFLAGS CXXFLAGS LDFLAGS`, then
-  `./configure --prefix=/opt/tup-boot-host --sysconfdir=/opt/tup-boot-host/etc --target=x86_64 --with-platform=efi --disable-efiemu --disable-werror`,
-  `make -j4`, and `make install`. This installs only into the dedicated prefix;
-  it does not install a firmware boot entry. This follows the book's 64-bit EFI
-  alternative, without its BIOS or 32-bit EFI alternatives.
-- Host squashfs-tools 4.7.5: follow its `Documentation/4.7.5/INSTALL`; compile
-  `squashfs-tools/` with zstd and xattr support and install into the dedicated
-  prefix. Retain build logs and compressor-library identities.
+Target build steps after the completed core and separate source gates pass:
+
 - Target libaio and LVM2: follow the matching BLFS recipes in an isolated layer
   build based on the completed core. For LVM2 use the documented
   `./configure --prefix=/usr --enable-cmdlib --enable-pkgconfig --enable-udev_sync`
@@ -79,10 +74,10 @@ Build steps after the source gates pass, in fresh source directories:
   regression suite is a separate disposable-device test; do not run it on the
   desktop's disks or record it as passed merely because dmsetup built.
 
-These are recipes to execute and receipt, not statements that dependencies have
-already been built, authenticated or tested. Layer orchestration/export receipts
-remain an integration responsibility. No tool installation runs on import or
-during the fixture suite.
+`target-sources.json` retains separately authenticated libaio/LVM2 inputs.
+Their target builds, device regression tests and layer orchestration/export
+receipts remain unrun. No tool installation runs on import or during the
+fixture suite.
 
 ## Kernel preparation
 
@@ -173,6 +168,9 @@ The external host-tool JSON has schema `tup.boot-tools.v1` and:
   reviewed host helpers;
 - `support_trees`: objects with absolute `path` and expected `tree_hash()`;
 - `grub_modules`: the separately hashed `x86_64-efi` directory;
+- `grub_label_font`: absolute `path` and `sha256` for the DejaVu12 font shipped
+  with the authenticated GRUB source; GRUB's EFI media-label renderer needs it
+  even when optional fonts/themes/locales are disabled;
 - `dracut_base`: the separately hashed host dracut framework directory;
 - `provenance`: reference to retained source/package/build verification evidence.
 
@@ -243,7 +241,7 @@ exercise real file/directory fsync, xattrs and metadata inventories; Windows
 fixtures use a test-only durability adapter and skip Linux xattr/shell cases. They
 test refusal/orchestration, not real SquashFS, initramfs or ISO compatibility.
 
-Still required: authenticate/build the separate dependency layer; run the kernel
+Still required: build the target dependency layer; run the kernel
 fragment through the actual 6.18.60 build; finish export/layer receipt integration;
 prove dracut 112's host/sysroot split with the real TUP libraries; inspect/boot the
 exact ISO; inject missing-driver/media failures; prove serial and private remote
