@@ -38,6 +38,12 @@ class BootFixture(unittest.TestCase):
         self.write(self.root / "etc/machine-id", b"")
         config = "".join(f"CONFIG_{name}=y\n" for name in inputs.BUILTIN + inputs.AVAILABLE)
         self.write(self.root / "boot" / ("config-" + self.release), config.encode())
+        # What the fake lsinitrd finds in the fake initramfs.
+        self.listing = "".join(f"-rwxr-xr-x   1 root     root            1 Jan  1  1970 {name}\n" for name in (
+            "init", "usr/bin/od", "usr/bin/sha256sum", "var/lib/dracut/hooks/cmdline/30-parse-dmsquash-live.sh",
+            "var/lib/dracut/hooks/mount/01-mount-overlayfs.sh", "var/lib/dracut/hooks/pre-mount/01-prepare-overlayfs.sh",
+            "var/lib/dracut/hooks/pre-udev/30-dmsquash-live-genrules.sh"))
+        self.modules = "dracut modules:\nbash\ndm\ndmsquash-live\noverlayfs\nrootfs-block\ninitqueue\nbase\n"
         image = bytearray(1024)
         image[0x202:0x206] = b"HdrS"
         struct.pack_into("<H", image, 0x206, 0x20C)
@@ -77,7 +83,8 @@ class BootFixture(unittest.TestCase):
         self.tools["support_trees"] = [{"path": str(grub), "sha256": inputs.tree_hash(grub)}]
         self.tools["grub_modules"] = str(grub)
         dracut = prefix / "lib/dracut"
-        for name in ("dracut-functions.sh", "dracut-logger.sh", "dracut-install", "modules.d/70dmsquash-live/module-setup.sh"):
+        for name in ("dracut-functions.sh", "dracut-logger.sh", "dracut-install", "skipcpio",
+                     "modules.d/70dmsquash-live/module-setup.sh"):
             self.write(dracut / name, b"fixture\n")
         self.tools["support_trees"].append({"path": str(dracut), "sha256": inputs.tree_hash(dracut)})
         self.tools["dracut_base"] = str(dracut)
@@ -95,7 +102,13 @@ class BootFixture(unittest.TestCase):
         self.expected = self.base / "expected.json"
         self.seal()
         self.output = self.base / "artifacts"
-        self.commands = []
+        self.commands, self.environments = [], []
+
+    def reseal(self):
+        """The layer receipt and sealed inputs follow a deliberate change of the fixture root."""
+        self.layer["root_tree_sha256"] = inputs.tree_hash(self.root)
+        self.write_json(self.layer_path, self.layer)
+        self.seal()
 
     def write(self, path, raw):
         path.parent.mkdir(parents=True, exist_ok=True)
@@ -111,6 +124,7 @@ class BootFixture(unittest.TestCase):
     def runner(self, command, *, cwd, env, log):
         command = [str(x) for x in command]
         self.commands.append(command)
+        self.environments.append(env)
         with open(log, "ab") as stream:
             stream.write(inputs.canonical(command))
         name = Path(command[0]).name
@@ -132,10 +146,10 @@ class BootFixture(unittest.TestCase):
             Path(command[-1]).write_bytes(b"fixture initramfs")
         elif name == "lsinitrd":
             if "-m" in command:
-                return "dracut modules:\nbash\nsystemd\ndmsquash-live\noverlayfs\n"
-            if command[2].endswith("01-tup-live-verify.sh"):
-                return (boot.HERE / "verify-live.sh").read_text()
-            return (cwd / "overlay/etc/tup-live/root.sha256").read_text()
+                return self.modules
+            if len(command) == 2:
+                return self.listing
+            return (Path(cwd) / "overlay" / command[2]).read_text()
         elif name == "grub-mkrescue":
             path = next(x.split("=", 1)[1] for x in command if x.startswith("--output="))
             Path(path).write_bytes(b"fixture ISO")
@@ -318,7 +332,11 @@ class PackagingTests(BootFixture):
         self.assertIn("H55 fixture gate", receipt["release_gates"])
         self.assertFalse(receipt["core_source_policy"]["source_release_eligible"])
         self.assertEqual(inputs.load_json(self.output / "ARTIFACT.json"), receipt)
-        self.assertFalse((self.output / "iso/ventoy.dat").exists())
+        # The marker stops Ventoy's own hook injection; it is not evidence of a Ventoy boot.
+        self.assertEqual((self.output / "iso/ventoy.dat").read_bytes(), boot.VENTOY_MARKER)
+        self.assertEqual(receipt["artifacts"][os.path.join("iso", "ventoy.dat")], inputs.digest(boot.VENTOY_MARKER))
+        self.assertIn("ventoy-unqualified", receipt["release_gates"])
+        self.assertEqual(receipt["inputs"]["policy"]["ventoy"], "marker-and-efi-handoff-loop-hook-unbooted")
         commands = "\n".join(" ".join(cmd) for cmd in self.commands)
         self.assertNotIn("grub-install", commands)
         self.assertNotIn("efibootmgr", commands)
@@ -341,6 +359,58 @@ class PackagingTests(BootFixture):
                          ["rd.overlay=tmpfs:size=512M,nr_inodes=100000", "rd.live.overlay.nouserconfirmprompt"])
         self.assertFalse({word.split("=")[0] for word in words} & {"rd.live.overlay", "rd.live.overlay.overlayfs",
                                                                    "rd.live.overlay.size", "iso-scan/filename"})
+
+    def test_dracut_runs_its_own_init_with_host_files_spelled_through_the_sysroot(self):
+        self.build()
+        dracut = next(command for command in self.commands if Path(command[0]).name == "dracut")
+        option = lambda name: dracut[dracut.index(name) + 1]
+        root = str(self.root.resolve())
+        self.assertEqual((option("--sysroot"), option("--modules")), (root, boot.MODULES))
+        # LFS builds systemd without systemd-sysusers, which dracut 112's systemd-journald module requires.
+        self.assertNotIn("systemd", option("--modules"))
+        self.assertEqual(option("--install").split(), ["/usr/bin/sha256sum", "/usr/bin/od"])
+        includes = {dracut[index + 2]: dracut[index + 1] for index, arg in enumerate(dracut) if arg == "--include"}
+        self.assertEqual(set(includes), {"/etc/tup-live/root.sha256", *("/" + target for target in boot.HOOKS.values())})
+        for target, source in includes.items():
+            # Dracut 112 would look up any other spelling of a host file below the sysroot.
+            self.assertTrue(source.startswith(root + os.sep))
+            self.assertTrue(os.path.normpath(source).endswith(os.path.normpath("overlay" + target)))
+            self.assertFalse(os.path.normpath(source).startswith(root + os.sep))
+        for index, command in enumerate(self.commands):
+            if Path(command[0]).name in {"dracut", "lsinitrd"}:
+                base = self.environments[index]["dracutbasedir"]
+                self.assertTrue(base.startswith(root + os.sep))
+                self.assertEqual(os.path.normpath(base), os.path.normpath(self.tools["dracut_base"]))
+        for name, target in boot.HOOKS.items():
+            self.assertEqual((self.output / "overlay" / target).read_bytes(), (boot.HERE / name).read_bytes())
+
+    def test_initramfs_without_the_ventoy_hook_or_dracuts_own_scripts_refuses(self):
+        def unhooked(command, **kwargs):
+            if Path(command[0]).name == "lsinitrd" and boot.HOOKS["ventoy-live.sh"] in command:
+                return "# some other hook\n"
+            return self.runner(command, **kwargs)
+        with self.assertRaisesRegex(inputs.Refusal, "ventoy-live.sh"):
+            self.build(unhooked)
+        # Dracut 112 exits 0 after "dracut-install: ERROR: installing" its own framework scripts.
+        complete = self.listing
+        for line in complete.splitlines(keepends=True):
+            with self.subTest(missing=line.split()[-1]):
+                self.listing = complete.replace(line, "")
+                with self.assertRaisesRegex(inputs.Refusal, "live scripts"):
+                    self.build()
+        self.listing = complete.replace(" init\n", " init -> usr/lib/systemd/systemd\n")
+        with self.assertRaisesRegex(inputs.Refusal, "live scripts"):
+            self.build()
+        self.assertFalse(self.output.exists())
+
+    def test_systemd_initramfs_without_the_dracut_hook_runner_refuses(self):
+        # Measured with dracut 112: "systemd systemd-initrd" alone installs the hooks but nothing that sources them.
+        self.modules += "systemd\nsystemd-initrd\n"
+        with self.assertRaisesRegex(inputs.Refusal, "live modules"):
+            self.build()
+        self.assertFalse(self.output.exists())
+        self.modules += "dracut-systemd\n"
+        self.build()
 
     def test_failed_native_validation_stops_before_image_tools(self):
         def fail(*args, **kwargs):

@@ -25,11 +25,27 @@ from tup.boot.inputs import (Refusal, canonical, check_kernel, check_offline_roo
 HERE = Path(__file__).resolve().parent
 TOOLS = {"mksquashfs", "dracut", "lsinitrd", "grub-mkrescue", "grub-script-check", "xorriso"}
 GRUB_TEXT_OPTIONS = ("--fonts=", "--themes=", "--locales=")
+# Dracut's own init runs the hooks. Dracut 112's systemd-journald module needs
+# systemd-sysusers, which the LFS systemd build omits, and a systemd initramfs
+# without dracut-systemd would never source a hook.
+MODULES = "bash base udev-rules kernel-modules rootfs-block dmsquash-live"
+HOOKS = {"verify-live.sh": "usr/lib/dracut/hooks/pre-pivot/01-tup-live-verify.sh",
+         "ventoy-live.sh": "usr/lib/dracut/hooks/initqueue/settled/20-tup-ventoy-live.sh"}
+# Dracut exits 0 when it cannot install its own scripts; these prove it did.
+LIVE_FILES = (r"init", r"(?:usr/)?bin/od", r"(?:usr/)?bin/sha256sum",
+              r"var/lib/dracut/hooks/cmdline/30-parse-dmsquash-live\.sh",
+              r"var/lib/dracut/hooks/pre-udev/30-dmsquash-live-genrules\.sh",
+              r"var/lib/dracut/hooks/pre-mount/01-prepare-overlayfs\.sh",
+              r"var/lib/dracut/hooks/mount/01-mount-overlayfs\.sh")
+# Ventoy only tests that this file exists in the ISO root. It then adds no hook
+# of its own and leaves the ISO's initramfs and kernel parameters alone.
+VENTOY_MARKER = b"TUP finds its own ISO through VentoyOsParam. Booting through Ventoy is not yet qualified.\n"
 POLICY = {"schema": "tup.live-policy.v1", "architecture": "x86_64", "init": "systemd",
           "firmware": "x86_64-efi", "dracut_version": "112", "grub_version": "2.14",
-          "systemd_version": "261",
+          "systemd_version": "261", "initramfs_init": "dracut-without-systemd",
           "squashfs_compression": "zstd", "overlay_mib": 512,
-          "root_discovery": "unique-content-label", "ventoy": "unqualified-no-marker",
+          "root_discovery": "unique-content-label",
+          "ventoy": "marker-and-efi-handoff-loop-hook-unbooted",
           "grub_assets": "text-console-without-fonts-themes-locales",
           "secure_boot": "unsigned-test-artifact", "installer": False}
 
@@ -57,7 +73,8 @@ def check_tools(path, expected):
     dracut = Path(lock["dracut_base"])
     if not any(Path(item["path"]) == dracut for item in lock["support_trees"]):
         raise Refusal("explicit hashed host dracut framework is required")
-    for name in ("dracut-functions.sh", "dracut-logger.sh", "dracut-install", "modules.d/70dmsquash-live/module-setup.sh"):
+    for name in ("dracut-functions.sh", "dracut-logger.sh", "dracut-install", "skipcpio",
+                 "modules.d/70dmsquash-live/module-setup.sh"):
         file_hash(dracut / name)
     modules = Path(lock["grub_modules"])
     if modules.name != "x86_64-efi" or not any(Path(item["path"]) == modules for item in lock["support_trees"]):
@@ -182,6 +199,13 @@ menuentry 'TUP x86_64 UEFI disposable test' {{
 '''
 
 
+def through(root, path):
+    # Dracut 112 looks every source up below --sysroot unless its text starts
+    # with the sysroot (dracut-install.c:1398-1405, dracut-functions.sh:1149-1150).
+    # Host files therefore need a spelling that passes through the sysroot.
+    return os.path.join(root, os.path.relpath(path, root))
+
+
 def environment(lock, stage, root=None):
     # Do not inherit DRACUT_EXTRA_ARGS, LD_PRELOAD, compiler flags, or the
     # preparation host's root command line. Target files come from --sysroot.
@@ -191,7 +215,7 @@ def environment(lock, stage, root=None):
             "dracutbasedir": lock["dracut_base"], "DRACUT_TESTBIN": "/usr/bin/bash",
             "SYSTEMD_VERSION": POLICY["systemd_version"]}
     if root is not None:
-        env.update(PKG_CONFIG_SYSROOT_DIR=str(root),
+        env.update(dracutbasedir=through(root, lock["dracut_base"]), PKG_CONFIG_SYSROOT_DIR=str(root),
                    PKG_CONFIG_LIBDIR=f"{root}/usr/lib/pkgconfig:{root}/usr/share/pkgconfig")
     return env
 
@@ -272,8 +296,8 @@ def assemble(root, expected_path, core_spec, layer_receipt, tools_path, tools_sh
     native = check_core_spec(core_spec)
     stage = Path(tempfile.mkdtemp(prefix=".tup-boot-", dir=output.parent))
     try:
-        for name in ("iso/boot/grub", "iso/LiveOS", "tmp", "home", "empty-conf.d", "overlay/etc/tup-live",
-                     "overlay/usr/lib/dracut/hooks/pre-pivot"):
+        for name in ("iso/boot/grub", "iso/LiveOS", "tmp", "home", "empty-conf.d",
+                     "overlay/etc/tup-live", *("overlay/" + target.rsplit("/", 1)[0] for target in HOOKS.values())):
             (stage / name).mkdir(parents=True, exist_ok=True)
         env = environment(lock, stage, root)
         log = stage / "build.log"
@@ -293,6 +317,7 @@ def assemble(root, expected_path, core_spec, layer_receipt, tools_path, tools_sh
         command = lambda name: lock["commands"][name]["path"]
         label = "TUP_" + digest(canonical(expected))[:24].upper()
         (stage / "iso/boot/grub/grub.cfg").write_text(grub_config(label), encoding="utf-8", newline="\n")
+        (stage / "iso/ventoy.dat").write_bytes(VENTOY_MARKER)
         shutil.copyfile(root / "boot" / ("vmlinuz-" + release), stage / "iso/boot/vmlinuz")
         runner([command("grub-script-check"), stage / "iso/boot/grub/grub.cfg"], cwd=stage, env=env, log=log)
         squash = stage / "iso/LiveOS/squashfs.img"
@@ -305,9 +330,14 @@ def assemble(root, expected_path, core_spec, layer_receipt, tools_path, tools_sh
         squash_hash = file_hash(squash)
         (stage / "overlay/etc/tup-live/root.sha256").write_text(
             squash_hash + "  /run/initramfs/live/LiveOS/squashfs.img\n", encoding="ascii", newline="\n")
-        hook = stage / "overlay/usr/lib/dracut/hooks/pre-pivot/01-tup-live-verify.sh"
-        shutil.copyfile(HERE / "verify-live.sh", hook)
-        hook.chmod(0o755)
+        for name, target in HOOKS.items():
+            shutil.copyfile(HERE / name, stage / "overlay" / target)
+            (stage / "overlay" / target).chmod(0o755)
+        # A directory given to --include is copied from below the sysroot
+        # (dracut.sh:2915-2917); a file goes through dracut-install like the rest.
+        overlay = sorted(path for path in (stage / "overlay").rglob("*") if path.is_file())
+        includes = [arg for path in overlay for arg in (
+            "--include", through(root, path), "/" + path.relative_to(stage / "overlay").as_posix())]
         conf = stage / "dracut.conf"
         conf.write_text('hostonly="no"\nhostonly_cmdline="no"\n', encoding="ascii", newline="\n")
         initrd = stage / "iso/boot/initramfs.img"
@@ -315,21 +345,24 @@ def assemble(root, expected_path, core_spec, layer_receipt, tools_path, tools_sh
                 "--confdir", stage / "empty-conf.d", "--tmpdir", stage / "tmp", "--logfile", stage / "dracut.log",
                 "--no-hostonly", "--no-hostonly-cmdline", "--no-hostonly-default-device", "--no-early-microcode",
                 "--nohardlink", "--nostrip", "--gzip", "--no-uefi", "--no-ukify",
-                "--modules", "bash base systemd systemd-initrd udev-rules kernel-modules rootfs-block dmsquash-live",
-                "--install", "/usr/bin/sha256sum", "--include", stage / "overlay", "/", initrd],
+                "--modules", MODULES, "--install", "/usr/bin/sha256sum /usr/bin/od", *includes, initrd],
                cwd=stage, env=env, log=log)
         file_hash(initrd)
         modules = runner([command("lsinitrd"), "-m", initrd], cwd=stage, env=env, log=log)
-        if not all(re.search(r"(?m)^\s*" + re.escape(name) + r"\s*$", modules)
-                   for name in ("dmsquash-live", "overlayfs", "systemd")):
+        listed = lambda name: re.search(r"(?m)^\s*" + re.escape(name) + r"\s*$", modules)
+        if (not all(listed(name) for name in ("base", "dmsquash-live", "initqueue", "overlayfs"))
+                or listed("systemd") and not listed("dracut-systemd")):
             raise Refusal("initramfs is missing required live modules")
         embedded = runner([command("lsinitrd"), "-f", "etc/tup-live/root.sha256", initrd], cwd=stage, env=env, log=log)
         if embedded.strip() != (stage / "overlay/etc/tup-live/root.sha256").read_text().strip():
             raise Refusal("initramfs payload identity was not embedded")
-        embedded_hook = runner([command("lsinitrd"), "-f", "usr/lib/dracut/hooks/pre-pivot/01-tup-live-verify.sh", initrd],
-                               cwd=stage, env=env, log=log)
-        if embedded_hook.strip() != (HERE / "verify-live.sh").read_text().strip():
-            raise Refusal("initramfs payload-verification hook was not embedded")
+        for name, target in HOOKS.items():
+            embedded_hook = runner([command("lsinitrd"), "-f", target, initrd], cwd=stage, env=env, log=log)
+            if embedded_hook.strip() != (HERE / name).read_text().strip():
+                raise Refusal("initramfs hook was not embedded: " + name)
+        listing = runner([command("lsinitrd"), initrd], cwd=stage, env=env, log=log)
+        if not all(re.search(r"(?m)\s" + name + "$", listing) for name in LIVE_FILES):
+            raise Refusal("initramfs lacks dracut's live scripts or the hook tools; see " + log.name)
         iso = stage / "tup-x86_64-uefi-test.iso"
         runner([command("grub-mkrescue"), *GRUB_TEXT_OPTIONS,
                 "--directory=" + lock["grub_modules"], "--output=" + str(iso),
@@ -347,7 +380,8 @@ def assemble(root, expected_path, core_spec, layer_receipt, tools_path, tools_sh
                        "source_lock_sha256", "source_lock_purpose", "source_release_eligible", "advisory_review_sha256")},
                    "inputs": expected, "label": label, "boot_tested": False, "ventoy_tested": False,
                    "artifacts": {str(p.relative_to(stage)): file_hash(p)
-                                 for p in (iso, squash, initrd, stage / "iso/boot/vmlinuz", stage / "iso/boot/grub/grub.cfg")},
+                                 for p in (iso, squash, initrd, stage / "iso/boot/vmlinuz", stage / "iso/boot/grub/grub.cfg",
+                                           stage / "iso/ventoy.dat")},
                    "build_log_sha256": file_hash(log),
                    "core_completion_sha256": file_hash(stage / "CORE-COMPLETION.json")}
         (stage / "ARTIFACT.json").write_bytes(canonical(receipt))
