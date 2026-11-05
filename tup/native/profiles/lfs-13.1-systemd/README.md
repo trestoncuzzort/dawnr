@@ -64,13 +64,20 @@ expected string corrected, and Python's network-resource tests are declared
 unavailable because the build has no network or resolver.
 Do not delete an intent and replay a partly installed page.
 
-glibc's suite runs with `TIMEOUTFACTOR=4`, the variable glibc's own test
-driver reads to scale timeouts. The build cgroup is CPU-limited and was
-measurably throttled, and one memory-heavy test timed out while the cgroup
-was pinned at its memory limit. Two glibc tests each build strings larger than
-2 GiB on purpose (`libio/tst-asprintf-null`, `stdlib/test-bz22786`); together
-they peaked at 4.74 GiB in an isolated measurement, so a 4 GiB build budget
-cannot run this suite. The run plan states the budget actually used.
+glibc's suite runs with `TIMEOUTFACTOR=10`, the variable glibc's own test
+driver reads to scale timeouts and the factor the LFS glibc page uses for a
+test that times out. The build cgroup is CPU-limited and was measurably
+throttled. Two glibc tests each build strings larger than 2 GiB on purpose
+(`libio/tst-asprintf-null`, `stdlib/test-bz22786`); together they peaked at
+4.74 GiB in an isolated measurement, so a 4 GiB build budget cannot run this
+suite. The run plan states the budget actually used. With factor four,
+`stdlib/test-bz22786` (about 5 s when memory is available) timed out at 80 s
+twice: in a rehearsal while the cgroup was pinned at its memory limit, and in
+core run 002 while the builder's host had almost no free physical memory and
+a second job ran beside the build. A timeout is the harness giving up, not a
+test assertion, so the larger factor accepts no result the suite would not
+accept on a faster machine; the builder conditions that caused the slowness
+are a separate correction and are recorded with each run.
 
 ## Selected sources and patch review
 

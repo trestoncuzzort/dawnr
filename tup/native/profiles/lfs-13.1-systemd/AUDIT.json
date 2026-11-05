@@ -1527,8 +1527,8 @@
           "action": "replace-suite",
           "classification": "test",
           "id": "006",
-          "reason": "Mandatory current-version suite, at most four jobs, retained result files and positive-result verdict. Non-pass results are accepted only as the exact reviewed lines of suite-exceptions/glibc.allow. TIMEOUTFACTOR is glibc's own test-timeout scale: the bounded build cgroup is CPU-throttled and one test timed out at the memory limit in the rehearsal.",
-          "replacement": "native_required_suite glibc env TIMEOUTFACTOR=4 make -j\"$TUP_TEST_JOBS\" check\n",
+          "reason": "Mandatory current-version suite, at most four jobs, retained result files and positive-result verdict. Non-pass results are accepted only as the exact reviewed lines of suite-exceptions/glibc.allow. TIMEOUTFACTOR is glibc's own test-timeout scale, and ten is the factor the LFS glibc page uses for a test that times out: the bounded build cgroup is CPU-throttled, and stdlib/test-bz22786, which allocates more than 2 GiB, timed out at factor four (80 s) in core run 002 while the builder's host had almost no free memory; it takes about 5 s when memory is available.",
+          "replacement": "native_required_suite glibc env TIMEOUTFACTOR=10 make -j\"$TUP_TEST_JOBS\" check\n",
           "sha256": "4a5b5cf7d4522d9fa9333a49af09b49b60b3cbcab91159faaa058aae59154d84"
         },
         {
