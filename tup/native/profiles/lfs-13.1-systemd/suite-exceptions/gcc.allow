@@ -1,0 +1,107 @@
+# Reviewed required-suite exceptions for GCC 16.2.0 built in the LFS chroot and
+# tested as the unprivileged tester account. Format and review rules: README.md
+# in this directory.
+#
+# Basis: The LFS 13.1-systemd GCC page lists the tests known to fail for this
+#   version (in gcc.target/i386: auto-init-padding-9.c, builtin-memmove-*.c,
+#   mem{cpy,set}-pr120683-*.c, pr111657-1.c, pr115102.c, pr116896.c,
+#   pr120881-2a.c and pr122343-4a.c; in g++.target/i386:
+#   memset-pr108585-1{a,b}.C, mv{,c}-symbols*.C, pr112824-2.C and
+#   pr116896-1.C; and gcc.dg/ipa/pr122458.c, gcc.dg/lto/toplevel-*-asm-* and
+#   gcc.dg/plugin/crash-test-nested-*.c), says most of them come from test
+#   authors not anticipating --enable-default-ssp or --enable-default-pie, and
+#   tells builders to compare with its reference results.
+#   https://www.linuxfromscratch.org/lfs/view/13.1-systemd/chapter08/gcc.html
+#   68 of the lines below match those names. The other six
+#   (gcc.target/i386 memset-pr70308-1a.c, memset-pr70308-1b.c, pr125355.c,
+#   pr125355-2.c and two results of xchg-4.c) are not named on the page. All
+#   74 lines, those six included, occur byte for byte in the LFS editors'
+#   reference test log for this book version and compiler:
+#   https://www.linuxfromscratch.org/lfs/build-logs/13.1/i7-14700K/test-logs/830-gcc-16.2.0
+#   (177526 bytes, sha256 271d2913bcfcbb3c24c2c11a72ac8a7dfb74bb04ec9b53eec854f9814aa4d855,
+#   fetched 2026-11-05). That log's only further result,
+#   "FAIL: gcc.target/i386/shift-gf2p8affine-2.c execution test", is the one
+#   the page ties to processors without AVX512; it passed here and is not
+#   listed. The cause of the six unnamed results was not traced separately.
+# Observed: rehearsal attempt 03 on 2026-11-05, an isolated continuation of
+#   failed core run 001 with this page's recipe unchanged, four test jobs:
+#   511259 expected passes in six summaries (g++ 267590, gcc 218851,
+#   libstdc++ 18597, libgomp 6123, libatomic 54, libitm 44), 72 unexpected
+#   failures (gcc 39, g++ 33) and 2 unexpected successes (gcc), no UNRESOLVED
+#   or ERROR. The reference log has the same counts except gcc 218831 passes
+#   and 40 failures.
+@min-pass 511000
+FAIL: g++.target/i386/memset-pr108585-1a.C   check-function-bodies _Z6squarei
+FAIL: g++.target/i386/memset-pr108585-1b.C   check-function-bodies _Z6squarei
+FAIL: g++.target/i386/mv-symbols1.C  -std=gnu++20  scan-assembler-times \n\tcall\t_Z3fooi.ifunc\n 1
+FAIL: g++.target/i386/mv-symbols1.C  -std=gnu++20  scan-assembler-times \n\tcall\t_Z3foov.ifunc\n 1
+FAIL: g++.target/i386/mv-symbols1.C  -std=gnu++26  scan-assembler-times \n\tcall\t_Z3fooi.ifunc\n 1
+FAIL: g++.target/i386/mv-symbols1.C  -std=gnu++26  scan-assembler-times \n\tcall\t_Z3foov.ifunc\n 1
+FAIL: g++.target/i386/mv-symbols1.C  -std=gnu++98  scan-assembler-times \n\tcall\t_Z3fooi.ifunc\n 1
+FAIL: g++.target/i386/mv-symbols1.C  -std=gnu++98  scan-assembler-times \n\tcall\t_Z3foov.ifunc\n 1
+FAIL: g++.target/i386/mv-symbols3.C  -std=gnu++20  scan-assembler-times \n\tcall\t_Z3foov.ifunc\n 1
+FAIL: g++.target/i386/mv-symbols3.C  -std=gnu++26  scan-assembler-times \n\tcall\t_Z3foov.ifunc\n 1
+FAIL: g++.target/i386/mv-symbols3.C  -std=gnu++98  scan-assembler-times \n\tcall\t_Z3foov.ifunc\n 1
+FAIL: g++.target/i386/mv-symbols4.C  -std=gnu++20  scan-assembler-times \n\tcall\t_Z3foov.ifunc\n 1
+FAIL: g++.target/i386/mv-symbols4.C  -std=gnu++26  scan-assembler-times \n\tcall\t_Z3foov.ifunc\n 1
+FAIL: g++.target/i386/mv-symbols4.C  -std=gnu++98  scan-assembler-times \n\tcall\t_Z3foov.ifunc\n 1
+FAIL: g++.target/i386/mv-symbols5.C  -std=gnu++20  scan-assembler-times \n\tcall\t_Z3foov.ifunc\n 1
+FAIL: g++.target/i386/mv-symbols5.C  -std=gnu++26  scan-assembler-times \n\tcall\t_Z3foov.ifunc\n 1
+FAIL: g++.target/i386/mv-symbols5.C  -std=gnu++98  scan-assembler-times \n\tcall\t_Z3foov.ifunc\n 1
+FAIL: g++.target/i386/mvc-symbols1.C  -std=gnu++20  scan-assembler-times \n\tcall\t_Z3fooi\n 1
+FAIL: g++.target/i386/mvc-symbols1.C  -std=gnu++20  scan-assembler-times \n\tcall\t_Z3foov\n 1
+FAIL: g++.target/i386/mvc-symbols1.C  -std=gnu++26  scan-assembler-times \n\tcall\t_Z3fooi\n 1
+FAIL: g++.target/i386/mvc-symbols1.C  -std=gnu++26  scan-assembler-times \n\tcall\t_Z3foov\n 1
+FAIL: g++.target/i386/mvc-symbols1.C  -std=gnu++98  scan-assembler-times \n\tcall\t_Z3fooi\n 1
+FAIL: g++.target/i386/mvc-symbols1.C  -std=gnu++98  scan-assembler-times \n\tcall\t_Z3foov\n 1
+FAIL: g++.target/i386/mvc-symbols3.C  -std=gnu++20  scan-assembler-times \n\tcall\t_Z3fooi\n 1
+FAIL: g++.target/i386/mvc-symbols3.C  -std=gnu++20  scan-assembler-times \n\tcall\t_Z3foov\n 1
+FAIL: g++.target/i386/mvc-symbols3.C  -std=gnu++26  scan-assembler-times \n\tcall\t_Z3fooi\n 1
+FAIL: g++.target/i386/mvc-symbols3.C  -std=gnu++26  scan-assembler-times \n\tcall\t_Z3foov\n 1
+FAIL: g++.target/i386/mvc-symbols3.C  -std=gnu++98  scan-assembler-times \n\tcall\t_Z3fooi\n 1
+FAIL: g++.target/i386/mvc-symbols3.C  -std=gnu++98  scan-assembler-times \n\tcall\t_Z3foov\n 1
+FAIL: g++.target/i386/pr112824-2.C   scan-assembler-not vmov.*[ \\t]+[^\n]*%rsp
+FAIL: g++.target/i386/pr116896-1.C  -std=gnu++20  scan-assembler-times \tjp\t 1
+FAIL: g++.target/i386/pr116896-1.C  -std=gnu++23  scan-assembler-times \tjp\t 1
+FAIL: g++.target/i386/pr116896-1.C  -std=gnu++26  scan-assembler-times \tjp\t 1
+FAIL: gcc.dg/ipa/pr122458.c (test for excess errors)
+FAIL: gcc.dg/lto/toplevel-extended-asm-1 c_lto_toplevel-extended-asm-1_0.o-c_lto_toplevel-extended-asm-1_1.o link, -O2 -flto -flto-partition=1to1
+FAIL: gcc.dg/lto/toplevel-simple-asm-1 c_lto_toplevel-simple-asm-1_0.o-c_lto_toplevel-simple-asm-1_1.o link, -O2 -flto -flto-toplevel-asm-heuristics -flto-partition=1to1
+FAIL: gcc.dg/lto/toplevel-simple-asm-1 c_lto_toplevel-simple-asm-1_0.o-c_lto_toplevel-simple-asm-1_1.o link, -O2 -flto -flto-toplevel-asm-heuristics -flto-partition=cache
+FAIL: gcc.dg/lto/toplevel-simple-asm-1 c_lto_toplevel-simple-asm-1_0.o-c_lto_toplevel-simple-asm-1_1.o link, -O2 -flto -flto-toplevel-asm-heuristics -flto-partition=max
+FAIL: gcc.dg/plugin/crash-test-nested-ice.c -fplugin=./crash_test_plugin.so  (test .sarif output for UTF-8-encoded parseable JSON)
+FAIL: gcc.dg/plugin/crash-test-nested-ice.c -fplugin=./crash_test_plugin.so  dg-regexp 13 not found: "during GIMPLE pass: crash_test"
+FAIL: gcc.dg/plugin/crash-test-nested-ice.c -fplugin=./crash_test_plugin.so (test for excess errors)
+FAIL: gcc.dg/plugin/crash-test-nested-write-through-null.c -fplugin=./crash_test_plugin.so  (test .sarif output for UTF-8-encoded parseable JSON)
+FAIL: gcc.dg/plugin/crash-test-nested-write-through-null.c -fplugin=./crash_test_plugin.so  dg-regexp 13 not found: "during GIMPLE pass: crash_test"
+FAIL: gcc.dg/plugin/crash-test-nested-write-through-null.c -fplugin=./crash_test_plugin.so (test for excess errors)
+FAIL: gcc.target/i386/auto-init-padding-9.c check-function-bodies foo
+FAIL: gcc.target/i386/builtin-memmove-12.c check-function-bodies foo
+FAIL: gcc.target/i386/builtin-memmove-13.c check-function-bodies foo
+FAIL: gcc.target/i386/memcpy-pr120683-2.c check-function-bodies foo
+FAIL: gcc.target/i386/memcpy-pr120683-3.c check-function-bodies foo
+FAIL: gcc.target/i386/memcpy-pr120683-4.c check-function-bodies foo
+FAIL: gcc.target/i386/memcpy-pr120683-5.c check-function-bodies foo
+FAIL: gcc.target/i386/memcpy-pr120683-6.c check-function-bodies foo
+FAIL: gcc.target/i386/memcpy-pr120683-7.c check-function-bodies foo
+FAIL: gcc.target/i386/memset-pr120683-13.c check-function-bodies foo
+FAIL: gcc.target/i386/memset-pr120683-17.c check-function-bodies foo
+FAIL: gcc.target/i386/memset-pr120683-18.c check-function-bodies foo
+FAIL: gcc.target/i386/memset-pr120683-19.c check-function-bodies foo
+FAIL: gcc.target/i386/memset-pr120683-20.c check-function-bodies foo
+FAIL: gcc.target/i386/memset-pr120683-21.c check-function-bodies foo
+FAIL: gcc.target/i386/memset-pr120683-22.c check-function-bodies foo
+FAIL: gcc.target/i386/memset-pr120683-23.c check-function-bodies foo
+FAIL: gcc.target/i386/memset-pr70308-1a.c check-function-bodies foo
+FAIL: gcc.target/i386/memset-pr70308-1b.c check-function-bodies foo
+FAIL: gcc.target/i386/pr111657-1.c check-function-bodies bar
+FAIL: gcc.target/i386/pr115102.c scan-assembler bswaphisi2_lowpart
+FAIL: gcc.target/i386/pr116896.c scan-assembler-times \tjp\t 2
+FAIL: gcc.target/i386/pr120881-2a.c check-function-bodies f2
+FAIL: gcc.target/i386/pr122343-4a.c check-function-bodies foo
+FAIL: gcc.target/i386/pr125355-2.c check-function-bodies foo.cold
+FAIL: gcc.target/i386/pr125355.c check-function-bodies foo
+FAIL: gcc.target/i386/xchg-4.c scan-assembler rolw
+FAIL: gcc.target/i386/xchg-4.c scan-assembler-not mov
+XPASS: gcc.dg/plugin/crash-test-nested-ice.c -fplugin=./crash_test_plugin.so (internal compiler error)
+XPASS: gcc.dg/plugin/crash-test-nested-write-through-null.c -fplugin=./crash_test_plugin.so (internal compiler error)

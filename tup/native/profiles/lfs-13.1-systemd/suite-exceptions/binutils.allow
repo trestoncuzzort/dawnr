@@ -5,6 +5,12 @@
 # Basis: The LFS 13.1-systemd binutils page states "One test related to gprofng
 #   is known to fail." It does not name the test.
 #   https://www.linuxfromscratch.org/lfs/view/13.1-systemd/chapter08/binutils.html
+#   The LFS editors' reference test log for this book version names it: its
+#   only non-pass result is this exact line, with the same six pass counts as
+#   the run observed here.
+#   https://www.linuxfromscratch.org/lfs/build-logs/13.1/i7-14700K/test-logs/820-binutils-2.47
+#   (55539 bytes, sha256 696419ce06c5a849c2724ff7d6c0a04456963ff4eb529fd4900e4b0013f16e78,
+#   fetched 2026-11-05).
 #   In the observed run exactly one result in the whole suite is not a pass,
 #   and it is in gprofng: gprofng.display/gp-gmon.exp builds a small program
 #   with "gcc -pg", converts its gmon.out with "gprofng display gmon" (which
