@@ -1536,7 +1536,7 @@
           "classification": "diagnostic",
           "id": "007",
           "reason": "No timeout matches is a valid diagnostic result; a grep error still fails.",
-          "replacement": "set +e\nfind . -name '*.out' -type f -exec grep -H 'Timed out' {} +\nnative_grep_rc=$?\nset -e\n[ \"$native_grep_rc\" -le 1 ]\n",
+          "replacement": "native_grep_rc=0\nfind . -name '*.out' -type f -exec grep -H 'Timed out' {} + || native_grep_rc=$?\n[ \"$native_grep_rc\" -le 1 ]\n",
           "sha256": "0c3cff7a9f5d30ae363514807a4ce30ba0fcb86e64bfcffdffd846a715e4d783"
         },
         {

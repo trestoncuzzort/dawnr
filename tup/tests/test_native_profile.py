@@ -43,7 +43,7 @@ class NativeProfileTests(unittest.TestCase):
             item["replacement"] = replacement
         return {"page_sha256": build.digest(self.page), "archive": None, "blocks": [item]}
 
-    def run_recipe(self, plan, **extra_env):
+    def run_recipe(self, plan, cwd=None, **extra_env):
         if not BASH:
             self.skipTest("Bash is required for isolated recipe fixtures")
         self.script.write_bytes(build.render_native_page("ch05/01-fixture.sh", self.page.read_bytes(), plan))
@@ -62,7 +62,7 @@ export -f tup_json_str tup_receipt_skip_tests ninja passwd
 exec bash "$1"
 '''
         return subprocess.run([BASH, "-c", launcher, "native-fixture", shell_path(self.script)],
-                              env=environment, capture_output=True, text=True, timeout=30)
+                              env=environment, capture_output=True, text=True, timeout=30, cwd=cwd)
 
     def test_raw_block_selection_never_executes_extractor_guard(self):
         plan = self.page_plan("ninja test\n")
@@ -102,6 +102,35 @@ exec bash "$1"
         result = self.run_recipe(plan)
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertEqual(self.marker.read_text(), "-l root\n")
+
+    def test_audited_glibc_timeout_diagnostic_survives_the_err_trap_when_nothing_timed_out(self):
+        # The rendered prologue traps ERR, and "set +e" does not disable that trap:
+        # the earlier spelling of this diagnostic exited 1 exactly when the suite
+        # was clean (no "Timed out" line), before the package could be installed.
+        audit = json.loads((MODULE.parent / "profiles/lfs-13.1-systemd/AUDIT.json").read_bytes())
+        block = next(item for item in audit["pages"]["ch08/05-glibc.sh"]["blocks"] if item["id"] == "007")
+        self.assertEqual((block["action"], block["classification"]), ("replace", "diagnostic"))
+        tree = self.directory / "build"
+        (tree / "posix").mkdir(parents=True)
+        (tree / "posix/tst-fixture.out").write_text("completed normally\n", encoding="utf-8")
+        plan = self.page_plan("grep fixture\n", action="replace", classification="diagnostic",
+                              replacement=block["replacement"] + 'printf reached > "$NATIVE_MARKER"\n')
+        result = self.run_recipe(plan, cwd=tree)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(self.marker.read_text(), "reached")
+        self.marker.unlink()
+        (tree / "posix/tst-slow.out").write_text("Timed out: killed the child process\n", encoding="utf-8")
+        result = self.run_recipe(plan, cwd=tree)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertIn("tst-slow.out:Timed out", result.stdout)
+        self.assertEqual(self.marker.read_text(), "reached")
+
+    def test_no_audited_replacement_relies_on_disabling_errexit(self):
+        audit = json.loads((MODULE.parent / "profiles/lfs-13.1-systemd/AUDIT.json").read_bytes())
+        for key, plan in audit["pages"].items():
+            for item in plan["blocks"]:
+                with self.subTest(page=key, block=item["id"]):
+                    self.assertNotRegex(item.get("replacement", ""), r"(?m)^\s*set \+[a-zA-Z]*e")
 
     def test_wrong_build_context_refuses_before_command_execution(self):
         plan = self.page_plan("ninja test\n")
