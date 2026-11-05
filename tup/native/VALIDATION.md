@@ -30,3 +30,14 @@ required external trust input and no production lock is supplied here. The
 explicit book selector does not resolve the maintained-book/init-system choice
 or approve historical LFS 12.4 for production. H01, H03–H06, H23 and H54 remain
 open until their full integration/runtime gates have evidence.
+
+Integration review on the same date reproduced one additional defect: a child
+could change a transitive pinned patch, exit zero, and have the final chapter
+marked complete. Full input/source postconditions now run before the stage
+completion commit and again when validating a completed stage. A failed check
+retains the running intent and prevents replay. The native suite now has
+**19 passing fixtures**, including mutation by a successful child and refusal
+without replay on a completed stage. The added integration checks also require
+Bash >= 4.4 and GNU coreutils >= 8.24, inventory `sync`, and allow bounded
+15-minute full-chapter validation rather than the 60-second tool-probe limit.
+Actual Linux durability and timing still require Linux runs.

@@ -7,6 +7,7 @@ See README.md for trust, resource and recovery boundaries.
 from __future__ import annotations
 
 import argparse
+from collections.abc import Callable
 import datetime as dt
 import hashlib
 import json
@@ -218,9 +219,9 @@ def map_identity(files: dict[str, Path | bytes]) -> dict:
     return result
 
 
-def checked(command: list[str], **kwargs) -> str:
+def checked(command: list[str], *, timeout: int = 60, **kwargs) -> str:
     try:
-        result = subprocess.run(command, check=True, text=True, stdout=subprocess.PIPE, timeout=60,
+        result = subprocess.run(command, check=True, text=True, stdout=subprocess.PIPE, timeout=timeout,
                                 stderr=subprocess.STDOUT, **kwargs)
     except (OSError, subprocess.SubprocessError) as exc:
         output = getattr(exc, "stdout", "") or ""
@@ -253,14 +254,18 @@ def host_identity(workspace: Path, jobs: int, memory_mib: int, free_gib: int) ->
                 "gzip": ["--version"], "xz": ["--version"], "patch": ["--version"],
                 "m4": ["--version"], "perl": ["-v"], "diff": ["--version"],
                 "find": ["--version"], "grep": ["--version"], "sed": ["--version"],
-                "sha256sum": ["--version"], "sort": ["--version"], "unshare": ["--version"],
+                "sha256sum": ["--version"], "sort": ["--version"], "sync": ["--version"],
+                "unshare": ["--version"],
                 "runuser": ["--version"], "mount": ["--version"], "chroot": ["--version"],
                 "python3": ["--version"], "bc": ["--version"]}
-    minimums = {"bash": (3, 2), "ld": (2, 13, 1), "bison": (2, 7), "gawk": (4, 0, 1),
+    # The transaction driver adds requirements beyond the historical book:
+    # inherit_errexit needs Bash 4.4; named-file sync and sync -f need coreutils 8.24.
+    minimums = {"bash": (4, 4), "ld": (2, 13, 1), "bison": (2, 7), "gawk": (4, 0, 1),
                 "gcc": (5, 4), "g++": (5, 4), "make": (4, 0), "makeinfo": (5, 0),
                 "tar": (1, 22), "gzip": (1, 3, 12), "xz": (5, 0, 0),
                 "patch": (2, 5, 4), "m4": (1, 4, 10), "diff": (2, 8, 1),
-                "find": (4, 2, 31), "sed": (4, 1, 5), "sort": (8, 1)}
+                "find": (4, 2, 31), "sed": (4, 1, 5), "sort": (8, 24),
+                "sha256sum": (8, 24), "sync": (8, 24)}
     for name, args in commands.items():
         executable = shutil.which(name)
         if executable is None:
@@ -337,10 +342,15 @@ def stage_record(state: Path, stage: str, inputs_sha256: str) -> bool:
 
 
 def run_stage(state: Path, stage: str, command: list[str], inputs_sha256: str,
-              validate_command: list[str] | None = None) -> None:
+              validate_command: list[str] | None = None, *,
+              postcondition: Callable[[], None] | None = None) -> None:
     if stage_record(state, stage, inputs_sha256):
         if validate_command is not None:
-            checked(validate_command, stdin=subprocess.DEVNULL)
+            # Validation hashes a complete chapter's sources and retained logs.
+            # Keep it bounded without imposing the short host-tool probe limit.
+            checked(validate_command, timeout=900, stdin=subprocess.DEVNULL)
+        if postcondition is not None:
+            postcondition()
         print(f"{stage}: verified prior stage receipt", flush=True)
         return
     receipt = state / f"{stage}.json"
@@ -360,6 +370,10 @@ def run_stage(state: Path, stage: str, command: list[str], inputs_sha256: str,
             code = 127
         stream.flush()
         os.fsync(stream.fileno())
+    if code == 0 and postcondition is not None:
+        # Leave the durable running intent intact if the full source/input
+        # check fails. A child's zero exit cannot authorize stage completion.
+        postcondition()
     record.update({"status": "complete" if code == 0 else "failed", "exit_code": code,
                    "seconds": round(time.monotonic() - started, 3), "log_sha256": digest(log)})
     atomic_json(receipt, record)
@@ -462,20 +476,25 @@ def main(argv=None):
             if read_json(state / "preparing.json") != {"status": "complete"}:
                 raise Refusal("preparation was interrupted")
             inputs_hash = hashlib.sha256(encoded(inputs)).hexdigest()
-            for stage in STAGES:
+
+            def validate_all_inputs():
                 load_lock(args.source_lock, args.lock_sha256, args.book)
                 verify_host_tools(host)
                 verify_sources(args.source_cache, lock)
                 verify_sources(root / "sources", lock, staged=True)
                 require_identity(read_json(state / "BUILD.json"), build_identity(args, input_map(args.source, args.book), lock, host))
                 verify_staged(root, inputs)
+
+            for stage in STAGES:
+                validate_all_inputs()
                 runner = str(root / "tup-build/native/run-stage.sh")
                 command = ["bash", runner, stage, str(root), args.build_user,
                            str(args.workspace / "home"), str(args.jobs)]
                 if stage in ("ch07-inner", "ch08"):
                     command = ["unshare", "--mount", "--pid", "--propagation", "private", "--fork", "--kill-child", *command]
                 validation = None if stage == "ownership" else [*command, "--validate"]
-                run_stage(state, stage, command, inputs_hash, validation)
+                run_stage(state, stage, command, inputs_hash, validation,
+                          postcondition=validate_all_inputs)
                 if stage == args.through:
                     break
             print(f"LFS core through {args.through} completed; native boot, installer and networking remain unbuilt")

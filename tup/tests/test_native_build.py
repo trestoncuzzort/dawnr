@@ -234,6 +234,40 @@ class NativeBuildTests(unittest.TestCase):
         with self.assertRaisesRegex(build.Refusal, "inputs changed"):
             build.require_identity(old, {"profile": "native", "source": "new"})
 
+    def test_child_success_cannot_commit_changed_transitive_input(self):
+        source = self.base / "pinned.patch"
+        source.write_bytes(b"approved input")
+        expected = build.digest(source)
+
+        def validate_source():
+            if build.digest(source) != expected:
+                raise build.Refusal("transitive source changed")
+
+        command = [sys.executable, "-c",
+                   'import pathlib,sys; pathlib.Path(sys.argv[1]).write_bytes(b"changed")',
+                   str(source)]
+        with self.assertRaisesRegex(build.Refusal, "transitive source changed"):
+            build.run_stage(self.state, "ch08", command, self.identity,
+                            postcondition=validate_source)
+        self.assertEqual(build.read_json(self.state / "ch08.json")["status"], "running")
+        with self.assertRaisesRegex(build.Refusal, "interrupted/failed"):
+            build.stage_record(self.state, "ch08", self.identity)
+
+    def test_completed_stage_rechecks_postconditions_without_replay(self):
+        marker = self.base / "ran"
+        command = [sys.executable, "-c",
+                   'import pathlib,sys; pathlib.Path(sys.argv[1]).touch()', str(marker)]
+        build.run_stage(self.state, "ch05", command, self.identity)
+        marker.unlink()
+
+        def refuse_changed_input():
+            raise build.Refusal("postcondition changed")
+
+        with self.assertRaisesRegex(build.Refusal, "postcondition changed"):
+            build.run_stage(self.state, "ch05", command, self.identity,
+                            postcondition=refuse_changed_input)
+        self.assertFalse(marker.exists(), "validation must not replay a completed stage")
+
     def test_non_linux_and_arm_hosts_refuse(self):
         for system, architecture in (("Windows", "AMD64"), ("Linux", "aarch64")):
             with self.subTest(system=system, architecture=architecture):

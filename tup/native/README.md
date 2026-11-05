@@ -19,6 +19,8 @@ and an existing unprivileged `lfs` account for chapters 5 and 6. Host package
 installation and account creation are separate bootstrap operations. Python
 3.10 or newer runs on the host; the early chroot uses Bash and coreutils only.
 The input-aware driver and its entire `buildlib/` directory must be integrated.
+The driver requires Bash 4.4 or later and GNU coreutils 8.24 or later for checked
+durability operations, beyond the historical book's minimum host versions.
 Use a Linux checkout with LF shell files; CRLF scripts are refused, not silently
 rewritten. Source, cache and workspace directories must be disjoint.
 
