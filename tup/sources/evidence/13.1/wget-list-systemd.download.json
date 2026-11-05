@@ -1,0 +1,8 @@
+{
+  "meaning": "observed download bytes; not authentication",
+  "resolved_url": "https://www.linuxfromscratch.org/lfs/view/13.1-systemd/wget-list-systemd",
+  "retrieved_at": "2026-11-05T08:01:33.849588+00:00",
+  "sha256": "2503a8ba321fce4cc4d6e0a8b6c3518703501f088dd1264fc9ec2a089751ab26",
+  "size": 6085,
+  "url": "https://www.linuxfromscratch.org/lfs/view/13.1-systemd/wget-list-systemd"
+}

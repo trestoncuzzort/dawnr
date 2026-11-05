@@ -1,0 +1,8 @@
+{
+  "meaning": "observed download bytes; not authentication",
+  "resolved_url": "https://api.github.com/repositories/29759715/releases/tags/v1.5.7",
+  "retrieved_at": "2026-11-05T08:03:48.952068+00:00",
+  "sha256": "9a8eed3b29a83a6abe4ed5afb9c144d6f7481d80190d6c555bb27d389c17d959",
+  "size": 26288,
+  "url": "https://api.github.com/repos/facebook/zstd/releases/tags/v1.5.7"
+}

@@ -1,0 +1,8 @@
+{
+  "meaning": "observed download bytes; not authentication",
+  "resolved_url": "https://www.kernel.org/pub/linux/utils/net/iproute2/sha256sums.asc",
+  "retrieved_at": "2026-11-05T08:03:47.917142+00:00",
+  "sha256": "9d7af0551a3156e4a6f24074ab8d7881045ee6d598de67d9e7156a0e73d27db4",
+  "size": 17260,
+  "url": "https://www.kernel.org/pub/linux/utils/net/iproute2/sha256sums.asc"
+}

@@ -1,0 +1,8 @@
+{
+  "meaning": "observed download bytes; not authentication",
+  "resolved_url": "https://api.github.com/repos/openssl/openssl/releases/tags/openssl-4.0.3",
+  "retrieved_at": "2026-11-05T08:03:48.432144+00:00",
+  "sha256": "eaeb828e9453406ecd637d26b17d169f78fde0360a01de7168b62a8095b22c60",
+  "size": 11560,
+  "url": "https://api.github.com/repos/openssl/openssl/releases/tags/openssl-4.0.3"
+}

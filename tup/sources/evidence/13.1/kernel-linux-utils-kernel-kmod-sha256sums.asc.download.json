@@ -1,0 +1,8 @@
+{
+  "meaning": "observed download bytes; not authentication",
+  "resolved_url": "https://www.kernel.org/pub/linux/utils/kernel/kmod/sha256sums.asc",
+  "retrieved_at": "2026-11-05T08:03:48.039939+00:00",
+  "sha256": "71476e88400003e244f2a73f39efd91804e095d76d9cfe4aa6eb7932b31110e8",
+  "size": 8173,
+  "url": "https://www.kernel.org/pub/linux/utils/kernel/kmod/sha256sums.asc"
+}

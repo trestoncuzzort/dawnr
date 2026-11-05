@@ -1,0 +1,1430 @@
+{
+  "advisory_review": {
+    "dispositions": [],
+    "status": "unresolved"
+  },
+  "architecture": "x86_64",
+  "book_version": "13.1-systemd",
+  "inventory": {
+    "path": "wget-list-systemd",
+    "sha256": "2503a8ba321fce4cc4d6e0a8b6c3518703501f088dd1264fc9ec2a089751ab26",
+    "url": "https://www.linuxfromscratch.org/lfs/view/13.1-systemd/wget-list-systemd"
+  },
+  "prepared_at": "2026-11-05T08:01:34.050071+00:00",
+  "schema": "tup-source-catalog-v1",
+  "sources": [
+    {
+      "authentication": {
+        "method": "unresolved",
+        "reason": "No publisher SHA256 or signature verified yet."
+      },
+      "baseline_name": "acl-2.4.0.tar.xz",
+      "book_md5": "e289f370161698a96f50b2a3fdadf411",
+      "book_url": "https://download.savannah.gnu.org/releases/acl/acl-2.4.0.tar.xz",
+      "disposition": "retain",
+      "name": "acl-2.4.0.tar.xz",
+      "reason": "Retain the pinned book input.",
+      "url": "https://download.savannah.gnu.org/releases/acl/acl-2.4.0.tar.xz"
+    },
+    {
+      "authentication": {
+        "method": "unresolved",
+        "reason": "No publisher SHA256 or signature verified yet."
+      },
+      "baseline_name": "attr-2.6.0.tar.gz",
+      "book_md5": "910a09c3ae0a211569d180586371cf7e",
+      "book_url": "https://download.savannah.gnu.org/releases/attr/attr-2.6.0.tar.gz",
+      "disposition": "retain",
+      "name": "attr-2.6.0.tar.gz",
+      "reason": "Retain the pinned book input.",
+      "url": "https://download.savannah.gnu.org/releases/attr/attr-2.6.0.tar.gz"
+    },
+    {
+      "authentication": {
+        "method": "unresolved",
+        "reason": "No publisher SHA256 or signature verified yet."
+      },
+      "baseline_name": "autoconf-2.73.tar.xz",
+      "book_md5": "9cbad9a116ef845bafeed8e7bc771bf4",
+      "book_url": "https://ftpmirror.gnu.org/autoconf/autoconf-2.73.tar.xz",
+      "disposition": "retain",
+      "name": "autoconf-2.73.tar.xz",
+      "reason": "Retain the pinned book input.",
+      "url": "https://ftp.gnu.org/gnu/autoconf/autoconf-2.73.tar.xz"
+    },
+    {
+      "authentication": {
+        "method": "unresolved",
+        "reason": "No publisher SHA256 or signature verified yet."
+      },
+      "baseline_name": "automake-1.18.1.tar.xz",
+      "book_md5": "cea31dbf1120f890cbf2a3032cfb9a68",
+      "book_url": "https://ftpmirror.gnu.org/automake/automake-1.18.1.tar.xz",
+      "disposition": "retain",
+      "name": "automake-1.18.1.tar.xz",
+      "reason": "Retain the pinned book input.",
+      "url": "https://ftp.gnu.org/gnu/automake/automake-1.18.1.tar.xz"
+    },
+    {
+      "authentication": {
+        "method": "unresolved",
+        "reason": "No publisher SHA256 or signature verified yet."
+      },
+      "baseline_name": "bash-5.3.tar.gz",
+      "book_md5": "977c8c0c5ae6309191e7768e28ebc951",
+      "book_url": "https://ftpmirror.gnu.org/bash/bash-5.3.tar.gz",
+      "disposition": "retain",
+      "name": "bash-5.3.tar.gz",
+      "reason": "Retain the pinned book input.",
+      "url": "https://ftp.gnu.org/gnu/bash/bash-5.3.tar.gz"
+    },
+    {
+      "authentication": {
+        "method": "unresolved",
+        "reason": "No publisher SHA256 or signature verified yet."
+      },
+      "baseline_name": "bc-7.0.3.tar.xz",
+      "book_md5": "ad4db5a0eb4fdbb3f6813be4b6b3da74",
+      "book_url": "https://github.com/gavinhoward/bc/releases/download/7.0.3/bc-7.0.3.tar.xz",
+      "disposition": "retain",
+      "name": "bc-7.0.3.tar.xz",
+      "reason": "Retain the pinned book input.",
+      "url": "https://github.com/gavinhoward/bc/releases/download/7.0.3/bc-7.0.3.tar.xz"
+    },
+    {
+      "authentication": {
+        "method": "unresolved",
+        "reason": "No publisher SHA256 or signature verified yet."
+      },
+      "baseline_name": "binutils-2.47.tar.xz",
+      "book_md5": "d772acfbd55a81644e9fe7b8189cd2a5",
+      "book_url": "https://sourceware.org/pub/binutils/releases/binutils-2.47.tar.xz",
+      "disposition": "retain",
+      "name": "binutils-2.47.tar.xz",
+      "reason": "Retain the pinned book input.",
+      "url": "https://sourceware.org/pub/binutils/releases/binutils-2.47.tar.xz"
+    },
+    {
+      "authentication": {
+        "method": "unresolved",
+        "reason": "No publisher SHA256 or signature verified yet."
+      },
+      "baseline_name": "bison-3.8.2.tar.xz",
+      "book_md5": "c28f119f405a2304ff0a7ccdcc629713",
+      "book_url": "https://ftpmirror.gnu.org/bison/bison-3.8.2.tar.xz",
+      "disposition": "retain",
+      "name": "bison-3.8.2.tar.xz",
+      "reason": "Retain the pinned book input.",
+      "url": "https://ftp.gnu.org/gnu/bison/bison-3.8.2.tar.xz"
+    },
+    {
+      "authentication": {
+        "method": "unresolved",
+        "reason": "No publisher SHA256 or signature verified yet."
+      },
+      "baseline_name": "bzip2-1.0.8.tar.gz",
+      "book_md5": "67e051268d0c475ea773822f7500d0e5",
+      "book_url": "https://www.sourceware.org/pub/bzip2/bzip2-1.0.8.tar.gz",
+      "disposition": "retain",
+      "name": "bzip2-1.0.8.tar.gz",
+      "reason": "Retain the pinned book input.",
+      "url": "https://www.sourceware.org/pub/bzip2/bzip2-1.0.8.tar.gz"
+    },
+    {
+      "authentication": {
+        "method": "unresolved",
+        "reason": "No publisher SHA256 or signature verified yet."
+      },
+      "baseline_name": "coreutils-9.11.tar.xz",
+      "book_md5": "e52e9857e4aa9ae38ef32f8ed6a27604",
+      "book_url": "https://ftpmirror.gnu.org/coreutils/coreutils-9.11.tar.xz",
+      "disposition": "retain",
+      "name": "coreutils-9.11.tar.xz",
+      "reason": "Retain the pinned book input.",
+      "url": "https://ftp.gnu.org/gnu/coreutils/coreutils-9.11.tar.xz"
+    },
+    {
+      "authentication": {
+        "method": "unresolved",
+        "reason": "No publisher SHA256 or signature verified yet."
+      },
+      "baseline_name": "dbus-1.16.2.tar.xz",
+      "book_md5": "97832e6f0a260936d28536e5349c22e5",
+      "book_url": "https://dbus.freedesktop.org/releases/dbus/dbus-1.16.2.tar.xz",
+      "disposition": "retain",
+      "name": "dbus-1.16.2.tar.xz",
+      "reason": "Retain the pinned book input.",
+      "url": "https://dbus.freedesktop.org/releases/dbus/dbus-1.16.2.tar.xz"
+    },
+    {
+      "authentication": {
+        "method": "unresolved",
+        "reason": "No publisher SHA256 or signature verified yet."
+      },
+      "baseline_name": "dejagnu-1.6.3.tar.gz",
+      "book_md5": "68c5208c58236eba447d7d6d1326b821",
+      "book_url": "https://ftpmirror.gnu.org/dejagnu/dejagnu-1.6.3.tar.gz",
+      "disposition": "retain",
+      "name": "dejagnu-1.6.3.tar.gz",
+      "reason": "Retain the pinned book input.",
+      "url": "https://ftp.gnu.org/gnu/dejagnu/dejagnu-1.6.3.tar.gz"
+    },
+    {
+      "authentication": {
+        "method": "unresolved",
+        "reason": "No publisher SHA256 or signature verified yet."
+      },
+      "baseline_name": "diffutils-3.12.tar.xz",
+      "book_md5": "d1b18b20868fb561f77861cd90b05de4",
+      "book_url": "https://ftpmirror.gnu.org/diffutils/diffutils-3.12.tar.xz",
+      "disposition": "retain",
+      "name": "diffutils-3.12.tar.xz",
+      "reason": "Retain the pinned book input.",
+      "url": "https://ftp.gnu.org/gnu/diffutils/diffutils-3.12.tar.xz"
+    },
+    {
+      "authentication": {
+        "method": "unresolved",
+        "reason": "No publisher SHA256 or signature verified yet."
+      },
+      "baseline_name": "e2fsprogs-1.47.4.tar.gz",
+      "book_md5": "733a93bc688314834ff2d10530ff4dc4",
+      "book_url": "https://downloads.sourceforge.net/project/e2fsprogs/e2fsprogs/v1.47.4/e2fsprogs-1.47.4.tar.gz",
+      "disposition": "retain",
+      "name": "e2fsprogs-1.47.4.tar.gz",
+      "reason": "Retain the pinned book input.",
+      "url": "https://downloads.sourceforge.net/project/e2fsprogs/e2fsprogs/v1.47.4/e2fsprogs-1.47.4.tar.gz"
+    },
+    {
+      "authentication": {
+        "method": "unresolved",
+        "reason": "No publisher SHA256 or signature verified yet."
+      },
+      "baseline_name": "elfutils-0.195.tar.bz2",
+      "book_md5": "3e8ef51c43beceddbbb74879549cf72c",
+      "book_url": "https://sourceware.org/ftp/elfutils/0.195/elfutils-0.195.tar.bz2",
+      "disposition": "retain",
+      "name": "elfutils-0.195.tar.bz2",
+      "reason": "Retain the pinned book input.",
+      "url": "https://sourceware.org/ftp/elfutils/0.195/elfutils-0.195.tar.bz2"
+    },
+    {
+      "authentication": {
+        "material": {
+          "path": "github-libexpat-libexpat-R_2_9_0.json",
+          "sha256": "df9edfc5507855180ea056838e42c28378a57a566ec5d4a96c34c606a9a48cb3",
+          "url": "https://api.github.com/repos/libexpat/libexpat/releases/tags/R_2_9_0"
+        },
+        "method": "https-published-sha256",
+        "selection": {
+          "format": "github-release",
+          "tag": "R_2_9_0"
+        }
+      },
+      "baseline_name": "expat-2.8.3.tar.xz",
+      "book_md5": "1747f5a57b191f0373baeb5adc8078ca",
+      "book_url": "https://github.com/libexpat/libexpat/releases/download/R_2_8_3/expat-2.8.3.tar.xz",
+      "disposition": "replace",
+      "name": "expat-2.9.0.tar.xz",
+      "reason": "LFS sa-13.1-022, sa-13.1-045 and sa-13.1-064 identify fixes through Expat 2.9.0; unresolved upstream issues require separate disposition.",
+      "sha256": "1e6371862cc31999b368c3b89b49994f0677e1bab5f1b2b85ae3741f5d803051",
+      "url": "https://github.com/libexpat/libexpat/releases/download/R_2_9_0/expat-2.9.0.tar.xz"
+    },
+    {
+      "authentication": {
+        "method": "unresolved",
+        "reason": "No publisher SHA256 or signature verified yet."
+      },
+      "baseline_name": "expect5.45.4.tar.gz",
+      "book_md5": "00fce8de158422f5ccd2666512329bd2",
+      "book_url": "https://prdownloads.sourceforge.net/expect/expect5.45.4.tar.gz",
+      "disposition": "retain",
+      "name": "expect5.45.4.tar.gz",
+      "reason": "Retain the pinned book input.",
+      "url": "https://prdownloads.sourceforge.net/expect/expect5.45.4.tar.gz"
+    },
+    {
+      "authentication": {
+        "method": "unresolved",
+        "reason": "No publisher SHA256 or signature verified yet."
+      },
+      "baseline_name": "file-5.48.tar.gz",
+      "book_md5": "423686e97f731d8c24e9cd1a22b03dec",
+      "book_url": "https://astron.com/pub/file/file-5.48.tar.gz",
+      "disposition": "retain",
+      "name": "file-5.48.tar.gz",
+      "reason": "Retain the pinned book input.",
+      "url": "https://astron.com/pub/file/file-5.48.tar.gz"
+    },
+    {
+      "authentication": {
+        "method": "unresolved",
+        "reason": "No publisher SHA256 or signature verified yet."
+      },
+      "baseline_name": "findutils-4.11.0.tar.xz",
+      "book_md5": "512c6875ed84034dca240c4bc9380b96",
+      "book_url": "https://ftpmirror.gnu.org/findutils/findutils-4.11.0.tar.xz",
+      "disposition": "retain",
+      "name": "findutils-4.11.0.tar.xz",
+      "reason": "Retain the pinned book input.",
+      "url": "https://ftp.gnu.org/gnu/findutils/findutils-4.11.0.tar.xz"
+    },
+    {
+      "authentication": {
+        "method": "unresolved",
+        "reason": "No publisher SHA256 or signature verified yet."
+      },
+      "baseline_name": "flex-2.6.4.tar.gz",
+      "book_md5": "2882e3179748cc9f9c23ec593d6adc8d",
+      "book_url": "https://github.com/westes/flex/releases/download/v2.6.4/flex-2.6.4.tar.gz",
+      "disposition": "retain",
+      "name": "flex-2.6.4.tar.gz",
+      "reason": "Retain the pinned book input.",
+      "url": "https://github.com/westes/flex/releases/download/v2.6.4/flex-2.6.4.tar.gz"
+    },
+    {
+      "authentication": {
+        "material": {
+          "path": "pypi-flit_core-4.0.2.json",
+          "sha256": "01e62ee667a85b11d5fa7c935cf714b34c2863b225f6b58499070e5dfab27185",
+          "url": "https://pypi.org/pypi/flit_core/4.0.2/json"
+        },
+        "method": "https-published-sha256",
+        "selection": {
+          "format": "pypi-release",
+          "version": "4.0.2"
+        }
+      },
+      "baseline_name": "flit_core-4.0.2.tar.gz",
+      "book_md5": "89ebb783230fc8db6c1d2a39644b7085",
+      "book_url": "https://pypi.org/packages/source/f/flit-core/flit_core-4.0.2.tar.gz",
+      "disposition": "retain",
+      "name": "flit_core-4.0.2.tar.gz",
+      "reason": "Retain the pinned book input.",
+      "sha256": "b6929defd93884b584d7c87829e0e7b5c26ed6be17b0b873979019314aa841c8",
+      "url": "https://pypi.org/packages/source/f/flit-core/flit_core-4.0.2.tar.gz"
+    },
+    {
+      "authentication": {
+        "method": "unresolved",
+        "reason": "No publisher SHA256 or signature verified yet."
+      },
+      "baseline_name": "gawk-5.4.1.tar.xz",
+      "book_md5": "d379c2110e7a3e15347dd5559a41ad64",
+      "book_url": "https://ftpmirror.gnu.org/gawk/gawk-5.4.1.tar.xz",
+      "disposition": "retain",
+      "name": "gawk-5.4.1.tar.xz",
+      "reason": "Retain the pinned book input.",
+      "url": "https://ftp.gnu.org/gnu/gawk/gawk-5.4.1.tar.xz"
+    },
+    {
+      "authentication": {
+        "method": "unresolved",
+        "reason": "No publisher SHA256 or signature verified yet."
+      },
+      "baseline_name": "gcc-16.2.0.tar.xz",
+      "book_md5": "19b777fb19ea4982731392481306f0d3",
+      "book_url": "https://ftpmirror.gnu.org/gcc/gcc-16.2.0/gcc-16.2.0.tar.xz",
+      "disposition": "retain",
+      "name": "gcc-16.2.0.tar.xz",
+      "reason": "Retain the pinned book input.",
+      "url": "https://ftp.gnu.org/gnu/gcc/gcc-16.2.0/gcc-16.2.0.tar.xz"
+    },
+    {
+      "authentication": {
+        "method": "unresolved",
+        "reason": "No publisher SHA256 or signature verified yet."
+      },
+      "baseline_name": "gdbm-1.26.tar.gz",
+      "book_md5": "aaa600665bc89e2febb3c7bd90679115",
+      "book_url": "https://ftpmirror.gnu.org/gdbm/gdbm-1.26.tar.gz",
+      "disposition": "retain",
+      "name": "gdbm-1.26.tar.gz",
+      "reason": "Retain the pinned book input.",
+      "url": "https://ftp.gnu.org/gnu/gdbm/gdbm-1.26.tar.gz"
+    },
+    {
+      "authentication": {
+        "method": "unresolved",
+        "reason": "No publisher SHA256 or signature verified yet."
+      },
+      "baseline_name": "gettext-1.0.tar.xz",
+      "book_md5": "dc8b2911535929cec1e263706b0a13a1",
+      "book_url": "https://ftpmirror.gnu.org/gettext/gettext-1.0.tar.xz",
+      "disposition": "retain",
+      "name": "gettext-1.0.tar.xz",
+      "reason": "Retain the pinned book input.",
+      "url": "https://ftp.gnu.org/gnu/gettext/gettext-1.0.tar.xz"
+    },
+    {
+      "authentication": {
+        "method": "unresolved",
+        "reason": "No publisher SHA256 or signature verified yet."
+      },
+      "baseline_name": "glibc-2.44.tar.xz",
+      "book_md5": "7677da43ef759c68e005f5d4c37986a6",
+      "book_url": "https://ftpmirror.gnu.org/glibc/glibc-2.44.tar.xz",
+      "disposition": "retain",
+      "name": "glibc-2.44.tar.xz",
+      "reason": "Retain the pinned book input.",
+      "url": "https://ftp.gnu.org/gnu/glibc/glibc-2.44.tar.xz"
+    },
+    {
+      "authentication": {
+        "method": "unresolved",
+        "reason": "No publisher SHA256 or signature verified yet."
+      },
+      "baseline_name": "gmp-6.3.0.tar.xz",
+      "book_md5": "956dc04e864001a9c22429f761f2c283",
+      "book_url": "https://ftpmirror.gnu.org/gmp/gmp-6.3.0.tar.xz",
+      "disposition": "retain",
+      "name": "gmp-6.3.0.tar.xz",
+      "reason": "Retain the pinned book input.",
+      "url": "https://ftp.gnu.org/gnu/gmp/gmp-6.3.0.tar.xz"
+    },
+    {
+      "authentication": {
+        "method": "unresolved",
+        "reason": "No publisher SHA256 or signature verified yet."
+      },
+      "baseline_name": "gperf-3.3.tar.gz",
+      "book_md5": "31753b021ea78a21f154bf9eecb8b079",
+      "book_url": "https://ftpmirror.gnu.org/gperf/gperf-3.3.tar.gz",
+      "disposition": "retain",
+      "name": "gperf-3.3.tar.gz",
+      "reason": "Retain the pinned book input.",
+      "url": "https://ftp.gnu.org/gnu/gperf/gperf-3.3.tar.gz"
+    },
+    {
+      "authentication": {
+        "method": "unresolved",
+        "reason": "No publisher SHA256 or signature verified yet."
+      },
+      "baseline_name": "grep-3.12.tar.xz",
+      "book_md5": "5d9301ed9d209c4a88c8d3a6fd08b9ac",
+      "book_url": "https://ftpmirror.gnu.org/grep/grep-3.12.tar.xz",
+      "disposition": "retain",
+      "name": "grep-3.12.tar.xz",
+      "reason": "Retain the pinned book input.",
+      "url": "https://ftp.gnu.org/gnu/grep/grep-3.12.tar.xz"
+    },
+    {
+      "authentication": {
+        "method": "unresolved",
+        "reason": "No publisher SHA256 or signature verified yet."
+      },
+      "baseline_name": "groff-1.24.1.tar.gz",
+      "book_md5": "d9d996af3d05ebab934380be708ea584",
+      "book_url": "https://ftpmirror.gnu.org/groff/groff-1.24.1.tar.gz",
+      "disposition": "retain",
+      "name": "groff-1.24.1.tar.gz",
+      "reason": "Retain the pinned book input.",
+      "url": "https://ftp.gnu.org/gnu/groff/groff-1.24.1.tar.gz"
+    },
+    {
+      "authentication": {
+        "method": "unresolved",
+        "reason": "No publisher SHA256 or signature verified yet."
+      },
+      "baseline_name": "grub-2.14.tar.xz",
+      "book_md5": "383f9effad01c235d2535357ff717543",
+      "book_url": "https://ftpmirror.gnu.org/grub/grub-2.14.tar.xz",
+      "disposition": "retain",
+      "name": "grub-2.14.tar.xz",
+      "reason": "Retain the pinned book input.",
+      "url": "https://ftp.gnu.org/gnu/grub/grub-2.14.tar.xz"
+    },
+    {
+      "authentication": {
+        "method": "unresolved",
+        "reason": "No publisher SHA256 or signature verified yet."
+      },
+      "baseline_name": "gzip-1.14.tar.xz",
+      "book_md5": "4bf5a10f287501ee8e8ebe00ef62b2c2",
+      "book_url": "https://ftpmirror.gnu.org/gzip/gzip-1.14.tar.xz",
+      "disposition": "retain",
+      "name": "gzip-1.14.tar.xz",
+      "reason": "Retain the pinned book input.",
+      "url": "https://ftp.gnu.org/gnu/gzip/gzip-1.14.tar.xz"
+    },
+    {
+      "authentication": {
+        "material": {
+          "path": "github-Mic92-iana-etc-20260805.json",
+          "sha256": "2c47592c50300a713cec76c9f467e9cd9eee20776c5be812e37d57bccfadec58",
+          "url": "https://api.github.com/repos/Mic92/iana-etc/releases/tags/20260805"
+        },
+        "method": "https-published-sha256",
+        "selection": {
+          "format": "github-release",
+          "tag": "20260805"
+        }
+      },
+      "baseline_name": "iana-etc-20260805.tar.gz",
+      "book_md5": "f6d2619cfac3a68f91392e28fe4067c3",
+      "book_url": "https://github.com/Mic92/iana-etc/releases/download/20260805/iana-etc-20260805.tar.gz",
+      "disposition": "retain",
+      "name": "iana-etc-20260805.tar.gz",
+      "reason": "Retain the pinned book input.",
+      "sha256": "29270860664e324107537f32ea476a333ca52d71b59c74bc06ecc3b0fa9cf490",
+      "url": "https://github.com/Mic92/iana-etc/releases/download/20260805/iana-etc-20260805.tar.gz"
+    },
+    {
+      "authentication": {
+        "method": "unresolved",
+        "reason": "No publisher SHA256 or signature verified yet."
+      },
+      "baseline_name": "inetutils-2.8.tar.gz",
+      "book_md5": "f0f9ad13045a67da9c882148f9efae6b",
+      "book_url": "https://ftpmirror.gnu.org/inetutils/inetutils-2.8.tar.gz",
+      "disposition": "retain",
+      "name": "inetutils-2.8.tar.gz",
+      "reason": "Retain the pinned book input.",
+      "url": "https://ftp.gnu.org/gnu/inetutils/inetutils-2.8.tar.gz"
+    },
+    {
+      "authentication": {
+        "material": {
+          "path": "kernel-linux-utils-net-iproute2-sha256sums.asc",
+          "sha256": "9d7af0551a3156e4a6f24074ab8d7881045ee6d598de67d9e7156a0e73d27db4",
+          "url": "https://www.kernel.org/pub/linux/utils/net/iproute2/sha256sums.asc"
+        },
+        "method": "https-published-sha256",
+        "selection": {
+          "format": "sha256sum"
+        }
+      },
+      "baseline_name": "iproute2-7.1.0.tar.xz",
+      "book_md5": "4f322144fb9a0877c5f9ef71b2f11180",
+      "book_url": "https://www.kernel.org/pub/linux/utils/net/iproute2/iproute2-7.1.0.tar.xz",
+      "disposition": "retain",
+      "name": "iproute2-7.1.0.tar.xz",
+      "reason": "Retain the pinned book input.",
+      "sha256": "fd9fa1b95809417157ca83dd72957e3261bdbce896353cb936f80af0b33a4b5c",
+      "url": "https://www.kernel.org/pub/linux/utils/net/iproute2/iproute2-7.1.0.tar.xz"
+    },
+    {
+      "authentication": {
+        "material": {
+          "path": "pypi-jinja2-3.1.6.json",
+          "sha256": "1bc757d7065f3e67d3a49e72ebc731d0774055575732592eede9820c136329cc",
+          "url": "https://pypi.org/pypi/jinja2/3.1.6/json"
+        },
+        "method": "https-published-sha256",
+        "selection": {
+          "format": "pypi-release",
+          "version": "3.1.6"
+        }
+      },
+      "baseline_name": "jinja2-3.1.6.tar.gz",
+      "book_md5": "66d4c25ff43d1deaf9637ccda523dec8",
+      "book_url": "https://pypi.org/packages/source/J/Jinja2/jinja2-3.1.6.tar.gz",
+      "disposition": "retain",
+      "name": "jinja2-3.1.6.tar.gz",
+      "reason": "Retain the pinned book input.",
+      "sha256": "0137fb05990d35f1275a587e9aee6d56da821fc83491a0fb838183be43f66d6d",
+      "url": "https://pypi.org/packages/source/J/Jinja2/jinja2-3.1.6.tar.gz"
+    },
+    {
+      "authentication": {
+        "material": {
+          "path": "kernel-linux-utils-kbd-sha256sums.asc",
+          "sha256": "3149ebc1204f97049a8f38aee42bd8cdb2c9b1ecfe278b3d74c775746b824407",
+          "url": "https://www.kernel.org/pub/linux/utils/kbd/sha256sums.asc"
+        },
+        "method": "https-published-sha256",
+        "selection": {
+          "format": "sha256sum"
+        }
+      },
+      "baseline_name": "kbd-2.10.0.tar.xz",
+      "book_md5": "77ff950dfa4c34fdf41125547bfa831a",
+      "book_url": "https://www.kernel.org/pub/linux/utils/kbd/kbd-2.10.0.tar.xz",
+      "disposition": "retain",
+      "name": "kbd-2.10.0.tar.xz",
+      "reason": "Retain the pinned book input.",
+      "sha256": "6e5ca4f8d76ee9e3a8db700b667f13e12aac9933828a64e1aaad93d26be9b479",
+      "url": "https://www.kernel.org/pub/linux/utils/kbd/kbd-2.10.0.tar.xz"
+    },
+    {
+      "authentication": {
+        "material": {
+          "path": "kernel-linux-utils-kernel-kmod-sha256sums.asc",
+          "sha256": "71476e88400003e244f2a73f39efd91804e095d76d9cfe4aa6eb7932b31110e8",
+          "url": "https://www.kernel.org/pub/linux/utils/kernel/kmod/sha256sums.asc"
+        },
+        "method": "https-published-sha256",
+        "selection": {
+          "format": "sha256sum"
+        }
+      },
+      "baseline_name": "kmod-34.2.tar.xz",
+      "book_md5": "36f2cc483745e81ede3406fa55e1065a",
+      "book_url": "https://www.kernel.org/pub/linux/utils/kernel/kmod/kmod-34.2.tar.xz",
+      "disposition": "retain",
+      "name": "kmod-34.2.tar.xz",
+      "reason": "Retain the pinned book input.",
+      "sha256": "5a5d5073070cc7e0c7a7a3c6ec2a0e1780850c8b47b3e3892226b93ffcb9cb54",
+      "url": "https://www.kernel.org/pub/linux/utils/kernel/kmod/kmod-34.2.tar.xz"
+    },
+    {
+      "authentication": {
+        "method": "unresolved",
+        "reason": "No publisher SHA256 or signature verified yet."
+      },
+      "baseline_name": "less-704.tar.gz",
+      "book_md5": "c4c9eea5b1862783b078c67ca67c9185",
+      "book_url": "https://www.greenwoodsoftware.com/less/less-704.tar.gz",
+      "disposition": "retain",
+      "name": "less-704.tar.gz",
+      "reason": "Retain the pinned book input.",
+      "url": "https://www.greenwoodsoftware.com/less/less-704.tar.gz"
+    },
+    {
+      "authentication": {
+        "material": {
+          "path": "kernel-linux-libs-security-linux-privs-libcap2-sha256sums.asc",
+          "sha256": "fa84c9906cc850a744733a7a57427c011f9a9ba1c7e924d4a4a73dc8a45275f6",
+          "url": "https://www.kernel.org/pub/linux/libs/security/linux-privs/libcap2/sha256sums.asc"
+        },
+        "method": "https-published-sha256",
+        "selection": {
+          "format": "sha256sum"
+        }
+      },
+      "baseline_name": "libcap-2.78.tar.xz",
+      "book_md5": "0ff11419aa4813c0a0f84fe67bf3b39e",
+      "book_url": "https://www.kernel.org/pub/linux/libs/security/linux-privs/libcap2/libcap-2.78.tar.xz",
+      "disposition": "retain",
+      "name": "libcap-2.78.tar.xz",
+      "reason": "Retain the pinned book input.",
+      "sha256": "0d621e562fd932ccf67b9660fb018e468a683d7b827541df27813228c996bb11",
+      "url": "https://www.kernel.org/pub/linux/libs/security/linux-privs/libcap2/libcap-2.78.tar.xz"
+    },
+    {
+      "authentication": {
+        "material": {
+          "path": "github-libffi-libffi-v3.8.0.json",
+          "sha256": "0af3ff1ae9aa8c6c8bf717284b5c59b430a9f209a2d36ba8cb5ec7d4d9d28a96",
+          "url": "https://api.github.com/repos/libffi/libffi/releases/tags/v3.8.0"
+        },
+        "method": "https-published-sha256",
+        "selection": {
+          "format": "github-release",
+          "tag": "v3.8.0"
+        }
+      },
+      "baseline_name": "libffi-3.8.0.tar.gz",
+      "book_md5": "96fe46f2a7bb82559b35a268a2c000ba",
+      "book_url": "https://github.com/libffi/libffi/releases/download/v3.8.0/libffi-3.8.0.tar.gz",
+      "disposition": "retain",
+      "name": "libffi-3.8.0.tar.gz",
+      "reason": "Retain the pinned book input.",
+      "sha256": "7da3e2d9a171eb0a038f592ecad3ff2bb2550f3496d87b3b29ad0cf4430c0db4",
+      "url": "https://github.com/libffi/libffi/releases/download/v3.8.0/libffi-3.8.0.tar.gz"
+    },
+    {
+      "authentication": {
+        "method": "unresolved",
+        "reason": "No publisher SHA256 or signature verified yet."
+      },
+      "baseline_name": "libpipeline-1.5.8.tar.gz",
+      "book_md5": "17ac6969b2015386bcb5d278a08a40b5",
+      "book_url": "https://download.savannah.gnu.org/releases/libpipeline/libpipeline-1.5.8.tar.gz",
+      "disposition": "retain",
+      "name": "libpipeline-1.5.8.tar.gz",
+      "reason": "Retain the pinned book input.",
+      "url": "https://download.savannah.gnu.org/releases/libpipeline/libpipeline-1.5.8.tar.gz"
+    },
+    {
+      "authentication": {
+        "method": "unresolved",
+        "reason": "No publisher SHA256 or signature verified yet."
+      },
+      "baseline_name": "libtool-2.6.2.tar.xz",
+      "book_md5": "87743862e6cabfb9e76651bc64e31e5c",
+      "book_url": "https://ftpmirror.gnu.org/libtool/libtool-2.6.2.tar.xz",
+      "disposition": "retain",
+      "name": "libtool-2.6.2.tar.xz",
+      "reason": "Retain the pinned book input.",
+      "url": "https://ftp.gnu.org/gnu/libtool/libtool-2.6.2.tar.xz"
+    },
+    {
+      "authentication": {
+        "material": {
+          "path": "github-besser82-libxcrypt-v4.5.2.json",
+          "sha256": "5ba2f3fe09ca83c3d8af820eba22e56ee9450a045db22d0002e6aa4a6f6fdb24",
+          "url": "https://api.github.com/repos/besser82/libxcrypt/releases/tags/v4.5.2"
+        },
+        "method": "https-published-sha256",
+        "selection": {
+          "format": "github-release",
+          "tag": "v4.5.2"
+        }
+      },
+      "baseline_name": "libxcrypt-4.5.2.tar.xz",
+      "book_md5": "25e888919ddcd153a07daa95224fa436",
+      "book_url": "https://github.com/besser82/libxcrypt/releases/download/v4.5.2/libxcrypt-4.5.2.tar.xz",
+      "disposition": "retain",
+      "name": "libxcrypt-4.5.2.tar.xz",
+      "reason": "Retain the pinned book input.",
+      "sha256": "71513a31c01a428bccd5367a32fd95f115d6dac50fb5b60c779d5c7942aec071",
+      "url": "https://github.com/besser82/libxcrypt/releases/download/v4.5.2/libxcrypt-4.5.2.tar.xz"
+    },
+    {
+      "authentication": {
+        "material": {
+          "path": "kernel-linux-kernel-v6.x-sha256sums.asc",
+          "sha256": "09057481a7f58c55910a7194d57ee9247bbbbf81246f720263c3666598ff4b44",
+          "url": "https://cdn.kernel.org/pub/linux/kernel/v6.x/sha256sums.asc"
+        },
+        "method": "https-published-sha256",
+        "selection": {
+          "format": "sha256sum"
+        }
+      },
+      "baseline_name": "linux-7.1.8.tar.xz",
+      "book_md5": "807584f564568b40162e9e4a72bf191f",
+      "book_url": "https://www.kernel.org/pub/linux/kernel/v7.x/linux-7.1.8.tar.xz",
+      "disposition": "replace",
+      "name": "linux-6.18.60.tar.xz",
+      "reason": "Selected maintained longterm branch for native kernel and API headers; native profile integration remains required.",
+      "sha256": "3c2f44ef6acc021a7ad444d9a2e6ec1ef488ff09368793d0004a6080f69d621e",
+      "url": "https://cdn.kernel.org/pub/linux/kernel/v6.x/linux-6.18.60.tar.xz"
+    },
+    {
+      "authentication": {
+        "method": "unresolved",
+        "reason": "No publisher SHA256 or signature verified yet."
+      },
+      "baseline_name": "lz4-1.10.0.tar.gz",
+      "book_md5": "dead9f5f1966d9ae56e1e32761e4e675",
+      "book_url": "https://github.com/lz4/lz4/releases/download/v1.10.0/lz4-1.10.0.tar.gz",
+      "disposition": "retain",
+      "name": "lz4-1.10.0.tar.gz",
+      "reason": "Retain the pinned book input.",
+      "url": "https://github.com/lz4/lz4/releases/download/v1.10.0/lz4-1.10.0.tar.gz"
+    },
+    {
+      "authentication": {
+        "method": "unresolved",
+        "reason": "No publisher SHA256 or signature verified yet."
+      },
+      "baseline_name": "m4-1.4.21.tar.xz",
+      "book_md5": "8051eef7239b2f187791f2ab0034d6b7",
+      "book_url": "https://ftpmirror.gnu.org/m4/m4-1.4.21.tar.xz",
+      "disposition": "retain",
+      "name": "m4-1.4.21.tar.xz",
+      "reason": "Retain the pinned book input.",
+      "url": "https://ftp.gnu.org/gnu/m4/m4-1.4.21.tar.xz"
+    },
+    {
+      "authentication": {
+        "method": "unresolved",
+        "reason": "No publisher SHA256 or signature verified yet."
+      },
+      "baseline_name": "make-4.4.1.tar.gz",
+      "book_md5": "c8469a3713cbbe04d955d4ae4be23eeb",
+      "book_url": "https://ftpmirror.gnu.org/make/make-4.4.1.tar.gz",
+      "disposition": "retain",
+      "name": "make-4.4.1.tar.gz",
+      "reason": "Retain the pinned book input.",
+      "url": "https://ftp.gnu.org/gnu/make/make-4.4.1.tar.gz"
+    },
+    {
+      "authentication": {
+        "method": "unresolved",
+        "reason": "No publisher SHA256 or signature verified yet."
+      },
+      "baseline_name": "man-db-2.13.1.tar.xz",
+      "book_md5": "b6335533cbeac3b24cd7be31fdee8c83",
+      "book_url": "https://download.savannah.gnu.org/releases/man-db/man-db-2.13.1.tar.xz",
+      "disposition": "retain",
+      "name": "man-db-2.13.1.tar.xz",
+      "reason": "Retain the pinned book input.",
+      "url": "https://download.savannah.gnu.org/releases/man-db/man-db-2.13.1.tar.xz"
+    },
+    {
+      "authentication": {
+        "material": {
+          "path": "kernel-linux-docs-man-pages-sha256sums.asc",
+          "sha256": "db9ceffbb06cc7c06acf69b05598916c51fd6eb6fd36bd710573c9355cb373f3",
+          "url": "https://www.kernel.org/pub/linux/docs/man-pages/sha256sums.asc"
+        },
+        "method": "https-published-sha256",
+        "selection": {
+          "format": "sha256sum"
+        }
+      },
+      "baseline_name": "man-pages-6.18.tar.xz",
+      "book_md5": "44915a91e4a28161dc421636a193fb3a",
+      "book_url": "https://www.kernel.org/pub/linux/docs/man-pages/man-pages-6.18.tar.xz",
+      "disposition": "retain",
+      "name": "man-pages-6.18.tar.xz",
+      "reason": "Retain the pinned book input.",
+      "sha256": "c934fadc8b59748c68227a34f6581d2ddf8282b73cdcd52546c8cd88b74b24d1",
+      "url": "https://www.kernel.org/pub/linux/docs/man-pages/man-pages-6.18.tar.xz"
+    },
+    {
+      "authentication": {
+        "material": {
+          "path": "pypi-markupsafe-3.0.3.json",
+          "sha256": "0de4f18187d0fc2318de8504c4178f2297bc7cfa7a55adfb6d013190aff8cff4",
+          "url": "https://pypi.org/pypi/markupsafe/3.0.3/json"
+        },
+        "method": "https-published-sha256",
+        "selection": {
+          "format": "pypi-release",
+          "version": "3.0.3"
+        }
+      },
+      "baseline_name": "markupsafe-3.0.3.tar.gz",
+      "book_md5": "13a73126d25afa72a1ff0daed072f5fe",
+      "book_url": "https://pypi.org/packages/source/M/MarkupSafe/markupsafe-3.0.3.tar.gz",
+      "disposition": "retain",
+      "name": "markupsafe-3.0.3.tar.gz",
+      "reason": "Retain the pinned book input.",
+      "sha256": "722695808f4b6457b320fdc131280796bdceb04ab50fe1795cd540799ebe1698",
+      "url": "https://pypi.org/packages/source/M/MarkupSafe/markupsafe-3.0.3.tar.gz"
+    },
+    {
+      "authentication": {
+        "material": {
+          "path": "github-mesonbuild-meson-1.12.0.json",
+          "sha256": "1efabbf770bc1eb314b5bec217fdd6e22561c5c19b7a0f19d515f20bf99a8dc7",
+          "url": "https://api.github.com/repos/mesonbuild/meson/releases/tags/1.12.0"
+        },
+        "method": "https-published-sha256",
+        "selection": {
+          "format": "github-release",
+          "tag": "1.12.0"
+        }
+      },
+      "baseline_name": "meson-1.12.0.tar.gz",
+      "book_md5": "9f943c267d63016012efcb0f31ecdd7d",
+      "book_url": "https://github.com/mesonbuild/meson/releases/download/1.12.0/meson-1.12.0.tar.gz",
+      "disposition": "retain",
+      "name": "meson-1.12.0.tar.gz",
+      "reason": "Retain the pinned book input.",
+      "sha256": "88afe0c20e52030218924ac37d0c81c59b4b5f3ae3752c8c6d7470c7d365886c",
+      "url": "https://github.com/mesonbuild/meson/releases/download/1.12.0/meson-1.12.0.tar.gz"
+    },
+    {
+      "authentication": {
+        "method": "unresolved",
+        "reason": "No publisher SHA256 or signature verified yet."
+      },
+      "baseline_name": "mpc-1.4.1.tar.xz",
+      "book_md5": "40c5fba305125279ea46041160e81daf",
+      "book_url": "https://ftpmirror.gnu.org/mpc/mpc-1.4.1.tar.xz",
+      "disposition": "retain",
+      "name": "mpc-1.4.1.tar.xz",
+      "reason": "Retain the pinned book input.",
+      "url": "https://ftp.gnu.org/gnu/mpc/mpc-1.4.1.tar.xz"
+    },
+    {
+      "authentication": {
+        "method": "unresolved",
+        "reason": "No publisher SHA256 or signature verified yet."
+      },
+      "baseline_name": "mpdecimal-4.0.1.tar.gz",
+      "book_md5": "3d4412579b1edc1047efab151889cca9",
+      "book_url": "https://www.bytereef.org/software/mpdecimal/releases/mpdecimal-4.0.1.tar.gz",
+      "disposition": "retain",
+      "name": "mpdecimal-4.0.1.tar.gz",
+      "reason": "Retain the pinned book input.",
+      "url": "https://www.bytereef.org/software/mpdecimal/releases/mpdecimal-4.0.1.tar.gz"
+    },
+    {
+      "authentication": {
+        "method": "unresolved",
+        "reason": "No publisher SHA256 or signature verified yet."
+      },
+      "baseline_name": "mpfr-4.2.2.tar.xz",
+      "book_md5": "7c32c39b8b6e3ae85f25156228156061",
+      "book_url": "https://ftpmirror.gnu.org/mpfr/mpfr-4.2.2.tar.xz",
+      "disposition": "retain",
+      "name": "mpfr-4.2.2.tar.xz",
+      "reason": "Retain the pinned book input.",
+      "url": "https://ftp.gnu.org/gnu/mpfr/mpfr-4.2.2.tar.xz"
+    },
+    {
+      "authentication": {
+        "method": "unresolved",
+        "reason": "No publisher SHA256 or signature verified yet."
+      },
+      "baseline_name": "ncurses-6.6.tar.gz",
+      "book_md5": "dd45bf6854430af403452a7a6a40652c",
+      "book_url": "https://invisible-mirror.net/archives/ncurses/ncurses-6.6.tar.gz",
+      "disposition": "retain",
+      "name": "ncurses-6.6.tar.gz",
+      "reason": "Retain the pinned book input.",
+      "url": "https://invisible-mirror.net/archives/ncurses/ncurses-6.6.tar.gz"
+    },
+    {
+      "authentication": {
+        "method": "unresolved",
+        "reason": "No publisher SHA256 or signature verified yet."
+      },
+      "baseline_name": "ninja-1.13.2.tar.gz",
+      "book_md5": "76c00637fde44909cd7d56f8d73f2042",
+      "book_url": "https://github.com/ninja-build/ninja/archive/v1.13.2/ninja-1.13.2.tar.gz",
+      "disposition": "retain",
+      "name": "ninja-1.13.2.tar.gz",
+      "reason": "Retain the pinned book input.",
+      "url": "https://github.com/ninja-build/ninja/archive/v1.13.2/ninja-1.13.2.tar.gz"
+    },
+    {
+      "authentication": {
+        "material": {
+          "path": "github-openssl-openssl-openssl-4.0.3.json",
+          "sha256": "eaeb828e9453406ecd637d26b17d169f78fde0360a01de7168b62a8095b22c60",
+          "url": "https://api.github.com/repos/openssl/openssl/releases/tags/openssl-4.0.3"
+        },
+        "method": "https-published-sha256",
+        "selection": {
+          "format": "github-release",
+          "tag": "openssl-4.0.3"
+        }
+      },
+      "baseline_name": "openssl-4.0.1.tar.gz",
+      "book_md5": "07e316afe26b61e72206b81706b497bb",
+      "book_url": "https://github.com/openssl/openssl/releases/download/openssl-4.0.1/openssl-4.0.1.tar.gz",
+      "disposition": "replace",
+      "name": "openssl-4.0.3.tar.gz",
+      "reason": "LFS sa-13.1-021 and sa-13.1-046 require fixes through OpenSSL 4.0.3.",
+      "sha256": "325b5c806167c13b40b1ffeadfe0248197c00eccc4cf123ec1e28d2d2fd216d9",
+      "url": "https://github.com/openssl/openssl/releases/download/openssl-4.0.3/openssl-4.0.3.tar.gz"
+    },
+    {
+      "authentication": {
+        "material": {
+          "path": "pypi-packaging-26.3.json",
+          "sha256": "4f190d2f0b312b3086058cee64ab4333bf3ce67fb78b4c2bdb43899049b29f4d",
+          "url": "https://pypi.org/pypi/packaging/26.3/json"
+        },
+        "method": "https-published-sha256",
+        "selection": {
+          "format": "pypi-release",
+          "version": "26.3"
+        }
+      },
+      "baseline_name": "packaging-26.3.tar.gz",
+      "book_md5": "c6809ec56986682ceffe573b8778a1ce",
+      "book_url": "https://files.pythonhosted.org/packages/source/p/packaging/packaging-26.3.tar.gz",
+      "disposition": "retain",
+      "name": "packaging-26.3.tar.gz",
+      "reason": "Retain the pinned book input.",
+      "sha256": "94edc256424af38762eb31306eed28beb9f0efc50a8837492c9d6fd6004aed79",
+      "url": "https://files.pythonhosted.org/packages/source/p/packaging/packaging-26.3.tar.gz"
+    },
+    {
+      "authentication": {
+        "method": "unresolved",
+        "reason": "No publisher SHA256 or signature verified yet."
+      },
+      "baseline_name": "patch-2.8.tar.xz",
+      "book_md5": "149327a021d41c8f88d034eab41c039f",
+      "book_url": "https://ftpmirror.gnu.org/patch/patch-2.8.tar.xz",
+      "disposition": "retain",
+      "name": "patch-2.8.tar.xz",
+      "reason": "Retain the pinned book input.",
+      "url": "https://ftp.gnu.org/gnu/patch/patch-2.8.tar.xz"
+    },
+    {
+      "authentication": {
+        "material": {
+          "path": "github-PCRE2Project-pcre2-pcre2-10.47.json",
+          "sha256": "80cf6d354a5df18b885e3b2dd6ebe2aaa6eb443a1c2d2c4932d22e0ea972e66c",
+          "url": "https://api.github.com/repos/PCRE2Project/pcre2/releases/tags/pcre2-10.47"
+        },
+        "method": "https-published-sha256",
+        "selection": {
+          "format": "github-release",
+          "tag": "pcre2-10.47"
+        }
+      },
+      "baseline_name": "pcre2-10.47.tar.bz2",
+      "book_md5": "aded5840ab5a7d772dd4e16fc294b665",
+      "book_url": "https://github.com/PCRE2Project/pcre2/releases/download/pcre2-10.47/pcre2-10.47.tar.bz2",
+      "disposition": "retain",
+      "name": "pcre2-10.47.tar.bz2",
+      "reason": "Retain the pinned book input.",
+      "sha256": "47fe8c99461250d42f89e6e8fdaeba9da057855d06eb7fc08d9ca03fd08d7bc7",
+      "url": "https://github.com/PCRE2Project/pcre2/releases/download/pcre2-10.47/pcre2-10.47.tar.bz2"
+    },
+    {
+      "authentication": {
+        "method": "unresolved",
+        "reason": "No publisher SHA256 or signature verified yet."
+      },
+      "baseline_name": "perl-5.44.0.tar.xz",
+      "book_md5": "55761cf1543af326492fd194647796d1",
+      "book_url": "https://www.cpan.org/src/5.0/perl-5.44.0.tar.xz",
+      "disposition": "retain",
+      "name": "perl-5.44.0.tar.xz",
+      "reason": "Retain the pinned book input.",
+      "url": "https://www.cpan.org/src/5.0/perl-5.44.0.tar.xz"
+    },
+    {
+      "authentication": {
+        "method": "unresolved",
+        "reason": "No publisher SHA256 or signature verified yet."
+      },
+      "baseline_name": "pkgconf-3.0.5.tar.xz",
+      "book_md5": "18c528161e6b04ae36dc981af8c4d97e",
+      "book_url": "https://distfiles.ariadne.space/pkgconf/pkgconf-3.0.5.tar.xz",
+      "disposition": "retain",
+      "name": "pkgconf-3.0.5.tar.xz",
+      "reason": "Retain the pinned book input.",
+      "url": "https://distfiles.ariadne.space/pkgconf/pkgconf-3.0.5.tar.xz"
+    },
+    {
+      "authentication": {
+        "method": "unresolved",
+        "reason": "No publisher SHA256 or signature verified yet."
+      },
+      "baseline_name": "procps-ng-4.0.7.tar.xz",
+      "book_md5": "d47bdda51c4bd595a1ab21b8e538bcb3",
+      "book_url": "https://sourceforge.net/projects/procps-ng/files/Production/procps-ng-4.0.7.tar.xz",
+      "disposition": "retain",
+      "name": "procps-ng-4.0.7.tar.xz",
+      "reason": "Retain the pinned book input.",
+      "url": "https://sourceforge.net/projects/procps-ng/files/Production/procps-ng-4.0.7.tar.xz"
+    },
+    {
+      "authentication": {
+        "method": "unresolved",
+        "reason": "No publisher SHA256 or signature verified yet."
+      },
+      "baseline_name": "psmisc-23.7.tar.xz",
+      "book_md5": "53eae841735189a896d614cba440eb10",
+      "book_url": "https://sourceforge.net/projects/psmisc/files/psmisc/psmisc-23.7.tar.xz",
+      "disposition": "retain",
+      "name": "psmisc-23.7.tar.xz",
+      "reason": "Retain the pinned book input.",
+      "url": "https://sourceforge.net/projects/psmisc/files/psmisc/psmisc-23.7.tar.xz"
+    },
+    {
+      "authentication": {
+        "method": "unresolved",
+        "reason": "No publisher SHA256 or signature verified yet."
+      },
+      "baseline_name": "Python-3.14.7.tar.xz",
+      "book_md5": "a4c4c2991b4126e227073c2d9445f432",
+      "book_url": "https://www.python.org/ftp/python/3.14.7/Python-3.14.7.tar.xz",
+      "disposition": "replace",
+      "name": "Python-3.14.10.tar.xz",
+      "reason": "Latest security-fixed patch release in the book's existing Python minor branch; covers 3.14.8, 3.14.9 and 3.14.10 fixes without a minor ABI change.",
+      "url": "https://www.python.org/ftp/python/3.14.10/Python-3.14.10.tar.xz"
+    },
+    {
+      "authentication": {
+        "method": "unresolved",
+        "reason": "No publisher SHA256 or signature verified yet."
+      },
+      "baseline_name": "python-3.14.7-docs-html.tar.bz2",
+      "book_md5": "bdf55dddc02a76961d61730f06d18849",
+      "book_url": "https://www.python.org/ftp/python/doc/3.14.7/python-3.14.7-docs-html.tar.bz2",
+      "disposition": "replace",
+      "name": "python-3.14.10-docs-html.tar.bz2",
+      "reason": "Documentation must match selected Python patch release.",
+      "url": "https://www.python.org/ftp/python/doc/3.14.10/python-3.14.10-docs-html.tar.bz2"
+    },
+    {
+      "authentication": {
+        "method": "unresolved",
+        "reason": "No publisher SHA256 or signature verified yet."
+      },
+      "baseline_name": "readline-8.3.tar.gz",
+      "book_md5": "25a73bfb2a3ad7146c5e9d4408d9f6cd",
+      "book_url": "https://ftpmirror.gnu.org/readline/readline-8.3.tar.gz",
+      "disposition": "retain",
+      "name": "readline-8.3.tar.gz",
+      "reason": "Retain the pinned book input.",
+      "url": "https://ftp.gnu.org/gnu/readline/readline-8.3.tar.gz"
+    },
+    {
+      "authentication": {
+        "method": "unresolved",
+        "reason": "No publisher SHA256 or signature verified yet."
+      },
+      "baseline_name": "sed-4.10.tar.xz",
+      "book_md5": "c70dc5372db95c816442ffedf77a0d0f",
+      "book_url": "https://ftpmirror.gnu.org/sed/sed-4.10.tar.xz",
+      "disposition": "retain",
+      "name": "sed-4.10.tar.xz",
+      "reason": "Retain the pinned book input.",
+      "url": "https://ftp.gnu.org/gnu/sed/sed-4.10.tar.xz"
+    },
+    {
+      "authentication": {
+        "material": {
+          "path": "pypi-setuptools-84.0.0.json",
+          "sha256": "fc55c3c123a680b2f77f3071bc028741023be1c67f076b878907e5a3823b2dbd",
+          "url": "https://pypi.org/pypi/setuptools/84.0.0/json"
+        },
+        "method": "https-published-sha256",
+        "selection": {
+          "format": "pypi-release",
+          "version": "84.0.0"
+        }
+      },
+      "baseline_name": "setuptools-84.0.0.tar.gz",
+      "book_md5": "c6919a4b0862ca30604559e163a6cce9",
+      "book_url": "https://pypi.org/packages/source/s/setuptools/setuptools-84.0.0.tar.gz",
+      "disposition": "retain",
+      "name": "setuptools-84.0.0.tar.gz",
+      "reason": "Retain the pinned book input.",
+      "sha256": "f4695c21257f0d9b537ec2692c941d02ee143b7cc1276941349a546573b2ef73",
+      "url": "https://pypi.org/packages/source/s/setuptools/setuptools-84.0.0.tar.gz"
+    },
+    {
+      "authentication": {
+        "material": {
+          "path": "github-shadow-maint-shadow-4.20.2.json",
+          "sha256": "202ef4c12569c1b551626b01afc52078e315cd8e2d01ec381075085246b3ca6c",
+          "url": "https://api.github.com/repos/shadow-maint/shadow/releases/tags/4.20.2"
+        },
+        "method": "https-published-sha256",
+        "selection": {
+          "format": "github-release",
+          "tag": "4.20.2"
+        }
+      },
+      "baseline_name": "shadow-4.20.2.tar.xz",
+      "book_md5": "f52e717bd330818c67bd57c897ec5a8e",
+      "book_url": "https://github.com/shadow-maint/shadow/releases/download/4.20.2/shadow-4.20.2.tar.xz",
+      "disposition": "retain",
+      "name": "shadow-4.20.2.tar.xz",
+      "reason": "Retain the pinned book input.",
+      "sha256": "b89f432b75ae55a2d852b446d0365484795fdf533ab97d550e325fa15594a224",
+      "url": "https://github.com/shadow-maint/shadow/releases/download/4.20.2/shadow-4.20.2.tar.xz"
+    },
+    {
+      "authentication": {
+        "method": "unresolved",
+        "reason": "No publisher SHA256 or signature verified yet."
+      },
+      "baseline_name": "sqlite-autoconf-3530400.tar.gz",
+      "book_md5": "ee54db5a5b04e77d4883ce0c051a1eba",
+      "book_url": "https://sqlite.org/2026/sqlite-autoconf-3530400.tar.gz",
+      "disposition": "retain",
+      "name": "sqlite-autoconf-3530400.tar.gz",
+      "reason": "Retain the pinned book input.",
+      "url": "https://sqlite.org/2026/sqlite-autoconf-3530400.tar.gz"
+    },
+    {
+      "authentication": {
+        "method": "unresolved",
+        "reason": "No publisher SHA256 or signature verified yet."
+      },
+      "baseline_name": "sqlite-doc-3530400.zip",
+      "book_md5": "2cd5b168d0e5c5ae2b99beb3a4269a73",
+      "book_url": "https://sqlite.org/2026/sqlite-doc-3530400.zip",
+      "disposition": "retain",
+      "name": "sqlite-doc-3530400.zip",
+      "reason": "Retain the pinned book input.",
+      "url": "https://sqlite.org/2026/sqlite-doc-3530400.zip"
+    },
+    {
+      "authentication": {
+        "method": "unresolved",
+        "reason": "No publisher SHA256 or signature verified yet."
+      },
+      "baseline_name": "systemd-261.2.tar.gz",
+      "book_md5": "e3f04ccc83a28ec5e80c5432bb8329f5",
+      "book_url": "https://github.com/systemd/systemd/archive/v261.2/systemd-261.2.tar.gz",
+      "disposition": "retain",
+      "name": "systemd-261.2.tar.gz",
+      "reason": "Retain the pinned book input.",
+      "url": "https://github.com/systemd/systemd/archive/v261.2/systemd-261.2.tar.gz"
+    },
+    {
+      "authentication": {
+        "method": "unresolved",
+        "reason": "No publisher SHA256 or signature verified yet."
+      },
+      "baseline_name": "systemd-man-pages-261.2.tar.xz",
+      "book_md5": "4c5533c1a2d0921dd4c5b5e6b8902570",
+      "book_url": "https://anduin.linuxfromscratch.org/LFS/systemd-man-pages-261.2.tar.xz",
+      "disposition": "retain",
+      "name": "systemd-man-pages-261.2.tar.xz",
+      "reason": "Retain the pinned book input.",
+      "url": "https://anduin.linuxfromscratch.org/LFS/systemd-man-pages-261.2.tar.xz"
+    },
+    {
+      "authentication": {
+        "method": "unresolved",
+        "reason": "No publisher SHA256 or signature verified yet."
+      },
+      "baseline_name": "tar-1.35.tar.xz",
+      "book_md5": "a2d8042658cfd8ea939e6d911eaf4152",
+      "book_url": "https://ftpmirror.gnu.org/tar/tar-1.35.tar.xz",
+      "disposition": "retain",
+      "name": "tar-1.35.tar.xz",
+      "reason": "Retain the pinned book input.",
+      "url": "https://ftp.gnu.org/gnu/tar/tar-1.35.tar.xz"
+    },
+    {
+      "authentication": {
+        "method": "unresolved",
+        "reason": "No publisher SHA256 or signature verified yet."
+      },
+      "baseline_name": "tcl8.6.18-src.tar.gz",
+      "book_md5": "acfe0c9f7d0c626ecf026e834a888da6",
+      "book_url": "https://downloads.sourceforge.net/tcl/tcl8.6.18-src.tar.gz",
+      "disposition": "retain",
+      "name": "tcl8.6.18-src.tar.gz",
+      "reason": "Retain the pinned book input.",
+      "url": "https://downloads.sourceforge.net/tcl/tcl8.6.18-src.tar.gz"
+    },
+    {
+      "authentication": {
+        "method": "unresolved",
+        "reason": "No publisher SHA256 or signature verified yet."
+      },
+      "baseline_name": "tcl8.6.18-html.tar.gz",
+      "book_md5": "54d1ff0f5eee4e81e5cdaa4baa343397",
+      "book_url": "https://downloads.sourceforge.net/tcl/tcl8.6.18-html.tar.gz",
+      "disposition": "retain",
+      "name": "tcl8.6.18-html.tar.gz",
+      "reason": "Retain the pinned book input.",
+      "url": "https://downloads.sourceforge.net/tcl/tcl8.6.18-html.tar.gz"
+    },
+    {
+      "authentication": {
+        "method": "unresolved",
+        "reason": "No publisher SHA256 or signature verified yet."
+      },
+      "baseline_name": "texinfo-7.3.tar.xz",
+      "book_md5": "915a09fcdfc2bf0f5ecf9e556d5698ff",
+      "book_url": "https://ftpmirror.gnu.org/texinfo/texinfo-7.3.tar.xz",
+      "disposition": "retain",
+      "name": "texinfo-7.3.tar.xz",
+      "reason": "Retain the pinned book input.",
+      "url": "https://ftp.gnu.org/gnu/texinfo/texinfo-7.3.tar.xz"
+    },
+    {
+      "authentication": {
+        "method": "unresolved",
+        "reason": "No publisher SHA256 or signature verified yet."
+      },
+      "baseline_name": "tzdata2026c.tar.gz",
+      "book_md5": "bff7174205cefab793e3b24271ef2f45",
+      "book_url": "https://www.iana.org/time-zones/repository/releases/tzdata2026c.tar.gz",
+      "disposition": "retain",
+      "name": "tzdata2026c.tar.gz",
+      "reason": "Retain the pinned book input.",
+      "url": "https://www.iana.org/time-zones/repository/releases/tzdata2026c.tar.gz"
+    },
+    {
+      "authentication": {
+        "material": {
+          "path": "kernel-linux-utils-util-linux-v2.42-sha256sums.asc",
+          "sha256": "b0401bec5699c684edd8f7faeb0ff068686528c55c2d49d8424e3e9b90737d93",
+          "url": "https://www.kernel.org/pub/linux/utils/util-linux/v2.42/sha256sums.asc"
+        },
+        "method": "https-published-sha256",
+        "selection": {
+          "format": "sha256sum"
+        }
+      },
+      "baseline_name": "util-linux-2.42.2.tar.xz",
+      "book_md5": "1d70131b70abda3dec3b37e282a20c96",
+      "book_url": "https://www.kernel.org/pub/linux/utils/util-linux/v2.42/util-linux-2.42.2.tar.xz",
+      "disposition": "replace",
+      "name": "util-linux-2.42.4.tar.xz",
+      "reason": "LFS sa-13.1-048 identifies fixes completed in util-linux 2.42.4.",
+      "sha256": "fbd62a100ab7bb8746ba0661255c3c48185b1e9021507c624da01fbc696330ec",
+      "url": "https://www.kernel.org/pub/linux/utils/util-linux/v2.42/util-linux-2.42.4.tar.xz"
+    },
+    {
+      "authentication": {
+        "method": "unresolved",
+        "reason": "No publisher SHA256 or signature verified yet."
+      },
+      "baseline_name": "vim-9.2.1025.tar.gz",
+      "book_md5": "060c9c0d7e2bdb5e5d80daad596cae02",
+      "book_url": "https://github.com/vim/vim/archive/v9.2.1025/vim-9.2.1025.tar.gz",
+      "disposition": "retain",
+      "name": "vim-9.2.1025.tar.gz",
+      "reason": "Retain the pinned book input.",
+      "url": "https://github.com/vim/vim/archive/v9.2.1025/vim-9.2.1025.tar.gz"
+    },
+    {
+      "authentication": {
+        "material": {
+          "path": "pypi-wheel-0.48.0.json",
+          "sha256": "03f655da3a6dd010d9ac41d4771d5d973109cb662a1e10eb9d967535ffd145f8",
+          "url": "https://pypi.org/pypi/wheel/0.48.0/json"
+        },
+        "method": "https-published-sha256",
+        "selection": {
+          "format": "pypi-release",
+          "version": "0.48.0"
+        }
+      },
+      "baseline_name": "wheel-0.48.0.tar.gz",
+      "book_md5": "f668e4885de814378b332eceea04a8a0",
+      "book_url": "https://pypi.org/packages/source/w/wheel/wheel-0.48.0.tar.gz",
+      "disposition": "retain",
+      "name": "wheel-0.48.0.tar.gz",
+      "reason": "Retain the pinned book input.",
+      "sha256": "94800765601e9171bf5d58d066e640662842bcedcbab982b2c90787a2c987322",
+      "url": "https://pypi.org/packages/source/w/wheel/wheel-0.48.0.tar.gz"
+    },
+    {
+      "authentication": {
+        "material": {
+          "path": "github-tukaani-project-xz-v5.8.4.json",
+          "sha256": "67654e3e93fdeed6168542acc2bf174cfe23f5c30342fca7dea5cd1748708cb7",
+          "url": "https://api.github.com/repos/tukaani-project/xz/releases/tags/v5.8.4"
+        },
+        "method": "https-published-sha256",
+        "selection": {
+          "format": "github-release",
+          "tag": "v5.8.4"
+        }
+      },
+      "baseline_name": "xz-5.8.3.tar.xz",
+      "book_md5": "a02753f34e5546d20213b87f876a0933",
+      "book_url": "https://github.com//tukaani-project/xz/releases/download/v5.8.3/xz-5.8.3.tar.xz",
+      "disposition": "replace",
+      "name": "xz-5.8.4.tar.xz",
+      "reason": "LFS sa-13.1-024 identifies the legacy-decoder memory-safety fix in XZ 5.8.4.",
+      "sha256": "4ce24038fd4221e0d13bc1a2de7a4db56e90b92b3bf75321f6c14be73f65de4b",
+      "url": "https://github.com/tukaani-project/xz/releases/download/v5.8.4/xz-5.8.4.tar.xz"
+    },
+    {
+      "authentication": {
+        "method": "unresolved",
+        "reason": "No publisher SHA256 or signature verified yet."
+      },
+      "baseline_name": "zlib-1.3.2.tar.gz",
+      "book_md5": "a1e6c958597af3c67d162995a342138a",
+      "book_url": "https://zlib.net/fossils/zlib-1.3.2.tar.gz",
+      "disposition": "retain",
+      "name": "zlib-1.3.2.tar.gz",
+      "reason": "Retain the pinned book input.",
+      "url": "https://zlib.net/fossils/zlib-1.3.2.tar.gz"
+    },
+    {
+      "authentication": {
+        "method": "unresolved",
+        "reason": "No publisher SHA256 or signature verified yet."
+      },
+      "baseline_name": "zstd-1.5.7.tar.gz",
+      "book_md5": "780fc1896922b1bc52a4e90980cdda48",
+      "book_url": "https://github.com/facebook/zstd/releases/download/v1.5.7/zstd-1.5.7.tar.gz",
+      "disposition": "retain",
+      "name": "zstd-1.5.7.tar.gz",
+      "reason": "Retain the pinned book input.",
+      "url": "https://github.com/facebook/zstd/releases/download/v1.5.7/zstd-1.5.7.tar.gz"
+    },
+    {
+      "authentication": {
+        "method": "unresolved",
+        "reason": "No publisher SHA256 or signature verified yet."
+      },
+      "baseline_name": "bzip2-1.0.8-install_docs-1.patch",
+      "book_md5": "6a5ac7e89b791aae556de0f745916f7f",
+      "book_url": "https://www.linuxfromscratch.org/patches/lfs/13.1/bzip2-1.0.8-install_docs-1.patch",
+      "disposition": "retain",
+      "name": "bzip2-1.0.8-install_docs-1.patch",
+      "reason": "Retain the pinned book input.",
+      "url": "https://www.linuxfromscratch.org/patches/lfs/13.1/bzip2-1.0.8-install_docs-1.patch"
+    },
+    {
+      "authentication": {
+        "method": "unresolved",
+        "reason": "No publisher SHA256 or signature verified yet."
+      },
+      "baseline_name": "coreutils-9.11-i18n-1.patch",
+      "book_md5": "900d64d9936516b68613271c9ebc0059",
+      "book_url": "https://www.linuxfromscratch.org/patches/lfs/13.1/coreutils-9.11-i18n-1.patch",
+      "disposition": "retain",
+      "name": "coreutils-9.11-i18n-1.patch",
+      "reason": "Retain the pinned book input.",
+      "url": "https://www.linuxfromscratch.org/patches/lfs/13.1/coreutils-9.11-i18n-1.patch"
+    },
+    {
+      "authentication": {
+        "method": "unresolved",
+        "reason": "No publisher SHA256 or signature verified yet."
+      },
+      "baseline_name": "expect-5.45.4-gcc15-1.patch",
+      "book_md5": "0ca4d6bb8d572fbcdb13cb36cd34833e",
+      "book_url": "https://www.linuxfromscratch.org/patches/lfs/13.1/expect-5.45.4-gcc15-1.patch",
+      "disposition": "retain",
+      "name": "expect-5.45.4-gcc15-1.patch",
+      "reason": "Retain the pinned book input.",
+      "url": "https://www.linuxfromscratch.org/patches/lfs/13.1/expect-5.45.4-gcc15-1.patch"
+    },
+    {
+      "authentication": {
+        "method": "unresolved",
+        "reason": "No publisher SHA256 or signature verified yet."
+      },
+      "baseline_name": "glibc-2.44-upstream_fixes-1.patch",
+      "book_md5": "990574184b25aa3029a2444e81865098",
+      "book_url": "https://www.linuxfromscratch.org/patches/lfs/13.1/glibc-2.44-upstream_fixes-1.patch",
+      "disposition": "retain",
+      "name": "glibc-2.44-upstream_fixes-1.patch",
+      "reason": "Retain the pinned book input.",
+      "url": "https://www.linuxfromscratch.org/patches/lfs/13.1/glibc-2.44-upstream_fixes-1.patch"
+    },
+    {
+      "authentication": {
+        "method": "unresolved",
+        "reason": "No publisher SHA256 or signature verified yet."
+      },
+      "baseline_name": "glibc-fhs-1.patch",
+      "book_md5": "9a5997c3452909b1769918c759eff8a2",
+      "book_url": "https://www.linuxfromscratch.org/patches/lfs/13.1/glibc-fhs-1.patch",
+      "disposition": "retain",
+      "name": "glibc-fhs-1.patch",
+      "reason": "Retain the pinned book input.",
+      "url": "https://www.linuxfromscratch.org/patches/lfs/13.1/glibc-fhs-1.patch"
+    },
+    {
+      "authentication": {
+        "method": "unresolved",
+        "reason": "No publisher SHA256 or signature verified yet."
+      },
+      "baseline_name": "kbd-2.10.0-backspace-1.patch",
+      "book_md5": "f75cca16a38da6caa7d52151f7136895",
+      "book_url": "https://www.linuxfromscratch.org/patches/lfs/13.1/kbd-2.10.0-backspace-1.patch",
+      "disposition": "retain",
+      "name": "kbd-2.10.0-backspace-1.patch",
+      "reason": "Retain the pinned book input.",
+      "url": "https://www.linuxfromscratch.org/patches/lfs/13.1/kbd-2.10.0-backspace-1.patch"
+    },
+    {
+      "authentication": {
+        "method": "unresolved",
+        "reason": "No publisher SHA256 or signature verified yet."
+      },
+      "baseline_name": "Python-3.14.7-openssl_4-1.patch",
+      "book_md5": "597d7737df1b4ea4e184c193da523050",
+      "book_url": "https://www.linuxfromscratch.org/patches/lfs/13.1/Python-3.14.7-openssl_4-1.patch",
+      "disposition": "retain",
+      "name": "Python-3.14.7-openssl_4-1.patch",
+      "reason": "Retain the pinned book input.",
+      "url": "https://www.linuxfromscratch.org/patches/lfs/13.1/Python-3.14.7-openssl_4-1.patch"
+    },
+    {
+      "authentication": {
+        "method": "unresolved",
+        "reason": "No publisher SHA256 or signature verified yet."
+      },
+      "baseline_name": "tar-1.35-acl_fix-1.patch",
+      "book_md5": "dbab49e317105539611866dac5dd54f6",
+      "book_url": "https://www.linuxfromscratch.org/patches/lfs/13.1/tar-1.35-acl_fix-1.patch",
+      "disposition": "retain",
+      "name": "tar-1.35-acl_fix-1.patch",
+      "reason": "Retain the pinned book input.",
+      "url": "https://www.linuxfromscratch.org/patches/lfs/13.1/tar-1.35-acl_fix-1.patch"
+    }
+  ]
+}

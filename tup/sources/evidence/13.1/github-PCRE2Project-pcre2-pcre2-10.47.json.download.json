@@ -1,0 +1,8 @@
+{
+  "meaning": "observed download bytes; not authentication",
+  "resolved_url": "https://api.github.com/repos/PCRE2Project/pcre2/releases/tags/pcre2-10.47",
+  "retrieved_at": "2026-11-05T08:03:48.507861+00:00",
+  "sha256": "80cf6d354a5df18b885e3b2dd6ebe2aaa6eb443a1c2d2c4932d22e0ea972e66c",
+  "size": 13409,
+  "url": "https://api.github.com/repos/PCRE2Project/pcre2/releases/tags/pcre2-10.47"
+}

@@ -1,0 +1,8 @@
+{
+  "meaning": "observed download bytes; not authentication",
+  "resolved_url": "https://api.github.com/repos/libffi/libffi/releases/tags/v3.8.0",
+  "retrieved_at": "2026-11-05T08:03:48.149658+00:00",
+  "sha256": "0af3ff1ae9aa8c6c8bf717284b5c59b430a9f209a2d36ba8cb5ec7d4d9d28a96",
+  "size": 9898,
+  "url": "https://api.github.com/repos/libffi/libffi/releases/tags/v3.8.0"
+}

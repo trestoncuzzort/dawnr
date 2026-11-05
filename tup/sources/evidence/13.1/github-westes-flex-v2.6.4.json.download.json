@@ -1,0 +1,8 @@
+{
+  "meaning": "observed download bytes; not authentication",
+  "resolved_url": "https://api.github.com/repos/westes/flex/releases/tags/v2.6.4",
+  "retrieved_at": "2026-11-05T08:03:47.732839+00:00",
+  "sha256": "104e093d79a4c393d6dd6c4604f43706a546a136e364a12c9545db1ee034d97f",
+  "size": 9654,
+  "url": "https://api.github.com/repos/westes/flex/releases/tags/v2.6.4"
+}

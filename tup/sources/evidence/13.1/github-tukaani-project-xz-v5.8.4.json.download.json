@@ -1,0 +1,8 @@
+{
+  "meaning": "observed download bytes; not authentication",
+  "resolved_url": "https://api.github.com/repos/tukaani-project/xz/releases/tags/v5.8.4",
+  "retrieved_at": "2026-11-05T08:03:48.724357+00:00",
+  "sha256": "67654e3e93fdeed6168542acc2bf174cfe23f5c30342fca7dea5cd1748708cb7",
+  "size": 24066,
+  "url": "https://api.github.com/repos/tukaani-project/xz/releases/tags/v5.8.4"
+}

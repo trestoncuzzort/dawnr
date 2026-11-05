@@ -1,0 +1,8 @@
+{
+  "meaning": "observed download bytes; not authentication",
+  "resolved_url": "https://www.linuxfromscratch.org/lfs/view/13.1-systemd/md5sums",
+  "retrieved_at": "2026-11-05T08:01:34.042007+00:00",
+  "sha256": "ccb1b1db30e62d2f63e2f76fd9490e5280c2a4c735e25794a6228400f171264f",
+  "size": 5160,
+  "url": "https://www.linuxfromscratch.org/lfs/view/13.1-systemd/md5sums"
+}

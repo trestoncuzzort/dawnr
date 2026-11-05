@@ -1,0 +1,637 @@
+{
+  "catalog_sha256": "9ab1fddbbd83b9c40ce77596310df8a6e403a1d12ca302efcf1318775822ec9e",
+  "checked_at": "2026-11-05T08:09:53.447983+00:00",
+  "complete": false,
+  "schema": "tup-source-verification-v1",
+  "sources": [
+    {
+      "name": "acl-2.4.0.tar.xz",
+      "reason": "no supported authentication evidence",
+      "status": "unresolved"
+    },
+    {
+      "name": "attr-2.6.0.tar.gz",
+      "reason": "no supported authentication evidence",
+      "status": "unresolved"
+    },
+    {
+      "name": "autoconf-2.73.tar.xz",
+      "reason": "no supported authentication evidence",
+      "status": "unresolved"
+    },
+    {
+      "name": "automake-1.18.1.tar.xz",
+      "reason": "no supported authentication evidence",
+      "status": "unresolved"
+    },
+    {
+      "name": "bash-5.3.tar.gz",
+      "reason": "no supported authentication evidence",
+      "status": "unresolved"
+    },
+    {
+      "name": "bc-7.0.3.tar.xz",
+      "reason": "no supported authentication evidence",
+      "status": "unresolved"
+    },
+    {
+      "name": "binutils-2.47.tar.xz",
+      "reason": "no supported authentication evidence",
+      "status": "unresolved"
+    },
+    {
+      "name": "bison-3.8.2.tar.xz",
+      "reason": "no supported authentication evidence",
+      "status": "unresolved"
+    },
+    {
+      "name": "bzip2-1.0.8.tar.gz",
+      "reason": "no supported authentication evidence",
+      "status": "unresolved"
+    },
+    {
+      "name": "coreutils-9.11.tar.xz",
+      "reason": "no supported authentication evidence",
+      "status": "unresolved"
+    },
+    {
+      "name": "dbus-1.16.2.tar.xz",
+      "reason": "no supported authentication evidence",
+      "status": "unresolved"
+    },
+    {
+      "name": "dejagnu-1.6.3.tar.gz",
+      "reason": "no supported authentication evidence",
+      "status": "unresolved"
+    },
+    {
+      "name": "diffutils-3.12.tar.xz",
+      "reason": "no supported authentication evidence",
+      "status": "unresolved"
+    },
+    {
+      "name": "e2fsprogs-1.47.4.tar.gz",
+      "reason": "no supported authentication evidence",
+      "status": "unresolved"
+    },
+    {
+      "name": "elfutils-0.195.tar.bz2",
+      "reason": "no supported authentication evidence",
+      "status": "unresolved"
+    },
+    {
+      "authentication": {
+        "assurance": "publisher HTTPS metadata; no signature verified",
+        "evidence_sha256": "dd1241e864a9c4e2fe6304bcada198978eb2e31b6f320644497b3e2173adee0f",
+        "status": "verified",
+        "trust_class": "https-published-sha256"
+      },
+      "name": "expat-2.9.0.tar.xz",
+      "sha256": "1e6371862cc31999b368c3b89b49994f0677e1bab5f1b2b85ae3741f5d803051",
+      "size": 534052,
+      "status": "verified"
+    },
+    {
+      "name": "expect5.45.4.tar.gz",
+      "reason": "no supported authentication evidence",
+      "status": "unresolved"
+    },
+    {
+      "name": "file-5.48.tar.gz",
+      "reason": "no supported authentication evidence",
+      "status": "unresolved"
+    },
+    {
+      "name": "findutils-4.11.0.tar.xz",
+      "reason": "no supported authentication evidence",
+      "status": "unresolved"
+    },
+    {
+      "name": "flex-2.6.4.tar.gz",
+      "reason": "no supported authentication evidence",
+      "status": "unresolved"
+    },
+    {
+      "authentication": {
+        "assurance": "publisher HTTPS metadata; no signature verified",
+        "evidence_sha256": "661a8286b9df029fa5152f5e1f04c271ccd16e53a362a76327b5eb5e0439755b",
+        "status": "verified",
+        "trust_class": "https-published-sha256"
+      },
+      "name": "flit_core-4.0.2.tar.gz",
+      "sha256": "b6929defd93884b584d7c87829e0e7b5c26ed6be17b0b873979019314aa841c8",
+      "size": 53083,
+      "status": "verified"
+    },
+    {
+      "name": "gawk-5.4.1.tar.xz",
+      "reason": "missing evidence: gawk-5.4.1.tar.xz",
+      "status": "unresolved"
+    },
+    {
+      "name": "gcc-16.2.0.tar.xz",
+      "reason": "missing evidence: gcc-16.2.0.tar.xz",
+      "status": "unresolved"
+    },
+    {
+      "name": "gdbm-1.26.tar.gz",
+      "reason": "missing evidence: gdbm-1.26.tar.gz",
+      "status": "unresolved"
+    },
+    {
+      "name": "gettext-1.0.tar.xz",
+      "reason": "missing evidence: gettext-1.0.tar.xz",
+      "status": "unresolved"
+    },
+    {
+      "name": "glibc-2.44.tar.xz",
+      "reason": "missing evidence: glibc-2.44.tar.xz",
+      "status": "unresolved"
+    },
+    {
+      "name": "gmp-6.3.0.tar.xz",
+      "reason": "missing evidence: gmp-6.3.0.tar.xz",
+      "status": "unresolved"
+    },
+    {
+      "name": "gperf-3.3.tar.gz",
+      "reason": "missing evidence: gperf-3.3.tar.gz",
+      "status": "unresolved"
+    },
+    {
+      "name": "grep-3.12.tar.xz",
+      "reason": "missing evidence: grep-3.12.tar.xz",
+      "status": "unresolved"
+    },
+    {
+      "name": "groff-1.24.1.tar.gz",
+      "reason": "missing evidence: groff-1.24.1.tar.gz",
+      "status": "unresolved"
+    },
+    {
+      "name": "grub-2.14.tar.xz",
+      "reason": "missing evidence: grub-2.14.tar.xz",
+      "status": "unresolved"
+    },
+    {
+      "name": "gzip-1.14.tar.xz",
+      "reason": "missing evidence: gzip-1.14.tar.xz",
+      "status": "unresolved"
+    },
+    {
+      "authentication": {
+        "assurance": "publisher HTTPS metadata; no signature verified",
+        "evidence_sha256": "faff5942ce4b62d4d692c1b147656a200565f63b8104941d72a6a058d3bc6793",
+        "status": "verified",
+        "trust_class": "https-published-sha256"
+      },
+      "name": "iana-etc-20260805.tar.gz",
+      "sha256": "29270860664e324107537f32ea476a333ca52d71b59c74bc06ecc3b0fa9cf490",
+      "size": 610207,
+      "status": "verified"
+    },
+    {
+      "name": "inetutils-2.8.tar.gz",
+      "reason": "missing evidence: inetutils-2.8.tar.gz",
+      "status": "unresolved"
+    },
+    {
+      "authentication": {
+        "assurance": "publisher HTTPS metadata; no signature verified",
+        "evidence_sha256": "2019626974fd151b76fcca74526261b7a955647cd641b5ceca053e21df719d80",
+        "status": "verified",
+        "trust_class": "https-published-sha256"
+      },
+      "name": "iproute2-7.1.0.tar.xz",
+      "sha256": "fd9fa1b95809417157ca83dd72957e3261bdbce896353cb936f80af0b33a4b5c",
+      "size": 964700,
+      "status": "verified"
+    },
+    {
+      "authentication": {
+        "assurance": "publisher HTTPS metadata; no signature verified",
+        "evidence_sha256": "76307ec34dc1b68bd43bf48f7559b3588ca3a2ab96e8442abc4e5575e41912cb",
+        "status": "verified",
+        "trust_class": "https-published-sha256"
+      },
+      "name": "jinja2-3.1.6.tar.gz",
+      "sha256": "0137fb05990d35f1275a587e9aee6d56da821fc83491a0fb838183be43f66d6d",
+      "size": 245115,
+      "status": "verified"
+    },
+    {
+      "authentication": {
+        "assurance": "publisher HTTPS metadata; no signature verified",
+        "evidence_sha256": "8f89aa8e89709aab4656f5c1be7fb2d7ad6ee0aceddbf0634692f58c26d2fe3d",
+        "status": "verified",
+        "trust_class": "https-published-sha256"
+      },
+      "name": "kbd-2.10.0.tar.xz",
+      "sha256": "6e5ca4f8d76ee9e3a8db700b667f13e12aac9933828a64e1aaad93d26be9b479",
+      "size": 1788500,
+      "status": "verified"
+    },
+    {
+      "authentication": {
+        "assurance": "publisher HTTPS metadata; no signature verified",
+        "evidence_sha256": "f45732aa4db86141a881d05e4936a512e60ad611545ac171e1a541847719af24",
+        "status": "verified",
+        "trust_class": "https-published-sha256"
+      },
+      "name": "kmod-34.2.tar.xz",
+      "sha256": "5a5d5073070cc7e0c7a7a3c6ec2a0e1780850c8b47b3e3892226b93ffcb9cb54",
+      "size": 443748,
+      "status": "verified"
+    },
+    {
+      "name": "less-704.tar.gz",
+      "reason": "no supported authentication evidence",
+      "status": "unresolved"
+    },
+    {
+      "authentication": {
+        "assurance": "publisher HTTPS metadata; no signature verified",
+        "evidence_sha256": "bd6053965ea3ceec8a991eb85f807aa5d5cfa86ba8b1190bdbf2c25718c8020e",
+        "status": "verified",
+        "trust_class": "https-published-sha256"
+      },
+      "name": "libcap-2.78.tar.xz",
+      "sha256": "0d621e562fd932ccf67b9660fb018e468a683d7b827541df27813228c996bb11",
+      "size": 201040,
+      "status": "verified"
+    },
+    {
+      "authentication": {
+        "assurance": "publisher HTTPS metadata; no signature verified",
+        "evidence_sha256": "d8ebe8b803587ad80a0c3380bce390329bfd63932dada41c47ea731573992b1d",
+        "status": "verified",
+        "trust_class": "https-published-sha256"
+      },
+      "name": "libffi-3.8.0.tar.gz",
+      "sha256": "7da3e2d9a171eb0a038f592ecad3ff2bb2550f3496d87b3b29ad0cf4430c0db4",
+      "size": 1581626,
+      "status": "verified"
+    },
+    {
+      "name": "libpipeline-1.5.8.tar.gz",
+      "reason": "no supported authentication evidence",
+      "status": "unresolved"
+    },
+    {
+      "name": "libtool-2.6.2.tar.xz",
+      "reason": "missing evidence: libtool-2.6.2.tar.xz",
+      "status": "unresolved"
+    },
+    {
+      "authentication": {
+        "assurance": "publisher HTTPS metadata; no signature verified",
+        "evidence_sha256": "908d5ba5a5d9ed5a6a515f1bbf96b367c4b58131142776ff08c96f3b8db5ea2e",
+        "status": "verified",
+        "trust_class": "https-published-sha256"
+      },
+      "name": "libxcrypt-4.5.2.tar.xz",
+      "sha256": "71513a31c01a428bccd5367a32fd95f115d6dac50fb5b60c779d5c7942aec071",
+      "size": 669820,
+      "status": "verified"
+    },
+    {
+      "authentication": {
+        "assurance": "publisher HTTPS metadata; no signature verified",
+        "evidence_sha256": "678f5b8d9394061e70c322696e1c2d605f2ce2a1824c1accaf2072b1faf774bb",
+        "status": "verified",
+        "trust_class": "https-published-sha256"
+      },
+      "name": "linux-6.18.60.tar.xz",
+      "sha256": "3c2f44ef6acc021a7ad444d9a2e6ec1ef488ff09368793d0004a6080f69d621e",
+      "size": 154827264,
+      "status": "verified"
+    },
+    {
+      "name": "lz4-1.10.0.tar.gz",
+      "reason": "no supported authentication evidence",
+      "status": "unresolved"
+    },
+    {
+      "name": "m4-1.4.21.tar.xz",
+      "reason": "missing evidence: m4-1.4.21.tar.xz",
+      "status": "unresolved"
+    },
+    {
+      "name": "make-4.4.1.tar.gz",
+      "reason": "missing evidence: make-4.4.1.tar.gz",
+      "status": "unresolved"
+    },
+    {
+      "name": "man-db-2.13.1.tar.xz",
+      "reason": "no supported authentication evidence",
+      "status": "unresolved"
+    },
+    {
+      "authentication": {
+        "assurance": "publisher HTTPS metadata; no signature verified",
+        "evidence_sha256": "a63e671948b55586c096e502f82afe596184df63e251dbec0684e68dfb7405d3",
+        "status": "verified",
+        "trust_class": "https-published-sha256"
+      },
+      "name": "man-pages-6.18.tar.xz",
+      "sha256": "c934fadc8b59748c68227a34f6581d2ddf8282b73cdcd52546c8cd88b74b24d1",
+      "size": 1902724,
+      "status": "verified"
+    },
+    {
+      "authentication": {
+        "assurance": "publisher HTTPS metadata; no signature verified",
+        "evidence_sha256": "a0606db6971ba0b85fadc911958aa4e38f036c4b1fb664ab8f9a3de951047bf9",
+        "status": "verified",
+        "trust_class": "https-published-sha256"
+      },
+      "name": "markupsafe-3.0.3.tar.gz",
+      "sha256": "722695808f4b6457b320fdc131280796bdceb04ab50fe1795cd540799ebe1698",
+      "size": 80313,
+      "status": "verified"
+    },
+    {
+      "authentication": {
+        "assurance": "publisher HTTPS metadata; no signature verified",
+        "evidence_sha256": "9addac17c0d233961750db6eb922c2f43f985d4ced810ff7f7d0abb5c1ab4d67",
+        "status": "verified",
+        "trust_class": "https-published-sha256"
+      },
+      "name": "meson-1.12.0.tar.gz",
+      "sha256": "88afe0c20e52030218924ac37d0c81c59b4b5f3ae3752c8c6d7470c7d365886c",
+      "size": 2518280,
+      "status": "verified"
+    },
+    {
+      "name": "mpc-1.4.1.tar.xz",
+      "reason": "missing evidence: mpc-1.4.1.tar.xz",
+      "status": "unresolved"
+    },
+    {
+      "name": "mpdecimal-4.0.1.tar.gz",
+      "reason": "no supported authentication evidence",
+      "status": "unresolved"
+    },
+    {
+      "name": "mpfr-4.2.2.tar.xz",
+      "reason": "missing evidence: mpfr-4.2.2.tar.xz",
+      "status": "unresolved"
+    },
+    {
+      "name": "ncurses-6.6.tar.gz",
+      "reason": "no supported authentication evidence",
+      "status": "unresolved"
+    },
+    {
+      "name": "ninja-1.13.2.tar.gz",
+      "reason": "no supported authentication evidence",
+      "status": "unresolved"
+    },
+    {
+      "authentication": {
+        "assurance": "publisher HTTPS metadata; no signature verified",
+        "evidence_sha256": "2284c055af49285ecc40db9d03064cffbc5098914bf40bbf7c2c5e5e2d260090",
+        "status": "verified",
+        "trust_class": "https-published-sha256"
+      },
+      "name": "openssl-4.0.3.tar.gz",
+      "sha256": "325b5c806167c13b40b1ffeadfe0248197c00eccc4cf123ec1e28d2d2fd216d9",
+      "size": 55235667,
+      "status": "verified"
+    },
+    {
+      "authentication": {
+        "assurance": "publisher HTTPS metadata; no signature verified",
+        "evidence_sha256": "8130602df97d0c09b5dd78a5ae203faf1fcc5bc19ff0bfd611bb58a19629b4a3",
+        "status": "verified",
+        "trust_class": "https-published-sha256"
+      },
+      "name": "packaging-26.3.tar.gz",
+      "sha256": "94edc256424af38762eb31306eed28beb9f0efc50a8837492c9d6fd6004aed79",
+      "size": 313412,
+      "status": "verified"
+    },
+    {
+      "name": "patch-2.8.tar.xz",
+      "reason": "missing evidence: patch-2.8.tar.xz",
+      "status": "unresolved"
+    },
+    {
+      "authentication": {
+        "assurance": "publisher HTTPS metadata; no signature verified",
+        "evidence_sha256": "08ff111c448c363ff4aa1efba6675386cec2dd8d4d0f921600a1400a339c03fc",
+        "status": "verified",
+        "trust_class": "https-published-sha256"
+      },
+      "name": "pcre2-10.47.tar.bz2",
+      "sha256": "47fe8c99461250d42f89e6e8fdaeba9da057855d06eb7fc08d9ca03fd08d7bc7",
+      "size": 2145789,
+      "status": "verified"
+    },
+    {
+      "name": "perl-5.44.0.tar.xz",
+      "reason": "no supported authentication evidence",
+      "status": "unresolved"
+    },
+    {
+      "name": "pkgconf-3.0.5.tar.xz",
+      "reason": "no supported authentication evidence",
+      "status": "unresolved"
+    },
+    {
+      "name": "procps-ng-4.0.7.tar.xz",
+      "reason": "no supported authentication evidence",
+      "status": "unresolved"
+    },
+    {
+      "name": "psmisc-23.7.tar.xz",
+      "reason": "no supported authentication evidence",
+      "status": "unresolved"
+    },
+    {
+      "name": "Python-3.14.10.tar.xz",
+      "reason": "no supported authentication evidence",
+      "status": "unresolved"
+    },
+    {
+      "name": "python-3.14.10-docs-html.tar.bz2",
+      "reason": "no supported authentication evidence",
+      "status": "unresolved"
+    },
+    {
+      "name": "readline-8.3.tar.gz",
+      "reason": "missing evidence: readline-8.3.tar.gz",
+      "status": "unresolved"
+    },
+    {
+      "name": "sed-4.10.tar.xz",
+      "reason": "missing evidence: sed-4.10.tar.xz",
+      "status": "unresolved"
+    },
+    {
+      "authentication": {
+        "assurance": "publisher HTTPS metadata; no signature verified",
+        "evidence_sha256": "2898a8d8bd5e99aa7443443cbf96a398cca5d309726c537f30b57fcbf5a8feb3",
+        "status": "verified",
+        "trust_class": "https-published-sha256"
+      },
+      "name": "setuptools-84.0.0.tar.gz",
+      "sha256": "f4695c21257f0d9b537ec2692c941d02ee143b7cc1276941349a546573b2ef73",
+      "size": 1168449,
+      "status": "verified"
+    },
+    {
+      "authentication": {
+        "assurance": "publisher HTTPS metadata; no signature verified",
+        "evidence_sha256": "23aa962aac38ca39a3307ea636f652458687197924559efe90e82b5371ccb254",
+        "status": "verified",
+        "trust_class": "https-published-sha256"
+      },
+      "name": "shadow-4.20.2.tar.xz",
+      "sha256": "b89f432b75ae55a2d852b446d0365484795fdf533ab97d550e325fa15594a224",
+      "size": 2291052,
+      "status": "verified"
+    },
+    {
+      "name": "sqlite-autoconf-3530400.tar.gz",
+      "reason": "no supported authentication evidence",
+      "status": "unresolved"
+    },
+    {
+      "name": "sqlite-doc-3530400.zip",
+      "reason": "no supported authentication evidence",
+      "status": "unresolved"
+    },
+    {
+      "name": "systemd-261.2.tar.gz",
+      "reason": "no supported authentication evidence",
+      "status": "unresolved"
+    },
+    {
+      "name": "systemd-man-pages-261.2.tar.xz",
+      "reason": "no supported authentication evidence",
+      "status": "unresolved"
+    },
+    {
+      "name": "tar-1.35.tar.xz",
+      "reason": "missing evidence: tar-1.35.tar.xz",
+      "status": "unresolved"
+    },
+    {
+      "name": "tcl8.6.18-src.tar.gz",
+      "reason": "no supported authentication evidence",
+      "status": "unresolved"
+    },
+    {
+      "name": "tcl8.6.18-html.tar.gz",
+      "reason": "no supported authentication evidence",
+      "status": "unresolved"
+    },
+    {
+      "name": "texinfo-7.3.tar.xz",
+      "reason": "missing evidence: texinfo-7.3.tar.xz",
+      "status": "unresolved"
+    },
+    {
+      "name": "tzdata2026c.tar.gz",
+      "reason": "no supported authentication evidence",
+      "status": "unresolved"
+    },
+    {
+      "authentication": {
+        "assurance": "publisher HTTPS metadata; no signature verified",
+        "evidence_sha256": "2eb90673fde38abd664b687a8f619d9aea144beeca97c8885c403081aa1bf5c0",
+        "status": "verified",
+        "trust_class": "https-published-sha256"
+      },
+      "name": "util-linux-2.42.4.tar.xz",
+      "sha256": "fbd62a100ab7bb8746ba0661255c3c48185b1e9021507c624da01fbc696330ec",
+      "size": 10729748,
+      "status": "verified"
+    },
+    {
+      "name": "vim-9.2.1025.tar.gz",
+      "reason": "no supported authentication evidence",
+      "status": "unresolved"
+    },
+    {
+      "authentication": {
+        "assurance": "publisher HTTPS metadata; no signature verified",
+        "evidence_sha256": "86f6087ca40d71b29f75f774ec722a65ce06cb346e8a57231481475c5842014b",
+        "status": "verified",
+        "trust_class": "https-published-sha256"
+      },
+      "name": "wheel-0.48.0.tar.gz",
+      "sha256": "94800765601e9171bf5d58d066e640662842bcedcbab982b2c90787a2c987322",
+      "size": 66471,
+      "status": "verified"
+    },
+    {
+      "authentication": {
+        "assurance": "publisher HTTPS metadata; no signature verified",
+        "evidence_sha256": "752ad76bf06edd9d2fb8ebc85ae40d3941344a1aadb94af0cda746e5acb32802",
+        "status": "verified",
+        "trust_class": "https-published-sha256"
+      },
+      "name": "xz-5.8.4.tar.xz",
+      "sha256": "4ce24038fd4221e0d13bc1a2de7a4db56e90b92b3bf75321f6c14be73f65de4b",
+      "size": 1567192,
+      "status": "verified"
+    },
+    {
+      "name": "zlib-1.3.2.tar.gz",
+      "reason": "no supported authentication evidence",
+      "status": "unresolved"
+    },
+    {
+      "name": "zstd-1.5.7.tar.gz",
+      "reason": "no supported authentication evidence",
+      "status": "unresolved"
+    },
+    {
+      "name": "bzip2-1.0.8-install_docs-1.patch",
+      "reason": "no supported authentication evidence",
+      "status": "unresolved"
+    },
+    {
+      "name": "coreutils-9.11-i18n-1.patch",
+      "reason": "no supported authentication evidence",
+      "status": "unresolved"
+    },
+    {
+      "name": "expect-5.45.4-gcc15-1.patch",
+      "reason": "no supported authentication evidence",
+      "status": "unresolved"
+    },
+    {
+      "name": "glibc-2.44-upstream_fixes-1.patch",
+      "reason": "no supported authentication evidence",
+      "status": "unresolved"
+    },
+    {
+      "name": "glibc-fhs-1.patch",
+      "reason": "no supported authentication evidence",
+      "status": "unresolved"
+    },
+    {
+      "name": "kbd-2.10.0-backspace-1.patch",
+      "reason": "no supported authentication evidence",
+      "status": "unresolved"
+    },
+    {
+      "name": "Python-3.14.7-openssl_4-1.patch",
+      "reason": "no supported authentication evidence",
+      "status": "unresolved"
+    },
+    {
+      "name": "tar-1.35-acl_fix-1.patch",
+      "reason": "no supported authentication evidence",
+      "status": "unresolved"
+    }
+  ],
+  "verifier": {
+    "name": "source_lock.py",
+    "python_version": "3.13.17",
+    "sha256": "15281583691bcfb90ef2863fde10ca61baa72a571ef0ad966e038dec3dddde84"
+  }
+}

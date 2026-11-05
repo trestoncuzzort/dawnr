@@ -1,0 +1,8 @@
+{
+  "meaning": "observed download bytes; not authentication",
+  "resolved_url": "https://www.kernel.org/pub/linux/utils/kbd/sha256sums.asc",
+  "retrieved_at": "2026-11-05T08:03:47.959838+00:00",
+  "sha256": "3149ebc1204f97049a8f38aee42bd8cdb2c9b1ecfe278b3d74c775746b824407",
+  "size": 8536,
+  "url": "https://www.kernel.org/pub/linux/utils/kbd/sha256sums.asc"
+}

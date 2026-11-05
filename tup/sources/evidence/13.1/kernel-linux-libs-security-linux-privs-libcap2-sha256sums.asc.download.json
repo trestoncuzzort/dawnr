@@ -1,0 +1,8 @@
+{
+  "meaning": "observed download bytes; not authentication",
+  "resolved_url": "https://www.kernel.org/pub/linux/libs/security/linux-privs/libcap2/sha256sums.asc",
+  "retrieved_at": "2026-11-05T08:03:48.090265+00:00",
+  "sha256": "fa84c9906cc850a744733a7a57427c011f9a9ba1c7e924d4a4a73dc8a45275f6",
+  "size": 14228,
+  "url": "https://www.kernel.org/pub/linux/libs/security/linux-privs/libcap2/sha256sums.asc"
+}

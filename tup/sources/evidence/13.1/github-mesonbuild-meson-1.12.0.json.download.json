@@ -1,0 +1,8 @@
+{
+  "meaning": "observed download bytes; not authentication",
+  "resolved_url": "https://api.github.com/repos/mesonbuild/meson/releases/tags/1.12.0",
+  "retrieved_at": "2026-11-05T08:03:48.438960+00:00",
+  "sha256": "1efabbf770bc1eb314b5bec217fdd6e22561c5c19b7a0f19d515f20bf99a8dc7",
+  "size": 9579,
+  "url": "https://api.github.com/repos/mesonbuild/meson/releases/tags/1.12.0"
+}

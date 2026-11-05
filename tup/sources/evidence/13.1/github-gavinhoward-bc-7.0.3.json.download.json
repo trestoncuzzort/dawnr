@@ -1,0 +1,8 @@
+{
+  "meaning": "observed download bytes; not authentication",
+  "resolved_url": "https://api.github.com/repos/gavinhoward/bc/releases/tags/7.0.3",
+  "retrieved_at": "2026-11-05T08:03:47.749230+00:00",
+  "sha256": "f301034911b6ae28bfce121e03b59877c1544e6160e48b14f51575ec88494758",
+  "size": 12875,
+  "url": "https://api.github.com/repos/gavinhoward/bc/releases/tags/7.0.3"
+}
