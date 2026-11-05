@@ -1,156 +1,159 @@
 # Native LFS core builder
 
-This path builds the existing x86_64 LFS recipes into an explicit directory on a
-disposable Linux host. It does not create a VM, partition a disk, install a
-bootloader or require QEMU. The first implementation stops at chapter 8. That
-output is an LFS core, not a bootable native TUP release. Chapters 9 onward need
-the native networking, EFI, initramfs, installer and enrollment work tracked in
-`../HEADLESS-GOAL.md`.
+This entrypoint builds an explicit directory-backed x86_64 LFS core on a
+trusted disposable Linux builder. It accepts no disk device, partitions
+nothing, and has no QEMU or Windows dependency. A completed chapter 8 is still
+not a bootable, installable or remotely accessible TUP release. The remaining
+native gates stay in [HEADLESS-GOAL.md](../HEADLESS-GOAL.md).
 
-The old `buildvm/prepare-host.sh` and `chain*.sh` are outside this entrypoint's
-dependency graph. No VM device name or physical install target is accepted.
-The generated book pages remain unchanged. The native shadow override locks
-root instead of assigning the historical shared password.
+`--profile lfs-13.1-systemd` selects the reviewed maintained core described in
+[the profile audit](profiles/lfs-13.1-systemd/README.md). It uses every selected
+chapter 5-8 page through an explicit hash-bound block plan. The historical
+`lfs-12.4-sysv` profile/book remains available for historical reproduction; it
+is not approved for production. A profile cannot silently select another
+book/init version or inherit the old shared overrides.
 
 ## Host and resources
 
-Use a dedicated Linux x86_64 builder with ext4 storage, root for orchestration,
-and an existing unprivileged `lfs` account for chapters 5 and 6. Host package
-installation and account creation are separate bootstrap operations. Python
-3.10 or newer runs on the host; the early chroot uses Bash and coreutils only.
-The input-aware driver and its entire `buildlib/` directory must be integrated.
-The driver requires Bash 4.4 or later and GNU coreutils 8.24 or later for checked
-durability operations, beyond the historical book's minimum host versions.
-Use a Linux checkout with LF shell files; CRLF scripts are refused, not silently
-rewritten. Source, cache and workspace directories must be disjoint.
+Use a dedicated Linux x86_64 builder with ext4 storage, root orchestration, and
+an existing unprivileged `lfs` account for chapters 5 and 6. The workspace and
+all its ancestors must be root-owned and not writable by group/other users;
+`/srv/tup-build/run-001` is a suitable layout. The workspace must initially be
+empty and traversable by the build user. Source checkout, source cache and
+workspace must be disjoint. Symlinks in input/control paths are refused.
 
-The preflight checks compiler/tool identities, LFS host requirements, ext4,
-mount namespaces, a C++ compile/link, and available CPU/RAM/disk. Default
-parallelism is four jobs with a 4096 MiB memory planning budget and a 40 GiB
-free-space floor. `MAKEFLAGS` and `TESTSUITEFLAGS` enforce the job count. The
-memory number is a capacity check, **not a cgroup hard limit**: set the disposable
-builder's RAM ceiling separately and measure actual peak use before accepting
-H01. The recipes are trusted root code inside a chroot; chroot is not a security
-boundary. Run this in disposable build infrastructure.
+The host needs Python 3.10+, Bash 4.4+, GNU coreutils 8.24+, the selected book's
+build tools and working mount/PID namespaces. The native13 host kernel minimum
+is 5.10, with GCC through 16.2.0 and binutils through 2.47. Early chroot needs
+only Bash and temporary coreutils; it does not require Python or flock. Host
+probes use `/usr/sbin:/usr/bin:/sbin:/bin` and the C locale. Use an LF checkout;
+CRLF shell inputs are refused rather than rewritten.
 
-## Authenticated source inputs
+Defaults are four compile jobs, at most four test jobs, a 4096 MiB memory
+planning budget, and a 40 GiB free-space floor. `MAKEFLAGS`, `TESTSUITEFLAGS`,
+`NINJAJOBS` and Python's PGO test process count are explicit. Ninja includes the
+book's NINJAJOBS hook. The memory budget is a capacity check, **not a hard memory
+limit**; set the disposable builder's memory ceiling separately and measure
+peak use. Package recipes are trusted root code; chroot is not a security
+boundary. No old `buildvm/prepare-host.sh` or `chain*.sh` wrapper is called.
 
-Supply the complete local source cache and a source lock with a separately
-authenticated expected SHA256. The builder never derives trust from a digest
-of newly downloaded content and does not fetch missing archives. A provenance
-description is an audit reference, not cryptographic proof by itself. Whoever
-provisions `--lock-sha256` must verify the publisher's signatures/checksums or
-reviewed pinned-source process before supplying that digest.
+## Source trust and immutable inputs
 
-The lock schema is:
+Provide all 94 selected archives/patches and the completed export from
+[sources/source_lock.py](../sources/source_lock.py). Native13 requires the
+exact reviewed source-name set, a complete verification report, per-source
+verified evidence or an exact approved provenance exception, and reviewed advisory dispositions. The source verifier
+performs the cryptographic checks. The separately reviewed `--lock-sha256`
+then pins that exact export; a SHA256 observed after a download is not source
+authentication. Missing downloads or incomplete authentication refuse before
+preparation. This builder never downloads sources or repairs pins.
 
-```json
-{
-  "schema": "tup-source-lock-v1",
-  "architecture": "x86_64",
-  "book_source_sha256": "<SHA256 of raw book-x86_64/BOOK-SOURCE bytes>",
-  "provenance": "<reference to authenticated publisher or reviewed pin evidence>",
-  "sources": [
-    {"name": "<archive or patch basename>", "url": "https://<publisher>/<file>",
-     "sha256": "<independently authenticated SHA256>"}
-  ]
-}
-```
+Trust classes distinguish publisher OpenPGP, HTTPS-published strong checksums,
+and distributor OpenPGP Manifests. The distributor path additionally requires
+the approved Gentoo signing root, signed snapshot, exact package Manifest,
+source size/SHA512 and the retained linkage. A bare `verified` flag is not a
+replacement for that structure or the independently reviewed lock digest.
+Make additionally uses a separately verified Gentoo Lzip reference and exact
+uncompressed tar equality to the selected gzip archive. Eight unsigned LFS
+patches and three Tcl/SQLite/manual inputs have narrowly enumerated provenance
+exceptions, not publisher authentication. Their policy digests, source tuples,
+retained evidence and required application/test/confinement gates are checked.
 
-Every book archive named in chapters 5–8 must appear. Include all patches and
-other transitive package inputs too; a book's MD5 list alone is insufficient for
-this contract. Missing, changed, duplicate and unsafe source records refuse
-before preparation. This repository does not yet include an authenticated
-native source lock, so no complete native build is claimed.
+The current source export is **build-only**: Expat's residual CPU denial of
+service CVE-2025-66382 remains release gate H55. The exact named deferral is
+preserved in the build identity and core receipt. Unreviewed advisories and
+arbitrary deferrals refuse. Python advisories 088/089 additionally require
+the two exact reviewed repo backports and their review digest in the lock.
+
+The source tree, selected book, generated overrides, helpers, native profile,
+source lock, all archives, host tools and resource/test policy form one immutable
+`root/tup-build/BUILD-INPUTS.json`. Its exact bytes cross into chroot. Full
+cached/staged source checks and input recomputation run before and after every
+stage, including resume validation. Existing markers alone never authorize
+reuse. Changes require a fresh workspace or a separately reviewed restoration
+of both target state and evidence.
 
 ## Run
 
-Create an empty dedicated workspace under a traversable parent, for example
-`/srv/tup-build/run-001`, and keep the source/cache elsewhere. Invoke the same
-arguments for each action (replace the placeholder digest only after checking
-the lock's provenance):
+After source authentication and disposable-host preparation, use the same
+arguments for each action. Replace the digest only after reviewing the export:
 
 ```bash
-python3 tup/native/build.py preflight \
-  --workspace /srv/tup-build/run-001 --source-cache /srv/tup-sources \
-  --source-lock /srv/tup-inputs/sources.lock.json --lock-sha256 VERIFIED_LOCK_DIGEST
-# Repeat with action prepare, then build. --through ch06 stops before chroot.
+args=(
+  --profile lfs-13.1-systemd
+  --workspace /srv/tup-build/run-001
+  --source /srv/dawnr/tup
+  --source-cache /srv/tup-sources
+  --source-lock /srv/tup-inputs/sources.lock.json
+  --lock-sha256 VERIFIED_LOCK_DIGEST
+  --build-user lfs --jobs 4 --memory-mib 4096 --free-gib 40 --through ch08
+)
+python3 /srv/dawnr/tup/native/build.py preflight "${args[@]}"
+python3 /srv/dawnr/tup/native/build.py prepare "${args[@]}"
+python3 /srv/dawnr/tup/native/build.py build "${args[@]}"
+python3 /srv/dawnr/tup/native/build.py validate "${args[@]}"
 ```
 
-`prepare` copies verified sources and all build inputs into `workspace/root`.
-`build` runs ch05, ch06, ownership transfer, ch07-inner, then ch08 synchronously.
-Later stages cannot start after a nonzero result. Chroot mounts exist in a
-private mount/PID namespace that ends with the stage; there are no asynchronous
-marker-polling chains. The selected tests remain `glibc gcc binutils`; other
-suite skips stay in the driver's receipts and are not passes.
+`--book` may relocate the selected profile's exact extracted book; it does not
+approve an arbitrary release. `--through ch06` stops before chroot and emits no
+full-core completion export. `prepare` stages inputs and creates target layout.
+`build` executes ch05, ch06, ownership, ch07-inner, then ch08 sequentially.
+`validate` requires every selected stage to be complete and runs only driver
+validation, never a missing package command. Validation still uses a private
+mount/PID namespace for the chroot view and can write the validation export.
 
-`--book` selects the location of the extracted x86_64 book. This initial unit
-accepts only the historical LFS 12.4 metadata and exact chapter 7 order. Other
-books, including 13.1, refuse until their changed packages/crossing are adapted
-and tested. This does not approve the retired SysV release for production;
-review the maintained book/init policy before the production build. The source
-lock binds the selected book's exact identity.
-
-Chapter 7 pages 2–4 are implemented by the ownership/environment/namespace
-crossing. Pages 5–12 are the explicit inner sequence. Page 13 combines optional
-space cleanup with exiting chroot, host unmounts and a backup; it is deliberately
-omitted here instead of executing host-side commands inside the target. The
-cross toolchain/docs can therefore remain until a separately receipted final
-cleanup is implemented. No completed full chapter-7 cleanup/backup is claimed.
-
-The source tree, full book/overrides/helpers, native scripts/profile, lock,
-archives, host toolchain identities and resource/test policy form one immutable
-`BUILD-INPUTS.json`. The same bytes are passed as `TUP_BUILD_INPUTS` outside and
-inside chroot. Before **every stage and resume**, the caller recomputes current
-input identities and validates both cached and staged archive hashes. The Bash
-driver may treat that JSON as opaque because this caller checks its contents.
-Completed stages require the same inputs, intact logs, and the driver's
-`TUP_VALIDATE_ONLY=1` ledger check before they are skipped.
+Chapter 7 ownership/mount/chroot pages are delegated to the checked host runner.
+Native13 executes inner pages 5-15, including temporary tool cleanup; manual
+exit, host unmount and optional backup examples are omitted. Namespace teardown
+releases mounts. Historical12.4 retains its original inner pages 5-12 policy.
+No backup operation is claimed by either profile.
 
 ## Evidence and recovery
 
-`workspace/state` holds preparation identity, stage intent/result JSON and
-unmodified logs. A completion record is atomically renamed only after the
-child succeeded and its log was flushed. Persisting that record is itself a
-required operation. `root/sources/log` retains the per-page driver receipts.
-The exact ordered source pins are exported as
-`root/sources/SHA256-MANIFEST-NATIVE.txt`; altered manifests and any extra staged
-source file/directory refuse before a stage starts.
+`workspace/state` retains preparation identity, stage intents/results and logs.
+A completion record is committed only after successful execution, flushed log
+and complete postconditions. The driver keeps per-page transactions in
+`root/sources/log`. Required native13 suites additionally preserve original
+result files and a checked file manifest under `log/native-suites`; removal,
+addition or alteration refuses subsequent validation. Optional suite skips are
+explicit receipts, never passes.
 
-The maintained 13.1 migration currently has only guarded block-audit and source
-export validation helpers. Its CLI profile, complete reviewed block audit and
-runtime wiring are not enabled. See the exact
-[profile checkpoint](profiles/lfs-13.1-systemd/README.md) for remaining work.
-No completion message means native boot/install readiness.
+Required coverage includes compiler/math suites, Tcl/Expect, both coreutils
+privilege phases, final Python, tar, kbd and embedded bzip2 comparisons. Python
+backport regressions also run with temporary Python; kbd compiles the 18 affected
+keymaps without opening a console. SQLite's shipped shell selftest and bounded
+SQL regressions are labeled local coverage: its selected autoconf archive does
+not ship the full upstream testfixture suite. Per-test upstream skips remain skips.
 
-An interrupted preparation, uncertain/failed stage, retained writer lock,
-changed input, altered log or corrupted driver ledger refuses reuse. Inspect
-and retain that evidence, then start in a new empty workspace. There is no
-`--force` option or automatic deletion of the old target root. Do not remove a
-writer lock while its build may still be running. Filesystem crashes or changes
-to the built tree still require final inventory/boot validation; stage receipts
-are not an image-integrity proof.
+A fresh full-core validation exports `state/CORE-COMPLETION.json`, schema
+`tup-native-core-completion-v1`, with input identity, completed stage receipts
+and logs, canonical driver identities, required-suite evidence and validation
+time. This is a **core-only** receipt. It does not attest all installed files or
+claim boot, remote access or release eligibility. Boot packaging must require a
+successful current `validate` invocation and separately inventory the exported
+root, including ownership, modes, links and extended attributes.
+The receipt preserves source assurance counts, source release eligibility and
+open release gates; core `release_eligible` remains false.
 
-## Validation
+Failed/interrupted preparation or execution, retained writer locks, damaged
+receipts, changed inputs and filesystem errors refuse reuse. There is no force
+or automatic target deletion. Preserve the failure evidence and investigate;
+do not remove locks while a builder may still be running. The first real LFS
+build, mount/recovery behavior, peak-resource measurements and all boot/install
+and remote-access gates still need runtime evidence.
 
-Prediction before running the fixture suite: all source-tamper, stale-input,
-failed-child, ledger-validation and receipt-write failures return failure; none
-authorizes a completed stage. Successful byte-exact fixture inputs are accepted.
-These fixtures never run an LFS page, mount a filesystem or access a device.
+## Checks
 
 ```bash
-python3 -m unittest discover -s tup/tests -p 'test_native_build.py' -v
+python3 -m unittest discover -s tup/tests -p 'test_native*.py' -v
 bash -n tup/native/run-stage.sh
-bash -n tup/native/profiles/x86_64/overrides/x86_64/ch08/shadow.sh
+bash -n tup/native/profiles/lfs-13.1-systemd/required-suite.sh
 ```
 
-Still required: Linux host preflight, mount-namespace failure/recovery tests,
-an actual clean chapters 5–8 build, Linux resume/driver integration tests,
-resource measurements and all later native installation gates. Windows fixture
-success cannot substitute for any of those results.
-
-The host/environment/chroot sequence follows LFS 12.4:
-[host requirements](https://www.linuxfromscratch.org/lfs/view/12.4/chapter02/hostreqs.html),
-[build environment](https://www.linuxfromscratch.org/lfs/view/12.4/chapter04/settingenvironment.html),
-[kernel filesystems](https://www.linuxfromscratch.org/lfs/view/12.4/chapter07/kernfs.html),
-and [chroot](https://www.linuxfromscratch.org/lfs/view/12.4/chapter07/chroot.html).
+These fixtures use synthetic results and harmless command stubs. They do not
+build a package or mount a filesystem. See [VALIDATION.md](VALIDATION.md) for
+observed results and limitations. Host/chroot policy follows the official
+[13.1 host requirements](https://www.linuxfromscratch.org/lfs/view/13.1-systemd/chapter02/hostreqs.html),
+[build environment](https://www.linuxfromscratch.org/lfs/view/13.1-systemd/chapter04/settingenvironment.html),
+[kernel filesystems](https://www.linuxfromscratch.org/lfs/view/13.1-systemd/chapter07/kernfs.html)
+and [chroot](https://www.linuxfromscratch.org/lfs/view/13.1-systemd/chapter07/chroot.html).

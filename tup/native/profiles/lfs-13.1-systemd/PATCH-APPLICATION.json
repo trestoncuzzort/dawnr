@@ -1,0 +1,105 @@
+{
+  "method": "GNU patch 2.7.6 --batch --forward --fuzz=0 on isolated regular-file copies; no package commands",
+  "patch_tool_sha256": "a7ae8b838a75711c06f86a2a8293dcad85a20b564670a120717e704c436e6f3a",
+  "results": [
+    {
+      "added_deleted_lines_unchanged": true,
+      "applied_patch_sha256": "35e3bbd9642af51fef2a8a83afba040d272da42d7e3a251d8e43255a7b496702",
+      "archive": "bzip2-1.0.8.tar.gz",
+      "archive_sha256": "ab5a03176ee106d3f0fa90e381da478ddae405918153cca248e682cd0c4a2269",
+      "context_adapted": false,
+      "exit_code": 0,
+      "failed_hunks": [],
+      "original_patch_sha256": "35e3bbd9642af51fef2a8a83afba040d272da42d7e3a251d8e43255a7b496702",
+      "patch": "bzip2-1.0.8-install_docs-1.patch",
+      "patch_output_sha256": "6f582578165ddf18a014e8d6398f80ff4f12e936826d6e14e607cdc84e1ea8b0"
+    },
+    {
+      "added_deleted_lines_unchanged": true,
+      "applied_patch_sha256": "5f958b6fc399dbbc9143efa6f892bdb77830b83053cb587919ecce8b516d20e4",
+      "archive": "coreutils-9.11.tar.xz",
+      "archive_sha256": "394024eda0a5955217ceda9cd1201e65dc8fa3aa29c2951135a49521d57c3cc3",
+      "context_adapted": true,
+      "exit_code": 0,
+      "failed_hunks": [],
+      "original_patch_sha256": "7c2aecf9ae24b87b019595e382b9f41d2c96de7f95abe95ad8cacc7e2ce1bbcc",
+      "patch": "coreutils-9.11-i18n-1.patch",
+      "patch_output_sha256": "32f34de8d5a5ab3b3d7c4720633edab45ff587dc800c9e0fd13d34a8c41a7341"
+    },
+    {
+      "added_deleted_lines_unchanged": true,
+      "applied_patch_sha256": "ab5fc0af9e2e0f80d7623c1a3a3dbeb1da3d8c9134276792199df401f9eb2cec",
+      "archive": "expect5.45.4.tar.gz",
+      "archive_sha256": "49a7da83b0bdd9f46d04a04deec19c7767bb9a323e40c4781f89caf760b92c34",
+      "context_adapted": false,
+      "exit_code": 0,
+      "failed_hunks": [],
+      "original_patch_sha256": "ab5fc0af9e2e0f80d7623c1a3a3dbeb1da3d8c9134276792199df401f9eb2cec",
+      "patch": "expect-5.45.4-gcc15-1.patch",
+      "patch_output_sha256": "14810d29e6050ef41daa4cb2a342d662a5618f8ef0af2f6f1aba1b0c0587ac7f"
+    },
+    {
+      "added_deleted_lines_unchanged": true,
+      "applied_patch_sha256": "643552db030e2f2d7ffde4f558e0f5f83d3fabf34a2e0e56ebdb49750ac27b0d",
+      "archive": "glibc-2.44.tar.xz",
+      "archive_sha256": "37f600f2bef3c5e8300147059568b2a2e40a7ad6ccc65ce942556d49429cc667",
+      "context_adapted": false,
+      "exit_code": 0,
+      "failed_hunks": [],
+      "original_patch_sha256": "643552db030e2f2d7ffde4f558e0f5f83d3fabf34a2e0e56ebdb49750ac27b0d",
+      "patch": "glibc-fhs-1.patch",
+      "patch_output_sha256": "d628ed2e6cd5fab4d29a5d12bd808dd74544d4ce6ada8a114b0d6b07b1dd2887"
+    },
+    {
+      "added_deleted_lines_unchanged": true,
+      "applied_patch_sha256": "cd3245887c9c2564ef18b8e9ed4046093a575fc91bce00fd82eb931102e4a30e",
+      "archive": "glibc-2.44.tar.xz",
+      "archive_sha256": "37f600f2bef3c5e8300147059568b2a2e40a7ad6ccc65ce942556d49429cc667",
+      "context_adapted": false,
+      "exit_code": 0,
+      "failed_hunks": [],
+      "original_patch_sha256": "cd3245887c9c2564ef18b8e9ed4046093a575fc91bce00fd82eb931102e4a30e",
+      "patch": "glibc-2.44-upstream_fixes-3.patch",
+      "patch_output_sha256": "3dafb54caad9f2b364f40e238081b72914f094bfec3d2ee3060c9b24ff853b6f"
+    },
+    {
+      "added_deleted_lines_unchanged": true,
+      "applied_patch_sha256": "19ceb40af281ce8069794514f073e4557898c970c4c80d24db80b2bd3ab3b996",
+      "archive": "kbd-2.10.0.tar.xz",
+      "archive_sha256": "6e5ca4f8d76ee9e3a8db700b667f13e12aac9933828a64e1aaad93d26be9b479",
+      "context_adapted": true,
+      "exit_code": 0,
+      "failed_hunks": [],
+      "original_patch_sha256": "8be28dcb11420624a500f2ea4fe975f771174bffee50e54ec8cd295a2dec104e",
+      "patch": "kbd-2.10.0-backspace-1.patch",
+      "patch_output_sha256": "ead86c8d20d18d6b6e10000fdd4e82725dbe390de470cca056c4d4eedc409489"
+    },
+    {
+      "added_deleted_lines_unchanged": true,
+      "applied_patch_sha256": "c8f0f5f31c71b28ad2d6ce04f895c1611dfc0e7744aa538134b71dfa71b4eef6",
+      "archive": "Python-3.14.10.tar.xz",
+      "archive_sha256": "de414a57119abef52784d8993e341d53aed635fc2b05c2607d9f98a2c5b72032",
+      "context_adapted": true,
+      "exit_code": 0,
+      "failed_hunks": [],
+      "original_patch_sha256": "707a0c457192ac2f3b5b8a51481bc5ebd12db22d57c1dbe0256138ee6e070792",
+      "patch": "Python-3.14.7-openssl_4-1.patch",
+      "patch_output_sha256": "a4c87cdf405b4eda6082c10ae704f144fc08b612a33764d2a06788353c07c4da"
+    },
+    {
+      "added_deleted_lines_unchanged": true,
+      "applied_patch_sha256": "51cadccfcb2f29cfdb4ec18015360100aa167179a72ece040a6a8612aeec5081",
+      "archive": "tar-1.35.tar.xz",
+      "archive_sha256": "4d62ff37342ec7aed748535323930c7cf94acf71c3591882b26a7ea50f3edc16",
+      "context_adapted": false,
+      "exit_code": 0,
+      "failed_hunks": [],
+      "original_patch_sha256": "51cadccfcb2f29cfdb4ec18015360100aa167179a72ece040a6a8612aeec5081",
+      "patch": "tar-1.35-acl_fix-1.patch",
+      "patch_output_sha256": "6eff8756e89dff4c459a5f7d5b080e517009a52de1c6e186b556099b768f33bf"
+    }
+  ],
+  "reviewed_at": "2026-11-05",
+  "schema": "tup-patch-context-review-v1",
+  "scope": "context applicability only; source authentication and runtime behavior remain separate gates"
+}

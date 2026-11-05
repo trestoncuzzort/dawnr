@@ -1,0 +1,5 @@
+# Preserve the exact reviewed patch/receipt bytes across checkout platforms.
+*.patch -text whitespace=-blank-at-eol
+*.json -text
+*.sh text eol=lf
+*.py text eol=lf

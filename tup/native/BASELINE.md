@@ -2,10 +2,11 @@
 
 Working decision, 2026-11-04: use **LFS 13.1-systemd with dated advisory
 overrides** for the production native profile. Preserve the existing 12.4
-SysV extraction and receipts as historical inputs. The current native builder
-deliberately accepts only its audited 12.4 chapter crossing; it must refuse
-the new book until the migration below is implemented and tested. Its current
-fixture success is not approval to deploy either book unchanged.
+SysV extraction and receipts as historical inputs. The native builder now exposes an explicit reviewed 13.1-systemd core
+profile alongside the historical 12.4 profile. Its block audit, source gates
+and fixtures are implementation evidence; an actual clean build and native
+qualification remain required. Neither fixture success nor the release number
+is approval to deploy either book unchanged.
 
 The [LFS download page](https://www.linuxfromscratch.org/lfs/download.html)
 states that the prior System V edition is no longer maintained. Keeping it

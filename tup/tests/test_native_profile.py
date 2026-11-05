@@ -154,6 +154,7 @@ exec bash "$1"
             b"snapshot_sha256=" + b"1" * 64 + b"\naudit_profile_sha256=" + b"2" * 64 + b"\n")
         (book / "ch05/01-demo.sh").write_bytes(b"# TUP_TARBALL=original.tar\n")
         lock = {"schema": "tup-source-lock-v1", "architecture": "x86_64",
+                "lock_purpose": "production", "release_eligible": True, "release_gates": [],
                 "book_source_sha256": build.digest(book / "BOOK-SOURCE"), "provenance": "fixture evidence",
                 "sources": [{"name": "updated.tar", "url": "https://example.invalid/updated.tar", "sha256": "3" * 64,
                              "authentication": {"status": "verified", "trust_class": "https-published-sha256",
@@ -163,7 +164,17 @@ exec bash "$1"
                 "advisory_review": {"status": "reviewed", "material_sha256": "6" * 64,
                                     "dispositions": [{"id": "fixture", "disposition": "fixed-by-selection"}]}}
         path = self.directory / "source-lock.json"
-        effective = {"overrides/x86_64/ch05/01-demo.sh": b"# TUP_TARBALL=updated.tar\n"}
+        effective = {"overrides/x86_64/ch05/01-demo.sh": b"# TUP_TARBALL=updated.tar\n",
+                     "native/profiles/lfs-13.1-systemd/AUDIT.json": build.encoded({"source_names": ["updated.tar"]})}
+        backport_fields = {}
+        for field, name in (("native_patch", "python-3.14.10-security-backports.patch"),
+                            ("native_review", "PYTHON-BACKPORT-REVIEW.json")):
+            key = "native/profiles/lfs-13.1-systemd/" + name
+            effective[key] = build.TUP / key
+            backport_fields[field] = {"path": "tup/" + key, "sha256": build.digest(effective[key])}
+        for advisory in ("sa-13.1-088", "sa-13.1-089"):
+            lock["advisory_review"]["dispositions"].append({"id": advisory, "package": "python",
+                "disposition": "fixed-by-native-patch", "selected_sources": ["Python-3.14.10.tar.xz"], **backport_fields})
 
         def load():
             path.write_bytes(build.encoded(lock))

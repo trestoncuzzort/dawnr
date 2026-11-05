@@ -59,8 +59,46 @@ Five additional driver protocol cases passed for replacement archives and
 metadata ambiguity. Those Windows driver tests use the documented sync shim;
 they do not establish Linux filesystem durability.
 
-The 13.1 CLI remains disabled and no reviewed production `AUDIT.json` exists.
+At that helper checkpoint the 13.1 CLI remained disabled and no reviewed
+`AUDIT.json` existed. The next checkpoint below supersedes that activation state.
 No new LFS page, mount or real package command ran in these fixtures. The
 remaining activation and source/patch review work is named in the profile
 checkpoint; none of H03/H54 or the native build/boot gates is closed by this
 helper implementation.
+
+## Reviewed native13 core checkpoint
+
+2026-11-05: the explicit `lfs-13.1-systemd` CLI now renders the complete
+124-page/580-block ch05-ch08 audit, with no historical shared override fallback.
+The source lock must cover its exact 94 inputs, source assurance policy and
+complete advisory review, including the Python backport bindings and H55
+build-only gate. The `validate` action refuses incomplete stages without
+executing a package and exports core-only evidence after fresh full validation.
+
+The final portable native run completed **54 tests, 0 failures, 3 explicit
+Linux-only skips**, in 5.026 seconds using CPython 3.13.17 and Git Bash. These
+fixtures cover block coverage, exact source and
+exception linkage, bounded clean runner environment, root/path protection,
+retained suite evidence and test result formats, Python XML failures/skips,
+manual archive confinement, changed backport digests and incomplete-stage
+refusal. Three ownership/runner cases require Linux and are explicitly skipped
+on Windows. All 124 rendered overrides pass Bash syntax checks. The integrated
+Linux fixture run and first actual LFS build remain separate handoff gates.
+
+Independent Linux regular-file checks are retained in the profile:
+
+- `PATCH-APPLICATION.json`: all eight selected LFS patches apply with zero
+  fuzz, exit 0, using GNU patch 2.7.6. The report binds the tool and patch inputs.
+- `PYTHON-BACKPORT-REGRESSIONS.json`: both original vulnerable twins are
+  rejected and both backported regressions pass with GCC 13.3.0. Exact upstream
+  source/function changes, patch and tool identities are bound. The compiled
+  harness checks long-path allocation, short destination, all relevant failure
+  branches and freeing the returned buffer; the POP3 method rejects all 33
+  prohibited control bytes without sending a command.
+
+These isolated checks ran no package build/install commands. Real temporary
+and final Python tests, complete compiler/math/package suites, mount namespace
+behavior, native build resource measurements, boot, networking and remote
+access still require their actual runtime evidence. SQLite local regressions
+do not claim the full upstream suite absent from its selected archive. H55 and
+the full native/remote-release goal remain open.
