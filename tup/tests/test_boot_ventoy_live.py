@@ -47,6 +47,7 @@ udevadm() {
 mount() {
     log "mount $*"
     [ ! -e "$T/mount-fails" ] || return 32
+    if [ -e "$T/mount-fails-once" ]; then command rm "$T/mount-fails-once"; return 32; fi
     eval "point=\\${$#} source=\\${$(($# - 1))}"
     cp -R "$T/content/${source##*/}/." "$point"
 }
@@ -376,8 +377,21 @@ class Discovery:
     def test_failed_mount_is_refused_without_looking_for_the_image(self):
         (self.base / "mount-fails").touch()
         calls = self.run_hook()
+        # Three passes, three attempts, one notice, then the stop.
+        self.assertEqual(len(self.commands(calls, "mount")), 3)
+        self.assertEqual([line.split()[0] for line in calls if not line.startswith("mount ")], ["info", "warn", "warn"])
+        self.assertIn("yet; trying twice more", calls[2])
         self.assertIn("cannot mount", calls[-1])
+        self.assertIn("after 3 attempts", calls[-1])
         self.assertEqual(self.commands(calls, "losetup") + self.commands(calls, "umount"), [])
+        self.assertFalse(self.job.exists())
+
+    def test_a_mount_that_fails_once_is_tried_again_and_the_boot_proceeds(self):
+        (self.base / "mount-fails-once").touch()
+        calls = self.run_hook()
+        self.assertEqual(len(self.commands(calls, "mount")), 2)
+        self.assertEqual(self.commands(calls, "losetup"), [f"losetup -r -f --show -- {self.base}/run/media/images/tup test.iso"])
+        self.assertIn("attached /dev/loop7 read-only", calls[-1])
         self.assertFalse(self.job.exists())
 
 

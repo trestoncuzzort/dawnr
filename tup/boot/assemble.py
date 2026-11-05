@@ -31,12 +31,22 @@ GRUB_TEXT_OPTIONS = ("--fonts=", "--themes=", "--locales=")
 MODULES = "bash base udev-rules kernel-modules rootfs-block dmsquash-live"
 HOOKS = {"verify-live.sh": "usr/lib/dracut/hooks/pre-pivot/01-tup-live-verify.sh",
          "ventoy-live.sh": "usr/lib/dracut/hooks/initqueue/settled/20-tup-ventoy-live.sh"}
-# Dracut exits 0 when it cannot install its own scripts; these prove it did.
+# Dracut exits 0 when it cannot install its own scripts or a program they
+# call (dracut.sh ignores a module's install status); these prove it did. The
+# programs are the ones dracut's init, dmsquash-live and the two hooks run.
 LIVE_FILES = (r"init", r"(?:usr/)?bin/od", r"(?:usr/)?bin/sha256sum",
+              *(r"(?:usr/)?bin/" + name for name in ("cat", "dd", "mount", "readlink", "rmdir", "stat", "udevadm", "umount")),
+              *(r"(?:usr/)?s?bin/" + name for name in ("blkid", "losetup", "switch_root")),
+              # systemd installs the daemon as a link to udevadm. "init" must stay
+              # a plain file: a link there would be systemd's init, not dracut's.
+              r"(?:usr/)?lib/systemd/systemd-udevd(?: -> \S*udevadm)?",
               r"var/lib/dracut/hooks/cmdline/30-parse-dmsquash-live\.sh",
               r"var/lib/dracut/hooks/pre-udev/30-dmsquash-live-genrules\.sh",
               r"var/lib/dracut/hooks/pre-mount/01-prepare-overlayfs\.sh",
               r"var/lib/dracut/hooks/mount/01-mount-overlayfs\.sh")
+# What dracut 112 writes when an install step failed, on its output
+# ("dracut[E]: ...", "dracut-install: ERROR: ...") and in its log file ("E: ...").
+DRACUT_ERRORS = re.compile(r"dracut-install: ERROR|^E: |dracut\[E\]", re.M)
 MICROCODE = "usr/lib/firmware/amd-ucode/microcode_amd_fam19h.bin"
 EARLY_MICROCODE = "kernel/x86/microcode/AuthenticAMD.bin"
 # Ventoy only tests that this file exists in the ISO root. It then adds no hook
@@ -379,7 +389,7 @@ def assemble(root, expected_path, core_spec, layer_receipt, tools_path, tools_sh
         conf = stage / "dracut.conf"
         conf.write_text('hostonly="no"\nhostonly_cmdline="no"\n', encoding="ascii", newline="\n")
         initrd = stage / "iso/boot/initramfs.img"
-        runner([command("dracut"), "--sysroot", root, "--kver", release, "--conf", conf,
+        said = runner([command("dracut"), "--sysroot", root, "--kver", release, "--conf", conf,
                 "--confdir", stage / "empty-conf.d", "--tmpdir", stage / "tmp", "--logfile", stage / "dracut.log",
                 "--no-hostonly", "--no-hostonly-cmdline", "--no-hostonly-default-device",
                 # --fwdir replaces the default search path, which also reads the
@@ -389,6 +399,11 @@ def assemble(root, expected_path, core_spec, layer_receipt, tools_path, tools_sh
                 "--modules", MODULES, "--install", "/usr/bin/sha256sum /usr/bin/od", *includes, initrd],
                cwd=stage, env=env, log=log)
         file_hash(initrd)
+        # A zero exit says nothing: a missing program or library is only logged.
+        logged = stage / "dracut.log"
+        said = (said or "") + (logged.read_text(encoding="utf-8", errors="replace") if logged.is_file() else "")
+        if DRACUT_ERRORS.search(said):
+            raise Refusal("dracut logged an install error although it exited 0; see dracut.log and " + log.name)
         modules = runner([command("lsinitrd"), "-m", initrd], cwd=stage, env=env, log=log)
         listed = lambda name: re.search(r"(?m)^\s*" + re.escape(name) + r"\s*$", modules)
         if (not all(listed(name) for name in ("base", "dmsquash-live", "initqueue", "overlayfs"))
@@ -407,8 +422,10 @@ def assemble(root, expected_path, core_spec, layer_receipt, tools_path, tools_sh
                  if entry["type"] == "file"}
         if set(early) != {"early_cpio", EARLY_MICROCODE} or early[EARLY_MICROCODE] != expected["microcode"]["sha256"]:
             raise Refusal("initramfs early microcode is not exactly the staged AMD family 19h container")
-        if not all(re.search(r"(?m)\s" + name + "$", listing) for name in LIVE_FILES):
-            raise Refusal("initramfs lacks dracut's live scripts or the hook tools; see " + log.name)
+        absent = [name for name in LIVE_FILES if not re.search(r"(?m)\s" + name + "$", listing)]
+        if absent:
+            raise Refusal("initramfs lacks dracut's live scripts or the programs they run (" + ", ".join(absent)
+                          + "); see " + log.name)
         iso = stage / "tup-x86_64-uefi-test.iso"
         runner([command("grub-mkrescue"), *GRUB_TEXT_OPTIONS,
                 "--directory=" + lock["grub_modules"], "--output=" + str(iso),

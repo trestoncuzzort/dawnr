@@ -45,7 +45,11 @@ class BootFixture(unittest.TestCase):
         self.listing = "".join(f"-rwxr-xr-x   1 root     root            1 Jan  1  1970 {name}\n" for name in (
             "init", "usr/bin/od", "usr/bin/sha256sum", "var/lib/dracut/hooks/cmdline/30-parse-dmsquash-live.sh",
             "var/lib/dracut/hooks/mount/01-mount-overlayfs.sh", "var/lib/dracut/hooks/pre-mount/01-prepare-overlayfs.sh",
-            "var/lib/dracut/hooks/pre-udev/30-dmsquash-live-genrules.sh"))
+            "var/lib/dracut/hooks/pre-udev/30-dmsquash-live-genrules.sh",
+            # Programs dracut's init, dmsquash-live and the two hooks run.
+            "usr/bin/cat", "usr/bin/dd", "usr/bin/mount", "usr/bin/readlink", "usr/bin/rmdir", "usr/bin/stat",
+            "usr/bin/udevadm", "usr/bin/umount", "usr/sbin/blkid", "usr/sbin/losetup", "usr/sbin/switch_root"))
+        self.listing += "lrwxrwxrwx   1 root     root           16 Jan  1  1970 usr/lib/systemd/systemd-udevd -> ../../bin/udevadm\n"
         self.modules = "dracut modules:\nbash\ndm\ndmsquash-live\noverlayfs\nrootfs-block\ninitqueue\nbase\n"
         image = bytearray(1024)
         image[0x202:0x206] = b"HdrS"
@@ -492,14 +496,51 @@ class PackagingTests(BootFixture):
         # Dracut 112 exits 0 after "dracut-install: ERROR: installing" its own framework scripts.
         complete = self.listing
         for line in complete.splitlines(keepends=True):
-            with self.subTest(missing=line.split()[-1]):
+            with self.subTest(missing=line.split(" 1970 ")[1].strip()):
                 self.listing = complete.replace(line, "")
                 with self.assertRaisesRegex(inputs.Refusal, "live scripts"):
                     self.build()
         self.listing = complete.replace(" init\n", " init -> usr/lib/systemd/systemd\n")
         with self.assertRaisesRegex(inputs.Refusal, "live scripts"):
             self.build()
+        # The udev daemon may be systemd's link to udevadm or a plain file, never a link elsewhere.
+        self.listing = complete.replace("systemd-udevd -> ../../bin/udevadm\n", "systemd-udevd\n")
+        self.build()
+        self.listing = complete.replace("systemd-udevd -> ../../bin/udevadm\n", "systemd-udevd -> ../../bin/true\n")
+        self.output = self.output.with_name("refused-link")
+        with self.assertRaisesRegex(inputs.Refusal, "systemd-udevd"):
+            self.build()
         self.assertFalse(self.output.exists())
+
+    def test_dracut_install_errors_refuse_although_dracut_exits_zero(self):
+        # Measured with dracut 112: a failed dracut-install of a script, program
+        # or library is logged and the run still exits 0.
+        option = lambda command, name: command[command.index(name) + 1]
+        cases = {"output": ("dracut[E]: FAILED: /x/dracut-install -D /x/initramfs -a stat\n", None),
+                 "install": ("dracut-install: ERROR: installing '/usr/bin/stat'\n", None),
+                 "log": ("", "I: *** Including module: base ***\nE: FAILED: /x/dracut-install -D /x/initramfs -a stat\n")}
+        for name, (printed, logged) in cases.items():
+            with self.subTest(where=name):
+                def noisy(command, **kwargs):
+                    result = self.runner(command, **kwargs)
+                    if Path(command[0]).name != "dracut":
+                        return result
+                    if logged is not None:
+                        Path(option([str(x) for x in command], "--logfile")).write_text(logged, encoding="utf-8")
+                    return printed
+                self.output = self.output.with_name("dracut-error-" + name)
+                with self.assertRaisesRegex(inputs.Refusal, "install error"):
+                    self.build(noisy)
+                self.assertFalse((self.output / "ARTIFACT.json").exists())
+        # Informational lines that only mention the words do not refuse.
+        def quiet(command, **kwargs):
+            result = self.runner(command, **kwargs)
+            if Path(command[0]).name == "dracut":
+                Path(option([str(x) for x in command], "--logfile")).write_text(
+                    "I: *** Including module: base ***\nW: no error here: E: is not at a line start\n", encoding="utf-8")
+            return result
+        self.output = self.output.with_name("dracut-quiet")
+        self.build(quiet)
 
     def test_systemd_initramfs_without_the_dracut_hook_runner_refuses(self):
         # Measured with dracut 112: "systemd systemd-initrd" alone installs the hooks but nothing that sources them.

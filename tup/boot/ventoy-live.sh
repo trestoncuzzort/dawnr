@@ -260,7 +260,15 @@ vl_main() {
     esac
     mkdir -p "$VL_DIR/media"
     if ! mount -n -t "$type" -o "$opts,nosuid,nodev,noexec" "$node" "$VL_DIR/media"; then
-        vl_stop "cannot mount $node read-only as $type"
+        # udev probed this partition a moment ago and it may still be busy.
+        # Every other "not there yet" case keeps the job queued; so does this
+        # one, for two more passes, before discovery stops for the whole boot.
+        VL_MOUNT_FAILED=$((${VL_MOUNT_FAILED:-0} + 1))
+        if [ "$VL_MOUNT_FAILED" -lt 3 ]; then
+            [ "$VL_MOUNT_FAILED" -gt 1 ] || vl_say warn "cannot mount $node read-only as $type yet; trying twice more"
+            return 0
+        fi
+        vl_stop "cannot mount $node read-only as $type after $VL_MOUNT_FAILED attempts"
         return 0
     fi
     iso="$VL_DIR/media$VL_PATH"
