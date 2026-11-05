@@ -9,7 +9,48 @@ the owner's MacBook. Disposable TUP guests install workload tools through an
 in-guest package manager, keep running across remote disconnects, and discard
 their writable state on explicit finish. Only selected results persist.
 
-## Linux checkpoint: 2026-11-05
+## Core build started: 2026-11-05
+
+The first complete native-profile LFS build is running from frozen commit
+`cbabbd393a6d6d1470329d6b64defeafaf0f0392`. Preflight and fresh-root preparation
+passed, and the first Binutils stage completed. The build uses four compiler
+jobs under systemd limits of 4 GiB memory, 2 GiB swap and four CPUs. This is an
+active build, not a completed core or boot result. Its private workspace retains
+original package/stage logs, receipts and aggregate resource observations.
+
+That exact snapshot passed **256 integrated Linux tests, zero skips**;
+[verification](receipts/native-dev-20261105/verification-cbabbd39.json) binds
+[the original log](receipts/native-dev-20261105/integration-cbabbd39-linux.txt).
+The [core progress snapshot](receipts/native-dev-20261105/core-001-progress.json)
+records the completed pages without claiming whole-build success. The latest
+remote-policy checkpoint passes [258 tests](receipts/native-dev-20261105/verification-73a7e1dd.json)
+and adds complete effective-configuration checks and
+stops the SSH session cgroup when the access service stops; durable workloads
+must use separate managed services. Actual remote login remains untested.
+
+The [source closure](sources/README.md) accepts all 94 selected inputs: 83
+authenticated and 11 exact, separately counted provenance exceptions. The
+build-only lock binds 102 advisory dispositions, the two tested Python
+backports, and open Expat release gate H55. Its SHA256 is
+`8c46c28a74f760ddf62df17f34327ac24dde7b465ab7c1bf3b9dbc7551522a05`.
+The [native profile](native/profiles/lfs-13.1-systemd/README.md) now enables the
+audited 124-page, 580-block chapter 5-8 execution plan and retained package tests.
+
+Authenticated dracut 112, GRUB 2.14 EFI and SquashFS 4.7.5 host tools have
+[actual build/packaging evidence](boot/HOST-TOOLS.md). Metadata roundtrip and
+an EFI smoke ISO inspection passed. That smoke image contains no TUP kernel or
+root and has not booted. The real TUP kernel, live ISO, Ventoy and installed boot
+remain required gates. The installer is reusing systemd-repart; disposable
+testing exposed that `--empty=create` overrides dry-run and that split output
+is independent of dry-run. Physical targets remain inaccessible to the current
+fixture adapter.
+
+The requested [fetch-before-fic skill](skills/fetch-before-fic/SKILL.md) is
+validated, installed in the preparation machine's user skill directory and
+retained here for transfer to the next development machine. New work must
+research and reuse existing implementations before adding custom code.
+
+## Earlier Linux checkpoint: 2026-11-05
 
 The integrated checkpoint at `f2ac0c1c` passes **135 tests, zero failures and
 zero skips**, in 12.395 seconds on Linux. This includes the real GNU sync path
@@ -20,13 +61,13 @@ retained deliberately. [Verification](receipts/native-dev-20261105/verification.
 links to the unchanged raw Linux test log. No hardware power-loss or native-boot
 claim follows from these fixtures.
 
-The separate maintained-book extraction inventories 143 pages, 640 command
+At that checkpoint, the separate maintained-book extraction inventories 143 pages, 640 command
 blocks and 94 sources. Its command-bearing pages refuse execution until their
-named native overrides are reviewed. The native13 CLI is still disabled. The
+named native overrides are reviewed. The native13 CLI was still disabled. The
 source checkpoint verifies 22 of 94 inputs against published HTTPS SHA256
 metadata; unresolved sources and advisory dispositions prevent production
 export. The full block audit, authenticated source lock and actual core build
-are the next gates.
+were the next gates; the current build status above supersedes that checkpoint.
 
 The hardware check found wired Ethernet now linked at 1 Gbps. The vendor INF
 identifies USB Wi-Fi as RTL8852CU; the selected 6.18.60 kernel source lacks its

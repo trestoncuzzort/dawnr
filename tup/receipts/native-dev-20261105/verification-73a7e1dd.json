@@ -1,0 +1,28 @@
+{
+  "schema": 1,
+  "observation_local_date": "2026-11-05",
+  "source_commit": "73a7e1dd2c7925f65c1d545ca8bbda7655fb1b14",
+  "command": "python3 -m unittest discover -s tup/tests -v",
+  "prediction": {
+    "tests": 258,
+    "passed": 258,
+    "skipped": 0
+  },
+  "exit_code": 0,
+  "wall_seconds": 17.043,
+  "raw_log_sha256": "ddfdd2f0dea4c114e089fbe62f2b69235a3da45908c6f293b8bd94c783ac2a2a",
+  "runtime": {
+    "python": "3.12.3",
+    "kernel": "6.18.54.1-microsoft-standard-WSL2",
+    "architecture": "x86_64"
+  },
+  "limits": [
+    "Unit/integration fixtures only; no complete LFS build, native boot, physical power-cut test, installer or remote workload qualification."
+  ],
+  "tests": 258,
+  "seconds": 16.964,
+  "skipped": 0,
+  "failures": 0,
+  "errors": 0,
+  "passed": 258
+}

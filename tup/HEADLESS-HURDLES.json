@@ -33,7 +33,8 @@
         "native/README.md",
         "native/build.py",
         "native/run-stage.sh",
-        "tests/test_native_build.py"
+        "tests/test_native_build.py",
+        "qualification/observe_cgroup.py"
       ],
       "test_command": "python -m unittest discover -s tup/tests -p test_native_build.py -v",
       "evidence": [
@@ -41,13 +42,14 @@
         "receipts/native-dev-20261104/environment.json",
         "receipts/native-dev-20261104/verification.json",
         "receipts/native-dev-20261105/verification.json",
-        "receipts/native-dev-20261105/environment.json"
+        "receipts/native-dev-20261105/environment.json",
+        "receipts/native-dev-20261105/resource-collector-probe.json"
       ],
-      "note": "Windows restart and disposable Ubuntu 24.04.5 setup completed. Linux x86_64/ext4, 8 CPUs, 6 GiB configured RAM and 4 GiB swap verified; private mount/PID namespace probe passed. All 135 integrated fixtures pass on Linux, zero skips. Initial compiler budget remains four jobs; actual full-build resource peaks and management responsiveness are unmeasured."
+      "note": "First core build started from frozen cbabbd39 after real Linux preflight/prepare; first Binutils stage completed. Four jobs, enforced 4 GiB memory/2 GiB swap/4 CPU quota. Collector actual tests passed aggregate memory, child failure, direct and descendant-cgroup leftover detection. Whole-build resource peaks and management responsiveness remain unqualified."
     },
     {
       "id": "H02",
-      "status": "open",
+      "status": "in_progress",
       "owner": "integration",
       "depends_on": [
         "H01",
@@ -57,10 +59,15 @@
       "finding": "[x86 kernel page](book-x86_64/ch10/03-kernel.sh) pins Linux 6.16.1. The production maintenance and advisory policy is absent.",
       "required_change": "Stage 1: select a currently maintained kernel after driver/toolchain review, and record changes from the historical book. Review [kernel maintenance](https://www.kernel.org/releases.html) and [LFS/BLFS advisories](https://www.linuxfromscratch.org/advisories/).",
       "acceptance": "Kernel/config/source versions are pinned; applicable advisories have dispositions; update and rollback tests use the selected supported line.",
-      "implementation": [],
+      "implementation": [
+        "boot/kernel.py",
+        "sources/selections-13.1.json"
+      ],
       "test_command": null,
-      "evidence": [],
-      "note": "Implementation and measured acceptance remain required. No native success claimed."
+      "evidence": [
+        "sources/source-lock-13.1-build.json"
+      ],
+      "note": "Linux 6.18.60 source is authenticated and selected for the maintained baseline; initial native/UEFI/storage kernel fragment implemented. Actual kernel build, hardware drivers, maintenance rollback and Wi-Fi gap remain open."
     },
     {
       "id": "H03",
@@ -91,9 +98,12 @@
         "native/VALIDATION.md",
         "receipts/native-dev-20261104/verification.json",
         "receipts/native-dev-20261105/verification.json",
-        "receipts/native-dev-20261105/lfs-patch-provenance-review.json"
+        "receipts/native-dev-20261105/lfs-patch-provenance-review.json",
+        "sources/verification-13.1.json",
+        "sources/source-lock-13.1-build.json",
+        "receipts/native-dev-20261105/remaining-source-provenance-review.json"
       ],
-      "note": "The 94-source maintained-book inventory, replacement-source selection and verifier are implemented. Checkpoint verifies 22/94 sources through published HTTPS SHA256 evidence; 72 sources and full advisory review remain unresolved in that checkpoint. A production lock cannot be exported yet. All 135 integrated Linux fixtures pass; this does not authenticate unreviewed sources or establish full transitive closure. A later independent review accepts exactly eight LFS patch digests as explicit unsigned-Git/HTTPS provenance exceptions; it does not claim publisher signatures. Selected-version application and package suites remain required."
+      "note": "Actual Linux GPG/Lzip/source verification accepts 94/94: 83 authenticated and 11 exact provenance exceptions. 102 dated advisory dispositions checked, including exact Python backports and unresolved H55 release gate. Build-only export is not production eligibility; boot/remote/firmware/GPU additions require their own source and advisory review."
     },
     {
       "id": "H04",
@@ -192,7 +202,7 @@
     },
     {
       "id": "H08",
-      "status": "open",
+      "status": "in_progress",
       "owner": "integration",
       "depends_on": [
         "H03",
@@ -203,10 +213,17 @@
       "finding": "[release.sh](release.sh), lines 215-221, chooses inventory by timestamp and lists available layer receipts rather than proving their membership in the artifact.",
       "required_change": "Stage 1: generate and bind the exact final payload/image inventory and selected layer receipts to the released artifact digest.",
       "acceptance": "Stale/unrelated/failed inventories are rejected; the final image matches its declared file inventory.",
-      "implementation": [],
+      "implementation": [
+        "boot/assemble.py",
+        "boot/inputs.py",
+        "boot/kernel.py",
+        "boot/host_tools.py"
+      ],
       "test_command": null,
-      "evidence": [],
-      "note": "Implementation and measured acceptance remain required. No native success claimed."
+      "evidence": [
+        "boot/host-qualification-20261105.json"
+      ],
+      "note": "Boot packaging foundation and authenticated host tools implemented. Real SquashFS metadata roundtrip and EFI smoke ISO inspection passed; smoke image has no TUP kernel/root and is unbooted. Exact TUP export inventory, kernel and actual boot/installation evidence remain required."
     },
     {
       "id": "H09",
@@ -240,7 +257,7 @@
     },
     {
       "id": "H10",
-      "status": "open",
+      "status": "in_progress",
       "owner": "integration",
       "depends_on": [
         "H02",
@@ -250,10 +267,17 @@
       "finding": "[x86 GRUB override](overrides/x86_64/ch10/grub.sh), lines 21-33, installs i386-pc BIOS GRUB to /dev/vdb, uses MBR assumptions and boots /dev/vda1. The desktop is UEFI.",
       "required_change": "Stage 2: native x86_64-efi GRUB, GPT/ESP, necessary EFI kernel support, boot entry and documented fallback. Follow [BLFS EFI setup](https://www.linuxfromscratch.org/blfs/view/12.4/postlfs/grub-setup.html).",
       "acceptance": "Native UEFI boot from the installed disk with the USB removed; bootloader/kernel/initramfs are loaded from installed artifacts.",
-      "implementation": [],
+      "implementation": [
+        "boot/assemble.py",
+        "boot/inputs.py",
+        "boot/kernel.py",
+        "boot/host_tools.py"
+      ],
       "test_command": null,
-      "evidence": [],
-      "note": "Implementation and measured acceptance remain required. No native success claimed."
+      "evidence": [
+        "boot/host-qualification-20261105.json"
+      ],
+      "note": "Boot packaging foundation and authenticated host tools implemented. Real SquashFS metadata roundtrip and EFI smoke ISO inspection passed; smoke image has no TUP kernel/root and is unbooted. Exact TUP export inventory, kernel and actual boot/installation evidence remain required."
     },
     {
       "id": "H11",
@@ -272,7 +296,7 @@
     },
     {
       "id": "H12",
-      "status": "open",
+      "status": "in_progress",
       "owner": "integration",
       "depends_on": [
         "H01",
@@ -282,14 +306,21 @@
       "finding": "[kernel override](overrides/x86_64/ch10/kernel.sh), lines 18-68, deliberately guarantees a small QEMU-oriented option set. Actual AHCI/NVMe/USB/NIC/firmware behavior is untested.",
       "required_change": "Stage 2: separate native installer/installed profiles; include required EFI/GPT, storage, USB, filesystems, modules and firmware. Build in essential drivers or load them correctly in initramfs.",
       "acceptance": "Both live and installed systems enumerate the intended hardware and explain a deliberately missing-driver/root failure in rescue output.",
-      "implementation": [],
+      "implementation": [
+        "boot/assemble.py",
+        "boot/inputs.py",
+        "boot/kernel.py",
+        "boot/host_tools.py"
+      ],
       "test_command": null,
-      "evidence": [],
-      "note": "Implementation and measured acceptance remain required. No native success claimed."
+      "evidence": [
+        "boot/host-qualification-20261105.json"
+      ],
+      "note": "Boot packaging foundation and authenticated host tools implemented. Real SquashFS metadata roundtrip and EFI smoke ISO inspection passed; smoke image has no TUP kernel/root and is unbooted. Exact TUP export inventory, kernel and actual boot/installation evidence remain required."
     },
     {
       "id": "H13",
-      "status": "open",
+      "status": "in_progress",
       "owner": "integration",
       "depends_on": [
         "H08",
@@ -300,14 +331,21 @@
       "finding": "[release.sh](release.sh), lines 194-206, emits qcow2/VMDK/VDI. No native installer ISO or live-root workflow was found.",
       "required_change": "Stage 2: package EFI boot files, kernel, live initramfs/root, installer, rescue tools and verified payload into an actual ISO. [GRUB ISO tooling](https://www.gnu.org/software/grub/manual/grub/html_node/Invoking-grub_002dmkrescue.html) supplies packaging, not the live OS.",
       "acceptance": "Inspect boot entries, hash the ISO, boot it and run its installer. Renaming/converting a VM disk alone does not pass.",
-      "implementation": [],
+      "implementation": [
+        "boot/assemble.py",
+        "boot/inputs.py",
+        "boot/kernel.py",
+        "boot/host_tools.py"
+      ],
       "test_command": null,
-      "evidence": [],
-      "note": "Implementation and measured acceptance remain required. No native success claimed."
+      "evidence": [
+        "boot/host-qualification-20261105.json"
+      ],
+      "note": "Boot packaging foundation and authenticated host tools implemented. Real SquashFS metadata roundtrip and EFI smoke ISO inspection passed; smoke image has no TUP kernel/root and is unbooted. Exact TUP export inventory, kernel and actual boot/installation evidence remain required."
     },
     {
       "id": "H14",
-      "status": "open",
+      "status": "in_progress",
       "owner": "integration",
       "depends_on": [
         "H13",
@@ -316,14 +354,19 @@
       "finding": "Ventoy firmware handoff does not implement TUP's live-root discovery. A custom ISO cannot assume /dev/sr0.",
       "required_change": "Stage 2: implement documented USB-filesystem plus loop mounting or Ventoy mapping/device-mapper; include EFI-variable access and chosen filesystem support. [ISO mounting](https://www.ventoy.net/en/doc_compatible_mount.html), [UEFI handoff](https://www.ventoy.net/en/doc_compatible_pass.html).",
       "acceptance": "The exact ISO boots through a pinned Ventoy version, including a supported subdirectory/path test, and finds and verifies its actual live payload.",
-      "implementation": [],
+      "implementation": [
+        "boot/ventoy.py",
+        "boot/verify-live.sh"
+      ],
       "test_command": null,
-      "evidence": [],
-      "note": "Implementation and measured acceptance remain required. No native success claimed."
+      "evidence": [
+        "boot/README.md"
+      ],
+      "note": "Ventoy handoff parsing and live-payload hook are implemented with negative fixtures. Actual Ventoy integration remains disabled/unqualified until real image runtime proof; no skip-marker shortcut or native boot success claimed."
     },
     {
       "id": "H15",
-      "status": "open",
+      "status": "in_progress",
       "owner": "integration",
       "depends_on": [
         "H12",
@@ -332,10 +375,15 @@
       "finding": "A ventoy.dat marker tells Ventoy to skip its hooks; it does not add compatibility. The BLFS initramfs example is not a finished live installer and omits encrypted/network root support.",
       "required_change": "Stage 2: design live-root versus installed-root paths explicitly; add necessary loop/ISO/compressed-root/overlay support, recovery tools and memory limits. Add the marker only after implementation works. [Marker semantics](https://www.ventoy.net/en/doc_compatible_mark.html), [BLFS initramfs](https://www.linuxfromscratch.org/blfs/view/12.4/postlfs/initramfs.html).",
       "acceptance": "Direct ISO boot and Ventoy boot both work within the RAM budget; missing/corrupt live media yields useful rescue behavior without writing a target disk.",
-      "implementation": [],
+      "implementation": [
+        "boot/ventoy.py",
+        "boot/verify-live.sh"
+      ],
       "test_command": null,
-      "evidence": [],
-      "note": "Implementation and measured acceptance remain required. No native success claimed."
+      "evidence": [
+        "boot/README.md"
+      ],
+      "note": "Ventoy handoff parsing and live-payload hook are implemented with negative fixtures. Actual Ventoy integration remains disabled/unqualified until real image runtime proof; no skip-marker shortcut or native boot success claimed."
     },
     {
       "id": "H16",
@@ -358,7 +406,7 @@
     },
     {
       "id": "H17",
-      "status": "open",
+      "status": "in_progress",
       "owner": "integration",
       "depends_on": [
         "H13",
@@ -370,11 +418,11 @@
       "implementation": [],
       "test_command": null,
       "evidence": [],
-      "note": "Implementation and measured acceptance remain required. No native success claimed."
+      "note": "Existing systemd-repart selected after real regular-file GPT/ESP/ext4 fixture. Found that --empty=create overrides --dry-run=yes, and split outputs are not protected by dry-run. A precreated image with --empty=require --dry-run=yes --split=no retained identical whole-image SHA256; explicit fixture apply/population worked. Adapter/actual TUP payload/failure-recovery evidence still in progress; no physical target writes permitted."
     },
     {
       "id": "H18",
-      "status": "open",
+      "status": "in_progress",
       "owner": "integration",
       "depends_on": [
         "H08",
@@ -386,7 +434,7 @@
       "implementation": [],
       "test_command": null,
       "evidence": [],
-      "note": "Implementation and measured acceptance remain required. No native success claimed."
+      "note": "Existing systemd-repart selected after real regular-file GPT/ESP/ext4 fixture. Found that --empty=create overrides --dry-run=yes, and split outputs are not protected by dry-run. A precreated image with --empty=require --dry-run=yes --split=no retained identical whole-image SHA256; explicit fixture apply/population worked. Adapter/actual TUP payload/failure-recovery evidence still in progress; no physical target writes permitted."
     },
     {
       "id": "H19",
@@ -478,7 +526,7 @@
     },
     {
       "id": "H24",
-      "status": "open",
+      "status": "in_progress",
       "owner": "integration",
       "depends_on": [
         "H03",
@@ -488,14 +536,20 @@
       "finding": "Target OpenSSH/VPN/firewall recipes are absent. Build-VM SSH connects to Ubuntu, not installed TUP.",
       "required_change": "Stages 2-4: receipted OpenSSH and selected private-access layer. Use [BLFS OpenSSH](https://www.linuxfromscratch.org/blfs/view/12.4/postlfs/openssh.html); account for its stock bootscript's ListenAddress limitation.",
       "acceptance": "Validate effective sshd configuration; connect/transfer/reboot/reconnect from the client; test late overlay availability and denied authentication.",
-      "implementation": [],
+      "implementation": [
+        "remote/policy.py",
+        "remote/source.json"
+      ],
       "test_command": null,
-      "evidence": [],
-      "note": "Implementation and measured acceptance remain required. No native success claimed."
+      "evidence": [
+        "receipts/native-dev-20261105/openssh-host-check.json",
+        "remote/evidence/policy-check.json"
+      ],
+      "note": "Authenticated OpenSSH 10.6p1 source and owner-only private configuration implemented. Actual Ubuntu host binary passes effective-policy checks; no TUP target build, enrollment, listener, remote login or service lifecycle test yet. Whole SSH session cgroup stops with service; durable jobs need separate managed services."
     },
     {
       "id": "H25",
-      "status": "open",
+      "status": "in_progress",
       "owner": "integration",
       "depends_on": [
         "H09",
@@ -504,10 +558,16 @@
       "finding": "The historical TUP base is SysV-based; copied systemd units are not service integration. Startup order and process recovery are unimplemented, and H54 requires a maintained baseline/init decision.",
       "required_change": "Stages 2-5: integrate dependency-aware startup/supervision with the init selected under H54, persistent state, logging, bounded retries and safe shutdown. Establish firewall policy before remote listeners. If SysV is retained, provide actual SysV integration rather than copying systemd units.",
       "acceptance": "Cold boot, service kill/restart, failed DNS/time and late-network tests produce one working service instance and honest failure reporting.",
-      "implementation": [],
+      "implementation": [
+        "remote/policy.py",
+        "remote/source.json"
+      ],
       "test_command": null,
-      "evidence": [],
-      "note": "Implementation and measured acceptance remain required. No native success claimed."
+      "evidence": [
+        "receipts/native-dev-20261105/openssh-host-check.json",
+        "remote/evidence/policy-check.json"
+      ],
+      "note": "Authenticated OpenSSH 10.6p1 source and owner-only private configuration implemented. Actual Ubuntu host binary passes effective-policy checks; no TUP target build, enrollment, listener, remote login or service lifecycle test yet. Whole SSH session cgroup stops with service; durable jobs need separate managed services."
     },
     {
       "id": "H26",
@@ -546,7 +606,7 @@
     },
     {
       "id": "H28",
-      "status": "open",
+      "status": "in_progress",
       "owner": "integration",
       "depends_on": [
         "H23",
@@ -556,10 +616,16 @@
       "finding": "Owner administration, user workload access, SSH forwarding and privileged control sockets need distinct authority.",
       "required_change": "Stages 4-6: owner-only management, least-privilege user operations and no unrestricted host-file/device/VMM control for tenants. [OpenSSH policy options](https://man.openbsd.org/sshd_config).",
       "acceptance": "Non-owner attempts to attach a host disk, inspect another user's job, forward into management or open a privileged control endpoint fail and are logged.",
-      "implementation": [],
+      "implementation": [
+        "remote/policy.py",
+        "remote/source.json"
+      ],
       "test_command": null,
-      "evidence": [],
-      "note": "Implementation and measured acceptance remain required. No native success claimed."
+      "evidence": [
+        "receipts/native-dev-20261105/openssh-host-check.json",
+        "remote/evidence/policy-check.json"
+      ],
+      "note": "Authenticated OpenSSH 10.6p1 source and owner-only private configuration implemented. Actual Ubuntu host binary passes effective-policy checks; no TUP target build, enrollment, listener, remote login or service lifecycle test yet. Whole SSH session cgroup stops with service; durable jobs need separate managed services."
     },
     {
       "id": "H29",
@@ -1023,14 +1089,17 @@
       "implementation": [
         "native/BASELINE.md",
         "extraction/13.1-systemd/README.md",
-        "native/profiles/lfs-13.1-systemd/README.md"
+        "native/profiles/lfs-13.1-systemd/README.md",
+        "native/profiles/lfs-13.1-systemd/AUDIT.json"
       ],
       "test_command": null,
       "evidence": [
         "native/BASELINE.md",
-        "receipts/native-dev-20261105/verification.json"
+        "receipts/native-dev-20261105/verification.json",
+        "native/profiles/lfs-13.1-systemd/PATCH-APPLICATION.json",
+        "native/profiles/lfs-13.1-systemd/PYTHON-BACKPORT-REGRESSIONS.json"
       ],
-      "note": "The separate pinned 13.1-systemd book now inventories 143 pages, 640 blocks and 94 source entries. Offline extraction reproduces exact bytes; every command-bearing page refuses execution pending its named native override. Dormant audit helpers pass fixtures, but CLI activation, full execution review, source/advisory authentication and a real core build remain open. Historical book trees are preserved.",
+      "note": "Maintained 13.1-systemd CLI enabled with 124 audited pages/580 blocks and 94 accepted source inputs. Original generated book bytes remain unchanged; exact overrides enforce package tests and security backports. First actual core build is running; completed core and boot acceptance remain open.",
       "finding": "The [LFS download page](https://www.linuxfromscratch.org/lfs/download.html), checked 2026-11-04, says the prior System V edition is no longer maintained. TUP extracts 12.4 SysV; the currently maintained stable book is 13.1-systemd. Updating only the kernel leaves the rest of the native base without a documented maintenance plan.",
       "required_change": "Stage 1 before a production build: choose and pin a maintained LFS baseline, audit each retained named override against its exact generated page, and review applicable advisories. Compare rebasing onto the maintained book with explicitly maintaining the SysV branch; preserve historical generated pages and receipts. Record the chosen init/service design and measure its cost.",
       "acceptance": "Source/book/deviation inventory agrees with the chosen version; no unresolved applicable high-impact advisory is waved through; clean build, boot, supervision, updates and rollback are tested on that exact baseline. An old successful receipt is not production approval."

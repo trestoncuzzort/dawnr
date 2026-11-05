@@ -1,0 +1,54 @@
+{
+  "schema": "tup-core-progress-v1",
+  "observed_utc": "2026-11-05T09:38:06.388373+00:00",
+  "status": "core-build-running",
+  "source_commit": "cbabbd393a6d6d1470329d6b64defeafaf0f0392",
+  "source_lock_sha256": "8c46c28a74f760ddf62df17f34327ac24dde7b465ab7c1bf3b9dbc7551522a05",
+  "build_inputs_sha256": "aa8145166ceaac33cbea12edb15b1b08a1bf4143a1f49a95cf443334e11c4081",
+  "limits": {
+    "memory_max_bytes": 4294967296,
+    "swap_max_bytes": 2147483648,
+    "cpu_quota_percent": 400,
+    "compiler_jobs": 4,
+    "tasks_max": 4096
+  },
+  "manager_state": {
+    "OOMPolicy": "kill",
+    "CPUQuotaPerSecUSec": "4s",
+    "MemoryMax": "4294967296",
+    "MemorySwapMax": "2147483648",
+    "ActiveState": "active",
+    "SubState": "running"
+  },
+  "completed_pages": [
+    {
+      "page": "ch05/01-introduction.sh",
+      "package": "null",
+      "seconds": 0,
+      "exit": 0,
+      "page_exit": 0,
+      "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "build_inputs_sha256": "aa8145166ceaac33cbea12edb15b1b08a1bf4143a1f49a95cf443334e11c4081",
+      "original_receipt_line_sha256": "6e0b649814257601b46c775dff99abb0c4c4c75650c23c9c87a051fa1dec47e9"
+    },
+    {
+      "page": "ch05/02-binutils-pass1.sh",
+      "package": "binutils-2.47.tar.xz",
+      "seconds": 36,
+      "exit": 0,
+      "page_exit": 0,
+      "log_sha256": "5c3d3b64a4182387be7cf412fbed6024d19de9e69a2e3f8a4829ae501e723bac",
+      "build_inputs_sha256": "aa8145166ceaac33cbea12edb15b1b08a1bf4143a1f49a95cf443334e11c4081",
+      "original_receipt_line_sha256": "701da78bab6d91156d1d83aa2d922ed014a95bd7533e776d223493e41c910d65"
+    }
+  ],
+  "launch_corrections": [
+    "Unsupported MemoryOOMGroup property refused before launch; used documented systemd255 OOMPolicy=kill, which sets memory.oom.group=1."
+  ],
+  "core_complete": false,
+  "booted": false,
+  "remote_login_tested": false,
+  "hardware_qualified": false,
+  "release_eligible": false,
+  "evidence_scope": "Progress snapshot; original stage/page/resource logs retained in the private disposable builder. No full-build or native-hardware result."
+}
