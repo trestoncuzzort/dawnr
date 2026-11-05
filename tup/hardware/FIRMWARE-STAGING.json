@@ -1,0 +1,166 @@
+{
+  "checked_at": "2026-11-05T09:52:54.546162+00:00",
+  "file_count": 8,
+  "firmware_loaded": false,
+  "inventory": {
+    ".": {
+      "gid": 0,
+      "mode": 493,
+      "mtime_ns": 1793872374491846505,
+      "type": "directory",
+      "uid": 0,
+      "xattrs": {}
+    },
+    "usr": {
+      "gid": 0,
+      "mode": 493,
+      "mtime_ns": 1793872374506443663,
+      "type": "directory",
+      "uid": 0,
+      "xattrs": {}
+    },
+    "usr/lib": {
+      "gid": 0,
+      "mode": 493,
+      "mtime_ns": 1793872374491846505,
+      "type": "directory",
+      "uid": 0,
+      "xattrs": {}
+    },
+    "usr/lib/firmware": {
+      "gid": 0,
+      "mode": 493,
+      "mtime_ns": 1793872374504230793,
+      "type": "directory",
+      "uid": 0,
+      "xattrs": {}
+    },
+    "usr/lib/firmware/amd-ucode": {
+      "gid": 0,
+      "mode": 493,
+      "mtime_ns": 1793872374504230793,
+      "type": "directory",
+      "uid": 0,
+      "xattrs": {}
+    },
+    "usr/lib/firmware/amd-ucode/microcode_amd_fam19h.bin": {
+      "gid": 0,
+      "mode": 420,
+      "mtime_ns": 1793872374506443663,
+      "sha256": "c614d6db8056c5c67a9189b225124127d56990a190305bcb3927d50e132de7dd",
+      "size": 128644,
+      "type": "file",
+      "uid": 0,
+      "xattrs": {}
+    },
+    "usr/lib/firmware/rtl_nic": {
+      "gid": 0,
+      "mode": 493,
+      "mtime_ns": 1793872374502959126,
+      "type": "directory",
+      "uid": 0,
+      "xattrs": {}
+    },
+    "usr/lib/firmware/rtl_nic/rtl8125a-3.fw": {
+      "gid": 0,
+      "mode": 420,
+      "mtime_ns": 1793872374498691082,
+      "sha256": "3f6c328af0ceff5969c729edf0f535e8bb2a9b9e05d15b6be3199a3e6d421b99",
+      "size": 3456,
+      "type": "file",
+      "uid": 0,
+      "xattrs": {}
+    },
+    "usr/lib/firmware/rtl_nic/rtl8125b-2.fw": {
+      "gid": 0,
+      "mode": 420,
+      "mtime_ns": 1793872374500297449,
+      "sha256": "529bf1c25c97ff52b401090d00ff89cc22351012336e5a0c9662728a3ee909ef",
+      "size": 3328,
+      "type": "file",
+      "uid": 0,
+      "xattrs": {}
+    },
+    "usr/lib/firmware/rtl_nic/rtl8125bp-2.fw": {
+      "gid": 0,
+      "mode": 420,
+      "mtime_ns": 1793872374504230793,
+      "sha256": "70010caccdb0d87461f26d77a15f86615dc970549126cf17db01a7f43baf5287",
+      "size": 752,
+      "type": "file",
+      "uid": 0,
+      "xattrs": {}
+    },
+    "usr/lib/firmware/rtl_nic/rtl8125d-1.fw": {
+      "gid": 0,
+      "mode": 420,
+      "mtime_ns": 1793872374501690519,
+      "sha256": "bc3c82939f02df2f58a17e7354096375001a80a5c1ca3f459c555d5a7d42bf1b",
+      "size": 17168,
+      "type": "file",
+      "uid": 0,
+      "xattrs": {}
+    },
+    "usr/lib/firmware/rtl_nic/rtl8125d-2.fw": {
+      "gid": 0,
+      "mode": 420,
+      "mtime_ns": 1793872374502959126,
+      "sha256": "c1cb0d358ca985b0d45584612143fd93613d567064702e265bfb370e99c90e35",
+      "size": 6800,
+      "type": "file",
+      "uid": 0,
+      "xattrs": {}
+    },
+    "usr/share": {
+      "gid": 0,
+      "mode": 493,
+      "mtime_ns": 1793872374506443663,
+      "type": "directory",
+      "uid": 0,
+      "xattrs": {}
+    },
+    "usr/share/licenses": {
+      "gid": 0,
+      "mode": 493,
+      "mtime_ns": 1793872374506443663,
+      "type": "directory",
+      "uid": 0,
+      "xattrs": {}
+    },
+    "usr/share/licenses/linux-firmware": {
+      "gid": 0,
+      "mode": 493,
+      "mtime_ns": 1793872374508785083,
+      "type": "directory",
+      "uid": 0,
+      "xattrs": {}
+    },
+    "usr/share/licenses/linux-firmware/LICENSE.amd-ucode": {
+      "gid": 0,
+      "mode": 420,
+      "mtime_ns": 1793872374510358934,
+      "sha256": "2103bd999f77522c5ab5fd35df0579ed00e2a6b885f6f8ebd444e97ffa482991",
+      "size": 3758,
+      "type": "file",
+      "uid": 0,
+      "xattrs": {}
+    },
+    "usr/share/licenses/linux-firmware/LICENSE.r8169": {
+      "gid": 0,
+      "mode": 420,
+      "mtime_ns": 1793872374508785083,
+      "sha256": "f9689ba2640d61e7b4527ad84cbfa6a9f0ec11484e2c9f6b5500197e22c27ecd",
+      "size": 219,
+      "type": "file",
+      "uid": 0,
+      "xattrs": {}
+    }
+  },
+  "method": "BLFS explicit selected regular files installed with GNU install -D -m 0644 into isolated staging",
+  "payload_bytes": 164125,
+  "schema": "tup-hardware-firmware-staging-v1",
+  "selection_sha256": "a81b4491d6108942884ec3509dc39eb14e673b7d1583f48c9bcd6d7e8b8690b2",
+  "source_verification_sha256": "e567e7deb8adf0ba4ba1f3d2000b1f6110e58fbd18562b2c9f8b63542e697dc8",
+  "stage_tree_sha256": "955bd4bbda4e257011e7e9d63946e6a6ea40284c30cacdc630410892bb894b5d",
+  "target_written": false
+}

@@ -1,0 +1,73 @@
+{
+  "architecture": "x86_64",
+  "checked_at": "2026-11-05T09:52:54.549679+00:00",
+  "config_sha256": "08938add1ba30999c8a90edde32cf07ef938c3c6724e5afdd4bb8add0b0fc8a9",
+  "device_driver_qualified": false,
+  "environment": {
+    "ARCH": "x86_64",
+    "KCONFIG_WARN_UNKNOWN_SYMBOLS": "1",
+    "KCONFIG_WERROR": "1",
+    "LC_ALL": "C",
+    "MAKEFLAGS": "-j1"
+  },
+  "firmware_loaded": false,
+  "inputs": {
+    "boot_fragment_sha256": "2aaa17f6714e1ff6fa4c80c9e6f4d79c24df9063ed6f76873b74e824325eaf7a",
+    "boot_helper_sha256": "e6497aa86fb32a584b516e5630ff30ad17212939f158e8dffcad099c9cbeeea7",
+    "defconfig_sha256": "f157c1c162578abba4d6e9490aef0588e26aaa2331f47023fda03c42e7c66f02",
+    "hardware_fragment_sha256": "f4a0127ae18a20dbaf7dd8da7c9bb61d189a74881fe93fdb695ef5e6579fdb0f",
+    "hardware_helper_sha256": "bf5229c3aa98aeb2ea01a05905dada6613d97d212603c8934280152ef83d0fd0",
+    "merge_config_sha256": "fecdeb0747c88f818f0d5d39333b948cdf83d9aca11c422253da17f5cc36e6f1"
+  },
+  "jobs": 1,
+  "kernel_archive_sha256": "3c2f44ef6acc021a7ad444d9a2e6ec1ef488ff09368793d0004a6080f69d621e",
+  "kernel_compiled": false,
+  "logs": {
+    "defconfig.log": "09c8e6821b5a409a2fde09306925da1e90e0b5a670cadb1b57fa973ed4faabcd",
+    "merge.log": "30e206a35432090d8c9449fed270a1ad864d057d3ffe9f83ff255739cc5b8320",
+    "olddefconfig.log": "67b2fe5dd658d14f2fe739959cbae704bc623d84d2908f1442ddf56882fe282e"
+  },
+  "schema": "tup-hardware-kconfig-qualification-v1",
+  "source_release": "6.18.60",
+  "steps": [
+    {
+      "action": "x86_64_defconfig",
+      "exit_code": 0
+    },
+    {
+      "action": "merge_config.sh -m",
+      "exit_code": 0
+    },
+    {
+      "action": "olddefconfig",
+      "exit_code": 0
+    },
+    {
+      "action": "boot required-symbol check",
+      "exit_code": 0
+    },
+    {
+      "action": "hardware required-symbol check",
+      "exit_code": 0
+    }
+  ],
+  "target_booted": false,
+  "tools": {
+    "bison": {
+      "sha256": "b67826f519b3bc9c6cc4fb50d03bf6c362ba3f202b32a553c7256a801f4c985e",
+      "version": "bison (GNU Bison) 3.8.2"
+    },
+    "flex": {
+      "sha256": "6b70611fd650c8216b5c8c1a54a69ed470cd82c63ec0dc095dd4d9782bc3efbb",
+      "version": "flex 2.6.4"
+    },
+    "gcc": {
+      "sha256": "1b99826121ae6682a634e5efe09bd3e3df58ce58e0b28f849114ab5b89139c26",
+      "version": "gcc (Ubuntu 13.3.0-6ubuntu2~24.04.1) 13.3.0"
+    },
+    "make": {
+      "sha256": "d78b8f1d099fbcfb6f2f49ab87223b9b68fb3956642f92d6ec6de812e8afa965",
+      "version": "GNU Make 4.3"
+    }
+  }
+}

@@ -1,0 +1,30 @@
+{
+  "checked_at": "2026-11-05T09:50:13.810443+00:00",
+  "record_sha256": "c640aadefa23a6a569968b456e83d36dc39dcb2120a43fc91282a12cc94e6639",
+  "schema": "tup-hardware-firmware-verification-v1",
+  "scope": "Exact upstream archive authentication; no target loading or hardware qualification",
+  "source": {
+    "authentication": {
+      "assurance": "Gentoo-signed snapshot authenticates exact upstream filename, size and SHA512; SHA256 pin is derived after verification",
+      "distributor": "Gentoo",
+      "evidence_sha256": "dec48fb552418afa6997fe468ca6547166a8abd500a64780c91b05ba7fbce42c",
+      "manifest_member": "gentoo-20261103/sys-kernel/linux-firmware/Manifest",
+      "manifest_sha256": "b58d0fc0d614f54117de361c360b851842885d8faf3237bbce6a40605565d897",
+      "primary_fingerprint": "DCD05B71EAB94199527F44ACDB6B8C1F96D8BF6D",
+      "signing_fingerprint": "E1D6ABB63BFCFB4BA02FDF1CEC590EEAC9189250",
+      "snapshot_sha256": "923b3132d9214cee3f59fa2b56a3af27a0287c8587576c99ebcd5b24e537a194",
+      "source_digest": "725bfcc57def709e43dcd89683e1a663c2d221e3d34da58ffcbf8af3b9c6da2b763739ec8fe0c2ece2620c71b2556b97f93e784c2d3f7c320b98bf35338e6aed",
+      "source_digest_algorithm": "sha512",
+      "source_size": 672694092,
+      "status": "verified",
+      "status_sha256": "0e675efd7fc7ec684b5d53c312b61219c66e4238caef255c74edb78e8afe6ab9",
+      "trust_class": "distributor-openpgp-manifest",
+      "verifier_sha256": "403e04c779ad9fab3895c405f8c53d35ab59fa8e3b8bbe3437f61bc41f468dd4"
+    },
+    "name": "linux-firmware-20261019.tar.xz",
+    "sha256": "a10d1ab5baf2c74ba92e8c7cf313e691696c26bddfa6df00db795e48d70cd4ca",
+    "size": 672694092,
+    "status": "verified"
+  },
+  "verifier_sha256": "37f39eb2a44b0ff93941fdc2c271ffaec2573a3647fe8cabcce42ee90bff760e"
+}
