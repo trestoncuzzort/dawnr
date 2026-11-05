@@ -36,9 +36,12 @@ class BootFixture(unittest.TestCase):
         self.write(self.root / "etc/shadow", b"root:!:0:0:99999:7:::\n")
         self.write(self.root / "etc/os-release", b'ID=tup\nNAME="TUP"\nVERSION_ID="fixture"\n')
         self.write(self.root / "etc/machine-id", b"")
-        config = "".join(f"CONFIG_{name}=y\n" for name in inputs.BUILTIN + inputs.AVAILABLE)
+        config = "".join(f"CONFIG_{name}=y\n" for name in inputs.BUILTIN + inputs.AVAILABLE + ["MICROCODE", "CPU_SUP_AMD"])
         self.write(self.root / "boot" / ("config-" + self.release), config.encode())
+        self.microcode = b"DMA\0fixture family 19h container"
+        self.write(self.root / boot.MICROCODE, self.microcode)
         # What the fake lsinitrd finds in the fake initramfs.
+        self.early = {"early_cpio": b"1\n", boot.EARLY_MICROCODE: self.microcode}
         self.listing = "".join(f"-rwxr-xr-x   1 root     root            1 Jan  1  1970 {name}\n" for name in (
             "init", "usr/bin/od", "usr/bin/sha256sum", "var/lib/dracut/hooks/cmdline/30-parse-dmsquash-live.sh",
             "var/lib/dracut/hooks/mount/01-mount-overlayfs.sh", "var/lib/dracut/hooks/pre-mount/01-prepare-overlayfs.sh",
@@ -147,7 +150,9 @@ class BootFixture(unittest.TestCase):
         elif name == "lsinitrd":
             if "-m" in command:
                 return self.modules
-            if len(command) == 2:
+            if "--unpackearly" in command:
+                for relative, raw in self.early.items():
+                    self.write(Path(cwd) / relative, raw)
                 return self.listing
             return (Path(cwd) / "overlay" / command[2]).read_text()
         elif name == "grub-mkrescue":
@@ -337,6 +342,8 @@ class PackagingTests(BootFixture):
         self.assertEqual(receipt["artifacts"][os.path.join("iso", "ventoy.dat")], inputs.digest(boot.VENTOY_MARKER))
         self.assertIn("ventoy-unqualified", receipt["release_gates"])
         self.assertEqual(receipt["inputs"]["policy"]["ventoy"], "marker-and-efi-handoff-loop-hook-unbooted")
+        self.assertEqual(receipt["inputs"]["microcode"], {"path": boot.MICROCODE, "sha256": inputs.digest(self.microcode)})
+        self.assertEqual(receipt["early_microcode"], {boot.EARLY_MICROCODE: inputs.digest(self.microcode)})
         commands = "\n".join(" ".join(cmd) for cmd in self.commands)
         self.assertNotIn("grub-install", commands)
         self.assertNotIn("efibootmgr", commands)
@@ -369,6 +376,9 @@ class PackagingTests(BootFixture):
         # LFS builds systemd without systemd-sysusers, which dracut 112's systemd-journald module requires.
         self.assertNotIn("systemd", option("--modules"))
         self.assertEqual(option("--install").split(), ["/usr/bin/sha256sum", "/usr/bin/od"])
+        self.assertIn("--early-microcode", dracut)
+        self.assertNotIn("--no-early-microcode", dracut)
+        self.assertEqual(option("--fwdir"), os.path.join(root, "usr", "lib", "firmware"))
         includes = {dracut[index + 2]: dracut[index + 1] for index, arg in enumerate(dracut) if arg == "--include"}
         self.assertEqual(set(includes), {"/etc/tup-live/root.sha256", *("/" + target for target in boot.HOOKS.values())})
         for target, source in includes.items():
@@ -383,6 +393,44 @@ class PackagingTests(BootFixture):
                 self.assertEqual(os.path.normpath(base), os.path.normpath(self.tools["dracut_base"]))
         for name, target in boot.HOOKS.items():
             self.assertEqual((self.output / "overlay" / target).read_bytes(), (boot.HERE / name).read_bytes())
+
+    def test_export_without_exactly_the_family_19h_microcode_refuses_before_any_tool(self):
+        path = self.root / boot.MICROCODE
+        config = self.root / "boot" / ("config-" + self.release)
+        cases = {"missing": path.unlink,
+                 "second container": lambda: self.write(path.with_name("microcode_amd_fam17h.bin"), self.microcode),
+                 "intel": lambda: self.write(self.root / "usr/lib/firmware/intel-ucode/06-55-04", b"fixture"),
+                 "not a container": lambda: path.write_bytes(b"fixture"),
+                 "kernel": lambda: config.write_text(config.read_text().replace("CONFIG_MICROCODE=y\n", ""))}
+        original = config.read_bytes()
+        for name, damage in cases.items():
+            with self.subTest(case=name):
+                damage()
+                self.layer["root_tree_sha256"] = inputs.tree_hash(self.root)
+                self.write_json(self.layer_path, self.layer)
+                for attempt in (self.seal, self.build):
+                    with self.assertRaisesRegex(inputs.Refusal, "(?i)microcode"):
+                        attempt()
+                self.assertEqual(self.commands, [])
+                self.assertFalse(self.output.exists())
+                for extra in (path.parent.parent / "intel-ucode", path.parent):
+                    if extra.exists():
+                        for child in extra.iterdir():
+                            child.unlink()
+                        extra.rmdir()
+                self.write(path, self.microcode)
+                config.write_bytes(original)
+
+    def test_initramfs_without_exactly_the_staged_early_microcode_refuses(self):
+        # Dracut drops early microcode with a warning when it disagrees about the kernel configuration.
+        for name, early in (("no early cpio", {}), ("marker only", {"early_cpio": b"1\n"}),
+                            ("other bytes", {"early_cpio": b"1\n", boot.EARLY_MICROCODE: b"DMA\0other"}),
+                            ("intel as well", {**self.early, "kernel/x86/microcode/GenuineIntel.bin": b"fixture"})):
+            with self.subTest(case=name):
+                self.early = early
+                with self.assertRaisesRegex(inputs.Refusal, "early microcode"):
+                    self.build()
+                self.assertFalse(self.output.exists())
 
     def test_initramfs_without_the_ventoy_hook_or_dracuts_own_scripts_refuses(self):
         def unhooked(command, **kwargs):

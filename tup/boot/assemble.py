@@ -19,8 +19,8 @@ import tempfile
 
 if __package__ in {None, ""}:
     sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
-from tup.boot.inputs import (Refusal, canonical, check_kernel, check_offline_root,
-                             checked_file, digest, file_hash, inventory, load_json, tree_hash)
+from tup.boot.inputs import (Refusal, canonical, check_config, check_kernel, check_offline_root,
+                             checked_file, digest, file_hash, inventory, load_json, root_path, tree_hash)
 
 HERE = Path(__file__).resolve().parent
 TOOLS = {"mksquashfs", "dracut", "lsinitrd", "grub-mkrescue", "grub-script-check", "xorriso"}
@@ -37,6 +37,8 @@ LIVE_FILES = (r"init", r"(?:usr/)?bin/od", r"(?:usr/)?bin/sha256sum",
               r"var/lib/dracut/hooks/pre-udev/30-dmsquash-live-genrules\.sh",
               r"var/lib/dracut/hooks/pre-mount/01-prepare-overlayfs\.sh",
               r"var/lib/dracut/hooks/mount/01-mount-overlayfs\.sh")
+MICROCODE = "usr/lib/firmware/amd-ucode/microcode_amd_fam19h.bin"
+EARLY_MICROCODE = "kernel/x86/microcode/AuthenticAMD.bin"
 # Ventoy only tests that this file exists in the ISO root. It then adds no hook
 # of its own and leaves the ISO's initramfs and kernel parameters alone.
 VENTOY_MARKER = b"TUP finds its own ISO through VentoyOsParam. Booting through Ventoy is not yet qualified.\n"
@@ -46,6 +48,7 @@ POLICY = {"schema": "tup.live-policy.v1", "architecture": "x86_64", "init": "sys
           "squashfs_compression": "zstd", "overlay_mib": 512,
           "root_discovery": "unique-content-label",
           "ventoy": "marker-and-efi-handoff-loop-hook-unbooted",
+          "early_microcode": "amd-family-19h-only",
           "grub_assets": "text-console-without-fonts-themes-locales",
           "secure_boot": "unsigned-test-artifact", "installer": False}
 
@@ -154,6 +157,21 @@ def check_completion(spec, previous):
     return path
 
 
+def check_microcode(root, release):
+    """Without host-only mode dracut 112 concatenates every amd-ucode and intel-ucode file."""
+    values = check_config(root_path(root, "boot/config-" + release))
+    if any(values.get("CONFIG_" + key) != "y" for key in ("MICROCODE", "CPU_SUP_AMD")):
+        raise Refusal("kernel cannot load early AMD microcode: MICROCODE and CPU_SUP_AMD are required")
+    path = root_path(root, MICROCODE)
+    if (not path.parent.is_dir() or [p.name for p in path.parent.iterdir()] != [path.name]
+            or (path.parent.parent / "intel-ucode").exists()):
+        raise Refusal("export must stage exactly the AMD family 19h microcode container: " + MICROCODE)
+    identity = file_hash(path)
+    if path.read_bytes()[:4] != b"DMA\0":
+        raise Refusal("staged microcode is not an AMD container: " + MICROCODE)
+    return {"path": MICROCODE, "sha256": identity}
+
+
 def describe(root, release, core_spec, layer_receipt, tools_path, tools_sha256):
     root = check_offline_root(root)
     core = check_core_spec(core_spec)
@@ -174,6 +192,7 @@ def describe(root, release, core_spec, layer_receipt, tools_path, tools_sha256):
         raise Refusal("boot layer receipt does not describe the supplied root")
     return {"schema": "tup.boot-inputs.v1", "policy": POLICY,
             "root_tree_sha256": identity, "kernel": check_kernel(root, release),
+            "microcode": check_microcode(root, release),
             "core_validator_sha256": file_hash(core_spec), "layer_receipt_sha256": file_hash(layer_receipt),
             "core_inputs_sha256": layer["core_inputs_sha256"],
             "tools_lock_sha256": tools_sha256,
@@ -296,7 +315,7 @@ def assemble(root, expected_path, core_spec, layer_receipt, tools_path, tools_sh
     native = check_core_spec(core_spec)
     stage = Path(tempfile.mkdtemp(prefix=".tup-boot-", dir=output.parent))
     try:
-        for name in ("iso/boot/grub", "iso/LiveOS", "tmp", "home", "empty-conf.d",
+        for name in ("iso/boot/grub", "iso/LiveOS", "tmp", "home", "empty-conf.d", "early-microcode",
                      "overlay/etc/tup-live", *("overlay/" + target.rsplit("/", 1)[0] for target in HOOKS.values())):
             (stage / name).mkdir(parents=True, exist_ok=True)
         env = environment(lock, stage, root)
@@ -343,7 +362,10 @@ def assemble(root, expected_path, core_spec, layer_receipt, tools_path, tools_sh
         initrd = stage / "iso/boot/initramfs.img"
         runner([command("dracut"), "--sysroot", root, "--kver", release, "--conf", conf,
                 "--confdir", stage / "empty-conf.d", "--tmpdir", stage / "tmp", "--logfile", stage / "dracut.log",
-                "--no-hostonly", "--no-hostonly-cmdline", "--no-hostonly-default-device", "--no-early-microcode",
+                "--no-hostonly", "--no-hostonly-cmdline", "--no-hostonly-default-device",
+                # --fwdir replaces the default search path, which also reads the
+                # builder kernel's firmware_class.path (dracut.sh:1168-1172).
+                "--early-microcode", "--fwdir", root / "usr/lib/firmware",
                 "--nohardlink", "--nostrip", "--gzip", "--no-uefi", "--no-ukify",
                 "--modules", MODULES, "--install", "/usr/bin/sha256sum /usr/bin/od", *includes, initrd],
                cwd=stage, env=env, log=log)
@@ -360,7 +382,12 @@ def assemble(root, expected_path, core_spec, layer_receipt, tools_path, tools_sh
             embedded_hook = runner([command("lsinitrd"), "-f", target, initrd], cwd=stage, env=env, log=log)
             if embedded_hook.strip() != (HERE / name).read_text().strip():
                 raise Refusal("initramfs hook was not embedded: " + name)
-        listing = runner([command("lsinitrd"), initrd], cwd=stage, env=env, log=log)
+        # Unpacks only the uncompressed leading cpio, then lists the main image.
+        listing = runner([command("lsinitrd"), "--unpackearly", initrd], cwd=stage / "early-microcode", env=env, log=log)
+        early = {name: entry["sha256"] for name, entry in inventory(stage / "early-microcode").items()
+                 if entry["type"] == "file"}
+        if set(early) != {"early_cpio", EARLY_MICROCODE} or early[EARLY_MICROCODE] != expected["microcode"]["sha256"]:
+            raise Refusal("initramfs early microcode is not exactly the staged AMD family 19h container")
         if not all(re.search(r"(?m)\s" + name + "$", listing) for name in LIVE_FILES):
             raise Refusal("initramfs lacks dracut's live scripts or the hook tools; see " + log.name)
         iso = stage / "tup-x86_64-uefi-test.iso"
@@ -379,6 +406,7 @@ def assemble(root, expected_path, core_spec, layer_receipt, tools_path, tools_sh
                    "core_source_policy": {field: core_receipt.get(field) for field in (
                        "source_lock_sha256", "source_lock_purpose", "source_release_eligible", "advisory_review_sha256")},
                    "inputs": expected, "label": label, "boot_tested": False, "ventoy_tested": False,
+                   "early_microcode": {EARLY_MICROCODE: early[EARLY_MICROCODE]},
                    "artifacts": {str(p.relative_to(stage)): file_hash(p)
                                  for p in (iso, squash, initrd, stage / "iso/boot/vmlinuz", stage / "iso/boot/grub/grub.cfg",
                                            stage / "iso/ventoy.dat")},
