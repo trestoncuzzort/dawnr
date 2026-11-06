@@ -1,0 +1,119 @@
+{
+  "format": "dawnr-native-case-v1",
+  "id": "flac-metaflac-parse-uint32",
+  "repository": "xiph/flac",
+  "path": "src/metaflac/options.c",
+  "machine": "LP64",
+  "sources": {
+    "original": {
+      "file": "original.c",
+      "sha256": "4d6873864fcb81657ab6cc2098391f24bb90dd1b80c7ab8332d24a8761a073a8",
+      "revision": "59fa3402cb19b6b7c85b916f138cfb03c7b27504",
+      "definitions": [
+        {
+          "name": "parse_uint32",
+          "line": 892,
+          "end_line": 899,
+          "starts_with": "FLAC__bool parse_uint32(const char *src, FLAC__uint32 *dest)"
+        },
+        {
+          "name": "parse_uint64",
+          "line": 901,
+          "end_line": 908,
+          "starts_with": "FLAC__bool parse_uint64(const char *src, FLAC__uint64 *dest)"
+        },
+        {
+          "name": "parse_add_padding",
+          "line": 1011,
+          "end_line": 1017,
+          "starts_with": "FLAC__bool parse_add_padding(const char *in, unsigned *out)"
+        }
+      ]
+    },
+    "fixed": {
+      "file": "fixed.c",
+      "sha256": "b82276c7e2be2220712ea0d5a88dec59788421d32bb9b80046a88afde22def51",
+      "revision": "59fa3402cb19b6b7c85b916f138cfb03c7b27504 with the proposed change",
+      "definitions": [
+        {
+          "name": "parse_uint32",
+          "line": 892,
+          "end_line": 901,
+          "starts_with": "FLAC__bool parse_uint32(const char *src, FLAC__uint32 *dest)"
+        },
+        {
+          "name": "parse_uint64",
+          "line": 903,
+          "end_line": 910,
+          "starts_with": "FLAC__bool parse_uint64(const char *src, FLAC__uint64 *dest)"
+        },
+        {
+          "name": "parse_add_padding",
+          "line": 1013,
+          "end_line": 1024,
+          "starts_with": "FLAC__bool parse_add_padding(const char *in, unsigned *out)"
+        }
+      ]
+    }
+  },
+  "prelude": "/* What parse_uint32, parse_uint64 and parse_add_padding of src/metaflac/options.c of xiph/flac\n * (https://github.com/xiph/flac) need besides their own text.\n *\n * Copied unchanged from the same revision of the project:\n *   - include/FLAC/ordinals.h, lines 1-31 (the licence notice, below) and lines 38-53 (the integer types);\n *   - src/libFLAC/format.c, line 115 (the definition of FLAC__STREAM_METADATA_LENGTH_LEN);\n *   - src/metaflac/options.c, lines 116, 117 and 122 (the prototypes of the three functions).\n *\n * The notice below is that of include/FLAC/ordinals.h (BSD-3-Clause, Xiph.Org Foundation).\n * include/FLAC/assert.h and src/libFLAC/format.c carry the same notice. src/metaflac/options.c is\n * GPL-2.0-or-later; its notice is the head of original.c and fixed.c.\n */\n\n/* libFLAC - Free Lossless Audio Codec library\n * Copyright (C) 2000-2009  Josh Coalson\n * Copyright (C) 2011-2025  Xiph.Org Foundation\n *\n * Redistribution and use in source and binary forms, with or without\n * modification, are permitted provided that the following conditions\n * are met:\n *\n * - Redistributions of source code must retain the above copyright\n * notice, this list of conditions and the following disclaimer.\n *\n * - Redistributions in binary form must reproduce the above copyright\n * notice, this list of conditions and the following disclaimer in the\n * documentation and/or other materials provided with the distribution.\n *\n * - Neither the name of the Xiph.org Foundation nor the names of its\n * contributors may be used to endorse or promote products derived from\n * this software without specific prior written permission.\n *\n * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS\n * ``AS IS'' AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT\n * LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR\n * A PARTICULAR PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL THE FOUNDATION OR\n * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,\n * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,\n * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR\n * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF\n * LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING\n * NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS\n * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.\n */\n\n#include <assert.h>\n#include <limits.h>\n#include <stddef.h>\n#include <stdlib.h>\n#include <string.h>\n\n/* include/FLAC/ordinals.h, lines 38-53 */\n#include <stdint.h>\n#include <stdbool.h>\n\ntypedef int8_t FLAC__int8;\ntypedef uint8_t FLAC__uint8;\n\ntypedef int16_t FLAC__int16;\ntypedef int32_t FLAC__int32;\ntypedef int64_t FLAC__int64;\ntypedef uint16_t FLAC__uint16;\ntypedef uint32_t FLAC__uint32;\ntypedef uint64_t FLAC__uint64;\n\ntypedef int FLAC__bool;\n\ntypedef FLAC__uint8 FLAC__byte;\n\n/* FLAC__ASSERT as include/FLAC/assert.h lines 41-44 define it for a build without NDEBUG and\n * without FUZZING_BUILD_MODE_UNSAFE_FOR_PRODUCTION: the C library assert. */\n#define FLAC__ASSERT(x) assert(x)\n\n/* src/libFLAC/format.c, line 115. FLAC_API is empty in a static build (include/FLAC/export.h). */\n#define FLAC_API\nFLAC_API const uint32_t FLAC__STREAM_METADATA_LENGTH_LEN = 24; /* bits */\n\n/* src/metaflac/options.c, lines 116, 117 and 122 */\nstatic FLAC__bool parse_uint32(const char *src, FLAC__uint32 *dest);\nstatic FLAC__bool parse_uint64(const char *src, FLAC__uint64 *dest);\nstatic FLAC__bool parse_add_padding(const char *in, unsigned *out);\n\n#ifdef __CPROVER__\n/* The model has no body for strspn, strtoul and strtoull, and its strlen adds goals that the assumption\n * coverage stage of the gate counts. It reads the four functions as the ones below.\n * The native replay of a counterexample is compiled without __CPROVER__ and calls the C library.\n *\n * What the three functions of this case pass is a string of decimal digits: parse_uint32 and\n * parse_uint64 call strtoul and strtoull only after strspn has shown that every character is\n * a decimal digit and that there is at least one, and the harness calls parse_add_padding only\n * with such strings. The stand-ins cover that and no more.\n *\n * case_strtoull follows C11 7.22.1.4 (https://www.open-std.org/jtc1/sc22/wg14/www/docs/n1570.pdf)\n * for base 10 and a string that does not start with white space or a sign: the longest run of\n * decimal digits is the number, the end pointer is set after it (to the start when there is no\n * digit), and a number above ULLONG_MAX gives ULLONG_MAX. A string that starts with white\n * space or a sign fails the property case_strtoull.covered, and a base other than 10 fails the\n * property case_strtoull.base. unsigned long and unsigned long long have the same width on\n * LP64, so case_strtoul is case_strtoull.\n *\n * case_strspn is strspn (C11 7.24.5.6) for the accept set \"0123456789\" only; any other set\n * fails the property case_strspn.accept. case_strlen is strlen (C11 7.24.6.3). Every loop ends\n * at the NUL byte of the string. */\n_Static_assert(sizeof(unsigned long) == sizeof(unsigned long long), \"case_strtoul needs LP64\");\n\nstatic int case_digit(char c)\n{\n    return c >= '0' && c <= '9';\n}\n\nstatic size_t case_strlen(const char *s)\n{\n    size_t n = 0;\n    while (s[n] != '\\0') {\n        ++n;\n    }\n    return n;\n}\n\nstatic size_t case_strspn(const char *s, const char *accept)\n{\n    size_t n = 0;\n    __CPROVER_assert(accept[0] == '0' && accept[1] == '1' && accept[2] == '2' && accept[3] == '3' &&\n                     accept[4] == '4' && accept[5] == '5' && accept[6] == '6' && accept[7] == '7' &&\n                     accept[8] == '8' && accept[9] == '9' && accept[10] == '\\0', \"case_strspn.accept\");\n    while (case_digit(s[n])) {\n        ++n;\n    }\n    return n;\n}\n\nstatic unsigned long long case_strtoull(const char *nptr, char **endptr, int base)\n{\n    unsigned long long value = 0;\n    int saturated = 0;\n    const char *p = nptr;\n\n    __CPROVER_assert(base == 10, \"case_strtoull.base\");\n    __CPROVER_assert(!(*nptr == ' ' || (*nptr >= '\\t' && *nptr <= '\\r') || *nptr == '+' || *nptr == '-'),\n                     \"case_strtoull.covered\");\n    while (case_digit(*p)) {\n        unsigned int digit = (unsigned int)(*p - '0');\n        if (saturated || value > ULLONG_MAX / 10u || (value == ULLONG_MAX / 10u && digit > ULLONG_MAX % 10u)) {\n            saturated = 1;\n            value = ULLONG_MAX;\n        } else {\n            value = value * 10u + digit;\n        }\n        ++p;\n    }\n    if (endptr != 0) {\n        *endptr = (char *)p;\n    }\n    return value;\n}\n\nstatic unsigned long case_strtoul(const char *nptr, char **endptr, int base)\n{\n    return (unsigned long)case_strtoull(nptr, endptr, base);\n}\n\n#define strlen(s) case_strlen(s)\n#define strspn(s, accept) case_strspn(s, accept)\n#define strtoul(nptr, endptr, base) case_strtoul(nptr, endptr, base)\n#define strtoull(nptr, endptr, base) case_strtoull(nptr, endptr, base)\n#endif\n",
+  "inputs": [
+    {
+      "name": "b0",
+      "type": "unsigned char"
+    },
+    {
+      "name": "b1",
+      "type": "unsigned char"
+    },
+    {
+      "name": "b2",
+      "type": "unsigned char"
+    },
+    {
+      "name": "b3",
+      "type": "unsigned char"
+    },
+    {
+      "name": "b4",
+      "type": "unsigned char"
+    },
+    {
+      "name": "b5",
+      "type": "unsigned char"
+    },
+    {
+      "name": "b6",
+      "type": "unsigned char"
+    },
+    {
+      "name": "b7",
+      "type": "unsigned char"
+    },
+    {
+      "name": "b8",
+      "type": "unsigned char"
+    },
+    {
+      "name": "b9",
+      "type": "unsigned char"
+    },
+    {
+      "name": "b10",
+      "type": "unsigned char"
+    }
+  ],
+  "harness": "    /* The string is the bytes b0 to b10 up to the first NUL byte, so its length is 0 to 11 and\n       each character is any other byte. Position 11 holds the terminator. */\n    char text[12];\n    text[0] = (char)b0; text[1] = (char)b1; text[2] = (char)b2; text[3] = (char)b3;\n    text[4] = (char)b4; text[5] = (char)b5; text[6] = (char)b6; text[7] = (char)b7;\n    text[8] = (char)b8; text[9] = (char)b9; text[10] = (char)b10; text[11] = '\\0';\n    /* The expected result. The value of a string of decimal digits is the number that the digits\n       write in base ten (C11 7.22.1.4, https://www.open-std.org/jtc1/sc22/wg14/www/docs/n1570.pdf).\n       Eleven digits give at most 99999999999, which 64-bit arithmetic holds without wrapping.\n       parse_uint32 is to take a string of one or more decimal digits whose value is at most\n       4294967295 and to store that value, and to refuse everything else. That follows from its\n       callers in the same file: each of them range-checks a FLAC__uint32 (--set-sample-rate\n       against FLAC__MAX_SAMPLE_RATE, for example), which holds the value that the user wrote\n       only if the stored value is that value. The metaflac manual (man/metaflac.md) describes\n       --add-padding=length as a padding block of the given length in bytes, and the length field\n       of a metadata block header has 24 bits\n       (https://xiph.org/flac/format.html#metadata_block_header), so parse_add_padding is to take\n       a length below 2^24 and to store it, and to refuse a larger one. The statements are one for\n       each position, in place of a loop, so that the unwinding bound stays small. */\n    unsigned long long want = 0;\n    int length = 0, digits = 1, live = 1;\n#define EACH(X) X(0) X(1) X(2) X(3) X(4) X(5) X(6) X(7) X(8) X(9) X(10)\n#define READ(at) if (live) { if (text[at] == '\\0') live = 0; else { ++length; \\\n        if (text[at] >= '0' && text[at] <= '9') want = want * 10u + (unsigned long long)(text[at] - '0'); \\\n        else digits = 0; } }\n    EACH(READ)\n    int fits = length > 0 && digits && want <= 0xffffffffull;\n    FLAC__uint32 stored = 0x5a5a5a5au;\n    FLAC__bool got = parse_uint32(text, &stored);\n    /* True exactly for one or more decimal digits with a value of at most 2^32 - 1. */\n    __CPROVER_assert((got != 0) == (fits != 0), \"uint32.result\");\n    /* A stored value is the value of the digits. */\n    __CPROVER_assert(!(got && length > 0 && digits) || (unsigned long long)stored == want, \"uint32.value\");\n    /* A refused string leaves the destination as it was. */\n    __CPROVER_assert(got || stored == 0x5a5a5a5au, \"uint32.untouched_on_refusal\");\n    if (length > 0 && digits) {\n        unsigned padding = 0xa5a5a5a5u;\n        FLAC__bool taken = parse_add_padding(text, &padding);\n        /* True exactly for a length below 2^24. */\n        __CPROVER_assert((taken != 0) == (want < (1ull << 24)), \"padding.result\");\n        /* A length that is taken is stored as written. */\n        __CPROVER_assert(!taken || (unsigned long long)padding == want, \"padding.value\");\n    }\n",
+  "assertions": [
+    "uint32.result",
+    "uint32.value",
+    "uint32.untouched_on_refusal",
+    "padding.result",
+    "padding.value"
+  ],
+  "assumptions": 0,
+  "loops": 0,
+  "unwind": 12,
+  "input_domain": "a string of 0 to 11 characters, each character any byte except NUL, given as the bytes b0 to b10 up to the first NUL byte; parse_add_padding is called when the string is one or more decimal digits",
+  "limitations": "parse_uint32, parse_uint64 and parse_add_padding; parse_block_number, which the proposed change also edits to call parse_uint32, uses strdup, free and strchr and is not examined; strings of up to 11 characters, so 11 digits reach 99999999999 and no string reaches the 64-bit limit; parse_add_padding only for strings of decimal digits, not for white space, signs or text, which strtoul accepts or reads as 0; the model reads strlen, strspn, strtoul and strtoull as the stand-ins in the prelude: base 10, the accept set 0123456789 and a string without white space or sign at its start, anything else fails a property of the stand-in; the replay of a counterexample calls the C library; the integer types, the notice, the assert macro, the constant FLAC__STREAM_METADATA_LENGTH_LEN and the prototypes are not extracted by the gate but copied into the prelude from include/FLAC/ordinals.h, include/FLAC/assert.h, src/libFLAC/format.c and src/metaflac/options.c at the same revision; FLAC__ASSERT is the C library assert; parse_uint64 is listed for both variants but only the fixed parse_uint32 calls it; the unwinding bound is 12"
+}
