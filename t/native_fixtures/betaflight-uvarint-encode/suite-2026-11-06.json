@@ -1,0 +1,51 @@
+{
+  "case": "betaflight-uvarint-encode",
+  "format": "dawnr-native-case-v1-suite",
+  "ok": true,
+  "rows": [
+    {
+      "confirmed_witnesses": 2,
+      "expected": "counterexample",
+      "ok": true,
+      "properties": 86,
+      "reason": "a checked property has a concrete failing trace",
+      "unit_sha256": "d80c2505d186911998e249f0b697e5465ba3d05a5a7ebb2282ae010cd02a1364",
+      "unwind": 6,
+      "variant": "original",
+      "verdict": "counterexample"
+    },
+    {
+      "confirmed_witnesses": 0,
+      "expected": "complete",
+      "ok": true,
+      "properties": 86,
+      "reason": "all inventoried properties and required unwinding checks succeeded; assumption goals reachable",
+      "unit_sha256": "60e8ad15bcf0069e1c7be62002c8050ac1bc35e83f332349c0dfe223409ce98f",
+      "unwind": 6,
+      "variant": "fixed",
+      "verdict": "complete"
+    },
+    {
+      "confirmed_witnesses": 0,
+      "expected": "vacuous",
+      "ok": true,
+      "properties": 84,
+      "reason": "assumption coverage has an unreachable before/after goal",
+      "unit_sha256": "d5266c74ac8becb88154568cb0ac418610e4f971fdd301d88a7274cd85a960a0",
+      "unwind": 6,
+      "variant": "vacuous",
+      "verdict": "vacuous"
+    },
+    {
+      "confirmed_witnesses": 0,
+      "expected": "incomplete or vacuous",
+      "ok": true,
+      "properties": 86,
+      "reason": "unwinding or another property is unresolved",
+      "unit_sha256": "60e8ad15bcf0069e1c7be62002c8050ac1bc35e83f332349c0dfe223409ce98f",
+      "unwind": 1,
+      "variant": "fixed",
+      "verdict": "incomplete"
+    }
+  ]
+}

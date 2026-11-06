@@ -1,0 +1,70 @@
+{
+  "format": "dawnr-native-case-v1",
+  "id": "betaflight-uvarint-encode",
+  "repository": "betaflight/betaflight",
+  "path": "src/main/common/uvarint.c",
+  "machine": "ILP32",
+  "sources": {
+    "original": {
+      "file": "original.c",
+      "sha256": "85cdea2dff512ca46bd8615b17a171ec25c762d86eca2ce795bb0dc47c824cbf",
+      "revision": "d0c07fbf0efef6e218b786802f67bc56b582d84a",
+      "definitions": [
+        {
+          "name": "uvarintEncode",
+          "line": 31,
+          "end_line": 47,
+          "starts_with": "int uvarintEncode(uint32_t val, uint8_t *ptr, size_t size)"
+        },
+        {
+          "name": "uvarintDecode",
+          "line": 49,
+          "end_line": 68,
+          "starts_with": "int uvarintDecode(uint32_t *val, const uint8_t *ptr, size_t size)"
+        }
+      ]
+    },
+    "fixed": {
+      "file": "fixed.c",
+      "sha256": "c252ca93738e35bd6f453e6f11f06b347223bc7db2327587b9a3f76beb5bebfd",
+      "revision": "d0c07fbf0efef6e218b786802f67bc56b582d84a with the proposed change",
+      "definitions": [
+        {
+          "name": "uvarintEncode",
+          "line": 31,
+          "end_line": 47,
+          "starts_with": "int uvarintEncode(uint32_t val, uint8_t *ptr, size_t size)"
+        },
+        {
+          "name": "uvarintDecode",
+          "line": 49,
+          "end_line": 68,
+          "starts_with": "int uvarintDecode(uint32_t *val, const uint8_t *ptr, size_t size)"
+        }
+      ]
+    }
+  },
+  "prelude": "typedef __UINT8_TYPE__ uint8_t;\ntypedef __UINT32_TYPE__ uint32_t;\ntypedef __SIZE_TYPE__ size_t;\n",
+  "inputs": [
+    {
+      "name": "val",
+      "type": "uint32_t"
+    },
+    {
+      "name": "size",
+      "type": "unsigned char"
+    }
+  ],
+  "harness": "    __CPROVER_assume(size <= 5);\n    /* One array per size, so that a write past the given size leaves its object. */\n    uint8_t a1[1] = {0xAA}, a2[2] = {0xAA, 0xAA}, a3[3] = {0xAA, 0xAA, 0xAA};\n    uint8_t a4[4] = {0xAA, 0xAA, 0xAA, 0xAA}, a5[5] = {0xAA, 0xAA, 0xAA, 0xAA, 0xAA};\n    uint8_t *p = size <= 1 ? a1 : size == 2 ? a2 : size == 3 ? a3 : size == 4 ? a4 : a5;\n    int r = uvarintEncode(val, p, size);\n    /* Reference, from the uvarint_t text of the FrSky OSD protocol\n       (https://github.com/hydra/FrSkyPixelOSD/blob/master/doc/OSD.md): little endian, seven\n       bits per byte, the final byte has its MSB clear and every byte before it has it set. */\n    int n = val < 0x80 ? 1 : val < 0x4000 ? 2 : val < 0x200000 ? 3 : val < 0x10000000 ? 4 : 5;\n    int fits = n <= (int)size;\n    int same = 1;\n    if (fits) {\n        if (p[0] != (uint8_t)((val & 0x7F) | (n > 1 ? 0x80 : 0))) same = 0;\n        if (n > 1 && p[1] != (uint8_t)(((val >> 7) & 0x7F) | (n > 2 ? 0x80 : 0))) same = 0;\n        if (n > 2 && p[2] != (uint8_t)(((val >> 14) & 0x7F) | (n > 3 ? 0x80 : 0))) same = 0;\n        if (n > 3 && p[3] != (uint8_t)(((val >> 21) & 0x7F) | (n > 4 ? 0x80 : 0))) same = 0;\n        if (n > 4 && p[4] != (uint8_t)(val >> 28)) same = 0;\n    }\n    uint32_t back = 0;\n    int read = fits ? uvarintDecode(&back, p, (size_t)n) : 0;\n    __CPROVER_assert(r == (fits ? n : -1), \"uvarint.length\");\n    __CPROVER_assert(same, \"uvarint.bytes\");\n    __CPROVER_assert(!fits || (read == n && back == val), \"uvarint.decoder_reads_it_back\");\n    __CPROVER_assert(size != 0 || a1[0] == 0xAA, \"uvarint.no_write_without_room\");\n",
+  "assertions": [
+    "uvarint.length",
+    "uvarint.bytes",
+    "uvarint.decoder_reads_it_back",
+    "uvarint.no_write_without_room"
+  ],
+  "assumptions": 1,
+  "loops": 2,
+  "unwind": 6,
+  "input_domain": "every 32-bit value with every buffer size from 0 to 5 bytes",
+  "limitations": "uvarintEncode, and uvarintDecode only on the bytes that a correct encoder writes; the overflow check of uvarintDecode and the callers in the FrSky OSD driver are not examined; when the value does not fit, only the return value is required"
+}
