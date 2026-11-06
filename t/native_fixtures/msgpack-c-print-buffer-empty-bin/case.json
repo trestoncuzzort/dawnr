@@ -1,0 +1,100 @@
+{
+  "format": "dawnr-native-case-v1",
+  "id": "msgpack-c-print-buffer-empty-bin",
+  "repository": "msgpack/msgpack-c",
+  "path": "src/objectc.c",
+  "machine": "LP64",
+  "sources": {
+    "original": {
+      "file": "original.c",
+      "sha256": "c0b51677fccc2f7b3a32894131a2eac49fd5b90bb04ea21b46514a760c389ef0",
+      "revision": "319ae6edf016327738b707cdb0d222b6091ae9f2",
+      "definitions": [
+        {
+          "name": "MSGPACK_CHECKED_CALL",
+          "kind": "macro",
+          "line": 323,
+          "end_line": 328,
+          "starts_with": "#define MSGPACK_CHECKED_CALL(ret, func, aux_buffer, aux_buffer_size, ...) \\"
+        },
+        {
+          "name": "msgpack_object_bin_print_buffer",
+          "line": 329,
+          "end_line": 355,
+          "starts_with": "static int msgpack_object_bin_print_buffer(char *buffer, size_t buffer_size, const char *ptr, size_t size)"
+        },
+        {
+          "name": "msgpack_object_print_buffer",
+          "line": 357,
+          "end_line": 475,
+          "starts_with": "int msgpack_object_print_buffer(char *buffer, size_t buffer_size, msgpack_object o)"
+        }
+      ]
+    },
+    "fixed": {
+      "file": "fixed.c",
+      "sha256": "2a07990a4d380923cf7277ee7cfa24b730583af2445e5b06959e7b1f8dba517c",
+      "revision": "319ae6edf016327738b707cdb0d222b6091ae9f2 with the proposed change",
+      "definitions": [
+        {
+          "name": "MSGPACK_CHECKED_CALL",
+          "kind": "macro",
+          "line": 323,
+          "end_line": 328,
+          "starts_with": "#define MSGPACK_CHECKED_CALL(ret, func, aux_buffer, aux_buffer_size, ...) \\"
+        },
+        {
+          "name": "msgpack_object_bin_print_buffer",
+          "line": 329,
+          "end_line": 355,
+          "starts_with": "static int msgpack_object_bin_print_buffer(char *buffer, size_t buffer_size, const char *ptr, size_t size)"
+        },
+        {
+          "name": "msgpack_object_print_buffer",
+          "line": 357,
+          "end_line": 479,
+          "starts_with": "int msgpack_object_print_buffer(char *buffer, size_t buffer_size, msgpack_object o)"
+        }
+      ]
+    }
+  },
+  "prelude": "/* What msgpack_object_print_buffer needs besides its own text.\n *\n * The type definitions are lines 27-98 of include/msgpack/object.h of msgpack-c\n * (https://github.com/msgpack/msgpack-c) at the pinned revision, copied unchanged. That\n * file carries this notice:\n *\n * MessagePack for C dynamic typing routine\n *\n * Copyright (C) 2008-2009 FURUHASHI Sadayuki\n *\n *    Distributed under the Boost Software License, Version 1.0.\n *    (See accompanying file LICENSE_1_0.txt or copy at\n *    http://www.boost.org/LICENSE_1_0.txt)\n */\n#include <ctype.h>\n#include <inttypes.h>\n#include <stdarg.h>\n#include <stdbool.h>\n#include <stddef.h>\n#include <stdint.h>\n#include <stdio.h>\n#include <string.h>\n\n/* include/msgpack/object.h, lines 27-98 */\ntypedef enum {\n    MSGPACK_OBJECT_NIL                  = 0x00,\n    MSGPACK_OBJECT_BOOLEAN              = 0x01,\n    MSGPACK_OBJECT_POSITIVE_INTEGER     = 0x02,\n    MSGPACK_OBJECT_NEGATIVE_INTEGER     = 0x03,\n    MSGPACK_OBJECT_FLOAT32              = 0x0a,\n    MSGPACK_OBJECT_FLOAT64              = 0x04,\n    MSGPACK_OBJECT_FLOAT                = 0x04,\n#if defined(MSGPACK_USE_LEGACY_NAME_AS_FLOAT)\n    MSGPACK_OBJECT_DOUBLE               = MSGPACK_OBJECT_FLOAT, /* obsolete */\n#endif /* MSGPACK_USE_LEGACY_NAME_AS_FLOAT */\n    MSGPACK_OBJECT_STR                  = 0x05,\n    MSGPACK_OBJECT_ARRAY                = 0x06,\n    MSGPACK_OBJECT_MAP                  = 0x07,\n    MSGPACK_OBJECT_BIN                  = 0x08,\n    MSGPACK_OBJECT_EXT                  = 0x09\n} msgpack_object_type;\n\n\nstruct msgpack_object;\nstruct msgpack_object_kv;\n\ntypedef struct {\n    uint32_t size;\n    struct msgpack_object* ptr;\n} msgpack_object_array;\n\ntypedef struct {\n    uint32_t size;\n    struct msgpack_object_kv* ptr;\n} msgpack_object_map;\n\ntypedef struct {\n    uint32_t size;\n    const char* ptr;\n} msgpack_object_str;\n\ntypedef struct {\n    uint32_t size;\n    const char* ptr;\n} msgpack_object_bin;\n\ntypedef struct {\n    int8_t type;\n    uint32_t size;\n    const char* ptr;\n} msgpack_object_ext;\n\ntypedef union {\n    bool boolean;\n    uint64_t u64;\n    int64_t  i64;\n#if defined(MSGPACK_USE_LEGACY_NAME_AS_FLOAT)\n    double   dec; /* obsolete*/\n#endif /* MSGPACK_USE_LEGACY_NAME_AS_FLOAT */\n    double   f64;\n    msgpack_object_array array;\n    msgpack_object_map map;\n    msgpack_object_str str;\n    msgpack_object_bin bin;\n    msgpack_object_ext ext;\n} msgpack_object_union;\n\ntypedef struct msgpack_object {\n    msgpack_object_type type;\n    msgpack_object_union via;\n} msgpack_object;\n\ntypedef struct msgpack_object_kv {\n    msgpack_object key;\n    msgpack_object val;\n} msgpack_object_kv;\n\n#ifdef __CPROVER__\n/* The model has no body for the __ctype_b_loc() of the C library header and no snprintf that\n * writes the text, so it reads isprint and snprintf as the functions below. The native replay\n * of a counterexample is compiled without __CPROVER__ and calls the C library.\n *\n * case_isprint is isprint in the C locale (C11 7.4.1.8).\n *\n * case_snprintf follows C11 7.21.6.5 for what the BIN and EXT branches pass: ordinary\n * characters and at most one of %i or %d with an int and %02x with an unsigned int. It takes\n * that one argument as a fixed parameter and does not read the others. It returns -1 for\n * every other directive, and msgpack_object_print_buffer then returns 0. The digits are\n * written without a loop, so that the unwinding bound of the case stays small. */\nstatic int case_isprint(int c)\n{\n    return c >= 0x20 && c <= 0x7e;\n}\n\nstatic int case_put(char *s, size_t n, int at, char c)\n{\n    if (n != 0 && (size_t)at < n - 1) {\n        s[at] = c;\n    }\n    return at + 1;\n}\n\n#define CASE_DECIMAL(power) \\\n    if (value >= power || power == 1u) at = case_put(s, n, at, digit[value / power % 10u])\n#define CASE_HEX(shift) \\\n    if (value >> shift != 0u || shift <= 4) at = case_put(s, n, at, digit[value >> shift & 15u])\n\nstatic int case_snprintf(char *s, size_t n, const char *format, long long argument, ...)\n{\n    static const char digit[] = \"0123456789abcdef\";\n    unsigned int value;\n    int at = 0, used = 0;\n\n    for (; *format != '\\0'; ++format) {\n        if (*format != '%') {\n            at = case_put(s, n, at, *format);\n        } else if (used) {\n            return -1;\n        } else if (format[1] == 'i' || format[1] == 'd') {\n            int number = (int)argument;\n            value = number < 0 ? 0u - (unsigned int)number : (unsigned int)number;\n            if (number < 0) {\n                at = case_put(s, n, at, '-');\n            }\n            CASE_DECIMAL(1000000000u); CASE_DECIMAL(100000000u); CASE_DECIMAL(10000000u);\n            CASE_DECIMAL(1000000u); CASE_DECIMAL(100000u); CASE_DECIMAL(10000u);\n            CASE_DECIMAL(1000u); CASE_DECIMAL(100u); CASE_DECIMAL(10u); CASE_DECIMAL(1u);\n            used = 1;\n            format += 1;\n        } else if (format[1] == '0' && format[2] == '2' && format[3] == 'x') {\n            value = (unsigned int)argument;\n            CASE_HEX(28); CASE_HEX(24); CASE_HEX(20); CASE_HEX(16);\n            CASE_HEX(12); CASE_HEX(8); CASE_HEX(4); CASE_HEX(0);\n            used = 1;\n            format += 3;\n        } else {\n            return -1;\n        }\n    }\n    if (n != 0) {\n        s[(size_t)at < n ? (size_t)at : n - 1] = '\\0';\n    }\n    return at;\n}\n#undef isprint\n#define isprint(c) case_isprint(c)\n#define snprintf(s, n, ...) case_snprintf(s, n, __VA_ARGS__, 0)\n#endif\n",
+  "inputs": [
+    {
+      "name": "kind",
+      "type": "unsigned char"
+    },
+    {
+      "name": "tag",
+      "type": "signed char"
+    },
+    {
+      "name": "count",
+      "type": "unsigned char"
+    },
+    {
+      "name": "b0",
+      "type": "unsigned char"
+    },
+    {
+      "name": "b1",
+      "type": "unsigned char"
+    },
+    {
+      "name": "room",
+      "type": "unsigned char"
+    }
+  ],
+  "harness": "    __CPROVER_assume(kind <= 1);\n    __CPROVER_assume(count <= 2);\n    __CPROVER_assume(room <= 24);\n    char data[2], want[24], out[24];\n    int len = 0, got, i;\n    data[0] = (char)b0;\n    data[1] = (char)b1;\n    /* The expected text. A BIN object is printed as its bytes between two double quotes. An\n       EXT object has \"(ext: T)\" before that, where T is its type as a decimal number. A\n       double quote among the bytes is written as \\\", another printable character of the C\n       locale (0x20 to 0x7e) as itself, and every other byte as \\x with two lowercase\n       hexadecimal digits. msgpack_object_print() writes the same text to a FILE. */\n    if (kind == 1) {\n        int t = tag < 0 ? -tag : tag;\n        want[len++] = '('; want[len++] = 'e'; want[len++] = 'x'; want[len++] = 't';\n        want[len++] = ':'; want[len++] = ' ';\n        if (tag < 0) want[len++] = '-';\n        if (t >= 100) want[len++] = (char)('0' + t / 100);\n        if (t >= 10) want[len++] = (char)('0' + t / 10 % 10);\n        want[len++] = (char)('0' + t % 10);\n        want[len++] = ')';\n    }\n    want[len++] = '\"';\n    for (i = 0; i < count; ++i) {\n        unsigned char byte = (unsigned char)data[i];\n        if (byte == '\"') {\n            want[len++] = '\\\\'; want[len++] = '\"';\n        } else if (byte >= 0x20 && byte <= 0x7e) {\n            want[len++] = (char)byte;\n        } else {\n            want[len++] = '\\\\'; want[len++] = 'x';\n            want[len++] = \"0123456789abcdef\"[byte >> 4];\n            want[len++] = \"0123456789abcdef\"[byte & 15];\n        }\n    }\n    want[len++] = '\"';\n    /* One statement for each of the 24 bytes of out in place of a loop, so that the unwinding\n       bound stays small. The bytes after the given size are a canary. */\n#define EACH(X) X(0) X(1) X(2) X(3) X(4) X(5) X(6) X(7) X(8) X(9) X(10) X(11) X(12) X(13) X(14) X(15) \\\n                X(16) X(17) X(18) X(19) X(20) X(21) X(22) X(23)\n#define FILL(at) out[at] = 0x55;\n#define SAME(at) if (at < len && out[at] != want[at]) same = 0;\n#define KEPT(at) if (at >= room && out[at] != 0x55) kept = 0;\n#define ENDED(at) if (at < room && out[at] == '\\0') ended = 1;\n    EACH(FILL)\n    msgpack_object object = {MSGPACK_OBJECT_NIL};\n    if (kind == 1) {\n        object.type = MSGPACK_OBJECT_EXT;\n        object.via.ext.type = tag;\n        object.via.ext.ptr = data;\n        object.via.ext.size = count;\n        got = msgpack_object_print_buffer(out, room, object);\n    } else {\n        object.type = MSGPACK_OBJECT_BIN;\n        object.via.bin.ptr = data;\n        object.via.bin.size = count;\n        got = msgpack_object_print_buffer(out, room, object);\n    }\n    /* The text and its terminator fit in the given size, or the result is 0. */\n    int fits = len < room, same = 1, kept = 1, ended = room == 0;\n    if (fits) {\n        EACH(SAME)\n        if (out[len] != '\\0') same = 0;\n    }\n    EACH(KEPT)\n    EACH(ENDED)\n    __CPROVER_assert(got == (fits ? len : 0), \"print.result\");\n    __CPROVER_assert(same, \"print.text\");\n    __CPROVER_assert(kept, \"print.nothing_after_the_given_size\");\n    __CPROVER_assert(ended, \"print.terminated\");\n",
+  "assertions": [
+    "print.result",
+    "print.text",
+    "print.nothing_after_the_given_size",
+    "print.terminated"
+  ],
+  "assumptions": 3,
+  "loops": 2,
+  "unwind": 10,
+  "input_domain": "a BIN object or an EXT object of every type from -128 to 127, with zero, one or two bytes of every value, printed into every buffer size from 0 to 24",
+  "limitations": "msgpack_object_print_buffer for BIN and EXT objects of at most two bytes, with msgpack_object_bin_print_buffer and MSGPACK_CHECKED_CALL; the other object types, and with them arrays and maps, are not examined; the model reads snprintf and isprint as the stand-ins in the prelude: snprintf with ordinary characters and one %i, %d or %02x directive, isprint as in the C locale; the replay of a counterexample calls the C library; the type definitions are not extracted by the gate but copied into the prelude from include/msgpack/object.h at the same revision; an unwinding bound of 10"
+}
