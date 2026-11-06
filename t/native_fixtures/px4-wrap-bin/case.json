@@ -1,0 +1,30 @@
+{
+  "format": "dawnr-native-case-v1",
+  "id": "px4-wrap-bin",
+  "repository": "PX4/PX4-Autopilot",
+  "path": "src/lib/collision_prevention/ObstacleMath.cpp",
+  "machine": "ILP32",
+  "sources": {
+    "original": {
+      "file": "original.cpp",
+      "sha256": "90146c4c5d67ec86a97da974f92e892a0d75ad81c3e33c1d4f849830514e7ba6",
+      "revision": "dd804e4b9c490aed051bb36f8d3fca1ee137be2a",
+      "definitions": [{"name": "wrap_bin", "line": 120, "end_line": 123, "starts_with": "int wrap_bin(int bin, int bin_count)"}]
+    },
+    "fixed": {
+      "file": "fixed.cpp",
+      "sha256": "d01b82d5cb76ae8449a3d0411c9a4dadf6c905ef44cce419f7d63cd9090fb8c2",
+      "revision": "07d30f9341dc02720eac2ed6fb9ee7524f8bd713",
+      "note": "published fix, PR #29030",
+      "definitions": [{"name": "wrap_bin", "line": 120, "end_line": 125, "starts_with": "int wrap_bin(int bin, int bin_count)"}]
+    }
+  },
+  "inputs": [{"name": "bin", "type": "int"}, {"name": "bin_count", "type": "int"}],
+  "harness": "    __CPROVER_assume(bin_count == 72);\n    int result = wrap_bin(bin, bin_count);\n    __CPROVER_assert(result >= 0 && result < 72, \"native.range\");\n    unsigned char bins[72] = {0};\n    bins[result] = 1;\n    __CPROVER_assert(bins[result] == 1, \"native.store\");\n",
+  "assertions": ["native.range", "native.store"],
+  "assumptions": 1,
+  "loops": 0,
+  "checks": ["--conversion-check"],
+  "input_domain": "all int32 bin; bin_count == 72",
+  "limitations": "extracted function and stated harness only; no PX4 callers, concurrency, hardware, timing or flight certification"
+}
