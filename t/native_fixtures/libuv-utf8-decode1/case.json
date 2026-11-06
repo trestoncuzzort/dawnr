@@ -1,0 +1,84 @@
+{
+  "format": "dawnr-native-case-v1",
+  "id": "libuv-utf8-decode1",
+  "repository": "libuv/libuv",
+  "path": "src/idna.c",
+  "machine": "LP64",
+  "sources": {
+    "original": {
+      "file": "original.c",
+      "sha256": "39dc7e0eb797beac872d59e60f29cb6a4d78a60403cffa8a194225fcf5b7e3f8",
+      "revision": "9e40720a0cdfd99970eacc43b39fa1404c6df38d",
+      "definitions": [
+        {
+          "name": "uv__utf8_decode1_slow",
+          "line": 71,
+          "end_line": 137,
+          "starts_with": "static unsigned uv__utf8_decode1_slow(const char** p,"
+        },
+        {
+          "name": "uv__utf8_decode1",
+          "line": 140,
+          "end_line": 151,
+          "starts_with": "unsigned uv__utf8_decode1(const char** p, const char* pe) {"
+        }
+      ]
+    },
+    "fixed": {
+      "file": "fixed.c",
+      "sha256": "f1a6014a2dd5fa486a0ff8190b6c1cd6fa01754c5ed1e6f9229fe7b58ecd9234",
+      "revision": "9e40720a0cdfd99970eacc43b39fa1404c6df38d with the proposed change",
+      "definitions": [
+        {
+          "name": "uv__utf8_decode1_slow",
+          "line": 71,
+          "end_line": 137,
+          "starts_with": "static unsigned uv__utf8_decode1_slow(const char** p,"
+        },
+        {
+          "name": "uv__utf8_decode1",
+          "line": 140,
+          "end_line": 151,
+          "starts_with": "unsigned uv__utf8_decode1(const char** p, const char* pe) {"
+        }
+      ]
+    }
+  },
+  "prelude": "#include <assert.h>\n",
+  "inputs": [
+    {
+      "name": "b0",
+      "type": "unsigned char"
+    },
+    {
+      "name": "b1",
+      "type": "unsigned char"
+    },
+    {
+      "name": "b2",
+      "type": "unsigned char"
+    },
+    {
+      "name": "b3",
+      "type": "unsigned char"
+    },
+    {
+      "name": "b4",
+      "type": "unsigned char"
+    },
+    {
+      "name": "len",
+      "type": "unsigned int"
+    }
+  ],
+  "harness": "    __CPROVER_assume(len >= 1 && len <= 5);\n    /* one array per length, so that a read past the end of the input leaves its object */\n    char s1[1], s2[2], s3[3], s4[4], s5[5];\n    char *s = len == 1 ? s1 : len == 2 ? s2 : len == 3 ? s3 : len == 4 ? s4 : s5;\n    s[0] = (char)b0;\n    if (len > 1) s[1] = (char)b1;\n    if (len > 2) s[2] = (char)b2;\n    if (len > 3) s[3] = (char)b3;\n    if (len > 4) s[4] = (char)b4;\n    const char *p = s;\n    unsigned r = uv__utf8_decode1(&p, s + len);\n    /* Well-formed UTF-8 byte sequences: RFC 3629 section 4 and Unicode table 3-7.\n       A byte past the end of the input is not a continuation byte. */\n    unsigned c1 = len > 1 ? b1 : 0, c2 = len > 2 ? b2 : 0, c3 = len > 3 ? b3 : 0;\n    int t1 = c1 >= 0x80 && c1 <= 0xBF, t2 = c2 >= 0x80 && c2 <= 0xBF, t3 = c3 >= 0x80 && c3 <= 0xBF;\n    unsigned n = 0, cp = 0;\n    if (b0 <= 0x7F) { n = 1; cp = b0; }\n    else if (b0 >= 0xC2 && b0 <= 0xDF && t1) { n = 2; cp = (b0 & 0x1Fu) << 6 | (c1 & 0x3Fu); }\n    else if (b0 == 0xE0 && c1 >= 0xA0 && c1 <= 0xBF && t2) n = 3;\n    else if (((b0 >= 0xE1 && b0 <= 0xEC) || b0 == 0xEE || b0 == 0xEF) && t1 && t2) n = 3;\n    else if (b0 == 0xED && c1 >= 0x80 && c1 <= 0x9F && t2) n = 3;\n    else if (b0 == 0xF0 && c1 >= 0x90 && c1 <= 0xBF && t2 && t3) n = 4;\n    else if (b0 >= 0xF1 && b0 <= 0xF3 && t1 && t2 && t3) n = 4;\n    else if (b0 == 0xF4 && c1 >= 0x80 && c1 <= 0x8F && t2 && t3) n = 4;\n    if (n == 3) cp = (b0 & 0x0Fu) << 12 | (c1 & 0x3Fu) << 6 | (c2 & 0x3Fu);\n    if (n == 4) cp = (b0 & 0x07u) << 18 | (c1 & 0x3Fu) << 12 | (c2 & 0x3Fu) << 6 | (c3 & 0x3Fu);\n    __CPROVER_assert(n == 0 || (r == cp && p == s + n), \"utf8.wellformed_decoded\");\n    __CPROVER_assert(n != 0 || r == (unsigned)-1, \"utf8.illformed_rejected\");\n    __CPROVER_assert(p > s && p <= s + len, \"utf8.cursor_in_bounds\");\n",
+  "assertions": [
+    "utf8.wellformed_decoded",
+    "utf8.illformed_rejected",
+    "utf8.cursor_in_bounds"
+  ],
+  "assumptions": 1,
+  "loops": 0,
+  "input_domain": "every input of 1 to 5 bytes, decoded from its first byte",
+  "limitations": "uv__utf8_decode1 and uv__utf8_decode1_slow only; 0 to 4 bytes follow the first byte, and the function distinguishes 0, 1, 2 and 3 or more; after an ill-formed sequence the cursor is only required to lie inside the input"
+}

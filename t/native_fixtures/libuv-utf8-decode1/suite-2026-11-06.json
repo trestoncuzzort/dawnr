@@ -1,0 +1,40 @@
+{
+  "case": "libuv-utf8-decode1",
+  "format": "dawnr-native-case-v1-suite",
+  "ok": true,
+  "rows": [
+    {
+      "confirmed_witnesses": 1,
+      "expected": "counterexample",
+      "ok": true,
+      "properties": 282,
+      "reason": "a checked property has a concrete failing trace",
+      "unit_sha256": "81e96bbb9d955442e719e8ef74ce02e8f13b29ebe80ffc84bbefcc74abf4e4f5",
+      "unwind": 4,
+      "variant": "original",
+      "verdict": "counterexample"
+    },
+    {
+      "confirmed_witnesses": 0,
+      "expected": "complete",
+      "ok": true,
+      "properties": 282,
+      "reason": "all inventoried properties and required unwinding checks succeeded; assumption goals reachable",
+      "unit_sha256": "7dce83f0541c2bdc35c37e7bea7337d00e2749f4b4b07397a49a70f64e2098fc",
+      "unwind": 4,
+      "variant": "fixed",
+      "verdict": "complete"
+    },
+    {
+      "confirmed_witnesses": 0,
+      "expected": "vacuous",
+      "ok": true,
+      "properties": 282,
+      "reason": "assumption coverage has an unreachable before/after goal",
+      "unit_sha256": "828098d8a0a8d3b06b36d4b8b7d1b851bdfd9ced11943ddb246cd20ad272edeb",
+      "unwind": 4,
+      "variant": "vacuous",
+      "verdict": "vacuous"
+    }
+  ]
+}
