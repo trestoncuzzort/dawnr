@@ -14,7 +14,9 @@ automation and host administration are no longer product goals.
 The CBMC gate over real C functions no longer reads a hang or a stop as proved, and no longer reads a limit of its model as a
 defect ([correction](CORRECTIONS.md)). A function that allocates can now be checked, inputs can be bounded arrays and strings,
 per-loop bounds are found by search, and a `complete` verdict can carry a proof checked by a separate program. All 29
-published suite rows came back the same. [The guide](t/NATIVE-CASES.md), [the limits](LIMITS.md#on-the-native-gate).
+published suite rows came back the same. C library models compared with the C library replace hand-written stand-ins, since CBMC's own `strtol` is wrong on
+many inputs, and a native sampler runs the real code over many inputs. [The guide](t/NATIVE-CASES.md), [the limits](LIMITS.md#on-the-native-gate),
+[the research behind the next steps](internal/RESEARCH-2026-11-05-papers-and-repos.md).
 
 ## Incremental updates (2026-10-25 UTC)
 

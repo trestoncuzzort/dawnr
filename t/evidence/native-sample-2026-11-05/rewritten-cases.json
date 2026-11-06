@@ -1,0 +1,51 @@
+[
+  {
+    "case": "libevent-servname-port-range-rewritten",
+    "draws": 1000000,
+    "failed_assertions": 4,
+    "failed_properties": [
+      "servname.digits",
+      "servname.value"
+    ],
+    "reached_the_end": 1000000,
+    "rejected": 0,
+    "seconds": 0.2326,
+    "status": "failed_assertions",
+    "variant": "original"
+  },
+  {
+    "case": "libevent-servname-port-range-rewritten",
+    "draws": 1000000,
+    "failed_assertions": 0,
+    "failed_properties": [],
+    "reached_the_end": 1000000,
+    "rejected": 0,
+    "seconds": 0.2337,
+    "status": "no_failure",
+    "variant": "fixed"
+  },
+  {
+    "case": "libuv-utf8-decode1-rewritten",
+    "draws": 1000000,
+    "failed_assertions": 75,
+    "failed_properties": [
+      "utf8.illformed_rejected"
+    ],
+    "reached_the_end": 1000000,
+    "rejected": 0,
+    "seconds": 0.1454,
+    "status": "failed_assertions",
+    "variant": "original"
+  },
+  {
+    "case": "libuv-utf8-decode1-rewritten",
+    "draws": 1000000,
+    "failed_assertions": 0,
+    "failed_properties": [],
+    "reached_the_end": 1000000,
+    "rejected": 0,
+    "seconds": 0.1424,
+    "status": "no_failure",
+    "variant": "fixed"
+  }
+]

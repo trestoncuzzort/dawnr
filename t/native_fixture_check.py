@@ -24,6 +24,7 @@ import time
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import native_case as cases
+import native_sample as sampler
 
 FIELDS = ("variant", "unwind", "verdict", "unit_sha256", "properties", "confirmed_witnesses")
 
@@ -118,6 +119,7 @@ def main(argv=None) -> int:
     parser.add_argument("--solver", choices=cases.SOLVERS, default=cases.DEFAULT_SOLVER, help="the published suites used minisat2")
     parser.add_argument("--cadical", help="with --lrat-check: certify each complete verdict, and check the formula of each original")
     parser.add_argument("--lrat-check", dest="lrat_check")
+    parser.add_argument("--sample", type=int, default=0, help="also run each fixed variant natively over this many draws (native_sample.py)")
     args = parser.parse_args(argv)
     if bool(args.cadical) != bool(args.lrat_check):
         parser.error("--cadical and --lrat-check go together")
@@ -150,8 +152,11 @@ def main(argv=None) -> int:
         if certify_with:
             entry["original_formula"] = original_formula(root, args.out / root.name / "original-formula", args)
             entry["certificates"] = [row["certificate"]["status"] for row in entry["rows"] if "certificate" in row]
+        if args.sample:
+            result = sampler.sample(root, "fixed", args.out / root.name / "native-sample", args.sample, compiler=args.compiler, timeout=args.timeout)
+            entry["sample"] = {key: result.get(key) for key in ("status", "draws", "reached_the_end", "rejected", "failed_assertions", "failed_properties", "seconds", "report")}
         report.append(entry)
-        print(json.dumps({key: entry[key] for key in ("case", "seconds", "ok", "published", "moved", "error", "peak_rss_mb", "certificates", "original_formula") if key in entry}), flush=True)
+        print(json.dumps({key: entry[key] for key in ("case", "seconds", "ok", "published", "moved", "error", "peak_rss_mb", "certificates", "original_formula", "sample") if key in entry}), flush=True)
     compared = sum(len(entry["rows"]) for entry in report if entry["published"])
     moved = sum(len(entry["moved"]) for entry in report)
     failed = sum(not entry["ok"] for entry in report)
@@ -163,9 +168,14 @@ def main(argv=None) -> int:
         unproved = (sum(entry["original_formula"]["status"] != "refuted" for entry in report)
                     + sum(status not in ("verified", "no_formula") for entry in report for status in entry["certificates"]))
         result["certificate_problems"] = unproved
+    disagreements = 0
+    if args.sample:
+        # A fix the model calls complete, and the real code does not agree with: a defect in a model, or in the case.
+        disagreements = sum(entry["sample"]["status"] != "no_failure" for entry in report)
+        result["sample_problems"] = disagreements
     (args.out / "fixture-check.json").write_text(json.dumps(result, indent=2, sort_keys=True) + "\n")
-    print(json.dumps({key: result[key] for key in ("cases", "rows_compared", "moved", "suites_failed", "certificate_problems") if key in result}))
-    return 0 if compared and not moved and not failed and not unproved else 1
+    print(json.dumps({key: result[key] for key in ("cases", "rows_compared", "moved", "suites_failed", "certificate_problems", "sample_problems") if key in result}))
+    return 0 if compared and not moved and not failed and not unproved and not disagreements else 1
 
 
 if __name__ == "__main__":

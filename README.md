@@ -78,7 +78,7 @@ are part of the reported result.
 
 The installed `dawnr` proof commands default to a minimum of **one** prover. An all-seven result must show seven
 successful program checks and seven refuted variants. The current engine pin is in [`t/ENGINE.md`](t/ENGINE.md);
-engine development lives in [t-proof-engine](https://github.com/trestoncuzzort/t-proof-engine).
+engine development lives in a separate repository that is currently private, and `t/` here carries the copy this project runs.
 
 ## PX4 work in this repository
 

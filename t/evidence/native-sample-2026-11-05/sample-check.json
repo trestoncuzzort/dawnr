@@ -1,0 +1,327 @@
+{
+  "count": 1000000,
+  "format": "dawnr-native-sample-check",
+  "report": [
+    {
+      "case": "betaflight-uvarint-encode",
+      "draws": 1000000,
+      "failed_assertions": 0,
+      "failed_properties": [],
+      "first_inputs": [],
+      "reached_the_end": 139163,
+      "reason": null,
+      "rejected": 860837,
+      "report": null,
+      "seconds": 15.1422,
+      "status": "no_failure",
+      "variant": "fixed"
+    },
+    {
+      "case": "betaflight-uvarint-encode",
+      "draws": 1000000,
+      "failed_assertions": 597,
+      "failed_properties": [
+        "uvarint.bytes",
+        "uvarint.decoder_reads_it_back",
+        "uvarint.length"
+      ],
+      "first_inputs": [
+        "1938: val=80 size=5",
+        "1938: val=80 size=5",
+        "1938: val=80 size=5",
+        "6279: val=80 size=3",
+        "6279: val=80 size=3"
+      ],
+      "reached_the_end": 139163,
+      "reason": null,
+      "rejected": 860837,
+      "report": null,
+      "seconds": 15.3887,
+      "status": "failed_assertions",
+      "variant": "original"
+    },
+    {
+      "case": "flac-metaflac-parse-uint32",
+      "draws": 1000000,
+      "failed_assertions": 0,
+      "failed_properties": [],
+      "first_inputs": [],
+      "reached_the_end": 1000000,
+      "reason": null,
+      "rejected": 0,
+      "report": null,
+      "seconds": 0.1655,
+      "status": "no_failure",
+      "variant": "fixed"
+    },
+    {
+      "case": "flac-metaflac-parse-uint32",
+      "draws": 1000000,
+      "failed_assertions": 479212,
+      "failed_properties": [
+        "padding.result",
+        "padding.value",
+        "uint32.result",
+        "uint32.value"
+      ],
+      "first_inputs": [
+        "2: b0=35 b1=35 b2=34 b3=32 b4=37 b5=33 b6=35 b7=36 b8=35 b9=30 b10=37",
+        "2: b0=35 b1=35 b2=34 b3=32 b4=37 b5=33 b6=35 b7=36 b8=35 b9=30 b10=37",
+        "3: b0=36 b1=30 b2=34 b3=35 b4=36 b5=32 b6=33 b7=32 b8=35 b9=30 b10=33",
+        "3: b0=36 b1=30 b2=34 b3=35 b4=36 b5=32 b6=33 b7=32 b8=35 b9=30 b10=33",
+        "13: b0=31 b1=36 b2=35 b3=36 b4=34 b5=34 b6=31 b7=35 b8=38 b9=36 b10=34"
+      ],
+      "reached_the_end": 1000000,
+      "reason": null,
+      "rejected": 0,
+      "report": null,
+      "seconds": 0.1511,
+      "status": "failed_assertions",
+      "variant": "original"
+    },
+    {
+      "case": "inav-uvarint-encode",
+      "draws": 1000000,
+      "failed_assertions": 0,
+      "failed_properties": [],
+      "first_inputs": [],
+      "reached_the_end": 139163,
+      "reason": null,
+      "rejected": 860837,
+      "report": null,
+      "seconds": 15.3368,
+      "status": "no_failure",
+      "variant": "fixed"
+    },
+    {
+      "case": "inav-uvarint-encode",
+      "draws": 1000000,
+      "failed_assertions": 597,
+      "failed_properties": [
+        "uvarint.bytes",
+        "uvarint.decoder_reads_it_back",
+        "uvarint.length"
+      ],
+      "first_inputs": [
+        "1938: val=80 size=5",
+        "1938: val=80 size=5",
+        "1938: val=80 size=5",
+        "6279: val=80 size=3",
+        "6279: val=80 size=3"
+      ],
+      "reached_the_end": 139163,
+      "reason": null,
+      "rejected": 860837,
+      "report": null,
+      "seconds": 15.3174,
+      "status": "failed_assertions",
+      "variant": "original"
+    },
+    {
+      "case": "libcoap-opt-parse-delta",
+      "draws": 1000000,
+      "failed_assertions": 0,
+      "failed_properties": [],
+      "first_inputs": [],
+      "reached_the_end": 618848,
+      "reason": null,
+      "rejected": 381152,
+      "report": null,
+      "seconds": 7.6892,
+      "status": "no_failure",
+      "variant": "fixed"
+    },
+    {
+      "case": "libcoap-opt-parse-delta",
+      "draws": 1000000,
+      "failed_assertions": 4,
+      "failed_properties": [
+        "opt.delta",
+        "opt.zero_exactly_when_invalid"
+      ],
+      "first_inputs": [
+        "863130: h0=ed h1=fe h2=ff h3=ff h4=66 room=7fff",
+        "863130: h0=ed h1=fe h2=ff h3=ff h4=66 room=7fff",
+        "909731: h0=e6 h1=fe h2=ff h3=f6 h4=35 room=7f",
+        "909731: h0=e6 h1=fe h2=ff h3=f6 h4=35 room=7f"
+      ],
+      "reached_the_end": 618848,
+      "reason": null,
+      "rejected": 381152,
+      "report": null,
+      "seconds": 7.6967,
+      "status": "failed_assertions",
+      "variant": "original"
+    },
+    {
+      "case": "libevent-servname-port-range",
+      "draws": 1000000,
+      "failed_assertions": 0,
+      "failed_properties": [],
+      "first_inputs": [],
+      "reached_the_end": 205699,
+      "reason": null,
+      "rejected": 794301,
+      "report": null,
+      "seconds": 28.4313,
+      "status": "no_failure",
+      "variant": "fixed"
+    },
+    {
+      "case": "libevent-servname-port-range",
+      "draws": 1000000,
+      "failed_assertions": 0,
+      "failed_properties": [],
+      "first_inputs": [],
+      "reached_the_end": 205699,
+      "reason": null,
+      "rejected": 794301,
+      "report": null,
+      "seconds": 27.9529,
+      "status": "no_failure",
+      "variant": "original"
+    },
+    {
+      "case": "libuv-utf8-decode1",
+      "draws": 1000000,
+      "failed_assertions": 0,
+      "failed_properties": [],
+      "first_inputs": [],
+      "reached_the_end": 134410,
+      "reason": null,
+      "rejected": 865590,
+      "report": null,
+      "seconds": 15.3667,
+      "status": "no_failure",
+      "variant": "fixed"
+    },
+    {
+      "case": "libuv-utf8-decode1",
+      "draws": 1000000,
+      "failed_assertions": 9,
+      "failed_properties": [
+        "utf8.illformed_rejected"
+      ],
+      "first_inputs": [
+        "10776: b0=f7 b1=ad b2=3f b3=f b4=0 len=2",
+        "48467: b0=f4 b1=80 b2=2e b3=ae b4=30 len=2",
+        "201487: b0=e3 b1=8a b2=f6 b3=2e b4=0 len=2",
+        "265753: b0=f4 b1=8e b2=1 b3=f b4=30 len=2",
+        "365005: b0=ef b1=be b2=32 b3=8d b4=8 len=2"
+      ],
+      "reached_the_end": 134410,
+      "reason": null,
+      "rejected": 865590,
+      "report": null,
+      "seconds": 15.2361,
+      "status": "failed_assertions",
+      "variant": "original"
+    },
+    {
+      "case": "msgpack-c-print-buffer-empty-bin",
+      "draws": 1000000,
+      "failed_assertions": 0,
+      "failed_properties": [],
+      "first_inputs": [],
+      "reached_the_end": 7353,
+      "reason": null,
+      "rejected": 992647,
+      "report": null,
+      "seconds": 18.8193,
+      "status": "no_failure",
+      "variant": "fixed"
+    },
+    {
+      "case": "msgpack-c-print-buffer-empty-bin",
+      "draws": 1000000,
+      "failed_assertions": 3182,
+      "failed_properties": [
+        "print.result",
+        "print.text"
+      ],
+      "first_inputs": [
+        "328: kind=1 tag=2 count=0 b0=e b1=b room=b",
+        "328: kind=1 tag=2 count=0 b0=e b1=b room=b",
+        "1039: kind=0 tag=7 count=0 b0=0 b1=36 room=a",
+        "1039: kind=0 tag=7 count=0 b0=0 b1=36 room=a",
+        "2648: kind=0 tag=3 count=0 b0=fe b1=7 room=b"
+      ],
+      "reached_the_end": 7353,
+      "reason": null,
+      "rejected": 992647,
+      "report": null,
+      "seconds": 17.7269,
+      "status": "failed_assertions",
+      "variant": "original"
+    },
+    {
+      "case": "open62541-datetime-parse-year",
+      "draws": 1000000,
+      "failed_assertions": 0,
+      "failed_properties": [],
+      "first_inputs": [],
+      "reached_the_end": 534,
+      "reason": null,
+      "rejected": 999466,
+      "report": null,
+      "seconds": 16.0883,
+      "status": "no_failure",
+      "variant": "fixed"
+    },
+    {
+      "case": "open62541-datetime-parse-year",
+      "draws": 1000000,
+      "failed_assertions": 162,
+      "failed_properties": [
+        "datetime.accepted_iff_representable"
+      ],
+      "first_inputs": [
+        "2976: d0=8 d1=9 d2=2 d3=1 d4=0 sign=0 digits=5",
+        "16712: d0=9 d1=2 d2=4 d3=1 d4=2 sign=0 digits=5",
+        "17454: d0=7 d1=0 d2=1 d3=0 d4=8 sign=0 digits=5",
+        "25424: d0=4 d1=3 d2=8 d3=7 d4=0 sign=0 digits=5",
+        "36054: d0=6 d1=9 d2=6 d3=6 d4=5 sign=1 digits=5"
+      ],
+      "reached_the_end": 534,
+      "reason": null,
+      "rejected": 999466,
+      "report": null,
+      "seconds": 16.2543,
+      "status": "failed_assertions",
+      "variant": "original"
+    },
+    {
+      "case": "px4-wrap-bin",
+      "draws": 1000000,
+      "failed_assertions": 0,
+      "failed_properties": [],
+      "first_inputs": [],
+      "reached_the_end": 79,
+      "reason": null,
+      "rejected": 999921,
+      "report": null,
+      "seconds": 17.4637,
+      "status": "no_failure",
+      "variant": "fixed"
+    },
+    {
+      "case": "px4-wrap-bin",
+      "draws": null,
+      "failed_assertions": null,
+      "failed_properties": [
+        "native.range"
+      ],
+      "first_inputs": [
+        "41: bin=f3de4309 bin_count=48",
+        "41: bin=f3de4309 bin_count=48"
+      ],
+      "reached_the_end": null,
+      "reason": null,
+      "rejected": null,
+      "report": "runtime error: index -63 out of bounds for type 'unsigned char [72]'",
+      "seconds": 0.0049,
+      "status": "sanitizer_report",
+      "variant": "original"
+    }
+  ]
+}

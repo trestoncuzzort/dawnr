@@ -68,6 +68,23 @@ SOLVERS = ("minisat2", "cadical")
 DEFAULT_SOLVER = "minisat2"
 
 
+# Tested C library models a case can link: see native_models/ and t/PREDICT-2026-11-05-native-models.md.
+MODELS = ("string", "stdlib", "ctype", "ctype_strict")
+MODELS_DIRECTORY = Path(__file__).resolve().parent / "native_models"
+
+
+def link_models(case: dict, out: Path) -> tuple[list[str], dict]:
+    """Copy the models a case asks for beside the unit, and return their file names and identities."""
+    names, identities = [], {}
+    for name in case.get("models", []):
+        data = (MODELS_DIRECTORY / f"{name}.c").read_bytes()
+        target = f"model_{name}.c"
+        (out / target).write_bytes(data)
+        names.append(target)
+        identities[name] = native.digest(data)
+    return names, identities
+
+
 def stops_unit(allowed: list[str], unit: str) -> tuple[str, list[str]]:
     """The second file of the inventory and checking stages, and the defines that reach the builtins.
 
@@ -220,7 +237,7 @@ def assigned_to(name: str, harness: str) -> bool:
 def load(root: Path) -> dict:
     case = json.loads((root / "case.json").read_text(encoding="utf-8"))
     required = {"format", "id", "repository", "path", "machine", "sources", "inputs", "harness", "assertions", "assumptions", "loops"}
-    optional = {"prelude", "unwind", "unwindset", "under_unwind", "checks", "input_domain", "limitations", "allowed_stops"}
+    optional = {"prelude", "unwind", "unwindset", "under_unwind", "checks", "input_domain", "limitations", "allowed_stops", "models"}
     if not isinstance(case, dict) or case.get("format") != FORMAT or not required <= set(case) or set(case) - required - optional:
         raise ValueError(f"case.json is not a complete {FORMAT} description")
     if case["machine"] not in MACHINES or not set(case.get("checks", [])) <= set(OPTIONAL_CHECKS):
@@ -239,6 +256,9 @@ def load(root: Path) -> dict:
         raise ValueError("assumptions, loops and unwind bounds are non-negative integers; native.machine is reserved")
     if not isinstance(case.get("allowed_stops", []), list) or not set(case.get("allowed_stops", [])) <= set(STOPS):
         raise ValueError(f"allowed_stops may name only: {', '.join(STOPS)}")
+    models = case.get("models", [])
+    if not isinstance(models, list) or not set(models) <= set(MODELS) or len(set(models)) != len(models) or {"ctype", "ctype_strict"} <= set(models):
+        raise ValueError(f"models may name each of {', '.join(MODELS)} once, and only one of ctype and ctype_strict")
     bounds = case.get("unwindset", {})
     if not isinstance(bounds, dict) or any(not LOOP.match(str(key)) or not isinstance(value, int) or value < 1 for key, value in bounds.items()):
         raise ValueError("unwindset maps a loop such as f.0, or a recursive function f, to a positive bound")
@@ -521,13 +541,16 @@ def check(root: Path, variant: str, out: Path, cbmc: str = "cbmc", unwind: int |
         stops, defines = stops_unit(case.get("allowed_stops", []), unit)
         (out / STOP_FILE).write_text(stops)
         receipt["stops_sha256"] = native.digest(stops)
+        linked, identities = link_models(case, out)
+        if identities:
+            receipt["models"] = identities
         model = ["--function", "harness", MACHINES[case["machine"]][0], "--little-endian", *native.KEEP_SELF_LOOPS, "--unwind", str(unwind),
                  *(["--unwindset", render_bounds(bounds)] if bounds else [])]
         common = [*model[:5], "--sat-solver", solver, *model[5:], "--json-ui"]
-        # Coverage reads the unit alone: its goals have to be the harness's own and the end marker reachable.
-        with_stops = ["unit.c", STOP_FILE, *defines, *common]
+        # Coverage reads the unit without the stops: its goals have to be the harness's own and the end marker reachable.
+        with_stops = ["unit.c", *linked, STOP_FILE, *defines, *common]
         configurations = {"inventory": [*with_stops, *checks, "--unwinding-assertions", "--show-properties"],
-                          "coverage": ["unit.c", *common, "--cover", "assume"],
+                          "coverage": ["unit.c", *linked, *common, "--cover", "assume"],
                           "checking": [*with_stops, *checks, "--unwinding-assertions", "--trace"]}
         runs = {}
         for name, args in configurations.items():
@@ -539,7 +562,7 @@ def check(root: Path, variant: str, out: Path, cbmc: str = "cbmc", unwind: int |
         if receipt["verdict"] == "counterexample":
             receipt["native_replay"] = replay(case, parts, witnesses(receipt, scalars(case)), out, compiler, timeout)
         if certify_with and receipt["verdict"] == "complete":
-            formula_args = ["unit.c", STOP_FILE, *defines, *model, *checks, "--unwinding-assertions"]
+            formula_args = ["unit.c", *linked, STOP_FILE, *defines, *model, *checks, "--unwinding-assertions"]
             receipt["certificate"] = certify(executable, formula_args, out, *certify_with, timeout, memory_limit_mb, keep_proof)
             if receipt["certificate"]["status"] not in ("verified", "no_formula"):
                 # The checking stage's own word stays in the properties; the verdict says it could not be checked.
@@ -623,6 +646,7 @@ def find_bounds(root: Path, out: Path, cbmc: str = "cbmc", timeout: float = 120,
     (out / "unit.c").write_text(unit)
     stops, defines = stops_unit(case.get("allowed_stops", []), unit)
     (out / STOP_FILE).write_text(stops)
+    linked, _ = link_models(case, out)
     summary = {"format": FORMAT + "-bounds", "case": case["id"], "variant": variant, "unit_sha256": scope["unit_sha256"], "ceiling": ceiling,
                "memory_limit_mb": memory_limit_mb, "solver": solver, "found": False, "attempts": []}
     executable, tool, verdict, reason = tool_identity(cbmc, out, timeout)
@@ -631,7 +655,7 @@ def find_bounds(root: Path, out: Path, cbmc: str = "cbmc", timeout: float = 120,
     if verdict is not None:
         summary.update(reason=f"{verdict}: {reason}")
         return summary
-    base = ["unit.c", STOP_FILE, *defines, "--function", "harness", MACHINES[case["machine"]][0], "--little-endian", *native.KEEP_SELF_LOOPS, "--sat-solver", solver, "--unwind", "2",
+    base = ["unit.c", *linked, STOP_FILE, *defines, "--function", "harness", MACHINES[case["machine"]][0], "--little-endian", *native.KEEP_SELF_LOOPS, "--sat-solver", solver, "--unwind", "2",
             "--json-ui", "--verbosity", "8", *CHECKS, *case.get("checks", []), "--unwinding-assertions"]
 
     def attempt(bounds: dict) -> dict:

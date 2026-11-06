@@ -1,0 +1,207 @@
+{
+  "format": "dawnr-native-case-v1-models-check",
+  "report": [
+    {
+      "case": "flac-metaflac-parse-uint32",
+      "failing_properties": [
+        [
+          "padding.result",
+          "padding.value",
+          "uint32.result",
+          "uint32.value"
+        ],
+        [
+          "padding.result",
+          "padding.value",
+          "uint32.result",
+          "uint32.value"
+        ]
+      ],
+      "fixed_seconds": [
+        8.93,
+        17.1
+      ],
+      "fixed_time_ratio": 1.91,
+      "models": [
+        "string",
+        "stdlib"
+      ],
+      "ok": true,
+      "own": [
+        {
+          "confirmed_witnesses": 2,
+          "ok": true,
+          "properties": 525,
+          "seconds": 1.84,
+          "unwind": 12,
+          "variant": "original",
+          "verdict": "counterexample"
+        },
+        {
+          "confirmed_witnesses": 0,
+          "ok": true,
+          "properties": 526,
+          "seconds": 8.93,
+          "unwind": 12,
+          "variant": "fixed",
+          "verdict": "complete"
+        },
+        {
+          "confirmed_witnesses": 0,
+          "ok": true,
+          "properties": 523,
+          "seconds": 0.22,
+          "unwind": 12,
+          "variant": "vacuous",
+          "verdict": "vacuous"
+        }
+      ],
+      "prelude_lines": [
+        166,
+        82
+      ],
+      "same_failing_properties": true,
+      "same_verdicts": true,
+      "shared": [
+        {
+          "confirmed_witnesses": 2,
+          "ok": true,
+          "properties": 778,
+          "seconds": 13.95,
+          "unwind": 12,
+          "variant": "original",
+          "verdict": "counterexample"
+        },
+        {
+          "confirmed_witnesses": 0,
+          "ok": true,
+          "properties": 779,
+          "seconds": 17.1,
+          "unwind": 12,
+          "variant": "fixed",
+          "verdict": "complete"
+        },
+        {
+          "confirmed_witnesses": 0,
+          "ok": true,
+          "properties": 775,
+          "seconds": 0.34,
+          "unwind": 12,
+          "variant": "vacuous",
+          "verdict": "vacuous"
+        }
+      ],
+      "witness_statuses": [
+        "assertion_failed",
+        "assertion_failed"
+      ]
+    },
+    {
+      "case": "libevent-servname-port-range",
+      "failing_properties": [
+        [
+          "servname.digits",
+          "servname.value"
+        ],
+        [
+          "servname.digits",
+          "servname.value"
+        ]
+      ],
+      "fixed_seconds": [
+        21.47,
+        14.28
+      ],
+      "fixed_time_ratio": 0.67,
+      "models": [
+        "stdlib"
+      ],
+      "ok": true,
+      "own": [
+        {
+          "confirmed_witnesses": 1,
+          "ok": true,
+          "properties": 239,
+          "seconds": 17.55,
+          "unwind": 12,
+          "variant": "original",
+          "verdict": "counterexample"
+        },
+        {
+          "confirmed_witnesses": 0,
+          "ok": true,
+          "properties": 239,
+          "seconds": 21.47,
+          "unwind": 12,
+          "variant": "fixed",
+          "verdict": "complete"
+        },
+        {
+          "confirmed_witnesses": 0,
+          "ok": true,
+          "properties": 235,
+          "seconds": 0.16,
+          "unwind": 12,
+          "variant": "vacuous",
+          "verdict": "vacuous"
+        },
+        {
+          "confirmed_witnesses": 0,
+          "ok": true,
+          "properties": 239,
+          "seconds": 0.33,
+          "unwind": 1,
+          "variant": "fixed",
+          "verdict": "incomplete"
+        }
+      ],
+      "prelude_lines": [
+        65,
+        19
+      ],
+      "same_failing_properties": true,
+      "same_verdicts": true,
+      "shared": [
+        {
+          "confirmed_witnesses": 1,
+          "ok": true,
+          "properties": 311,
+          "seconds": 12.86,
+          "unwind": 12,
+          "variant": "original",
+          "verdict": "counterexample"
+        },
+        {
+          "confirmed_witnesses": 0,
+          "ok": true,
+          "properties": 311,
+          "seconds": 14.28,
+          "unwind": 12,
+          "variant": "fixed",
+          "verdict": "complete"
+        },
+        {
+          "confirmed_witnesses": 0,
+          "ok": true,
+          "properties": 307,
+          "seconds": 0.22,
+          "unwind": 12,
+          "variant": "vacuous",
+          "verdict": "vacuous"
+        },
+        {
+          "confirmed_witnesses": 0,
+          "ok": true,
+          "properties": 311,
+          "seconds": 0.43,
+          "unwind": 1,
+          "variant": "fixed",
+          "verdict": "incomplete"
+        }
+      ],
+      "witness_statuses": [
+        "assertion_failed"
+      ]
+    }
+  ]
+}

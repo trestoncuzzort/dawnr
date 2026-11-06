@@ -4,6 +4,7 @@ import os
 from pathlib import Path
 import re
 import shutil
+import subprocess
 import sys
 import tempfile
 
@@ -791,3 +792,115 @@ def test_a_damaged_proof_is_refused_by_the_real_checker(tmp_path, damage):
 def test_the_case_gate_describes_itself_in_the_receipt_when_tools_are_absent(tmp_path):
     receipt = cases.check(write_case(tmp_path / "case"), "fixed", tmp_path / "out", cbmc="definitely-absent-cbmc", certify_with=("a", "b"))
     assert receipt["verdict"] == "absent" and "certificate" not in receipt
+
+
+@pytest.mark.parametrize("models", [["nothing"], ["string", "string"], ["ctype", "ctype_strict"], "string"])
+def test_a_bad_list_of_models_is_refused(tmp_path, models):
+    with pytest.raises(ValueError, match="models"):
+        cases.load(write_case(tmp_path / "case", models=models))
+
+
+def test_each_model_file_is_present_and_written_without_assumptions_or_intrinsics():
+    for name in cases.MODELS:
+        text = (cases.MODELS_DIRECTORY / f"{name}.c").read_text()
+        assert "__CPROVER" not in text.split("*/", 1)[1], name   # they have to compile natively, to be compared with the C library
+
+
+def test_the_ctype_tables_are_what_the_generator_writes(tmp_path):
+    """Generated files must not drift from their generator. The generator writes beside itself, so run a copy."""
+    shutil.copy(cases.MODELS_DIRECTORY / "make_ctype.py", tmp_path / "make_ctype.py")
+    done = subprocess.run([sys.executable, str(tmp_path / "make_ctype.py")], capture_output=True, text=True, timeout=60)
+    assert done.returncode == 0, done.stderr
+    for name in ("ctype.c", "ctype_strict.c"):
+        assert (tmp_path / name).read_bytes() == (cases.MODELS_DIRECTORY / name).read_bytes()
+
+
+@pytest.mark.skipif(not sys.platform.startswith("linux") or shutil.which("gcc") is None, reason="the comparison is with glibc")
+def test_the_models_agree_with_the_c_library_on_a_small_domain(tmp_path):
+    """The full domain is in t/PREDICT-2026-11-05-native-models.md. This is the same program with short strings."""
+    done = subprocess.run([sys.executable, str(cases.MODELS_DIRECTORY / "cross_check.py"), "--out", str(tmp_path / "out"), "--string-length", "3", "--set-length", "2",
+                           "--number-length", "2", "--sanitized-number-length", "1"], capture_output=True, text=True, timeout=300)
+    assert done.returncode == 0, done.stdout[-1500:] + done.stderr[-500:]
+    report = json.loads((tmp_path / "out" / "cross-check.json").read_text())
+    assert report["runs"]["plain"]["counts"]["different"] == 0 and report["runs"]["plain"]["counts"]["compared"] > 10000
+    assert report["runs"]["sanitized"]["counts"]["different"] == 0
+
+
+PARSE = "long parse(const char *s)\n{\n\tchar *end;\n\tlong v = strtol(s, &end, 2);\n\treturn end == s ? -1 : v;\n}\n"
+PARSE_FIELDS = dict(prelude="#include <stdlib.h>\n", inputs=[{"name": "c", "type": "char"}], assertions=["parse.binary"],
+                    harness='    (void)c;\n    __CPROVER_assert(parse("12") == 1 && parse("+") == -1, "parse.binary");\n', unwind=6)
+
+
+@real
+def test_the_stdlib_model_gives_the_right_answer_where_the_cbmc_model_does_not(tmp_path):
+    """In base 2, "12" is 1 and the number ends at the 2. CBMC 6.11.0's model takes the 2 as a digit and gives 4."""
+    alone = custom_case(tmp_path / "alone", PARSE, PARSE, ["parse"], **PARSE_FIELDS)
+    wrong = cases.check(alone, "fixed", tmp_path / "alone-out", cbmc=CBMC)
+    assert wrong["verdict"] == "counterexample"
+    assert {witness["status"] for witness in wrong["native_replay"]["witnesses"]} == {"not_reproduced"}  # the real strtol disagrees with the model
+    linked = custom_case(tmp_path / "linked", PARSE, PARSE, ["parse"], models=["stdlib"], **PARSE_FIELDS)
+    right = cases.check(linked, "fixed", tmp_path / "linked-out", cbmc=CBMC)
+    assert right["verdict"] == "complete" and set(right["models"]) == {"stdlib"}
+    assert (tmp_path / "linked-out" / "model_stdlib.c").exists() and "model_stdlib.c" in right["stages"]["coverage"]["arguments"]
+
+
+DIGIT = "int digit(int c)\n{\n\treturn isdigit(c) != 0;\n}\n"
+DIGIT_FIELDS = dict(prelude="#include <ctype.h>\n", inputs=[{"name": "c", "type": "unsigned char"}], assertions=["digit.exact"], unwind=2,
+                    harness='    __CPROVER_assert(digit(c) == (c >= 48 && c <= 57), "digit.exact");\n')
+
+
+@real
+def test_the_ctype_macros_of_glibc_run_with_the_model_and_stop_without_it(tmp_path):
+    alone = custom_case(tmp_path / "alone", DIGIT, DIGIT, ["digit"], **DIGIT_FIELDS)
+    receipt = cases.check(alone, "fixed", tmp_path / "alone-out", cbmc=CBMC)
+    assert receipt["verdict"] == "incomplete" and "__ctype_b_loc" in receipt["reason"]
+    linked = custom_case(tmp_path / "linked", DIGIT, DIGIT, ["digit"], models=["ctype"], **DIGIT_FIELDS)
+    assert cases.check(linked, "fixed", tmp_path / "linked-out", cbmc=CBMC)["verdict"] == "complete"
+
+
+@real
+def test_a_negative_char_is_undefined_by_c_and_only_the_strict_table_says_so(tmp_path):
+    """isdigit of a negative char other than EOF is undefined by C11 7.4, and glibc tolerates it."""
+    harness = '    __CPROVER_assert(digit((char)c) == (c >= 48 && c <= 57), "digit.exact");\n'
+    fields = {**DIGIT_FIELDS, "harness": harness}
+    tolerant = custom_case(tmp_path / "tolerant", DIGIT, DIGIT, ["digit"], models=["ctype"], **fields)
+    assert cases.check(tolerant, "fixed", tmp_path / "tolerant-out", cbmc=CBMC)["verdict"] == "complete"
+    strict = custom_case(tmp_path / "strict", DIGIT, DIGIT, ["digit"], models=["ctype_strict"], **fields)
+    receipt = cases.check(strict, "fixed", tmp_path / "strict-out", cbmc=CBMC)
+    assert receipt["verdict"] == "counterexample"
+    assert {witness["status"] for witness in receipt["native_replay"]["witnesses"]} == {"not_reproduced"}  # by design: glibc tolerates it
+    casted = dict(fields, harness='    __CPROVER_assert(digit((unsigned char)(char)c) == (c >= 48 && c <= 57), "digit.exact");\n')
+    fixed = custom_case(tmp_path / "fixed", DIGIT, DIGIT, ["digit"], models=["ctype_strict"], **casted)
+    assert cases.check(fixed, "fixed", tmp_path / "fixed-out", cbmc=CBMC)["verdict"] == "complete"
+
+
+COUNT = "unsigned leading(const char *s)\n{\n\treturn (unsigned)strspn(s, \"ab\");\n}\n"
+
+
+@real
+def test_a_string_model_reads_one_byte_at_a_time_so_it_finds_a_missing_terminator(tmp_path):
+    fields = dict(prelude="#include <string.h>\n", models=["string"], assertions=["count.bound"], unwind=6)
+    sound = custom_case(tmp_path / "sound", COUNT, COUNT, ["leading"], inputs=[{"name": "t", "type": "char", "string": {"max": 3}}],
+                        harness='    __CPROVER_assert(leading(t) <= t_len, "count.bound");\n', **fields)
+    assert cases.check(sound, "fixed", tmp_path / "sound-out", cbmc=CBMC)["verdict"] == "complete"
+    # The same bytes in an array with no terminator: strspn runs off the end of the object.
+    broken = custom_case(tmp_path / "broken", COUNT, COUNT, ["leading"], inputs=[{"name": "t", "type": "char", "array": {"min": 1, "max": 3}}],
+                         harness='    __CPROVER_assert(leading(t) <= t_len, "count.bound");\n', **fields)
+    receipt = cases.check(broken, "fixed", tmp_path / "broken-out", cbmc=CBMC)
+    assert receipt["verdict"] == "counterexample"
+    assert "memory_error" in {witness["status"] for witness in receipt["native_replay"]["witnesses"]}
+
+
+@certifying
+def test_a_verdict_that_rests_on_a_model_can_still_be_certified(tmp_path):
+    linked = custom_case(tmp_path / "linked", PARSE, PARSE, ["parse"], models=["stdlib"], **PARSE_FIELDS)
+    receipt = cases.check(linked, "fixed", tmp_path / "out", cbmc=CBMC, certify_with=(CADICAL, LRAT_CHECK))
+    assert receipt["verdict"] == "complete" and receipt["certificate"]["status"] in ("verified", "no_formula")
+
+
+@real
+def test_find_bounds_sees_the_loops_inside_a_model(tmp_path):
+    fields = dict(prelude="#include <string.h>\n", models=["string"], assertions=["count.bound"], inputs=[{"name": "t", "type": "char", "string": {"max": 3}}],
+                  harness='    __CPROVER_assert(leading(t) <= t_len, "count.bound");\n')
+    found = cases.find_bounds(custom_case(tmp_path / "case", COUNT, COUNT, ["leading"], **fields), tmp_path / "bounds", cbmc=CBMC)
+    assert found["found"] and any(key.startswith(("strspn", "dawnr_in_set")) for key in found["unwindset"])

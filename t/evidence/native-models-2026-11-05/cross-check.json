@@ -1,0 +1,41 @@
+{
+  "format": "dawnr-native-models-cross-check",
+  "runs": {
+    "plain": {
+      "counts": {
+        "compared": 85702150,
+        "different": 0,
+        "glibc": "2.39",
+        "numbers": 84030450,
+        "strings": 1669777,
+        "table": 1923
+      },
+      "differences": [],
+      "domain": {
+        "number_length": 5,
+        "set_length": 3,
+        "string_length": 5
+      },
+      "exit": 0,
+      "stderr": ""
+    },
+    "sanitized": {
+      "counts": {
+        "compared": 2143750,
+        "different": 0,
+        "glibc": "2.39",
+        "numbers": 472050,
+        "strings": 1669777,
+        "table": 1923
+      },
+      "differences": [],
+      "domain": {
+        "number_length": 3,
+        "set_length": 3,
+        "string_length": 5
+      },
+      "exit": 0,
+      "stderr": "==580193==WARNING: strlen interceptor is enabled even though replace_str=0. Use intercept_strlen=0 to disable it.==580193==WARNING: strchr* interceptors are enabled even though replace_str=0. Use intercept_strchr=0 to disable them.==580193==WARNING: strndup* interceptors are enabled even though replace_str=0. Use intercept_strndup=0 to disable them."
+    }
+  }
+}

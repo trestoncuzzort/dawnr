@@ -27,6 +27,8 @@ that writes `case.json` from the files beside it. See `native_fixtures/` for exa
 | `loops` | the fewest unwinding properties a complete run must show |
 | `unwind`, `unwindset`, `under_unwind` | the global bound (default 4), per-loop bounds, and the bound of the short control (default 1) |
 | `checks` | optional CBMC checks, from the list in `OPTIONAL_CHECKS` |
+| `models` | tested C library models to link: `string`, `stdlib`, and one of `ctype` and `ctype_strict`. See below |
+| `allowed_stops` | stops this case means to allow. See below |
 | `input_domain`, `limitations` | what is covered and what is not, in words. They go in every receipt |
 
 ### Inputs
@@ -52,8 +54,14 @@ The harness may read these names but not assign to them, or to any other input.
 python3 t/native_case.py CASE --variant fixed --cbmc CBMC --out NEW_DIR  # one variant
 python3 t/native_case.py CASE --find-bounds --cbmc CBMC --out NEW_DIR    # per-loop bounds and the loop count
 python3 t/native_case.py CASE --suite --cbmc CBMC --out NEW_DIR          # every control
+python3 t/native_sample.py CASE --variant fixed --out NEW_DIR            # the real code, natively, over many inputs
 python3 t/native_fixture_check.py --cbmc CBMC --out NEW_DIR              # have the published cases moved?
 ```
+
+`native_sample.py` runs the same harness natively under ASan and UBSan over generated inputs, 1,000,000 by default. It uses no model, so it is the one
+check of `complete` that does not go through CBMC. A failure on a variant the gate calls `complete` is a disagreement between the model and the real code: find out why.
+It is a sample and proves nothing. Read `reached_the_end` first. A harness that rejects most draws has barely been run: one published case
+reaches its end on 79 draws of 1,000,000. Typed inputs help, since an `array` or `string` draws its length in range and needs no rejection.
 
 `--solver cadical` uses the build's other SAT solver. On the published cases it took 302 s in all against
 MiniSat's 997 s, and one row went from 302 s to 6 s, but another went from 2.8 s to 11.9 s, and it found
@@ -148,18 +156,39 @@ Measured on CBMC 6.11.0 with the gate's check list, each as one statement in a h
   prelude. Line directives are refused, because one could hide an assumption from the count.
 - `ILP32`: if the machine has no 32-bit C library headers, include nothing and write
   `typedef __UINT8_TYPE__ uint8_t; typedef __SIZE_TYPE__ size_t;` and so on.
-- `malloc`, `free`, `memcpy`, `memset`, `strlen` and `memcmp` are modelled, and the assumptions
-  inside CBMC's own models are recorded apart from yours (`library_assumption_goals`). CBMC has
-  no usable model of `snprintf`, `sscanf`, the results of `strtol` and its family in general, or
-  glibc's `<ctype.h>` macros. Reading `va_arg` in a stand-in also fails. If the code calls one of
-  these, put a stand-in in the prelude inside `#ifdef __CPROVER__`, so the native replay uses the
-  real C library, and make it refuse what it does not cover. State it in `limitations`, and add a
-  `cross_check.py` that compares it with the C library over every argument it can get, and runs
-  the harness natively over the input domain or a stated large sample of it.
+- `malloc`, `free`, `memcpy`, `memset`, `strlen` and `memcmp` are modelled by CBMC, and the assumptions
+  inside its own models are recorded apart from yours (`library_assumption_goals`). For the rest, see
+  the next section before writing a stand-in.
 - Write checks over an array as one statement per index rather than a loop, so that the harness
   adds no loop of its own to the model.
 - Recursion and large switch statements: give each call a concrete selector, otherwise CBMC
   explores every branch at every depth.
+
+## C library functions
+
+```json
+{"models": ["string", "stdlib", "ctype"]}
+```
+
+| model | gives you | why |
+|---|---|---|
+| `string` | `strnlen`, `strspn`, `strcspn`, `strpbrk`, `strstr`, `memchr`, `memrchr`, `strchrnul`, `strsep`, `strtok`, `strtok_r`, `strndup` | CBMC 6.11.0 has none of these |
+| `stdlib` | `strtol`, `strtoul`, `strtoll`, `strtoull`, `atoi`, `atol`, `atoll` | CBMC has no `strtoul`, `strtoll`, `strtoull` or `atoll`, and **its `strtol` is wrong on many inputs**: in base 2 it reads `12` as 4, not 1, it moves the end pointer past a lone sign, and it leaves it unset on overflow. Use this whenever the code calls `strtol` |
+| `ctype` | the tables glibc's `<ctype.h>` macros read | CBMC models `isdigit` as a function, but glibc's header makes it a macro over `__ctype_b_loc`, which it has no model of |
+| `ctype_strict` | the same, for C11 7.4's range | a negative `char` passed to `isdigit` is undefined behaviour that glibc tolerates. This fails a property on it, and the witness is `not_reproduced` on glibc, by design |
+
+Use `--solver cadical` with these. Each is general, where a stand-in covers only what its case needs, so the model is larger: on flac, `fixed` took 962 s under
+MiniSat against 161 s with its own stand-ins, and 17 s under CaDiCaL against 9 s.
+
+Each is plain C, read one byte at a time, so a read past the end of an object fails a property. `native_models/cross_check.py`
+compares them with the C library over a stated domain: return value, end pointer, `errno`, and the bytes left behind. The
+measurement is in `PREDICT-2026-11-05-native-models.md`. The native replay still calls the real C library, so
+where a model and the library differ, the witness reads `not_reproduced` and says so.
+
+CBMC has no usable `snprintf` or `sscanf`, and reading `va_arg` in a stand-in fails. If the code calls one of those, put a stand-in in
+the prelude inside `#ifdef __CPROVER__`, so the native replay uses the real C library, and make it refuse what it does
+not cover. State it in `limitations`, and add a `cross_check.py` that compares it with the C library over every argument it can get,
+and runs the harness natively over the input domain or a stated large sample of it.
 
 ## What makes a case worth anything
 

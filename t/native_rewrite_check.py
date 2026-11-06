@@ -16,6 +16,7 @@ from __future__ import annotations
 import argparse
 import json
 from pathlib import Path
+import re
 import shutil
 import sys
 
@@ -67,6 +68,9 @@ REWRITES = {
     "flac-metaflac-parse-uint32": {"inputs": TEXT, "assumptions": 0, "harness": [(FLAC_OLD, "")]},
     "libevent-servname-port-range": {"inputs": TEXT, "assumptions": 0, "harness": [(LIBEVENT_OLD, LIBEVENT_NEW)]},
 }
+# The same, with the case's own stand-ins for C library functions taken out and the shared models linked in their place.
+WITH_MODELS = {"flac-metaflac-parse-uint32": ["string", "stdlib"], "libevent-servname-port-range": ["stdlib"]}
+STAND_INS = re.compile(r"#ifdef __CPROVER__\n.*?\n#endif\n", re.S)
 
 
 def replace_once(text: str, old: str, new: str, label: str) -> str:
@@ -75,15 +79,44 @@ def replace_once(text: str, old: str, new: str, label: str) -> str:
     return text.replace(old, new)
 
 
-def rewrite(root: Path, target: Path, change: dict) -> Path:
+def rewrite(root: Path, target: Path, change: dict, models: list[str] | None = None) -> Path:
     shutil.copytree(root, target)
     case = json.loads((root / "case.json").read_text())
     harness = case["harness"]
     for old, new in change["harness"]:
         harness = replace_once(harness, old, new, case["id"])
     case.update(id=case["id"] + "-rewritten", inputs=change["inputs"], assumptions=change["assumptions"], harness=harness)
+    if models:
+        blocks = STAND_INS.findall(case["prelude"])
+        if len(blocks) != 1:
+            raise ValueError(f"{case['id']}: {len(blocks)} stand-in blocks, not one")
+        case.update(prelude=STAND_INS.sub("", case["prelude"]), models=models)
     (target / "case.json").write_text(json.dumps(case, indent=2) + "\n")
     return target
+
+
+def check_models(args) -> tuple[list[dict], bool]:
+    """The rewritten cases with their own stand-ins, against the same cases with the shared models."""
+    report, same = [], True
+    for name, models in WITH_MODELS.items():
+        root, change = args.fixtures / name, REWRITES[name]
+        own = rewrite(root, args.out / (name + "-own-case"), change)
+        shared = rewrite(root, args.out / (name + "-models-case"), change, models)
+        first = cases.suite(own, args.out / (name + "-own"), args.cbmc, args.timeout, args.compiler, args.memory_limit_mb, args.solver)
+        second = cases.suite(shared, args.out / (name + "-models"), args.cbmc, args.timeout, args.compiler, args.memory_limit_mb, args.solver)
+        failing = [sorted({row.get("description", row["property"]) for row in json.loads((args.out / (name + suffix) / "original" / "receipt.json").read_text()).get("properties", [])
+                           if row["status"] == "FAILURE"}) for suffix in ("-own", "-models")]
+        fixed = [next(row["seconds"] for row in summary["rows"] if row["variant"] == "fixed") for summary in (first, second)]
+        prelude = [len(json.loads((directory / "case.json").read_text())["prelude"].splitlines()) for directory in (own, shared)]
+        witnesses = json.loads((args.out / (name + "-models") / "original" / "receipt.json").read_text()).get("native_replay", {}).get("witnesses", [])
+        entry = {"case": name, "models": models, "same_verdicts": [row["verdict"] for row in first["rows"]] == [row["verdict"] for row in second["rows"]],
+                 "same_failing_properties": failing[0] == failing[1], "failing_properties": failing, "prelude_lines": prelude, "fixed_seconds": fixed,
+                 "fixed_time_ratio": round(fixed[1] / fixed[0], 2) if fixed[0] else None, "ok": second["ok"], "own": row_view(first), "shared": row_view(second),
+                 "witness_statuses": [witness["status"] for witness in witnesses]}
+        same = same and entry["same_verdicts"] and entry["same_failing_properties"] and second["ok"]
+        report.append(entry)
+        print(json.dumps({key: entry[key] for key in ("case", "models", "same_verdicts", "same_failing_properties", "prelude_lines", "fixed_seconds", "fixed_time_ratio", "witness_statuses", "ok")}), flush=True)
+    return report, same
 
 
 def row_view(summary: dict) -> list[dict]:
@@ -99,8 +132,13 @@ def main(argv=None) -> int:
     parser.add_argument("--timeout", type=float, default=1800)
     parser.add_argument("--memory-limit-mb", type=int, default=cases.DEFAULT_MEMORY_MB)
     parser.add_argument("--solver", choices=cases.SOLVERS, default=cases.DEFAULT_SOLVER)
+    parser.add_argument("--models", action="store_true", help="compare the cases' own stand-ins with the shared C library models instead")
     args = parser.parse_args(argv)
     args.out.mkdir(parents=True, exist_ok=False)
+    if args.models:
+        report, same = check_models(args)
+        (args.out / "models-check.json").write_text(json.dumps({"format": cases.FORMAT + "-models-check", "report": report}, indent=2, sort_keys=True) + "\n")
+        return 0 if same else 1
     report, same = [], True
     for name, change in REWRITES.items():
         root = args.fixtures / name

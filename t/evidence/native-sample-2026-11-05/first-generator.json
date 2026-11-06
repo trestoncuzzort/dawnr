@@ -1,0 +1,308 @@
+{
+  "count": 1000000,
+  "format": "dawnr-native-sample-check",
+  "report": [
+    {
+      "case": "betaflight-uvarint-encode",
+      "draws": 1000000,
+      "failed_assertions": 0,
+      "failed_properties": [],
+      "first_inputs": [],
+      "reached_the_end": 181050,
+      "reason": null,
+      "rejected": 818950,
+      "report": null,
+      "seconds": 14.4256,
+      "status": "no_failure",
+      "variant": "fixed"
+    },
+    {
+      "case": "betaflight-uvarint-encode",
+      "draws": 1000000,
+      "failed_assertions": 2316,
+      "failed_properties": [
+        "uvarint.bytes",
+        "uvarint.decoder_reads_it_back",
+        "uvarint.length"
+      ],
+      "first_inputs": [
+        "262: val=80 size=3",
+        "262: val=80 size=3",
+        "262: val=80 size=3",
+        "440: val=80 size=1",
+        "597: val=80 size=3"
+      ],
+      "reached_the_end": 181050,
+      "reason": null,
+      "rejected": 818950,
+      "report": null,
+      "seconds": 14.6238,
+      "status": "failed_assertions",
+      "variant": "original"
+    },
+    {
+      "case": "flac-metaflac-parse-uint32",
+      "draws": 1000000,
+      "failed_assertions": 0,
+      "failed_properties": [],
+      "first_inputs": [],
+      "reached_the_end": 1000000,
+      "reason": null,
+      "rejected": 0,
+      "report": null,
+      "seconds": 0.1865,
+      "status": "no_failure",
+      "variant": "fixed"
+    },
+    {
+      "case": "flac-metaflac-parse-uint32",
+      "draws": 1000000,
+      "failed_assertions": 0,
+      "failed_properties": [],
+      "first_inputs": [],
+      "reached_the_end": 1000000,
+      "reason": null,
+      "rejected": 0,
+      "report": null,
+      "seconds": 0.172,
+      "status": "no_failure",
+      "variant": "original"
+    },
+    {
+      "case": "inav-uvarint-encode",
+      "draws": 1000000,
+      "failed_assertions": 0,
+      "failed_properties": [],
+      "first_inputs": [],
+      "reached_the_end": 181050,
+      "reason": null,
+      "rejected": 818950,
+      "report": null,
+      "seconds": 14.5754,
+      "status": "no_failure",
+      "variant": "fixed"
+    },
+    {
+      "case": "inav-uvarint-encode",
+      "draws": 1000000,
+      "failed_assertions": 2316,
+      "failed_properties": [
+        "uvarint.bytes",
+        "uvarint.decoder_reads_it_back",
+        "uvarint.length"
+      ],
+      "first_inputs": [
+        "262: val=80 size=3",
+        "262: val=80 size=3",
+        "262: val=80 size=3",
+        "440: val=80 size=1",
+        "597: val=80 size=3"
+      ],
+      "reached_the_end": 181050,
+      "reason": null,
+      "rejected": 818950,
+      "report": null,
+      "seconds": 15.1947,
+      "status": "failed_assertions",
+      "variant": "original"
+    },
+    {
+      "case": "libcoap-opt-parse-delta",
+      "draws": 1000000,
+      "failed_assertions": 0,
+      "failed_properties": [],
+      "first_inputs": [],
+      "reached_the_end": 492298,
+      "reason": null,
+      "rejected": 507702,
+      "report": null,
+      "seconds": 9.7346,
+      "status": "no_failure",
+      "variant": "fixed"
+    },
+    {
+      "case": "libcoap-opt-parse-delta",
+      "draws": 1000000,
+      "failed_assertions": 20,
+      "failed_properties": [
+        "opt.delta",
+        "opt.zero_exactly_when_invalid"
+      ],
+      "first_inputs": [
+        "55734: h0=e3 h1=fe h2=ff h3=2 h4=63 room=80",
+        "55734: h0=e3 h1=fe h2=ff h3=2 h4=63 room=80",
+        "289371: h0=e6 h1=fe h2=fe h3=2 h4=8 room=a",
+        "289371: h0=e6 h1=fe h2=fe h3=2 h4=8 room=a",
+        "369105: h0=ea h1=fe h2=ff h3=0 h4=f room=80"
+      ],
+      "reached_the_end": 492298,
+      "reason": null,
+      "rejected": 507702,
+      "report": null,
+      "seconds": 9.5866,
+      "status": "failed_assertions",
+      "variant": "original"
+    },
+    {
+      "case": "libevent-servname-port-range",
+      "draws": 1000000,
+      "failed_assertions": 0,
+      "failed_properties": [],
+      "first_inputs": [],
+      "reached_the_end": 205987,
+      "reason": null,
+      "rejected": 794013,
+      "report": null,
+      "seconds": 27.0919,
+      "status": "no_failure",
+      "variant": "fixed"
+    },
+    {
+      "case": "libevent-servname-port-range",
+      "draws": 1000000,
+      "failed_assertions": 0,
+      "failed_properties": [],
+      "first_inputs": [],
+      "reached_the_end": 205987,
+      "reason": null,
+      "rejected": 794013,
+      "report": null,
+      "seconds": 27.1517,
+      "status": "no_failure",
+      "variant": "original"
+    },
+    {
+      "case": "libuv-utf8-decode1",
+      "draws": 1000000,
+      "failed_assertions": 0,
+      "failed_properties": [],
+      "first_inputs": [],
+      "reached_the_end": 74543,
+      "reason": null,
+      "rejected": 925457,
+      "report": null,
+      "seconds": 16.1586,
+      "status": "no_failure",
+      "variant": "fixed"
+    },
+    {
+      "case": "libuv-utf8-decode1",
+      "draws": 1000000,
+      "failed_assertions": 32,
+      "failed_properties": [
+        "utf8.illformed_rejected"
+      ],
+      "first_inputs": [
+        "16134: b0=ed b1=a5 b2=3f b3=ff b4=0 len=2",
+        "95388: b0=ea b1=a6 b2=25 b3=10 b4=39 len=2",
+        "108303: b0=ec b1=98 b2=e b3=7d b4=0 len=2",
+        "153401: b0=f4 b1=80 b2=5c b3=2e b4=1f len=2",
+        "181596: b0=e4 b1=8c b2=b8 b3=0 b4=2 len=2"
+      ],
+      "reached_the_end": 74543,
+      "reason": null,
+      "rejected": 925457,
+      "report": null,
+      "seconds": 15.9881,
+      "status": "failed_assertions",
+      "variant": "original"
+    },
+    {
+      "case": "msgpack-c-print-buffer-empty-bin",
+      "draws": 1000000,
+      "failed_assertions": 0,
+      "failed_properties": [],
+      "first_inputs": [],
+      "reached_the_end": 6324,
+      "reason": null,
+      "rejected": 993676,
+      "report": null,
+      "seconds": 17.3861,
+      "status": "no_failure",
+      "variant": "fixed"
+    },
+    {
+      "case": "msgpack-c-print-buffer-empty-bin",
+      "draws": 1000000,
+      "failed_assertions": 4966,
+      "failed_properties": [
+        "print.result",
+        "print.text"
+      ],
+      "first_inputs": [
+        "289: kind=0 tag=78 count=0 b0=78 b1=37 room=f",
+        "289: kind=0 tag=78 count=0 b0=78 b1=37 room=f",
+        "301: kind=0 tag=36 count=0 b0=ff b1=38 room=a",
+        "301: kind=0 tag=36 count=0 b0=ff b1=38 room=a",
+        "1153: kind=0 tag=31 count=0 b0=f7 b1=35 room=8"
+      ],
+      "reached_the_end": 6324,
+      "reason": null,
+      "rejected": 993676,
+      "report": null,
+      "seconds": 17.4246,
+      "status": "failed_assertions",
+      "variant": "original"
+    },
+    {
+      "case": "open62541-datetime-parse-year",
+      "draws": 1000000,
+      "failed_assertions": 0,
+      "failed_properties": [],
+      "first_inputs": [],
+      "reached_the_end": 2,
+      "reason": null,
+      "rejected": 999998,
+      "report": null,
+      "seconds": 16.2572,
+      "status": "no_failure",
+      "variant": "fixed"
+    },
+    {
+      "case": "open62541-datetime-parse-year",
+      "draws": 1000000,
+      "failed_assertions": 0,
+      "failed_properties": [],
+      "first_inputs": [],
+      "reached_the_end": 2,
+      "reason": null,
+      "rejected": 999998,
+      "report": null,
+      "seconds": 16.151,
+      "status": "no_failure",
+      "variant": "original"
+    },
+    {
+      "case": "px4-wrap-bin",
+      "draws": 1000000,
+      "failed_assertions": 0,
+      "failed_properties": [],
+      "first_inputs": [],
+      "reached_the_end": 119,
+      "reason": null,
+      "rejected": 999881,
+      "report": null,
+      "seconds": 17.3956,
+      "status": "no_failure",
+      "variant": "fixed"
+    },
+    {
+      "case": "px4-wrap-bin",
+      "draws": null,
+      "failed_assertions": null,
+      "failed_properties": [
+        "native.range"
+      ],
+      "first_inputs": [
+        "90871: bin=947c018e bin_count=48"
+      ],
+      "reached_the_end": null,
+      "reason": null,
+      "rejected": null,
+      "report": "runtime error: index -66 out of bounds for type 'unsigned char [72]'",
+      "seconds": 1.5592,
+      "status": "sanitizer_report",
+      "variant": "original"
+    }
+  ]
+}

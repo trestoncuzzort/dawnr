@@ -1,0 +1,84 @@
+base  0 "+": model 0 end 1 errno 0; C library 0 end 0 errno 0
+base  2 "+": model 0 end 1 errno 0; C library 0 end 0 errno 0
+base  8 "+": model 0 end 1 errno 0; C library 0 end 0 errno 0
+base 10 "+": model 0 end 1 errno 0; C library 0 end 0 errno 0
+base 16 "+": model 0 end 1 errno 0; C library 0 end 0 errno 0
+base 36 "+": model 0 end 1 errno 0; C library 0 end 0 errno 0
+base  0 "-": model 0 end 1 errno 0; C library 0 end 0 errno 0
+base  2 "-": model 0 end 1 errno 0; C library 0 end 0 errno 0
+base  8 "-": model 0 end 1 errno 0; C library 0 end 0 errno 0
+base 10 "-": model 0 end 1 errno 0; C library 0 end 0 errno 0
+base 16 "-": model 0 end 1 errno 0; C library 0 end 0 errno 0
+base 36 "-": model 0 end 1 errno 0; C library 0 end 0 errno 0
+base  0 " ": model 0 end 1 errno 0; C library 0 end 0 errno 0
+base  2 " ": model 0 end 1 errno 0; C library 0 end 0 errno 0
+base  8 " ": model 0 end 1 errno 0; C library 0 end 0 errno 0
+base 10 " ": model 0 end 1 errno 0; C library 0 end 0 errno 0
+base 16 " ": model 0 end 1 errno 0; C library 0 end 0 errno 0
+base 36 " ": model 0 end 1 errno 0; C library 0 end 0 errno 0
+base  0 "  +": model 0 end 3 errno 0; C library 0 end 0 errno 0
+base  2 "  +": model 0 end 3 errno 0; C library 0 end 0 errno 0
+base  8 "  +": model 0 end 3 errno 0; C library 0 end 0 errno 0
+base 10 "  +": model 0 end 3 errno 0; C library 0 end 0 errno 0
+base 16 "  +": model 0 end 3 errno 0; C library 0 end 0 errno 0
+base 36 "  +": model 0 end 3 errno 0; C library 0 end 0 errno 0
+base  2 "9": model 9 end 1 errno 0; C library 0 end 0 errno 0
+base  8 "9": model 9 end 1 errno 0; C library 0 end 0 errno 0
+base  2 "19": model 11 end 2 errno 0; C library 1 end 1 errno 0
+base  8 "19": model 17 end 2 errno 0; C library 1 end 1 errno 0
+base  0 "08": model 8 end 2 errno 0; C library 0 end 1 errno 0
+base  2 "08": model 8 end 2 errno 0; C library 0 end 1 errno 0
+base  8 "08": model 8 end 2 errno 0; C library 0 end 1 errno 0
+base  0 "0x": model 0 end 2 errno 0; C library 0 end 1 errno 0
+base 16 "0x": model 0 end 2 errno 0; C library 0 end 1 errno 0
+base  0 "0X": model 0 end 2 errno 0; C library 0 end 1 errno 0
+base 16 "0X": model 0 end 2 errno 0; C library 0 end 1 errno 0
+base  0 "0xg": model 0 end 2 errno 0; C library 0 end 1 errno 0
+base 16 "0xg": model 0 end 2 errno 0; C library 0 end 1 errno 0
+base  0 "-0x": model 0 end 3 errno 0; C library 0 end 2 errno 0
+base 16 "-0x": model 0 end 3 errno 0; C library 0 end 2 errno 0
+base  2 "12": model 4 end 2 errno 0; C library 1 end 1 errno 0
+base  2 "-12": model -4 end 3 errno 0; C library -1 end 2 errno 0
+base  2 " 12": model 4 end 3 errno 0; C library 1 end 2 errno 0
+base  2 "12 ": model 4 end 2 errno 0; C library 1 end 1 errno 0
+base  2 "9223372036854775807": model 2975007 end 19 errno 0; C library 0 end 0 errno 0
+base  8 "9223372036854775807": model 167318873324125191 end 19 errno 0; C library 0 end 0 errno 0
+base 16 "9223372036854775807": model 9223372036854775807 end -1 errno 34; C library 9223372036854775807 end 19 errno 34
+base 36 "9223372036854775807": model 9223372036854775807 end -1 errno 34; C library 9223372036854775807 end 19 errno 34
+base  0 "9223372036854775808": model 9223372036854775807 end -1 errno 34; C library 9223372036854775807 end 19 errno 34
+base  2 "9223372036854775808": model 2975008 end 19 errno 0; C library 0 end 0 errno 0
+base  8 "9223372036854775808": model 167318873324125192 end 19 errno 0; C library 0 end 0 errno 0
+base 10 "9223372036854775808": model 9223372036854775807 end -1 errno 34; C library 9223372036854775807 end 19 errno 34
+base 16 "9223372036854775808": model 9223372036854775807 end -1 errno 34; C library 9223372036854775807 end 19 errno 34
+base 36 "9223372036854775808": model 9223372036854775807 end -1 errno 34; C library 9223372036854775807 end 19 errno 34
+base  0 "-9223372036854775808": model -9223372036854775808 end -1 errno 34; C library -9223372036854775808 end 20 errno 0
+base  2 "-9223372036854775808": model -2975008 end 20 errno 0; C library 0 end 0 errno 0
+base  8 "-9223372036854775808": model -167318873324125192 end 20 errno 0; C library 0 end 0 errno 0
+base 10 "-9223372036854775808": model -9223372036854775808 end -1 errno 34; C library -9223372036854775808 end 20 errno 0
+base 16 "-9223372036854775808": model -9223372036854775808 end -1 errno 34; C library -9223372036854775808 end 20 errno 34
+base 36 "-9223372036854775808": model -9223372036854775808 end -1 errno 34; C library -9223372036854775808 end 20 errno 34
+base  0 "-9223372036854775809": model -9223372036854775808 end -1 errno 34; C library -9223372036854775808 end 20 errno 34
+base  2 "-9223372036854775809": model -2975009 end 20 errno 0; C library 0 end 0 errno 0
+base  8 "-9223372036854775809": model -167318873324125193 end 20 errno 0; C library 0 end 0 errno 0
+base 10 "-9223372036854775809": model -9223372036854775808 end -1 errno 34; C library -9223372036854775808 end 20 errno 34
+base 16 "-9223372036854775809": model -9223372036854775808 end -1 errno 34; C library -9223372036854775808 end 20 errno 34
+base 36 "-9223372036854775809": model -9223372036854775808 end -1 errno 34; C library -9223372036854775808 end 20 errno 34
+base  0 "99999999999999999999x": model 9223372036854775807 end -1 errno 34; C library 9223372036854775807 end 20 errno 34
+base  2 "99999999999999999999x": model 9437175 end 20 errno 0; C library 0 end 0 errno 0
+base  8 "99999999999999999999x": model 1482327648780231825 end 20 errno 0; C library 0 end 0 errno 0
+base 10 "99999999999999999999x": model 9223372036854775807 end -1 errno 34; C library 9223372036854775807 end 20 errno 34
+base 16 "99999999999999999999x": model 9223372036854775807 end -1 errno 34; C library 9223372036854775807 end 20 errno 34
+base 36 "99999999999999999999x": model 9223372036854775807 end -1 errno 34; C library 9223372036854775807 end 21 errno 34
+base  0 "0000000000000000000000000000000000001": model 0 end 31 errno 0; C library 1 end 37 errno 0
+base  2 "0000000000000000000000000000000000001": model 0 end 31 errno 0; C library 1 end 37 errno 0
+base  8 "0000000000000000000000000000000000001": model 0 end 31 errno 0; C library 1 end 37 errno 0
+base 10 "0000000000000000000000000000000000001": model 0 end 31 errno 0; C library 1 end 37 errno 0
+base 16 "0000000000000000000000000000000000001": model 0 end 31 errno 0; C library 1 end 37 errno 0
+base 36 "0000000000000000000000000000000000001": model 0 end 31 errno 0; C library 1 end 37 errno 0
+base  0 "00000000000000000000000000000000000000000000012": model 0 end 31 errno 0; C library 10 end 47 errno 0
+base  2 "00000000000000000000000000000000000000000000012": model 0 end 31 errno 0; C library 1 end 46 errno 0
+base  8 "00000000000000000000000000000000000000000000012": model 0 end 31 errno 0; C library 10 end 47 errno 0
+base 10 "00000000000000000000000000000000000000000000012": model 0 end 31 errno 0; C library 12 end 47 errno 0
+base 16 "00000000000000000000000000000000000000000000012": model 0 end 31 errno 0; C library 18 end 47 errno 0
+base 36 "00000000000000000000000000000000000000000000012": model 0 end 31 errno 0; C library 38 end 47 errno 0
+83 of 174 differ; the end pointer is left unset on 18

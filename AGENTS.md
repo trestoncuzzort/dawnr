@@ -21,8 +21,8 @@ tools, and read-only build diagnostics support that work. Do not revive desktop 
 control, or general computer administration from older plans. Built-in host control is already retired;
 the older ambitions and measurements remain historical records.
 
-**The t engine has its own repository.** [t-proof-engine](https://github.com/trestoncuzzort/t-proof-engine) holds the
-language, the seven lowerings, the kernel adapters, the twin harness, the matrix runner, the tasks and their
+**The t engine has its own repository.** `trestoncuzzort/t-language`, private, formerly public as t-proof-engine (the old name in this file and in
+`t/sync_engine.sh` means this repository), holds the language, the seven lowerings, the kernel adapters, the twin harness, the matrix runner, the tasks and their
 documents. It was split out on 2026-10-06 with its history. `t/` here carries a pinned copy (`t/ENGINE.md` names
 the commit) beside the pipeline scripts, which still live here. Engine changes land in t-proof-engine first, then
 `bash t/sync_engine.sh` brings them here; never edit an engine file only in this repository.

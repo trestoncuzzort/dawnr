@@ -10,6 +10,7 @@ on:
       - t/native_*.py
       - t/test_native_*.py
       - t/native_fixtures/**
+      - t/native_models/**
       - t/build_certify_tools.sh
       - .github/workflows/native.yml
   pull_request:
@@ -18,6 +19,7 @@ on:
       - t/native_*.py
       - t/test_native_*.py
       - t/native_fixtures/**
+      - t/native_models/**
       - t/build_certify_tools.sh
       - .github/workflows/native.yml
 
@@ -59,14 +61,18 @@ jobs:
         working-directory: t
         run: |
           "$CBMC" --version
-          python -m pytest -q -p no:cacheprovider test_native_check.py test_native_case.py
+          python -m pytest -q -p no:cacheprovider test_native_check.py test_native_case.py test_native_sample.py
+
+      - name: the C library models agree with this runner's C library
+        run: python t/native_models/cross_check.py --out "$RUNNER_TEMP/models"
 
       # CaDiCaL, because MiniSat takes about three times as long here. A different solver may find a different
-      # witness, so the comparison asks only that a confirmed witness still exists.
-      - name: the published cases have not moved, and their verdicts are certified
+      # witness, so the comparison asks only that a confirmed witness still exists. The sample runs each fix natively,
+      # so that a model which disagrees with the real code shows up here.
+      - name: the published cases have not moved, their verdicts are certified, and the real code agrees
         run: |
           python t/native_fixture_check.py --cbmc "$CBMC" --out "$RUNNER_TEMP/fixtures" --timeout 1500 --solver cadical \
-            --memory-limit-mb 6144 --cadical "$CADICAL" --lrat-check "$LRAT_CHECK"
+            --memory-limit-mb 6144 --cadical "$CADICAL" --lrat-check "$LRAT_CHECK" --sample 200000
 
       - name: keep the comparison
         if: always()
@@ -99,4 +105,4 @@ jobs:
 
       - name: the gate's controls without the tool
         working-directory: t
-        run: python -m pytest -q -p no:cacheprovider test_native_check.py test_native_case.py
+        run: python -m pytest -q -p no:cacheprovider test_native_check.py test_native_case.py test_native_sample.py

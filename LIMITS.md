@@ -130,8 +130,9 @@ their counts. The guide is `t/NATIVE-CASES.md`.
   used, or strict aliasing violations. The measured list is in the guide. `complete` does not mean free of undefined
   behaviour.
 - A case's harness and its stand-ins for library functions are written by a person or a model and read by a person.
-  CBMC's own library models can also narrow what they return. Assumptions in them are listed in each receipt, and
-  they are not checked against the C library.
+  CBMC's own library models can also be wrong, as its `strtol` is on many inputs, and can narrow what they return. The
+  assumptions in them are listed in each receipt, and only the models in `t/native_models/` are compared with the C library,
+  over a bounded domain. `t/native_sample.py` runs the real code on a sample, and a sample proves nothing.
 - Each stop this gate knows of is made a failing property, and the list came from reading CBMC's library at the pinned
   tag. A stop found in no such list, or a stop a case allows by name, ends an execution with no property.
 
