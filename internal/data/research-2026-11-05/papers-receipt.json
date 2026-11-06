@@ -1,0 +1,36 @@
+{
+ "kind": "papers",
+ "entries": 250,
+ "entries_without_problems": 250,
+ "problems": 0,
+ "unverifiable": 0,
+ "online": true,
+ "final": true,
+ "by_subsystem": {
+  "assistant-runtime": 18,
+  "constrained-generation": 24,
+  "documents-reasoning": 7,
+  "evaluation-method": 21,
+  "flight-domain": 7,
+  "native-bmc": 44,
+  "proof-backends": 27,
+  "repair-loop": 26,
+  "small-model-training": 21,
+  "spec-quality": 30,
+  "teacher-data": 25
+ },
+ "by_tier": {
+  "A": 30,
+  "B": 162,
+  "C": 58
+ },
+ "below_floor": {
+  "spec-quality": "30/35",
+  "proof-backends": "27/35",
+  "constrained-generation": "24/25",
+  "small-model-training": "21/25"
+ },
+ "input_sha256": "ca909c3865341d937d5a5d07e7745de8cfab32efad41935fc9f6032027e5a694",
+ "problem_list": [],
+ "unverifiable_list": []
+}
