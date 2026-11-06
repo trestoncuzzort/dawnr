@@ -1,0 +1,38 @@
+lvgl at 7c79d686, every source compiled under -fsanitize=undefined, then:
+
+#include "lvgl.h"
+#include <stdio.h>
+static void set_value(void *var, int32_t v) { (void)var; (void)v; }
+int main(void)
+{
+    lv_init();
+    lv_anim_timeline_t *at = lv_anim_timeline_create();
+    static int target;
+    lv_anim_t a;
+    lv_anim_init(&a);
+    lv_anim_set_var(&a, &target);
+    lv_anim_set_exec_cb(&a, set_value);
+    lv_anim_set_values(&a, 0, 100);
+    lv_anim_set_duration(&a, 40000);
+    lv_anim_timeline_add(at, 0, &a);
+    printf("playtime %u ms\n", (unsigned)lv_anim_timeline_get_playtime(at));
+    unsigned steps[] = {10000, 30000, 40000, 50000, 60000, 65000};
+    for (unsigned i = 0; i < sizeof steps / sizeof *steps; ++i) {
+        unsigned p = steps[i];
+        long long want_time = (long long)p * 40000 / 65535;
+        lv_anim_timeline_set_progress(at, (uint16_t)p);
+        unsigned back = lv_anim_timeline_get_progress(at);
+        printf("set_progress(%u): expected time %lld ms; get_progress gives %u\n", p, want_time, back);
+    }
+    return 0;
+}
+
+--- output
+src/misc/lv_math.c:441:26: runtime error: signed integer overflow: 40000 * 60000 cannot be represented in type 'int'
+playtime 40000 ms
+set_progress(10000): expected time 6103 ms; get_progress gives 9999
+set_progress(30000): expected time 18310 ms; get_progress gives 29998
+set_progress(40000): expected time 24414 ms; get_progress gives 39999
+set_progress(50000): expected time 30518 ms; get_progress gives 49999
+set_progress(60000): expected time 36621 ms; get_progress gives 0
+set_progress(65000): expected time 39673 ms; get_progress gives 0

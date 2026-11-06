@@ -24,9 +24,9 @@ and its 114-task Frama-C column was unchanged. See the
 [measurement](PREDICT-2026-10-25-framac-certificate-binding.md).
 Candidate comparison requires refreshed dawnr baseline and specification controls using this evaluator.
 
-The native gate (`native_check.py`, `native_case.py`, `native_fixture_check.py`, `native_rewrite_check.py`, `native_sample.py`, `native_models/`, `build_certify_tools.sh`,
+The native gate (`native_check.py`, `native_case.py`, `native_fixture_check.py`, `native_rewrite_check.py`, `native_sample.py`, `native_scaffold.py`, `native_models/`, `build_certify_tools.sh`,
 `NATIVE-CASES.md`, their tests, predictions and evidence) is imported from engine commit
-`746b005c4389b937067f865af07f1454ecfd1f34` as a per-file update, so the base pin above still does not imply a full
+`6a28aecb045f3b01a6d7092b679dc4778aff555c` as a per-file update, so the base pin above still does not imply a full
 synchronization. The published cases under `native_fixtures/`, other than `px4-wrap-bin`, are dawnr's: they back pull requests
 opened upstream and link here. The repository is now named t-language and is private, and the old name redirects.
 

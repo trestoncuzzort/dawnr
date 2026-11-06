@@ -73,6 +73,30 @@ at `--max-bound`, or when a callee has no body. Its answer is a proposal: the ga
 with it. A large global bound multiplies the model by the longest loop, so per-loop bounds matter:
 one case took over 3 GB with a global bound of 26, and 9 seconds with 10.
 
+## Drafting a case
+
+```bash
+python3 t/native_scaffold.py SOURCE.c --function NAME --out CASE -I include/   # draft one case to edit
+python3 t/native_scaffold.py SOURCE.c --scan --out NEW_DIR -I include/ --cbmc CBMC   # draft and check every function in the file
+```
+
+A draft gives each parameter an input from its type: a `char *` with no length beside it is a `string`, a pointer with a length after it is an `array`, an array parameter has the size it declares, and any other
+pointer to a scalar is one element. Pointers side by side share the length after them, unless the length is named after one of them (`dst, src, dst_size`), or one is a `const char *` beside a writable pointer, which is then a string.
+A pointer named as the end of the one before it makes one array (`s, se`). Every such guess is written into the case's `input_domain`, because **any of them can be wrong**. A
+function taking a struct, a function pointer or a pointer to a pointer is refused by name, as yet. The text is the file preprocessed, with project headers expanded
+and system headers kept as includes, so a case needs no project header, but the tree does need its generated headers: pass a configured build's directories with `-I`. It holds the functions the target reaches in that file, and links the C library models it needs.
+
+A draft only checks safety: it knows nothing of what the function is for, so its one assertion is that it ran. Add real assertions to make a case of it.
+
+**A scan runs the code it drafts**, natively, on arbitrary values. A function that calls the operating system (`kill`, `close`, `remove`, and so on) is refused by name, but that is a list and not a sandbox: run a scan of code you do not trust as an
+unprivileged user, away from the network. `--allow-system` drafts one such case to read, and a scan will not take it.
+
+A scan lists a **candidate** when a witness is confirmed natively as `memory_error` or `undefined_behavior`, or when the native sampler gets a sanitizer report other than an abort. The project's own `assert` firing is counted in `project_asserts` and not listed, since it is more likely the contract than a defect, so a defect behind an assert is missed.
+
+**A candidate is not a bug.** The harness knows nothing of what a caller promises, so `strcpy` looks broken to it whenever it draws a destination shorter than the source. A candidate's `doubt` says when a failure can be explained by what the draft guessed, or by state it did not set up: that is the first thing to look at, and it does not remove the row.
+Read the function and its callers. Read the project's own contract, then **assume it in the harness and run the gate and the sampler again**: a reading can be wrong, and this is what shows it. Search upstream. The next step for a real one is a
+case with real assertions, and the suite. In [the measurement](PREDICT-2026-11-05-native-scaffold.md), 6 of 15 candidates read as real, nearly all in one integer math file, and one first read as a false alarm was overturned this way.
+
 ## The controls and the verdicts
 
 `--suite` runs these in order. All have to give the expected verdict:

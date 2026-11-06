@@ -61,7 +61,7 @@ jobs:
         working-directory: t
         run: |
           "$CBMC" --version
-          python -m pytest -q -p no:cacheprovider test_native_check.py test_native_case.py test_native_sample.py
+          python -m pytest -q -p no:cacheprovider test_native_check.py test_native_case.py test_native_sample.py test_native_scaffold.py
 
       - name: the C library models agree with this runner's C library
         run: python t/native_models/cross_check.py --out "$RUNNER_TEMP/models"
@@ -105,4 +105,4 @@ jobs:
 
       - name: the gate's controls without the tool
         working-directory: t
-        run: python -m pytest -q -p no:cacheprovider test_native_check.py test_native_case.py test_native_sample.py
+        run: python -m pytest -q -p no:cacheprovider test_native_check.py test_native_case.py test_native_sample.py test_native_scaffold.py

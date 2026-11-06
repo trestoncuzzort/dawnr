@@ -1,0 +1,451 @@
+{
+ "before": {
+  "functions": 16,
+  "drafted": 16,
+  "verdicts": {
+   "complete": 7,
+   "counterexample": 4,
+   "timeout": 5
+  },
+  "candidates": [
+   {
+    "project": "lvgl",
+    "file": "lv_string_builtin.c",
+    "function": "lv_memcmp",
+    "gate_verdict": "counterexample",
+    "guesses": [
+     "len is the length of p1",
+     "p2 and p1 have the same length, len"
+    ],
+    "witness": {
+     "p1": {
+      "elements": [],
+      "length": 0
+     },
+     "p2": {
+      "elements": [],
+      "length": 0
+     }
+    },
+    "replay": [
+     "memory_error"
+    ],
+    "sanitizer": "==N==ERROR: AddressSanitizer: use-after-poison",
+    "sampler": {
+     "status": "sanitizer_report",
+     "access": "READ"
+    },
+    "doubt": null,
+    "read_as": "real, known",
+    "why": "reads one element at length 0: the defect F1 predicted, fixed upstream"
+   },
+   {
+    "project": "lvgl",
+    "file": "lv_string_builtin.c",
+    "function": "lv_strcpy",
+    "gate_verdict": "counterexample",
+    "guesses": [
+     "dst is a string",
+     "src is a string"
+    ],
+    "witness": {
+     "dst": {
+      "elements": [],
+      "length": 0
+     },
+     "src": {
+      "elements": [
+       "80"
+      ],
+      "length": 1
+     }
+    },
+    "replay": [
+     "memory_error"
+    ],
+    "sanitizer": "==N==ERROR: AddressSanitizer: heap-buffer-overflow",
+    "sampler": {
+     "status": "sanitizer_report",
+     "access": "WRITE"
+    },
+    "doubt": "a write past dst, a buffer it is given no size for",
+    "read_as": "false alarm",
+    "why": "no length: room in dst is the caller's. The doubt named this"
+   },
+   {
+    "project": "lvgl",
+    "file": "lv_string_builtin.c",
+    "function": "lv_strcat",
+    "gate_verdict": "counterexample",
+    "guesses": [
+     "dst is a string",
+     "src is a string"
+    ],
+    "witness": {
+     "dst": {
+      "elements": [],
+      "length": 0
+     },
+     "src": {
+      "elements": [
+       "80"
+      ],
+      "length": 1
+     }
+    },
+    "replay": [
+     "memory_error"
+    ],
+    "sanitizer": "==N==ERROR: AddressSanitizer: heap-buffer-overflow",
+    "sampler": {
+     "status": "sanitizer_report",
+     "access": "WRITE"
+    },
+    "doubt": "a write past dst, a buffer it is given no size for",
+    "read_as": "false alarm",
+    "why": "no length: room in dst is the caller's. The doubt named this"
+   },
+   {
+    "project": "lvgl",
+    "file": "lv_string_builtin.c",
+    "function": "lv_strncat",
+    "gate_verdict": "counterexample",
+    "guesses": [
+     "dst is a string",
+     "src_len is the length of src"
+    ],
+    "witness": {
+     "dst": {
+      "elements": [],
+      "length": 0
+     },
+     "src": {
+      "elements": [
+       "80",
+       "80"
+      ],
+      "length": 2
+     }
+    },
+    "replay": [
+     "memory_error"
+    ],
+    "sanitizer": "==N==ERROR: AddressSanitizer: heap-buffer-overflow",
+    "sampler": {
+     "status": "sanitizer_report",
+     "access": "WRITE"
+    },
+    "doubt": "a write past dst, a buffer it is given no size for",
+    "read_as": "false alarm",
+    "why": "src_len bounds src and not dst, so room in dst is the caller's. The doubt named this"
+   }
+  ],
+  "rows": [
+   {
+    "function": "lv_memcpy",
+    "verdict": "timeout",
+    "candidate": false,
+    "sampler": "no_failure"
+   },
+   {
+    "function": "lv_memset",
+    "verdict": "timeout",
+    "candidate": false,
+    "sampler": "no_failure"
+   },
+   {
+    "function": "lv_memmove",
+    "verdict": "timeout",
+    "candidate": false,
+    "sampler": "no_failure"
+   },
+   {
+    "function": "lv_memcmp",
+    "verdict": "counterexample",
+    "candidate": true,
+    "sampler": "sanitizer_report"
+   },
+   {
+    "function": "lv_strlen",
+    "verdict": "complete",
+    "candidate": false,
+    "sampler": "no_failure"
+   },
+   {
+    "function": "lv_strnlen",
+    "verdict": "complete",
+    "candidate": false,
+    "sampler": "no_failure"
+   },
+   {
+    "function": "lv_strlcpy",
+    "verdict": "complete",
+    "candidate": false,
+    "sampler": "no_failure"
+   },
+   {
+    "function": "lv_strncpy",
+    "verdict": "complete",
+    "candidate": false,
+    "sampler": "no_failure"
+   },
+   {
+    "function": "lv_strcpy",
+    "verdict": "counterexample",
+    "candidate": true,
+    "sampler": "sanitizer_report"
+   },
+   {
+    "function": "lv_strcmp",
+    "verdict": "complete",
+    "candidate": false,
+    "sampler": "no_failure"
+   },
+   {
+    "function": "lv_strncmp",
+    "verdict": "complete",
+    "candidate": false,
+    "sampler": "no_failure"
+   },
+   {
+    "function": "lv_strdup",
+    "verdict": "timeout",
+    "candidate": false,
+    "sampler": "not_compiled"
+   },
+   {
+    "function": "lv_strndup",
+    "verdict": "timeout",
+    "candidate": false,
+    "sampler": "not_compiled"
+   },
+   {
+    "function": "lv_strcat",
+    "verdict": "counterexample",
+    "candidate": true,
+    "sampler": "sanitizer_report"
+   },
+   {
+    "function": "lv_strncat",
+    "verdict": "counterexample",
+    "candidate": true,
+    "sampler": "sanitizer_report"
+   },
+   {
+    "function": "lv_strchr",
+    "verdict": "complete",
+    "candidate": false,
+    "sampler": "no_failure"
+   }
+  ]
+ },
+ "after": {
+  "functions": 16,
+  "drafted": 16,
+  "verdicts": {
+   "complete": 8,
+   "counterexample": 3,
+   "timeout": 5
+  },
+  "candidates": [
+   {
+    "project": "lvgl",
+    "file": "lv_string_builtin.c",
+    "function": "lv_strcpy",
+    "gate_verdict": "counterexample",
+    "guesses": [
+     "dst is a string",
+     "src is a string"
+    ],
+    "witness": {
+     "dst": {
+      "elements": [],
+      "length": 0
+     },
+     "src": {
+      "elements": [
+       "80"
+      ],
+      "length": 1
+     }
+    },
+    "replay": [
+     "memory_error"
+    ],
+    "sanitizer": "==N==ERROR: AddressSanitizer: heap-buffer-overflow",
+    "sampler": {
+     "status": "sanitizer_report",
+     "access": "WRITE"
+    },
+    "doubt": "a write past dst, a buffer it is given no size for",
+    "read_as": "false alarm",
+    "why": "no length: room in dst is the caller's. The doubt named this"
+   },
+   {
+    "project": "lvgl",
+    "file": "lv_string_builtin.c",
+    "function": "lv_strcat",
+    "gate_verdict": "counterexample",
+    "guesses": [
+     "dst is a string",
+     "src is a string"
+    ],
+    "witness": {
+     "dst": {
+      "elements": [],
+      "length": 0
+     },
+     "src": {
+      "elements": [
+       "80"
+      ],
+      "length": 1
+     }
+    },
+    "replay": [
+     "memory_error"
+    ],
+    "sanitizer": "==N==ERROR: AddressSanitizer: heap-buffer-overflow",
+    "sampler": {
+     "status": "sanitizer_report",
+     "access": "WRITE"
+    },
+    "doubt": "a write past dst, a buffer it is given no size for",
+    "read_as": "false alarm",
+    "why": "no length: room in dst is the caller's. The doubt named this"
+   },
+   {
+    "project": "lvgl",
+    "file": "lv_string_builtin.c",
+    "function": "lv_strncat",
+    "gate_verdict": "counterexample",
+    "guesses": [
+     "dst is a string",
+     "src_len is the length of src"
+    ],
+    "witness": {
+     "dst": {
+      "elements": [],
+      "length": 0
+     },
+     "src": {
+      "elements": [
+       "80",
+       "80"
+      ],
+      "length": 2
+     }
+    },
+    "replay": [
+     "memory_error"
+    ],
+    "sanitizer": "==N==ERROR: AddressSanitizer: heap-buffer-overflow",
+    "sampler": {
+     "status": "sanitizer_report",
+     "access": "WRITE"
+    },
+    "doubt": "a write past dst, a buffer it is given no size for",
+    "read_as": "false alarm",
+    "why": "src_len bounds src and not dst, so room in dst is the caller's. The doubt named this"
+   }
+  ],
+  "rows": [
+   {
+    "function": "lv_memcpy",
+    "verdict": "timeout",
+    "candidate": false,
+    "sampler": "no_failure"
+   },
+   {
+    "function": "lv_memset",
+    "verdict": "timeout",
+    "candidate": false,
+    "sampler": "no_failure"
+   },
+   {
+    "function": "lv_memmove",
+    "verdict": "timeout",
+    "candidate": false,
+    "sampler": "no_failure"
+   },
+   {
+    "function": "lv_memcmp",
+    "verdict": "complete",
+    "candidate": false,
+    "sampler": "no_failure"
+   },
+   {
+    "function": "lv_strlen",
+    "verdict": "complete",
+    "candidate": false,
+    "sampler": "no_failure"
+   },
+   {
+    "function": "lv_strnlen",
+    "verdict": "complete",
+    "candidate": false,
+    "sampler": "no_failure"
+   },
+   {
+    "function": "lv_strlcpy",
+    "verdict": "complete",
+    "candidate": false,
+    "sampler": "no_failure"
+   },
+   {
+    "function": "lv_strncpy",
+    "verdict": "complete",
+    "candidate": false,
+    "sampler": "no_failure"
+   },
+   {
+    "function": "lv_strcpy",
+    "verdict": "counterexample",
+    "candidate": true,
+    "sampler": "sanitizer_report"
+   },
+   {
+    "function": "lv_strcmp",
+    "verdict": "complete",
+    "candidate": false,
+    "sampler": "no_failure"
+   },
+   {
+    "function": "lv_strncmp",
+    "verdict": "complete",
+    "candidate": false,
+    "sampler": "no_failure"
+   },
+   {
+    "function": "lv_strdup",
+    "verdict": "timeout",
+    "candidate": false,
+    "sampler": "not_compiled"
+   },
+   {
+    "function": "lv_strndup",
+    "verdict": "timeout",
+    "candidate": false,
+    "sampler": "not_compiled"
+   },
+   {
+    "function": "lv_strcat",
+    "verdict": "counterexample",
+    "candidate": true,
+    "sampler": "sanitizer_report"
+   },
+   {
+    "function": "lv_strncat",
+    "verdict": "counterexample",
+    "candidate": true,
+    "sampler": "sanitizer_report"
+   },
+   {
+    "function": "lv_strchr",
+    "verdict": "complete",
+    "candidate": false,
+    "sampler": "no_failure"
+   }
+  ]
+ }
+}

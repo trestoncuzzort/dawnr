@@ -1,0 +1,351 @@
+{
+ "summary": {
+  "files": 19,
+  "projects": 6,
+  "functions": 199,
+  "drafted": 70,
+  "drafted_share": 0.352,
+  "verdicts": {
+   "complete": 24,
+   "incomplete": 20,
+   "out_of_memory": 7,
+   "vacuous": 3,
+   "counterexample": 14,
+   "timeout": 2
+  },
+  "reached_a_verdict": 61,
+  "reached_share": 0.871,
+  "refusals": {
+   "takes a pointer to a pointer": 9,
+   "takes a pointer to an aggregate": 115,
+   "takes a void pointer with no length": 2,
+   "takes an aggregate by value": 2,
+   "takes a function pointer": 1
+  },
+  "candidates": 15,
+  "read_as": {
+   "false alarm": 9,
+   "real, minor": 5,
+   "real": 1
+  },
+  "real_share": 0.4,
+  "candidates_with_no_doubt": 12,
+  "real_among_those": 6,
+  "doubted_and_real": 0
+ },
+ "files": [
+  {
+   "project": "flac",
+   "revision_tree": "flac-pristine",
+   "file": "src_libFLAC_bitmath.c",
+   "functions": 2,
+   "drafted": 2,
+   "refused": {},
+   "verdicts": {
+    "complete": 2
+   },
+   "candidates": [],
+   "project_asserts": []
+  },
+  {
+   "project": "flac",
+   "revision_tree": "flac-pristine",
+   "file": "src_libFLAC_crc.c",
+   "functions": 4,
+   "drafted": 4,
+   "refused": {},
+   "verdicts": {
+    "complete": 4
+   },
+   "candidates": [],
+   "project_asserts": []
+  },
+  {
+   "project": "flac",
+   "revision_tree": "flac-pristine",
+   "file": "src_share_replaygain_analysis_replaygain_analysis.c",
+   "functions": 10,
+   "drafted": 9,
+   "refused": {
+    "takes a pointer to a pointer": 1
+   },
+   "verdicts": {
+    "complete": 1,
+    "incomplete": 4,
+    "out_of_memory": 2,
+    "vacuous": 2
+   },
+   "candidates": [
+    "filter",
+    "GetTitleGain"
+   ],
+   "project_asserts": []
+  },
+  {
+   "project": "flac",
+   "revision_tree": "flac-pristine",
+   "file": "src_share_utf8_charset.c",
+   "functions": 0,
+   "drafted": 0,
+   "refused": {},
+   "verdicts": {},
+   "candidates": [],
+   "project_asserts": []
+  },
+  {
+   "project": "libcoap",
+   "revision_tree": "libcoap-pristine",
+   "file": "src_coap_encode.c",
+   "functions": 6,
+   "drafted": 6,
+   "refused": {},
+   "verdicts": {
+    "complete": 2,
+    "counterexample": 2,
+    "incomplete": 2
+   },
+   "candidates": [],
+   "project_asserts": [
+    "coap_encode_var_safe",
+    "coap_encode_var_safe8"
+   ]
+  },
+  {
+   "project": "libcoap",
+   "revision_tree": "libcoap-pristine",
+   "file": "src_coap_option.c",
+   "functions": 24,
+   "drafted": 8,
+   "refused": {
+    "takes a pointer to an aggregate": 13,
+    "takes a void pointer with no length": 1,
+    "takes a pointer to a pointer": 2
+   },
+   "verdicts": {
+    "complete": 2,
+    "incomplete": 5,
+    "out_of_memory": 1
+   },
+   "candidates": [],
+   "project_asserts": []
+  },
+  {
+   "project": "libcoap",
+   "revision_tree": "libcoap-pristine",
+   "file": "src_coap_str.c",
+   "functions": 10,
+   "drafted": 5,
+   "refused": {
+    "takes a pointer to an aggregate": 5
+   },
+   "verdicts": {
+    "complete": 1,
+    "incomplete": 2,
+    "out_of_memory": 2
+   },
+   "candidates": [],
+   "project_asserts": []
+  },
+  {
+   "project": "libevent",
+   "revision_tree": "libevent-pristine",
+   "file": "event_tagging.c",
+   "functions": 29,
+   "drafted": 3,
+   "refused": {
+    "takes a pointer to an aggregate": 26
+   },
+   "verdicts": {
+    "complete": 1,
+    "counterexample": 2
+   },
+   "candidates": [
+    "encode_int_internal",
+    "encode_int64_internal"
+   ],
+   "project_asserts": []
+  },
+  {
+   "project": "libevent",
+   "revision_tree": "libevent-pristine",
+   "file": "evutil_time.c",
+   "functions": 10,
+   "drafted": 1,
+   "refused": {
+    "takes a pointer to an aggregate": 9
+   },
+   "verdicts": {
+    "incomplete": 1
+   },
+   "candidates": [],
+   "project_asserts": []
+  },
+  {
+   "project": "libevent",
+   "revision_tree": "libevent-pristine",
+   "file": "strlcpy.c",
+   "functions": 0,
+   "drafted": 0,
+   "refused": {},
+   "verdicts": {},
+   "candidates": [],
+   "project_asserts": []
+  },
+  {
+   "project": "libuv",
+   "revision_tree": "libuv",
+   "file": "src_idna.c",
+   "functions": 10,
+   "drafted": 5,
+   "refused": {
+    "takes a pointer to a pointer": 5
+   },
+   "verdicts": {
+    "complete": 2,
+    "counterexample": 2,
+    "out_of_memory": 1
+   },
+   "candidates": [
+    "uv_wtf8_to_utf16",
+    "uv__get_surrogate_value"
+   ],
+   "project_asserts": [
+    "uv_wtf8_to_utf16"
+   ]
+  },
+  {
+   "project": "libuv",
+   "revision_tree": "libuv",
+   "file": "src_inet.c",
+   "functions": 11,
+   "drafted": 5,
+   "refused": {
+    "takes a void pointer with no length": 1,
+    "takes a pointer to an aggregate": 5
+   },
+   "verdicts": {
+    "incomplete": 4,
+    "vacuous": 1
+   },
+   "candidates": [],
+   "project_asserts": []
+  },
+  {
+   "project": "libuv",
+   "revision_tree": "libuv",
+   "file": "src_strscpy.c",
+   "functions": 1,
+   "drafted": 1,
+   "refused": {},
+   "verdicts": {
+    "complete": 1
+   },
+   "candidates": [],
+   "project_asserts": []
+  },
+  {
+   "project": "libuv",
+   "revision_tree": "libuv",
+   "file": "src_strtok.c",
+   "functions": 1,
+   "drafted": 0,
+   "refused": {
+    "takes a pointer to a pointer": 1
+   },
+   "verdicts": {},
+   "candidates": [],
+   "project_asserts": []
+  },
+  {
+   "project": "lvgl",
+   "revision_tree": "lvgl-memcmp",
+   "file": "src_misc_lv_area.c",
+   "functions": 33,
+   "drafted": 4,
+   "refused": {
+    "takes a pointer to an aggregate": 29
+   },
+   "verdicts": {
+    "complete": 3,
+    "counterexample": 1
+   },
+   "candidates": [
+    "lv_pct_to_px"
+   ],
+   "project_asserts": []
+  },
+  {
+   "project": "lvgl",
+   "revision_tree": "lvgl-memcmp",
+   "file": "src_misc_lv_math.c",
+   "functions": 12,
+   "drafted": 11,
+   "refused": {
+    "takes a pointer to an aggregate": 1
+   },
+   "verdicts": {
+    "complete": 1,
+    "counterexample": 6,
+    "incomplete": 2,
+    "timeout": 2
+   },
+   "candidates": [
+    "do_cubic_bezier",
+    "lv_cubic_bezier",
+    "lv_sqrt32",
+    "lv_atan2",
+    "lv_pow",
+    "lv_map",
+    "lv_bezier3"
+   ],
+   "project_asserts": []
+  },
+  {
+   "project": "msgpack-c",
+   "revision_tree": "msgpack-c-pristine",
+   "file": "src_objectc.c",
+   "functions": 17,
+   "drafted": 1,
+   "refused": {
+    "takes a pointer to an aggregate": 14,
+    "takes an aggregate by value": 2
+   },
+   "verdicts": {
+    "out_of_memory": 1
+   },
+   "candidates": [],
+   "project_asserts": []
+  },
+  {
+   "project": "msgpack-c",
+   "revision_tree": "msgpack-c-pristine",
+   "file": "src_version.c",
+   "functions": 4,
+   "drafted": 4,
+   "refused": {},
+   "verdicts": {
+    "complete": 4
+   },
+   "candidates": [],
+   "project_asserts": []
+  },
+  {
+   "project": "msgpack-c",
+   "revision_tree": "msgpack-c-pristine",
+   "file": "src_zone.c",
+   "functions": 15,
+   "drafted": 1,
+   "refused": {
+    "takes a pointer to an aggregate": 13,
+    "takes a function pointer": 1
+   },
+   "verdicts": {
+    "counterexample": 1
+   },
+   "candidates": [
+    "msgpack_zone_new"
+   ],
+   "project_asserts": []
+  }
+ ]
+}

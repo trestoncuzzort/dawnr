@@ -1,0 +1,7 @@
+{"attempt": 1, "function": "lv_cubic_bezier", "assumed": "the ranges in lv_math.h", "verdict": "timeout", "note": "300 s a stage, so the gate says nothing here"}
+{"attempt": 1, "function": "lv_bezier3", "assumed": "the ranges in lv_math.h", "verdict": "complete"}
+{"attempt": 1, "function": "lv_atan2", "assumed": "the comment inside lv_atan2", "verdict": "complete"}
+{"attempt": 1, "function": "lv_pct_to_px", "assumed": "a range written wrongly: it allowed a large negative percentage", "verdict": "counterexample"}
+{"attempt": 2, "function": "lv_pct_to_px", "assumed": "a range written wrongly: it allowed a sign bit LV_PCT never sets, witness v = 0xb0000000", "verdict": "counterexample"}
+{"attempt": 2, "function": "lv_cubic_bezier", "assumed": "the ranges in lv_math.h", "sampled": "sanitizer_report", "report": "signed integer overflow: 15903 * 246977", "input": "x=31 x1=0 y1=1024 x2=0 y2=256", "note": "this overturned the reading as a false alarm"}
+{"attempt": 3, "function": "lv_pct_to_px", "assumed": "what LV_PCT can produce, from -1000 to 1000, of a 16-bit size", "verdict": "complete"}

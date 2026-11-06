@@ -135,6 +135,11 @@ their counts. The guide is `t/NATIVE-CASES.md`.
   over a bounded domain. `t/native_sample.py` runs the real code on a sample, and a sample proves nothing.
 - Each stop this gate knows of is made a failing property, and the list came from reading CBMC's library at the pinned
   tag. A stop found in no such list, or a stop a case allows by name, ends an execution with no property.
+- A draft from `t/native_scaffold.py` guesses what its inputs mean and knows nothing of what callers promise, and no person has
+  read it. A candidate from a scan is not a bug until it has been read, and a reading can be wrong: of 15 measured, 9 read as false
+  alarms, 6 of those by reading alone, and one first read as a false alarm turned out real. No maintainer has seen them. A scan has no
+  recall figure: 115 of 199 functions were refused for taking a struct pointer before anything looked at them, and a defect behind the
+  project's own `assert` is not listed. A scan runs what it drafts, and its list of refused system calls is not a sandbox.
 
 ## On the training side
 

@@ -184,9 +184,16 @@ def body_missing(result: dict) -> bool:
     return ".no-body." in str(result.get("property", "")) or str(result.get("description", "")).endswith("requires instrumentation")
 
 
+def memory_access(stderr: str) -> str | None:
+    """`READ` or `WRITE`, from the line AddressSanitizer prints after its error line, when it prints one."""
+    found = re.search(r"(?m)^(READ|WRITE) of size \d+", stderr)
+    return found.group(1) if found else None
+
+
 def out_of_memory(run: dict) -> bool:
-    """CBMC catches the failed allocation, reports it and exits 6."""
-    return run.get("exit") == 6 and '"Out of memory"' in run.get("stdout", "")
+    """CBMC catches the failed allocation, reports it and exits 6. During propositional reduction it says so in other words."""
+    stdout = run.get("stdout", "")
+    return run.get("exit") == 6 and ('"Out of memory"' in stdout or "Solver ran out of memory" in stdout)
 
 
 def library_goal(goal: dict) -> bool:

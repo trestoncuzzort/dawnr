@@ -1,0 +1,39 @@
+lvgl at 7c79d686, each function's own text from the scan's draft.
+
+lv_sqrt32, every uint32_t, gcc -O2 -fwrapv. A result counts as wrong when it is not the floor of the root.
+inputs where the result is not the floor of the root: 41708; of those off by more than one: 0; first 2147441940, last 2147483647
+
+The same function at -O0 under UBSan with -fno-sanitize-recover=all, one input each. Exit 1 is the report.
+2147395600 exit 0 46340
+2147488280 exit 1 | UB
+2147488281 exit 1 | UB
+2147483647 exit 1 | UB
+2147483648 exit 1 | UB
+4294705156 exit 1 | UB
+4294836224 exit 1 | UB
+4294836225 exit 0 65535
+4294967295 exit 0 65535
+
+lv_cubic_bezier, gcc -O2 -fwrapv, with its multiplications counted by __builtin_mul_overflow. x from 1 to 1023, x1 and x2 from 0 to 1024 by 16, y1 and y2 in {0, 256, 512, 768, 1024}: all inside the documented ranges.
+The true value comes from 60 steps of bisection on x(t), in double.
+calls 108054375, with signed overflow 275; (x1,x2) pairs 4225, of which any overflow 3, first (0,0)
+more than 32 of 1024 from the true curve: 13344, of which overflowed 0
+worst: lv_cubic_bezier(1021, 1008, 0, 1024, 0) = 1015, true value 672.6
+The 13,344 are a limit of the method and not of the overflow: x(t) is nearly flat there, so a tolerance of 1 in x leaves t far off. They were not read further.
+
+At -O0 under UBSan with -fno-sanitize-recover=all:
+cubic-bezier(0, 1, 0, 0.25) at x = 31: exit 1 | UB: signed integer overflow: 15903 * 246977 cannot be represented in type 'int'
+cubic-bezier(0, 0, 0, 1) at x = 31: exit 1 | UB: signed integer overflow: 15903 * 246977 cannot be represented in type 'int'
+ease-in, cubic-bezier(0.42, 0, 1, 1) at x = 31: exit 0, 1
+cubic-bezier(0, 0, 0.1, 1) at x = 31: exit 0, 165
+linear, cubic-bezier(0, 0, 1, 1) at x = 31: exit 0, 32
+
+lv_map, lv_pow and lv_atan2, at -O0 under UBSan and ASan with -fno-sanitize-recover=all:
+lv_atan2(0, 0): exit 1, division by zero. Outside the contract in the comment inside the function
+lv_atan2(3, 4): exit 0, 36
+lv_pow(10, 8): exit 0, 100000000
+lv_pow(10, 16): exit 1, signed integer overflow: 10000000000000000 * 10000000000000000
+lv_pow(3, 32): exit 1, signed integer overflow: 1853020188851841 * 1853020188851841
+lv_map(50, 0, 100, 0, 100): exit 0, 50
+lv_map(40000, 0, 65535, 0, 65535): exit 1, signed integer overflow: 65535 * 40000
+lv_map(50000, 0, 100000, 0, 100000): exit 1, signed integer overflow: 100000 * 50000

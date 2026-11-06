@@ -904,3 +904,32 @@ def test_find_bounds_sees_the_loops_inside_a_model(tmp_path):
                   harness='    __CPROVER_assert(leading(t) <= t_len, "count.bound");\n')
     found = cases.find_bounds(custom_case(tmp_path / "case", COUNT, COUNT, ["leading"], **fields), tmp_path / "bounds", cbmc=CBMC)
     assert found["found"] and any(key.startswith(("strspn", "dawnr_in_set")) for key in found["unwindset"])
+
+
+FIRST = "int first(const char *s, unsigned n)\n{\n\t(void)n;\n\treturn s[0];\n}\n"
+EMPTY_FIELDS = dict(inputs=[{"name": "s", "type": "char", "array": {"max": 2}}], assertions=["first.ran"], harness='    (void)first(s, s_len);\n    __CPROVER_assert(1 == 1, "first.ran");\n')
+
+
+@real
+def test_a_read_from_an_empty_input_fails_natively_as_it_does_in_the_model(tmp_path):
+    """ASan gives malloc(0) one readable byte, so this read passed natively until that byte was poisoned."""
+    root = custom_case(tmp_path / "case", FIRST, FIRST, ["first"], **EMPTY_FIELDS)
+    receipt = cases.check(root, "fixed", tmp_path / "out", cbmc=CBMC)
+    assert receipt["verdict"] == "counterexample"
+    replayed = receipt["native_replay"]["witnesses"]
+    assert replayed and all(witness["arrays"]["s"]["length"] == 0 for witness in replayed)
+    assert {witness["status"] for witness in replayed} == {"memory_error"} and "use-after-poison" in replayed[0]["detail"]["sanitizer"]
+
+
+@pytest.mark.skipif(not have_sanitizers(), reason="needs a native compiler with sanitizers")
+def test_an_empty_input_can_still_be_freed_and_the_code_under_check_keeps_the_real_malloc(tmp_path):
+    source = "char *copy(const char *s, unsigned n)\n{\n\tchar *out = malloc(n + 1);\n\tif (out) { memcpy(out, s, n); out[n] = 0; }\n\treturn out;\n}\n"
+    fields = dict(prelude="#include <stdlib.h>\n#include <string.h>\n", inputs=[{"name": "s", "type": "char", "array": {"max": 2}}], assertions=["copy.ran"],
+                  harness='    char *c = copy(s, s_len);\n    free(c);\n    free(s);\n    __CPROVER_assert(1 == 1, "copy.ran");\n')
+    root = custom_case(tmp_path / "case", source, source, ["copy"], **fields)
+    case = cases.load(root)
+    _, _, parts = cases.build_unit(case, "fixed", root)
+    (tmp_path / "out").mkdir()
+    bits = {"s_len": {"width": 32, "hex": "0"}, "s_e0": {"width": 8, "hex": "61"}, "s_e1": {"width": 8, "hex": "62"}}
+    report = cases.replay(case, parts, [{"property": "p", "inputs": bits}], tmp_path / "out", "gcc", 60)
+    assert report["compile"]["exit"] == 0 and report["witnesses"][0]["status"] == "not_reproduced"   # free of an empty input is no report

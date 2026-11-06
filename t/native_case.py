@@ -350,6 +350,19 @@ def array_views(case: dict, witness: dict) -> dict:
     return views
 
 
+# ASan gives malloc(0) one readable byte, so a read from an empty input would pass natively where the model fails it. Poisoning that
+# byte makes an empty input empty. In the harness's own text only: the code under check keeps the real malloc.
+# github.com/google/sanitizers/wiki/AddressSanitizerManualPoisoning
+EXACT_MALLOC = '''extern void __asan_poison_memory_region(void const volatile *, size_t);
+static void *dawnr_exact_malloc(size_t size) {
+    void *block = (malloc)(size);
+    if (block != 0 && size == 0) __asan_poison_memory_region(block, 1);
+    return block;
+}
+#define malloc(size) dawnr_exact_malloc(size)
+'''
+
+
 def replay_unit(case: dict, parts: dict) -> str:
     """The same prelude, definitions and harness as a native program reading input bit patterns."""
     inputs, drawn = scalars(case), ""
@@ -358,11 +371,12 @@ def replay_unit(case: dict, parts: dict) -> str:
                   f"&{item['name']}, sizeof {item['name']})) return 2;\n")
     # A leak is a finding only when the case asks the model to look for one.
     leaks = "" if "--memory-leak-check" in case.get("checks", []) else 'const char *__asan_default_options(void) { return "detect_leaks=0"; }\n'
-    return ('''#include <limits.h>
+    # The prelude first, as in the checked unit: a feature macro it defines has to come before any system header.
+    return (leaks + parts["prelude"] + parts["definitions"] + '''#include <limits.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-''' + leaks + parts["prelude"] + parts["definitions"] + '''static int dawnr_failed;
+''' + (EXACT_MALLOC if parts.get("setup") else "") + '''static int dawnr_failed;
 #define __CPROVER_assume(c) do { if (!(c)) { puts("native-replay: assumption rejected"); exit(3); } } while (0)
 #define __CPROVER_assert(c, name) do { if (!(c)) { printf("native-replay: assertion failed: %s\\n", name); dawnr_failed = 1; } } while (0)
 static int dawnr_input(const char *width, const char *hex, void *target, size_t size) {
@@ -402,7 +416,7 @@ def replay(case: dict, parts: dict, found: list[dict], out: Path, compiler: str,
         failed = re.findall(r"(?m)^native-replay: assertion failed: (.*)$", run["stdout"])
         sanitizer = re.search(r"(?m)^.*(runtime error: .*|ERROR: (?:AddressSanitizer|LeakSanitizer): \S+).*$", run["stderr"])
         status = "unconfirmed"
-        detail = {"assertions": failed, "sanitizer": sanitizer.group(0).strip() if sanitizer else None}
+        detail = {"assertions": failed, "sanitizer": sanitizer.group(0).strip() if sanitizer else None, "access": native.memory_access(run["stderr"])}
         if run["state"] != "finished":
             status = run["state"]
         elif sanitizer:

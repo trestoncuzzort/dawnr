@@ -25,6 +25,11 @@ import native_case as cases
 import native_check as native
 
 FORMAT = "dawnr-native-sample-v1"
+OPTIONS = r'''
+const char *__asan_default_options(void) { return "detect_leaks=0:handle_abort=1:allocator_may_return_null=1"; }
+const char *__ubsan_default_options(void) { return "print_stacktrace=0"; }
+'''
+# After the prelude, as in the checked unit: a feature macro it defines has to come before any system header.
 RUNTIME = r'''
 #include <limits.h>
 #include <setjmp.h>
@@ -32,8 +37,6 @@ RUNTIME = r'''
 #include <stdlib.h>
 #include <string.h>
 extern void __sanitizer_set_death_callback(void (*)(void));
-const char *__asan_default_options(void) { return "detect_leaks=0:handle_abort=1:allocator_may_return_null=1"; }
-const char *__ubsan_default_options(void) { return "print_stacktrace=0"; }
 '''
 LOOP = r'''
 static jmp_buf dawnr_jump;
@@ -191,7 +194,7 @@ def sample_unit(case: dict, parts: dict) -> str:
     draws = declarations + "".join(draw_statement(case, item, index) for index, item in enumerate(inputs))
     loop = LOOP.replace("NAMES", names).replace("COUNT", str(len(inputs)))
     body = (f"static void dawnr_body({parameters})\n{{\n" + parts.get("setup", "") + parts["harness"] + cases.END + "}\n")
-    return (RUNTIME + parts["prelude"] + parts["definitions"] + loop
+    return (OPTIONS + parts["prelude"] + parts["definitions"] + RUNTIME + (cases.EXACT_MALLOC if parts.get("setup") else "") + loop
             + "#define __CPROVER_assume(c) do { if (!(c)) longjmp(dawnr_jump, 1); } while (0)\n"
             + "#define __CPROVER_assert(c, name) do { if (!(c)) dawnr_failure(name); } while (0)\n"
             + body + MAIN.replace("DRAWS", draws).replace("ARGUMENTS", arguments))
@@ -225,7 +228,7 @@ def sample(root: Path, variant: str, out: Path, count: int = 1_000_000, seed: in
         if run["state"] != "finished":
             report.update(status=run["state"])
         elif sanitizer:
-            report.update(status="sanitizer_report", report=sanitizer.group(1)[:300])
+            report.update(status="sanitizer_report", report=sanitizer.group(1)[:300], access=native.memory_access(run["stderr"]))
         elif not counts:
             report.update(status="stopped", reason="the program ended before its last line")
         elif counts["failed_assertions"]:

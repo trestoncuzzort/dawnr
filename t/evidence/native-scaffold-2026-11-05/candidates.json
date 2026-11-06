@@ -1,0 +1,347 @@
+[
+ {
+  "project": "flac",
+  "file": "replaygain_analysis.c",
+  "function": "filter",
+  "gate_verdict": "out_of_memory",
+  "guesses": [
+   "nSamples is the length of input",
+   "output and input have the same length, nSamples",
+   "order is the length of a",
+   "b and a have the same length, order"
+  ],
+  "witness": null,
+  "replay": [],
+  "sanitizer": null,
+  "sampler": {
+   "status": "sanitizer_report",
+   "access": "READ"
+  },
+  "doubt": null,
+  "read_as": "false alarm",
+  "why": "by reading only: it reads behind its pointers on purpose, and replaygain_analysis.c passes pointers MAX_ORDER into a larger buffer"
+ },
+ {
+  "project": "flac",
+  "file": "replaygain_analysis.c",
+  "function": "GetTitleGain",
+  "gate_verdict": "vacuous",
+  "guesses": [],
+  "witness": null,
+  "replay": [],
+  "sanitizer": null,
+  "sampler": {
+   "status": "sanitizer_report",
+   "access": null
+  },
+  "doubt": "a null pointer the draft did not pass, so from state it did not set up",
+  "read_as": "false alarm",
+  "why": "by reading only: it needs InitGainAnalysis first, as the file's header comment says. The doubt named this"
+ },
+ {
+  "project": "libevent",
+  "file": "event_tagging.c",
+  "function": "encode_int_internal",
+  "gate_verdict": "counterexample",
+  "guesses": [
+   "data is a string"
+  ],
+  "witness": {
+   "data": {
+    "elements": [],
+    "length": 0
+   }
+  },
+  "replay": [
+   "memory_error"
+  ],
+  "sanitizer": "==N==ERROR: AddressSanitizer: heap-buffer-overflow",
+  "sampler": {
+   "status": "sanitizer_report",
+   "access": "WRITE"
+  },
+  "doubt": "a write past data, a buffer it is given no size for",
+  "read_as": "false alarm",
+  "why": "by reading only: static, and each caller passes ev_uint8_t data[5] or more. The doubt named this"
+ },
+ {
+  "project": "libevent",
+  "file": "event_tagging.c",
+  "function": "encode_int64_internal",
+  "gate_verdict": "counterexample",
+  "guesses": [
+   "data is a string"
+  ],
+  "witness": {
+   "data": {
+    "elements": [],
+    "length": 0
+   }
+  },
+  "replay": [
+   "memory_error"
+  ],
+  "sanitizer": "==N==ERROR: AddressSanitizer: heap-buffer-overflow",
+  "sampler": {
+   "status": "sanitizer_report",
+   "access": "WRITE"
+  },
+  "doubt": "a write past data, a buffer it is given no size for",
+  "read_as": "false alarm",
+  "why": "by reading only: static, and each caller passes ev_uint8_t data[9]. The doubt named this"
+ },
+ {
+  "project": "libuv",
+  "file": "idna.c",
+  "function": "uv_wtf8_to_utf16",
+  "gate_verdict": "counterexample",
+  "guesses": [
+   "source_ptr is a string",
+   "w_target_len is the length of w_target"
+  ],
+  "witness": {
+   "source_ptr": {
+    "elements": [
+     "f4",
+     "80",
+     "80",
+     "80"
+    ],
+    "length": 4
+   },
+   "w_target": {
+    "elements": [],
+    "length": 0
+   }
+  },
+  "replay": [
+   "memory_error",
+   "stopped_early"
+  ],
+  "sanitizer": "==N==ERROR: AddressSanitizer: use-after-poison",
+  "sampler": {
+   "status": "sanitizer_report",
+   "access": "WRITE"
+  },
+  "doubt": null,
+  "read_as": "false alarm",
+  "why": "by reading only: libuv's docs ask for a target with room, and each caller sizes it with uv_wtf8_length_as_utf16 first"
+ },
+ {
+  "project": "libuv",
+  "file": "idna.c",
+  "function": "uv__get_surrogate_value",
+  "gate_verdict": "counterexample",
+  "guesses": [
+   "w_source_len is the length of w_source_ptr"
+  ],
+  "witness": {
+   "w_source_ptr": {
+    "elements": [],
+    "length": 0
+   }
+  },
+  "replay": [
+   "memory_error"
+  ],
+  "sanitizer": "==N==ERROR: AddressSanitizer: use-after-poison",
+  "sampler": {
+   "status": "sanitizer_report",
+   "access": "READ"
+  },
+  "doubt": null,
+  "read_as": "false alarm",
+  "why": "by reading only: static, and called only inside loops on w_source_len, which stop at 0"
+ },
+ {
+  "project": "lvgl",
+  "file": "lv_area.c",
+  "function": "lv_pct_to_px",
+  "gate_verdict": "counterexample",
+  "guesses": [],
+  "witness": {
+   "base": "7fffffff",
+   "v": "bfffffff"
+  },
+  "replay": [
+   "undefined_behavior"
+  ],
+  "sanitizer": "replay.c:5402:155: runtime error: signed integer overflow: -1610612737 * 2147483647 cannot be represented in type 'int'",
+  "sampler": {
+   "status": "sanitizer_report",
+   "access": null
+  },
+  "doubt": null,
+  "read_as": "false alarm",
+  "why": "needs a percentage times a size above 2^31, or a sign bit LV_PCT never sets. Checked: complete under what LV_PCT can produce, on the third attempt at writing that range down"
+ },
+ {
+  "project": "lvgl",
+  "file": "lv_math.c",
+  "function": "do_cubic_bezier",
+  "gate_verdict": "counterexample",
+  "guesses": [],
+  "witness": {
+   "a": "ffeee800",
+   "b": "fff00046",
+   "c": "7fe4648d",
+   "t": "801"
+  },
+  "replay": [
+   "undefined_behavior"
+  ],
+  "sanitizer": "replay.c:5391:16: runtime error: signed integer overflow: -1120256 * 2049 cannot be represented in type 'int'",
+  "sampler": {
+   "status": "sanitizer_report",
+   "access": null
+  },
+  "doubt": null,
+  "read_as": "real, minor",
+  "why": "the same defect as lv_cubic_bezier: the draft drew a large t, and lv_cubic_bezier does pass one"
+ },
+ {
+  "project": "lvgl",
+  "file": "lv_math.c",
+  "function": "lv_cubic_bezier",
+  "gate_verdict": "timeout",
+  "guesses": [],
+  "witness": null,
+  "replay": [],
+  "sanitizer": null,
+  "sampler": {
+   "status": "sanitizer_report",
+   "access": null
+  },
+  "doubt": null,
+  "read_as": "real, minor",
+  "why": "first read as a false alarm, wrongly: with x1 = x2 = 0, inside the documented ranges, Newton's method runs away and do_cubic_bezier overflows on the next step. Found by sampling under the stated contract. Rare: 275 of 108,054,375 calls on a grid, in 3 of 4,225 (x1, x2) pairs, and on a wrapping build none of the 275 ended more than 32 of 1024 from the true curve, because bisection follows"
+ },
+ {
+  "project": "lvgl",
+  "file": "lv_math.c",
+  "function": "lv_sqrt32",
+  "gate_verdict": "counterexample",
+  "guesses": [],
+  "witness": {
+   "x": "feffffff"
+  },
+  "replay": [
+   "undefined_behavior"
+  ],
+  "sanitizer": "replay.c:5457:11: runtime error: signed integer overflow: 65408 * 65408 cannot be represented in type 'int'",
+  "sampler": {
+   "status": "sanitizer_report",
+   "access": null
+  },
+  "doubt": null,
+  "read_as": "real, minor",
+  "why": "takes uint32_t, and lvgl's own tests go above 2^31, but xn * xn overflows int32_t for x from 2147441940 up to the saturated branch at 65535^2. On a wrapping build, 41,708 inputs just below 2^31 give a root one too high, measured over every uint32_t. It is documented as approximate. No caller in lvgl passes that much"
+ },
+ {
+  "project": "lvgl",
+  "file": "lv_math.c",
+  "function": "lv_atan2",
+  "gate_verdict": "counterexample",
+  "guesses": [],
+  "witness": {
+   "x": "80000000",
+   "y": "ffffffff"
+  },
+  "replay": [
+   "undefined_behavior"
+  ],
+  "sanitizer": "replay.c:5394:11: runtime error: negation of -2147483648 cannot be represented in type 'int'; cast to an unsigned type to negate this value to itself",
+  "sampler": {
+   "status": "sanitizer_report",
+   "access": null
+  },
+  "doubt": null,
+  "read_as": "false alarm",
+  "why": "a comment inside the function says at least one of x and y must be non-zero and both within 1456, and the arc widget and conical gradient check before calling. The header does not say so. Checked: complete under that comment"
+ },
+ {
+  "project": "lvgl",
+  "file": "lv_math.c",
+  "function": "lv_pow",
+  "gate_verdict": "counterexample",
+  "guesses": [],
+  "witness": {
+   "base": "80000000",
+   "exp": "7f"
+  },
+  "replay": [
+   "undefined_behavior"
+  ],
+  "sanitizer": "replay.c:5396:20: runtime error: signed integer overflow: 2147483648 * 4611686018427387904 cannot be represented in type 'long int'",
+  "sampler": {
+   "status": "sanitizer_report",
+   "access": null
+  },
+  "doubt": null,
+  "read_as": "real, minor",
+  "why": "the last base *= base is computed after its value stops mattering, so lv_pow(10, 16) and lv_pow(3, 32) overflow although the answer fits. No caller in lvgl passes that much"
+ },
+ {
+  "project": "lvgl",
+  "file": "lv_math.c",
+  "function": "lv_map",
+  "gate_verdict": "counterexample",
+  "guesses": [],
+  "witness": {
+   "max_in": "40000000",
+   "max_out": "0",
+   "min_in": "80000000",
+   "min_out": "0",
+   "x": "0"
+  },
+  "replay": [
+   "undefined_behavior"
+  ],
+  "sanitizer": "replay.c:5390:13: runtime error: signed integer overflow: 1073741824 - -2147483648 cannot be represented in type 'int'",
+  "sampler": {
+   "status": "sanitizer_report",
+   "access": null
+  },
+  "doubt": null,
+  "read_as": "real",
+  "why": "(x - min_in) * delta_out overflows int32_t on ordinary values, and reaches the public timeline API: on a 40 s timeline, lv_anim_timeline_set_progress(at, 60000) overflows and lv_anim_timeline_get_progress then gives 0. See timeline-demo.txt"
+ },
+ {
+  "project": "lvgl",
+  "file": "lv_math.c",
+  "function": "lv_bezier3",
+  "gate_verdict": "timeout",
+  "guesses": [],
+  "witness": null,
+  "replay": [],
+  "sanitizer": null,
+  "sampler": {
+   "status": "sanitizer_report",
+   "access": null
+  },
+  "doubt": null,
+  "read_as": "false alarm",
+  "why": "it fixes x1 and x2 at 341 and 683. Checked: complete under the ranges in lv_math.h"
+ },
+ {
+  "project": "msgpack-c",
+  "file": "zone.c",
+  "function": "msgpack_zone_new",
+  "gate_verdict": "counterexample",
+  "guesses": [],
+  "witness": {
+   "chunk_size": "fffffffffffffff8"
+  },
+  "replay": [
+   "memory_error"
+  ],
+  "sanitizer": "==N==ERROR: AddressSanitizer: heap-buffer-overflow",
+  "sampler": {
+   "status": "sanitizer_report",
+   "access": "WRITE"
+  },
+  "doubt": null,
+  "read_as": "real, minor",
+  "why": "sizeof(chunk) + chunk_size wraps, malloc succeeds with too little, and chunk->next is written out of bounds. Upstream has since merged a fix for exactly this: msgpack-c#1206, 2026-11-06, by another author, after the revision scanned"
+ }
+]

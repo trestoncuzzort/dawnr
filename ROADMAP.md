@@ -15,8 +15,9 @@ The CBMC gate over real C functions no longer reads a hang or a stop as proved, 
 defect ([correction](CORRECTIONS.md)). A function that allocates can now be checked, inputs can be bounded arrays and strings,
 per-loop bounds are found by search, and a `complete` verdict can carry a proof checked by a separate program. All 29
 published suite rows came back the same. C library models compared with the C library replace hand-written stand-ins, since CBMC's own `strtol` is wrong on
-many inputs, and a native sampler runs the real code over many inputs. [The guide](t/NATIVE-CASES.md), [the limits](LIMITS.md#on-the-native-gate),
-[the research behind the next steps](internal/RESEARCH-2026-11-05-papers-and-repos.md).
+many inputs, and a native sampler runs the real code over many inputs. A case can now be drafted from a function's signature and a whole file scanned, with no harness written by hand. Over 19 files from 6 projects, 35 percent of
+functions drafted, and of the 15 candidates, 6 read as real, nearly all in one integer math file ([measurement](t/PREDICT-2026-11-05-native-scaffold.md)). The gate has no recall figure yet, and that is next.
+[The guide](t/NATIVE-CASES.md), [the limits](LIMITS.md#on-the-native-gate), [the research behind the next steps](internal/RESEARCH-2026-11-05-papers-and-repos.md).
 
 ## Incremental updates (2026-10-25 UTC)
 
