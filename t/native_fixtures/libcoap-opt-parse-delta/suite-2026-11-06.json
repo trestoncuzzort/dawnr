@@ -1,0 +1,40 @@
+{
+  "case": "libcoap-opt-parse-delta",
+  "format": "dawnr-native-case-v1-suite",
+  "ok": true,
+  "rows": [
+    {
+      "confirmed_witnesses": 1,
+      "expected": "counterexample",
+      "ok": true,
+      "properties": 214,
+      "reason": "a checked property has a concrete failing trace",
+      "unit_sha256": "6ec7a8fe840c6400060f6cfb56da606a389b6397d9c51e057dc714e1791d76d6",
+      "unwind": 4,
+      "variant": "original",
+      "verdict": "counterexample"
+    },
+    {
+      "confirmed_witnesses": 0,
+      "expected": "complete",
+      "ok": true,
+      "properties": 207,
+      "reason": "all inventoried properties and required unwinding checks succeeded; assumption goals reachable",
+      "unit_sha256": "24c2fa5355feedf64014607fbe38d812719b19fd682d4908f5b092515604b245",
+      "unwind": 4,
+      "variant": "fixed",
+      "verdict": "complete"
+    },
+    {
+      "confirmed_witnesses": 0,
+      "expected": "vacuous",
+      "ok": true,
+      "properties": 207,
+      "reason": "assumption coverage has an unreachable before/after goal",
+      "unit_sha256": "3d53233bd829e7ce602a2c7e7de9f2ef11620d2d1718925f294b6285112bef6d",
+      "unwind": 4,
+      "variant": "vacuous",
+      "verdict": "vacuous"
+    }
+  ]
+}

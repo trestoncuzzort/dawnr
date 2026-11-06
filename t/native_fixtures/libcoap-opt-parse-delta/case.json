@@ -1,0 +1,103 @@
+{
+  "format": "dawnr-native-case-v1",
+  "id": "libcoap-opt-parse-delta",
+  "repository": "obgm/libcoap",
+  "path": "src/coap_option.c",
+  "machine": "LP64",
+  "sources": {
+    "original": {
+      "file": "original.c",
+      "sha256": "d67b3577177e4bba5cb51d70ea9a7e190b1b50f273467f05fd9034a3c2dccbed",
+      "revision": "45ace062bf5cbe60ef9e4e4883fc844228c5f8ca",
+      "definitions": [
+        {
+          "name": "ADVANCE_OPT",
+          "kind": "macro",
+          "line": 22,
+          "end_line": 28,
+          "starts_with": "#define ADVANCE_OPT(o,e,step) if ((e) < step) {           \\"
+        },
+        {
+          "name": "ADVANCE_OPT_CHECK",
+          "kind": "macro",
+          "line": 34,
+          "end_line": 38,
+          "starts_with": "#define ADVANCE_OPT_CHECK(o,e,step) do { \\"
+        },
+        {
+          "name": "coap_opt_parse",
+          "line": 40,
+          "end_line": 114,
+          "starts_with": "size_t"
+        }
+      ]
+    },
+    "fixed": {
+      "file": "fixed.c",
+      "sha256": "c7b146252506865f47b5da70a8db731330f4b0f5aad9326d48691be98ee9b181",
+      "revision": "45ace062bf5cbe60ef9e4e4883fc844228c5f8ca with the proposed change",
+      "definitions": [
+        {
+          "name": "ADVANCE_OPT",
+          "kind": "macro",
+          "line": 22,
+          "end_line": 28,
+          "starts_with": "#define ADVANCE_OPT(o,e,step) if ((e) < step) {           \\"
+        },
+        {
+          "name": "ADVANCE_OPT_CHECK",
+          "kind": "macro",
+          "line": 34,
+          "end_line": 38,
+          "starts_with": "#define ADVANCE_OPT_CHECK(o,e,step) do { \\"
+        },
+        {
+          "name": "coap_opt_parse",
+          "line": 40,
+          "end_line": 117,
+          "starts_with": "size_t"
+        }
+      ]
+    }
+  },
+  "prelude": "/* What coap_opt_parse needs besides its own text, taken from libcoap\n * (https://github.com/obgm/libcoap) at the pinned revision. The blocks marked \"lines a-b\"\n * are copied unchanged from the named file.\n *\n * The files carry SPDX-License-Identifier: BSD-2-Clause. include/coap3/coap_option.h has\n * the notice \"Copyright (C) 2010-2013,2022-2026 Olaf Bergmann <bergmann@tzi.org>\" and\n * include/coap3/coap_pdu_internal.h has the notice \"Copyright (C) 2010-2026 Olaf Bergmann\n * <bergmann@tzi.org>\". The licence text of the project (file LICENSE) is:\n *\n * Copyright (c) 2010--2026, Olaf Bergmann and others\n * All rights reserved.\n *\n * Redistribution and use in source and binary forms, with or without\n * modification, are permitted provided that the following conditions are\n * met:\n *\n *   o Redistributions of source code must retain the above copyright\n *     notice, this list of conditions and the following disclaimer.\n *\n *   o Redistributions in binary form must reproduce the above copyright\n *     notice, this list of conditions and the following disclaimer in\n *     the documentation and/or other materials provided with the\n *     distribution.\n *\n * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS\n * \"AS IS\" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT\n * LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR\n * A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT\n * HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,\n * SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT\n * LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,\n * DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY\n * THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT\n * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE\n * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.\n */\n#include <assert.h>\n#include <stddef.h>\n#include <stdint.h>\n\n/* include/coap3/coap_option.h, lines 144-158 */\n/**\n * Use byte-oriented access methods here because sliding a complex struct\n * coap_opt_t over the data buffer may cause bus error on certain platforms.\n */\ntypedef uint8_t coap_opt_t;\n#define PCHAR(p) ((coap_opt_t *)(p))\n\n/**\n * Representation of CoAP options.\n */\ntypedef struct {\n  uint16_t delta;\n  size_t length;\n  const uint8_t *value;\n} coap_option_t;\n\n/* include/coap3/coap_pdu_internal.h, line 96 */\n#define COAP_PAYLOAD_START 0xFF /* payload marker */\n\n/* Stand-in, not from libcoap: the debug log messages of coap_opt_parse do nothing. */\n#define coap_log_debug(...) do { } while (0)\n\n/* Not from libcoap: the buffer that the harness passes when the given length is 6 or more.\n * The longest option header is 5 bytes and the longest value 65804 bytes. */\nstatic unsigned char case_buffer[65809];\n",
+  "inputs": [
+    {
+      "name": "h0",
+      "type": "unsigned char"
+    },
+    {
+      "name": "h1",
+      "type": "unsigned char"
+    },
+    {
+      "name": "h2",
+      "type": "unsigned char"
+    },
+    {
+      "name": "h3",
+      "type": "unsigned char"
+    },
+    {
+      "name": "h4",
+      "type": "unsigned char"
+    },
+    {
+      "name": "room",
+      "type": "unsigned int"
+    }
+  ],
+  "harness": "    /* Reference: RFC 7252 section 3.1 (https://www.rfc-editor.org/rfc/rfc7252#section-3.1).\n       An option starts with one byte: the delta in the high nibble and the length in the\n       low nibble. A nibble of 13 is followed by one extra byte, and the value is the nibble\n       plus that byte (so the extra byte plus 13). A nibble of 14 is followed by two extra\n       bytes in network order, and the value is that number plus 269. A nibble of 15 is\n       reserved. The extra bytes of the delta come before those of the length, and the\n       option value follows them. The option number is the sum of the deltas. Option\n       numbers are 16 bits wide (section 12.2 lists 0 to 65535), so a delta above 65535\n       cannot belong to a valid option. The header size, the delta and the length are\n       computed here from the input bytes with 32-bit arithmetic only.\n       The given length is 0 to 65809. For a length of 0 to 5 the buffer is a local array\n       that ends where the given length ends, so any read past the end is out of bounds.\n       For a length of 6 or more the header (at most 5 bytes) always fits, and the buffer\n       is a static array of the longest header and value. */\n    __CPROVER_assume(room <= 65809u);\n    unsigned char hb[5] = {h0, h1, h2, h3, h4};\n    uint32_t dn = (uint32_t)(h0 >> 4), ln = (uint32_t)(h0 & 15u);\n    uint32_t pos = 1u, delta = dn, vlen = ln;\n    if (dn == 13u) {\n        delta = 13u + hb[pos];\n        pos = pos + 1u;\n    } else if (dn == 14u) {\n        delta = 269u + 256u * hb[pos] + hb[pos + 1u];\n        pos = pos + 2u;\n    }\n    if (ln == 13u) {\n        vlen = 13u + hb[pos];\n        pos = pos + 1u;\n    } else if (ln == 14u) {\n        vlen = 269u + 256u * hb[pos] + hb[pos + 1u];\n        pos = pos + 2u;\n    }\n    uint32_t hsize = pos;\n    /* The option is invalid when a nibble is reserved, when the header does not fit in the\n       given length, when the value does not fit after the header, or when the delta is\n       above 65535. */\n    int invalid = dn == 15u || ln == 15u || hsize > room || vlen > room - hsize || delta > 65535u;\n\n    struct {\n        unsigned char before[4];\n        coap_option_t option;\n        unsigned char after[4];\n    } cell;\n    cell.before[0] = cell.before[1] = cell.before[2] = cell.before[3] = 0x5a;\n    cell.after[0] = cell.after[1] = cell.after[2] = cell.after[3] = 0xa5;\n\n    unsigned char tiny[5] = {0, 0, 0, 0, 0};\n    const unsigned char *base = case_buffer;\n    size_t got = 0;\n    if (room == 0u) {\n        base = tiny + 5;\n        got = coap_opt_parse(base, 0, &cell.option);\n    } else if (room == 1u) {\n        tiny[4] = h0;\n        base = tiny + 4;\n        got = coap_opt_parse(base, 1, &cell.option);\n    } else if (room == 2u) {\n        tiny[3] = h0; tiny[4] = h1;\n        base = tiny + 3;\n        got = coap_opt_parse(base, 2, &cell.option);\n    } else if (room == 3u) {\n        tiny[2] = h0; tiny[3] = h1; tiny[4] = h2;\n        base = tiny + 2;\n        got = coap_opt_parse(base, 3, &cell.option);\n    } else if (room == 4u) {\n        tiny[1] = h0; tiny[2] = h1; tiny[3] = h2; tiny[4] = h3;\n        base = tiny + 1;\n        got = coap_opt_parse(base, 4, &cell.option);\n    } else if (room == 5u) {\n        tiny[0] = h0; tiny[1] = h1; tiny[2] = h2; tiny[3] = h3; tiny[4] = h4;\n        base = tiny;\n        got = coap_opt_parse(base, 5, &cell.option);\n    } else {\n        case_buffer[0] = h0; case_buffer[1] = h1; case_buffer[2] = h2; case_buffer[3] = h3; case_buffer[4] = h4;\n        base = case_buffer;\n        got = coap_opt_parse(base, room, &cell.option);\n    }\n\n    __CPROVER_assert((got == 0) == (invalid != 0), \"opt.zero_exactly_when_invalid\");\n    __CPROVER_assert(got == 0 || cell.option.delta == delta, \"opt.delta\");\n    __CPROVER_assert(got == 0 || cell.option.length == (size_t)vlen, \"opt.length\");\n    __CPROVER_assert(got == 0 || cell.option.value == base + hsize, \"opt.value\");\n    __CPROVER_assert(got == 0 || got == (size_t)hsize + (size_t)vlen, \"opt.size\");\n    __CPROVER_assert(cell.before[0] == 0x5a && cell.before[1] == 0x5a && cell.before[2] == 0x5a && cell.before[3] == 0x5a\n                     && cell.after[0] == 0xa5 && cell.after[1] == 0xa5 && cell.after[2] == 0xa5 && cell.after[3] == 0xa5,\n                     \"opt.nothing_else_written\");\n",
+  "assertions": [
+    "opt.zero_exactly_when_invalid",
+    "opt.delta",
+    "opt.length",
+    "opt.value",
+    "opt.size",
+    "opt.nothing_else_written"
+  ],
+  "assumptions": 1,
+  "loops": 0,
+  "input_domain": "the first five bytes of the option buffer (the header byte, then up to two extra delta bytes and two extra length bytes) with every value, and a buffer length from 0 to 65809 (the longest header of 5 bytes plus the longest value of 65804 bytes); bytes of the buffer after the fifth are zero and are not read by the function",
+  "limitations": "coap_opt_parse with ADVANCE_OPT and ADVANCE_OPT_CHECK; the callers (option iterators, PDU parsing) are not examined; the type definitions, COAP_PAYLOAD_START and a buffer are not extracted by the gate but copied or written into the prelude from include/coap3/coap_option.h and include/coap3/coap_pdu_internal.h at the same revision; coap_log_debug is a macro that does nothing, so the log messages are not examined; the function does not read option value bytes, so the value bytes are not modelled; the contents of the result structure are checked only when the function returns a size other than 0; the check that nothing else is written looks at four guard bytes on each side of the result structure and does not look at its padding"
+}
