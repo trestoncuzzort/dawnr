@@ -6,8 +6,8 @@ successful measurements is not measuring anything.
 
 - **The native gate read a hang as proved, and a limit of its model as a defect (2026-11-05).**
   A function that spun in `while (c) ;`, or called `abort`, `exit` or `_Exit`, or reached `__builtin_unreachable`, on some
-  input got `complete` on an assertion that it returned, because CBMC ends those executions with no property and no
-  sign. In the other direction, a recursion bound that was too short and a callee with no body gave `counterexample` on
+  input got `complete` on an assertion that it returned, because CBMC ends those executions with no property. For a
+  self-loop it prints one warning, which the gate did not read. In the other direction, a recursion bound that was too short and a callee with no body gave `counterexample` on
   correct code. Both are fixed. A stop now fails a property and gives a counterexample with a replayed witness, a loop that
   never ends gives `incomplete`, and a limit of the model gives `incomplete` and names itself. No published result moved:
   all 29 suite rows of the 8 published cases come back the same on two SAT solvers, so none of the upstream pull requests

@@ -69,6 +69,9 @@ Receipt: [`evidence/native-gate-2026-11-05/fixture-check-certified.json`](eviden
 | open62541-datetime-parse-year | 19.6 | 208,935 | 130.05 | 2,948.5 | 20.91 | 95.48 | `verified` |
 | betaflight, INAV, libuv, PX4 | under 0.5 | under 8,000 | under 0.1 | under 2 | under 0.1 | under 0.1 | `verified` |
 
+The same run on GitHub's machines, run 42175532805 of dawnr's `native.yml`: 29 rows, none moved, no certificate problem, and each proof
+the same size to 0.1 MB, so the formula and the proof do not depend on the machine.
+
 arXiv:2609.20873 reports checking at 1.9 times solving for its DRAT proofs. These LRAT checks took 0.13 to 0.29 of solving, since an LRAT
 proof names the clauses each step uses. They are different proofs of different problems, so this is not a comparison of the two.
 

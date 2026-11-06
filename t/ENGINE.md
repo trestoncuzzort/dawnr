@@ -26,7 +26,7 @@ Candidate comparison requires refreshed dawnr baseline and specification control
 
 The native gate (`native_check.py`, `native_case.py`, `native_fixture_check.py`, `native_rewrite_check.py`, `build_certify_tools.sh`,
 `NATIVE-CASES.md`, their tests, predictions and evidence) is imported from engine commit
-`a7c029beb6d2adc31a2b7583c23e457e01bb7b03` as a per-file update, so the base pin above still does not imply a full
+`f4bc18971a2d3f8dc3609f75b357a43efd58c7c1` as a per-file update, so the base pin above still does not imply a full
 synchronization. The published cases under `native_fixtures/`, other than `px4-wrap-bin`, are dawnr's: they back pull requests
 opened upstream and link here. The repository is now named t-language and is private, and the old name redirects.
 

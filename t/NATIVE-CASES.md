@@ -109,10 +109,10 @@ proof in any of the seven kernels. The checker reads text proofs, and a proof ca
 
 ## Executions that stop or hang
 
-Left alone, CBMC lets some executions vanish from the model with no property and no sign:
+Left alone, CBMC lets some executions leave the model with no property:
 `abort`, `exit`, `_Exit`, `pthread_exit` and `thrd_exit` are modelled as `__CPROVER_assume(0)`,
-`__builtin_unreachable` is ignored, and `while (c) ;` becomes an assumption. An assertion after them
-then holds on the inputs that never reach it. So the gate passes `--no-self-loops-to-assumptions`, and
+`__builtin_unreachable` is ignored, and `while (c) ;` becomes an assumption, with one printed warning. An assertion
+after them then holds on the inputs that never reach it. So the gate passes `--no-self-loops-to-assumptions`, and
 makes each of those a failing property named `native.stop.NAME`. A stop gives `counterexample`, with
 the witness replayed natively, and a loop that never ends gives `incomplete`.
 
