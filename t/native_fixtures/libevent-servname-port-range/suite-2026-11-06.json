@@ -1,0 +1,51 @@
+{
+  "case": "libevent-servname-port-range",
+  "format": "dawnr-native-case-v1-suite",
+  "ok": true,
+  "rows": [
+    {
+      "confirmed_witnesses": 1,
+      "expected": "counterexample",
+      "ok": true,
+      "properties": 140,
+      "reason": "a checked property has a concrete failing trace",
+      "unit_sha256": "73ec2295baed994bd0655d37ae1cfb6b612f39d8359e2064905808d1715e275c",
+      "unwind": 12,
+      "variant": "original",
+      "verdict": "counterexample"
+    },
+    {
+      "confirmed_witnesses": 0,
+      "expected": "complete",
+      "ok": true,
+      "properties": 140,
+      "reason": "all inventoried properties and required unwinding checks succeeded; assumption goals reachable",
+      "unit_sha256": "5e42830f54683aba818d9fcd7969f453be2e96f66060263212ca948c2d281fbd",
+      "unwind": 12,
+      "variant": "fixed",
+      "verdict": "complete"
+    },
+    {
+      "confirmed_witnesses": 0,
+      "expected": "vacuous",
+      "ok": true,
+      "properties": 138,
+      "reason": "assumption coverage has an unreachable before/after goal",
+      "unit_sha256": "7eb5af63271725c28075fae23666a391e07eaedb3000bdcaf537175989a40b00",
+      "unwind": 12,
+      "variant": "vacuous",
+      "verdict": "vacuous"
+    },
+    {
+      "confirmed_witnesses": 0,
+      "expected": "incomplete or vacuous",
+      "ok": true,
+      "properties": 142,
+      "reason": "unwinding or another property is unresolved",
+      "unit_sha256": "5e42830f54683aba818d9fcd7969f453be2e96f66060263212ca948c2d281fbd",
+      "unwind": 1,
+      "variant": "fixed",
+      "verdict": "incomplete"
+    }
+  ]
+}

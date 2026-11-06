@@ -1,0 +1,100 @@
+{
+  "format": "dawnr-native-case-v1",
+  "id": "libevent-servname-port-range",
+  "repository": "libevent/libevent",
+  "path": "evutil.c",
+  "machine": "LP64",
+  "sources": {
+    "original": {
+      "file": "original.c",
+      "sha256": "2273f20507eda04ee11cb747567d184abdb9b25f21a173743e6b4eec73fa0915",
+      "revision": "d82464a277d0f42703702c4dfd9af6af38595a83",
+      "definitions": [
+        {
+          "name": "parse_numeric_servname",
+          "line": 1050,
+          "end_line": 1060,
+          "starts_with": "static int"
+        }
+      ]
+    },
+    "fixed": {
+      "file": "fixed.c",
+      "sha256": "4e3e70084f01cbc47fba35942ff99e658a27c389fed2495eee2385ab58d6b567",
+      "revision": "d82464a277d0f42703702c4dfd9af6af38595a83 with the proposed change",
+      "definitions": [
+        {
+          "name": "parse_numeric_servname",
+          "line": 1050,
+          "end_line": 1060,
+          "starts_with": "static int"
+        }
+      ]
+    }
+  },
+  "prelude": "/* What parse_numeric_servname needs besides its own text: strtol and NULL.\n *\n * CBMC 6.11.0 has a built-in strtol, but it is not exact. For \"+ \" (a sign and then no digit) it\n * sets the end pointer after the sign, where C11 7.22.1.4 paragraph 7 puts it at the start of the\n * string. parse_numeric_servname would then return 0 for \"+\" in the model and -1 with the C\n * library. So the model reads strtol as the stand-in below. The native replay of a counterexample\n * is compiled without __CPROVER__ and calls the C library.\n *\n * case_strtol follows C11 7.22.1.4 for base 10: white space as isspace in the C locale (space\n * and \\t \\n \\v \\f \\r), an optional sign, decimal digits, the end pointer at the first character\n * that is not part of the number or at the start of the string when there is no digit, and\n * saturation at LONG_MAX and LONG_MIN. The base is a fixed parameter; for any other base it\n * converts nothing. It does not set errno (parse_numeric_servname does not read it). Its loops\n * stop at the terminator, so the unwinding bound of the case covers strings of up to 11\n * characters and the unwinding assertions say so. */\n#include <limits.h>\n#include <stddef.h>\n#include <stdlib.h>\n\n#ifdef __CPROVER__\nstatic long case_strtol(const char *nptr, char **endptr, int base)\n{\n    const char *p = nptr;\n    unsigned long limit, acc = 0;\n    int negative = 0, any = 0, over = 0;\n\n    if (base != 10) {\n        if (endptr != NULL) {\n            *endptr = (char *)nptr;\n        }\n        return 0;\n    }\n    while (*p == ' ' || (*p >= '\\t' && *p <= '\\r')) {\n        ++p;\n    }\n    if (*p == '-' || *p == '+') {\n        negative = *p == '-';\n        ++p;\n    }\n    limit = negative ? (unsigned long)LONG_MAX + 1ul : (unsigned long)LONG_MAX;\n    while (*p >= '0' && *p <= '9') {\n        unsigned long digit = (unsigned long)(*p - '0');\n        if (!over) {\n            if (acc > (limit - digit) / 10ul) {\n                over = 1;\n            } else {\n                acc = acc * 10ul + digit;\n            }\n        }\n        any = 1;\n        ++p;\n    }\n    if (endptr != NULL) {\n        *endptr = (char *)(any ? p : nptr);\n    }\n    if (over) {\n        return negative ? LONG_MIN : LONG_MAX;\n    }\n    if (negative) {\n        return acc == (unsigned long)LONG_MAX + 1ul ? LONG_MIN : -(long)acc;\n    }\n    return (long)acc;\n}\n#define strtol(nptr, endptr, base) case_strtol(nptr, endptr, base)\n#endif\n",
+  "inputs": [
+    {
+      "name": "count",
+      "type": "unsigned char"
+    },
+    {
+      "name": "ch0",
+      "type": "unsigned char"
+    },
+    {
+      "name": "ch1",
+      "type": "unsigned char"
+    },
+    {
+      "name": "ch2",
+      "type": "unsigned char"
+    },
+    {
+      "name": "ch3",
+      "type": "unsigned char"
+    },
+    {
+      "name": "ch4",
+      "type": "unsigned char"
+    },
+    {
+      "name": "ch5",
+      "type": "unsigned char"
+    },
+    {
+      "name": "ch6",
+      "type": "unsigned char"
+    },
+    {
+      "name": "ch7",
+      "type": "unsigned char"
+    },
+    {
+      "name": "ch8",
+      "type": "unsigned char"
+    },
+    {
+      "name": "ch9",
+      "type": "unsigned char"
+    },
+    {
+      "name": "ch10",
+      "type": "unsigned char"
+    }
+  ],
+  "harness": "    /* The string is count characters (0 to 11) of any value except the terminator, then the\n       terminator. The characters after it are not part of the string and can have any value. */\n    __CPROVER_assume(count <= 11);\n    __CPROVER_assume(count <= 0 || ch0 != 0);\n    __CPROVER_assume(count <= 1 || ch1 != 0);\n    __CPROVER_assume(count <= 2 || ch2 != 0);\n    __CPROVER_assume(count <= 3 || ch3 != 0);\n    __CPROVER_assume(count <= 4 || ch4 != 0);\n    __CPROVER_assume(count <= 5 || ch5 != 0);\n    __CPROVER_assume(count <= 6 || ch6 != 0);\n    __CPROVER_assume(count <= 7 || ch7 != 0);\n    __CPROVER_assume(count <= 8 || ch8 != 0);\n    __CPROVER_assume(count <= 9 || ch9 != 0);\n    __CPROVER_assume(count <= 10 || ch10 != 0);\n    char text[12];\n    int pos = 0, negative = 0, digits = 0, shown, up;\n    long long magnitude = 0, number;\n    text[11] = '\\0';\n    text[0] = (char)ch0; text[1] = (char)ch1; text[2] = (char)ch2; text[3] = (char)ch3;\n    text[4] = (char)ch4; text[5] = (char)ch5; text[6] = (char)ch6; text[7] = (char)ch7;\n    text[8] = (char)ch8; text[9] = (char)ch9; text[10] = (char)ch10;\n    text[count] = '\\0';\n    /* The expected result. A port number is an integer from 0 to 65535 (RFC 6335 section 6,\n       https://www.rfc-editor.org/rfc/rfc6335#section-6). parse_numeric_servname returns the\n       port for a numeric service name and -1 for anything else. The text is read as C11 7.22.1.4\n       (https://www.open-std.org/jtc1/sc22/wg14/www/docs/n1570.pdf) reads the text for strtol in\n       base 10: white space (space, \\t \\n \\v \\f \\r), an optional + or -, one or more decimal\n       digits. The value is computed here in 64 bits from the characters, 11 digits at most, so it\n       cannot overflow. White space and a sign are what strtol accepts, and the function takes them\n       today, so the expected result for them is the value of the number: \" 80\" and \"+80\" give 80\n       and \"-0\" gives 0. The case does not say that they should be accepted, only what the number\n       is. */\n    while (pos < count && (text[pos] == ' ' || (text[pos] >= '\\t' && text[pos] <= '\\r'))) {\n        ++pos;\n    }\n    if (pos < count && (text[pos] == '+' || text[pos] == '-')) {\n        negative = text[pos] == '-';\n        ++pos;\n    }\n    while (pos < count && text[pos] >= '0' && text[pos] <= '9') {\n        magnitude = magnitude * 10 + (text[pos] - '0');\n        ++pos;\n        ++digits;\n    }\n    number = negative ? -magnitude : magnitude;\n    shown = parse_numeric_servname(text);\n    up = digits > 0 && pos == count;\n    /* The result is -1 or a port number. */\n    __CPROVER_assert(shown == -1 || (shown >= 0 && shown <= 65535), \"servname.range\");\n    /* A string of decimal digits and nothing else gives its value when that is at most 65535\n       and -1 otherwise. Leading zeros do not matter. */\n    __CPROVER_assert(!(count > 0 && digits == count) || (long long)shown == (magnitude <= 65535 ? magnitude : -1),\n                     \"servname.digits\");\n    /* A whole string that is white space, a sign and digits gives its value when that is a port\n       number and -1 otherwise. */\n    __CPROVER_assert(!up || (long long)shown == (number >= 0 && number <= 65535 ? number : -1), \"servname.value\");\n    /* The empty string gives -1. */\n    __CPROVER_assert(count != 0 || shown == -1, \"servname.empty\");\n    /* A number followed by any other character, also white space, gives -1. */\n    __CPROVER_assert(!(digits > 0 && pos < count) || shown == -1, \"servname.trailing\");\n    /* A string without a digit after the optional white space and sign gives -1. */\n    __CPROVER_assert(digits > 0 || shown == -1, \"servname.no_digits\");\n",
+  "assertions": [
+    "servname.range",
+    "servname.digits",
+    "servname.value",
+    "servname.empty",
+    "servname.trailing",
+    "servname.no_digits"
+  ],
+  "assumptions": 12,
+  "loops": 2,
+  "unwind": 12,
+  "input_domain": "every string of 0 to 11 characters, each of any value except 0, followed by the terminator; the characters after the terminator are of any value",
+  "limitations": "parse_numeric_servname alone, for strings of at most 11 characters; callers, locale and errno are not examined; the model reads strtol as the stand-in in the prelude, which is exact for base 10 only and does not set errno, and the replay of a counterexample calls the C library; the expected value is computed for white space, a sign and decimal digits as C11 7.22.1.4 reads them, and the case does not say that the function should accept white space or a sign; a bound of 12 on every loop"
+}
