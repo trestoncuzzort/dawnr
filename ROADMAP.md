@@ -9,6 +9,13 @@ As of 2026-10-17, whole-system control is out of scope. Repository and document
 tools support the coding, reasoning, training, and verification work. Desktop
 automation and host administration are no longer product goals.
 
+## The native gate (2026-11-05)
+
+The CBMC gate over real C functions no longer reads a hang or a stop as proved, and no longer reads a limit of its model as a
+defect ([correction](CORRECTIONS.md)). A function that allocates can now be checked, inputs can be bounded arrays and strings,
+per-loop bounds are found by search, and a `complete` verdict can carry a proof checked by a separate program. All 29
+published suite rows came back the same. [The guide](t/NATIVE-CASES.md), [the limits](LIMITS.md#on-the-native-gate).
+
 ## Incremental updates (2026-10-25 UTC)
 
 dawnr is updated as dawnr MAJOR.MINOR.PATCH ([release/ROLLING.md](release/ROLLING.md)). Tested improvements to the

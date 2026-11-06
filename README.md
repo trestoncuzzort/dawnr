@@ -28,7 +28,7 @@ automatically; the first installation downloads several gigabytes.
 Use `dawnr` for an interactive session, `dawnr help ask` for checked-code
 examples, or the [user guide](docs/USER-GUIDE.md) for setup and troubleshooting.
 You can read `./bin/dawnr --help` before installing anything.
-Downloads come from the [latest versioned release](release/ROLLING.md), now **dawnr 6.0.1**
+Downloads come from the [latest versioned release](release/ROLLING.md), now **dawnr 6.0.2**
 ([model card](release/MODEL-CARD-dawnr-6.0.md)). Its model is the one first released on October 5, unchanged; the
 next model is in training as the 6.1.0 candidate and ships only if it beats this one (see the model status below).
 `dawnr version` prints the release a checkout is.
@@ -41,7 +41,7 @@ next model is in training as the 6.1.0 candidate and ships only if it beats this
 | Specification checks | Checks contracts against examples and reference behavior; mutates programs and outputs to find wrong results a contract still allows. | [`t/spec_gate.py`](t/spec_gate.py), [`t/spec_check.py`](t/spec_check.py), [`t/audit.py`](t/audit.py) |
 | Executable comparisons | Compiles generated C or Dafny/Python and compares it with the interpreter. Separately checks C contracts and overflow obligations at machine width. | [`t/build.py`](t/build.py), [`t/ship.py`](t/ship.py) |
 | PX4 checks | Models selected routines, records failing inputs and fixes, and compares them with compiled functions or extracted statements from checksum-verified source. Optional receipts identify each bounded run. | [`t/flight/`](t/flight/README.md) |
-| Native safety pilot | Uses CBMC to check the pinned original and fixed PX4 `wrap_bin` definitions under explicit 32-bit assumptions, with compiled counterexample replay and controls for vacuity and incomplete loop unwinding. | [`t/native_check.py`](t/native_check.py), [measured scope](t/PREDICT-2026-10-10-native-cbmc.md) |
+| Native checks | Uses CBMC to check real C functions, pinned by hash and described by case files, under a stated 32-bit or 64-bit machine model. A counterexample is replayed natively under sanitizers. A `complete` verdict needs reachable assumptions, sufficient bounds and no execution that stops or hangs, and can carry a proof checked by a separate program. | [`t/native_case.py`](t/native_case.py), [guide](t/NATIVE-CASES.md), [cases](t/native_fixtures/), [limits](LIMITS.md#on-the-native-gate) |
 | Training and evaluation | Filters generated answers, assembles corpora, trains or fine-tunes models, and evaluates them with recorded splits, input hashes, and per-stage results. | [`t/student_rows.py`](t/student_rows.py), [`locallm/dawnr_pipeline.py`](locallm/dawnr_pipeline.py), [`locallm/dawnr_report.py`](locallm/dawnr_report.py) |
 | Local assistant | Reads files, proposes edits, journals changes, runs sandboxed commands, and uses retrieval, memory, and external tools. | [`locallm/dawnr_cli.py`](locallm/dawnr_cli.py), [`locallm/dawnr_agent/`](locallm/dawnr_agent/), [`locallm/dawnr_harness/`](locallm/dawnr_harness/) |
 | Documents and arithmetic | Answers with quotations from supplied files, extracts fields from source text, and compares a model's numerical answer with separately generated workings evaluated exactly. | [`locallm/cite_docs.py`](locallm/cite_docs.py), [`locallm/extract_docs.py`](locallm/extract_docs.py), [`locallm/calc.py`](locallm/calc.py) |
@@ -218,8 +218,8 @@ python3 t/refute_at.py t/flight/findings/px4_wrap_bin_any.t \
 python3 t/flight/px4_diff.py --table /tmp/dawnr-px4-diff.md \
   --receipt /tmp/dawnr-px4-diff.json
 
-# Experimental native safety check; requires CBMC 6.11.0 and a C preprocessor.
-python3 t/native_check.py --case fixed --out /tmp/dawnr-native-fixed
+# Native checks of real C functions; requires CBMC 6.11.0 and a C compiler. See t/NATIVE-CASES.md.
+python3 t/native_case.py t/native_fixtures/libuv-utf8-decode1 --suite --out /tmp/dawnr-native-suite
 ```
 
 The engine CLI also exposes lowering, contract repair, compiled-output comparisons, and machine-width checks:

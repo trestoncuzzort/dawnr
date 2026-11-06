@@ -156,3 +156,110 @@ def test_real_cbmc_pilot(case, unwind, verdict, tmp_path):
     if case in ("original", "mutant") and shutil.which("gcc"):
         statuses = {witness["status"] for witness in result["native_replay"]["witnesses"]}
         assert {"range_counterexample", "undefined_behavior"} <= statuses
+
+
+def fail_with(checking, result):
+    """Add a failed property and make the terminal status and the exit code agree with it."""
+    edit(checking, lambda d: d[0]["result"].append(result))
+    edit(checking, lambda d: d[-1].update(cProverStatus="failure"))
+    checking["exit"] = 10
+
+
+def traced(name, description=""):
+    return {"property": name, "description": description, "status": "FAILURE", "trace": [{"stepType": "failure", "property": name}]}
+
+
+def test_a_recursion_bound_is_not_a_counterexample():
+    inventory, coverage, checking, scope = sample()
+    fail_with(checking, traced("depth.recursion", "recursion unwinding assertion"))
+    assert native.interpret(inventory, coverage, checking, scope)["verdict"] == "incomplete"
+
+
+def test_a_recursion_property_counts_as_a_bound_and_is_not_replayed():
+    inventory, coverage, checking, scope = sample()
+    edit(checking, lambda d: d[0]["result"].append({"property": "depth.recursion", "status": "SUCCESS"}))
+    scope["expected_loops"] = 1
+    assert native.interpret(inventory, coverage, checking, scope)["verdict"] == "complete"
+    assert native.bound_property({"property": "depth.recursion"}) and native.bound_property({"property": "f.unwind.3"})
+    assert not native.bound_property({"property": "harness.assertion.1"}) and not native.bound_property({"property": "recursion.overflow.1"})
+    assert native.witnesses({"properties": [{**traced("depth.recursion"), "trace": []}, {**traced("f.no-body.g"), "trace": []}]}) == []
+
+
+def test_a_real_failure_beside_a_short_bound_is_still_a_counterexample():
+    inventory, coverage, checking, scope = sample()
+    fail_with(checking, traced("depth.recursion"))
+    fail_with(checking, traced("harness.overflow.1"))
+    assert native.interpret(inventory, coverage, checking, scope)["verdict"] == "counterexample"
+
+
+def test_a_callee_without_a_body_is_incomplete_and_named_even_beside_another_failure():
+    for others in ([], [traced("harness.overflow.1")]):
+        inventory, coverage, checking, scope = sample()
+        fail_with(checking, traced("harness.no-body.helper", "no body for callee helper"))
+        for other in others:
+            fail_with(checking, other)
+        result = native.interpret(inventory, coverage, checking, scope)
+        assert result["verdict"] == "incomplete" and "helper" in result["reason"]
+
+
+def library_goals(coverage, status="failed", file="<builtin-library-malloc>"):
+    edit(coverage, lambda d: d[0]["goals"].extend([
+        {"goal": "malloc.coverage.1", "description": "max allocation size exceeded", "sourceLocation": {"file": file, "function": "malloc", "line": "31"}, "status": status},
+        {"goal": "malloc.coverage.2", "description": "max allocation may fail", "sourceLocation": {"file": file, "function": "malloc", "line": "36"}, "status": status}]))
+    edit(coverage, lambda d: d[0].update(totalGoals=4, goalsCovered=2 + (2 if status == "satisfied" else 0)))
+
+
+def test_assumptions_in_a_library_model_are_recorded_apart():
+    inventory, coverage, checking, scope = sample()
+    library_goals(coverage)
+    result = native.interpret(inventory, coverage, checking, scope)
+    assert result["verdict"] == "complete" and len(result["assumption_goals"]) == 2 and len(result["library_assumption_goals"]) == 2
+
+
+def test_a_library_goal_does_not_stand_in_for_a_harness_assumption():
+    inventory, coverage, checking, scope = sample()
+    library_goals(coverage)
+    scope["expected_assumptions"] = 2  # the harness has one, and the two library goals must not make up the second
+    assert native.interpret(inventory, coverage, checking, scope)["verdict"] == "tool_error"
+    inventory, coverage, checking, scope = sample()
+    library_goals(coverage, status="satisfied")
+    edit(coverage, lambda d: d[0]["goals"][1].update(status="failed"))
+    edit(coverage, lambda d: d[0].update(goalsCovered=3))
+    assert native.interpret(inventory, coverage, checking, scope)["verdict"] == "vacuous"
+
+
+def test_a_goal_outside_the_library_is_counted_as_the_harness_s_own():
+    inventory, coverage, checking, scope = sample()
+    library_goals(coverage, file="builtin-library-malloc")
+    assert native.interpret(inventory, coverage, checking, scope)["verdict"] == "tool_error"
+
+
+def test_running_out_of_memory_is_a_named_nonresult():
+    inventory, coverage, checking, scope = sample()
+    coverage.update(exit=6, stdout=json.dumps([{"messageType": "ERROR", "messageText": "Out of memory"}]))
+    assert native.interpret(inventory, coverage, checking, scope)["verdict"] == "out_of_memory"
+    # The same words in a successful run are only words.
+    inventory, coverage, checking, scope = sample()
+    edit(checking, lambda d: d.insert(0, {"messageType": "STATUS-MESSAGE", "messageText": "Out of memory"}))
+    assert native.interpret(inventory, coverage, checking, scope)["verdict"] == "complete"
+
+
+def test_a_tool_error_carries_the_tool_s_own_message():
+    inventory, coverage, checking, scope = sample()
+    edit(checking, lambda d: d.append({"messageType": "ERROR", "messageText": "too many addressed objects"}))
+    result = native.interpret(inventory, coverage, checking, scope)
+    assert result["verdict"] == "tool_error" and "too many addressed objects" in result["reason"]
+
+
+@pytest.mark.skipif(not native.MEMORY_LIMIT_ENFORCED, reason="the address space limit is enforced on Linux")
+def test_the_memory_ceiling_stops_a_child_and_only_when_asked(tmp_path):
+    code = "b = bytearray(1024 * 1024 * 1024); print(len(b))"
+    assert native.run_process([sys.executable, "-c", code], tmp_path, 60)["stdout"].strip() == str(1024 ** 3)
+    capped = native.run_process([sys.executable, "-c", code], tmp_path, 60, memory_limit_mb=256)
+    assert capped["exit"] != 0 and "MemoryError" in capped["stderr"]
+
+
+def test_where_the_ceiling_is_not_enforced_the_run_still_happens(tmp_path, monkeypatch):
+    monkeypatch.setattr(native, "MEMORY_LIMIT_ENFORCED", False)
+    run = native.run_process([sys.executable, "-c", "print('ran')"], tmp_path, 60, memory_limit_mb=1)
+    assert run["exit"] == 0 and run["stdout"].strip() == "ran"

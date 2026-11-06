@@ -4,6 +4,17 @@ Published claims that turned out to be wrong, and what they are now. They are
 kept here rather than quietly fixed, because a project that only reports its
 successful measurements is not measuring anything.
 
+- **The native gate read a hang as proved, and a limit of its model as a defect (2026-11-05).**
+  A function that spun in `while (c) ;`, or called `abort`, `exit` or `_Exit`, or reached `__builtin_unreachable`, on some
+  input got `complete` on an assertion that it returned, because CBMC ends those executions with no property and no
+  sign. In the other direction, a recursion bound that was too short and a callee with no body gave `counterexample` on
+  correct code. Both are fixed. A stop now fails a property and gives a counterexample with a replayed witness, a loop that
+  never ends gives `incomplete`, and a limit of the model gives `incomplete` and names itself. No published result moved:
+  all 29 suite rows of the 8 published cases come back the same on two SAT solvers, so none of the upstream pull requests
+  that cite those cases rested on either fault. The first version of one fix made `pthread_exit` read as proved where it
+  had been a tool error, and a probe written to test for exactly that caught it before anything was published.
+  [Measurements](t/PREDICT-2026-11-05-native-gate-model-gaps.md), [receipts](t/evidence/native-gate-2026-11-05/).
+
 - **A pending remote result was reported as live training (2026-10-30).**
   The second seed's result poll kept returning a timeout after its GPU container
   had terminated. That timeout established only that the result was unavailable.

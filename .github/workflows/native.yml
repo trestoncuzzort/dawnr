@@ -1,0 +1,102 @@
+name: native gate
+
+# The CBMC gate over pinned C functions. Its tests skip without CBMC, so without this job a
+# change to the gate would never meet the real tool on CI. The published cases are rerun too:
+# they back open pull requests upstream, so a gate change must not move their results.
+on:
+  push:
+    branches: [main, work/native-cases]
+    paths:
+      - t/native_*.py
+      - t/test_native_*.py
+      - t/native_fixtures/**
+      - t/build_certify_tools.sh
+      - .github/workflows/native.yml
+  pull_request:
+    branches: [main]
+    paths:
+      - t/native_*.py
+      - t/test_native_*.py
+      - t/native_fixtures/**
+      - t/build_certify_tools.sh
+      - .github/workflows/native.yml
+
+permissions:
+  contents: read
+
+jobs:
+  real-tool:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    steps:
+      - name: check out the repository
+        uses: actions/checkout@v4
+
+      - name: set up python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: install pytest
+        run: python -m pip install pytest
+
+      - name: install the pinned CBMC
+        # The digest is the one GitHub publishes for this release asset, and the one recorded
+        # in t/PREDICT-2026-11-05-native-cases.md. The gate refuses any other version.
+        run: |
+          curl -fsSL -o cbmc.deb https://github.com/diffblue/cbmc/releases/download/cbmc-6.11.0/ubuntu-24.04-cbmc-6.11.0-Linux.deb
+          echo 'b3721aa541038384d7801ea3aeabbcddc3e8845ac8f1cbff637cf8dec7481ac8  cbmc.deb' | sha256sum -c -
+          dpkg-deb -x cbmc.deb "$RUNNER_TEMP/cbmc"
+          echo "CBMC=$RUNNER_TEMP/cbmc/usr/bin/cbmc" >> "$GITHUB_ENV"
+
+      - name: build the pinned solver and proof checker
+        run: |
+          bash t/build_certify_tools.sh "$RUNNER_TEMP/certify"
+          echo "CADICAL=$RUNNER_TEMP/certify/cadical" >> "$GITHUB_ENV"
+          echo "LRAT_CHECK=$RUNNER_TEMP/certify/lrat-check" >> "$GITHUB_ENV"
+
+      - name: the gate's controls with the real tools
+        working-directory: t
+        run: |
+          "$CBMC" --version
+          python -m pytest -q -p no:cacheprovider test_native_check.py test_native_case.py
+
+      # CaDiCaL, because MiniSat takes about three times as long here. A different solver may find a different
+      # witness, so the comparison asks only that a confirmed witness still exists.
+      - name: the published cases have not moved, and their verdicts are certified
+        run: |
+          python t/native_fixture_check.py --cbmc "$CBMC" --out "$RUNNER_TEMP/fixtures" --timeout 1500 --solver cadical \
+            --memory-limit-mb 6144 --cadical "$CADICAL" --lrat-check "$LRAT_CHECK"
+
+      - name: keep the comparison
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: native-fixture-check
+          path: ${{ runner.temp }}/fixtures/fixture-check.json
+          if-no-files-found: warn
+
+  # The parts that need no model checker, where the other job does not reach: the oldest
+  # Python the project supports, and the platforms where the memory limit is not enforced.
+  portable:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macos-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 10
+    steps:
+      - name: check out the repository
+        uses: actions/checkout@v4
+
+      - name: set up python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.10"
+
+      - name: install pytest
+        run: python -m pip install pytest
+
+      - name: the gate's controls without the tool
+        working-directory: t
+        run: python -m pytest -q -p no:cacheprovider test_native_check.py test_native_case.py

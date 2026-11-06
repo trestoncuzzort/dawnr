@@ -117,6 +117,24 @@ a reader reaching a particular paragraph. The headline is in
   sequences, loops with invariants and recursive specification functions. No
   heap, no floats, no concurrency.
 
+## On the native gate
+
+`t/native_case.py` checks real C functions with CBMC. It is separate from the seven kernels and adds nothing to
+their counts. The guide is `t/NATIVE-CASES.md`.
+
+- `complete` covers the stated inputs, properties and machine model. It says nothing about callers, other
+  configurations, concurrency, hardware, timing or the rest of the file. A bound is a bound.
+- CBMC's translation of C to a formula is trusted in every result. The SAT solver is also trusted unless the verdict
+  carries a certificate, and a certificate does not cover that translation or the coverage stage.
+- The default checks do not flag reading uninitialized memory, out-of-range pointer arithmetic before the pointer is
+  used, or strict aliasing violations. The measured list is in the guide. `complete` does not mean free of undefined
+  behaviour.
+- A case's harness and its stand-ins for library functions are written by a person or a model and read by a person.
+  CBMC's own library models can also narrow what they return. Assumptions in them are listed in each receipt, and
+  they are not checked against the C library.
+- Each stop this gate knows of is made a failing property, and the list came from reading CBMC's library at the pinned
+  tag. A stop found in no such list, or a stop a case allows by name, ends an execution with no property.
+
 ## On the training side
 
 - Pretraining the core did not help this pipeline. A 92M core pretrained on 46M

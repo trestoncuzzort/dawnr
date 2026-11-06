@@ -19,6 +19,7 @@ import re
 import shutil
 import signal
 import subprocess
+import sys
 import time
 
 FIXTURES = Path(__file__).resolve().parent / "native_fixtures" / "px4-wrap-bin"
@@ -28,8 +29,11 @@ SOURCES = {
     "fixed": ("07d30f9341dc02720eac2ed6fb9ee7524f8bd713", "d01b82d5cb76ae8449a3d0411c9a4dadf6c905ef44cce419f7d63cd9090fb8c2"),
 }
 CASES = ("original", "fixed", "mutant", "vacuous", "loop")
-MODEL = ["--function", "harness", "--32", "--little-endian"]
-CHECKS = ["--bounds-check", "--pointer-check", "--signed-overflow-check", "--div-by-zero-check",
+# Without the flag CBMC turns `while (c) ;` into an assumption during symbolic execution: a hang on some
+# input vanishes from the model, and no coverage goal can show it (src/goto-symex/symex_goto.cpp at cbmc-6.11.0).
+KEEP_SELF_LOOPS = ["--no-self-loops-to-assumptions"]
+MODEL = ["--function", "harness", "--32", "--little-endian", *KEEP_SELF_LOOPS]
+CHECKS =["--bounds-check", "--pointer-check", "--signed-overflow-check", "--div-by-zero-check",
           "--undefined-shift-check", "--conversion-check", "--retain-trivial-checks"]
 
 
@@ -97,11 +101,26 @@ void harness(void) {
     return unit, scope, definition
 
 
-def run_process(argv: list[str], cwd: Path, timeout: float) -> dict:
-    """Keep each invocation bounded; timeout kills its whole process group."""
+MEMORY_LIMIT_ENFORCED = sys.platform == "linux"  # macOS does not enforce RLIMIT_AS, and Windows has no such limit
+
+
+def address_space_cap(limit_mb: int):
+    """A hook run in the child: an allocation past the ceiling fails, and CBMC reports it and exits."""
+    def apply() -> None:
+        import resource  # Linux only, and this hook only runs there
+        _, hard = resource.getrlimit(resource.RLIMIT_AS)
+        wanted = limit_mb * 1024 * 1024
+        resource.setrlimit(resource.RLIMIT_AS, (wanted if hard == resource.RLIM_INFINITY else min(wanted, hard), hard))
+    return apply
+
+
+def run_process(argv: list[str], cwd: Path, timeout: float, memory_limit_mb: int | None = None) -> dict:
+    """Keep each invocation bounded; timeout kills its whole process group. A memory limit is for
+    the model checker only: AddressSanitizer reserves far more address space than it uses."""
     start = time.monotonic()
+    capped = address_space_cap(memory_limit_mb) if memory_limit_mb and MEMORY_LIMIT_ENFORCED else None
     try:
-        process = subprocess.Popen(argv, cwd=cwd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, start_new_session=True)
+        process = subprocess.Popen(argv, cwd=cwd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, start_new_session=True, preexec_fn=capped)
     except OSError as error:
         return {"state": "absent" if isinstance(error, FileNotFoundError) else "tool_error", "error": type(error).__name__,
                 "exit": None, "stdout": "", "stderr": "", "seconds": 0.0}
@@ -111,7 +130,10 @@ def run_process(argv: list[str], cwd: Path, timeout: float) -> dict:
     except subprocess.TimeoutExpired:
         state = "timeout"
         try:
-            os.killpg(process.pid, signal.SIGKILL)
+            if hasattr(os, "killpg"):
+                os.killpg(process.pid, signal.SIGKILL)
+            else:  # Windows has no process groups in this sense; the checker has no children there
+                process.kill()
         except ProcessLookupError:
             pass
         stdout, stderr = process.communicate()
@@ -125,8 +147,9 @@ def document(run: dict) -> list[dict]:
     data = json.loads(run["stdout"])
     if not isinstance(data, list) or not data or any(not isinstance(row, dict) for row in data):
         raise ValueError("invalid JSON event list")
-    if any(row.get("messageType") == "ERROR" for row in data):
-        raise ValueError("CBMC reported a parser or tool error")
+    errors = [str(row.get("messageText", "")) for row in data if row.get("messageType") == "ERROR"]
+    if errors:
+        raise ValueError("CBMC reported a parser or tool error: " + "; ".join(errors)[:400])
     return data
 
 
@@ -148,13 +171,42 @@ def clean(value):
     return value
 
 
+def bound_property(result: dict) -> bool:
+    """A limit of the bound, not a defect. `f.unwind.N` is a loop and `f.recursion` a recursive call:
+    src/goto-symex/symex_goto.cpp and symex_function_call.cpp at cbmc-6.11.0."""
+    name = str(result.get("property", ""))
+    return result.get("sourceLocation", {}).get("propertyClass") == "unwind" or ".unwind." in name or name.endswith(".recursion")
+
+
+def body_missing(result: dict) -> bool:
+    """Not modelled, so nothing past the call means anything: `f.no-body.g`, where f calls g and g has no
+    definition, and the longjmp family, whose models refuse with an assertion (src/ansi-c/library/setjmp.c)."""
+    return ".no-body." in str(result.get("property", "")) or str(result.get("description", "")).endswith("requires instrumentation")
+
+
+def out_of_memory(run: dict) -> bool:
+    """CBMC catches the failed allocation, reports it and exits 6."""
+    return run.get("exit") == 6 and '"Out of memory"' in run.get("stdout", "")
+
+
+def library_goal(goal: dict) -> bool:
+    """An assumption inside one of CBMC's own library models, such as malloc. It is a modelling
+    choice of the tool, and it can sit on a branch this harness never takes, so it says nothing
+    about the harness; the end marker still has to be reachable through it."""
+    return str(goal.get("sourceLocation", {}).get("file", "")).startswith("<builtin-library-")
+
+
 def interpret(inventory: dict, coverage: dict, checking: dict, scope: dict) -> dict:
     for run in (inventory, coverage, checking):
         if run["state"] != "finished":
             return {"verdict": run["state"], "reason": "a required CBMC stage did not finish"}
+        if out_of_memory(run):
+            return {"verdict": "out_of_memory", "reason": "a required CBMC stage ran out of its memory limit"}
     try:
         listed, covered, checked = document(inventory), document(coverage), document(checking)
-        props, goals, results = rows(listed, "properties"), rows(covered, "goals"), rows(checked, "result")
+        props, every_goal, results = rows(listed, "properties"), rows(covered, "goals"), rows(checked, "result")
+        goals = [goal for goal in every_goal if not library_goal(goal)]
+        library = [goal for goal in every_goal if library_goal(goal)]
         expected = [prop["name"] for prop in props]
         actual = [result["property"] for result in results]
         if len(set(expected)) != len(expected) or len(set(actual)) != len(actual) or not set(expected) <= set(actual):
@@ -164,9 +216,9 @@ def interpret(inventory: dict, coverage: dict, checking: dict, scope: dict) -> d
         if inventory["exit"] != 0 or coverage["exit"] != 0:
             raise ValueError("inventory or coverage process failed")
         total = next(row for row in covered if "goals" in row)
-        if len(goals) != 2 * scope["expected_assumptions"] or total.get("totalGoals") != len(goals):
+        if len(goals) != 2 * scope["expected_assumptions"] or total.get("totalGoals") != len(every_goal):
             raise ValueError("assumption coverage is incomplete")
-        if len({goal.get("goal") for goal in goals}) != len(goals):
+        if len({goal.get("goal") for goal in every_goal}) != len(every_goal):
             raise ValueError("duplicate assumption coverage goals")
         paired = {}
         for goal in goals:
@@ -177,9 +229,9 @@ def interpret(inventory: dict, coverage: dict, checking: dict, scope: dict) -> d
             paired.setdefault(key, []).append(side)
         if len(paired) != scope["expected_assumptions"] or any(sorted(pair) != ["after", "before"] for pair in paired.values()):
             raise ValueError("assumption coverage lacks complete before/after pairs")
-        if any(goal.get("status") not in ("satisfied", "failed") for goal in goals):
+        if any(goal.get("status") not in ("satisfied", "failed") for goal in every_goal):
             raise ValueError("unknown assumption coverage status")
-        if total.get("goalsCovered") != sum(goal["status"] == "satisfied" for goal in goals):
+        if total.get("goalsCovered") != sum(goal["status"] == "satisfied" for goal in every_goal):
             raise ValueError("inconsistent assumption coverage totals")
         terminal = [row["cProverStatus"] for row in checked if "cProverStatus" in row]
         statuses = {result.get("status") for result in results}
@@ -189,9 +241,15 @@ def interpret(inventory: dict, coverage: dict, checking: dict, scope: dict) -> d
         if terminal != (["failure"] if failed else ["success"]) or checking["exit"] != (10 if failed else 0):
             raise ValueError("property outcomes contradict terminal status or process exit")
         detail = {"properties": clean(results), "assumption_goals": clean(goals)}
+        if library:
+            detail["library_assumption_goals"] = clean(library)
         if any(goal["status"] != "satisfied" for goal in goals):
             return {**detail, "verdict": "vacuous", "reason": "assumption coverage has an unreachable before/after goal"}
-        unwind = [result for result in results if result.get("sourceLocation", {}).get("propertyClass") == "unwind" or ".unwind." in result["property"]]
+        missing = [result for result in failed if body_missing(result)]
+        if missing:
+            return {**detail, "verdict": "incomplete", "reason": "no body for a callee, so nothing past the call is modelled: "
+                    + ", ".join(sorted(result["property"].split(".no-body.")[-1] for result in missing))[:300]}
+        unwind = [result for result in results if bound_property(result)]
         ordinary = [result for result in failed if result not in unwind]
         if ordinary:
             if any(not any(step.get("stepType") == "failure" and step.get("property") == result["property"]
@@ -210,7 +268,7 @@ def interpret(inventory: dict, coverage: dict, checking: dict, scope: dict) -> d
 def witnesses(result: dict) -> list[dict]:
     found = []
     for prop in result.get("properties", []):
-        if prop.get("status") != "FAILURE" or ".unwind." in prop["property"]:
+        if prop.get("status") != "FAILURE" or bound_property(prop) or body_missing(prop):
             continue
         values = {}
         for step in prop.get("trace", []):

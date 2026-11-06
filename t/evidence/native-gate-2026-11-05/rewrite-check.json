@@ -1,0 +1,336 @@
+{
+  "format": "dawnr-native-case-v1-rewrite-check",
+  "report": [
+    {
+      "assumptions": [
+        1,
+        0
+      ],
+      "by_hand": [
+        {
+          "confirmed_witnesses": 1,
+          "ok": true,
+          "properties": 282,
+          "seconds": 0.19,
+          "unwind": 4,
+          "variant": "original",
+          "verdict": "counterexample"
+        },
+        {
+          "confirmed_witnesses": 0,
+          "ok": true,
+          "properties": 282,
+          "seconds": 0.68,
+          "unwind": 4,
+          "variant": "fixed",
+          "verdict": "complete"
+        },
+        {
+          "confirmed_witnesses": 0,
+          "ok": true,
+          "properties": 282,
+          "seconds": 0.3,
+          "unwind": 4,
+          "variant": "vacuous",
+          "verdict": "vacuous"
+        }
+      ],
+      "case": "libuv-utf8-decode1",
+      "failing_properties": [
+        "harness.assertion.3"
+      ],
+      "fixed_seconds": [
+        0.68,
+        0.4
+      ],
+      "fixed_time_ratio": 0.59,
+      "harness_lines": [
+        29,
+        22
+      ],
+      "rewritten": [
+        {
+          "confirmed_witnesses": 1,
+          "ok": true,
+          "properties": 284,
+          "seconds": 0.2,
+          "unwind": 4,
+          "variant": "original",
+          "verdict": "counterexample"
+        },
+        {
+          "confirmed_witnesses": 0,
+          "ok": true,
+          "properties": 284,
+          "seconds": 0.4,
+          "unwind": 4,
+          "variant": "fixed",
+          "verdict": "complete"
+        },
+        {
+          "confirmed_witnesses": 0,
+          "ok": true,
+          "properties": 284,
+          "seconds": 0.14,
+          "unwind": 4,
+          "variant": "vacuous",
+          "verdict": "vacuous"
+        }
+      ],
+      "same_verdicts": true,
+      "witness_arrays": [
+        {
+          "s": {
+            "elements": [
+              "f1",
+              "8e"
+            ],
+            "length": 2
+          }
+        }
+      ],
+      "witness_statuses": [
+        "assertion_failed"
+      ]
+    },
+    {
+      "assumptions": [
+        0,
+        0
+      ],
+      "by_hand": [
+        {
+          "confirmed_witnesses": 2,
+          "ok": true,
+          "properties": 240,
+          "seconds": 1.19,
+          "unwind": 12,
+          "variant": "original",
+          "verdict": "counterexample"
+        },
+        {
+          "confirmed_witnesses": 0,
+          "ok": true,
+          "properties": 241,
+          "seconds": 313.12,
+          "unwind": 12,
+          "variant": "fixed",
+          "verdict": "complete"
+        },
+        {
+          "confirmed_witnesses": 0,
+          "ok": true,
+          "properties": 241,
+          "seconds": 0.16,
+          "unwind": 12,
+          "variant": "vacuous",
+          "verdict": "vacuous"
+        }
+      ],
+      "case": "flac-metaflac-parse-uint32",
+      "failing_properties": [
+        "harness.assertion.2",
+        "harness.assertion.5"
+      ],
+      "fixed_seconds": [
+        313.12,
+        193.37
+      ],
+      "fixed_time_ratio": 0.62,
+      "harness_lines": [
+        43,
+        37
+      ],
+      "rewritten": [
+        {
+          "confirmed_witnesses": 2,
+          "ok": true,
+          "properties": 525,
+          "seconds": 1.43,
+          "unwind": 12,
+          "variant": "original",
+          "verdict": "counterexample"
+        },
+        {
+          "confirmed_witnesses": 0,
+          "ok": true,
+          "properties": 526,
+          "seconds": 193.37,
+          "unwind": 12,
+          "variant": "fixed",
+          "verdict": "complete"
+        },
+        {
+          "confirmed_witnesses": 0,
+          "ok": true,
+          "properties": 523,
+          "seconds": 0.24,
+          "unwind": 12,
+          "variant": "vacuous",
+          "verdict": "vacuous"
+        }
+      ],
+      "same_verdicts": true,
+      "witness_arrays": [
+        {
+          "text": {
+            "elements": [
+              "37",
+              "39",
+              "36",
+              "30",
+              "39",
+              "38",
+              "35",
+              "36",
+              "34",
+              "35"
+            ],
+            "length": 10
+          }
+        },
+        {
+          "text": {
+            "elements": [
+              "36",
+              "38",
+              "37",
+              "33",
+              "36",
+              "32",
+              "32",
+              "35",
+              "32",
+              "31",
+              "36"
+            ],
+            "length": 11
+          }
+        }
+      ],
+      "witness_statuses": [
+        "assertion_failed",
+        "assertion_failed"
+      ]
+    },
+    {
+      "assumptions": [
+        12,
+        0
+      ],
+      "by_hand": [
+        {
+          "confirmed_witnesses": 1,
+          "ok": true,
+          "properties": 140,
+          "seconds": 6.51,
+          "unwind": 12,
+          "variant": "original",
+          "verdict": "counterexample"
+        },
+        {
+          "confirmed_witnesses": 0,
+          "ok": true,
+          "properties": 140,
+          "seconds": 23.1,
+          "unwind": 12,
+          "variant": "fixed",
+          "verdict": "complete"
+        },
+        {
+          "confirmed_witnesses": 0,
+          "ok": true,
+          "properties": 138,
+          "seconds": 0.15,
+          "unwind": 12,
+          "variant": "vacuous",
+          "verdict": "vacuous"
+        },
+        {
+          "confirmed_witnesses": 0,
+          "ok": true,
+          "properties": 142,
+          "seconds": 0.17,
+          "unwind": 1,
+          "variant": "fixed",
+          "verdict": "incomplete"
+        }
+      ],
+      "case": "libevent-servname-port-range",
+      "failing_properties": [
+        "harness.assertion.3"
+      ],
+      "fixed_seconds": [
+        23.1,
+        14.85
+      ],
+      "fixed_time_ratio": 0.64,
+      "harness_lines": [
+        62,
+        43
+      ],
+      "rewritten": [
+        {
+          "confirmed_witnesses": 1,
+          "ok": true,
+          "properties": 239,
+          "seconds": 9.52,
+          "unwind": 12,
+          "variant": "original",
+          "verdict": "counterexample"
+        },
+        {
+          "confirmed_witnesses": 0,
+          "ok": true,
+          "properties": 239,
+          "seconds": 14.85,
+          "unwind": 12,
+          "variant": "fixed",
+          "verdict": "complete"
+        },
+        {
+          "confirmed_witnesses": 0,
+          "ok": true,
+          "properties": 235,
+          "seconds": 0.18,
+          "unwind": 12,
+          "variant": "vacuous",
+          "verdict": "vacuous"
+        },
+        {
+          "confirmed_witnesses": 0,
+          "ok": true,
+          "properties": 239,
+          "seconds": 0.38,
+          "unwind": 1,
+          "variant": "fixed",
+          "verdict": "incomplete"
+        }
+      ],
+      "same_verdicts": true,
+      "witness_arrays": [
+        {
+          "text": {
+            "elements": [
+              "36",
+              "38",
+              "37",
+              "31",
+              "39",
+              "35",
+              "33",
+              "38",
+              "35",
+              "31",
+              "31"
+            ],
+            "length": 11
+          }
+        }
+      ],
+      "witness_statuses": [
+        "assertion_failed"
+      ]
+    }
+  ]
+}

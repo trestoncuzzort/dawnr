@@ -24,6 +24,12 @@ and its 114-task Frama-C column was unchanged. See the
 [measurement](PREDICT-2026-10-25-framac-certificate-binding.md).
 Candidate comparison requires refreshed dawnr baseline and specification controls using this evaluator.
 
+The native gate (`native_check.py`, `native_case.py`, `native_fixture_check.py`, `native_rewrite_check.py`, `build_certify_tools.sh`,
+`NATIVE-CASES.md`, their tests, predictions and evidence) is imported from engine commit
+`a7c029beb6d2adc31a2b7583c23e457e01bb7b03` as a per-file update, so the base pin above still does not imply a full
+synchronization. The published cases under `native_fixtures/`, other than `px4-wrap-bin`, are dawnr's: they back pull requests
+opened upstream and link here. The repository is now named t-language and is private, and the old name redirects.
+
 - **Engine changes land in t-proof-engine first.** Then `bash t/sync_engine.sh` brings them here and moves the
   pin above. It overwrites every file the engine tracks under `t/` and deletes the ones it dropped.
 - **dawnr owns `t/requirements.txt`**, although the engine has a file of the same name. dawnr's pipeline needs

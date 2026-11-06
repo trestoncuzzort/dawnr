@@ -1,0 +1,543 @@
+{
+  "format": "dawnr-native-case-v1-tune",
+  "report": [
+    {
+      "attempts": 8,
+      "case": "betaflight-uvarint-encode",
+      "found": true,
+      "largest_bound": 5,
+      "model_found": {
+        "clauses": 15934,
+        "exit": 0,
+        "seconds": 0.0829,
+        "state": "finished",
+        "variables": 6018
+      },
+      "model_published": {
+        "clauses": 18189,
+        "exit": 0,
+        "seconds": 0.0853,
+        "state": "finished",
+        "variables": 6787
+      },
+      "other_failures": [],
+      "published_loops": 2,
+      "published_unwind": 6,
+      "reason": "no unwinding property fails under these bounds",
+      "rows": [
+        {
+          "confirmed_witnesses": 1,
+          "properties": 86,
+          "seconds": 0.16,
+          "unwind": 2,
+          "variant": "original",
+          "verdict": "counterexample"
+        },
+        {
+          "confirmed_witnesses": 0,
+          "properties": 86,
+          "seconds": 0.17,
+          "unwind": 2,
+          "variant": "fixed",
+          "verdict": "complete"
+        },
+        {
+          "confirmed_witnesses": 0,
+          "properties": 84,
+          "seconds": 0.1,
+          "unwind": 2,
+          "variant": "vacuous",
+          "verdict": "vacuous"
+        },
+        {
+          "confirmed_witnesses": 0,
+          "properties": 86,
+          "seconds": 0.12,
+          "unwind": 1,
+          "variant": "fixed",
+          "verdict": "incomplete"
+        }
+      ],
+      "search_seconds": 0.84,
+      "suite_ok": true,
+      "unwindset": {
+        "uvarintDecode.0": 5,
+        "uvarintEncode.0": 5
+      }
+    },
+    {
+      "attempts": 15,
+      "case": "flac-metaflac-parse-uint32",
+      "found": true,
+      "largest_bound": 12,
+      "model_found": {
+        "clauses": 87009,
+        "exit": 0,
+        "seconds": 6.194,
+        "state": "finished",
+        "variables": 24844
+      },
+      "model_published": {
+        "clauses": 87009,
+        "exit": 0,
+        "seconds": 6.3709,
+        "state": "finished",
+        "variables": 24844
+      },
+      "other_failures": [],
+      "published_loops": 0,
+      "published_unwind": 12,
+      "reason": "no unwinding property fails under these bounds",
+      "rows": [
+        {
+          "confirmed_witnesses": 2,
+          "properties": 240,
+          "seconds": 0.98,
+          "unwind": 2,
+          "variant": "original",
+          "verdict": "counterexample"
+        },
+        {
+          "confirmed_witnesses": 0,
+          "properties": 241,
+          "seconds": 6.39,
+          "unwind": 2,
+          "variant": "fixed",
+          "verdict": "complete"
+        },
+        {
+          "confirmed_witnesses": 0,
+          "properties": 241,
+          "seconds": 0.16,
+          "unwind": 2,
+          "variant": "vacuous",
+          "verdict": "vacuous"
+        }
+      ],
+      "search_seconds": 49.51,
+      "suite_ok": true,
+      "unwindset": {
+        "case_strlen.0": 12,
+        "case_strspn.0": 12,
+        "case_strtoull.0": 12
+      }
+    },
+    {
+      "attempts": 8,
+      "case": "inav-uvarint-encode",
+      "found": true,
+      "largest_bound": 5,
+      "model_found": {
+        "clauses": 15934,
+        "exit": 0,
+        "seconds": 0.0833,
+        "state": "finished",
+        "variables": 6018
+      },
+      "model_published": {
+        "clauses": 18189,
+        "exit": 0,
+        "seconds": 0.088,
+        "state": "finished",
+        "variables": 6787
+      },
+      "other_failures": [],
+      "published_loops": 2,
+      "published_unwind": 6,
+      "reason": "no unwinding property fails under these bounds",
+      "rows": [
+        {
+          "confirmed_witnesses": 1,
+          "properties": 86,
+          "seconds": 0.16,
+          "unwind": 2,
+          "variant": "original",
+          "verdict": "counterexample"
+        },
+        {
+          "confirmed_witnesses": 0,
+          "properties": 86,
+          "seconds": 0.16,
+          "unwind": 2,
+          "variant": "fixed",
+          "verdict": "complete"
+        },
+        {
+          "confirmed_witnesses": 0,
+          "properties": 84,
+          "seconds": 0.09,
+          "unwind": 2,
+          "variant": "vacuous",
+          "verdict": "vacuous"
+        },
+        {
+          "confirmed_witnesses": 0,
+          "properties": 86,
+          "seconds": 0.12,
+          "unwind": 1,
+          "variant": "fixed",
+          "verdict": "incomplete"
+        }
+      ],
+      "search_seconds": 0.9,
+      "suite_ok": true,
+      "unwindset": {
+        "uvarintDecode.0": 5,
+        "uvarintEncode.0": 5
+      }
+    },
+    {
+      "attempts": 2,
+      "case": "libcoap-opt-parse-delta",
+      "found": true,
+      "largest_bound": 2,
+      "model_found": {
+        "clauses": 1867480,
+        "exit": 0,
+        "seconds": 10.8912,
+        "state": "finished",
+        "variables": 228326
+      },
+      "model_published": {
+        "clauses": 1867480,
+        "exit": 0,
+        "seconds": 11.0198,
+        "state": "finished",
+        "variables": 228326
+      },
+      "other_failures": [],
+      "published_loops": 0,
+      "published_unwind": 4,
+      "reason": "no unwinding property fails under these bounds",
+      "rows": [
+        {
+          "confirmed_witnesses": 1,
+          "properties": 214,
+          "seconds": 14.29,
+          "unwind": 2,
+          "variant": "original",
+          "verdict": "counterexample"
+        },
+        {
+          "confirmed_witnesses": 0,
+          "properties": 207,
+          "seconds": 12.96,
+          "unwind": 2,
+          "variant": "fixed",
+          "verdict": "complete"
+        },
+        {
+          "confirmed_witnesses": 0,
+          "properties": 207,
+          "seconds": 0.12,
+          "unwind": 2,
+          "variant": "vacuous",
+          "verdict": "vacuous"
+        }
+      ],
+      "search_seconds": 22.93,
+      "suite_ok": true,
+      "unwindset": {}
+    },
+    {
+      "attempts": 16,
+      "case": "libevent-servname-port-range",
+      "found": true,
+      "largest_bound": 12,
+      "model_found": {
+        "clauses": 228173,
+        "exit": 0,
+        "seconds": 10.1579,
+        "state": "finished",
+        "variables": 55727
+      },
+      "model_published": {
+        "clauses": 228173,
+        "exit": 0,
+        "seconds": 10.3277,
+        "state": "finished",
+        "variables": 55727
+      },
+      "other_failures": [],
+      "published_loops": 2,
+      "published_unwind": 12,
+      "reason": "no unwinding property fails under these bounds",
+      "rows": [
+        {
+          "confirmed_witnesses": 1,
+          "properties": 140,
+          "seconds": 3.02,
+          "unwind": 2,
+          "variant": "original",
+          "verdict": "counterexample"
+        },
+        {
+          "confirmed_witnesses": 0,
+          "properties": 140,
+          "seconds": 10.96,
+          "unwind": 2,
+          "variant": "fixed",
+          "verdict": "complete"
+        },
+        {
+          "confirmed_witnesses": 0,
+          "properties": 138,
+          "seconds": 0.14,
+          "unwind": 2,
+          "variant": "vacuous",
+          "verdict": "vacuous"
+        },
+        {
+          "confirmed_witnesses": 0,
+          "properties": 142,
+          "seconds": 0.16,
+          "unwind": 1,
+          "variant": "fixed",
+          "verdict": "incomplete"
+        }
+      ],
+      "search_seconds": 127.29,
+      "suite_ok": true,
+      "unwindset": {
+        "case_strtol.0": 12,
+        "case_strtol.1": 12,
+        "harness.0": 12,
+        "harness.1": 12
+      }
+    },
+    {
+      "attempts": 2,
+      "case": "libuv-utf8-decode1",
+      "found": true,
+      "largest_bound": 2,
+      "model_found": {
+        "clauses": 23974,
+        "exit": 0,
+        "seconds": 0.0857,
+        "state": "finished",
+        "variables": 7973
+      },
+      "model_published": {
+        "clauses": 23974,
+        "exit": 0,
+        "seconds": 0.0864,
+        "state": "finished",
+        "variables": 7973
+      },
+      "other_failures": [],
+      "published_loops": 0,
+      "published_unwind": 4,
+      "reason": "no unwinding property fails under these bounds",
+      "rows": [
+        {
+          "confirmed_witnesses": 1,
+          "properties": 282,
+          "seconds": 0.17,
+          "unwind": 2,
+          "variant": "original",
+          "verdict": "counterexample"
+        },
+        {
+          "confirmed_witnesses": 0,
+          "properties": 282,
+          "seconds": 0.17,
+          "unwind": 2,
+          "variant": "fixed",
+          "verdict": "complete"
+        },
+        {
+          "confirmed_witnesses": 0,
+          "properties": 282,
+          "seconds": 0.11,
+          "unwind": 2,
+          "variant": "vacuous",
+          "verdict": "vacuous"
+        }
+      ],
+      "search_seconds": 0.17,
+      "suite_ok": true,
+      "unwindset": {}
+    },
+    {
+      "attempts": 8,
+      "case": "msgpack-c-print-buffer-empty-bin",
+      "found": true,
+      "largest_bound": 9,
+      "model_found": {
+        "clauses": 731978,
+        "exit": 0,
+        "seconds": 5.7118,
+        "state": "finished",
+        "variables": 208532
+      },
+      "model_published": {
+        "clauses": 2175161,
+        "exit": 0,
+        "seconds": 13.1627,
+        "state": "finished",
+        "variables": 601159
+      },
+      "other_failures": [],
+      "published_loops": 2,
+      "published_unwind": 10,
+      "reason": "no unwinding property fails under these bounds",
+      "rows": [
+        {
+          "confirmed_witnesses": 1,
+          "properties": 445,
+          "seconds": 5.49,
+          "unwind": 2,
+          "variant": "original",
+          "verdict": "counterexample"
+        },
+        {
+          "confirmed_witnesses": 0,
+          "properties": 445,
+          "seconds": 6.39,
+          "unwind": 2,
+          "variant": "fixed",
+          "verdict": "complete"
+        },
+        {
+          "confirmed_witnesses": 0,
+          "properties": 443,
+          "seconds": 0.22,
+          "unwind": 2,
+          "variant": "vacuous",
+          "verdict": "vacuous"
+        },
+        {
+          "confirmed_witnesses": 0,
+          "properties": 445,
+          "seconds": 0.31,
+          "unwind": 1,
+          "variant": "fixed",
+          "verdict": "vacuous"
+        }
+      ],
+      "search_seconds": 18.95,
+      "suite_ok": true,
+      "unwindset": {
+        "case_snprintf.0": 9,
+        "harness.0": 3,
+        "msgpack_object_bin_print_buffer.0": 3
+      }
+    },
+    {
+      "attempts": 6,
+      "case": "open62541-datetime-parse-year",
+      "found": true,
+      "largest_bound": 6,
+      "model_found": {
+        "clauses": 691293,
+        "exit": 0,
+        "seconds": 95.9485,
+        "state": "finished",
+        "variables": 167613
+      },
+      "model_published": {
+        "clauses": 875241,
+        "exit": 0,
+        "seconds": 99.4711,
+        "state": "finished",
+        "variables": 208935
+      },
+      "other_failures": [],
+      "published_loops": 3,
+      "published_unwind": 6,
+      "reason": "no unwinding property fails under these bounds",
+      "rows": [
+        {
+          "confirmed_witnesses": 1,
+          "properties": 574,
+          "seconds": 99.67,
+          "unwind": 2,
+          "variant": "original",
+          "verdict": "counterexample"
+        },
+        {
+          "confirmed_witnesses": 0,
+          "properties": 574,
+          "seconds": 93.35,
+          "unwind": 2,
+          "variant": "fixed",
+          "verdict": "complete"
+        },
+        {
+          "confirmed_witnesses": 0,
+          "properties": 571,
+          "seconds": 0.2,
+          "unwind": 2,
+          "variant": "vacuous",
+          "verdict": "vacuous"
+        },
+        {
+          "confirmed_witnesses": 0,
+          "properties": 573,
+          "seconds": 1.06,
+          "unwind": 1,
+          "variant": "fixed",
+          "verdict": "vacuous"
+        }
+      ],
+      "search_seconds": 250.01,
+      "suite_ok": true,
+      "unwindset": {
+        "parseUInt64.1": 6
+      }
+    },
+    {
+      "attempts": 2,
+      "case": "px4-wrap-bin",
+      "found": true,
+      "largest_bound": 2,
+      "model_found": {
+        "clauses": 7068,
+        "exit": 0,
+        "seconds": 0.0373,
+        "state": "finished",
+        "variables": 2135
+      },
+      "model_published": {
+        "clauses": 7068,
+        "exit": 0,
+        "seconds": 0.0385,
+        "state": "finished",
+        "variables": 2135
+      },
+      "other_failures": [],
+      "published_loops": 0,
+      "published_unwind": 4,
+      "reason": "no unwinding property fails under these bounds",
+      "rows": [
+        {
+          "confirmed_witnesses": 2,
+          "properties": 15,
+          "seconds": 0.09,
+          "unwind": 2,
+          "variant": "original",
+          "verdict": "counterexample"
+        },
+        {
+          "confirmed_witnesses": 0,
+          "properties": 15,
+          "seconds": 0.09,
+          "unwind": 2,
+          "variant": "fixed",
+          "verdict": "complete"
+        },
+        {
+          "confirmed_witnesses": 0,
+          "properties": 15,
+          "seconds": 0.08,
+          "unwind": 2,
+          "variant": "vacuous",
+          "verdict": "vacuous"
+        }
+      ],
+      "search_seconds": 0.08,
+      "suite_ok": true,
+      "unwindset": {}
+    }
+  ]
+}
