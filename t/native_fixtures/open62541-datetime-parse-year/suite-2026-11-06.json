@@ -1,0 +1,51 @@
+{
+  "case": "open62541-datetime-parse-year",
+  "format": "dawnr-native-case-v1-suite",
+  "ok": true,
+  "rows": [
+    {
+      "confirmed_witnesses": 1,
+      "expected": "counterexample",
+      "ok": true,
+      "properties": 574,
+      "reason": "a checked property has a concrete failing trace",
+      "unit_sha256": "a1bf8fac3ca8e82980541546acc6a4dfdf21ab69ffc0043432dd9058cd68867c",
+      "unwind": 6,
+      "variant": "original",
+      "verdict": "counterexample"
+    },
+    {
+      "confirmed_witnesses": 0,
+      "expected": "complete",
+      "ok": true,
+      "properties": 574,
+      "reason": "all inventoried properties and required unwinding checks succeeded; assumption goals reachable",
+      "unit_sha256": "265b4bdc653af380ede760da7f05a21601a80c827d78acfe044b4cddb29ef9a7",
+      "unwind": 6,
+      "variant": "fixed",
+      "verdict": "complete"
+    },
+    {
+      "confirmed_witnesses": 0,
+      "expected": "vacuous",
+      "ok": true,
+      "properties": 571,
+      "reason": "assumption coverage has an unreachable before/after goal",
+      "unit_sha256": "354e7e7517ddae3e8eadcbc32177876ef7936a4ec3314e69ddf99478411655bd",
+      "unwind": 6,
+      "variant": "vacuous",
+      "verdict": "vacuous"
+    },
+    {
+      "confirmed_witnesses": 0,
+      "expected": "incomplete or vacuous",
+      "ok": true,
+      "properties": 573,
+      "reason": "assumption coverage has an unreachable before/after goal",
+      "unit_sha256": "265b4bdc653af380ede760da7f05a21601a80c827d78acfe044b4cddb29ef9a7",
+      "unwind": 1,
+      "variant": "fixed",
+      "verdict": "vacuous"
+    }
+  ]
+}
