@@ -307,13 +307,15 @@ def confirmed(receipt: dict) -> int:
 
 def suite(root: Path, out: Path, cbmc: str = "cbmc", timeout: float = 120, compiler: str = "gcc") -> dict:
     """The controls every case must pass: the original fails with a replayed witness, the
-    fix completes, contradictory assumptions are vacuous, a short unwind is incomplete."""
+    fix completes, contradictory assumptions are vacuous, and a short unwind is not complete.
+    A short unwind is incomplete when some execution stays within the bound and vacuous
+    when none does, because the end of the harness is then out of reach."""
     case = load(root)
     if "fixed" not in case["sources"]:
         raise ValueError("the suite needs a fixed source")
     planned = [("original", None, "counterexample"), ("fixed", None, "complete"), ("vacuous", None, "vacuous")]
     if case["loops"]:
-        planned.append(("fixed", case.get("under_unwind", 1), "incomplete"))
+        planned.append(("fixed", case.get("under_unwind", 1), "incomplete or vacuous"))
     out.mkdir(parents=True, exist_ok=False)
     rows = []
     for variant, unwind, expected in planned:
@@ -321,7 +323,7 @@ def suite(root: Path, out: Path, cbmc: str = "cbmc", timeout: float = 120, compi
         row = {"variant": variant, "unwind": receipt["unwind"], "expected": expected, "verdict": receipt["verdict"],
                "reason": receipt["reason"], "unit_sha256": receipt["scope"]["unit_sha256"],
                "properties": len(receipt.get("properties", [])), "confirmed_witnesses": confirmed(receipt)}
-        row["ok"] = row["verdict"] == expected and (variant != "original" or row["confirmed_witnesses"] > 0)
+        row["ok"] = row["verdict"] in expected.split(" or ") and (variant != "original" or row["confirmed_witnesses"] > 0)
         rows.append(row)
     summary = {"format": FORMAT + "-suite", "case": case["id"], "rows": rows, "ok": all(row["ok"] for row in rows)}
     (out / "suite.json").write_text(json.dumps(summary, indent=2, sort_keys=True) + "\n")

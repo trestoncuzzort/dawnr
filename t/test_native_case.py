@@ -232,3 +232,9 @@ def test_an_insufficient_unwinding_bound_is_incomplete(tmp_path):
     root = write_case(tmp_path / "case", sources=sources, harness=harness, assertions=["count.result"], assumptions=1, loops=1)
     assert cases.check(root, "fixed", tmp_path / "short", cbmc=CBMC, unwind=1)["verdict"] == "incomplete"
     assert cases.check(root, "fixed", tmp_path / "enough", cbmc=CBMC, unwind=4)["verdict"] == "complete"
+    # When every execution needs more than the bound, the end of the harness is out of reach instead.
+    always = write_case(tmp_path / "always", sources=sources, harness=harness.replace("a >= 0", "a >= 1"),
+                        assertions=["count.result"], assumptions=1, loops=1)
+    assert cases.check(always, "fixed", tmp_path / "none", cbmc=CBMC, unwind=1)["verdict"] == "vacuous"
+    summary = cases.suite(always, tmp_path / "suite", cbmc=CBMC)
+    assert [(row["unwind"], row["verdict"], row["ok"]) for row in summary["rows"]][-1] == (1, "vacuous", True)
