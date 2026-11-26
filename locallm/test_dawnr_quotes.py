@@ -420,5 +420,37 @@ class NoTextTest(unittest.TestCase):
         self.assertEqual(unfound_quotes(code("continue;"), None), ["continue;"])
 
 
+class CraftedTextTest(unittest.TestCase):
+    """What was read is the session's untrusted text, up to the 64,000 characters a reply holds: no pattern the
+    check runs over it takes time that grows with the square of a line's length. A file of brackets took 4 seconds
+    a read for the Markdown link alone (2026-11-26), a first line of brackets and parentheses most of one."""
+
+    QUOTE = '"the cache is cleared only when the person runs clean"'
+    N = 64_000
+
+    def assertQuick(self, sources):
+        import time
+        started = time.perf_counter()
+        unfound_quotes(self.QUOTE, sources)
+        self.assertLess(time.perf_counter() - started, 0.5)
+
+    def test_a_text_of_link_brackets_is_checked_at_once(self):
+        for text in ("[" * (self.N // 2) + "](" * (self.N // 4), "[](" * (self.N // 3), "[[](" * (self.N // 4)):
+            with self.subTest(text=text[:8]):
+                self.assertQuick([text])
+
+    def test_a_first_line_made_like_a_documents_header_is_checked_at_once(self):
+        for head in (" ()" * (self.N // 3), " ():" * (self.N // 4), " (" * (self.N // 2)):
+            with self.subTest(head=head[:8]):
+                self.assertQuick([head + "\nthe cache is cleared only when the person runs clean"] * 4)
+
+    def test_a_document_named_with_brackets_is_still_its_own_header(self):
+        head = "here/my file (1).pdf (pdf, 2 pages): lines 1-2 of 2 of its text, 90 bytes"
+        self.assertEqual(unfound_quotes(self.QUOTE, [head + "\nthe cache is cleared only when\nthe person runs clean"]), [])
+
+    def test_a_link_is_still_quoted_by_its_text(self):
+        self.assertEqual(unfound_quotes(self.QUOTE, ["[the cache is cleared only when the person runs clean](a.md)"]), [])
+
+
 if __name__ == "__main__":
     unittest.main()

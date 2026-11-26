@@ -46,7 +46,10 @@ WORDS = 6                                           # a passage in quotes of few
 # from what was read only in these): a comment's marker at the start of a line, where a comment runs on; a Markdown
 # link, which a reader quotes by its text; quote marks of every style and escaped ones, as one.
 COMMENT = re.compile(r"\s*(?:/\*+|\*+/?|//+|#+|--|;+)\s?")
-LINK = re.compile(r"\[([^\]\n]*)\]\([^)\n]*\)")
+# what was read is untrusted text, up to 64,000 characters a reply: a link's text holds no bracket and its address
+# no parenthesis, so each character is looked at from one place only (a file of brackets took 4 seconds a read when
+# either could run on to the next one; 2026-11-26)
+LINK = re.compile(r"\[([^\[\]\n]*)\]\([^()\n]*\)")
 QUOTE_MARKS = str.maketrans(dict.fromkeys("'\u2018\u2019\u201a\u201b\u2032\u201c\u201d\u201e\u201f\u2033", '"'))
 # What the tools show of a file's lines, and around them (dawnr_agent/files.py): an fs_read window's header (the file,
 # its first and last line, and the file's sha256 when it was read whole), the same for a document's text, whose
@@ -54,7 +57,7 @@ QUOTE_MARKS = str.maketrans(dict.fromkeys("'\u2018\u2019\u201a\u201b\u2032\u201c
 # a reply cut at its size. Lines a file has one after the other are one text however the tools showed them: in two
 # windows of one version of it, as two hits, a window and a hit.
 WINDOW = re.compile(r"(.*): lines (\d+)-(\d+) of \d+, \d+ bytes(?:, sha256 ([0-9a-f]+))?")
-DOCUMENT = re.compile(r"(.*) \(.*\): lines (\d+)-(\d+) of \d+ of its text, \d+ bytes$")
+DOCUMENT = re.compile(r"(.*) \(([^()]*)\): lines (\d+)-(\d+) of \d+ of its text, \d+ bytes$")    # ("pdf, 2 pages")
 PAGE = re.compile(r"\[page \d+\]$")
 SEARCH = re.compile(r"search for .* \(literal, .*\): \d+ matches in \d+ files, \d+ files searched$")
 HIT = re.compile(r"(.+?):(\d+): (.*)")
@@ -199,7 +202,7 @@ def _shown(text: str) -> list[tuple[str, str | None, int, str | None]]:
     head = lines[0] if lines else ""
     window, document = WINDOW.match(head), DOCUMENT.match(head)
     if window or document:
-        path, start, last = (window or document).group(1, 2, 3)
+        path, start, last = window.group(1, 2, 3) if window else document.group(1, 3, 4)
         version = window.group(4) if window else None
         start, last, body = int(start), int(last), lines[1:]
         if window and body and re.match(rf" *{start}\t", body[0]):        # numbered: each line says which it is
