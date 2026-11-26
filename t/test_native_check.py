@@ -250,9 +250,10 @@ def pointer_call(inventory, coverage, checking, description, function="cr_free",
 
 
 SEVERAL_TARGETS = "dereferenced function pointer must be one of [cr_default_realloc, lre_realloc]"
+ONE_TARGET = "dereferenced function pointer must be dawnr_read"  # the same property when only one function can be meant
 
 
-@pytest.mark.parametrize("description", [SEVERAL_TARGETS])
+@pytest.mark.parametrize("description", [SEVERAL_TARGETS, ONE_TARGET])
 def test_the_no_target_branch_of_a_call_through_a_function_pointer_is_recorded_apart(description):
     inventory, coverage, checking, scope = sample()
     pointer_call(inventory, coverage, checking, description)

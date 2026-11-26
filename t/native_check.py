@@ -213,10 +213,11 @@ def interpret(inventory: dict, coverage: dict, checking: dict, scope: dict) -> d
         listed, covered, checked = document(inventory), document(coverage), document(checking)
         props, every_goal, results = rows(listed, "properties"), rows(covered, "goals"), rows(checked, "result")
         # CBMC ends the no-such-target branch of a call through a function pointer with ASSUME false, after a
-        # property "dereferenced function pointer must be one of [...]" at the same place. That assumption is the tool's and not the
-        # harness's, and it has to be unreachable, so it is listed apart and kept out of the count.
+        # property "dereferenced function pointer must be one of [...]" at the same place, or "must be f" when f is the only
+        # possible target. That assumption is the tool's and not the harness's, and it has to be unreachable, so it is listed
+        # apart and kept out of the count.
         pointer_calls = {(prop.get("sourceLocation", {}).get("function"), prop.get("sourceLocation", {}).get("line")) for prop in props
-                         if str(prop.get("description", "")).startswith("dereferenced function pointer must be one of")}
+                         if str(prop.get("description", "")).startswith("dereferenced function pointer must be")}
         def pointer_goal(goal: dict) -> bool:
             location = goal.get("sourceLocation", {})
             return location.get("function") != "harness" and (location.get("function"), location.get("line")) in pointer_calls

@@ -986,10 +986,13 @@ def test_past_256_addressed_objects_a_case_asks_for_more_object_bits(tmp_path):
 
 TWICE = "static int twice(int a)\n{\n\treturn a * 2;\n}\n"
 THRICE = "static int thrice(int a)\n{\n\treturn a * 3;\n}\n"
-# A call through a pointer that may hold either function; the original's thrice is wrong.
+# A call through a pointer that may hold either of two functions, and one through a pointer only one function can be in.
+# Each original gets one function wrong.
 THROUGH_POINTERS = {
     "several targets": ("", TWICE + THRICE + "int apply(int a, int which)\n{\n\tint (*op)(int) = which ? twice : thrice;\n\treturn op(a);\n}\n",
                         ["twice", "thrice", "apply"], "a * 3", "a * 4", "apply(a, w) == (w ? a * 2 : a * 3)"),
+    "one target": ("struct ops { int (*op)(int); };\n", TWICE + "int apply(int a, int which)\n{\n\tstruct ops table = { twice };\n\t(void)which;\n\treturn table.op(a);\n}\n",
+                   ["twice", "apply"], "a * 2", "a * 3", "apply(a, w) == a * 2"),
 }
 
 
