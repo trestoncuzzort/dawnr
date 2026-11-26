@@ -20,7 +20,8 @@ ends) and one `ID.json` per function:
   verified, route, why     whether a proved twin was found, by which route, and if not, the reason verify gives
   twin                     the proved twin as verify shows it: the program, its specification, the provers' cells,
                            what it was held to, and its Python when the hand-back writes one
-  stages                   one entry per refusal line, in order: the route, the attempt (`answer 2`,
+  stages                   one entry per refusal line, in order (a function whose check raised ends with one for
+                           the error, after those reached before it): the route, the attempt (`answer 2`,
                            `specification 1, body 3`), the stage it stopped at (verify_py.STAGES) and the reason,
                            with what it was tried on (the input where a specification was false, the cells of a
                            prover row, the inputs a body was compared on)
@@ -32,7 +33,8 @@ ends) and one `ID.json` per function:
   stopped at               the furthest stage any attempt reached (verify_py.STAGES), for a refused function
 
 A run taken up again keeps the records it has and asks only for the functions that have none. A function whose
-check raised (the provers did not finish, the sandbox failed) is a record too, with the error, and the run goes on.
+check raised (the provers did not finish, the sandbox failed) is a record too: the stages and refusals verify had
+reached before it raised, then the error as a stage of its own (`error`), and the run goes on.
 """
 from __future__ import annotations
 
@@ -147,8 +149,10 @@ def one(problem: dict, student, prover, settings: dict) -> dict:
     except verify_py.Refused as refused:
         return record(problem, function, entry, drawn, None, entry_refused=str(refused), seconds=time.monotonic() - start)
     except Exception as error:                                  # noqa: BLE001 -- recorded, and the run goes on
-        return record(problem, function, entry, drawn, r, error=f"{type(error).__name__}: {error}"[:300],
-                      seconds=time.monotonic() - start)
+        # what verify had refused and the stages it had passed before it raised (verify_py `_reached`) stay in the record
+        reached = getattr(error, "reached", None) or {}
+        return record(problem, function, entry, drawn, {"stages": reached.get("stages", []), "refused": reached.get("refused", [])},
+                      error=f"{type(error).__name__}: {error}"[:300], seconds=time.monotonic() - start)
     return record(problem, function, entry, drawn, r, seconds=time.monotonic() - start)
 
 

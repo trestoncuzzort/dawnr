@@ -106,6 +106,48 @@ def test_a_run_taken_up_again_keeps_the_records_it_has_and_an_error_is_a_record_
     assert manifest["started"] == first["started"] and len(manifest["taken up again"]) == 1
 
 
+
+def _timing_out(tasks, jobs):
+    raise answer.ProverTimeout("the provers did not finish")
+
+
+@needs_sandbox
+def test_an_error_after_some_stages_keeps_those_stages_and_ends_with_the_error_as_a_stage_of_its_own(tmp_path):
+    # Until 2026-11-26 the record of a function whose check raised carried the error alone, and the attempts verify
+    # had refused before it raised were lost (r was None). Here answer 1 is refused for want of a task block, then
+    # answer 2 is held, answers as the function does, and the provers do not finish.
+    run = tmp_path / "verify-run"
+    model = student("no task block here", TRIPLE)
+    verify_panel.run(PROBLEMS[1:2], run, model, prover=_timing_out, settings={"whole": 2, "specs": 1, "answers": 1})
+    got = json.loads((run / "8.json").read_text())
+    assert not got["verified"] and got["error"] == "ProverTimeout: the provers did not finish"
+    assert [(s["route"], s["source"], s["stage"]) for s in got["stages"]] == [
+        ("answers", "answer 1", "reply"), (None, "the run", "error")]
+    assert got["stages"][-1]["reason"] == "ProverTimeout: the provers did not finish"
+    assert len(got["refused"]) == 1 and got["refused"][0].startswith("answer 1: ")          # the refusal line is kept too
+    assert got["stopped at"] == "error" and got["why"] == got["error"]
+
+
+@needs_sandbox
+def test_an_error_in_the_second_route_keeps_what_the_first_route_refused_before_it(tmp_path):
+    run = tmp_path / "verify-run"
+    model = student("no task block here", TRIPLE, TRIPLE)                 # answer 1 refused; a specification, then its body
+    verify_panel.run(PROBLEMS[1:2], run, model, prover=_timing_out, settings={"whole": 1, "specs": 1, "answers": 1})
+    got = json.loads((run / "8.json").read_text())
+    assert got["error"] == "ProverTimeout: the provers did not finish"
+    assert [(s["route"], s["source"], s["stage"]) for s in got["stages"]] == [
+        ("answers", "answer 1", "reply"), (None, "the run", "error")]
+    assert [r.split(":")[0] for r in got["refused"]] == ["answer 1"]
+
+
+@needs_sandbox
+def test_an_error_before_any_stage_is_still_the_error_alone(tmp_path):
+    run = tmp_path / "verify-run"
+    verify_panel.run(PROBLEMS[1:2], run, student(TRIPLE), prover=_timing_out, settings={"whole": 1, "specs": 1, "answers": 1})
+    got = json.loads((run / "8.json").read_text())
+    assert [(s["route"], s["stage"]) for s in got["stages"]] == [(None, "error")] and got["refused"] == []
+
+
 def test_the_panel_is_the_wider_111_with_each_reference_as_the_function_and_its_words_as_the_docstring(monkeypatch):
     pool = {5: {"fn": "f", "rec": {"text": "Words.", "code": "def f(x):\n    return x\n", "test_list": ["assert f(1) == 1"]}},
             6: {"fn": "g", "rec": {"text": "More.", "code": "def g(x):\n    return x\n", "test_list": ["assert g(2) == 2"]}}}
