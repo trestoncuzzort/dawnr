@@ -77,6 +77,10 @@ NUMBERED = re.compile(r" *[1-9][0-9]*\t")    # what fs_read puts before each lin
 NUMBERED_BY = ("fs_read", "fs_edit")         # the tools whose untrusted text has a file's lines numbered so: what
                                              # compares that text with a plan (as_compared) takes the numbers off
                                              # first, or two lines copied from it do not look copied
+# what programs and pages put before each line they show of a file, whatever tool showed their text: a number and a
+# tab (`cat -n`, `nl`), a number and a colon or a dash with or without a file's name before it (`grep -n`, its context
+# lines), a number and a bar or a colon (a page's code listing). Anchored at the line's start; linear in its length.
+LISTED = (re.compile(r"[ \t]*[0-9]+\t"), re.compile(r"(?:[^\n:]*:)?[0-9]+[:-]"), re.compile(r"[ \t]*[0-9]+[ \t]*[|:][ \t]?"))
 HIT = re.compile(r".*?:[1-9][0-9]*: ")       # what fs_search puts before each line it finds: the file's name, the
                                              # line's number and ": " (the shortest start of a line that is so)
 
@@ -218,10 +222,20 @@ def as_compared(tool: str, text: str) -> list:
     shown, and also without the file's name and line number before each (HIT), since a name is untrusted text too;
     anything else as it is."""
     if tool in NUMBERED_BY:
-        return [_numbers_off(text)[0]]
-    if tool == "fs_search":
-        return [text, "\n".join(line[m.end():] if (m := HIT.match(line)) else line for line in text.split("\n"))]
-    return [text]
+        forms = [_numbers_off(text)[0]]
+    elif tool == "fs_search":
+        forms = [text, "\n".join(line[m.end():] if (m := HIT.match(line)) else line for line in text.split("\n"))]
+    else:
+        forms = [text]
+    # and, whatever the tool, without the numbers a program or a page put before each line (LISTED): a command's own
+    # output (`cat -n`, `nl`, `grep -n`) or a page's code listing shows a file's lines numbered too, and two lines
+    # copied from it did not look copied either (2026-11-26). Each form only adds to what a plan is held against.
+    for base in list(forms):
+        for prefix in LISTED:
+            off = "\n".join(line[m.end():] if (m := prefix.match(line)) else line for line in base.split("\n"))
+            if off not in forms:
+                forms.append(off)
+    return forms
 
 
 def _line_numbers(text: str) -> list | None:

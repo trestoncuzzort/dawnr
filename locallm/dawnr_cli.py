@@ -1130,11 +1130,11 @@ def main(argv=None) -> int:
     approve.agent = agent
     with harness:
         for problem in harness.problems:                        # what is switched off here; the scan's own limits are in `roots`
-            if "secret scan stopped" not in problem:
-                print(f"dawnr: {problem}", file=sys.stderr)
+            if "secret scan stopped" not in problem:                 # a problem can name a skill's or a server's own text
+                print(visible(f"dawnr: {problem}"), file=sys.stderr)
         root = agent.space.roots[0]
-        print(f"dawnr in {root.path} ({'may change files here' if root.mode == 'write' else 'reads only'}; "
-              f"{'online' if not harness.policy.offline else 'offline'})", file=sys.stderr)
+        print(visible(f"dawnr in {root.path} ({'may change files here' if root.mode == 'write' else 'reads only'}; "
+                      f"{'online' if not harness.policy.offline else 'offline'})"), file=sys.stderr)
         meter = Meter()
         planner = Planner(harness, agent, a.host, a.name, post=meter)
         if task:
