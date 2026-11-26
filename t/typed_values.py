@@ -638,12 +638,46 @@ def _draw_like(like, rnd: random.Random, larger: bool):
 
 # ------------------------------------------------------------------ wrong answers --
 
-def mutations(value, datatypes: dict | None = None, limit: int = 12) -> list:
+def default(ty, datatypes: dict | None = None, depth: int = 0):
+    """The plainest value of a declared type (0, false, the empty seq, set and map, a field-less constructor), or
+    None for a type with none here (a float, a datatype every constructor of which recurses)."""
+    if ty == "int":
+        return 0
+    if ty == "bool":
+        return False
+    if ty == "seq" or (isinstance(ty, dict) and set(ty) == {"seq"}):
+        return ()
+    if ty == "set" or (isinstance(ty, dict) and set(ty) == {"set"}):
+        return frozenset()
+    if isinstance(ty, dict) and "map" in ty:
+        return interp.MapV(())
+    if isinstance(ty, dict) and ("pair" in ty or "tuple" in ty):
+        parts = [default(t, datatypes, depth + 1) for t in (ty.get("pair") or ty.get("tuple"))]
+        if any(p is None for p in parts):
+            return None
+        return interp.Pair(*parts) if "pair" in ty else interp.Tup(tuple(parts))
+    if isinstance(ty, dict) and "datatype" in ty and depth < 4:
+        for c in ((datatypes or {}).get(ty["datatype"]) or {}).get("ctors", []):
+            fields = [default(f["type"], datatypes, depth + 1) for f in c.get("fields") or []]
+            if all(f is not None for f in fields):
+                return interp.Ctor(ty["datatype"], c["name"], tuple(fields))
+    return None
+
+
+def mutations(value, datatypes: dict | None = None, limit: int = 12, ty=None) -> list:
     """Wrong outputs near a right one of a compound type (a pair, a tuple, a set, a map, a datatype value, a seq of
     them), deterministically, for the completeness half of the specification check (spec_check.mutations, which
-    keeps the ints, bools and seqs it always had). Each is of the same type as the right one."""
+    keeps the ints, bools and seqs it always had). Each is of the same type as the right one. With `ty`, the
+    declared type, an empty value gets one too: the set or map of one plainest element, the seq of one, the other
+    constructor with its plainest fields; and a value of a plain type gets spec_check.mutations's."""
     from spec_check import mutations as plain
     out = []
+    if ty is not None and not compound(value):
+        inner = ty.get("seq") if isinstance(ty, dict) and set(ty) == {"seq"} else None
+        if value == () and inner is not None:
+            one = default(inner, datatypes)
+            return [(one,)] if one is not None else []
+        return plain(value)
 
     def near(x):
         if compound(x):
@@ -663,6 +697,9 @@ def mutations(value, datatypes: dict | None = None, limit: int = 12) -> list:
         out += [value - {x} for x in items[:4]]
         for x in items[:2]:
             out += [value | {m} for m in near(x) if m not in value][:2]
+        if not value and ty is not None:
+            one = default(ty["set"] if isinstance(ty, dict) else "int", datatypes)
+            out += [frozenset({one})] if one is not None else []
     elif isinstance(value, interp.MapV):
         pairs = list(value.items)
         out += [interp.MapV(tuple(p for p in pairs if p is not q)) for q in pairs[:3]]
@@ -671,6 +708,9 @@ def mutations(value, datatypes: dict | None = None, limit: int = 12) -> list:
         if pairs:
             k, x = pairs[0]
             out += [interp.MapV.of(pairs + [(m, x)]) for m in near(k) if not value.has(m)][:2]
+        elif isinstance(ty, dict) and "map" in ty:
+            k, x = default(ty["map"][0], datatypes), default(ty["map"][1], datatypes)
+            out += [interp.MapV.of([(k, x)])] if k is not None and x is not None else []
     elif isinstance(value, interp.Ctor):
         for i, x in enumerate(value.args):
             out += [interp.Ctor(value.dtype, value.ctor, value.args[:i] + (m,) + value.args[i + 1:]) for m in near(x)[:3]]
@@ -680,6 +720,10 @@ def mutations(value, datatypes: dict | None = None, limit: int = 12) -> list:
             elif c["name"] != value.ctor and len(c["fields"]) == 1 and len(value.args) == 1 and \
                     fits_value(value.args[0], c["fields"][0]["type"]):
                 out.append(interp.Ctor(value.dtype, c["name"], value.args))
+            elif c["name"] != value.ctor:                       # another constructor, its fields at their plainest
+                fields = [default(f["type"], datatypes, 1) for f in c["fields"]]
+                if all(f is not None for f in fields):
+                    out.append(interp.Ctor(value.dtype, c["name"], tuple(fields)))
     elif isinstance(value, tuple) and value and any(compound(x) for x in value):
         out += [value[:-1], value[1:], tuple(reversed(value)), value + (value[-1],)]
         out += [(m,) + value[1:] for m in near(value[0])[:3]]

@@ -525,12 +525,14 @@ def mutations(value):
     return unique
 
 
-def wrong_answers(value, datatypes: dict | None = None) -> list:
+def wrong_answers(value, datatypes: dict | None = None, ty=None) -> list:
     """`mutations` of a right answer, and for a value of a compound type the reader's typed kinds bring (a pair, a
     tuple, a set, a map, a datatype value, a seq of them: t/typed_values.py) wrong answers of that type, which
-    `mutations` has none of. Every value `mutations` knew gets exactly what it always got."""
-    if typed_values.compound(value):
-        return typed_values.mutations(value, datatypes)
+    `mutations` has none of. `ty`, the declared type of a result whose kind the reader typed, gives an empty one
+    wrong answers too (without them no mutant is judged and a specification that says nothing passes). Every value
+    `mutations` knew gets exactly what it always got."""
+    if ty is not None or typed_values.compound(value):
+        return typed_values.mutations(value, datatypes, ty=ty)
     return mutations(value)
 
 
@@ -957,7 +959,8 @@ def check_task(task: dict, entry: dict, n: int, rnd: random.Random, oracle=None,
         # The ensures is true of the right answer. Is it also true of a wrong
         # one? Nothing else in this project asks, and a specification that
         # cannot tell them apart is what the proven-but-wrong column is made of.
-        for wrong in wrong_answers(env[task["returns"][0]["name"]], dts):
+        for wrong in wrong_answers(env[task["returns"][0]["name"]], dts,
+                                   task["returns"][0].get("type") if typed_result else None):
             probe = dict(env)
             probe[task["returns"][0]["name"]] = wrong
             st2 = interp.St()

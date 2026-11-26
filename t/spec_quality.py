@@ -112,7 +112,8 @@ def scores(task: dict, entry: dict) -> dict:
             return {"unscorable": f"{type(e).__name__}: {e}"[:120]}
         tests += 1
         held += ok
-        for wrong in spec_check.wrong_answers(env[ret], typed_values.datatypes_of(task)):
+        typed_result = task["returns"][0].get("type") if typed_values.is_typed(point["expected"][0]) else None
+        for wrong in spec_check.wrong_answers(env[ret], typed_values.datatypes_of(task), typed_result):
             probe = dict(env)
             probe[ret] = wrong
             if clock() <= 0:
@@ -245,7 +246,8 @@ def witnesses(task: dict, entry: dict, limit: int = 3) -> list[str]:
                     rejected = f"the test `{call}` is rejected: `ensures {surface.pexpr(e)}` is {why} on it"
                     break
         if accepted is None:
-            for wrong in spec_check.wrong_answers(env[ret], typed_values.datatypes_of(task)):
+            for wrong in spec_check.wrong_answers(env[ret], typed_values.datatypes_of(task),
+                                                  task["returns"][0].get("type") if typed_values.is_typed(point["expected"][0]) else None):
                 probe = dict(env)
                 probe[ret] = wrong
                 if clock() <= 0:

@@ -166,6 +166,16 @@ def test_wrong_answers_are_near_the_right_one_and_of_its_type(value):
         assert interp.Ctor("Option", "Nothing", ()) in wrong and interp.Ctor("Option", "Some", (6,)) in wrong
 
 
+def test_an_empty_answer_has_wrong_answers_of_its_declared_type():
+    assert tv.mutations(frozenset(), ty={"set": "seq"}) == [frozenset({()})]
+    assert tv.mutations(interp.MapV(()), ty={"map": ["int", "seq"]}) == [interp.MapV.of([(0, ())])]
+    assert tv.mutations(interp.Ctor("Option", "Nothing", ()), OPTION, ty={"datatype": "Option"}) == [
+        interp.Ctor("Option", "Some", (0,))]
+    assert tv.mutations((), ty={"seq": {"pair": ["seq", "int"]}}) == [(interp.Pair((), 0),)]
+    assert tv.mutations((), ty={"seq": "bool"}) == [(False,)]
+    assert tv.mutations(3, ty="int") == tv.mutations(3, ty="int") and 4 in tv.mutations(3, ty="int")
+
+
 @needs_sandbox
 def test_values_cross_into_the_sandbox_and_back_as_literals():
     code = ("from collections import Counter\n"

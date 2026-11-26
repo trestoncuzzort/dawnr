@@ -246,3 +246,37 @@ def test_what_t_still_has_no_type_for_is_refused_before_the_model_is_asked(body,
     f = verify_py.read_function(f"def f(x):\n    return {body}\n")
     with pytest.raises(verify_py.Refused, match=why):
         verify_py.entry_for(f, tests)
+
+
+@needs_sandbox
+@pytest.mark.parametrize("returned, tests, declared", [
+    ("set()", ["assert nothing(3) == set()", "assert nothing(0) == set()"], "set<seq>"),
+    ("{}", ["assert nothing(3) == {}", "assert nothing(1) == {}"], "map<int, seq>"),
+    ("None if n < 100 else n", ["assert nothing(3) == None", "assert nothing(200) == 200"], "Option"),
+])
+def test_a_specification_that_says_nothing_does_not_pass_where_the_answers_are_empty(returned, tests, declared):
+    # found by holding `ensures true` against every newly posable MBPP problem: MBPP 490's function answers the
+    # empty set on most drawn inputs, no wrong answer was made of an empty set, and the specification passed
+    f = verify_py.read_function(f"def nothing(n):\n    return {returned}\n")
+    entry, _ = verify_py.entry_for(f, tests)
+    head = "datatype Option = Nothing | Some(v: int)\n" if declared == "Option" else ""
+    task = surface.parse(f"{head}t 1\ntask nothing(n: int) returns (r: {declared})\n  ensures true\n{{\n}}\n")
+    v = spec_gate.judge(task, entry, f["code"])
+    assert not v["passes"] and v["agreement"]["completeness"] == 0.0, v
+
+
+@needs_sandbox
+@pytest.mark.parametrize("returned, tests, declared", [
+    ("set()", ["assert nothing(3) == set()", "assert nothing(0) == set()"], "set<seq>"),
+    ("{}", ["assert nothing(3) == {}", "assert nothing(1) == {}"], "map<int, seq>"),
+    ("None if n < 100 else n", ["assert nothing(3) == None", "assert nothing(200) == 200"], "Option"),
+])
+def test_a_specification_that_says_nothing_does_not_pass_where_the_answers_are_empty(returned, tests, declared):
+    # found by holding `ensures true` against every newly posable MBPP problem: MBPP 490's function answers the
+    # empty set on most drawn inputs, no wrong answer was made of an empty set, and the specification passed
+    f = verify_py.read_function(f"def nothing(n):\n    return {returned}\n")
+    entry, _ = verify_py.entry_for(f, tests)
+    head = "datatype Option = Nothing | Some(v: int)\n" if declared == "Option" else ""
+    task = surface.parse(f"{head}t 1\ntask nothing(n: int) returns (r: {declared})\n  ensures true\n{{\n}}\n")
+    v = spec_gate.judge(task, entry, f["code"])
+    assert not v["passes"] and v["agreement"]["completeness"] == 0.0, v
