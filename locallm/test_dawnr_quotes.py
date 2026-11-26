@@ -497,6 +497,50 @@ class MarkdownTest(unittest.TestCase):
                                         [window("here/a.md", ["the cache is cleared only when the person runs clean and never on its own"], 1, 1)]),
                          ["the cache is cleared only when the person runs \\*clean and never on its own"])
 
+class EllipsisTest(unittest.TestCase):
+    """An ellipsis inside a quote (`...`, `…`, `[...]`) leaves words out: the quote is found when its pieces are in
+    one source, in the order the quote has them, each piece judged as a quote is (a piece with nothing to check adds
+    nothing). Pieces out of order, or in different sources, are reported."""
+
+    def test_a_code_line_with_an_ellipsis_is_found_when_its_pieces_are_in_one_line_in_order(self):
+        for dots in ("...", "…", "[...]", "[…]", " ... "):
+            with self.subTest(dots=dots):
+                self.assertEqual(unfound_quotes(code(f"if (hit.mFraction < {dots}|| hit.mFraction > 1.0f"), [PATCH]), [])
+        # out of order, or one piece is not in the line
+        self.assertEqual(unfound_quotes(code("|| hit.mFraction > 1.0f ... if (hit.mFraction <"), [PATCH]),
+                         ["|| hit.mFraction > 1.0f ... if (hit.mFraction <"])
+        self.assertEqual(unfound_quotes(code("if (hit.mFraction < ... || hit.mFraction >= 1.0f"), [PATCH]),
+                         ["if (hit.mFraction < ... || hit.mFraction >= 1.0f"])
+        # a code line is one line: pieces in two lines of the source are not
+        self.assertEqual(unfound_quotes(code("if (hit.mFraction < ... continue;"), [PATCH]),
+                         ["if (hit.mFraction < ... continue;"])
+
+    def test_a_prose_quote_with_an_ellipsis_is_found_across_the_source_lines_in_order(self):
+        read = window("here/docs/cache.md", CACHE, 1, 9)
+        quote = "> The cache is cleared only ... and never on its own.\n"
+        self.assertEqual(unfound_quotes(quote, [read]), [])
+        self.assertEqual(unfound_quotes("> The cache is cleared only … is rebuilt in the background.\n", [read]), [])
+        self.assertEqual(unfound_quotes("> A stale cache is rebuilt in the background ... The cache is cleared only when the person\n",
+                                        [read]), ["A stale cache is rebuilt in the background ... The cache is cleared only when the person"])
+        self.assertEqual(unfound_quotes('It says "the cache is cleared ... or on a schedule".', [read]),
+                         ["the cache is cleared ... or on a schedule"])
+
+    def test_pieces_in_different_sources_are_reported(self):
+        a = window("here/docs/a.md", ["The cache is cleared only when the person"], 1, 1)
+        b = window("here/docs/b.md", ["runs clean, and never on its own."], 1, 1)
+        quote = "> The cache is cleared only ... and never on its own.\n"
+        self.assertEqual(unfound_quotes(quote, [a, b]), ["The cache is cleared only ... and never on its own."])
+        self.assertEqual(unfound_quotes(quote, [a]), ["The cache is cleared only ... and never on its own."])
+
+    def test_a_piece_with_nothing_to_check_adds_nothing(self):
+        read = "def f(a, b):\n    return a * b\n"
+        self.assertEqual(unfound_quotes(code("def f(...):"), [read]), [])          # "def f(" is found, "):" is too short
+        self.assertEqual(unfound_quotes(code("def g(...):"), [read]), ["def g(...):"])
+        self.assertEqual(unfound_quotes(code("... ... ..."), [read]), [])          # nothing at all to check
+        self.assertEqual(unfound_quotes(code("return ... ..."), [read]), [])
+        # a literal ellipsis in what was read is still found as it was written
+        self.assertEqual(unfound_quotes(code('print("loading...")'), ['x = 1\nprint("loading...")\n']), [])
+
 
 class NoTextTest(unittest.TestCase):
     """None for a text is no text: no answer has no quotes, and a source that is None, or no sources, is nothing

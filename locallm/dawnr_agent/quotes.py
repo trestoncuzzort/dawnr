@@ -83,6 +83,8 @@ DIFF_TAGS = ("diff", "patch", "udiff")
 # inside a word, as in snake_case). A code line is compared with every one of them: there they are the code.
 ESCAPED = re.compile(r"\\([!-/:-@\[-`{-~])")
 BACKTICKS = re.compile(r"`+")
+# An ellipsis in a quote, bare or in brackets, stands for words the answer leaves out
+ELLIPSIS = re.compile(r"\[\s*(?:\.{3,}|\u2026)\s*\]|\.{3,}|\u2026")
 
 
 class Changed(NamedTuple):
@@ -123,8 +125,29 @@ def unfound_quotes(answer: str | None, sources: Iterable[str | Changed | None] |
 
 def _found(key: str, spans: bool, read: list[tuple[str, tuple[str, ...]]]) -> bool:
     """Whether the key is inside a line of what was read, or, for a quote that may run across line breaks, inside a
-    text joined from its lines."""
-    return any(key in lines or (spans and any(key in whole for whole in wholes)) for lines, wholes in read)
+    text joined from its lines. A key with an ellipsis, which was not found as it stands (the source may have the
+    dots), is found when its pieces are inside one source in the order the key has them (_in_order), a piece with
+    nothing to check in it left out; one with no piece to check is nothing to report."""
+    if any(key in lines or (spans and any(key in whole for whole in wholes)) for lines, wholes in read):
+        return True
+    if not ELLIPSIS.search(key):
+        return False
+    pieces = [piece for piece in (part.strip(" ") for part in ELLIPSIS.split(key)) if _checkable(piece)]
+    if not pieces:
+        return True
+    return any(_in_order(pieces, line) for lines, _wholes in read for line in lines.split("\n")) or (
+        spans and any(_in_order(pieces, whole) for _lines_, wholes in read for whole in wholes))
+
+
+def _in_order(pieces: list[str], text: str) -> bool:
+    """Whether each piece is inside the text, each after the end of the one before it."""
+    at = 0
+    for piece in pieces:
+        at = text.find(piece, at)
+        if at < 0:
+            return False
+        at += len(piece)
+    return True
 
 
 def _bare(key: str) -> str:
