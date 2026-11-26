@@ -258,6 +258,15 @@ class ReadFormatTest(unittest.TestCase):
     """What the tools put around and between the lines of a file is not in a quote of them: a passage that runs
     over two lines a file has one after the other is found wherever the tools showed those lines."""
 
+    def test_a_line_is_what_the_file_tools_count_as_one_a_unicode_separator_inside_it(self):
+        # the file tools count lines at newlines only, as grep -n does (files.py's _file_lines): a line holding a
+        # vertical tab, a form feed or U+2028 is one numbered line, and the answer's copy of it one code line
+        line = '{"a": "one\u2028two", "b": "x\x0cy"}'
+        window = "here/a.json: lines 1-2 of 2, 40 bytes\n1\t" + line + "\n2\t}"
+        self.assertEqual(unfound_quotes(code(line), [window]), [])
+        # reported whole, its whitespace single spaces as every quote is reported
+        self.assertEqual(unfound_quotes(code(line.replace("two", "three")), [window]), ['{"a": "one three", "b": "x y"}'])
+
     def test_a_passage_over_two_adjacent_search_hits_is_found_and_over_two_far_apart_is_not(self):
         self.assertEqual(unfound_quotes(BOTH, [HITS]), [])
         apart = 'It says "runs clean, and never on its own. A stale cache is rebuilt in the background".'

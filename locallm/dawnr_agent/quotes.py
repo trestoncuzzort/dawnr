@@ -126,13 +126,23 @@ def _unmarked(text: str) -> str:
     return _plain(EMPHASIS.sub("", ESCAPED.sub(r"\1", text).replace("`", "")))
 
 
+def _lines(text: str) -> list[str]:
+    """`text`'s lines as the file tools count them (dawnr_agent/files.py, grep -n): split at a line feed only, with
+    a carriage return before it part of the line end, and no line after a last line feed. str.splitlines also splits
+    at a vertical tab, a form feed, U+2028 and others, which a file's line can hold."""
+    lines = text.split("\n")
+    if lines and lines[-1] == "":
+        lines.pop()
+    return [line[:-1] if line.endswith("\r") else line for line in lines]
+
+
 def _quoted(answer: str) -> list[tuple[str, str, bool]]:
     """(text as the answer has it, text as it is compared, whether it may run across a source's line breaks) for
     each piece of quoted material, in order."""
     out: list[tuple[str, str, bool]] = []
     open_fence = ""                                 # the fence of the code block being read; "" outside one
     diff, indent = False, 0                         # whether that block is a diff, and how far its fence is indented
-    for line in answer.splitlines():
+    for line in _lines(answer):
         fenced, marked = FENCE.match(line), MARKERS.match(line)
         if open_fence:
             if (fenced and fenced.group(1)[0] == open_fence[0] and len(fenced.group(1)) >= len(open_fence)
@@ -174,7 +184,7 @@ def _source(text: str) -> tuple[str, tuple[str, ...]]:
     number and tab and a patch's marker; whitespace made single spaces in both. A line needs nothing taken off to
     be searched on its own (what is inside the rest of a line is inside the line, and a quote that keeps the "+" or
     the number is found too); the markers matter where lines are joined, between the end of one and the next."""
-    lines = text.splitlines()
+    lines = _lines(text)
     unnumbered = [line[number.end():] if (number := NUMBER.match(line)) else line for line in lines]
     return "\n".join(_fold(line) for line in lines), _joined(unnumbered, any(map(HUNK.match, unnumbered)))
 
@@ -198,7 +208,7 @@ def _shown(text: str) -> list[tuple[str, str | None, int, str | None]]:
     put on it. The version is the sha256 a window's header gives (fs_read gives it for a file it read whole), else
     None, as for a search's hits; a page's mark in a document has None for its text. Nothing for a reply that is
     not a window or a search."""
-    lines = text.splitlines()
+    lines = _lines(text)
     head = lines[0] if lines else ""
     window, document = WINDOW.match(head), DOCUMENT.match(head)
     if window or document:

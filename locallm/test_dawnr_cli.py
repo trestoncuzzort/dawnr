@@ -796,6 +796,23 @@ def test_an_answer_whose_quotes_are_all_in_what_it_read_has_no_note(tmp_path):
     assert not any(line.startswith("[Quoted but not found") for line in said)
 
 
+def test_a_line_quoted_from_the_closest_lines_a_refused_edit_showed_counts_as_read():
+    # A dry run that refuses an edit shows the model the file's closest lines ("Nothing ran. ..." with quoted=True,
+    # Planner.messages), and nothing else of the file need have been read: a line quoted from them was read. The
+    # call's own arguments are not a source: the text the model asked to replace is no quote of the file.
+    from types import SimpleNamespace as NS
+    from dawnr_agent.files import Preview, _closest
+    from dawnr_agent.plan import Step
+    text = "def clear(cache):\n    if cache.owner_ran_clean and not cache.pinned:\n        cache.drop()\n"
+    guess = "    if cache.owner_ran_clean and cache.pinned:"
+    quoted = _closest(text, guess + "\n")
+    assert quoted.startswith("lines 1-3 of 3:\n") and "and not cache.pinned" in quoted
+    step = Step("fs_edit", {"path": "here/cache.py", "old": guess, "new": "    if cache.owner_ran_clean:"})
+    rounds = [NS(outcome=None, dry=NS(views=[NS(step=step, preview=Preview(error="the text is not in the file", quoted=quoted))]))]
+    assert cli.unread_quotes("It clears it only then:\n```python\n    if cache.owner_ran_clean and not cache.pinned:\n```", rounds) == ""
+    assert "if cache.owner_ran_clean and cache.pinned:" in cli.unread_quotes(f"It clears it then:\n```python\n{guess}\n```", rounds)
+
+
 def test_a_listing_is_held_as_the_model_got_it_as_whole_paths(tmp_path):
     # fs_list says "f notes.md (4 bytes)" and "d sub/"; the model is handed "here/notes.md  (4 bytes)" and
     # "here/sub/  (a folder)" (listing), and an answer that names the files as it got them quotes nothing unread
