@@ -464,7 +464,27 @@ def _shown(text: str, task: dict, row: dict, proved: int, stage: dict, same: dic
             "same as yours on": same["inputs"], "python": gate.python_of(task, entry)}
 
 
+def _reached(error: Exception, out: dict, before: dict | None = None) -> None:
+    """What a route had refused and the stages it had passed when `error` stopped it, kept on the error as `reached`
+    (the refusals and stages of the route before it first, when this is the second), so that whoever catches the
+    error can still say how far the function got (t/verify_panel.py)."""
+    first = before or {}
+    error.reached = {"refused": list(first.get("refused", [])) + list(out["refused"]),
+                     "stages": list(first.get("stages", [])) + list(out["stages"])}
+
+
 def by_answers(entry: dict, function: dict, student, answers: int = 5, max_new: int = 1024, prover=gate.prove, jobs: int = 2) -> dict:
+    """The route below, with what it had reached kept on any error it raises (`_reached`)."""
+    out = {"fn": entry["fn"], "tests": entry["rec"]["test_list"], "refused": [], "stages": [], "candidates": [], "shown": None,
+           "answers asked": 0}
+    try:
+        return _by_answers(out, entry, function, student, answers, max_new, prover, jobs)
+    except Exception as error:
+        _reached(error, out)
+        raise
+
+
+def _by_answers(out: dict, entry: dict, function: dict, student, answers: int, max_new: int, prover, jobs: int) -> dict:
     """`dawnr ask`'s route with the person's function standing where the independently written Python stands: the
     model is asked for whole answers (a program with its specification) from the docstring and the examples,
     without being shown the function; an answer's specification must hold at the function's answers and pin them
@@ -476,9 +496,8 @@ def by_answers(entry: dict, function: dict, student, answers: int = 5, max_new: 
     replies = [student([question], 0.0, 0, "q", max_new)[0][0]]
     for seed in range(1, answers):
         replies.append(student([question], TEMPERATURE, seed, "q", max_new)[0][0])
+    out["answers asked"] = len(replies)
     kept, lines = gate.candidates(replies, entry)
-    out = {"fn": fn, "tests": tests, "refused": [], "stages": [], "candidates": [], "shown": None,
-           "answers asked": len(replies)}
     for line in lines:
         source, reason = line.split(": ", 1)
         _refuse(out, "answers", source, _gate_stage(reason), reason)
@@ -523,7 +542,13 @@ def verify(entry: dict, function: dict, student, specs: int = 3, answers: int = 
     first = by_answers(entry, function, student, whole, max_new, prover, jobs) if whole else None
     if first and first["shown"]:
         return dict(first, route="answers")
-    second = by_specification(entry, function, student, specs, answers, max_new, prover, jobs)
+    try:
+        second = by_specification(entry, function, student, specs, answers, max_new, prover, jobs)
+    except Exception as error:
+        if first:                                               # what the first route refused came before what stopped this one
+            error.reached = {"refused": first["refused"] + error.reached["refused"],
+                             "stages": first["stages"] + error.reached["stages"]}
+        raise
     if first:
         second["refused"] = first["refused"] + second["refused"]
         second["stages"] = first["stages"] + second["stages"]
@@ -534,13 +559,22 @@ def verify(entry: dict, function: dict, student, specs: int = 3, answers: int = 
 
 def by_specification(entry: dict, function: dict, student, specs: int = 3, answers: int = 3, max_new: int = 1024,
                      prover=gate.prove, jobs: int = 2) -> dict:
+    """The route below, with what it had reached kept on any error it raises (`_reached`)."""
+    out = {"fn": entry["fn"], "tests": entry["rec"]["test_list"], "refused": [], "stages": [], "specifications": [], "shown": None,
+           "specifications asked": specs, "bodies asked": 0}
+    try:
+        return _by_specification(out, entry, function, student, specs, answers, max_new, prover, jobs)
+    except Exception as error:
+        _reached(error, out)
+        raise
+
+
+def _by_specification(out: dict, entry: dict, function: dict, student, specs: int, answers: int, max_new: int, prover, jobs: int) -> dict:
     """SAFE's two stages with the function shown (arXiv:2410.15756): specifications written from the function and
     its docstring, each held against the function, then bodies for a supported one, each proved.
     {"shown": {...} | None, "refused": [...], "why"?}."""
     fn, code, shown_code = entry["fn"], function["code"], function["shown"]
     tests = entry["rec"]["test_list"]
-    out = {"fn": fn, "tests": tests, "refused": [], "stages": [], "specifications": [], "shown": None,
-           "specifications asked": specs, "bodies asked": 0}
     written = []
     for attempt in range(specs):
         reply = student([spec_first_rows.spec_question(entry, shown_code)], 0.0 if attempt == 0 else TEMPERATURE,
