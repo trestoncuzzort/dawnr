@@ -259,6 +259,95 @@ def test_a_conditional_directive_inside_the_declarator_does_not_hide_a_declarati
         cases.extract(refused, {"name": "f", "line": 1, "end_line": refused.count("\n")})
 
 
+DIRECTIVES = ["#define X 1", "#undef X", "#include <stdio.h>", '#include "x.h"', "#pragma once", "#line 5", "#error stop", "#warning w", "# define X 1",
+              "  #define X 1", "#", "#define A \\\n\t1", "#ident \"x\"", "#assert machine(x)", "#unknown"]
+
+
+@pytest.mark.parametrize("directive", DIRECTIVES)
+def test_a_directive_before_the_function_is_refused(directive):
+    source, entry = function(directive + "\n", "int f(void)")
+    with pytest.raises(ValueError, match="preprocessor directive outside"):
+        cases.extract(source, entry)
+
+
+@pytest.mark.parametrize("directive", DIRECTIVES)
+@pytest.mark.parametrize("head", ["int f(void)", "int f(a)\nint a;"])
+def test_a_directive_between_the_declarator_and_the_body_is_refused(directive, head):
+    source, entry = function("", f"{head}\n{directive}")
+    with pytest.raises(ValueError, match="preprocessor directive outside"):
+        cases.extract(source, entry)
+
+
+@pytest.mark.parametrize("directive", DIRECTIVES)
+def test_a_directive_inside_the_body_is_the_functions_own_text(directive):
+    body = f"{{\n{directive}\n\treturn 0;\n}}\n"
+    source, entry = function("", "int f(void)", body)
+    assert cases.extract(source, entry) == source
+
+
+@pytest.mark.parametrize("prefix", ["/*\n#define X 1\n*/\n", "// #define X 1\n"])
+def test_what_looks_like_a_directive_in_a_comment_is_not_one(prefix):
+    source, entry = function(prefix, "int f(void)")
+    assert cases.extract(source, entry) == source
+
+
+def test_a_directive_in_a_conditional_before_the_function_is_refused_too():
+    source, entry = function("#if X\n#define Y 1\n#endif\n", "int f(void)")
+    with pytest.raises(ValueError, match="preprocessor directive outside"):
+        cases.extract(source, entry)
+
+
+@pytest.mark.parametrize("directives", [
+    "#ifdef X\nint f(a) int a;\n#else\nint f(a) long a;\n#endif\n",    # a branch of the declarator
+    "int f(\n#if X\nint a\n#else\nlong a\n#endif\n)\n",                # a branch of the parameter list
+    "#if X\nstatic\n#endif\nint f(void)\n",
+])
+def test_conditional_directives_around_the_parts_of_a_declarator_stay_accepted(directives):
+    source = directives + "{\n\treturn 0;\n}\n"
+    assert cases.extract(source, {"name": "f", "line": 1, "end_line": source.count("\n")}) == source
+
+
+@pytest.mark.parametrize("source", [
+    "#if 0\nint f(void)\n{\n\treturn 0;\n}\n#endif\n",      # the range ends on #endif, so it is not one function
+    "#ifdef X\nint f(void)\n{\n\treturn 0;\n}\n",           # a conditional that is never closed
+    "#endif\nint f(void)\n{\n\treturn 0;\n}\n",             # one that was never opened
+    "#if X\n#else\n#else\nint f(void)\n{\n\treturn 0;\n}\n#endif\n#endif\n",
+])
+def test_a_range_may_not_open_or_close_a_conditional_it_does_not_hold(source):
+    with pytest.raises(ValueError):
+        cases.extract(source, {"name": "f", "line": 1, "end_line": source.count("\n")})
+
+
+@pytest.mark.parametrize("directive", DIRECTIVES)
+def test_a_directive_outside_the_one_declaration_is_refused(directive):
+    for source in (f"{directive}\nint table = 1;\n", f"int table =\n{directive}\n1;\n", f"int table = 1\n{directive}\n;\n"):
+        with pytest.raises(ValueError, match="preprocessor directive outside"):
+            cases.extract(source, {"name": "table", "kind": "declaration", "line": 1, "end_line": source.count("\n")})
+
+
+@pytest.mark.parametrize("directive", DIRECTIVES)
+def test_a_directive_inside_the_braces_of_a_declaration_is_its_own_text(directive):
+    source = f"static const struct {{\n{directive}\n\tint key;\n}} table[] = {{ {{1}} }};\n"
+    assert cases.extract(source, {"name": "table", "kind": "declaration", "line": 1, "end_line": source.count("\n")}) == source
+
+
+@pytest.mark.parametrize("source", [
+    "int table =\n#if A\n1\n#else\n2\n#endif\n;\n",
+    "int table\n#if A\n= 1\n#else\n= 2\n#endif\n;\n",
+])
+def test_conditional_directives_inside_one_declaration_stay_accepted(source):
+    assert cases.extract(source, {"name": "table", "kind": "declaration", "line": 1, "end_line": source.count("\n")}) == source
+
+
+@pytest.mark.parametrize("source", [
+    "#if A\nint table = 1;\n",
+    "#endif\nint table = 1;\n",
+])
+def test_a_declaration_range_may_not_open_or_close_a_conditional_it_does_not_hold(source):
+    with pytest.raises(ValueError):
+        cases.extract(source, {"name": "table", "kind": "declaration", "line": 1, "end_line": source.count("\n")})
+
+
 def test_no_source_byte_can_change_under_the_pinned_identity(tmp_path):
     root = write_case(tmp_path / "case")
     cases.build_unit(cases.load(root), "original", root)

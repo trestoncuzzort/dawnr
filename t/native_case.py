@@ -176,11 +176,66 @@ def outer_semicolons(text: str) -> list[int]:
     return found
 
 
-def blanked(text: str) -> str:
-    """The text with each comment and literal, and each preprocessor line, replaced by spaces, newlines kept."""
+CONDITIONALS = ("if", "ifdef", "ifndef", "elif", "elifdef", "elifndef", "else", "endif")
+
+
+def skeleton(text: str) -> str:
+    """The text with each comment and literal replaced by spaces, newlines kept."""
     kept = {index for index, _ in code(text)}
-    plain = "".join(char if index in kept or char == "\n" else " " for index, char in enumerate(text))
-    return "\n".join(" " * len(line) if line.lstrip().startswith("#") else line for line in plain.split("\n"))
+    return "".join(char if index in kept or char == "\n" else " " for index, char in enumerate(text))
+
+
+def directives(plain: str) -> list[tuple[int, int, str]]:
+    """Each preprocessor directive of a skeleton as (start, end, name), a backslash at a line end continuing it."""
+    found, offset, lines, current = [], 0, plain.split("\n"), None
+    for line in lines:
+        if current is None and line.lstrip().startswith("#"):
+            current = [offset, re.match(r"\s*#\s*(\w*)", line).group(1)]
+        if current is not None and not line.rstrip().endswith("\\"):
+            found.append((current[0], offset + len(line), current[1]))
+            current = None
+        offset += len(line) + 1
+    return found
+
+
+def blanked(text: str) -> str:
+    """The skeleton with each preprocessor directive replaced by spaces."""
+    plain = skeleton(text)
+    for start, end, _ in directives(plain):
+        plain = plain[:start] + "".join(" " if char != "\n" else char for char in plain[start:end]) + plain[end:]
+    return plain
+
+
+def check_directives(name: str, kind: str, text: str) -> None:
+    """A function or declaration range holds that one item and nothing a preprocessor directive could add to the unit.
+    A directive inside the item's braces is the item's own text. A directive outside them (before a function's
+    declarator, between it and its body, or anywhere outside the braces of a declaration) must be a conditional one,
+    and the conditional directives of the range pair up, so the range cannot open or close one it does not hold."""
+    plain, open_ifs, else_seen = skeleton(text), 0, []
+    found, blank = directives(plain), blanked(text)
+    first = blank.find("{")
+    brace = (len(blank) if first < 0 else first) if kind == "function" else None
+    depth, at = 0, 0
+    for start, end, word in found:
+        if brace is None:
+            depth = max(0, depth + blank.count("{", at, start) - blank.count("}", at, start))
+            at = start
+        outside = depth == 0 if brace is None else start < brace
+        if outside and word not in CONDITIONALS:
+            raise ValueError(f"{name}: a preprocessor directive outside the {'function' if kind == 'function' else 'declaration'}'s braces is not part of it")
+        if word in ("if", "ifdef", "ifndef"):
+            open_ifs += 1
+            else_seen.append(False)
+        elif word in ("elif", "elifdef", "elifndef", "else", "endif"):
+            if not open_ifs or (word == "else" and else_seen[-1]) or (word in ("elif", "elifdef", "elifndef") and else_seen[-1]):
+                raise ValueError(f"{name}: conditional directives do not pair up in the extracted lines")
+            if word == "endif":
+                open_ifs -= 1
+                else_seen.pop()
+            elif word == "else":
+                else_seen[-1] = True
+    if open_ifs:
+        raise ValueError(f"{name}: conditional directives do not pair up in the extracted lines")
 
 
 def one_declarator(name: str, text: str) -> bool:
@@ -235,6 +290,8 @@ def extract(source: str, entry: dict) -> str:
         if not chosen[0].lstrip().startswith("#") or any(not line.endswith("\\") for line in chosen[:-1]) or chosen[-1].endswith("\\"):
             raise ValueError(f"{entry['name']}: not exactly one preprocessor definition")
         return text
+    if kind in ("function", "declaration"):
+        check_directives(entry["name"], kind, text)
     depth, low, closed = balance(text)
     # Conditional compilation can hold unmatched braces in its branches; the line range then stands alone.
     conditional = any(re.match(r"\s*#\s*(if|ifdef|ifndef|elif|else)\b", line) for line in chosen)
