@@ -966,6 +966,27 @@ def test_windows_of_a_file_too_big_to_hash_are_not_joined_across_an_edit_that_ra
     assert cli.unread_quotes(quote, rounds) == ""
 
 
+def test_a_faithful_quote_of_a_documents_text_is_found_where_the_reader_cut_its_lines(tmp_path):
+    # files.py cuts a document's text at str.splitlines (a vertical tab, a form feed, a carriage return, U+0085,
+    # U+2028 and others end a line there) and shows the cuts as line feeds; the checker cuts what was shown at line
+    # feeds only. The two agree on what the model was shown, so a quote of the lines as shown, and a passage over
+    # them, are found; none of the separators is in what the model saw, so none is in what it quotes.
+    pages = [(1, "The cache is cleared only when the person\x0cruns clean,\rand never on its own.\r\n"
+                 "A stale cache is\x85rebuilt in the background.\x0b\x1cDone."), (2, "Next page, same as before.")]
+    answer = ("The first lines:\n```\nThe cache is cleared\nonly when the person\nruns clean,\n```\n"
+              "> The cache is cleared only when the person runs clean, and never on its own.\n\n"
+              "It says \"A stale cache is rebuilt in the background. Done.\" and \"Done. [page 2] Next page, same as before.\"")
+    model = Model(turn(("fs_read", {"path": "here/memo.pdf"})), turn(text=answer))
+    work, harness, agent, planner, meter, said, asked, _ask = session(tmp_path, model)
+    (work / "memo.pdf").write_bytes(b"%PDF-1.4\n")
+    agent.files.document_reader = (lambda copy: (pages, "pdf, 2 pages"), str(tmp_path / "scratch"))
+    with harness:
+        cli.run_task(agent, planner, meter, "What does the memo say?", [], said.append)
+    shown = model.bodies[1]["messages"][-1]["content"]
+    assert "lines 1-" in shown and " " not in shown and "\x0c" not in shown and "\x85" not in shown
+    assert not any(line.startswith("[Quoted but not found") for line in said), said
+
+
 def test_a_listing_is_held_as_the_model_got_it_as_whole_paths(tmp_path):
     # fs_list says "f notes.md (4 bytes)" and "d sub/"; the model is handed "here/notes.md  (4 bytes)" and
     # "here/sub/  (a folder)" (listing), and an answer that names the files as it got them quotes nothing unread
