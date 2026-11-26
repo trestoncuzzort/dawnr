@@ -9,7 +9,8 @@ two files or lines apart; a passage of either text of a patch over a changed lin
 compared without its marker and its syntax is not a quote; prose is found with Markdown's emphasis, code spans and
 escapes or without them, a code line only with every character; a passage of fewer than six words, and a
 line with nothing to check in it (punctuation, an ellipsis, fewer than four characters), is never reported; what is
-reported comes in the order of the answer, once each. Standard library only.
+reported comes in the order of the answer, once each; None for the answer, for a source or for the sources is no
+text. Standard library only.
 """
 import sys
 import unittest
@@ -388,6 +389,21 @@ class MarkdownTest(unittest.TestCase):
                          ["Report every static sensor the body touches on its way, as an ordinary contact.",
                           "configure a Debug GCC build with TARGETUNITTESTS=ON and the samples disabled",
                           "return a b"])
+
+
+class NoTextTest(unittest.TestCase):
+    """None for a text is no text: no answer has no quotes, and a source that is None, or no sources, is nothing
+    read."""
+
+    def test_no_answer_has_no_quotes(self):
+        self.assertEqual(unfound_quotes(None, [PATCH]), [])
+
+    def test_a_source_that_is_none_is_nothing_read(self):
+        self.assertEqual(unfound_quotes(code(CLAIMED, "continue;"), [None, PATCH, None]), [CLAIMED])
+        self.assertEqual(unfound_quotes(code("continue;"), [None]), ["continue;"])
+
+    def test_no_sources_is_nothing_read(self):
+        self.assertEqual(unfound_quotes(code("continue;"), None), ["continue;"])
 
 
 if __name__ == "__main__":

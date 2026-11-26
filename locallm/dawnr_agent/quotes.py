@@ -28,7 +28,8 @@ fewer than four characters that are not spaces), a fence inside a blockquote, a 
 
 This is the test locallm/rag_quote.py makes of a quote (word for word in a document, whitespace folded), made of
 free Markdown instead of a quoting syntax. Found means copied, not right: a line copied exactly from the old side
-of a patch is found as surely as one from the new. Text in, text out; standard library only.
+of a patch is found as surely as one from the new. Text in, text out (None for a text is no text: no quotes,
+nothing read); standard library only.
 """
 from __future__ import annotations
 
@@ -76,10 +77,13 @@ ESCAPED = re.compile(r"\\([!-/:-@\[-`{-~])")
 EMPHASIS = re.compile(r"(?<!\w)[*_]+|[*_]+(?!\w)")
 
 
-def unfound_quotes(answer: str, sources: Iterable[str]) -> list[str]:
+def unfound_quotes(answer: str | None, sources: Iterable[str | None] | None) -> list[str]:
     """The quoted material in the answer that is in none of the sources, whitespace made single spaces, in the
-    order the answer has it, each once."""
-    texts = list(sources)
+    order the answer has it, each once. None for a text is no text: no answer has no quotes, and a source that is
+    None, or no sources, is nothing read."""
+    if not answer:
+        return []
+    texts = [text for text in sources or () if text is not None]
     read = [_source(text) for text in texts] + [("", _joined(run, patch)) for run, patch in _runs(texts)]
     unmarked = None                                 # what was read without Markdown's inline formatting, when needed
     unfound: list[str] = []
