@@ -20,8 +20,8 @@ from test_loop_dataset import evidence as _bare_evidence, sample  # noqa: E402
 
 
 def evidence(s):
-    """The fixture's verdict, which judged no mutant, with the share of wrong answers it rejected (2026-11-26: a verdict
-    that judged none is refused, graded_pool.rejection)."""
+    """The fixture's verdict, which judged no mutant, with the share of wrong answers it rejected set to 1.0, so that
+    it passes the completeness check in graded_pool.rejection (which refuses a verdict that judged no mutant)."""
     out = _bare_evidence(s)
     for v in out.values():
         v["completeness"] = 1.0

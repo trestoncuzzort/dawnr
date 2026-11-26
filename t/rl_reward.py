@@ -77,8 +77,8 @@ DRAWN_TESTS = 50
 # Bumped whenever local_signals changes what it measures: a cached row of another
 # version is re-graded (its proof is cheap to redo, run_par caches verdicts).
 REWARD_VERSION = 4
-# 4 (2026-11-26): an agreeing specification where no wrong answer was judged is weak too (`pins_down` is True only
-# when one was judged and cleared the floor); version 3 read that as not weak, so `ensures true` earned the top tier.
+# 4: `weak` also covers an agreeing specification where no wrong answer was judged (`pins_down` is True only when one
+# was judged and met the floor); version 3 read that as not weak, so `ensures true` earned the top tier.
 # 3 (2026-10-01): `weak` is the gate's own rule, spec_check.complete() is False (both mutant families,
 # near outputs and other inputs' answers, rejected at least 60% of the time: SAFE arXiv:2410.15756), where
 # version 2 read spec_check's `weak` (any near-output mutant accepted: stricter on that family, blind to the

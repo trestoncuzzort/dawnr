@@ -54,7 +54,7 @@ MIN_AGREEING_DRAWS = 10
 # On 2026-10-01, 40 of the pool's 693 rows sat below 0.6 (an `ensures` true of the right answer
 # and of most wrong ones, e.g. "every character of r is alphanumeric" for a function that removes
 # the others). A row is trained on only at this completeness or above; a verdict that judged no
-# mutant is refused (2026-11-26: no wrong answer judged is no evidence that the specification pins the answer down).
+# mutant is refused: with no wrong answer judged, nothing shows that the specification pins the answer down.
 MIN_COMPLETENESS = 0.6
 
 

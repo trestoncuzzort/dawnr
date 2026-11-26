@@ -95,7 +95,7 @@ class WeakSpecification(unittest.TestCase):
         self.assertEqual(self.levels(None), {1: 7, 2: 7, 3: 7, 4: 7, 5: 7})
 
     def test_below_the_floor_is_not_counted_and_the_floor_itself_is(self):
-        # problem 5 judged no mutant (2026-11-26): that is no evidence its specification pins the answer down, so it is not counted
+        # problem 5 judged no mutant: nothing shows its specification pins the answer down, so it is not counted
         self.assertEqual(self.levels(0.6), {1: 7, 2: 7, 3: 0, 4: 0, 5: 0})
 
     def test_the_unchecked_column_does_not_move(self):

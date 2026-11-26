@@ -1,11 +1,12 @@
-"""No wrong answer judged is not evidence that a specification pins the answer down (2026-11-26).
+"""A specification is not shown to pin the answer down when no wrong answer was judged against it.
 
-`spec_check.complete` says None when no mutant of either family was judged, and the gate, the scores and the RL
-reward each read None as "not failing", so `ensures true` passed wherever no wrong answer was judged (the t-track
-found MBPP 490 on a branch). The rule: the verify gate refuses it with a reason, and no score or reward counts it
-as strong. The specification here is the vacuous one, `ensures true`, over a function whose answer is the same
-for every input; the answer's value type is stood in for by patching `spec_check.mutations` to find no mutant,
-which is what it says of a value it has no mutations for, and the other family has no other answer to offer."""
+`spec_check.complete` says None when no mutant of either family was judged. The gate, the scores and the RL reward
+must not read None as "not failing", or `ensures true` would pass wherever no wrong answer is judged. The rule: the
+verify gate refuses it with a reason, and no score or reward counts it as strong.
+
+The specification here is the vacuous `ensures true`, over a function whose answer is the same for every input. The
+answer's value type is stood in for by patching `spec_check.mutations` to find no mutant, which is what it says of a
+value it has no mutations for; the other family has no other answer to offer."""
 import random
 import sys
 import unittest
@@ -41,7 +42,7 @@ class Unjudged(unittest.TestCase):
         self.assertGreaterEqual(r["draws"], 10)
         self.assertNotIn("completeness", r)
         self.assertNotIn("cross_completeness", r)
-        self.assertIsNone(spec_check.complete(r))          # unchanged: complete still reports what it measured
+        self.assertIsNone(spec_check.complete(r))          # `complete` still reports what it measured (None)
 
     def test_pins_down_is_true_only_when_a_wrong_answer_was_judged_and_rejected(self):
         self.assertFalse(spec_check.pins_down({"status": "agrees"}))
