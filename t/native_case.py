@@ -108,10 +108,9 @@ def own_properties(results: list[dict]) -> list[dict]:
     return [row for row in results if row.get("sourceLocation", {}).get("file") != STOP_FILE]
 
 
-def balance(text: str) -> tuple[int, int, list[int]]:
-    """Final brace depth, its minimum, and where it returned to zero, outside comments and literals."""
-    depth = low = index = 0
-    closed = []
+def code(text: str):
+    """Each character outside comments and literals, with its index."""
+    index = 0
     while index < len(text):
         two = text[index:index + 2]
         if two == "//":
@@ -130,12 +129,30 @@ def balance(text: str) -> tuple[int, int, list[int]]:
                 raise ValueError("unterminated literal in extracted lines")
             index += 1
         else:
-            depth += {"{": 1, "}": -1}.get(text[index], 0)
-            low = min(low, depth)
-            if text[index] == "}" and depth == 0:
-                closed.append(index)
+            yield index, text[index]
             index += 1
+
+
+def balance(text: str) -> tuple[int, int, list[int]]:
+    """Final brace depth, its minimum, and where it returned to zero, outside comments and literals."""
+    depth = low = 0
+    closed = []
+    for index, char in code(text):
+        depth += {"{": 1, "}": -1}.get(char, 0)
+        low = min(low, depth)
+        if char == "}" and depth == 0:
+            closed.append(index)
     return depth, low, closed
+
+
+def outer_semicolons(text: str) -> list[int]:
+    """Where a semicolon stands outside every brace, comment and literal: where a declaration can end."""
+    depth, found = 0, []
+    for index, char in code(text):
+        depth += {"{": 1, "}": -1}.get(char, 0)
+        if char == ";" and depth == 0:
+            found.append(index)
+    return found
 
 
 def extract(source: str, entry: dict) -> str:
@@ -165,8 +182,9 @@ def extract(source: str, entry: dict) -> str:
     tail = text.rstrip()
     if kind == "function" and (not tail.endswith("}") or (not conditional and closed != [len(tail) - 1])):
         raise ValueError(f"{entry['name']}: not exactly one function definition")
-    # `static const struct { ... } table[] = { ... };` closes a brace twice and is still one declaration.
-    if kind == "declaration" and not tail.endswith(";"):
+    # A declaration ends at the one semicolon outside its braces. `static const struct { ... } table[] = { ... };` closes a
+    # brace twice and is one; `int a = 1;\nint b = 2;`, and a range running on through a function, are not.
+    if kind == "declaration" and (not tail.endswith(";") or (not conditional and outer_semicolons(tail) != [len(tail) - 1])):
         raise ValueError(f"{entry['name']}: not exactly one declaration")
     return text
 

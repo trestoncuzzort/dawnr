@@ -128,6 +128,28 @@ def test_a_table_of_an_unnamed_struct_type_is_one_declaration():
     assert cases.extract(source, {"name": "table", "kind": "declaration", "line": 1, "end_line": 7}) == source
 
 
+@pytest.mark.parametrize("source", [
+    "int table = 1, other = 2;\n",                                         # one declaration of two objects
+    'static const char *table = "};";\n',                                  # a semicolon in a literal
+    "static const struct {\n\tenum { X = 1 } k;\n} table[] = { {X} };\n",  # semicolons inside the braces
+    "static const int table[] = {\n#if A\n\t1,\n#else\n\t2,\n#endif\n};\n",
+])
+def test_one_declaration_is_accepted_whatever_its_braces_hold(source):
+    assert cases.extract(source, {"name": "table", "kind": "declaration", "line": 1, "end_line": source.count("\n")}) == source
+
+
+@pytest.mark.parametrize("source", [
+    'static const char *table = "}{";\nint add(int a, int b)\n{\n\treturn a + b;\n}\nstruct pair {\n\tint left;\n};\n',
+    "int table[] = {1};\nint other[] = {2};\n",
+    "int table = 1;\nint other = 2;\n",
+    "int table = 1;\nint other(void);\n",
+    "struct table { int x; };\nint other = 1;\n",
+])
+def test_a_declaration_range_over_more_than_one_declaration_is_refused(source):
+    with pytest.raises(ValueError, match="not exactly one declaration"):
+        cases.extract(source, {"name": "table", "kind": "declaration", "line": 1, "end_line": source.count("\n")})
+
+
 def test_no_source_byte_can_change_under_the_pinned_identity(tmp_path):
     root = write_case(tmp_path / "case")
     cases.build_unit(cases.load(root), "original", root)
