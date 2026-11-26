@@ -473,5 +473,74 @@ class CraftedTextTest(unittest.TestCase):
         self.assertEqual(unfound_quotes(self.QUOTE, ["[the cache is cleared only when the person runs clean](a.md)"]), [])
 
 
+class ProgramPrefixTest(unittest.TestCase):
+    """A program's own line prefixes in a command's output (grep -n's `path:N:text` and `N:text`, cat -n's and nl's
+    number and tab) are taken off where the output's lines consistently carry them: every line of a run has one and
+    the numbers count up. A passage over two such lines is found; a false quote is still reported."""
+
+    LINES = ["The cache is cleared only when the person", "runs clean, and never on its own.",
+             "A stale cache is rebuilt in the background."]
+
+    def test_a_passage_over_two_lines_of_grep_n_output_with_the_file_name_is_found(self):
+        out = "here/docs/cache.md:3:" + self.LINES[0] + "\nhere/docs/cache.md:4:" + self.LINES[1] + "\n"
+        self.assertEqual(unfound_quotes(BOTH, [out]), [])
+        context = "here/docs/cache.md-3-" + self.LINES[0] + "\nhere/docs/cache.md:4:" + self.LINES[1] + "\n"
+        self.assertEqual(unfound_quotes(BOTH, [context]), [])
+
+    def test_a_passage_over_two_lines_of_grep_n_output_on_one_file_is_found(self):
+        self.assertEqual(unfound_quotes(BOTH, ["3:" + self.LINES[0] + "\n4:" + self.LINES[1] + "\n"]), [])
+
+    def test_a_passage_over_two_lines_of_cat_n_and_nl_output_is_found(self):
+        cat = "".join(f"{n:>6}\t{line}\n" for n, line in enumerate(self.LINES, 3))
+        self.assertEqual(unfound_quotes(BOTH, [cat]), [])
+        nl = "     1\t# Cache\n       \n     2\t" + self.LINES[0] + "\n     3\t" + self.LINES[1] + "\n"
+        self.assertEqual(unfound_quotes(BOTH, [nl]), [])
+        # nl numbers the lines that are not blank: a passage over the blank line one numbered line apart is a
+        # paragraph break the file has, and the lines either side of it are one after the other
+        self.assertEqual(unfound_quotes("> # Cache The cache is cleared only when the person\n", [nl]), [])
+
+    def test_a_false_quote_over_prefixed_lines_is_still_reported(self):
+        out = "here/docs/cache.md:3:" + self.LINES[0] + "\nhere/docs/cache.md:4:" + self.LINES[1] + "\n"
+        wrong = "> The cache is cleared only when the person never runs clean on its own.\n"
+        self.assertEqual(unfound_quotes(wrong, [out]), [wrong[2:-1]])
+        claimed = code(CLAIMED)
+        self.assertEqual(unfound_quotes(claimed, ["src/a.cpp:9:" + PATCH.splitlines()[0] + "\nsrc/a.cpp:10:" + PATCH.splitlines()[2]]),
+                         [CLAIMED])
+
+    def test_lines_the_numbers_show_are_apart_or_of_two_files_are_not_joined(self):
+        apart = "here/docs/cache.md:3:" + self.LINES[0] + "\nhere/docs/cache.md:9:" + self.LINES[1] + "\n"
+        self.assertEqual(unfound_quotes(BOTH, [apart]), [BOTH[2:-1]])
+        two = "here/docs/a.md:3:" + self.LINES[0] + "\nhere/docs/b.md:4:" + self.LINES[1] + "\n"
+        self.assertEqual(unfound_quotes(BOTH, [two]), [BOTH[2:-1]])
+
+    def test_numbers_and_tabs_that_are_the_texts_own_are_kept(self):
+        # a table whose rows start with a number and a tab, with a line of its own between: not a program's prefix
+        # (not every line of the run has one), so a quote that keeps the number is found
+        table = "Year\tRevenue\n2024\tRevenue grew by two percent\nand then fell in 2025.\n"
+        self.assertEqual(unfound_quotes("> 2024 Revenue grew by two percent and then fell in 2025.\n", [table]), [])
+        # numbers that do not count up are no line numbers
+        down = "5:The cache is cleared only when the person\n3:runs clean, and never on its own.\n"
+        self.assertEqual(unfound_quotes(BOTH, [down]), [BOTH[2:-1]])
+
+    def test_a_line_of_a_file_made_like_a_prefix_is_checked_at_once(self):
+        import time
+        for text in ("a-1" * 20_000, "-1" * 30_000, "1" * 60_000 + "-", ("x" * 299 + ":") * 200):
+            with self.subTest(text=text[:8]):
+                started = time.perf_counter()
+                unfound_quotes(BOTH, [text + "\n" + text])
+                self.assertLess(time.perf_counter() - started, 0.5)
+
+    def test_a_number_too_long_to_be_a_line_number_is_text(self):
+        # int() refuses a string of more than 4300 digits: what was read is untrusted, and a line of digits is text
+        big = "9" * 5000
+        for text in (big + "\tthe cache is cleared\n", f"here/a.md:{big}: the cache is cleared\n",
+                     f"here/a.md: lines 1-{big} of 5, 3 bytes\n1\tthe cache is cleared\n",
+                     f"here/a.md (pdf, 2 pages): lines {big}-{big} of 5 of its text, 3 bytes\nthe cache is cleared\n",
+                     "search for 'x' in here (literal, exact case): 1 matches in 1 files, 1 files searched\n"
+                     f"here/a.md:{big}: the cache is cleared\n"):
+            with self.subTest(text=text[:20]):
+                self.assertEqual(unfound_quotes('> the cache is cleared\n', [text]), [])
+
+
 if __name__ == "__main__":
     unittest.main()

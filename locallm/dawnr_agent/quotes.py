@@ -39,7 +39,7 @@ from typing import Iterable
 
 FENCE = re.compile(r"\s*(`{3,}|~{3,})(.*)")          # a code fence, and the rest of its line
 MARKERS = re.compile(r"\s*(?:>\s?)+")                # a blockquote line's ">", nested ones too
-NUMBER = re.compile(r" *(\d+)\t")                   # fs_read's line number, right-aligned, and its tab
+NUMBER = re.compile(r" *(\d{1,15})\t")                   # fs_read's line number, right-aligned, and its tab
 QUOTED = re.compile(r'"([^"]*)"|\u201c([^\u201c\u201d]*)\u201d')
 WORDS = 6                                           # a passage in quotes of fewer words is a phrase
 # Compared, not shown (2026-11-26: five of the six quotes a 27B's three reviews had reported were copied, and differed
@@ -56,12 +56,12 @@ QUOTE_MARKS = str.maketrans(dict.fromkeys("'\u2018\u2019\u201a\u201b\u2032\u201c
 # pages are marked on lines of their own; a search's header, then each hit after its file's name and its number; and
 # a reply cut at its size. Lines a file has one after the other are one text however the tools showed them: in two
 # windows of one version of it, as two hits, a window and a hit.
-WINDOW = re.compile(r"(.*): lines (\d+)-(\d+) of \d+, \d+ bytes(?:, sha256 ([0-9a-f]+))?")
+WINDOW = re.compile(r"(.*): lines (\d{1,15})-(\d{1,15}) of \d+, \d+ bytes(?:, sha256 ([0-9a-f]+))?")
 # the reader's name for what it read ("pdf, 2 pages", "text (cp1252)": doc_read.read) holds brackets one deep at most
-DOCUMENT = re.compile(r"(.*) \(((?:[^()]|\([^()]*\))*)\): lines (\d+)-(\d+) of \d+ of its text, \d+ bytes$")
+DOCUMENT = re.compile(r"(.*) \(((?:[^()]|\([^()]*\))*)\): lines (\d{1,15})-(\d{1,15}) of \d+ of its text, \d+ bytes$")
 PAGE = re.compile(r"\[page \d+\]$")
 SEARCH = re.compile(r"search for .* \(literal, .*\): \d+ matches in \d+ files, \d+ files searched$")
-HIT = re.compile(r"(.+?):(\d+): (.*)")
+HIT = re.compile(r"(.+?):(\d{1,15}): (.*)")
 CLIPPED = re.compile(r"\[truncated at \d+ characters\]$")
 # A unified diff (POSIX diff, "Diff -u or -U Output Format",
 # pubs.opengroup.org/onlinepubs/9799919799/utilities/diff.html; git-scm.com/docs/git-diff, "Generating patch text
@@ -181,13 +181,94 @@ def _diff_line(line: str, indent: int) -> str:
 
 
 def _source(text: str) -> tuple[str, tuple[str, ...]]:
-    """A source's lines as they were read, one to a line, and its whole text with each line taken without fs_read's
-    number and tab and a patch's marker; whitespace made single spaces in both. A line needs nothing taken off to
-    be searched on its own (what is inside the rest of a line is inside the line, and a quote that keeps the "+" or
-    the number is found too); the markers matter where lines are joined, between the end of one and the next."""
+    """A source's lines as they were read, one to a line, and its whole text joined from its lines: each line taken
+    without a program's line prefix where the output's lines consistently carry one (_stretches) and a patch's
+    marker; whitespace made single spaces in both. A line needs nothing taken off to be searched on its own (what
+    is inside the rest of a line is inside the line, and a quote that keeps a prefix or the "+" is found too); the
+    prefixes matter where lines are joined, between the end of one and the next. A text with prefixes taken off is
+    also joined as it is, for a quote that keeps them."""
     lines = _lines(text)
-    unnumbered = [line[number.end():] if (number := NUMBER.match(line)) else line for line in lines]
-    return "\n".join(_fold(line) for line in lines), _joined(unnumbered, any(map(HUNK.match, unnumbered)))
+    stretches = _stretches(lines)
+    whole = [joined for stretch in stretches for joined in _joined(stretch, any(map(HUNK.match, stretch)))]
+    if len(stretches) != 1 or stretches[0] != lines:
+        whole += _joined(lines, any(map(HUNK.match, lines)))
+    return "\n".join(_fold(line) for line in lines), tuple(whole)
+
+
+def _stretches(lines: list[str]) -> list[list[str]]:
+    """The lines as stretches of lines one after the other: a run of two lines or more that all carry a program's line
+    prefix, with the numbers counting up, is taken without the prefix and cut where a number is not the one after
+    the last (grep -n shows the lines that match, which are not one after the other); the lines between such runs
+    are a stretch as they are. Prefixes are the output of cat -n and nl (a number and a tab; nl leaves a blank line
+    unnumbered), of grep -n on one file (`3:text`, and `3-text` for a context line) and of grep -n on several
+    (`path:3:text`). Only where every line of the run has one: a TSV row or a numbered list in a text is its own."""
+    out: list[list[str]] = []
+    plain: list[str] = []
+    i = 0
+    while i < len(lines):
+        best = max((got for form in (_cat_n, _grep_one, _grep_many) if (got := _follow(lines, i, form))),
+                   key=lambda got: got[0], default=None)
+        if best is None:
+            plain.append(lines[i])
+            i += 1
+            continue
+        if plain:
+            out.append(plain)
+            plain = []
+        i = best[0]
+        out += best[1]
+    return out + [plain] if plain else out
+
+
+def _follow(lines: list[str], i: int, form) -> tuple[int, list[list[str]]] | None:
+    """(where the run of lines from i that carry this form of prefix ends, its text in stretches), None for a run
+    of fewer than two lines."""
+    stretches: list[list[str]] = []
+    current: list[str] = []
+    blanks: list[str] = []
+    key = last = None
+    end = i
+    count = 0
+    for j in range(i, len(lines)):
+        got = form(lines[j])
+        if got is _BLANK and last is not None:
+            blanks.append("")
+            continue
+        if not isinstance(got, tuple) or (last is not None and (got[0] != key or got[1] <= last)):
+            break
+        key, number, rest = got
+        if last is not None and number != last + 1 and current:
+            stretches.append(current)
+            current, blanks = [], []
+        current += blanks + [rest]
+        blanks = []
+        last, end, count = number, j + 1, count + 1
+    if count < 2:
+        return None
+    return end, stretches + [current]
+
+
+_BLANK = object()
+_GREP_ONE = re.compile(r"(\d{1,15})[:-]")
+_GREP_MANY = re.compile(r"(.{1,300}?)[:-](\d{1,15})[:-]")
+
+
+def _cat_n(line: str):
+    """(key, number, text) of a line of cat -n or nl output; _BLANK for the blank line nl leaves unnumbered."""
+    number = NUMBER.match(line)
+    if number:
+        return "", int(number.group(1)), line[number.end():]
+    return _BLANK if not line.strip() else None
+
+
+def _grep_one(line: str):
+    number = _GREP_ONE.match(line)
+    return ("", int(number.group(1)), line[number.end():]) if number else None
+
+
+def _grep_many(line: str):
+    hit = _GREP_MANY.match(line)
+    return (hit.group(1), int(hit.group(2)), line[hit.end():]) if hit else None
 
 
 def _joined(lines: list[str], patch: bool = False) -> tuple[str, ...]:
