@@ -748,17 +748,40 @@ class FileTools:
         start = max(1, int(args.get("start", 1)))
         count = min(int(args.get("lines", self.limits.read_lines)), self.limits.max_lines)
         window = lines[start - 1:start - 1 + count]
-        last = start - 1 + len(window)
         digest = f", sha256 {sha256(data)[:HASH_SHOWN]}" if whole else ""
+        cap = self.limits.max_output_chars
+        partial = "" if whole else f"\n[only the first {self.limits.max_read_bytes} bytes of the file are readable]"
+        # The reply holds `cap` characters. The window is cut to the whole lines that fit before the header and the
+        # resume hint are written, so the header names exactly the lines shown and the hint survives. Until
+        # 2026-11-26 the cap cut the finished text instead: mid-line, with the header still naming every line asked
+        # for and the resume hint after the body cut away, so the model could not tell where to go on.
+        widest = (f"{target.display}: lines {start}-{start - 1 + len(window)} of {len(lines)}, {size} bytes"
+                  f"{digest}{note}\n"
+                  f"\n[line {start} is {max((len(s) for s in window), default=0)} characters; the first {cap} are shown]"
+                  f"\n[lines {len(lines)}-{len(lines)} not shown (the reply holds {cap} characters); "
+                  f"read again with \"start\": {len(lines)}]{partial}")
+        room = cap - len(widest)
+        shown, used = [], 0
+        for line in window:
+            used += len(line) + 1
+            if used > room:
+                break
+            shown.append(line)
+        cut = ""
+        if window and not shown:                      # one line longer than the whole reply: its start, said so
+            shown = [window[0][:max(0, room)]]
+            cut = f"\n[line {start} is {len(window[0])} characters; the first {len(shown[0])} are shown]"
+        narrowed = len(shown) < len(window) or bool(cut)
+        last = start - 1 + len(shown)
         head = (f"{target.display}: lines {start}-{last} of {len(lines)}, {size} bytes{digest}{note}"
-                if window else f"{target.display}: {len(lines)} lines, {size} bytes{digest}; nothing at line {start}")
-        body = "\n".join(window)
-        tail = ""
+                if shown else f"{target.display}: {len(lines)} lines, {size} bytes{digest}; nothing at line {start}")
+        body = "\n".join(shown)
+        tail = cut
         if last < len(lines):
-            tail = f"\n[lines {last + 1}-{len(lines)} not shown; read again with \"start\": {last + 1}]"
-        if not whole:
-            tail += f"\n[only the first {self.limits.max_read_bytes} bytes of the file are readable]"
-        return ToolResult(_clip(head + "\n" + body + tail, self.limits.max_output_chars), trust="untrusted")
+            why = f" (the reply holds {cap} characters)" if narrowed else ""
+            tail += f"\n[lines {last + 1}-{len(lines)} not shown{why}; read again with \"start\": {last + 1}]"
+        tail += partial
+        return ToolResult(_clip(head + "\n" + body + tail, cap), trust="untrusted")
 
     # ------------------------------------------------------------- search --
 
