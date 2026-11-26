@@ -239,7 +239,7 @@ def assigned_to(name: str, harness: str) -> bool:
 def load(root: Path) -> dict:
     case = json.loads((root / "case.json").read_text(encoding="utf-8"))
     required = {"format", "id", "repository", "path", "machine", "sources", "inputs", "harness", "assertions", "assumptions", "loops"}
-    optional = {"prelude", "unwind", "unwindset", "under_unwind", "checks", "input_domain", "limitations", "allowed_stops", "models"}
+    optional = {"prelude", "unwind", "unwindset", "under_unwind", "checks", "input_domain", "limitations", "allowed_stops", "models", "object_bits"}
     if not isinstance(case, dict) or case.get("format") != FORMAT or not required <= set(case) or set(case) - required - optional:
         raise ValueError(f"case.json is not a complete {FORMAT} description")
     if case["machine"] not in MACHINES or not set(case.get("checks", [])) <= set(OPTIONAL_CHECKS):
@@ -561,6 +561,7 @@ def check(root: Path, variant: str, out: Path, cbmc: str = "cbmc", unwind: int |
         if identities:
             receipt["models"] = identities
         model = ["--function", "harness", MACHINES[case["machine"]][0], "--little-endian", *native.KEEP_SELF_LOOPS, "--unwind", str(unwind),
+                 *(["--object-bits", str(int(case["object_bits"]))] if "object_bits" in case else []),
                  *(["--unwindset", render_bounds(bounds)] if bounds else [])]
         common = [*model[:5], "--sat-solver", solver, *model[5:], "--json-ui"]
         # Coverage reads the unit without the stops: its goals have to be the harness's own and the end marker reachable.

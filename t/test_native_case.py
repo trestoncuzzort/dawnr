@@ -154,6 +154,10 @@ def test_comparisons_with_an_input_are_not_assignments(tmp_path):
     assert cases.load(write_case(tmp_path / "case", harness=harness, assumptions=1))["assumptions"] == 1
 
 
+def test_a_case_may_set_the_object_bits_of_cbmc(tmp_path):
+    assert cases.load(write_case(tmp_path / "case", object_bits=12))["object_bits"] == 12
+
+
 def test_the_unit_carries_machine_inputs_harness_and_end_marker(tmp_path):
     root = write_case(tmp_path / "case")
     case = cases.load(root)
@@ -951,3 +955,30 @@ def test_an_empty_input_can_still_be_freed_and_the_code_under_check_keeps_the_re
     bits = {"s_len": {"width": 32, "hex": "0"}, "s_e0": {"width": 8, "hex": "61"}, "s_e1": {"width": 8, "hex": "62"}}
     report = cases.replay(case, parts, [{"property": "p", "inputs": bits}], tmp_path / "out", "gcc", 60)
     assert report["compile"]["exit"] == 0 and report["witnesses"][0]["status"] == "not_reproduced"   # free of an empty input is no report
+
+
+@posix
+def test_the_object_bits_of_a_case_reach_every_cbmc_stage(tmp_path):
+    cbmc = tool(tmp_path / "fake-cbmc", '[ "$1" = "--version" ] && { echo "6.11.0 (cbmc-6.11.0)"; exit 0; }\necho "[]"\n')
+    receipt = cases.check(write_case(tmp_path / "case", object_bits=12), "fixed", tmp_path / "out", cbmc=cbmc)
+    for stage in ("inventory", "coverage", "checking"):
+        arguments = receipt["stages"][stage]["arguments"]
+        assert arguments[arguments.index("--object-bits") + 1] == "12", stage
+    plain = cases.check(write_case(tmp_path / "plain"), "fixed", tmp_path / "plain-out", cbmc=cbmc)
+    assert all("--object-bits" not in stage["arguments"] for stage in plain["stages"].values())
+
+
+MANY = ("int fill(unsigned n)\n{\n\tint total = 0;\n\tfor (unsigned i = 0; i < n; ++i) {\n\t\tint *p = malloc(sizeof *p);\n"
+        "\t\tif (!p) { return -1; }\n\t\t*p = 1;\n\t\ttotal += *p;\n\t\tfree(p);\n\t}\n\treturn total;\n}\n")
+MANY_FIELDS = dict(prelude="#include <stdlib.h>\n", assertions=["fill.counted"], unwind=301,
+                   harness='    (void)a;\n    int got = fill(300);\n    __CPROVER_assert(got == 300 || got == -1, "fill.counted");\n')
+
+
+@real
+def test_past_256_addressed_objects_a_case_asks_for_more_object_bits(tmp_path):
+    """CBMC 6.11.0 gives 8 bits of a pointer to the object by default, so a 257th object is a tool error."""
+    default = custom_case(tmp_path / "default", MANY, MANY, ["fill"], **MANY_FIELDS)
+    receipt = cases.check(default, "fixed", tmp_path / "default-out", cbmc=CBMC)
+    assert receipt["verdict"] == "tool_error" and "too many addressed objects" in receipt["reason"]
+    raised = custom_case(tmp_path / "raised", MANY, MANY, ["fill"], object_bits=10, **MANY_FIELDS)
+    assert cases.check(raised, "fixed", tmp_path / "raised-out", cbmc=CBMC)["verdict"] == "complete"
