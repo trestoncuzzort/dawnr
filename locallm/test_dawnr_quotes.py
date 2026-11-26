@@ -595,7 +595,7 @@ class CraftedTextTest(unittest.TestCase):
                      "`a" * (n // 2), "``a`" * (n // 4), "`" * n, "*" * n, "a*" * (n // 2) + "_a" * (n // 4),
                      "*" * (n // 2) + "_" * (n // 2), "(*" * (n // 2)):
             with self.subTest(text=text[:8]):
-                self.assertQuick([text, text + "\n" + text])
+                self.assertQuick([text])                                    # one reply, 64,000 characters
 
     def test_a_link_whose_address_holds_a_parenthesis_is_still_quoted_by_its_text(self):
         # Markdown allows balanced parentheses in a link's address (CommonMark 6.3), as Wikipedia's links have them

@@ -167,7 +167,8 @@ def _without(cache: dict[bool, list], read: list, emphasis: bool) -> list:
     """What was read without Markdown's inline formatting (_unmarked), made once for each of the two ways."""
     if emphasis not in cache:
         cache[emphasis] = [("\n".join(_unmarked(line, emphasis) for line in lines.split("\n")),
-                            tuple(_unmarked(whole, emphasis) for whole in wholes)) for lines, wholes in read]
+                            tuple(dict.fromkeys(_unmarked(whole, emphasis) for whole in dict.fromkeys(wholes))))
+                           for lines, wholes in read]
     return cache[emphasis]
 
 
@@ -196,6 +197,8 @@ def _paired(text: str) -> str:
     closing one of the same character around text, by its left- and right-flanking rules, its rule of three and its
     process-emphasis steps. A run it does not pair stays (`5 * 3`, `*a`, `snake_case`), as does one inside a code
     span or after a backslash."""
+    if "*" not in text and "_" not in text:
+        return text
     ticks: dict[int, list[int]] = {}                            # code spans: where each length of backticks runs
     for tick in BACKTICKS.finditer(text):
         ticks.setdefault(len(tick.group()), []).append(tick.start())
