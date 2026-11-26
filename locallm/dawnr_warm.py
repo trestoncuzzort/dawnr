@@ -76,6 +76,8 @@ def main(argv=None) -> int:
     if cli.settings_refused("warm"):                            # not a cold start: the assistant would refuse it too
         return 2
     try:
+        if a.state is not None:                                 # the agent built here makes the folder before the assistant does
+            cli.remember_state(a.state)
         config = cli.default_config(a.cwd, read_only=a.read_only, roots=tuple(a.root), online=a.online, state=a.state)
         harness, agent = cli.build_agent(config)
         with harness:

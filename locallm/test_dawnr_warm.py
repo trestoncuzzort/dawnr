@@ -42,3 +42,15 @@ def test_a_bad_rounds_or_steps_setting_is_said_and_refused_and_nothing_is_asked_
     assert warm.main(["--host", "nowhere:1", "--cwd", str(tmp_path), "Read it."]) == 2
     assert capsys.readouterr().err == ("warm: DAWNR_MAX_STEPS='0' is not a whole number above 0; set it to one, or unset "
                                        "it for the default of 40\n")
+
+
+def test_warming_records_a_state_folder_for_dawnr_forget(tmp_path, monkeypatch):
+    # the launcher warms the prefix before the assistant starts, and the agent built for it already makes the folder
+    import dawnr_cli as cli
+    monkeypatch.setenv("DAWNR_HOME", str(tmp_path))
+
+    def no_agent(config, **how):
+        raise RuntimeError("no agent in this test")
+    monkeypatch.setattr(cli, "build_agent", no_agent)
+    assert warm.main(["--host", "nowhere:1", "--cwd", str(tmp_path), "--state", str(tmp_path / "given")]) == 0
+    assert (tmp_path / "state-folders").read_text() == f"{tmp_path / 'given'}\n"
