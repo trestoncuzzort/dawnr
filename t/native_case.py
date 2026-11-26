@@ -109,8 +109,24 @@ def own_properties(results: list[dict]) -> list[dict]:
     return [row for row in results if row.get("sourceLocation", {}).get("file") != STOP_FILE]
 
 
-def code(text: str):
-    """Each character outside comments and literals, with its index."""
+RAW_PREFIXES = ("u8R", "uR", "UR", "LR", "R")
+RAW_OPENING = re.compile(r'"[^ ()\\\t\v\f\r\n]{0,16}\(')
+
+
+def raw_string_opens(text: str, index: int) -> bool:
+    """Whether the quote at index opens a raw string literal: an encoding prefix and R that are a token of their own
+    right before it, then a delimiter of up to 16 characters and a parenthesis (C++ [lex.string]; in C, GCC's extension).
+    An ordinary string ending in R, the string "R" and a name ending in R before a string do not."""
+    for prefix in RAW_PREFIXES:
+        start = index - len(prefix)
+        if text.startswith(prefix, start) and start >= 0 and not (start > 0 and (text[start - 1].isalnum() or text[start - 1] in "_$")):
+            return RAW_OPENING.match(text, index) is not None
+    return False
+
+
+def code(text: str, strict: bool = True, refuse_raw: bool = False):
+    """Each character outside comments and literals, with its index. Not strict, an unterminated comment or literal ends
+    the text; with refuse_raw, a raw string literal raises, since this scan cannot say where one ends."""
     index = 0
     while index < len(text):
         two = text[index:index + 2]
@@ -120,13 +136,17 @@ def code(text: str):
         elif two == "/*":
             close = text.find("*/", index + 2)
             if close < 0:
-                raise ValueError("unterminated comment in extracted lines")
+                if strict:
+                    raise ValueError("unterminated comment in extracted lines")
+                close = len(text) - 2
             index = close + 2
         elif text[index] in "\"'":
+            if refuse_raw and text[index] == '"' and raw_string_opens(text, index):
+                raise ValueError("raw string literal")
             quote, index = text[index], index + 1
             while index < len(text) and text[index] != quote:
                 index += 2 if text[index] == "\\" else 1
-            if index >= len(text):
+            if index >= len(text) and strict:
                 raise ValueError("unterminated literal in extracted lines")
             index += 1
         else:
@@ -156,6 +176,39 @@ def outer_semicolons(text: str) -> list[int]:
     return found
 
 
+def blanked(text: str) -> str:
+    """The text with each comment and literal, and each preprocessor line, replaced by spaces, newlines kept."""
+    kept = {index for index, _ in code(text)}
+    plain = "".join(char if index in kept or char == "\n" else " " for index, char in enumerate(text))
+    return "\n".join(" " * len(line) if line.lstrip().startswith("#") else line for line in plain.split("\n"))
+
+
+def one_declarator(name: str, text: str) -> bool:
+    """Whether what stands before the first brace of a function's text is one declarator and nothing else: no semicolon
+    stands before the function's name, and a semicolon after its parameter list ends a declaration of one of the parameters
+    that an old-style (K&R) identifier list names. `int counter;` before the function, a prototype of it, and a semicolon
+    after `(void)` or after a prototype-style list are not.
+    C11 6.9.1 Function definitions, paragraphs 6 and 7 (N1570): an identifier list is followed by a declaration list, each
+    declaration of which declares only identifiers from the list."""
+    plain = blanked(text)
+    prefix = plain[:plain.find("{")]
+    if ";" not in prefix:
+        return True
+    named = re.search(rf"(?<![\w$]){re.escape(name)}\s*\(", prefix)
+    if named is None or ";" in prefix[:named.start()]:
+        return False
+    depth, close = 1, named.end()
+    while close < len(prefix) and depth:
+        depth += {"(": 1, ")": -1}.get(prefix[close], 0)
+        close += 1
+    parameters, rest = prefix[named.end():close - 1], prefix[close:]
+    if depth or not re.fullmatch(r"\s*[A-Za-z_]\w*(\s*,\s*[A-Za-z_]\w*)*\s*", parameters) or re.fullmatch(r"\s*void\s*", parameters):
+        return False
+    identifiers = set(re.findall(r"[A-Za-z_$][\w$]*", parameters))
+    *declarations, last = rest.split(";")
+    return bool(declarations) and not last.strip() and all(set(re.findall(r"[A-Za-z_$][\w$]*", each)) & identifiers for each in declarations)
+
+
 def extract(source: str, entry: dict) -> str:
     """Return lines line..end_line unchanged, refusing a range that is not one whole item."""
     if set(entry) - {"name", "kind", "line", "end_line", "starts_with"} or not NAME.match(str(entry.get("name", ""))):
@@ -166,8 +219,15 @@ def extract(source: str, entry: dict) -> str:
         raise ValueError(f"unsupported kind or line range for {entry['name']}")
     chosen = lines[first - 1:last]
     text = "\n".join(chosen) + "\n"
-    # R" also ends an ordinary string such as "ERROR"; a raw string literal starts a token.
-    if "\r" in text or re.search(r'(?<![A-Za-z0-9_])(?:u8|u|U|L)?R"', text):
+    # A raw string literal needs its own parse, and R" also ends the ordinary string "R" and "ERROR": only R, u8R, uR, UR or LR
+    # as a token of its own right before a quote that is followed by a delimiter and a parenthesis opens one.
+    raw = False
+    try:
+        for _ in code(text, strict=False, refuse_raw=True):
+            pass
+    except ValueError:
+        raw = True
+    if "\r" in text or raw:
         raise ValueError(f"{entry['name']}: carriage returns and raw string literals are not supported")
     if not chosen[0].startswith(entry.get("starts_with", "")) or entry["name"] not in text:
         raise ValueError(f"{entry['name']}: extracted lines do not start as declared or do not name it")
@@ -181,7 +241,7 @@ def extract(source: str, entry: dict) -> str:
     if not conditional and (depth != 0 or low < 0):
         raise ValueError(f"{entry['name']}: braces do not balance over the extracted lines")
     tail = text.rstrip()
-    if kind == "function" and (not tail.endswith("}") or (not conditional and closed != [len(tail) - 1])):
+    if kind == "function" and (not tail.endswith("}") or (not conditional and closed != [len(tail) - 1]) or not one_declarator(entry["name"], text)):
         raise ValueError(f"{entry['name']}: not exactly one function definition")
     # A declaration ends at the one semicolon outside its braces. `static const struct { ... } table[] = { ... };` closes a
     # brace twice and is one; `int a = 1;\nint b = 2;`, and a range running on through a function, are not.

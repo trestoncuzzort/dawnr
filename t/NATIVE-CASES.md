@@ -176,7 +176,8 @@ Measured on CBMC 6.11.0 with the gate's check list, each as one statement in a h
 ## What costs time if you learn it by trial
 
 - A definition is one whole item. A function range ends at its closing brace, and a declaration at
-  its one semicolon outside braces. Helpers from other files go in the prelude unchanged, naming the
+  its one semicolon outside braces. Nothing but the one function's declarator (with old-style parameter
+  declarations after it) and body may stand in a function range: `int counter;` before it is refused. Helpers from other files go in the prelude unchanged, naming the
   file and lines, and are listed in `limitations`.
 - More than 256 addressed objects, such as allocations in a long loop, stop CBMC with "too many
   addressed objects". Set `object_bits`: 10 gives 1024.

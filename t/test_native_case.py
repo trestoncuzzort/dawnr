@@ -119,6 +119,39 @@ def test_a_string_that_ends_in_r_is_not_a_raw_string_literal(text):
     assert cases.extract(source, {"name": "name", "line": 1, "end_line": 4}) == source
 
 
+@pytest.mark.parametrize("text", [
+    '"R"',                                    # the string R
+    'ok ? "R" : "(x)"',                       # R closes one string and a parenthesis opens the next
+    'L"R"',                                   # a wide string R
+    'BAR"(x)"',                               # an identifier ending in R, directly before a string
+    'u8"R" "(x)"',
+    "'R' + sizeof \"(x)\"",                   # a character constant R
+    'name[0] == \'R\' ? "R" : "r"',
+])
+def test_the_string_r_and_names_ending_in_r_are_not_raw_string_literals(text):
+    source = f"static const char *name(int ok)\n{{\n\treturn {text};\n}}\n"
+    assert cases.extract(source, {"name": "name", "line": 1, "end_line": 4}) == source
+
+
+@pytest.mark.parametrize("comment", ['/* R"(x)" */', '// R"(x)"', '/* "R"(x) */'])
+def test_a_comment_holding_what_looks_like_a_raw_string_literal_is_not_one(comment):
+    source = f"static const char *name(int ok)\n{{\n\t{comment}\n\treturn \"R\";\n}}\n"
+    assert cases.extract(source, {"name": "name", "line": 1, "end_line": 5}) == source
+
+
+@pytest.mark.parametrize("literal", ['R"(x)"', 'u8R"(x)"', 'uR"(x)"', 'UR"(x)"', 'LR"(x)"', '"a"R"(x)"', 'R"d(x)d"', 'R"0123456789abcdef()0123456789abcdef"',
+                                     'R"(")"', 'R"()"'])
+def test_a_raw_string_literal_is_refused_whatever_it_holds_and_wherever_it_starts(literal):
+    source = f"static const char *name(void)\n{{\n\treturn {literal};\n}}\n"
+    with pytest.raises(ValueError, match="raw string literals"):
+        cases.extract(source, {"name": "name", "line": 1, "end_line": 4})
+
+
+def test_a_raw_string_literal_in_a_macro_is_refused():
+    with pytest.raises(ValueError, match="raw string literals"):
+        cases.extract('#define NAME R"(x)"\n', {"name": "NAME", "kind": "macro", "line": 1, "end_line": 1})
+
+
 @pytest.mark.parametrize("literal", ['R"(x)"', 'u8R"(x)"', 'uR"(x)"', 'UR"(x)"', 'LR"(x)"', '"a"R"(x)"'])
 def test_a_raw_string_literal_is_still_refused(literal):
     source = f"static const char *name(void)\n{{\n\treturn {literal};\n}}\n"
@@ -151,6 +184,72 @@ def test_one_declaration_is_accepted_whatever_its_braces_hold(source):
 def test_a_declaration_range_over_more_than_one_declaration_is_refused(source):
     with pytest.raises(ValueError, match="not exactly one declaration"):
         cases.extract(source, {"name": "table", "kind": "declaration", "line": 1, "end_line": source.count("\n")})
+
+
+def function(declarations, head, body="{\n\treturn 0;\n}\n"):
+    source = f"{declarations}{head}\n{body}"
+    return source, {"name": "f", "line": 1,"end_line": source.count("\n")}
+
+
+@pytest.mark.parametrize("declarations", [
+    "int counter;\n",
+    "int counter = 1;\n",
+    "static int counter;\nstatic int other;\n",
+    "int table[sizeof(int)];\n",
+    "int (*hook)(int);\n",
+    "int f(void);\n",                  # a prototype of the function itself
+    "int g(a) int a; ;\n",             # an old-style declarator followed by a stray semicolon
+    "struct pair { int x; };\n",
+    "extern int counter /* ; */;\n",
+])
+def test_a_function_range_that_starts_with_a_declaration_without_braces_is_refused(declarations):
+    source, entry = function(declarations, "int f(void)")
+    with pytest.raises(ValueError, match="not exactly one function definition"):
+        cases.extract(source, entry)
+
+
+@pytest.mark.parametrize("head", [
+    "int f(void)",
+    "static inline int f(void)",
+    "int *f(const char *s, int n)",
+    "int (*f(int a))(int)",
+    "__attribute__((unused)) int f(int a)",
+    "int f(a)\nint a;",                                  # old style: the parameter declarations end in semicolons
+    "int f(a, b)\nint a;\nchar *b;",
+    "int f(a, b)\nint a, b;",
+    "int f(a, cb)\nint a;\nint (*cb)();",
+    "int f(a) /* ; */ int a; /* ; */",
+    'int f(a) int a; /* ";" */',
+])
+def test_a_function_range_of_one_declarator_and_its_body_is_accepted(head):
+    source, entry = function("", head)
+    assert cases.extract(source, entry) == source
+
+
+@pytest.mark.parametrize("head", [
+    "int f(a)\nint a;\nint b;",           # declares nothing the list names
+    "int f(void)\nint a;",                # a parameter list that names nothing has no declarations to follow it
+    "int f(int a)\nint a;",               # a prototype-style list has none either
+    "int f(a)\nint a;;",                  # a stray semicolon
+])
+def test_an_old_style_definition_is_accepted_only_where_its_declarations_declare_its_parameters(head):
+    source, entry = function("", head)
+    with pytest.raises(ValueError, match="not exactly one function definition"):
+        cases.extract(source, entry)
+
+
+def test_a_declaration_before_an_old_style_definition_is_refused():
+    source, entry = function("int counter;\n", "int f(a)\nint a;")
+    with pytest.raises(ValueError, match="not exactly one function definition"):
+        cases.extract(source, entry)
+
+
+def test_a_conditional_directive_inside_the_declarator_does_not_hide_a_declaration_before_it():
+    kept = "#ifdef X\nint f(a) int a;\n#else\nint f(a) long a;\n#endif\n{\n\treturn 0;\n}\n"
+    assert cases.extract(kept, {"name": "f", "line": 1, "end_line": kept.count("\n")}) == kept
+    refused = "int counter;\n" + kept
+    with pytest.raises(ValueError, match="not exactly one function definition"):
+        cases.extract(refused, {"name": "f", "line": 1, "end_line": refused.count("\n")})
 
 
 def test_no_source_byte_can_change_under_the_pinned_identity(tmp_path):
@@ -773,8 +872,10 @@ def test_a_complete_verdict_gets_a_checked_proof(tmp_path):
     assert receipt["certificate"]["tools"]["solver"]["version"] and len(receipt["certificate"]["tools"]["checker"]["binary_sha256"]) == 64
 
 
-def export_and_solve(tmp_path, root, variant, unwind=None):
-    """The formula of a variant, and what the solver says about it, written to a kept directory."""
+def export_and_solve(tmp_path, root, variant, unwind=None, tools=None):
+    """The formula of a variant, and what the solver says about it, written to a kept directory. The command is the gate's:
+    the same model options and linked models, so that what is exported is what check() certifies."""
+    cbmc, solver, checker = tools or (CBMC, CADICAL, LRAT_CHECK)
     out = tmp_path / f"{root.name}-{variant}-{unwind}"
     case = cases.load(root)
     unit, _, _ = cases.build_unit(case, variant, root)
@@ -782,9 +883,42 @@ def export_and_solve(tmp_path, root, variant, unwind=None):
     (out / "unit.c").write_text(unit)
     stops, defines = cases.stops_unit(case.get("allowed_stops", []), unit)
     (out / cases.STOP_FILE).write_text(stops)
-    args = ["unit.c", cases.STOP_FILE, *defines, "--function", "harness", cases.MACHINES[case["machine"]][0], "--little-endian", *native.KEEP_SELF_LOOPS,
-            "--unwind", str(unwind or case.get("unwind", 4)), *cases.CHECKS, "--unwinding-assertions"]
-    return cases.certify(CBMC, args, out, CADICAL, LRAT_CHECK, 120, 4096, keep_proof=True), out
+    linked, _ = cases.link_models(case, out)
+    # As the gate does: an explicit bound applies to every loop, and the case's own per-loop bounds stay out of it.
+    bounds = case.get("unwindset", {}) if unwind is None else {}
+    model = cases.model_options(case, unwind or case.get("unwind", 4), bounds)
+    args = ["unit.c", *linked, cases.STOP_FILE, *defines, *model, *cases.CHECKS, *case.get("checks", []), "--unwinding-assertions"]
+    return cases.certify(cbmc, args, out, solver, checker, 120, 4096, keep_proof=True), out
+
+
+@posix
+def test_the_helper_of_the_certificate_tests_gives_cbmc_what_the_gate_gives_it(tmp_path):
+    """The formula of a case is built through model_options and the models link, so object_bits and models are in it."""
+    _, solver, checker = fake_tools(tmp_path / "tools")
+    root = write_case(tmp_path / "case", object_bits=12, models=["string"], checks=["--nan-check"])
+    _, out = export_and_solve(tmp_path, root, "fixed", 3, tools=(logging_cbmc(tmp_path / "fake-cbmc"), solver, checker))
+    call = (out / "calls.txt").read_text().split()
+    assert call[call.index("--object-bits") + 1] == "12" and call[call.index("--unwind") + 1] == "3"
+    assert "model_string.c" in call and (out / "model_string.c").exists() and "--nan-check" in call
+    assert call[call.index("--dimacs"):call.index("--dimacs") + 3] == ["--dimacs", "--outfile", "formula.cnf"]
+
+
+@certifying
+def test_past_256_addressed_objects_the_certificate_of_a_case_takes_its_object_bits_too(tmp_path):
+    raised = custom_case(tmp_path / "raised", MANY, MANY, ["fill"], object_bits=10, **MANY_FIELDS)
+    assert cases.check(raised, "fixed", tmp_path / "gate", cbmc=CBMC, certify_with=(CADICAL, LRAT_CHECK))["certificate"]["status"] == "verified"
+    assert export_and_solve(tmp_path, raised, "fixed")[0]["status"] == "verified"
+
+
+@certifying
+def test_the_helper_exports_the_formula_the_gate_certifies_when_a_model_is_linked(tmp_path):
+    fields = dict(prelude="#include <string.h>\n", models=["string"], assertions=["count.bound"], inputs=[{"name": "t", "type": "char", "string": {"max": 3}}],
+                  harness='    __CPROVER_assert(leading(t) <= t_len, "count.bound");\n', unwind=6)
+    root = custom_case(tmp_path / "linked", COUNT, COUNT, ["leading"], **fields)
+    gate = cases.check(root, "fixed", tmp_path / "gate", cbmc=CBMC, certify_with=(CADICAL, LRAT_CHECK))["certificate"]
+    report, out = export_and_solve(tmp_path, root, "fixed")
+    assert gate["status"] == report["status"] == "verified" and (out / "model_string.c").exists()
+    assert (gate["variables"], gate["clauses"]) == (report["variables"], report["clauses"])
 
 
 @certifying
