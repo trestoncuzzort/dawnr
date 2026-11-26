@@ -83,8 +83,23 @@ class EditMiss(PathRefused):
         self.quoted = quoted
 
 
+def _file_lines(text: str, keepends: bool = False) -> list:
+    """`text`'s lines as grep -n, sed -n and wc -l count them: a line ends at a newline, a CRLF is one line end, and a
+    last newline ends a line without starting one; without `keepends`, each without its line end. Every number of a
+    text file's line that the file tools show or take is counted with this (a document's text, which a reader
+    extracts, is not a file's lines and is cut as before). str.splitlines also ends a line at \\v, \\f, \\x1c to
+    \\x1e, \\x85, U+2028, U+2029 and a lone \\r, and until 2026-11-26 they counted with it: on a file holding one of
+    those, every number past it was more than grep -n's (a form feed on a line of its own, a page break, counted two
+    lines)."""
+    parts = text.split("\n")
+    lines = [part + "\n" for part in parts[:-1]] + ([parts[-1]] if parts[-1] else [])
+    if keepends:
+        return lines
+    return [line[:-2] if line.endswith("\r\n") else line[:-1] if line.endswith("\n") else line for line in lines]
+
+
 def _lines(text: str) -> list:
-    return (text if text.endswith("\n") else text + "\n").splitlines(keepends=True)
+    return _file_lines(text if text.endswith("\n") else text + "\n", keepends=True)
 
 
 def _loose_edit(text: str, old: str, new: str) -> str | None:
@@ -92,8 +107,10 @@ def _loose_edit(text: str, old: str, new: str) -> str | None:
     constant run of leading whitespace (the indentation left out, or part of it) and whitespace at line ends, or
     but for a blank first line that is not in the file. None unless exactly one place matches. The ladder is aider's
     (aider/coders/editblock_coder.py, replace_part_with_missing_leading_whitespace; Apache-2.0; receipt
-    ac8eee06f37d): a model gets the words right and the indentation wrong, and wrong the same way on every line."""
-    whole = text.splitlines(keepends=True)
+    ac8eee06f37d): a model gets the words right and the indentation wrong, and wrong the same way on every line. The
+    lines are grep -n's (_file_lines): cut with str.splitlines, a line holding a U+2028 was two, one of them unindented,
+    and its edit with the indentation left out was refused (until 2026-11-26)."""
+    whole = _file_lines(text, keepends=True)
     for candidate in dict.fromkeys((old, old.lstrip("\n"))):
         part, repl = _lines(candidate), _lines(new) if new else []
         if not any(p.strip() for p in part):
@@ -126,7 +143,7 @@ def _loose_edit(text: str, old: str, new: str) -> str | None:
 
 def _closest(text: str, old: str, threshold: float = 0.6, context: int = 2, most: int = 3000) -> str:
     """The lines of `text` most like `old`, or "" when nothing is like it (aider's find_similar_lines)."""
-    lines, want = text.splitlines(), old.strip("\n").splitlines() or [""]
+    lines, want = _file_lines(text), _file_lines(old.strip("\n") + "\n")
     if not lines or len(lines) > most:
         return ""
     best, at = 0.0, 0
@@ -194,12 +211,12 @@ def _line_numbers(text: str) -> list | None:
 
 def _starts_at_line(text: str, old: str, number: int, every: bool) -> bool:
     """Whether what _replaced would put `old`'s replacement in place of starts exactly at line `number` of `text`, the
-    lines counted as fs_read counts them (str.splitlines): the text it looks for (with CRLF line ends in a CRLF file
-    where `old` is not found as it is) starts at that line, and one replacement would be made there and not at an
-    earlier copy (overlapping copies count once in str.count)."""
+    lines counted as fs_read and grep -n count them (_file_lines): the text it looks for (with CRLF line ends in a
+    CRLF file where `old` is not found as it is) starts at that line, and one replacement would be made there and not
+    at an earlier copy (overlapping copies count once in str.count)."""
     if text.count(old) == 0 and "\r\n" in text and "\n" in old:
         old = old.replace("\r\n", "\n").replace("\n", "\r\n")
-    lines = text.splitlines(keepends=True)
+    lines = _file_lines(text, keepends=True)
     if not 1 <= number <= len(lines):
         return False
     start = sum(len(line) for line in lines[:number - 1])
@@ -208,12 +225,14 @@ def _starts_at_line(text: str, old: str, number: int, every: bool) -> bool:
 
 def _around(old: bytes, new: bytes, context: int = 3, most: int = 24) -> str:
     """The lines of `new` around where it differs from `old`: what an edit left, so the file need not be read again
-    to see it (SWE-agent's editor shows the edited window after every edit, arXiv:2405.15793 section 3)."""
+    to see it (SWE-agent's editor shows the edited window after every edit, arXiv:2405.15793 section 3). Until
+    2026-11-26 the lines were cut with str.splitlines while their numbers counted newlines, so on a file with a form
+    feed or a U+2028 before the change the window named and showed lines from before it."""
     head = next((i for i, (a, b) in enumerate(zip(old, new)) if a != b), min(len(old), len(new)))
     tail = next((i for i, (a, b) in enumerate(zip(reversed(old[head:]), reversed(new[head:]))) if a != b),
                 min(len(old), len(new)) - head)
     text = new.decode("utf-8", "replace")
-    lines = text.splitlines()
+    lines = _file_lines(text)
     first = max(1, text.count("\n", 0, len(new[:head].decode("utf-8", "replace"))) + 1 - context)
     last = min(len(lines), text.count("\n", 0, len(new[:len(new) - tail].decode("utf-8", "replace"))) + 1 + context)
     shown = lines[first - 1:last]
@@ -811,7 +830,7 @@ class FileTools:
         except UnicodeDecodeError:
             text = data.decode("utf-8", errors="replace")
             note = " [not UTF-8: undecodable bytes shown as U+FFFD]"
-        lines = text.splitlines()
+        lines = _file_lines(text)                     # grep -n's lines, so its numbers and "start" are grep -n's too
         start = max(1, int(args.get("start", 1)))
         count = min(int(args.get("lines", self.limits.read_lines)), self.limits.max_lines)
         window = lines[start - 1:start - 1 + count]
@@ -894,7 +913,7 @@ class FileTools:
                     skipped["binary"] += 1
                     continue
                 text = data.decode("utf-8", errors="replace")
-                for n, line in enumerate(text.splitlines(), 1):
+                for n, line in enumerate(_file_lines(text), 1):      # grep -n's lines and numbers, as fs_read's
                     if needle in (line.casefold() if fold else line):
                         matched_files.add(target.display)
                         if len(hits) < limit:
@@ -1211,8 +1230,8 @@ class FileTools:
                        writes={key: data})
 
     def _diff(self, target: Target, old: bytes, new: bytes, limit: int = 120) -> list[str]:
-        a = old.decode("utf-8", errors="replace").splitlines()
-        b = new.decode("utf-8", errors="replace").splitlines()
+        a = _file_lines(old.decode("utf-8", errors="replace"))         # the lines diff -u numbers in its @@ lines
+        b = _file_lines(new.decode("utf-8", errors="replace"))
         lines = list(difflib.unified_diff(a, b, f"a/{target.display}", f"b/{target.display}", lineterm="", n=2))
         if len(lines) > limit:
             lines = lines[:limit] + [f"[{len(lines) - limit} more diff lines not shown]"]

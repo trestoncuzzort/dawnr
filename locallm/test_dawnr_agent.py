@@ -744,6 +744,51 @@ class FileTools(Env):
         self.assertIn("starts with its number and a tab", said)
         self.assertIn("not part of the file", said)
 
+    def test_a_line_number_is_the_one_grep_n_gives_where_a_file_holds_other_line_breaks(self):
+        # str.splitlines also ends a line at \v, \f, \x1c-\x1e, \x85, U+2028, U+2029 and a lone \r. Until 2026-11-26
+        # the file tools counted lines with it, so on a file holding one of them every number past it was more than
+        # grep -n's, sed -n's and wc -l's: on this file grep -n puts TARGET on line 9, and fs_read numbered it 18, showed
+        # another line at "start": 9 and said the file had 20 lines; fs_search said 18; a missed edit's closest lines
+        # and an edit's window named lines 16-20 and 6-12 of 20, and the window showed lines from before the change;
+        # numbers copied from grep -n did not say where the text was; the dry run's diff said @@ -16,5 +16,5 @@.
+        lines = ["one", "\x0c", "alpha\x0bbeta", "gamma\x1cdelta\x1d\x1eend", "eps\x85ilon", "zeta\u2028eta\u2029theta",
+                 "lone\rcr", "crlf", "TARGET = 1", "nine", "last"]
+        data = ("\n".join(lines[:7]) + "\ncrlf\r\n" + "\n".join(lines[8:]) + "\n").encode()
+        (self.proj / "f.txt").write_bytes(data)
+        h, a = self.build(permissions={"fs_edit": "allow"})
+        r = h.call("fs_read", {"path": "project/f.txt"})
+        self.assertEqual(r.text, f"project/f.txt: lines 1-11 of 11, {len(data)} bytes, sha256 {sha256(data)[:16]}\n"
+                         + "\n".join(f"{n:>2}\t{line}" for n, line in enumerate(lines, 1)))
+        r = h.call("fs_read", {"path": "project/f.txt", "start": 9, "lines": 1})
+        self.assertEqual(r.text.split("\n")[1:], ["9\tTARGET = 1", '[lines 10-11 not shown; read again with "start": 10]'])
+        self.assertIn("\nproject/f.txt:9: TARGET = 1", h.call("fs_search", {"query": "TARGET"}).text)
+        self.assertIn("\nproject/f.txt:3: alpha\x0bbeta", h.call("fs_search", {"query": "beta"}).text)
+        r = h.call("fs_edit", {"path": "project/f.txt", "old": "TARGET = 3", "new": "TARGET = 4"})
+        self.assertTrue(r.is_error, r.text)
+        self.assertEqual(r.untrusted_notes[-1], "lines 7-11 of 11:\n" + "\n".join(lines[6:11]))
+        r = h.call("fs_edit", {"path": "project/f.txt", "old": lines[5] + "\n" + lines[6] + "x", "new": "x"})  # two lines
+        self.assertEqual(r.untrusted_notes[-1], "lines 4-9 of 11:\n" + "\n".join(lines[3:9]))
+        r = h.call("fs_edit", {"path": "project/f.txt", "old": " 9\tTARGET = 1\n10\tnine", "new": " 9\tTARGET = 2\n10\tnine"})
+        self.assertFalse(r.is_error, r.text)
+        self.assertEqual((self.proj / "f.txt").read_bytes(), data.replace(b"TARGET = 1", b"TARGET = 2"))
+        lines[8] = "TARGET = 2"
+        self.assertEqual(r.untrusted_notes[-1], "lines 6-11 of 11 are now:\n" + "\n".join(lines[5:11]))
+        dry = preview_plan(a, h, Plan.from_json({"steps": [{"tool": "fs_edit", "arguments": {
+            "path": "project/f.txt", "old": "TARGET = 2", "new": "TARGET = 3"}}]}), h.session())
+        self.assertEqual([d for v in dry.views for d in v.preview.detail if d.startswith("@@")], ["@@ -7,5 +7,5 @@"])
+
+    def test_an_edit_whose_indentation_is_left_out_matches_a_line_with_a_line_separator_in_it(self):
+        # The indentation ladder (_loose_edit) matches whole lines. It cut them with str.splitlines, so a line holding a
+        # U+2028 (which JSON lets a string hold as it is) was two lines to it, one indented and one not, and an edit of
+        # it with the indentation left out was refused until 2026-11-26.
+        before = '{\n    "a": {\n        "text": "one\u2028two",\n        "n": 1\n    }\n}\n'
+        (self.proj / "a.json").write_bytes(before.encode())
+        h, _ = self.build(permissions={"fs_edit": "allow"})
+        r = h.call("fs_edit", {"path": "project/a.json", "old": '"text": "one\u2028two",\n"n": 1',
+                               "new": '"text": "one\u2028two",\n"n": 2'})
+        self.assertFalse(r.is_error, r.text)
+        self.assertEqual((self.proj / "a.json").read_bytes().decode(), before.replace('"n": 1', '"n": 2'))
+
     def test_search_is_literal_bounded_and_skips_links_secrets_and_binaries(self):
         (self.proj / "src" / "b.t").write_text("(a+)+$ double\n")
         (self.proj / ".env").write_text("double\n")
