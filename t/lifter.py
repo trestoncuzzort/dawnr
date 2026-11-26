@@ -48,7 +48,6 @@ import hashlib
 import json
 import os
 import sys
-import tempfile
 import time
 import traceback
 from concurrent.futures import ProcessPoolExecutor, as_completed
@@ -157,8 +156,8 @@ def _stage_call(stage: str, token: str, line: int, fn, *args, **kwargs):
 def _scratch_dfy(out_dir: Optional[Path], stem: str, method_name: str):
     """The path `lift_check.check` writes its checker, differential and callee files beside. Under `out_dir` they
     are outputs and stay. With no `out_dir` they are private copies of the program being checked, so they live in a
-    folder of their own that is removed when the check ends, on a result, a refusal or an exception (a check killed
-    by SIGKILL cannot remove it; PRIVACY.md says so)."""
+    folder of their own that is removed when the check ends, on a result, a refusal or an exception; a folder a
+    killed check leaves is removed by the next check (`check_scratch.sweep`)."""
     if out_dir is not None:
         yield _scratch_dfy_path(out_dir, stem, method_name)
         return
@@ -167,17 +166,14 @@ def _scratch_dfy(out_dir: Optional[Path], stem: str, method_name: str):
 
 
 def _scratch_dfy_path(out_dir: Path, stem: str, method_name: str) -> Path:
-    if out_dir is not None:
-        # Created here, not by _write_outcome: the check stage writes its
-        # .check.dfy into this directory BEFORE any outcome is written, so a
-        # fresh --out made every early file raise FileNotFoundError inside
-        # lift_check and get filed as `refused:error`. A lift that a missing
-        # directory turned into a refusal is a corrupted row, not a slow one.
-        out_dir.mkdir(parents=True, exist_ok=True)
-        return out_dir / f"{stem}.{method_name}.check.dfy"
-    fd, name = tempfile.mkstemp(suffix=".dfy", prefix=f"{stem}.{method_name}.")
-    os.close(fd)
-    return Path(name)
+    """The checker file's path under `out_dir` (only `_scratch_dfy` calls this, and only with an `out_dir`)."""
+    # Created here, not by _write_outcome: the check stage writes its
+    # .check.dfy into this directory BEFORE any outcome is written, so a
+    # fresh --out made every early file raise FileNotFoundError inside
+    # lift_check and get filed as `refused:error`. A lift that a missing
+    # directory turned into a refusal is a corrupted row, not a slow one.
+    out_dir.mkdir(parents=True, exist_ok=True)
+    return out_dir / f"{stem}.{method_name}.check.dfy"
 
 
 # ---------------------------------------------------------------------------
