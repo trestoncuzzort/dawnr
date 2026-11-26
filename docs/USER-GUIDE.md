@@ -59,6 +59,23 @@ Proposed changes appear for review before they are applied. In an interactive
 session, `/undo` restores the last recorded change. `--read-only` allows file
 reading and explanations while preventing edits and command execution.
 
+### Longer tasks
+
+A task may take up to 18 rounds and 40 steps. A step is one action, such as
+reading part of a file, searching or running a command. A round is one turn
+of the assistant, with the steps it asks for or its answer; the last round is
+kept for the answer. If a task that reads many files, such as a review, stops
+because it ran out of rounds or steps, give it more with `DAWNR_MAX_ROUNDS`
+and `DAWNR_MAX_STEPS`:
+
+```bash
+DAWNR_MAX_ROUNDS=30 DAWNR_MAX_STEPS=60 dawnr do "Review the tests" --read-only
+```
+
+Each must be a whole number above 0. Any other value stops `dawnr` with a
+message that names the setting, before the task starts. Unset or empty, the
+defaults apply.
+
 ## Generate a checked function
 
 Give the function's intended behavior and concrete examples:

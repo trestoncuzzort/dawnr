@@ -129,6 +129,31 @@ def windows_names(command: str, has=shutil.which) -> str:
     return COMMAND_WORD.sub(fix, command)
 # the last round of a task: a question the files do not answer otherwise ends in one more search and no answer at all
 LAST_ROUND = "Answer now from what you have read. If what was asked is not in the files, say that it is not there."
+# A task's budget in the loop. A bug fixed is three rounds (edit, run the test, read what it says): twelve rounds ran
+# out on the third bug. DAWNR_MAX_ROUNDS and DAWNR_MAX_STEPS set the rounds and the steps for a longer task, such as
+# a review that reads many files
+BUDGET = {"max_steps": 40, "max_rounds": 18, "max_failures": 2}
+BUDGET_SETTINGS = (("max_rounds", "DAWNR_MAX_ROUNDS"), ("max_steps", "DAWNR_MAX_STEPS"))
+
+
+class SettingError(ValueError):
+    """A setting in the environment whose meaning dawnr will not guess: said, and nothing is started."""
+
+
+def loop_budget() -> dict:
+    """The loop's budget, with DAWNR_MAX_ROUNDS and DAWNR_MAX_STEPS where they are set. Each is a whole number above
+    0; any other value is refused rather than replaced by the default, so that a mistyped setting does not quietly give
+    a task fewer rounds than the person asked for. Set and empty is the same as unset."""
+    out = dict(BUDGET)
+    for key, name in BUDGET_SETTINGS:
+        raw = os.environ.get(name, "")
+        if not raw.strip():
+            continue
+        if not re.fullmatch(r"[0-9]+", raw.strip()) or int(raw.strip()) < 1:
+            raise SettingError(f"{name}={raw!r} is not a whole number above 0; set it to one, or unset it for the "
+                               f"default of {BUDGET[key]}")
+        out[key] = int(raw.strip())
+    return out
 
 
 def default_config(cwd: Path, *, read_only: bool = False, roots: tuple = (), online: bool = False,
@@ -144,8 +169,7 @@ def default_config(cwd: Path, *, read_only: bool = False, roots: tuple = (), onl
             name += "-2"
         names.add(name)
         listed.append({"name": name, "path": str(path)})
-    # a bug fixed is three rounds (edit, run the test, read what it says): twelve rounds ran out on the third bug
-    agent = {"roots": listed, "sandbox": "bwrap", "budget": {"max_steps": 40, "max_rounds": 18, "max_failures": 2}}
+    agent = {"roots": listed, "sandbox": "bwrap", "budget": loop_budget()}
     if state is not None:
         agent["state"] = str(state)
     # Left out of what the model is offered, each some hundreds of tokens read on every first call: `t` (proving is
@@ -1002,7 +1026,11 @@ def main(argv=None) -> int:
     task = " ".join(a.task).strip()
     if not task and not sys.stdin.isatty():
         ap.error("no task was given and this is not a terminal")
-    config = default_config(a.cwd, read_only=a.read_only, roots=tuple(a.root), online=a.online, state=a.state)
+    try:
+        config = default_config(a.cwd, read_only=a.read_only, roots=tuple(a.root), online=a.online, state=a.state)
+    except SettingError as error:                               # said, and nothing is started
+        print(f"dawnr: {error}", file=sys.stderr)
+        return 2
     approve = plan_approver(yes=a.yes)
     harness, agent = build_agent(config, plan_approver=approve)
     approve.agent = agent
