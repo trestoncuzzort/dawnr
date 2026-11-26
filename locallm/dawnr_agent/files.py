@@ -71,8 +71,12 @@ class Preview:
 
 COUNT_BY_EYE = 12              # matches past which a search says to count with a command (the 4B counted 50 lines
                                # of a log by eye into 20, 15 and 5 where they were 25, 17 and 8)
-NUMBERED = re.compile(r" *[1-9][0-9]*\t")    # what fs_read puts before each line it shows: the line's number,
-                                             # right-aligned with spaces, and a tab
+NUMBERED = re.compile(r" *[1-9][0-9]*\t")    # what fs_read puts before each line it shows, and fs_edit before each
+                                             # line of its window and of its closest lines: the line's number,
+                                             # right-aligned with spaces, and a tab (_numbered)
+NUMBERED_BY = ("fs_read", "fs_edit")         # the tools whose untrusted text has a file's lines numbered so: what
+                                             # compares that text with a plan (dawnr_cli.py's Planner.heard) takes
+                                             # the numbers off first, or two lines copied from it do not look copied
 
 
 class EditMiss(PathRefused):
@@ -96,6 +100,13 @@ def _file_lines(text: str, keepends: bool = False) -> list:
     if keepends:
         return lines
     return [line[:-2] if line.endswith("\r\n") else line[:-1] if line.endswith("\n") else line for line in lines]
+
+
+def _numbered(lines: list, first: int) -> str:
+    """`lines` shown as fs_read shows them, numbered from `first`: each after its number, right-aligned to the widest
+    number shown (cat -n's form), and a tab (NUMBERED)."""
+    width = len(str(first + len(lines) - 1))
+    return "\n".join(f"{n:>{width}}\t{line}" for n, line in enumerate(lines, first))
 
 
 def _lines(text: str) -> list:
@@ -142,7 +153,8 @@ def _loose_edit(text: str, old: str, new: str) -> str | None:
 
 
 def _closest(text: str, old: str, threshold: float = 0.6, context: int = 2, most: int = 3000) -> str:
-    """The lines of `text` most like `old`, or "" when nothing is like it (aider's find_similar_lines)."""
+    """The lines of `text` most like `old`, or "" when nothing is like it (aider's find_similar_lines), each after its
+    number and a tab as fs_read shows it (_numbered; until 2026-11-26 they were bare, unlike a read's)."""
     lines, want = _file_lines(text), _file_lines(old.strip("\n") + "\n")
     if not lines or len(lines) > most:
         return ""
@@ -156,7 +168,7 @@ def _closest(text: str, old: str, threshold: float = 0.6, context: int = 2, most
     if best < threshold:
         return ""
     first, last = max(0, at - context), min(len(lines), at + len(want) + context)
-    return f"lines {first + 1}-{last} of {len(lines)}:\n" + "\n".join(lines[first:last])
+    return f"lines {first + 1}-{last} of {len(lines)}:\n" + _numbered(lines[first:last], first + 1)
 
 
 def _replaced(target: Target, text: str, old: str, new: str, every: bool) -> str:
@@ -225,9 +237,10 @@ def _starts_at_line(text: str, old: str, number: int, every: bool) -> bool:
 
 def _around(old: bytes, new: bytes, context: int = 3, most: int = 24) -> str:
     """The lines of `new` around where it differs from `old`: what an edit left, so the file need not be read again
-    to see it (SWE-agent's editor shows the edited window after every edit, arXiv:2405.15793 section 3). Until
-    2026-11-26 the lines were cut with str.splitlines while their numbers counted newlines, so on a file with a form
-    feed or a U+2028 before the change the window named and showed lines from before it."""
+    to see it (SWE-agent's editor shows the edited window after every edit, arXiv:2405.15793 section 3), each after its
+    number and a tab as fs_read shows it (_numbered). Until 2026-11-26 the lines were bare, and cut with
+    str.splitlines while their numbers counted newlines, so on a file with a form feed or a U+2028 before the change
+    the window named and showed lines from before it."""
     head = next((i for i, (a, b) in enumerate(zip(old, new)) if a != b), min(len(old), len(new)))
     tail = next((i for i, (a, b) in enumerate(zip(reversed(old[head:]), reversed(new[head:]))) if a != b),
                 min(len(old), len(new)) - head)
@@ -237,7 +250,8 @@ def _around(old: bytes, new: bytes, context: int = 3, most: int = 24) -> str:
     last = min(len(lines), text.count("\n", 0, len(new[:len(new) - tail].decode("utf-8", "replace"))) + 1 + context)
     shown = lines[first - 1:last]
     cut = f"\n[{len(shown) - most} more changed lines not shown]" if len(shown) > most else ""
-    return f"lines {first}-{min(last, first + most - 1)} of {len(lines)} are now:\n" + "\n".join(shown[:most]) + cut
+    return (f"lines {first}-{min(last, first + most - 1)} of {len(lines)} are now:\n" + _numbered(shown[:most], first)
+            + cut)
 
 
 def _clip(text: str, limit: int) -> str:
@@ -864,8 +878,7 @@ class FileTools:
         last = start - 1 + len(shown)
         head = (f"{target.display}: lines {start}-{last} of {len(lines)}, {size} bytes{digest}{note}"
                 if shown else f"{target.display}: {len(lines)} lines, {size} bytes{digest}; nothing at line {start}")
-        width = len(str(last))
-        body = "\n".join(f"{n:>{width}}\t{line}" for n, line in enumerate(shown, start))
+        body = _numbered(shown, start)
         tail = cut
         if last < len(lines):
             why = f" (the reply holds {cap} characters)" if narrowed else ""
@@ -1061,14 +1074,15 @@ class FileTools:
         try:
             return _replaced(target, text, old, new, every)
         except EditMiss:
-            # fs_read shows each line after its number and a tab (NUMBERED), and a model may copy them into the text
-            # to replace. When every line of that text starts with them, they count up by one, and they say where it
-            # is (the rest starts at the line the first one names, and an edit of one place would be made there), the
-            # edit is tried once more without them, and without them in the new text too when every line of it that
-            # is not empty has them. In a file whose own rows start with a number and a tab, "2\tcherry" is no line,
-            # and without its "number" it is another row's text: that is not where it said, so it is not edited
-            # there. A new text with them on some lines only is not guessed at, and a text that is nothing but them
-            # is not looked for: those, and everything else, miss exactly as they did before.
+            # fs_read shows each line after its number and a tab (NUMBERED), as fs_edit's window and closest lines do,
+            # and a model may copy them into the text to replace. When every line of that text starts with them, they
+            # count up by one, and they say where it is (the rest starts at the line the first one names, and an edit
+            # of one place would be made there), the edit is tried once more without them, and without them in the
+            # new text too when every line of it that is not empty has them. In a file whose own rows start with a
+            # number and a tab, "2\tcherry" is no line, and without its "number" it is another row's text: that is
+            # not where it said, so it is not edited there. A new text with them on some lines only is not guessed
+            # at, and a text that is nothing but them is not looked for: those, and everything else, miss exactly as
+            # they did before.
             bare_old, numbered, plain = _numbers_off(old)
             bare_new, numbered_new, plain_new = _numbers_off(new)
             if not numbered or plain or not bare_old.strip() or (numbered_new and plain_new):

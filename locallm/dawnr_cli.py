@@ -60,7 +60,7 @@ from dawnr_agent import build_agent as _build_agent  # noqa: E402
 from dawnr_agent.journal import sha256  # noqa: E402
 from dawnr_agent.shell import LIVE  # noqa: E402
 from dawnr_agent.system import FILE_READERS, facts, git_kind, look, under_windows  # noqa: E402
-from dawnr_agent.files import _numbers_off  # noqa: E402
+from dawnr_agent.files import NUMBERED_BY, _numbers_off  # noqa: E402
 
 MAX_TOKENS = 1500              # one turn of the model: a plan, or an answer; a file it writes has to fit in it
 HISTORY = 3                    # earlier tasks of the session handed back, each cut short
@@ -415,10 +415,11 @@ class Planner(NativePlanner):
     @staticmethod
     def heard(state, local: bool = False) -> str:
         """The untrusted text this task has put in front of the model (files, pages, command output), spaces squeezed.
-        `local`: only what came from this computer, not from the network. A read's line numbers are taken off first,
-        and only a read's: with them in, a command copied from two lines of a file stopped looking copied, and under
-        --yes it ran unasked (2026-11-26, when reads were numbered)."""
-        spans = [_numbers_off(text)[0] if o.step.tool == "fs_read" else text
+        `local`: only what came from this computer, not from the network. The line numbers a read, an edit's window
+        and its closest lines show (NUMBERED_BY) are taken off first, and only theirs: with them in, a command copied
+        from two lines of a file stopped looking copied, and under --yes it ran unasked (2026-11-26, when reads were
+        numbered; an edit's lines, numbered later that day, did the same until their numbers were taken off here)."""
+        spans = [_numbers_off(text)[0] if o.step.tool in NUMBERED_BY else text
                  for r in state.rounds for o in (r.outcome.outcomes if r.outcome is not None else []) if o.result is not None
                  and not (local and o.step.tool.startswith("web_")) for untrusted, text in o.result.spans() if untrusted]
         return " ".join(" ".join(spans).split())
