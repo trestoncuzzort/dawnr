@@ -148,7 +148,8 @@ def extract(source: str, entry: dict) -> str:
         raise ValueError(f"unsupported kind or line range for {entry['name']}")
     chosen = lines[first - 1:last]
     text = "\n".join(chosen) + "\n"
-    if "\r" in text or 'R"' in text:
+    # R" also ends an ordinary string such as "ERROR"; a raw string literal starts a token.
+    if "\r" in text or re.search(r'(?<![A-Za-z0-9_])(?:u8|u|U|L)?R"', text):
         raise ValueError(f"{entry['name']}: carriage returns and raw string literals are not supported")
     if not chosen[0].startswith(entry.get("starts_with", "")) or entry["name"] not in text:
         raise ValueError(f"{entry['name']}: extracted lines do not start as declared or do not name it")

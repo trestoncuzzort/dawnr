@@ -110,6 +110,19 @@ def test_a_range_that_is_not_one_declared_item_is_refused(entry):
         cases.extract(SOURCE, entry)
 
 
+@pytest.mark.parametrize("text", ['ok ? "OK" : "ERROR"', 'DIR"/x"'])
+def test_a_string_that_ends_in_r_is_not_a_raw_string_literal(text):
+    source = f"static const char *name(int ok)\n{{\n\treturn {text};\n}}\n"
+    assert cases.extract(source, {"name": "name", "line": 1, "end_line": 4}) == source
+
+
+@pytest.mark.parametrize("literal", ['R"(x)"', 'u8R"(x)"', 'uR"(x)"', 'UR"(x)"', 'LR"(x)"', '"a"R"(x)"'])
+def test_a_raw_string_literal_is_still_refused(literal):
+    source = f"static const char *name(void)\n{{\n\treturn {literal};\n}}\n"
+    with pytest.raises(ValueError, match="raw string literals"):
+        cases.extract(source, {"name": "name", "line": 1, "end_line": 4})
+
+
 def test_no_source_byte_can_change_under_the_pinned_identity(tmp_path):
     root = write_case(tmp_path / "case")
     cases.build_unit(cases.load(root), "original", root)
