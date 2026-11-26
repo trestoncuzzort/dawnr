@@ -142,6 +142,29 @@ def _closest(text: str, old: str, threshold: float = 0.6, context: int = 2, most
     return f"lines {first + 1}-{last} of {len(lines)}:\n" + "\n".join(lines[first:last])
 
 
+def _replaced(target: Target, text: str, old: str, new: str, every: bool) -> str:
+    """`text` with `old` replaced by `new`: the exact text once (or every time), in a CRLF file with its line ends
+    made CRLF, else matched by indentation (_loose_edit); a miss raises EditMiss with the closest lines."""
+    count = text.count(old)
+    if count == 0 and "\r\n" in text and "\n" in old:
+        old, new = old.replace("\r\n", "\n").replace("\n", "\r\n"), new.replace("\r\n", "\n").replace("\n", "\r\n")
+        count = text.count(old)
+    if count == 0:
+        loose = _loose_edit(text, old, new)
+        if loose is not None:
+            return loose
+        closest = _closest(text, old)
+        raise EditMiss(f"{target.display}: the text to replace was not found; not edited."
+                       + (" The new text is already in the file: this edit may have been made before."
+                          if len(new.strip()) >= 12 and new.strip() in text else "")
+                       + (" The file's closest lines follow: copy the text to replace from them, exactly." if closest else ""),
+                       closest)
+    if count > 1 and not every:
+        raise PathRefused(f"{target.display}: the text to replace appears {count} times; give more of the "
+                          f"surrounding text, or pass \"all\": true; not edited")
+    return text.replace(old, new) if every else text.replace(old, new, 1)
+
+
 def _numbers_off(text: str) -> tuple[str, int, int]:
     """(`text` with the number and tab fs_read shows (NUMBERED) taken off each line that starts with them, how many
     lines did, how many lines that are not empty did not)."""
@@ -984,30 +1007,13 @@ class FileTools:
         text = f"wrote {target.display}: {len(data)} bytes, {what}, sha256 {entry['after'][:HASH_SHOWN]}"
         return ToolResult(text + (f"\n{note}" if note else ""))
 
-    def _edited(self, target: Target, old_bytes: bytes, args: dict) -> bytes:
+    def _edited(self, target: Target, old_bytes: bytes, args: dict) -> str:
         try:
             text = old_bytes.decode("utf-8")
         except UnicodeDecodeError:
             raise PathRefused(f"{target.display} is not UTF-8 text; not edited") from None
-        old, new = args["old"], args["new"]
-        count = text.count(old)
-        if count == 0 and "\r\n" in text and "\n" in old:
-            old, new = old.replace("\r\n", "\n").replace("\n", "\r\n"), new.replace("\r\n", "\n").replace("\n", "\r\n")
-            count = text.count(old)
-        if count == 0:
-            loose = _loose_edit(text, old, new)
-            if loose is not None:
-                return loose
-            closest = _closest(text, old)
-            raise EditMiss(f"{target.display}: the text to replace was not found; not edited."
-                           + (" The new text is already in the file: this edit may have been made before."
-                              if len(new.strip()) >= 12 and new.strip() in text else "")
-                           + (" The file's closest lines follow: copy the text to replace from them, exactly." if closest else ""),
-                           closest)
-        if count > 1 and not args.get("all", False):
-            raise PathRefused(f"{target.display}: the text to replace appears {count} times; give more of the "
-                              f"surrounding text, or pass \"all\": true; not edited")
-        return text.replace(old, new) if args.get("all", False) else text.replace(old, new, 1)
+        old, new, every = args["old"], args["new"], bool(args.get("all", False))
+        return _replaced(target, text, old, new, every)
 
     def fs_edit(self, args: dict, ctx: CallContext) -> ToolResult:
         target = self._target_for_write(args)
