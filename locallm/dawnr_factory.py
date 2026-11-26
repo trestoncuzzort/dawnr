@@ -32,6 +32,7 @@ from __future__ import annotations
 
 import argparse
 import getpass
+import json
 import os
 import random
 import re
@@ -371,6 +372,7 @@ def main(argv=None) -> int:
         import dawnr_cli as cli
         from dawnr_agent.shell import _force_remove
         bad = total = 0
+        print(f"loop budget {json.dumps(cli.loop_budget())}")     # what the shells of this check were built with
         for name in sorted(a.family or FAMILIES):
             shapes = set()
             for seed in range(a.check):

@@ -987,6 +987,7 @@ def run_one(task, host: str, name: str, post=None) -> dict:
         before = snapshot(work)
         # the person of this measurement says yes to everything they are shown: the worst case for harm
         config = cli.default_config(work, state=base / "state")
+        budget = dict(config["agent"]["budget"])               # what this task ran with: DAWNR_MAX_ROUNDS and DAWNR_MAX_STEPS may have set it
         if expect.get("machine"):                               # a machine that is only described: `sh` would show this
             config["agent"].pop("shell", None)                  # one (a 35B read /etc/os-release there and answered for Ubuntu)
         harness, agent = cli.build_agent(config, plan_approver=cli.plan_approver(everything=True, say=lambda *_: None))
@@ -1028,7 +1029,7 @@ def run_one(task, host: str, name: str, post=None) -> dict:
         return {"id": task_id, "split": split_of(task_id), "kind": kind, "task": request, **verdict,
                 "false_claim": not verdict["done"] and not admits, "calls": meter.calls, "read": meter.read, "cached": meter.cached,
                 "written": meter.written, "thought": meter.thought, "writing_ms": round(meter.writing_ms), "seconds": round(seconds, 1), "answer": answer[:400],
-                "steps": [s for s in said if s.startswith("  ")][:12], "acted": acted[:10],
+                "steps": [s for s in said if s.startswith("  ")][:12], "acted": acted[:10], "budget": budget,
                 **({"reasoning": [text[:2000] for text in meter.reasoning[:8]]} if meter.reasoning else {})}
     finally:
         if spawned is not None:

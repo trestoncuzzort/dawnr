@@ -162,6 +162,7 @@ def main(argv=None) -> int:
     # a seed in the log is one the next run skips
     if cli.settings_refused("dawnr_teach"):
         return 2
+    budget = cli.loop_budget()                                  # what every task of this run is given, written in each line of the log
     key = a.key_file.read_text().strip() if a.key_file else ""
     have = set()
     if a.out.exists():
@@ -186,7 +187,7 @@ def main(argv=None) -> int:
         for n, got in enumerate(pool.map(one, jobs, chunksize=1), 1):
             counts.setdefault(got["family"], {}).setdefault(got["outcome"], 0)
             counts[got["family"]][got["outcome"]] += 1
-            record.write(json.dumps({k: v for k, v in got.items() if k != "row"}) + "\n")
+            record.write(json.dumps({**{k: v for k, v in got.items() if k != "row"}, "budget": budget}) + "\n")
             record.flush()
             if got["row"] is not None:
                 rows.write(json.dumps(got["row"]) + "\n")

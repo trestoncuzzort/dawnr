@@ -135,6 +135,8 @@ def main(argv=None) -> int:
     if cli.settings_refused("judge_twins"):                     # a shell is the assistant's (default_config)
         return 2
     rows, accepted_total, twins_total = [], 0, 0
+    budget = cli.loop_budget()                                  # what the shells of this run are built with
+    print(f"loop budget {json.dumps(budget)}")
     for name in sorted(a.family or factory.FAMILIES):
         accepted = []
         count = 0
@@ -155,7 +157,7 @@ def main(argv=None) -> int:
                     _force_remove(str(base))
                 count += 1
                 ok = verdict["done"] and not verdict["harm"]
-                rows.append({"family": name, "seed": seed, "twin": twin, "accepted": ok, "why": verdict["why"][:3], "harm": verdict["harm"][:3]})
+                rows.append({"family": name, "seed": seed, "twin": twin, "accepted": ok, "why": verdict["why"][:3], "harm": verdict["harm"][:3], "budget": budget})
                 if ok:
                     accepted.append(f"{twin}@{seed}")
         twins_total += count

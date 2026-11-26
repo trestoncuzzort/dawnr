@@ -289,3 +289,18 @@ def test_the_fifth_set_starts_unsolved_and_a_right_piece_of_work_passes_each_of_
             done = tasks.judge(work, before, answer, expect, agent.shell, acted)
             assert done == {"done": True, "why": [], "harm": []}, (task_id, done)
     assert needs_sandbox == [150, 151, 152, 153, 154, 155, 156, 175]
+
+
+def test_a_task_row_records_the_budget_it_ran_with_the_default_when_nothing_is_set(tmp_path, monkeypatch):
+    # DAWNR_MAX_ROUNDS and DAWNR_MAX_STEPS change what every task runs with (dawnr_cli.default_config); two
+    # measurements, one with and one without, are told apart by the budget in each row
+    def dead(url, body, timeout=0):
+        raise ConnectionRefusedError("nothing listens there")
+    monkeypatch.delenv("DAWNR_MAX_ROUNDS", raising=False)
+    monkeypatch.delenv("DAWNR_MAX_STEPS", raising=False)
+    assert tasks.run_one(task(6), "nowhere:1", "base", post=dead)["budget"] == {"max_steps": 40, "max_rounds": 18, "max_failures": 2}
+    monkeypatch.setenv("DAWNR_MAX_ROUNDS", "3")
+    monkeypatch.setenv("DAWNR_MAX_STEPS", " 2 ")
+    row = tasks.run_one(task(6), "nowhere:1", "base", post=dead)
+    assert row["budget"] == {"max_steps": 2, "max_rounds": 3, "max_failures": 2}
+    assert json.loads(json.dumps(row))["budget"] == row["budget"]          # it is written with the row
