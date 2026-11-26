@@ -404,12 +404,72 @@ def test_in_its_last_round_it_is_asked_to_answer_and_given_nothing_to_call(tmp_p
     assert all("tools" in body for body in model.bodies[:last]) and "tools" not in model.bodies[last]
     assert model.bodies[last]["messages"][-1] == {"role": "user", "content": cli.LAST_ROUND}
     assert model.bodies[last - 1]["messages"][-1]["role"] == "tool"
-    # a call written out as text in that last round is not an answer, and is not shown as one
-    model = Model(*looks, turn(text="I will edit it. <tool_call> <function=fs_edit> ... </function> </tool_call>"))
+    # a call written out as text in that last round is not an answer, and is not shown as one; asked once more with
+    # nothing to call, and written out again (a server that does not end it at the stop strings), it still is not
+    written = turn(text="I will edit it. <tool_call> <function=fs_edit> ... </function> </tool_call>")
+    model = Model(*looks, written, turn(text="<tool_call> <function=fs_edit> ... </function> </tool_call>"))
     (tmp_path / "again").mkdir()
     work, harness, agent, planner, meter, said, asked, _ask = session(tmp_path / "again", model)
     with harness:
         assert cli.run_task(agent, planner, meter, "Rename it everywhere.", [], said.append) == cli.UNFINISHED
+    assert len(model.bodies) == last + 2 and "tools" not in model.bodies[-1]
+
+
+# The reply of a 27B in the last round of a read-only review, finish_reason "stop": the call it wanted, written out as
+# text. The task ended there with no answer at all, after sixteen windows of files had been read
+WRITTEN = ("<tool_call>\n<function=fs_read>\n<parameter=path>\nhere/tests/reference/observations.py\n</parameter>\n"
+           "<parameter=start>\n201\n</parameter>\n</function>\n</tool_call>")
+
+
+def written_call():
+    reply = turn(text=WRITTEN)
+    reply["choices"][0]["finish_reason"] = "stop"
+    return reply
+
+
+def test_a_call_written_as_text_in_the_last_round_is_asked_once_more_for_the_answer_with_nothing_to_call(tmp_path):
+    last = cli.default_config(tmp_path)["agent"]["budget"]["max_rounds"] - 1
+    looks = [turn(("fs_read", {"path": "here/tests/reference/observations.py"}))]
+    looks += [turn(("fs_search", {"query": f"observation {i}"})) for i in range(last - 1)]
+    said_at_last = "observe() returns an empty list. I could not check anything past line 200."
+    model = Model(*looks, written_call(), turn(text=said_at_last))
+    work, harness, agent, planner, meter, said, asked, _ask = session(tmp_path, model)
+    (work / "tests" / "reference").mkdir(parents=True)
+    (work / "tests" / "reference" / "observations.py").write_text("def observe():\n    return []\n")
+    with harness:
+        answer = cli.run_task(agent, planner, meter, "Review tests/reference/observations.py.", [], said.append)
+    assert answer == said_at_last and len(model.bodies) == last + 2
+    again = model.bodies[last + 1]                              # the same messages, the call it wrote, and the word
+    assert "tools" not in again and again["stop"] == ["<tool_call>", "<function="]
+    assert again["messages"][:-2] == model.bodies[last]["messages"]
+    assert again["messages"][-2:] == [{"role": "assistant", "content": WRITTEN}, {"role": "user", "content": cli.NOTHING_MORE}]
+    # what comes back is the answer only if it is one: a reply that holds a call is not, whatever text comes with it
+    model = Model(*looks, written_call(), turn(("fs_read", {"path": "here/tests/reference/observations.py", "start": 201}),
+                                               text="Let me read the rest of the file."))
+    (tmp_path / "calls").mkdir()
+    work, harness, agent, planner, meter, said, asked, _ask = session(tmp_path / "calls", model)
+    (work / "tests" / "reference").mkdir(parents=True)
+    (work / "tests" / "reference" / "observations.py").write_text("def observe():\n    return []\n")
+    with harness:
+        answer = cli.run_task(agent, planner, meter, "Review tests/reference/observations.py.", [], said.append)
+    assert len(model.bodies) == last + 2 and answer.startswith(cli.UNFINISHED)
+
+
+def test_a_last_round_that_ends_in_no_answer_all_the_same_names_the_files_it_read(tmp_path):
+    last = cli.default_config(tmp_path)["agent"]["budget"]["max_rounds"] - 1
+    looks = [turn(("fs_read", {"path": "here/a.md"})), turn(("fs_read", {"path": "here/missing.md"})),
+             turn(("fs_read", {"path": "here/src/b.py"})), turn(("fs_read", {"path": "here/a.md", "start": 2}))]
+    looks += [turn(("fs_search", {"query": f"total {i}"})) for i in range(last - len(looks))]
+    model = Model(*looks, written_call(), turn(text=""))      # the call begun again, ended at once by the stop strings
+    work, harness, agent, planner, meter, said, asked, _ask = session(tmp_path, model)
+    (work / "a.md").write_text("one\ntwo\n")
+    (work / "src").mkdir()
+    (work / "src" / "b.py").write_text("print('b')\n")
+    with harness:
+        answer = cli.run_task(agent, planner, meter, "Review the project.", [], said.append)
+    assert answer.startswith(cli.UNFINISHED) and "here/a.md" in answer and "here/src/b.py" in answer
+    assert "missing.md" not in answer and answer.count("here/a.md") == 1 and len(model.bodies) == last + 2
+    assert answer == cli.UNFINISHED + cli.READ_BY_THEN.format(files="here/a.md, here/src/b.py") and answer in said
 
 
 def test_a_search_in_one_file_searches_that_file_and_a_search_of_nothing_says_so(tmp_path):

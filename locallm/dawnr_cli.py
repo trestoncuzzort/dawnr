@@ -84,6 +84,7 @@ LOOKING = ("A question about the computer itself as it is now (what is running, 
 UNLOOKED = re.compile(r"\b(cannot|can't|can not|unable|do not have|don't have|no access|please provide|not able)\b", re.I)
 LOOK_FIRST = "You have not looked yet. List the folder or search it, then answer from what you find."
 UNFINISHED = "Stopped: it ran out of rounds before it finished. What was changed is what the line below says."
+READ_BY_THEN = " Files it had read by then: {files}."    # after it, so that the person knows what the task covered
 # a task the loop stopped (its steps kept failing, or it went round): the model is asked once, with nothing to call,
 # for its own account, and the journal's line follows it whatever it says
 ACCOUNT = ("The work was stopped here: {why}. Do not call anything. Say in a sentence or two what was done and what was "
@@ -129,6 +130,12 @@ def windows_names(command: str, has=shutil.which) -> str:
     return COMMAND_WORD.sub(fix, command)
 # the last round of a task: a question the files do not answer otherwise ends in one more search and no answer at all
 LAST_ROUND = "Answer now from what you have read. If what was asked is not in the files, say that it is not there."
+# ... and given that, a 27B wrote the call it wanted as text (a read-only review, sixteen windows of files read, and
+# the task ended with no answer at all): said once, answered again with nothing to call, and a call begun again is
+# ended at once by the stop strings
+CALL_MARKS = ("<tool_call>", "<function=")     # a call in the model family's own format, written out as text
+NOTHING_MORE = ("Nothing more can be read or run now: a call written out as text does not run. Answer from what you have "
+                "already read, and say plainly what you could not check.")
 
 
 def default_config(cwd: Path, *, read_only: bool = False, roots: tuple = (), online: bool = False,
@@ -411,6 +418,13 @@ class Planner(NativePlanner):
         return seen
 
     @staticmethod
+    def files_read(state) -> list:
+        """The files this task has read with fs_read (a read that failed or did not run is not one), each once, in
+        the order they were first read."""
+        return list(dict.fromkeys(str(o.step.arguments.get("path")) for r in state.rounds if r.outcome is not None
+                                  for o in r.outcome.outcomes if o.status == "ran" and o.step.tool == "fs_read"))
+
+    @staticmethod
     def heard(state, local: bool = False) -> str:
         """The untrusted text this task has put in front of the model (files, pages, command output), spaces squeezed.
         `local`: only what came from this computer, not from the network."""
@@ -594,8 +608,19 @@ class Planner(NativePlanner):
                 body.pop("tools", None)
                 again = (self._send(f"http://{self.host}/v1/chat/completions", body)["choices"][0].get("message") or {}).get("content") or ""
                 text = again.strip() or text
-            # asked to answer with nothing left to call, the model sometimes writes the call it wanted as text
-            return Finish(UNFINISHED if "<tool_call>" in text or "<function=" in text else text)
+            # asked to answer with nothing left to call, the model sometimes writes the call it wanted as text: said
+            # once, answered again with nothing to call; what is still no answer ends the task, naming what it read
+            if any(mark in text for mark in CALL_MARKS):
+                body["messages"] = body["messages"] + [{"role": "assistant", "content": text},
+                                                       {"role": "user", "content": NOTHING_MORE}]
+                body.pop("tools", None)
+                again = self._send(f"http://{self.host}/v1/chat/completions", dict(body, stop=list(CALL_MARKS)))["choices"][0].get("message") or {}
+                said = (again.get("content") or "").strip()
+                if said and not again.get("tool_calls") and not any(mark in said for mark in CALL_MARKS):
+                    return Finish(said)
+                read = self.files_read(state)
+                return Finish(UNFINISHED + (READ_BY_THEN.format(files=", ".join(read)) if read else ""))
+            return Finish(text)
         approver = getattr(self.agent, "plan_approver", None)
         if hasattr(approver, "looked"):
             approver.heard, approver.local = self.heard(state), self.heard(state, local=True)
