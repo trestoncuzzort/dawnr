@@ -453,6 +453,18 @@ class CraftedTextTest(unittest.TestCase):
             with self.subTest(head=head[:8]):
                 self.assertQuick([head + "\nthe cache is cleared only when the person runs clean"] * 4)
 
+    def test_a_text_documents_encoding_in_its_header_keeps_it_a_header(self):
+        # doc_read.py names a text document's encoding in brackets inside the header's own: "text (cp1252)"
+        head = "here/old.txt (text (cp1252)): lines {}-{} of 4 of its text, 90 bytes\n"
+        first = head.format(1, 2) + "The cache is cleared\nonly when the person runs clean,"
+        second = head.format(3, 4) + "and never on its own.\nA stale cache is rebuilt."
+        self.assertEqual(unfound_quotes('It says "only when the person runs clean, and never on its own".', [first, second]), [])
+
+    def test_a_first_line_with_brackets_inside_brackets_is_checked_at_once(self):
+        for head in (" (()" * (self.N // 4), " (a(b)" * (self.N // 6), " ((" * (self.N // 3), " ( (b) (b)" * (self.N // 10)):
+            with self.subTest(head=head[:8]):
+                self.assertQuick([head + "\nthe cache is cleared only when the person runs clean"] * 4)
+
     def test_a_document_named_with_brackets_is_still_its_own_header(self):
         head = "here/my file (1).pdf (pdf, 2 pages): lines 1-2 of 2 of its text, 90 bytes"
         self.assertEqual(unfound_quotes(self.QUOTE, [head + "\nthe cache is cleared only when\nthe person runs clean"]), [])

@@ -57,7 +57,8 @@ QUOTE_MARKS = str.maketrans(dict.fromkeys("'\u2018\u2019\u201a\u201b\u2032\u201c
 # a reply cut at its size. Lines a file has one after the other are one text however the tools showed them: in two
 # windows of one version of it, as two hits, a window and a hit.
 WINDOW = re.compile(r"(.*): lines (\d+)-(\d+) of \d+, \d+ bytes(?:, sha256 ([0-9a-f]+))?")
-DOCUMENT = re.compile(r"(.*) \(([^()]*)\): lines (\d+)-(\d+) of \d+ of its text, \d+ bytes$")    # ("pdf, 2 pages")
+# the reader's name for what it read ("pdf, 2 pages", "text (cp1252)": doc_read.read) holds brackets one deep at most
+DOCUMENT = re.compile(r"(.*) \(((?:[^()]|\([^()]*\))*)\): lines (\d+)-(\d+) of \d+ of its text, \d+ bytes$")
 PAGE = re.compile(r"\[page \d+\]$")
 SEARCH = re.compile(r"search for .* \(literal, .*\): \d+ matches in \d+ files, \d+ files searched$")
 HIT = re.compile(r"(.+?):(\d+): (.*)")
