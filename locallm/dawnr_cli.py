@@ -60,7 +60,7 @@ from dawnr_agent import build_agent as _build_agent  # noqa: E402
 from dawnr_agent.journal import sha256  # noqa: E402
 from dawnr_agent.shell import LIVE  # noqa: E402
 from dawnr_agent.system import FILE_READERS, facts, git_kind, look, under_windows  # noqa: E402
-from dawnr_agent.files import NUMBERED_BY, _numbers_off  # noqa: E402
+from dawnr_agent.files import as_compared  # noqa: E402
 
 MAX_TOKENS = 1500              # one turn of the model: a plan, or an answer; a file it writes has to fit in it
 HISTORY = 3                    # earlier tasks of the session handed back, each cut short
@@ -415,13 +415,24 @@ class Planner(NativePlanner):
     @staticmethod
     def heard(state, local: bool = False) -> str:
         """The untrusted text this task has put in front of the model (files, pages, command output), spaces squeezed.
-        `local`: only what came from this computer, not from the network. The line numbers a read, an edit's window
-        and its closest lines show (NUMBERED_BY) are taken off first, and only theirs: with them in, a command copied
-        from two lines of a file stopped looking copied, and under --yes it ran unasked (2026-11-26, when reads were
-        numbered; an edit's lines, numbered later that day, did the same until their numbers were taken off here)."""
-        spans = [_numbers_off(text)[0] if o.step.tool in NUMBERED_BY else text
-                 for r in state.rounds for o in (r.outcome.outcomes if r.outcome is not None else []) if o.result is not None
-                 and not (local and o.step.tool.startswith("web_")) for untrusted, text in o.result.spans() if untrusted]
+        `local`: only what came from this computer, not from the network. Each text is taken in the forms as_compared
+        gives (dawnr_agent/files.py): a read's and an edit's lines without their numbers, a search's hits also without
+        the name and number before each. With those between two lines, a command copied from them stopped looking
+        copied, and under --yes it ran unasked (2026-11-26, when reads were numbered; an edit's lines, numbered later
+        that day, did the same, and a search's hits had done so since they were written). The closest lines a refused
+        edit's dry run shows the model (Planner.messages) are held too: until 2026-11-26 they were not, and a command
+        copied from them ran unasked as well."""
+        spans = []
+        for r in state.rounds:
+            dry = getattr(r, "dry", None)
+            for v in (dry.views if dry is not None else []):
+                if v.preview.quoted:                            # a file's lines, shown with a refusal
+                    spans += as_compared(v.step.tool, v.preview.quoted)
+            for o in (r.outcome.outcomes if r.outcome is not None else []):
+                if o.result is None or (local and o.step.tool.startswith("web_")):
+                    continue
+                spans += [form for untrusted, text in o.result.spans() if untrusted
+                          for form in as_compared(o.step.tool, text)]
         return " ".join(" ".join(spans).split())
 
     def unrun(self, state) -> list:

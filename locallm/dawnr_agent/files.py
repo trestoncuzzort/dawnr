@@ -75,8 +75,10 @@ NUMBERED = re.compile(r" *[1-9][0-9]*\t")    # what fs_read puts before each lin
                                              # line of its window and of its closest lines: the line's number,
                                              # right-aligned with spaces, and a tab (_numbered)
 NUMBERED_BY = ("fs_read", "fs_edit")         # the tools whose untrusted text has a file's lines numbered so: what
-                                             # compares that text with a plan (dawnr_cli.py's Planner.heard) takes
-                                             # the numbers off first, or two lines copied from it do not look copied
+                                             # compares that text with a plan (as_compared) takes the numbers off
+                                             # first, or two lines copied from it do not look copied
+HIT = re.compile(r".*?:[1-9][0-9]*: ")       # what fs_search puts before each line it finds: the file's name, the
+                                             # line's number and ": " (the shortest start of a line that is so)
 
 
 class EditMiss(PathRefused):
@@ -207,6 +209,19 @@ def _numbers_off(text: str) -> tuple[str, int, int]:
             plain += 1
         out.append(line)
     return "\n".join(out), numbered, plain
+
+
+def as_compared(tool: str, text: str) -> list:
+    """`text`, untrusted text a call of `tool` showed the model, in the forms a plan is held against (dawnr_cli.py's
+    Planner.heard), so that two lines copied from it look copied: a read's and an edit's lines without the number and
+    tab the tool put before each (NUMBERED_BY), the only thing in them that is not the file's; a search's hits as
+    shown, and also without the file's name and line number before each (HIT), since a name is untrusted text too;
+    anything else as it is."""
+    if tool in NUMBERED_BY:
+        return [_numbers_off(text)[0]]
+    if tool == "fs_search":
+        return [text, "\n".join(line[m.end():] if (m := HIT.match(line)) else line for line in text.split("\n"))]
+    return [text]
 
 
 def _line_numbers(text: str) -> list | None:
