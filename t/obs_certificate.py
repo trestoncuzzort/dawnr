@@ -19,6 +19,10 @@ engine change; certificate.check() dispatches `kind == "paired-observation"` her
     python3 -I obs_certificate.py check <cert.json>                             # replay (no model)
     python3 -I obs_certificate.py --self-test
 """
+try:                                    # a scratch folder in dawnr's own parent, swept after a killed check
+    from . import check_scratch
+except ImportError:
+    import check_scratch
 import hashlib
 import json
 import os
@@ -116,7 +120,7 @@ def _lower_and_run(real_t, twin_t, witness, kernel, flake, spark_jobs=DEFAULT_SP
     lower, suffix = pm[kernel]
     import tempfile
     # the lowered programs are private copies: the folder goes when the replay ends, whatever its outcome
-    with tempfile.TemporaryDirectory(prefix="obs-") as work_folder:
+    with check_scratch.TemporaryDirectory(prefix="obs-") as work_folder:
         work = pathlib.Path(work_folder)
         rp = work / f"real.{suffix}"; tp = work / f"twin.{suffix}"
         real_src = lower(clean, clean["body"]); twin_src = lower(clean, twin_task.get("body"), witness=witness)
@@ -453,7 +457,7 @@ def check(cert, spec=None, kernels=None, jobs=2, verify_override=None):
 def self_test():
     import tempfile
     # the scratch folder of the self-check is removed when it ends, on a pass, a fail or an exception
-    with tempfile.TemporaryDirectory(prefix="obs_certificate-") as folder:
+    with check_scratch.TemporaryDirectory(prefix="obs_certificate-") as folder:
         return _self_test(pathlib.Path(folder))
 
 

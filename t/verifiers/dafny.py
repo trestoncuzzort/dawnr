@@ -238,6 +238,10 @@ import unicodedata
 from pathlib import Path
 
 from . import Outcome, Result, safe_text, sha256_file, run_tree
+try:
+    from .. import check_scratch
+except ImportError:
+    import check_scratch
 from .discover import find, missing
 
 DAFNY = find("T_DAFNY", ["dafny"], [".local/dafny/dafny"])
@@ -633,19 +637,21 @@ def verify(path: Path, budget: int = DEFAULT_RLIMIT) -> Result:
     # NFKC folds homoglyph spellings; the hash above binds the raw bytes.
     src = unicodedata.normalize("NFKC", data.decode("utf-8", errors="replace"))
     banned = sorted({m.group(0) for m in BANNED_RE.finditer(src)})
-    fd2, src_copy = tempfile.mkstemp(prefix="t_src_", suffix=".dfy")
-    # The private copy is removed when the check ends, on a verdict, a timeout or an exception: it holds the
-    # checked program. A check killed by SIGKILL cannot remove it (PRIVACY.md).
+    # The private copy and the --rprint file live in a folder of their own in dawnr scratch parent, removed when the
+    # check ends, on a verdict, a timeout or an exception: it holds the checked program. A check killed by SIGKILL
+    # cannot remove it; the next check sweep does (check_scratch).
+    scratch = check_scratch.TemporaryDirectory(prefix="t_dafny")
+    src_copy = os.path.join(scratch.name, "t_src.dfy")
     try:
-        with os.fdopen(fd2, "wb") as f:
+        with open(src_copy, "xb") as f:
             f.write(data)                       # the kernel reads this private copy, never the editable path
         kernel_path = Path(src_copy)
         cert_present = _CERT.search(src) is not None
         # The resolver's own print of the program, the declaration evidence
         # for the certificate door (module docstring); a temp file because
         # --rprint writes nowhere else.
-        fd, rp_name = tempfile.mkstemp(prefix="t_rprint_", suffix=".dfy")
-        os.close(fd)
+        rp_name = os.path.join(scratch.name, "t_rprint.dfy")
+        Path(rp_name).touch()
         rprint: str | None = None
         t0 = time.monotonic()
         try:
@@ -774,7 +780,4 @@ def verify(path: Path, budget: int = DEFAULT_RLIMIT) -> Result:
                               "error_count": n_errors,
                               "certificate": cert})
     finally:
-        try:
-            os.unlink(src_copy)
-        except OSError:
-            pass
+        scratch.cleanup()

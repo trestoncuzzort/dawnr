@@ -1,7 +1,7 @@
 """A private copy a check makes in the temporary folder must not outlive the check (PRIVACY.md, the row on copies of a
 program being checked). Each path below runs with the temporary folder pointed at an empty folder and asserts the folder
 is empty again after a check that succeeds, after one that fails, and after one that raises. A check killed with SIGKILL
-cannot clean up and is not tested; PRIVACY.md says so."""
+cannot clean up; the next check removes its copy (t/check_scratch.py, tested in t/test_check_scratch.py)."""
 import json
 import os
 import subprocess
@@ -30,7 +30,15 @@ def watch(tmp_path, monkeypatch):
 
 
 def left(folder):
-    return sorted(p.name for p in folder.iterdir())
+    """What a check left: the names in the temporary folder, and the names inside dawnr own scratch parent there (the
+    parent itself is dawnr, made once and kept, and a sweep of a killed check removes its folders: t/test_check_scratch.py)."""
+    names = []
+    for p in folder.iterdir():
+        if p.name.startswith("dawnr-checks-") and p.is_dir() and not p.is_symlink():
+            names += [f"{p.name}/{q.name}" for q in p.iterdir()]
+        else:
+            names.append(p.name)
+    return sorted(names)
 
 
 def _outcomes(run_one):

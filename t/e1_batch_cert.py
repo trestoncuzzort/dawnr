@@ -18,6 +18,10 @@ cell of the frozen keyset:
     python3 -I e1_batch_cert.py mint-run <v2-run-dir> <pairs-dir> <cert-dir>
     python3 -I e1_batch_cert.py control
 """
+try:                                    # a scratch folder in dawnr's own parent, swept after a killed check
+    from . import check_scratch
+except ImportError:
+    import check_scratch
 import hashlib
 import json
 import os
@@ -140,7 +144,7 @@ def mint_run(run_dir, pairs_dir, cert_dir):
 def control():
     import tempfile
     # the scratch folder of the self-check is removed when it ends, on a pass, a fail or an exception
-    with tempfile.TemporaryDirectory(prefix="e1_batch_cert-") as folder:
+    with check_scratch.TemporaryDirectory(prefix="e1_batch_cert-") as folder:
         return _control(pathlib.Path(folder))
 
 

@@ -40,6 +40,10 @@ A task keeps its lift either way; the verdict is its trust label (t/lift_vericod
 """
 from __future__ import annotations
 
+try:                                    # a scratch folder in dawnr's own parent, swept after a killed check
+    from . import check_scratch
+except ImportError:
+    import check_scratch
 import copy
 import json
 import os
@@ -595,7 +599,7 @@ if __name__ == "__main__":
     if a.print:
         print(build(Path(a.source).read_text(), task, rmap)[0])
     elif a.work is None:
-        with tempfile.TemporaryDirectory(prefix="lift-check-verus-") as work:
+        with check_scratch.TemporaryDirectory(prefix="lift-check-verus-") as work:
             print(json.dumps(check(Path(a.source), task, rmap, Path(work), Path(a.task).stem), indent=2))
     else:
         print(json.dumps(check(Path(a.source), task, rmap, Path(a.work), Path(a.task).stem), indent=2))

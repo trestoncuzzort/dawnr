@@ -31,6 +31,10 @@ artifacts by their outputs on a set of inputs). Same namespaces, same limits, on
 """
 from __future__ import annotations
 
+try:                                    # a scratch folder in dawnr's own parent, swept after a killed check
+    from . import check_scratch
+except ImportError:
+    import check_scratch
 import json
 import os
 import select
@@ -267,13 +271,13 @@ def available() -> bool:
         return Path(SEATBELT).exists()
     if backend() == "landlock":
         if "landlock" not in _PROBED:
-            with tempfile.TemporaryDirectory(prefix="py-sandbox-probe-") as tmp:
+            with check_scratch.TemporaryDirectory(prefix="py-sandbox-probe-") as tmp:
                 _PROBED["landlock"] = _probe(_command(Path(tmp))[:-3] + ["/usr/bin/true"])
         return _PROBED["landlock"][0] and Path("/usr/bin/python3").exists()
     if shutil.which("bwrap") is None:
         return False
     if "linux" not in _PROBED:
-        with tempfile.TemporaryDirectory(prefix="py-sandbox-probe-") as tmp:
+        with check_scratch.TemporaryDirectory(prefix="py-sandbox-probe-") as tmp:
             cmd = _command(Path(tmp))[:-3] + ["/usr/bin/true"]          # the job's namespaces and mounts, no Python
             try:
                 _PROBED["linux"] = subprocess.run(cmd, capture_output=True, timeout=20).returncode == 0
@@ -331,7 +335,7 @@ def run_tests(code: str, asserts: list[str], per_test: int = 3, memory_mb: int =
     if not available():
         raise RuntimeError(f"py_sandbox: no sandbox ({why_unavailable()}); model-written code is not run without it")
     marker = _marker()
-    with tempfile.TemporaryDirectory(prefix="py-sandbox-") as tmp:
+    with check_scratch.TemporaryDirectory(prefix="py-sandbox-") as tmp:
         job = Path(tmp)
         (job / "solution.py").write_text(code, encoding="utf-8")
         (job / "asserts.json").write_text(json.dumps(list(asserts)), encoding="utf-8")
@@ -402,7 +406,7 @@ class Session:
         if not available():
             raise RuntimeError(f"py_sandbox: no sandbox ({why_unavailable()}); model-written code is not run without it")
         self.code, self.fn, self.per_call, self.memory_mb = code, fn, per_call, memory_mb
-        self._tmp = tempfile.TemporaryDirectory(prefix="py-sandbox-")
+        self._tmp = check_scratch.TemporaryDirectory(prefix="py-sandbox-")
         job = Path(self._tmp.name)
         (job / "solution.py").write_text(code, encoding="utf-8")
         self._marker = _marker()

@@ -11,6 +11,10 @@ executed replays -- the same honest distinction as the paired set.
     python3 -I db_batch_cert.py mint-all <cert-dir>
     python3 -I db_batch_cert.py control
 """
+try:                                    # a scratch folder in dawnr's own parent, swept after a killed check
+    from . import check_scratch
+except ImportError:
+    import check_scratch
 import hashlib
 import json
 import os
@@ -90,7 +94,7 @@ def mint_all(cert_dir):
 def control():
     import tempfile
     # the scratch folder of the self-check is removed when it ends, on a pass, a fail or an exception
-    with tempfile.TemporaryDirectory(prefix="db_batch_cert-") as folder:
+    with check_scratch.TemporaryDirectory(prefix="db_batch_cert-") as folder:
         return _control(pathlib.Path(folder))
 
 

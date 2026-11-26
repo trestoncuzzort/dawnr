@@ -26,6 +26,10 @@ nothing is written per task. `#print axioms` on both theorems must show no `sorr
 """
 from __future__ import annotations
 
+try:                                    # a scratch folder in dawnr's own parent, swept after a killed check
+    from . import check_scratch
+except ImportError:
+    import check_scratch
 import json
 import os
 import re
@@ -308,7 +312,7 @@ if __name__ == "__main__":
     if a.print:
         print(build(Path(a.source).read_text(), task)[0])
     elif a.work is None:
-        with tempfile.TemporaryDirectory(prefix="lift-check-lean-") as work:
+        with check_scratch.TemporaryDirectory(prefix="lift-check-lean-") as work:
             print(json.dumps(check(Path(a.source), task, Path(work), Path(a.task).stem), indent=2))
     else:
         print(json.dumps(check(Path(a.source), task, Path(a.work), Path(a.task).stem), indent=2))

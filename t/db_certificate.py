@@ -22,6 +22,10 @@ A certificate therefore binds what was actually retained and replays only what i
     python3 -I db_certificate.py check <cert.json>
     python3 -I db_certificate.py --self-test
 """
+try:                                    # a scratch folder in dawnr's own parent, swept after a killed check
+    from . import check_scratch
+except ImportError:
+    import check_scratch
 import hashlib
 import json
 import os
@@ -77,7 +81,7 @@ def _default_adjudicate(task, body, kernel):
     (NO witness) and read the kernel verdict. Returns (normalized_state, raw)."""
     import audit
     _lmod, suffix = audit.tlib._LOWER_MOD[kernel]
-    with tempfile.TemporaryDirectory(prefix="t-db-") as work:       # the lowered body is a private copy
+    with check_scratch.TemporaryDirectory(prefix="t-db-") as work:       # the lowered body is a private copy
         v = audit._kernel_verdict(task, body, kernel, pathlib.Path(work) / f"c.{suffix}")
     return norm(v)
 

@@ -1,0 +1,199 @@
+"""Private copies a check makes live in one folder owned by this user in the temporary folder, and a killed check's
+copy is removed by the next check.
+
+Why: a check removes its copy when it ends (a `with` block or a `finally`), but SIGKILL runs neither, so the copy of the
+program being checked stayed in the temporary folder (PRIVACY.md, the row on copies of a program being checked).
+
+Layout. `<temporary folder>/dawnr-checks-<uid>/` is the parent. It is created mode 0700 with mkdir (which fails if the
+name exists, so a planted name is never adopted), then opened with O_NOFOLLOW | O_DIRECTORY and checked on the open
+descriptor: a link, a non-folder, a folder owned by another user, or one that group or others can write is refused
+(ScratchRefused) and nothing is made in it. Each check's folder is made directly inside it, mode 0700, named
+`<prefix>-p<pid>-s<start>-<16 hex>`: the owner's PID and the process start time (Linux: field 22 of /proc/<pid>/stat;
+`x` where the platform gives none) are in the name, so they exist the instant the folder does. The creator opens the
+folder and takes an exclusive flock on that descriptor and holds it as long as the check runs. A lock lives in the open
+file description, so the kernel drops it when the process dies, SIGKILL included.
+
+Sweep (run at the start of every scratch folder made here). A folder in the parent is removed only if ALL hold: it is
+a real folder (lstat, not a link) directly inside the parent, its name matches the pattern above exactly, its lock can
+be taken without waiting (no live holder, also none in a child that inherited the descriptor), and its recorded PID
+is dead or now has a different start time. A link, a file, a name off the pattern, a folder a live process holds or
+whose owner is alive, a folder owned by another user, and anything the sweep cannot decide, are left. The removal is
+shutil.rmtree(name, dir_fd=<parent descriptor>), refused where rmtree.avoids_symlink_attacks is false, so it never
+follows a link; nothing outside the parent is ever touched.
+
+Prior art read: systemd tmpfiles.d(5) (age cleanup takes an exclusive BSD lock on what it removes and skips what is
+locked; "Does not follow symlinks"); pytest's _pytest/pathlib.py (numbered temp folders, a `.lock` file holding the PID,
+refuses symlinks; it trusts lock age, not liveness, which is why this one uses flock plus PID and start time); Python's
+shutil docs (the rmtree symlink-attack note and rmtree.avoids_symlink_attacks); flock(2) (duplicates made by fork share
+the lock)."""
+from __future__ import annotations
+
+import os
+import re
+import secrets
+import shutil
+import stat
+import tempfile
+import weakref
+
+try:
+    import fcntl
+except ImportError:                                      # a platform without flock: plain private folders, no sweep
+    fcntl = None
+
+_NAME = re.compile(r"\A[A-Za-z0-9_.-]+-p(\d+)-s(\d+|x)-[0-9a-f]{16}\Z")
+
+
+class ScratchRefused(OSError):
+    """The scratch parent exists but is not safe to use; nothing was made or removed."""
+
+
+def parent_path() -> str:
+    return os.path.join(tempfile.gettempdir(), f"dawnr-checks-{os.geteuid()}" if hasattr(os, "geteuid")
+                        else "dawnr-checks")
+
+
+def _open_parent() -> int:
+    """The scratch parent as an open descriptor, made if absent, refused if unsafe."""
+    path = parent_path()
+    try:
+        os.mkdir(path, 0o700)
+    except FileExistsError:
+        pass
+    try:
+        fd = os.open(path, os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW)
+    except OSError as e:
+        raise ScratchRefused(f"{path}: not a folder, or a link: {e}") from e
+    try:
+        st = os.fstat(fd)
+        if not stat.S_ISDIR(st.st_mode):
+            raise ScratchRefused(f"{path}: not a folder")
+        if hasattr(os, "geteuid") and st.st_uid != os.geteuid():
+            raise ScratchRefused(f"{path}: owned by another user")
+        if st.st_mode & 0o022:
+            raise ScratchRefused(f"{path}: group or others can write to it")
+    except BaseException:
+        os.close(fd)
+        raise
+    return fd
+
+
+def start_time(pid: int) -> str:
+    """The process start time in clock ticks since boot as digits, or `x` when this platform does not give it."""
+    try:
+        with open(f"/proc/{pid}/stat", "rb") as f:
+            data = f.read().decode("utf-8", "replace")
+        return str(int(data.rsplit(")", 1)[1].split()[19]))
+    except (OSError, ValueError, IndexError):
+        return "x"
+
+
+def _alive(pid: int) -> bool:
+    try:
+        os.kill(pid, 0)
+    except ProcessLookupError:
+        return False
+    except OSError:                                      # PermissionError: it exists; anything else: cannot decide
+        return True
+    return True
+
+
+def _owner_gone(pid: int, start: str) -> bool:
+    if not _alive(pid):
+        return True
+    now = start_time(pid)
+    return start != "x" and now != "x" and now != start
+
+
+def sweep() -> list[str]:
+    """Remove the stale folders of killed checks from the scratch parent; return their names. A folder it cannot
+    decide is left; a refused parent raises ScratchRefused."""
+    if fcntl is None or not shutil.rmtree.avoids_symlink_attacks:
+        return []
+    pfd = _open_parent()
+    removed = []
+    try:
+        for name in os.listdir(pfd):
+            m = _NAME.match(name)
+            if m is None:
+                continue
+            try:
+                st = os.stat(name, dir_fd=pfd, follow_symlinks=False)
+                if not stat.S_ISDIR(st.st_mode) or st.st_uid != os.geteuid():
+                    continue
+                if not _owner_gone(int(m.group(1)), m.group(2)):
+                    continue
+                dfd = os.open(name, os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW, dir_fd=pfd)
+            except OSError:
+                continue
+            try:
+                try:
+                    fcntl.flock(dfd, fcntl.LOCK_EX | fcntl.LOCK_NB)
+                except OSError:
+                    continue                             # a live holder
+                if os.fstat(dfd).st_ino != st.st_ino:    # replaced between the check and the open
+                    continue
+                shutil.rmtree(name, dir_fd=pfd)
+                removed.append(name)
+            except OSError:
+                continue
+            finally:
+                os.close(dfd)
+    finally:
+        os.close(pfd)
+    return removed
+
+
+def _remove(pid: int, path: str, fd: int | None) -> None:
+    if os.getpid() != pid:                               # a forked child does not remove its parent's folder
+        return
+    shutil.rmtree(path, ignore_errors=True)
+    if fd is not None:
+        try:
+            os.close(fd)
+        except OSError:
+            pass
+
+
+class TemporaryDirectory:
+    """A drop-in for tempfile.TemporaryDirectory(prefix=...): `.name`, `.cleanup()`, `with ... as name`; the folder is
+    made in the scratch parent, locked while this object lives, and removed by cleanup, by leaving the `with`, or when
+    the object is collected. A killed process's folder is removed by the next sweep."""
+
+    def __init__(self, prefix: str = "t"):
+        prefix = re.sub(r"[^A-Za-z0-9_.-]", "_", prefix or "t").rstrip("-") or "t"
+        if fcntl is None:
+            self.name = tempfile.mkdtemp(prefix=prefix + "-")
+            self._fd = None
+        else:
+            sweep()
+            pfd = _open_parent()
+            try:
+                pid = os.getpid()
+                for _ in range(100):
+                    name = f"{prefix}-p{pid}-s{start_time(pid)}-{secrets.token_hex(8)}"
+                    try:
+                        os.mkdir(name, 0o700, dir_fd=pfd)
+                        break
+                    except FileExistsError:
+                        continue
+                else:
+                    raise ScratchRefused("no free folder name")
+                self._fd = os.open(name, os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW, dir_fd=pfd)
+                fcntl.flock(self._fd, fcntl.LOCK_EX)
+                self.name = os.path.join(parent_path(), name)
+            finally:
+                os.close(pfd)
+        self._finalizer = weakref.finalize(self, _remove, os.getpid(), self.name, self._fd)
+
+    def cleanup(self) -> None:
+        self._finalizer()
+
+    def __enter__(self) -> str:
+        return self.name
+
+    def __exit__(self, *_) -> None:
+        self.cleanup()
+
+    def __repr__(self) -> str:
+        return f"<TemporaryDirectory {self.name!r}>"

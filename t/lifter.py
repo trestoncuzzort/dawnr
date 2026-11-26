@@ -38,6 +38,10 @@ file, it records the exception in that file's record."
 
 from __future__ import annotations
 
+try:                                    # a scratch folder in dawnr's own parent, swept after a killed check
+    from . import check_scratch
+except ImportError:
+    import check_scratch
 import argparse
 import contextlib
 import hashlib
@@ -158,7 +162,7 @@ def _scratch_dfy(out_dir: Optional[Path], stem: str, method_name: str):
     if out_dir is not None:
         yield _scratch_dfy_path(out_dir, stem, method_name)
         return
-    with tempfile.TemporaryDirectory(prefix="lifter-") as folder:
+    with check_scratch.TemporaryDirectory(prefix="lifter-") as folder:
         yield Path(folder) / f"{stem}.{method_name}.dfy"
 
 

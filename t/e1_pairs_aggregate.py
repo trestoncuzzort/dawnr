@@ -19,6 +19,10 @@ Modes:
     python3 -I e1_pairs_aggregate.py <checkpoint.jsonl> [out.json]            # v1 UNVALIDATED
     python3 -I e1_pairs_aggregate.py control
 """
+try:                                    # a scratch folder in dawnr's own parent, swept after a killed check
+    from . import check_scratch
+except ImportError:
+    import check_scratch
 import json
 import os
 import sys
@@ -361,7 +365,7 @@ def control():
 def pipeline_control():
     import tempfile
     # the scratch folder of the self-check is removed when it ends, on a pass, a fail or an exception
-    with tempfile.TemporaryDirectory(prefix="e1_pairs_aggregate-") as folder:
+    with check_scratch.TemporaryDirectory(prefix="e1_pairs_aggregate-") as folder:
         return _pipeline_control(pathlib.Path(folder))
 
 
