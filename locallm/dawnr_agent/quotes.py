@@ -10,21 +10,21 @@ of them is returned, for the person to be told.
 
 Quoted material is every line of a fenced code block (``` or ~~~, with a language or without), every blockquote
 line without its ">", and every passage of six words or more in double quotes, straight or curly (U+201C, U+201D),
-on a line of prose. A line of a code block whose language is diff or patch is compared as what it quotes: without
-its "-", "+" or " ", a hunk header by its heading, a line that names the files not at all; it is reported as the
-answer has it. Whitespace does not count on either side: each run of it is one space, and there is none at
+on a line of prose. A line of a code block whose language is diff, patch or udiff is compared as what it quotes:
+without its "-", "+" or " ", a hunk header by its heading, a line that names the files not at all; it is reported
+as the answer has it. Whitespace does not count on either side: each run of it is one space, and there is none at
 the ends. A quote is found when it is inside one line of a source, the line as it was read. A blockquote line or a
 passage in quotes can run across the source's line breaks, so it is also found when it is inside the source's
 whole text, its lines joined by spaces, each line first taken without fs_read's line number and tab and then
 without a patch's one-character "+", "-" or " ": a quote of a patch's lines without their markers is found, and a
-patch is joined once more as each of its two texts, without its "-" lines and without its "+" lines. The
-lines of one file are joined the same way wherever the tools showed them, in two fs_read windows, as two fs_search
-hits or as one of each: each line without what the tool put on or around it (a hit's file name and number, a
-window's header and hints, a document's page marks), and only lines the file has one after the other. A
-blockquote line or a passage is also found without Markdown's inline formatting on either side (a backslash before
-punctuation, a code span's backticks, emphasis), which a reader does not see; a code line keeps every character.
-Never reported: a quote with nothing in it to check (no letter or digit, as in punctuation, brackets or an ellipsis, or
-fewer than four characters that are not spaces), a fence inside a blockquote, a passage of fewer than six words.
+patch is joined once more as each of its two texts, without its "-" lines and without its "+" lines. The lines of
+one file are joined the same way wherever the tools showed them, in two fs_read windows, as two fs_search hits or
+as one of each: each line without what the tool put on or around it (a hit's file name and number, a window's
+header and hints, a document's page marks), and only lines the file has one after the other. A blockquote line or
+a passage is also found without Markdown's inline formatting on either side (a backslash before punctuation, a code
+span's backticks, emphasis), which a reader does not see; a code line keeps every character. Never reported: a
+quote with nothing in it to check (no letter or digit, as in punctuation, brackets or an ellipsis, or fewer than
+four characters that are not spaces), a fence inside a blockquote, a passage of fewer than six words.
 
 This is the test locallm/rag_quote.py makes of a quote (word for word in a document, whitespace folded), made of
 free Markdown instead of a quoting syntax. Found means copied, not right: a line copied exactly from the old side
@@ -57,12 +57,13 @@ PAGE = re.compile(r"\[page \d+\]$")
 SEARCH = re.compile(r"search for .* \(literal, .*\): \d+ matches in \d+ files, \d+ files searched$")
 HIT = re.compile(r"(.+?):(\d+): (.*)")
 CLIPPED = re.compile(r"\[truncated at \d+ characters\]$")
-# A unified diff (POSIX diff, "Diff -u or -U Output Format", pubs.opengroup.org/onlinepubs/9799919799/utilities/diff.html;
-# git-scm.com/docs/git-diff, "Generating patch text with -p") is two texts, the old one's lines marked "-", the new
-# one's "+", the lines of both " ", and its own syntax: each hunk's header with the lines it covers, "@@ -12,2 +12,2
-# @@", which git follows with the name of the function the hunk is in; and the lines that name the files ("---",
-# "+++", and git's "diff --git" and extended headers). In what was read, a patch is a text with a hunk header, or a
-# file named .patch or .diff; in an answer, a code block whose language is diff or patch.
+# A unified diff (POSIX diff, "Diff -u or -U Output Format",
+# pubs.opengroup.org/onlinepubs/9799919799/utilities/diff.html; git-scm.com/docs/git-diff, "Generating patch text
+# with -p") is two texts, the old one's lines marked "-", the new one's "+", the lines of both " ", and its own
+# syntax: each hunk's header with the lines it covers, "@@ -12,2 +12,2 @@", which git follows with the name of the
+# function the hunk is in; and the lines that name the files ("---", "+++", and git's "diff --git" and extended
+# headers). In what was read, a patch is a text with a hunk header, or a file named .patch or .diff; in an answer, a
+# code block whose language is diff, patch or udiff.
 HUNK = re.compile(r"@@ -\d+(?:,\d+)? \+\d+(?:,\d+)? @@")
 HUNK_HEAD = re.compile(r"@@ .*?@@ ?")                # an answer's, whose numbers may be anything
 DIFF_FILES = re.compile(r"diff --git |index [0-9a-f]+\.\.[0-9a-f]+|(?:---|\+\+\+) \S+(?:$|\t)|(?:old|new) mode "

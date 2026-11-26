@@ -331,7 +331,9 @@ class DiffTest(unittest.TestCase):
     def test_a_patch_line_copied_into_a_diff_block_is_found_with_other_space_after_its_marker(self):
         self.assertEqual(unfound_quotes(code("+continue;", "+if (hit.mFraction < 0.0f || hit.mFraction > 1.0f",
                                              tag="diff"), [PATCH]), [])
-        listed = "1. The fix:\n\n   ```patch\n   -    if not os.path.exists(path):\n   ```\n"   # a block in a list item
+        self.assertEqual(unfound_quotes(code("+continue;", tag="udiff"), [PATCH]), [])
+        self.assertEqual(unfound_quotes(code("+continue;", tag="python"), [PATCH]), ["+continue;"])   # not a diff
+        listed ="1. The fix:\n\n   ```patch\n   -    if not os.path.exists(path):\n   ```\n"   # a block in a list item
         self.assertEqual(unfound_quotes(listed, [READ]), [])
 
     def test_a_passage_of_either_side_of_a_patch_over_a_changed_line_is_found(self):
