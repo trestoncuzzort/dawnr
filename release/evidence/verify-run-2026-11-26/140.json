@@ -1,0 +1,396 @@
+{
+ "id": 140,
+ "fn": "extract_singly",
+ "verified": false,
+ "route": null,
+ "why": "no body the model wrote answered as your function does and was proved",
+ "twin": null,
+ "stages": [
+  {
+   "route": "answers",
+   "source": "answer 1",
+   "stage": "examples",
+   "reason": "fails a test (`assert extract_singly([(3, 4, 5), (4, 5, 7), (1, 4)]) == [3, 4, 5, 7, 1]`: it returns [3, 4, 1])"
+  },
+  {
+   "route": "answers",
+   "source": "answer 2",
+   "stage": "parse",
+   "reason": "does not parse (expected '{', found 't' [Stmt])"
+  },
+  {
+   "route": "answers",
+   "source": "answer 3",
+   "stage": "parse",
+   "reason": "does not parse (expected 'id', found 't' [Expr])"
+  },
+  {
+   "route": "answers",
+   "source": "answer 4",
+   "stage": "examples",
+   "reason": "fails a test (`assert extract_singly([(3, 4, 5), (4, 5, 7), (1, 4)]) == [3, 4, 5, 7, 1]`: it returns [3, 4, 1])"
+  },
+  {
+   "route": "answers",
+   "source": "answer 5",
+   "stage": "examples",
+   "reason": "fails a test (`assert extract_singly([(3, 4, 5), (4, 5, 7), (1, 4)]) == [3, 4, 5, 7, 1]`: it returns [3, 4, 1])"
+  },
+  {
+   "route": "specification",
+   "source": "specification 3",
+   "stage": "parse",
+   "reason": "it does not parse (expected 'id', found 't' [Expr])"
+  },
+  {
+   "route": "specification",
+   "source": "specification 1, body 1",
+   "stage": "prover",
+   "reason": "no prover proved it",
+   "cells": {
+    "dafny": "unproved / refuted",
+    "verus": "\u2014",
+    "spark": "\u2014",
+    "framac": "\u2014",
+    "lean": "\u2014",
+    "rocq": "\u2014",
+    "fstar": "\u2014"
+   }
+  },
+  {
+   "route": "specification",
+   "source": "specification 1, body 2",
+   "stage": "well formed",
+   "reason": "not well formed"
+  },
+  {
+   "route": "specification",
+   "source": "specification 1, body 3",
+   "stage": "prover",
+   "reason": "no prover proved it",
+   "cells": {
+    "dafny": "unproved / refuted",
+    "verus": "\u2014",
+    "spark": "\u2014",
+    "framac": "\u2014",
+    "lean": "\u2014",
+    "rocq": "\u2014",
+    "fstar": "\u2014"
+   }
+  },
+  {
+   "route": "specification",
+   "source": "specification 2, body 1",
+   "stage": "prover",
+   "reason": "no prover proved it",
+   "cells": {
+    "dafny": "unproved / refuted",
+    "verus": "\u2014",
+    "spark": "\u2014",
+    "framac": "\u2014",
+    "lean": "\u2014",
+    "rocq": "\u2014",
+    "fstar": "\u2014"
+   }
+  },
+  {
+   "route": "specification",
+   "source": "specification 2, body 2",
+   "stage": "prover",
+   "reason": "no prover proved it",
+   "cells": {
+    "dafny": "unproved / refuted",
+    "verus": "\u2014",
+    "spark": "\u2014",
+    "framac": "\u2014",
+    "lean": "\u2014",
+    "rocq": "\u2014",
+    "fstar": "\u2014"
+   }
+  },
+  {
+   "route": "specification",
+   "source": "specification 2, body 3",
+   "stage": "prover",
+   "reason": "no prover proved it",
+   "cells": {
+    "dafny": "unproved / refuted",
+    "verus": "\u2014",
+    "spark": "\u2014",
+    "framac": "\u2014",
+    "lean": "\u2014",
+    "rocq": "\u2014",
+    "fstar": "\u2014"
+   }
+  }
+ ],
+ "refused": [
+  "answer 1: fails a test (`assert extract_singly([(3, 4, 5), (4, 5, 7), (1, 4)]) == [3, 4, 5, 7, 1]`: it returns [3, 4, 1])",
+  "answer 2: does not parse (expected '{', found 't' [Stmt])",
+  "answer 3: does not parse (expected 'id', found 't' [Expr])",
+  "answer 4: fails a test (`assert extract_singly([(3, 4, 5), (4, 5, 7), (1, 4)]) == [3, 4, 5, 7, 1]`: it returns [3, 4, 1])",
+  "answer 5: fails a test (`assert extract_singly([(3, 4, 5), (4, 5, 7), (1, 4)]) == [3, 4, 5, 7, 1]`: it returns [3, 4, 1])",
+  "specification 3: it does not parse (expected 'id', found 't' [Expr])",
+  "specification 1, body 1: no prover proved it",
+  "specification 1, body 2: not well formed",
+  "specification 1, body 3: no prover proved it",
+  "specification 2, body 1: no prover proved it",
+  "specification 2, body 2: no prover proved it",
+  "specification 2, body 3: no prover proved it"
+ ],
+ "specifications": [
+  {
+   "source": "specification 1",
+   "verdict": "kept",
+   "scores": {
+    "correctness": 1.0,
+    "completeness": 0.7391304347826086,
+    "tests": 3,
+    "mutants": 23
+   },
+   "spec": "t 1\ngate quantifiers\ntask f(test_list: seq<seq>) returns (r: seq)\n  ensures len(r) <= len(test_list) * 3\n  ensures forall k in [0, len(r)) . exists j in [0, len(test_list)) . exists i in [0, len(test_list[j])) . r[k] == test_list[j][i]\n  ensures forall k in [0, len(r)) . forall m in [k + 1, len(r)) . r[k] != r[m]\n  ensures forall j in [0, len(test_list)) . forall i in [0, len(test_list[j])) . exists k in [0, len(r)) . r[k] == test_list[j][i]\n{\n}\n",
+   "function": {
+    "passes": true,
+    "why": "passes",
+    "agreement": {
+     "status": "agrees",
+     "draws": 100,
+     "completeness": 0.822,
+     "mutants_rejected": 401,
+     "mutants_accepted": 87,
+     "weak_witness": {
+      "args": [
+       [
+        [
+         2,
+         -1,
+         -3
+        ],
+        [
+         -4,
+         2,
+         2
+        ],
+        []
+       ]
+      ],
+      "reference_said": [
+       2,
+       -1,
+       -3,
+       -4
+      ],
+      "also_accepts": [
+       -4,
+       -3,
+       -1,
+       2
+      ]
+     }
+    },
+    "larger": {
+     "status": "agrees",
+     "draws": 60,
+     "completeness": 0.741,
+     "mutants_rejected": 344,
+     "mutants_accepted": 120,
+     "weak_witness": {
+      "args": [
+       [
+        [
+         2,
+         -3
+        ],
+        [
+         4
+        ],
+        [
+         0,
+         1
+        ],
+        [],
+        [
+         1,
+         -2
+        ],
+        [
+         4,
+         0,
+         -1
+        ]
+       ]
+      ],
+      "reference_said": [
+       2,
+       -3,
+       4,
+       0,
+       1,
+       -2,
+       -1
+      ],
+      "also_accepts": [
+       -1,
+       -2,
+       1,
+       0,
+       4,
+       -3,
+       2
+      ]
+     },
+     "requires_caps_size": false
+    }
+   }
+  },
+  {
+   "source": "specification 2",
+   "verdict": "kept",
+   "scores": {
+    "correctness": 1.0,
+    "completeness": 0.7391304347826086,
+    "tests": 3,
+    "mutants": 23
+   },
+   "spec": "t 1\ngate loops\ntask f(test_list: seq<seq>) returns (r: seq)\n  ensures forall i in [0, len(r)) . exists j in [0, len(test_list)) . exists k in [0, len(test_list[j])) . r[i] == test_list[j][k]\n  ensures forall i in [0, len(r)) . forall j in [0, i) . r[i] != r[j]\n  ensures forall j in [0, len(test_list)) . forall k in [0, len(test_list[j])) . exists i in [0, len(r)) . r[i] == test_list[j][k]\n{\n}\n",
+   "function": {
+    "passes": true,
+    "why": "passes",
+    "agreement": {
+     "status": "agrees",
+     "draws": 100,
+     "completeness": 0.822,
+     "mutants_rejected": 401,
+     "mutants_accepted": 87,
+     "weak_witness": {
+      "args": [
+       [
+        [
+         2,
+         -1,
+         -3
+        ],
+        [
+         -4,
+         2,
+         2
+        ],
+        []
+       ]
+      ],
+      "reference_said": [
+       2,
+       -1,
+       -3,
+       -4
+      ],
+      "also_accepts": [
+       -4,
+       -3,
+       -1,
+       2
+      ]
+     }
+    },
+    "larger": {
+     "status": "agrees",
+     "draws": 60,
+     "completeness": 0.741,
+     "mutants_rejected": 344,
+     "mutants_accepted": 120,
+     "weak_witness": {
+      "args": [
+       [
+        [
+         2,
+         -3
+        ],
+        [
+         4
+        ],
+        [
+         0,
+         1
+        ],
+        [],
+        [
+         1,
+         -2
+        ],
+        [
+         4,
+         0,
+         -1
+        ]
+       ]
+      ],
+      "reference_said": [
+       2,
+       -3,
+       4,
+       0,
+       1,
+       -2,
+       -1
+      ],
+      "also_accepts": [
+       -1,
+       -2,
+       1,
+       0,
+       4,
+       -3,
+       2
+      ]
+     },
+     "requires_caps_size": false
+    }
+   }
+  }
+ ],
+ "candidates": [],
+ "asked": {
+  "answers": 5,
+  "specifications": 3,
+  "bodies": 6
+ },
+ "inputs": {
+  "examples": [
+   "assert extract_singly([(3, 4, 5), (4, 5, 7), (1, 4)]) == [3, 4, 5, 7, 1]",
+   "assert extract_singly([(1, 2, 3), (4, 2, 3), (7, 8)]) == [1, 2, 3, 4, 7, 8]",
+   "assert extract_singly([(7, 8, 9), (10, 11, 12), (10, 11)]) == [7, 8, 9, 10, 11, 12]"
+  ],
+  "taken from the function": false,
+  "kinds": [
+   {
+    "args": [
+     "seq-of-seq"
+    ],
+    "expected": "seq"
+   },
+   {
+    "args": [
+     "seq-of-seq"
+    ],
+    "expected": "seq"
+   },
+   {
+    "args": [
+     "seq-of-seq"
+    ],
+    "expected": "seq"
+   }
+  ],
+  "specification check": {
+   "seed": 1,
+   "draws": 100,
+   "larger draws": 60
+  }
+ },
+ "stopped at": "prover",
+ "function": {
+  "code": "def extract_singly(test_list):\r\n  res = []\r\n  temp = set()\r\n  for inner in test_list:\r\n    for ele in inner:\r\n      if not ele in temp:\r\n        temp.add(ele)\r\n        res.append(ele)\r\n  return (res) ",
+  "doc": "Write a function to extract elements that occur singly in the given tuple list."
+ },
+ "seconds": 151.2
+}

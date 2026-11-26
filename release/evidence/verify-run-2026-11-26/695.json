@@ -1,0 +1,339 @@
+{
+ "id": 695,
+ "fn": "check_greater",
+ "verified": false,
+ "route": null,
+ "why": "no specification the model wrote holds at your function's answers and pins them down",
+ "twin": null,
+ "stages": [
+  {
+   "route": "answers",
+   "source": "answer 3",
+   "stage": "parse",
+   "reason": "does not parse ('forall' does not start an expression [Expr])"
+  },
+  {
+   "route": "answers",
+   "source": "answer 1",
+   "stage": "specification check",
+   "reason": "`r == (forall i in [0, len(a)) . b[i] > a[i])`: the requires excludes most drawn inputs",
+   "passes": false,
+   "why": "the requires excludes most drawn inputs",
+   "agreement": {
+    "status": "agrees",
+    "draws": 10,
+    "outside_requires": 90,
+    "completeness": 1.0,
+    "mutants_rejected": 10,
+    "mutants_accepted": 0
+   }
+  },
+  {
+   "route": "answers",
+   "source": "answer 2",
+   "stage": "specification check",
+   "reason": "`r == (forall i in [0, len(a)) . b[i] > a[i])`: the requires excludes most drawn inputs",
+   "passes": false,
+   "why": "the requires excludes most drawn inputs",
+   "agreement": {
+    "status": "agrees",
+    "draws": 10,
+    "outside_requires": 90,
+    "completeness": 1.0,
+    "mutants_rejected": 10,
+    "mutants_accepted": 0
+   }
+  },
+  {
+   "route": "answers",
+   "source": "answer 4",
+   "stage": "specification check",
+   "reason": "`r == (forall i in [0, len(a)) . b[i] > a[i])`: the requires excludes most drawn inputs",
+   "passes": false,
+   "why": "the requires excludes most drawn inputs",
+   "agreement": {
+    "status": "agrees",
+    "draws": 10,
+    "outside_requires": 90,
+    "completeness": 1.0,
+    "mutants_rejected": 10,
+    "mutants_accepted": 0
+   }
+  },
+  {
+   "route": "answers",
+   "source": "answer 5",
+   "stage": "specification check",
+   "reason": "`r == (forall i in [0, len(a)) . i < len(b) and b[i] > a[i])` is false at your function's own answer `check_greater([3, 6, 3, 9], [18, 15, 9]) == true`",
+   "at": "check_greater([3, 6, 3, 9], [18, 15, 9]) == true",
+   "passes": false,
+   "why": "the specification is false at the Python's answer",
+   "agreement": {
+    "status": "disagrees",
+    "args": [
+     [
+      3,
+      6,
+      3,
+      9
+     ],
+     [
+      18,
+      15,
+      9
+     ]
+    ],
+    "reference_said": true,
+    "ensures": 0
+   }
+  },
+  {
+   "route": "specification",
+   "source": "specification 1",
+   "stage": "specification check",
+   "reason": "`r == (forall i in [0, len(t1)) . t1[i] < t2[i])`: the requires excludes most drawn inputs",
+   "passes": false,
+   "why": "the requires excludes most drawn inputs",
+   "agreement": {
+    "status": "agrees",
+    "draws": 10,
+    "outside_requires": 90,
+    "completeness": 1.0,
+    "mutants_rejected": 10,
+    "mutants_accepted": 0
+   }
+  },
+  {
+   "route": "specification",
+   "source": "specification 2",
+   "stage": "specification check",
+   "reason": "`r == (forall i in [0, len(tup1)) . tup1[i] < tup2[i])`: the requires excludes most drawn inputs",
+   "passes": false,
+   "why": "the requires excludes most drawn inputs",
+   "agreement": {
+    "status": "agrees",
+    "draws": 10,
+    "outside_requires": 90,
+    "completeness": 1.0,
+    "mutants_rejected": 10,
+    "mutants_accepted": 0
+   }
+  },
+  {
+   "route": "specification",
+   "source": "specification 3",
+   "stage": "specification check",
+   "reason": "`r == (forall i in [0, len(test_tup1)) . test_tup1[i] < test_tup2[i])`: the requires excludes most drawn inputs",
+   "passes": false,
+   "why": "the requires excludes most drawn inputs",
+   "agreement": {
+    "status": "agrees",
+    "draws": 10,
+    "outside_requires": 90,
+    "completeness": 1.0,
+    "mutants_rejected": 10,
+    "mutants_accepted": 0
+   }
+  }
+ ],
+ "refused": [
+  "answer 3: does not parse ('forall' does not start an expression [Expr])",
+  "answer 1: `r == (forall i in [0, len(a)) . b[i] > a[i])`: the requires excludes most drawn inputs",
+  "answer 2: `r == (forall i in [0, len(a)) . b[i] > a[i])`: the requires excludes most drawn inputs",
+  "answer 4: `r == (forall i in [0, len(a)) . b[i] > a[i])`: the requires excludes most drawn inputs",
+  "answer 5: `r == (forall i in [0, len(a)) . i < len(b) and b[i] > a[i])` is false at your function's own answer `check_greater([3, 6, 3, 9], [18, 15, 9]) == true`",
+  "specification 1: `r == (forall i in [0, len(t1)) . t1[i] < t2[i])`: the requires excludes most drawn inputs",
+  "specification 2: `r == (forall i in [0, len(tup1)) . tup1[i] < tup2[i])`: the requires excludes most drawn inputs",
+  "specification 3: `r == (forall i in [0, len(test_tup1)) . test_tup1[i] < test_tup2[i])`: the requires excludes most drawn inputs"
+ ],
+ "specifications": [
+  {
+   "source": "specification 1",
+   "verdict": "kept",
+   "scores": {
+    "correctness": 1.0,
+    "completeness": 1.0,
+    "tests": 3,
+    "mutants": 3
+   },
+   "spec": "t 1\ntask f(t1: seq, t2: seq) returns (r: bool)\n  requires len(t1) == len(t2)\n  ensures r == (forall i in [0, len(t1)) . t1[i] < t2[i])\n{\n}\n",
+   "function": {
+    "passes": false,
+    "why": "the requires excludes most drawn inputs",
+    "agreement": {
+     "status": "agrees",
+     "draws": 10,
+     "outside_requires": 90,
+     "completeness": 1.0,
+     "mutants_rejected": 10,
+     "mutants_accepted": 0
+    }
+   }
+  },
+  {
+   "source": "specification 2",
+   "verdict": "kept",
+   "scores": {
+    "correctness": 1.0,
+    "completeness": 1.0,
+    "tests": 3,
+    "mutants": 3
+   },
+   "spec": "t 1\ntask f(tup1: seq, tup2: seq) returns (r: bool)\n  requires len(tup1) == len(tup2)\n  ensures r == (forall i in [0, len(tup1)) . tup1[i] < tup2[i])\n{\n}\n",
+   "function": {
+    "passes": false,
+    "why": "the requires excludes most drawn inputs",
+    "agreement": {
+     "status": "agrees",
+     "draws": 10,
+     "outside_requires": 90,
+     "completeness": 1.0,
+     "mutants_rejected": 10,
+     "mutants_accepted": 0
+    }
+   }
+  },
+  {
+   "source": "specification 3",
+   "verdict": "kept",
+   "scores": {
+    "correctness": 1.0,
+    "completeness": 1.0,
+    "tests": 3,
+    "mutants": 3
+   },
+   "spec": "t 1\ntask f(test_tup1: seq, test_tup2: seq) returns (r: bool)\n  requires len(test_tup1) == len(test_tup2)\n  ensures r == (forall i in [0, len(test_tup1)) . test_tup1[i] < test_tup2[i])\n{\n}\n",
+   "function": {
+    "passes": false,
+    "why": "the requires excludes most drawn inputs",
+    "agreement": {
+     "status": "agrees",
+     "draws": 10,
+     "outside_requires": 90,
+     "completeness": 1.0,
+     "mutants_rejected": 10,
+     "mutants_accepted": 0
+    }
+   }
+  }
+ ],
+ "candidates": [
+  {
+   "source": "answer 1",
+   "function": {
+    "passes": false,
+    "why": "the requires excludes most drawn inputs",
+    "agreement": {
+     "status": "agrees",
+     "draws": 10,
+     "outside_requires": 90,
+     "completeness": 1.0,
+     "mutants_rejected": 10,
+     "mutants_accepted": 0
+    }
+   }
+  },
+  {
+   "source": "answer 2",
+   "function": {
+    "passes": false,
+    "why": "the requires excludes most drawn inputs",
+    "agreement": {
+     "status": "agrees",
+     "draws": 10,
+     "outside_requires": 90,
+     "completeness": 1.0,
+     "mutants_rejected": 10,
+     "mutants_accepted": 0
+    }
+   }
+  },
+  {
+   "source": "answer 4",
+   "function": {
+    "passes": false,
+    "why": "the requires excludes most drawn inputs",
+    "agreement": {
+     "status": "agrees",
+     "draws": 10,
+     "outside_requires": 90,
+     "completeness": 1.0,
+     "mutants_rejected": 10,
+     "mutants_accepted": 0
+    }
+   }
+  },
+  {
+   "source": "answer 5",
+   "function": {
+    "passes": false,
+    "why": "the specification is false at the Python's answer",
+    "agreement": {
+     "status": "disagrees",
+     "args": [
+      [
+       3,
+       6,
+       3,
+       9
+      ],
+      [
+       18,
+       15,
+       9
+      ]
+     ],
+     "reference_said": true,
+     "ensures": 0
+    }
+   }
+  }
+ ],
+ "asked": {
+  "answers": 5,
+  "specifications": 3,
+  "bodies": 0
+ },
+ "inputs": {
+  "examples": [
+   "assert check_greater((10, 4, 5), (13, 5, 18)) == True",
+   "assert check_greater((1, 2, 3), (2, 1, 4)) == False",
+   "assert check_greater((4, 5, 6), (5, 6, 7)) == True"
+  ],
+  "taken from the function": false,
+  "kinds": [
+   {
+    "args": [
+     "seq",
+     "seq"
+    ],
+    "expected": "bool"
+   },
+   {
+    "args": [
+     "seq",
+     "seq"
+    ],
+    "expected": "bool"
+   },
+   {
+    "args": [
+     "seq",
+     "seq"
+    ],
+    "expected": "bool"
+   }
+  ],
+  "specification check": {
+   "seed": 1,
+   "draws": 100,
+   "larger draws": 60
+  }
+ },
+ "stopped at": "specification check",
+ "function": {
+  "code": "def check_greater(test_tup1, test_tup2):\r\n  res = all(x < y for x, y in zip(test_tup1, test_tup2))\r\n  return (res) ",
+  "doc": "Write a function to check if each element of the second tuple is greater than its corresponding index in the first tuple."
+ },
+ "seconds": 26.2
+}

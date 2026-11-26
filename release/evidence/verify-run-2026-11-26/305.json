@@ -1,0 +1,170 @@
+{
+ "id": 305,
+ "fn": "start_withp",
+ "verified": false,
+ "route": null,
+ "why": "no specification the model wrote holds at your function's answers and pins them down",
+ "twin": null,
+ "stages": [
+  {
+   "route": "answers",
+   "source": "answer 1",
+   "stage": "examples",
+   "reason": "fails a test (`assert start_withp([\"Python PHP\", \"Java JavaScript\", \"c c++\"])==('Python', 'PHP')`: it returns [[80, 121, 116, 104, 111, 110, 32, 80, 72, 80]])"
+  },
+  {
+   "route": "answers",
+   "source": "answer 2",
+   "stage": "parse",
+   "reason": "does not parse (expected 'id', found '(' [Stmt])"
+  },
+  {
+   "route": "answers",
+   "source": "answer 3",
+   "stage": "examples",
+   "reason": "fails a test (`assert start_withp([\"Python Programming\",\"Java Programming\"])==('Python','Programming')`: it returns [[80, 121, 116, 104, 111, 110], [80, 114, 111, 103, 114, 97,)"
+  },
+  {
+   "route": "answers",
+   "source": "answer 5",
+   "stage": "examples",
+   "reason": "fails a test (`assert start_withp([\"Python PHP\", \"Java JavaScript\", \"c c++\"])==('Python', 'PHP')`: requires-excluded)"
+  },
+  {
+   "route": "answers",
+   "source": "answer 4",
+   "stage": "specification check",
+   "reason": "`len(r) == 2; r[0][0] == 112 or r[0][0] == 80; r[1][0] == 112 or r[1][0] == 80; (forall w in words . w != r[0]) or (forall w in words . w != r[1])`: reference result has no t value",
+   "passes": false,
+   "why": "reference result has no t value",
+   "agreement": {
+    "status": "reference result has no t value",
+    "draws": 0,
+    "skipped": {
+     "reference result has no t value": 100
+    }
+   }
+  },
+  {
+   "route": "specification",
+   "source": "specification 1",
+   "stage": "parse",
+   "reason": "it does not parse ('exists' does not start an expression [Expr])"
+  },
+  {
+   "route": "specification",
+   "source": "specification 3",
+   "stage": "parse",
+   "reason": "it does not parse (expected 'task', found 'gate' [Task])"
+  },
+  {
+   "route": "specification",
+   "source": "specification 2",
+   "stage": "specification check",
+   "reason": "`len(r) == 2; r[0][0] == 80; r[1][0] == 80; exists i in [0, len(words)) . words[i] == r[0] + [32] + r[1]; forall j in [0, len(r[0])) . j >= 1 ==> r[0][j] >= 65 and r[0][j] <= 90 or r[0][j] >= 97 and r[0][j] <= 122 or r[0][j] >= 48 and r[0][j] <= 57 or r[0][j] == 95; forall j in [0, len(r[1])) . j >= 1 ==> r[1][j] >= 65 and r[1][j] <= 90 or r[1][j] >= 97 and r[1][j] <= 122 or r[1][j] >= 48 and r[1][j] <= 57 or r[1][j] == 95`: reference result has no t value",
+   "passes": false,
+   "why": "reference result has no t value",
+   "agreement": {
+    "status": "reference result has no t value",
+    "draws": 0,
+    "skipped": {
+     "reference result has no t value": 100
+    }
+   }
+  }
+ ],
+ "refused": [
+  "answer 1: fails a test (`assert start_withp([\"Python PHP\", \"Java JavaScript\", \"c c++\"])==('Python', 'PHP')`: it returns [[80, 121, 116, 104, 111, 110, 32, 80, 72, 80]])",
+  "answer 2: does not parse (expected 'id', found '(' [Stmt])",
+  "answer 3: fails a test (`assert start_withp([\"Python Programming\",\"Java Programming\"])==('Python','Programming')`: it returns [[80, 121, 116, 104, 111, 110], [80, 114, 111, 103, 114, 97,)",
+  "answer 5: fails a test (`assert start_withp([\"Python PHP\", \"Java JavaScript\", \"c c++\"])==('Python', 'PHP')`: requires-excluded)",
+  "answer 4: `len(r) == 2; r[0][0] == 112 or r[0][0] == 80; r[1][0] == 112 or r[1][0] == 80; (forall w in words . w != r[0]) or (forall w in words . w != r[1])`: reference result has no t value",
+  "specification 1: it does not parse ('exists' does not start an expression [Expr])",
+  "specification 3: it does not parse (expected 'task', found 'gate' [Task])",
+  "specification 2: `len(r) == 2; r[0][0] == 80; r[1][0] == 80; exists i in [0, len(words)) . words[i] == r[0] + [32] + r[1]; forall j in [0, len(r[0])) . j >= 1 ==> r[0][j] >= 65 and r[0][j] <= 90 or r[0][j] >= 97 and r[0][j] <= 122 or r[0][j] >= 48 and r[0][j] <= 57 or r[0][j] == 95; forall j in [0, len(r[1])) . j >= 1 ==> r[1][j] >= 65 and r[1][j] <= 90 or r[1][j] >= 97 and r[1][j] <= 122 or r[1][j] >= 48 and r[1][j] <= 57 or r[1][j] == 95`: reference result has no t value"
+ ],
+ "specifications": [
+  {
+   "source": "specification 2",
+   "verdict": "kept",
+   "scores": {
+    "correctness": 1.0,
+    "completeness": 1.0,
+    "tests": 3,
+    "mutants": 12
+   },
+   "spec": "t 1\ngate quantifiers\ntask f(words: seq<seq>) returns (r: seq<seq>)\n  ensures len(r) == 2\n  ensures r[0][0] == 80\n  ensures r[1][0] == 80\n  ensures exists i in [0, len(words)) . words[i] == r[0] + [32] + r[1]\n  ensures forall j in [0, len(r[0])) . j >= 1 ==> r[0][j] >= 65 and r[0][j] <= 90 or r[0][j] >= 97 and r[0][j] <= 122 or r[0][j] >= 48 and r[0][j] <= 57 or r[0][j] == 95\n  ensures forall j in [0, len(r[1])) . j >= 1 ==> r[1][j] >= 65 and r[1][j] <= 90 or r[1][j] >= 97 and r[1][j] <= 122 or r[1][j] >= 48 and r[1][j] <= 57 or r[1][j] == 95\n{\n}\n",
+   "function": {
+    "passes": false,
+    "why": "reference result has no t value",
+    "agreement": {
+     "status": "reference result has no t value",
+     "draws": 0,
+     "skipped": {
+      "reference result has no t value": 100
+     }
+    }
+   }
+  }
+ ],
+ "candidates": [
+  {
+   "source": "answer 4",
+   "function": {
+    "passes": false,
+    "why": "reference result has no t value",
+    "agreement": {
+     "status": "reference result has no t value",
+     "draws": 0,
+     "skipped": {
+      "reference result has no t value": 100
+     }
+    }
+   }
+  }
+ ],
+ "asked": {
+  "answers": 5,
+  "specifications": 3,
+  "bodies": 0
+ },
+ "inputs": {
+  "examples": [
+   "assert start_withp([\"Python PHP\", \"Java JavaScript\", \"c c++\"])==('Python', 'PHP')",
+   "assert start_withp([\"Python Programming\",\"Java Programming\"])==('Python','Programming')",
+   "assert start_withp([\"Pqrst Pqr\",\"qrstuv\"])==('Pqrst','Pqr')"
+  ],
+  "taken from the function": false,
+  "kinds": [
+   {
+    "args": [
+     "seq-of-seq"
+    ],
+    "expected": "seq-of-seq"
+   },
+   {
+    "args": [
+     "seq-of-seq"
+    ],
+    "expected": "seq-of-seq"
+   },
+   {
+    "args": [
+     "seq-of-seq"
+    ],
+    "expected": "seq-of-seq"
+   }
+  ],
+  "specification check": {
+   "seed": 1,
+   "draws": 100,
+   "larger draws": 60
+  }
+ },
+ "stopped at": "specification check",
+ "function": {
+  "code": "import re\r\ndef start_withp(words):\r\n for w in words:\r\n        m = re.match(\"(P\\w+)\\W(P\\w+)\", w)\r\n        if m:\r\n            return m.groups()",
+  "doc": "Write a function to match two words from a list of words starting with letter 'p'."
+ },
+ "seconds": 75.7
+}

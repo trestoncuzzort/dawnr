@@ -1,0 +1,151 @@
+{
+ "id": 399,
+ "fn": "bitwise_xor",
+ "verified": false,
+ "route": null,
+ "why": "no specification the model wrote holds at your function's answers and pins them down",
+ "twin": null,
+ "stages": [
+  {
+   "route": "answers",
+   "source": "answer 1",
+   "stage": "parse",
+   "reason": "does not parse (unexpected character '^' [Id])"
+  },
+  {
+   "route": "answers",
+   "source": "answer 2",
+   "stage": "parse",
+   "reason": "does not parse (expected 'eof', found 'spec' [Task])"
+  },
+  {
+   "route": "answers",
+   "source": "answer 3",
+   "stage": "examples",
+   "reason": "fails a test (`assert bitwise_xor((10, 4, 6, 9), (5, 2, 3, 3)) == (15, 6, 5, 10)`: it returns [5, 2, 3, 6])"
+  },
+  {
+   "route": "answers",
+   "source": "answer 4",
+   "stage": "parse",
+   "reason": "does not parse (unexpected character '^' [Id])"
+  },
+  {
+   "route": "answers",
+   "source": "answer 5",
+   "stage": "examples",
+   "reason": "fails a test (`assert bitwise_xor((10, 4, 6, 9), (5, 2, 3, 3)) == (15, 6, 5, 10)`: budget)"
+  },
+  {
+   "route": "specification",
+   "source": "specification 1",
+   "stage": "parse",
+   "reason": "it does not parse (unexpected character '^' [Id])"
+  },
+  {
+   "route": "specification",
+   "source": "specification 2",
+   "stage": "parse",
+   "reason": "it does not parse (unexpected character '&' [Id])"
+  },
+  {
+   "route": "specification",
+   "source": "specification 3",
+   "stage": "specification check",
+   "reason": "`len(r) == len(t1); forall i in [0, len(t1)) . r[i] == bitxor(t1[i], t2[i])`: the requires excludes most drawn inputs",
+   "passes": false,
+   "why": "the requires excludes most drawn inputs",
+   "agreement": {
+    "status": "agrees",
+    "draws": 10,
+    "outside_requires": 90,
+    "completeness": 1.0,
+    "mutants_rejected": 56,
+    "mutants_accepted": 0
+   }
+  }
+ ],
+ "refused": [
+  "answer 1: does not parse (unexpected character '^' [Id])",
+  "answer 2: does not parse (expected 'eof', found 'spec' [Task])",
+  "answer 3: fails a test (`assert bitwise_xor((10, 4, 6, 9), (5, 2, 3, 3)) == (15, 6, 5, 10)`: it returns [5, 2, 3, 6])",
+  "answer 4: does not parse (unexpected character '^' [Id])",
+  "answer 5: fails a test (`assert bitwise_xor((10, 4, 6, 9), (5, 2, 3, 3)) == (15, 6, 5, 10)`: budget)",
+  "specification 1: it does not parse (unexpected character '^' [Id])",
+  "specification 2: it does not parse (unexpected character '&' [Id])",
+  "specification 3: `len(r) == len(t1); forall i in [0, len(t1)) . r[i] == bitxor(t1[i], t2[i])`: the requires excludes most drawn inputs"
+ ],
+ "specifications": [
+  {
+   "source": "specification 3",
+   "verdict": "kept",
+   "scores": {
+    "correctness": 1.0,
+    "completeness": 1.0,
+    "tests": 3,
+    "mutants": 24
+   },
+   "spec": "t 1\ntask f(t1: seq, t2: seq) returns (r: seq)\n  requires len(t1) == len(t2)\n  ensures len(r) == len(t1)\n  ensures forall i in [0, len(t1)) . r[i] == bitxor(t1[i], t2[i])\nspec fun bitxor(a: int, b: int): int\n  decreases a + b\n= if a == 0 then b else if b == 0 then a else if a % 2 == 0 and b % 2 == 0 then 2 * bitxor(a / 2, b / 2) else if a % 2 == 1 and b % 2 == 1 then 2 * bitxor((a - 1) / 2, (b - 1) / 2) else if a % 2 == 0 then 1 + 2 * bitxor(a / 2, (b - 1) / 2) else 1 + 2 * bitxor((a - 1) / 2, b / 2)\n{\n}\n",
+   "function": {
+    "passes": false,
+    "why": "the requires excludes most drawn inputs",
+    "agreement": {
+     "status": "agrees",
+     "draws": 10,
+     "outside_requires": 90,
+     "completeness": 1.0,
+     "mutants_rejected": 56,
+     "mutants_accepted": 0
+    }
+   }
+  }
+ ],
+ "candidates": [],
+ "asked": {
+  "answers": 5,
+  "specifications": 3,
+  "bodies": 0
+ },
+ "inputs": {
+  "examples": [
+   "assert bitwise_xor((10, 4, 6, 9), (5, 2, 3, 3)) == (15, 6, 5, 10)",
+   "assert bitwise_xor((11, 5, 7, 10), (6, 3, 4, 4)) == (13, 6, 3, 14)",
+   "assert bitwise_xor((12, 6, 8, 11), (7, 4, 5, 6)) == (11, 2, 13, 13)"
+  ],
+  "taken from the function": false,
+  "kinds": [
+   {
+    "args": [
+     "seq",
+     "seq"
+    ],
+    "expected": "seq"
+   },
+   {
+    "args": [
+     "seq",
+     "seq"
+    ],
+    "expected": "seq"
+   },
+   {
+    "args": [
+     "seq",
+     "seq"
+    ],
+    "expected": "seq"
+   }
+  ],
+  "specification check": {
+   "seed": 1,
+   "draws": 100,
+   "larger draws": 60
+  }
+ },
+ "stopped at": "specification check",
+ "function": {
+  "code": "def bitwise_xor(test_tup1, test_tup2):\r\n  res = tuple(ele1 ^ ele2 for ele1, ele2 in zip(test_tup1, test_tup2))\r\n  return (res) ",
+  "doc": "Write a function to perform the mathematical bitwise xor operation across the given tuples."
+ },
+ "seconds": 42.8
+}

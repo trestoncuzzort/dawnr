@@ -1,0 +1,188 @@
+{
+ "id": 893,
+ "fn": "Extract",
+ "verified": true,
+ "route": "answers",
+ "why": null,
+ "twin": {
+  "program": "t 1\ngate loops\ntask Extract(sublists: seq<seq>) returns (r: seq)\n  requires forall i in [0, len(sublists)) . len(sublists[i]) > 0\n  ensures len(r) == len(sublists)\n  ensures forall i in [0, len(sublists)) . r[i] == sublists[i][len(sublists[i]) - 1]\n{\n  r := [];\n  var i: int := 0;\n  while i < len(sublists)\n    invariant 0 <= i\n    invariant i <= len(sublists)\n    invariant len(r) == i\n    invariant forall j in [0, i) . r[j] == sublists[j][len(sublists[j]) - 1]\n    decreases len(sublists) - i\n  {\n    r := r + [sublists[i][len(sublists[i]) - 1]];\n    i := i + 1;\n  }\n}\n",
+  "proved by": 1,
+  "provers": [
+   "dafny"
+  ],
+  "undecided": [
+   "framac",
+   "fstar",
+   "lean",
+   "rocq",
+   "spark",
+   "verus"
+  ],
+  "cells": {
+   "dafny": "verified / refuted",
+   "verus": "\u2014",
+   "spark": "\u2014",
+   "framac": "\u2014",
+   "lean": "\u2014",
+   "rocq": "\u2014",
+   "fstar": "\u2014"
+  },
+  "specification": [
+   "requires forall i in [0, len(sublists)) . len(sublists[i]) > 0",
+   "ensures len(r) == len(sublists)",
+   "ensures forall i in [0, len(sublists)) . r[i] == sublists[i][len(sublists[i]) - 1]"
+  ],
+  "behind the specification": {
+   "tests passed": 3,
+   "agrees with the Python on": 70,
+   "drawn inputs outside its requires": 0,
+   "mutated outputs rejected": 1.0
+  },
+  "same as yours on": 35,
+  "python": {
+   "source": null,
+   "inputs": 35,
+   "why": "its Python translation did not answer every input as the proved program does"
+  }
+ },
+ "stages": [
+  {
+   "route": "answers",
+   "source": "answer 1",
+   "stage": "same as the function",
+   "reason": "it does not answer as your function does (`Extract(*[[[]]]) == []` is the program's answer, not yours)",
+   "inputs": 86,
+   "first": "assert Extract(*[[[]]]) == []"
+  },
+  {
+   "route": "answers",
+   "source": "answer 3",
+   "stage": "prover",
+   "reason": "refuted by dafny",
+   "cells": {
+    "dafny": "refuted / refuted",
+    "verus": "\u2014",
+    "spark": "\u2014",
+    "framac": "\u2014",
+    "lean": "\u2014",
+    "rocq": "\u2014",
+    "fstar": "\u2014"
+   }
+  }
+ ],
+ "refused": [
+  "answer 1: it does not answer as your function does (`Extract(*[[[]]]) == []` is the program's answer, not yours)",
+  "answer 3: refuted by dafny"
+ ],
+ "specifications": [],
+ "candidates": [
+  {
+   "source": "answer 1",
+   "function": {
+    "passes": true,
+    "why": "passes",
+    "agreement": {
+     "status": "agrees",
+     "draws": 70,
+     "completeness": 1.0,
+     "mutants_rejected": 268,
+     "mutants_accepted": 0
+    },
+    "larger": {
+     "status": "agrees",
+     "draws": 1,
+     "completeness": 1.0,
+     "mutants_rejected": 8,
+     "mutants_accepted": 0,
+     "requires_caps_size": false
+    }
+   }
+  },
+  {
+   "source": "answer 3",
+   "function": {
+    "passes": true,
+    "why": "passes",
+    "agreement": {
+     "status": "agrees",
+     "draws": 70,
+     "completeness": 1.0,
+     "mutants_rejected": 268,
+     "mutants_accepted": 0
+    },
+    "larger": {
+     "status": "agrees",
+     "draws": 1,
+     "completeness": 1.0,
+     "mutants_rejected": 8,
+     "mutants_accepted": 0,
+     "requires_caps_size": false
+    }
+   }
+  },
+  {
+   "source": "answer 4",
+   "function": {
+    "passes": true,
+    "why": "passes",
+    "agreement": {
+     "status": "agrees",
+     "draws": 70,
+     "completeness": 1.0,
+     "mutants_rejected": 268,
+     "mutants_accepted": 0
+    },
+    "larger": {
+     "status": "agrees",
+     "draws": 1,
+     "completeness": 1.0,
+     "mutants_rejected": 8,
+     "mutants_accepted": 0,
+     "requires_caps_size": false
+    }
+   }
+  }
+ ],
+ "asked": {
+  "answers": 5
+ },
+ "inputs": {
+  "examples": [
+   "assert Extract([[1, 2, 3], [4, 5], [6, 7, 8, 9]]) == [3, 5, 9]",
+   "assert Extract([['x', 'y', 'z'], ['m'], ['a', 'b'], ['u', 'v']]) == ['z', 'm', 'b', 'v']",
+   "assert Extract([[1, 2, 3], [4, 5]]) == [3, 5]"
+  ],
+  "taken from the function": false,
+  "kinds": [
+   {
+    "args": [
+     "seq-of-seq"
+    ],
+    "expected": "seq"
+   },
+   {
+    "args": [
+     "seq-of-seq"
+    ],
+    "expected": "seq"
+   },
+   {
+    "args": [
+     "seq-of-seq"
+    ],
+    "expected": "seq"
+   }
+  ],
+  "specification check": {
+   "seed": 1,
+   "draws": 100,
+   "larger draws": 60
+  }
+ },
+ "stopped at": null,
+ "function": {
+  "code": "def Extract(lst): \r\n    return [item[-1] for item in lst] ",
+  "doc": "Write a python function to get the last element of each sublist."
+ },
+ "seconds": 34.5
+}

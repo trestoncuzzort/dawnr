@@ -44,3 +44,26 @@ model's specification, the proof, or `t` itself could not be counted.
   functions to read first (those whose specifications were false at an example).
 - R2 fails: the proof or the comparison with the function is where `verify` loses most, and the records say which.
 - R3 is read beside R2 and is not a claim about the student.
+
+## Outcome, 2026-11-26 (run 17:42Z to 19:58Z, code at 0919a75a)
+
+The run's folder is `release/evidence/verify-run-2026-11-26/`: `run.json` and one record per function. The writer was
+the base model this machine was serving (`run.json` names it), with the reference and 3072 tokens; Dafny alone.
+
+- **R1 holds.** 111 records for the 111 ids, no error, and in every record the stage entries are the refusal lines,
+  one for one and in order.
+- **R2 holds.** Of the 90 functions refused, 65 (72%) stopped at or before the specification check: examples 24,
+  specification check 39, parse 1, well formed 1. The other 25 got further: 8 stopped at the comparison with the
+  function and 17 at the prover. On 2026-10-05, with the student, it was 88 of 102 (86%).
+- **R3 holds.** 21 of the 111 were verified, 14 by asking for whole answers and 7 by the specification route: 49, 70,
+  81, 106, 154, 206, 257, 343, 353, 363, 380, 470, 551, 660, 710, 788, 805, 808, 878, 893, 942. Of the three the
+  record of 2026-10-05 names as proved, 106 and 206 are again and 828 is not. 889, whose reference sorts where its
+  words say reverse, is refused with the same sentence as on 2026-10-05.
+
+Across the 111, the 832 refusal lines were at: parse 271, specification check 185, examples 147, prover 88, well
+formed 84, same as the function 57. Of the 981 answers, specifications and bodies asked for (555, 291 and 135),
+271 (28%) did not parse, with the language's reference in front of every question.
+
+What it changes, as registered: the records are the unit the next panel run is read against, and the next work is
+the specification the model writes. The specification route earned its place again (7 of the 21). The student was
+not serving, so how it does on this panel with the records kept is still open.

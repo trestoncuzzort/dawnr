@@ -1,0 +1,311 @@
+{
+ "id": 357,
+ "fn": "find_max",
+ "verified": false,
+ "route": null,
+ "why": "no body the model wrote answered as your function does and was proved",
+ "twin": null,
+ "stages": [
+  {
+   "route": "answers",
+   "source": "answer 1",
+   "stage": "parse",
+   "reason": "does not parse (expected '{', found 'first' [Stmt])"
+  },
+  {
+   "route": "answers",
+   "source": "answer 3",
+   "stage": "parse",
+   "reason": "does not parse (expected 'eof', found 'spec' [Task])"
+  },
+  {
+   "route": "answers",
+   "source": "answer 4",
+   "stage": "parse",
+   "reason": "does not parse (expected '.', found '[' [Expr])"
+  },
+  {
+   "route": "answers",
+   "source": "answer 2",
+   "stage": "specification check",
+   "reason": "`r == max_of(records)` is false at your function's own answer `find_max([[4, 1, 1]]) == 4`",
+   "at": "find_max([[4, 1, 1]]) == 4",
+   "passes": false,
+   "why": "the specification is false at the Python's answer",
+   "agreement": {
+    "status": "disagrees",
+    "args": [
+     [
+      [
+       4,
+       1,
+       1
+      ]
+     ]
+    ],
+    "reference_said": 4,
+    "ensures": 0
+   }
+  },
+  {
+   "route": "answers",
+   "source": "answer 5",
+   "stage": "specification check",
+   "reason": "`r == pairs[0][0]; forall i in [1, len(pairs)) . r >= pairs[i][0]; forall i in [1, len(pairs)) . r >= pairs[i][1]` is false at your function's own answer `find_max([[-4, 4, -1]]) == 4`",
+   "at": "find_max([[-4, 4, -1]]) == 4",
+   "passes": false,
+   "why": "the specification is false at the Python's answer",
+   "agreement": {
+    "status": "disagrees",
+    "args": [
+     [
+      [
+       -4,
+       4,
+       -1
+      ]
+     ]
+    ],
+    "reference_said": 4,
+    "ensures": 0
+   }
+  },
+  {
+   "route": "specification",
+   "source": "specification 2",
+   "stage": "parse",
+   "reason": "it does not parse (expected '{', found 'rest_max' [Stmt])"
+  },
+  {
+   "route": "specification",
+   "source": "specification 1, body 1",
+   "stage": "prover",
+   "reason": "refuted by dafny",
+   "cells": {
+    "dafny": "refuted / refuted",
+    "verus": "\u2014",
+    "spark": "\u2014",
+    "framac": "\u2014",
+    "lean": "\u2014",
+    "rocq": "\u2014",
+    "fstar": "\u2014"
+   }
+  },
+  {
+   "route": "specification",
+   "source": "specification 1, body 2",
+   "stage": "prover",
+   "reason": "refuted by dafny",
+   "cells": {
+    "dafny": "refuted / refuted",
+    "verus": "\u2014",
+    "spark": "\u2014",
+    "framac": "\u2014",
+    "lean": "\u2014",
+    "rocq": "\u2014",
+    "fstar": "\u2014"
+   }
+  },
+  {
+   "route": "specification",
+   "source": "specification 1, body 3",
+   "stage": "parse",
+   "reason": "does not parse"
+  },
+  {
+   "route": "specification",
+   "source": "specification 3, body 1",
+   "stage": "prover",
+   "reason": "no prover proved it",
+   "cells": {
+    "dafny": "unproved / refuted",
+    "verus": "\u2014",
+    "spark": "\u2014",
+    "framac": "\u2014",
+    "lean": "\u2014",
+    "rocq": "\u2014",
+    "fstar": "\u2014"
+   }
+  },
+  {
+   "route": "specification",
+   "source": "specification 3, body 3",
+   "stage": "prover",
+   "reason": "no prover proved it",
+   "cells": {
+    "dafny": "unproved / refuted",
+    "verus": "\u2014",
+    "spark": "\u2014",
+    "framac": "\u2014",
+    "lean": "\u2014",
+    "rocq": "\u2014",
+    "fstar": "\u2014"
+   }
+  }
+ ],
+ "refused": [
+  "answer 1: does not parse (expected '{', found 'first' [Stmt])",
+  "answer 3: does not parse (expected 'eof', found 'spec' [Task])",
+  "answer 4: does not parse (expected '.', found '[' [Expr])",
+  "answer 2: `r == max_of(records)` is false at your function's own answer `find_max([[4, 1, 1]]) == 4`",
+  "answer 5: `r == pairs[0][0]; forall i in [1, len(pairs)) . r >= pairs[i][0]; forall i in [1, len(pairs)) . r >= pairs[i][1]` is false at your function's own answer `find_max([[-4, 4, -1]]) == 4`",
+  "specification 2: it does not parse (expected '{', found 'rest_max' [Stmt])",
+  "specification 1, body 1: refuted by dafny",
+  "specification 1, body 2: refuted by dafny",
+  "specification 1, body 3: does not parse",
+  "specification 3, body 1: no prover proved it",
+  "specification 3, body 3: no prover proved it"
+ ],
+ "specifications": [
+  {
+   "source": "specification 1",
+   "verdict": "kept",
+   "scores": {
+    "correctness": 1.0,
+    "completeness": 1.0,
+    "tests": 3,
+    "mutants": 42
+   },
+   "spec": "t 1\ntask f(test_list: seq<seq>) returns (r: int)\n  requires len(test_list) > 0\n  ensures forall i in [0, len(test_list)) . forall j in [0, len(test_list[i])) . test_list[i][j] <= r\n  ensures exists i in [0, len(test_list)) . exists j in [0, len(test_list[i])) . test_list[i][j] == r\n{\n}\n",
+   "function": {
+    "passes": true,
+    "why": "passes",
+    "agreement": {
+     "status": "agrees",
+     "draws": 66,
+     "completeness": 1.0,
+     "mutants_rejected": 587,
+     "mutants_accepted": 0
+    },
+    "larger": {
+     "status": "agrees",
+     "draws": 60,
+     "completeness": 1.0,
+     "mutants_rejected": 594,
+     "mutants_accepted": 0,
+     "requires_caps_size": false
+    }
+   }
+  },
+  {
+   "source": "specification 3",
+   "verdict": "kept",
+   "scores": {
+    "correctness": 1.0,
+    "completeness": 1.0,
+    "tests": 3,
+    "mutants": 42
+   },
+   "spec": "t 1\ntask f(tuples: seq<seq>) returns (r: int)\n  requires len(tuples) > 0\n  requires forall i in [0, len(tuples)) . len(tuples[i]) > 0\n  ensures forall i in [0, len(tuples)) . forall j in [0, len(tuples[i])) . r >= tuples[i][j]\n  ensures exists i in [0, len(tuples)) . exists j in [0, len(tuples[i])) . r == tuples[i][j]\n{\n}\n",
+   "function": {
+    "passes": true,
+    "why": "passes",
+    "agreement": {
+     "status": "agrees",
+     "draws": 42,
+     "outside_requires": 24,
+     "completeness": 1.0,
+     "mutants_rejected": 375,
+     "mutants_accepted": 0
+    },
+    "larger": {
+     "status": "agrees",
+     "draws": 1,
+     "outside_requires": 59,
+     "completeness": 1.0,
+     "mutants_rejected": 10,
+     "mutants_accepted": 0,
+     "requires_caps_size": false
+    }
+   }
+  }
+ ],
+ "candidates": [
+  {
+   "source": "answer 2",
+   "function": {
+    "passes": false,
+    "why": "the specification is false at the Python's answer",
+    "agreement": {
+     "status": "disagrees",
+     "args": [
+      [
+       [
+        4,
+        1,
+        1
+       ]
+      ]
+     ],
+     "reference_said": 4,
+     "ensures": 0
+    }
+   }
+  },
+  {
+   "source": "answer 5",
+   "function": {
+    "passes": false,
+    "why": "the specification is false at the Python's answer",
+    "agreement": {
+     "status": "disagrees",
+     "args": [
+      [
+       [
+        -4,
+        4,
+        -1
+       ]
+      ]
+     ],
+     "reference_said": 4,
+     "ensures": 0
+    }
+   }
+  }
+ ],
+ "asked": {
+  "answers": 5,
+  "specifications": 3,
+  "bodies": 6
+ },
+ "inputs": {
+  "examples": [
+   "assert find_max([(2, 4), (6, 7), (5, 1), (6, 10), (8, 7)]) == 10",
+   "assert find_max([(3, 5), (7, 8), (6, 2), (7, 11), (9, 8)]) == 11",
+   "assert find_max([(4, 6), (8, 9), (7, 3), (8, 12), (10, 9)]) == 12"
+  ],
+  "taken from the function": false,
+  "kinds": [
+   {
+    "args": [
+     "seq-of-seq"
+    ],
+    "expected": "int"
+   },
+   {
+    "args": [
+     "seq-of-seq"
+    ],
+    "expected": "int"
+   },
+   {
+    "args": [
+     "seq-of-seq"
+    ],
+    "expected": "int"
+   }
+  ],
+  "specification check": {
+   "seed": 1,
+   "draws": 100,
+   "larger draws": 60
+  }
+ },
+ "stopped at": "prover",
+ "function": {
+  "code": "def find_max(test_list):\r\n  res = max(int(j) for i in test_list for j in i)\r\n  return (res) ",
+  "doc": "Write a function to find the maximum element of all the given tuple records."
+ },
+ "seconds": 115.0
+}

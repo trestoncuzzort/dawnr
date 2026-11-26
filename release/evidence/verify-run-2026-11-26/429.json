@@ -1,0 +1,136 @@
+{
+ "id": 429,
+ "fn": "and_tuples",
+ "verified": false,
+ "route": null,
+ "why": "no specification the model wrote holds at your function's answers and pins them down. Every one it wrote from your docstring is false at an answer your function gives (`and_tuples((10, 4, 6, 9), (5, 2, 3, 3)) == (0, 0, 2, 1)`): either the model misread the docstring, or the function does not do what it says",
+ "twin": null,
+ "stages": [
+  {
+   "route": "answers",
+   "source": "answer 1",
+   "stage": "parse",
+   "reason": "does not parse (unexpected character '&' [Id])"
+  },
+  {
+   "route": "answers",
+   "source": "answer 2",
+   "stage": "parse",
+   "reason": "does not parse (unexpected character '&' [Id])"
+  },
+  {
+   "route": "answers",
+   "source": "answer 3",
+   "stage": "well formed",
+   "reason": "not well formed (and over non-bool)"
+  },
+  {
+   "route": "answers",
+   "source": "answer 4",
+   "stage": "parse",
+   "reason": "does not parse (unexpected character '&' [Id])"
+  },
+  {
+   "route": "answers",
+   "source": "answer 5",
+   "stage": "parse",
+   "reason": "does not parse (unexpected character '&' [Id])"
+  },
+  {
+   "route": "specification",
+   "source": "specification 1",
+   "stage": "parse",
+   "reason": "it does not parse (unexpected character '&' [Id])"
+  },
+  {
+   "route": "specification",
+   "source": "specification 3",
+   "stage": "parse",
+   "reason": "it does not parse (unexpected character '&' [Id])"
+  },
+  {
+   "route": "specification",
+   "source": "specification 2",
+   "stage": "examples",
+   "reason": "`len(r) == len(a); forall i in [0, len(r)) . r[i] == bit_and(a[i], b[i])` is false at your function's own answer `and_tuples((10, 4, 6, 9), (5, 2, 3, 3)) == (0, 0, 2, 1)`",
+   "at": "and_tuples((10, 4, 6, 9), (5, 2, 3, 3)) == (0, 0, 2, 1)",
+   "scores": {
+    "correctness": 0.0,
+    "completeness": 1.0,
+    "tests": 3,
+    "mutants": 20
+   }
+  }
+ ],
+ "refused": [
+  "answer 1: does not parse (unexpected character '&' [Id])",
+  "answer 2: does not parse (unexpected character '&' [Id])",
+  "answer 3: not well formed (and over non-bool)",
+  "answer 4: does not parse (unexpected character '&' [Id])",
+  "answer 5: does not parse (unexpected character '&' [Id])",
+  "specification 1: it does not parse (unexpected character '&' [Id])",
+  "specification 3: it does not parse (unexpected character '&' [Id])",
+  "specification 2: `len(r) == len(a); forall i in [0, len(r)) . r[i] == bit_and(a[i], b[i])` is false at your function's own answer `and_tuples((10, 4, 6, 9), (5, 2, 3, 3)) == (0, 0, 2, 1)`"
+ ],
+ "specifications": [
+  {
+   "source": "specification 2",
+   "verdict": "dropped",
+   "scores": {
+    "correctness": 0.0,
+    "completeness": 1.0,
+    "tests": 3,
+    "mutants": 20
+   },
+   "spec": "t 1\ntask f(a: seq, b: seq) returns (r: seq)\n  requires len(a) == len(b)\n  ensures len(r) == len(a)\n  ensures forall i in [0, len(r)) . r[i] == bit_and(a[i], b[i])\nspec fun bit_and(x: int, y: int): int\n  decreases x + y\n= if x == 0 then 0 else if y == 0 then 0 else if x == y then x else if x > y then bit_and(x - y, y) else bit_and(x, y - x)\n{\n}\n"
+  }
+ ],
+ "candidates": [],
+ "asked": {
+  "answers": 5,
+  "specifications": 3,
+  "bodies": 0
+ },
+ "inputs": {
+  "examples": [
+   "assert and_tuples((10, 4, 6, 9), (5, 2, 3, 3)) == (0, 0, 2, 1)",
+   "assert and_tuples((1, 2, 3, 4), (5, 6, 7, 8)) == (1, 2, 3, 0)",
+   "assert and_tuples((8, 9, 11, 12), (7, 13, 14, 17)) == (0, 9, 10, 0)"
+  ],
+  "taken from the function": false,
+  "kinds": [
+   {
+    "args": [
+     "seq",
+     "seq"
+    ],
+    "expected": "seq"
+   },
+   {
+    "args": [
+     "seq",
+     "seq"
+    ],
+    "expected": "seq"
+   },
+   {
+    "args": [
+     "seq",
+     "seq"
+    ],
+    "expected": "seq"
+   }
+  ],
+  "specification check": {
+   "seed": 1,
+   "draws": 100,
+   "larger draws": 60
+  }
+ },
+ "stopped at": "examples",
+ "function": {
+  "code": "def and_tuples(test_tup1, test_tup2):\r\n  res = tuple(ele1 & ele2 for ele1, ele2 in zip(test_tup1, test_tup2))\r\n  return (res) ",
+  "doc": "Write a function to extract the elementwise and tuples from the given two tuples."
+ },
+ "seconds": 28.7
+}

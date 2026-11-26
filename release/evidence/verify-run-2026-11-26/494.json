@@ -1,0 +1,194 @@
+{
+ "id": 494,
+ "fn": "binary_to_integer",
+ "verified": false,
+ "route": null,
+ "why": "no specification the model wrote holds at your function's answers and pins them down. Every one it wrote from your docstring is false at an answer your function gives (`binary_to_integer((1, 1, 0, 1, 0, 0, 1)) == '105'`): either the model misread the docstring, or the function does not do what it says",
+ "twin": null,
+ "stages": [
+  {
+   "route": "answers",
+   "source": "answer 1",
+   "stage": "parse",
+   "reason": "does not parse (expected 'eof', found 'spec' [Task])"
+  },
+  {
+   "route": "answers",
+   "source": "answer 2",
+   "stage": "well formed",
+   "reason": "not well formed (call of unknown fun pow2)"
+  },
+  {
+   "route": "answers",
+   "source": "answer 3",
+   "stage": "parse",
+   "reason": "does not parse (unexpected character '^' [Id])"
+  },
+  {
+   "route": "answers",
+   "source": "answer 4",
+   "stage": "specification check",
+   "reason": "`len(r) > 0; r.isdigit()` is false at your function's own answer `binary_to_integer([-1]) == \"-1\"`",
+   "at": "binary_to_integer([-1]) == \"-1\"",
+   "passes": false,
+   "why": "the specification is false at the Python's answer",
+   "agreement": {
+    "status": "disagrees",
+    "args": [
+     [
+      -1
+     ]
+    ],
+    "reference_said": "-1",
+    "ensures": 1
+   }
+  },
+  {
+   "route": "answers",
+   "source": "answer 5",
+   "stage": "specification check",
+   "reason": "`len(r) >= 1; forall k in [0, len(r)) . r[k] >= 48 and r[k] <= 57` is false at your function's own answer `binary_to_integer([-1]) == \"-1\"`",
+   "at": "binary_to_integer([-1]) == \"-1\"",
+   "passes": false,
+   "why": "the specification is false at the Python's answer",
+   "agreement": {
+    "status": "disagrees",
+    "args": [
+     [
+      -1
+     ]
+    ],
+    "reference_said": "-1",
+    "ensures": 1
+   }
+  },
+  {
+   "route": "specification",
+   "source": "specification 2",
+   "stage": "parse",
+   "reason": "it does not parse (unexpected character '^' [Id])"
+  },
+  {
+   "route": "specification",
+   "source": "specification 3",
+   "stage": "parse",
+   "reason": "it does not parse (expected ')', found 'n' [Expr])"
+  },
+  {
+   "route": "specification",
+   "source": "specification 1",
+   "stage": "examples",
+   "reason": "`r == tostr(binary_value(bits))` is false at your function's own answer `binary_to_integer((1, 1, 0, 1, 0, 0, 1)) == '105'`",
+   "at": "binary_to_integer((1, 1, 0, 1, 0, 0, 1)) == '105'",
+   "scores": {
+    "correctness": 0.0,
+    "completeness": 0.9545454545454546,
+    "tests": 3,
+    "mutants": 22
+   }
+  }
+ ],
+ "refused": [
+  "answer 1: does not parse (expected 'eof', found 'spec' [Task])",
+  "answer 2: not well formed (call of unknown fun pow2)",
+  "answer 3: does not parse (unexpected character '^' [Id])",
+  "answer 4: `len(r) > 0; r.isdigit()` is false at your function's own answer `binary_to_integer([-1]) == \"-1\"`",
+  "answer 5: `len(r) >= 1; forall k in [0, len(r)) . r[k] >= 48 and r[k] <= 57` is false at your function's own answer `binary_to_integer([-1]) == \"-1\"`",
+  "specification 2: it does not parse (unexpected character '^' [Id])",
+  "specification 3: it does not parse (expected ')', found 'n' [Expr])",
+  "specification 1: `r == tostr(binary_value(bits))` is false at your function's own answer `binary_to_integer((1, 1, 0, 1, 0, 0, 1)) == '105'`"
+ ],
+ "specifications": [
+  {
+   "source": "specification 1",
+   "verdict": "dropped",
+   "scores": {
+    "correctness": 0.0,
+    "completeness": 0.9545454545454546,
+    "tests": 3,
+    "mutants": 22
+   },
+   "spec": "t 1\ntask f(bits: seq) returns (r: seq)\n  requires forall i in [0, len(bits)) . bits[i] == 0 or bits[i] == 1\n  ensures r == tostr(binary_value(bits))\nspec fun binary_value(bits: seq): int\n  decreases len(bits)\n= if len(bits) == 0 then 0 else bits[0] + 2 * binary_value(bits[1..len(bits)])\n{\n}\n"
+  }
+ ],
+ "candidates": [
+  {
+   "source": "answer 4",
+   "function": {
+    "passes": false,
+    "why": "the specification is false at the Python's answer",
+    "agreement": {
+     "status": "disagrees",
+     "args": [
+      [
+       -1
+      ]
+     ],
+     "reference_said": "-1",
+     "ensures": 1
+    }
+   }
+  },
+  {
+   "source": "answer 5",
+   "function": {
+    "passes": false,
+    "why": "the specification is false at the Python's answer",
+    "agreement": {
+     "status": "disagrees",
+     "args": [
+      [
+       -1
+      ]
+     ],
+     "reference_said": "-1",
+     "ensures": 1
+    }
+   }
+  }
+ ],
+ "asked": {
+  "answers": 5,
+  "specifications": 3,
+  "bodies": 0
+ },
+ "inputs": {
+  "examples": [
+   "assert binary_to_integer((1, 1, 0, 1, 0, 0, 1)) == '105'",
+   "assert binary_to_integer((0, 1, 1, 0, 0, 1, 0, 1)) == '101'",
+   "assert binary_to_integer((1, 1, 0, 1, 0, 1)) == '53'"
+  ],
+  "taken from the function": false,
+  "kinds": [
+   {
+    "args": [
+     "seq"
+    ],
+    "expected": "seq"
+   },
+   {
+    "args": [
+     "seq"
+    ],
+    "expected": "seq"
+   },
+   {
+    "args": [
+     "seq"
+    ],
+    "expected": "seq"
+   }
+  ],
+  "specification check": {
+   "seed": 1,
+   "draws": 100,
+   "larger draws": 60
+  }
+ },
+ "stopped at": "specification check",
+ "function": {
+  "code": "def binary_to_integer(test_tup):\r\n  res = int(\"\".join(str(ele) for ele in test_tup), 2)\r\n  return (str(res)) ",
+  "doc": "Write a function to convert the given binary tuple to integer."
+ },
+ "seconds": 32.2
+}

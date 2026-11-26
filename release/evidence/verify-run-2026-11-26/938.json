@@ -1,0 +1,177 @@
+{
+ "id": 938,
+ "fn": "find_closet",
+ "verified": false,
+ "route": null,
+ "why": "no specification the model wrote holds at your function's answers and pins them down",
+ "twin": null,
+ "stages": [
+  {
+   "route": "answers",
+   "source": "answer 2",
+   "stage": "parse",
+   "reason": "does not parse (expected 'decreases', found ')' [Stmt])"
+  },
+  {
+   "route": "answers",
+   "source": "answer 3",
+   "stage": "examples",
+   "reason": "fails a test (`assert find_closet([1, 4, 10],[2, 15, 20],[10, 12],3,3,2) == (10, 15, 10)`: it returns [1, 2, 10])"
+  },
+  {
+   "route": "answers",
+   "source": "answer 4",
+   "stage": "parse",
+   "reason": "does not parse (comparisons do not chain; parenthesise [What the notation refuses])"
+  },
+  {
+   "route": "answers",
+   "source": "answer 5",
+   "stage": "parse",
+   "reason": "does not parse (expected 'decreases', found '{' [Stmt])"
+  },
+  {
+   "route": "answers",
+   "source": "answer 1",
+   "stage": "specification check",
+   "reason": "`len(r) == 3; r[0] == a[r[0]]; r[1] == b[r[1]]; r[2] == c[r[2]]; forall i in [0, n) . forall j in [0, m) . forall l in [0, k) . abs(a[i] - b[j]) + abs(b[j] - c[l]) + abs(c[l] - a[i]) >= abs(r[0] - r[1]) + abs(r[1] - r[2]) + abs(r[2] - r[0])`: no valid draws",
+   "passes": false,
+   "why": "no valid draws",
+   "agreement": {
+    "status": "no valid draws",
+    "draws": 0,
+    "outside_requires": 45
+   }
+  },
+  {
+   "route": "specification",
+   "source": "specification 1",
+   "stage": "parse",
+   "reason": "it does not parse (expected '{', found 'a' [Stmt])"
+  },
+  {
+   "route": "specification",
+   "source": "specification 2",
+   "stage": "parse",
+   "reason": "it does not parse (expected '{', found 'm1' [Stmt])"
+  },
+  {
+   "route": "specification",
+   "source": "specification 3",
+   "stage": "specification check",
+   "reason": "`len(r) == 3; exists i in [0, n) . r[0] == a[i]; exists j in [0, m) . r[1] == b[j]; exists l in [0, k) . r[2] == c[l]; forall i in [0, n) . forall j in [0, m) . forall l in [0, k) . max(a[i], max(b[j], c[l])) - min(a[i], min(b[j], c[l])) >= max(r[0], max(r[1], r[2])) - min(r[0], min(r[1], r[2]))`: no valid draws",
+   "passes": false,
+   "why": "no valid draws",
+   "agreement": {
+    "status": "no valid draws",
+    "draws": 0,
+    "outside_requires": 45
+   }
+  }
+ ],
+ "refused": [
+  "answer 2: does not parse (expected 'decreases', found ')' [Stmt])",
+  "answer 3: fails a test (`assert find_closet([1, 4, 10],[2, 15, 20],[10, 12],3,3,2) == (10, 15, 10)`: it returns [1, 2, 10])",
+  "answer 4: does not parse (comparisons do not chain; parenthesise [What the notation refuses])",
+  "answer 5: does not parse (expected 'decreases', found '{' [Stmt])",
+  "answer 1: `len(r) == 3; r[0] == a[r[0]]; r[1] == b[r[1]]; r[2] == c[r[2]]; forall i in [0, n) . forall j in [0, m) . forall l in [0, k) . abs(a[i] - b[j]) + abs(b[j] - c[l]) + abs(c[l] - a[i]) >= abs(r[0] - r[1]) + abs(r[1] - r[2]) + abs(r[2] - r[0])`: no valid draws",
+  "specification 1: it does not parse (expected '{', found 'a' [Stmt])",
+  "specification 2: it does not parse (expected '{', found 'm1' [Stmt])",
+  "specification 3: `len(r) == 3; exists i in [0, n) . r[0] == a[i]; exists j in [0, m) . r[1] == b[j]; exists l in [0, k) . r[2] == c[l]; forall i in [0, n) . forall j in [0, m) . forall l in [0, k) . max(a[i], max(b[j], c[l])) - min(a[i], min(b[j], c[l])) >= max(r[0], max(r[1], r[2])) - min(r[0], min(r[1], r[2]))`: no valid draws"
+ ],
+ "specifications": [
+  {
+   "source": "specification 3",
+   "verdict": "kept",
+   "scores": {
+    "correctness": 1.0,
+    "completeness": 1.0,
+    "tests": 3,
+    "mutants": 22
+   },
+   "spec": "t 1\ngate loops\ntask f(a: seq, b: seq, c: seq, n: int, m: int, k: int) returns (r: seq)\n  requires n == len(a)\n  requires m == len(b)\n  requires k == len(c)\n  requires n >= 1 and m >= 1 and k >= 1\n  requires forall i in [1, n) . a[i - 1] <= a[i]\n  requires forall i in [1, m) . b[i - 1] <= b[i]\n  requires forall i in [1, k) . c[i - 1] <= c[i]\n  ensures len(r) == 3\n  ensures exists i in [0, n) . r[0] == a[i]\n  ensures exists j in [0, m) . r[1] == b[j]\n  ensures exists l in [0, k) . r[2] == c[l]\n  ensures forall i in [0, n) . forall j in [0, m) . forall l in [0, k) . max(a[i], max(b[j], c[l])) - min(a[i], min(b[j], c[l])) >= max(r[0], max(r[1], r[2])) - min(r[0], min(r[1], r[2]))\n{\n}\n",
+   "function": {
+    "passes": false,
+    "why": "no valid draws",
+    "agreement": {
+     "status": "no valid draws",
+     "draws": 0,
+     "outside_requires": 45
+    }
+   }
+  }
+ ],
+ "candidates": [
+  {
+   "source": "answer 1",
+   "function": {
+    "passes": false,
+    "why": "no valid draws",
+    "agreement": {
+     "status": "no valid draws",
+     "draws": 0,
+     "outside_requires": 45
+    }
+   }
+  }
+ ],
+ "asked": {
+  "answers": 5,
+  "specifications": 3,
+  "bodies": 0
+ },
+ "inputs": {
+  "examples": [
+   "assert find_closet([1, 4, 10],[2, 15, 20],[10, 12],3,3,2) == (10, 15, 10)",
+   "assert find_closet([20, 24, 100],[2, 19, 22, 79, 800],[10, 12, 23, 24, 119],3,5,5) == (24, 22, 23)",
+   "assert find_closet([2, 5, 11],[3, 16, 21],[11, 13],3,3,2) == (11, 16, 11)"
+  ],
+  "taken from the function": false,
+  "kinds": [
+   {
+    "args": [
+     "seq",
+     "seq",
+     "seq",
+     "int",
+     "int",
+     "int"
+    ],
+    "expected": "seq"
+   },
+   {
+    "args": [
+     "seq",
+     "seq",
+     "seq",
+     "int",
+     "int",
+     "int"
+    ],
+    "expected": "seq"
+   },
+   {
+    "args": [
+     "seq",
+     "seq",
+     "seq",
+     "int",
+     "int",
+     "int"
+    ],
+    "expected": "seq"
+   }
+  ],
+  "specification check": {
+   "seed": 1,
+   "draws": 100,
+   "larger draws": 60
+  }
+ },
+ "stopped at": "specification check",
+ "function": {
+  "code": "import sys \r\n\r\ndef find_closet(A, B, C, p, q, r): \r\n\tdiff = sys.maxsize \r\n\tres_i = 0\r\n\tres_j = 0\r\n\tres_k = 0\r\n\ti = 0\r\n\tj = 0\r\n\tk = 0\r\n\twhile(i < p and j < q and k < r): \r\n\t\tminimum = min(A[i], min(B[j], C[k])) \r\n\t\tmaximum = max(A[i], max(B[j], C[k])); \r\n\t\tif maximum-minimum < diff: \r\n\t\t\tres_i = i \r\n\t\t\tres_j = j \r\n\t\t\tres_k = k \r\n\t\t\tdiff = maximum - minimum; \r\n\t\tif diff == 0: \r\n\t\t\tbreak\r\n\t\tif A[i] == minimum: \r\n\t\t\ti = i+1\r\n\t\telif B[j] == minimum: \r\n\t\t\tj = j+1\r\n\t\telse: \r\n\t\t\tk = k+1\r\n\treturn A[res_i],B[res_j],C[res_k]",
+  "doc": "Write a function to find three closest elements from three sorted arrays."
+ },
+ "seconds": 117.8
+}

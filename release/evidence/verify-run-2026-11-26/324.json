@@ -1,0 +1,114 @@
+{
+ "id": 324,
+ "fn": "sum_of_alternates",
+ "verified": false,
+ "route": null,
+ "why": "no specification the model wrote holds at your function's answers and pins them down",
+ "twin": null,
+ "stages": [
+  {
+   "route": "answers",
+   "source": "answer 1",
+   "stage": "examples",
+   "reason": "fails a test (`assert sum_of_alternates((5, 6, 3, 6, 10, 34)) == (46, 18)`: it returns [18, 46])"
+  },
+  {
+   "route": "answers",
+   "source": "answer 2",
+   "stage": "examples",
+   "reason": "fails a test (`assert sum_of_alternates((5, 6, 3, 6, 10, 34)) == (46, 18)`: it returns [18, 46])"
+  },
+  {
+   "route": "answers",
+   "source": "answer 3",
+   "stage": "examples",
+   "reason": "fails a test (`assert sum_of_alternates((5, 6, 3, 6, 10, 34)) == (46, 18)`: it returns [18, 46])"
+  },
+  {
+   "route": "answers",
+   "source": "answer 4",
+   "stage": "well formed",
+   "reason": "not well formed (implies over non-bool)"
+  },
+  {
+   "route": "answers",
+   "source": "answer 5",
+   "stage": "parse",
+   "reason": "does not parse (expected 'id', found 't' [Task])"
+  },
+  {
+   "route": "specification",
+   "source": "specification 1",
+   "stage": "parse",
+   "reason": "it does not parse (expected 'id', found 't' [Task])"
+  },
+  {
+   "route": "specification",
+   "source": "specification 2",
+   "stage": "parse",
+   "reason": "it does not parse (expected 'id', found 't' [Task])"
+  },
+  {
+   "route": "specification",
+   "source": "specification 3",
+   "stage": "parse",
+   "reason": "it does not parse (expected 'id', found 't' [Task])"
+  }
+ ],
+ "refused": [
+  "answer 1: fails a test (`assert sum_of_alternates((5, 6, 3, 6, 10, 34)) == (46, 18)`: it returns [18, 46])",
+  "answer 2: fails a test (`assert sum_of_alternates((5, 6, 3, 6, 10, 34)) == (46, 18)`: it returns [18, 46])",
+  "answer 3: fails a test (`assert sum_of_alternates((5, 6, 3, 6, 10, 34)) == (46, 18)`: it returns [18, 46])",
+  "answer 4: not well formed (implies over non-bool)",
+  "answer 5: does not parse (expected 'id', found 't' [Task])",
+  "specification 1: it does not parse (expected 'id', found 't' [Task])",
+  "specification 2: it does not parse (expected 'id', found 't' [Task])",
+  "specification 3: it does not parse (expected 'id', found 't' [Task])"
+ ],
+ "specifications": [],
+ "candidates": [],
+ "asked": {
+  "answers": 5,
+  "specifications": 3,
+  "bodies": 0
+ },
+ "inputs": {
+  "examples": [
+   "assert sum_of_alternates((5, 6, 3, 6, 10, 34)) == (46, 18)",
+   "assert sum_of_alternates((1, 2, 3, 4, 5)) == (6, 9)",
+   "assert sum_of_alternates((6, 7, 8, 9, 4, 5)) == (21, 18)"
+  ],
+  "taken from the function": false,
+  "kinds": [
+   {
+    "args": [
+     "seq"
+    ],
+    "expected": "seq"
+   },
+   {
+    "args": [
+     "seq"
+    ],
+    "expected": "seq"
+   },
+   {
+    "args": [
+     "seq"
+    ],
+    "expected": "seq"
+   }
+  ],
+  "specification check": {
+   "seed": 1,
+   "draws": 100,
+   "larger draws": 60
+  }
+ },
+ "stopped at": "examples",
+ "function": {
+  "code": "def sum_of_alternates(test_tuple):\r\n  sum1 = 0\r\n  sum2 = 0\r\n  for idx, ele in enumerate(test_tuple):\r\n    if idx % 2:\r\n      sum1 += ele\r\n    else:\r\n      sum2 += ele\r\n  return ((sum1),(sum2)) ",
+  "doc": "Write a function to extract the sum of alternate chains of tuples."
+ },
+ "seconds": 61.9
+}

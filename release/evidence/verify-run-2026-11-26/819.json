@@ -1,0 +1,295 @@
+{
+ "id": 819,
+ "fn": "count_duplic",
+ "verified": false,
+ "route": null,
+ "why": "no specification the model wrote holds at your function's answers and pins them down. Every one it wrote from your docstring is false at an answer your function gives (`count_duplic([2,2,3,1,2,6,7,9])==([2, 3, 1, 2, 6, 7, 9], [2, 1, 1, 1, 1, 1, 1])`): either the model misread the docstring, or the function does not do what it says",
+ "twin": null,
+ "stages": [
+  {
+   "route": "answers",
+   "source": "answer 1",
+   "stage": "parse",
+   "reason": "does not parse ('end of input' does not start an expression [Expr])"
+  },
+  {
+   "route": "answers",
+   "source": "answer 2",
+   "stage": "well formed",
+   "reason": "not well formed (counts[...] := writes counts, not an array parameter named in modifies)"
+  },
+  {
+   "route": "answers",
+   "source": "answer 4",
+   "stage": "parse",
+   "reason": "does not parse (expected ')', found 'start' [Expr])"
+  },
+  {
+   "route": "answers",
+   "source": "answer 3",
+   "stage": "specification check",
+   "reason": "`len(r) >= 1` is false at your function's own answer `count_duplic([]) == []`",
+   "at": "count_duplic([]) == []",
+   "passes": false,
+   "why": "the specification is false at the Python's answer",
+   "agreement": {
+    "status": "disagrees",
+    "args": [
+     []
+    ],
+    "reference_said": [],
+    "ensures": 0
+   }
+  },
+  {
+   "route": "answers",
+   "source": "answer 5",
+   "stage": "specification check",
+   "reason": "`len(r) == 2; len(r[0]) == len(r[1])`: weak specification",
+   "passes": false,
+   "why": "weak specification",
+   "agreement": {
+    "status": "agrees",
+    "draws": 80,
+    "completeness": 0.75,
+    "mutants_rejected": 240,
+    "mutants_accepted": 80,
+    "weak_witness": {
+     "args": [
+      [
+       0,
+       0,
+       0,
+       2,
+       3,
+       5,
+       6,
+       6,
+       6
+      ]
+     ],
+     "reference_said": [
+      [
+       0,
+       2,
+       3,
+       5,
+       6
+      ],
+      [
+       3,
+       1,
+       1,
+       1,
+       3
+      ]
+     ],
+     "also_accepts": [
+      [
+       3,
+       1,
+       1,
+       1,
+       3
+      ],
+      [
+       0,
+       2,
+       3,
+       5,
+       6
+      ]
+     ]
+    }
+   }
+  },
+  {
+   "route": "specification",
+   "source": "specification 1",
+   "stage": "parse",
+   "reason": "it does not parse (expected 'in', found 'end of input' [Expr])"
+  },
+  {
+   "route": "specification",
+   "source": "specification 2",
+   "stage": "examples",
+   "reason": "`len(r) == 2; len(r[0]) == len(r[1]); r[0][0] == lists[0]; r[1][0] >= 1; forall i in [0, len(r[0])) . forall j in [0, i) . r[0][i] != r[0][j]; forall i in [0, len(r[0])) . forall j in [i + 1, len(r[0])) . r[0][i] != r[0][j]; forall i in [0, len(r[0])) . forall j in [0, i) . r[1][j] >= 1; forall i in [0, len(r[0])) . forall j in [0, i) . r[1][j] >= 1; forall i in [0, len(r[0])) . forall j in [i + 1, len(r[0])) . r[1][j] >= 1` is false at your function's own answer `count_duplic([2,2,3,1,2,6,7,9])==([2, 3, 1, 2, 6, 7, 9], [2, 1, 1, 1, 1, 1, 1])`",
+   "at": "count_duplic([2,2,3,1,2,6,7,9])==([2, 3, 1, 2, 6, 7, 9], [2, 1, 1, 1, 1, 1, 1])",
+   "scores": {
+    "correctness": 0.3333333333333333,
+    "completeness": 1.0,
+    "tests": 3,
+    "mutants": 12
+   }
+  },
+  {
+   "route": "specification",
+   "source": "specification 3",
+   "stage": "examples",
+   "reason": "`len(r) == 2; len(r[0]) == len(r[1]); s == [] ==> r[0] == [] and r[1] == []; s != [] ==> (forall k in [0, len(r[0])) . r[0][k] != r[0][k + 1]); forall k in [0, len(r[1])) . r[1][k] >= 1; forall k in [0, len(r[0])) . r[0][k] == s[0]; forall k in [0, len(r[1])) . r[1][k] == 1` is false at your function's own answer `count_duplic([1,2,2,2,4,4,4,5,5,5,5])==([1, 2, 4, 5], [1, 3, 3, 4])`",
+   "at": "count_duplic([1,2,2,2,4,4,4,5,5,5,5])==([1, 2, 4, 5], [1, 3, 3, 4])",
+   "scores": {
+    "correctness": 0.0,
+    "completeness": 1.0,
+    "tests": 3,
+    "mutants": 12
+   }
+  }
+ ],
+ "refused": [
+  "answer 1: does not parse ('end of input' does not start an expression [Expr])",
+  "answer 2: not well formed (counts[...] := writes counts, not an array parameter named in modifies)",
+  "answer 4: does not parse (expected ')', found 'start' [Expr])",
+  "answer 3: `len(r) >= 1` is false at your function's own answer `count_duplic([]) == []`",
+  "answer 5: `len(r) == 2; len(r[0]) == len(r[1])`: weak specification",
+  "specification 1: it does not parse (expected 'in', found 'end of input' [Expr])",
+  "specification 2: `len(r) == 2; len(r[0]) == len(r[1]); r[0][0] == lists[0]; r[1][0] >= 1; forall i in [0, len(r[0])) . forall j in [0, i) . r[0][i] != r[0][j]; forall i in [0, len(r[0])) . forall j in [i + 1, len(r[0])) . r[0][i] != r[0][j]; forall i in [0, len(r[0])) . forall j in [0, i) . r[1][j] >= 1; forall i in [0, len(r[0])) . forall j in [0, i) . r[1][j] >= 1; forall i in [0, len(r[0])) . forall j in [i + 1, len(r[0])) . r[1][j] >= 1` is false at your function's own answer `count_duplic([2,2,3,1,2,6,7,9])==([2, 3, 1, 2, 6, 7, 9], [2, 1, 1, 1, 1, 1, 1])`",
+  "specification 3: `len(r) == 2; len(r[0]) == len(r[1]); s == [] ==> r[0] == [] and r[1] == []; s != [] ==> (forall k in [0, len(r[0])) . r[0][k] != r[0][k + 1]); forall k in [0, len(r[1])) . r[1][k] >= 1; forall k in [0, len(r[0])) . r[0][k] == s[0]; forall k in [0, len(r[1])) . r[1][k] == 1` is false at your function's own answer `count_duplic([1,2,2,2,4,4,4,5,5,5,5])==([1, 2, 4, 5], [1, 3, 3, 4])`"
+ ],
+ "specifications": [
+  {
+   "source": "specification 2",
+   "verdict": "dropped",
+   "scores": {
+    "correctness": 0.3333333333333333,
+    "completeness": 1.0,
+    "tests": 3,
+    "mutants": 12
+   },
+   "spec": "t 1\ntask f(lists: seq) returns (r: seq<seq>)\n  requires len(lists) > 0\n  ensures len(r) == 2\n  ensures len(r[0]) == len(r[1])\n  ensures r[0][0] == lists[0]\n  ensures r[1][0] >= 1\n  ensures forall i in [0, len(r[0])) . forall j in [0, i) . r[0][i] != r[0][j]\n  ensures forall i in [0, len(r[0])) . forall j in [i + 1, len(r[0])) . r[0][i] != r[0][j]\n  ensures forall i in [0, len(r[0])) . forall j in [0, i) . r[1][j] >= 1\n  ensures forall i in [0, len(r[0])) . forall j in [0, i) . r[1][j] >= 1\n  ensures forall i in [0, len(r[0])) . forall j in [i + 1, len(r[0])) . r[1][j] >= 1\n{\n}\n"
+  },
+  {
+   "source": "specification 3",
+   "verdict": "dropped",
+   "scores": {
+    "correctness": 0.0,
+    "completeness": 1.0,
+    "tests": 3,
+    "mutants": 12
+   },
+   "spec": "t 1\ntask f(s: seq) returns (r: seq<seq>)\n  ensures len(r) == 2\n  ensures len(r[0]) == len(r[1])\n  ensures s == [] ==> r[0] == [] and r[1] == []\n  ensures s != [] ==> (forall k in [0, len(r[0])) . r[0][k] != r[0][k + 1])\n  ensures forall k in [0, len(r[1])) . r[1][k] >= 1\n  ensures forall k in [0, len(r[0])) . r[0][k] == s[0]\n  ensures forall k in [0, len(r[1])) . r[1][k] == 1\n{\n}\n"
+  }
+ ],
+ "candidates": [
+  {
+   "source": "answer 3",
+   "function": {
+    "passes": false,
+    "why": "the specification is false at the Python's answer",
+    "agreement": {
+     "status": "disagrees",
+     "args": [
+      []
+     ],
+     "reference_said": [],
+     "ensures": 0
+    }
+   }
+  },
+  {
+   "source": "answer 5",
+   "function": {
+    "passes": false,
+    "why": "weak specification",
+    "agreement": {
+     "status": "agrees",
+     "draws": 80,
+     "completeness": 0.75,
+     "mutants_rejected": 240,
+     "mutants_accepted": 80,
+     "weak_witness": {
+      "args": [
+       [
+        0,
+        0,
+        0,
+        2,
+        3,
+        5,
+        6,
+        6,
+        6
+       ]
+      ],
+      "reference_said": [
+       [
+        0,
+        2,
+        3,
+        5,
+        6
+       ],
+       [
+        3,
+        1,
+        1,
+        1,
+        3
+       ]
+      ],
+      "also_accepts": [
+       [
+        3,
+        1,
+        1,
+        1,
+        3
+       ],
+       [
+        0,
+        2,
+        3,
+        5,
+        6
+       ]
+      ]
+     }
+    }
+   }
+  }
+ ],
+ "asked": {
+  "answers": 5,
+  "specifications": 3,
+  "bodies": 0
+ },
+ "inputs": {
+  "examples": [
+   "assert count_duplic([1,2,2,2,4,4,4,5,5,5,5])==([1, 2, 4, 5], [1, 3, 3, 4])",
+   "assert count_duplic([2,2,3,1,2,6,7,9])==([2, 3, 1, 2, 6, 7, 9], [2, 1, 1, 1, 1, 1, 1])",
+   "assert count_duplic([2,1,5,6,8,3,4,9,10,11,8,12])==([2, 1, 5, 6, 8, 3, 4, 9, 10, 11, 8, 12], [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1])"
+  ],
+  "taken from the function": false,
+  "kinds": [
+   {
+    "args": [
+     "seq"
+    ],
+    "expected": "seq-of-seq"
+   },
+   {
+    "args": [
+     "seq"
+    ],
+    "expected": "seq-of-seq"
+   },
+   {
+    "args": [
+     "seq"
+    ],
+    "expected": "seq-of-seq"
+   }
+  ],
+  "specification check": {
+   "seed": 1,
+   "draws": 100,
+   "larger draws": 60
+  }
+ },
+ "stopped at": "specification check",
+ "function": {
+  "code": "def count_duplic(lists):\r\n    element = []\r\n    frequency = []\r\n    if not lists:\r\n        return element\r\n    running_count = 1\r\n    for i in range(len(lists)-1):\r\n        if lists[i] == lists[i+1]:\r\n            running_count += 1\r\n        else:\r\n            frequency.append(running_count)\r\n            element.append(lists[i])\r\n            running_count = 1\r\n    frequency.append(running_count)\r\n    element.append(lists[i+1])\r\n    return element,frequency\r\n",
+  "doc": "Write a function to count the frequency of consecutive duplicate elements in a given list of numbers."
+ },
+ "seconds": 183.9
+}
