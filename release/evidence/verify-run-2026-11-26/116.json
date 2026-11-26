@@ -1,0 +1,194 @@
+{
+ "id": 116,
+ "fn": "tuple_to_int",
+ "verified": false,
+ "route": null,
+ "why": "no body the model wrote answered as your function does and was proved",
+ "twin": null,
+ "stages": [
+  {
+   "route": "answers",
+   "source": "answer 1",
+   "stage": "well formed",
+   "reason": "not well formed (call of unknown fun pow10)"
+  },
+  {
+   "route": "answers",
+   "source": "answer 2",
+   "stage": "well formed",
+   "reason": "not well formed (call of unknown fun pow10)"
+  },
+  {
+   "route": "answers",
+   "source": "answer 3",
+   "stage": "parse",
+   "reason": "does not parse (expected 'eof', found 'spec' [Task])"
+  },
+  {
+   "route": "answers",
+   "source": "answer 4",
+   "stage": "well formed",
+   "reason": "not well formed (call of unknown fun pow10)"
+  },
+  {
+   "route": "answers",
+   "source": "answer 5",
+   "stage": "well formed",
+   "reason": "not well formed (call of unknown fun pow10)"
+  },
+  {
+   "route": "specification",
+   "source": "specification 2",
+   "stage": "parse",
+   "reason": "it does not parse (unexpected character '^' [Id])"
+  },
+  {
+   "route": "specification",
+   "source": "specification 3",
+   "stage": "specification check",
+   "reason": "`r == nums[0] * 100 + nums[1] * 10 + nums[2]`: the requires excludes most drawn inputs",
+   "passes": false,
+   "why": "the requires excludes most drawn inputs",
+   "agreement": {
+    "status": "agrees",
+    "draws": 12,
+    "outside_requires": 69,
+    "completeness": 1.0,
+    "mutants_rejected": 168,
+    "mutants_accepted": 0
+   }
+  },
+  {
+   "route": "specification",
+   "source": "specification 1, body 1",
+   "stage": "well formed",
+   "reason": "not well formed"
+  },
+  {
+   "route": "specification",
+   "source": "specification 1, body 2",
+   "stage": "well formed",
+   "reason": "not well formed"
+  },
+  {
+   "route": "specification",
+   "source": "specification 1, body 3",
+   "stage": "well formed",
+   "reason": "not well formed"
+  }
+ ],
+ "refused": [
+  "answer 1: not well formed (call of unknown fun pow10)",
+  "answer 2: not well formed (call of unknown fun pow10)",
+  "answer 3: does not parse (expected 'eof', found 'spec' [Task])",
+  "answer 4: not well formed (call of unknown fun pow10)",
+  "answer 5: not well formed (call of unknown fun pow10)",
+  "specification 2: it does not parse (unexpected character '^' [Id])",
+  "specification 3: `r == nums[0] * 100 + nums[1] * 10 + nums[2]`: the requires excludes most drawn inputs",
+  "specification 1, body 1: not well formed",
+  "specification 1, body 2: not well formed",
+  "specification 1, body 3: not well formed"
+ ],
+ "specifications": [
+  {
+   "source": "specification 1",
+   "verdict": "kept",
+   "scores": {
+    "correctness": 1.0,
+    "completeness": 1.0,
+    "tests": 3,
+    "mutants": 42
+   },
+   "spec": "t 1\ntask f(nums: seq) returns (r: int)\n  requires forall i in [0, len(nums)) . nums[i] >= 0 and nums[i] <= 9\n  ensures r == digits_to_int(nums)\nspec fun digits_to_int(d: seq): int\n  decreases len(d)\n= if len(d) == 0 then 0 else d[0] * pow10(len(d) - 1) + digits_to_int(d[1..len(d)])\nspec fun pow10(n: int): int\n  decreases n\n= if n == 0 then 1 else 10 * pow10(n - 1)\n{\n}\n",
+   "function": {
+    "passes": true,
+    "why": "passes",
+    "agreement": {
+     "status": "agrees",
+     "draws": 66,
+     "outside_requires": 15,
+     "completeness": 1.0,
+     "mutants_rejected": 885,
+     "mutants_accepted": 0
+    },
+    "larger": {
+     "status": "agrees",
+     "draws": 37,
+     "outside_requires": 10,
+     "completeness": 1.0,
+     "mutants_rejected": 518,
+     "mutants_accepted": 0,
+     "requires_caps_size": false
+    }
+   }
+  },
+  {
+   "source": "specification 3",
+   "verdict": "kept",
+   "scores": {
+    "correctness": 1.0,
+    "completeness": 1.0,
+    "tests": 3,
+    "mutants": 42
+   },
+   "spec": "t 1\ntask f(nums: seq) returns (r: int)\n  requires len(nums) == 3\n  requires forall i in [0, len(nums)) . nums[i] >= 0 and nums[i] <= 9\n  ensures r == nums[0] * 100 + nums[1] * 10 + nums[2]\n{\n}\n",
+   "function": {
+    "passes": false,
+    "why": "the requires excludes most drawn inputs",
+    "agreement": {
+     "status": "agrees",
+     "draws": 12,
+     "outside_requires": 69,
+     "completeness": 1.0,
+     "mutants_rejected": 168,
+     "mutants_accepted": 0
+    }
+   }
+  }
+ ],
+ "candidates": [],
+ "asked": {
+  "answers": 5,
+  "specifications": 3,
+  "bodies": 3
+ },
+ "inputs": {
+  "examples": [
+   "assert tuple_to_int((1,2,3))==123",
+   "assert tuple_to_int((4,5,6))==456",
+   "assert tuple_to_int((5,6,7))==567"
+  ],
+  "taken from the function": false,
+  "kinds": [
+   {
+    "args": [
+     "seq"
+    ],
+    "expected": "int"
+   },
+   {
+    "args": [
+     "seq"
+    ],
+    "expected": "int"
+   },
+   {
+    "args": [
+     "seq"
+    ],
+    "expected": "int"
+   }
+  ],
+  "specification check": {
+   "seed": 1,
+   "draws": 100,
+   "larger draws": 60
+  }
+ },
+ "stopped at": "specification check",
+ "function": {
+  "code": "def tuple_to_int(nums):\r\n    result = int(''.join(map(str,nums)))\r\n    return result",
+  "doc": "Write a function to convert a given tuple of positive integers into an integer."
+ },
+ "seconds": 56.8
+}

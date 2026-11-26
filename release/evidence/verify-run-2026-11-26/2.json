@@ -1,0 +1,255 @@
+{
+ "id": 2,
+ "fn": "similar_elements",
+ "verified": false,
+ "route": null,
+ "why": "no body the model wrote answered as your function does and was proved",
+ "twin": null,
+ "stages": [
+  {
+   "route": "answers",
+   "source": "answer 1",
+   "stage": "examples",
+   "reason": "fails a test (`assert similar_elements((11, 12, 14, 13),(17, 15, 14, 13)) == (13, 14)`: it returns [14, 13])"
+  },
+  {
+   "route": "answers",
+   "source": "answer 2",
+   "stage": "examples",
+   "reason": "fails a test (`assert similar_elements((11, 12, 14, 13),(17, 15, 14, 13)) == (13, 14)`: it returns [14, 13])"
+  },
+  {
+   "route": "answers",
+   "source": "answer 3",
+   "stage": "parse",
+   "reason": "does not parse (expected 'in', found '.' [Expr])"
+  },
+  {
+   "route": "answers",
+   "source": "answer 4",
+   "stage": "examples",
+   "reason": "fails a test (`assert similar_elements((11, 12, 14, 13),(17, 15, 14, 13)) == (13, 14)`: it returns [14, 13])"
+  },
+  {
+   "route": "answers",
+   "source": "answer 5",
+   "stage": "parse",
+   "reason": "does not parse (expected 'decreases', found '{' [Stmt])"
+  },
+  {
+   "route": "specification",
+   "source": "specification 2",
+   "stage": "parse",
+   "reason": "it does not parse (expected 'in', found '.' [Expr])"
+  },
+  {
+   "route": "specification",
+   "source": "specification 3",
+   "stage": "examples",
+   "reason": "`forall x in [0, len(r)) . (forall y in [0, len(t1)) . t1[y] == r[x]) and (forall y in [0, len(t2)) . t2[y] == r[x]); forall x in [0, len(t1)) . (forall y in [0, len(t2)) . t2[y] == t1[x]) ==> (forall z in [0, len(r)) . r[z] == t1[x]); len(r) <= len(t1); len(r) <= len(t2)` is false at your function's own answer `similar_elements((3, 4, 5, 6),(5, 7, 4, 10)) == (4, 5)`",
+   "at": "similar_elements((3, 4, 5, 6),(5, 7, 4, 10)) == (4, 5)",
+   "scores": {
+    "correctness": 0.0,
+    "completeness": 1.0,
+    "tests": 3,
+    "mutants": 21
+   }
+  },
+  {
+   "route": "specification",
+   "source": "specification 1, body 1",
+   "stage": "examples",
+   "reason": "fails a test"
+  },
+  {
+   "route": "specification",
+   "source": "specification 1, body 2",
+   "stage": "examples",
+   "reason": "fails a test"
+  },
+  {
+   "route": "specification",
+   "source": "specification 1, body 3",
+   "stage": "examples",
+   "reason": "fails a test"
+  }
+ ],
+ "refused": [
+  "answer 1: fails a test (`assert similar_elements((11, 12, 14, 13),(17, 15, 14, 13)) == (13, 14)`: it returns [14, 13])",
+  "answer 2: fails a test (`assert similar_elements((11, 12, 14, 13),(17, 15, 14, 13)) == (13, 14)`: it returns [14, 13])",
+  "answer 3: does not parse (expected 'in', found '.' [Expr])",
+  "answer 4: fails a test (`assert similar_elements((11, 12, 14, 13),(17, 15, 14, 13)) == (13, 14)`: it returns [14, 13])",
+  "answer 5: does not parse (expected 'decreases', found '{' [Stmt])",
+  "specification 2: it does not parse (expected 'in', found '.' [Expr])",
+  "specification 3: `forall x in [0, len(r)) . (forall y in [0, len(t1)) . t1[y] == r[x]) and (forall y in [0, len(t2)) . t2[y] == r[x]); forall x in [0, len(t1)) . (forall y in [0, len(t2)) . t2[y] == t1[x]) ==> (forall z in [0, len(r)) . r[z] == t1[x]); len(r) <= len(t1); len(r) <= len(t2)` is false at your function's own answer `similar_elements((3, 4, 5, 6),(5, 7, 4, 10)) == (4, 5)`",
+  "specification 1, body 1: fails a test",
+  "specification 1, body 2: fails a test",
+  "specification 1, body 3: fails a test"
+ ],
+ "specifications": [
+  {
+   "source": "specification 1",
+   "verdict": "kept",
+   "scores": {
+    "correctness": 1.0,
+    "completeness": 0.8571428571428571,
+    "tests": 3,
+    "mutants": 21
+   },
+   "spec": "t 1\ntask f(a: seq, b: seq) returns (r: seq)\n  ensures forall i in [0, len(r)) . (exists j in [0, len(a)) . a[j] == r[i]) and (exists k in [0, len(b)) . b[k] == r[i])\n  ensures forall i in [0, len(a)) . (exists j in [0, len(b)) . b[j] == a[i]) ==> (exists k in [0, len(r)) . r[k] == a[i])\n  ensures forall i in [0, len(r)) . forall j in [0, len(r)) . i != j ==> r[i] != r[j]\n{\n}\n",
+   "function": {
+    "passes": true,
+    "why": "passes",
+    "agreement": {
+     "status": "agrees",
+     "draws": 100,
+     "completeness": 0.944,
+     "mutants_rejected": 255,
+     "mutants_accepted": 15,
+     "weak_witness": {
+      "args": [
+       [
+        2,
+        2,
+        5,
+        8
+       ],
+       [
+        9,
+        9,
+        12,
+        8,
+        5,
+        3
+       ]
+      ],
+      "reference_said": [
+       8,
+       5
+      ],
+      "also_accepts": [
+       5,
+       8
+      ]
+     }
+    },
+    "larger": {
+     "status": "agrees",
+     "draws": 60,
+     "completeness": 0.804,
+     "mutants_rejected": 291,
+     "mutants_accepted": 71,
+     "weak_witness": {
+      "args": [
+       [
+        -1,
+        0,
+        0,
+        1,
+        1,
+        1,
+        2,
+        3,
+        3,
+        3,
+        4,
+        4,
+        4,
+        4,
+        5,
+        5,
+        5,
+        6
+       ],
+       [
+        1,
+        5,
+        6,
+        2,
+        2,
+        6,
+        1,
+        6,
+        3
+       ]
+      ],
+      "reference_said": [
+       1,
+       2,
+       3,
+       5,
+       6
+      ],
+      "also_accepts": [
+       6,
+       5,
+       3,
+       2,
+       1
+      ]
+     },
+     "requires_caps_size": false
+    }
+   }
+  },
+  {
+   "source": "specification 3",
+   "verdict": "dropped",
+   "scores": {
+    "correctness": 0.0,
+    "completeness": 1.0,
+    "tests": 3,
+    "mutants": 21
+   },
+   "spec": "t 1\ntask f(t1: seq, t2: seq) returns (r: seq)\n  ensures forall x in [0, len(r)) . (forall y in [0, len(t1)) . t1[y] == r[x]) and (forall y in [0, len(t2)) . t2[y] == r[x])\n  ensures forall x in [0, len(t1)) . (forall y in [0, len(t2)) . t2[y] == t1[x]) ==> (forall z in [0, len(r)) . r[z] == t1[x])\n  ensures len(r) <= len(t1)\n  ensures len(r) <= len(t2)\n{\n}\n"
+  }
+ ],
+ "candidates": [],
+ "asked": {
+  "answers": 5,
+  "specifications": 3,
+  "bodies": 3
+ },
+ "inputs": {
+  "examples": [
+   "assert similar_elements((3, 4, 5, 6),(5, 7, 4, 10)) == (4, 5)",
+   "assert similar_elements((1, 2, 3, 4),(5, 4, 3, 7)) == (3, 4)",
+   "assert similar_elements((11, 12, 14, 13),(17, 15, 14, 13)) == (13, 14)"
+  ],
+  "taken from the function": false,
+  "kinds": [
+   {
+    "args": [
+     "seq",
+     "seq"
+    ],
+    "expected": "seq"
+   },
+   {
+    "args": [
+     "seq",
+     "seq"
+    ],
+    "expected": "seq"
+   },
+   {
+    "args": [
+     "seq",
+     "seq"
+    ],
+    "expected": "seq"
+   }
+  ],
+  "specification check": {
+   "seed": 1,
+   "draws": 100,
+   "larger draws": 60
+  }
+ },
+ "stopped at": "examples",
+ "function": {
+  "code": "def similar_elements(test_tup1, test_tup2):\r\n  res = tuple(set(test_tup1) & set(test_tup2))\r\n  return (res) ",
+  "doc": "Write a function to find the similar elements from the given two tuple lists."
+ },
+ "seconds": 116.7
+}

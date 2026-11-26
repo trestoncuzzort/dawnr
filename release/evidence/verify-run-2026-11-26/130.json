@@ -1,0 +1,199 @@
+{
+ "id": 130,
+ "fn": "max_occurrences",
+ "verified": false,
+ "route": null,
+ "why": "no specification the model wrote holds at your function's answers and pins them down. Every one it wrote from your docstring is false at an answer your function gives (`max_occurrences([10,20,20,30,40,90,80,50,30,20,50,10])==(20, 3)`): either the model misread the docstring, or the function does not do what it says",
+ "twin": null,
+ "stages": [
+  {
+   "route": "answers",
+   "source": "answer 1",
+   "stage": "parse",
+   "reason": "does not parse (expected 'eof', found 'spec' [Task])"
+  },
+  {
+   "route": "answers",
+   "source": "answer 2",
+   "stage": "well formed",
+   "reason": "not well formed (len of a non-seq, non-map)"
+  },
+  {
+   "route": "answers",
+   "source": "answer 3",
+   "stage": "well formed",
+   "reason": "not well formed (call of unknown fun max_occurrence_value)"
+  },
+  {
+   "route": "answers",
+   "source": "answer 4",
+   "stage": "parse",
+   "reason": "does not parse (expected '.', found '[' [Expr])"
+  },
+  {
+   "route": "answers",
+   "source": "answer 5",
+   "stage": "examples",
+   "reason": "fails a test (`assert max_occurrences([2,3,8,4,7,9,8,2,6,5,1,6,1,2,3,2,4,6,9,1,2])==(2, 5)`: it returns [2, 4])"
+  },
+  {
+   "route": "specification",
+   "source": "specification 1",
+   "stage": "parse",
+   "reason": "it does not parse (expected '{', found 'end of input' [Stmt])"
+  },
+  {
+   "route": "specification",
+   "source": "specification 2",
+   "stage": "examples",
+   "reason": "`len(r) == 2; r[0] >= 0 and r[0] < len(nums); r[1] > 0; forall i in [0, len(nums)) . nums[i] == r[0] ==> r[1] == count(nums, r[0]); forall i in [0, len(nums)) . nums[i] != r[0] ==> count(nums, nums[i]) <= r[1]` is false at your function's own answer `max_occurrences([10,20,20,30,40,90,80,50,30,20,50,10])==(20, 3)`",
+   "at": "max_occurrences([10,20,20,30,40,90,80,50,30,20,50,10])==(20, 3)",
+   "scores": {
+    "correctness": 0.6666666666666666,
+    "completeness": 0.7142857142857143,
+    "tests": 3,
+    "mutants": 21
+   }
+  },
+  {
+   "route": "specification",
+   "source": "specification 3",
+   "stage": "specification check",
+   "reason": "`len(r) == 2; r[0] >= 0 and r[1] >= 1; forall i in [0, len(nums)) . nums[i] == r[0] or nums[i] != r[0]; forall v in [0, 100) . count_in(nums, v) <= r[1]; count_in(nums, r[0]) == r[1]` is false at your function's own answer `max_occurrences([4, 1, 3, 6, -1, 11, 9, 5, 8, -1, -1, 10]) == [-1, 3]`",
+   "at": "max_occurrences([4, 1, 3, 6, -1, 11, 9, 5, 8, -1, -1, 10]) == [-1, 3]",
+   "passes": false,
+   "why": "the specification is false at the Python's answer",
+   "agreement": {
+    "status": "disagrees",
+    "args": [
+     [
+      4,
+      1,
+      3,
+      6,
+      -1,
+      11,
+      9,
+      5,
+      8,
+      -1,
+      -1,
+      10
+     ]
+    ],
+    "reference_said": [
+     -1,
+     3
+    ],
+    "ensures": 1
+   }
+  }
+ ],
+ "refused": [
+  "answer 1: does not parse (expected 'eof', found 'spec' [Task])",
+  "answer 2: not well formed (len of a non-seq, non-map)",
+  "answer 3: not well formed (call of unknown fun max_occurrence_value)",
+  "answer 4: does not parse (expected '.', found '[' [Expr])",
+  "answer 5: fails a test (`assert max_occurrences([2,3,8,4,7,9,8,2,6,5,1,6,1,2,3,2,4,6,9,1,2])==(2, 5)`: it returns [2, 4])",
+  "specification 1: it does not parse (expected '{', found 'end of input' [Stmt])",
+  "specification 2: `len(r) == 2; r[0] >= 0 and r[0] < len(nums); r[1] > 0; forall i in [0, len(nums)) . nums[i] == r[0] ==> r[1] == count(nums, r[0]); forall i in [0, len(nums)) . nums[i] != r[0] ==> count(nums, nums[i]) <= r[1]` is false at your function's own answer `max_occurrences([10,20,20,30,40,90,80,50,30,20,50,10])==(20, 3)`",
+  "specification 3: `len(r) == 2; r[0] >= 0 and r[1] >= 1; forall i in [0, len(nums)) . nums[i] == r[0] or nums[i] != r[0]; forall v in [0, 100) . count_in(nums, v) <= r[1]; count_in(nums, r[0]) == r[1]` is false at your function's own answer `max_occurrences([4, 1, 3, 6, -1, 11, 9, 5, 8, -1, -1, 10]) == [-1, 3]`"
+ ],
+ "specifications": [
+  {
+   "source": "specification 2",
+   "verdict": "dropped",
+   "scores": {
+    "correctness": 0.6666666666666666,
+    "completeness": 0.7142857142857143,
+    "tests": 3,
+    "mutants": 21
+   },
+   "spec": "t 1\ntask f(nums: seq) returns (r: seq)\n  requires len(nums) > 0\n  ensures len(r) == 2\n  ensures r[0] >= 0 and r[0] < len(nums)\n  ensures r[1] > 0\n  ensures forall i in [0, len(nums)) . nums[i] == r[0] ==> r[1] == count(nums, r[0])\n  ensures forall i in [0, len(nums)) . nums[i] != r[0] ==> count(nums, nums[i]) <= r[1]\nspec fun count(s: seq, x: int): int\n  decreases len(s)\n= if len(s) == 0 then 0 else if s[0] == x then 1 + count(s[1..len(s)], x) else count(s[1..len(s)], x)\n{\n}\n"
+  },
+  {
+   "source": "specification 3",
+   "verdict": "kept",
+   "scores": {
+    "correctness": 1.0,
+    "completeness": 0.9047619047619048,
+    "tests": 3,
+    "mutants": 21
+   },
+   "spec": "t 1\ntask f(nums: seq) returns (r: seq)\n  requires len(nums) >= 1\n  ensures len(r) == 2\n  ensures r[0] >= 0 and r[1] >= 1\n  ensures forall i in [0, len(nums)) . nums[i] == r[0] or nums[i] != r[0]\n  ensures forall v in [0, 100) . count_in(nums, v) <= r[1]\n  ensures count_in(nums, r[0]) == r[1]\nspec fun count_in(s: seq, v: int): int\n  decreases len(s)\n= if len(s) == 0 then 0 else if s[0] == v then 1 + count_in(s[1..len(s)], v) else count_in(s[1..len(s)], v)\n{\n}\n",
+   "function": {
+    "passes": false,
+    "why": "the specification is false at the Python's answer",
+    "agreement": {
+     "status": "disagrees",
+     "args": [
+      [
+       4,
+       1,
+       3,
+       6,
+       -1,
+       11,
+       9,
+       5,
+       8,
+       -1,
+       -1,
+       10
+      ]
+     ],
+     "reference_said": [
+      -1,
+      3
+     ],
+     "ensures": 1
+    }
+   }
+  }
+ ],
+ "candidates": [],
+ "asked": {
+  "answers": 5,
+  "specifications": 3,
+  "bodies": 0
+ },
+ "inputs": {
+  "examples": [
+   "assert max_occurrences([2,3,8,4,7,9,8,2,6,5,1,6,1,2,3,2,4,6,9,1,2])==(2, 5)",
+   "assert max_occurrences([2,3,8,4,7,9,8,7,9,15,14,10,12,13,16,16,18])==(8, 2)",
+   "assert max_occurrences([10,20,20,30,40,90,80,50,30,20,50,10])==(20, 3)"
+  ],
+  "taken from the function": false,
+  "kinds": [
+   {
+    "args": [
+     "seq"
+    ],
+    "expected": "seq"
+   },
+   {
+    "args": [
+     "seq"
+    ],
+    "expected": "seq"
+   },
+   {
+    "args": [
+     "seq"
+    ],
+    "expected": "seq"
+   }
+  ],
+  "specification check": {
+   "seed": 1,
+   "draws": 100,
+   "larger draws": 60
+  }
+ },
+ "stopped at": "specification check",
+ "function": {
+  "code": "from collections import defaultdict\r\ndef max_occurrences(nums):\r\n    dict = defaultdict(int)\r\n    for i in nums:\r\n        dict[i] += 1\r\n    result = max(dict.items(), key=lambda x: x[1]) \r\n    return result",
+  "doc": "Write a function to find the item with maximum frequency in a given list."
+ },
+ "seconds": 130.2
+}

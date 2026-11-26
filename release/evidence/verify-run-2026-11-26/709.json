@@ -1,0 +1,146 @@
+{
+ "id": 709,
+ "fn": "get_unique",
+ "verified": false,
+ "route": null,
+ "why": "no specification the model wrote holds at your function's answers and pins them down",
+ "twin": null,
+ "stages": [
+  {
+   "route": "answers",
+   "source": "answer 1",
+   "stage": "well formed",
+   "reason": "not well formed (+ wants all ints or all reals (not ['seq', {'seq': 'seq'}]); write real(x) to convert)"
+  },
+  {
+   "route": "answers",
+   "source": "answer 2",
+   "stage": "parse",
+   "reason": "does not parse (expected 'eof', found 'spec' [Task])"
+  },
+  {
+   "route": "answers",
+   "source": "answer 3",
+   "stage": "well formed",
+   "reason": "not well formed (assign to j, not a return or local)"
+  },
+  {
+   "route": "answers",
+   "source": "answer 4",
+   "stage": "well formed",
+   "reason": "not well formed (field 'length' of a value that is not a datatype: 'seq')"
+  },
+  {
+   "route": "answers",
+   "source": "answer 5",
+   "stage": "well formed",
+   "reason": "not well formed (counts[...] := writes counts, not an array parameter named in modifies)"
+  },
+  {
+   "route": "specification",
+   "source": "specification 1",
+   "stage": "parse",
+   "reason": "it does not parse (expected ')', found 'end of input' [Expr])"
+  },
+  {
+   "route": "specification",
+   "source": "specification 2",
+   "stage": "parse",
+   "reason": "it does not parse ('var' does not start an expression [Expr])"
+  },
+  {
+   "route": "specification",
+   "source": "specification 3",
+   "stage": "specification check",
+   "reason": "`len(r) > 0; r[0] == 123; r[len(r) - 1] == 125; r[1..len(r) - 1].split([44, 32]) == [] or true`: weak specification",
+   "passes": false,
+   "why": "weak specification",
+   "agreement": {
+    "status": "agrees",
+    "draws": 55,
+    "completeness": 1.0,
+    "mutants_rejected": 412,
+    "mutants_accepted": 0
+   }
+  }
+ ],
+ "refused": [
+  "answer 1: not well formed (+ wants all ints or all reals (not ['seq', {'seq': 'seq'}]); write real(x) to convert)",
+  "answer 2: does not parse (expected 'eof', found 'spec' [Task])",
+  "answer 3: not well formed (assign to j, not a return or local)",
+  "answer 4: not well formed (field 'length' of a value that is not a datatype: 'seq')",
+  "answer 5: not well formed (counts[...] := writes counts, not an array parameter named in modifies)",
+  "specification 1: it does not parse (expected ')', found 'end of input' [Expr])",
+  "specification 2: it does not parse ('var' does not start an expression [Expr])",
+  "specification 3: `len(r) > 0; r[0] == 123; r[len(r) - 1] == 125; r[1..len(r) - 1].split([44, 32]) == [] or true`: weak specification"
+ ],
+ "specifications": [
+  {
+   "source": "specification 3",
+   "verdict": "kept",
+   "scores": {
+    "correctness": 1.0,
+    "completeness": 1.0,
+    "tests": 3,
+    "mutants": 24
+   },
+   "spec": "t 1\ntask f(tuples: seq<seq>) returns (r: seq)\n  ensures len(r) > 0\n  ensures r[0] == 123\n  ensures r[len(r) - 1] == 125\n  ensures r[1..len(r) - 1].split([44, 32]) == [] or true\n{\n}\n",
+   "function": {
+    "passes": false,
+    "why": "weak specification",
+    "agreement": {
+     "status": "agrees",
+     "draws": 55,
+     "completeness": 1.0,
+     "mutants_rejected": 412,
+     "mutants_accepted": 0
+    }
+   }
+  }
+ ],
+ "candidates": [],
+ "asked": {
+  "answers": 5,
+  "specifications": 3,
+  "bodies": 0
+ },
+ "inputs": {
+  "examples": [
+   "assert get_unique([(3, 4), (1, 2), (2, 4), (8, 2), (7, 2), (8, 1), (9, 1), (8, 4), (10, 4)] ) == '{4: 4, 2: 3, 1: 2}'",
+   "assert get_unique([(4, 5), (2, 3), (3, 5), (9, 3), (8, 3), (9, 2), (10, 2), (9, 5), (11, 5)] ) == '{5: 4, 3: 3, 2: 2}'",
+   "assert get_unique([(6, 5), (3, 4), (2, 6), (11, 1), (8, 22), (8, 11), (4, 3), (14, 3), (11, 6)] ) == '{5: 1, 4: 1, 6: 2, 1: 1, 22: 1, 11: 1, 3: 2}'"
+  ],
+  "taken from the function": false,
+  "kinds": [
+   {
+    "args": [
+     "seq-of-seq"
+    ],
+    "expected": "seq"
+   },
+   {
+    "args": [
+     "seq-of-seq"
+    ],
+    "expected": "seq"
+   },
+   {
+    "args": [
+     "seq-of-seq"
+    ],
+    "expected": "seq"
+   }
+  ],
+  "specification check": {
+   "seed": 1,
+   "draws": 100,
+   "larger draws": 60
+  }
+ },
+ "stopped at": "specification check",
+ "function": {
+  "code": "from collections import defaultdict \r\ndef get_unique(test_list):\r\n  res = defaultdict(list)\r\n  for sub in test_list:\r\n    res[sub[1]].append(sub[0])\r\n  res = dict(res)\r\n  res_dict = dict()\r\n  for key in res:\r\n    res_dict[key] = len(list(set(res[key])))\r\n  return (str(res_dict)) ",
+  "doc": "Write a function to count unique keys for each value present in the tuple."
+ },
+ "seconds": 142.9
+}

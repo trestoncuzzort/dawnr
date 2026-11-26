@@ -1,0 +1,114 @@
+{
+ "id": 859,
+ "fn": "sub_lists",
+ "verified": false,
+ "route": null,
+ "why": "no specification the model wrote holds at your function's answers and pins them down",
+ "twin": null,
+ "stages": [
+  {
+   "route": "answers",
+   "source": "answer 1",
+   "stage": "parse",
+   "reason": "does not parse (comparisons do not chain; parenthesise [What the notation refuses])"
+  },
+  {
+   "route": "answers",
+   "source": "answer 2",
+   "stage": "parse",
+   "reason": "does not parse ('*' does not start an expression [Expr])"
+  },
+  {
+   "route": "answers",
+   "source": "answer 3",
+   "stage": "parse",
+   "reason": "does not parse (expected 'eof', found '}' [Task])"
+  },
+  {
+   "route": "answers",
+   "source": "answer 4",
+   "stage": "parse",
+   "reason": "does not parse (comparisons do not chain; parenthesise [What the notation refuses])"
+  },
+  {
+   "route": "answers",
+   "source": "answer 5",
+   "stage": "parse",
+   "reason": "does not parse ('*' does not start an expression [Expr])"
+  },
+  {
+   "route": "specification",
+   "source": "specification 1",
+   "stage": "parse",
+   "reason": "it does not parse ('*' does not start an expression [Expr])"
+  },
+  {
+   "route": "specification",
+   "source": "specification 2",
+   "stage": "parse",
+   "reason": "it does not parse (unexpected character '^' [Id])"
+  },
+  {
+   "route": "specification",
+   "source": "specification 3",
+   "stage": "parse",
+   "reason": "it does not parse ('*' does not start an expression [Expr])"
+  }
+ ],
+ "refused": [
+  "answer 1: does not parse (comparisons do not chain; parenthesise [What the notation refuses])",
+  "answer 2: does not parse ('*' does not start an expression [Expr])",
+  "answer 3: does not parse (expected 'eof', found '}' [Task])",
+  "answer 4: does not parse (comparisons do not chain; parenthesise [What the notation refuses])",
+  "answer 5: does not parse ('*' does not start an expression [Expr])",
+  "specification 1: it does not parse ('*' does not start an expression [Expr])",
+  "specification 2: it does not parse (unexpected character '^' [Id])",
+  "specification 3: it does not parse ('*' does not start an expression [Expr])"
+ ],
+ "specifications": [],
+ "candidates": [],
+ "asked": {
+  "answers": 5,
+  "specifications": 3,
+  "bodies": 0
+ },
+ "inputs": {
+  "examples": [
+   "assert sub_lists([10, 20, 30, 40])==[[], [10], [20], [30], [40], [10, 20], [10, 30], [10, 40], [20, 30], [20, 40], [30, 40], [10, 20, 30], [10, 20, 40], [10, 30, 40], [20, 30, 40], [10, 20, 30, 40]]",
+   "assert sub_lists(['X', 'Y', 'Z'])==[[], ['X'], ['Y'], ['Z'], ['X', 'Y'], ['X', 'Z'], ['Y', 'Z'], ['X', 'Y', 'Z']]",
+   "assert sub_lists([1,2,3])==[[],[1],[2],[3],[1,2],[1,3],[2,3],[1,2,3]]"
+  ],
+  "taken from the function": false,
+  "kinds": [
+   {
+    "args": [
+     "seq"
+    ],
+    "expected": "seq-of-seq"
+   },
+   {
+    "args": [
+     "seq"
+    ],
+    "expected": "seq-of-seq"
+   },
+   {
+    "args": [
+     "seq"
+    ],
+    "expected": "seq-of-seq"
+   }
+  ],
+  "specification check": {
+   "seed": 1,
+   "draws": 100,
+   "larger draws": 60
+  }
+ },
+ "stopped at": "parse",
+ "function": {
+  "code": "from itertools import combinations\r\ndef sub_lists(my_list):\r\n\tsubs = []\r\n\tfor i in range(0, len(my_list)+1):\r\n\t  temp = [list(x) for x in combinations(my_list, i)]\r\n\t  if len(temp)>0:\r\n\t    subs.extend(temp)\r\n\treturn subs",
+  "doc": "Write a function to generate all sublists of a given list."
+ },
+ "seconds": 67.1
+}

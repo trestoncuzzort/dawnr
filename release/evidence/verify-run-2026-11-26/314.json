@@ -1,0 +1,145 @@
+{
+ "id": 314,
+ "fn": "max_sum_rectangular_grid",
+ "verified": false,
+ "route": null,
+ "why": "no specification the model wrote holds at your function's answers and pins them down",
+ "twin": null,
+ "stages": [
+  {
+   "route": "answers",
+   "source": "answer 1",
+   "stage": "parse",
+   "reason": "does not parse (expected 'eof', found 'spec' [Task])"
+  },
+  {
+   "route": "answers",
+   "source": "answer 2",
+   "stage": "parse",
+   "reason": "does not parse (expected 'eof', found 'spec' [Task])"
+  },
+  {
+   "route": "answers",
+   "source": "answer 3",
+   "stage": "parse",
+   "reason": "does not parse (expected '{', found 'prev' [Stmt])"
+  },
+  {
+   "route": "answers",
+   "source": "answer 4",
+   "stage": "parse",
+   "reason": "does not parse (expected '{', found 'if' [Stmt])"
+  },
+  {
+   "route": "answers",
+   "source": "answer 5",
+   "stage": "parse",
+   "reason": "does not parse (expected 'eof', found 'spec' [Task])"
+  },
+  {
+   "route": "specification",
+   "source": "specification 2",
+   "stage": "parse",
+   "reason": "it does not parse (expected '{', found 'incl' [Stmt])"
+  },
+  {
+   "route": "specification",
+   "source": "specification 3",
+   "stage": "parse",
+   "reason": "it does not parse (expected 'task', found 'spec' [Task])"
+  },
+  {
+   "route": "specification",
+   "source": "specification 1",
+   "stage": "specification check",
+   "reason": "`r == max_sum(grid, n)`: no valid draws",
+   "passes": false,
+   "why": "no valid draws",
+   "agreement": {
+    "status": "no valid draws",
+    "draws": 0,
+    "outside_requires": 7
+   }
+  }
+ ],
+ "refused": [
+  "answer 1: does not parse (expected 'eof', found 'spec' [Task])",
+  "answer 2: does not parse (expected 'eof', found 'spec' [Task])",
+  "answer 3: does not parse (expected '{', found 'prev' [Stmt])",
+  "answer 4: does not parse (expected '{', found 'if' [Stmt])",
+  "answer 5: does not parse (expected 'eof', found 'spec' [Task])",
+  "specification 2: it does not parse (expected '{', found 'incl' [Stmt])",
+  "specification 3: it does not parse (expected 'task', found 'spec' [Task])",
+  "specification 1: `r == max_sum(grid, n)`: no valid draws"
+ ],
+ "specifications": [
+  {
+   "source": "specification 1",
+   "verdict": "kept",
+   "scores": {
+    "correctness": 1.0,
+    "completeness": 1.0,
+    "tests": 3,
+    "mutants": 41
+   },
+   "spec": "t 1\ngate loops\ntask f(grid: seq<seq>, n: int) returns (r: int)\n  requires n >= 0\n  requires len(grid) == 2\n  requires len(grid[0]) == n\n  requires len(grid[1]) == n\n  ensures r == max_sum(grid, n)\nspec fun max_sum(grid: seq<seq>, n: int): int\n  decreases n\n= if n == 0 then 0 else if n == 1 then max(grid[0][0], grid[1][0]) else max(max_sum(grid, n - 1), max_sum(grid, n - 2) + max(grid[0][n - 1], grid[1][n - 1]))\n{\n}\n",
+   "function": {
+    "passes": false,
+    "why": "no valid draws",
+    "agreement": {
+     "status": "no valid draws",
+     "draws": 0,
+     "outside_requires": 7
+    }
+   }
+  }
+ ],
+ "candidates": [],
+ "asked": {
+  "answers": 5,
+  "specifications": 3,
+  "bodies": 0
+ },
+ "inputs": {
+  "examples": [
+   "assert max_sum_rectangular_grid([ [1, 4, 5], [2, 0, 0 ] ], 3) == 7",
+   "assert max_sum_rectangular_grid([ [ 1, 2, 3, 4, 5], [ 6, 7, 8, 9, 10] ], 5) == 24",
+   "assert max_sum_rectangular_grid([ [7, 9, 11, 15, 19], [21, 25, 28, 31, 32] ], 5) == 81"
+  ],
+  "taken from the function": false,
+  "kinds": [
+   {
+    "args": [
+     "seq-of-seq",
+     "int"
+    ],
+    "expected": "int"
+   },
+   {
+    "args": [
+     "seq-of-seq",
+     "int"
+    ],
+    "expected": "int"
+   },
+   {
+    "args": [
+     "seq-of-seq",
+     "int"
+    ],
+    "expected": "int"
+   }
+  ],
+  "specification check": {
+   "seed": 1,
+   "draws": 100,
+   "larger draws": 60
+  }
+ },
+ "stopped at": "specification check",
+ "function": {
+  "code": "def max_sum_rectangular_grid(grid, n) : \r\n\tincl = max(grid[0][0], grid[1][0]) \r\n\texcl = 0\r\n\tfor i in range(1, n) : \r\n\t\texcl_new = max(excl, incl) \r\n\t\tincl = excl + max(grid[0][i], grid[1][i]) \r\n\t\texcl = excl_new \r\n\treturn max(excl, incl)",
+  "doc": "Write a function to find out the maximum sum such that no two chosen numbers are adjacent for the given rectangular grid of dimension 2 x n."
+ },
+ "seconds": 63.3
+}

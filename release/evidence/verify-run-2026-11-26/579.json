@@ -1,0 +1,136 @@
+{
+ "id": 579,
+ "fn": "find_dissimilar",
+ "verified": false,
+ "route": null,
+ "why": "no specification the model wrote holds at your function's answers and pins them down. Every one it wrote from your docstring is false at an answer your function gives (`find_dissimilar((3, 4, 5, 6), (5, 7, 4, 10)) == (3, 6, 7, 10)`): either the model misread the docstring, or the function does not do what it says",
+ "twin": null,
+ "stages": [
+  {
+   "route": "answers",
+   "source": "answer 1",
+   "stage": "examples",
+   "reason": "fails a test (`assert find_dissimilar((21, 11, 25, 26), (26, 34, 21, 36)) == (34, 36, 11, 25)`: it returns [11, 25, 34, 36])"
+  },
+  {
+   "route": "answers",
+   "source": "answer 2",
+   "stage": "examples",
+   "reason": "fails a test (`assert find_dissimilar((21, 11, 25, 26), (26, 34, 21, 36)) == (34, 36, 11, 25)`: it returns [11, 25, 34, 36])"
+  },
+  {
+   "route": "answers",
+   "source": "answer 3",
+   "stage": "examples",
+   "reason": "fails a test (`assert find_dissimilar((3, 4, 5, 6), (5, 7, 4, 10)) == (3, 6, 7, 10)`: it returns [7, 10, 3, 6])"
+  },
+  {
+   "route": "answers",
+   "source": "answer 4",
+   "stage": "examples",
+   "reason": "fails a test (`assert find_dissimilar((3, 4, 5, 6), (5, 7, 4, 10)) == (3, 6, 7, 10)`: it returns [3, 4, 5, 7])"
+  },
+  {
+   "route": "answers",
+   "source": "answer 5",
+   "stage": "parse",
+   "reason": "does not parse ('exists' does not start an expression [Expr])"
+  },
+  {
+   "route": "specification",
+   "source": "specification 2",
+   "stage": "parse",
+   "reason": "it does not parse (expected ')', found 'not' [Expr])"
+  },
+  {
+   "route": "specification",
+   "source": "specification 3",
+   "stage": "parse",
+   "reason": "it does not parse (comparisons do not chain; parenthesise [What the notation refuses])"
+  },
+  {
+   "route": "specification",
+   "source": "specification 1",
+   "stage": "examples",
+   "reason": "`len(r) == len(a) + len(b) - 2 * (len(a) + len(b) - len(r)); forall x in [0, len(r)) . (exists i in [0, len(a)) . a[i] == r[x]) or (exists i in [0, len(b)) . b[i] == r[x]); forall x in [0, len(r)) . not ((exists i in [0, len(a)) . a[i] == r[x]) and (exists i in [0, len(b)) . b[i] == r[x])); forall x in [0, len(a)) . (exists i in [0, len(b)) . b[i] == a[x]) ==> not (exists j in [0, len(r)) . r[j] == a[x]); forall x in [0, len(b)) . (exists i in [0, len(a)) . a[i] == b[x]) ==> not (exists j in [0, len(r)) . r[j] == b[x])` is false at your function's own answer `find_dissimilar((3, 4, 5, 6), (5, 7, 4, 10)) == (3, 6, 7, 10)`",
+   "at": "find_dissimilar((3, 4, 5, 6), (5, 7, 4, 10)) == (3, 6, 7, 10)",
+   "scores": {
+    "correctness": 0.0,
+    "completeness": 1.0,
+    "tests": 3,
+    "mutants": 23
+   }
+  }
+ ],
+ "refused": [
+  "answer 1: fails a test (`assert find_dissimilar((21, 11, 25, 26), (26, 34, 21, 36)) == (34, 36, 11, 25)`: it returns [11, 25, 34, 36])",
+  "answer 2: fails a test (`assert find_dissimilar((21, 11, 25, 26), (26, 34, 21, 36)) == (34, 36, 11, 25)`: it returns [11, 25, 34, 36])",
+  "answer 3: fails a test (`assert find_dissimilar((3, 4, 5, 6), (5, 7, 4, 10)) == (3, 6, 7, 10)`: it returns [7, 10, 3, 6])",
+  "answer 4: fails a test (`assert find_dissimilar((3, 4, 5, 6), (5, 7, 4, 10)) == (3, 6, 7, 10)`: it returns [3, 4, 5, 7])",
+  "answer 5: does not parse ('exists' does not start an expression [Expr])",
+  "specification 2: it does not parse (expected ')', found 'not' [Expr])",
+  "specification 3: it does not parse (comparisons do not chain; parenthesise [What the notation refuses])",
+  "specification 1: `len(r) == len(a) + len(b) - 2 * (len(a) + len(b) - len(r)); forall x in [0, len(r)) . (exists i in [0, len(a)) . a[i] == r[x]) or (exists i in [0, len(b)) . b[i] == r[x]); forall x in [0, len(r)) . not ((exists i in [0, len(a)) . a[i] == r[x]) and (exists i in [0, len(b)) . b[i] == r[x])); forall x in [0, len(a)) . (exists i in [0, len(b)) . b[i] == a[x]) ==> not (exists j in [0, len(r)) . r[j] == a[x]); forall x in [0, len(b)) . (exists i in [0, len(a)) . a[i] == b[x]) ==> not (exists j in [0, len(r)) . r[j] == b[x])` is false at your function's own answer `find_dissimilar((3, 4, 5, 6), (5, 7, 4, 10)) == (3, 6, 7, 10)`"
+ ],
+ "specifications": [
+  {
+   "source": "specification 1",
+   "verdict": "dropped",
+   "scores": {
+    "correctness": 0.0,
+    "completeness": 1.0,
+    "tests": 3,
+    "mutants": 23
+   },
+   "spec": "t 1\ntask f(a: seq, b: seq) returns (r: seq)\n  ensures len(r) == len(a) + len(b) - 2 * (len(a) + len(b) - len(r))\n  ensures forall x in [0, len(r)) . (exists i in [0, len(a)) . a[i] == r[x]) or (exists i in [0, len(b)) . b[i] == r[x])\n  ensures forall x in [0, len(r)) . not ((exists i in [0, len(a)) . a[i] == r[x]) and (exists i in [0, len(b)) . b[i] == r[x]))\n  ensures forall x in [0, len(a)) . (exists i in [0, len(b)) . b[i] == a[x]) ==> not (exists j in [0, len(r)) . r[j] == a[x])\n  ensures forall x in [0, len(b)) . (exists i in [0, len(a)) . a[i] == b[x]) ==> not (exists j in [0, len(r)) . r[j] == b[x])\n{\n}\n"
+  }
+ ],
+ "candidates": [],
+ "asked": {
+  "answers": 5,
+  "specifications": 3,
+  "bodies": 0
+ },
+ "inputs": {
+  "examples": [
+   "assert find_dissimilar((3, 4, 5, 6), (5, 7, 4, 10)) == (3, 6, 7, 10)",
+   "assert find_dissimilar((1, 2, 3, 4), (7, 2, 3, 9)) == (1, 4, 7, 9)",
+   "assert find_dissimilar((21, 11, 25, 26), (26, 34, 21, 36)) == (34, 36, 11, 25)"
+  ],
+  "taken from the function": false,
+  "kinds": [
+   {
+    "args": [
+     "seq",
+     "seq"
+    ],
+    "expected": "seq"
+   },
+   {
+    "args": [
+     "seq",
+     "seq"
+    ],
+    "expected": "seq"
+   },
+   {
+    "args": [
+     "seq",
+     "seq"
+    ],
+    "expected": "seq"
+   }
+  ],
+  "specification check": {
+   "seed": 1,
+   "draws": 100,
+   "larger draws": 60
+  }
+ },
+ "stopped at": "examples",
+ "function": {
+  "code": "def find_dissimilar(test_tup1, test_tup2):\r\n  res = tuple(set(test_tup1) ^ set(test_tup2))\r\n  return (res) ",
+  "doc": "Write a function to find the dissimilar elements in the given two tuples."
+ },
+ "seconds": 80.6
+}
