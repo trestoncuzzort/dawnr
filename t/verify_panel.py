@@ -160,14 +160,21 @@ def summary(records: list[dict]) -> dict:
                                       key=lambda kv: verify_py.STAGES.index(kv[0]) if kv[0] in verify_py.STAGES else 99))}
 
 
+def _now() -> str:
+    return time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
+
+
 def run(problems_: list[dict], run_dir: Path, student, prover=gate.prove, settings: dict | None = None,
-        about: dict | None = None, say=lambda line: None) -> dict:
-    """Every problem's record in `run_dir` (made if absent), `run.json` beside them; the totals."""
+        about: dict | None = None, say=lambda line: None, commit: str | None = None) -> dict:
+    """Every problem's record in `run_dir` (made if absent), `run.json` beside them; the totals. `commit` names the
+    code the run is at when it does not run from a checkout git can read."""
     run_dir = Path(run_dir)
     run_dir.mkdir(parents=True, exist_ok=True)
     settings = dict(settings or {})
+    before = json.loads((run_dir / MANIFEST).read_text(encoding="utf-8")) if (run_dir / MANIFEST).exists() else {}
     manifest = {"about": dict(about or {}), "ids": [p["id"] for p in problems_], "settings": settings,
-                "commit": _commit(), "started": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()), "done": None}
+                "commit": commit or _commit(), "started": before.get("started") or _now(),
+                "taken up again": before.get("taken up again", []) + ([_now()] if before else []), "done": None}
     _write(run_dir / MANIFEST, manifest)
     records = []
     for n, problem in enumerate(problems_, 1):
@@ -181,7 +188,7 @@ def run(problems_: list[dict], run_dir: Path, student, prover=gate.prove, settin
         say(f"verify_panel: {n} of {len(problems_)}: {problem['id']} {problem['fn']}: "
             + ("VERIFIED" if rec["verified"] else f"stopped at {rec['stopped at']}") + f" ({rec.get('seconds')} s)")
     done = summary(records)
-    _write(run_dir / MANIFEST, dict(manifest, done=done, ended=time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())))
+    _write(run_dir / MANIFEST, dict(manifest, done=done, ended=_now()))
     return done
 
 
@@ -199,6 +206,7 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--jobs", type=int, default=2)
     ap.add_argument("--kernels", default="", help="comma-separated provers to ask (default: every one installed)")
     ap.add_argument("--ids", default="", help="comma-separated problem ids (default: the whole panel)")
+    ap.add_argument("--commit", help="the commit the code is at, when this does not run from a git checkout")
     a = ap.parse_args(argv)
     os.environ.setdefault("T_MIN_KERNELS", "1")                 # as `dawnr verify` runs it (bin/dawnr)
     import python_beside
@@ -210,7 +218,7 @@ def main(argv: list[str] | None = None) -> int:
     about = {"student": a.student, "student name": a.student_name, "reference": a.reference,
              "kernels": a.kernels or "installed", "T_MIN_KERNELS": os.environ["T_MIN_KERNELS"]}
     done = run(problems(ids), a.run, student, prover=lambda tasks, jobs: gate.prove(tasks, jobs, kernels=a.kernels),
-               settings=settings, about=about, say=lambda line: print(line, flush=True))
+               settings=settings, about=about, say=lambda line: print(line, flush=True), commit=a.commit)
     print(json.dumps(done, indent=1))
     return 0
 

@@ -85,8 +85,11 @@ def test_a_panel_run_leaves_one_record_per_function_in_the_folder_it_is_given(tm
 @needs_sandbox
 def test_a_run_taken_up_again_keeps_the_records_it_has_and_an_error_is_a_record_too(tmp_path):
     run = tmp_path / "verify-run"
-    verify_panel.run(PROBLEMS[:1], run, student(BODY), prover=proving, settings={"whole": 1, "specs": 1, "answers": 1})
+    verify_panel.run(PROBLEMS[:1], run, student(BODY), prover=proving, settings={"whole": 1, "specs": 1, "answers": 1},
+                     commit="0123abc")
     before = (run / "7.json").read_bytes()
+    first = json.loads((run / "run.json").read_text())
+    assert first["commit"] == "0123abc" and first["taken up again"] == []
 
     def timing_out(tasks, jobs):
         raise answer.ProverTimeout("the provers did not finish")
@@ -98,6 +101,9 @@ def test_a_run_taken_up_again_keeps_the_records_it_has_and_an_error_is_a_record_
     assert failed["stages"][-1] == {"route": None, "source": "the run", "stage": "error",
                                     "reason": "ProverTimeout: the provers did not finish"}
     assert summary["errors"] == 1 and summary["functions"] == 2 and summary["verified"] == 1
+    # the run keeps when it was first started, and says when it was taken up again
+    manifest = json.loads((run / "run.json").read_text())
+    assert manifest["started"] == first["started"] and len(manifest["taken up again"]) == 1
 
 
 def test_the_panel_is_the_wider_111_with_each_reference_as_the_function_and_its_words_as_the_docstring(monkeypatch):
