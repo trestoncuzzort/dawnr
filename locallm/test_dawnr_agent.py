@@ -683,6 +683,7 @@ class FileTools(Env):
         # 500 lines of 100 characters with the newline: a 2000-line window is 50,000 characters, past the reply's
         # 20,000-character cap. Until 2026-11-26 the cap cut the finished text mid-line: the header still named
         # lines 1-500 and the resume hint after the body was cut away, so the model could not tell where to go on.
+        # Each line shown carries its number and a tab (four characters here), and they count against the cap too.
         (self.proj / "wide.txt").write_text("".join(f"{i:04d} " + "x" * 94 + "\n" for i in range(1, 501)))
         h, _ = self.build()
         r = h.call("fs_read", {"path": "project/wide.txt", "lines": 2000})
@@ -692,12 +693,18 @@ class FileTools(Env):
         self.assertIsNotNone(m, r.text[:300])
         last = int(m.group(1))
         self.assertLess(last, 500)
-        self.assertIn(f"\n{last:04d} " + "x" * 94 + "\n", r.text)      # the last line named is shown whole
-        self.assertNotIn(f"\n{last + 1:04d} ", r.text)                  # and the next one not at all
+        self.assertIn(f"\n{last}\t{last:04d} " + "x" * 94 + "\n", r.text)  # the last line named is shown whole
+        self.assertNotIn(f"\t{last + 1:04d} ", r.text)                      # and the next one not at all
+        self.assertNotIn(f"\n{last + 1}\t", r.text)
         self.assertIn(f'"start": {last + 1}', r.text)
+        parts = r.text.split("\n")                                          # the header names exactly the lines shown:
+        width = len(str(last))                                              # each whole, after its number and a tab
+        self.assertEqual(parts[1:-1], [f"{i:>{width}}\t{i:04d} " + "x" * 94 for i in range(1, last + 1)])
+        self.assertEqual(parts[-1], f'[lines {last + 1}-500 not shown (the reply holds 20000 characters); '
+                                    f'read again with "start": {last + 1}]')
         r = h.call("fs_read", {"path": "project/wide.txt", "start": last + 1, "lines": 2000})
         self.assertIn(f"lines {last + 1}-", r.text)
-        self.assertIn(f"\n{last + 1:04d} ", r.text)
+        self.assertRegex(r.text, rf"\n *{last + 1}\t{last + 1:04d} ")
 
     def test_one_line_longer_than_the_reply_cap_says_it_was_cut(self):
         (self.proj / "one.txt").write_text("y" * 30_000 + "\nnext\n")
@@ -707,6 +714,35 @@ class FileTools(Env):
         self.assertIn("lines 1-1 of 2", r.text)
         self.assertIn("line 1 is 30000 characters", r.text)
         self.assertIn('"start": 2', r.text)
+        # its number and a tab, then as much of the line as fits, counted without them
+        m = re.search(r"\n1\t(y+)\n\[line 1 is 30000 characters; the first (\d+) are shown\]\n", r.text)
+        self.assertIsNotNone(m, r.text[:300])
+        self.assertEqual(len(m.group(1)), int(m.group(2)))
+        self.assertNotIn("next", r.text)
+
+    def test_each_line_read_starts_with_its_number_and_a_tab_right_aligned_to_the_widest_shown(self):
+        # Until 2026-11-26 a read was the bare lines, and a model citing a line had to count to it: two models asked
+        # where something was in a file both named the wrong line. Each line shown now starts with its number,
+        # right-aligned to the widest number shown (cat -n's form), and a tab; the header and the hint are as before.
+        text = "".join(("" if i == 99 else f"line {i}") + "\n" for i in range(1, 121))
+        (self.proj / "n.txt").write_text(text)
+        h, _ = self.build()
+        r = h.call("fs_read", {"path": "project/n.txt", "start": 95, "lines": 10})
+        data = text.encode()
+        self.assertEqual(r.text, f"project/n.txt: lines 95-104 of 120, {len(data)} bytes, sha256 {sha256(data)[:16]}\n"
+                         + "\n".join(f"{i:>3}\t" + ("" if i == 99 else f"line {i}") for i in range(95, 105))
+                         + '\n[lines 105-120 not shown; read again with "start": 105]')
+        r = h.call("fs_read", {"path": "project/n.txt", "start": 3, "lines": 4})        # one digit: nothing to pad
+        self.assertIn("\n3\tline 3\n4\tline 4\n5\tline 5\n6\tline 6\n[lines 7-120 not shown", r.text)
+        (self.proj / "crlf.txt").write_bytes(b"one\r\ntwo\r\n")
+        r = h.call("fs_read", {"path": "project/crlf.txt"})
+        self.assertTrue(r.text.endswith(" bytes, sha256 " + sha256(b"one\r\ntwo\r\n")[:16] + "\n1\tone\n2\ttwo"), r.text)
+
+    def test_the_read_tool_says_each_line_starts_with_its_number_which_is_not_in_the_file(self):
+        h, _ = self.build()
+        said = h.registry.get("fs_read").description
+        self.assertIn("starts with its number and a tab", said)
+        self.assertIn("not part of the file", said)
 
     def test_search_is_literal_bounded_and_skips_links_secrets_and_binaries(self):
         (self.proj / "src" / "b.t").write_text("(a+)+$ double\n")
