@@ -458,6 +458,45 @@ class MarkdownTest(unittest.TestCase):
                           "configure a Debug GCC build with TARGETUNITTESTS=ON and the samples disabled",
                           "return a b"])
 
+    READ_LINE = "the cache is cleared only when the person runs clean, and never on its own"
+
+    def test_a_star_or_an_underscore_that_pairs_with_no_other_is_text_not_emphasis(self):
+        # a quote that differs from what was read by such a character is not what was read
+        read = window("here/docs/cache.md", [self.READ_LINE + "."], 1, 1)
+        for stray in ("*", "_", "**", "__"):
+            for quote in (f"{stray}{self.READ_LINE}.", f"{self.READ_LINE}{stray}."):
+                with self.subTest(quote=quote):
+                    self.assertEqual(unfound_quotes(f"> {quote}\n", [read]), [quote])
+        # the same in what was read: an asterisk between spaces is a product, not emphasis
+        product = window("here/a.md", ["Twice the cache is cleared only when 5 * 3 is more than 14 on the person's own."], 1, 1)
+        self.assertEqual(unfound_quotes("> Twice the cache is cleared only when 5 3 is more than 14 on the person's own.\n",
+                                        [product]), ["Twice the cache is cleared only when 5 3 is more than 14 on the person's own."])
+        self.assertEqual(unfound_quotes("> Twice the cache is cleared only when 5 * 3 is more than 14 on the person's own.\n",
+                                        [product]), [])
+
+    def test_emphasis_that_pairs_is_compared_away_as_commonmark_pairs_it(self):
+        text = self.READ_LINE
+        for marked in (f"*{text}*", f"_{text}_", f"**{text}**", f"__{text}__", f"***{text}***", f"_**{text}**_",
+                       f"**the cache** is cleared only when the *person* runs clean, and never on its own",
+                       "the cache is cleared only when the person runs **clean, and never on its own**"):
+            with self.subTest(marked=marked):
+                self.assertEqual(unfound_quotes(f"> {marked}\n", [window("here/a.md", [text], 1, 1)]), [])
+                self.assertEqual(unfound_quotes(f"> {text}\n", [window("here/a.md", [marked], 1, 1)]), [])
+        # CommonMark: an underscore inside a word does not open or close emphasis; an asterisk does
+        self.assertEqual(unfound_quotes("> the cache is cleared only when the person runs clean and the snake case is never on its own\n",
+                                        [window("here/a.md", ["the cache is cleared only when the person runs clean and the snake_case_ is never on its own"], 1, 1)]),
+                         ["the cache is cleared only when the person runs clean and the snake case is never on its own"])
+        self.assertEqual(unfound_quotes("> the cache is cleared only when the person runs cleanerandnever on its own\n",
+                                        [window("here/a.md", ["the cache is cleared only when the person runs clean*er*and*never on its own"], 1, 1)]),
+                         ["the cache is cleared only when the person runs cleanerandnever on its own"])
+        # in a code span the characters are the text's own: a quote of them without the backticks is found
+        span = window("here/a.md", ["the cache is cleared only when the person runs `*clean*` and never on its own"], 1, 1)
+        self.assertEqual(unfound_quotes("> the cache is cleared only when the person runs *clean* and never on its own\n", [span]), [])
+        # escaped: not emphasis either
+        self.assertEqual(unfound_quotes("> the cache is cleared only when the person runs \\*clean and never on its own\n",
+                                        [window("here/a.md", ["the cache is cleared only when the person runs clean and never on its own"], 1, 1)]),
+                         ["the cache is cleared only when the person runs \\*clean and never on its own"])
+
 
 class NoTextTest(unittest.TestCase):
     """None for a text is no text: no answer has no quotes, and a source that is None, or no sources, is nothing
@@ -504,6 +543,15 @@ class CraftedTextTest(unittest.TestCase):
         first = head.format(1, 2) + "The cache is cleared\nonly when the person runs clean,"
         second = head.format(3, 4) + "and never on its own.\nA stale cache is rebuilt."
         self.assertEqual(unfound_quotes('It says "only when the person runs clean, and never on its own".', [first, second]), [])
+
+    def test_a_text_of_emphasis_characters_and_backticks_is_checked_at_once(self):
+        # the quote is in none of them, so every source is looked at without its emphasis (CommonMark's pairing)
+        n = self.N
+        for text in ("*a " * (n // 3), "*_" * (n // 2), "_*" * (n // 2), "*a_" * (n // 3), "**_" * (n // 3),
+                     "`a" * (n // 2), "``a`" * (n // 4), "`" * n, "*" * n, "a*" * (n // 2) + "_a" * (n // 4),
+                     "*" * (n // 2) + "_" * (n // 2), "(*" * (n // 2)):
+            with self.subTest(text=text[:8]):
+                self.assertQuick([text, text + "\n" + text])
 
     def test_a_first_line_with_brackets_inside_brackets_is_checked_at_once(self):
         for head in (" (()" * (self.N // 4), " (a(b)" * (self.N // 6), " ((" * (self.N // 3), " ( (b) (b)" * (self.N // 10)):

@@ -35,6 +35,7 @@ nothing read); standard library only.
 from __future__ import annotations
 
 import re
+import unicodedata
 from typing import Iterable, NamedTuple
 
 FENCE = re.compile(r"\s*(`{3,}|~{3,})(.*)")          # a code fence, and the rest of its line
@@ -81,7 +82,7 @@ DIFF_TAGS = ("diff", "patch", "udiff")
 # a backslash before punctuation, without backticks, and without the * and _ of emphasis, on both sides (not an _
 # inside a word, as in snake_case). A code line is compared with every one of them: there they are the code.
 ESCAPED = re.compile(r"\\([!-/:-@\[-`{-~])")
-EMPHASIS = re.compile(r"(?<!\w)[*_]+|[*_]+(?!\w)")
+BACKTICKS = re.compile(r"`+")
 
 
 class Changed(NamedTuple):
@@ -102,7 +103,7 @@ def unfound_quotes(answer: str | None, sources: Iterable[str | Changed | None] |
     texts = [text for text in sources or () if text is not None]
     read = ([_source(text) for text in texts if isinstance(text, str)]
             + [("", _joined(run, patch)) for run, patch in _runs(texts)])
-    unmarked = None                                 # what was read without Markdown's inline formatting, when needed
+    unmarked: dict[bool, list] = {}                 # what was read without Markdown's inline formatting, when needed
     unfound: list[str] = []
     for quote, compared, spans in _quoted(answer):
         quote, compared = _plain(quote), _plain(compared)
@@ -113,12 +114,9 @@ def unfound_quotes(answer: str | None, sources: Iterable[str | Changed | None] |
             key = _bare(key)
         if _found(key, spans, read):
             continue
-        if spans:
-            if unmarked is None:
-                unmarked = [("\n".join(map(_unmarked, lines.split("\n"))), tuple(map(_unmarked, wholes)))
-                            for lines, wholes in read]
-            if _found(_bare(_unmarked(key)), spans, unmarked):
-                continue
+        if spans and any(_found(_bare(_unmarked(key, emphasis)), spans, _without(unmarked, read, emphasis))
+                         for emphasis in (True, False)):
+            continue
         unfound.append(quote)
     return unfound
 
@@ -133,8 +131,106 @@ def _bare(key: str) -> str:
     return key.strip('" ').rstrip(".,;:!?").strip('" ')
 
 
-def _unmarked(text: str) -> str:
-    return _plain(EMPHASIS.sub("", ESCAPED.sub(r"\1", text).replace("`", "")))
+def _without(cache: dict[bool, list], read: list, emphasis: bool) -> list:
+    """What was read without Markdown's inline formatting (_unmarked), made once for each of the two ways."""
+    if emphasis not in cache:
+        cache[emphasis] = [("\n".join(_unmarked(line, emphasis) for line in lines.split("\n")),
+                            tuple(_unmarked(whole, emphasis) for whole in wholes)) for lines, wholes in read]
+    return cache[emphasis]
+
+
+def _unmarked(text: str, emphasis: bool = True) -> str:
+    """The text a reader sees: no backslash before punctuation, no backticks, and (emphasis) none of the emphasis
+    that pairs (_paired). Without the last, a quote of text that has a code span's asterisks as its own is found."""
+    return _plain(ESCAPED.sub(r"\1", _paired(text) if emphasis else text).replace("`", ""))
+
+
+class _Run:
+    """A run of * or _ that Markdown could read as emphasis: its character, its length, whether it can open and
+    whether it can close emphasis, and how many of its characters a match has used."""
+    __slots__ = ("char", "length", "opens", "closes", "used", "serial")
+
+    def __init__(self, char: str, length: int, opens: bool, closes: bool):
+        self.char, self.length, self.opens, self.closes, self.used, self.serial = char, length, opens, closes, 0, 0
+
+
+def _punctuation(char: str) -> bool:
+    return char in "!\"#$%&'()*+,-./:;<=>?@[\\]^_`{|}~" or unicodedata.category(char)[0] in "PS"
+
+
+def _paired(text: str) -> str:
+    """The text without the * and _ that are emphasis, which a reader does not see: the delimiter runs that
+    CommonMark 0.31.2 (spec.commonmark.org/0.31.2, 6.2 Emphasis and strong emphasis) pairs, an opening run and a
+    closing one of the same character around text, by its left- and right-flanking rules, its rule of three and its
+    process-emphasis steps. A run it does not pair stays (`5 * 3`, `*a`, `snake_case`), as does one inside a code
+    span or after a backslash."""
+    ticks: dict[int, list[int]] = {}                            # code spans: where each length of backticks runs
+    for tick in BACKTICKS.finditer(text):
+        ticks.setdefault(len(tick.group()), []).append(tick.start())
+    seen: dict[int, int] = {}
+    parts: list[str | _Run] = []
+    runs: list[_Run] = []
+    i, n, literal = 0, len(text), 0
+    while i < n:
+        c = text[i]
+        if c == "\\" and i + 1 < n and _punctuation(text[i + 1]):
+            i += 2
+        elif c == "`":
+            size = len(BACKTICKS.match(text, i).group())
+            starts, k = ticks[size], seen.get(size, 0)
+            while k < len(starts) and starts[k] < i + size:     # the next run of this length closes the span
+                k += 1
+            seen[size] = k
+            i = starts[k] + size if k < len(starts) else i + size
+        elif c in "*_":
+            j = i
+            while j < n and text[j] == c:
+                j += 1
+            before, after = text[i - 1] if i else " ", text[j] if j < n else " "
+            left = not after.isspace() and (not _punctuation(after) or before.isspace() or _punctuation(before))
+            right = not before.isspace() and (not _punctuation(before) or after.isspace() or _punctuation(after))
+            opens = left if c == "*" else left and (not right or _punctuation(before))
+            closes = right if c == "*" else right and (not left or _punctuation(after))
+            parts.append(text[literal:i])
+            run = _Run(c, j - i, opens, closes)
+            parts.append(run)
+            runs.append(run)
+            i = literal = j
+        else:
+            i += 1
+    if not runs:
+        return text
+    parts.append(text[literal:])
+    openers: list[_Run] = []
+    bottom: dict[tuple[str, bool, int], int] = {}              # per kind of closer, the openers below it do not match
+    for serial, run in enumerate(runs, 1):
+        run.serial = serial
+        if run.closes:
+            key = (run.char, run.opens, run.length % 3)
+            while run.length > run.used:
+                at = len(openers) - 1
+                while at >= 0 and openers[at].serial > bottom.get(key, 0):
+                    opener = openers[at]
+                    if (opener.char == run.char and opener.opens and opener.length > opener.used
+                            and not ((run.opens or opener.closes) and (opener.length + run.length) % 3 == 0
+                                     and (opener.length % 3 or run.length % 3))):
+                        break
+                    at -= 1
+                else:
+                    at = -1
+                if at < 0 or openers[at].serial <= bottom.get(key, 0):
+                    bottom[key] = openers[-1].serial if openers else 0
+                    break
+                opener = openers[at]
+                use = 2 if opener.length - opener.used >= 2 and run.length - run.used >= 2 else 1
+                opener.used += use
+                run.used += use
+                del openers[at + 1:]
+                if opener.length == opener.used:
+                    del openers[at]
+        if run.opens and run.length > run.used:
+            openers.append(run)
+    return "".join(part if isinstance(part, str) else part.char * (part.length - part.used) for part in parts)
 
 
 def _lines(text: str) -> list[str]:
