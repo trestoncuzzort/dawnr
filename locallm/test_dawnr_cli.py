@@ -405,12 +405,112 @@ def test_in_its_last_round_it_is_asked_to_answer_and_given_nothing_to_call(tmp_p
     assert all("tools" in body for body in model.bodies[:last]) and "tools" not in model.bodies[last]
     assert model.bodies[last]["messages"][-1] == {"role": "user", "content": cli.LAST_ROUND}
     assert model.bodies[last - 1]["messages"][-1]["role"] == "tool"
-    # a call written out as text in that last round is not an answer, and is not shown as one
-    model = Model(*looks, turn(text="I will edit it. <tool_call> <function=fs_edit> ... </function> </tool_call>"))
+    # a call written out as text in that last round is not an answer, and is not shown as one; asked once more with
+    # nothing to call, and written out again, it still is not
+    written = turn(text="I will edit it. <tool_call> <function=fs_edit> ... </function> </tool_call>")
+    model = Model(*looks, written, turn(text="<tool_call> <function=fs_edit> ... </function> </tool_call>"))
     (tmp_path / "again").mkdir()
     work, harness, agent, planner, meter, said, asked, _ask = session(tmp_path / "again", model)
     with harness:
         assert cli.run_task(agent, planner, meter, "Rename it everywhere.", [], said.append) == cli.UNFINISHED
+    assert len(model.bodies) == last + 2 and "tools" not in model.bodies[-1]
+
+
+# The reply of a 27B in the last round of a read-only review, finish_reason "stop": the call it wanted, written out as
+# text. The task ended there with no answer at all, after sixteen windows of files had been read
+WRITTEN = ("<tool_call>\n<function=fs_read>\n<parameter=path>\nhere/tests/reference/observations.py\n</parameter>\n"
+           "<parameter=start>\n201\n</parameter>\n</function>\n</tool_call>")
+
+
+def written_call():
+    reply = turn(text=WRITTEN)
+    reply["choices"][0]["finish_reason"] = "stop"
+    return reply
+
+
+def test_a_call_written_as_text_in_the_last_round_is_asked_once_more_for_the_answer_with_nothing_to_call(tmp_path):
+    last = cli.default_config(tmp_path)["agent"]["budget"]["max_rounds"] - 1
+    looks = [turn(("fs_read", {"path": "here/tests/reference/observations.py"}))]
+    looks += [turn(("fs_search", {"query": f"observation {i}"})) for i in range(last - 1)]
+    said_at_last = "observe() returns an empty list. I could not check anything past line 200."
+    model = Model(*looks, written_call(), turn(text=said_at_last))
+    work, harness, agent, planner, meter, said, asked, _ask = session(tmp_path, model)
+    (work / "tests" / "reference").mkdir(parents=True)
+    (work / "tests" / "reference" / "observations.py").write_text("def observe():\n    return []\n")
+    with harness:
+        answer = cli.run_task(agent, planner, meter, "Review tests/reference/observations.py.", [], said.append)
+    assert answer == said_at_last and len(model.bodies) == last + 2
+    again = model.bodies[last + 1]                              # the same messages, the call it wrote, and the word
+    assert "tools" not in again and "stop" not in again          # no stop strings: see Server, below
+    assert again["messages"][:-2] == model.bodies[last]["messages"]
+    assert again["messages"][-2:] == [{"role": "assistant", "content": WRITTEN}, {"role": "user", "content": cli.NOTHING_MORE}]
+    # what comes back is the answer only if it is one: a reply that holds a call is not, whatever text comes with it
+    model = Model(*looks, written_call(), turn(("fs_read", {"path": "here/tests/reference/observations.py", "start": 201}),
+                                               text="Let me read the rest of the file."))
+    (tmp_path / "calls").mkdir()
+    work, harness, agent, planner, meter, said, asked, _ask = session(tmp_path / "calls", model)
+    (work / "tests" / "reference").mkdir(parents=True)
+    (work / "tests" / "reference" / "observations.py").write_text("def observe():\n    return []\n")
+    with harness:
+        answer = cli.run_task(agent, planner, meter, "Review tests/reference/observations.py.", [], said.append)
+    assert len(model.bodies) == last + 2 and answer.startswith(cli.UNFINISHED)
+
+
+def test_a_last_round_that_ends_in_no_answer_all_the_same_names_the_files_it_read(tmp_path):
+    last = cli.default_config(tmp_path)["agent"]["budget"]["max_rounds"] - 1
+    looks = [turn(("fs_read", {"path": "here/a.md"})), turn(("fs_read", {"path": "here/missing.md"})),
+             turn(("fs_read", {"path": "here/src/b.py"})), turn(("fs_read", {"path": "here/a.md", "start": 2}))]
+    looks += [turn(("fs_search", {"query": f"total {i}"})) for i in range(last - len(looks))]
+    model = Model(*looks, written_call(), turn(text=""))      # asked once more, nothing said at all
+    work, harness, agent, planner, meter, said, asked, _ask = session(tmp_path, model)
+    (work / "a.md").write_text("one\ntwo\n")
+    (work / "src").mkdir()
+    (work / "src" / "b.py").write_text("print('b')\n")
+    with harness:
+        answer = cli.run_task(agent, planner, meter, "Review the project.", [], said.append)
+    assert answer.startswith(cli.UNFINISHED) and "here/a.md" in answer and "here/src/b.py" in answer
+    assert "missing.md" not in answer and answer.count("here/a.md") == 1 and len(model.bodies) == last + 2
+    assert answer == cli.UNFINISHED + cli.READ_BY_THEN.format(files="here/a.md, here/src/b.py") and answer in said
+
+
+class Server(Model):
+    """The model server as llama.cpp's chat route answers (measured on the 27B's server, build b11342, 2026-11-26):
+    each reply given is what the model writes in full, and a request's stop strings cut it before the first of them,
+    which is dropped, with finish_reason "stop" as for a reply that ended by itself, and nothing else that says so."""
+
+    def __call__(self, url, body, timeout=1800.0):
+        reply = json.loads(json.dumps(super().__call__(url, body, timeout)))
+        choice = reply["choices"][0]
+        text = choice["message"].get("content") or ""
+        cut = min([text.index(s) for s in body.get("stop") or () if s in text], default=len(text))
+        choice["message"]["content"] = text[:cut]
+        choice.update(index=0, finish_reason="tool_calls" if choice["message"].get("tool_calls") else "stop")
+        return reply
+
+
+# Asked once more, a sentence and then the call begun again; what llama.cpp's chat route returned for that with the
+# two call marks as stop strings: the sentence alone, and finish_reason "stop", as for a reply that ended by itself
+BEGUN_AGAIN = "Let me read the rest.\n" + WRITTEN
+CUT_AT_STOP = {"finish_reason": "stop", "index": 0,
+               "message": {"role": "assistant", "content": "Let me read the rest.\n"}}
+
+
+# a sentence before the call, or what reads as an answer: no rule tells the two apart, and neither is taken
+@pytest.mark.parametrize("begun", [BEGUN_AGAIN, "observe() returns an empty list.\n" + WRITTEN],
+                         ids=["sentence", "answer"])
+def test_asked_once_more_what_comes_before_a_call_begun_again_is_not_taken_for_the_answer(tmp_path, begun):
+    assert Server(turn(text=BEGUN_AGAIN))("", {"stop": list(cli.CALL_MARKS)})["choices"] == [CUT_AT_STOP]
+    last = cli.default_config(tmp_path)["agent"]["budget"]["max_rounds"] - 1
+    looks = [turn(("fs_read", {"path": "here/tests/reference/observations.py"}))]
+    looks += [turn(("fs_search", {"query": f"observation {i}"})) for i in range(last - 1)]
+    model = Server(*looks, written_call(), turn(text=begun))
+    work, harness, agent, planner, meter, said, asked, _ask = session(tmp_path, model)
+    (work / "tests" / "reference").mkdir(parents=True)
+    (work / "tests" / "reference" / "observations.py").write_text("def observe():\n    return []\n")
+    with harness:
+        answer = cli.run_task(agent, planner, meter, "Review tests/reference/observations.py.", [], said.append)
+    assert answer == cli.UNFINISHED + cli.READ_BY_THEN.format(files="here/tests/reference/observations.py")
+    assert len(model.bodies) == last + 2 and "tools" not in model.bodies[-1]
 
 
 def test_a_search_in_one_file_searches_that_file_and_a_search_of_nothing_says_so(tmp_path):
@@ -552,6 +652,33 @@ def test_a_turn_cut_off_at_its_length_while_thinking_aloud_is_not_taken_for_the_
         assert cli.run_task(agent, planner, meter, "What do my notes say?", [], said.append) == "It says Thursday."
     assert model.bodies[1]["messages"][-1] == {"role": "user", "content": cli.CUT_OFF} and "tools" in model.bodies[1]
     assert model.bodies[1]["messages"][-2]["content"].endswith("c.put('a', 1) ...")
+
+
+def test_an_answer_the_server_cut_at_its_length_limit_says_so_and_is_never_passed_off_as_whole(tmp_path):
+    # Every reply that can become the answer is read for finish_reason "length", not only the first one while tools are
+    # offered: here the reply asked for after a cut-off is cut too, and what is handed back says it is not all of it.
+    first = turn(text="Let me trace through the test: 1. c = LRU(2) ... 2. c.put('a', 1) ...")
+    first["choices"][0]["finish_reason"] = "length"
+    again = turn(text="It says the meeting moved to Thursday, and the room")
+    again["choices"][0]["finish_reason"] = "length"
+    model = Model(first, again)
+    work, harness, agent, planner, meter, said, asked, _ask = session(tmp_path, model)
+    with harness:
+        got = cli.run_task(agent, planner, meter, "What do my notes say?", [], said.append)
+    assert got != "It says the meeting moved to Thursday, and the room"     # not handed back as if it were all of it
+    assert got == "It says the meeting moved to Thursday, and the room" + cli.CUT_SHORT
+
+
+def test_an_account_the_server_cut_at_its_length_limit_says_so(tmp_path):
+    cut = turn(text="It read the notes and then went round the same")
+    cut["choices"][0]["finish_reason"] = "length"
+    whole = turn(text="It read the notes twice and stopped.")
+    *_, planner, _meter, _said, _asked, _ask = session(tmp_path, Model(cut, whole))
+    planner.messages = lambda result: [{"role": "user", "content": "What do my notes say?"}]
+    told = planner.account(None, "it went round")
+    assert told != "It read the notes and then went round the same"           # not handed back as if it were all of it
+    assert told == "It read the notes and then went round the same" + cli.CUT_SHORT
+    assert planner.account(None, "it went round") == "It read the notes twice and stopped."
 
 
 LITE = """<html><body><table>
@@ -925,4 +1052,48 @@ def test_the_read_tool_the_model_is_offered_says_a_text_files_lines_start_with_t
     with harness:
         told = harness.registry.get("fs_read").description
     assert "PDF" in told and "number and a tab" in told and "not part of the file" in told
+
+
+def test_a_state_folder_given_is_recorded_once_and_resolved_for_dawnr_forget(tmp_path, monkeypatch, capsys):
+    data, real = tmp_path / "data", tmp_path / "real"
+    data.mkdir()
+    real.mkdir()
+    (tmp_path / "link").symlink_to(real, target_is_directory=True)
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setenv("HOME", str(tmp_path))
+    env = {"DAWNR_HOME": str(data)}
+    record = data / "state-folders"
+    # relative and through a link: what is written is where the journal will be
+    assert cli.remember_state(Path("link/state"), env) == real / "state"
+    assert cli.remember_state(real / "state", env) == real / "state"          # the same folder: not written twice
+    assert cli.remember_state(Path("~/other"), env) == tmp_path / "other"
+    assert record.read_bytes() == f"{real / 'state'}\n{tmp_path / 'other'}\n".encode()
+    assert record.stat().st_mode & 0o777 == 0o600
+    # a line a stopped writer left without its end stays a line of its own
+    record.write_bytes(b"/unfinished")
+    cli.remember_state(Path("next"), env)
+    assert record.read_bytes() == f"/unfinished\n{tmp_path / 'next'}\n".encode()
+    # without DAWNR_HOME (not started by the dawnr command) nothing is written anywhere
+    assert cli.remember_state(Path("state"), {}) is None
+    # a link where the record should be is not followed, and the person is told the folder is not recorded
+    mine, other = tmp_path / "mine.txt", tmp_path / "other data"
+    mine.write_text("mine\n")
+    other.mkdir()
+    (other / "state-folders").symlink_to(mine)
+    assert cli.remember_state(Path("state"), {"DAWNR_HOME": str(other)}) is None
+    assert mine.read_text() == "mine\n" and "`dawnr forget` will not erase it" in capsys.readouterr().err
+
+
+def test_the_assistant_records_a_state_folder_before_it_makes_it(tmp_path, monkeypatch):
+    monkeypatch.setenv("DAWNR_HOME", str(tmp_path))
+    given = tmp_path / "given"
+
+    def stop(config, **how):                                    # in place of the agent, which would make the folder
+        assert (tmp_path / "state-folders").read_text() == f"{given}\n"
+        assert config["agent"]["state"] == str(given) and not given.exists()
+        raise SystemExit(7)
+    monkeypatch.setattr(cli, "build_agent", stop)
+    with pytest.raises(SystemExit) as stopped:
+        cli.main(["--host", "nowhere:1", "--cwd", str(tmp_path), "--state", str(given), "a task"])
+    assert stopped.value.code == 7
 
