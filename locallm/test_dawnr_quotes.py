@@ -18,7 +18,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
-from dawnr_agent.quotes import unfound_quotes  # noqa: E402
+from dawnr_agent.quotes import Changed, unfound_quotes  # noqa: E402
 
 # The real case: a patch excerpt as the session read it, and the line an answer showed in a code block as the
 # patch's own. The patch tests hit.mFraction and the contact on two lines; the answer's `if` has the contact alone.
@@ -309,6 +309,32 @@ class ReadFormatTest(unittest.TestCase):
         self.assertEqual(unfound_quotes(BOTH, reads), ["The cache is cleared only when the person runs clean, and "
                                                        "never on its own."])
         self.assertEqual(unfound_quotes(BOTH, [reads[0], HITS]), [])        # a hit joins any window of its file
+
+    def test_windows_of_a_file_too_big_to_hash_are_not_joined_across_an_edit_of_it(self):
+        # No sha256 in the header (a file the tool did not read whole): the windows' order and the edits that ran
+        # between them are all that says which version of the file a window shows
+        old = CACHE[:3] + ["(a line between)"] + CACHE[3:]
+        first = window("here/docs/cache.md", old, 1, 3).replace(", sha256 0f1e2d3c4b5a", "")
+        second = window("here/docs/cache.md", old[1:], 4, 5).replace(", sha256 0f1e2d3c4b5a", "")
+        self.assertNotIn("sha256", first + second)
+        whole = "The cache is cleared only when the person runs clean, and never on its own."
+        self.assertEqual(unfound_quotes(BOTH, [first, second]), [])                    # no edit between: joined
+        self.assertEqual(unfound_quotes(BOTH, [first, Changed("here/docs/cache.md"), second]), [whole])
+        self.assertEqual(unfound_quotes(BOTH, [first, Changed("docs/cache.md"), second]), [whole])   # as named by the call
+        self.assertEqual(unfound_quotes(BOTH, [first, Changed(None), second]), [whole])              # an undo: any file
+        self.assertEqual(unfound_quotes(BOTH, [first, Changed("here/docs/other.md"), second]), [])   # another file
+        self.assertEqual(unfound_quotes(BOTH, [Changed("here/docs/cache.md"), first, second]), [])   # before both
+        self.assertEqual(unfound_quotes(BOTH, [first, second, Changed("here/docs/cache.md")]), [])   # after both
+        # a hit read before the edit and a window read after it: not one text either, and the other way round
+        hit = ("search for 'clean' in here/docs (literal, exact case): 1 matches in 1 files, 2 files searched\n"
+               "here/docs/cache.md:4: runs clean, and never on its own.")
+        lead = window("here/docs/cache.md", CACHE, 1, 3).replace(", sha256 0f1e2d3c4b5a", "")
+        self.assertEqual(unfound_quotes(BOTH, [lead, hit]), [])
+        self.assertEqual(unfound_quotes(BOTH, [lead, Changed("here/docs/cache.md"), hit]), [whole])
+        self.assertEqual(unfound_quotes(BOTH, [hit, Changed("here/docs/cache.md"), lead]), [whole])
+        # what each window shows on its own is still found
+        self.assertEqual(unfound_quotes("> runs clean, and never on its own.\n",
+                                        [first, Changed("here/docs/cache.md"), second]), [])
 
     def test_a_passage_over_a_page_break_of_a_document_is_found(self):
         pdf = ("here/docs/cache.pdf (pdf, 2 pages): lines 1-4 of 4 of its text, 20480 bytes\n"

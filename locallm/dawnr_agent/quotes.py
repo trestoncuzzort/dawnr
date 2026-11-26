@@ -35,7 +35,7 @@ nothing read); standard library only.
 from __future__ import annotations
 
 import re
-from typing import Iterable
+from typing import Iterable, NamedTuple
 
 FENCE = re.compile(r"\s*(`{3,}|~{3,})(.*)")          # a code fence, and the rest of its line
 MARKERS = re.compile(r"\s*(?:>\s?)+")                # a blockquote line's ">", nested ones too
@@ -84,14 +84,24 @@ ESCAPED = re.compile(r"\\([!-/:-@\[-`{-~])")
 EMPHASIS = re.compile(r"(?<!\w)[*_]+|[*_]+(?!\w)")
 
 
-def unfound_quotes(answer: str | None, sources: Iterable[str | None] | None) -> list[str]:
+class Changed(NamedTuple):
+    """Among the sources, in the order the task made its calls: a change that ran to this file (an edit or a write
+    of `path`), or to any file (path None: an undo, which names a change, not a file). Windows of a file read on
+    either side of it are windows of two versions of the file, and are not joined by their line numbers: a window
+    whose header has no sha256 (a file too big to hash) says nothing of its version but when it was read."""
+    path: str | None
+
+
+def unfound_quotes(answer: str | None, sources: Iterable[str | Changed | None] | None) -> list[str]:
     """The quoted material in the answer that is in none of the sources, whitespace made single spaces, in the
-    order the answer has it, each once. None for a text is no text: no answer has no quotes, and a source that is
-    None, or no sources, is nothing read."""
+    order the answer has it, each once. The sources are texts, in the order they were read, and the changes made
+    between them (Changed). None for a text is no text: no answer has no quotes, and a source that is None, or no
+    sources, is nothing read."""
     if not answer:
         return []
     texts = [text for text in sources or () if text is not None]
-    read = [_source(text) for text in texts] + [("", _joined(run, patch)) for run, patch in _runs(texts)]
+    read = ([_source(text) for text in texts if isinstance(text, str)]
+            + [("", _joined(run, patch)) for run, patch in _runs(texts)])
     unmarked = None                                 # what was read without Markdown's inline formatting, when needed
     unfound: list[str] = []
     for quote, compared, spans in _quoted(answer):
@@ -324,25 +334,41 @@ def _shown(text: str) -> list[tuple[str, str | None, int, str | None]]:
     return []
 
 
-def _runs(texts: list[str]) -> list[tuple[list[str], bool]]:
+def _named(changed: str | None, path: str) -> bool:
+    """Whether a change to `changed` (as a call named it; None: any file) is a change to the file a header calls
+    `path`: the same path, or one that ends with the other after a slash (a header says root and path)."""
+    if changed is None:
+        return True
+    a, b = changed.removeprefix("./").strip("/"), path.removeprefix("./").strip("/")
+    return a == b or a.endswith("/" + b) or b.endswith("/" + a)
+
+
+def _runs(texts: list) -> list[tuple[list[str], bool]]:
     """The lines the tools showed of each file, in runs of lines the file has one after the other, wherever each was
     shown (two windows, two hits, a window and a hit); of a line shown twice, the longer (a hit's is stripped, and
     cut at 200 characters). A page's mark keeps the lines on either side of it one after the other. Windows of two
     versions of a file (read before and after an edit, which can move its lines) are not joined; a line of no known
-    version (a hit) is joined to every version of its file, and to the other such lines. With each run, whether it
-    is a patch's (the file is named .patch or .diff, or the run has a hunk header)."""
-    files: dict[tuple[str, str | None], dict[int, str | None]] = {}
+    version (a hit) is joined to every version of its file, and to the other such lines. A change to the file that
+    ran between two replies (Changed, among the texts in the order of the calls) makes the replies after it of
+    another version, whether or not their headers have a sha256 to say so. With each run, whether it is a patch's
+    (the file is named .patch or .diff, or the run has a hunk header)."""
+    files: dict[tuple[str, str | None, int], dict[int, str | None]] = {}
+    changes: list[str | None] = []
     for text in texts:
+        if isinstance(text, Changed):
+            changes.append(text.path)
+            continue
         for path, version, n, line in _shown(text):
-            got = files.setdefault((path, version), {})
+            era = sum(_named(changed, path) for changed in changes)         # how many changes to this file so far
+            got = files.setdefault((path, version, era), {})
             if n not in got or len(line or "") > len(got[n] or ""):
                 got[n] = line
-    for (path, version), got in files.items():
-        for n, line in (files.get((path, None), {}) if version is not None else {}).items():
+    for (path, version, era), got in files.items():
+        for n, line in (files.get((path, None, era), {}) if version is not None else {}).items():
             if n not in got or len(line or "") > len(got[n] or ""):
                 got[n] = line
     runs: list[tuple[list[str], bool]] = []
-    for (path, _version), got in files.items():
+    for (path, _version, _era), got in files.items():
         last = None
         for n in sorted(got):
             if n - 1 != last:

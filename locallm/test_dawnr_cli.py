@@ -940,6 +940,32 @@ def test_a_line_quoted_from_the_closest_lines_a_refused_edit_showed_counts_as_re
     assert "if cache.owner_ran_clean and cache.pinned:" in cli.unread_quotes(f"It clears it then:\n```python\n{guess}\n```", rounds)
 
 
+def test_windows_of_a_file_too_big_to_hash_are_not_joined_across_an_edit_that_ran_between_them():
+    # No sha256 in either header, so only the order of the calls says the file changed between the two reads: line
+    # 3 of the old file and line 5 of the old file (now line 4) are two lines of no version of it.
+    from types import SimpleNamespace as NS
+    from dawnr_agent.plan import Step
+
+    def read(start, last, lines):
+        body = "\n".join(f"{n}\t{line}" for n, line in enumerate(lines[start - 1:last], start))
+        return NS(step=Step("fs_read", {"path": "here/cache.md"}), status="ran",
+                  result=NS(spans=lambda: [(True, f"here/cache.md: lines {start}-{last} of {len(lines)}, 9000000 bytes\n{body}")]))
+
+    old = ["# Cache", "The cache is cleared only when the person", "(a line between)", "runs clean, and never on its own."]
+    new = old[:2] + old[3:]
+    edit = NS(step=Step("fs_edit", {"path": "here/cache.md", "old": "(a line between)\n", "new": ""}), status="ran",
+              result=NS(spans=lambda: [(False, "edited")]))
+    quote = "> The cache is cleared only when the person runs clean, and never on its own.\n"
+    other = [read(1, 2, old), read(3, 3, new)]
+    assert cli.unread_quotes(quote, [NS(outcome=NS(outcomes=other))]) == ""             # no edit between: one text
+    rounds = [NS(outcome=NS(outcomes=[read(1, 2, old)])), NS(outcome=NS(outcomes=[edit])),
+              NS(outcome=NS(outcomes=[read(3, 3, new)]))]
+    assert cli.unread_quotes(quote, rounds).startswith("[Quoted but not found in anything it read: ")
+    failed = NS(step=edit.step, status="failed", result=edit.result)               # an edit that did not run changes nothing
+    rounds[1] = NS(outcome=NS(outcomes=[failed]))
+    assert cli.unread_quotes(quote, rounds) == ""
+
+
 def test_a_listing_is_held_as_the_model_got_it_as_whole_paths(tmp_path):
     # fs_list says "f notes.md (4 bytes)" and "d sub/"; the model is handed "here/notes.md  (4 bytes)" and
     # "here/sub/  (a folder)" (listing), and an answer that names the files as it got them quotes nothing unread
