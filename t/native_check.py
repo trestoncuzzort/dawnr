@@ -212,7 +212,16 @@ def interpret(inventory: dict, coverage: dict, checking: dict, scope: dict) -> d
     try:
         listed, covered, checked = document(inventory), document(coverage), document(checking)
         props, every_goal, results = rows(listed, "properties"), rows(covered, "goals"), rows(checked, "result")
-        goals = [goal for goal in every_goal if not library_goal(goal)]
+        # CBMC ends the no-such-target branch of a call through a function pointer with ASSUME false, after a
+        # property "dereferenced function pointer must be one of [...]" at the same place. That assumption is the tool's and not the
+        # harness's, and it has to be unreachable, so it is listed apart and kept out of the count.
+        pointer_calls = {(prop.get("sourceLocation", {}).get("function"), prop.get("sourceLocation", {}).get("line")) for prop in props
+                         if str(prop.get("description", "")).startswith("dereferenced function pointer must be one of")}
+        def pointer_goal(goal: dict) -> bool:
+            location = goal.get("sourceLocation", {})
+            return location.get("function") != "harness" and (location.get("function"), location.get("line")) in pointer_calls
+        through_pointer = [goal for goal in every_goal if not library_goal(goal) and pointer_goal(goal)]
+        goals = [goal for goal in every_goal if not library_goal(goal) and not pointer_goal(goal)]
         library = [goal for goal in every_goal if library_goal(goal)]
         expected = [prop["name"] for prop in props]
         actual = [result["property"] for result in results]
@@ -250,6 +259,8 @@ def interpret(inventory: dict, coverage: dict, checking: dict, scope: dict) -> d
         detail = {"properties": clean(results), "assumption_goals": clean(goals)}
         if library:
             detail["library_assumption_goals"] = clean(library)
+        if through_pointer:
+            detail["function_pointer_assumption_goals"] = clean(through_pointer)
         if any(goal["status"] != "satisfied" for goal in goals):
             return {**detail, "verdict": "vacuous", "reason": "assumption coverage has an unreachable before/after goal"}
         missing = [result for result in failed if body_missing(result)]

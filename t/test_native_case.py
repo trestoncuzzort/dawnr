@@ -982,3 +982,25 @@ def test_past_256_addressed_objects_a_case_asks_for_more_object_bits(tmp_path):
     assert receipt["verdict"] == "tool_error" and "too many addressed objects" in receipt["reason"]
     raised = custom_case(tmp_path / "raised", MANY, MANY, ["fill"], object_bits=10, **MANY_FIELDS)
     assert cases.check(raised, "fixed", tmp_path / "raised-out", cbmc=CBMC)["verdict"] == "complete"
+
+
+TWICE = "static int twice(int a)\n{\n\treturn a * 2;\n}\n"
+THRICE = "static int thrice(int a)\n{\n\treturn a * 3;\n}\n"
+# A call through a pointer that may hold either function; the original's thrice is wrong.
+THROUGH_POINTERS = {
+    "several targets": ("", TWICE + THRICE + "int apply(int a, int which)\n{\n\tint (*op)(int) = which ? twice : thrice;\n\treturn op(a);\n}\n",
+                        ["twice", "thrice", "apply"], "a * 3", "a * 4", "apply(a, w) == (w ? a * 2 : a * 3)"),
+}
+
+
+@real
+@pytest.mark.parametrize("label", list(THROUGH_POINTERS))
+def test_a_call_through_a_function_pointer_gets_the_controls_of_any_case(tmp_path, label):
+    prelude, fixed, names, right, wrong, claim = THROUGH_POINTERS[label]
+    root = custom_case(tmp_path / "case", fixed.replace(right, wrong), fixed, names, prelude=prelude, assumptions=1, assertions=["apply.result"],
+                       inputs=[{"name": "a", "type": "int"}, {"name": "w", "type": "int"}],
+                       harness=f'    __CPROVER_assume(a >= -1000 && a <= 1000);\n    __CPROVER_assert({claim}, "apply.result");\n')
+    summary = cases.suite(root, tmp_path / "suite", cbmc=CBMC)
+    assert summary["ok"] and [row["verdict"] for row in summary["rows"]] == ["counterexample", "complete", "vacuous"], summary["rows"]
+    receipt = json.loads((tmp_path / "suite" / "fixed" / "receipt.json").read_text())
+    assert len(receipt["function_pointer_assumption_goals"]) == 2 and len(receipt["assumption_goals"]) == 2 * 2
