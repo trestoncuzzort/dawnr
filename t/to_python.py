@@ -1049,7 +1049,38 @@ def _example_inputs(task: dict, tests: list[str], ins: list[str], limit: int = 1
     return out
 
 
-_REFUSES = """
+def _t_same(a, b) -> bool:
+    """`a == b` and the same type at every level: Python's `==` calls 1, True and 1.0 equal, a set and a frozenset, a dict
+    and an OrderedDict or defaultdict, a str and a subclass of it, a tuple and a namedtuple, and a function that answers
+    the one where the proved program answers the other has not answered as the program does. The type of each part of
+    `b`, the reference, is the one the tests write it in (`_form` decides list or tuple, a set or the `{}` written for
+    an empty one); only the order of a set's elements and a dict's keys is free."""
+    if type(a) is not type(b):
+        return False
+    if isinstance(a, (list, tuple)):
+        return len(a) == len(b) and all(_t_same(x, y) for x, y in zip(a, b))
+    if isinstance(a, (set, frozenset)):
+        return len(a) == len(b) and all(any(_t_same(x, y) for y in b) for x in a)
+    if isinstance(a, dict):
+        return len(a) == len(b) and all(any(_t_same(k, j) and _t_same(v, w) for j, w in b.items()) for k, v in a.items())
+    return a == b
+
+
+def _strict_example(line: str) -> str:
+    """`assert f(x) == v` as `assert _t_same(f(x), v)`; any other line as it was written."""
+    import ast
+    try:
+        node = ast.parse(line).body[0]
+        t = node.test
+        if (isinstance(node, ast.Assert) and isinstance(t, ast.Compare) and len(t.ops) == 1 and isinstance(t.ops[0], ast.Eq)
+                and isinstance(t.left, ast.Call)):
+            return f"assert _t_same({ast.unparse(t.left)}, {ast.unparse(t.comparators[0])})"
+    except (SyntaxError, IndexError):
+        pass
+    return line
+
+
+_REFUSES = "\n\n" + inspect.getsource(_t_same) + """
 def _t_call_heap(f, args, idx):
     out = f(*args)
     return out, [args[i] for i in idx]
@@ -1075,7 +1106,7 @@ def check(task: dict, src: str, fn: str, tests: list[str] | None = None, n: int 
     except Uncarried as why:                                    # nothing was written, so nothing is claimed
         return {"agrees": False, "abstained": True, "inputs": 0, "why": f"the comparison with your function cannot carry {why}"}
     names = [(p["name"], p["type"]) for p in task["params"]]
-    asserts, refusals = [], []
+    asserts, strict, refusals = [], [], []         # `asserts` as they read (`==`); `strict` is what runs (`_t_same`)
     def one(env: dict) -> None:
         heap: dict = {}
         try:
@@ -1100,8 +1131,10 @@ def check(task: dict, src: str, fn: str, tests: list[str] | None = None, n: int 
             idx = [i for i, (p, _t) in enumerate(names) if p in mods]
             finals = [_t_value_to_py(heap[names[i][0]], "array") for i in idx]
             asserts.append(f"assert _t_call_heap({fn}, {args!r}, {idx!r}) == ({want!r}, {finals!r})")
+            strict.append(f"assert _t_same(_t_call_heap({fn}, {args!r}, {idx!r}), ({want!r}, {finals!r}))")
             return
         asserts.append(f"assert {fn}(*{args!r}) == {want!r}")
+        strict.append(f"assert _t_same({fn}(*{args!r}), {want!r})")
 
     for env in interp.domain(task, names, interp.MAX_POINTS):
         if len(asserts) >= n:
@@ -1118,10 +1151,14 @@ def check(task: dict, src: str, fn: str, tests: list[str] | None = None, n: int 
         # written as the function's Python values there is nothing to compare, and "agrees" would be a claim from nothing
         return {"agrees": False, "abstained": True, "inputs": 0,
                 "why": "no input of the program's domain could be written as the values your function takes"}
-    asserts += [t.strip() for t in tests or [] if t.strip()]
+    # the person's own examples are the written forms: `assert f(x) == v` is run as `assert _t_same(f(x), v)`, so a
+    # function that passes its own example only because 1 == True (or 1 == 1.0, or a list for a tuple's subclass) does not
+    own = [t.strip() for t in tests or [] if t.strip()]
+    asserts += own
+    strict += [_strict_example(t) for t in own]
     if not asserts:
         return {"agrees": False, "inputs": 0, "why": "no input to check on"}
-    r = py_sandbox.run_tests(src + _REFUSES, asserts + refusals, per_test=per_test)
+    r = py_sandbox.run_tests(src + _REFUSES, strict + refusals, per_test=per_test)
     ok = r.get("status") == "ran" and bool(r.get("all_pass"))
     if ok:
         return {"agrees": True, "inputs": len(asserts), "refused": len(refusals)}

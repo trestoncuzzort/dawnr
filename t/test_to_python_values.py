@@ -130,6 +130,113 @@ def test_a_tuple_of_ints_the_tests_write_as_a_tuple_is_written_as_a_tuple_where_
     assert not r["agrees"] and r["first"].startswith("assert rot3(*[("), r
 
 
+BOOL = ("t 1\ntask is_pos(n: int) returns (r: bool)\n  ensures true\n{\n  if n > 0 {\n    r := true;\n  } else {\n    r := false;\n  }\n}\n")
+FLAG = ("t 1\ntask flag(n: int) returns (r: int)\n  ensures true\n{\n  if n > 0 {\n    r := 1;\n  } else {\n    r := 0;\n  }\n}\n")
+TWICE = "t 1\ntask twice(n: int) returns (r: int)\n  ensures true\n{\n  r := n + n;\n}\n"
+MAP_OF_PAIRS = ("t 1\ntask wrap(a: int, b: int) returns (r: map<int, (int, bool)>)\n  ensures true\n{\n"
+                "  r := map[0 := (a, a < b)];\n}\n")
+_IS_POS = ["assert is_pos(3) == True", "assert is_pos(-1) == False"]
+_SWAP3 = "def swap3(p):\n    return (p[2], p[1], p[0])\n"
+_SWAP3_TESTS = CASES["3-tuple"][3]
+_FROM_PAIR = CASES["map"][1]
+_FROM_PAIR_TESTS = CASES["map"][3]
+
+# a function that is right under Python's `==` on its examples and on the program's own answers, and a different type:
+# (the program, the right function, the examples, the function of another type at one place)
+BY_TYPE = {
+    "True for 1 (an int where the program answers a bool)": (
+        BOOL, "def is_pos(n):\n    return n > 0\n", "is_pos", _IS_POS, "def is_pos(n):\n    return 1 if n > 0 else 0\n"),
+    "True for 1, the other way (a bool where the program answers an int)": (
+        FLAG, "def flag(n):\n    return 1 if n > 0 else 0\n", "flag", ["assert flag(3) == 1", "assert flag(-1) == 0"],
+        "def flag(n):\n    return n > 0\n"),
+    "1.0 for 1": (
+        TWICE, "def twice(n):\n    return n + n\n", "twice", ["assert twice(2) == 4", "assert twice(0) == 0"],
+        "def twice(n):\n    return float(n + n)\n"),
+    "an int for a bool inside a 3-tuple": (
+        TUPLE3, _SWAP3, "swap3", _SWAP3_TESTS, "def swap3(p):\n    return (p[2], int(p[1]), p[0])\n"),
+    "a float for an int inside a map": (
+        MAP, _FROM_PAIR, "from_pair", _FROM_PAIR_TESTS, "def from_pair(a, b):\n    return {0: float(a), 1: b}\n"),
+    "a frozenset for a set": (
+        STRINGS_IN_SET, CASES["strings in a set"][1], "both", CASES["strings in a set"][3],
+        "def both(a, b):\n    return frozenset({a, b})\n"),
+    "an OrderedDict for a dict": (
+        MAP, _FROM_PAIR, "from_pair", _FROM_PAIR_TESTS,
+        "from collections import OrderedDict\n\ndef from_pair(a, b):\n    return OrderedDict([(0, a), (1, b)])\n"),
+    "a defaultdict for a dict": (
+        MAP, _FROM_PAIR, "from_pair", _FROM_PAIR_TESTS,
+        "from collections import defaultdict\n\ndef from_pair(a, b):\n    return defaultdict(int, {0: a, 1: b})\n"),
+    "a str subclass inside a tuple": (
+        STRING_IN_TUPLE, CASES["string in a tuple"][1], "tag", CASES["string in a tuple"][3],
+        "class S(str):\n    pass\n\ndef tag(s):\n    return (S(s), len(s))\n"),
+    "a namedtuple for a tuple": (
+        TUPLE3, _SWAP3, "swap3", _SWAP3_TESTS,
+        "from collections import namedtuple\nT = namedtuple('T', 'a b c')\n\ndef swap3(p):\n    return T(p[2], p[1], p[0])\n"),
+    "a bool for an int inside a tuple nested in a map": (
+        MAP_OF_PAIRS, "def wrap(a, b):\n    return {0: (a, a < b)}\n", "wrap",
+        ["assert wrap(1, 2) == {0: (1, True)}", "assert wrap(2, 1) == {0: (2, False)}"],
+        "def wrap(a, b):\n    return {0: (a, a < b) if a < 3 else (a, int(a < b))}\n"),
+    # already refuted by == (a list is never equal to a tuple), held so that the strict comparison keeps it so
+    "a list for a tuple nested in a map": (
+        MAP_OF_PAIRS, "def wrap(a, b):\n    return {0: (a, a < b)}\n", "wrap",
+        ["assert wrap(1, 2) == {0: (1, True)}", "assert wrap(2, 1) == {0: (2, False)}"],
+        "def wrap(a, b):\n    return {0: (a, a < b) if a < 3 else [a, a < b]}\n"),
+}
+
+
+@needs_sandbox
+@pytest.mark.parametrize("name", list(BY_TYPE))
+def test_a_function_that_differs_only_by_type_is_refuted_and_the_right_one_still_agrees(name):
+    task, right, fn, tests, wrong = BY_TYPE[name]
+    for line in tests:                                          # Python's == finds it right on every example it is given
+        assert py_sandbox.run_tests(wrong, [line])["all_pass"], line
+    assert compare(task, right, fn, tests)["agrees"]
+    r = compare(task, wrong, fn, tests)
+    assert not r["agrees"] and not r.get("abstained"), r
+    assert r["first"].startswith(f"assert {fn}(*[") and r["first"] not in tests, r
+
+
+@needs_sandbox
+def test_the_comparison_keeps_the_forms_the_tests_write_and_names_the_programs_answer_in_them():
+    # the line names the answer in the type the tests write: True, not 1; a tuple, not a list
+    task, _right, fn, tests, wrong = BY_TYPE["True for 1 (an int where the program answers a bool)"]
+    line = compare(task, wrong, fn, tests)["first"]
+    assert line.endswith("== True") or line.endswith("== False"), line
+    task, _right, fn, tests, wrong = BY_TYPE["a namedtuple for a tuple"]
+    assert compare(task, wrong, fn, tests)["first"].endswith(")"), "the answer is a tuple"
+
+
+def test_the_strict_equality_is_the_same_type_at_every_level():
+    same = to_python._t_same
+    assert same(1, 1) and same((1, [True]), (1, [True])) and same({1: (2,)}, {1: (2,)}) and same({"a"}, {"a"})
+    assert not same(1, True) and not same(0, False) and not same(1, 1.0) and not same(True, 1)
+    assert not same((1,), [1]) and not same([1], (1,)) and not same({1}, frozenset({1}))
+    assert not same({1: 2}, {True: 2}) and not same({1: 2}, {1: 2.0}) and not same((1, [2]), (1, (2,)))
+    assert not same("ab", type("S", (str,), {})("ab")) and not same({}, __import__("collections").OrderedDict())
+
+
+def test_the_persons_own_examples_are_read_as_written_and_run_strictly():
+    strict = to_python._strict_example
+    assert strict("assert f(1, [2]) == (3, True)") == "assert _t_same(f(1, [2]), (3, True))"
+    assert strict("assert not f(1)") == "assert not f(1)" and strict("assert f(1)") == "assert f(1)"
+    assert strict("assert f(1) != 2") == "assert f(1) != 2" and strict("assert f(") == "assert f("
+
+
+@needs_sandbox
+def test_a_function_that_passes_its_own_example_only_because_one_equals_true_is_refuted_at_that_example():
+    # no input but the example's own: the example says True, the function answers 1, and Python's == is content
+    task = "t 1\ntask one(n: int) returns (r: bool)\n  requires n == 3\n  ensures true\n{\n  r := true;\n}\n"
+    tests = ["assert one(3) == True"]
+    assert compare(task, "def one(n):\n    return True\n", "one", tests)["agrees"]
+    r = compare(task, "def one(n):\n    return 1\n", "one", tests)
+    assert not r["agrees"], r
+
+
+@needs_sandbox
+def test_a_function_whose_source_has_no_final_newline_still_loads_beside_the_comparison():
+    task, right, fn, tests, _wrong = BY_TYPE["True for 1 (an int where the program answers a bool)"]
+    assert compare(task, right.rstrip("\n"), fn, tests)["agrees"]
+
+
 def test_a_dict_inside_a_set_or_as_a_key_is_refused_by_name():
     with pytest.raises(to_python.Uncarried, match="dict inside a set"):
         to_python._form({"set": {"map": ["int", "int"]}}, [], {}, True)
