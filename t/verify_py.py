@@ -44,8 +44,10 @@ list[tuple[str, int]], dict[str, list[int]], set[tuple[int, int]] and the like, 
 
 The examples, given or taken from the function, are read at the types the model's task declares (t/typed_values.py,
 2026-11-26): a tuple mixing kinds is a pair or a tuple, a dict a map, a set a set, None beside a value an option the
-task declares, a list mixing kinds a seq of a datatype. Where the comparison of the proved program with the function
-(t/to_python.py, part of the t engine) cannot carry a type yet, verify says so and shows nothing.
+task declares, a list mixing kinds a seq of a datatype. The comparison of the proved program with the function
+(t/to_python.py) writes each as the Python value the test wrote; where it has no faithful writing (a dict inside a set,
+a sequence written as a list in one test and a tuple in another, where the result is compared) verify says so and
+shows nothing.
 """
 from __future__ import annotations
 
@@ -364,39 +366,21 @@ def entry_for(function: dict, tests: list[str]) -> tuple[dict, bool]:
     return entry, drawn
 
 
-def _carried(ty, v) -> bool:
-    """Whether t/to_python.py's boundary writes a value of type `ty`, as the test wrote it (`v`), as the Python value
-    the person's function takes: ints, bools, strings at the top, sets of ints, lists (any depth) of ints and bools,
-    and pairs of ints and bools. Read from its _boundary_kinds and _t_value_to_py on 2026-11-26."""
-    if ty == "int":
-        return isinstance(v, int) and not isinstance(v, bool)
-    if ty == "bool":
-        return isinstance(v, bool)
-    if ty == "seq":
-        return isinstance(v, str) or (isinstance(v, (list, tuple)) and all(_carried("int", x) for x in v))
-    if ty == "set":
-        return (isinstance(v, (set, frozenset)) and all(_carried("int", x) for x in v)) or v == {}
-    if isinstance(ty, dict) and set(ty) == {"seq"}:
-        if not isinstance(v, (list, tuple)):
-            return False
-        if ty["seq"] == "seq":                                  # rows of ints; a row written as a string is not carried
-            return all(isinstance(x, (list, tuple)) and _carried("seq", x) for x in v)
-        return all(_carried(ty["seq"], x) for x in v)
-    if isinstance(ty, dict) and set(ty) == {"pair"} and all(t in ("int", "bool") for t in ty["pair"]):
-        return isinstance(v, tuple) and len(v) == 2 and all(_carried(t, x) for t, x in zip(ty["pair"], v))
-    return False
-
-
 def _not_compared(task: dict, entry: dict) -> str | None:
-    """The first type, in t's words, of a position the reader typed (t/typed_values.py) whose values the comparison
-    with the person's function cannot carry; None when it carries them all, as it does every value read before."""
+    """The first position, in t's words, that the reader typed (t/typed_values.py) and whose values the comparison with
+    the person's function cannot carry, with why (`to_python.uncarried`); None when it carries them all, as it does
+    every value read before. Read from what t/to_python.py's boundary writes, a map as a dict, a tuple of any arity
+    as a tuple, a datatype value as the Python value it was read from, a string inside any of them as a str."""
     if not typed_values.entry_is_typed(entry):
         return None
+    dts = typed_values.datatypes_of(task)
     sides = [(p["type"], i) for i, p in enumerate(task["params"])] + [(task["returns"][0]["type"], None)]
     for ty, i in sides:
         cells = [pt["expected"] if i is None else pt["args"][i] for pt in entry["points"]]
-        if any(typed_values.is_typed(k) for k, _v in cells) and not all(_carried(ty, v) for _k, v in cells):
-            return se._type_words(ty)
+        if any(typed_values.is_typed(k) for k, _v in cells):
+            why = to_python.uncarried(ty, [v for _k, v in cells], dts, result=i is None)
+            if why:
+                return f"{se._type_words(ty)}: {why}"
     return None
 
 
@@ -406,8 +390,8 @@ def _compared(task: dict, code: str, fn: str, tests: list[str], entry: dict) -> 
     cannot = _not_compared(task, entry)
     if cannot:
         return {"agrees": False, "abstained": True,
-                "why": f"the comparison with your function cannot carry {cannot} yet (t/to_python.py, in the t engine, "
-                       "writes no Python value of it); the program was not compared with your function"}
+                "why": f"the comparison with your function cannot carry {cannot} (t/to_python.py writes no Python "
+                       "value of it as the tests do); the program was not compared with your function"}
     return to_python.check(task, code, fn, tests, outside=0)
 
 

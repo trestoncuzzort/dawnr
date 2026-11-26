@@ -11,7 +11,7 @@ it: a float, a tuple mixing kinds, a dict, deeper nesting (three list levels, or
 three levels in `t`), a list mixing kinds, None, a set, a list of bools, an object, other.
 
 For each problem now posable it also says whether t/to_python.py's comparison of a proved program with the
-function would carry the types the question suggests (verify_py._carried), since `verify` shows a twin only after
+function would carry the types the question suggests (to_python.uncarried), since `verify` shows a twin only after
 that comparison: a posed question whose types it does not carry is refused there, by name. This counts posing, not
 proving: no model and no prover is run.
 
@@ -31,8 +31,8 @@ sys.path.insert(0, str(HERE))
 
 import answer                                                   # noqa: E402
 import mbpp_dfy                                                 # noqa: E402
+import to_python                                                # noqa: E402
 import typed_values                                             # noqa: E402
-import verify_py                                                # noqa: E402
 
 WIDE = dict(strings=True, nested_strings=True, tuples=True, nested_ints=True)
 GROUPS = ("float", "tuple mixing kinds", "dict", "deeper nesting", "list mixing kinds", "None", "set", "list of bools",
@@ -89,15 +89,38 @@ def group(why: str, tests: list[str]) -> str:
     return "other"
 
 
+def _declared(t, dts: dict):
+    """A suggested type as the task would declare it: an option or a sum of kinds is the datatype the prompt tells the
+    model to declare (typed_values.declarations), added to `dts` under its name."""
+    if not isinstance(t, dict):
+        return t
+    (k, v), = t.items()
+    if k == "option":
+        name = "Option" if "Option" not in dts else f"Option{len(dts)}"
+        dts[name] = {"name": name, "ctors": [{"name": "Nothing"}, {"name": "Some", "fields": [{"name": "v", "type": _declared(v, dts)}]}]}
+        return {"datatype": name}
+    if k == "sum":
+        name = "Item" if "Item" not in dts else f"Item{len(dts)}"
+        dts[name] = {"name": name, "ctors": [{"name": c, "fields": [{"name": typed_values._SUM_CTOR[c][0],
+                                                                    "type": typed_values._SUM_CTOR[c][1]}]} for c in v]}
+        return {"datatype": name}
+    if k in ("pair", "tuple"):
+        return {k: [_declared(x, dts) for x in v]}
+    if k == "map":
+        return {"map": [_declared(x, dts) for x in v]}
+    return {k: _declared(v, dts)}
+
+
 def carried(entry: dict) -> bool:
     """Whether the comparison with the function carries every typed position at the type the question suggests."""
     first = entry["points"][0]
     for i, (kind, _v) in enumerate(list(first["args"]) + [first["expected"]]):
         if not typed_values.is_typed(kind):
             continue
-        ty = typed_values.type_of_kind(kind)
+        dts: dict = {}
+        ty = _declared(typed_values.type_of_kind(kind), dts)
         cells = [(p["args"][i] if i < len(first["args"]) else p["expected"]) for p in entry["points"]]
-        if not all(verify_py._carried(ty, v) for _k, v in cells):
+        if to_python.uncarried(ty, [v for _k, v in cells], dts, result=i >= len(first["args"])) is not None:
             return False
     return True
 

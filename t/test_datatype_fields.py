@@ -2,7 +2,7 @@
 """test_datatype_fields.py: datatypes with fields (SPEC.md "Datatypes (v2): fields", PREDICT T23, 2026-10-07).
 Text-level checks only, no kernel runs: the notation (parse, print, the `X.y` rule), the interpreter (field values,
 definedness, the witness ladder and its shown form), the three lowerings that state the construct (Dafny, Verus,
-Lean), the four that refuse it by name, the name sanitizer, and the Python hand-back's refusal."""
+Lean), the four that refuse it by name, the name sanitizer, and the Python hand-back's record."""
 from __future__ import annotations
 
 import re
@@ -202,12 +202,26 @@ task f(r: Opt) returns (k: int) ensures true
        "a match binder named like a keyword is renamed with its uses")
 
 
-def test_python_hand_back_refuses():
+def test_python_hand_back_carries_a_record():
+    # 2026-11-26: a datatype value crosses the Python boundary as the Python value typed_values reads it from (a record
+    # as the tuple of its fields) and is a tuple of its constructor's name and fields inside; before, this was refused
+    task = load("manhattan")
+    source, fn = to_python.translate(task)
+    scope: dict = {}
+    exec(source, scope)                                           # noqa: S102 -- the translator's own output, in a test
+    ok(scope[fn]((1, 2), (4, 6)) == 7, "the record hand-back answers: manhattan((1, 2), (4, 6)) == 7")
     try:
-        to_python.translate(load("manhattan"))
-        ok(False, "to_python refuses datatypes")
+        scope[fn]([1, 2, 3], (4, 6))
+        ok(False, "a record of three fields is not a Point")
+    except TypeError as e:
+        ok("must be Point" in str(e), "the hand-back names the declared type: %s" % e)
+    rogue = load("manhattan")
+    rogue["body"] = [{"assign": ["d", {"ctor": {"dtype": "Colour", "ctor": "Red", "args": []}}]}]
+    try:
+        to_python.translate(rogue)
+        ok(False, "a datatype the task does not declare is refused")
     except to_python.Unsupported as e:
-        ok("datatypes" in str(e), "to_python refuses datatypes by name")
+        ok("datatypes" in str(e), "an undeclared datatype is refused by name")
 
 
 if __name__ == "__main__":

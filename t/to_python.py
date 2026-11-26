@@ -26,8 +26,17 @@ internal/ENTERPRISE-PLAN-2026-09-19.md; Meyer's design by contract, where a viol
 fault and is reported at the call). The check runs the guard beside the interpreter too: on drawn inputs the
 `requires` excludes, the Python must refuse.
 
-Not translated (the answer keeps its `t` form only): datatypes (constructors, `match` and field access), which no
-answer has needed yet.
+Compound values at the boundary (2026-11-26, the values t/typed_values.py reads). The boundary writes a value as the
+Python value the test wrote it, at the type the program declares: a map is a dict, a tuple of any arity a tuple, a set
+a set, a string inside any of them a str, and a datatype value the Python value typed_values read it from (an option's
+None or the value itself, a record the tuple of its fields, one constructor of several the value of its kind). Inside
+the function a map is a dict, a tuple a tuple, a datatype value a tuple of its constructor's name and its fields. Each
+position's written form is kept in a small form (`_form`) that `_t_in` and `_t_out` read, in the generated Python and
+beside the interpreter alike, so the comparison and the hand-back cross the boundary by the same code. What has no
+faithful writing (a dict inside a set, a datatype of constructors without fields, a sequence the tests write as a list
+in one test and a tuple in another, where the result is compared) is refused by name (`Uncarried`).
+
+Not translated (the answer keeps its `t` form only): a datatype the task does not declare.
 """
 from __future__ import annotations
 
@@ -42,6 +51,7 @@ sys.path.insert(0, str(HERE))
 
 import interp                                                   # noqa: E402
 import surface                                                  # noqa: E402
+import typed_values                                             # noqa: E402
 
 INDENT = "    "
 _RENAME_SUFFIX = "_"
@@ -95,6 +105,37 @@ class _Writer:
                 self.helpers.append(n)
 
     # ---------------------------------------------------------------- expressions --
+    def datatype_expr(self, e: dict) -> str:
+        """SPEC.md "Datatypes (v1)" and "(v2): fields": a datatype value is the tuple of its constructor's name and its
+        fields (structural equality, as t's), `match` a chain of conditionals that evaluates only the chosen arm, a field
+        the position of the name in the constructor that carries it."""
+        declared = {d["name"]: d for d in self.task.get("datatypes", []) or []}
+        if "ctor" in e:
+            c = e["ctor"]
+            if c.get("dtype") not in declared or "name" not in c:
+                raise Unsupported(f"datatypes: {c.get('dtype')} is not one the task declares")
+            return "(" + "".join(v + ", " for v in [repr(c["name"])] + [self.expr(a) for a in c.get("args", [])]) + ")"
+        if "match" in e:
+            m = e["match"]
+            arms = []
+            for arm in m["arms"]:
+                binders = ", ".join(_ident(b) for b in arm.get("binders", []))
+                arms.append((arm["ctor"], f"(lambda {binders}: {self.expr(arm['body'])})(*_t_s[1:{1 + len(arm.get('binders', []))}])"))
+            chain = arms[-1][1]                                     # check_wf: one arm for every constructor
+            for ctor, body in reversed(arms[:-1]):
+                chain = f"({body} if _t_s[0] == {ctor!r} else {chain})"
+            return f"(lambda _t_s: {chain})({self.expr(m['scrutinee'])})"
+        f = e["field"]
+        where: dict = {}
+        for d in declared.values():
+            for c in d["ctors"]:
+                names = [x["name"] for x in c.get("fields") or []]
+                if f["name"] in names and where.setdefault(c["name"], names.index(f["name"]) + 1) != names.index(f["name"]) + 1:
+                    raise Unsupported(f"datatypes: field {f['name']} at different places in constructors of one name")
+        if not where:
+            raise Unsupported(f"datatypes: no constructor of the task has the field {f['name']}")
+        return f"_t_field({self.expr(f['of'])}, {where!r})"
+
     def expr(self, e: dict) -> str:
         if "int" in e:
             return repr(e["int"])
@@ -117,7 +158,7 @@ class _Writer:
             c = e["ite"]
             return f"({self.expr(c['then'])} if {self.expr(c['cond'])} else {self.expr(c['else'])})"
         if "ctor" in e or "match" in e or "field" in e:
-            raise Unsupported("datatypes")
+            return self.datatype_expr(e)
         if "lam" in e:
             # SPEC.md "Higher-order calls (v1)" (2026-10-06): Python's own lambda
             return "(lambda %s: %s)" % (", ".join(_ident(v) for v in e["lam"]["vars"]), self.expr(e["lam"]["body"]))
@@ -173,6 +214,10 @@ class _Writer:
             return f"{x[0]}[{x[1]}:{x[2]}]"
         if op == "pair":
             return f"({x[0]}, {x[1]})"
+        if op == "tuple":
+            return "(" + "".join(v + ", " for v in x) + ")"       # SPEC.md "Compositional types (v1)": three or more
+        if op == "proj":
+            return f"{x[0]}[{x[1]}]"
         if op == "fst":
             return f"{x[0]}[0]"
         if op == "snd":
@@ -349,6 +394,8 @@ def _boundary_kinds(task: dict, tests: list[str]) -> tuple[list[str], str]:
     seen_in = ["value"] * len(task["params"])
     seen_out = "value"
     out_containers: tuple[str, ...] = ()
+    nodes_in: list[list] = [[] for _ in task["params"]]       # every test's own writing, for the typed positions
+    nodes_out: list = []
     for line in tests or []:
         try:
             node = ast.parse(line.strip()).body[0]
@@ -359,6 +406,8 @@ def _boundary_kinds(task: dict, tests: list[str]) -> tuple[list[str], str]:
             continue
         for i, arg in enumerate(node.test.left.args[:len(seen_in)]):
             seen_in[i] = _merge(seen_in[i], _literal_kind(arg))
+            nodes_in[i].append(arg)
+        nodes_out.append(node.test.comparators[0])
         seen_out = _merge(seen_out, _literal_kind(node.test.comparators[0]))
         if len(_containers(node.test.comparators[0])) > len(out_containers):
             out_containers = _containers(node.test.comparators[0])   # the deepest writing seen (an empty one says less)
@@ -377,6 +426,16 @@ def _boundary_kinds(task: dict, tests: list[str]) -> tuple[list[str], str]:
         return "value"
     ins = [form(p["type"], k) for p, k in zip(task["params"], seen_in)]
     out = form(task["returns"][0]["type"], seen_out)
+    # 2026-11-26: a position the typed reader read (t/typed_values.py) that the boundary above does not carry is
+    # written by a form of its declared type and of how the tests write it; Uncarried where it has no faithful writing
+    dts = typed_values.datatypes_of(task)
+    for i, (p, ns) in enumerate(zip(task["params"], nodes_in)):
+        f = _form_of(p["type"], ns, dts, False)
+        if f is not None:
+            ins[i] = "form:" + json.dumps(f)
+    f = _form_of(task["returns"][0]["type"], nodes_out, dts, True)
+    if f is not None:
+        out = "form:" + json.dumps(f)
     # 2026-10-05, the wider reader: a result the tests write with a tuple somewhere (`(0, 4, 5, 1)`, `[(1, 2), (3, 4)]`)
     # leaves in that writing, or Python's == finds the list unequal to the tuple and the question's own test fails
     if "tuple" in out_containers:
@@ -426,6 +485,297 @@ def _type_guard(ttype, kind: str, v: str) -> tuple[str, str] | None:
     return None
 
 
+# ------------------------------------------------- compound values at the boundary --
+# A position's "form" says how its values are written in Python, as a JSON-able list (it is embedded in the generated
+# source): ["int"], ["bool"], ["char"] (an int written as a one-character str), ["str"] (a seq written as a str),
+# ["seq", container, elem], ["set", elem, frozen, empty], ["tup", container, [elems]] (a pair or a tuple of three or more),
+# ["map", key, value], ["opt", bare, one, field] (None, or the value), ["rec", ctor, container, [fields]] (a record from
+# the tuple of its fields), ["sum", bare, [[ctor, kind, field], ...]] (one constructor of several, by the value's kind).
+# Container is "list" or "tuple"; a set's empty is "set" or "dict" (MBPP writes an empty set `{}` as often as `set()`,
+# and `set() == {}` is False in Python, so the empty set is written as the tests write it). Inside the function a value is the interpreter's, except that a map is a dict, a pair
+# or tuple a tuple and a datatype value a tuple (its constructor's name, then its fields).
+
+
+class Uncarried(Unsupported):
+    """A value the boundary cannot write as the Python value the test wrote, named; nothing is compared or shown."""
+
+
+def _t_in(v, f):
+    """The Python value `v` of a position written as `f`, as the function inside holds it; TypeError when it is not one."""
+    k = f[0]
+    if k == "int":
+        if isinstance(v, int) and not isinstance(v, bool):
+            return v
+    elif k == "bool":
+        if isinstance(v, bool):
+            return v
+    elif k == "char":
+        if isinstance(v, str) and len(v) == 1:
+            return ord(v)
+    elif k == "str":
+        if isinstance(v, str):
+            return tuple(ord(c) for c in v)
+    elif k == "seq":
+        if isinstance(v, (list, tuple)):
+            return tuple(_t_in(x, f[2]) for x in v)
+    elif k == "set":
+        if isinstance(v, (set, frozenset)) or (f[3] == "dict" and isinstance(v, dict) and not v):
+            return frozenset(_t_in(x, f[1]) for x in v)
+    elif k == "tup":
+        if isinstance(v, (list, tuple)) and len(v) == len(f[2]):
+            return tuple(_t_in(x, g) for x, g in zip(v, f[2]))
+    elif k == "map":
+        if isinstance(v, dict):
+            return {_t_in(a, f[1]): _t_in(b, f[2]) for a, b in v.items()}
+    elif k == "opt":
+        if v is None:
+            return (f[1],)
+        return (f[2], _t_in(v, f[3]))
+    elif k == "rec":
+        if isinstance(v, (list, tuple)) and len(v) == len(f[3]):
+            return (f[1],) + tuple(_t_in(x, g) for x, g in zip(v, f[3]))
+    elif k == "sum":
+        if v is None and f[1] is not None:
+            return (f[1],)
+        hit = [(c, g) for c, kind, g in f[2]
+               if (kind == "bool" and isinstance(v, bool))
+               or (kind == "int" and isinstance(v, int) and not isinstance(v, bool))
+               or (kind in ("str", "seq") and isinstance(v, str))
+               or (kind in ("list", "seq") and isinstance(v, (list, tuple)))]
+        if len(hit) == 1:
+            return (hit[0][0], _t_in(v, hit[0][1]))
+    raise TypeError("a value of the declared type")
+
+
+def _t_out(v, f):
+    """The function's value `v` of a position written as `f`, as the Python value the test writes; ValueError when it has none."""
+    k = f[0]
+    if k == "char":
+        return chr(v)
+    if k == "str":
+        return "".join(chr(c) for c in v)
+    if k == "seq":
+        xs = [_t_out(x, f[2]) for x in v]
+        return xs if f[1] == "list" else tuple(xs)
+    if k == "tup":
+        xs = [_t_out(x, g) for x, g in zip(v, f[2])]
+        return xs if f[1] == "list" else tuple(xs)
+    if k == "set":
+        xs = {_t_out(x, f[1]) for x in v}
+        return {} if f[3] == "dict" and not xs else frozenset(xs) if f[2] else xs
+    if k == "map":
+        return {_t_out(a, f[1]): _t_out(b, f[2]) for a, b in v.items()}
+    if k == "opt":
+        return None if v[0] == f[1] else _t_out(v[1], f[3])
+    if k == "rec":
+        xs = [_t_out(x, g) for x, g in zip(v[1:], f[3])]
+        return xs if f[2] == "list" else tuple(xs)
+    if k == "sum":
+        if v[0] == f[1]:
+            return None
+        for c, _kind, g in f[2]:
+            if v[0] == c:
+                return _t_out(v[1], g)
+        raise ValueError("a constructor with no Python value")
+    return v
+
+
+def _t_field(v, where):
+    if v[0] not in where:
+        raise ValueError("a field the constructor does not have, undefined in t")
+    return v[where[v[0]]]
+
+
+def _native(v):
+    """An interpreter value as the generated function holds it (see above)."""
+    if isinstance(v, interp.Pair):
+        return (_native(v.a), _native(v.b))
+    if isinstance(v, interp.Tup):
+        return tuple(_native(x) for x in v.items)
+    if isinstance(v, interp.MapV):
+        return {_native(a): _native(b) for a, b in v.items}
+    if isinstance(v, interp.Ctor):
+        return (v.ctor,) + tuple(_native(a) for a in v.args)
+    if isinstance(v, tuple):
+        return tuple(_native(x) for x in v)
+    if isinstance(v, frozenset):
+        return frozenset(_native(x) for x in v)
+    return v
+
+
+def _words(ty) -> str:
+    try:
+        return surface._print_type(ty)
+    except Exception:                                           # noqa: BLE001 -- words for a refusal
+        return str(ty)
+
+
+def _container(raws: list, strict: bool, what: str, default: str = "list") -> str:
+    """"list" or "tuple", as the tests write the collections at one position; where they differ, the first one's for an
+    argument (a function takes either) and a refusal for a result (an equal list and tuple are unequal in Python).
+    With no test to say, `default`: a sequence is a list, a tuple or a record's fields a tuple."""
+    kinds = {"tuple" if isinstance(r, tuple) else "list" for r in raws}
+    if len(kinds) > 1 and strict:
+        raise Uncarried(f"{what} written as a list in one test and as a tuple in another")
+    return ("tuple" if isinstance(raws[0], tuple) else "list") if raws else default
+
+
+def _form(ty, raws: list, dts: dict, strict: bool, hashable: bool = False):
+    """How the values `raws` (the tests' own, at this position) of declared type `ty` are written in Python. Uncarried
+    where a Python value cannot hold them as the tests wrote them. `strict`: a result, compared with `==`; `hashable`:
+    inside a set or as a key, where a list or a dict cannot be."""
+    if ty == "int":
+        strs = [r for r in raws if isinstance(r, str)]
+        if strs:
+            if len(strs) != len(raws) or any(len(r) != 1 for r in strs):
+                raise Uncarried("an int written as a string in one test and otherwise in another")
+            return ["char"]
+        return ["int"]
+    if ty == "bool":
+        return ["bool"]
+    if ty == "seq":
+        strs = [r for r in raws if isinstance(r, str)]
+        if strs:
+            if len(strs) != len(raws):
+                raise Uncarried("a sequence written as a string in one test and as a list in another")
+            return ["str"]
+        ty = {"seq": "int"}
+    if ty == "set":
+        ty = {"set": "int"}
+    if not isinstance(ty, dict) or len(ty) != 1:
+        raise Uncarried(f"the type {_words(ty)}")
+    (k, inner), = ty.items()
+    if k in ("seq", "set"):
+        if k == "seq" and not all(isinstance(r, (list, tuple)) for r in raws):
+            raise Uncarried(f"a value that is not a list or tuple where {_words(ty)} is declared")
+        if k == "set" and not all(isinstance(r, (set, frozenset)) or r == {} for r in raws):
+            raise Uncarried(f"a value that is not a set where {_words(ty)} is declared")
+        flat = [x for r in raws for x in r]
+        if k == "set":
+            as_dict = [r for r in raws if isinstance(r, dict)]
+            as_set = [r for r in raws if not isinstance(r, dict) and not r]
+            if as_dict and as_set and strict:
+                raise Uncarried("an empty set written as {} in one test and as set() in another")
+            return ["set", _form(inner, flat, dts, strict, True), hashable,
+                    "dict" if as_dict and not as_set and not hashable else "set"]
+        return ["seq", "tuple" if hashable else _container(raws, strict, "a sequence"),
+                _form(inner, flat, dts, strict, hashable)]
+    if k in ("pair", "tuple"):
+        if not all(isinstance(r, (list, tuple)) and len(r) == len(inner) for r in raws):
+            raise Uncarried(f"a value that is not a {len(inner)}-tuple where {_words(ty)} is declared")
+        return ["tup", "tuple" if hashable else _container(raws, strict, "a tuple", "tuple"),
+                [_form(t, [r[i] for r in raws], dts, strict, hashable) for i, t in enumerate(inner)]]
+    if k == "map":
+        if hashable:
+            raise Uncarried("a dict inside a set or as a key (a dict has no hash in Python)")
+        if not all(isinstance(r, dict) for r in raws):
+            raise Uncarried(f"a value that is not a dict where {_words(ty)} is declared")
+        return ["map", _form(inner[0], [a for r in raws for a in r], dts, strict, True),
+                _form(inner[1], [b for r in raws for b in r.values()], dts, strict)]
+    if k == "datatype":
+        return _form_datatype(inner, raws, dts, strict, hashable)
+    raise Uncarried(f"the type {_words(ty)}")
+
+
+def _form_datatype(name: str, raws: list, dts: dict, strict: bool, hashable: bool):
+    """A datatype value as typed_values.read_at reads it (`_read_ctor`): None the constructor without fields, a record
+    from the tuple of its fields, an option's value as itself, else the constructor whose field has the value's kind.
+    A result (`strict`) must have a Python value for every constructor, or what it does not write goes unseen."""
+    if name not in dts:
+        raise Uncarried(f"a datatype {name} the task does not declare")
+    ctors = dts[name]["ctors"]
+    bare = [c for c in ctors if not c.get("fields")]
+    one = [c for c in ctors if len(c.get("fields") or []) == 1]
+    full = [r for r in raws if r is not None]
+    if len(ctors) == 1 and len(ctors[0].get("fields") or []) >= 2:
+        c = ctors[0]
+        fields = c["fields"]
+        if not all(isinstance(r, (list, tuple)) and len(r) == len(fields) for r in full) or len(full) != len(raws):
+            raise Uncarried(f"a value that is not a tuple of {len(fields)} where the record {name} is declared")
+        return ["rec", c["name"], "tuple" if hashable else _container(full, strict, f"the record {name}", "tuple"),
+                [_form(f["type"], [r[i] for r in full], dts, strict, hashable) for i, f in enumerate(fields)]]
+    if len(bare) == 1 and len(one) == 1 and len(ctors) == 2:
+        return ["opt", bare[0]["name"], one[0]["name"], _form(one[0]["fields"][0]["type"], full, dts, strict, hashable)]
+    seqs = [c for c in one if c["fields"][0]["type"] == "seq"]
+    taken: dict = {}
+    for r in full:                                              # the constructor each test value is read as
+        try:
+            taken.setdefault(typed_values.read_at(r, {"datatype": name}, dts).ctor, []).append(r)
+        except typed_values.Unreadable as why:
+            raise Uncarried(f"a value of {name} that typed_values cannot read ({why})") from None
+    entries, unwritten = [], [c["name"] for c in ctors if c not in one and c not in bare]
+    unwritten += [c["name"] for c in bare] if len(bare) != 1 else []
+    for c in one:
+        ft, n = c["fields"][0]["type"], c["name"]
+        kind = {"bool": "bool", "int": "int"}.get(ft) if isinstance(ft, str) else None
+        if ft == "seq":
+            kind = "seq" if len(seqs) == 1 else {"Str": "str", "Seq": "list"}.get(n)
+        if kind is None:
+            unwritten.append(n)
+            continue
+        mine = taken.get(n, [])
+        if kind == "str":
+            g = ["str"]
+        elif kind == "list":
+            g = ["seq", "tuple" if hashable else _container(mine, strict, f"a sequence in {n}"),
+                 _form("int", [x for r in mine for x in r], dts, strict)]
+        else:
+            g = _form(ft, mine, dts, strict, hashable)
+        entries.append([n, kind, g])
+    if not entries and len(bare) != 1:
+        raise Uncarried(f"the datatype {name}, whose constructors have no Python value")
+    if strict and unwritten:
+        raise Uncarried(f"the constructor {unwritten[0]} of {name}, which has no Python value")
+    return ["sum", bare[0]["name"] if len(bare) == 1 else None, entries]
+
+
+def _needs_form(ty) -> bool:
+    """Whether the function inside holds a value of `ty` otherwise than a Python caller does: a map, a tuple of three or
+    more, a datatype value (anywhere in the type)."""
+    text = json.dumps(ty)
+    return any(f'"{k}"' in text for k in ("map", "tuple", "datatype")) and "float" not in text and "real" not in text
+
+
+def _form_of(ty, nodes: list, dts: dict, result: bool):
+    """The form of a position the typed reader read (an older reader refuses a test value there), or of a type the
+    interpreter holds otherwise than a Python caller does (a map, a tuple of three or more, a datatype: `_needs_form`);
+    None for the rest, which keeps the older boundary. Not even a value the older boundary writes in part (a list of
+    tuples it would write as lists) keeps that path where the position is typed: it is written as the tests do.
+    Uncarried where that cannot be."""
+    if not nodes and _needs_form(ty):
+        return _form(ty, [], dts, result)                       # no test to say how it is written: the plain Python value
+    if not nodes or "float" in json.dumps(ty) or "real" in json.dumps(ty):
+        return None
+    raws = []
+    for n in nodes:
+        try:
+            raws.append(typed_values.literal(n))
+        except typed_values.Unreadable:
+            return None                                         # a float, a call, a name: not a value the typed reader reads
+    import mbpp_dfy
+    wide = dict(strings=True, nested_strings=True, tuples=True, nested_ints=True)
+    for n in nodes:
+        try:
+            mbpp_dfy._literal(n, **wide)
+        except Exception:                                       # noqa: BLE001 -- refused by the older reader: a typed position
+            break
+    else:
+        if not _needs_form(ty):
+            return None                                         # read by the older reader, of a type it holds as it is
+    return _form(ty, raws, dts, result)
+
+
+def uncarried(ty, raws: list, dts: dict | None = None, result: bool = False) -> str | None:
+    """None when the boundary writes the values `raws` of declared type `ty` as the tests wrote them (a form, `_form`),
+    else why not, in words. verify asks it before a model is asked for a program, to say
+    what the comparison with the person's function cannot carry."""
+    try:
+        _form(ty, raws, dts or {}, result)
+    except Uncarried as why:
+        return str(why)
+    return None
+
+
 def translate(task: dict, tests: list[str] | None = None, fn_name: str | None = None) -> tuple[str, str]:
     """(Python source, the function's name). Raises Unsupported for what it does not write."""
     w = _Writer(task)
@@ -446,8 +796,12 @@ def translate(task: dict, tests: list[str] | None = None, fn_name: str | None = 
         if typed:
             conv_in += [f"{INDENT}if not ({typed[0]}):",
                         f"{INDENT}{INDENT}raise TypeError({f'{name}: `{p}` must be {typed[1]}; nothing was proved for anything else'!r})"]
-    for p, kind in zip(params, ins):
-        if kind in _IN:
+    for p, decl, kind in zip(params, task["params"], ins):
+        if kind.startswith("form:"):
+            said = f"{name}: `{p}` must be {_words(decl['type'])}; nothing was proved for anything else"
+            conv_in += [f"{INDENT}try:", f"{INDENT}{INDENT}{p} = _t_in({p}, {json.loads(kind[5:])!r})",
+                        f"{INDENT}except TypeError:", f"{INDENT}{INDENT}raise TypeError({said!r}) from None"]
+        elif kind in _IN:
             conv_in.append(f"{INDENT}{p} = " + _IN[kind].format(v=p))
     requires = [w.expr(c) for c in task.get("requires", [])]
     if requires:                                                # then the `requires`, on the values the program will see
@@ -458,7 +812,9 @@ def translate(task: dict, tests: list[str] | None = None, fn_name: str | None = 
                  f"{INDENT}{INDENT}return " + " and ".join(f"bool({r})" for r in requires),
                  f"{INDENT}except (IndexError, ZeroDivisionError):   # a `requires` with no value here admits nothing",
                  f"{INDENT}{INDENT}return False", ""]
-    if out.startswith("shape:"):
+    if out.startswith("form:"):
+        result = f"_t_out(_t_result, {json.loads(out[5:])!r})"
+    elif out.startswith("shape:"):
         result = f"_t_shape(_t_result, {tuple(out[6:].split(','))!r})"
     elif out == "strs-tuple":
         result = "tuple(''.join(chr(c) for c in x) for x in _t_result)"
@@ -501,6 +857,9 @@ def translate(task: dict, tests: list[str] | None = None, fn_name: str | None = 
                     f"{INDENT}{INDENT}if 'thread' not in str(e):", f"{INDENT}{INDENT}{INDENT}raise",
                     f"{INDENT}{INDENT}for i in range(lo, hi):", f"{INDENT}{INDENT}{INDENT}if i not in done:",
                     f"{INDENT}{INDENT}{INDENT}{INDENT}run(i)", ""]
+    for helper in (_t_in, _t_out, _t_field):
+        if any(f"{helper.__name__}(" in l for l in lines):
+            support += inspect.getsource(helper).rstrip().splitlines() + [""]
     if any("_t_aset(" in l for l in lines):
         support += ["def _t_aset(a, i, v):", f"{INDENT}if not 0 <= i < len(a):",
                     f"{INDENT}{INDENT}raise IndexError('write outside the array, undefined in t')", f"{INDENT}a[i] = v", ""]
@@ -560,6 +919,8 @@ def _shape(v, kinds: tuple[str, ...]):
 
 def _t_value_to_py(v, kind: str):
     """An interpreter value as the question's own Python writes it (the boundary's form)."""
+    if kind.startswith("form:"):
+        return _t_out(_native(v), json.loads(kind[5:]))
     if kind == "str":
         return "".join(chr(c) for c in v)
     if kind == "strs":
@@ -595,6 +956,99 @@ def _interp_result(task: dict, env: dict, heap: dict | None = None):
     return env2[ret], None
 
 
+def _variants(v, ty, lad: dict, dts: dict, depth: int = 0):
+    """`v`, a value of declared type `ty`, with one part of it replaced: a component, a value of a map, an element, a key
+    added, a string made longer or shorter, the datatype's other values. What a function that is right on the
+    tests and wrong in one place of the type is likely to differ on."""
+    def ladder(t) -> list:
+        try:
+            return list(interp._ladder(lad, t)[:6])
+        except Exception:                                       # noqa: BLE001 -- a type with no ladder has no replacement
+            return []
+    if depth > 3:
+        return
+    if ty == "seq" and isinstance(v, tuple):
+        yield v[:-1]
+        yield v + (v[-1] if v else 0,)
+        yield v[::-1]
+        yield tuple(x + 1 for x in v)
+        for x in ladder("seq"):
+            yield x
+        return
+    if not isinstance(ty, dict) or len(ty) != 1:
+        return
+    (k, inner), = ty.items()
+    parts = types = rebuild = None
+    if k == "pair" and isinstance(v, interp.Pair):
+        parts, types, rebuild = [v.a, v.b], inner, lambda ps: interp.Pair(*ps)
+    elif k == "tuple" and isinstance(v, interp.Tup):
+        parts, types, rebuild = list(v.items), inner, lambda ps: interp.Tup(tuple(ps))
+    elif k == "datatype" and isinstance(v, interp.Ctor):
+        yield from lad.get(f"datatype:{inner}", ())
+        c = next((c for d in dts.values() for c in d["ctors"] if d["name"] == inner and c["name"] == v.ctor), None)
+        if c and c.get("fields") and len(c["fields"]) == len(v.args):
+            parts, types, rebuild = list(v.args), [f["type"] for f in c["fields"]], lambda ps: interp.Ctor(v.dtype, v.ctor, tuple(ps))
+    if parts is not None:
+        for i, (x, t) in enumerate(zip(parts, types)):
+            for alt in ladder(t) + list(_variants(x, t, lad, dts, depth + 1)):
+                yield rebuild(parts[:i] + [alt] + parts[i + 1:])
+        return
+    if k == "map" and isinstance(v, interp.MapV):
+        for j, (key, val) in enumerate(v.items):
+            for alt in ladder(inner[1]) + list(_variants(val, inner[1], lad, dts, depth + 1)):
+                yield interp.MapV.of(list(v.items[:j]) + [(key, alt)] + list(v.items[j + 1:]))
+        for key in ladder(inner[0]):
+            for val in ladder(inner[1])[:1]:
+                yield v.put(key, val)
+        return
+    if k == "seq" and isinstance(v, tuple):
+        for j, x in enumerate(v[:8]):
+            for alt in ladder(inner) + list(_variants(x, inner, lad, dts, depth + 1)):
+                yield v[:j] + (alt,) + v[j + 1:]
+        for alt in ladder(inner)[:2]:
+            yield v + (alt,)
+        yield v[:-1]
+        return
+    if k == "set" and isinstance(v, frozenset):
+        for alt in ladder(inner):
+            yield v | {alt}
+        for x in list(v)[:4]:
+            yield v - {x}
+
+
+def _example_inputs(task: dict, tests: list[str], ins: list[str], limit: int = 150) -> list[dict]:
+    """The tests' own arguments, read at the declared types, and each with one typed parameter's value replaced by
+    each of its `_variants`: inputs shaped like the examples, where a function that passes the examples is likely to
+    be wrong. Only for a parameter written by a form; the rest keep the tests' values."""
+    import ast
+    params = task["params"]
+    dts = typed_values.datatypes_of(task)
+    lad = interp.ladders(task)
+    out: list[dict] = []
+    seen: set = set()
+
+    def add(vals: list) -> None:
+        key = repr([interp._tv(v) for v in vals])
+        if key not in seen and len(out) < limit:
+            seen.add(key)
+            out.append({p["name"]: v for p, v in zip(params, vals)})
+    for line in tests:
+        try:
+            node = ast.parse(line.strip()).body[0]
+            args = node.test.left.args
+            base = [typed_values.read_at(typed_values.literal(a), p["type"], dts) for a, p in zip(args, params)]
+        except (SyntaxError, IndexError, AttributeError, typed_values.Unreadable):
+            continue
+        if len(base) != len(params):
+            continue
+        add(base)
+        for i, kind in enumerate(ins):
+            if kind.startswith("form:"):
+                for alt in _variants(base[i], params[i]["type"], lad, dts):
+                    add(base[:i] + [alt] + base[i + 1:])
+    return out
+
+
 _REFUSES = """
 def _t_call_heap(f, args, idx):
     out = f(*args)
@@ -616,37 +1070,54 @@ def check(task: dict, src: str, fn: str, tests: list[str] | None = None, n: int 
     `outside` that it excludes, which the Python must refuse with a ValueError.
     {"agrees": bool, "inputs": N, "refused": M, "why"?, "first"?: the first assertion that did not pass}."""
     import py_sandbox
-    ins, out = _boundary_kinds(task, tests or [])
+    try:
+        ins, out = _boundary_kinds(task, tests or [])
+    except Uncarried as why:                                    # nothing was written, so nothing is claimed
+        return {"agrees": False, "abstained": True, "inputs": 0, "why": f"the comparison with your function cannot carry {why}"}
     names = [(p["name"], p["type"]) for p in task["params"]]
     asserts, refusals = [], []
-    for env in interp.domain(task, names, interp.MAX_POINTS):
-        if len(asserts) >= n:
-            break
+    def one(env: dict) -> None:
         heap: dict = {}
         try:
             got, refusal = _interp_result(task, env, heap)
         except (interp.Undef, interp.Budget, RecursionError, ZeroDivisionError):
-            continue
+            return
         if refusal and len(refusals) < outside:
             try:
                 refusals.append(f"assert _t_refuses({fn}, *{[_t_value_to_py(env[p], k) for (p, _t), k in zip(names, ins)]!r})")
             except (ValueError, TypeError, OverflowError):
                 pass
         if refusal or got is None:
-            continue
+            return
         try:
             args = [_t_value_to_py(env[p], k) for (p, _t), k in zip(names, ins)]
             want = _t_value_to_py(got, out)
         except (ValueError, TypeError, OverflowError):
-            continue                                            # not a value a Python caller could pass (a bad code point)
+            return                                            # not a value a Python caller could pass (a bad code point)
         mods = interp.heap_mods(task)
         if mods:
             # SPEC.md "Heap (v1)": the call's result and each modified list's contents afterwards
             idx = [i for i, (p, _t) in enumerate(names) if p in mods]
             finals = [_t_value_to_py(heap[names[i][0]], "array") for i in idx]
             asserts.append(f"assert _t_call_heap({fn}, {args!r}, {idx!r}) == ({want!r}, {finals!r})")
-            continue
+            return
         asserts.append(f"assert {fn}(*{args!r}) == {want!r}")
+
+    for env in interp.domain(task, names, interp.MAX_POINTS):
+        if len(asserts) >= n:
+            break
+        one(env)
+    if any(k.startswith("form:") for k in ins):
+        # 2026-11-26: a tuple's, a map's or a datatype's own domain is a few dozen values of 0, 1 and -1 (interp._ladder
+        # caps a product at PAIR_SHELL), so a function that differs where a component is 2, or a string is two long,
+        # would not be met. The tests' own inputs, and each with one part replaced, are compared as well.
+        for env in _example_inputs(task, tests or [], ins):
+            one(env)
+    if not asserts and any(k.startswith("form:") for k in ins + [out]):
+        # the tests alone say nothing about a function that is the person's own: with no input of the program's domain
+        # written as the function's Python values there is nothing to compare, and "agrees" would be a claim from nothing
+        return {"agrees": False, "abstained": True, "inputs": 0,
+                "why": "no input of the program's domain could be written as the values your function takes"}
     asserts += [t.strip() for t in tests or [] if t.strip()]
     if not asserts:
         return {"agrees": False, "inputs": 0, "why": "no input to check on"}

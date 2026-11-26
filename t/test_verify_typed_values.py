@@ -1,9 +1,10 @@
 """`dawnr verify` on functions whose tests hold values beyond ints, bools, strings and lists of them (2026-11-26):
 a tuple mixing kinds, a dict, deeper nesting, None, a set, a list of bools, a list mixing kinds. Each is read at the
 type the task declares (t/typed_values.py), the specification is held against the person's function on drawn
-inputs of the same shapes, and where the comparison with the function cannot carry the type (t/to_python.py's
-boundary, in the t engine) verify says so instead of claiming a difference. Until this change every one of these
-was refused before the model was asked."""
+inputs of the same shapes, and the proved program is compared with the function (t/to_python.py's boundary writes each
+as the Python value the test wrote; test_to_python_values.py holds that boundary), so that a program that differs from
+the function only inside the new type is refused, and where the boundary has no faithful writing verify says so instead
+of claiming a difference. Until this change every one of these was refused before the model was asked."""
 import sys
 from pathlib import Path
 
@@ -60,11 +61,25 @@ def held(r):
     return r["held"]
 
 
+def compared(r):
+    """The program was compared with the function, on inputs of the type, and shown."""
+    assert r["shown"] and r["refused"] == [], r["refused"]
+    assert r["shown"]["same as yours on"] >= 10 and r["shown"]["python"]["source"], r["shown"]["python"]
+
+
 def abstained(r, words):
     assert r["shown"] is None, r["refused"]
     (line,) = r["refused"]
     assert line.startswith("specification 1, body 1: the comparison with your function cannot carry")
     assert words in line and "t/to_python.py" in line
+
+
+def differs(r, fn):
+    """The program was compared with the function and refused, naming an input and the program's answer there."""
+    assert r["shown"] is None, r["shown"]
+    (line,) = r["refused"]
+    assert line.startswith("specification 1, body 1: it does not answer as your function does (`" + fn + "(*[")
+    assert line.endswith("` is the proved program's answer, not yours)"), line
 
 
 def prompt_words(entry):
@@ -82,7 +97,7 @@ def test_a_tuple_mixing_a_string_and_an_int_is_a_pair():
     assert "of type(s) (seq, int)" in prompt_words(entry)
     h = held(r)
     assert h["passes"] and h["agreement"]["draws"] >= 10 and h["agreement"]["completeness"] >= 0.6
-    abstained(r, "(seq, int)")
+    compared(r)
     assert wrong["refused"] == ["specification 1: `r == len(p.0)` is false at your function's own answer `second(('ab', 3)) == 3`"]
 
 
@@ -124,7 +139,7 @@ def test_a_dict_is_a_map_and_crosses_into_the_sandbox_with_its_int_keys():
     assert "returning map<int, int>" in prompt_words(entry)
     h = held(r)
     assert h["passes"] and h["agreement"]["draws"] >= 10 and h["agreement"]["completeness"] >= 0.6
-    abstained(r, "map<int, int>")
+    compared(r)
     assert wrong["refused"][0].startswith("specification 1: `len(r) == n; forall i in [0, n) . i in r and r[i] == i + i` is false at "
                                           "your function's own answer `square_map(3) == {0: 0, 1: 1, 2: 4}`")
 
@@ -141,7 +156,7 @@ def test_a_dict_parameter_is_drawn_from_its_annotation_when_no_example_is_given(
     r = verify_py.by_specification(entry, f, student(fenced(spec), fenced(spec.replace("{\n}", "{\n  r := k in d;\n}"))),
                                    specs=1, answers=1, prover=proving)
     assert spec_gate.judge(surface.parse(spec), entry, f["code"])["passes"]
-    abstained(r, "map<seq, int>")
+    compared(r)
 
 
 @needs_sandbox
@@ -171,7 +186,7 @@ def test_none_beside_a_value_is_an_option_the_task_declares():
     assert "returning Option (declare before `t 1`: datatype Option = Nothing | Some(v: int))" in words
     h = held(r)
     assert h["passes"] and h["agreement"]["draws"] >= 10 and h["agreement"]["completeness"] >= 0.6
-    abstained(r, "Option")
+    compared(r)
     assert wrong["refused"][0].endswith("is false at your function's own answer `positive(3) == 3`")
 
 
@@ -230,8 +245,63 @@ def test_a_list_mixing_ints_and_strings_is_a_seq_of_a_datatype_with_one_construc
     assert "of type(s) seq<Item>" in prompt_words(entry)
     assert "datatype Item = Int(i: int) | Str(s: seq)" in prompt_words(entry)
     assert held(r)["passes"] and held(r)["agreement"]["draws"] >= 10
-    abstained(r, "seq<Item>")
+    compared(r)
     assert wrong["refused"][0].endswith("is false at your function's own answer `count_ints([1, 'ab', 2]) == 2`")
+
+
+PAIR_SPEC = "t 1\ntask second(p: (seq, int)) returns (r: int)\n  ensures r == p.1\n{\n}\n"
+PAIR_TESTS = ["assert second(('ab', 3)) == 3", "assert second(('x', 5)) == 5"]
+TUPLE3_SPEC = ("t 1\ntask swap3(p: (int, bool, seq)) returns (r: (seq, bool, int))\n  ensures r.1 == p.1\n"
+               "  ensures r.2 == p.0\n{\n}\n")
+TUPLE3_TESTS = ["assert swap3((1, True, 'ab')) == ('ab', True, 1)", "assert swap3((0, False, 'xy')) == ('xy', False, 0)"]
+OPTION_SPEC = ("datatype Option = Nothing | Some(v: int)\nt 1\ntask positive(n: int) returns (r: Option)\n"
+               "  ensures n > 0 ==> r == Option.Some(n)\n  ensures n <= 0 ==> r == Option.Nothing\n{\n}\n")
+OPTION_TESTS = ["assert positive(3) == 3", "assert positive(-1) == None", "assert positive(0) == None"]
+
+
+@needs_sandbox
+@pytest.mark.parametrize("function, tests, spec, right, wrong", [
+    # a string inside a pair: the answer changes where the string is three or more long
+    ("def second(p):\n    return p[1]\n", PAIR_TESTS, PAIR_SPEC, "r := p.1;", "r := p.1 + len(p.0) / 3;"),
+    # a component of a 3-tuple: the answer changes where the int is two or more
+    ("def swap3(p):\n    return (p[2], p[1], p[0])\n", TUPLE3_TESTS, TUPLE3_SPEC, "r := (p.2, p.1, p.0);",
+     "r := (p.2, p.1, p.0 + p.0 / 2);"),
+    # None where the function has a value: the function answers 1 for 1
+    ("def positive(n):\n    return n if n > 0 else None\n", OPTION_TESTS, OPTION_SPEC,
+     "if n > 0 {\n    r := Option.Some(n);\n  } else {\n    r := Option.Nothing;\n  }",
+     "if n > 1 {\n    r := Option.Some(n);\n  } else {\n    r := Option.Nothing;\n  }"),
+])
+def test_a_program_that_differs_from_the_function_only_inside_the_new_type_is_refused_not_shown(function, tests, spec, right, wrong):
+    fn = function.split("(")[0][4:]
+    f = verify_py.read_function(function)
+    entry, _ = verify_py.entry_for(f, tests)
+    ok = verify_py.by_specification(entry, f, student(fenced(spec), fenced(spec.replace("{\n}", "{\n  " + right + "\n}"))),
+                                    specs=1, answers=1, prover=proving)
+    compared(ok)
+    bad = verify_py.by_specification(entry, f, student(fenced(spec), fenced(spec.replace("{\n}", "{\n  " + wrong + "\n}"))),
+                                     specs=1, answers=1, prover=proving)
+    differs(bad, fn)
+
+
+@needs_sandbox
+def test_a_map_program_that_differs_from_the_function_where_a_key_is_five_is_refused_not_shown():
+    f = verify_py.read_function("def square_map(n):\n    return {i: i * i for i in range(n)}\n")
+    entry, _ = verify_py.entry_for(f, ["assert square_map(3) == {0: 0, 1: 1, 2: 4}", "assert square_map(0) == {}"])
+    body = SQUARES_BODY.replace("r := r[i := i * i];", "r := r[i := i * i + i / 5];")
+    bad = verify_py.by_specification(entry, f, student(fenced(SQUARES_SPEC), fenced(body)), specs=1, answers=1, prover=proving)
+    differs(bad, "square_map")
+    assert "{0: 0, 1: 1, 2: 4, 3: 9, 4: 16, 5: 26}` is the proved program's answer" in bad["refused"][0]
+
+
+@needs_sandbox
+def test_a_result_written_as_a_tuple_in_one_example_and_a_list_in_another_is_not_compared_and_says_so():
+    f = verify_py.read_function("def pr(n):\n    return ('ab', n) if n > 0 else ['x', n]\n")
+    entry, _ = verify_py.entry_for(f, ["assert pr(1) == ('ab', 1)", "assert pr(0) == ['x', 0]"])
+    spec = ("t 1\ntask pr(n: int) returns (r: (seq, int))\n  ensures r.1 == n\n  ensures n > 0 ==> r.0 == \"ab\"\n"
+            "  ensures n <= 0 ==> r.0 == [120]\n{\n}\n")
+    body = spec.replace("{\n}", "{\n  if n > 0 {\n    r := (\"ab\", n);\n  } else {\n    r := ([120], n);\n  }\n}")
+    r = verify_py.by_specification(entry, f, student(fenced(spec), fenced(body)), specs=1, answers=1, prover=proving)
+    abstained(r, "list in one test and as a tuple in another")
 
 
 @needs_sandbox
