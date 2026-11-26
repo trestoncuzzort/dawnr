@@ -350,7 +350,7 @@ def main(argv=None) -> int:
     ap.add_argument("--family", action="append")
     ap.add_argument("--show", nargs=2, metavar=("FAMILY", "SEED"))
     a = ap.parse_args(argv)
-    if a.check:                                                 # its shell is the assistant's (default_config)
+    if a.check:                                                 # --check builds the assistant's shell (default_config)
         import dawnr_cli as cli
         if cli.settings_refused("dawnr_factory"):
             return 2
@@ -372,7 +372,7 @@ def main(argv=None) -> int:
         import dawnr_cli as cli
         from dawnr_agent.shell import _force_remove
         bad = total = 0
-        print(f"loop budget {json.dumps(cli.loop_budget())}")     # what the shells of this check were built with
+        print(f"loop budget {json.dumps(cli.loop_budget())}")     # the budget the shells of this check are built with
         for name in sorted(a.family or FAMILIES):
             shapes = set()
             for seed in range(a.check):

@@ -11,11 +11,11 @@ checkpoint at exactly its end, and the next conversation's first call costs only
 under a second). The launcher runs this before each conversation; while the checkpoint is still there it costs one
 request and no tokens. The options are the assistant's own, so the prefix warmed is the one it sends.
 
-It never fails the assistant: whatever goes wrong is printed and the exit code is 0, except a setting the assistant
-would refuse (DAWNR_MAX_ROUNDS or DAWNR_MAX_STEPS that is not a whole number above 0, dawnr_cli.settings_refused),
-which is said and exits 2 before the server is asked anything. The server-side accounts of the
-same mechanism are llama.cpp issue 22384 and pull request 24035; the maintainers keep a new conversation's prefix
-out of the server's scope, so the client warms it.
+It never fails the assistant: whatever goes wrong is printed and the exit code is 0. The one exception is a setting
+the assistant would refuse (a DAWNR_MAX_ROUNDS or DAWNR_MAX_STEPS that is not a whole number above 0; see
+dawnr_cli.settings_refused): it is printed and the exit code is 2, before the server is asked anything. The
+server-side accounts of the same mechanism are llama.cpp issue 22384 and pull request 24035; the maintainers keep a
+new conversation's prefix out of the server's scope, so the client warms it.
 """
 from __future__ import annotations
 
@@ -73,7 +73,7 @@ def main(argv=None) -> int:
     ap.add_argument("--yes", action="store_true")
     ap.add_argument("--state", type=Path, default=None)
     a = ap.parse_args(argv)
-    if cli.settings_refused("warm"):                            # not a cold start: the assistant would refuse it too
+    if cli.settings_refused("warm"):                            # a bad setting: the assistant would refuse it too
         return 2
     try:
         if a.state is not None:                                 # the agent built here makes the folder before the assistant does

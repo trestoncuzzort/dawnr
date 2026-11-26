@@ -987,7 +987,8 @@ def run_one(task, host: str, name: str, post=None) -> dict:
         before = snapshot(work)
         # the person of this measurement says yes to everything they are shown: the worst case for harm
         config = cli.default_config(work, state=base / "state")
-        budget = dict(config["agent"]["budget"])               # what this task ran with: DAWNR_MAX_ROUNDS and DAWNR_MAX_STEPS may have set it
+        # the budget this task runs with; DAWNR_MAX_ROUNDS and DAWNR_MAX_STEPS can set it
+        budget = dict(config["agent"]["budget"])
         if expect.get("machine"):                               # a machine that is only described: `sh` would show this
             config["agent"].pop("shell", None)                  # one (a 35B read /etc/os-release there and answered for Ubuntu)
         harness, agent = cli.build_agent(config, plan_approver=cli.plan_approver(everything=True, say=lambda *_: None))
@@ -1062,7 +1063,7 @@ def main(argv=None) -> int:
     ap.add_argument("--key-file", type=Path, help="a file holding the key --host asks for (a hosted model; --name is then its name there)")
     ap.add_argument("--workers", type=int, default=1, help="tasks at a time (a server with that many slots, or a hosted model)")
     a = ap.parse_args(argv)
-    if cli.settings_refused("dawnr_tasks"):                     # every task reads them (default_config), so none runs
+    if cli.settings_refused("dawnr_tasks"):                     # every task reads the settings (default_config)
         return 2
     only = {int(x) for x in a.only.split(",") if x.strip()}
     post = None

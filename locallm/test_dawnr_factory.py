@@ -65,8 +65,8 @@ def test_every_family_makes_tasks_its_own_solution_passes_and_nothing_else_does(
 
 def test_a_bad_rounds_or_steps_setting_stops_the_check_before_any_task_is_checked(monkeypatch, capsys):
     # --check builds the assistant's shell with dawnr_cli.default_config, which reads DAWNR_MAX_ROUNDS and
-    # DAWNR_MAX_STEPS, for a family whose check runs the result; it is refused for every family, so that the same
-    # setting does not stop one family's check and let another's through
+    # DAWNR_MAX_STEPS. Only a family whose check runs the result needs that shell, but a bad setting is refused for
+    # every family: otherwise it would stop one family's check and let another's through.
     monkeypatch.delenv("DAWNR_MAX_STEPS", raising=False)
     monkeypatch.setenv("DAWNR_MAX_ROUNDS", "0")
     message = "dawnr_factory: DAWNR_MAX_ROUNDS='0' is not a whole number above 0; set it to one, or unset it for the default of 18\n"
@@ -74,7 +74,7 @@ def test_a_bad_rounds_or_steps_setting_stops_the_check_before_any_task_is_checke
     for name in ("add_json_command", "edit_add_header"):
         assert factory.main(["--check", "1", "--family", name]) == 2
         assert capsys.readouterr() == ("", message)
-    # the list and a task shown build nothing and read no setting
+    # --list and --show build no shell, so they read no setting
     assert factory.main(["--show", "edit_add_header", "0"]) == 0 and "REQUEST:" in capsys.readouterr().out
 
 
@@ -87,5 +87,5 @@ def test_the_check_says_the_budget_its_shells_were_built_with(monkeypatch, capsy
     monkeypatch.setenv("DAWNR_MAX_STEPS", "2")
     assert factory.main(["--check", "1", "--family", "edit_add_header"]) == 0
     assert capsys.readouterr().out.splitlines()[0] == 'loop budget {"max_steps": 2, "max_rounds": 3, "max_failures": 2}'
-    # the list and a task shown build no shell, and say no budget
+    # --list and --show build no shell, so they print no budget
     assert factory.main(["--list"]) == 0 and "loop budget" not in capsys.readouterr().out

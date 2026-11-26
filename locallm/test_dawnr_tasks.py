@@ -292,8 +292,8 @@ def test_the_fifth_set_starts_unsolved_and_a_right_piece_of_work_passes_each_of_
 
 
 def test_a_task_row_records_the_budget_it_ran_with_the_default_when_nothing_is_set(tmp_path, monkeypatch):
-    # DAWNR_MAX_ROUNDS and DAWNR_MAX_STEPS change what every task runs with (dawnr_cli.default_config); two
-    # measurements, one with and one without, are told apart by the budget in each row
+    # DAWNR_MAX_ROUNDS and DAWNR_MAX_STEPS change the budget every task runs with (dawnr_cli.default_config). Each row
+    # records its budget, so a run with the settings can be told from a run without them.
     def dead(url, body, timeout=0):
         raise ConnectionRefusedError("nothing listens there")
     monkeypatch.delenv("DAWNR_MAX_ROUNDS", raising=False)
@@ -303,4 +303,4 @@ def test_a_task_row_records_the_budget_it_ran_with_the_default_when_nothing_is_s
     monkeypatch.setenv("DAWNR_MAX_STEPS", " 2 ")
     row = tasks.run_one(task(6), "nowhere:1", "base", post=dead)
     assert row["budget"] == {"max_steps": 2, "max_rounds": 3, "max_failures": 2}
-    assert json.loads(json.dumps(row))["budget"] == row["budget"]          # it is written with the row
+    assert json.loads(json.dumps(row))["budget"] == row["budget"]          # the budget survives being written as JSON

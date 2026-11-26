@@ -30,8 +30,8 @@ def test_warm_posts_the_prefix_alone():
 
 
 def test_a_bad_rounds_or_steps_setting_is_said_and_refused_and_nothing_is_asked_of_the_server(tmp_path, monkeypatch, capsys):
-    # dawnr_warm builds the assistant's own configuration, so it reads DAWNR_MAX_ROUNDS and DAWNR_MAX_STEPS; a cold
-    # start is slower, not wrong, but a setting dawnr will not guess is not a cold start
+    # dawnr_warm builds the assistant's own configuration, so it reads DAWNR_MAX_ROUNDS and DAWNR_MAX_STEPS. A failed
+    # warm-up only means a slower cold start, but a bad setting is an error the assistant would refuse too.
     import pytest
 
     import dawnr_cli as cli

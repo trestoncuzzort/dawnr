@@ -147,21 +147,23 @@ LAST_ROUND = "Answer now from what you have read. If what was asked is not in th
 CALL_MARKS = ("<tool_call>", "<function=")     # a call in the model family's own format, written out as text
 NOTHING_MORE = ("Nothing more can be read or run now: a call written out as text does not run. Answer from what you have "
                 "already read, and say plainly what you could not check.")
-# A task's budget in the loop. A bug fixed is three rounds (edit, run the test, read what it says): twelve rounds ran
-# out on the third bug. DAWNR_MAX_ROUNDS and DAWNR_MAX_STEPS set the rounds and the steps for a longer task, such as
-# a review that reads many files
+# The loop's budget for one task. Fixing one bug takes about three rounds (edit, run the test, read the result), so a
+# task with several bugs needs many. DAWNR_MAX_ROUNDS and DAWNR_MAX_STEPS raise the rounds and the steps for a longer
+# task, such as a review that reads many files.
 BUDGET = {"max_steps": 40, "max_rounds": 18, "max_failures": 2}
 BUDGET_SETTINGS = (("max_rounds", "DAWNR_MAX_ROUNDS"), ("max_steps", "DAWNR_MAX_STEPS"))
 
 
 class SettingError(ValueError):
-    """A setting in the environment whose meaning dawnr will not guess: said, and nothing is started."""
+    """A setting in the environment that dawnr will not guess at: it is reported and nothing starts."""
 
 
 def loop_budget() -> dict:
-    """The loop's budget, with DAWNR_MAX_ROUNDS and DAWNR_MAX_STEPS where they are set. Each is a whole number above
-    0; any other value is refused rather than replaced by the default, so that a mistyped setting does not quietly give
-    a task fewer rounds than the person asked for. Set and empty is the same as unset."""
+    """Return the loop's budget, with DAWNR_MAX_ROUNDS and DAWNR_MAX_STEPS applied where they are set.
+
+    Each must be a whole number above 0. Any other value raises SettingError instead of falling back to the default, so
+    a mistyped setting cannot quietly give a task fewer rounds than the person asked for. A set but empty value counts
+    as unset."""
     out = dict(BUDGET)
     for key, name in BUDGET_SETTINGS:
         raw = os.environ.get(name, "")
@@ -175,10 +177,12 @@ def loop_budget() -> dict:
 
 
 def settings_refused(prog: str = "dawnr") -> bool:
-    """The settings dawnr reads from the environment, checked by every program that reads them before it starts
-    anything: the launcher before it starts a model (bin/dawnr), this front door, dawnr_warm.py and the measuring
-    scripts (dawnr_tasks.py, dawnr_teach.py, dawnr_factory.py --check, judge_twins.py), which read them through
-    default_config. A bad one is said on stderr as `prog: ...` and True is returned, for the caller to exit 2."""
+    """Check the settings dawnr reads from the environment. If one is bad, print why and return True.
+
+    Every program that reads the settings calls this before it starts anything: the launcher (bin/dawnr), this front
+    door, dawnr_warm.py, and the measuring scripts (dawnr_tasks.py, dawnr_teach.py, dawnr_factory.py --check,
+    judge_twins.py), which read them through default_config. The message goes to stderr as `prog: ...`, and the caller
+    then exits 2."""
     try:
         loop_budget()
     except SettingError as error:
@@ -1135,7 +1139,7 @@ def main(argv=None) -> int:
     task = " ".join(a.task).strip()
     if not task and not sys.stdin.isatty():
         ap.error("no task was given and this is not a terminal")
-    if settings_refused():                                      # said, and nothing is started
+    if settings_refused():                                      # a bad setting is reported and nothing starts
         return 2
     if a.state is not None:                                     # before the agent makes the folder
         remember_state(a.state)

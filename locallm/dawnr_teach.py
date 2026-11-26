@@ -158,11 +158,11 @@ def main(argv=None) -> int:
     ap.add_argument("--key-file", type=Path, help="a file holding the key --host asks for (sent as a bearer token)")
     a = ap.parse_args(argv)
     import dawnr_cli as cli
-    # every task reads them (default_config); refused one task at a time, each seed would be logged as an error, and
-    # a seed in the log is one the next run skips
+    # Every task reads the settings (default_config). They are checked once, here: if each task refused a bad setting
+    # on its own, every seed would be logged as an error, and the next run skips every seed that is in the log.
     if cli.settings_refused("dawnr_teach"):
         return 2
-    budget = cli.loop_budget()                                  # what every task of this run is given, written in each line of the log
+    budget = cli.loop_budget()                                  # the budget every task gets; written to each log line
     key = a.key_file.read_text().strip() if a.key_file else ""
     have = set()
     if a.out.exists():

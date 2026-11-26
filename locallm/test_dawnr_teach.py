@@ -1,11 +1,11 @@
-"""dawnr_teach.py: what the teacher is given is the assistant as a person runs it, settings and all."""
+"""dawnr_teach.py: each task runs the assistant as a person runs it, settings included."""
 import dawnr_teach as teach
 
 
 def test_a_bad_rounds_or_steps_setting_is_said_before_any_task_and_no_seed_is_recorded(tmp_path, monkeypatch, capsys):
-    # each task runs the assistant's loop with dawnr_cli.default_config, which reads DAWNR_MAX_ROUNDS and
-    # DAWNR_MAX_STEPS. A seed in the log is one the next run skips, so a setting refused one task at a time would
-    # record every seed as an error and leave nothing to run once the setting is put right
+    # Each task runs the assistant's loop with dawnr_cli.default_config, which reads DAWNR_MAX_ROUNDS and
+    # DAWNR_MAX_STEPS. The next run skips every seed in the log, so if each task refused a bad setting on its own,
+    # every seed would be logged as an error and nothing would be left to run once the setting is fixed.
     monkeypatch.delenv("DAWNR_MAX_ROUNDS", raising=False)
     monkeypatch.setenv("DAWNR_MAX_STEPS", "-3")
     out = tmp_path / "rows.jsonl"
@@ -17,8 +17,8 @@ def test_a_bad_rounds_or_steps_setting_is_said_before_any_task_and_no_seed_is_re
 
 
 def test_each_line_of_the_log_records_the_budget_the_run_gave_its_tasks(tmp_path, monkeypatch):
-    # a run with DAWNR_MAX_ROUNDS or DAWNR_MAX_STEPS set is told from one without by the log it leaves; the server is
-    # not there, so each task is judged not done, which is still a line in the log
+    # Each log line records the budget, so a run with DAWNR_MAX_ROUNDS or DAWNR_MAX_STEPS set can be told from one
+    # without. There is no server, so each task is judged not done, which still writes a log line.
     import json
     log = tmp_path / "rows.log.jsonl"
     argv = ["--host", "nowhere:1", "--out", str(tmp_path / "rows.jsonl"), "--family", "edit_add_header", "--per-family", "1", "--workers", "1"]

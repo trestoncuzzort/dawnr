@@ -146,8 +146,8 @@ def test_the_persons_tool_folders_join_a_bare_path(tmp_path):
 
 
 def test_a_bad_rounds_or_steps_setting_stops_the_assistant_before_a_model_is_started(tmp_path):
-    # DAWNR_MAX_ROUNDS and DAWNR_MAX_STEPS are read by locallm/dawnr_cli.py, which the launcher runs only once the
-    # base model is up. A stand-in model server here records that it was started, and never answers.
+    # locallm/dawnr_cli.py reads DAWNR_MAX_ROUNDS and DAWNR_MAX_STEPS, but the launcher runs it only once the base
+    # model is up. A stand-in model server records that it was started and never answers.
     data, started = tmp_path / 'data', tmp_path / 'the-model-was-started'
     data.mkdir()
     server, weights = tmp_path / 'llama-server', tmp_path / 'base.gguf'
@@ -160,8 +160,8 @@ def test_a_bad_rounds_or_steps_setting_stops_the_assistant_before_a_model_is_sta
     (data / 'env').write_text(f'DAWNR_PYTHON={shlex.quote(sys.executable)}\nDAWNR_REPO={shlex.quote(str(ROOT))}\n'
                               f'LLAMA_SERVER={shlex.quote(str(server))}\nBASE_GGUF={shlex.quote(str(weights))}\n'
                               f'DAWNR_BASE_PORT={port}\nDAWNR_START_SECONDS=1\n')
-    # the person's folder is where dawnr is started, and what is in it is theirs: a module there named as dawnr's own
-    # or as one dawnr imports is never run by the check
+    # dawnr is started from the person's folder, and what is in it belongs to them: a module there named dawnr_cli, or
+    # named like a module the launcher's check imports, must never be run by the check
     planted = tmp_path / 'a-module-in-the-folder-ran'
     for name in ('dawnr_cli', 'shlex'):
         (tmp_path / f'{name}.py').write_text(f'open({str(planted)!r}, "w").close()\n'
@@ -177,7 +177,8 @@ def test_a_bad_rounds_or_steps_setting_stops_the_assistant_before_a_model_is_sta
         assert result.stderr == (f"dawnr: {name}={bad!r} is not a whole number above 0; set it to one, or unset it for "
                                  f"the default of {default}\n")
         assert not started.exists() and not planted.exists()
-    # with good settings the stand-in is started: the check above is the settings', not a launcher that starts nothing
+    # with good settings the stand-in does start: the refusals above come from the settings, not from a launcher that
+    # starts nothing
     result = dawnr(DAWNR_MAX_ROUNDS='30', DAWNR_MAX_STEPS=' 60 ')
     assert result.returncode == 1 and 'the base model did not come up' in result.stderr and started.exists()
     assert not planted.exists()

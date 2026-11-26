@@ -132,10 +132,10 @@ def main(argv=None) -> int:
     ap.add_argument("--family", action="append")
     ap.add_argument("--out", type=Path)
     a = ap.parse_args(argv)
-    if cli.settings_refused("judge_twins"):                     # a shell is the assistant's (default_config)
+    if cli.settings_refused("judge_twins"):                     # the shell is the assistant's (default_config)
         return 2
     rows, accepted_total, twins_total = [], 0, 0
-    budget = cli.loop_budget()                                  # what the shells of this run are built with
+    budget = cli.loop_budget()                                  # the budget the shells of this run are built with
     print(f"loop budget {json.dumps(budget)}")
     for name in sorted(a.family or factory.FAMILIES):
         accepted = []
