@@ -38,8 +38,14 @@ The examples, when none is given with --test, are taken from the function itself
 types, so they record what it does; a bug in it is recorded too, and shows in the specification.
 
 Read: one plain top-level function with positional parameters. Without --test, each parameter needs an annotation
-built from int, bool and str with list[...] and tuple[...]: list[int], tuple[int, ...], list[tuple[str, int]] and
-the like, in any of the spellings in use (List[int], typing.Tuple[int, int], Sequence[int], a type variable).
+built from int, bool and str with list[...], tuple[...], dict[...] and set[...]: list[int], tuple[int, ...],
+list[tuple[str, int]], dict[str, list[int]], set[tuple[int, int]] and the like, in any of the spellings in use
+(List[int], typing.Tuple[int, int], Sequence[int], Mapping[str, int], a type variable).
+
+The examples, given or taken from the function, are read at the types the model's task declares (t/typed_values.py,
+2026-11-26): a tuple mixing kinds is a pair or a tuple, a dict a map, a set a set, None beside a value an option the
+task declares, a list mixing kinds a seq of a datatype. Where the comparison of the proved program with the function
+(t/to_python.py, part of the t engine) cannot carry a type yet, verify says so and shows nothing.
 """
 from __future__ import annotations
 
@@ -66,6 +72,7 @@ import spec_first_rows                                          # noqa: E402
 import spec_gate                                                # noqa: E402
 import surface                                                  # noqa: E402
 import to_python                                                # noqa: E402
+import typed_values                                             # noqa: E402
 
 TEMPERATURE = 0.7
 EXAMPLES = 6                   # examples taken from the function when the person gives none
@@ -86,6 +93,9 @@ _DRAWS = {
 # sandbox, and the values are few and plain, because a person reads them as examples.
 _LISTS = {"list", "List", "Sequence", "Iterable", "Collection", "MutableSequence"}
 _TUPLES = {"tuple", "Tuple"}
+# 2026-11-26: a dict and a set, whose values cross into the sandbox as literal text (t/typed_values.py), not JSON
+_DICTS = {"dict", "Dict", "Mapping", "MutableMapping"}
+_SETS = {"set", "Set", "frozenset", "FrozenSet", "AbstractSet", "MutableSet"}
 _ANY = {"Any", "object", "T", "S", "U", "K", "V"}              # a value of any type: numbers are drawn for it
 
 
@@ -101,7 +111,8 @@ def _kind(annotation, variables: frozenset = frozenset()) -> str | None:
     name = node.attr if isinstance(node, ast.Attribute) else node.id if isinstance(node, ast.Name) else None
     if name is not None:
         return (name if name in ("int", "bool", "str") else "int" if name in _ANY or name in variables
-                else "list[int]" if name in _LISTS else "tuple[int, ...]" if name in _TUPLES else None)
+                else "list[int]" if name in _LISTS else "tuple[int, ...]" if name in _TUPLES
+                else "dict[int, int]" if name in _DICTS else "set[int]" if name in _SETS else None)
     if isinstance(node, ast.BinOp) and isinstance(node.op, ast.BitOr):          # X | None
         sides = [x for x in (node.left, node.right) if not (isinstance(x, ast.Constant) and x.value is None)]
         return _kind(sides[0], variables) if len(sides) == 1 else None
@@ -119,6 +130,11 @@ def _kind(annotation, variables: frozenset = frozenset()) -> str | None:
         return f"list[{inner[0]}]"
     if base in _TUPLES:                                         # `tuple[int]` is written for a tuple of numbers
         return f"tuple[{inner[0]}, ...]" if variadic or len(inner) == 1 else f"tuple[{', '.join(inner)}]"
+    # a key or a set's element must be hashable: no list inside it
+    if base in _DICTS and len(inner) == 2 and "list[" not in inner[0]:
+        return f"dict[{inner[0]}, {inner[1]}]"
+    if base in _SETS and len(inner) == 1 and "list[" not in inner[0]:
+        return f"set[{inner[0]}]"
     return None
 
 
@@ -140,7 +156,14 @@ def _pool(kind: str, inside: bool = False) -> list:
         return _pool(f"tuple[{inner[0]}, {inner[0]}]", True)
     if kind in _DRAWS:
         return _DRAWS[kind]
-    if head == "tuple" and not variadic:
+    if head in ("dict", "set"):
+        e = _pool(inner[0], True)
+        v = _pool(inner[-1], True)
+        # the walk a list's pool takes (two, none, one, three, a repeat, four), as keys and values or as elements
+        shapes = [(0, 1), (), (0,), (2, 0, 1), (1, 1), (3, 4, 0, 2)]
+        made = ([{e[i % len(e)]: v[i % len(v)] for i in idx} for idx in shapes] if head == "dict"
+                else [{e[i % len(e)] for i in idx} for idx in shapes])
+    elif head == "tuple" and not variadic:
         pools = [_pool(k, True) for k in inner]
         made = [tuple(pool[(i + j) % len(pool)] for j, pool in enumerate(pools)) for i in range(6)]
     else:
@@ -177,6 +200,10 @@ def fit(value, kind: str):
     """A value someone wrote with lists or with tuples, written as the kind writes it: what _rebuilt does inside
     the sandbox, done to the value that is shown."""
     head, inner, variadic = _parts(kind)
+    if head == "dict" and isinstance(value, dict):
+        return {fit(k, inner[0]): fit(x, inner[1]) for k, x in value.items()}
+    if head == "set" and isinstance(value, (set, frozenset)):
+        return {fit(x, inner[0]) for x in value}
     if head not in ("list", "tuple") or not isinstance(value, (list, tuple)):
         return value
     if head == "list" or variadic:
@@ -184,13 +211,38 @@ def fit(value, kind: str):
     return tuple(fit(v, k) for v, k in zip(value, inner)) if len(value) == len(inner) else tuple(value)
 
 
+def _literal_kinds(kinds: list) -> bool:
+    """Whether some kind holds a dict or a set, which JSON cannot carry into the sandbox."""
+    return any("dict[" in k or "set[" in k for k in kinds)
+
+
 def _wrapper(fn: str, kinds: list) -> str:
-    """The function called with one list of arguments, its result as text: appended to the code the sandbox loads."""
+    """The function called with one list of arguments, its result as text: appended to the code the sandbox loads.
+    Where a kind holds a dict or a set the arguments arrive as one literal's text instead, every tuple, set and dict
+    already itself (t/typed_values.py)."""
+    if _literal_kinds(kinds):
+        return (f"\n\ndef _t_repr_call(_t_text):\n    import ast as _t_ast\n"
+                f"    return repr({fn}(*_t_ast.literal_eval(_t_text)))\n")
     args = ", ".join(_rebuilt(k, f"args[{i}]") for i, k in enumerate(kinds))
     return f"\n\ndef _t_repr_call(args):\n    return repr({fn}({args}))\n"
 
 
-READ = "int, bool, str, list[...] and tuple[...] of them"       # what a refusal tells the person to annotate with
+def _shown_literal(v) -> str:
+    """A value as a test writes it: repr, with a set's elements in a fixed order (a set of strings prints in an order
+    that changes from one run of Python to the next)."""
+    if isinstance(v, (set, frozenset)):
+        return "{" + ", ".join(sorted((_shown_literal(x) for x in v))) + "}" if v else "set()"
+    if isinstance(v, dict):
+        return "{" + ", ".join(f"{_shown_literal(k)}: {_shown_literal(x)}" for k, x in v.items()) + "}"
+    if isinstance(v, tuple):
+        inner = ", ".join(_shown_literal(x) for x in v)
+        return f"({inner},)" if len(v) == 1 else f"({inner})"
+    if isinstance(v, list):
+        return "[" + ", ".join(_shown_literal(x) for x in v) + "]"
+    return repr(v)
+
+
+READ = "int, bool, str, list[...], tuple[...], dict[...] and set[...] of them"   # what a refusal tells the person to annotate with
 
 
 class Refused(Exception):
@@ -272,14 +324,16 @@ def drawn_tests(function: dict, want: int = EXAMPLES, seed: int = 0) -> list[str
         raise Refused(f"no --test was given and {unread(function)}; annotate each parameter ({READ}) or give an "
                       f"example with --test \"assert {function['fn']}(...) == ...\"")
     out = []
+    literal = _literal_kinds(function["kinds"])
     with py_sandbox.Session(function["code"] + _wrapper(function["fn"], function["kinds"]), "_t_repr_call") as session:
         for args in drawn_inputs(function["kinds"], want, seed):
             try:
-                value = session.call([list(args)])
+                value = session.call(typed_values.encode(list(args)) if literal else [list(args)])
             except (py_sandbox.CallError, py_sandbox.CallTimeout, py_sandbox.Unrepresentable):
                 continue
             if isinstance(value, str):
-                out.append(f"assert {function['fn']}({', '.join(repr(a) for a in args)}) == {value}")
+                shown = _shown_literal if literal else repr
+                out.append(f"assert {function['fn']}({', '.join(shown(a) for a in args)}) == {value}")
             if len(out) >= want:
                 break
     return out
@@ -302,12 +356,59 @@ def entry_for(function: dict, tests: list[str]) -> tuple[dict, bool]:
             raise Refused(f"your function fails your own example `{failed[0].strip()}`; nothing was asked of the model")
     text = function["doc"].strip() or f"Write `{function['fn']}`, the function the Python solution below computes."
     try:
-        entry = gate.entry_of(text, tests)
+        entry = gate.entry_of(text, tests, typed=True)
     except ValueError as error:
         raise Refused(("the examples taken from the function are not values t holds: " if drawn else "") + str(error)) from None
     if entry["fn"] != function["fn"]:
         raise Refused(f"the examples call `{entry['fn']}`, and the function is `{function['fn']}`")
     return entry, drawn
+
+
+def _carried(ty, v) -> bool:
+    """Whether t/to_python.py's boundary writes a value of type `ty`, as the test wrote it (`v`), as the Python value
+    the person's function takes: ints, bools, strings at the top, sets of ints, lists (any depth) of ints and bools,
+    and pairs of ints and bools. Read from its _boundary_kinds and _t_value_to_py on 2026-11-26."""
+    if ty == "int":
+        return isinstance(v, int) and not isinstance(v, bool)
+    if ty == "bool":
+        return isinstance(v, bool)
+    if ty == "seq":
+        return isinstance(v, str) or (isinstance(v, (list, tuple)) and all(_carried("int", x) for x in v))
+    if ty == "set":
+        return (isinstance(v, (set, frozenset)) and all(_carried("int", x) for x in v)) or v == {}
+    if isinstance(ty, dict) and set(ty) == {"seq"}:
+        if not isinstance(v, (list, tuple)):
+            return False
+        if ty["seq"] == "seq":                                  # rows of ints; a row written as a string is not carried
+            return all(isinstance(x, (list, tuple)) and _carried("seq", x) for x in v)
+        return all(_carried(ty["seq"], x) for x in v)
+    if isinstance(ty, dict) and set(ty) == {"pair"} and all(t in ("int", "bool") for t in ty["pair"]):
+        return isinstance(v, tuple) and len(v) == 2 and all(_carried(t, x) for t, x in zip(ty["pair"], v))
+    return False
+
+
+def _not_compared(task: dict, entry: dict) -> str | None:
+    """The first type, in t's words, of a position the reader typed (t/typed_values.py) whose values the comparison
+    with the person's function cannot carry; None when it carries them all, as it does every value read before."""
+    if not typed_values.entry_is_typed(entry):
+        return None
+    sides = [(p["type"], i) for i, p in enumerate(task["params"])] + [(task["returns"][0]["type"], None)]
+    for ty, i in sides:
+        cells = [pt["expected"] if i is None else pt["args"][i] for pt in entry["points"]]
+        if any(typed_values.is_typed(k) for k, _v in cells) and not all(_carried(ty, v) for _k, v in cells):
+            return se._type_words(ty)
+    return None
+
+
+def _compared(task: dict, code: str, fn: str, tests: list[str], entry: dict) -> dict:
+    """to_python.check's comparison of the program with the person's function, or, where it cannot carry a type,
+    no comparison and the reason (`abstained`): never a difference claimed that was not seen."""
+    cannot = _not_compared(task, entry)
+    if cannot:
+        return {"agrees": False, "abstained": True,
+                "why": f"the comparison with your function cannot carry {cannot} yet (t/to_python.py, in the t engine, "
+                       "writes no Python value of it); the program was not compared with your function"}
+    return to_python.check(task, code, fn, tests, outside=0)
 
 
 def _ensures(spec: dict) -> str:
@@ -376,10 +477,10 @@ def by_answers(entry: dict, function: dict, student, answers: int = 5, max_new: 
             else:
                 refused.append(f"{label}: {_ensures(c['task'])}: {v['why']}")
             continue
-        same = to_python.check(c["task"], code, fn, tests, outside=0)
+        same = _compared(c["task"], code, fn, tests, entry)
         if not same.get("agrees"):
             where = f" (`{same['first'][7:]}` is the program's answer, not yours)" if same.get("first") else ""
-            refused.append(f"{label}: it does not answer as your function does{where}")
+            refused.append(f"{label}: " + (same["why"] if same.get("abstained") else f"it does not answer as your function does{where}"))
             continue
         named = se.rename_task(copy.deepcopy(c["task"]), f"answer_{c['n']}__{fn}")
         row = prover([named], jobs).get(named["name"])
@@ -478,10 +579,11 @@ def by_specification(entry: dict, function: dict, student, specs: int = 3, answe
                 continue
             seen.add(text)
             task = surface.parse(text)
-            same = to_python.check(task, code, fn, tests, outside=0)
+            same = _compared(task, code, fn, tests, entry)
             if not same.get("agrees"):
                 where = f" (`{same['first'][7:]}` is the proved program's answer, not yours)" if same.get("first") else ""
-                out["refused"].append(f"{label}: it does not answer as your function does{where}")
+                out["refused"].append(f"{label}: " + (same["why"] if same.get("abstained")
+                                                      else f"it does not answer as your function does{where}"))
                 continue
             named = se.rename_task(copy.deepcopy(task), f"answer_{out['bodies asked']}__{fn}")
             row = prover([named], jobs).get(named["name"])

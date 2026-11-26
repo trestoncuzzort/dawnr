@@ -42,6 +42,7 @@ import mbpp_dfy                                                 # noqa: E402
 import surface                                                  # noqa: E402
 import spec_check                                               # noqa: E402
 import spec_experiment as se                                    # noqa: E402
+import typed_values                                             # noqa: E402
 
 MIN_CORRECTNESS, MIN_COMPLETENESS = 0.8, 0.6                    # SAFE's thresholds
 # Wall clocks (2026-10-04). The interpreter bounds steps (MAX_STEPS) and sizes (MAX_BITS, MAX_SEQ), not time, and
@@ -111,7 +112,7 @@ def scores(task: dict, entry: dict) -> dict:
             return {"unscorable": f"{type(e).__name__}: {e}"[:120]}
         tests += 1
         held += ok
-        for wrong in spec_check.mutations(env[ret]):
+        for wrong in spec_check.wrong_answers(env[ret], typed_values.datatypes_of(task)):
             probe = dict(env)
             probe[ret] = wrong
             if clock() <= 0:
@@ -151,7 +152,7 @@ def _test_of(entry: dict, point: dict) -> tuple[str, object] | None:
     """(the problem's own `fn(args) == expected` text, the expected Python value) for the test line that parses to
     this point, read from the entry's test lists; None when no line matches."""
     import ast
-    want = (json.dumps(point.get("args")), json.dumps(point.get("expected")))
+    want = (json.dumps(point.get("args"), default=repr), json.dumps(point.get("expected"), default=repr))
     rec = entry.get("rec", {})
     for src in list(rec.get("test_list") or []) + list(rec.get("challenge_test_list") or []):
         try:
@@ -177,9 +178,12 @@ def call_text(entry: dict, point: dict) -> tuple[str, object]:
     if found is not None:
         return found
     fn = entry.get("fn") or point.get("fn") or "f"
-    args = ", ".join(_literal(se._as_interp_value(k, v)) for k, v in point.get("args", []))
+
+    def shown(k, v):
+        return repr(v) if typed_values.is_typed(k) else _literal(se._as_interp_value(k, v))   # a typed value is its literal
+    args = ", ".join(shown(k, v) for k, v in point.get("args", []))
     ekind, evalue = point.get("expected", ["int", None])
-    return f"{fn}({args}) == {_literal(se._as_interp_value(ekind, evalue))}", None
+    return f"{fn}({args}) == {shown(ekind, evalue)}", None
 
 
 def witnesses(task: dict, entry: dict, limit: int = 3) -> list[str]:
@@ -241,7 +245,7 @@ def witnesses(task: dict, entry: dict, limit: int = 3) -> list[str]:
                     rejected = f"the test `{call}` is rejected: `ensures {surface.pexpr(e)}` is {why} on it"
                     break
         if accepted is None:
-            for wrong in spec_check.mutations(env[ret]):
+            for wrong in spec_check.wrong_answers(env[ret], typed_values.datatypes_of(task)):
                 probe = dict(env)
                 probe[ret] = wrong
                 if clock() <= 0:
