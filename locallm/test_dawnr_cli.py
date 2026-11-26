@@ -405,7 +405,7 @@ def test_in_its_last_round_it_is_asked_to_answer_and_given_nothing_to_call(tmp_p
     assert model.bodies[last]["messages"][-1] == {"role": "user", "content": cli.LAST_ROUND}
     assert model.bodies[last - 1]["messages"][-1]["role"] == "tool"
     # a call written out as text in that last round is not an answer, and is not shown as one; asked once more with
-    # nothing to call, and written out again (a server that does not end it at the stop strings), it still is not
+    # nothing to call, and written out again, it still is not
     written = turn(text="I will edit it. <tool_call> <function=fs_edit> ... </function> </tool_call>")
     model = Model(*looks, written, turn(text="<tool_call> <function=fs_edit> ... </function> </tool_call>"))
     (tmp_path / "again").mkdir()
@@ -440,7 +440,7 @@ def test_a_call_written_as_text_in_the_last_round_is_asked_once_more_for_the_ans
         answer = cli.run_task(agent, planner, meter, "Review tests/reference/observations.py.", [], said.append)
     assert answer == said_at_last and len(model.bodies) == last + 2
     again = model.bodies[last + 1]                              # the same messages, the call it wrote, and the word
-    assert "tools" not in again and again["stop"] == ["<tool_call>", "<function="]
+    assert "tools" not in again and "stop" not in again          # no stop strings: see Server, below
     assert again["messages"][:-2] == model.bodies[last]["messages"]
     assert again["messages"][-2:] == [{"role": "assistant", "content": WRITTEN}, {"role": "user", "content": cli.NOTHING_MORE}]
     # what comes back is the answer only if it is one: a reply that holds a call is not, whatever text comes with it
@@ -460,7 +460,7 @@ def test_a_last_round_that_ends_in_no_answer_all_the_same_names_the_files_it_rea
     looks = [turn(("fs_read", {"path": "here/a.md"})), turn(("fs_read", {"path": "here/missing.md"})),
              turn(("fs_read", {"path": "here/src/b.py"})), turn(("fs_read", {"path": "here/a.md", "start": 2}))]
     looks += [turn(("fs_search", {"query": f"total {i}"})) for i in range(last - len(looks))]
-    model = Model(*looks, written_call(), turn(text=""))      # the call begun again, ended at once by the stop strings
+    model = Model(*looks, written_call(), turn(text=""))      # asked once more, nothing said at all
     work, harness, agent, planner, meter, said, asked, _ask = session(tmp_path, model)
     (work / "a.md").write_text("one\ntwo\n")
     (work / "src").mkdir()
@@ -470,6 +470,46 @@ def test_a_last_round_that_ends_in_no_answer_all_the_same_names_the_files_it_rea
     assert answer.startswith(cli.UNFINISHED) and "here/a.md" in answer and "here/src/b.py" in answer
     assert "missing.md" not in answer and answer.count("here/a.md") == 1 and len(model.bodies) == last + 2
     assert answer == cli.UNFINISHED + cli.READ_BY_THEN.format(files="here/a.md, here/src/b.py") and answer in said
+
+
+class Server(Model):
+    """The model server as llama.cpp's chat route answers (measured on the 27B's server, build b11342, 2026-11-26):
+    each reply given is what the model writes in full, and a request's stop strings cut it before the first of them,
+    which is dropped, with finish_reason "stop" as for a reply that ended by itself, and nothing else that says so."""
+
+    def __call__(self, url, body, timeout=1800.0):
+        reply = json.loads(json.dumps(super().__call__(url, body, timeout)))
+        choice = reply["choices"][0]
+        text = choice["message"].get("content") or ""
+        cut = min([text.index(s) for s in body.get("stop") or () if s in text], default=len(text))
+        choice["message"]["content"] = text[:cut]
+        choice.update(index=0, finish_reason="tool_calls" if choice["message"].get("tool_calls") else "stop")
+        return reply
+
+
+# Asked once more, a sentence and then the call begun again; what llama.cpp's chat route returned for that with the
+# two call marks as stop strings: the sentence alone, and finish_reason "stop", as for a reply that ended by itself
+BEGUN_AGAIN = "Let me read the rest.\n" + WRITTEN
+CUT_AT_STOP = {"finish_reason": "stop", "index": 0,
+               "message": {"role": "assistant", "content": "Let me read the rest.\n"}}
+
+
+# a sentence before the call, or what reads as an answer: no rule tells the two apart, and neither is taken
+@pytest.mark.parametrize("begun", [BEGUN_AGAIN, "observe() returns an empty list.\n" + WRITTEN],
+                         ids=["sentence", "answer"])
+def test_asked_once_more_what_comes_before_a_call_begun_again_is_not_taken_for_the_answer(tmp_path, begun):
+    assert Server(turn(text=BEGUN_AGAIN))("", {"stop": list(cli.CALL_MARKS)})["choices"] == [CUT_AT_STOP]
+    last = cli.default_config(tmp_path)["agent"]["budget"]["max_rounds"] - 1
+    looks = [turn(("fs_read", {"path": "here/tests/reference/observations.py"}))]
+    looks += [turn(("fs_search", {"query": f"observation {i}"})) for i in range(last - 1)]
+    model = Server(*looks, written_call(), turn(text=begun))
+    work, harness, agent, planner, meter, said, asked, _ask = session(tmp_path, model)
+    (work / "tests" / "reference").mkdir(parents=True)
+    (work / "tests" / "reference" / "observations.py").write_text("def observe():\n    return []\n")
+    with harness:
+        answer = cli.run_task(agent, planner, meter, "Review tests/reference/observations.py.", [], said.append)
+    assert answer == cli.UNFINISHED + cli.READ_BY_THEN.format(files="here/tests/reference/observations.py")
+    assert len(model.bodies) == last + 2 and "tools" not in model.bodies[-1]
 
 
 def test_a_search_in_one_file_searches_that_file_and_a_search_of_nothing_says_so(tmp_path):

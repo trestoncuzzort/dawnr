@@ -131,8 +131,10 @@ def windows_names(command: str, has=shutil.which) -> str:
 # the last round of a task: a question the files do not answer otherwise ends in one more search and no answer at all
 LAST_ROUND = "Answer now from what you have read. If what was asked is not in the files, say that it is not there."
 # ... and given that, a 27B wrote the call it wanted as text (a read-only review, sixteen windows of files read, and
-# the task ended with no answer at all): said once, answered again with nothing to call, and a call begun again is
-# ended at once by the stop strings
+# the task ended with no answer at all): said once, and answered again with nothing to call. Not with the call marks as
+# stop strings: llama.cpp's chat route drops the one it meets and ends the reply with finish_reason "stop", as a reply
+# that ended by itself, so the sentence before a call begun again ("Let me read the rest.") came back looking like the
+# answer (its server, measured 2026-11-26)
 CALL_MARKS = ("<tool_call>", "<function=")     # a call in the model family's own format, written out as text
 NOTHING_MORE = ("Nothing more can be read or run now: a call written out as text does not run. Answer from what you have "
                 "already read, and say plainly what you could not check.")
@@ -609,12 +611,13 @@ class Planner(NativePlanner):
                 again = (self._send(f"http://{self.host}/v1/chat/completions", body)["choices"][0].get("message") or {}).get("content") or ""
                 text = again.strip() or text
             # asked to answer with nothing left to call, the model sometimes writes the call it wanted as text: said
-            # once, answered again with nothing to call; what is still no answer ends the task, naming what it read
+            # once, answered again with nothing to call; a reply that still holds a call, whatever text comes before
+            # it, is no answer either, and what is no answer ends the task, naming what it read
             if any(mark in text for mark in CALL_MARKS):
                 body["messages"] = body["messages"] + [{"role": "assistant", "content": text},
                                                        {"role": "user", "content": NOTHING_MORE}]
                 body.pop("tools", None)
-                again = self._send(f"http://{self.host}/v1/chat/completions", dict(body, stop=list(CALL_MARKS)))["choices"][0].get("message") or {}
+                again = self._send(f"http://{self.host}/v1/chat/completions", body)["choices"][0].get("message") or {}
                 said = (again.get("content") or "").strip()
                 if said and not again.get("tool_calls") and not any(mark in said for mark in CALL_MARKS):
                     return Finish(said)
