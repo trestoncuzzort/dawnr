@@ -89,6 +89,7 @@ LOOKING = ("A question about the computer itself as it is now (what is running, 
 UNLOOKED = re.compile(r"\b(cannot|can't|can not|unable|do not have|don't have|no access|please provide|not able)\b", re.I)
 LOOK_FIRST = "You have not looked yet. List the folder or search it, then answer from what you find."
 UNFINISHED = "Stopped: it ran out of rounds before it finished. What was changed is what the line below says."
+READ_BY_THEN = " Files it had read by then: {files}."    # after it, so that the person knows what the task covered
 # a task the loop stopped (its steps kept failing, or it went round): the model is asked once, with nothing to call,
 # for its own account, and the journal's line follows it whatever it says
 ACCOUNT = ("The work was stopped here: {why}. Do not call anything. Say in a sentence or two what was done and what was "
@@ -99,6 +100,9 @@ ACCOUNTED = ("failures", "no progress", "budget")
 # loop's own stop note, which it had been shown where the command's output would have been
 FROM_DAWNR = "[From dawnr itself, not output of the call:] "
 CUT_OFF = "Your reply was cut off at its length limit. Do not think aloud: make the next call now, or answer in a few sentences."
+# an answer made of a reply the server ended at its length limit (finish_reason "length") is handed back with this
+# said, never as if it were all of it; every reply that can become the answer or the account is read for it
+CUT_SHORT = "\n\n[The reply stopped at its length limit; what is above is not all of it.]"
 # code changed in this task and nothing run after the last change: sent back once, with the tools still offered
 UNRUN = ("You changed {files} and have not run anything since. Run it the way the request describes (or run its tests) and "
          "look at what it prints; then answer, or fix what you find.")
@@ -134,6 +138,14 @@ def windows_names(command: str, has=shutil.which) -> str:
     return COMMAND_WORD.sub(fix, command)
 # the last round of a task: a question the files do not answer otherwise ends in one more search and no answer at all
 LAST_ROUND = "Answer now from what you have read. If what was asked is not in the files, say that it is not there."
+# ... and given that, a 27B wrote the call it wanted as text (a read-only review, sixteen windows of files read, and
+# the task ended with no answer at all): said once, and answered again with nothing to call. Not with the call marks as
+# stop strings: llama.cpp's chat route drops the one it meets and ends the reply with finish_reason "stop", as a reply
+# that ended by itself, so the sentence before a call begun again ("Let me read the rest.") came back looking like the
+# answer (its server, measured 2026-11-26)
+CALL_MARKS = ("<tool_call>", "<function=")     # a call in the model family's own format, written out as text
+NOTHING_MORE = ("Nothing more can be read or run now: a call written out as text does not run. Answer from what you have "
+                "already read, and say plainly what you could not check.")
 
 
 def default_config(cwd: Path, *, read_only: bool = False, roots: tuple = (), online: bool = False,
@@ -464,6 +476,13 @@ class Planner(NativePlanner):
         return seen
 
     @staticmethod
+    def files_read(state) -> list:
+        """The files this task has read with fs_read (a read that failed or did not run is not one), each once, in
+        the order they were first read."""
+        return list(dict.fromkeys(str(o.step.arguments.get("path")) for r in state.rounds if r.outcome is not None
+                                  for o in r.outcome.outcomes if o.status == "ran" and o.step.tool == "fs_read"))
+
+    @staticmethod
     def heard(state, local: bool = False) -> str:
         """The untrusted text this task has put in front of the model (files, pages, command output), spaces squeezed.
         `local`: only what came from this computer, not from the network."""
@@ -591,11 +610,19 @@ class Planner(NativePlanner):
         body = {"model": self.name, "temperature": 0, "max_tokens": 300,
                 "messages": self.messages(result) + [{"role": "user", "content": ACCOUNT.format(why=why)}]}
         try:
-            msg = self._send(f"http://{self.host}/v1/chat/completions", body)["choices"][0].get("message") or {}
+            msg, cut = self._reply(body)
         except Exception:                                       # noqa: BLE001  (no account is not an error of the task)
             return ""
         text = (msg.get("content") or "").strip()
-        return "" if msg.get("tool_calls") or "<tool_call>" in text or "<function=" in text else text
+        if msg.get("tool_calls") or "<tool_call>" in text or "<function=" in text or not text:
+            return ""
+        return text + (CUT_SHORT if cut else "")
+
+    def _reply(self, body) -> tuple[dict, bool]:
+        """One reply's message, and whether the server ended it at its length limit (finish_reason "length"): a reply
+        cut there is not all the model meant to say."""
+        choice = self._send(f"http://{self.host}/v1/chat/completions", body)["choices"][0]
+        return choice.get("message") or {}, choice.get("finish_reason") == "length"
 
     def __call__(self, state):
         if self.look_first and not state.rounds:
@@ -608,18 +635,19 @@ class Planner(NativePlanner):
         reasoned = "tools" in body and (self.think == "always" or ("stuck" in self.think and self.stuck(state)))
         choice = self._send(f"http://{self.host}/v1/chat/completions", self.thinking(body) if reasoned else body)["choices"][0]
         msg = choice.get("message") or {}
+        cut = choice.get("finish_reason") == "length"           # whether the reply that may become the answer was cut
         calls = msg.get("tool_calls") or []
-        if not calls and choice.get("finish_reason") == "length" and "tools" in body:
+        if not calls and cut and "tools" in body:
             # the turn ran out of length while thinking aloud, before the call it was working up to: that is not an
             # answer (a failing test was followed by 1,500 tokens tracing it by hand, and the task ended there)
             body["messages"] = body["messages"] + [{"role": "assistant", "content": (msg.get("content") or "")[-600:]}, {"role": "user", "content": CUT_OFF}]
-            msg = self._send(f"http://{self.host}/v1/chat/completions", body)["choices"][0].get("message") or {}
+            msg, cut = self._reply(body)
             calls = msg.get("tool_calls") or []
         if not calls and len(state.rounds) == int(self.look_first) and UNLOOKED.search(msg.get("content") or ""):
             # "I cannot determine that from the files", said before any file was opened: sent back once
             body["messages"] = body["messages"] + [{"role": "assistant", "content": msg.get("content") or ""},
                                                    {"role": "user", "content": LOOK_FIRST}]
-            msg = self._send(f"http://{self.host}/v1/chat/completions", body)["choices"][0].get("message") or {}
+            msg, cut = self._reply(body)
             calls = msg.get("tool_calls") or []
         if not calls and "unrun" not in self.told and "sh" in {t["function"]["name"] for t in self.tools} and not self.last_round(state):
             unrun = self.unrun(state)
@@ -627,7 +655,7 @@ class Planner(NativePlanner):
                 self.told.add("unrun")
                 body["messages"] = body["messages"] + [{"role": "assistant", "content": msg.get("content") or ""},
                                                        {"role": "user", "content": UNRUN.format(files=", ".join(unrun))}]
-                msg = self._send(f"http://{self.host}/v1/chat/completions", body)["choices"][0].get("message") or {}
+                msg, cut = self._reply(body)
                 calls = msg.get("tool_calls") or []
         if (not calls and not reasoned and "answer" in self.think and "answer" not in self.told and "tools" in body
                 and self.worked(state)):
@@ -635,9 +663,9 @@ class Planner(NativePlanner):
             # and from the same place: not the first answer handed back to be doubted, the same question considered.
             # What comes back may be calls (it found something still to do) or the answer that stands.
             self.told.add("answer")
-            again = self._send(f"http://{self.host}/v1/chat/completions", self.thinking(dict(body, messages=self.messages(state))))["choices"][0].get("message") or {}
+            again, again_cut = self._reply(self.thinking(dict(body, messages=self.messages(state))))
             if again.get("tool_calls") or (again.get("content") or "").strip():
-                msg, calls = again, again.get("tool_calls") or []
+                msg, calls, cut = again, again.get("tool_calls") or [], again_cut
         if not calls:
             text = (msg.get("content") or "").strip()
             unsaid = self.unsaid(text)
@@ -645,10 +673,24 @@ class Planner(NativePlanner):
                 body["messages"] = body["messages"] + [{"role": "assistant", "content": text},
                                                        {"role": "user", "content": UNSAID.format(files=", ".join(unsaid))}]
                 body.pop("tools", None)
-                again = (self._send(f"http://{self.host}/v1/chat/completions", body)["choices"][0].get("message") or {}).get("content") or ""
-                text = again.strip() or text
-            # asked to answer with nothing left to call, the model sometimes writes the call it wanted as text
-            return Finish(UNFINISHED if "<tool_call>" in text or "<function=" in text else text)
+                said_again, again_cut = self._reply(body)
+                again = (said_again.get("content") or "").strip()
+                if again:
+                    text, cut = again, again_cut
+            # asked to answer with nothing left to call, the model sometimes writes the call it wanted as text: said
+            # once, answered again with nothing to call; a reply that still holds a call, whatever text comes before
+            # it, is no answer either, and what is no answer ends the task, naming what it read
+            if any(mark in text for mark in CALL_MARKS):
+                body["messages"] = body["messages"] + [{"role": "assistant", "content": text},
+                                                       {"role": "user", "content": NOTHING_MORE}]
+                body.pop("tools", None)
+                again, again_cut = self._reply(body)
+                said = (again.get("content") or "").strip()
+                if said and not again.get("tool_calls") and not any(mark in said for mark in CALL_MARKS):
+                    return Finish(said + (CUT_SHORT if again_cut else ""))
+                read = self.files_read(state)
+                return Finish(UNFINISHED + (READ_BY_THEN.format(files=", ".join(read)) if read else ""))
+            return Finish(text + (CUT_SHORT if cut else ""))
         approver = getattr(self.agent, "plan_approver", None)
         if hasattr(approver, "looked"):
             approver.heard, approver.local = self.heard(state), self.heard(state, local=True)
