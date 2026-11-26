@@ -42,12 +42,12 @@ built from int, bool and str with list[...], tuple[...], dict[...] and set[...]:
 list[tuple[str, int]], dict[str, list[int]], set[tuple[int, int]] and the like, in any of the spellings in use
 (List[int], typing.Tuple[int, int], Sequence[int], Mapping[str, int], a type variable).
 
-The examples, given or taken from the function, are read at the types the model's task declares (t/typed_values.py,
-2026-11-26): a tuple mixing kinds is a pair or a tuple, a dict a map, a set a set, None beside a value an option the
-task declares, a list mixing kinds a seq of a datatype. The comparison of the proved program with the function
-(t/to_python.py) writes each as the Python value the test wrote; where it has no faithful writing (a dict inside a set,
-a sequence written as a list in one test and a tuple in another, where the result is compared) verify says so and
-shows nothing.
+The examples, given or taken from the function, are read at the types the model's task declares
+(t/typed_values.py): a tuple mixing kinds is a pair or a tuple, a dict a map, a set a set, None beside a value an
+option the task declares, a list mixing kinds a seq of a datatype. The comparison of the proved program with the
+function (t/to_python.py) writes each as the Python value the test wrote; where it has no faithful writing (a dict
+inside a set, a sequence written as a list in one test and a tuple in another, where the result is compared) verify
+says so and shows nothing.
 """
 from __future__ import annotations
 
@@ -95,7 +95,7 @@ _DRAWS = {
 # sandbox, and the values are few and plain, because a person reads them as examples.
 _LISTS = {"list", "List", "Sequence", "Iterable", "Collection", "MutableSequence"}
 _TUPLES = {"tuple", "Tuple"}
-# 2026-11-26: a dict and a set, whose values cross into the sandbox as literal text (t/typed_values.py), not JSON
+# A dict and a set: their values cross into the sandbox as literal text (t/typed_values.py), not JSON.
 _DICTS = {"dict", "Dict", "Mapping", "MutableMapping"}
 _SETS = {"set", "Set", "frozenset", "FrozenSet", "AbstractSet", "MutableSet"}
 _ANY = {"Any", "object", "T", "S", "U", "K", "V"}              # a value of any type: numbers are drawn for it

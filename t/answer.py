@@ -77,10 +77,9 @@ def entry_of(text: str, tests: list[str], typed: bool = False) -> dict:
     function's name. ValueError when a test is not an `assert f(...) == value` line the pool's
     reader takes, or the tests name different functions.
 
-    `typed` (2026-11-26, `dawnr verify`): a value the reader refuses is read as its literal and
-    each such position given one type across the tests (t/typed_values.py): a tuple mixing kinds,
-    a dict, a set, None, deeper nesting, a list of bools or one mixing kinds. Off, every question is
-    read as it was."""
+    `typed`: a value the reader refuses is kept as its literal, and each such position is then given
+    one type across the tests (t/typed_values.py): a tuple mixing kinds, a dict, a set, None, deeper
+    nesting, a list of bools or a list mixing kinds. Off, those values are refused."""
     # the wider reader (2026-10-05): a tuple is read as the list of the same elements and a list of int lists as
     # t's seq<seq>; a question a person asks is not held to the pools' narrower reading
     points = [mbpp_dfy.parse_assertion(a, strings=True, nested_strings=True, tuples=True, nested_ints=True, typed=typed)

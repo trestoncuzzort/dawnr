@@ -179,8 +179,8 @@ def draw(kind: str, rnd: random.Random, like=None, strings: bool = False):
     carries those unstated preconditions, so a draw copies its shape: a sorted example stays sorted, an example
     of characters stays characters, a positive example stays positive.
 
-    A kind the reader typed (t/typed_values.py, 2026-11-26) is drawn there, in the example's shape; None is then a
-    value it may draw (an option's), so such a draw that fails is `typed_values.NO_VALUE`, not None."""
+    A kind the reader typed (t/typed_values.py) is drawn in the example's shape. None is then a value it may draw
+    (an option's), so a draw that fails there is `typed_values.NO_VALUE`, not None."""
     if typed_values.is_typed(kind):
         return typed_values.draw(typed_values.type_of_kind(kind), like, rnd)
     if kind == "int":
@@ -407,10 +407,10 @@ def bound_inputs(params: list, args: list, positions: list[int], typed: list[int
     for a string position is a one-character string where the task declares a string: the
     problem's first assertion passed a one-character literal, the kinds therefore say `int`, and
     a task that (rightly) declares `seq` used to be handed an integer and the check ended with
-    "interpreter refused" (spec_experiment.mark_characters has the test-harness half, 2026-10-01).
+    "interpreter refused" (spec_experiment.mark_characters has the test-harness half).
 
     `typed`: positions whose kind the reader typed (t/typed_values.py); the drawn value there is read at the
-    declared type, and a TypeError when it does not read, as for any value with no t form."""
+    declared type, and raises TypeError when it does not read, as for any value with no t form."""
     env = {}
     for i, (p, a) in enumerate(zip(params, args)):
         if i in typed:
@@ -526,11 +526,11 @@ def mutations(value):
 
 
 def wrong_answers(value, datatypes: dict | None = None, ty=None) -> list:
-    """`mutations` of a right answer, and for a value of a compound type the reader's typed kinds bring (a pair, a
-    tuple, a set, a map, a datatype value, a seq of them: t/typed_values.py) wrong answers of that type, which
-    `mutations` has none of. `ty`, the declared type of a result whose kind the reader typed, gives an empty one
-    wrong answers too (without them no mutant is judged and a specification that says nothing passes). Every value
-    `mutations` knew gets exactly what it always got."""
+    """`mutations` of a right answer, plus wrong answers of the same type for a value of a compound type the reader
+    typed (a pair, a tuple, a set, a map, a datatype value, a seq of them: t/typed_values.py), which `mutations` has
+    none of. `ty`, the declared type of a result whose kind the reader typed, also gives an empty value wrong
+    answers; without them no mutant would be judged and a specification that says nothing would pass. Every value
+    `mutations` handles keeps its `mutations` result."""
     if ty is not None or typed_values.compound(value):
         return typed_values.mutations(value, datatypes, ty=ty)
     return mutations(value)
@@ -729,7 +729,7 @@ def fits_type(v, ty) -> bool:
 
 def _example_value(kind, v, ty, task: dict, result: bool = False):
     """One of a problem's own values at a declared type: a typed kind's literal read there (t/typed_values.py),
-    any other as it always was."""
+    any other kind unchanged."""
     if typed_values.is_typed(kind):
         return typed_values.read_at(v, ty, typed_values.datatypes_of(task))
     return to_t(v, ty) if result else as_param(to_t(v, ty), ty)
@@ -834,8 +834,8 @@ def check_task(task: dict, entry: dict, n: int, rnd: random.Random, oracle=None,
              if [k for k, _v in p.get("args", [])] == kinds]
     positions = string_positions(entry)
     nested = nested_string_positions(entry)
-    # 2026-11-26 (t/typed_values.py): positions the reader typed are drawn in their examples' shapes, cross as they
-    # are, and are read at the declared types; the result too when its kind is typed
+    # Positions the reader typed (t/typed_values.py) are drawn in their examples' shapes and read at the declared
+    # types; the result too, when its kind is typed.
     typed = [i for i, k in enumerate(kinds) if typed_values.is_typed(k)]
     typed_result = typed_values.is_typed(entry["points"][0]["expected"][0])
     dts = typed_values.datatypes_of(task)
@@ -900,7 +900,7 @@ def check_task(task: dict, entry: dict, n: int, rnd: random.Random, oracle=None,
             return {"status": f"cannot draw {kinds}"}
         try:
             with deadline(5):
-                out = fn(*python_arguments(copy.deepcopy(args), positions, nested, typed))   # a mutating reference keeps its hands off the draw
+                out = fn(*python_arguments(copy.deepcopy(args), positions, nested, typed))   # a deep copy shields the draw from a mutating reference
         except Timeout:
             skipped["reference did not finish"] += 1
             continue

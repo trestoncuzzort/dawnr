@@ -99,7 +99,7 @@ def literal_oracle(session: py_sandbox.Session):
 
 
 def _session(code: str, entry: dict) -> tuple[py_sandbox.Session, object]:
-    """The sandboxed function and the oracle that calls it: JSON for the kinds the reader always had, literal text
+    """The sandboxed function and the oracle that calls it: JSON for the kinds the plain reader reads, literal text
     for the kinds it typed."""
     if typed_values.entry_is_typed(entry):
         session = py_sandbox.Session(code + typed_values.wrapper(entry["fn"]), typed_values.LITERAL_CALL)

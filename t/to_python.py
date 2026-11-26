@@ -26,15 +26,17 @@ internal/ENTERPRISE-PLAN-2026-09-19.md; Meyer's design by contract, where a viol
 fault and is reported at the call). The check runs the guard beside the interpreter too: on drawn inputs the
 `requires` excludes, the Python must refuse.
 
-Compound values at the boundary (2026-11-26, the values t/typed_values.py reads). The boundary writes a value as the
-Python value the test wrote it, at the type the program declares: a map is a dict, a tuple of any arity a tuple, a set
-a set, a string inside any of them a str, and a datatype value the Python value typed_values read it from (an option's
-None or the value itself, a record the tuple of its fields, one constructor of several the value of its kind). Inside
-the function a map is a dict, a tuple a tuple, a datatype value a tuple of its constructor's name and its fields. Each
-position's written form is kept in a small form (`_form`) that `_t_in` and `_t_out` read, in the generated Python and
-beside the interpreter alike, so the comparison and the hand-back cross the boundary by the same code. What has no
-faithful writing (a dict inside a set, a datatype of constructors without fields, a sequence the tests write as a list
-in one test and a tuple in another, where the result is compared) is refused by name (`Uncarried`).
+Compound values at the boundary (the values t/typed_values.py reads). The boundary writes a value as the Python
+value the test wrote, at the type the program declares:
+  - a map is a dict, a tuple of any arity a tuple, a set a set, and a string inside any of them a str;
+  - a datatype value is the Python value typed_values read it from: an option's None or the value itself, a record
+    the tuple of its fields, one constructor of several the value of its kind.
+Inside the function a map is a dict, a tuple a tuple, and a datatype value a tuple of its constructor's name and its
+fields. Each position's written form is kept in a small form (`_form`) that `_t_in` and `_t_out` read, in the
+generated Python and beside the interpreter alike, so the comparison and the hand-back cross the boundary by the same
+code. A value with no faithful writing is refused by name (`Uncarried`): a dict inside a set, a datatype whose
+constructors have no fields, or a sequence that the tests write as a list in one test and a tuple in another, where
+the result is compared.
 
 Not translated (the answer keeps its `t` form only): a datatype the task does not declare.
 """
@@ -426,8 +428,8 @@ def _boundary_kinds(task: dict, tests: list[str]) -> tuple[list[str], str]:
         return "value"
     ins = [form(p["type"], k) for p, k in zip(task["params"], seen_in)]
     out = form(task["returns"][0]["type"], seen_out)
-    # 2026-11-26: a position the typed reader read (t/typed_values.py) that the boundary above does not carry is
-    # written by a form of its declared type and of how the tests write it; Uncarried where it has no faithful writing
+    # A position the typed reader read (t/typed_values.py) that the boundary above does not carry is written by a form
+    # of its declared type and of how the tests write it; Uncarried where it has no faithful writing.
     dts = typed_values.datatypes_of(task)
     for i, (p, ns) in enumerate(zip(task["params"], nodes_in)):
         f = _form_of(p["type"], ns, dts, False)
@@ -487,13 +489,21 @@ def _type_guard(ttype, kind: str, v: str) -> tuple[str, str] | None:
 
 # ------------------------------------------------- compound values at the boundary --
 # A position's "form" says how its values are written in Python, as a JSON-able list (it is embedded in the generated
-# source): ["int"], ["bool"], ["char"] (an int written as a one-character str), ["str"] (a seq written as a str),
-# ["seq", container, elem], ["set", elem, frozen, empty], ["tup", container, [elems]] (a pair or a tuple of three or more),
-# ["map", key, value], ["opt", bare, one, field] (None, or the value), ["rec", ctor, container, [fields]] (a record from
-# the tuple of its fields), ["sum", bare, [[ctor, kind, field], ...]] (one constructor of several, by the value's kind).
-# Container is "list" or "tuple"; a set's empty is "set" or "dict" (MBPP writes an empty set `{}` as often as `set()`,
-# and `set() == {}` is False in Python, so the empty set is written as the tests write it). Inside the function a value is the interpreter's, except that a map is a dict, a pair
-# or tuple a tuple and a datatype value a tuple (its constructor's name, then its fields).
+# source):
+#   ["int"], ["bool"]
+#   ["char"]                                    an int written as a one-character str
+#   ["str"]                                     a seq written as a str
+#   ["seq", container, elem]
+#   ["set", elem, frozen, empty]
+#   ["tup", container, [elems]]                 a pair or a tuple of three or more
+#   ["map", key, value]
+#   ["opt", bare, one, field]                   None, or the value
+#   ["rec", ctor, container, [fields]]          a record, from the tuple of its fields
+#   ["sum", bare, [[ctor, kind, field], ...]]   one constructor of several, chosen by the value's kind
+# `container` is "list" or "tuple". A set's `empty` is "set" or "dict": MBPP writes an empty set as `{}` as often as
+# `set()`, and `set() == {}` is False in Python, so the empty set is written as the tests write it. Inside the function
+# a value is the interpreter's, except that a map is a dict, a pair or tuple a tuple, and a datatype value a tuple (its
+# constructor's name, then its fields).
 
 
 class Uncarried(Unsupported):
@@ -737,10 +747,10 @@ def _needs_form(ty) -> bool:
 
 
 def _form_of(ty, nodes: list, dts: dict, result: bool):
-    """The form of a position the typed reader read (an older reader refuses a test value there), or of a type the
+    """The form of a position the typed reader read (the plain reader refuses a test value there), or of a type the
     interpreter holds otherwise than a Python caller does (a map, a tuple of three or more, a datatype: `_needs_form`);
-    None for the rest, which keeps the older boundary. Not even a value the older boundary writes in part (a list of
-    tuples it would write as lists) keeps that path where the position is typed: it is written as the tests do.
+    None for the rest, which keeps the plain boundary. A typed position always gets a form, even where the plain
+    boundary would write part of it (a list of tuples it would write as lists): it is written as the tests write it.
     Uncarried where that cannot be."""
     if not nodes and _needs_form(ty):
         return _form(ty, [], dts, result)                       # no test to say how it is written: the plain Python value
@@ -757,11 +767,11 @@ def _form_of(ty, nodes: list, dts: dict, result: bool):
     for n in nodes:
         try:
             mbpp_dfy._literal(n, **wide)
-        except Exception:                                       # noqa: BLE001 -- refused by the older reader: a typed position
+        except Exception:                                       # noqa: BLE001 -- plain reader refuses: a typed position
             break
     else:
         if not _needs_form(ty):
-            return None                                         # read by the older reader, of a type it holds as it is
+            return None                                         # read by the plain reader, of a type it holds as it is
     return _form(ty, raws, dts, result)
 
 
@@ -1141,9 +1151,9 @@ def check(task: dict, src: str, fn: str, tests: list[str] | None = None, n: int 
             break
         one(env)
     if any(k.startswith("form:") for k in ins):
-        # 2026-11-26: a tuple's, a map's or a datatype's own domain is a few dozen values of 0, 1 and -1 (interp._ladder
-        # caps a product at PAIR_SHELL), so a function that differs where a component is 2, or a string is two long,
-        # would not be met. The tests' own inputs, and each with one part replaced, are compared as well.
+        # A tuple's, a map's or a datatype's own domain is a few dozen values of 0, 1 and -1 (interp._ladder caps a
+        # product at PAIR_SHELL), so a function that differs where a component is 2, or a string is two long, would not
+        # be met. The tests' own inputs, and each with one part replaced, are compared as well.
         for env in _example_inputs(task, tests or [], ins):
             one(env)
     if not asserts and any(k.startswith("form:") for k in ins + [out]):
@@ -1151,8 +1161,9 @@ def check(task: dict, src: str, fn: str, tests: list[str] | None = None, n: int 
         # written as the function's Python values there is nothing to compare, and "agrees" would be a claim from nothing
         return {"agrees": False, "abstained": True, "inputs": 0,
                 "why": "no input of the program's domain could be written as the values your function takes"}
-    # the person's own examples are the written forms: `assert f(x) == v` is run as `assert _t_same(f(x), v)`, so a
-    # function that passes its own example only because 1 == True (or 1 == 1.0, or a list for a tuple's subclass) does not
+    # The person's own examples are run in their written forms: `assert f(x) == v` runs as `assert _t_same(f(x), v)`, so
+    # a function that passes its own example only because 1 == True (or 1 == 1.0, or a list for a tuple's subclass)
+    # does not count as agreeing.
     own = [t.strip() for t in tests or [] if t.strip()]
     asserts += own
     strict += [_strict_example(t) for t in own]

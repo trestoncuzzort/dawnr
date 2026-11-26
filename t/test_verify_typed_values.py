@@ -1,10 +1,12 @@
-"""`dawnr verify` on functions whose tests hold values beyond ints, bools, strings and lists of them (2026-11-26):
-a tuple mixing kinds, a dict, deeper nesting, None, a set, a list of bools, a list mixing kinds. Each is read at the
-type the task declares (t/typed_values.py), the specification is held against the person's function on drawn
-inputs of the same shapes, and the proved program is compared with the function (t/to_python.py's boundary writes each
-as the Python value the test wrote; test_to_python_values.py holds that boundary), so that a program that differs from
-the function only inside the new type is refused, and where the boundary has no faithful writing verify says so instead
-of claiming a difference. Until this change every one of these was refused before the model was asked."""
+"""`dawnr verify` on functions whose tests hold values beyond ints, bools, strings and lists of them: a tuple mixing
+kinds, a dict, deeper nesting, None, a set, a list of bools, a list mixing kinds.
+
+Each is read at the type the task declares (t/typed_values.py). The specification is held against the person's
+function on drawn inputs of the same shapes, and the proved program is compared with the function (t/to_python.py's
+boundary writes each value as the Python value the test wrote; test_to_python_values.py holds that boundary), so a
+program that differs from the function only inside such a value's type is refused. Where the boundary has no faithful
+writing, verify says so instead of claiming a difference. Without the typed reader every one of these is refused
+before the model is asked."""
 import sys
 from pathlib import Path
 
@@ -237,8 +239,8 @@ def test_a_list_mixing_ints_and_strings_is_a_seq_of_a_datatype_with_one_construc
     spec = ("datatype Item = Int(i: int) | Str(s: seq)\nt 1\ntask count_ints(xs: seq<Item>) returns (r: int)\n"
             "  ensures r == len([x for x in xs if case x { Int(i) => true, Str(s) => false }])\n{\n}\n")
     entry, r, wrong = ask("def count_ints(xs):\n    return sum(1 for x in xs if isinstance(x, int))\n",
-                          # [1, 'a', 2] alone the reader reads as ints, the character being its code point: a longer
-                          # string is what the reader refused
+                          # [1, 'a', 2] alone would be read as ints, the character being its code point: a longer
+                          # string is what makes the reader refuse it
                           ["assert count_ints([1, 'ab', 2]) == 2", "assert count_ints(['b', 'cd']) == 0"],
                           spec, spec.replace("{\n}", "{\n  r := len([x for x in xs if case x { Int(i) => true, Str(s) => false }]);\n}"),
                           wrong=spec.replace("Int(i) => true, Str(s) => false", "Int(i) => false, Str(s) => true"))
@@ -325,8 +327,8 @@ def test_what_t_still_has_no_type_for_is_refused_before_the_model_is_asked(body,
     ("None if n < 100 else n", ["assert nothing(3) == None", "assert nothing(200) == 200"], "Option"),
 ])
 def test_a_specification_that_says_nothing_does_not_pass_where_the_answers_are_empty(returned, tests, declared):
-    # found by holding `ensures true` against every newly posable MBPP problem: MBPP 490's function answers the
-    # empty set on most drawn inputs, no wrong answer was made of an empty set, and the specification passed
+    # MBPP 490's function answers the empty set on most drawn inputs. If no wrong answer is made from an empty set, no
+    # mutant is judged and a specification that says nothing (`ensures true`) passes.
     f = verify_py.read_function(f"def nothing(n):\n    return {returned}\n")
     entry, _ = verify_py.entry_for(f, tests)
     head = "datatype Option = Nothing | Some(v: int)\n" if declared == "Option" else ""
@@ -342,8 +344,8 @@ def test_a_specification_that_says_nothing_does_not_pass_where_the_answers_are_e
     ("None if n < 100 else n", ["assert nothing(3) == None", "assert nothing(200) == 200"], "Option"),
 ])
 def test_a_specification_that_says_nothing_does_not_pass_where_the_answers_are_empty(returned, tests, declared):
-    # found by holding `ensures true` against every newly posable MBPP problem: MBPP 490's function answers the
-    # empty set on most drawn inputs, no wrong answer was made of an empty set, and the specification passed
+    # MBPP 490's function answers the empty set on most drawn inputs. If no wrong answer is made from an empty set, no
+    # mutant is judged and a specification that says nothing (`ensures true`) passes.
     f = verify_py.read_function(f"def nothing(n):\n    return {returned}\n")
     entry, _ = verify_py.entry_for(f, tests)
     head = "datatype Option = Nothing | Some(v: int)\n" if declared == "Option" else ""

@@ -203,8 +203,8 @@ task f(r: Opt) returns (k: int) ensures true
 
 
 def test_python_hand_back_carries_a_record():
-    # 2026-11-26: a datatype value crosses the Python boundary as the Python value typed_values reads it from (a record
-    # as the tuple of its fields) and is a tuple of its constructor's name and fields inside; before, this was refused
+    # A datatype value crosses the Python boundary as the Python value typed_values reads it from (a record as the
+    # tuple of its fields), and inside the function it is a tuple of its constructor's name and fields.
     task = load("manhattan")
     source, fn = to_python.translate(task)
     scope: dict = {}

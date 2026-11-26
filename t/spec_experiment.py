@@ -1378,7 +1378,7 @@ def bind_point(task: dict, point: dict) -> tuple[dict | None, dict | None]:
     dts = typed_values.datatypes_of(task)
     for i, (p, (kind, val)) in enumerate(zip(params, args)):
         if typed_values.is_typed(kind):
-            # 2026-11-26: a value the reader kept as its literal is read at the declared type, or refused
+            # a value the reader kept as its literal is read at the declared type, or refused
             try:
                 env[p["name"]] = typed_values.read_at(val, p["type"], dts)
             except typed_values.Unreadable as why:

@@ -1,38 +1,38 @@
 #!/usr/bin/env python3
-"""t/typed_values.py -- test values beyond ints, bools, strings and lists of them, read at the type a task declares
-(2026-11-26).
+"""t/typed_values.py -- test values beyond ints, bools, strings and lists of them, read at the type a task declares.
 
 The test reader (t/mbpp_dfy.py `_literal`) reads an int, a bool, a string, and lists and tuples of them, and refuses
-the rest by name. `t` itself has carried more since 2026-10-06: products of any arity and of any component types,
-sequences and sets of any element type (SPEC.md "Compositional types (v1)"), maps ("Maps (v1)") and datatypes with
-fields ("Datatypes (v2)"), and Dafny carries all of them. Of MBPP's 974 problems the reader refused 178; after the
-63 with a float, the first refusals were a tuple or list mixing kinds of element, a dict, deeper nesting, None, a
-set and a list of bools. This module is the reading those problems need, and nothing is read here that `t` has no
-type for.
+the rest by name. `t` itself carries more: products of any arity and component types, sequences and sets of any
+element type (SPEC.md "Compositional types (v1)"), maps ("Maps (v1)") and datatypes with fields ("Datatypes (v2)"),
+and Dafny carries all of them. Of MBPP's 974 problems the reader refuses 178, 63 of them for a float; by first
+refusal the rest are a tuple or list mixing kinds of element, a dict, deeper nesting, None, a set and a list of
+bools. This module is the reading those problems need, and nothing is read here that `t` has no type for.
 
 How a value is read. A test's value is kept as the Python literal it is (`ast.literal_eval`'s own reading, with a
-float, a complex number and bytes refused by name), and it is read at the type the TASK declares when a task meets
-it: a str is a `seq` of its code points (one character may also be an `int`, as SPEC.md's 'a' is 97), a tuple is a
-`(T1, T2)` pair or a tuple of three or more, a dict is a `map<K, V>`, a set is a `set<T>`, None is the constructor
-without fields of a datatype that has one such constructor and one with one field (an option), and a list that
-mixes kinds is a `seq` of a datatype with one one-field constructor a kind. That is how MultiPL-E types a test's
-data for a typed target, "from the type of the function signature" (arXiv:2208.08227, III-C.2), and how
-spec_experiment.kind_fits already reads a nested list. A value the declared type cannot hold faithfully is refused
-(`Unreadable`), never squeezed into it: a key that would collide with another once read, a bool where an int is
-declared (SPEC.md gate 1), a str where a list is declared.
+float, a complex number and bytes refused by name), and is read at the type the TASK declares when a task meets it:
+  - a str is a `seq` of its code points (one character may also be an `int`, as SPEC.md's 'a' is 97);
+  - a tuple is a `(T1, T2)` pair or a tuple of three or more;
+  - a dict is a `map<K, V>`, and a set is a `set<T>`;
+  - None is the constructor without fields of a datatype that has one such constructor and one with one field (an
+    option);
+  - a list that mixes kinds is a `seq` of a datatype with one one-field constructor a kind.
+This is how MultiPL-E types a test's data for a typed target, "from the type of the function signature"
+(arXiv:2208.08227, III-C.2), and how spec_experiment.kind_fits reads a nested list. A value the declared type cannot
+hold faithfully is refused (`Unreadable`), never squeezed into it: a key that would collide with another once read,
+a bool where an int is declared (SPEC.md gate 1), a str where a list is declared.
 
 What the question says. A position's values across the problem's tests are given one type here (`type_of`), in
-the canonical spellings of SPEC.md "Compositional types (v1)": tuples of one kind are sequences, as the wider reader
-of 2026-10-05 reads them, and a tuple of several kinds is a product. Two forms only the question uses name a
-datatype the task must declare: `{"option": T}` (None or a T) and `{"sum": [...]}` (a list mixing ints, bools,
-strings and lists of ints). The point carries the type as its kind, `t:` and the type as JSON, so that no earlier
-kind ("int", "seq", "seq-of-seq", ...) is ever confused with one of these.
+the canonical spellings of SPEC.md "Compositional types (v1)": tuples of one kind are sequences, as the wide reader
+(mbpp_dfy's `WIDE` options) reads them, and a tuple of several kinds is a product. Two forms only the question uses
+name a datatype the task must declare: `{"option": T}` (None or a T) and `{"sum": [...]}` (a list mixing ints, bools,
+strings and lists of ints). The point carries the type as its kind, `t:` and the type as JSON, so that no other kind
+("int", "seq", "seq-of-seq", ...) is ever confused with one of these.
 
 Crossing into the sandbox. A person's function runs in t/py_sandbox.py, whose calls cross as JSON: no tuple, no
 set, no dict with a key that is not a string. So for these values the code loaded there gets one more function,
 which takes the arguments as the text of a Python literal and gives back the text of its result's literal
 (`wrapper`), read on this side by `ast.literal_eval` again. verify_py's `_t_repr_call` already sends results back
-as `repr` text; this sends the arguments the same way. Nothing of the sandbox itself changes.
+as `repr` text; this sends the arguments the same way. The sandbox itself is not changed.
 
 Drawn inputs (`draw`) keep each example's shape, as spec_check.draw does for the kinds it knows: a str stays a str
 of about the same length and alphabet, a tuple keeps its length and the kinds of its components, a dict draws keys
@@ -667,7 +667,7 @@ def default(ty, datatypes: dict | None = None, depth: int = 0):
 def mutations(value, datatypes: dict | None = None, limit: int = 12, ty=None) -> list:
     """Wrong outputs near a right one of a compound type (a pair, a tuple, a set, a map, a datatype value, a seq of
     them), deterministically, for the completeness half of the specification check (spec_check.mutations, which
-    keeps the ints, bools and seqs it always had). Each is of the same type as the right one. With `ty`, the
+    handles the ints, bools and seqs). Each is of the same type as the right one. With `ty`, the
     declared type, an empty value gets one too: the set or map of one plainest element, the seq of one, the other
     constructor with its plainest fields; and a value of a plain type gets spec_check.mutations's."""
     from spec_check import mutations as plain

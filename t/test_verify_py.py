@@ -270,7 +270,7 @@ def test_an_annotation_is_read_by_its_structure_in_any_spelling():
            "      i: 'list[str]', j: Optional[int], k: Sequence[Tuple[str, int]], m: tuple[int], n: float, o: list[Any], q: int | None,\n"
            "      r: list[tuple[int, ...]], u: set[int], v: T, w: Thing):\n    return 0\n")
     f = function(src)
-    # 2026-11-26: a dict and a set are read too (their values cross into the sandbox as literal text); a float is not
+    # a dict and a set are read too (their values cross into the sandbox as literal text); a float is not
     assert f["kinds"] == ["tuple[int, ...]", "tuple[int, ...]", "list[tuple[int, int]]", "list[int]", "list[int]", "dict[int, int]",
                           "list[list[int]]", "list[str]", "int", "list[tuple[str, int]]", "tuple[int, ...]", None, "list[int]", "int",
                           "list[tuple[int, ...]]", "set[int]", "int", None]

@@ -38,7 +38,7 @@ def lit(text):
     (["(10, 4, None)", "(7, 8)"], "seq<Option>"),
     (["[19, 'red', 12]", "[1]"], "seq<Item>"),
     (["(1, 5, (4, 6), 10)", "(2, 9, (5, 7))"], "seq<Item>"),
-    (["(1, 2)", "(3, 4, 5)"], "seq"),                           # a tuple of one kind is a sequence, as before
+    (["(1, 2)", "(3, 4, 5)"], "seq"),                           # a tuple of one kind is a sequence
     (["['a', 'b']"], "seq"),                                    # one-character strings are a string's code points
 ])
 def test_a_position_gets_one_type_across_the_tests(values, words):
@@ -133,7 +133,7 @@ def test_the_reader_keeps_every_reading_it_had_and_types_only_what_it_refused():
     tv.settle(points)
     kind = tv.kind_of({"option": "seq"})
     assert [p["expected"] for p in points] == [(kind, None), (kind, "a"), (kind, "c")]
-    assert points[1]["args"][0] == ("seq", [97, 98, 99])        # the argument read whole, as it was
+    assert points[1]["args"][0] == ("seq", [97, 98, 99])        # the argument is read whole
     assert mbpp_dfy.parse_assertion("assert f(1.5) == 1", **wide, typed=True) == {"ok": False, "why": "arg:float"}
 
 

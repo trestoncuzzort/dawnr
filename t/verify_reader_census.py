@@ -4,18 +4,17 @@
     python3 t/verify_reader_census.py [--json OUT]
 
 A problem is posable when every one of its tests is read into `t` values, as `dawnr verify` reads a person's tests
-(t/answer.py entry_of; with --test given, verify_py.entry_for). Before is the wider reader of 2026-10-05
-(t/PREDICT-2026-10-05-wider-reader.md: 796 of 974); after is the typed reader of 2026-11-26 (t/typed_values.py).
-Each problem the wider reader refuses is grouped by its first refusal, as the investigation of 2026-11-26 grouped
-it: a float, a tuple mixing kinds, a dict, deeper nesting (three list levels, or rows that hold strings, which are
-three levels in `t`), a list mixing kinds, None, a set, a list of bools, an object, other.
+(t/answer.py entry_of; with --test given, verify_py.entry_for). "Before" is the wide reader (mbpp_dfy's reading with
+the `WIDE` options); "after" is the typed reader (t/typed_values.py). Each problem the wide reader refuses is grouped
+by its first refusal: a float, a tuple mixing kinds, a dict, deeper nesting (three list levels, or rows that hold
+strings, which are three levels in `t`), a list mixing kinds, None, a set, a list of bools, an object, other.
 
 For each problem now posable it also says whether t/to_python.py's comparison of a proved program with the
 function would carry the types the question suggests (to_python.uncarried), since `verify` shows a twin only after
 that comparison: a posed question whose types it does not carry is refused there, by name. This counts posing, not
 proving: no model and no prover is run.
 
-It also checks that the typed reader reads every problem the wider reader read exactly as the wider reader does.
+It also checks that the typed reader reads every problem the wide reader read exactly as the wide reader does.
 """
 from __future__ import annotations
 
@@ -55,8 +54,9 @@ def _mixes(v, kind) -> bool:
 
 
 def group(why: str, tests: list[str]) -> str:
-    """The investigation's grouping of a first refusal (its inv-data/unread.py, with mixed.py's split of
-    `seq-of-seq`; what mixed.py left unclassified are rows of strings, three levels in t, so deeper nesting)."""
+    """The group (one of GROUPS) a problem's first refusal `why` belongs to. A `seq-of-seq` refusal is split by
+    looking at the test values: a list mixing kinds, a tuple mixing kinds, else deeper nesting (which includes rows of
+    strings, three levels in `t`)."""
     if "float" in why or "complex" in why or why == "arg:BinOp":
         return "float"
     if "seq-of-seq" in why:

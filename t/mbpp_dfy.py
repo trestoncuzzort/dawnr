@@ -227,14 +227,14 @@ def parse_assertion(src: str, strings: bool = False, nested_strings: bool = Fals
     both (t/answer.py entry_of); the pools to v5 are read without them, so
     no pool, split or panel moves.
 
-    `typed` (default False, 2026-11-26, t/typed_values.py): a value the
-    reading above refuses is kept as its Python literal under the kind
+    `typed` (default False, see t/typed_values.py): a value the reading
+    above refuses is kept as its Python literal under the kind
     `typed_values.PENDING` instead (a tuple mixing kinds, a dict, a set,
     None, deeper nesting, a list of bools), and every value of the point is
-    kept as its literal under "raw", so that `typed_values.settle` can give a
-    position one type across a problem's tests. A float, a call or a name is
-    still refused by name. Nothing the reading above takes is read
-    differently, so no pool, split or panel moves.
+    also kept as its literal under "raw", so that `typed_values.settle` can
+    give a position one type across a problem's tests. A float, a call or a
+    name is still refused by name. A value the reading above accepts is read
+    the same way either way, so no pool, split or panel changes.
     """
     try:
         tree = ast.parse(src.strip(), mode="exec")

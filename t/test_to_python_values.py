@@ -1,15 +1,18 @@
 #!/usr/bin/env python3
-"""t/to_python.py's boundary at the values t/typed_values.py reads (2026-11-26): a map, a tuple of three or more, a
-datatype value (an option's None, one kind of a mixed list) and a string inside any of them.
+"""t/to_python.py's boundary at the values t/typed_values.py reads: a map, a tuple of three or more, a datatype value
+(an option's None, one kind of a mixed list) and a string inside any of them.
 
-Two things are held for each. The COMPARISON of the proved program with a person's function (`to_python.check`, which
-`dawnr verify` asks before showing a twin) says a right function agrees and REFUTES a function that differs only inside
-the new type: a map with one value changed, a 3-tuple with one component changed, None where the program has a value,
-a string inside a tuple changed. A function that agrees on its own examples and differs elsewhere is the case that
-matters, so every wrong function here passes the examples it is given, and the refutation names the input and the
-answer the program gives there. And the Python HAND-BACK (`to_python.translate`) runs, answers the examples, and agrees
-with the program on the inputs `check` draws. Before this change none of them could be written: the boundary left a
-dict as the interpreter's `MapV`, a tuple of three as one of the interpreter's own, and a datatype value as its class."""
+Two things are checked for each:
+  - The COMPARISON of the proved program with a person's function (`to_python.check`, which `dawnr verify` runs before
+    showing a twin) says a right function agrees and REFUTES a function that differs only inside the type: a map with
+    one value changed, a 3-tuple with one component changed, None where the program has a value, a string inside a
+    tuple changed. A function that agrees on its own examples and differs elsewhere is the case that matters, so
+    every wrong function here passes the examples it is given, and the refutation names the input and the answer the
+    program gives there.
+  - The Python HAND-BACK (`to_python.translate`) runs, answers the examples, and agrees with the program on the
+    inputs `check` draws.
+Without typed values at the boundary none of these could be written: it would leave a dict as the interpreter's
+`MapV`, a tuple of three as one of the interpreter's own, and a datatype value as its class."""
 import sys
 from pathlib import Path
 
@@ -47,7 +50,7 @@ MIXED = ("datatype Item = Int(i: int) | Str(s: seq)\nt 1\ntask count_ints(xs: se
          "  r := len([x for x in xs if case x { Int(i) => true, Str(s) => false }]);\n}\n")
 
 # (the program, the function that is right, the examples, a function that passes the examples and differs only inside
-# the new type, the assertion the refutation must name: the program's answer at the input the function gets wrong)
+# the type, the assertion the refutation must name: the program's answer at the input the function gets wrong)
 CASES = {
     "map": (MAP, "def from_pair(a, b):\n    return {0: a, 1: b}\n", "from_pair",
             ["assert from_pair(1, 2) == {0: 1, 1: 2}", "assert from_pair(0, 0) == {0: 0, 1: 0}"],
@@ -122,7 +125,7 @@ def test_a_result_written_as_a_list_in_one_example_and_a_tuple_in_another_is_ref
 
 @needs_sandbox
 def test_a_tuple_of_ints_the_tests_write_as_a_tuple_is_written_as_a_tuple_where_the_task_declares_one():
-    # the older reader reads (1, 2, 3) as a sequence, so no test here is typed; the declared type decides the boundary
+    # the plain reader reads (1, 2, 3) as a sequence, so no test here is typed; the declared type decides the boundary
     task = "t 1\ntask rot3(p: (int, int, int)) returns (r: (int, int, int))\n  ensures true\n{\n  r := (p.1, p.2, p.0);\n}\n"
     tests = ["assert rot3((1, 2, 3)) == (2, 3, 1)", "assert rot3((0, 0, 0)) == (0, 0, 0)"]
     assert compare(task, "def rot3(p):\n    return (p[1], p[2], p[0])\n", "rot3", tests)["agrees"]
