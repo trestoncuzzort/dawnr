@@ -759,3 +759,38 @@ def test_any_other_refusal_is_not_retried(tmp_path):
     with pytest.raises(urllib.error.HTTPError):
         planner._send("http://nowhere:1/v1/chat/completions", {"messages": [{"role": "user", "content": "x"}]})
 
+
+PATCH_READ = ("+\t\t\tif (hit.mFraction < 0.0f || hit.mFraction > 1.0f\n"
+              "+\t\t\t\t|| mContactManager.HasContactInCurrentStep(inBody.GetID(), hit.mSubShapeID1, sensor->GetID(), hit.mSubShapeID2))\n"
+              "+\t\t\t\tcontinue;\n")
+
+
+def test_a_quote_in_the_answer_that_is_in_nothing_it_read_is_named_after_the_answer(tmp_path):
+    # The case this was written for (2026-11-26): a 27B's review set a condition in a code block as the patch's own
+    # text, with one of its two clauses gone and the other's `||` turned into an `if`.
+    answer = ("It skips a hit already admitted this step:\n```\n"
+              "if (mContactManager.HasContactInCurrentStep(inBody.GetID(), hit.mSubShapeID1, sensor->GetID(), hit.mSubShapeID2))\n"
+              "    continue;\n```")
+    model = Model(turn(("fs_read", {"path": "here/patch.diff"})), turn(text=answer))
+    work, harness, agent, planner, meter, said, asked, _ask = session(tmp_path, model)
+    (work / "patch.diff").write_text(PATCH_READ)
+    with harness:
+        got = cli.run_task(agent, planner, meter, "What does the patch skip?", [], said.append)
+    assert got == answer                                        # the answer itself is handed back as it was written
+    note = said[said.index(answer) + 1]
+    assert note.startswith("[Quoted but not found in anything it read: ")
+    assert "if (mContactManager.HasContactInCurrentStep(" in note and "continue;" not in note
+    assert said[-2] == "[Nothing was changed.]"
+
+
+def test_an_answer_whose_quotes_are_all_in_what_it_read_has_no_note(tmp_path):
+    answer = ("It skips a hit already admitted this step:\n```\n"
+              "|| mContactManager.HasContactInCurrentStep(inBody.GetID(), hit.mSubShapeID1, sensor->GetID(), hit.mSubShapeID2))\n"
+              "    continue;\n```")
+    model = Model(turn(("fs_read", {"path": "here/patch.diff"})), turn(text=answer))
+    work, harness, agent, planner, meter, said, asked, _ask = session(tmp_path, model)
+    (work / "patch.diff").write_text(PATCH_READ)
+    with harness:
+        got = cli.run_task(agent, planner, meter, "What does the patch skip?", [], said.append)
+    assert got == answer and said[-3] == answer and said[-2] == "[Nothing was changed.]"
+    assert not any(line.startswith("[Quoted but not found") for line in said)
