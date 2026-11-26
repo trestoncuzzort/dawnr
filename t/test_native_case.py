@@ -1,5 +1,6 @@
 """Controls for the case-driven native CBMC adapter; optional real-tool runs."""
 import argparse
+import ast
 import json
 import os
 from pathlib import Path
@@ -857,6 +858,24 @@ def test_the_case_gate_describes_itself_in_the_receipt_when_tools_are_absent(tmp
 def test_a_bad_list_of_models_is_refused(tmp_path, models):
     with pytest.raises(ValueError, match="models"):
         cases.load(write_case(tmp_path / "case", models=models))
+
+
+def test_the_guide_names_every_key_a_case_may_hold_and_every_list_the_gate_keeps_apart():
+    """t/NATIVE-CASES.md is what a case is written from, and what a receipt is read with."""
+    guide = (Path(cases.__file__).parent / "NATIVE-CASES.md").read_text()
+
+    def function(module, name):
+        return next(node for node in ast.walk(ast.parse(Path(module.__file__).read_text())) if isinstance(node, ast.FunctionDef) and node.name == name)
+    keys = set()
+    for node in ast.walk(function(cases, "load")):
+        if isinstance(node, ast.Assign) and [getattr(target, "id", None) for target in node.targets] in (["required"], ["optional"]):
+            keys |= ast.literal_eval(node.value)
+    # What the gate lists beside the harness's own assumption goals, in a receipt: detail["..."] = ...
+    lists = {node.targets[0].slice.value for node in ast.walk(function(native, "interpret")) if isinstance(node, ast.Assign)
+             and isinstance(node.targets[0], ast.Subscript) and getattr(node.targets[0].value, "id", None) == "detail"}
+    assert {"format", "models", "object_bits"} <= keys and "library_assumption_goals" in lists
+    missing = sorted(name for name in keys | lists if f"`{name}`" not in guide)
+    assert not missing, missing
 
 
 def test_each_model_file_is_present_and_written_without_assumptions_or_intrinsics():
