@@ -140,7 +140,9 @@ def draft_compiles(tmp_path, text, target):
     ("struct S { int x; } s = {1};\ntypedef struct S T;\n", "T v = {a};\n\treturn v.x;"),  # a tag through a typedef
     ("enum { N = 4 } mode = N;\nstruct box { int a[N]; };\n", "struct box b;\n\tb.a[0] = a;\n\treturn b.a[0];"),  # through a kept type
     ("struct S { int x; } s = {1};\nstruct box { struct S inner; };\n", "struct box b;\n\tb.inner.x = a;\n\treturn b.inner.x;"),
-    ('static int limit = 5;\nint *cursor __attribute__((section(".data"))) = &limit;\n', "return a + *cursor;"),
+    # an attribute holding a quoted argument in its own parentheses; visibility("default") compiles for ELF and
+    # Mach-O alike, where section(".data") is refused on macOS ("mach-o section specifier requires a segment and section")
+    ('static int limit = 5;\nint *cursor __attribute__((visibility("default"))) = &limit;\n', "return a + *cursor;"),
 ])
 def test_a_draft_keeps_an_item_its_function_reaches_by_any_name_the_item_declares(tmp_path, text, body):
     compiled, errors, _ = draft_compiles(tmp_path, text + f"int pick(int a)\n{{\n\t{body}\n}}\n", "pick")
