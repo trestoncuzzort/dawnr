@@ -1011,18 +1011,22 @@ def unread_quotes(answer: str, rounds, most: int = 5, width: int = 120) -> str:
     """The line that names the answer's quotes found in none of the texts this task's calls returned; "" if none.
     A listing is held as the model got it (listing(): each entry its whole path), not as fs_list wrote it. The
     closest lines a refused edit's dry run showed the model (Planner.messages) were read too; the call's own
-    arguments are not a source. The texts are in the order the calls ran, with a Changed after the call of an edit
-    or a write that ran (an undo names a change, not a file: any file), so that windows of a file read on either
-    side of it are not taken for one version (a window of a file too big to hash has no sha256 to say so)."""
+    arguments are not a source. The texts are in the order the calls ran, with a Changed after each call that ran
+    and may have changed a file, so that windows of a file read on either side of it are not taken for one version
+    (a window of a file too big to hash has no sha256 to say so):
+      - an edit or a write names its file;
+      - an undo, a shell command or a run command may have changed any file and does not say which, so its Changed
+        names none."""
     texts: list = []
     for r in rounds:
         for o in (r.outcome.outcomes if r.outcome is not None else []):
             if o.result is not None:
                 texts += [listing(text, str(o.step.arguments.get("path") or "").rstrip("/")) if o.step.tool == "fs_list"
                           else text for _untrusted, text in o.result.spans()]
-            if o.status == "ran" and o.step.tool in ("fs_write", "fs_edit", "fs_undo"):
-                texts.append(Changed(str(o.step.arguments["path"]) if o.step.tool != "fs_undo"
-                                     and o.step.arguments.get("path") else None))
+            if o.status == "ran" and o.step.tool in ("fs_write", "fs_edit"):
+                texts.append(Changed(str(o.step.arguments.get("path") or "") or None))
+            elif o.status == "ran" and o.step.tool in ("fs_undo", "sh", "run_command"):
+                texts.append(Changed(None))         # may have changed any file, and does not say which
     texts += [v.preview.quoted for r in rounds for v in (r.dry.views if getattr(r, "dry", None) is not None else [])
               if v.preview.quoted]
     unfound = unfound_quotes(answer, texts)

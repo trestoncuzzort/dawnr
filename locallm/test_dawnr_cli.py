@@ -964,6 +964,14 @@ def test_windows_of_a_file_too_big_to_hash_are_not_joined_across_an_edit_that_ra
     failed = NS(step=edit.step, status="failed", result=edit.result)               # an edit that did not run changes nothing
     rounds[1] = NS(outcome=NS(outcomes=[failed]))
     assert cli.unread_quotes(quote, rounds) == ""
+    # A command that ran may have changed any file (`sed -i`, `git checkout`, a build) and does not say which, so it
+    # parts the windows read before it from those read after it, as an undo does; one that did not run changes nothing.
+    for tool, args in (("sh", {"command": "sed -i '3d' cache.md"}), ("run_command", {"argv": ["git", "checkout", "cache.md"]})):
+        ran = NS(step=Step(tool, args), status="ran", result=NS(spans=lambda: [(True, "")]))
+        rounds[1] = NS(outcome=NS(outcomes=[ran]))
+        assert cli.unread_quotes(quote, rounds).startswith("[Quoted but not found in anything it read: "), tool
+        rounds[1] = NS(outcome=NS(outcomes=[NS(step=ran.step, status="refused", result=ran.result)]))
+        assert cli.unread_quotes(quote, rounds) == "", tool
 
 
 def test_a_faithful_quote_of_a_documents_text_is_found_where_the_reader_cut_its_lines(tmp_path):
