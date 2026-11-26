@@ -1,4 +1,5 @@
 """Controls for the case-driven native CBMC adapter; optional real-tool runs."""
+import argparse
 import json
 import os
 from pathlib import Path
@@ -13,6 +14,7 @@ import pytest
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import native_case as cases
 import native_check as native
+import native_fixture_check as fixture_check
 
 PILOT = Path(__file__).resolve().parent / "native_fixtures" / "px4-wrap-bin"
 
@@ -178,6 +180,19 @@ def test_comparisons_with_an_input_are_not_assignments(tmp_path):
 
 def test_a_case_may_set_the_object_bits_of_cbmc(tmp_path):
     assert cases.load(write_case(tmp_path / "case", object_bits=12))["object_bits"] == 12
+
+
+# CBMC 6.11.0 takes 1 to one less than the pointer width: "object-bits must be positive and less than the pointer width (32)".
+@pytest.mark.parametrize("machine, bits", [("LP64", 1), ("LP64", 63), ("ILP32", 1), ("ILP32", 31)])
+def test_object_bits_cbmc_takes_are_taken(tmp_path, machine, bits):
+    assert cases.load(write_case(tmp_path / "case", machine=machine, object_bits=bits))["object_bits"] == bits
+
+
+@pytest.mark.parametrize("machine, bits", [("LP64", "x"), ("LP64", "12"), ("LP64", True), ("LP64", 3.7), ("LP64", None), ("LP64", -1), ("LP64", 0),
+                                           ("LP64", 64), ("ILP32", 32)])
+def test_object_bits_cbmc_would_refuse_or_read_otherwise_are_refused_at_load(tmp_path, machine, bits):
+    with pytest.raises(ValueError, match="object_bits is an integer from 1 to"):
+        cases.load(write_case(tmp_path / "case", machine=machine, object_bits=bits))
 
 
 def test_the_unit_carries_machine_inputs_harness_and_end_marker(tmp_path):
@@ -988,6 +1003,62 @@ def test_the_object_bits_of_a_case_reach_every_cbmc_stage(tmp_path):
         assert arguments[arguments.index("--object-bits") + 1] == "12", stage
     plain = cases.check(write_case(tmp_path / "plain"), "fixed", tmp_path / "plain-out", cbmc=cbmc)
     assert all("--object-bits" not in stage["arguments"] for stage in plain["stages"].values())
+
+
+def logging_cbmc(path):
+    """A stand-in cbmc that adds each command it is given to calls.txt where it runs, and writes a formula when asked for one."""
+    return tool(path, '[ "$1" = "--version" ] && { echo "6.11.0 (cbmc-6.11.0)"; exit 0; }\necho "$*" >> calls.txt\n'
+                      'while [ $# -gt 1 ]; do [ "$1" = "--outfile" ] && printf "p cnf 2 3\\n1 0\\n" > "$2"; shift; done\necho "[]"\n')
+
+
+RUNS = ["the gate", "the bounds search", "the fixture check's model size", "the fixture check's formula of the original"]
+
+
+def commands_of(tmp_path, run, **fields):
+    """The commands a stand-in cbmc gets from one run over a case: the gate's stages, the bounds search, or one of the fixture check's own."""
+    cbmc = logging_cbmc(tmp_path / "fake-cbmc")
+    _, solver, checker = fake_tools(tmp_path / "tools")
+    root, out = write_case(tmp_path / "case", **fields), tmp_path / "out"
+    if run == "the gate":
+        cases.check(root, "fixed", out, cbmc=cbmc)
+    elif run == "the bounds search":
+        cases.find_bounds(root, out, cbmc=cbmc)
+    elif run == "the fixture check's model size":
+        fixture_check.model_size(root, out, cbmc, 4, {}, 30, 1024, "minisat2")
+    else:
+        fixture_check.original_formula(root, out, argparse.Namespace(cbmc=cbmc, cadical=solver, lrat_check=checker, timeout=30, memory_limit_mb=1024))
+    return [call.split() for call in (out / "calls.txt").read_text().splitlines()]
+
+
+@posix
+@pytest.mark.parametrize("run", RUNS)
+def test_every_cbmc_command_of_a_case_has_its_object_bits(tmp_path, run):
+    calls = commands_of(tmp_path, run, object_bits=12)
+    assert calls and all(call[call.index("--object-bits") + 1] == "12" if "--object-bits" in call else False for call in calls), calls
+
+
+@posix
+@pytest.mark.parametrize("run", RUNS)
+def test_every_cbmc_command_of_a_case_links_its_models(tmp_path, run):
+    calls = commands_of(tmp_path, run, models=["string"])
+    assert calls and all("model_string.c" in call for call in calls), calls
+
+
+FLAT = ("int fill(void)\n{\n\tint total = 0;\n" + "\t{ int *p = malloc(sizeof *p); if (!p) { return -1; } *p = 1; total += *p; free(p); }\n" * 300
+        + "\treturn total;\n}\n")
+FLAT_FIELDS = dict(prelude="#include <stdlib.h>\n", assertions=["fill.counted"],
+                   harness='    (void)a;\n    int got = fill();\n    __CPROVER_assert(got == 300 || got == -1, "fill.counted");\n')
+
+
+@real
+def test_past_256_addressed_objects_the_bounds_search_and_the_model_size_take_the_object_bits_too(tmp_path):
+    """300 allocations and no loop: the search has nothing to raise, and stops on the object limit unless the case raises it."""
+    default = custom_case(tmp_path / "default", FLAT, FLAT, ["fill"], **FLAT_FIELDS)
+    assert cases.find_bounds(default, tmp_path / "default-bounds", cbmc=CBMC)["reason"] == "stopped: exit 6"
+    assert fixture_check.model_size(default, tmp_path / "default-size", CBMC, 2, {}, 120, 4096, "minisat2")["exit"] == 6
+    raised = custom_case(tmp_path / "raised", FLAT, FLAT, ["fill"], object_bits=10, **FLAT_FIELDS)
+    assert cases.find_bounds(raised, tmp_path / "raised-bounds", cbmc=CBMC)["found"]
+    assert fixture_check.model_size(raised, tmp_path / "raised-size", CBMC, 2, {}, 120, 4096, "minisat2")["exit"] == 0
 
 
 MANY = ("int fill(unsigned n)\n{\n\tint total = 0;\n\tfor (unsigned i = 0; i < n; ++i) {\n\t\tint *p = malloc(sizeof *p);\n"

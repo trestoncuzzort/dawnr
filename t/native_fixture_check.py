@@ -54,8 +54,9 @@ def model_size(root: Path, out: Path, cbmc: str, unwind: int, bounds: dict, time
     (out / "unit.c").write_text(unit)
     stops, defines = cases.stops_unit(case.get("allowed_stops", []), unit)
     (out / cases.STOP_FILE).write_text(stops)
-    args = ["unit.c", cases.STOP_FILE, *defines, "--function", "harness", cases.MACHINES[case["machine"]][0], "--little-endian",
-            *cases.native.KEEP_SELF_LOOPS, "--sat-solver", solver, "--unwind", str(unwind), *(["--unwindset", cases.render_bounds(bounds)] if bounds else []),
+    linked, _ = cases.link_models(case, out)
+    model = cases.model_options(case, unwind, bounds)
+    args = ["unit.c", *linked, cases.STOP_FILE, *defines, *model[:5], "--sat-solver", solver, *model[5:],
             "--json-ui", "--verbosity", "8",
             *cases.CHECKS, *case.get("checks", []), "--unwinding-assertions"]
     run = cases.native.run_process([cbmc, *args], out, timeout, memory_limit_mb)
@@ -97,8 +98,9 @@ def original_formula(root: Path, out: Path, args) -> dict:
     (out / "unit.c").write_text(unit)
     stops, defines = cases.stops_unit(case.get("allowed_stops", []), unit)
     (out / cases.STOP_FILE).write_text(stops)
-    formula = ["unit.c", cases.STOP_FILE, *defines, "--function", "harness", cases.MACHINES[case["machine"]][0], "--little-endian", *cases.native.KEEP_SELF_LOOPS,
-               "--unwind", str(case.get("unwind", 4)), *(["--unwindset", cases.render_bounds(case["unwindset"])] if case.get("unwindset") else []),
+    linked, _ = cases.link_models(case, out)
+    # The same command as the gate's certificate (native_case.check), on the original.
+    formula = ["unit.c", *linked, cases.STOP_FILE, *defines, *cases.model_options(case, case.get("unwind", 4), case.get("unwindset", {})),
                *cases.CHECKS, *case.get("checks", []), "--unwinding-assertions"]
     report = cases.certify(args.cbmc, formula, out, args.cadical, args.lrat_check, args.timeout, args.memory_limit_mb)
     for name in ("formula.cnf", "proof.lrat"):  # up to gigabytes, and nothing to read once the status is known

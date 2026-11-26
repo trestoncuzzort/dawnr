@@ -40,6 +40,7 @@ FORMAT = "dawnr-native-case-v1"
 VARIANTS = ("original", "fixed", "vacuous")
 MACHINES = {"ILP32": ("--32", "sizeof(int) == 4 && sizeof(long) == 4 && sizeof(void *) == 4"),
             "LP64": ("--64", "sizeof(int) == 4 && sizeof(long) == 8 && sizeof(void *) == 8")}
+POINTER_BITS = {"ILP32": 32, "LP64": 64}
 # Defined conversions are not undefined behavior, so --conversion-check is opt-in here.
 CHECKS = [flag for flag in native.CHECKS if flag != "--conversion-check"]
 OPTIONAL_CHECKS = ("--conversion-check", "--pointer-overflow-check", "--float-overflow-check", "--nan-check",
@@ -282,6 +283,12 @@ def load(root: Path) -> dict:
     bounds = case.get("unwindset", {})
     if not isinstance(bounds, dict) or any(not LOOP.match(str(key)) or not isinstance(value, int) or value < 1 for key, value in bounds.items()):
         raise ValueError("unwindset maps a loop such as f.0, or a recursive function f, to a positive bound")
+    # CBMC 6.11.0 refuses 0 and the pointer width: "object-bits must be positive and less than the pointer width (32)".
+    # A string, true or 3.7 would reach it as something else, so only an integer is taken.
+    bits = case.get("object_bits", 8)
+    if not isinstance(bits, int) or isinstance(bits, bool) or not 1 <= bits < POINTER_BITS[case["machine"]]:
+        raise ValueError(f"object_bits is an integer from 1 to {POINTER_BITS[case['machine']] - 1} on {case['machine']}: "
+                         "the bits of a pointer CBMC gives to the object, 8 when unset")
     if len(re.findall(r"__CPROVER_assume\s*\(", case["harness"])) != case["assumptions"]:
         raise ValueError("the declared assumption count does not match the harness")
     for name in names:
@@ -474,6 +481,14 @@ def render_bounds(bounds: dict) -> str:
     return ",".join(f"{key}:{bounds[key]}" for key in sorted(bounds))
 
 
+def model_options(case: dict, unwind: int, bounds: dict) -> list[str]:
+    """The model every CBMC command of a case is built on, so that the gate's stages, its certificate, the bounds search
+    and the fixture check all check the same program: entry, machine, self-loops, bounds and object bits."""
+    return ["--function", "harness", MACHINES[case["machine"]][0], "--little-endian", *native.KEEP_SELF_LOOPS, "--unwind", str(unwind),
+            *(["--object-bits", str(case["object_bits"])] if "object_bits" in case else []),
+            *(["--unwindset", render_bounds(bounds)] if bounds else [])]
+
+
 def file_digest(path: Path) -> str:
     """SHA-256 of a file that may be too large to hold in memory, such as a proof."""
     digest = hashlib.sha256()
@@ -578,9 +593,7 @@ def check(root: Path, variant: str, out: Path, cbmc: str = "cbmc", unwind: int |
         linked, identities = link_models(case, out)
         if identities:
             receipt["models"] = identities
-        model = ["--function", "harness", MACHINES[case["machine"]][0], "--little-endian", *native.KEEP_SELF_LOOPS, "--unwind", str(unwind),
-                 *(["--object-bits", str(int(case["object_bits"]))] if "object_bits" in case else []),
-                 *(["--unwindset", render_bounds(bounds)] if bounds else [])]
+        model = model_options(case, unwind, bounds)
         common = [*model[:5], "--sat-solver", solver, *model[5:], "--json-ui"]
         # Coverage reads the unit without the stops: its goals have to be the harness's own and the end marker reachable.
         with_stops = ["unit.c", *linked, STOP_FILE, *defines, *common]
@@ -690,7 +703,8 @@ def find_bounds(root: Path, out: Path, cbmc: str = "cbmc", timeout: float = 120,
     if verdict is not None:
         summary.update(reason=f"{verdict}: {reason}")
         return summary
-    base = ["unit.c", *linked, STOP_FILE, *defines, "--function", "harness", MACHINES[case["machine"]][0], "--little-endian", *native.KEEP_SELF_LOOPS, "--sat-solver", solver, "--unwind", "2",
+    model = model_options(case, 2, {})
+    base = ["unit.c", *linked, STOP_FILE, *defines, *model[:5], "--sat-solver", solver, *model[5:],
             "--json-ui", "--verbosity", "8", *CHECKS, *case.get("checks", []), "--unwinding-assertions"]
 
     def attempt(bounds: dict) -> dict:
