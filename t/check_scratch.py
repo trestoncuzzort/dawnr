@@ -18,8 +18,9 @@ a real folder (lstat, not a link) directly inside the parent, its name matches t
 be taken without waiting (no live holder, also none in a child that inherited the descriptor), and its recorded PID
 is dead or now has a different start time. A link, a file, a name off the pattern, a folder a live process holds or
 whose owner is alive, a folder owned by another user, and anything the sweep cannot decide, are left. The removal is
-shutil.rmtree(name, dir_fd=<parent descriptor>), refused where rmtree.avoids_symlink_attacks is false, so it never
-follows a link; nothing outside the parent is ever touched.
+shutil.rmtree through the parent's descriptor (`dir_fd`, Python 3.11 and later) or, on Python 3.10, by the folder's
+full path inside this user's own 0700 parent (`_rmtree_in`); the sweep does nothing where
+rmtree.avoids_symlink_attacks is false, so it never follows a link, and nothing outside the parent is ever touched.
 
 Prior art read: systemd tmpfiles.d(5) (age cleanup takes an exclusive BSD lock on what it removes and skips what is
 locked; "Does not follow symlinks"); pytest's _pytest/pathlib.py (numbered temp folders, a `.lock` file holding the PID,
@@ -28,6 +29,7 @@ shutil docs (the rmtree symlink-attack note and rmtree.avoids_symlink_attacks); 
 the lock)."""
 from __future__ import annotations
 
+import inspect
 import os
 import re
 import secrets
@@ -133,7 +135,7 @@ def sweep() -> list[str]:
                     continue                             # a live holder
                 if os.fstat(dfd).st_ino != st.st_ino:    # replaced between the check and the open
                     continue
-                shutil.rmtree(name, dir_fd=pfd)
+                _rmtree_in(pfd, name)
                 removed.append(name)
             except OSError:
                 continue
@@ -142,6 +144,19 @@ def sweep() -> list[str]:
     finally:
         os.close(pfd)
     return removed
+
+
+def _rmtree_in(pfd: int, name: str) -> None:
+    """Remove the folder `name` inside the open scratch parent `pfd`.
+
+    Python 3.11 and later take the parent as `dir_fd`. Python 3.10 has no `dir_fd` on rmtree, so there the folder is
+    removed by its full path instead. That is still safe: the parent is this user's own 0700 folder (`_open_parent`
+    refuses any other), so no one else can swap a link in, and rmtree never follows links inside the tree
+    (`shutil.rmtree.avoids_symlink_attacks`, checked by `sweep` before it calls this)."""
+    if "dir_fd" in inspect.signature(shutil.rmtree).parameters:
+        shutil.rmtree(name, dir_fd=pfd)
+    else:
+        shutil.rmtree(os.path.join(parent_path(), name))
 
 
 def _remove(pid: int, path: str, fd: int | None) -> None:

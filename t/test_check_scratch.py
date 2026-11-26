@@ -146,6 +146,23 @@ def test_a_dead_owner_without_a_lock_is_removed_and_a_live_one_is_kept(tmp):
     assert not gone.exists() and alive.exists() and (alive / "solution.py").exists()
 
 
+def test_a_stale_folder_is_removed_on_a_python_whose_rmtree_has_no_dir_fd(tmp, monkeypatch):
+    # Python 3.10, which CI runs, has shutil.rmtree(path, ignore_errors=False, onerror=None): no dir_fd. The sweep
+    # removes the folder there too, and keeps refusing what it refused.
+    import shutil
+    import check_scratch as cs
+    real = shutil.rmtree
+
+    def rmtree_310(path, ignore_errors=False, onerror=None):
+        return real(path, ignore_errors=ignore_errors, onerror=onerror)
+    rmtree_310.avoids_symlink_attacks = real.avoids_symlink_attacks
+    monkeypatch.setattr(shutil, "rmtree", rmtree_310)
+    gone = _mk(tmp, f"t-db-p{_dead_pid()}-s1-{'e' * 16}")
+    alive = _mk(tmp, f"t-db-p{os.getpid()}-s{cs.start_time(os.getpid())}-{'f' * 16}")
+    assert cs.sweep() == [gone.name]
+    assert not gone.exists() and alive.exists()
+
+
 def test_a_reused_pid_is_not_taken_for_the_owner(tmp):
     import check_scratch as cs
     reused = _mk(tmp, f"t-db-p{os.getpid()}-s1-{'c' * 16}")                   # a live pid, another start time
