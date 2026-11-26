@@ -268,6 +268,34 @@ ok = py_sandbox.available(); ok or print(py_sandbox.why_unavailable()); sys.exit
 
 abspath() { case $1 in /*) printf '%s' "$1";; *) printf '%s/%s' "$PWD" "$1";; esac; }
 
+# A folder `dawnr forget` may erase as a whole because it holds only dawnr's state: an absolute path that is itself the
+# physical path (no link at its end or above it), not / or the home folder or DAWNR_HOME, holding at least one entry
+# and every entry one of the names the agent writes into a state folder, of its kind and not a link: the journal
+# (journal.jsonl, backups/: locallm/dawnr_agent/journal.py), the plan log (plans.jsonl: dawnr_agent/config.py), the
+# sandbox's scratch (sh/, sh-hidden/: dawnr_agent/shell.py) and the document reader's (doc/: locallm/dawnr_cli.py)
+state_folder() {
+  local d=$1 e
+  case $d in /*) ;; *) return 1;; esac
+  [ -d "$d" ] && [ ! -L "$d" ] || return 1
+  [ "$(cd -P -- "$d" 2>/dev/null && pwd -P)" = "$d" ] || return 1
+  for e in / "${HOME:-/}" "$DAWNR_HOME"; do
+    [ "$d" != "$(cd -P -- "$e" 2>/dev/null && pwd -P)" ] || return 1
+  done
+  (
+    shopt -s nullglob dotglob
+    found=0
+    for e in "$d"/*; do
+      case ${e##*/} in
+        journal.jsonl|plans.jsonl) [ -f "$e" ] && [ ! -L "$e" ] || exit 1;;
+        backups|doc|sh|sh-hidden) [ -d "$e" ] && [ ! -L "$e" ] || exit 1;;
+        *) exit 1;;
+      esac
+      found=1
+    done
+    [ "$found" = 1 ]
+  )
+}
+
 # the options that name a file are the caller's paths; the gate runs from the repository's folder
 own_paths() {
   ARGS=()
@@ -476,7 +504,8 @@ case $cmd in
     ;;
   forget)
     # Everything dawnr kept about the person's work on this machine (PRIVACY.md lists it): the agent's journal and
-    # state, the API's jobs (the text and files given to the page), the run folder (logs, pids, the page's token).
+    # state, in the default state folder and in each folder given with --state, the API's jobs (the text and files
+    # given to the page), the run folder (logs, pids, the page's token).
     # --all also erases the models and everything install.sh fetched; the launcher then needs install.sh again.
     [ $# -eq 0 ] || [ "${1:-}" = --all ] || { echo 'usage: dawnr forget [--all]' >&2; exit 2; }
     stop_all 2>/dev/null || true
@@ -489,15 +518,36 @@ case $cmd in
       [ -e "$d" ] || continue
       rm -rf -- "$d" && echo "erased $d" && gone=$((gone + 1))
     done
+    # A folder given with --state has no name forget could know, so locallm/dawnr_cli.py writes each one into
+    # DAWNR_HOME/state-folders, one absolute path a line. It is erased only when it is still what the agent made
+    # of it: a real folder, reached through no link, holding nothing but what the agent writes into a state folder.
+    # A folder of the person's own that was given with --state, a link, or the home folder is named and left whole.
+    FOLDERS="$DAWNR_HOME/state-folders"
+    if [ -f "$FOLDERS" ] && [ ! -L "$FOLDERS" ]; then
+      while IFS= read -r d || [ -n "$d" ]; do
+        [ -n "$d" ] || continue
+        case $d in /*) [ -e "$d" ] || [ -L "$d" ] || continue;; esac   # already gone (a relative line is never looked up)
+        if state_folder "$d"; then
+          rm -rf -- "$d" && echo "erased $d" && gone=$((gone + 1))
+        else
+          echo "kept $d: it does not look like a dawnr state folder"
+        fi
+      done < "$FOLDERS"
+    fi
+    if [ -e "$FOLDERS" ] || [ -L "$FOLDERS" ]; then                  # the record goes too; a link is removed, not followed
+      rm -f -- "$FOLDERS" && echo "erased $FOLDERS" && gone=$((gone + 1))
+    fi
     if [ "${1:-}" = --all ]; then
-      for d in "$DAWNR_HOME/models" "$DAWNR_HOME/downloads" "$DAWNR_HOME/llama.cpp" "$DAWNR_HOME/provers" "$DAWNR_HOME/pylib" "$DAWNR_HOME/env"; do
+      # the *.tmp folders are what install.sh unpacks into before moving into place, left by an install that stopped
+      for d in "$DAWNR_HOME/models" "$DAWNR_HOME/downloads" "$DAWNR_HOME/llama.cpp" "$DAWNR_HOME/provers" "$DAWNR_HOME/pylib" "$DAWNR_HOME/env" \
+          "$DAWNR_HOME/llama.cpp.tmp" "$DAWNR_HOME/cudart.tmp" "$DAWNR_HOME/pylib.tmp"; do
         [ -e "$d" ] || continue
         rm -rf -- "$d" && echo "erased $d" && gone=$((gone + 1))
       done
       echo "the models and what install.sh fetched are gone; run install.sh again before the next dawnr command"
     fi
     [ $gone -gt 0 ] || echo "nothing was kept"
-    echo "dawnr sends nothing anywhere, so there is nothing else to erase (PRIVACY.md)"
+    echo "dawnr sends nothing anywhere; what this does not erase, and why, is in PRIVACY.md (Erasing)"
     ;;
   doctor)
     echo "dawnr $(cat "$DAWNR_REPO/VERSION" 2>/dev/null || echo unknown) at $DAWNR_REPO, data in $DAWNR_HOME"

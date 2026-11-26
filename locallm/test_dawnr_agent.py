@@ -679,6 +679,35 @@ class FileTools(Env):
         (self.proj / "bin.dat").write_bytes(b"\x00\x01\x02")
         self.assertTrue(h.call("fs_read", {"path": "project/bin.dat"}).is_error)
 
+    def test_a_window_past_the_reply_cap_is_cut_at_whole_lines_and_says_where_to_resume(self):
+        # 500 lines of 100 characters with the newline: a 2000-line window is 50,000 characters, past the reply's
+        # 20,000-character cap. Until 2026-11-26 the cap cut the finished text mid-line: the header still named
+        # lines 1-500 and the resume hint after the body was cut away, so the model could not tell where to go on.
+        (self.proj / "wide.txt").write_text("".join(f"{i:04d} " + "x" * 94 + "\n" for i in range(1, 501)))
+        h, _ = self.build()
+        r = h.call("fs_read", {"path": "project/wide.txt", "lines": 2000})
+        self.assertLessEqual(len(r.text), 20_000)
+        self.assertNotIn("[truncated at", r.text)
+        m = re.search(r"lines 1-(\d+) of 500", r.text)
+        self.assertIsNotNone(m, r.text[:300])
+        last = int(m.group(1))
+        self.assertLess(last, 500)
+        self.assertIn(f"\n{last:04d} " + "x" * 94 + "\n", r.text)      # the last line named is shown whole
+        self.assertNotIn(f"\n{last + 1:04d} ", r.text)                  # and the next one not at all
+        self.assertIn(f'"start": {last + 1}', r.text)
+        r = h.call("fs_read", {"path": "project/wide.txt", "start": last + 1, "lines": 2000})
+        self.assertIn(f"lines {last + 1}-", r.text)
+        self.assertIn(f"\n{last + 1:04d} ", r.text)
+
+    def test_one_line_longer_than_the_reply_cap_says_it_was_cut(self):
+        (self.proj / "one.txt").write_text("y" * 30_000 + "\nnext\n")
+        h, _ = self.build()
+        r = h.call("fs_read", {"path": "project/one.txt"})
+        self.assertLessEqual(len(r.text), 20_000)
+        self.assertIn("lines 1-1 of 2", r.text)
+        self.assertIn("line 1 is 30000 characters", r.text)
+        self.assertIn('"start": 2', r.text)
+
     def test_search_is_literal_bounded_and_skips_links_secrets_and_binaries(self):
         (self.proj / "src" / "b.t").write_text("(a+)+$ double\n")
         (self.proj / ".env").write_text("double\n")
