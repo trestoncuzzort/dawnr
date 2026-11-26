@@ -32,6 +32,7 @@ import shutil
 import sys
 import threading
 import time
+import uuid
 from dataclasses import fields
 from pathlib import Path
 
@@ -66,6 +67,30 @@ def default_state_dir() -> Path:
 
 
 LOGGED_TEXT = 200          # characters of a text argument the plan log keeps; a longer one only by length and sha256
+
+PLAN_LOG_KEEP = 200        # plans the plan log keeps; the oldest go first (the API keeps its newest 200 finished jobs, t/serve_api.py KEEP)
+
+
+def _rotate(path: Path, keep: int) -> None:
+    """Cut the log at `path` to its newest `keep` lines (one line is one plan), the oldest first out, in the order
+    they were written. The shortened log is written whole beside the old one and put in its place in one step
+    (os.replace), so that whatever stops this midway leaves the old file or the new one, never half of either."""
+    lines = [line for line in path.read_bytes().split(b"\n") if line.strip()]
+    if len(lines) <= keep:
+        return
+    tmp = path.with_name(f".{path.name}.{uuid.uuid4().hex[:8]}.tmp")
+    try:
+        with open(tmp, "wb") as f:
+            f.write(b"\n".join(lines[-keep:]) + b"\n")
+            f.flush()
+            os.fsync(f.fileno())
+        os.replace(tmp, path)
+    except BaseException:
+        try:
+            tmp.unlink()                                   # the half-written copy; the log itself is untouched
+        except OSError:
+            pass
+        raise
 
 
 def _logged(value):
@@ -145,6 +170,11 @@ class Agent:
                         f.write(json.dumps(row, ensure_ascii=True) + "\n")
                 except (OSError, ValueError) as e:
                     self.harness.messages.append(f"agent plan log not written: {e}")
+                else:
+                    try:
+                        _rotate(self.audit_path, PLAN_LOG_KEEP)
+                    except OSError as e:
+                        self.harness.messages.append(f"agent plan log not shortened: {e}")
 
 
 def _rules(spec, space: Space, exec_path: str, problems: list, limits: dict) -> list:

@@ -1402,6 +1402,95 @@ class Plans(Env):
         self.assertNotIn("z" * 201, log)
         self.assertEqual(a.plans, rows)                    # what the agent keeps in memory is the same
 
+    def _plans(self, h, s, count, first=1):
+        for n in range(first, first + count):                # a plan of its own each (the same one twice is refused), in a conversation of its own (four plans end one)
+            r = h.call("plan", {"steps": [{"tool": "fs_read", "arguments": {"path": "project/readme.txt", "start": n}}]}, session=h.session())
+            self.assertFalse(r.is_error, r.text)
+
+    def _log_starts(self):
+        return [json.loads(line)["calls"][0]["arguments"]["start"]
+                for line in (self.state / "plans.jsonl").read_text().splitlines()]
+
+    def test_the_plan_log_keeps_the_newest_plans_only_the_oldest_go_first_and_the_order_stays(self):
+        # Until 2026-11-26 plans.jsonl held every plan ever made, with the short texts of the person's files and
+        # commands in full, and was never cut; the API's jobs keep the newest 200 finished (t/serve_api.py KEEP).
+        with mock.patch.object(config_mod, "PLAN_LOG_KEEP", 5, create=True):
+            h, a = self.build()
+            s = h.session()
+            self._plans(h, s, 4)
+            self.assertEqual(self._log_starts(), [1, 2, 3, 4])            # under the cap: nothing is cut
+            self._plans(h, s, 1, first=5)
+            self.assertEqual(self._log_starts(), [1, 2, 3, 4, 5])         # at the cap: still all
+            self._plans(h, s, 1, first=6)
+            self.assertEqual(self._log_starts(), [2, 3, 4, 5, 6])         # one over: the oldest goes, the newest is there
+            self._plans(h, s, 7, first=7)
+            self.assertEqual(self._log_starts(), [9, 10, 11, 12, 13])     # the cap holds and the order is the order written
+        text = (self.state / "plans.jsonl").read_text()
+        self.assertTrue(text.endswith("\n") and "\n\n" not in text)
+        self.assertEqual([p.name for p in self.state.iterdir() if p.name.startswith(".plans")], [])   # no copy left beside it
+        self.assertEqual(len(a.plans), 13)                                # the agent's own memory of this session is not the log
+        self.assertEqual(config_mod.PLAN_LOG_KEEP, 200)                   # as many as the API keeps of its finished jobs
+
+    def test_a_plan_log_already_over_the_cap_is_cut_to_it_at_the_next_plan(self):
+        # a log from before the cap (or from a longer cap) has more than it may: the next plan cuts it, newest kept
+        h, a = self.build()
+        self.state.mkdir(parents=True, exist_ok=True)
+        old = [json.dumps({"time": n, "calls": [{"tool": "fs_read", "arguments": {"path": "project/readme.txt", "start": n}}]})
+               for n in range(-30, 0)]
+        (self.state / "plans.jsonl").write_text("\n".join(old) + "\n")
+        with mock.patch.object(config_mod, "PLAN_LOG_KEEP", 4, create=True):
+            self._plans(h, h.session(), 1, first=77)
+        self.assertEqual(self._log_starts(), [-3, -2, -1, 77])
+
+    def test_the_plan_log_put_in_place_by_a_cut_is_still_the_models_to_neither_write_nor_read(self):
+        # the cut replaces the file, and the replacement is a new file (a new identity): the state folder's own
+        # protection must still cover it (its folder is protected, and hidden, by identity)
+        with mock.patch.object(config_mod, "PLAN_LOG_KEEP", 2, create=True):
+            h, a = self.build(roots=[{"name": "project", "path": str(self.proj), "mode": "write"}], state=str(self.proj / "agent-state"))
+            self._plans(h, h.session(), 4)
+        self.assertEqual(len((self.proj / "agent-state" / "plans.jsonl").read_text().splitlines()), 2)
+        for name, args in (("fs_write", {"path": "project/agent-state/plans.jsonl", "content": "", "overwrite": True}),
+                           ("fs_edit", {"path": "project/agent-state/plans.jsonl", "old": "plan", "new": "x"}),
+                           ("fs_read", {"path": "project/agent-state/plans.jsonl"})):
+            self.assertTrue(h.call(name, args).is_error, name)
+        self.assertEqual(len((self.proj / "agent-state" / "plans.jsonl").read_text().splitlines()), 2)
+
+    def test_an_interrupted_cut_of_the_plan_log_leaves_the_old_file_or_the_new_one_whole(self):
+        with mock.patch.object(config_mod, "PLAN_LOG_KEEP", 3, create=True):
+            h, a = self.build()
+            s = h.session()
+            self._plans(h, s, 3)
+            log = self.state / "plans.jsonl"
+            whole = log.read_bytes()
+            # stopped while the copy is being written: the log is not touched, and the half copy is gone
+            def stop(fd):
+                raise OSError("disk went away")
+            with mock.patch.object(config_mod.os, "fsync", stop):
+                self._plans(h, s, 1, first=4)
+            after_append = log.read_bytes()
+            self.assertTrue(after_append.startswith(whole))                 # the 4th plan was appended to the whole old file
+            self.assertEqual(len(after_append.splitlines()), 4)
+            self.assertTrue(all(json.loads(line) for line in after_append.splitlines()))
+            self.assertEqual([p.name for p in self.state.iterdir() if p.name.startswith(".plans")], [])
+            self.assertTrue(any("not shortened" in m and "disk went away" in m for m in h.messages))
+            # stopped just before the copy takes the log's place: the old file, whole
+            def stop_replace(src, dst):
+                raise OSError("stopped before the swap")
+            with mock.patch.object(config_mod.os, "replace", stop_replace):
+                self._plans(h, s, 1, first=5)
+            self.assertEqual(len(log.read_bytes().splitlines()), 5)
+            self.assertTrue(all(json.loads(line) for line in log.read_bytes().splitlines()))
+            self.assertEqual([p.name for p in self.state.iterdir() if p.name.startswith(".plans")], [])
+            # the next plan, nothing stopping it: the new file, whole, the newest three
+            self._plans(h, s, 1, first=6)
+            self.assertEqual(self._log_starts(), [4, 5, 6])
+            # the cut itself, stopped at the last moment, from outside: a copy written whole is the only other file
+            before = log.read_bytes()
+            with mock.patch.object(config_mod.os, "replace", stop_replace):
+                with self.assertRaises(OSError):
+                    config_mod._rotate(log, 1)
+            self.assertEqual(log.read_bytes(), before)
+
 
 # --------------------------------------------------------------------- the loop --
 

@@ -269,3 +269,23 @@ def test_forget_keeps_a_recorded_folder_that_is_not_a_dawnr_state_folder(tmp_pat
     assert {str(top): snapshot(top) for top in (mixed, real, elsewhere, home)} == before
     assert os.path.islink(link) and os.path.islink(tmp_path / 'linked parent')
     assert not os.path.lexists(data / 'state-folders')
+
+
+def test_forget_erases_a_state_folder_holding_the_copy_a_cut_of_the_plan_log_left_when_it_was_stopped(tmp_path):
+    # the plan log is cut by writing the shortened copy beside it (.plans.jsonl.XXXXXXXX.tmp, dawnr_agent/config.py)
+    # and putting it in place; a computer that stopped between the two leaves the copy, which is dawnr's own file
+    _home, data, env, _default = forget_place(tmp_path)
+    left, odd = tmp_path / 'left', tmp_path / 'odd'
+    for state in (left, odd):
+        journal_a_change(state)
+        (state / 'plans.jsonl').write_text('{}\n')
+    (left / '.plans.jsonl.0a1b2c3d.tmp').write_text('{}\n')
+    (odd / '.plans.jsonl.notes.tmp').write_text('my own file\n')              # the same kind of name, not the agent's
+    (data / 'state-folders').write_text(f'{left}\n{odd}\n')
+    before = snapshot(odd)
+    got = forget(env)
+    assert got.returncode == 0, got.stderr
+    assert f'erased {left}' in got.stdout.splitlines(), got.stdout
+    assert not os.path.lexists(left)
+    assert f'kept {odd}: it does not look like a dawnr state folder' in got.stdout.splitlines(), got.stdout
+    assert snapshot(odd) == before
