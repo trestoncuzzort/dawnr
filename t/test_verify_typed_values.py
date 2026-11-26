@@ -193,6 +193,20 @@ def test_a_set_is_a_set_both_ways_and_the_twin_is_verified():
 
 
 @needs_sandbox
+def test_the_certificate_of_a_twin_over_a_set_replays_reading_its_tests_as_verify_read_them():
+    import certificate
+    spec = "t 1\ntask size(s: set) returns (r: int)\n  ensures r == card(s)\n{\n}\n"
+    f = verify_py.read_function("def size(s):\n    return len(s)\n")
+    entry, _ = verify_py.entry_for(f, ["assert size({1, 2, 3}) == 3", "assert size({5}) == 1"])
+    r = verify_py.by_specification(entry, f, student(fenced(spec), fenced(spec.replace("{\n}", "{\n  r := card(s);\n}"))),
+                                   specs=1, answers=1, prover=proving)
+    made = certificate.from_verify(r, f)
+    report = certificate.check(made, prover=proving)
+    assert report["verdict"] == certificate.REPRODUCED, [s for s in report["steps"] if s["result"] != "ok"]
+    assert {s["what"]: s["result"] for s in report["steps"]}["tests"] == "ok"
+
+
+@needs_sandbox
 def test_a_list_of_bools_is_a_seq_of_bools_and_the_twin_is_verified():
     spec = "t 1\ntask all_true(bs: seq<bool>) returns (r: bool)\n  ensures r == all(bs)\n{\n}\n"
     entry, r, wrong = ask("def all_true(bs):\n    return all(bs)\n",
