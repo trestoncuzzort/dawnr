@@ -27,3 +27,15 @@ def test_warm_posts_the_prefix_alone():
     assert url == "http://h/completion" and body["n_predict"] == 0 and body["cache_prompt"] is True
     assert body["prompt"] == "<|im_start|>system\nS<|im_end|>\n"
     assert all(b.get("tools") for u, b in sent[:2])            # the tools are part of the rendered prefix
+
+
+def test_warming_records_a_state_folder_for_dawnr_forget(tmp_path, monkeypatch):
+    # the launcher warms the prefix before the assistant starts, and the agent built for it already makes the folder
+    import dawnr_cli as cli
+    monkeypatch.setenv("DAWNR_HOME", str(tmp_path))
+
+    def no_agent(config, **how):
+        raise RuntimeError("no agent in this test")
+    monkeypatch.setattr(cli, "build_agent", no_agent)
+    assert warm.main(["--host", "nowhere:1", "--cwd", str(tmp_path), "--state", str(tmp_path / "given")]) == 0
+    assert (tmp_path / "state-folders").read_text() == f"{tmp_path / 'given'}\n"
