@@ -92,12 +92,13 @@ def domain(result: dict) -> float | None:
 def passes(result: dict) -> bool:
     """The rule: agrees on at least MIN_DRAWS draws; the `requires` admits at least MIN_DOMAIN of
     the drawn inputs the Python answers; and of the mutants judged at least MIN_COMPLETENESS are
-    rejected (no mutant judged is not a failure: every mutant was undefined)."""
+    rejected; no mutant judged is a failure too (no wrong answer could be judged, so nothing shows the
+    specification pins the answer down)."""
     if result.get("status") != "agrees" or result.get("draws", 0) < MIN_DRAWS:
         return False
     if domain(result) < MIN_DOMAIN:
         return False
-    return spec_check.complete(result, MIN_COMPLETENESS) is not False
+    return spec_check.pins_down(result, MIN_COMPLETENESS)
 
 
 def reason(result: dict) -> str:
@@ -108,6 +109,8 @@ def reason(result: dict) -> str:
             return "too few draws inside the requires"
         if domain(result) < MIN_DOMAIN:
             return "the requires excludes most drawn inputs"
+        if spec_check.no_wrong_answer_judged(result):
+            return "no wrong answer could be judged against the specification"
         return "weak specification"
     if result.get("status") == "disagrees":
         return "the specification is false at the Python's answer"

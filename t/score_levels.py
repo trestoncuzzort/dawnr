@@ -78,8 +78,8 @@ def tag_levels(tag: str, ids: set[int], verdicts: dict, min_completeness: float 
         name = t.get("name") or e.get("name") or ""
         raw = verdicts.get(f"{tag}/{name}") or {}
         status = score_heldout.checked_spec(raw, d / "tasks" / f"{name}.json")
-        if status == "agrees" and min_completeness is not None and spec_check.complete(raw, min_completeness) is False:
-            status = "weak"                                     # true of the right answer and of most wrong ones
+        if status == "agrees" and min_completeness is not None and not spec_check.pins_down(raw, min_completeness):
+            status = "weak"                                     # true of most wrong ones, or no wrong one judged
         if status == "agrees" and larger and spec_check.larger_reason(raw.get("larger"), min_completeness or 0.6, raw):
             status = "weak"                                     # the same, once the inputs are larger than the examples
         level, bare = answer_level(t.get("overall"), cells.get(name), status)

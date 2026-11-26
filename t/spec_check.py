@@ -157,11 +157,27 @@ def keep_witnesses(old: dict, new: dict) -> dict:
 def complete(result: dict, floor: float = MIN_COMPLETENESS) -> bool | None:
     """Does an agreeing specification also pin the answer down? False when either mutant family
     measured (outputs near the right one; other inputs' answers) is rejected less than `floor` of
-    the time, True when every family measured clears it, None when no mutant was judged."""
+    the time, True when every family measured clears it, None when no mutant was judged.
+
+    None is not a pass. A specification none of whose wrong answers could be judged (`ensures true` on a task whose
+    answer has no mutant, or every wrong answer undefined) has shown nothing about pinning the answer down, so a gate,
+    a score or a reward asks `pins_down` (True only) and never reads None as "not failing"; `no_wrong_answer_judged`
+    names the case."""
     shares = [result[k] for k in ("completeness", "cross_completeness") if isinstance(result.get(k), (int, float))]
     if not shares:
         return None
     return all(x >= floor for x in shares)
+
+
+def pins_down(result: dict, floor: float = MIN_COMPLETENESS) -> bool:
+    """True only when a wrong answer was judged and every family measured rejected at least `floor` of them.
+    No wrong answer judged is not evidence that the specification pins the answer down, so it is False here."""
+    return complete(result, floor) is True
+
+
+def no_wrong_answer_judged(result: dict) -> bool:
+    """No mutant of either family was judged for this result (`complete` says None)."""
+    return complete(result) is None
 
 
 def draw(kind: str, rnd: random.Random, like=None, strings: bool = False):

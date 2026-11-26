@@ -95,7 +95,8 @@ class WeakSpecification(unittest.TestCase):
         self.assertEqual(self.levels(None), {1: 7, 2: 7, 3: 7, 4: 7, 5: 7})
 
     def test_below_the_floor_is_not_counted_and_the_floor_itself_is(self):
-        self.assertEqual(self.levels(0.6), {1: 7, 2: 7, 3: 0, 4: 0, 5: 7})
+        # problem 5 judged no mutant (2026-11-26): that is no evidence its specification pins the answer down, so it is not counted
+        self.assertEqual(self.levels(0.6), {1: 7, 2: 7, 3: 0, 4: 0, 5: 0})
 
     def test_the_unchecked_column_does_not_move(self):
         lv = score_levels.tag_levels("set", {3, 4}, self.verdicts, 0.6)
@@ -103,7 +104,7 @@ class WeakSpecification(unittest.TestCase):
 
     def test_the_table_and_the_pooled_row_use_it(self):
         rows, pooled = score_levels.table(["set"], {1, 2, 3, 4, 5}, self.verdicts, 0.6)
-        self.assertEqual((rows[0][">=7"], pooled[">=7"]), (3, 3))
+        self.assertEqual((rows[0][">=7"], pooled[">=7"]), (2, 2))
         self.assertEqual(pooled[">=7 before the specification check"], 5)
 
     def test_a_specification_that_does_not_stand_on_larger_inputs_is_not_counted_when_that_is_asked(self):
@@ -115,7 +116,7 @@ class WeakSpecification(unittest.TestCase):
         asked = score_levels.tag_levels("set", {1, 2, 3, 4, 5}, self.verdicts, 0.6, larger=True)
         self.assertEqual({tid: v[0] for tid, v in asked.items()}, {1: 7, 2: 0, 3: 0, 4: 0, 5: 0})
         # not asked: every run registered before that day is scored by the rule it was registered under
-        self.assertEqual(self.levels(0.6), {1: 7, 2: 7, 3: 0, 4: 0, 5: 7})
+        self.assertEqual(self.levels(0.6), {1: 7, 2: 7, 3: 0, 4: 0, 5: 0})
         self.verdicts["set/p1"]["larger"] = {"status": "agrees", "draws": 3, "completeness": 0.0}      # too few judged to say
         self.assertEqual(score_levels.tag_levels("set", {1}, self.verdicts, 0.6, larger=True)[1][0], 7)
         self.verdicts["set/p1"]["larger"] = {"status": "agrees", "draws": 4, "outside_requires": 30, "completeness": 1.0,

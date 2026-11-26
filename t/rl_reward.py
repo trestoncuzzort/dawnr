@@ -76,7 +76,9 @@ SPEC_DRAWS = 50
 DRAWN_TESTS = 50
 # Bumped whenever local_signals changes what it measures: a cached row of another
 # version is re-graded (its proof is cheap to redo, run_par caches verdicts).
-REWARD_VERSION = 3
+REWARD_VERSION = 4
+# 4 (2026-11-26): an agreeing specification where no wrong answer was judged is weak too (`pins_down` is True only
+# when one was judged and cleared the floor); version 3 read that as not weak, so `ensures true` earned the top tier.
 # 3 (2026-10-01): `weak` is the gate's own rule, spec_check.complete() is False (both mutant families,
 # near outputs and other inputs' answers, rejected at least 60% of the time: SAFE arXiv:2410.15756), where
 # version 2 read spec_check's `weak` (any near-output mutant accepted: stricter on that family, blind to the
@@ -183,7 +185,7 @@ def local_signals(task_id: int, reply: str, entry: dict, spec_seed: int = 1, pro
         out["drawn"] = drawn_tests(task, entry, DRAWN_TESTS, random.Random(spec_seed))
         spec = spec_check.check_task(task, entry, SPEC_DRAWS, random.Random(spec_seed))
         out["spec"] = {k: spec[k] for k in ("status", "draws", "completeness", "cross_completeness") if k in spec}
-        out["spec"]["weak"] = spec_check.complete(spec) is False
+        out["spec"]["weak"] = spec.get("status") == "agrees" and not spec_check.pins_down(spec)
         out["spec_points"] = spec_check.check_points(task, entry)
         out["exploit"] = spec_check.exploit(task, entry).get("exploited_by")
     return out

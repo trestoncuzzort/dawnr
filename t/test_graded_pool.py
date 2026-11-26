@@ -16,7 +16,16 @@ sys.path.insert(0, str(HERE))
 
 import graded_pool  # noqa: E402
 import spec_check  # noqa: E402
-from test_loop_dataset import evidence, sample  # noqa: E402
+from test_loop_dataset import evidence as _bare_evidence, sample  # noqa: E402
+
+
+def evidence(s):
+    """The fixture's verdict, which judged no mutant, with the share of wrong answers it rejected (2026-11-26: a verdict
+    that judged none is refused, graded_pool.rejection)."""
+    out = _bare_evidence(s)
+    for v in out.values():
+        v["completeness"] = 1.0
+    return out
 
 
 def with_row(s, **cells):
