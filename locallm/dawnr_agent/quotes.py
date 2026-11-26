@@ -10,20 +10,24 @@ of them is returned, for the person to be told.
 
 Quoted material is every line of a fenced code block (``` or ~~~, with a language or without), every blockquote
 line without its ">", and every passage of six words or more in double quotes, straight or curly (U+201C, U+201D),
-on a line of prose. A line of a code block whose language is diff, patch or udiff is compared as what it quotes:
-without its "-", "+" or " ", a hunk header by its heading, a line that names the files not at all; it is reported
-as the answer has it. Whitespace does not count on either side: each run of it is one space, and there is none at
+on a line of prose. A line of a code block that is a diff (its language is diff, patch or udiff, or whatever its
+tag, a line of it starts with a hunk header `@@ -a,b +c,d @@`) is compared as what it quotes: without its "-", "+"
+or " ", a hunk header by its heading, a line that names the files not at all; it is reported as the answer has it. Whitespace does not count on either side: each run of it is one space, and there is none at
 the ends. A quote is found when it is inside one line of a source, the line as it was read. A blockquote line or a
 passage in quotes can run across the source's line breaks, so it is also found when it is inside the source's
-whole text, its lines joined by spaces, each line first taken without fs_read's line number and tab and then
-without a patch's one-character "+", "-" or " ": a quote of a patch's lines without their markers is found, and a
+whole text, its lines joined by spaces, each line first taken without a program's line prefix (fs_read's and cat -n's
+number and tab, grep -n's `N:` and `path:N:`: only where every line of a run has one and the numbers count up, and a
+run is cut where a number is not the one after the last) and then without a patch's one-character "+", "-" or " ": a quote of a patch's lines without their markers is found, and a
 patch is joined once more as each of its two texts, without its "-" lines and without its "+" lines. The lines of
 one file are joined the same way wherever the tools showed them, in two fs_read windows, as two fs_search hits or
 as one of each: each line without what the tool put on or around it (a hit's file name and number, a window's
 header and hints, a document's page marks), and only lines the file has one after the other, in one version of it
-(two windows whose sha256 differ, read on either side of an edit, are not joined). A blockquote line or
-a passage is also found without Markdown's inline formatting on either side (a backslash before punctuation, a code
-span's backticks, emphasis), which a reader does not see; a code line keeps every character. Never reported: a
+(two windows whose sha256 differ, or between which an edit of the file ran (Changed, among the sources, in the
+order of the calls), are not joined). A blockquote line or a passage is also found without Markdown's inline
+formatting on either side (a backslash before punctuation, a code span's backticks, the emphasis CommonMark pairs: a
+lone * or _ is the text's own), which a reader does not see; a code line keeps every character. A quote with an
+ellipsis (..., the character, either in brackets) that is not found as written is found when its pieces are in one
+source in order, each piece one that has something to check. Never reported: a
 quote with nothing in it to check (no letter or digit, as in punctuation, brackets or an ellipsis, or fewer than
 four characters that are not spaces), a fence inside a blockquote, a passage of fewer than six words.
 
