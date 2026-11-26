@@ -143,7 +143,8 @@ def _quoted(answer: str) -> list[tuple[str, str, bool]]:
     out: list[tuple[str, str, bool]] = []
     open_fence = ""                                 # the fence of the code block being read; "" outside one
     diff, indent = False, 0                         # whether that block is a diff, and how far its fence is indented
-    for line in _lines(answer):
+    lines = _lines(answer)
+    for at, line in enumerate(lines):
         fenced, marked = FENCE.match(line), MARKERS.match(line)
         if open_fence:
             if (fenced and fenced.group(1)[0] == open_fence[0] and len(fenced.group(1)) >= len(open_fence)
@@ -153,8 +154,9 @@ def _quoted(answer: str) -> list[tuple[str, str, bool]]:
                 out.append((line, _diff_line(line, indent) if diff else line, False))
         elif fenced and not (fenced.group(1)[0] == "`" and "`" in fenced.group(2)):   # ```x``` is inline code
             open_fence = fenced.group(1)
-            diff = fenced.group(2).strip().split(" ")[0].lower() in DIFF_TAGS
             indent = len(line) - len(line.lstrip(" "))
+            diff = (fenced.group(2).strip().split(" ")[0].lower() in DIFF_TAGS
+                    or _is_diff(lines[at + 1:], fenced, indent))
         elif marked:
             inner = line[marked.end():]
             if not FENCE.match(inner):              # a code block set in a blockquote: its fences are not quotes
@@ -165,6 +167,21 @@ def _quoted(answer: str) -> list[tuple[str, str, bool]]:
                 if len(passage.split()) >= WORDS:
                     out.append((passage, passage, True))
     return out
+
+
+def _is_diff(rest: list[str], fence, indent: int) -> bool:
+    """Whether the code block that `fence` opens, whose lines start `rest`, is a diff by what is in it, whatever its
+    language tag says (a model leaves the tag off, or names the file's language): a hunk header in it, `@@ -a,b +c,d
+    @@`, which no other code starts a line with."""
+    open_fence = fence.group(1)
+    for line in rest:
+        closing = FENCE.match(line)
+        if (closing and closing.group(1)[0] == open_fence[0] and len(closing.group(1)) >= len(open_fence)
+                and not closing.group(2).strip()):
+            return False
+        if HUNK.match(line[min(indent, len(line) - len(line.lstrip(" "))):]):
+            return True
+    return False
 
 
 def _diff_line(line: str, indent: int) -> str:

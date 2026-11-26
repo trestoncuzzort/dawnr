@@ -377,6 +377,25 @@ class DiffTest(unittest.TestCase):
     def test_the_line_with_a_clause_dropped_is_still_reported_in_a_diff_block(self):
         self.assertEqual(unfound_quotes(code("+" + CLAIMED, "+    continue;", tag="diff"), [PATCH]), ["+" + CLAIMED])
 
+    def test_a_block_whose_lines_are_a_diff_is_one_whatever_its_language_tag(self):
+        # the model often leaves the tag off or says what the file is: the block's lines say it is a diff
+        body = ["--- a/settings.py", "+++ b/settings.py", "@@ -12,2 +12,2 @@ def load(path):",
+                "-    if not os.path.exists(path):", "+    if not os.path.isfile(path):", "         return None"]
+        for tag in ("", "python", "text", "sh", "DIFF"):
+            with self.subTest(tag=tag):
+                # the old line is found without its marker, the new one is reported as the answer has it
+                self.assertEqual(unfound_quotes(code(*body, tag=tag), [READ]), ["+ if not os.path.isfile(path):"])
+        # a hunk header on its own, with no file lines, is enough; indented under a list item as well
+        self.assertEqual(unfound_quotes("1. The fix:\n\n   ```\n   @@ -12,2 +12,2 @@\n   -    if not os.path.exists(path):\n   ```\n",
+                                        [READ]), [])
+
+    def test_a_block_that_only_looks_like_a_diff_line_by_line_is_not_one(self):
+        # lines that start with - or + but no hunk header: code (a list, an expression), compared as written
+        self.assertEqual(unfound_quotes(code("--- a/settings.py", "+++ b/settings.py", "-    return None", tag="python"),
+                                        [READ]), ["--- a/settings.py", "+++ b/settings.py", "- return None"])
+        self.assertEqual(unfound_quotes(code("@@ -a,b +c,d @@", "-    return None"), [READ]),
+                         ["@@ -a,b +c,d @@", "- return None"])
+
 
 # The start of two lines of instruction.md as a 27B read it (2026-11-26): Markdown, with emphasis and code spans.
 INSTRUCTION = window("here/instruction.md", [
