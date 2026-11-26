@@ -224,8 +224,10 @@ def interpret(inventory: dict, coverage: dict, checking: dict, scope: dict) -> d
         through_pointer = [goal for goal in every_goal if not library_goal(goal) and pointer_goal(goal)]
         # The coverage stage also lists the preconditions of an inlined library call (memcpy) at the call site in
         # the unit. They are properties, checked in the checking stage, and not assumptions, so they are listed apart as well.
+        # Only a goal that is an inventoried property is taken for one; any other goal still counts as the harness's own.
+        inventoried = {prop.get("name") for prop in props}
         def assumption_goal(goal: dict) -> bool:
-            return str(goal.get("description", "")).startswith(("assert(false) before assume(", "assert(false) after assume("))
+            return goal.get("goal") not in inventoried or str(goal.get("description", "")).startswith(("assert(false) before assume(", "assert(false) after assume("))
         not_assumptions = [goal for goal in every_goal if not library_goal(goal) and not pointer_goal(goal) and not assumption_goal(goal)]
         goals = [goal for goal in every_goal if not library_goal(goal) and not pointer_goal(goal) and assumption_goal(goal)]
         library = [goal for goal in every_goal if library_goal(goal)]
