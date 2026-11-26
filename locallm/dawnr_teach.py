@@ -157,6 +157,11 @@ def main(argv=None) -> int:
     ap.add_argument("--model", default="", help="the model's name at --host, for a server that serves several (a hosted teacher)")
     ap.add_argument("--key-file", type=Path, help="a file holding the key --host asks for (sent as a bearer token)")
     a = ap.parse_args(argv)
+    import dawnr_cli as cli
+    # every task reads them (default_config); refused one task at a time, each seed would be logged as an error, and
+    # a seed in the log is one the next run skips
+    if cli.settings_refused("dawnr_teach"):
+        return 2
     key = a.key_file.read_text().strip() if a.key_file else ""
     have = set()
     if a.out.exists():

@@ -477,7 +477,8 @@ def test_a_rounds_or_steps_setting_that_is_not_a_whole_number_above_zero_is_refu
     monkeypatch.setattr(cli, "build_agent", lambda *a, **kw: started.append(a) or pytest.fail("started with DAWNR_MAX_STEPS=0"))
     assert cli.main(["--host", "nowhere:1", "--cwd", str(tmp_path), "Read it."]) == 2
     err = capsys.readouterr().err
-    assert "DAWNR_MAX_STEPS='0'" in err and "whole number above 0" in err and not started
+    assert err == "dawnr: DAWNR_MAX_STEPS='0' is not a whole number above 0; set it to one, or unset it for the default of 40\n"
+    assert not started
 
 
 def test_the_line_for_a_common_job_is_given_for_the_desktop_and_programs_the_machine_has():

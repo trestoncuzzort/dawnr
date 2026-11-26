@@ -2,7 +2,9 @@
 import os
 from pathlib import Path
 import shlex
+import socket
 import subprocess
+import sys
 
 import pytest
 
@@ -141,4 +143,42 @@ def test_the_persons_tool_folders_join_a_bare_path(tmp_path):
     result = subprocess.run(['/bin/bash', str(ROOT/'bin/dawnr'), 'version'], capture_output=True, text=True, timeout=5,
                             env={'HOME': str(home), 'PATH': str(tmp_path / 'nothing-here')})
     assert result.stdout == 'dawnr 9.9.9-from-the-tool-folder\n', result.stderr
+
+
+def test_a_bad_rounds_or_steps_setting_stops_the_assistant_before_a_model_is_started(tmp_path):
+    # DAWNR_MAX_ROUNDS and DAWNR_MAX_STEPS are read by locallm/dawnr_cli.py, which the launcher runs only once the
+    # base model is up. A stand-in model server here records that it was started, and never answers.
+    data, started = tmp_path / 'data', tmp_path / 'the-model-was-started'
+    data.mkdir()
+    server, weights = tmp_path / 'llama-server', tmp_path / 'base.gguf'
+    server.write_text('#!/bin/sh\ntouch ' + shlex.quote(str(started)) + '\n')
+    server.chmod(0o755)
+    weights.write_text('weights')
+    with socket.socket() as s:                                  # a port nothing listens on
+        s.bind(('127.0.0.1', 0))
+        port = s.getsockname()[1]
+    (data / 'env').write_text(f'DAWNR_PYTHON={shlex.quote(sys.executable)}\nDAWNR_REPO={shlex.quote(str(ROOT))}\n'
+                              f'LLAMA_SERVER={shlex.quote(str(server))}\nBASE_GGUF={shlex.quote(str(weights))}\n'
+                              f'DAWNR_BASE_PORT={port}\nDAWNR_START_SECONDS=1\n')
+    # the person's folder is where dawnr is started, and what is in it is theirs: a module there named as dawnr's own
+    # or as one dawnr imports is never run by the check
+    planted = tmp_path / 'a-module-in-the-folder-ran'
+    for name in ('dawnr_cli', 'shlex'):
+        (tmp_path / f'{name}.py').write_text(f'open({str(planted)!r}, "w").close()\n'
+                                             'def settings_refused(prog="dawnr"):\n    return False\n')
+
+    def dawnr(**settings):
+        env = {k: v for k, v in os.environ.items() if not k.startswith('DAWNR_')}
+        return subprocess.run(['bash', str(ROOT/'bin/dawnr'), 'do', 'Read it.'], cwd=tmp_path, capture_output=True,
+                              text=True, timeout=60, env={**env, 'DAWNR_HOME': str(data), **settings})
+    for name, bad, default in (('DAWNR_MAX_STEPS', '0', 40), ('DAWNR_MAX_ROUNDS', 'abc', 18)):
+        result = dawnr(**{name: bad})
+        assert (result.returncode, result.stdout) == (2, ''), result.stderr
+        assert result.stderr == (f"dawnr: {name}={bad!r} is not a whole number above 0; set it to one, or unset it for "
+                                 f"the default of {default}\n")
+        assert not started.exists() and not planted.exists()
+    # with good settings the stand-in is started: the check above is the settings', not a launcher that starts nothing
+    result = dawnr(DAWNR_MAX_ROUNDS='30', DAWNR_MAX_STEPS=' 60 ')
+    assert result.returncode == 1 and 'the base model did not come up' in result.stderr and started.exists()
+    assert not planted.exists()
 

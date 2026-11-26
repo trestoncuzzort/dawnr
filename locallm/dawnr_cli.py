@@ -156,6 +156,19 @@ def loop_budget() -> dict:
     return out
 
 
+def settings_refused(prog: str = "dawnr") -> bool:
+    """The settings dawnr reads from the environment, checked by every program that reads them before it starts
+    anything: the launcher before it starts a model (bin/dawnr), this front door, dawnr_warm.py and the measuring
+    scripts (dawnr_tasks.py, dawnr_teach.py, dawnr_factory.py --check, judge_twins.py), which read them through
+    default_config. A bad one is said on stderr as `prog: ...` and True is returned, for the caller to exit 2."""
+    try:
+        loop_budget()
+    except SettingError as error:
+        print(f"{prog}: {error}", file=sys.stderr)
+        return True
+    return False
+
+
 def default_config(cwd: Path, *, read_only: bool = False, roots: tuple = (), online: bool = False,
                    state: Path | None = None) -> dict:
     """The harness configuration for a session started in `cwd`."""
@@ -1026,11 +1039,9 @@ def main(argv=None) -> int:
     task = " ".join(a.task).strip()
     if not task and not sys.stdin.isatty():
         ap.error("no task was given and this is not a terminal")
-    try:
-        config = default_config(a.cwd, read_only=a.read_only, roots=tuple(a.root), online=a.online, state=a.state)
-    except SettingError as error:                               # said, and nothing is started
-        print(f"dawnr: {error}", file=sys.stderr)
+    if settings_refused():                                      # said, and nothing is started
         return 2
+    config = default_config(a.cwd, read_only=a.read_only, roots=tuple(a.root), online=a.online, state=a.state)
     approve = plan_approver(yes=a.yes)
     harness, agent = build_agent(config, plan_approver=approve)
     approve.agent = agent

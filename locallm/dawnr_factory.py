@@ -349,6 +349,10 @@ def main(argv=None) -> int:
     ap.add_argument("--family", action="append")
     ap.add_argument("--show", nargs=2, metavar=("FAMILY", "SEED"))
     a = ap.parse_args(argv)
+    if a.check:                                                 # its shell is the assistant's (default_config)
+        import dawnr_cli as cli
+        if cli.settings_refused("dawnr_factory"):
+            return 2
     if a.list:
         for name, fn in sorted(FAMILIES.items()):
             print(f"{name:28s} {(fn.__doc__ or '').strip().splitlines()[0] if fn.__doc__ else ''}")

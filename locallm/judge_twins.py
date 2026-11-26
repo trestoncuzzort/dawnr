@@ -132,6 +132,8 @@ def main(argv=None) -> int:
     ap.add_argument("--family", action="append")
     ap.add_argument("--out", type=Path)
     a = ap.parse_args(argv)
+    if cli.settings_refused("judge_twins"):                     # a shell is the assistant's (default_config)
+        return 2
     rows, accepted_total, twins_total = [], 0, 0
     for name in sorted(a.family or factory.FAMILIES):
         accepted = []

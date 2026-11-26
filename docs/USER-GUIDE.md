@@ -73,8 +73,8 @@ DAWNR_MAX_ROUNDS=30 DAWNR_MAX_STEPS=60 dawnr do "Review the tests" --read-only
 ```
 
 Each must be a whole number above 0. Any other value stops `dawnr` with a
-message that names the setting, before the task starts. Unset or empty, the
-defaults apply.
+message that names the setting, before a model is loaded and before the task
+starts. Unset or empty, the defaults apply.
 
 ## Generate a checked function
 

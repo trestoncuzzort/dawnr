@@ -1061,6 +1061,8 @@ def main(argv=None) -> int:
     ap.add_argument("--key-file", type=Path, help="a file holding the key --host asks for (a hosted model; --name is then its name there)")
     ap.add_argument("--workers", type=int, default=1, help="tasks at a time (a server with that many slots, or a hosted model)")
     a = ap.parse_args(argv)
+    if cli.settings_refused("dawnr_tasks"):                     # every task reads them (default_config), so none runs
+        return 2
     only = {int(x) for x in a.only.split(",") if x.strip()}
     post = None
     if a.key_file:

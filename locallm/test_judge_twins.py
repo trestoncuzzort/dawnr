@@ -29,3 +29,14 @@ def test_judge_rejects_a_dropped_file_and_passes_the_solution():
     with tempfile.TemporaryDirectory() as tmp:
         assert jt.judge_solution(task, task["solution"], Path(tmp) / "a")["done"]
         assert not jt.judge_solution(task, twins["drop"], Path(tmp) / "b")["done"]
+
+
+def test_a_bad_rounds_or_steps_setting_is_said_before_any_twin_is_judged(monkeypatch, capsys):
+    # a family whose check runs the result is judged with the assistant's shell, built by dawnr_cli.default_config,
+    # which reads DAWNR_MAX_ROUNDS and DAWNR_MAX_STEPS
+    monkeypatch.delenv("DAWNR_MAX_ROUNDS", raising=False)
+    monkeypatch.setenv("DAWNR_MAX_STEPS", "2.5")
+    assert "run" in factory.make("add_json_command", 0)["expect"]
+    assert jt.main(["--seeds", "1", "--family", "add_json_command"]) == 2
+    assert capsys.readouterr() == ("", "judge_twins: DAWNR_MAX_STEPS='2.5' is not a whole number above 0; set it to one, "
+                                       "or unset it for the default of 40\n")

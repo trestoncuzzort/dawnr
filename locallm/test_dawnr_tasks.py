@@ -79,6 +79,20 @@ def test_a_run_that_stopped_is_never_an_answer_and_a_dead_server_writes_no_rows(
     assert not (tmp_path / "rows.jsonl").exists()
 
 
+def test_a_bad_rounds_or_steps_setting_is_said_before_the_server_is_asked_and_no_rows_are_written(tmp_path, monkeypatch, capsys):
+    # every task runs with dawnr_cli.default_config, which reads DAWNR_MAX_ROUNDS and DAWNR_MAX_STEPS
+    import io
+    import urllib.request
+    asked = []
+    monkeypatch.setattr(urllib.request, "urlopen", lambda *a, **kw: asked.append(a) or io.BytesIO(b'{"status": "ok"}'))
+    monkeypatch.delenv("DAWNR_MAX_STEPS", raising=False)
+    monkeypatch.setenv("DAWNR_MAX_ROUNDS", "3O")
+    assert tasks.main(["--host", "127.0.0.1:9", "--only", "6", "--out", str(tmp_path / "rows.jsonl")]) == 2
+    assert capsys.readouterr().err == ("dawnr_tasks: DAWNR_MAX_ROUNDS='3O' is not a whole number above 0; set it to one, "
+                                       "or unset it for the default of 18\n")
+    assert not asked and not (tmp_path / "rows.jsonl").exists()
+
+
 def test_retired_host_calls_do_not_run_and_historical_judging_still_reads_old_records(tmp_path):
     stop = ("pc", {"command": "systemctl --user stop pipewire"})
     row = tasks.run_one(task(6), "nowhere:1", "base", post=Model(turn(stop), turn(text="The phone number is not in the files.")))
