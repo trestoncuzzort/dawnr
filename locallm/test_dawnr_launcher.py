@@ -3,6 +3,7 @@ import os
 from pathlib import Path
 import shlex
 import subprocess
+import sys
 
 import pytest
 
@@ -142,3 +143,129 @@ def test_the_persons_tool_folders_join_a_bare_path(tmp_path):
                             env={'HOME': str(home), 'PATH': str(tmp_path / 'nothing-here')})
     assert result.stdout == 'dawnr 9.9.9-from-the-tool-folder\n', result.stderr
 
+
+# `dawnr forget` as the person runs it. Every folder it is told about (HOME, XDG_STATE_HOME, DAWNR_HOME) is the test's
+# own, and no process id is written, so the model servers it stops first are none.
+
+def forget_place(tmp_path):
+    """(home, data folder, environment, the default state folder) for one run of the launcher."""
+    home, data = tmp_path / 'home', tmp_path / 'data'
+    home.mkdir()
+    data.mkdir()
+    (data / 'env').write_text('')                      # the launcher reads its settings before any command
+    env = {**os.environ, 'HOME': str(home), 'XDG_STATE_HOME': str(tmp_path / 'state home'), 'DAWNR_HOME': str(data)}
+    default = (home / 'Library' / 'Application Support' if sys.platform == 'darwin' else tmp_path / 'state home')
+    return home, data, env, default / 'dawnr-agent'
+
+
+def forget(env, *args):
+    return subprocess.run(['bash', str(ROOT/'bin/dawnr'), 'forget', *args], env=env, capture_output=True, text=True,
+                          timeout=60)
+
+
+def assistant_session(tmp_path, env, *options):
+    """One session of the assistant as `dawnr do` starts it (locallm/dawnr_cli.py), against a model server that is not
+    there: it makes its state folder, and stops at its first call to the model."""
+    work = tmp_path / 'work'
+    work.mkdir(exist_ok=True)
+    got = subprocess.run([sys.executable, str(ROOT/'locallm/dawnr_cli.py'), '--host', '127.0.0.1:9', '--cwd', str(work),
+                          *options, 'list the files'], cwd=work, env=env, capture_output=True, text=True, timeout=120)
+    assert got.returncode == 0, got.stderr
+
+
+def journal_a_change(state):
+    """What a session that changed a file adds to its state folder, written by the journal itself
+    (locallm/dawnr_agent/journal.py): the replaced bytes under backups/ and a line in journal.jsonl."""
+    code = ('import sys; sys.path[:0] = [sys.argv[1], sys.argv[2]]; from dawnr_agent.journal import Journal\n'
+            'j = Journal(sys.argv[3]); old = j.keep(b"the bytes the change replaced\\n")\n'
+            'j.record(action="write", root="here", path="notes.txt", before=old, after=None)')
+    subprocess.run([sys.executable, '-c', code, str(ROOT/'locallm'), str(ROOT/'t'), str(state)], check=True, timeout=60)
+
+
+def snapshot(top):
+    """Every name under `top`, links not followed: a file's bytes, a link's target, a folder's existence."""
+    out = {}
+    for at, dirs, files in os.walk(top):
+        for name in dirs + files:
+            path = os.path.join(at, name)
+            rel = os.path.relpath(path, top)
+            if os.path.islink(path):
+                out[rel] = 'link to ' + os.readlink(path)
+            elif os.path.isdir(path):
+                out[rel] = 'folder'
+            else:
+                out[rel] = Path(path).read_bytes()
+    return out
+
+
+def test_a_folder_given_with_state_is_erased_by_forget(tmp_path):
+    _home, data, env, _default = forget_place(tmp_path)
+    given = tmp_path / 'my state'
+    assistant_session(tmp_path, env, '--state', '../my state')       # relative to the folder it is started in
+    journal_a_change(given)
+    assert (given / 'journal.jsonl').is_file() and (given / 'backups').is_dir()
+    got = forget(env)
+    assert got.returncode == 0, got.stderr
+    assert f'erased {given}' in got.stdout.splitlines(), got.stdout
+    assert not os.path.lexists(given)
+    assert not os.path.lexists(data / 'state-folders')               # and the record of it
+
+
+@pytest.mark.parametrize('args', [[], ['--all']])
+def test_forget_leaves_nothing_of_what_dawnr_kept_in_any_place_it_keeps_it(tmp_path, args):
+    # Each place PRIVACY.md lists as erased by `dawnr forget` (and by `--all`), with what dawnr itself writes there.
+    _home, data, env, default = forget_place(tmp_path)
+    given = tmp_path / 'given state'
+    assistant_session(tmp_path, env)                                 # the default state folder
+    assistant_session(tmp_path, env, '--state', str(given))          # a folder given with --state, and its record
+    for state in (default, given):
+        journal_a_change(state)
+    # the page's and the API's jobs (t/serve_api.py: a folder a job, the files given to it, what it printed)
+    job = data / 'jobs' / '0123456789abcdef'
+    (job / 'files').mkdir(parents=True)
+    (job / 'files' / 'invoice.txt').write_text('Total due: 120\n')
+    (job / 'stdout.txt').write_text('the answer\n')
+    # the run folder: a model server's log, the API's token, the file that opens the page; no process id
+    (data / 'run').mkdir(exist_ok=True)
+    for name in ('base.log', 'api.token', 'open.html'):
+        (data / 'run' / name).write_text('kept\n')
+    # what install.sh puts in the data folder, and the folders it unpacks into when it stops before moving them
+    installed = ['models/dawnr.gguf', 'downloads/llama.tar.gz.part', 'llama.cpp/llama-server', 'provers/dafny/dafny',
+                 'pylib/pypdfium2/__init__.py', 'llama.cpp.tmp/llama-server', 'cudart.tmp/libcudart.so',
+                 'pylib.tmp/pypdfium2/__init__.py']
+    for rel in installed:
+        (data / rel).parent.mkdir(parents=True, exist_ok=True)
+        (data / rel).write_text('installed\n')
+    assert (default / 'journal.jsonl').is_file() and (given / 'journal.jsonl').is_file()
+    got = forget(env, *args)
+    assert got.returncode == 0, got.stderr
+    # what is left: of the two state folders nothing, of the data folder only what install.sh put there (or nothing)
+    left = [str(p) for p in (default, given) if os.path.lexists(p)] + sorted(p.name for p in data.iterdir())
+    assert left == ([] if args else sorted({rel.split('/')[0] for rel in installed} | {'env'})), f'left: {left}\n{got.stdout}'
+    assert 'PRIVACY.md (Erasing)' in got.stdout.splitlines()[-1]     # what it does not erase is said, and where
+
+
+def test_forget_keeps_a_recorded_folder_that_is_not_a_dawnr_state_folder(tmp_path):
+    home, data, env, _default = forget_place(tmp_path)
+    mixed = tmp_path / 'project'                    # the journal beside a file of the person's own
+    journal_a_change(mixed)
+    (mixed / 'thesis.tex').write_text('my own words\n')
+    real = tmp_path / 'real state'                  # a dawnr state folder, named through a link to it
+    journal_a_change(real)
+    link = tmp_path / 'linked state'
+    link.symlink_to(real, target_is_directory=True)
+    elsewhere = tmp_path / 'elsewhere'              # a state folder reached through a link above it
+    journal_a_change(elsewhere / 'state')
+    (tmp_path / 'linked parent').symlink_to(elsewhere, target_is_directory=True)
+    through = tmp_path / 'linked parent' / 'state'
+    journal_a_change(home)                          # the home folder itself, holding nothing but a journal
+    recorded = [mixed, link, through, home, 'relative/state']
+    (data / 'state-folders').write_text(''.join(f'{p}\n' for p in recorded))
+    before = {str(top): snapshot(top) for top in (mixed, real, elsewhere, home)}
+    got = forget(env)
+    assert got.returncode == 0, got.stderr
+    for p in recorded:
+        assert f'kept {p}: it does not look like a dawnr state folder' in got.stdout.splitlines(), got.stdout
+    assert {str(top): snapshot(top) for top in (mixed, real, elsewhere, home)} == before
+    assert os.path.islink(link) and os.path.islink(tmp_path / 'linked parent')
+    assert not os.path.lexists(data / 'state-folders')

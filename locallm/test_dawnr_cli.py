@@ -759,3 +759,46 @@ def test_any_other_refusal_is_not_retried(tmp_path):
     with pytest.raises(urllib.error.HTTPError):
         planner._send("http://nowhere:1/v1/chat/completions", {"messages": [{"role": "user", "content": "x"}]})
 
+
+def test_a_state_folder_given_is_recorded_once_and_resolved_for_dawnr_forget(tmp_path, monkeypatch, capsys):
+    data, real = tmp_path / "data", tmp_path / "real"
+    data.mkdir()
+    real.mkdir()
+    (tmp_path / "link").symlink_to(real, target_is_directory=True)
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setenv("HOME", str(tmp_path))
+    env = {"DAWNR_HOME": str(data)}
+    record = data / "state-folders"
+    # relative and through a link: what is written is where the journal will be
+    assert cli.remember_state(Path("link/state"), env) == real / "state"
+    assert cli.remember_state(real / "state", env) == real / "state"          # the same folder: not written twice
+    assert cli.remember_state(Path("~/other"), env) == tmp_path / "other"
+    assert record.read_bytes() == f"{real / 'state'}\n{tmp_path / 'other'}\n".encode()
+    assert record.stat().st_mode & 0o777 == 0o600
+    # a line a stopped writer left without its end stays a line of its own
+    record.write_bytes(b"/unfinished")
+    cli.remember_state(Path("next"), env)
+    assert record.read_bytes() == f"/unfinished\n{tmp_path / 'next'}\n".encode()
+    # without DAWNR_HOME (not started by the dawnr command) nothing is written anywhere
+    assert cli.remember_state(Path("state"), {}) is None
+    # a link where the record should be is not followed, and the person is told the folder is not recorded
+    mine, other = tmp_path / "mine.txt", tmp_path / "other data"
+    mine.write_text("mine\n")
+    other.mkdir()
+    (other / "state-folders").symlink_to(mine)
+    assert cli.remember_state(Path("state"), {"DAWNR_HOME": str(other)}) is None
+    assert mine.read_text() == "mine\n" and "`dawnr forget` will not erase it" in capsys.readouterr().err
+
+
+def test_the_assistant_records_a_state_folder_before_it_makes_it(tmp_path, monkeypatch):
+    monkeypatch.setenv("DAWNR_HOME", str(tmp_path))
+    given = tmp_path / "given"
+
+    def stop(config, **how):                                    # in place of the agent, which would make the folder
+        assert (tmp_path / "state-folders").read_text() == f"{given}\n"
+        assert config["agent"]["state"] == str(given) and not given.exists()
+        raise SystemExit(7)
+    monkeypatch.setattr(cli, "build_agent", stop)
+    with pytest.raises(SystemExit) as stopped:
+        cli.main(["--host", "nowhere:1", "--cwd", str(tmp_path), "--state", str(given), "a task"])
+    assert stopped.value.code == 7
