@@ -587,12 +587,15 @@ if __name__ == "__main__":
     ap.add_argument("source")
     ap.add_argument("task")
     ap.add_argument("--sidecar")
-    ap.add_argument("--work", default=tempfile.gettempdir())
+    ap.add_argument("--work", default=None, help="a folder to keep the harness in; default: a private folder removed afterwards")
     ap.add_argument("--print", action="store_true")
     a = ap.parse_args()
     task = json.loads(Path(a.task).read_text())
     rmap = json.loads(Path(a.sidecar).read_text()).get("rename_map", {}) if a.sidecar else {}
     if a.print:
         print(build(Path(a.source).read_text(), task, rmap)[0])
+    elif a.work is None:
+        with tempfile.TemporaryDirectory(prefix="lift-check-verus-") as work:
+            print(json.dumps(check(Path(a.source), task, rmap, Path(work), Path(a.task).stem), indent=2))
     else:
         print(json.dumps(check(Path(a.source), task, rmap, Path(a.work), Path(a.task).stem), indent=2))

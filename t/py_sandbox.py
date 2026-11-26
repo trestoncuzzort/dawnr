@@ -409,7 +409,11 @@ class Session:
         (job / "runner.py").write_text(SESSION_RUNNER % {"memory": memory_mb, "per_call": per_call,
                                                          "result": self._marker, "fn": fn}, encoding="utf-8")
         self._job, self._p, self._buf, self.restarts = job, None, b"", 0
-        self._start()
+        try:
+            self._start()
+        except BaseException:
+            self._tmp.cleanup()           # the copy of the model-written code goes now, not when the session is collected
+            raise
 
     def __enter__(self):
         return self

@@ -40,6 +40,7 @@ import json
 import re
 import signal
 import sys
+import contextlib
 import tempfile
 from concurrent.futures import ProcessPoolExecutor
 from pathlib import Path
@@ -174,19 +175,21 @@ def audit_file(path: str, kernel: str | None = None, seconds: int = TASK_SECONDS
     res["file"] = path
     survivors = res.get("survivors", [])
     if kernel and res["status"] == "ok":
-        work = Path(out_dir or tempfile.mkdtemp(prefix="t-audit-"))
-        work.mkdir(parents=True, exist_ok=True)
-        _lmod, suffix = tlib._LOWER_MOD[kernel]
-        # the sanitized stem plus a hash of the path: `a-b.t` and `a_b.t` sanitize alike, and a parallel audit with a
-        # shared --out would otherwise write one source path for both and read the other task's verdict
-        stem = re.sub(r"[^A-Za-z0-9_]", "_", Path(path).stem) + "_" + hashlib.sha1(str(Path(path).resolve()).encode()).hexdigest()[:8]
-        res["kernel"] = kernel
-        res["real_verdict"] = _kernel_verdict(task, task["body"], kernel, work / f"{stem}.{suffix}")
-        if res["real_verdict"] == "verified":
-            for i, s in enumerate(survivors[:CONFIRM]):
-                s["verdict"] = _kernel_verdict(task, s["body"], kernel, work / f"{stem}_survivor{i}.{suffix}")
-                if s["verdict"] == "verified":
-                    break
+        # a folder the caller gave is the caller's; one made here holds private copies and goes when the audit ends
+        with (contextlib.nullcontext(out_dir) if out_dir else tempfile.TemporaryDirectory(prefix="t-audit-")) as work_dir:
+            work = Path(work_dir)
+            work.mkdir(parents=True, exist_ok=True)
+            _lmod, suffix = tlib._LOWER_MOD[kernel]
+            # the sanitized stem plus a hash of the path: `a-b.t` and `a_b.t` sanitize alike, and a parallel audit with a
+            # shared --out would otherwise write one source path for both and read the other task's verdict
+            stem = re.sub(r"[^A-Za-z0-9_]", "_", Path(path).stem) + "_" + hashlib.sha1(str(Path(path).resolve()).encode()).hexdigest()[:8]
+            res["kernel"] = kernel
+            res["real_verdict"] = _kernel_verdict(task, task["body"], kernel, work / f"{stem}.{suffix}")
+            if res["real_verdict"] == "verified":
+                for i, s in enumerate(survivors[:CONFIRM]):
+                    s["verdict"] = _kernel_verdict(task, s["body"], kernel, work / f"{stem}_survivor{i}.{suffix}")
+                    if s["verdict"] == "verified":
+                        break
     for s in survivors:
         s["change"] = _changed_line(task, s["body"])
         s["witness"] = harness.witness(s["witness"])

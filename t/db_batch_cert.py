@@ -89,12 +89,19 @@ def mint_all(cert_dir):
 
 def control():
     import tempfile
+    # the scratch folder of the self-check is removed when it ends, on a pass, a fail or an exception
+    with tempfile.TemporaryDirectory(prefix="db_batch_cert-") as folder:
+        return _control(pathlib.Path(folder))
+
+
+def _control(d):
+    import tempfile
     checks = []
 
     def ok(name, cond):
         checks.append((name, bool(cond))); print(f"  {name}: [{'ok' if cond else 'FAIL'}]")
     # a tiny synthetic tag so control needs no corpus: 1 task (REAL) + 1 survivor, 1 kernel
-    d = pathlib.Path(tempfile.mkdtemp()); out = d / "out"; out.mkdir()
+    out = d / "out"; out.mkdir()
     global OUT
     OUT = out
     task = {"name": "q", "requires": ["n >= 0"], "ensures": ["r == (n >= 0)"], "body": "r := true;"}

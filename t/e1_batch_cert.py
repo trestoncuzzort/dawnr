@@ -139,6 +139,13 @@ def mint_run(run_dir, pairs_dir, cert_dir):
 
 def control():
     import tempfile
+    # the scratch folder of the self-check is removed when it ends, on a pass, a fail or an exception
+    with tempfile.TemporaryDirectory(prefix="e1_batch_cert-") as folder:
+        return _control(pathlib.Path(folder))
+
+
+def _control(d):
+    import tempfile
     import types
     import importlib
     g2 = importlib.import_module("e1_pairs_gate2")
@@ -146,7 +153,7 @@ def control():
 
     def ok(name, cond):
         checks.append((name, bool(cond))); print(f"  {name}: [{'ok' if cond else 'FAIL'}]")
-    d = pathlib.Path(tempfile.mkdtemp()); pdir = d / "twins" / "pairs"; pdir.mkdir(parents=True); g2.PAIRS = pdir
+    pdir = d / "twins" / "pairs"; pdir.mkdir(parents=True); g2.PAIRS = pdir
 
     def mk(task, br, bt):
         prog = f"t 1\ntask {task}(n: int) returns (r: bool)\n  requires n >= 0\n  ensures r == (n >= 0)\n{{ {br} }}"

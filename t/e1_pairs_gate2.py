@@ -450,6 +450,13 @@ def cmd_run(a, _probe=None, _grade=None):
 
 def cmd_control(_a):
     import tempfile
+    # the scratch folder of the self-check is removed when it ends, on a pass, a fail or an exception
+    with tempfile.TemporaryDirectory(prefix="e1_pairs_gate2-") as folder:
+        return _cmd_control(_a, pathlib.Path(folder))
+
+
+def _cmd_control(_a, d):
+    import tempfile
     import types
     global PAIRS
     checks = []
@@ -457,7 +464,7 @@ def cmd_control(_a):
     def ok(name, cond):
         checks.append((name, bool(cond))); print(f"  {name}: [{'ok' if cond else 'FAIL'}]")
 
-    d = pathlib.Path(tempfile.mkdtemp()); pdir = d / "twins" / "pairs"; pdir.mkdir(parents=True)
+    pdir = d / "twins" / "pairs"; pdir.mkdir(parents=True)
     PAIRS = pdir
 
     def mk(task, br, bt, w):
@@ -569,7 +576,7 @@ def cmd_control(_a):
 
     # newline byte tamper (LF->CRLF) caught by read_bytes rehash (read_text would hide it)
     import tempfile as _tf
-    sd = pathlib.Path(_tf.mkdtemp()); hz, pz = _ca_write(sd, "line1\nline2\n", "dfy")
+    sd = d / "sd"; sd.mkdir(); hz, pz = _ca_write(sd, "line1\nline2\n", "dfy")
     bsz = {"real_src_sha256": hz, "twin_src_sha256": hz, "suffix": "dfy"}
     ok("rehash valid before tamper", _rehash_ok(sd, bsz))
     pz.write_bytes(b"line1\r\nline2\r\n")                        # same text, different bytes

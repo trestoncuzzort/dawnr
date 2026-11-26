@@ -39,6 +39,7 @@ file, it records the exception in that file's record."
 from __future__ import annotations
 
 import argparse
+import contextlib
 import hashlib
 import json
 import os
@@ -148,7 +149,20 @@ def _stage_call(stage: str, token: str, line: int, fn, *args, **kwargs):
         return None, Refusal(reason="error", token=f"{type(e).__name__}: {e}", line=line, stage=stage)
 
 
-def _scratch_dfy_path(out_dir: Optional[Path], stem: str, method_name: str) -> Path:
+@contextlib.contextmanager
+def _scratch_dfy(out_dir: Optional[Path], stem: str, method_name: str):
+    """The path `lift_check.check` writes its checker, differential and callee files beside. Under `out_dir` they
+    are outputs and stay. With no `out_dir` they are private copies of the program being checked, so they live in a
+    folder of their own that is removed when the check ends, on a result, a refusal or an exception (a check killed
+    by SIGKILL cannot remove it; PRIVACY.md says so)."""
+    if out_dir is not None:
+        yield _scratch_dfy_path(out_dir, stem, method_name)
+        return
+    with tempfile.TemporaryDirectory(prefix="lifter-") as folder:
+        yield Path(folder) / f"{stem}.{method_name}.dfy"
+
+
+def _scratch_dfy_path(out_dir: Path, stem: str, method_name: str) -> Path:
     if out_dir is not None:
         # Created here, not by _write_outcome: the check stage writes its
         # .check.dfy into this directory BEFORE any outcome is written, so a
@@ -553,12 +567,11 @@ def lift_file(dfy_path: Path, out_dir: Optional[Path] = None,
                 method=method_name, task=task, record=record, checked=False))
             continue
 
-        scratch = _scratch_dfy_path(Path(out_dir) if out_dir is not None else None,
-                                     stem, method_name or "_")
-        check_output, err = _stage_call(
-            "check", "lift_check.check", method_line,
-            lift_check.check, task, method, plan.closure, record, scratch, timeout_s,
-            callees=getattr(rewrite_result, "callees", ()))
+        with _scratch_dfy(Path(out_dir) if out_dir is not None else None, stem, method_name or "_") as scratch:
+            check_output, err = _stage_call(
+                "check", "lift_check.check", method_line,
+                lift_check.check, task, method, plan.closure, record, scratch, timeout_s,
+                callees=getattr(rewrite_result, "callees", ()))
         if err is not None:
             outcome.methods.append(MethodOutcome(
                 method=method_name, task=task, record=record, refusal=err))

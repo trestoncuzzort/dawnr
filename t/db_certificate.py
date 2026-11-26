@@ -77,8 +77,8 @@ def _default_adjudicate(task, body, kernel):
     (NO witness) and read the kernel verdict. Returns (normalized_state, raw)."""
     import audit
     _lmod, suffix = audit.tlib._LOWER_MOD[kernel]
-    work = pathlib.Path(tempfile.mkdtemp(prefix="t-db-"))
-    v = audit._kernel_verdict(task, body, kernel, work / f"c.{suffix}")
+    with tempfile.TemporaryDirectory(prefix="t-db-") as work:       # the lowered body is a private copy
+        v = audit._kernel_verdict(task, body, kernel, pathlib.Path(work) / f"c.{suffix}")
     return norm(v)
 
 

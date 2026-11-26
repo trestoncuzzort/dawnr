@@ -37,8 +37,8 @@ def _cell_cvc5(arg):
         task = tasks_io.load_task(path)
         body = task["body"] if which == "REAL" else json.loads(body_json)
         _lmod, suffix = audit.tlib._LOWER_MOD["spark"]
-        work = pathlib.Path(tempfile.mkdtemp(prefix="e2-cvc5-"))
-        v = audit._kernel_verdict(task, body, "spark", work / f"c.{suffix}")
+        with tempfile.TemporaryDirectory(prefix="e2-cvc5-") as work:    # the lowered body is a private copy
+            v = audit._kernel_verdict(task, body, "spark", pathlib.Path(work) / f"c.{suffix}")
         rec["cvc5_state"], _ = norm(v)
     except Exception as e:  # noqa: BLE001
         rec["cvc5_state"] = "unverifiable:worker-error"

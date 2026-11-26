@@ -127,14 +127,14 @@ def _cell(arg):
             rec.update(state="refused:source-changed", raw=f"exp {exp_src[:8]} got {got_src[:8]}")
             return rec
         body = task["body"] if which == "REAL" else json.loads(body_json)
-        work = pathlib.Path(tempfile.mkdtemp(prefix="t-fa-"))
         _lmod, suffix = audit.tlib._LOWER_MOD[kernel]
-        old = signal.signal(signal.SIGALRM, lambda *_: (_ for _ in ()).throw(_TO()))
-        signal.alarm(max(90, audit.TASK_SECONDS))
-        try:
-            v = audit._kernel_verdict(task, body, kernel, work / f"c.{suffix}")
-        finally:
-            signal.alarm(0); signal.signal(signal.SIGALRM, old)
+        with tempfile.TemporaryDirectory(prefix="t-fa-") as work:       # the lowered body is a private copy
+            old = signal.signal(signal.SIGALRM, lambda *_: (_ for _ in ()).throw(_TO()))
+            signal.alarm(max(90, audit.TASK_SECONDS))
+            try:
+                v = audit._kernel_verdict(task, body, kernel, pathlib.Path(work) / f"c.{suffix}")
+            finally:
+                signal.alarm(0); signal.signal(signal.SIGALRM, old)
         st, raw = norm(v)
         rec.update(state=st, raw=raw)
     except _TO:
