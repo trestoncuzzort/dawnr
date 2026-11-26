@@ -3,7 +3,9 @@
 What must hold: a code line that drops a clause from the line it stands for is reported, and a line copied exactly
 is not, whether it was read in a patch (with its "+" or without), an fs_read window (with its line numbers or
 without) or an fs_search hit; a code line is looked for one source line at a time, a blockquote line and a passage
-of six words or more in double quotes across the source's line breaks too; a passage of fewer than six words, and a
+of six words or more in double quotes across the source's line breaks too, and across lines a file has one after
+the other wherever the tools showed them (two windows, two search hits, a document's page break), never across
+two files or lines apart; a passage of fewer than six words, and a
 line with nothing to check in it (punctuation, an ellipsis, fewer than four characters), is never reported; what is
 reported comes in the order of the answer, once each. Standard library only.
 """
@@ -226,6 +228,82 @@ class LiveReviewTest(unittest.TestCase):
         patch = (PATCH + "+\t\t\t// Replay the base resolver's travel shortening, without modifying any body\n"
                  "+\t\t\t// or its original CCD record.\n")
         self.assertEqual(unfound_quotes(answer, [patch]), [CLAIMED])
+
+
+# One file's lines as the tools show them (dawnr_agent/files.py): fs_search's hits, each after the file's name and
+# its number; two fs_read windows, each after its header and with its line numbers, the first with the hint where
+# to go on; the same two windows as fs_read gave them before reads were numbered; a document's text with its pages
+# marked; and an edit's window of the lines it left.
+CACHE = ["# Cache", "", "The cache is cleared only when the person", "runs clean, and never on its own.", "",
+         "## Rebuilding", "", "", "A stale cache is rebuilt in the background."]
+BOTH = "> The cache is cleared only when the person runs clean, and never on its own.\n"
+HITS = ("search for 'the' in here (literal, ignoring case): 3 matches in 1 files, 4 files searched\n"
+        "here/docs/cache.md:3: The cache is cleared only when the person\n"
+        "here/docs/cache.md:4: runs clean, and never on its own.\n"
+        "here/docs/cache.md:9: A stale cache is rebuilt in the background.")
+
+
+def window(path: str, lines: list, start: int, last: int, numbered: bool = True) -> str:
+    """fs_read's reply for lines start..last of a file of these lines."""
+    shown = lines[start - 1:last]
+    body = "\n".join(f"{n:>{len(str(last))}}\t{line}" if numbered else line for n, line in enumerate(shown, start))
+    more = f"\n[lines {last + 1}-{len(lines)} not shown; read again with \"start\": {last + 1}]" if last < len(lines) else ""
+    return f"{path}: lines {start}-{last} of {len(lines)}, 310 bytes, sha256 0f1e2d3c4b5a\n{body}{more}"
+
+
+class ReadFormatTest(unittest.TestCase):
+    """What the tools put around and between the lines of a file is not in a quote of them: a passage that runs
+    over two lines a file has one after the other is found wherever the tools showed those lines."""
+
+    def test_a_passage_over_two_adjacent_search_hits_is_found_and_over_two_far_apart_is_not(self):
+        self.assertEqual(unfound_quotes(BOTH, [HITS]), [])
+        apart = 'It says "runs clean, and never on its own. A stale cache is rebuilt in the background".'
+        self.assertEqual(unfound_quotes(apart, [HITS]), ["runs clean, and never on its own. A stale cache is rebuilt "
+                                                         "in the background"])
+
+    def test_a_passage_over_two_windows_of_one_file_is_found_in_either_order_numbered_or_not(self):
+        first, second = window("here/docs/cache.md", CACHE, 1, 3), window("here/docs/cache.md", CACHE, 4, 9)
+        self.assertEqual(unfound_quotes(BOTH, [first]), ["The cache is cleared only when the person runs clean, and "
+                                                         "never on its own."])
+        self.assertEqual(unfound_quotes(BOTH, [first, second]), [])
+        self.assertEqual(unfound_quotes(BOTH, [second, PATCH, first]), [])
+        bare = [window("here/docs/cache.md", CACHE, 1, 3, numbered=False),
+                window("here/docs/cache.md", CACHE, 4, 9, numbered=False)]
+        self.assertEqual(unfound_quotes(BOTH, bare), [])
+
+    def test_a_window_and_a_search_hit_of_the_next_line_are_one_text(self):
+        hit = ("search for 'clean' in here/docs (literal, exact case): 1 matches in 1 files, 2 files searched\n"
+               "here/docs/cache.md:4: runs clean, and never on its own.")
+        self.assertEqual(unfound_quotes(BOTH, [window("here/docs/cache.md", CACHE, 1, 3), hit]), [])
+
+    def test_lines_of_two_files_or_of_one_file_not_one_after_the_other_are_not_joined(self):
+        other = ["runs clean, and never on its own."]
+        self.assertEqual(unfound_quotes(BOTH, [window("here/docs/cache.md", CACHE, 1, 3),
+                                               window("here/docs/other.md", other, 1, 1)]),
+                         ["The cache is cleared only when the person runs clean, and never on its own."])
+        skipped = CACHE[:3] + ["(a line between)"] + CACHE[3:]
+        self.assertEqual(unfound_quotes(BOTH, [window("here/docs/cache.md", skipped, 1, 3),
+                                               window("here/docs/cache.md", skipped, 5, 10)]),
+                         ["The cache is cleared only when the person runs clean, and never on its own."])
+
+    def test_a_passage_over_a_page_break_of_a_document_is_found(self):
+        pdf = ("here/docs/cache.pdf (pdf, 2 pages): lines 1-4 of 4 of its text, 20480 bytes\n"
+               "[page 1]\nThe cache is cleared only when the person\n[page 2]\nruns clean, and never on its own.")
+        self.assertEqual(unfound_quotes(BOTH, [pdf]), [])
+
+    def test_a_passage_from_an_edit_window_is_found(self):
+        # A guard, found before the change above too: an edit's window has its header before the lines and its
+        # hint after them, and nothing on them or between them.
+        edited = "lines 2-5 of 9 are now:\n\nThe cache is cleared only when the person\nruns clean, or on a schedule.\n"
+        self.assertEqual(unfound_quotes("> The cache is cleared only when the person runs clean, or on a schedule.\n",
+                                        [edited]), [])
+
+    def test_the_line_with_a_clause_dropped_is_still_reported_from_windows_and_hits(self):
+        patch = PATCH.splitlines()
+        hits = ("search for 'HasContactInCurrentStep' in here (literal, exact case): 2 matches in 1 files, 9 files "
+                "searched\nhere/sensor.patch:2: " + patch[1].strip() + "\nhere/sensor.patch:9: if (mContactManager.Has")
+        self.assertEqual(unfound_quotes(code(CLAIMED), [window("here/sensor.patch", patch, 1, 1),
+                                                        window("here/sensor.patch", patch, 2, 3), hits]), [CLAIMED])
 
 
 if __name__ == "__main__":

@@ -14,7 +14,10 @@ on a line of prose. Whitespace does not count on either side: each run of it is 
 the ends. A quote is found when it is inside one line of a source, the line as it was read. A blockquote line or a
 passage in quotes can run across the source's line breaks, so it is also found when it is inside the source's
 whole text, its lines joined by spaces, each line first taken without fs_read's line number and tab and then
-without a patch's one-character "+", "-" or " ": a quote of a patch's lines without their markers is found. Never
+without a patch's one-character "+", "-" or " ": a quote of a patch's lines without their markers is found. The
+lines of one file are joined the same way wherever the tools showed them, in two fs_read windows, as two fs_search
+hits or as one of each: each line without what the tool put on or around it (a hit's file name and number, a
+window's header and hints, a document's page marks), and only lines the file has one after the other. Never
 reported: a quote with nothing in it to check (no letter or digit, as in punctuation, brackets or an ellipsis, or
 fewer than four characters that are not spaces), a fence inside a blockquote, a passage of fewer than six words.
 
@@ -29,7 +32,7 @@ from typing import Iterable
 
 FENCE = re.compile(r"\s*(`{3,}|~{3,})(.*)")          # a code fence, and the rest of its line
 MARKERS = re.compile(r"\s*(?:>\s?)+")                # a blockquote line's ">", nested ones too
-NUMBER = re.compile(r" *\d+\t")                     # fs_read's line number, right-aligned, and its tab
+NUMBER = re.compile(r" *(\d+)\t")                   # fs_read's line number, right-aligned, and its tab
 QUOTED = re.compile(r'"([^"]*)"|\u201c([^\u201c\u201d]*)\u201d')
 WORDS = 6                                           # a passage in quotes of fewer words is a phrase
 # Compared, not shown (2026-11-26: five of the six quotes a 27B's three reviews had reported were copied, and differed
@@ -38,12 +41,24 @@ WORDS = 6                                           # a passage in quotes of few
 COMMENT = re.compile(r"\s*(?:/\*+|\*+/?|//+|#+|--|;+)\s?")
 LINK = re.compile(r"\[([^\]\n]*)\]\([^)\n]*\)")
 QUOTE_MARKS = str.maketrans(dict.fromkeys("'\u2018\u2019\u201a\u201b\u2032\u201c\u201d\u201e\u201f\u2033", '"'))
+# What the tools show of a file's lines, and around them (dawnr_agent/files.py): an fs_read window's header (the file,
+# its first and last line), the same for a document's text, whose pages are marked on lines of their own; a search's
+# header, then each hit after its file's name and its number; and a reply cut at its size. Lines a file has one after
+# the other are one text however the tools showed them: in two windows, as two hits, a window and a hit.
+WINDOW = re.compile(r"(.*): lines (\d+)-(\d+) of \d+, \d+ bytes")
+DOCUMENT = re.compile(r"(.*) \(.*\): lines (\d+)-(\d+) of \d+ of its text, \d+ bytes$")
+PAGE = re.compile(r"\[page \d+\]$")
+SEARCH = re.compile(r"search for .* \(literal, .*\): \d+ matches in \d+ files, \d+ files searched$")
+HIT = re.compile(r"(.+?):(\d+): (.*)")
+CLIPPED = re.compile(r"\[truncated at \d+ characters\]$")
 
 
 def unfound_quotes(answer: str, sources: Iterable[str]) -> list[str]:
     """The quoted material in the answer that is in none of the sources, whitespace made single spaces, in the
     order the answer has it, each once."""
-    read = [_source(text) for text in sources]
+    texts = list(sources)
+    read = [_source(text) for text in texts]
+    runs = [_joined(run) for run in _runs(texts)]
     unfound: list[str] = []
     for quote, spans in _quoted(answer):
         quote = _plain(quote)
@@ -52,7 +67,8 @@ def unfound_quotes(answer: str, sources: Iterable[str]) -> list[str]:
         key = _fold(quote)
         if spans:                                   # prose: the quote marks around it and its closing stop are its own
             key = key.strip('" ').rstrip(".,;:!?").strip('" ')
-        if not any(key in lines or (spans and any(key in whole for whole in wholes)) for lines, wholes in read):
+        if not (any(key in lines or (spans and any(key in whole for whole in wholes)) for lines, wholes in read)
+                or (spans and any(key in whole for wholes in runs for whole in wholes))):
             unfound.append(quote)
     return unfound
 
@@ -83,21 +99,63 @@ def _quoted(answer: str) -> list[tuple[str, bool]]:
     return out
 
 
-def _source(text: str) -> tuple[str, str]:
+def _source(text: str) -> tuple[str, tuple[str, str]]:
     """A source's lines as they were read, one to a line, and its whole text with each line taken without fs_read's
     number and tab and a patch's marker; whitespace made single spaces in both. A line needs nothing taken off to
     be searched on its own (what is inside the rest of a line is inside the line, and a quote that keeps the "+" or
     the number is found too); the markers matter where lines are joined, between the end of one and the next."""
     lines = text.splitlines()
-    bare, uncommented = [], []
-    for line in lines:
-        number = NUMBER.match(line)
-        line = line[number.end():] if number else line
-        line = line[1:] if line[:1] in ("+", "-", " ") else line
-        bare.append(line)
-        comment = COMMENT.match(line)              # and once more without a comment's marker, where a comment runs on
-        uncommented.append(line[comment.end():] if comment else line)
-    return "\n".join(_fold(line) for line in lines), (_fold(" ".join(bare)), _fold(" ".join(uncommented)))
+    unnumbered = [line[number.end():] if (number := NUMBER.match(line)) else line for line in lines]
+    return "\n".join(_fold(line) for line in lines), _joined(unnumbered)
+
+
+def _joined(lines: list[str]) -> tuple[str, str]:
+    """Lines as one text, each without a patch's one-character marker, and once more each also without a comment's
+    marker, where a comment runs on; whitespace made single spaces."""
+    bare = [line[1:] if line[:1] in ("+", "-", " ") else line for line in lines]
+    uncommented = [line[comment.end():] if (comment := COMMENT.match(line)) else line for line in bare]
+    return _fold(" ".join(bare)), _fold(" ".join(uncommented))
+
+
+def _shown(text: str) -> list[tuple[str, int, str | None]]:
+    """(file, number, text) of each line of a file that this tool's reply shows, without what the tool put on it;
+    a page's mark in a document has None for its text. Nothing for a reply that is not a window or a search."""
+    lines = text.splitlines()
+    head = lines[0] if lines else ""
+    window, document = WINDOW.match(head), DOCUMENT.match(head)
+    if window or document:
+        path, start, last = (window or document).group(1, 2, 3)
+        start, last, body = int(start), int(last), lines[1:]
+        if window and body and re.match(rf" *{start}\t", body[0]):        # numbered: each line says which it is
+            return [(path, int(number.group(1)), line[number.end():]) for line in body
+                    if (number := NUMBER.match(line)) and start <= int(number.group(1)) <= last]
+        return [(path, n, None if document and PAGE.match(line) else line)
+                for n, line in enumerate(body[:last - start + 1], start) if not CLIPPED.match(line)]
+    if SEARCH.match(head):
+        return [(hit.group(1), int(hit.group(2)), hit.group(3)) for hit in map(HIT.match, lines[1:]) if hit]
+    return []
+
+
+def _runs(texts: list[str]) -> list[list[str]]:
+    """The lines the tools showed of each file, in runs of lines the file has one after the other, wherever each was
+    shown (two windows, two hits, a window and a hit); of a line shown twice, the longer (a hit's is stripped, and
+    cut at 200 characters). A page's mark keeps the lines on either side of it one after the other."""
+    files: dict[str, dict[int, str | None]] = {}
+    for text in texts:
+        for path, n, line in _shown(text):
+            got = files.setdefault(path, {})
+            if n not in got or len(line or "") > len(got[n] or ""):
+                got[n] = line
+    runs: list[list[str]] = []
+    for got in files.values():
+        last = None
+        for n in sorted(got):
+            if n - 1 != last:
+                runs.append([])
+            if got[n] is not None:
+                runs[-1].append(got[n])
+            last = n
+    return runs
 
 
 def _plain(text: str) -> str:
