@@ -6,7 +6,8 @@ without) or an fs_search hit; a code line is looked for one source line at a tim
 of six words or more in double quotes across the source's line breaks too, and across lines a file has one after
 the other wherever the tools showed them (two windows, two search hits, a document's page break), never across
 two files or lines apart; a passage of either text of a patch over a changed line is found; a diff block's line is
-compared without its marker and its syntax is not a quote; a passage of fewer than six words, and a
+compared without its marker and its syntax is not a quote; prose is found with Markdown's emphasis, code spans and
+escapes or without them, a code line only with every character; a passage of fewer than six words, and a
 line with nothing to check in it (punctuation, an ellipsis, fewer than four characters), is never reported; what is
 reported comes in the order of the answer, once each. Standard library only.
 """
@@ -351,6 +352,42 @@ class DiffTest(unittest.TestCase):
 
     def test_the_line_with_a_clause_dropped_is_still_reported_in_a_diff_block(self):
         self.assertEqual(unfound_quotes(code("+" + CLAIMED, "+    continue;", tag="diff"), [PATCH]), ["+" + CLAIMED])
+
+
+# The start of two lines of instruction.md as a 27B read it (2026-11-26): Markdown, with emphasis and code spans.
+INSTRUCTION = window("here/instruction.md", [
+    "**Task description.** A fast dynamic body using `EMotionQuality::LinearCast` can pass through a static sensor in "
+    "a single update without notifying the contact listener. Report every static sensor the body really touches on its "
+    "way, as an ordinary contact.", "",
+    "**Test guidelines.** Build and run the native `UnitTests` target with CMake. Focused tests should call "
+    "`PhysicsSystem::Update` and observe the existing `ContactListener` API. From `Build/`, configure a Debug GCC build "
+    "with `TARGET_UNIT_TESTS=ON` and the samples disabled."], 1, 3)
+
+
+class MarkdownTest(unittest.TestCase):
+    """Markdown's inline formatting is not text a reader sees: a quote in prose is found with it or without it, on
+    either side; a code line is compared with every character."""
+
+    def test_emphasis_and_code_spans_in_what_was_read_are_not_needed_in_a_quote_of_it(self):
+        answer = ("> Task description. A fast dynamic body using EMotionQuality::LinearCast can pass through a static "
+                  "sensor in a single update\n\n"
+                  'It asks that "Focused tests should call PhysicsSystem::Update and observe the existing ContactListener '
+                  'API."\n')
+        self.assertEqual(unfound_quotes(answer, [INSTRUCTION]), [])
+
+    def test_emphasis_code_spans_and_escapes_the_answer_adds_are_not_compared(self):
+        answer = ("> Report every static sensor the body **really** touches on its way, as an *ordinary* contact.\n\n"
+                  'It says to "configure a Debug GCC build with TARGET\\_UNIT\\_TESTS=ON and the samples disabled".\n')
+        self.assertEqual(unfound_quotes(answer, [INSTRUCTION]), [])
+
+    def test_a_word_changed_is_still_reported_and_a_code_line_keeps_every_character(self):
+        answer = ("> Report every static sensor the body touches on its way, as an ordinary contact.\n\n"
+                  "> configure a Debug GCC build with TARGETUNITTESTS=ON and the samples disabled\n\n"
+                  + code("return a b", "Report every static sensor the body really touches on its way"))
+        self.assertEqual(unfound_quotes(answer, [INSTRUCTION, "def f(a, b):\n    return a * b\n"]),
+                         ["Report every static sensor the body touches on its way, as an ordinary contact.",
+                          "configure a Debug GCC build with TARGETUNITTESTS=ON and the samples disabled",
+                          "return a b"])
 
 
 if __name__ == "__main__":

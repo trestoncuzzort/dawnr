@@ -20,8 +20,10 @@ without a patch's one-character "+", "-" or " ": a quote of a patch's lines with
 patch is joined once more as each of its two texts, without its "-" lines and without its "+" lines. The
 lines of one file are joined the same way wherever the tools showed them, in two fs_read windows, as two fs_search
 hits or as one of each: each line without what the tool put on or around it (a hit's file name and number, a
-window's header and hints, a document's page marks), and only lines the file has one after the other. Never
-reported: a quote with nothing in it to check (no letter or digit, as in punctuation, brackets or an ellipsis, or
+window's header and hints, a document's page marks), and only lines the file has one after the other. A
+blockquote line or a passage is also found without Markdown's inline formatting on either side (a backslash before
+punctuation, a code span's backticks, emphasis), which a reader does not see; a code line keeps every character.
+Never reported: a quote with nothing in it to check (no letter or digit, as in punctuation, brackets or an ellipsis, or
 fewer than four characters that are not spaces), a fence inside a blockquote, a passage of fewer than six words.
 
 This is the test locallm/rag_quote.py makes of a quote (word for word in a document, whitespace folded), made of
@@ -66,14 +68,20 @@ DIFF_FILES = re.compile(r"diff --git |index [0-9a-f]+\.\.[0-9a-f]+|(?:---|\+\+\+
                         r"|(?:new|deleted) file mode |(?:dis)?similarity index |rename (?:from|to) |copy (?:from|to) "
                         r"|Binary files |\\ No newline at end of file")
 DIFF_TAGS = ("diff", "patch", "udiff")
+# Markdown's inline formatting, which a reader of the text does not see (CommonMark 0.31.2, spec.commonmark.org/0.31.2:
+# 2.4 Backslash escapes, 6.1 Code spans, 6.2 Emphasis and strong emphasis): a quote in prose is also compared without
+# a backslash before punctuation, without backticks, and without the * and _ of emphasis, on both sides (not an _
+# inside a word, as in snake_case). A code line is compared with every one of them: there they are the code.
+ESCAPED = re.compile(r"\\([!-/:-@\[-`{-~])")
+EMPHASIS = re.compile(r"(?<!\w)[*_]+|[*_]+(?!\w)")
 
 
 def unfound_quotes(answer: str, sources: Iterable[str]) -> list[str]:
     """The quoted material in the answer that is in none of the sources, whitespace made single spaces, in the
     order the answer has it, each once."""
     texts = list(sources)
-    read = [_source(text) for text in texts]
-    runs = [_joined(run, patch) for run, patch in _runs(texts)]
+    read = [_source(text) for text in texts] + [("", _joined(run, patch)) for run, patch in _runs(texts)]
+    unmarked = None                                 # what was read without Markdown's inline formatting, when needed
     unfound: list[str] = []
     for quote, compared, spans in _quoted(answer):
         quote, compared = _plain(quote), _plain(compared)
@@ -81,11 +89,31 @@ def unfound_quotes(answer: str, sources: Iterable[str]) -> list[str]:
             continue
         key = _fold(compared)
         if spans:                                   # prose: the quote marks around it and its closing stop are its own
-            key = key.strip('" ').rstrip(".,;:!?").strip('" ')
-        if not (any(key in lines or (spans and any(key in whole for whole in wholes)) for lines, wholes in read)
-                or (spans and any(key in whole for wholes in runs for whole in wholes))):
-            unfound.append(quote)
+            key = _bare(key)
+        if _found(key, spans, read):
+            continue
+        if spans:
+            if unmarked is None:
+                unmarked = [("\n".join(map(_unmarked, lines.split("\n"))), tuple(map(_unmarked, wholes)))
+                            for lines, wholes in read]
+            if _found(_bare(_unmarked(key)), spans, unmarked):
+                continue
+        unfound.append(quote)
     return unfound
+
+
+def _found(key: str, spans: bool, read: list[tuple[str, tuple[str, ...]]]) -> bool:
+    """Whether the key is inside a line of what was read, or, for a quote that may run across line breaks, inside a
+    text joined from its lines."""
+    return any(key in lines or (spans and any(key in whole for whole in wholes)) for lines, wholes in read)
+
+
+def _bare(key: str) -> str:
+    return key.strip('" ').rstrip(".,;:!?").strip('" ')
+
+
+def _unmarked(text: str) -> str:
+    return _plain(EMPHASIS.sub("", ESCAPED.sub(r"\1", text).replace("`", "")))
 
 
 def _quoted(answer: str) -> list[tuple[str, str, bool]]:
