@@ -32,6 +32,12 @@ MARKERS = re.compile(r"\s*(?:>\s?)+")                # a blockquote line's ">", 
 NUMBER = re.compile(r" *\d+\t")                     # fs_read's line number, right-aligned, and its tab
 QUOTED = re.compile(r'"([^"]*)"|\u201c([^\u201c\u201d]*)\u201d')
 WORDS = 6                                           # a passage in quotes of fewer words is a phrase
+# Compared, not shown (2026-11-26: five of the six quotes a 27B's three reviews had reported were copied, and differed
+# from what was read only in these): a comment's marker at the start of a line, where a comment runs on; a Markdown
+# link, which a reader quotes by its text; quote marks of every style and escaped ones, as one.
+COMMENT = re.compile(r"\s*(?:/\*+|\*+/?|//+|#+|--|;+)\s?")
+LINK = re.compile(r"\[([^\]\n]*)\]\([^)\n]*\)")
+QUOTE_MARKS = str.maketrans(dict.fromkeys("'\u2018\u2019\u201a\u201b\u2032\u201c\u201d\u201e\u201f\u2033", '"'))
 
 
 def unfound_quotes(answer: str, sources: Iterable[str]) -> list[str]:
@@ -43,7 +49,10 @@ def unfound_quotes(answer: str, sources: Iterable[str]) -> list[str]:
         quote = _plain(quote)
         if quote in unfound or not _checkable(quote):
             continue
-        if not any(quote in lines or (spans and quote in whole) for lines, whole in read):
+        key = _fold(quote)
+        if spans:                                   # prose: the quote marks around it and its closing stop are its own
+            key = key.strip('" ').rstrip(".,;:!?").strip('" ')
+        if not any(key in lines or (spans and any(key in whole for whole in wholes)) for lines, wholes in read):
             unfound.append(quote)
     return unfound
 
@@ -80,16 +89,24 @@ def _source(text: str) -> tuple[str, str]:
     be searched on its own (what is inside the rest of a line is inside the line, and a quote that keeps the "+" or
     the number is found too); the markers matter where lines are joined, between the end of one and the next."""
     lines = text.splitlines()
-    bare = []
+    bare, uncommented = [], []
     for line in lines:
         number = NUMBER.match(line)
         line = line[number.end():] if number else line
-        bare.append(line[1:] if line[:1] in ("+", "-", " ") else line)
-    return "\n".join(_plain(line) for line in lines), _plain(" ".join(bare))
+        line = line[1:] if line[:1] in ("+", "-", " ") else line
+        bare.append(line)
+        comment = COMMENT.match(line)              # and once more without a comment's marker, where a comment runs on
+        uncommented.append(line[comment.end():] if comment else line)
+    return "\n".join(_fold(line) for line in lines), (_fold(" ".join(bare)), _fold(" ".join(uncommented)))
 
 
 def _plain(text: str) -> str:
     return " ".join(text.split())
+
+
+def _fold(text: str) -> str:
+    """Text as it is compared: whitespace single spaces, a Markdown link its text, every quote mark one."""
+    return _plain(LINK.sub(r"\1", text.replace('\\"', '"').replace("\\'", "'")).translate(QUOTE_MARKS))
 
 
 def _checkable(quote: str) -> bool:

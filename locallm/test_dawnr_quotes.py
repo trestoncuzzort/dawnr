@@ -180,5 +180,53 @@ class ResultTest(unittest.TestCase):
         self.assertEqual(unfound_quotes(answer, iter([DOC, PATCH])), [CLAIMED])
 
 
+class LiveReviewTest(unittest.TestCase):
+    """Quotes a 27B wrote in three reviews of one task (2026-11-26), every one copied from what it read and every one
+    reported before: a comment that runs over two lines, a sentence set in quotes inside a blockquote, a sentence whose
+    source has Markdown links, and a sentence whose quotes inside it are another style, with the period inside."""
+
+    def test_a_comment_quoted_across_two_lines_is_found_without_the_comment_markers(self):
+        patch = ("here/golden.patch: lines 256-257 of 500, 27580 bytes, sha256 94438ada9f84\n"
+                 " 256\t+\t\t\t// Replay the base resolver's travel shortening, without modifying any body\n"
+                 " 257\t+\t\t\t// or its original CCD record. Observe the fraction at each body's own turn.\n")
+        scenes = ("here/scenes.py: lines 110-111 of 188, 10762 bytes, sha256 0a1b2c3d4e5f\n"
+                  " 110\t    # A long thin box starts horizontal. Rotation at integration places its tip\n"
+                  " 111\t    # in the sensor before the positive-X cast. Translation then separates it.\n")
+        answer = ('It states "Replay the base resolver\'s travel shortening, without modifying any body or its original '
+                  'CCD record." and the scene says "Rotation at integration places its tip in the sensor before the '
+                  'positive-X cast. Translation then separates it."')
+        self.assertEqual(unfound_quotes(answer, [patch, scenes]), [])
+
+    def test_a_blockquote_set_in_quote_marks_is_found(self):
+        brief = ("here/instruction.md: lines 2-2 of 8, 1945 bytes, sha256 26b5c67b4b06\n"
+                 "2\t**Task description.** A fast body can pass through a sensor. Report every static sensor the body "
+                 "really touches on its way, as an ordinary contact: from the step it is touched, it gets exactly what "
+                 "the listener gives any other contact. Change nothing else.\n")
+        answer = ('> "Report every static sensor the body really touches on its way, as an ordinary contact: from the '
+                  'step it is touched, it gets exactly what the listener gives any other contact."')
+        self.assertEqual(unfound_quotes(answer, [brief]), [])
+
+    def test_a_sentence_whose_source_has_markdown_links_is_found_by_the_links_text(self):
+        rationale = ("here/docs/rationale.md: lines 150-150 of 154, 22834 bytes, sha256 7c4a8d09ca37\n"
+                     "150\tThe [component matrix](check-evidence/case-matrix.tsv#L1-L25) predates the rotated-start "
+                     "fix. The [contact traces](check-evidence/contact-proof.log#L1-L9) include the accepted and "
+                     "rejected discrete controls.\n")
+        answer = '- Line 150: "The component matrix predates the rotated-start fix. The contact traces include the accepted and rejected discrete controls."'
+        self.assertEqual(unfound_quotes(answer, [rationale]), [])
+
+    def test_quote_marks_of_another_style_and_a_period_inside_the_closing_quote_are_found(self):
+        checks = ("here/tests/checks.toml: lines 133-133 of 306, 13933 bytes, sha256 e3b0c44298fc\n"
+                  '133\treference = { path = "AGENTS.md", line = 79, quote = "- User-visible changes go into '
+                  '`Docs/ReleaseNotes.md` (under \\"Unreleased changes\\"); breaking API changes also go elsewhere." }\n')
+        answer = "Required by: “User-visible changes go into `Docs/ReleaseNotes.md` (under 'Unreleased changes').”"
+        self.assertEqual(unfound_quotes(answer, [checks]), [])
+
+    def test_the_line_with_a_clause_dropped_is_still_reported_with_all_of_this_in_place(self):
+        answer = f"```\n{CLAIMED}\n    continue;\n```\nAs the patch says: \"without modifying any body or its original CCD record.\""
+        patch = (PATCH + "+\t\t\t// Replay the base resolver's travel shortening, without modifying any body\n"
+                 "+\t\t\t// or its original CCD record.\n")
+        self.assertEqual(unfound_quotes(answer, [patch]), [CLAIMED])
+
+
 if __name__ == "__main__":
     unittest.main()
