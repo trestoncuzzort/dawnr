@@ -653,6 +653,33 @@ def test_a_turn_cut_off_at_its_length_while_thinking_aloud_is_not_taken_for_the_
     assert model.bodies[1]["messages"][-2]["content"].endswith("c.put('a', 1) ...")
 
 
+def test_an_answer_the_server_cut_at_its_length_limit_says_so_and_is_never_passed_off_as_whole(tmp_path):
+    # Every reply that can become the answer is read for finish_reason "length", not only the first one while tools are
+    # offered: here the reply asked for after a cut-off is cut too, and what is handed back says it is not all of it.
+    first = turn(text="Let me trace through the test: 1. c = LRU(2) ... 2. c.put('a', 1) ...")
+    first["choices"][0]["finish_reason"] = "length"
+    again = turn(text="It says the meeting moved to Thursday, and the room")
+    again["choices"][0]["finish_reason"] = "length"
+    model = Model(first, again)
+    work, harness, agent, planner, meter, said, asked, _ask = session(tmp_path, model)
+    with harness:
+        got = cli.run_task(agent, planner, meter, "What do my notes say?", [], said.append)
+    assert got != "It says the meeting moved to Thursday, and the room"     # not handed back as if it were all of it
+    assert got == "It says the meeting moved to Thursday, and the room" + cli.CUT_SHORT
+
+
+def test_an_account_the_server_cut_at_its_length_limit_says_so(tmp_path):
+    cut = turn(text="It read the notes and then went round the same")
+    cut["choices"][0]["finish_reason"] = "length"
+    whole = turn(text="It read the notes twice and stopped.")
+    *_, planner, _meter, _said, _asked, _ask = session(tmp_path, Model(cut, whole))
+    planner.messages = lambda result: [{"role": "user", "content": "What do my notes say?"}]
+    told = planner.account(None, "it went round")
+    assert told != "It read the notes and then went round the same"           # not handed back as if it were all of it
+    assert told == "It read the notes and then went round the same" + cli.CUT_SHORT
+    assert planner.account(None, "it went round") == "It read the notes twice and stopped."
+
+
 LITE = """<html><body><table>
 <tr><td>1.&nbsp;</td><td><a rel="nofollow" href="//duckduckgo.com/l/?uddg=https%3A%2F%2Fdocs.python.org%2F3%2Flibrary%2Fshlex.html&amp;rut=abc" class='result-link'>shlex &mdash; Simple lexical analysis</a></td></tr>
 <tr><td>&nbsp;</td><td class='result-snippet'>Return a shell-escaped version of the string <b>s</b>.</td></tr>
