@@ -165,7 +165,8 @@ def extract(source: str, entry: dict) -> str:
     tail = text.rstrip()
     if kind == "function" and (not tail.endswith("}") or (not conditional and closed != [len(tail) - 1])):
         raise ValueError(f"{entry['name']}: not exactly one function definition")
-    if kind == "declaration" and (not tail.endswith(";") or (not conditional and len(closed) > 1)):
+    # `static const struct { ... } table[] = { ... };` closes a brace twice and is still one declaration.
+    if kind == "declaration" and not tail.endswith(";"):
         raise ValueError(f"{entry['name']}: not exactly one declaration")
     return text
 

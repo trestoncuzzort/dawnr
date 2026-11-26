@@ -123,6 +123,11 @@ def test_a_raw_string_literal_is_still_refused(literal):
         cases.extract(source, {"name": "name", "line": 1, "end_line": 4})
 
 
+def test_a_table_of_an_unnamed_struct_type_is_one_declaration():
+    source = "static const struct {\n\tint key;\n\tint value;\n} table[] = {\n\t{1, 2},\n\t{3, 4},\n};\n"
+    assert cases.extract(source, {"name": "table", "kind": "declaration", "line": 1, "end_line": 7}) == source
+
+
 def test_no_source_byte_can_change_under_the_pinned_identity(tmp_path):
     root = write_case(tmp_path / "case")
     cases.build_unit(cases.load(root), "original", root)
