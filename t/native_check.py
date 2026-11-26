@@ -222,7 +222,12 @@ def interpret(inventory: dict, coverage: dict, checking: dict, scope: dict) -> d
             location = goal.get("sourceLocation", {})
             return location.get("function") != "harness" and (location.get("function"), location.get("line")) in pointer_calls
         through_pointer = [goal for goal in every_goal if not library_goal(goal) and pointer_goal(goal)]
-        goals = [goal for goal in every_goal if not library_goal(goal) and not pointer_goal(goal)]
+        # The coverage stage also lists the preconditions of an inlined library call (memcpy) at the call site in
+        # the unit. They are properties, checked in the checking stage, and not assumptions, so they are listed apart as well.
+        def assumption_goal(goal: dict) -> bool:
+            return str(goal.get("description", "")).startswith(("assert(false) before assume(", "assert(false) after assume("))
+        not_assumptions = [goal for goal in every_goal if not library_goal(goal) and not pointer_goal(goal) and not assumption_goal(goal)]
+        goals = [goal for goal in every_goal if not library_goal(goal) and not pointer_goal(goal) and assumption_goal(goal)]
         library = [goal for goal in every_goal if library_goal(goal)]
         expected = [prop["name"] for prop in props]
         actual = [result["property"] for result in results]
@@ -262,6 +267,8 @@ def interpret(inventory: dict, coverage: dict, checking: dict, scope: dict) -> d
             detail["library_assumption_goals"] = clean(library)
         if through_pointer:
             detail["function_pointer_assumption_goals"] = clean(through_pointer)
+        if not_assumptions:
+            detail["coverage_goals_that_are_not_assumptions"] = clean(not_assumptions)
         if any(goal["status"] != "satisfied" for goal in goals):
             return {**detail, "verdict": "vacuous", "reason": "assumption coverage has an unreachable before/after goal"}
         missing = [result for result in failed if body_missing(result)]

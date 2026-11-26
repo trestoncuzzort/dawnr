@@ -1007,3 +1007,18 @@ def test_a_call_through_a_function_pointer_gets_the_controls_of_any_case(tmp_pat
     assert summary["ok"] and [row["verdict"] for row in summary["rows"]] == ["counterexample", "complete", "vacuous"], summary["rows"]
     receipt = json.loads((tmp_path / "suite" / "fixed" / "receipt.json").read_text())
     assert len(receipt["function_pointer_assumption_goals"]) == 2 and len(receipt["assumption_goals"]) == 2 * 2
+
+
+PUT = "void put_u32(unsigned char *tab, unsigned val)\n{\n\tmemcpy(tab, &val, sizeof(val));\n}\n"
+
+
+@real
+def test_a_memcpy_expanded_in_place_gets_the_controls_of_any_case(tmp_path):
+    """The original copies one byte too few."""
+    root = custom_case(tmp_path / "case", PUT.replace("sizeof(val)", "sizeof(val) - 1"), PUT, ["put_u32"], prelude="#include <string.h>\n",
+                       inputs=[{"name": "a", "type": "unsigned int"}], assertions=["put.bytes"],
+                       harness='    unsigned char tab[4] = {0};\n    put_u32(tab, a);\n    __CPROVER_assert(tab[3] == (unsigned char)(a >> 24), "put.bytes");\n')
+    summary = cases.suite(root, tmp_path / "suite", cbmc=CBMC)
+    assert summary["ok"] and [row["verdict"] for row in summary["rows"]] == ["counterexample", "complete", "vacuous"], summary["rows"]
+    receipt = json.loads((tmp_path / "suite" / "fixed" / "receipt.json").read_text())
+    assert len(receipt["coverage_goals_that_are_not_assumptions"]) == 3 and len(receipt["assumption_goals"]) == 2

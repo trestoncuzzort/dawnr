@@ -282,6 +282,39 @@ def test_the_harness_s_own_assumption_on_the_line_of_a_call_through_a_pointer_st
     assert result["verdict"] == "complete" and len(result["assumption_goals"]) == 2 and "function_pointer_assumption_goals" not in result
 
 
+def inlined_preconditions(inventory, coverage, checking):
+    """memcpy expanded at its call site: CBMC 6.11.0 lists its preconditions among the coverage goals, located in the unit
+    and not in a library file, and they are properties of the other two stages too (as measured on a case over DynBuf)."""
+    where = {"file": "unit.c", "function": "put_u32", "line": "23"}
+    for index, description in enumerate(("memcpy src/dst overlap", "memcpy source region readable", "memcpy destination region writeable"), 1):
+        name = f"put_u32.precondition_instance.{index}"
+        edit(inventory, lambda d: d[0]["properties"].append({"name": name, "description": description, "sourceLocation": where}))
+        edit(checking, lambda d: d[0]["result"].append({"property": name, "description": description, "status": "SUCCESS", "sourceLocation": where}))
+        edit(coverage, lambda d: d[0]["goals"].append({"goal": name, "description": description, "sourceLocation": where, "status": "failed"}))
+    edit(coverage, lambda d: d[0].update(totalGoals=len(d[0]["goals"])))
+
+
+def test_the_preconditions_of_an_inlined_library_call_are_not_assumptions():
+    inventory, coverage, checking, scope = sample()
+    inlined_preconditions(inventory, coverage, checking)
+    result = native.interpret(inventory, coverage, checking, scope)
+    assert result["verdict"] == "complete", result["reason"]
+    assert len(result["assumption_goals"]) == 2 and len(result["coverage_goals_that_are_not_assumptions"]) == 3
+
+
+def test_a_goal_that_is_not_an_assumption_does_not_stand_in_for_one():
+    inventory, coverage, checking, scope = sample()
+    inlined_preconditions(inventory, coverage, checking)
+    scope["expected_assumptions"] = 2
+    assert native.interpret(inventory, coverage, checking, scope)["verdict"] == "tool_error"
+
+
+def test_a_harness_goal_that_is_neither_side_of_an_assumption_still_breaks_the_count():
+    inventory, coverage, checking, scope = sample()
+    edit(coverage, lambda d: d[0]["goals"][1].update(description="assert(false) somewhere else"))
+    assert native.interpret(inventory, coverage, checking, scope)["verdict"] == "tool_error"
+
+
 def test_running_out_of_memory_is_a_named_nonresult():
     inventory, coverage, checking, scope = sample()
     coverage.update(exit=6, stdout=json.dumps([{"messageType": "ERROR", "messageText": "Out of memory"}]))
