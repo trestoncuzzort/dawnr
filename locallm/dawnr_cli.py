@@ -49,6 +49,11 @@ import urllib.error
 import urllib.request
 from pathlib import Path
 
+try:
+    import fcntl                                                # POSIX: the record of --state folders is locked
+except ImportError:                                             # pragma: no cover -- Windows
+    fcntl = None
+
 HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE))
 sys.path.insert(0, str(HERE.parent / "t"))
@@ -161,6 +166,54 @@ def default_config(cwd: Path, *, read_only: bool = False, roots: tuple = (), onl
     if online:                                                  # web_search and web_fetch, each asked for; the search needs
         config["web"] = {"search": {"backend": "duckduckgo"}}   # no account (dawnr_harness/web.py)
     return config
+
+
+# Where each folder given with --state is written down, inside DAWNR_HOME: `dawnr forget` (bin/dawnr) knows the default
+# state folder by name, and a --state folder only from here (PRIVACY.md, "Erasing")
+STATE_FOLDERS = "state-folders"
+
+
+def remember_state(state: Path, env=None) -> Path | None:
+    """Write the folder given with --state into DAWNR_HOME/state-folders, so that `dawnr forget` can erase it. The
+    path is made absolute with every link resolved, the place the journal will really be; it is written once, one
+    path a line. The record is opened without following a link, created owner-only, and appended to under an
+    exclusive lock, so that two sessions starting together neither lose a line nor write one twice. The path
+    recorded, or None: when DAWNR_HOME is not set (this file run by hand, not by the dawnr command), or when the
+    record cannot be written, which is said, because the folder then outlives `dawnr forget`."""
+    env = os.environ if env is None else env
+    home = env.get("DAWNR_HOME")
+    if not home:
+        return None
+    folder = Path(state).expanduser()
+    try:
+        folder = folder.resolve()                               # a loop of links is RuntimeError before Python 3.13
+        line = os.fsencode(str(folder))
+        if b"\n" in line:
+            raise OSError("the folder's name holds a line break, and the record is one path a line")
+        flags = os.O_RDWR | os.O_CREAT | os.O_APPEND | getattr(os, "O_NOFOLLOW", 0) | getattr(os, "O_CLOEXEC", 0)
+        fd = os.open(Path(home) / STATE_FOLDERS, flags, 0o600)
+        try:
+            if fcntl is not None:
+                fcntl.flock(fd, fcntl.LOCK_EX)
+            chunks = []
+            while True:
+                chunk = os.read(fd, 1 << 16)
+                if not chunk:
+                    break
+                chunks.append(chunk)
+            kept = b"".join(chunks)
+            if line not in kept.split(b"\n"):
+                # a line a stopped writer left unfinished keeps its own line, so this one is never joined to it
+                os.write(fd, (b"\n" if kept and not kept.endswith(b"\n") else b"") + line + b"\n")
+                os.fsync(fd)
+        finally:
+            os.close(fd)
+    except (OSError, RuntimeError) as e:
+        why = getattr(e, "strerror", None) or e
+        print(f"dawnr: {folder} could not be written into {Path(home) / STATE_FOLDERS} ({why}), so `dawnr forget` "
+              "will not erase it: erase it yourself when its journal is no longer wanted", file=sys.stderr)
+        return None
+    return folder
 
 
 def build_agent(config, **how):
@@ -1002,6 +1055,8 @@ def main(argv=None) -> int:
     task = " ".join(a.task).strip()
     if not task and not sys.stdin.isatty():
         ap.error("no task was given and this is not a terminal")
+    if a.state is not None:                                     # before the agent makes the folder
+        remember_state(a.state)
     config = default_config(a.cwd, read_only=a.read_only, roots=tuple(a.root), online=a.online, state=a.state)
     approve = plan_approver(yes=a.yes)
     harness, agent = build_agent(config, plan_approver=approve)
