@@ -351,6 +351,10 @@ def analyse(text: str, types_from: str | None = None) -> dict:
                 functions[parts[1]] = index
             continue
         head = clean_head(item.rstrip(";"))
+        # A bare type declaration such as `enum { A = 1, B };` is a type, not a global named A.
+        if re.match(r"(?:enum|struct|union)\b[^{;=()]*\{", head) and head.rstrip().endswith("}"):
+            others.append(index)
+            continue
         if not head.startswith(("typedef", "extern", "__extension__ typedef")) and "=" in head:
             match = re.search(r"([A-Za-z_][A-Za-z0-9_]*)\s*(?:\[[^\]]*\]\s*)*=", head)
             if match:

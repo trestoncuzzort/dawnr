@@ -64,6 +64,27 @@ def test_only_function_definitions_read_as_functions():
     assert not scaffold.is_function_head("struct node") and not scaffold.is_function_head("int x[] = (int[])") and not scaffold.is_function_head("typedef int (f)(void)")
 
 
+ENUM = "enum { FIRST = 1, SECOND };\nint pick(int a)\n{\n\treturn a ? SECOND : 0;\n}\n"
+
+
+def test_a_bare_type_with_an_initializer_is_a_type_and_not_a_global(tmp_path):
+    unit = scaffold.analyse(ENUM)
+    assert unit["globals"] == {} and unit["others"] == [0]
+    assert "refused" not in scaffold.draft(unit, "pick", tmp_path / "case", "x.c")
+    assert "enum { FIRST = 1, SECOND };" in cases.load(tmp_path / "case")["prelude"]
+
+
+def test_a_table_of_an_unnamed_struct_type_is_still_a_global_by_its_name():
+    unit = scaffold.analyse("static const struct { int key; int value; } table[] = { {1, 2} };\nint pick(void)\n{\n\treturn table[0].key;\n}\n")
+    assert set(unit["globals"]) == {"table"} and unit["others"] == []
+
+
+@real
+def test_a_draft_that_names_a_later_enumerator_goes_through_the_gate(tmp_path):
+    assert "refused" not in scaffold.draft(scaffold.analyse(ENUM), "pick", tmp_path / "case", "x.c")
+    assert cases.check(tmp_path / "case", "original", tmp_path / "gate", cbmc=CBMC)["verdict"] == "complete"
+
+
 def test_a_draft_holds_what_the_target_reaches_and_nothing_else(tmp_path):
     unit = scaffold.analyse(UNIT)
     result = scaffold.draft(unit, "top", tmp_path / "case", "x.c")
