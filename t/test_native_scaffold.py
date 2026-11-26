@@ -88,6 +88,8 @@ def test_a_table_of_an_unnamed_struct_type_is_still_a_global_by_its_name():
     ("static enum { OFF = 0, ON } state = OFF;", {"state", "OFF", "ON"}),
     ("static int (*table[])(int) = { helper };", {"table"}),
     ("void (*const hook)(void) = 0;", {"hook"}),
+    ("__typeof__(*p) x = 1;", {"x"}),                                                   # parentheses that are no declarator's
+    ("int x[sizeof(int (*)(int))] = {0};", {"x"}),
 ])
 def test_an_initialized_global_is_known_by_every_name_it_declares(item, names):
     unit = scaffold.analyse(item + "\n")

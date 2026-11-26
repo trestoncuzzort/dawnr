@@ -362,6 +362,14 @@ def declared_name(declarator: str) -> str | None:
 
     In `( declarator )` the name is inside the parentheses after its pointers (C11 6.7.6, port70.net/~nsz/c/c11/n1570.html)."""
     left = split_top(declarator, "=")[0]
+    # The parentheses of typeof, sizeof and alignment are an operand's, not a declarator's: `__typeof__(*p) x` declares x.
+    while operand := re.search(r"\b(?:__typeof__|__typeof|typeof|sizeof|_Alignof|_Alignas|__alignof__|alignof)\s*\(", left):
+        depth, end = 0, operand.end() - 1
+        for end in range(operand.end() - 1, len(left)):
+            depth += {"(": 1, ")": -1}.get(left[end], 0)
+            if depth == 0:
+                break
+        left = left[:operand.start()] + " " + left[end + 1:]
     inner = re.search(r"\(\s*(?:\*\s*(?:(?:const|volatile|restrict|__restrict)\b\s*)*)+([A-Za-z_][A-Za-z0-9_]*)", left)
     if inner:
         return inner.group(1)
