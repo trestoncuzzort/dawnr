@@ -25,7 +25,7 @@ from .tools import visible  # noqa: E402
 
 def terminal_approver(name: str, arguments: dict, why: str) -> bool:
     shown = json.dumps(arguments, ensure_ascii=False)
-    print(visible(f"[approval] {name} {shown[:400]}\n  why asked: {why}"), file=sys.stderr)      # tools.visible
+    print(visible(f"[approval] {name} {shown[:400]}\n  why asked: {why}"), file=sys.stderr)      # see `visible`
     try:
         return input("  allow? [y/N] ").strip().lower() in ("y", "yes")
     except EOFError:

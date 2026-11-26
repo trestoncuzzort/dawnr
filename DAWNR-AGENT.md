@@ -113,10 +113,9 @@ rights; kernel bugs; a person who approves a plan whose dry run showed the harm.
 The file tools count lines as `grep -n`, `sed -n` and `wc -l` do, in what they show
 (`fs_read`'s numbers and its `start`, `fs_search`'s, `fs_edit`'s lines and the
 line its numbers name, a dry run's diff): a line ends at a newline, and a CRLF is
-one line end. Python's `str.splitlines`, which they used before, also ends a line
+one line end. Python's `str.splitlines` is not used, because it also ends a line
 at a form feed, a vertical tab, `\x1c` to `\x1e`, `\x85`, U+2028, U+2029 and a
-lone carriage return, so on a file holding one of those their numbers were ahead
-of `grep -n`'s.
+lone carriage return, which would put a file's line numbers ahead of `grep -n`'s.
 
 The file tools exist only when the operator configures roots, and write tools
 only act in roots marked `"mode": "write"`. A write runs without asking only when

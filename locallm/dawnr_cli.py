@@ -489,13 +489,11 @@ class Planner(NativePlanner):
     @staticmethod
     def heard(state, local: bool = False) -> str:
         """The untrusted text this task has put in front of the model (files, pages, command output), spaces squeezed.
-        `local`: only what came from this computer, not from the network. Each text is taken in the forms as_compared
-        gives (dawnr_agent/files.py): a read's and an edit's lines without their numbers, a search's hits also without
-        the name and number before each. With those between two lines, a command copied from them stopped looking
-        copied, and under --yes it ran unasked (2026-11-26, when reads were numbered; an edit's lines, numbered later
-        that day, did the same, and a search's hits had done so since they were written). The closest lines a refused
-        edit's dry run shows the model (Planner.messages) are held too: until 2026-11-26 they were not, and a command
-        copied from them ran unasked as well."""
+        `local`: only what came from this computer, not from the network. Each text is taken in every form
+        `as_compared` gives (dawnr_agent/files.py): a read's and an edit's lines without their numbers, a search's hits
+        also without the file name and number before each. With those prefixes between two lines, a command copied
+        from them would not look copied, and under --yes it would run without asking. The closest lines that a refused
+        edit's dry run shows the model (`Planner.messages`) are held against the plan too, for the same reason."""
         spans = []
         for r in state.rounds:
             dry = getattr(r, "dry", None)
@@ -915,8 +913,10 @@ def second_look(agent, dry, task: str, heard: str = "", local: str = "") -> str:
 
 
 def show(text="") -> None:
-    """What dawnr says to the person on the terminal, the default `say`: the model's words, its steps and its answer
-    carry text it read, and a control character in them is shown as its escape, never acted on (tools.visible)."""
+    """Print `text` to the person on the terminal; this is the default `say`.
+
+    The model's words, its steps and its answer can carry text it read, so control characters in them are shown as
+    escapes and never acted on (see `visible`)."""
     print(visible(str(text)))
 
 

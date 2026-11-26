@@ -150,8 +150,8 @@ class DryRun:
         else:
             lines.append("nothing has run yet; approving runs exactly these steps in order, stopping at the first "
                          "that fails")
-        # the person's copy says what is there, a file's control characters included (tools.visible); the model's is
-        # the text as it is
+        # The copy shown to a person has control characters from file text escaped (see `visible`); the model's copy
+        # is unchanged.
         return visible("\n".join(lines)) if for_person else "\n".join(lines)
 
 

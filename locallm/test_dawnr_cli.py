@@ -892,10 +892,10 @@ CONTROLS = re.compile("[\x00-\x08\x0b-\x1f\x7f-\x9f\u061c\u200e\u200f\u2028-\u20
 
 
 def test_what_the_person_is_shown_and_asked_about_shows_control_characters_as_escapes(tmp_path, capsys):
-    # A file's own bytes reach the person in a plan's dry run (the lines around an edit), and the model's words in
-    # each step's line and in the answer. An escape sequence or a carriage return among them, handed to the terminal,
-    # changes what the person sees before saying yes (2026-11-26: with a file's lines counted at newlines only, a lone
-    # carriage return stays inside its line; an escape sequence already reached the terminal on main).
+    # A file's bytes reach the person in a plan's dry run (the lines around an edit), and the model's words reach them
+    # in each step's line and in the answer. An escape sequence or a carriage return among them would change what the
+    # person sees before answering yes, so they must be shown as escapes. Lines are split at newlines only, so a lone
+    # carriage return stays inside its line and reaches the dry run.
     edit = ("fs_edit", {"path": "here/e.txt", "old": "first", "new": "FIRST"})
     model = Model(turn(edit), turn(edit))                       # an unread file is read first, then the edit asked for
     work, harness, agent, planner, meter, said, asked, _ask = session(tmp_path, model, answers=["n"])
@@ -945,9 +945,9 @@ def test_dawnrs_own_printing_shows_control_characters_as_escapes(capsys):
 
 
 def test_a_command_or_a_query_copied_from_two_numbered_lines_of_a_read_still_counts_as_copied(tmp_path):
-    # Reads show each line after its number and a tab (2026-11-26). The text a plan is held against has them taken
-    # off again: with them in it, a command copied from two lines of a file stopped looking copied, and under --yes it
-    # ran unasked. These are the cases the change's own probe ran on the real functions.
+    # A read shows each line after its number and a tab. The text a plan is compared against has them taken off
+    # again: with them in it, a command copied from two lines of a file would not look copied, and under --yes it
+    # would run without asking.
     from types import SimpleNamespace as NS
     from dawnr_agent.files import Preview
     from dawnr_agent.plan import DryRun, Plan, Step, StepView
@@ -978,10 +978,9 @@ def test_a_command_or_a_query_copied_from_two_numbered_lines_of_a_read_still_cou
 
 
 def test_a_command_or_a_query_copied_from_two_numbered_lines_of_an_edits_window_still_counts_as_copied(tmp_path):
-    # An edit's window and a missed edit's closest lines show each line after its number and a tab, as a read does
-    # (2026-11-26). The text a plan is held against has those numbers taken off too: with them in it, the two-line
-    # command and the two-line query below, copied from either, did not look copied, and with --yes they were
-    # approved without anyone being asked, as when they were copied from a read heard with its numbers.
+    # An edit's window and a missed edit's closest lines number each line as a read does. The text a plan is compared
+    # against has those numbers taken off too: with them in it, the two-line command and two-line query below, copied
+    # from either, would not look copied, and with --yes they would be approved without asking.
     from types import SimpleNamespace as NS
     from dawnr_agent.files import Preview
     from dawnr_agent.plan import DryRun, Plan, Step, StepView
@@ -1031,9 +1030,9 @@ LISTINGS = {                                    # the same two lines, as program
 @pytest.mark.parametrize("shape", sorted(LISTINGS))
 def test_a_command_or_a_query_copied_from_two_lines_a_program_or_a_page_numbered_counts_as_copied(shape):
     # A command's own output (`cat -n`, `nl`, `grep -n`) and a page's code listing put a number before each line, as
-    # the file tools do. The text a plan is held against takes such numbers off too: with them in it, a two-line
-    # command or a two-line query copied from that output did not look copied, and with --yes it was approved
-    # without anyone being asked (2026-11-26; on origin/main as well).
+    # the file tools do. The text a plan is compared against has such numbers taken off too: with them in it, a
+    # two-line command or two-line query copied from that output would not look copied, and with --yes it would be
+    # approved without asking.
     from types import SimpleNamespace as NS
     from dawnr_agent.files import Preview
     from dawnr_agent.plan import DryRun, Plan, Step, StepView
@@ -1061,11 +1060,11 @@ def test_a_command_or_a_query_copied_from_two_lines_a_program_or_a_page_numbered
 
 
 def test_a_command_or_a_query_copied_from_two_lines_a_search_found_or_a_refused_edit_showed_counts_as_copied(tmp_path):
-    # Two more places show the model a file's lines: a search's hits, each after its file's name and line number, and
-    # the closest lines a refused edit's dry run shows ("Nothing ran. ..."). The text a plan is held against had the
-    # hits only with the name and number between two lines, and the refused dry run's lines not at all, so the two-line
-    # command and query below, copied from either, were approved under --yes without anyone being asked (on origin/main
-    # too, before any line was numbered). The hits are held as shown and also without the name and number before each.
+    # Two more places show the model a file's lines: a search's hits, each after its file name and line number, and the
+    # closest lines in a refused edit's dry run ("Nothing ran. ..."). Both must be held against the plan: with the file
+    # name and number between two lines, or with the refused dry run's lines left out, the two-line command and query
+    # below, copied from either, would be approved under --yes without asking. The hits are held as shown and also
+    # without the name and number before each.
     from types import SimpleNamespace as NS
     from dawnr_agent import preview_plan
     from dawnr_agent.files import Preview

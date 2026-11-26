@@ -721,9 +721,8 @@ class FileTools(Env):
         self.assertNotIn("next", r.text)
 
     def test_each_line_read_starts_with_its_number_and_a_tab_right_aligned_to_the_widest_shown(self):
-        # Until 2026-11-26 a read was the bare lines, and a model citing a line had to count to it: two models asked
-        # where something was in a file both named the wrong line. Each line shown now starts with its number,
-        # right-aligned to the widest number shown (cat -n's form), and a tab; the header and the hint are as before.
+        # Each line shown starts with its number, right-aligned to the widest number shown (the `cat -n` form), and a
+        # tab, so a model can cite a line without counting to it. The header and the resume hint are unchanged.
         text = "".join(("" if i == 99 else f"line {i}") + "\n" for i in range(1, 121))
         (self.proj / "n.txt").write_text(text)
         h, _ = self.build()
@@ -745,12 +744,10 @@ class FileTools(Env):
         self.assertIn("not part of the file", said)
 
     def test_a_line_number_is_the_one_grep_n_gives_where_a_file_holds_other_line_breaks(self):
-        # str.splitlines also ends a line at \v, \f, \x1c-\x1e, \x85, U+2028, U+2029 and a lone \r. Until 2026-11-26
-        # the file tools counted lines with it, so on a file holding one of them every number past it was more than
-        # grep -n's, sed -n's and wc -l's: on this file grep -n puts TARGET on line 9, and fs_read numbered it 18, showed
-        # another line at "start": 9 and said the file had 20 lines; fs_search said 18; a missed edit's closest lines
-        # and an edit's window named lines 16-20 and 6-12 of 20, and the window showed lines from before the change;
-        # numbers copied from grep -n did not say where the text was; the dry run's diff said @@ -16,5 +16,5 @@.
+        # str.splitlines also ends a line at \v, \f, \x1c-\x1e, \x85, U+2028, U+2029 and a lone \r; grep -n, sed -n and
+        # wc -l do not. On this file grep -n puts TARGET on line 9, so every file tool must number it 9 as well:
+        # fs_read and its "start", fs_search, the closest lines of a missed edit, an edit's window, numbers copied
+        # from grep -n, and the line numbers in a dry run's diff (@@ -7,5 +7,5 @@).
         lines = ["one", "\x0c", "alpha\x0bbeta", "gamma\x1cdelta\x1d\x1eend", "eps\x85ilon", "zeta\u2028eta\u2029theta",
                  "lone\rcr", "crlf", "TARGET = 1", "nine", "last"]
         data = ("\n".join(lines[:7]) + "\ncrlf\r\n" + "\n".join(lines[8:]) + "\n").encode()
@@ -779,9 +776,9 @@ class FileTools(Env):
         self.assertEqual([d for v in dry.views for d in v.preview.detail if d.startswith("@@")], ["@@ -7,5 +7,5 @@"])
 
     def test_an_edit_whose_indentation_is_left_out_matches_a_line_with_a_line_separator_in_it(self):
-        # The indentation ladder (_loose_edit) matches whole lines. It cut them with str.splitlines, so a line holding a
-        # U+2028 (which JSON lets a string hold as it is) was two lines to it, one indented and one not, and an edit of
-        # it with the indentation left out was refused until 2026-11-26.
+        # The indentation ladder (_loose_edit) matches whole lines. A line holding a U+2028 (which JSON lets a string
+        # hold as it is) must stay one line: split in two, one half would have no indentation, and an edit with the
+        # indentation left out would be refused.
         before = '{\n    "a": {\n        "text": "one\u2028two",\n        "n": 1\n    }\n}\n'
         (self.proj / "a.json").write_bytes(before.encode())
         h, _ = self.build(permissions={"fs_edit": "allow"})
@@ -807,8 +804,7 @@ class FileTools(Env):
 
     def test_an_edit_says_what_it_left_and_one_that_misses_is_matched_by_indentation_or_shown_the_closest_lines(self):
         """The edit window is SWE-agent's (arXiv:2405.15793); the ladder and the closest lines are aider's
-        (aider/coders/editblock_coder.py; receipt ac8eee06f37d). Both show each line after its number and a tab, as a
-        read does (2026-11-26; until then their lines were bare)."""
+        (aider/coders/editblock_coder.py; receipt ac8eee06f37d). Both number each line as a read does."""
         code = "class A:\n    def f(self):\n        if x:\n            return 1\n        return 2\n\n    def g(self):\n        return 3\n"
         (self.proj / "a.py").write_text(code)
         h, a = self.build(permissions={"fs_edit": "allow"})
@@ -886,10 +882,10 @@ class FileTools(Env):
         self.assertEqual(a.ops.journal.backup(backup), b"alpha\nbeta\nalpha\n")
 
     def test_an_edit_whose_lines_carry_the_numbers_a_read_shows_is_made_without_them(self):
-        # A read shows each line after its number and a tab, and a model may copy them into the text to replace. When
-        # that text is not in the file, every line of it starts with them, and they count up by one from the line
-        # where the rest of it starts, the edit is tried once more without them, and without them in the new text
-        # too when every line of it that is not empty has them.
+        # A read shows each line after its number and a tab, and a model may copy them into the text to replace. The
+        # edit is retried without them when that text is not in the file, every line of it starts with them, they count
+        # up by one, and the first names the line where the rest of the text starts. The numbers are also taken off the
+        # new text when every non-empty line of it has them.
         code = ('import sys\n\n\ndef total(items):\n    """The sum of the prices."""\n    count = 0\n'
                 '    for item in items:\n        count += item.price\n    return count\n\n\n'
                 'if __name__ == "__main__":\n    print(total(sys.argv[1:]))\n')
@@ -906,8 +902,8 @@ class FileTools(Env):
         self.assertFalse(r.is_error, r.text)
         code = code.replace("    return count\n", "    return round(count, 2)\n")
         self.assertEqual((self.proj / "t.py").read_text(), code)
-        # made again: its numbers name line 9, where that text is no longer, so it misses just as it did before
-        # numbers were ever taken off (the new text it is held against is the one given, numbers and all)
+        # The same edit again: its numbers name line 9, where that text no longer is, so it misses, as it would if
+        # numbers were never taken off. `new` is compared as given, numbers included, so no "already in the file" hint.
         r = h.call("fs_edit", {"path": "project/t.py", **both})
         self.assertTrue(r.is_error)
         self.assertTrue(r.text.startswith("project/t.py: the text to replace was not found; not edited."), r.text)
@@ -933,8 +929,8 @@ class FileTools(Env):
         self.assertEqual((self.proj / "t.py").read_text(), code)
 
     def test_an_edit_with_numbers_of_another_shape_or_on_some_lines_only_misses_as_it_did(self):
-        # No change from before line numbers were shown: this holds on the code before and after them. Only the
-        # number and tab a read puts on every line are left out of an edit's texts; anything else misses as before.
+        # Only the number and tab that a read puts on every line are removed from an edit's texts; anything else is
+        # looked for as given and misses.
         code = "alpha = 1\nbeta = 2\n"
         (self.proj / "g.txt").write_text(code)
         (self.proj / "rows.tsv").write_text("1\tbanana\n2\tbanana\n")
@@ -955,10 +951,10 @@ class FileTools(Env):
 
     def test_an_edit_whose_numbers_do_not_say_where_its_text_is_misses_as_if_none_were_taken_off(self):
         # In a file whose own rows start with a number and a tab, "2\tcherry" looks like a line copied from a read. It
-        # is no line of the file, and without its "number" it is the text of the row with id 3: edited there, that is
-        # another row than the one it named. The numbers taken off must be on every line, count up by one, and name
-        # the line where the rest of the text starts, and an edit of one place must be made at that line; otherwise
-        # the edit misses exactly as it did before numbers were ever taken off.
+        # is no line of the file, and without its "number" it is the text of the row with id 3, so removing the number
+        # would edit a different row than the one named. The numbers removed must be on every line, count up by one,
+        # and name the line where the rest of the text starts; an edit of one place must also be made at that line.
+        # Otherwise the edit misses.
         h, _ = self.build(permissions={"fs_edit": "allow"})
         rows = "id\tfruit\n1\tapple\n2\tbanana\n\n3\tcherry\n"                    # lines 1-5, line 4 empty
         for name, before, old, new, every in [
@@ -988,10 +984,9 @@ class FileTools(Env):
         self.assertEqual((self.proj / "crlf.tsv").read_bytes(), b"1\tapple\r\n2\tfig\r\n")
 
     def test_lines_copied_with_their_numbers_from_an_edits_window_or_closest_lines_are_edited_as_a_reads_are(self):
-        # An edit's window and a missed edit's closest lines show each line after its number and a tab, right-aligned
-        # to the widest number shown, as a read does (2026-11-26; until then they were bare, unlike the read). Lines
-        # copied from them with their numbers are edited by the same retry as a read's: their numbers taken off only
-        # where they name the line the rest of the text starts at.
+        # An edit's window and a missed edit's closest lines number each line as a read does, right-aligned to the
+        # widest number. Lines copied from them with their numbers are edited by the same retry as a read's: the
+        # numbers are removed only where they name the line the rest of the text starts at.
         code = "".join(f"value_{i} = {i}\n" for i in range(1, 15))
         (self.proj / "v.py").write_text(code)
         h, _ = self.build(permissions={"fs_edit": "allow"})
@@ -1012,7 +1007,7 @@ class FileTools(Env):
         self.assertFalse(r.is_error, r.text)
         code = code.replace("value_12 = 12\n", "value_12 = 120\n")
         self.assertEqual((self.proj / "v.py").read_text(), code)
-        # a number that is not the line its text is on, as a read's: it misses
+        # a number that is not the line its text is on: it misses
         r = h.call("fs_edit", {"path": "project/v.py", "old": "7\tvalue_6 = 6", "new": "7\tvalue_6 = 60"})
         self.assertTrue(r.is_error)
         self.assertTrue(r.text.startswith("project/v.py: the text to replace was not found; not edited."), r.text)
