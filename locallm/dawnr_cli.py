@@ -912,8 +912,10 @@ QUOTES_UNFOUND = "[Quoted but not found in anything it read: {quotes}]"
 
 
 def unread_quotes(answer: str, rounds, most: int = 5, width: int = 120) -> str:
-    """The line that names the answer's quotes found in none of the texts this task's calls returned; "" if none."""
-    texts = [text for r in rounds for o in (r.outcome.outcomes if r.outcome is not None else []) if o.result is not None
+    """The line that names the answer's quotes found in none of the texts this task's calls returned; "" if none.
+    A listing is held as the model got it (listing(): each entry its whole path), not as fs_list wrote it."""
+    texts = [listing(text, str(o.step.arguments.get("path") or "").rstrip("/")) if o.step.tool == "fs_list" else text
+             for r in rounds for o in (r.outcome.outcomes if r.outcome is not None else []) if o.result is not None
              for _untrusted, text in o.result.spans()]
     unfound = unfound_quotes(answer, texts)
     if not unfound:

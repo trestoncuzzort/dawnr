@@ -794,3 +794,17 @@ def test_an_answer_whose_quotes_are_all_in_what_it_read_has_no_note(tmp_path):
         got = cli.run_task(agent, planner, meter, "What does the patch skip?", [], said.append)
     assert got == answer and said[-3] == answer and said[-2] == "[Nothing was changed.]"
     assert not any(line.startswith("[Quoted but not found") for line in said)
+
+
+def test_a_listing_is_held_as_the_model_got_it_as_whole_paths(tmp_path):
+    # fs_list says "f notes.md (4 bytes)" and "d sub/"; the model is handed "here/notes.md  (4 bytes)" and
+    # "here/sub/  (a folder)" (listing), and an answer that names the files as it got them quotes nothing unread
+    answer = "The folder holds:\n```\nhere/notes.md\nhere/sub/\nhere/other.md\n```"
+    model = Model(turn(("fs_list", {"path": "here"})), turn(text=answer))
+    work, harness, agent, planner, meter, said, asked, _ask = session(tmp_path, model)
+    (work / "notes.md").write_text("one\n")
+    (work / "sub").mkdir()
+    with harness:
+        cli.run_task(agent, planner, meter, "What is in the folder?", [], said.append)
+    assert "here/notes.md  (4 bytes)" in model.bodies[1]["messages"][-1]["content"]
+    assert said[said.index(answer) + 1] == "[Quoted but not found in anything it read: “here/other.md”]"
