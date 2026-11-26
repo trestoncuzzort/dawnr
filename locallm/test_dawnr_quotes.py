@@ -597,6 +597,25 @@ class CraftedTextTest(unittest.TestCase):
             with self.subTest(text=text[:8]):
                 self.assertQuick([text, text + "\n" + text])
 
+    def test_a_link_whose_address_holds_a_parenthesis_is_still_quoted_by_its_text(self):
+        # Markdown allows balanced parentheses in a link's address (CommonMark 6.3), as Wikipedia's links have them
+        for address in ("https://x.org/a_(b)", "https://en.wikipedia.org/wiki/Cache_(computing)#Writing", "a_(b)_(c)",
+                        "a(b(c))", "a(b(c(d)))"):
+            with self.subTest(address=address):
+                read = f"The [cache is cleared only when the person]({address}) runs clean, and never on its own.\n"
+                self.assertEqual(unfound_quotes(BOTH, [read]), [])
+        # a changed word is still reported, and an address nested four deep is past what the pattern folds (bounded)
+        wrong = "The [cache is cleared only when the person](https://x.org/a_(b)) runs clean, and always on its own.\n"
+        self.assertEqual(unfound_quotes(BOTH, [wrong]), [BOTH[2:-1]])
+
+    def test_a_text_of_links_with_parentheses_in_their_addresses_is_checked_at_once(self):
+        n = self.N
+        for text in ("[](" + "(a)" * (n // 3), "[](" + "[](a" * (n // 4), "[](x(" * (n // 5), "[](" + "(" * n,
+                     "[](" + "[](" * (n // 3), "[](a(b)" * (n // 6), "[a](b(c)" * (n // 8), "[](a " + "[" * n,
+                     "[]((a)(" * (n // 7), "[x](((y)" * (n // 8), "[x]( " * (n // 5)):
+            with self.subTest(text=text[:8]):
+                self.assertQuick([text])
+
     def test_a_first_line_with_brackets_inside_brackets_is_checked_at_once(self):
         for head in (" (()" * (self.N // 4), " (a(b)" * (self.N // 6), " ((" * (self.N // 3), " ( (b) (b)" * (self.N // 10)):
             with self.subTest(head=head[:8]):

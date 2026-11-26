@@ -48,9 +48,14 @@ WORDS = 6                                           # a passage in quotes of few
 # link, which a reader quotes by its text; quote marks of every style and escaped ones, as one.
 COMMENT = re.compile(r"\s*(?:/\*+|\*+/?|//+|#+|--|;+)\s?")
 # what was read is untrusted text, up to 64,000 characters a reply: a link's text holds no bracket and its address
-# no parenthesis, so each character is looked at from one place only (a file of brackets took 4 seconds a read when
-# either could run on to the next one; 2026-11-26)
-LINK = re.compile(r"\[([^\[\]\n]*)\]\([^()\n]*\)")
+# no parenthesis but pairs of them to three levels deep (CommonMark 6.3: an address holds balanced pairs, and an
+# implementation should support three levels), so each character is looked at from one place only: the two ways to
+# go on, a character that is no parenthesis and a pair of them, start with different characters (a file of brackets
+# took 4 seconds a read when either could run on to the next one; 2026-11-26)
+_PAIRS = r"\([^()\n]*\)"
+for _level in range(2):
+    _PAIRS = r"\((?:[^()\n]|" + _PAIRS + r")*\)"
+LINK = re.compile(r"\[([^\[\]\n]*)\]\((?:[^()\n]|" + _PAIRS + r")*\)")
 QUOTE_MARKS = str.maketrans(dict.fromkeys("'\u2018\u2019\u201a\u201b\u2032\u201c\u201d\u201e\u201f\u2033", '"'))
 # What the tools show of a file's lines, and around them (dawnr_agent/files.py): an fs_read window's header (the file,
 # its first and last line, and the file's sha256 when it was read whole), the same for a document's text, whose
