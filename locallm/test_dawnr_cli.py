@@ -1,6 +1,7 @@
 """dawnr_cli.py: the assistant's front door. A scripted model stands in for the server; the loop, the tools and the
 journal are the real ones (locallm/dawnr_agent), in a folder of their own."""
 import json
+import re
 from pathlib import Path
 
 import pytest
@@ -758,6 +759,41 @@ def test_any_other_refusal_is_not_retried(tmp_path):
     planner.post = bad
     with pytest.raises(urllib.error.HTTPError):
         planner._send("http://nowhere:1/v1/chat/completions", {"messages": [{"role": "user", "content": "x"}]})
+
+
+CONTROLS = re.compile("[\x00-\x08\x0b-\x1f\x7f-\x9f\u061c\u200e\u200f\u2028-\u202e\u2066-\u2069]")
+
+
+def test_what_the_person_is_shown_and_asked_about_shows_control_characters_as_escapes(tmp_path, capsys):
+    # A file's own bytes reach the person in a plan's dry run (the lines around an edit), and the model's words in
+    # each step's line and in the answer. An escape sequence or a carriage return among them, handed to the terminal,
+    # changes what the person sees before saying yes (2026-11-26: with a file's lines counted at newlines only, a lone
+    # carriage return stays inside its line; an escape sequence already reached the terminal on main).
+    edit = ("fs_edit", {"path": "here/e.txt", "old": "first", "new": "FIRST"})
+    model = Model(turn(edit), turn(edit))                       # an unread file is read first, then the edit asked for
+    work, harness, agent, planner, meter, said, asked, _ask = session(tmp_path, model, answers=["n"])
+    (work / "e.txt").write_text("red \x1b[31mX\x1b[0m\nlone\rcr\nfirst\nrtl \u202eevil\nend\n", newline="")   # each in the edit's window
+    with harness:
+        cli.run_task(agent, planner, meter, "Capitalise the first line of e.txt.", [])
+    plan = "\n".join(said)
+    assert asked and "\\x1b[31mX\\x1b[0m" in plan and "lone\\rcr" in plan and "\\u202eevil" in plan
+    assert not CONTROLS.search(plan.replace("\n", "").replace("\t", ""))
+    assert not CONTROLS.search(capsys.readouterr().out.replace("\n", "").replace("\t", ""))
+    model = Model(turn(text="It says: \x1b[2Jall\rdone."))
+    (tmp_path / "answer").mkdir()
+    work, harness, agent, planner, meter, said, asked, _ask = session(tmp_path / "answer", model)
+    with harness:
+        cli.run_task(agent, planner, meter, "What does e.txt say?", [])
+    out = capsys.readouterr().out
+    assert "It says: \\x1b[2Jall\\rdone." in out and not CONTROLS.search(out.replace("\n", "").replace("\t", ""))
+
+
+def test_dawnrs_own_printing_shows_control_characters_as_escapes(capsys):
+    import inspect
+    for fn in (cli.plan_approver, cli.Narrator, cli.run_task, cli.repl):
+        assert inspect.signature(fn).parameters["say"].default is cli.show, fn
+    cli.show("a\x1b[2Jb\rc\u202ed\te")
+    assert capsys.readouterr().out == "a\\x1b[2Jb\\rc\\u202ed\te\n"
 
 
 def test_a_command_or_a_query_copied_from_two_numbered_lines_of_a_read_still_counts_as_copied(tmp_path):

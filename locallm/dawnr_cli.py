@@ -61,6 +61,7 @@ from dawnr_agent.journal import sha256  # noqa: E402
 from dawnr_agent.shell import LIVE  # noqa: E402
 from dawnr_agent.system import FILE_READERS, facts, git_kind, look, under_windows  # noqa: E402
 from dawnr_agent.files import as_compared  # noqa: E402
+from dawnr_harness.tools import visible  # noqa: E402
 
 MAX_TOKENS = 1500              # one turn of the model: a plan, or an answer; a file it writes has to fit in it
 HISTORY = 3                    # earlier tasks of the session handed back, each cut short
@@ -817,7 +818,13 @@ def second_look(agent, dry, task: str, heard: str = "", local: str = "") -> str:
     return " ".join(own + said) + (HELD if said else "")
 
 
-def plan_approver(ask=input, say=print, yes: bool = False, everything: bool = False):
+def show(text="") -> None:
+    """What dawnr says to the person on the terminal, the default `say`: the model's words, its steps and its answer
+    carry text it read, and a control character in them is shown as its escape, never acted on (tools.visible)."""
+    print(visible(str(text)))
+
+
+def plan_approver(ask=input, say=show, yes: bool = False, everything: bool = False):
     """A plan in which nothing changes anything runs unasked; any other is shown whole and asked for once. `yes`
     answers for the person where nothing is lost: not for `pc`, which cannot be undone, and not for a plan that
     removes a file whose contents are kept nowhere else. `everything` is the measurement's person, who says yes
@@ -866,7 +873,7 @@ def _step_line(step, outcome) -> str:
 class Narrator:
     """The planner, with each finished round's steps said as the next one starts."""
 
-    def __init__(self, planner, say=print):
+    def __init__(self, planner, say=show):
         self.planner, self.say, self.said = planner, say, 0
 
     def tell(self, rounds: list) -> None:
@@ -921,7 +928,7 @@ def done(agent, before: int, rounds: list) -> str:
     return said + (" The last plan did not run in full, whatever is said above." if unrun else "")
 
 
-def run_task(agent, planner, meter: Meter, task: str, history: list, say=print) -> str:
+def run_task(agent, planner, meter: Meter, task: str, history: list, say=show) -> str:
     """One task through the loop; what was answered (or why it stopped) is said and returned."""
     meter.reset()
     before = len(_journal(agent))
@@ -978,7 +985,7 @@ HELP = ("Describe a repository inspection, change or test. /changes lists what w
         "/quit leaves.")
 
 
-def repl(agent, planner, meter: Meter, ask=input, say=print) -> int:
+def repl(agent, planner, meter: Meter, ask=input, say=show) -> int:
     history: list = []
     say(HELP)
     while True:

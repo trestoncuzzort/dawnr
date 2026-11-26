@@ -20,11 +20,12 @@ if __name__ == "__main__" and __package__ in (None, ""):
     raise SystemExit(_main())
 
 from .runtime import build_harness  # noqa: E402
+from .tools import visible  # noqa: E402
 
 
 def terminal_approver(name: str, arguments: dict, why: str) -> bool:
     shown = json.dumps(arguments, ensure_ascii=False)
-    print(f"[approval] {name} {shown[:400]}\n  why asked: {why}", file=sys.stderr)
+    print(visible(f"[approval] {name} {shown[:400]}\n  why asked: {why}"), file=sys.stderr)      # tools.visible
     try:
         return input("  allow? [y/N] ").strip().lower() in ("y", "yes")
     except EOFError:
