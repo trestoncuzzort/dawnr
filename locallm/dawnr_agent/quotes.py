@@ -10,11 +10,14 @@ of them is returned, for the person to be told.
 
 Quoted material is every line of a fenced code block (``` or ~~~, with a language or without), every blockquote
 line without its ">", and every passage of six words or more in double quotes, straight or curly (U+201C, U+201D),
-on a line of prose. Whitespace does not count on either side: each run of it is one space, and there is none at
+on a line of prose. A line of a code block whose language is diff or patch is compared as what it quotes: without
+its "-", "+" or " ", a hunk header by its heading, a line that names the files not at all; it is reported as the
+answer has it. Whitespace does not count on either side: each run of it is one space, and there is none at
 the ends. A quote is found when it is inside one line of a source, the line as it was read. A blockquote line or a
 passage in quotes can run across the source's line breaks, so it is also found when it is inside the source's
 whole text, its lines joined by spaces, each line first taken without fs_read's line number and tab and then
-without a patch's one-character "+", "-" or " ": a quote of a patch's lines without their markers is found. The
+without a patch's one-character "+", "-" or " ": a quote of a patch's lines without their markers is found, and a
+patch is joined once more as each of its two texts, without its "-" lines and without its "+" lines. The
 lines of one file are joined the same way wherever the tools showed them, in two fs_read windows, as two fs_search
 hits or as one of each: each line without what the tool put on or around it (a hit's file name and number, a
 window's header and hints, a document's page marks), and only lines the file has one after the other. Never
@@ -51,6 +54,18 @@ PAGE = re.compile(r"\[page \d+\]$")
 SEARCH = re.compile(r"search for .* \(literal, .*\): \d+ matches in \d+ files, \d+ files searched$")
 HIT = re.compile(r"(.+?):(\d+): (.*)")
 CLIPPED = re.compile(r"\[truncated at \d+ characters\]$")
+# A unified diff (POSIX diff, "Diff -u or -U Output Format", pubs.opengroup.org/onlinepubs/9799919799/utilities/diff.html;
+# git-scm.com/docs/git-diff, "Generating patch text with -p") is two texts, the old one's lines marked "-", the new
+# one's "+", the lines of both " ", and its own syntax: each hunk's header with the lines it covers, "@@ -12,2 +12,2
+# @@", which git follows with the name of the function the hunk is in; and the lines that name the files ("---",
+# "+++", and git's "diff --git" and extended headers). In what was read, a patch is a text with a hunk header, or a
+# file named .patch or .diff; in an answer, a code block whose language is diff or patch.
+HUNK = re.compile(r"@@ -\d+(?:,\d+)? \+\d+(?:,\d+)? @@")
+HUNK_HEAD = re.compile(r"@@ .*?@@ ?")                # an answer's, whose numbers may be anything
+DIFF_FILES = re.compile(r"diff --git |index [0-9a-f]+\.\.[0-9a-f]+|(?:---|\+\+\+) \S+(?:$|\t)|(?:old|new) mode "
+                        r"|(?:new|deleted) file mode |(?:dis)?similarity index |rename (?:from|to) |copy (?:from|to) "
+                        r"|Binary files |\\ No newline at end of file")
+DIFF_TAGS = ("diff", "patch", "udiff")
 
 
 def unfound_quotes(answer: str, sources: Iterable[str]) -> list[str]:
@@ -58,13 +73,13 @@ def unfound_quotes(answer: str, sources: Iterable[str]) -> list[str]:
     order the answer has it, each once."""
     texts = list(sources)
     read = [_source(text) for text in texts]
-    runs = [_joined(run) for run in _runs(texts)]
+    runs = [_joined(run, patch) for run, patch in _runs(texts)]
     unfound: list[str] = []
-    for quote, spans in _quoted(answer):
-        quote = _plain(quote)
-        if quote in unfound or not _checkable(quote):
+    for quote, compared, spans in _quoted(answer):
+        quote, compared = _plain(quote), _plain(compared)
+        if quote in unfound or not _checkable(compared):
             continue
-        key = _fold(quote)
+        key = _fold(compared)
         if spans:                                   # prose: the quote marks around it and its closing stop are its own
             key = key.strip('" ').rstrip(".,;:!?").strip('" ')
         if not (any(key in lines or (spans and any(key in whole for whole in wholes)) for lines, wholes in read)
@@ -73,10 +88,12 @@ def unfound_quotes(answer: str, sources: Iterable[str]) -> list[str]:
     return unfound
 
 
-def _quoted(answer: str) -> list[tuple[str, bool]]:
-    """(text, whether it may run across a source's line breaks) for each piece of quoted material, in order."""
-    out: list[tuple[str, bool]] = []
+def _quoted(answer: str) -> list[tuple[str, str, bool]]:
+    """(text as the answer has it, text as it is compared, whether it may run across a source's line breaks) for
+    each piece of quoted material, in order."""
+    out: list[tuple[str, str, bool]] = []
     open_fence = ""                                 # the fence of the code block being read; "" outside one
+    diff, indent = False, 0                         # whether that block is a diff, and how far its fence is indented
     for line in answer.splitlines():
         fenced, marked = FENCE.match(line), MARKERS.match(line)
         if open_fence:
@@ -84,19 +101,34 @@ def _quoted(answer: str) -> list[tuple[str, bool]]:
                     and not fenced.group(2).strip()):
                 open_fence = ""
             else:
-                out.append((line, False))
+                out.append((line, _diff_line(line, indent) if diff else line, False))
         elif fenced and not (fenced.group(1)[0] == "`" and "`" in fenced.group(2)):   # ```x``` is inline code
             open_fence = fenced.group(1)
+            diff = fenced.group(2).strip().split(" ")[0].lower() in DIFF_TAGS
+            indent = len(line) - len(line.lstrip(" "))
         elif marked:
             inner = line[marked.end():]
             if not FENCE.match(inner):              # a code block set in a blockquote: its fences are not quotes
-                out.append((inner, True))
+                out.append((inner, inner, True))
         else:
             for straight, curly in QUOTED.findall(line):
                 passage = straight or curly
                 if len(passage.split()) >= WORDS:
-                    out.append((passage, True))
+                    out.append((passage, passage, True))
     return out
+
+
+def _diff_line(line: str, indent: int) -> str:
+    """What a line of a diff block in an answer quotes: a line of either text without its "-", "+" or " "; of a hunk's
+    header, its heading; of a line that names files, nothing. The fence's indentation is not the line's
+    (CommonMark: spec.commonmark.org/0.31.2/#fenced-code-blocks, up to that many spaces come off each line)."""
+    line = line[min(indent, len(line) - len(line.lstrip(" "))):]
+    if DIFF_FILES.match(line):
+        return ""
+    hunk = HUNK_HEAD.match(line)
+    if hunk:
+        return line[hunk.end():]
+    return line[1:] if line[:1] in ("+", "-", " ") else line
 
 
 def _source(text: str) -> tuple[str, tuple[str, str]]:
@@ -106,15 +138,21 @@ def _source(text: str) -> tuple[str, tuple[str, str]]:
     the number is found too); the markers matter where lines are joined, between the end of one and the next."""
     lines = text.splitlines()
     unnumbered = [line[number.end():] if (number := NUMBER.match(line)) else line for line in lines]
-    return "\n".join(_fold(line) for line in lines), _joined(unnumbered)
+    return "\n".join(_fold(line) for line in lines), _joined(unnumbered, any(map(HUNK.match, unnumbered)))
 
 
-def _joined(lines: list[str]) -> tuple[str, str]:
+def _joined(lines: list[str], patch: bool = False) -> tuple[str, ...]:
     """Lines as one text, each without a patch's one-character marker, and once more each also without a comment's
-    marker, where a comment runs on; whitespace made single spaces."""
-    bare = [line[1:] if line[:1] in ("+", "-", " ") else line for line in lines]
-    uncommented = [line[comment.end():] if (comment := COMMENT.match(line)) else line for line in bare]
-    return _fold(" ".join(bare)), _fold(" ".join(uncommented))
+    marker, where a comment runs on; whitespace made single spaces. Of a patch, the same of each of its two texts
+    too: without its "-" lines (the new one), and without its "+" lines (the old one)."""
+    texts = [lines] + ([[line for line in lines if line[:1] != "-"], [line for line in lines if line[:1] != "+"]]
+                       if patch else [])
+    out: list[str] = []
+    for text in texts:
+        bare = [line[1:] if line[:1] in ("+", "-", " ") else line for line in text]
+        uncommented = [line[comment.end():] if (comment := COMMENT.match(line)) else line for line in bare]
+        out += [_fold(" ".join(bare)), _fold(" ".join(uncommented))]
+    return tuple(out)
 
 
 def _shown(text: str) -> list[tuple[str, int, str | None]]:
@@ -136,26 +174,27 @@ def _shown(text: str) -> list[tuple[str, int, str | None]]:
     return []
 
 
-def _runs(texts: list[str]) -> list[list[str]]:
+def _runs(texts: list[str]) -> list[tuple[list[str], bool]]:
     """The lines the tools showed of each file, in runs of lines the file has one after the other, wherever each was
     shown (two windows, two hits, a window and a hit); of a line shown twice, the longer (a hit's is stripped, and
-    cut at 200 characters). A page's mark keeps the lines on either side of it one after the other."""
+    cut at 200 characters). A page's mark keeps the lines on either side of it one after the other. With each run,
+    whether it is a patch's (the file is named .patch or .diff, or the run has a hunk header)."""
     files: dict[str, dict[int, str | None]] = {}
     for text in texts:
         for path, n, line in _shown(text):
             got = files.setdefault(path, {})
             if n not in got or len(line or "") > len(got[n] or ""):
                 got[n] = line
-    runs: list[list[str]] = []
-    for got in files.values():
+    runs: list[tuple[list[str], bool]] = []
+    for path, got in files.items():
         last = None
         for n in sorted(got):
             if n - 1 != last:
-                runs.append([])
+                runs.append(([], path.lower().endswith((".patch", ".diff"))))
             if got[n] is not None:
-                runs[-1].append(got[n])
+                runs[-1][0].append(got[n])
             last = n
-    return runs
+    return [(run, patch or any(map(HUNK.match, run))) for run, patch in runs]
 
 
 def _plain(text: str) -> str:

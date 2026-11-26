@@ -5,7 +5,8 @@ is not, whether it was read in a patch (with its "+" or without), an fs_read win
 without) or an fs_search hit; a code line is looked for one source line at a time, a blockquote line and a passage
 of six words or more in double quotes across the source's line breaks too, and across lines a file has one after
 the other wherever the tools showed them (two windows, two search hits, a document's page break), never across
-two files or lines apart; a passage of fewer than six words, and a
+two files or lines apart; a passage of either text of a patch over a changed line is found; a diff block's line is
+compared without its marker and its syntax is not a quote; a passage of fewer than six words, and a
 line with nothing to check in it (punctuation, an ellipsis, fewer than four characters), is never reported; what is
 reported comes in the order of the answer, once each. Standard library only.
 """
@@ -304,6 +305,52 @@ class ReadFormatTest(unittest.TestCase):
                 "searched\nhere/sensor.patch:2: " + patch[1].strip() + "\nhere/sensor.patch:9: if (mContactManager.Has")
         self.assertEqual(unfound_quotes(code(CLAIMED), [window("here/sensor.patch", patch, 1, 1),
                                                         window("here/sensor.patch", patch, 2, 3), hits]), [CLAIMED])
+
+
+# A patch to the cache's notes: one line changed, between two that are not.
+NOTES_PATCH = ["@@ -3,4 +3,4 @@", " The cache is cleared only when the person", "-runs clean, or every night.",
+               "+runs clean, and never on its own.", " ", " A stale cache is rebuilt in the background."]
+
+
+class DiffTest(unittest.TestCase):
+    """A diff, in what was read or in the answer, is two texts and its own syntax: a quote of either text is found,
+    and a diff block's syntax is not a quote."""
+
+    def test_a_diff_blocks_lines_are_compared_without_their_marker_and_its_syntax_is_not_a_quote(self):
+        answer = ("The fix, against what was read:\n\n```diff\n"
+                  "diff --git a/settings.py b/settings.py\nindex 3f2a1b0..9c8d7e6 100644\n"
+                  "--- a/settings.py\n+++ b/settings.py\n"
+                  "@@ -12,2 +12,2 @@ def load(path):\n"
+                  "-    if not os.path.exists(path):\n+    if not os.path.isfile(path):\n"
+                  "         return None\n\\ No newline at end of file\n```\n")
+        # what was read is found without its marker; the new line, read nowhere, is reported as the answer has it
+        self.assertEqual(unfound_quotes(answer, [READ]), ["+ if not os.path.isfile(path):"])
+
+    def test_a_patch_line_copied_into_a_diff_block_is_found_with_other_space_after_its_marker(self):
+        self.assertEqual(unfound_quotes(code("+continue;", "+if (hit.mFraction < 0.0f || hit.mFraction > 1.0f",
+                                             tag="diff"), [PATCH]), [])
+        listed = "1. The fix:\n\n   ```patch\n   -    if not os.path.exists(path):\n   ```\n"   # a block in a list item
+        self.assertEqual(unfound_quotes(listed, [READ]), [])
+
+    def test_a_passage_of_either_side_of_a_patch_over_a_changed_line_is_found(self):
+        new = "> The cache is cleared only when the person runs clean, and never on its own.\n"
+        old = 'The old notes said "runs clean, or every night. A stale cache is rebuilt in the background."\n'
+        read = window("here/docs/notes.patch", NOTES_PATCH, 1, 6)
+        run = "exit 0 after 0.02 s: git diff (in here)\n" + "\n".join(NOTES_PATCH)     # a command's output
+        middle = window("here/docs/notes.patch", NOTES_PATCH, 2, 4)                  # no hunk header in it
+        for source in (read, run, middle):
+            self.assertEqual(unfound_quotes(new, [source]), [])
+        for source in (read, run):
+            self.assertEqual(unfound_quotes(old, [source]), [])
+
+    def test_a_text_that_is_not_a_patch_keeps_the_lines_that_start_with_a_dash(self):
+        notes = window("here/docs/notes.md", ["The cache is cleared only when", "- the person runs clean", "and never "
+                                              "on its own."], 1, 3)
+        self.assertEqual(unfound_quotes("> The cache is cleared only when and never on its own.\n", [notes]),
+                         ["The cache is cleared only when and never on its own."])
+
+    def test_the_line_with_a_clause_dropped_is_still_reported_in_a_diff_block(self):
+        self.assertEqual(unfound_quotes(code("+" + CLAIMED, "+    continue;", tag="diff"), [PATCH]), ["+" + CLAIMED])
 
 
 if __name__ == "__main__":
