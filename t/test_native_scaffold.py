@@ -90,6 +90,8 @@ def test_a_table_of_an_unnamed_struct_type_is_still_a_global_by_its_name():
     ("void (*const hook)(void) = 0;", {"hook"}),
     ("__typeof__(*p) x = 1;", {"x"}),                                                   # parentheses that are no declarator's
     ("int x[sizeof(int (*)(int))] = {0};", {"x"}),
+    ("int counter __attribute__((aligned(8))) = 0;", {"counter"}),                       # an attribute with parentheses inside
+    ('int *cursor __attribute__((section(".data"))) = &limit;', {"cursor"}),
 ])
 def test_an_initialized_global_is_known_by_every_name_it_declares(item, names):
     unit = scaffold.analyse(item + "\n")
@@ -138,6 +140,7 @@ def draft_compiles(tmp_path, text, target):
     ("struct S { int x; } s = {1};\ntypedef struct S T;\n", "T v = {a};\n\treturn v.x;"),  # a tag through a typedef
     ("enum { N = 4 } mode = N;\nstruct box { int a[N]; };\n", "struct box b;\n\tb.a[0] = a;\n\treturn b.a[0];"),  # through a kept type
     ("struct S { int x; } s = {1};\nstruct box { struct S inner; };\n", "struct box b;\n\tb.inner.x = a;\n\treturn b.inner.x;"),
+    ('static int limit = 5;\nint *cursor __attribute__((section(".data"))) = &limit;\n', "return a + *cursor;"),
 ])
 def test_a_draft_keeps_an_item_its_function_reaches_by_any_name_the_item_declares(tmp_path, text, body):
     compiled, errors, _ = draft_compiles(tmp_path, text + f"int pick(int a)\n{{\n\t{body}\n}}\n", "pick")

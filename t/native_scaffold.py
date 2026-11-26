@@ -30,7 +30,7 @@ import native_sample as sampler
 CHAR_TYPES = {"char", "signed char", "unsigned char"}
 BUILTIN_WORDS = {"char", "short", "int", "long", "signed", "unsigned", "float", "double", "_Bool", "__int128"}
 QUALIFIERS = re.compile(r"\b(?:const|volatile|restrict|__restrict|__restrict__|__const|register|__extension__|_Nonnull|_Nullable)\b")
-ATTRIBUTE = re.compile(r"__attribute__\s*\(\(.*?\)\)|__asm__\s*\(.*?\)|__asm\s*\(.*?\)|__declspec\s*\(.*?\)", re.S)
+ATTRIBUTE = re.compile(r"\b(?:__attribute__|__asm__|__asm|__declspec)\s*\(")
 LENGTH_NAME = re.compile(r"(?:^|_)(?:len|length|size|sz|n|nbytes|bytes|count|cnt|num|cap|capacity|max|limit|bufsize|buflen)(?:$|_)|(?:len|size|count)$", re.I)
 # The rest of a length's name once the name of its pointer is taken off: `dst_size` is the size of `dst`, and `buflen` the length of `buf`.
 OWNED_LENGTH = re.compile(r"_?(?:len|length|size|sz|n|nbytes|bytes|count|cnt|cap|capacity|max|limit)", re.I)
@@ -101,7 +101,22 @@ def split_items(text: str) -> list[str]:
 
 
 def clean_head(head: str) -> str:
-    return ATTRIBUTE.sub(" ", head).strip()
+    """The text without attributes, asm labels and declspecs, each taken out through its own closing parenthesis:
+    `__attribute__((aligned(8)))` holds parentheses of its own, and a match up to the first `))` left a `)` behind."""
+    while start := ATTRIBUTE.search(head):
+        depth, index = 0, start.end() - 1
+        while index < len(head):
+            if head[index] in "\"'":
+                quote, index = head[index], index + 1
+                while index < len(head) and head[index] != quote:
+                    index += 2 if head[index] == "\\" else 1
+            else:
+                depth += {"(": 1, ")": -1}.get(head[index], 0)
+                if depth == 0:
+                    break
+            index += 1
+        head = head[:start.start()] + " " + head[index + 1:]
+    return head.strip()
 
 
 def is_function_head(head: str) -> bool:
