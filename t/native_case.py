@@ -208,19 +208,18 @@ def blanked(text: str) -> str:
 
 def check_directives(name: str, kind: str, text: str) -> None:
     """A function or declaration range holds that one item and nothing a preprocessor directive could add to the unit.
-    A directive inside the item's braces is the item's own text. A directive outside them (before a function's
-    declarator, between it and its body, or anywhere outside the braces of a declaration) must be a conditional one,
-    and the conditional directives of the range pair up, so the range cannot open or close one it does not hold."""
+    A directive is the item's own text only inside braces, at a brace depth above zero, wherever that body stands in the
+    range, so each alternative body of a conditional function counts on its own. A directive at depth zero (before a
+    declarator, between a declarator and its body, between bodies, or outside the braces of a declaration) must be a
+    conditional one, and the conditional directives of the range pair up, so the range cannot open or close one it does
+    not hold. A bare `#` is not part of the item either."""
     plain, open_ifs, else_seen = skeleton(text), 0, []
     found, blank = directives(plain), blanked(text)
-    first = blank.find("{")
-    brace = (len(blank) if first < 0 else first) if kind == "function" else None
     depth, at = 0, 0
     for start, end, word in found:
-        if brace is None:
-            depth = max(0, depth + blank.count("{", at, start) - blank.count("}", at, start))
-            at = start
-        outside = depth == 0 if brace is None else start < brace
+        depth = max(0, depth + blank.count("{", at, start) - blank.count("}", at, start))
+        at = start
+        outside = depth == 0
         if outside and word not in CONDITIONALS:
             raise ValueError(f"{name}: a preprocessor directive outside the {'function' if kind == 'function' else 'declaration'}'s braces is not part of it")
         if word in ("if", "ifdef", "ifndef"):

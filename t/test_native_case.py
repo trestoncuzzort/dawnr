@@ -348,6 +348,37 @@ def test_a_declaration_range_may_not_open_or_close_a_conditional_it_does_not_hol
         cases.extract(source, {"name": "table", "kind": "declaration", "line": 1, "end_line": source.count("\n")})
 
 
+def two_bodies(first_head="int f(int a)", between="", second_head="int f(long a)", inside_first="", inside_second=""):
+    return (f"#ifdef X\n{first_head}\n{{\n{inside_first}\treturn a;\n}}\n{between}#else\n{second_head}\n{{\n{inside_second}\treturn 0;\n}}\n#endif\n")
+
+
+@pytest.mark.parametrize("directive", DIRECTIVES)
+@pytest.mark.parametrize("place", ["first_head", "between", "second_head"])
+def test_a_directive_outside_every_alternative_body_is_refused(directive, place):
+    """The braces of each body count on their own: a directive is part of the function only inside one of them."""
+    fields = {"first_head": dict(first_head=f"int f(int a)\n{directive}"), "between": dict(between=f"{directive}\n"),
+              "second_head": dict(second_head=f"int f(long a)\n{directive}")}[place]
+    with pytest.raises(ValueError, match="preprocessor directive outside"):
+        cases.check_directives("f", "function", two_bodies(**fields))
+
+
+@pytest.mark.parametrize("directive", DIRECTIVES)
+@pytest.mark.parametrize("place", ["inside_first", "inside_second"])
+def test_a_directive_inside_either_alternative_body_is_accepted(directive, place):
+    cases.check_directives("f", "function", two_bodies(**{place: f"{directive}\n"}))
+
+
+@pytest.mark.parametrize("ending", ["#endif\n", ""])
+def test_a_range_of_alternative_bodies_is_refused_as_not_one_function(ending):
+    source = two_bodies(second_head="int f(long a)\n#define Y 1")
+    source = source[:-len("#endif\n")] + ending
+    with pytest.raises(ValueError, match="preprocessor directive outside"):
+        cases.extract(source, {"name": "f", "line": 1, "end_line": source.count("\n")})
+    clean = two_bodies()[:-len("#endif\n")] + ending
+    with pytest.raises(ValueError):
+        cases.extract(clean, {"name": "f", "line": 1, "end_line": clean.count("\n")})
+
+
 def test_no_source_byte_can_change_under_the_pinned_identity(tmp_path):
     root = write_case(tmp_path / "case")
     cases.build_unit(cases.load(root), "original", root)
