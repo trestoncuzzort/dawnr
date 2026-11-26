@@ -180,6 +180,32 @@ def _numbers_off(text: str) -> tuple[str, int, int]:
     return "\n".join(out), numbered, plain
 
 
+def _line_numbers(text: str) -> list | None:
+    """The numbers fs_read showed on the lines of `text` (NUMBERED), in order, when every line has one (an empty line
+    too, as fs_read shows it: its number and a tab; a last newline ends the text and starts no line); else None."""
+    lines = text.split("\n")
+    if lines[-1] == "":
+        lines.pop()
+    found = [NUMBERED.match(line) for line in lines]
+    if not found or not all(found):
+        return None
+    return [int(m.group().strip()) for m in found]
+
+
+def _starts_at_line(text: str, old: str, number: int, every: bool) -> bool:
+    """Whether what _replaced would put `old`'s replacement in place of starts exactly at line `number` of `text`, the
+    lines counted as fs_read counts them (str.splitlines): the text it looks for (with CRLF line ends in a CRLF file
+    where `old` is not found as it is) starts at that line, and one replacement would be made there and not at an
+    earlier copy (overlapping copies count once in str.count)."""
+    if text.count(old) == 0 and "\r\n" in text and "\n" in old:
+        old = old.replace("\r\n", "\n").replace("\n", "\r\n")
+    lines = text.splitlines(keepends=True)
+    if not 1 <= number <= len(lines):
+        return False
+    start = sum(len(line) for line in lines[:number - 1])
+    return text.startswith(old, start) and (every or text.count(old) > 1 or text.find(old) == start)
+
+
 def _around(old: bytes, new: bytes, context: int = 3, most: int = 24) -> str:
     """The lines of `new` around where it differs from `old`: what an edit left, so the file need not be read again
     to see it (SWE-agent's editor shows the edited window after every edit, arXiv:2405.15793 section 3)."""
@@ -1013,7 +1039,26 @@ class FileTools:
         except UnicodeDecodeError:
             raise PathRefused(f"{target.display} is not UTF-8 text; not edited") from None
         old, new, every = args["old"], args["new"], bool(args.get("all", False))
-        return _replaced(target, text, old, new, every)
+        try:
+            return _replaced(target, text, old, new, every)
+        except EditMiss:
+            # fs_read shows each line after its number and a tab (NUMBERED), and a model may copy them into the text
+            # to replace. When every line of that text starts with them, they count up by one, and they say where it
+            # is (the rest starts at the line the first one names, and an edit of one place would be made there), the
+            # edit is tried once more without them, and without them in the new text too when every line of it that
+            # is not empty has them. In a file whose own rows start with a number and a tab, "2\tcherry" is no line,
+            # and without its "number" it is another row's text: that is not where it said, so it is not edited
+            # there. A new text with them on some lines only is not guessed at, and a text that is nothing but them
+            # is not looked for: those, and everything else, miss exactly as they did before.
+            bare_old, numbered, plain = _numbers_off(old)
+            bare_new, numbered_new, plain_new = _numbers_off(new)
+            if not numbered or plain or not bare_old.strip() or (numbered_new and plain_new):
+                raise
+            numbers = _line_numbers(old)
+            if (numbers is None or any(b != a + 1 for a, b in zip(numbers, numbers[1:]))
+                    or not _starts_at_line(text, bare_old, numbers[0], every)):
+                raise
+        return _replaced(target, text, bare_old, bare_new, every)
 
     def fs_edit(self, args: dict, ctx: CallContext) -> ToolResult:
         target = self._target_for_write(args)
