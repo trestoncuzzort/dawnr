@@ -26,12 +26,13 @@ Nothing, by default. The three exceptions are each something you choose:
 |---|---|---|---|
 | the model files, llama.cpp, the provers, the PDF reader, the install settings | the data folder `DAWNR_HOME` (default `~/.local/share/dawnr`): `models/`, `llama.cpp/`, `provers/`, `downloads/`, `pylib/`, `env` | to run | `dawnr forget --all`, or deleting the folder |
 | the model servers' logs and process ids, the API token, the file that opens the page in your browser | `DAWNR_HOME/run` | to run, and so that only your browser can open the page | `dawnr forget` |
-| the assistant's journal: every change it made to a file, and the bytes it replaced | the state folder: `~/.local/state/dawnr-agent` on Linux, `~/Library/Application Support/dawnr-agent` on macOS, `%LOCALAPPDATA%\dawnr-agent` on Windows, or the folder given with `--state` | so that each change can be undone ([DAWNR-AGENT.md](DAWNR-AGENT.md)) | `dawnr forget` |
+| the assistant's journal: every change it made to a file, and the bytes it replaced; and its plan log (`plans.jsonl`): for each plan, every call's tool and arguments, a text longer than 200 characters (a file's contents, an edit's texts) only by its length and SHA-256 | the state folder: `~/.local/state/dawnr-agent` on Linux, `~/Library/Application Support/dawnr-agent` on macOS, `%LOCALAPPDATA%\dawnr-agent` on Windows, or the folder given with `--state` | so that each change can be undone, and a run that went wrong can be followed afterwards ([DAWNR-AGENT.md](DAWNR-AGENT.md)) | `dawnr forget` |
 | the page's and the API's jobs: the text and files you gave, what the model wrote, the certificate | `DAWNR_HOME/jobs`; the newest 200 finished jobs are kept and the oldest erased first; `DELETE /v1/jobs/ID` erases one now | so that the page can show the result and you can replay it | `dawnr forget`, or `DELETE` |
 | the page's session token | your browser's session storage for that tab; gone when the tab closes | so that the page can talk to the API | closing the tab |
 
 The page sets no cookies and stores nothing else in the browser. The API server writes no request log. The files you
-point the assistant at are read in place; the only copies are the journal's undo record and the jobs above.
+point the assistant at are read in place; the only copies are the journal's undo record, the plan log's texts of 200
+characters or fewer (an edit's text is often a line of a file), and the jobs above.
 
 ## What runs beside dawnr, and whether it talks to the network
 

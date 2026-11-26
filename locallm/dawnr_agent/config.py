@@ -39,7 +39,7 @@ from . import paths
 from .commands import (DEFAULT_MAX_OUTPUT, DEFAULT_TIMEOUT, HIDE_UNDER_HOME, MAX_TIMEOUT, PLACEHOLDERS, Bwrap,
                        CommandRule, CommandTools, ps_tool, safe_exec_path)
 from .files import FileOps, FileTools, Limits, Preview
-from .journal import Journal
+from .journal import Journal, sha256
 from .loop import Budget
 from .paths import DEFAULT_PROTECT, DEFAULT_SECRETS, Space
 
@@ -63,6 +63,22 @@ def default_state_dir() -> Path:
     if sys.platform == "darwin":
         return Path.home() / "Library" / "Application Support" / "dawnr-agent"
     return Path(os.environ.get("XDG_STATE_HOME") or Path.home() / ".local" / "state") / "dawnr-agent"
+
+
+LOGGED_TEXT = 200          # characters of a text argument the plan log keeps; a longer one only by length and sha256
+
+
+def _logged(value):
+    """An argument as the plan log (plans.jsonl) keeps it: a text longer than LOGGED_TEXT characters (a file's
+    contents, an edit's texts, a long command) as {"chars": its length, "sha256": of its UTF-8}, in a list or an
+    object too; anything else as it is."""
+    if isinstance(value, str) and len(value) > LOGGED_TEXT:
+        return {"chars": len(value), "sha256": sha256(value.encode("utf-8", "surrogatepass"))}
+    if isinstance(value, dict):
+        return {k: _logged(v) for k, v in value.items()}
+    if isinstance(value, (list, tuple)):
+        return [_logged(v) for v in value]
+    return value
 
 
 def _type(value, types, where: str):
@@ -114,9 +130,12 @@ class Agent:
         return Preview(summary=f"calls {name} (not simulated)")
 
     def record_plan(self, dry, outcome, session) -> None:
+        # "calls": each step's tool and the arguments it was pinned to (what the digest covers), so that a run that
+        # went wrong can be followed afterwards; until 2026-11-26 the row held only how many steps there were.
         row = {"time": round(time.time(), 3), "session": session.id if session else "", "plan": dry.digest,
                "steps": len(dry.views), "approved": outcome.approved, "ran": outcome.steps_run,
-               "stopped": outcome.stopped}
+               "stopped": outcome.stopped,
+               "calls": [{"tool": v.step.tool, "arguments": _logged(v.step.arguments)} for v in dry.views]}
         with self._lock:
             self.plans.append(row)
             if self.audit_path is not None:

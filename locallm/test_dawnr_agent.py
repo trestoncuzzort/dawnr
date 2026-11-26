@@ -1337,6 +1337,42 @@ class Plans(Env):
         tools_run = [row["tool"] for row in h.audit]
         self.assertEqual(tools_run[:3], ["fs_read", "fs_write", "plan"])
 
+    def test_the_plan_log_keeps_what_each_call_asked_for_a_long_text_by_its_length_and_sha256_only(self):
+        # Until 2026-11-26 a row of plans.jsonl said how many steps a plan had and how far it ran, and not what any
+        # step was asked to do, so a run that went wrong could not be followed afterwards.
+        h, a = self.build(permissions={"fs_write": "allow", "fs_edit": "allow"})
+        s = h.session()
+        long, edge = "é" * 201, "e" * 200            # over 200 characters: its length and sha256 only
+        steps = [{"tool": "fs_write", "arguments": {"path": "project/long.txt", "content": long}},
+                 {"tool": "fs_edit", "arguments": {"path": "project/readme.txt", "old": "world", "new": edge}},
+                 {"tool": "fs_read", "arguments": {"path": "project/readme.txt", "start": 2}}]
+        digest = preview_plan(a, h, Plan.from_json({"steps": steps}), s).digest
+        r = h.call("plan", {"steps": steps}, session=s)
+        self.assertFalse(r.is_error, r.text)
+        # a text inside a list the same way; a plan refused before it ran is kept too
+        h.call("plan", {"steps": [{"tool": "run_command", "arguments": {"argv": ["echo", "z" * 300]}}]}, session=s)
+        log = (self.state / "plans.jsonl").read_text()
+        rows = [json.loads(line) for line in log.splitlines()]
+        self.assertEqual(len(rows), 2)
+        first, second = rows
+        self.assertIn("calls", first)
+        self.assertEqual(list(first), ["time", "session", "plan", "steps", "approved", "ran", "stopped", "calls"])
+        self.assertEqual({k: first[k] for k in ("session", "plan", "steps", "approved", "ran", "stopped")},
+                         {"session": s.id, "plan": digest, "steps": 3, "approved": None, "ran": 3, "stopped": "done"})
+        self.assertEqual(first["calls"], [
+            {"tool": "fs_write", "arguments": {"path": "project/long.txt",
+                                               "content": {"chars": 201, "sha256": sha256(long.encode("utf-8"))}}},
+            {"tool": "fs_edit", "arguments": {"path": "project/readme.txt", "old": "world", "new": edge,
+                                              "expect_sha256": sha256(b"hello\nworld\n")[:16]}},
+            {"tool": "fs_read", "arguments": {"path": "project/readme.txt", "start": 2}}])
+        self.assertEqual(second["calls"], [{"tool": "run_command",
+                                            "arguments": {"argv": ["echo", {"chars": 300, "sha256": sha256(b"z" * 300)}]}}])
+        self.assertEqual((second["steps"], second["ran"]), (1, 0))
+        self.assertTrue(second["stopped"].startswith("step 1 would be refused"), second["stopped"])
+        self.assertNotIn(json.dumps(long)[1:-1], log)
+        self.assertNotIn("z" * 201, log)
+        self.assertEqual(a.plans, rows)                    # what the agent keeps in memory is the same
+
 
 # --------------------------------------------------------------------- the loop --
 
