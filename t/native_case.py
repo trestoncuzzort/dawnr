@@ -125,8 +125,8 @@ def raw_string_opens(text: str, index: int) -> bool:
 
 
 def code(text: str, strict: bool = True, refuse_raw: bool = False):
-    """Each character outside comments and literals, with its index. Not strict, an unterminated comment or literal ends
-    the text; with refuse_raw, a raw string literal raises, since this scan cannot say where one ends."""
+    """Each character outside comments and literals, with its index. Not strict, an unterminated comment ends the
+    text and a literal ends at its line, as one cannot run over a line end; with refuse_raw, a raw string literal raises, since this scan cannot say where one ends."""
     index = 0
     while index < len(text):
         two = text[index:index + 2]
@@ -144,7 +144,7 @@ def code(text: str, strict: bool = True, refuse_raw: bool = False):
             if refuse_raw and text[index] == '"' and raw_string_opens(text, index):
                 raise ValueError("raw string literal")
             quote, index = text[index], index + 1
-            while index < len(text) and text[index] != quote:
+            while index < len(text) and text[index] != quote and (strict or text[index] != "\n"):
                 index += 2 if text[index] == "\\" else 1
             if index >= len(text) and strict:
                 raise ValueError("unterminated literal in extracted lines")

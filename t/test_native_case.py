@@ -152,6 +152,13 @@ def test_a_raw_string_literal_in_a_macro_is_refused():
         cases.extract('#define NAME R"(x)"\n', {"name": "NAME", "kind": "macro", "line": 1, "end_line": 1})
 
 
+def test_an_apostrophe_in_a_directive_does_not_hide_a_raw_string_literal_after_it():
+    """A literal does not run over a line end, so the unpaired apostrophe of `#error don't` ends with its line."""
+    source = "static const char *name(void)\n{\n#ifdef X\n#error don't\n#endif\n\treturn R\"(x)\";\n}\n"
+    with pytest.raises(ValueError, match="raw string literals"):
+        cases.extract(source, {"name": "name", "line": 1, "end_line": 7})
+
+
 @pytest.mark.parametrize("literal", ['R"(x)"', 'u8R"(x)"', 'uR"(x)"', 'UR"(x)"', 'LR"(x)"', '"a"R"(x)"'])
 def test_a_raw_string_literal_is_still_refused(literal):
     source = f"static const char *name(void)\n{{\n\treturn {literal};\n}}\n"
