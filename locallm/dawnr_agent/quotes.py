@@ -20,7 +20,8 @@ without a patch's one-character "+", "-" or " ": a quote of a patch's lines with
 patch is joined once more as each of its two texts, without its "-" lines and without its "+" lines. The lines of
 one file are joined the same way wherever the tools showed them, in two fs_read windows, as two fs_search hits or
 as one of each: each line without what the tool put on or around it (a hit's file name and number, a window's
-header and hints, a document's page marks), and only lines the file has one after the other. A blockquote line or
+header and hints, a document's page marks), and only lines the file has one after the other, in one version of it
+(two windows whose sha256 differ, read on either side of an edit, are not joined). A blockquote line or
 a passage is also found without Markdown's inline formatting on either side (a backslash before punctuation, a code
 span's backticks, emphasis), which a reader does not see; a code line keeps every character. Never reported: a
 quote with nothing in it to check (no letter or digit, as in punctuation, brackets or an ellipsis, or fewer than
@@ -48,10 +49,11 @@ COMMENT = re.compile(r"\s*(?:/\*+|\*+/?|//+|#+|--|;+)\s?")
 LINK = re.compile(r"\[([^\]\n]*)\]\([^)\n]*\)")
 QUOTE_MARKS = str.maketrans(dict.fromkeys("'\u2018\u2019\u201a\u201b\u2032\u201c\u201d\u201e\u201f\u2033", '"'))
 # What the tools show of a file's lines, and around them (dawnr_agent/files.py): an fs_read window's header (the file,
-# its first and last line), the same for a document's text, whose pages are marked on lines of their own; a search's
-# header, then each hit after its file's name and its number; and a reply cut at its size. Lines a file has one after
-# the other are one text however the tools showed them: in two windows, as two hits, a window and a hit.
-WINDOW = re.compile(r"(.*): lines (\d+)-(\d+) of \d+, \d+ bytes")
+# its first and last line, and the file's sha256 when it was read whole), the same for a document's text, whose
+# pages are marked on lines of their own; a search's header, then each hit after its file's name and its number; and
+# a reply cut at its size. Lines a file has one after the other are one text however the tools showed them: in two
+# windows of one version of it, as two hits, a window and a hit.
+WINDOW = re.compile(r"(.*): lines (\d+)-(\d+) of \d+, \d+ bytes(?:, sha256 ([0-9a-f]+))?")
 DOCUMENT = re.compile(r"(.*) \(.*\): lines (\d+)-(\d+) of \d+ of its text, \d+ bytes$")
 PAGE = re.compile(r"\[page \d+\]$")
 SEARCH = re.compile(r"search for .* \(literal, .*\): \d+ matches in \d+ files, \d+ files searched$")
@@ -164,7 +166,7 @@ def _diff_line(line: str, indent: int) -> str:
     return line[1:] if line[:1] in ("+", "-", " ") else line
 
 
-def _source(text: str) -> tuple[str, tuple[str, str]]:
+def _source(text: str) -> tuple[str, tuple[str, ...]]:
     """A source's lines as they were read, one to a line, and its whole text with each line taken without fs_read's
     number and tab and a patch's marker; whitespace made single spaces in both. A line needs nothing taken off to
     be searched on its own (what is inside the rest of a line is inside the line, and a quote that keeps the "+" or
@@ -188,38 +190,47 @@ def _joined(lines: list[str], patch: bool = False) -> tuple[str, ...]:
     return tuple(out)
 
 
-def _shown(text: str) -> list[tuple[str, int, str | None]]:
-    """(file, number, text) of each line of a file that this tool's reply shows, without what the tool put on it;
-    a page's mark in a document has None for its text. Nothing for a reply that is not a window or a search."""
+def _shown(text: str) -> list[tuple[str, str | None, int, str | None]]:
+    """(file, its version, number, text) of each line of a file that this tool's reply shows, without what the tool
+    put on it. The version is the sha256 a window's header gives (fs_read gives it for a file it read whole), else
+    None, as for a search's hits; a page's mark in a document has None for its text. Nothing for a reply that is
+    not a window or a search."""
     lines = text.splitlines()
     head = lines[0] if lines else ""
     window, document = WINDOW.match(head), DOCUMENT.match(head)
     if window or document:
         path, start, last = (window or document).group(1, 2, 3)
+        version = window.group(4) if window else None
         start, last, body = int(start), int(last), lines[1:]
         if window and body and re.match(rf" *{start}\t", body[0]):        # numbered: each line says which it is
-            return [(path, int(number.group(1)), line[number.end():]) for line in body
+            return [(path, version, int(number.group(1)), line[number.end():]) for line in body
                     if (number := NUMBER.match(line)) and start <= int(number.group(1)) <= last]
-        return [(path, n, None if document and PAGE.match(line) else line)
+        return [(path, version, n, None if document and PAGE.match(line) else line)
                 for n, line in enumerate(body[:last - start + 1], start) if not CLIPPED.match(line)]
     if SEARCH.match(head):
-        return [(hit.group(1), int(hit.group(2)), hit.group(3)) for hit in map(HIT.match, lines[1:]) if hit]
+        return [(hit.group(1), None, int(hit.group(2)), hit.group(3)) for hit in map(HIT.match, lines[1:]) if hit]
     return []
 
 
 def _runs(texts: list[str]) -> list[tuple[list[str], bool]]:
     """The lines the tools showed of each file, in runs of lines the file has one after the other, wherever each was
     shown (two windows, two hits, a window and a hit); of a line shown twice, the longer (a hit's is stripped, and
-    cut at 200 characters). A page's mark keeps the lines on either side of it one after the other. With each run,
-    whether it is a patch's (the file is named .patch or .diff, or the run has a hunk header)."""
-    files: dict[str, dict[int, str | None]] = {}
+    cut at 200 characters). A page's mark keeps the lines on either side of it one after the other. Windows of two
+    versions of a file (read before and after an edit, which can move its lines) are not joined; a line of no known
+    version (a hit) is joined to every version of its file, and to the other such lines. With each run, whether it
+    is a patch's (the file is named .patch or .diff, or the run has a hunk header)."""
+    files: dict[tuple[str, str | None], dict[int, str | None]] = {}
     for text in texts:
-        for path, n, line in _shown(text):
-            got = files.setdefault(path, {})
+        for path, version, n, line in _shown(text):
+            got = files.setdefault((path, version), {})
+            if n not in got or len(line or "") > len(got[n] or ""):
+                got[n] = line
+    for (path, version), got in files.items():
+        for n, line in (files.get((path, None), {}) if version is not None else {}).items():
             if n not in got or len(line or "") > len(got[n] or ""):
                 got[n] = line
     runs: list[tuple[list[str], bool]] = []
-    for path, got in files.items():
+    for (path, _version), got in files.items():
         last = None
         for n in sorted(got):
             if n - 1 != last:

@@ -246,12 +246,12 @@ HITS = ("search for 'the' in here (literal, ignoring case): 3 matches in 1 files
         "here/docs/cache.md:9: A stale cache is rebuilt in the background.")
 
 
-def window(path: str, lines: list, start: int, last: int, numbered: bool = True) -> str:
-    """fs_read's reply for lines start..last of a file of these lines."""
+def window(path: str, lines: list, start: int, last: int, numbered: bool = True, sha: str = "0f1e2d3c4b5a") -> str:
+    """fs_read's reply for lines start..last of a file of these lines, whose sha256 starts with `sha`."""
     shown = lines[start - 1:last]
     body = "\n".join(f"{n:>{len(str(last))}}\t{line}" if numbered else line for n, line in enumerate(shown, start))
     more = f"\n[lines {last + 1}-{len(lines)} not shown; read again with \"start\": {last + 1}]" if last < len(lines) else ""
-    return f"{path}: lines {start}-{last} of {len(lines)}, 310 bytes, sha256 0f1e2d3c4b5a\n{body}{more}"
+    return f"{path}: lines {start}-{last} of {len(lines)}, 310 bytes, sha256 {sha}\n{body}{more}"
 
 
 class ReadFormatTest(unittest.TestCase):
@@ -288,6 +288,18 @@ class ReadFormatTest(unittest.TestCase):
         self.assertEqual(unfound_quotes(BOTH, [window("here/docs/cache.md", skipped, 1, 3),
                                                window("here/docs/cache.md", skipped, 5, 10)]),
                          ["The cache is cleared only when the person runs clean, and never on its own."])
+
+    def test_windows_of_the_file_before_and_after_an_edit_are_not_joined(self):
+        # Lines 1-3 read, the first line taken out, lines 4-5 read: the file's line 4 is now what was line 5. Line 3
+        # then line 5 of the old file is in neither file; the two windows have two sha256s, a hit has none.
+        old = CACHE[:3] + ["(a line between)"] + CACHE[3:]
+        new = old[1:]
+        reads = [window("here/docs/cache.md", old, 1, 3, sha="aaaaaaaaaaaa"),
+                 window("here/docs/cache.md", new, 4, 5, sha="bbbbbbbbbbbb")]
+        self.assertEqual(new[3], "runs clean, and never on its own.")
+        self.assertEqual(unfound_quotes(BOTH, reads), ["The cache is cleared only when the person runs clean, and "
+                                                       "never on its own."])
+        self.assertEqual(unfound_quotes(BOTH, [reads[0], HITS]), [])        # a hit joins any window of its file
 
     def test_a_passage_over_a_page_break_of_a_document_is_found(self):
         pdf = ("here/docs/cache.pdf (pdf, 2 pages): lines 1-4 of 4 of its text, 20480 bytes\n"
