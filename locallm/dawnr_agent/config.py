@@ -32,6 +32,7 @@ import shutil
 import sys
 import threading
 import time
+import uuid
 from dataclasses import fields
 from pathlib import Path
 
@@ -39,9 +40,10 @@ from . import paths
 from .commands import (DEFAULT_MAX_OUTPUT, DEFAULT_TIMEOUT, HIDE_UNDER_HOME, MAX_TIMEOUT, PLACEHOLDERS, Bwrap,
                        CommandRule, CommandTools, ps_tool, safe_exec_path)
 from .files import FileOps, FileTools, Limits, Preview
-from .journal import Journal
+from .journal import Journal, sha256
 from .loop import Budget
 from .paths import DEFAULT_PROTECT, DEFAULT_SECRETS, Space
+from .statelock import state_lock
 
 AGENT_KEYS = {"roots", "protect", "secrets", "commands", "command_path", "env", "sandbox", "processes",
               "check_writes", "state", "limits", "budget", "dry_run", "shell", "system", "sysinfo"}
@@ -63,6 +65,54 @@ def default_state_dir() -> Path:
     if sys.platform == "darwin":
         return Path.home() / "Library" / "Application Support" / "dawnr-agent"
     return Path(os.environ.get("XDG_STATE_HOME") or Path.home() / ".local" / "state") / "dawnr-agent"
+
+
+LOGGED_TEXT = 200          # longest text argument the plan log stores as is; a longer one is stored as length + sha256
+
+PLAN_LOG_KEEP = 200        # plans kept, newest first; the API keeps as many jobs (t/serve_api.py)
+
+
+def _rotate(path: Path, keep: int) -> None:
+    """_rotate: trim the log at `path` to its newest `keep` lines (one line is one plan), dropping the oldest first.
+
+    - The shortened log is written to a temporary file beside the old one, then swapped in with os.replace, so a crash
+      leaves either the old file or the new one, never half of each.
+    - The whole trim runs under the state lock (statelock.py). Without it, a plan another session appends between
+      the read and the swap would exist only in the old file, and the swap would lose it.
+    """
+    with state_lock(path.parent):
+        lines = [line for line in path.read_bytes().split(b"\n") if line.strip()]
+        if len(lines) <= keep:
+            return
+        tmp = path.with_name(f".{path.name}.{uuid.uuid4().hex[:8]}.tmp")
+        try:
+            with open(tmp, "wb") as f:
+                f.write(b"\n".join(lines[-keep:]) + b"\n")
+                f.flush()
+                os.fsync(f.fileno())
+            os.replace(tmp, path)
+        except BaseException:
+            try:
+                tmp.unlink()                               # remove the partial copy; the log itself is untouched
+            except OSError:
+                pass
+            raise
+
+
+def _logged(value):
+    """_logged: return a tool argument in the form the plan log (plans.jsonl) stores.
+
+    A text longer than LOGGED_TEXT characters (a file's contents, an edit's texts, a long command) becomes
+    {"chars": its length, "sha256": hash of its UTF-8}. This applies inside lists and objects too. Anything else is
+    returned unchanged.
+    """
+    if isinstance(value, str) and len(value) > LOGGED_TEXT:
+        return {"chars": len(value), "sha256": sha256(value.encode("utf-8", "surrogatepass"))}
+    if isinstance(value, dict):
+        return {k: _logged(v) for k, v in value.items()}
+    if isinstance(value, (list, tuple)):
+        return [_logged(v) for v in value]
+    return value
 
 
 def _type(value, types, where: str):
@@ -114,18 +164,26 @@ class Agent:
         return Preview(summary=f"calls {name} (not simulated)")
 
     def record_plan(self, dry, outcome, session) -> None:
+        # "calls" lists each step's tool and the arguments it was pinned to (the same ones the plan digest covers),
+        # so a run that went wrong can be traced step by step afterwards.
         row = {"time": round(time.time(), 3), "session": session.id if session else "", "plan": dry.digest,
                "steps": len(dry.views), "approved": outcome.approved, "ran": outcome.steps_run,
-               "stopped": outcome.stopped}
+               "stopped": outcome.stopped,
+               "calls": [{"tool": v.step.tool, "arguments": _logged(v.step.arguments)} for v in dry.views]}
         with self._lock:
             self.plans.append(row)
             if self.audit_path is not None:
                 try:
-                    self.audit_path.parent.mkdir(parents=True, exist_ok=True)
-                    with open(self.audit_path, "a", encoding="utf-8") as f:
-                        f.write(json.dumps(row, ensure_ascii=True) + "\n")
+                    with state_lock(self.audit_path.parent):        # wait while another session trims the log
+                        with open(self.audit_path, "a", encoding="utf-8") as f:
+                            f.write(json.dumps(row, ensure_ascii=True) + "\n")
                 except (OSError, ValueError) as e:
                     self.harness.messages.append(f"agent plan log not written: {e}")
+                else:
+                    try:
+                        _rotate(self.audit_path, PLAN_LOG_KEEP)
+                    except OSError as e:
+                        self.harness.messages.append(f"agent plan log not shortened: {e}")
 
 
 def _rules(spec, space: Space, exec_path: str, problems: list, limits: dict) -> list:

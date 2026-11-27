@@ -27,16 +27,16 @@ Nothing, by default. The three exceptions are each something you choose:
 | the model files, llama.cpp, the provers, the PDF reader, the install settings | the data folder `DAWNR_HOME` (default `~/.local/share/dawnr`): `models/`, `llama.cpp/`, `provers/`, `downloads/`, `pylib/`, `env`, and the `llama.cpp.tmp/`, `cudart.tmp/` and `pylib.tmp/` an install that stopped part way leaves | to run | `dawnr forget --all`, or deleting the folder |
 | the `dawnr` command: the paths of this checkout and of `DAWNR_HOME`, nothing else | `~/.local/bin/dawnr` (install.sh's `BIN_DIR`) | so that `dawnr` runs from any folder, and says to run install.sh again after `forget --all` | deleting the file |
 | the model servers' logs and process ids, the API token, the file that opens the page in your browser | `DAWNR_HOME/run` | to run, and so that only your browser can open the page | `dawnr forget` |
-| the assistant's journal: every change it made to a file, and the bytes it replaced | the state folder: `~/.local/state/dawnr-agent` on Linux, `~/Library/Application Support/dawnr-agent` on macOS, `%LOCALAPPDATA%\dawnr-agent` on Windows, or the folder given with `--state` | so that each change can be undone ([DAWNR-AGENT.md](DAWNR-AGENT.md)) | `dawnr forget`; a folder given with `--state` while it holds nothing else (see Erasing) |
+| the assistant's journal: every change it made to a file, and the bytes it replaced; its plan log (`plans.jsonl`): for each plan, the tool and arguments of every call, except that a text longer than 200 characters (a file's contents, an edit's texts) is kept only as its length and SHA-256, and only the newest 200 plans are kept, the oldest being dropped as each new one is added; and an empty `.lock` file, which two sessions sharing the folder use to take turns writing | the state folder: `~/.local/state/dawnr-agent` on Linux, `~/Library/Application Support/dawnr-agent` on macOS, `%LOCALAPPDATA%\dawnr-agent` on Windows, or the folder given with `--state` | so that each change can be undone, and a run that went wrong can be followed afterwards ([DAWNR-AGENT.md](DAWNR-AGENT.md)) | `dawnr forget`; a folder given with `--state` while it holds nothing else (see Erasing) |
 | the folders given with `--state` | `DAWNR_HOME/state-folders`, one path a line, written when the assistant starts with `--state` and `DAWNR_HOME` is set, as the `dawnr` command sets it | so that `dawnr forget` can find a folder it does not know by name | `dawnr forget` |
 | the page's and the API's jobs: the text and files you gave, what the model wrote, the certificate | `DAWNR_HOME/jobs`; the newest 200 finished jobs are kept and the oldest erased first; `DELETE /v1/jobs/ID` erases one now | so that the page can show the result and you can replay it | `dawnr forget`, or `DELETE` |
 | the page's session token | your browser's session storage for that tab; gone when the tab closes | so that the page can talk to the API | closing the tab |
 | copies of a program being checked, which the provers and the sandbox are handed | the system's temporary folder (`$TMPDIR`, else `/tmp`), each removed when its check ends, except: a check that is killed leaves its folder; the Dafny adapter leaves the copy it hands Dafny (`t_src_*.dfy`: `t/verifiers/dafny.py` never removes it); replaying an observation certificate leaves its folder (`obs-*`: `t/obs_certificate.py` never removes it) | so that a prover reads a private copy, not a file that can change while it reads | deleting them; not `dawnr forget`, which cannot tell them from the same files of another run of the provers |
 
 The page sets no cookies and stores nothing else in the browser. The API server writes no request log. The files you
-point the assistant at are read in place; the only copies kept are the journal's undo record and the jobs above. The
-document reader and the sandbox work on copies inside the state folder (`doc/`, `sh/`), removed when the read or the
-command ends.
+point the assistant at are read in place; the only copies kept are the journal's undo record, the plan log's texts of 200
+characters or fewer (an edit's text is often a line of a file), and the jobs above. The document reader and the sandbox
+work on copies inside the state folder (`doc/`, `sh/`), removed when the read or the command ends.
 
 The window in `locallm/` (`locallm/home.py`, started by `locallm/start-linux.sh` and its siblings, never by the
 `dawnr` command) keeps two more things once a person turns them on, in the per-user data folder: on Linux
@@ -73,8 +73,11 @@ Whoever installs it on a shared machine controls the folders above.
 starts with it from the `dawnr` command, before anything is written into it; one given to `locallm/dawnr_cli.py` run
 by hand, without `DAWNR_HOME`, is not recorded. A recorded folder is erased only while it is a real folder at that
 path, reached through no link, other than `/`, the home folder or `DAWNR_HOME`, and holding nothing but what the
-assistant writes into a state folder: `journal.jsonl` and `backups/` (the journal), `plans.jsonl` (its plans), and
-`doc/`, `sh/` and `sh-hidden/` (the document reader's and the sandbox's scratch). Any other is named and left whole,
+assistant writes into a state folder: `journal.jsonl` and `backups/` (the journal), `plans.jsonl` (its plans, with
+`.plans.jsonl.XXXXXXXX.tmp`, the shortened copy that trimming it leaves behind if the computer stops midway),
+`.lock` (an empty file that two sessions sharing one state folder use to take turns writing, so that neither loses
+the other's lines), and `doc/`, `sh/` and `sh-hidden/` (the document reader's and the sandbox's scratch). Any other is
+named and left whole,
 as `kept PATH: it does not look like a dawnr state folder`: a folder you also keep your own files in keeps the
 journal too, so erase those names in it yourself. `dawnr forget --all` also erases the models and everything
 `install.sh` fetched, with what an install that stopped part way left; run `install.sh` again to use dawnr after

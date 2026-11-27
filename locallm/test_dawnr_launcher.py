@@ -13,6 +13,17 @@ from locallm.install_runtime import check_manifest, configure, manifest_entries
 ROOT = Path(__file__).resolve().parents[1]
 
 
+def test_every_launcher_is_executable_in_the_repository():
+    # install.sh links `dawnr` to bin/dawnr and the person runs it by name, so a checkout where bin/dawnr lost its
+    # executable bit cannot start dawnr at all. An edit made from Windows can drop the bit, and every other test here
+    # runs the launcher through `bash`, so only this one notices.
+    out = subprocess.run(["git", "-C", str(ROOT), "ls-files", "-s", "--", "bin"], capture_output=True, text=True)
+    if out.returncode != 0 or not out.stdout.strip():
+        pytest.skip("not a git checkout")
+    modes = {line.split("\t", 1)[1]: line.split()[0] for line in out.stdout.splitlines()}
+    assert modes and all(mode == "100755" for mode in modes.values()), modes
+
+
 @pytest.mark.parametrize('args', [[], ['--help'], ['help'], ['help', 'ask'],
                                    ['do', '--help'], ['ask', 'example', '--help'],
                                    ['serve', '--help']])
@@ -309,3 +320,48 @@ def test_forget_keeps_a_recorded_folder_that_is_not_a_dawnr_state_folder(tmp_pat
     assert {str(top): snapshot(top) for top in (mixed, real, elsewhere, home)} == before
     assert os.path.islink(link) and os.path.islink(tmp_path / 'linked parent')
     assert not os.path.lexists(data / 'state-folders')
+
+
+def test_forget_erases_a_state_folder_holding_the_copy_a_cut_of_the_plan_log_left_when_it_was_stopped(tmp_path):
+    # Trimming the plan log writes the shortened copy beside it (.plans.jsonl.XXXXXXXX.tmp, dawnr_agent/config.py)
+    # and then swaps it in. If the computer stops between the two, the copy stays; it is dawnr's own file.
+    _home, data, env, _default = forget_place(tmp_path)
+    left, odd = tmp_path / 'left', tmp_path / 'odd'
+    for state in (left, odd):
+        journal_a_change(state)
+        (state / 'plans.jsonl').write_text('{}\n')
+    (left / '.plans.jsonl.0a1b2c3d.tmp').write_text('{}\n')
+    (odd / '.plans.jsonl.notes.tmp').write_text('my own file\n')              # a similar name that is not the agent's
+    (data / 'state-folders').write_text(f'{left}\n{odd}\n')
+    before = snapshot(odd)
+    got = forget(env)
+    assert got.returncode == 0, got.stderr
+    assert f'erased {left}' in got.stdout.splitlines(), got.stdout
+    assert not os.path.lexists(left)
+    assert f'kept {odd}: it does not look like a dawnr state folder' in got.stdout.splitlines(), got.stdout
+    assert snapshot(odd) == before
+
+
+def test_forget_erases_a_state_folder_holding_the_lock_file_and_keeps_one_where_that_name_is_something_else(tmp_path):
+    # Every write to the plan log and the journal holds a lock on `.lock` in the state folder
+    # (locallm/dawnr_agent/statelock.py). It is an empty file of dawnr's own, so a folder holding it is still dawnr's.
+    _home, data, env, _default = forget_place(tmp_path)
+    locked, linked, folder = tmp_path / 'locked', tmp_path / 'linked', tmp_path / 'folder'
+    for state in (locked, linked, folder):
+        journal_a_change(state)
+    (locked / '.lock').write_bytes(b'')                                       # empty, as the journal's writes leave it
+    for state in (linked, folder):
+        (state / '.lock').unlink(missing_ok=True)                             # remove the real one, then replace it
+    (tmp_path / 'theirs.txt').write_text('my own file\n')
+    (linked / '.lock').symlink_to(tmp_path / 'theirs.txt')                    # a link there is not dawnr's file
+    (folder / '.lock').mkdir()                                                # a folder there is not dawnr's file
+    (data / 'state-folders').write_text(f'{locked}\n{linked}\n{folder}\n')
+    before = {str(top): snapshot(top) for top in (linked, folder)}
+    got = forget(env)
+    assert got.returncode == 0, got.stderr
+    assert f'erased {locked}' in got.stdout.splitlines(), got.stdout
+    assert not os.path.lexists(locked)
+    for kept in (linked, folder):
+        assert f'kept {kept}: it does not look like a dawnr state folder' in got.stdout.splitlines(), got.stdout
+    assert {str(top): snapshot(top) for top in (linked, folder)} == before
+    assert (tmp_path / 'theirs.txt').read_text() == 'my own file\n'
