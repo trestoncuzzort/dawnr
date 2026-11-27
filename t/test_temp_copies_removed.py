@@ -107,8 +107,9 @@ def test_dafny_adapter_with_the_real_dafny_leaves_none_of_its_copies(watch, tmp_
     src.write_text("method M() ensures true {}\n", encoding="utf-8")
     result = d.verify(src)
     assert result.ok
-    # dafny's own runtime may make its own folder; the adapter's copies are in its `t_dafny-...` scratch folder
-    assert [n for n in left(watch) if n.startswith("t_")] == []
+    # dafny's own runtime may make its own folder; the adapter's copies are in its `t_dafny-...` scratch folder,
+    # which `left` names under dawnr's scratch parent, so each name is matched without its folder
+    assert [n for n in left(watch) if os.path.basename(n).startswith("t_")] == []
 
 
 # --- replaying an observation certificate ------------------------------------------------------------------------
