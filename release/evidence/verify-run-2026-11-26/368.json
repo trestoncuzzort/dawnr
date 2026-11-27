@@ -1,0 +1,272 @@
+{
+ "id": 368,
+ "fn": "repeat_tuples",
+ "verified": false,
+ "route": null,
+ "why": "no body the model wrote answered as your function does and was proved",
+ "twin": null,
+ "stages": [
+  {
+   "route": "answers",
+   "source": "answer 1",
+   "stage": "same as the function",
+   "reason": "it does not answer as your function does (`repeat_tuples(*[[], 1]) == ((),)` is the program's answer, not yours)",
+   "inputs": 203,
+   "first": "assert repeat_tuples(*[[], 1]) == ((),)"
+  },
+  {
+   "route": "answers",
+   "source": "answer 3",
+   "stage": "same as the function",
+   "reason": "it does not answer as your function does (`repeat_tuples(*[[], 1]) == ((),)` is the program's answer, not yours)",
+   "inputs": 203,
+   "first": "assert repeat_tuples(*[[], 1]) == ((),)"
+  },
+  {
+   "route": "answers",
+   "source": "answer 4",
+   "stage": "same as the function",
+   "reason": "it does not answer as your function does (`repeat_tuples(*[[], 1]) == ((),)` is the program's answer, not yours)",
+   "inputs": 203,
+   "first": "assert repeat_tuples(*[[], 1]) == ((),)"
+  },
+  {
+   "route": "specification",
+   "source": "specification 1, body 1",
+   "stage": "same as the function",
+   "reason": "it does not answer as your function does (`repeat_tuples(*[[], 1]) == ((),)` is the proved program's answer, not yours)",
+   "inputs": 203,
+   "first": "assert repeat_tuples(*[[], 1]) == ((),)"
+  },
+  {
+   "route": "specification",
+   "source": "specification 1, body 2",
+   "stage": "same as the function",
+   "reason": "it does not answer as your function does (`repeat_tuples(*[[], 1]) == ((),)` is the proved program's answer, not yours)",
+   "inputs": 203,
+   "first": "assert repeat_tuples(*[[], 1]) == ((),)"
+  },
+  {
+   "route": "specification",
+   "source": "specification 1, body 3",
+   "stage": "same as the function",
+   "reason": "it does not answer as your function does (`repeat_tuples(*[[], 1]) == ((),)` is the proved program's answer, not yours)",
+   "inputs": 203,
+   "first": "assert repeat_tuples(*[[], 1]) == ((),)"
+  },
+  {
+   "route": "specification",
+   "source": "specification 3, body 1",
+   "stage": "same as the function",
+   "reason": "it does not answer as your function does (`repeat_tuples(*[[], 1]) == ((),)` is the proved program's answer, not yours)",
+   "inputs": 203,
+   "first": "assert repeat_tuples(*[[], 1]) == ((),)"
+  },
+  {
+   "route": "specification",
+   "source": "specification 3, body 3",
+   "stage": "same as the function",
+   "reason": "it does not answer as your function does (`repeat_tuples(*[[], 1]) == ((),)` is the proved program's answer, not yours)",
+   "inputs": 203,
+   "first": "assert repeat_tuples(*[[], 1]) == ((),)"
+  }
+ ],
+ "refused": [
+  "answer 1: it does not answer as your function does (`repeat_tuples(*[[], 1]) == ((),)` is the program's answer, not yours)",
+  "answer 3: it does not answer as your function does (`repeat_tuples(*[[], 1]) == ((),)` is the program's answer, not yours)",
+  "answer 4: it does not answer as your function does (`repeat_tuples(*[[], 1]) == ((),)` is the program's answer, not yours)",
+  "specification 1, body 1: it does not answer as your function does (`repeat_tuples(*[[], 1]) == ((),)` is the proved program's answer, not yours)",
+  "specification 1, body 2: it does not answer as your function does (`repeat_tuples(*[[], 1]) == ((),)` is the proved program's answer, not yours)",
+  "specification 1, body 3: it does not answer as your function does (`repeat_tuples(*[[], 1]) == ((),)` is the proved program's answer, not yours)",
+  "specification 3, body 1: it does not answer as your function does (`repeat_tuples(*[[], 1]) == ((),)` is the proved program's answer, not yours)",
+  "specification 3, body 3: it does not answer as your function does (`repeat_tuples(*[[], 1]) == ((),)` is the proved program's answer, not yours)"
+ ],
+ "specifications": [
+  {
+   "source": "specification 1",
+   "verdict": "kept",
+   "scores": {
+    "correctness": 1.0,
+    "completeness": 1.0,
+    "tests": 3,
+    "mutants": 6
+   },
+   "spec": "t 1\ntask f(tup: seq, n: int) returns (r: seq<seq>)\n  requires n >= 0\n  ensures len(r) == n\n  ensures forall i in [0, n) . r[i] == tup\n{\n}\n",
+   "function": {
+    "passes": true,
+    "why": "passes",
+    "agreement": {
+     "status": "agrees",
+     "draws": 100,
+     "completeness": 1.0,
+     "mutants_rejected": 187,
+     "mutants_accepted": 0
+    },
+    "larger": {
+     "status": "agrees",
+     "draws": 60,
+     "completeness": 1.0,
+     "mutants_rejected": 120,
+     "mutants_accepted": 0,
+     "requires_caps_size": false
+    }
+   }
+  },
+  {
+   "source": "specification 2",
+   "verdict": "duplicate",
+   "scores": {
+    "correctness": 1.0,
+    "completeness": 1.0,
+    "tests": 3,
+    "mutants": 6
+   },
+   "spec": "t 1\ntask f(tup: seq, n: int) returns (r: seq<seq>)\n  requires n >= 0\n  ensures len(r) == n\n  ensures forall i in [0, n) . r[i] == tup\n{\n}\n"
+  },
+  {
+   "source": "specification 3",
+   "verdict": "kept",
+   "scores": {
+    "correctness": 1.0,
+    "completeness": 1.0,
+    "tests": 3,
+    "mutants": 6
+   },
+   "spec": "t 1\ntask f(test_tup: seq, N: int) returns (r: seq<seq>)\n  requires N >= 0\n  ensures len(r) == N\n  ensures forall i in [0, N) . r[i] == test_tup\n{\n}\n",
+   "function": {
+    "passes": true,
+    "why": "passes",
+    "agreement": {
+     "status": "agrees",
+     "draws": 100,
+     "completeness": 1.0,
+     "mutants_rejected": 187,
+     "mutants_accepted": 0
+    },
+    "larger": {
+     "status": "agrees",
+     "draws": 60,
+     "completeness": 1.0,
+     "mutants_rejected": 120,
+     "mutants_accepted": 0,
+     "requires_caps_size": false
+    }
+   }
+  }
+ ],
+ "candidates": [
+  {
+   "source": "answer 1",
+   "function": {
+    "passes": true,
+    "why": "passes",
+    "agreement": {
+     "status": "agrees",
+     "draws": 100,
+     "completeness": 1.0,
+     "mutants_rejected": 187,
+     "mutants_accepted": 0
+    },
+    "larger": {
+     "status": "agrees",
+     "draws": 60,
+     "completeness": 1.0,
+     "mutants_rejected": 120,
+     "mutants_accepted": 0,
+     "requires_caps_size": false
+    }
+   }
+  },
+  {
+   "source": "answer 3",
+   "function": {
+    "passes": true,
+    "why": "passes",
+    "agreement": {
+     "status": "agrees",
+     "draws": 100,
+     "completeness": 1.0,
+     "mutants_rejected": 187,
+     "mutants_accepted": 0
+    },
+    "larger": {
+     "status": "agrees",
+     "draws": 60,
+     "completeness": 1.0,
+     "mutants_rejected": 120,
+     "mutants_accepted": 0,
+     "requires_caps_size": false
+    }
+   }
+  },
+  {
+   "source": "answer 4",
+   "function": {
+    "passes": true,
+    "why": "passes",
+    "agreement": {
+     "status": "agrees",
+     "draws": 100,
+     "completeness": 1.0,
+     "mutants_rejected": 187,
+     "mutants_accepted": 0
+    },
+    "larger": {
+     "status": "agrees",
+     "draws": 60,
+     "completeness": 1.0,
+     "mutants_rejected": 120,
+     "mutants_accepted": 0,
+     "requires_caps_size": false
+    }
+   }
+  }
+ ],
+ "asked": {
+  "answers": 5,
+  "specifications": 3,
+  "bodies": 6
+ },
+ "inputs": {
+  "examples": [
+   "assert repeat_tuples((1, 3), 4) == ((1, 3), (1, 3), (1, 3), (1, 3))",
+   "assert repeat_tuples((1, 2), 3) == ((1, 2), (1, 2), (1, 2))",
+   "assert repeat_tuples((3, 4), 5) == ((3, 4), (3, 4), (3, 4), (3, 4), (3, 4))"
+  ],
+  "taken from the function": false,
+  "kinds": [
+   {
+    "args": [
+     "seq",
+     "int"
+    ],
+    "expected": "seq-of-seq"
+   },
+   {
+    "args": [
+     "seq",
+     "int"
+    ],
+    "expected": "seq-of-seq"
+   },
+   {
+    "args": [
+     "seq",
+     "int"
+    ],
+    "expected": "seq-of-seq"
+   }
+  ],
+  "specification check": {
+   "seed": 1,
+   "draws": 100,
+   "larger draws": 60
+  }
+ },
+ "stopped at": "same as the function",
+ "function": {
+  "code": "def repeat_tuples(test_tup, N):\r\n  res = ((test_tup, ) * N)\r\n  return (res) ",
+  "doc": "Write a function to repeat the given tuple n times."
+ },
+ "seconds": 53.7
+}

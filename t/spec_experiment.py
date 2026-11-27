@@ -102,6 +102,7 @@ import interp          # noqa: E402
 import mbpp_dfy        # noqa: E402
 import surface         # noqa: E402
 import tasks_io        # noqa: E402
+import typed_values    # noqa: E402  (a test value read at the declared type)
 
 OUT_ROOT = HERE / "out" / "spec-experiment"
 FEWSHOT = ["abs", "max", "sum_upto", "linear_search", "gcd"]
@@ -891,9 +892,20 @@ def signature_words(entry: dict, surface: bool = False) -> tuple[int, str, str]:
     """(number of parameters, their kinds, the result's kind) as the prompt states them, read
     from the problem's first test. `surface` spells a nested sequence as the language does
     (`seq<seq>`, prompt s2); without it the pool's own kind names are printed, as every prompt
-    before s2 did."""
+    before s2 did. A value read at its own type (t/typed_values.py) is spelled as t spells the
+    type, and a datatype the question needs is named, with its declaration after the result."""
     args = entry["points"][0]["args"]
     ret = entry["points"][0]["expected"][0]
+    if any(typed_values.is_typed(k) for k in [a[0] for a in args] + [ret]):
+        kinds = [a[0] for a in args] + [ret]
+        names = typed_values.declarations([typed_values.type_of_kind(k) for k in kinds if typed_values.is_typed(k)])
+
+        def word(k):
+            if typed_values.is_typed(k):
+                return typed_values.words(typed_values.type_of_kind(k), names)
+            return SURFACE_KIND.get(k, k) if surface else k
+        said = word(ret) + (" (declare before `t 1`: " + "; ".join(d for _n, d in names.values()) + ")" if names else "")
+        return len(args), ", ".join(word(a[0]) for a in args), said
     if surface:
         return len(args), ", ".join(SURFACE_KIND.get(a[0], a[0]) for a in args), SURFACE_KIND.get(ret, ret)
     return len(args), ", ".join(a[0] for a in args), ret
@@ -1324,7 +1336,7 @@ def _as_interp_value(kind: str, val):
         return tuple(tuple(row) for row in val)
     if kind == "seq":
         return tuple(val)
-    return val
+    return val                  # a typed kind's value is read at the declared type already (expected_value)
 
 
 NESTED_SEQ = {"seq": "seq"}                     # surface.py's `seq<seq>` (SPEC.md "Nested sequences")
@@ -1363,18 +1375,45 @@ def bind_point(task: dict, point: dict) -> tuple[dict | None, dict | None]:
     if len(args) != len(params):
         return None, {"verdict": "arity", "why": f"{len(args)} args for {len(params)} params"}
     env = {}
+    dts = typed_values.datatypes_of(task)
     for i, (p, (kind, val)) in enumerate(zip(params, args)):
+        if typed_values.is_typed(kind):
+            # a value the reader kept as its literal is read at the declared type, or refused
+            try:
+                env[p["name"]] = typed_values.read_at(val, p["type"], dts)
+            except typed_values.Unreadable as why:
+                return None, {"verdict": "type", "why": f"{p['name']} is {_type_words(p['type'])}, test passes "
+                                                        f"{typed_values.words(typed_values.type_of_kind(kind))} ({why})"}
+            continue
         if kind == "int" and p["type"] == "seq" and i in point.get("char_args", ()):
             kind, val = "seq", [val]            # a one-character string, where the task declares a string
         if not kind_fits(kind, val, p["type"]):
             return None, {"verdict": "type", "why": f"{p['name']} is {p['type']}, test passes {kind}"}
         env[p["name"]] = _as_interp_value(kind, val)
+    ekind, eval_ = point["expected"]
+    if typed_values.is_typed(ekind):
+        ty = task["returns"][0].get("type")
+        try:
+            typed_values.read_at(eval_, ty, dts)
+        except typed_values.Unreadable as why:
+            return None, {"verdict": "type", "why": f"the result is {_type_words(ty)}, the test expects "
+                                                    f"{typed_values.words(typed_values.type_of_kind(ekind))} ({why})"}
     return env, None
 
 
+def _type_words(ty) -> str:
+    try:
+        return surface._print_type(ty)
+    except Exception:                                           # noqa: BLE001 -- words for a refusal, never a verdict
+        return str(ty)
+
+
 def expected_value(task: dict, point: dict):
-    """(kind, value) of the point's expected result, read at the type the task returns."""
+    """(kind, value) of the point's expected result, read at the type the task returns. A typed kind's value is
+    the interpreter's value already (bind_point has checked that it reads)."""
     ekind, eval_ = point["expected"]
+    if typed_values.is_typed(ekind):
+        return ekind, typed_values.read_at(eval_, task["returns"][0].get("type"), typed_values.datatypes_of(task))
     if ekind == "int" and point.get("char_expected") and task["returns"][0].get("type") == "seq":
         ekind, eval_ = "seq", [eval_]           # the expected string is one character long
     return ekind, eval_
@@ -1418,6 +1457,10 @@ def run_point(task: dict, point: dict) -> dict:
     # admits a seq expected value; live once --pool v2 (seq) or --pool v3
     # (seq-of-seq, added 2026-09-11) does.
     eval_cmp = _as_interp_value(ekind, eval_)
+    if typed_values.is_typed(ekind):
+        # the tags reach every depth: a bool is never an int, a pair never a seq (interp._tv)
+        ok = interp._tv(got) == interp._tv(eval_cmp)
+        return {"verdict": "pass" if ok else "fail", "got": interp._j(got), "expected": interp._j(eval_cmp)}
     ok = (isinstance(got, bool) == (ekind == "bool")) and got == eval_cmp
     return {"verdict": "pass" if ok else "fail", "got": interp._j(got), "expected": eval_}
 

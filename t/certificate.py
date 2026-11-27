@@ -278,7 +278,9 @@ def check(certificate: dict, prover=None, jobs: int = 2, spec: dict | None = Non
     tests, entry = list(predicate.get("tests") or []), None
     if tests:
         try:
-            entry = gate.entry_of(predicate.get("question") or "", tests)
+            # `dawnr verify` reads a set, a dict, None and the rest at the task's types (t/typed_values.py); its
+            # certificate's tests are read the same way, and every other certificate's tests are read without it
+            entry = gate.entry_of(predicate.get("question") or "", tests, typed=predicate.get("kind") == "verify")
         except ValueError as error:
             step("tests", BAD, f"the recorded tests cannot be read: {error}"[:200])
         else:

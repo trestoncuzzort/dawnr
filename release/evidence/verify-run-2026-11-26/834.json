@@ -1,0 +1,133 @@
+{
+ "id": 834,
+ "fn": "generate_matrix",
+ "verified": false,
+ "route": null,
+ "why": "no specification the model wrote holds at your function's answers and pins them down. Every one it wrote from your docstring is false at an answer your function gives (`generate_matrix(3)==[[1, 2, 3], [8, 9, 4], [7, 6, 5]]`): either the model misread the docstring, or the function does not do what it says",
+ "twin": null,
+ "stages": [
+  {
+   "route": "answers",
+   "source": "answer 1",
+   "stage": "parse",
+   "reason": "does not parse (expected ':=', found '[' [Stmt])"
+  },
+  {
+   "route": "answers",
+   "source": "answer 2",
+   "stage": "parse",
+   "reason": "does not parse (expected '{', found 'total' [Stmt])"
+  },
+  {
+   "route": "answers",
+   "source": "answer 3",
+   "stage": "parse",
+   "reason": "does not parse (expected '{', found 'if' [Stmt])"
+  },
+  {
+   "route": "answers",
+   "source": "answer 4",
+   "stage": "parse",
+   "reason": "does not parse (expected ':=', found '[' [Stmt])"
+  },
+  {
+   "route": "answers",
+   "source": "answer 5",
+   "stage": "parse",
+   "reason": "does not parse (expected ':=', found '[' [Stmt])"
+  },
+  {
+   "route": "specification",
+   "source": "specification 2",
+   "stage": "parse",
+   "reason": "it does not parse (expected '{', found 'first_row' [Stmt])"
+  },
+  {
+   "route": "specification",
+   "source": "specification 3",
+   "stage": "parse",
+   "reason": "it does not parse (expected ')', found 'vals' [Expr])"
+  },
+  {
+   "route": "specification",
+   "source": "specification 1",
+   "stage": "examples",
+   "reason": "`len(r) == n; forall i in [0, n) . len(r[i]) == n; forall i in [0, n) . forall j in [0, n) . r[i][j] >= 1 and r[i][j] <= n * n; forall i in [0, n) . forall j in [0, n) . forall k in [0, n) . forall l in [0, n) . r[i][j] == r[k][l] ==> i == k and j == l; forall i in [0, n) . forall j in [0, n) . r[i][j] == spiral_value(n, i, j)` is false at your function's own answer `generate_matrix(3)==[[1, 2, 3], [8, 9, 4], [7, 6, 5]]`",
+   "at": "generate_matrix(3)==[[1, 2, 3], [8, 9, 4], [7, 6, 5]]",
+   "scores": {
+    "correctness": 0.3333333333333333,
+    "completeness": 1.0,
+    "tests": 3,
+    "mutants": 14
+   }
+  }
+ ],
+ "refused": [
+  "answer 1: does not parse (expected ':=', found '[' [Stmt])",
+  "answer 2: does not parse (expected '{', found 'total' [Stmt])",
+  "answer 3: does not parse (expected '{', found 'if' [Stmt])",
+  "answer 4: does not parse (expected ':=', found '[' [Stmt])",
+  "answer 5: does not parse (expected ':=', found '[' [Stmt])",
+  "specification 2: it does not parse (expected '{', found 'first_row' [Stmt])",
+  "specification 3: it does not parse (expected ')', found 'vals' [Expr])",
+  "specification 1: `len(r) == n; forall i in [0, n) . len(r[i]) == n; forall i in [0, n) . forall j in [0, n) . r[i][j] >= 1 and r[i][j] <= n * n; forall i in [0, n) . forall j in [0, n) . forall k in [0, n) . forall l in [0, n) . r[i][j] == r[k][l] ==> i == k and j == l; forall i in [0, n) . forall j in [0, n) . r[i][j] == spiral_value(n, i, j)` is false at your function's own answer `generate_matrix(3)==[[1, 2, 3], [8, 9, 4], [7, 6, 5]]`"
+ ],
+ "specifications": [
+  {
+   "source": "specification 1",
+   "verdict": "dropped",
+   "scores": {
+    "correctness": 0.3333333333333333,
+    "completeness": 1.0,
+    "tests": 3,
+    "mutants": 14
+   },
+   "spec": "t 1\ntask f(n: int) returns (r: seq<seq>)\n  requires n >= 0\n  ensures len(r) == n\n  ensures forall i in [0, n) . len(r[i]) == n\n  ensures forall i in [0, n) . forall j in [0, n) . r[i][j] >= 1 and r[i][j] <= n * n\n  ensures forall i in [0, n) . forall j in [0, n) . forall k in [0, n) . forall l in [0, n) . r[i][j] == r[k][l] ==> i == k and j == l\n  ensures forall i in [0, n) . forall j in [0, n) . r[i][j] == spiral_value(n, i, j)\nspec fun spiral_value(n: int, i: int, j: int): int\n  decreases n\n= if n == 0 then 0 else if i == 0 then j + 1 else if j == n - 1 then n + i else if i == n - 1 then 2 * n - 1 + (n - 1 - j) else if j == 0 then 3 * n - 3 + (n - 2 - i) else spiral_value(n - 2, i - 1, j - 1) + 4 * (n - 1)\n{\n}\n"
+  }
+ ],
+ "candidates": [],
+ "asked": {
+  "answers": 5,
+  "specifications": 3,
+  "bodies": 0
+ },
+ "inputs": {
+  "examples": [
+   "assert generate_matrix(3)==[[1, 2, 3], [8, 9, 4], [7, 6, 5]] ",
+   "assert generate_matrix(2)==[[1,2],[4,3]]",
+   "assert generate_matrix(7)==[[1, 2, 3, 4, 5, 6, 7], [24, 25, 26, 27, 28, 29, 8], [23, 40, 41, 42, 43, 30, 9], [22, 39, 48, 49, 44, 31, 10], [21, 38, 47, 46, 45, 32, 11], [20, 37, 36, 35, 34, 33, 12], [19, 18, 17, 16, 15, 14, 13]]"
+  ],
+  "taken from the function": false,
+  "kinds": [
+   {
+    "args": [
+     "int"
+    ],
+    "expected": "seq-of-seq"
+   },
+   {
+    "args": [
+     "int"
+    ],
+    "expected": "seq-of-seq"
+   },
+   {
+    "args": [
+     "int"
+    ],
+    "expected": "seq-of-seq"
+   }
+  ],
+  "specification check": {
+   "seed": 1,
+   "draws": 100,
+   "larger draws": 60
+  }
+ },
+ "stopped at": "examples",
+ "function": {
+  "code": "def generate_matrix(n):\r\n        if n<=0:\r\n            return [] \r\n        matrix=[row[:] for row in [[0]*n]*n]        \r\n        row_st=0\r\n        row_ed=n-1        \r\n        col_st=0\r\n        col_ed=n-1\r\n        current=1        \r\n        while (True):\r\n            if current>n*n:\r\n                break\r\n            for c in range (col_st, col_ed+1):\r\n                matrix[row_st][c]=current\r\n                current+=1\r\n            row_st+=1\r\n            for r in range (row_st, row_ed+1):\r\n                matrix[r][col_ed]=current\r\n                current+=1\r\n            col_ed-=1\r\n            for c in range (col_ed, col_st-1, -1):\r\n                matrix[row_ed][c]=current\r\n                current+=1\r\n            row_ed-=1\r\n            for r in range (row_ed, row_st-1, -1):\r\n                matrix[r][col_st]=current\r\n                current+=1\r\n            col_st+=1\r\n        return matrix",
+  "doc": "Write a function to generate a square matrix filled with elements from 1 to n raised to the power of 2 in spiral order."
+ },
+ "seconds": 117.7
+}

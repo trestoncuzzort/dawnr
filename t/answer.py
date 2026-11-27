@@ -54,6 +54,7 @@ import spec_first                                               # noqa: E402
 import spec_gate                                                # noqa: E402
 import surface                                                  # noqa: E402
 import to_python                                                # noqa: E402
+import typed_values                                             # noqa: E402
 
 TEMPERATURE = 0.7
 
@@ -71,16 +72,26 @@ def _why_unread(why) -> str:
     return (side + _UNREAD[what]) if side and what in _UNREAD else str(why)
 
 
-def entry_of(text: str, tests: list[str]) -> dict:
+def entry_of(text: str, tests: list[str], typed: bool = False) -> dict:
     """The question as the pool holds a problem: its words, its tests read into points, the
     function's name. ValueError when a test is not an `assert f(...) == value` line the pool's
-    reader takes, or the tests name different functions."""
+    reader takes, or the tests name different functions.
+
+    `typed`: a value the reader refuses is kept as its literal, and each such position is then given
+    one type across the tests (t/typed_values.py): a tuple mixing kinds, a dict, a set, None, deeper
+    nesting, a list of bools or a list mixing kinds. Off, those values are refused."""
     # the wider reader (2026-10-05): a tuple is read as the list of the same elements and a list of int lists as
     # t's seq<seq>; a question a person asks is not held to the pools' narrower reading
-    points = [mbpp_dfy.parse_assertion(a, strings=True, nested_strings=True, tuples=True, nested_ints=True) for a in tests]
+    points = [mbpp_dfy.parse_assertion(a, strings=True, nested_strings=True, tuples=True, nested_ints=True, typed=typed)
+              for a in tests]
     bad = [f"{a!r}: {_why_unread(p.get('why'))}" for a, p in zip(tests, points) if not p.get("ok")]
     if not points or bad:
         raise ValueError("the tests must be `assert f(arguments) == value` lines: " + "; ".join(bad or ["none given"]))
+    if typed:
+        try:
+            typed_values.settle(points)
+        except typed_values.Unreadable as why:
+            raise ValueError(f"the tests' values have no type in t: {why}") from None
     names = {p["fn"] for p in points}
     if len(names) != 1:
         raise ValueError(f"the tests call more than one function: {sorted(names)}")

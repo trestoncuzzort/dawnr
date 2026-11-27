@@ -157,6 +157,12 @@ def main(argv=None) -> int:
     ap.add_argument("--model", default="", help="the model's name at --host, for a server that serves several (a hosted teacher)")
     ap.add_argument("--key-file", type=Path, help="a file holding the key --host asks for (sent as a bearer token)")
     a = ap.parse_args(argv)
+    import dawnr_cli as cli
+    # Every task reads the settings (default_config). They are checked once, here: if each task refused a bad setting
+    # on its own, every seed would be logged as an error, and the next run skips every seed that is in the log.
+    if cli.settings_refused("dawnr_teach"):
+        return 2
+    budget = cli.loop_budget()                                  # the budget every task gets; written to each log line
     key = a.key_file.read_text().strip() if a.key_file else ""
     have = set()
     if a.out.exists():
@@ -181,7 +187,7 @@ def main(argv=None) -> int:
         for n, got in enumerate(pool.map(one, jobs, chunksize=1), 1):
             counts.setdefault(got["family"], {}).setdefault(got["outcome"], 0)
             counts[got["family"]][got["outcome"]] += 1
-            record.write(json.dumps({k: v for k, v in got.items() if k != "row"}) + "\n")
+            record.write(json.dumps({**{k: v for k, v in got.items() if k != "row"}, "budget": budget}) + "\n")
             record.flush()
             if got["row"] is not None:
                 rows.write(json.dumps(got["row"]) + "\n")

@@ -40,6 +40,7 @@ FORMAT = "dawnr-native-case-v1"
 VARIANTS = ("original", "fixed", "vacuous")
 MACHINES = {"ILP32": ("--32", "sizeof(int) == 4 && sizeof(long) == 4 && sizeof(void *) == 4"),
             "LP64": ("--64", "sizeof(int) == 4 && sizeof(long) == 8 && sizeof(void *) == 8")}
+POINTER_BITS = {"ILP32": 32, "LP64": 64}
 # Defined conversions are not undefined behavior, so --conversion-check is opt-in here.
 CHECKS = [flag for flag in native.CHECKS if flag != "--conversion-check"]
 OPTIONAL_CHECKS = ("--conversion-check", "--pointer-overflow-check", "--float-overflow-check", "--nan-check",
@@ -108,10 +109,28 @@ def own_properties(results: list[dict]) -> list[dict]:
     return [row for row in results if row.get("sourceLocation", {}).get("file") != STOP_FILE]
 
 
-def balance(text: str) -> tuple[int, int, list[int]]:
-    """Final brace depth, its minimum, and where it returned to zero, outside comments and literals."""
-    depth = low = index = 0
-    closed = []
+RAW_PREFIXES = ("u8R", "uR", "UR", "LR", "R")
+RAW_OPENING = re.compile(r'"[^ ()\\\t\v\f\r\n]{0,16}\(')
+
+
+def raw_string_opens(text: str, index: int) -> bool:
+    """Whether the quote at `index` opens a raw string literal.
+    It does when an encoding prefix and R (R, u8R, uR, UR or LR) stand as a token of their own right before it, and a
+    delimiter of up to 16 characters and a parenthesis follow (C++ [lex.string]; in C, a GCC extension). An ordinary
+    string ending in R, the string "R" and a name ending in R before a string do not."""
+    for prefix in RAW_PREFIXES:
+        start = index - len(prefix)
+        if text.startswith(prefix, start) and start >= 0 and not (start > 0 and (text[start - 1].isalnum() or text[start - 1] in "_$")):
+            return RAW_OPENING.match(text, index) is not None
+    return False
+
+
+def code(text: str, strict: bool = True, refuse_raw: bool = False):
+    """Yield (index, character) for each character outside comments and literals.
+    Strict, an unterminated comment or literal raises ValueError. Not strict, an unterminated comment ends the text
+    and a literal ends at its line end, as a literal cannot run over one. With refuse_raw, a raw string literal raises
+    ValueError, since this scan cannot say where one ends."""
+    index = 0
     while index < len(text):
         two = text[index:index + 2]
         if two == "//":
@@ -120,22 +139,131 @@ def balance(text: str) -> tuple[int, int, list[int]]:
         elif two == "/*":
             close = text.find("*/", index + 2)
             if close < 0:
-                raise ValueError("unterminated comment in extracted lines")
+                if strict:
+                    raise ValueError("unterminated comment in extracted lines")
+                close = len(text) - 2
             index = close + 2
         elif text[index] in "\"'":
+            if refuse_raw and text[index] == '"' and raw_string_opens(text, index):
+                raise ValueError("raw string literal")
             quote, index = text[index], index + 1
-            while index < len(text) and text[index] != quote:
+            while index < len(text) and text[index] != quote and (strict or text[index] != "\n"):
                 index += 2 if text[index] == "\\" else 1
-            if index >= len(text):
+            if index >= len(text) and strict:
                 raise ValueError("unterminated literal in extracted lines")
             index += 1
         else:
-            depth += {"{": 1, "}": -1}.get(text[index], 0)
-            low = min(low, depth)
-            if text[index] == "}" and depth == 0:
-                closed.append(index)
+            yield index, text[index]
             index += 1
+
+
+def balance(text: str) -> tuple[int, int, list[int]]:
+    """Final brace depth, its minimum, and where it returned to zero, outside comments and literals."""
+    depth = low = 0
+    closed = []
+    for index, char in code(text):
+        depth += {"{": 1, "}": -1}.get(char, 0)
+        low = min(low, depth)
+        if char == "}" and depth == 0:
+            closed.append(index)
     return depth, low, closed
+
+
+def outer_semicolons(text: str) -> list[int]:
+    """Where a semicolon stands outside every brace, comment and literal: where a declaration can end."""
+    depth, found = 0, []
+    for index, char in code(text):
+        depth += {"{": 1, "}": -1}.get(char, 0)
+        if char == ";" and depth == 0:
+            found.append(index)
+    return found
+
+
+CONDITIONALS = ("if", "ifdef", "ifndef", "elif", "elifdef", "elifndef", "else", "endif")
+
+
+def skeleton(text: str) -> str:
+    """The text with each comment and literal replaced by spaces, newlines kept."""
+    kept = {index for index, _ in code(text)}
+    return "".join(char if index in kept or char == "\n" else " " for index, char in enumerate(text))
+
+
+def directives(plain: str) -> list[tuple[int, int, str]]:
+    """Each preprocessor directive of a skeleton as (start, end, name), a backslash at a line end continuing it."""
+    found, offset, lines, current = [], 0, plain.split("\n"), None
+    for line in lines:
+        if current is None and line.lstrip().startswith("#"):
+            current = [offset, re.match(r"\s*#\s*(\w*)", line).group(1)]
+        if current is not None and not line.rstrip().endswith("\\"):
+            found.append((current[0], offset + len(line), current[1]))
+            current = None
+        offset += len(line) + 1
+    return found
+
+
+def blanked(text: str) -> str:
+    """The skeleton with each preprocessor directive replaced by spaces."""
+    plain = skeleton(text)
+    for start, end, _ in directives(plain):
+        plain = plain[:start] + "".join(" " if char != "\n" else char for char in plain[start:end]) + plain[end:]
+    return plain
+
+
+def check_directives(name: str, kind: str, text: str) -> None:
+    """A function or declaration range holds that one item and nothing a preprocessor directive could add to the unit.
+    A directive is the item's own text only inside braces, at a brace depth above zero, wherever that body stands in the
+    range, so each alternative body of a conditional function counts on its own. A directive at depth zero (before a
+    declarator, between a declarator and its body, between bodies, or outside the braces of a declaration) must be a
+    conditional one, and the conditional directives of the range pair up, so the range cannot open or close one it does
+    not hold. A bare `#` is not part of the item either."""
+    plain, open_ifs, else_seen = skeleton(text), 0, []
+    found, blank = directives(plain), blanked(text)
+    depth, at = 0, 0
+    for start, end, word in found:
+        depth = max(0, depth + blank.count("{", at, start) - blank.count("}", at, start))
+        at = start
+        outside = depth == 0
+        if outside and word not in CONDITIONALS:
+            raise ValueError(f"{name}: a preprocessor directive outside the {'function' if kind == 'function' else 'declaration'}'s braces is not part of it")
+        if word in ("if", "ifdef", "ifndef"):
+            open_ifs += 1
+            else_seen.append(False)
+        elif word in ("elif", "elifdef", "elifndef", "else", "endif"):
+            if not open_ifs or (word == "else" and else_seen[-1]) or (word in ("elif", "elifdef", "elifndef") and else_seen[-1]):
+                raise ValueError(f"{name}: conditional directives do not pair up in the extracted lines")
+            if word == "endif":
+                open_ifs -= 1
+                else_seen.pop()
+            elif word == "else":
+                else_seen[-1] = True
+    if open_ifs:
+        raise ValueError(f"{name}: conditional directives do not pair up in the extracted lines")
+
+
+def one_declarator(name: str, text: str) -> bool:
+    """Whether what stands before the first brace of a function's text is one declarator and nothing else.
+    No semicolon may stand before the function's name. A semicolon after the parameter list is allowed only where it
+    ends a declaration of one of the parameters that an old-style (K&R) identifier list names. So `int counter;`
+    before the function, a prototype of it, and a semicolon after `(void)` or after a prototype-style list are refused.
+    C11 6.9.1 Function definitions, paragraphs 6 and 7 (N1570): an identifier list is followed by a declaration list,
+    each declaration of which declares only identifiers from the list."""
+    plain = blanked(text)
+    prefix = plain[:plain.find("{")]
+    if ";" not in prefix:
+        return True
+    named = re.search(rf"(?<![\w$]){re.escape(name)}\s*\(", prefix)
+    if named is None or ";" in prefix[:named.start()]:
+        return False
+    depth, close = 1, named.end()
+    while close < len(prefix) and depth:
+        depth += {"(": 1, ")": -1}.get(prefix[close], 0)
+        close += 1
+    parameters, rest = prefix[named.end():close - 1], prefix[close:]
+    if depth or not re.fullmatch(r"\s*[A-Za-z_]\w*(\s*,\s*[A-Za-z_]\w*)*\s*", parameters) or re.fullmatch(r"\s*void\s*", parameters):
+        return False
+    identifiers = set(re.findall(r"[A-Za-z_$][\w$]*", parameters))
+    *declarations, last = rest.split(";")
+    return bool(declarations) and not last.strip() and all(set(re.findall(r"[A-Za-z_$][\w$]*", each)) & identifiers for each in declarations)
 
 
 def extract(source: str, entry: dict) -> str:
@@ -148,7 +276,15 @@ def extract(source: str, entry: dict) -> str:
         raise ValueError(f"unsupported kind or line range for {entry['name']}")
     chosen = lines[first - 1:last]
     text = "\n".join(chosen) + "\n"
-    if "\r" in text or 'R"' in text:
+    # A raw string literal needs its own parse. Only R, u8R, uR, UR or LR as a token of its own, right before a quote
+    # that is followed by a delimiter and a parenthesis, opens one; R" also ends the ordinary strings "R" and "ERROR".
+    raw = False
+    try:
+        for _ in code(text, strict=False, refuse_raw=True):
+            pass
+    except ValueError:
+        raw = True
+    if "\r" in text or raw:
         raise ValueError(f"{entry['name']}: carriage returns and raw string literals are not supported")
     if not chosen[0].startswith(entry.get("starts_with", "")) or entry["name"] not in text:
         raise ValueError(f"{entry['name']}: extracted lines do not start as declared or do not name it")
@@ -156,15 +292,19 @@ def extract(source: str, entry: dict) -> str:
         if not chosen[0].lstrip().startswith("#") or any(not line.endswith("\\") for line in chosen[:-1]) or chosen[-1].endswith("\\"):
             raise ValueError(f"{entry['name']}: not exactly one preprocessor definition")
         return text
+    if kind in ("function", "declaration"):
+        check_directives(entry["name"], kind, text)
     depth, low, closed = balance(text)
     # Conditional compilation can hold unmatched braces in its branches; the line range then stands alone.
     conditional = any(re.match(r"\s*#\s*(if|ifdef|ifndef|elif|else)\b", line) for line in chosen)
     if not conditional and (depth != 0 or low < 0):
         raise ValueError(f"{entry['name']}: braces do not balance over the extracted lines")
     tail = text.rstrip()
-    if kind == "function" and (not tail.endswith("}") or (not conditional and closed != [len(tail) - 1])):
+    if kind == "function" and (not tail.endswith("}") or (not conditional and closed != [len(tail) - 1]) or not one_declarator(entry["name"], text)):
         raise ValueError(f"{entry['name']}: not exactly one function definition")
-    if kind == "declaration" and (not tail.endswith(";") or (not conditional and len(closed) > 1)):
+    # A declaration ends at the one semicolon outside its braces. `static const struct { ... } table[] = { ... };`
+    # closes a brace twice and is one; `int a = 1;\nint b = 2;` and a range that runs on through a function are not.
+    if kind == "declaration" and (not tail.endswith(";") or (not conditional and outer_semicolons(tail) != [len(tail) - 1])):
         raise ValueError(f"{entry['name']}: not exactly one declaration")
     return text
 
@@ -237,7 +377,7 @@ def assigned_to(name: str, harness: str) -> bool:
 def load(root: Path) -> dict:
     case = json.loads((root / "case.json").read_text(encoding="utf-8"))
     required = {"format", "id", "repository", "path", "machine", "sources", "inputs", "harness", "assertions", "assumptions", "loops"}
-    optional = {"prelude", "unwind", "unwindset", "under_unwind", "checks", "input_domain", "limitations", "allowed_stops", "models"}
+    optional = {"prelude", "unwind", "unwindset", "under_unwind", "checks", "input_domain", "limitations", "allowed_stops", "models", "object_bits"}
     if not isinstance(case, dict) or case.get("format") != FORMAT or not required <= set(case) or set(case) - required - optional:
         raise ValueError(f"case.json is not a complete {FORMAT} description")
     if case["machine"] not in MACHINES or not set(case.get("checks", [])) <= set(OPTIONAL_CHECKS):
@@ -262,6 +402,12 @@ def load(root: Path) -> dict:
     bounds = case.get("unwindset", {})
     if not isinstance(bounds, dict) or any(not LOOP.match(str(key)) or not isinstance(value, int) or value < 1 for key, value in bounds.items()):
         raise ValueError("unwindset maps a loop such as f.0, or a recursive function f, to a positive bound")
+    # CBMC 6.11.0 refuses 0 and the pointer width: "object-bits must be positive and less than the pointer width (32)".
+    # A string, true or 3.7 would reach it as something else, so only an integer is taken.
+    bits = case.get("object_bits", 8)
+    if not isinstance(bits, int) or isinstance(bits, bool) or not 1 <= bits < POINTER_BITS[case["machine"]]:
+        raise ValueError(f"object_bits is an integer from 1 to {POINTER_BITS[case['machine']] - 1} on {case['machine']}: "
+                         "the bits of a pointer CBMC gives to the object, 8 when unset")
     if len(re.findall(r"__CPROVER_assume\s*\(", case["harness"])) != case["assumptions"]:
         raise ValueError("the declared assumption count does not match the harness")
     for name in names:
@@ -454,6 +600,14 @@ def render_bounds(bounds: dict) -> str:
     return ",".join(f"{key}:{bounds[key]}" for key in sorted(bounds))
 
 
+def model_options(case: dict, unwind: int, bounds: dict) -> list[str]:
+    """The model every CBMC command of a case is built on, so that the gate's stages, its certificate, the bounds search
+    and the fixture check all check the same program: entry, machine, self-loops, bounds and object bits."""
+    return ["--function", "harness", MACHINES[case["machine"]][0], "--little-endian", *native.KEEP_SELF_LOOPS, "--unwind", str(unwind),
+            *(["--object-bits", str(case["object_bits"])] if "object_bits" in case else []),
+            *(["--unwindset", render_bounds(bounds)] if bounds else [])]
+
+
 def file_digest(path: Path) -> str:
     """SHA-256 of a file that may be too large to hold in memory, such as a proof."""
     digest = hashlib.sha256()
@@ -558,8 +712,7 @@ def check(root: Path, variant: str, out: Path, cbmc: str = "cbmc", unwind: int |
         linked, identities = link_models(case, out)
         if identities:
             receipt["models"] = identities
-        model = ["--function", "harness", MACHINES[case["machine"]][0], "--little-endian", *native.KEEP_SELF_LOOPS, "--unwind", str(unwind),
-                 *(["--unwindset", render_bounds(bounds)] if bounds else [])]
+        model = model_options(case, unwind, bounds)
         common = [*model[:5], "--sat-solver", solver, *model[5:], "--json-ui"]
         # Coverage reads the unit without the stops: its goals have to be the harness's own and the end marker reachable.
         with_stops = ["unit.c", *linked, STOP_FILE, *defines, *common]
@@ -669,7 +822,8 @@ def find_bounds(root: Path, out: Path, cbmc: str = "cbmc", timeout: float = 120,
     if verdict is not None:
         summary.update(reason=f"{verdict}: {reason}")
         return summary
-    base = ["unit.c", *linked, STOP_FILE, *defines, "--function", "harness", MACHINES[case["machine"]][0], "--little-endian", *native.KEEP_SELF_LOOPS, "--sat-solver", solver, "--unwind", "2",
+    model = model_options(case, 2, {})
+    base = ["unit.c", *linked, STOP_FILE, *defines, *model[:5], "--sat-solver", solver, *model[5:],
             "--json-ui", "--verbosity", "8", *CHECKS, *case.get("checks", []), "--unwinding-assertions"]
 
     def attempt(bounds: dict) -> dict:

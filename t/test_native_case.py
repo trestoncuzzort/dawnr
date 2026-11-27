@@ -1,4 +1,6 @@
 """Controls for the case-driven native CBMC adapter; optional real-tool runs."""
+import argparse
+import ast
 import json
 import os
 from pathlib import Path
@@ -13,6 +15,7 @@ import pytest
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import native_case as cases
 import native_check as native
+import native_fixture_check as fixture_check
 
 PILOT = Path(__file__).resolve().parent / "native_fixtures" / "px4-wrap-bin"
 
@@ -110,6 +113,272 @@ def test_a_range_that_is_not_one_declared_item_is_refused(entry):
         cases.extract(SOURCE, entry)
 
 
+@pytest.mark.parametrize("text", ['ok ? "OK" : "ERROR"', 'DIR"/x"'])
+def test_a_string_that_ends_in_r_is_not_a_raw_string_literal(text):
+    source = f"static const char *name(int ok)\n{{\n\treturn {text};\n}}\n"
+    assert cases.extract(source, {"name": "name", "line": 1, "end_line": 4}) == source
+
+
+@pytest.mark.parametrize("text", [
+    '"R"',                                    # the string R
+    'ok ? "R" : "(x)"',                       # R closes one string and a parenthesis opens the next
+    'L"R"',                                   # a wide string R
+    'BAR"(x)"',                               # an identifier ending in R, directly before a string
+    'u8"R" "(x)"',
+    "'R' + sizeof \"(x)\"",                   # a character constant R
+    'name[0] == \'R\' ? "R" : "r"',
+])
+def test_the_string_r_and_names_ending_in_r_are_not_raw_string_literals(text):
+    source = f"static const char *name(int ok)\n{{\n\treturn {text};\n}}\n"
+    assert cases.extract(source, {"name": "name", "line": 1, "end_line": 4}) == source
+
+
+@pytest.mark.parametrize("comment", ['/* R"(x)" */', '// R"(x)"', '/* "R"(x) */'])
+def test_a_comment_holding_what_looks_like_a_raw_string_literal_is_not_one(comment):
+    source = f"static const char *name(int ok)\n{{\n\t{comment}\n\treturn \"R\";\n}}\n"
+    assert cases.extract(source, {"name": "name", "line": 1, "end_line": 5}) == source
+
+
+@pytest.mark.parametrize("literal", ['R"(x)"', 'u8R"(x)"', 'uR"(x)"', 'UR"(x)"', 'LR"(x)"', '"a"R"(x)"', 'R"d(x)d"', 'R"0123456789abcdef()0123456789abcdef"',
+                                     'R"(")"', 'R"()"'])
+def test_a_raw_string_literal_is_refused_whatever_it_holds_and_wherever_it_starts(literal):
+    source = f"static const char *name(void)\n{{\n\treturn {literal};\n}}\n"
+    with pytest.raises(ValueError, match="raw string literals"):
+        cases.extract(source, {"name": "name", "line": 1, "end_line": 4})
+
+
+def test_a_raw_string_literal_in_a_macro_is_refused():
+    with pytest.raises(ValueError, match="raw string literals"):
+        cases.extract('#define NAME R"(x)"\n', {"name": "NAME", "kind": "macro", "line": 1, "end_line": 1})
+
+
+def test_an_apostrophe_in_a_directive_does_not_hide_a_raw_string_literal_after_it():
+    """A literal does not run over a line end, so the unpaired apostrophe of `#error don't` ends with its line."""
+    source = "static const char *name(void)\n{\n#ifdef X\n#error don't\n#endif\n\treturn R\"(x)\";\n}\n"
+    with pytest.raises(ValueError, match="raw string literals"):
+        cases.extract(source, {"name": "name", "line": 1, "end_line": 7})
+
+
+@pytest.mark.parametrize("literal", ['R"(x)"', 'u8R"(x)"', 'uR"(x)"', 'UR"(x)"', 'LR"(x)"', '"a"R"(x)"'])
+def test_a_raw_string_literal_is_still_refused(literal):
+    source = f"static const char *name(void)\n{{\n\treturn {literal};\n}}\n"
+    with pytest.raises(ValueError, match="raw string literals"):
+        cases.extract(source, {"name": "name", "line": 1, "end_line": 4})
+
+
+def test_a_table_of_an_unnamed_struct_type_is_one_declaration():
+    source = "static const struct {\n\tint key;\n\tint value;\n} table[] = {\n\t{1, 2},\n\t{3, 4},\n};\n"
+    assert cases.extract(source, {"name": "table", "kind": "declaration", "line": 1, "end_line": 7}) == source
+
+
+@pytest.mark.parametrize("source", [
+    "int table = 1, other = 2;\n",                                         # one declaration of two objects
+    'static const char *table = "};";\n',                                  # a semicolon in a literal
+    "static const struct {\n\tenum { X = 1 } k;\n} table[] = { {X} };\n",  # semicolons inside the braces
+    "static const int table[] = {\n#if A\n\t1,\n#else\n\t2,\n#endif\n};\n",
+])
+def test_one_declaration_is_accepted_whatever_its_braces_hold(source):
+    assert cases.extract(source, {"name": "table", "kind": "declaration", "line": 1, "end_line": source.count("\n")}) == source
+
+
+@pytest.mark.parametrize("source", [
+    'static const char *table = "}{";\nint add(int a, int b)\n{\n\treturn a + b;\n}\nstruct pair {\n\tint left;\n};\n',
+    "int table[] = {1};\nint other[] = {2};\n",
+    "int table = 1;\nint other = 2;\n",
+    "int table = 1;\nint other(void);\n",
+    "struct table { int x; };\nint other = 1;\n",
+])
+def test_a_declaration_range_over_more_than_one_declaration_is_refused(source):
+    with pytest.raises(ValueError, match="not exactly one declaration"):
+        cases.extract(source, {"name": "table", "kind": "declaration", "line": 1, "end_line": source.count("\n")})
+
+
+def function(declarations, head, body="{\n\treturn 0;\n}\n"):
+    source = f"{declarations}{head}\n{body}"
+    return source, {"name": "f", "line": 1,"end_line": source.count("\n")}
+
+
+@pytest.mark.parametrize("declarations", [
+    "int counter;\n",
+    "int counter = 1;\n",
+    "static int counter;\nstatic int other;\n",
+    "int table[sizeof(int)];\n",
+    "int (*hook)(int);\n",
+    "int f(void);\n",                  # a prototype of the function itself
+    "int g(a) int a; ;\n",             # an old-style declarator followed by a stray semicolon
+    "struct pair { int x; };\n",
+    "extern int counter /* ; */;\n",
+])
+def test_a_function_range_that_starts_with_a_declaration_without_braces_is_refused(declarations):
+    source, entry = function(declarations, "int f(void)")
+    with pytest.raises(ValueError, match="not exactly one function definition"):
+        cases.extract(source, entry)
+
+
+@pytest.mark.parametrize("head", [
+    "int f(void)",
+    "static inline int f(void)",
+    "int *f(const char *s, int n)",
+    "int (*f(int a))(int)",
+    "__attribute__((unused)) int f(int a)",
+    "int f(a)\nint a;",                                  # old style: the parameter declarations end in semicolons
+    "int f(a, b)\nint a;\nchar *b;",
+    "int f(a, b)\nint a, b;",
+    "int f(a, cb)\nint a;\nint (*cb)();",
+    "int f(a) /* ; */ int a; /* ; */",
+    'int f(a) int a; /* ";" */',
+])
+def test_a_function_range_of_one_declarator_and_its_body_is_accepted(head):
+    source, entry = function("", head)
+    assert cases.extract(source, entry) == source
+
+
+@pytest.mark.parametrize("head", [
+    "int f(a)\nint a;\nint b;",           # declares nothing the list names
+    "int f(void)\nint a;",                # a parameter list that names nothing has no declarations to follow it
+    "int f(int a)\nint a;",               # a prototype-style list has none either
+    "int f(a)\nint a;;",                  # a stray semicolon
+])
+def test_an_old_style_definition_is_accepted_only_where_its_declarations_declare_its_parameters(head):
+    source, entry = function("", head)
+    with pytest.raises(ValueError, match="not exactly one function definition"):
+        cases.extract(source, entry)
+
+
+def test_a_declaration_before_an_old_style_definition_is_refused():
+    source, entry = function("int counter;\n", "int f(a)\nint a;")
+    with pytest.raises(ValueError, match="not exactly one function definition"):
+        cases.extract(source, entry)
+
+
+def test_a_conditional_directive_inside_the_declarator_does_not_hide_a_declaration_before_it():
+    kept = "#ifdef X\nint f(a) int a;\n#else\nint f(a) long a;\n#endif\n{\n\treturn 0;\n}\n"
+    assert cases.extract(kept, {"name": "f", "line": 1, "end_line": kept.count("\n")}) == kept
+    refused = "int counter;\n" + kept
+    with pytest.raises(ValueError, match="not exactly one function definition"):
+        cases.extract(refused, {"name": "f", "line": 1, "end_line": refused.count("\n")})
+
+
+DIRECTIVES = ["#define X 1", "#undef X", "#include <stdio.h>", '#include "x.h"', "#pragma once", "#line 5", "#error stop", "#warning w", "# define X 1",
+              "  #define X 1", "#", "#define A \\\n\t1", "#ident \"x\"", "#assert machine(x)", "#unknown"]
+
+
+@pytest.mark.parametrize("directive", DIRECTIVES)
+def test_a_directive_before_the_function_is_refused(directive):
+    source, entry = function(directive + "\n", "int f(void)")
+    with pytest.raises(ValueError, match="preprocessor directive outside"):
+        cases.extract(source, entry)
+
+
+@pytest.mark.parametrize("directive", DIRECTIVES)
+@pytest.mark.parametrize("head", ["int f(void)", "int f(a)\nint a;"])
+def test_a_directive_between_the_declarator_and_the_body_is_refused(directive, head):
+    source, entry = function("", f"{head}\n{directive}")
+    with pytest.raises(ValueError, match="preprocessor directive outside"):
+        cases.extract(source, entry)
+
+
+@pytest.mark.parametrize("directive", DIRECTIVES)
+def test_a_directive_inside_the_body_is_the_functions_own_text(directive):
+    body = f"{{\n{directive}\n\treturn 0;\n}}\n"
+    source, entry = function("", "int f(void)", body)
+    assert cases.extract(source, entry) == source
+
+
+@pytest.mark.parametrize("prefix", ["/*\n#define X 1\n*/\n", "// #define X 1\n"])
+def test_what_looks_like_a_directive_in_a_comment_is_not_one(prefix):
+    source, entry = function(prefix, "int f(void)")
+    assert cases.extract(source, entry) == source
+
+
+def test_a_directive_in_a_conditional_before_the_function_is_refused_too():
+    source, entry = function("#if X\n#define Y 1\n#endif\n", "int f(void)")
+    with pytest.raises(ValueError, match="preprocessor directive outside"):
+        cases.extract(source, entry)
+
+
+@pytest.mark.parametrize("directives", [
+    "#ifdef X\nint f(a) int a;\n#else\nint f(a) long a;\n#endif\n",    # a branch of the declarator
+    "int f(\n#if X\nint a\n#else\nlong a\n#endif\n)\n",                # a branch of the parameter list
+    "#if X\nstatic\n#endif\nint f(void)\n",
+])
+def test_conditional_directives_around_the_parts_of_a_declarator_stay_accepted(directives):
+    source = directives + "{\n\treturn 0;\n}\n"
+    assert cases.extract(source, {"name": "f", "line": 1, "end_line": source.count("\n")}) == source
+
+
+@pytest.mark.parametrize("source", [
+    "#if 0\nint f(void)\n{\n\treturn 0;\n}\n#endif\n",      # the range ends on #endif, so it is not one function
+    "#ifdef X\nint f(void)\n{\n\treturn 0;\n}\n",           # a conditional that is never closed
+    "#endif\nint f(void)\n{\n\treturn 0;\n}\n",             # one that was never opened
+    "#if X\n#else\n#else\nint f(void)\n{\n\treturn 0;\n}\n#endif\n#endif\n",
+])
+def test_a_range_may_not_open_or_close_a_conditional_it_does_not_hold(source):
+    with pytest.raises(ValueError):
+        cases.extract(source, {"name": "f", "line": 1, "end_line": source.count("\n")})
+
+
+@pytest.mark.parametrize("directive", DIRECTIVES)
+def test_a_directive_outside_the_one_declaration_is_refused(directive):
+    for source in (f"{directive}\nint table = 1;\n", f"int table =\n{directive}\n1;\n", f"int table = 1\n{directive}\n;\n"):
+        with pytest.raises(ValueError, match="preprocessor directive outside"):
+            cases.extract(source, {"name": "table", "kind": "declaration", "line": 1, "end_line": source.count("\n")})
+
+
+@pytest.mark.parametrize("directive", DIRECTIVES)
+def test_a_directive_inside_the_braces_of_a_declaration_is_its_own_text(directive):
+    source = f"static const struct {{\n{directive}\n\tint key;\n}} table[] = {{ {{1}} }};\n"
+    assert cases.extract(source, {"name": "table", "kind": "declaration", "line": 1, "end_line": source.count("\n")}) == source
+
+
+@pytest.mark.parametrize("source", [
+    "int table =\n#if A\n1\n#else\n2\n#endif\n;\n",
+    "int table\n#if A\n= 1\n#else\n= 2\n#endif\n;\n",
+])
+def test_conditional_directives_inside_one_declaration_stay_accepted(source):
+    assert cases.extract(source, {"name": "table", "kind": "declaration", "line": 1, "end_line": source.count("\n")}) == source
+
+
+@pytest.mark.parametrize("source", [
+    "#if A\nint table = 1;\n",
+    "#endif\nint table = 1;\n",
+])
+def test_a_declaration_range_may_not_open_or_close_a_conditional_it_does_not_hold(source):
+    with pytest.raises(ValueError):
+        cases.extract(source, {"name": "table", "kind": "declaration", "line": 1, "end_line": source.count("\n")})
+
+
+def two_bodies(first_head="int f(int a)", between="", second_head="int f(long a)", inside_first="", inside_second=""):
+    return (f"#ifdef X\n{first_head}\n{{\n{inside_first}\treturn a;\n}}\n{between}#else\n{second_head}\n{{\n{inside_second}\treturn 0;\n}}\n#endif\n")
+
+
+@pytest.mark.parametrize("directive", DIRECTIVES)
+@pytest.mark.parametrize("place", ["first_head", "between", "second_head"])
+def test_a_directive_outside_every_alternative_body_is_refused(directive, place):
+    """The braces of each body count on their own: a directive is part of the function only inside one of them."""
+    fields = {"first_head": dict(first_head=f"int f(int a)\n{directive}"), "between": dict(between=f"{directive}\n"),
+              "second_head": dict(second_head=f"int f(long a)\n{directive}")}[place]
+    with pytest.raises(ValueError, match="preprocessor directive outside"):
+        cases.check_directives("f", "function", two_bodies(**fields))
+
+
+@pytest.mark.parametrize("directive", DIRECTIVES)
+@pytest.mark.parametrize("place", ["inside_first", "inside_second"])
+def test_a_directive_inside_either_alternative_body_is_accepted(directive, place):
+    cases.check_directives("f", "function", two_bodies(**{place: f"{directive}\n"}))
+
+
+@pytest.mark.parametrize("ending", ["#endif\n", ""])
+def test_a_range_of_alternative_bodies_is_refused_as_not_one_function(ending):
+    source = two_bodies(second_head="int f(long a)\n#define Y 1")
+    source = source[:-len("#endif\n")] + ending
+    with pytest.raises(ValueError, match="preprocessor directive outside"):
+        cases.extract(source, {"name": "f", "line": 1, "end_line": source.count("\n")})
+    clean = two_bodies()[:-len("#endif\n")] + ending
+    with pytest.raises(ValueError):
+        cases.extract(clean, {"name": "f", "line": 1, "end_line": clean.count("\n")})
+
+
 def test_no_source_byte_can_change_under_the_pinned_identity(tmp_path):
     root = write_case(tmp_path / "case")
     cases.build_unit(cases.load(root), "original", root)
@@ -134,6 +403,24 @@ def test_an_incomplete_or_unsupported_description_is_refused(tmp_path, changes):
 def test_comparisons_with_an_input_are_not_assignments(tmp_path):
     harness = "    __CPROVER_assume(a <= b && a >= -5 && a != 3 && b == 7);\n" + HARNESS
     assert cases.load(write_case(tmp_path / "case", harness=harness, assumptions=1))["assumptions"] == 1
+
+
+def test_a_case_may_set_the_object_bits_of_cbmc(tmp_path):
+    assert cases.load(write_case(tmp_path / "case", object_bits=12))["object_bits"] == 12
+
+
+# CBMC 6.11.0 takes 1 up to one less than the pointer width:
+# "object-bits must be positive and less than the pointer width (32)".
+@pytest.mark.parametrize("machine, bits", [("LP64", 1), ("LP64", 63), ("ILP32", 1), ("ILP32", 31)])
+def test_object_bits_cbmc_takes_are_taken(tmp_path, machine, bits):
+    assert cases.load(write_case(tmp_path / "case", machine=machine, object_bits=bits))["object_bits"] == bits
+
+
+@pytest.mark.parametrize("machine, bits", [("LP64", "x"), ("LP64", "12"), ("LP64", True), ("LP64", 3.7), ("LP64", None), ("LP64", -1), ("LP64", 0),
+                                           ("LP64", 64), ("ILP32", 32)])
+def test_object_bits_cbmc_would_refuse_or_read_otherwise_are_refused_at_load(tmp_path, machine, bits):
+    with pytest.raises(ValueError, match="object_bits is an integer from 1 to"):
+        cases.load(write_case(tmp_path / "case", machine=machine, object_bits=bits))
 
 
 def test_the_unit_carries_machine_inputs_harness_and_end_marker(tmp_path):
@@ -713,8 +1000,11 @@ def test_a_complete_verdict_gets_a_checked_proof(tmp_path):
     assert receipt["certificate"]["tools"]["solver"]["version"] and len(receipt["certificate"]["tools"]["checker"]["binary_sha256"]) == 64
 
 
-def export_and_solve(tmp_path, root, variant, unwind=None):
-    """The formula of a variant, and what the solver says about it, written to a kept directory."""
+def export_and_solve(tmp_path, root, variant, unwind=None, tools=None):
+    """The formula of a variant, and what the solver says about it, written to a kept directory.
+    The command is the gate's, with the same model options and linked models, so that what is exported is what
+    check() certifies."""
+    cbmc, solver, checker = tools or (CBMC, CADICAL, LRAT_CHECK)
     out = tmp_path / f"{root.name}-{variant}-{unwind}"
     case = cases.load(root)
     unit, _, _ = cases.build_unit(case, variant, root)
@@ -722,9 +1012,42 @@ def export_and_solve(tmp_path, root, variant, unwind=None):
     (out / "unit.c").write_text(unit)
     stops, defines = cases.stops_unit(case.get("allowed_stops", []), unit)
     (out / cases.STOP_FILE).write_text(stops)
-    args = ["unit.c", cases.STOP_FILE, *defines, "--function", "harness", cases.MACHINES[case["machine"]][0], "--little-endian", *native.KEEP_SELF_LOOPS,
-            "--unwind", str(unwind or case.get("unwind", 4)), *cases.CHECKS, "--unwinding-assertions"]
-    return cases.certify(CBMC, args, out, CADICAL, LRAT_CHECK, 120, 4096, keep_proof=True), out
+    linked, _ = cases.link_models(case, out)
+    # As the gate does: an explicit bound applies to every loop, and the case's own per-loop bounds stay out of it.
+    bounds = case.get("unwindset", {}) if unwind is None else {}
+    model = cases.model_options(case, unwind or case.get("unwind", 4), bounds)
+    args = ["unit.c", *linked, cases.STOP_FILE, *defines, *model, *cases.CHECKS, *case.get("checks", []), "--unwinding-assertions"]
+    return cases.certify(cbmc, args, out, solver, checker, 120, 4096, keep_proof=True), out
+
+
+@posix
+def test_the_helper_of_the_certificate_tests_gives_cbmc_what_the_gate_gives_it(tmp_path):
+    """The formula of a case is built through model_options and the models link, so object_bits and models are in it."""
+    _, solver, checker = fake_tools(tmp_path / "tools")
+    root = write_case(tmp_path / "case", object_bits=12, models=["string"], checks=["--nan-check"])
+    _, out = export_and_solve(tmp_path, root, "fixed", 3, tools=(logging_cbmc(tmp_path / "fake-cbmc"), solver, checker))
+    call = (out / "calls.txt").read_text().split()
+    assert call[call.index("--object-bits") + 1] == "12" and call[call.index("--unwind") + 1] == "3"
+    assert "model_string.c" in call and (out / "model_string.c").exists() and "--nan-check" in call
+    assert call[call.index("--dimacs"):call.index("--dimacs") + 3] == ["--dimacs", "--outfile", "formula.cnf"]
+
+
+@certifying
+def test_past_256_addressed_objects_the_certificate_of_a_case_takes_its_object_bits_too(tmp_path):
+    raised = custom_case(tmp_path / "raised", MANY, MANY, ["fill"], object_bits=10, **MANY_FIELDS)
+    assert cases.check(raised, "fixed", tmp_path / "gate", cbmc=CBMC, certify_with=(CADICAL, LRAT_CHECK))["certificate"]["status"] == "verified"
+    assert export_and_solve(tmp_path, raised, "fixed")[0]["status"] == "verified"
+
+
+@certifying
+def test_the_helper_exports_the_formula_the_gate_certifies_when_a_model_is_linked(tmp_path):
+    fields = dict(prelude="#include <string.h>\n", models=["string"], assertions=["count.bound"], inputs=[{"name": "t", "type": "char", "string": {"max": 3}}],
+                  harness='    __CPROVER_assert(leading(t) <= t_len, "count.bound");\n', unwind=6)
+    root = custom_case(tmp_path / "linked", COUNT, COUNT, ["leading"], **fields)
+    gate = cases.check(root, "fixed", tmp_path / "gate", cbmc=CBMC, certify_with=(CADICAL, LRAT_CHECK))["certificate"]
+    report, out = export_and_solve(tmp_path, root, "fixed")
+    assert gate["status"] == report["status"] == "verified" and (out / "model_string.c").exists()
+    assert (gate["variables"], gate["clauses"]) == (report["variables"], report["clauses"])
 
 
 @certifying
@@ -798,6 +1121,24 @@ def test_the_case_gate_describes_itself_in_the_receipt_when_tools_are_absent(tmp
 def test_a_bad_list_of_models_is_refused(tmp_path, models):
     with pytest.raises(ValueError, match="models"):
         cases.load(write_case(tmp_path / "case", models=models))
+
+
+def test_the_guide_names_every_key_a_case_may_hold_and_every_list_the_gate_keeps_apart():
+    """t/NATIVE-CASES.md is what a case is written from, and what a receipt is read with."""
+    guide = (Path(cases.__file__).parent / "NATIVE-CASES.md").read_text()
+
+    def function(module, name):
+        return next(node for node in ast.walk(ast.parse(Path(module.__file__).read_text())) if isinstance(node, ast.FunctionDef) and node.name == name)
+    keys = set()
+    for node in ast.walk(function(cases, "load")):
+        if isinstance(node, ast.Assign) and [getattr(target, "id", None) for target in node.targets] in (["required"], ["optional"]):
+            keys |= ast.literal_eval(node.value)
+    # What the gate lists beside the harness's own assumption goals, in a receipt: detail["..."] = ...
+    lists = {node.targets[0].slice.value for node in ast.walk(function(native, "interpret")) if isinstance(node, ast.Assign)
+             and isinstance(node.targets[0], ast.Subscript) and getattr(node.targets[0].value, "id", None) == "detail"}
+    assert {"format", "models", "object_bits"} <= keys and "library_assumption_goals" in lists
+    missing = sorted(name for name in keys | lists if f"`{name}`" not in guide)
+    assert not missing, missing
 
 
 def test_each_model_file_is_present_and_written_without_assumptions_or_intrinsics():
@@ -933,3 +1274,129 @@ def test_an_empty_input_can_still_be_freed_and_the_code_under_check_keeps_the_re
     bits = {"s_len": {"width": 32, "hex": "0"}, "s_e0": {"width": 8, "hex": "61"}, "s_e1": {"width": 8, "hex": "62"}}
     report = cases.replay(case, parts, [{"property": "p", "inputs": bits}], tmp_path / "out", "gcc", 60)
     assert report["compile"]["exit"] == 0 and report["witnesses"][0]["status"] == "not_reproduced"   # free of an empty input is no report
+
+
+@posix
+def test_the_object_bits_of_a_case_reach_every_cbmc_stage(tmp_path):
+    cbmc = tool(tmp_path / "fake-cbmc", '[ "$1" = "--version" ] && { echo "6.11.0 (cbmc-6.11.0)"; exit 0; }\necho "[]"\n')
+    receipt = cases.check(write_case(tmp_path / "case", object_bits=12), "fixed", tmp_path / "out", cbmc=cbmc)
+    for stage in ("inventory", "coverage", "checking"):
+        arguments = receipt["stages"][stage]["arguments"]
+        assert arguments[arguments.index("--object-bits") + 1] == "12", stage
+    plain = cases.check(write_case(tmp_path / "plain"), "fixed", tmp_path / "plain-out", cbmc=cbmc)
+    assert all("--object-bits" not in stage["arguments"] for stage in plain["stages"].values())
+
+
+def logging_cbmc(path):
+    """A stand-in cbmc that adds each command it is given to calls.txt where it runs, and writes a formula when asked
+    for one."""
+    return tool(path, '[ "$1" = "--version" ] && { echo "6.11.0 (cbmc-6.11.0)"; exit 0; }\necho "$*" >> calls.txt\n'
+                      'while [ $# -gt 1 ]; do [ "$1" = "--outfile" ] && printf "p cnf 2 3\\n1 0\\n" > "$2"; shift; done\necho "[]"\n')
+
+
+RUNS = ["the gate", "the bounds search", "the fixture check's model size", "the fixture check's formula of the original"]
+
+
+def commands_of(tmp_path, run, **fields):
+    """The commands a stand-in cbmc gets from one run over a case: the gate's stages, the bounds search, or one of the
+    fixture check's own."""
+    cbmc = logging_cbmc(tmp_path / "fake-cbmc")
+    _, solver, checker = fake_tools(tmp_path / "tools")
+    root, out = write_case(tmp_path / "case", **fields), tmp_path / "out"
+    if run == "the gate":
+        cases.check(root, "fixed", out, cbmc=cbmc)
+    elif run == "the bounds search":
+        cases.find_bounds(root, out, cbmc=cbmc)
+    elif run == "the fixture check's model size":
+        fixture_check.model_size(root, out, cbmc, 4, {}, 30, 1024, "minisat2")
+    else:
+        fixture_check.original_formula(root, out, argparse.Namespace(cbmc=cbmc, cadical=solver, lrat_check=checker, timeout=30, memory_limit_mb=1024))
+    return [call.split() for call in (out / "calls.txt").read_text().splitlines()]
+
+
+@posix
+@pytest.mark.parametrize("run", RUNS)
+def test_every_cbmc_command_of_a_case_has_its_object_bits(tmp_path, run):
+    calls = commands_of(tmp_path, run, object_bits=12)
+    assert calls and all(call[call.index("--object-bits") + 1] == "12" if "--object-bits" in call else False for call in calls), calls
+
+
+@posix
+@pytest.mark.parametrize("run", RUNS)
+def test_every_cbmc_command_of_a_case_links_its_models(tmp_path, run):
+    calls = commands_of(tmp_path, run, models=["string"])
+    assert calls and all("model_string.c" in call for call in calls), calls
+
+
+FLAT = ("int fill(void)\n{\n\tint total = 0;\n" + "\t{ int *p = malloc(sizeof *p); if (!p) { return -1; } *p = 1; total += *p; free(p); }\n" * 300
+        + "\treturn total;\n}\n")
+FLAT_FIELDS = dict(prelude="#include <stdlib.h>\n", assertions=["fill.counted"],
+                   harness='    (void)a;\n    int got = fill();\n    __CPROVER_assert(got == 300 || got == -1, "fill.counted");\n')
+
+
+@real
+def test_past_256_addressed_objects_the_bounds_search_and_the_model_size_take_the_object_bits_too(tmp_path):
+    """300 allocations and no loop: the search has nothing to raise, and stops on the object limit unless the case
+    raises it."""
+    default = custom_case(tmp_path / "default", FLAT, FLAT, ["fill"], **FLAT_FIELDS)
+    assert cases.find_bounds(default, tmp_path / "default-bounds", cbmc=CBMC)["reason"] == "stopped: exit 6"
+    assert fixture_check.model_size(default, tmp_path / "default-size", CBMC, 2, {}, 120, 4096, "minisat2")["exit"] == 6
+    raised = custom_case(tmp_path / "raised", FLAT, FLAT, ["fill"], object_bits=10, **FLAT_FIELDS)
+    assert cases.find_bounds(raised, tmp_path / "raised-bounds", cbmc=CBMC)["found"]
+    assert fixture_check.model_size(raised, tmp_path / "raised-size", CBMC, 2, {}, 120, 4096, "minisat2")["exit"] == 0
+
+
+MANY = ("int fill(unsigned n)\n{\n\tint total = 0;\n\tfor (unsigned i = 0; i < n; ++i) {\n\t\tint *p = malloc(sizeof *p);\n"
+        "\t\tif (!p) { return -1; }\n\t\t*p = 1;\n\t\ttotal += *p;\n\t\tfree(p);\n\t}\n\treturn total;\n}\n")
+MANY_FIELDS = dict(prelude="#include <stdlib.h>\n", assertions=["fill.counted"], unwind=301,
+                   harness='    (void)a;\n    int got = fill(300);\n    __CPROVER_assert(got == 300 || got == -1, "fill.counted");\n')
+
+
+@real
+def test_past_256_addressed_objects_a_case_asks_for_more_object_bits(tmp_path):
+    """CBMC 6.11.0 gives 8 bits of a pointer to the object by default, so a 257th object is a tool error."""
+    default = custom_case(tmp_path / "default", MANY, MANY, ["fill"], **MANY_FIELDS)
+    receipt = cases.check(default, "fixed", tmp_path / "default-out", cbmc=CBMC)
+    assert receipt["verdict"] == "tool_error" and "too many addressed objects" in receipt["reason"]
+    raised = custom_case(tmp_path / "raised", MANY, MANY, ["fill"], object_bits=10, **MANY_FIELDS)
+    assert cases.check(raised, "fixed", tmp_path / "raised-out", cbmc=CBMC)["verdict"] == "complete"
+
+
+TWICE = "static int twice(int a)\n{\n\treturn a * 2;\n}\n"
+THRICE = "static int thrice(int a)\n{\n\treturn a * 3;\n}\n"
+# A call through a pointer that may hold either of two functions, and one through a pointer only one function can be in.
+# Each original gets one function wrong.
+THROUGH_POINTERS = {
+    "several targets": ("", TWICE + THRICE + "int apply(int a, int which)\n{\n\tint (*op)(int) = which ? twice : thrice;\n\treturn op(a);\n}\n",
+                        ["twice", "thrice", "apply"], "a * 3", "a * 4", "apply(a, w) == (w ? a * 2 : a * 3)"),
+    "one target": ("struct ops { int (*op)(int); };\n", TWICE + "int apply(int a, int which)\n{\n\tstruct ops table = { twice };\n\t(void)which;\n\treturn table.op(a);\n}\n",
+                   ["twice", "apply"], "a * 2", "a * 3", "apply(a, w) == a * 2"),
+}
+
+
+@real
+@pytest.mark.parametrize("label", list(THROUGH_POINTERS))
+def test_a_call_through_a_function_pointer_gets_the_controls_of_any_case(tmp_path, label):
+    prelude, fixed, names, right, wrong, claim = THROUGH_POINTERS[label]
+    root = custom_case(tmp_path / "case", fixed.replace(right, wrong), fixed, names, prelude=prelude, assumptions=1, assertions=["apply.result"],
+                       inputs=[{"name": "a", "type": "int"}, {"name": "w", "type": "int"}],
+                       harness=f'    __CPROVER_assume(a >= -1000 && a <= 1000);\n    __CPROVER_assert({claim}, "apply.result");\n')
+    summary = cases.suite(root, tmp_path / "suite", cbmc=CBMC)
+    assert summary["ok"] and [row["verdict"] for row in summary["rows"]] == ["counterexample", "complete", "vacuous"], summary["rows"]
+    receipt = json.loads((tmp_path / "suite" / "fixed" / "receipt.json").read_text())
+    assert len(receipt["function_pointer_assumption_goals"]) == 2 and len(receipt["assumption_goals"]) == 2 * 2
+
+
+PUT = "void put_u32(unsigned char *tab, unsigned val)\n{\n\tmemcpy(tab, &val, sizeof(val));\n}\n"
+
+
+@real
+def test_a_memcpy_expanded_in_place_gets_the_controls_of_any_case(tmp_path):
+    """The original copies one byte too few."""
+    root = custom_case(tmp_path / "case", PUT.replace("sizeof(val)", "sizeof(val) - 1"), PUT, ["put_u32"], prelude="#include <string.h>\n",
+                       inputs=[{"name": "a", "type": "unsigned int"}], assertions=["put.bytes"],
+                       harness='    unsigned char tab[4] = {0};\n    put_u32(tab, a);\n    __CPROVER_assert(tab[3] == (unsigned char)(a >> 24), "put.bytes");\n')
+    summary = cases.suite(root, tmp_path / "suite", cbmc=CBMC)
+    assert summary["ok"] and [row["verdict"] for row in summary["rows"]] == ["counterexample", "complete", "vacuous"], summary["rows"]
+    receipt = json.loads((tmp_path / "suite" / "fixed" / "receipt.json").read_text())
+    assert len(receipt["coverage_goals_that_are_not_assumptions"]) == 3 and len(receipt["assumption_goals"]) == 2

@@ -1,0 +1,659 @@
+{
+ "id": 560,
+ "fn": "union_elements",
+ "verified": false,
+ "route": null,
+ "why": "no body the model wrote answered as your function does and was proved",
+ "twin": null,
+ "stages": [
+  {
+   "route": "answers",
+   "source": "answer 1",
+   "stage": "parse",
+   "reason": "does not parse ('exists' does not start an expression [Expr])"
+  },
+  {
+   "route": "answers",
+   "source": "answer 2",
+   "stage": "parse",
+   "reason": "does not parse ('exists' does not start an expression [Expr])"
+  },
+  {
+   "route": "answers",
+   "source": "answer 4",
+   "stage": "parse",
+   "reason": "does not parse ('exists' does not start an expression [Expr])"
+  },
+  {
+   "route": "answers",
+   "source": "answer 3",
+   "stage": "specification check",
+   "reason": "`len(r) == len(a) + len(b) - 2; forall i in [0, len(a)) . forall j in [0, len(r)) . r[j] == a[i]; forall i in [0, len(b)) . forall j in [0, len(r)) . r[j] == b[i]` is false at your function's own answer `union_elements([2, 2, 5, 8], [9, 9, 12, 8, 5, 3]) == [2, 3, 5, 8, 9, 12]`",
+   "at": "union_elements([2, 2, 5, 8], [9, 9, 12, 8, 5, 3]) == [2, 3, 5, 8, 9, 12]",
+   "passes": false,
+   "why": "the specification is false at the Python's answer",
+   "agreement": {
+    "status": "disagrees",
+    "args": [
+     [
+      2,
+      2,
+      5,
+      8
+     ],
+     [
+      9,
+      9,
+      12,
+      8,
+      5,
+      3
+     ]
+    ],
+    "reference_said": [
+     2,
+     3,
+     5,
+     8,
+     9,
+     12
+    ],
+    "ensures": 0
+   }
+  },
+  {
+   "route": "answers",
+   "source": "answer 5",
+   "stage": "specification check",
+   "reason": "`forall x in [0, len(a)) . x < len(r) ==> (exists y in [0, len(a)) . r[x] == a[y]); forall x in [0, len(b)) . x < len(r) ==> (exists y in [0, len(b)) . r[x] == b[y]); forall x in [0, len(r)) . (exists y in [0, len(a)) . r[x] == a[y]) or (exists y in [0, len(b)) . r[x] == b[y]); len(r) <= len(a) + len(b)` is false at your function's own answer `union_elements([2, 2, 5, 8], [9, 9, 12, 8, 5, 3]) == [2, 3, 5, 8, 9, 12]`",
+   "at": "union_elements([2, 2, 5, 8], [9, 9, 12, 8, 5, 3]) == [2, 3, 5, 8, 9, 12]",
+   "passes": false,
+   "why": "the specification is false at the Python's answer",
+   "agreement": {
+    "status": "disagrees",
+    "args": [
+     [
+      2,
+      2,
+      5,
+      8
+     ],
+     [
+      9,
+      9,
+      12,
+      8,
+      5,
+      3
+     ]
+    ],
+    "reference_said": [
+     2,
+     3,
+     5,
+     8,
+     9,
+     12
+    ],
+    "ensures": 0
+   }
+  },
+  {
+   "route": "specification",
+   "source": "specification 1, body 1",
+   "stage": "same as the function",
+   "reason": "it does not answer as your function does (`union_elements(*[[1], [0]]) == (1, 0)` is the proved program's answer, not yours)",
+   "inputs": 203,
+   "first": "assert union_elements(*[[1], [0]]) == (1, 0)"
+  },
+  {
+   "route": "specification",
+   "source": "specification 1, body 3",
+   "stage": "same as the function",
+   "reason": "it does not answer as your function does (`union_elements(*[[1], [0]]) == (1, 0)` is the proved program's answer, not yours)",
+   "inputs": 203,
+   "first": "assert union_elements(*[[1], [0]]) == (1, 0)"
+  },
+  {
+   "route": "specification",
+   "source": "specification 2, body 1",
+   "stage": "same as the function",
+   "reason": "it does not answer as your function does (`union_elements(*[[1], [0]]) == (1, 0)` is the proved program's answer, not yours)",
+   "inputs": 203,
+   "first": "assert union_elements(*[[1], [0]]) == (1, 0)"
+  },
+  {
+   "route": "specification",
+   "source": "specification 2, body 2",
+   "stage": "same as the function",
+   "reason": "it does not answer as your function does (`union_elements(*[[1], [0]]) == (1, 0)` is the proved program's answer, not yours)",
+   "inputs": 203,
+   "first": "assert union_elements(*[[1], [0]]) == (1, 0)"
+  },
+  {
+   "route": "specification",
+   "source": "specification 2, body 3",
+   "stage": "same as the function",
+   "reason": "it does not answer as your function does (`union_elements(*[[1], [0]]) == (1, 0)` is the proved program's answer, not yours)",
+   "inputs": 203,
+   "first": "assert union_elements(*[[1], [0]]) == (1, 0)"
+  },
+  {
+   "route": "specification",
+   "source": "specification 3, body 1",
+   "stage": "same as the function",
+   "reason": "it does not answer as your function does (`union_elements(*[[1], [0]]) == (1, 0)` is the proved program's answer, not yours)",
+   "inputs": 203,
+   "first": "assert union_elements(*[[1], [0]]) == (1, 0)"
+  },
+  {
+   "route": "specification",
+   "source": "specification 3, body 2",
+   "stage": "same as the function",
+   "reason": "it does not answer as your function does (`union_elements(*[[1], [0]]) == (1, 0)` is the proved program's answer, not yours)",
+   "inputs": 203,
+   "first": "assert union_elements(*[[1], [0]]) == (1, 0)"
+  },
+  {
+   "route": "specification",
+   "source": "specification 3, body 3",
+   "stage": "same as the function",
+   "reason": "it does not answer as your function does (`union_elements(*[[1], [0]]) == (1, 0)` is the proved program's answer, not yours)",
+   "inputs": 203,
+   "first": "assert union_elements(*[[1], [0]]) == (1, 0)"
+  }
+ ],
+ "refused": [
+  "answer 1: does not parse ('exists' does not start an expression [Expr])",
+  "answer 2: does not parse ('exists' does not start an expression [Expr])",
+  "answer 4: does not parse ('exists' does not start an expression [Expr])",
+  "answer 3: `len(r) == len(a) + len(b) - 2; forall i in [0, len(a)) . forall j in [0, len(r)) . r[j] == a[i]; forall i in [0, len(b)) . forall j in [0, len(r)) . r[j] == b[i]` is false at your function's own answer `union_elements([2, 2, 5, 8], [9, 9, 12, 8, 5, 3]) == [2, 3, 5, 8, 9, 12]`",
+  "answer 5: `forall x in [0, len(a)) . x < len(r) ==> (exists y in [0, len(a)) . r[x] == a[y]); forall x in [0, len(b)) . x < len(r) ==> (exists y in [0, len(b)) . r[x] == b[y]); forall x in [0, len(r)) . (exists y in [0, len(a)) . r[x] == a[y]) or (exists y in [0, len(b)) . r[x] == b[y]); len(r) <= len(a) + len(b)` is false at your function's own answer `union_elements([2, 2, 5, 8], [9, 9, 12, 8, 5, 3]) == [2, 3, 5, 8, 9, 12]`",
+  "specification 1, body 1: it does not answer as your function does (`union_elements(*[[1], [0]]) == (1, 0)` is the proved program's answer, not yours)",
+  "specification 1, body 3: it does not answer as your function does (`union_elements(*[[1], [0]]) == (1, 0)` is the proved program's answer, not yours)",
+  "specification 2, body 1: it does not answer as your function does (`union_elements(*[[1], [0]]) == (1, 0)` is the proved program's answer, not yours)",
+  "specification 2, body 2: it does not answer as your function does (`union_elements(*[[1], [0]]) == (1, 0)` is the proved program's answer, not yours)",
+  "specification 2, body 3: it does not answer as your function does (`union_elements(*[[1], [0]]) == (1, 0)` is the proved program's answer, not yours)",
+  "specification 3, body 1: it does not answer as your function does (`union_elements(*[[1], [0]]) == (1, 0)` is the proved program's answer, not yours)",
+  "specification 3, body 2: it does not answer as your function does (`union_elements(*[[1], [0]]) == (1, 0)` is the proved program's answer, not yours)",
+  "specification 3, body 3: it does not answer as your function does (`union_elements(*[[1], [0]]) == (1, 0)` is the proved program's answer, not yours)"
+ ],
+ "specifications": [
+  {
+   "source": "specification 1",
+   "verdict": "kept",
+   "scores": {
+    "correctness": 1.0,
+    "completeness": 0.7391304347826086,
+    "tests": 3,
+    "mutants": 23
+   },
+   "spec": "t 1\ntask f(a: seq, b: seq) returns (r: seq)\n  ensures forall x in [0, len(a)) . exists y in [0, len(r)) . r[y] == a[x]\n  ensures forall x in [0, len(b)) . exists y in [0, len(r)) . r[y] == b[x]\n  ensures forall x in [0, len(r)) . (exists y in [0, len(a)) . a[y] == r[x]) or (exists y in [0, len(b)) . b[y] == r[x])\n  ensures forall i in [0, len(r)) . forall j in [i + 1, len(r)) . r[i] != r[j]\n{\n}\n",
+   "function": {
+    "passes": true,
+    "why": "passes",
+    "agreement": {
+     "status": "agrees",
+     "draws": 100,
+     "completeness": 0.763,
+     "mutants_rejected": 554,
+     "mutants_accepted": 172,
+     "weak_witness": {
+      "args": [
+       [
+        2,
+        2,
+        5,
+        8
+       ],
+       [
+        9,
+        9,
+        12,
+        8,
+        5,
+        3
+       ]
+      ],
+      "reference_said": [
+       2,
+       3,
+       5,
+       8,
+       9,
+       12
+      ],
+      "also_accepts": [
+       12,
+       9,
+       8,
+       5,
+       3,
+       2
+      ]
+     }
+    },
+    "larger": {
+     "status": "agrees",
+     "draws": 60,
+     "completeness": 0.742,
+     "mutants_rejected": 331,
+     "mutants_accepted": 115,
+     "weak_witness": {
+      "args": [
+       [
+        -1,
+        0,
+        0,
+        1,
+        1,
+        1,
+        2,
+        3,
+        3,
+        3,
+        4,
+        4,
+        4,
+        4,
+        5,
+        5,
+        5,
+        6
+       ],
+       [
+        1,
+        1,
+        2,
+        2,
+        3,
+        5,
+        6,
+        6,
+        6
+       ]
+      ],
+      "reference_said": [
+       0,
+       1,
+       2,
+       3,
+       4,
+       5,
+       6,
+       -1
+      ],
+      "also_accepts": [
+       -1,
+       6,
+       5,
+       4,
+       3,
+       2,
+       1,
+       0
+      ]
+     },
+     "requires_caps_size": false
+    }
+   }
+  },
+  {
+   "source": "specification 2",
+   "verdict": "kept",
+   "scores": {
+    "correctness": 1.0,
+    "completeness": 0.7391304347826086,
+    "tests": 3,
+    "mutants": 23
+   },
+   "spec": "t 1\ntask f(a: seq, b: seq) returns (r: seq)\n  ensures forall x in [0, len(a)) . exists y in [0, len(r)) . r[y] == a[x]\n  ensures forall x in [0, len(b)) . exists y in [0, len(r)) . r[y] == b[x]\n  ensures forall x in [0, len(r)) . (exists y in [0, len(a)) . a[y] == r[x]) or (exists y in [0, len(b)) . b[y] == r[x])\n  ensures forall x in [0, len(r)) . forall y in [x + 1, len(r)) . r[x] != r[y]\n{\n}\n",
+   "function": {
+    "passes": true,
+    "why": "passes",
+    "agreement": {
+     "status": "agrees",
+     "draws": 100,
+     "completeness": 0.763,
+     "mutants_rejected": 554,
+     "mutants_accepted": 172,
+     "weak_witness": {
+      "args": [
+       [
+        2,
+        2,
+        5,
+        8
+       ],
+       [
+        9,
+        9,
+        12,
+        8,
+        5,
+        3
+       ]
+      ],
+      "reference_said": [
+       2,
+       3,
+       5,
+       8,
+       9,
+       12
+      ],
+      "also_accepts": [
+       12,
+       9,
+       8,
+       5,
+       3,
+       2
+      ]
+     }
+    },
+    "larger": {
+     "status": "agrees",
+     "draws": 60,
+     "completeness": 0.742,
+     "mutants_rejected": 331,
+     "mutants_accepted": 115,
+     "weak_witness": {
+      "args": [
+       [
+        -1,
+        0,
+        0,
+        1,
+        1,
+        1,
+        2,
+        3,
+        3,
+        3,
+        4,
+        4,
+        4,
+        4,
+        5,
+        5,
+        5,
+        6
+       ],
+       [
+        1,
+        1,
+        2,
+        2,
+        3,
+        5,
+        6,
+        6,
+        6
+       ]
+      ],
+      "reference_said": [
+       0,
+       1,
+       2,
+       3,
+       4,
+       5,
+       6,
+       -1
+      ],
+      "also_accepts": [
+       -1,
+       6,
+       5,
+       4,
+       3,
+       2,
+       1,
+       0
+      ]
+     },
+     "requires_caps_size": false
+    }
+   }
+  },
+  {
+   "source": "specification 3",
+   "verdict": "kept",
+   "scores": {
+    "correctness": 1.0,
+    "completeness": 0.7391304347826086,
+    "tests": 3,
+    "mutants": 23
+   },
+   "spec": "t 1\ntask f(t1: seq, t2: seq) returns (r: seq)\n  ensures forall x in [0, len(t1)) . x < len(t1) ==> (exists i in [0, len(r)) . r[i] == t1[x])\n  ensures forall x in [0, len(t2)) . x < len(t2) ==> (exists i in [0, len(r)) . r[i] == t2[x])\n  ensures forall i in [0, len(r)) . (exists x in [0, len(t1)) . r[i] == t1[x]) or (exists x in [0, len(t2)) . r[i] == t2[x])\n  ensures forall i in [0, len(r)) . forall j in [i + 1, len(r)) . r[i] != r[j]\n{\n}\n",
+   "function": {
+    "passes": true,
+    "why": "passes",
+    "agreement": {
+     "status": "agrees",
+     "draws": 100,
+     "completeness": 0.763,
+     "mutants_rejected": 554,
+     "mutants_accepted": 172,
+     "weak_witness": {
+      "args": [
+       [
+        2,
+        2,
+        5,
+        8
+       ],
+       [
+        9,
+        9,
+        12,
+        8,
+        5,
+        3
+       ]
+      ],
+      "reference_said": [
+       2,
+       3,
+       5,
+       8,
+       9,
+       12
+      ],
+      "also_accepts": [
+       12,
+       9,
+       8,
+       5,
+       3,
+       2
+      ]
+     }
+    },
+    "larger": {
+     "status": "agrees",
+     "draws": 60,
+     "completeness": 0.742,
+     "mutants_rejected": 331,
+     "mutants_accepted": 115,
+     "weak_witness": {
+      "args": [
+       [
+        -1,
+        0,
+        0,
+        1,
+        1,
+        1,
+        2,
+        3,
+        3,
+        3,
+        4,
+        4,
+        4,
+        4,
+        5,
+        5,
+        5,
+        6
+       ],
+       [
+        1,
+        1,
+        2,
+        2,
+        3,
+        5,
+        6,
+        6,
+        6
+       ]
+      ],
+      "reference_said": [
+       0,
+       1,
+       2,
+       3,
+       4,
+       5,
+       6,
+       -1
+      ],
+      "also_accepts": [
+       -1,
+       6,
+       5,
+       4,
+       3,
+       2,
+       1,
+       0
+      ]
+     },
+     "requires_caps_size": false
+    }
+   }
+  }
+ ],
+ "candidates": [
+  {
+   "source": "answer 3",
+   "function": {
+    "passes": false,
+    "why": "the specification is false at the Python's answer",
+    "agreement": {
+     "status": "disagrees",
+     "args": [
+      [
+       2,
+       2,
+       5,
+       8
+      ],
+      [
+       9,
+       9,
+       12,
+       8,
+       5,
+       3
+      ]
+     ],
+     "reference_said": [
+      2,
+      3,
+      5,
+      8,
+      9,
+      12
+     ],
+     "ensures": 0
+    }
+   }
+  },
+  {
+   "source": "answer 5",
+   "function": {
+    "passes": false,
+    "why": "the specification is false at the Python's answer",
+    "agreement": {
+     "status": "disagrees",
+     "args": [
+      [
+       2,
+       2,
+       5,
+       8
+      ],
+      [
+       9,
+       9,
+       12,
+       8,
+       5,
+       3
+      ]
+     ],
+     "reference_said": [
+      2,
+      3,
+      5,
+      8,
+      9,
+      12
+     ],
+     "ensures": 0
+    }
+   }
+  }
+ ],
+ "asked": {
+  "answers": 5,
+  "specifications": 3,
+  "bodies": 9
+ },
+ "inputs": {
+  "examples": [
+   "assert union_elements((3, 4, 5, 6),(5, 7, 4, 10) ) == (3, 4, 5, 6, 7, 10)",
+   "assert union_elements((1, 2, 3, 4),(3, 4, 5, 6) ) == (1, 2, 3, 4, 5, 6)",
+   "assert union_elements((11, 12, 13, 14),(13, 15, 16, 17) ) == (11, 12, 13, 14, 15, 16, 17)"
+  ],
+  "taken from the function": false,
+  "kinds": [
+   {
+    "args": [
+     "seq",
+     "seq"
+    ],
+    "expected": "seq"
+   },
+   {
+    "args": [
+     "seq",
+     "seq"
+    ],
+    "expected": "seq"
+   },
+   {
+    "args": [
+     "seq",
+     "seq"
+    ],
+    "expected": "seq"
+   }
+  ],
+  "specification check": {
+   "seed": 1,
+   "draws": 100,
+   "larger draws": 60
+  }
+ },
+ "stopped at": "same as the function",
+ "function": {
+  "code": "def union_elements(test_tup1, test_tup2):\r\n  res = tuple(set(test_tup1 + test_tup2))\r\n  return (res) ",
+  "doc": "Write a function to find the union of elements of the given tuples."
+ },
+ "seconds": 214.5
+}

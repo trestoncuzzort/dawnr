@@ -58,6 +58,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import corpora    # noqa: E402
 import nl_census  # noqa: E402  (STRING_METHODS_V1_*, solution_tags, for string_lib_v1_only)
+import typed_values  # noqa: E402  (parse_assertion's typed reading)
 
 # nl/ sits beside t/ in the repo. The corpus is committed, unlike t-corpora.
 NL_DATA = Path(__file__).resolve().parent.parent / "nl" / "data"
@@ -201,7 +202,7 @@ class _Unsupported(Exception):
 
 
 def parse_assertion(src: str, strings: bool = False, nested_strings: bool = False,
-                    tuples: bool = False, nested_ints: bool = False) -> dict:
+                    tuples: bool = False, nested_ints: bool = False, typed: bool = False) -> dict:
     """One MBPP `assert` line as {ok, fn, args, expected} or {ok: False, why}.
 
     Only the shape `assert f(a, b, ...) == expected` is accepted, plus the
@@ -225,6 +226,15 @@ def parse_assertion(src: str, strings: bool = False, nested_strings: bool = Fals
     the wider reader of 2026-10-05. A question a person asks is read with
     both (t/answer.py entry_of); the pools to v5 are read without them, so
     no pool, split or panel moves.
+
+    `typed` (default False, see t/typed_values.py): a value the reading
+    above refuses is kept as its Python literal under the kind
+    `typed_values.PENDING` instead (a tuple mixing kinds, a dict, a set,
+    None, deeper nesting, a list of bools), and every value of the point is
+    also kept as its literal under "raw", so that `typed_values.settle` can
+    give a position one type across a problem's tests. A float, a call or a
+    name is still refused by name. A value the reading above accepts is read
+    the same way either way, so no pool, split or panel changes.
     """
     try:
         tree = ast.parse(src.strip(), mode="exec")
@@ -256,23 +266,40 @@ def parse_assertion(src: str, strings: bool = False, nested_strings: bool = Fals
     if call.keywords:
         return {"ok": False, "why": "keyword-argument"}
 
-    args = []
+    args, raw = [], {"args": [], "expected": None}
     for a in call.args:
         try:
             args.append(_literal(a, strings, nested_strings, tuples, nested_ints))
         except _Unsupported as u:
-            return {"ok": False, "why": "arg:%s" % u}
+            if not typed:
+                return {"ok": False, "why": "arg:%s" % u}
+            try:
+                args.append((typed_values.PENDING, typed_values.literal(a)))
+            except typed_values.Unreadable as w:
+                return {"ok": False, "why": "arg:%s" % w}
+        if typed:
+            raw["args"].append(typed_values.literal(a))
 
     if rhs is None:
         expected = ("bool", not negate)
+        raw["expected"] = not negate
     else:
         try:
             expected = _literal(rhs, strings, nested_strings, tuples, nested_ints)
         except _Unsupported as u:
-            return {"ok": False, "why": "expected:%s" % u}
+            if not typed:
+                return {"ok": False, "why": "expected:%s" % u}
+            try:
+                expected = (typed_values.PENDING, typed_values.literal(rhs))
+            except typed_values.Unreadable as w:
+                return {"ok": False, "why": "expected:%s" % w}
         if negate:
             return {"ok": False, "why": "negated-equality"}
+        if typed:
+            raw["expected"] = typed_values.literal(rhs)
 
+    if typed:
+        return {"ok": True, "fn": fn, "args": args, "expected": expected, "raw": raw}
     return {"ok": True, "fn": fn, "args": args, "expected": expected}
 
 

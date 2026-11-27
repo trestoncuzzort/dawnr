@@ -1,0 +1,154 @@
+{
+ "id": 231,
+ "fn": "max_sum",
+ "verified": false,
+ "route": null,
+ "why": "no specification the model wrote holds at your function's answers and pins them down. Every one it wrote from your docstring is false at an answer your function gives (`max_sum([[1], [2,1], [3,3,2]], 3) == 6`): either the model misread the docstring, or the function does not do what it says",
+ "twin": null,
+ "stages": [
+  {
+   "route": "answers",
+   "source": "answer 1",
+   "stage": "parse",
+   "reason": "does not parse (expected 'eof', found 'spec' [Task])"
+  },
+  {
+   "route": "answers",
+   "source": "answer 2",
+   "stage": "examples",
+   "reason": "fails a test (`assert max_sum([[1], [2,1], [3,3,2]], 3) == 6`: undefined)"
+  },
+  {
+   "route": "answers",
+   "source": "answer 3",
+   "stage": "parse",
+   "reason": "does not parse (expected '{', found 'prev' [Stmt])"
+  },
+  {
+   "route": "answers",
+   "source": "answer 4",
+   "stage": "parse",
+   "reason": "does not parse (expected '{', found 'n' [Stmt])"
+  },
+  {
+   "route": "answers",
+   "source": "answer 5",
+   "stage": "well formed",
+   "reason": "not well formed (call of unknown fun max_sum_spec)"
+  },
+  {
+   "route": "specification",
+   "source": "specification 3",
+   "stage": "parse",
+   "reason": "it does not parse ('forall' does not start an expression [Expr])"
+  },
+  {
+   "route": "specification",
+   "source": "specification 1",
+   "stage": "examples",
+   "reason": "`r == max_path(tri, n)` is false at your function's own answer `max_sum([[1], [2,1], [3,3,2]], 3) == 6`",
+   "at": "max_sum([[1], [2,1], [3,3,2]], 3) == 6",
+   "scores": {
+    "correctness": 0.0,
+    "completeness": 1.0,
+    "tests": 3,
+    "mutants": 41
+   }
+  },
+  {
+   "route": "specification",
+   "source": "specification 2",
+   "stage": "examples",
+   "reason": "`r == 6` is false at your function's own answer `max_sum([[1], [1, 2], [4, 1, 12]], 3) == 15`",
+   "at": "max_sum([[1], [1, 2], [4, 1, 12]], 3) == 15",
+   "scores": {
+    "correctness": 0.3333333333333333,
+    "completeness": 1.0,
+    "tests": 3,
+    "mutants": 41
+   }
+  }
+ ],
+ "refused": [
+  "answer 1: does not parse (expected 'eof', found 'spec' [Task])",
+  "answer 2: fails a test (`assert max_sum([[1], [2,1], [3,3,2]], 3) == 6`: undefined)",
+  "answer 3: does not parse (expected '{', found 'prev' [Stmt])",
+  "answer 4: does not parse (expected '{', found 'n' [Stmt])",
+  "answer 5: not well formed (call of unknown fun max_sum_spec)",
+  "specification 3: it does not parse ('forall' does not start an expression [Expr])",
+  "specification 1: `r == max_path(tri, n)` is false at your function's own answer `max_sum([[1], [2,1], [3,3,2]], 3) == 6`",
+  "specification 2: `r == 6` is false at your function's own answer `max_sum([[1], [1, 2], [4, 1, 12]], 3) == 15`"
+ ],
+ "specifications": [
+  {
+   "source": "specification 1",
+   "verdict": "dropped",
+   "scores": {
+    "correctness": 0.0,
+    "completeness": 1.0,
+    "tests": 3,
+    "mutants": 41
+   },
+   "spec": "t 1\ngate quantifiers\ntask f(tri: seq<seq>, n: int) returns (r: int)\n  requires n >= 1\n  requires len(tri) == n\n  requires forall i in [0, n) . len(tri[i]) == i + 1\n  ensures r == max_path(tri, n)\nspec fun max_path(tri: seq<seq>, n: int): int\n  decreases n\n= if n == 1 then tri[0][0] else max(max_path_row(tri, n - 1, 0), max_path_row(tri, n - 1, n - 1))\nspec fun max_path_row(tri: seq<seq>, row: int, col: int): int\n  decreases row\n= if row == 0 then tri[0][0] else tri[row][col] + max(max_path_row(tri, row - 1, col - 1), max_path_row(tri, row - 1, col))\n{\n}\n"
+  },
+  {
+   "source": "specification 2",
+   "verdict": "dropped",
+   "scores": {
+    "correctness": 0.3333333333333333,
+    "completeness": 1.0,
+    "tests": 3,
+    "mutants": 41
+   },
+   "spec": "t 1\ngate loops\ntask f(tri: seq<seq>, n: int) returns (r: int)\n  requires n >= 1\n  requires len(tri) == n\n  requires forall i in [0, n) . len(tri[i]) == i + 1\n  ensures r == 6\n{\n}\n"
+  }
+ ],
+ "candidates": [],
+ "asked": {
+  "answers": 5,
+  "specifications": 3,
+  "bodies": 0
+ },
+ "inputs": {
+  "examples": [
+   "assert max_sum([[1], [2,1], [3,3,2]], 3) == 6",
+   "assert max_sum([[1], [1, 2], [4, 1, 12]], 3) == 15 ",
+   "assert max_sum([[2], [3,2], [13,23,12]], 3) == 28"
+  ],
+  "taken from the function": false,
+  "kinds": [
+   {
+    "args": [
+     "seq-of-seq",
+     "int"
+    ],
+    "expected": "int"
+   },
+   {
+    "args": [
+     "seq-of-seq",
+     "int"
+    ],
+    "expected": "int"
+   },
+   {
+    "args": [
+     "seq-of-seq",
+     "int"
+    ],
+    "expected": "int"
+   }
+  ],
+  "specification check": {
+   "seed": 1,
+   "draws": 100,
+   "larger draws": 60
+  }
+ },
+ "stopped at": "examples",
+ "function": {
+  "code": "def max_sum(tri, n): \r\n\tif n > 1: \r\n\t\ttri[1][1] = tri[1][1]+tri[0][0] \r\n\t\ttri[1][0] = tri[1][0]+tri[0][0] \r\n\tfor i in range(2, n): \r\n\t\ttri[i][0] = tri[i][0] + tri[i-1][0] \r\n\t\ttri[i][i] = tri[i][i] + tri[i-1][i-1] \r\n\t\tfor j in range(1, i): \r\n\t\t\tif tri[i][j]+tri[i-1][j-1] >= tri[i][j]+tri[i-1][j]: \r\n\t\t\t\ttri[i][j] = tri[i][j] + tri[i-1][j-1] \r\n\t\t\telse: \r\n\t\t\t\ttri[i][j] = tri[i][j]+tri[i-1][j] \r\n\treturn (max(tri[n-1]))",
+  "doc": "Write a function to find the maximum sum in the given right triangle of numbers."
+ },
+ "seconds": 81.0
+}

@@ -1,0 +1,121 @@
+{
+ "id": 363,
+ "fn": "add_K_element",
+ "verified": true,
+ "route": "answers",
+ "why": null,
+ "twin": {
+  "program": "t 1\ngate loops\ntask add_K_element(tuples: seq<seq>, k: int) returns (r: seq<seq>)\n  ensures len(r) == len(tuples)\n  ensures forall i in [0, len(r)) . len(r[i]) == len(tuples[i])\n  ensures forall i in [0, len(r)) . forall j in [0, len(r[i])) . r[i][j] == tuples[i][j] + k\n{\n  r := [];\n  var i: int := 0;\n  while i < len(tuples)\n    invariant 0 <= i\n    invariant i <= len(tuples)\n    invariant len(r) == i\n    invariant forall j in [0, len(r)) . len(r[j]) == len(tuples[j])\n    invariant forall j in [0, len(r)) . forall m in [0, len(r[j])) . r[j][m] == tuples[j][m] + k\n    decreases len(tuples) - i\n  {\n    var row: seq := [];\n    var j: int := 0;\n    while j < len(tuples[i])\n      invariant 0 <= j\n      invariant j <= len(tuples[i])\n      invariant len(row) == j\n      invariant forall m in [0, len(row)) . row[m] == tuples[i][m] + k\n      decreases len(tuples[i]) - j\n    {\n      row := row + [tuples[i][j] + k];\n      j := j + 1;\n    }\n    r := r + [row];\n    i := i + 1;\n  }\n}\n",
+  "proved by": 1,
+  "provers": [
+   "dafny"
+  ],
+  "undecided": [
+   "framac",
+   "fstar",
+   "lean",
+   "rocq",
+   "spark",
+   "verus"
+  ],
+  "cells": {
+   "dafny": "verified / refuted",
+   "verus": "\u2014",
+   "spark": "\u2014",
+   "framac": "\u2014",
+   "lean": "\u2014",
+   "rocq": "\u2014",
+   "fstar": "\u2014"
+  },
+  "specification": [
+   "ensures len(r) == len(tuples)",
+   "ensures forall i in [0, len(r)) . len(r[i]) == len(tuples[i])",
+   "ensures forall i in [0, len(r)) . forall j in [0, len(r[i])) . r[i][j] == tuples[i][j] + k"
+  ],
+  "behind the specification": {
+   "tests passed": 3,
+   "agrees with the Python on": 100,
+   "drawn inputs outside its requires": 0,
+   "mutated outputs rejected": 1.0
+  },
+  "same as yours on": 203,
+  "python": {
+   "source": "def add_K_element(tuples, k):\n    \"\"\"The program dawnr proved in `t`, written in Python (checked against `t`, not itself proved).\n\n    ensures  len(r) == len(tuples)\n    ensures  forall i in [0, len(r)) . len(r[i]) == len(tuples[i])\n    ensures  forall i in [0, len(r)) . forall j in [0, len(r[i])) . r[i][j] == tuples[i][j] + k\n    \"\"\"\n    if not (_t_ints(tuples, 2)):\n        raise TypeError('add_K_element: `tuples` must be a list of lists of integers; nothing was proved for anything else')\n    if not (_t_ints(k, 0)):\n        raise TypeError('add_K_element: `k` must be an integer; nothing was proved for anything else')\n    tuples = _t_tuple(tuples)\n    _t_result = _t_core(tuples, k)\n    return _t_shape(_t_result, ('list', 'tuple'))\n\ndef _t_core(tuples, k):\n    r = ()\n    i = 0\n    # invariant: 0 <= i\n    # invariant: i <= len(tuples)\n    # invariant: len(r) == i\n    # invariant: forall j in [0, len(r)) . len(r[j]) == len(tuples[j])\n    # invariant: forall j in [0, len(r)) . forall m in [0, len(r[j])) . r[j][m] == tuples[j][m] + k\n    # decreases: len(tuples) - i\n    while (i < len(tuples)):\n        row = ()\n        j = 0\n        # invariant: 0 <= j\n        # invariant: j <= len(tuples[i])\n        # invariant: len(row) == j\n        # invariant: forall m in [0, len(row)) . row[m] == tuples[i][m] + k\n        # decreases: len(tuples[i]) - j\n        while (j < len(tuples[i])):\n            row = (row + ((tuples[i][j] + k), ))\n            j = (j + 1)\n        r = (r + (row, ))\n        i = (i + 1)\n    return r\n\ndef _t_tuple(v):\n    return tuple(_t_tuple(x) for x in v) if isinstance(v, (list, tuple)) else v\n\ndef _t_ints(v, depth):\n    if depth == 0:\n        return isinstance(v, int) and not isinstance(v, bool)\n    return isinstance(v, (list, tuple)) and all(_t_ints(x, depth - 1) for x in v)\n\ndef _t_shape(v, kinds):\n    if not isinstance(v, tuple):\n        return v\n    inner = [_t_shape(x, kinds[1:] or kinds[-1:]) for x in v]\n    return tuple(inner) if kinds[0] == \"tuple\" else inner\n",
+   "function": "add_K_element",
+   "inputs": 203,
+   "refused": 0
+  }
+ },
+ "stages": [],
+ "refused": [],
+ "specifications": [],
+ "candidates": [
+  {
+   "source": "answer 1",
+   "function": {
+    "passes": true,
+    "why": "passes",
+    "agreement": {
+     "status": "agrees",
+     "draws": 100,
+     "completeness": 1.0,
+     "mutants_rejected": 289,
+     "mutants_accepted": 0
+    },
+    "larger": {
+     "status": "agrees",
+     "draws": 60,
+     "completeness": 1.0,
+     "mutants_rejected": 266,
+     "mutants_accepted": 0,
+     "requires_caps_size": false
+    }
+   }
+  }
+ ],
+ "asked": {
+  "answers": 5
+ },
+ "inputs": {
+  "examples": [
+   "assert add_K_element([(1, 3, 4), (2, 4, 6), (3, 8, 1)], 4) == [(5, 7, 8), (6, 8, 10), (7, 12, 5)]",
+   "assert add_K_element([(1, 2, 3), (4, 5, 6), (7, 8, 9)], 8) == [(9, 10, 11), (12, 13, 14), (15, 16, 17)]",
+   "assert add_K_element([(11, 12, 13), (14, 15, 16), (17, 18, 19)], 9) == [(20, 21, 22), (23, 24, 25), (26, 27, 28)]"
+  ],
+  "taken from the function": false,
+  "kinds": [
+   {
+    "args": [
+     "seq-of-seq",
+     "int"
+    ],
+    "expected": "seq-of-seq"
+   },
+   {
+    "args": [
+     "seq-of-seq",
+     "int"
+    ],
+    "expected": "seq-of-seq"
+   },
+   {
+    "args": [
+     "seq-of-seq",
+     "int"
+    ],
+    "expected": "seq-of-seq"
+   }
+  ],
+  "specification check": {
+   "seed": 1,
+   "draws": 100,
+   "larger draws": 60
+  }
+ },
+ "stopped at": null,
+ "function": {
+  "code": "def add_K_element(test_list, K):\r\n  res = [tuple(j + K for j in sub ) for sub in test_list]\r\n  return (res) ",
+  "doc": "Write a function to add the k elements to each element in the tuple."
+ },
+ "seconds": 45.8
+}

@@ -1,0 +1,172 @@
+{
+ "id": 219,
+ "fn": "extract_min_max",
+ "verified": false,
+ "route": null,
+ "why": "no specification the model wrote holds at your function's answers and pins them down. Every one it wrote from your docstring is false at an answer your function gives (`extract_min_max((2, 3, 4, 8, 9, 11, 7), 4) == (2, 3, 4, 7, 8, 9, 11)`): either the model misread the docstring, or the function does not do what it says",
+ "twin": null,
+ "stages": [
+  {
+   "route": "answers",
+   "source": "answer 1",
+   "stage": "well formed",
+   "reason": "not well formed (sorted[...] := writes sorted, not an array parameter named in modifies)"
+  },
+  {
+   "route": "answers",
+   "source": "answer 2",
+   "stage": "well formed",
+   "reason": "not well formed (call of unknown fun is_sorted)"
+  },
+  {
+   "route": "answers",
+   "source": "answer 3",
+   "stage": "examples",
+   "reason": "fails a test (`assert extract_min_max((5, 20, 3, 7, 6, 8), 2) == (3, 5, 8, 20)`: it returns [3, 5, 6, 7, 8, 20])"
+  },
+  {
+   "route": "answers",
+   "source": "answer 4",
+   "stage": "well formed",
+   "reason": "not well formed (call of unknown fun sorted)"
+  },
+  {
+   "route": "answers",
+   "source": "answer 5",
+   "stage": "examples",
+   "reason": "fails a test (`assert extract_min_max((2, 3, 4, 8, 9, 11, 7), 4) == (2, 3, 4, 7, 8, 9, 11)`: requires-excluded)"
+  },
+  {
+   "route": "specification",
+   "source": "specification 1",
+   "stage": "examples",
+   "reason": "`len(r) == 2 * k; forall i in [0, k) . exists j in [0, len(s)) . r[i] == s[j]; forall i in [k, 2 * k) . exists j in [0, len(s)) . r[i] == s[j]; forall i in [0, k) . forall j in [k, 2 * k) . r[i] <= r[j]; forall i in [0, k) . forall j in [0, k) . i < j ==> r[i] <= r[j]; forall i in [k, 2 * k) . forall j in [k, 2 * k) . i < j ==> r[i] <= r[j]` is false at your function's own answer `extract_min_max((2, 3, 4, 8, 9, 11, 7), 4) == (2, 3, 4, 7, 8, 9, 11)`",
+   "at": "extract_min_max((2, 3, 4, 8, 9, 11, 7), 4) == (2, 3, 4, 7, 8, 9, 11)",
+   "scores": {
+    "correctness": 0.6666666666666666,
+    "completeness": 0.9565217391304348,
+    "tests": 3,
+    "mutants": 23
+   }
+  },
+  {
+   "route": "specification",
+   "source": "specification 2",
+   "stage": "examples",
+   "reason": "`len(r) == 2 * k; sorted(r) == r; forall i in [0, k) . r[i] <= r[k]; forall i in [k, len(r)) . r[k] <= r[i]; len(r) == 0 ==> true` is false at your function's own answer `extract_min_max((5, 20, 3, 7, 6, 8), 2) == (3, 5, 8, 20)`",
+   "at": "extract_min_max((5, 20, 3, 7, 6, 8), 2) == (3, 5, 8, 20)",
+   "scores": {
+    "correctness": 0.0,
+    "completeness": 1.0,
+    "tests": 3,
+    "mutants": 23
+   }
+  },
+  {
+   "route": "specification",
+   "source": "specification 3",
+   "stage": "examples",
+   "reason": "`r == sorted(s)[0..k] + sorted(s)[len(s) - k..len(s)]; len(r) == 2 * k` is false at your function's own answer `extract_min_max((5, 20, 3, 7, 6, 8), 2) == (3, 5, 8, 20)`",
+   "at": "extract_min_max((5, 20, 3, 7, 6, 8), 2) == (3, 5, 8, 20)",
+   "scores": {
+    "correctness": 0.0,
+    "completeness": 1.0,
+    "tests": 2,
+    "mutants": 15
+   }
+  }
+ ],
+ "refused": [
+  "answer 1: not well formed (sorted[...] := writes sorted, not an array parameter named in modifies)",
+  "answer 2: not well formed (call of unknown fun is_sorted)",
+  "answer 3: fails a test (`assert extract_min_max((5, 20, 3, 7, 6, 8), 2) == (3, 5, 8, 20)`: it returns [3, 5, 6, 7, 8, 20])",
+  "answer 4: not well formed (call of unknown fun sorted)",
+  "answer 5: fails a test (`assert extract_min_max((2, 3, 4, 8, 9, 11, 7), 4) == (2, 3, 4, 7, 8, 9, 11)`: requires-excluded)",
+  "specification 1: `len(r) == 2 * k; forall i in [0, k) . exists j in [0, len(s)) . r[i] == s[j]; forall i in [k, 2 * k) . exists j in [0, len(s)) . r[i] == s[j]; forall i in [0, k) . forall j in [k, 2 * k) . r[i] <= r[j]; forall i in [0, k) . forall j in [0, k) . i < j ==> r[i] <= r[j]; forall i in [k, 2 * k) . forall j in [k, 2 * k) . i < j ==> r[i] <= r[j]` is false at your function's own answer `extract_min_max((2, 3, 4, 8, 9, 11, 7), 4) == (2, 3, 4, 7, 8, 9, 11)`",
+  "specification 2: `len(r) == 2 * k; sorted(r) == r; forall i in [0, k) . r[i] <= r[k]; forall i in [k, len(r)) . r[k] <= r[i]; len(r) == 0 ==> true` is false at your function's own answer `extract_min_max((5, 20, 3, 7, 6, 8), 2) == (3, 5, 8, 20)`",
+  "specification 3: `r == sorted(s)[0..k] + sorted(s)[len(s) - k..len(s)]; len(r) == 2 * k` is false at your function's own answer `extract_min_max((5, 20, 3, 7, 6, 8), 2) == (3, 5, 8, 20)`"
+ ],
+ "specifications": [
+  {
+   "source": "specification 1",
+   "verdict": "dropped",
+   "scores": {
+    "correctness": 0.6666666666666666,
+    "completeness": 0.9565217391304348,
+    "tests": 3,
+    "mutants": 23
+   },
+   "spec": "t 1\ngate quantifiers\ntask f(s: seq, k: int) returns (r: seq)\n  requires k >= 0\n  requires k <= len(s)\n  ensures len(r) == 2 * k\n  ensures forall i in [0, k) . exists j in [0, len(s)) . r[i] == s[j]\n  ensures forall i in [k, 2 * k) . exists j in [0, len(s)) . r[i] == s[j]\n  ensures forall i in [0, k) . forall j in [k, 2 * k) . r[i] <= r[j]\n  ensures forall i in [0, k) . forall j in [0, k) . i < j ==> r[i] <= r[j]\n  ensures forall i in [k, 2 * k) . forall j in [k, 2 * k) . i < j ==> r[i] <= r[j]\n{\n}\n"
+  },
+  {
+   "source": "specification 2",
+   "verdict": "dropped",
+   "scores": {
+    "correctness": 0.0,
+    "completeness": 1.0,
+    "tests": 3,
+    "mutants": 23
+   },
+   "spec": "t 1\ngate quantifiers\ntask f(s: seq, k: int) returns (r: seq)\n  requires k >= 0\n  requires k <= len(s)\n  ensures len(r) == 2 * k\n  ensures sorted(r) == r\n  ensures forall i in [0, k) . r[i] <= r[k]\n  ensures forall i in [k, len(r)) . r[k] <= r[i]\n  ensures len(r) == 0 ==> true\n{\n}\n"
+  },
+  {
+   "source": "specification 3",
+   "verdict": "dropped",
+   "scores": {
+    "correctness": 0.0,
+    "completeness": 1.0,
+    "tests": 2,
+    "mutants": 15
+   },
+   "spec": "t 1\ngate loops\ntask f(s: seq, k: int) returns (r: seq)\n  requires k >= 0\n  requires k <= len(s) / 2\n  ensures r == sorted(s)[0..k] + sorted(s)[len(s) - k..len(s)]\n  ensures len(r) == 2 * k\n{\n}\n"
+  }
+ ],
+ "candidates": [],
+ "asked": {
+  "answers": 5,
+  "specifications": 3,
+  "bodies": 0
+ },
+ "inputs": {
+  "examples": [
+   "assert extract_min_max((5, 20, 3, 7, 6, 8), 2) == (3, 5, 8, 20)",
+   "assert extract_min_max((4, 5, 6, 1, 2, 7), 3) == (1, 2, 4, 5, 6, 7)",
+   "assert extract_min_max((2, 3, 4, 8, 9, 11, 7), 4) == (2, 3, 4, 7, 8, 9, 11)"
+  ],
+  "taken from the function": false,
+  "kinds": [
+   {
+    "args": [
+     "seq",
+     "int"
+    ],
+    "expected": "seq"
+   },
+   {
+    "args": [
+     "seq",
+     "int"
+    ],
+    "expected": "seq"
+   },
+   {
+    "args": [
+     "seq",
+     "int"
+    ],
+    "expected": "seq"
+   }
+  ],
+  "specification check": {
+   "seed": 1,
+   "draws": 100,
+   "larger draws": 60
+  }
+ },
+ "stopped at": "examples",
+ "function": {
+  "code": "\r\ndef extract_min_max(test_tup, K):\r\n  res = []\r\n  test_tup = list(test_tup)\r\n  temp = sorted(test_tup)\r\n  for idx, val in enumerate(temp):\r\n    if idx < K or idx >= len(temp) - K:\r\n      res.append(val)\r\n  res = tuple(res)\r\n  return (res) ",
+  "doc": "Write a function to extract maximum and minimum k elements in the given tuple."
+ },
+ "seconds": 60.2
+}

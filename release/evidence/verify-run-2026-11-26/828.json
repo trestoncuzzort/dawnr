@@ -1,0 +1,209 @@
+{
+ "id": 828,
+ "fn": "count_alpha_dig_spl",
+ "verified": false,
+ "route": null,
+ "why": "no specification the model wrote holds at your function's answers and pins them down. Every one it wrote from your docstring is false at an answer your function gives (`count_alpha_dig_spl(\"abc!@#123\")==(3,3,3)`): either the model misread the docstring, or the function does not do what it says",
+ "twin": null,
+ "stages": [
+  {
+   "route": "answers",
+   "source": "answer 1",
+   "stage": "well formed",
+   "reason": "not well formed (== wants two values of one type, found 'int' and 'bool')"
+  },
+  {
+   "route": "answers",
+   "source": "answer 2",
+   "stage": "parse",
+   "reason": "does not parse (expected '{', found 'if' [Stmt])"
+  },
+  {
+   "route": "answers",
+   "source": "answer 3",
+   "stage": "parse",
+   "reason": "does not parse (expected ')', found 'n' [Expr])"
+  },
+  {
+   "route": "answers",
+   "source": "answer 4",
+   "stage": "well formed",
+   "reason": "not well formed (ctor of unknown datatype 's')"
+  },
+  {
+   "route": "answers",
+   "source": "answer 5",
+   "stage": "well formed",
+   "reason": "not well formed (unbound var null)"
+  },
+  {
+   "route": "specification",
+   "source": "specification 1",
+   "stage": "examples",
+   "reason": "`len(r) == 3; r[0] == (forall i in [0, len(s)) . s[i] >= 65 and s[i] <= 90 or s[i] >= 97 and s[i] <= 122); r[1] == (forall i in [0, len(s)) . s[i] >= 48 and s[i] <= 57); r[2] == (forall i in [0, len(s)) . not (s[i] >= 65 and s[i] <= 90 or s[i] >= 97 and s[i] <= 122 or s[i] >= 48 and s[i] <= 57))` is false at your function's own answer `count_alpha_dig_spl(\"abc!@#123\")==(3,3,3)`",
+   "at": "count_alpha_dig_spl(\"abc!@#123\")==(3,3,3)",
+   "scores": {
+    "correctness": 0.0,
+    "completeness": 1.0,
+    "tests": 3,
+    "mutants": 19
+   }
+  },
+  {
+   "route": "specification",
+   "source": "specification 2",
+   "stage": "examples",
+   "reason": "`len(r) == 3; r[0] == s.count([97, 98, 99, 100, 101, 102, 103, 104, 105, 106, 107, 108, 109, 110, 111, 112, 113, 114, 115, 116, 117, 118, 119, 120, 121, 122, 65, 66, 67, 68, 69, 70, 71, 72, 73, 74, 75, 76, 77, 78, 79, 80, 81, 82, 83, 84, 85, 86, 87, 88, 89, 90]); r[1] == s.count([48, 49, 50, 51, 52, 53, 54, 55, 56, 57]); r[2] == len(s) - r[0] - r[1]` is false at your function's own answer `count_alpha_dig_spl(\"abc!@#123\")==(3,3,3)`",
+   "at": "count_alpha_dig_spl(\"abc!@#123\")==(3,3,3)",
+   "scores": {
+    "correctness": 0.0,
+    "completeness": 1.0,
+    "tests": 3,
+    "mutants": 19
+   }
+  },
+  {
+   "route": "specification",
+   "source": "specification 3",
+   "stage": "specification check",
+   "reason": "`r[0] == len(s) - r[1] - r[2]; r[1] == len(s) - r[0] - r[2]; r[2] == len(s) - r[0] - r[1]; r[0] >= 0; r[1] >= 0; r[2] >= 0; len(r) == 3; forall i in [0, len(s)) . s[i] >= 97 and s[i] <= 122 or s[i] >= 65 and s[i] <= 90 ==> r[0] > 0 or i >= 1; forall i in [0, len(s)) . s[i] >= 48 and s[i] <= 57 ==> r[1] > 0 or i >= 1; forall i in [0, len(s)) . (s[i] < 65 or s[i] > 90 and s[i] < 97 or s[i] > 122) and s[i] < 48 or s[i] > 57 ==> r[2] > 0 or i >= 1` is false at your function's own answer `count_alpha_dig_spl([84, 86, 118, 55, 79, 103, 122]) == [6, 1, 0]`",
+   "at": "count_alpha_dig_spl([84, 86, 118, 55, 79, 103, 122]) == [6, 1, 0]",
+   "passes": false,
+   "why": "the specification is false at the Python's answer",
+   "agreement": {
+    "status": "disagrees",
+    "args": [
+     [
+      84,
+      86,
+      118,
+      55,
+      79,
+      103,
+      122
+     ]
+    ],
+    "reference_said": [
+     6,
+     1,
+     0
+    ],
+    "ensures": 9
+   }
+  }
+ ],
+ "refused": [
+  "answer 1: not well formed (== wants two values of one type, found 'int' and 'bool')",
+  "answer 2: does not parse (expected '{', found 'if' [Stmt])",
+  "answer 3: does not parse (expected ')', found 'n' [Expr])",
+  "answer 4: not well formed (ctor of unknown datatype 's')",
+  "answer 5: not well formed (unbound var null)",
+  "specification 1: `len(r) == 3; r[0] == (forall i in [0, len(s)) . s[i] >= 65 and s[i] <= 90 or s[i] >= 97 and s[i] <= 122); r[1] == (forall i in [0, len(s)) . s[i] >= 48 and s[i] <= 57); r[2] == (forall i in [0, len(s)) . not (s[i] >= 65 and s[i] <= 90 or s[i] >= 97 and s[i] <= 122 or s[i] >= 48 and s[i] <= 57))` is false at your function's own answer `count_alpha_dig_spl(\"abc!@#123\")==(3,3,3)`",
+  "specification 2: `len(r) == 3; r[0] == s.count([97, 98, 99, 100, 101, 102, 103, 104, 105, 106, 107, 108, 109, 110, 111, 112, 113, 114, 115, 116, 117, 118, 119, 120, 121, 122, 65, 66, 67, 68, 69, 70, 71, 72, 73, 74, 75, 76, 77, 78, 79, 80, 81, 82, 83, 84, 85, 86, 87, 88, 89, 90]); r[1] == s.count([48, 49, 50, 51, 52, 53, 54, 55, 56, 57]); r[2] == len(s) - r[0] - r[1]` is false at your function's own answer `count_alpha_dig_spl(\"abc!@#123\")==(3,3,3)`",
+  "specification 3: `r[0] == len(s) - r[1] - r[2]; r[1] == len(s) - r[0] - r[2]; r[2] == len(s) - r[0] - r[1]; r[0] >= 0; r[1] >= 0; r[2] >= 0; len(r) == 3; forall i in [0, len(s)) . s[i] >= 97 and s[i] <= 122 or s[i] >= 65 and s[i] <= 90 ==> r[0] > 0 or i >= 1; forall i in [0, len(s)) . s[i] >= 48 and s[i] <= 57 ==> r[1] > 0 or i >= 1; forall i in [0, len(s)) . (s[i] < 65 or s[i] > 90 and s[i] < 97 or s[i] > 122) and s[i] < 48 or s[i] > 57 ==> r[2] > 0 or i >= 1` is false at your function's own answer `count_alpha_dig_spl([84, 86, 118, 55, 79, 103, 122]) == [6, 1, 0]`"
+ ],
+ "specifications": [
+  {
+   "source": "specification 1",
+   "verdict": "dropped",
+   "scores": {
+    "correctness": 0.0,
+    "completeness": 1.0,
+    "tests": 3,
+    "mutants": 19
+   },
+   "spec": "t 1\ntask f(s: seq) returns (r: seq)\n  ensures len(r) == 3\n  ensures r[0] == (forall i in [0, len(s)) . s[i] >= 65 and s[i] <= 90 or s[i] >= 97 and s[i] <= 122)\n  ensures r[1] == (forall i in [0, len(s)) . s[i] >= 48 and s[i] <= 57)\n  ensures r[2] == (forall i in [0, len(s)) . not (s[i] >= 65 and s[i] <= 90 or s[i] >= 97 and s[i] <= 122 or s[i] >= 48 and s[i] <= 57))\n{\n}\n"
+  },
+  {
+   "source": "specification 2",
+   "verdict": "dropped",
+   "scores": {
+    "correctness": 0.0,
+    "completeness": 1.0,
+    "tests": 3,
+    "mutants": 19
+   },
+   "spec": "t 1\ntask f(s: seq) returns (r: seq)\n  ensures len(r) == 3\n  ensures r[0] == s.count([97, 98, 99, 100, 101, 102, 103, 104, 105, 106, 107, 108, 109, 110, 111, 112, 113, 114, 115, 116, 117, 118, 119, 120, 121, 122, 65, 66, 67, 68, 69, 70, 71, 72, 73, 74, 75, 76, 77, 78, 79, 80, 81, 82, 83, 84, 85, 86, 87, 88, 89, 90])\n  ensures r[1] == s.count([48, 49, 50, 51, 52, 53, 54, 55, 56, 57])\n  ensures r[2] == len(s) - r[0] - r[1]\n{\n}\n"
+  },
+  {
+   "source": "specification 3",
+   "verdict": "kept",
+   "scores": {
+    "correctness": 1.0,
+    "completeness": 0.8947368421052632,
+    "tests": 3,
+    "mutants": 19
+   },
+   "spec": "t 1\ntask f(s: seq) returns (r: seq)\n  ensures r[0] == len(s) - r[1] - r[2]\n  ensures r[1] == len(s) - r[0] - r[2]\n  ensures r[2] == len(s) - r[0] - r[1]\n  ensures r[0] >= 0\n  ensures r[1] >= 0\n  ensures r[2] >= 0\n  ensures len(r) == 3\n  ensures forall i in [0, len(s)) . s[i] >= 97 and s[i] <= 122 or s[i] >= 65 and s[i] <= 90 ==> r[0] > 0 or i >= 1\n  ensures forall i in [0, len(s)) . s[i] >= 48 and s[i] <= 57 ==> r[1] > 0 or i >= 1\n  ensures forall i in [0, len(s)) . (s[i] < 65 or s[i] > 90 and s[i] < 97 or s[i] > 122) and s[i] < 48 or s[i] > 57 ==> r[2] > 0 or i >= 1\n{\n}\n",
+   "function": {
+    "passes": false,
+    "why": "the specification is false at the Python's answer",
+    "agreement": {
+     "status": "disagrees",
+     "args": [
+      [
+       84,
+       86,
+       118,
+       55,
+       79,
+       103,
+       122
+      ]
+     ],
+     "reference_said": [
+      6,
+      1,
+      0
+     ],
+     "ensures": 9
+    }
+   }
+  }
+ ],
+ "candidates": [],
+ "asked": {
+  "answers": 5,
+  "specifications": 3,
+  "bodies": 0
+ },
+ "inputs": {
+  "examples": [
+   "assert count_alpha_dig_spl(\"abc!@#123\")==(3,3,3)",
+   "assert count_alpha_dig_spl(\"dgsuy@#$%&1255\")==(5,4,5)",
+   "assert count_alpha_dig_spl(\"fjdsif627348#%$^&\")==(6,6,5)"
+  ],
+  "taken from the function": false,
+  "kinds": [
+   {
+    "args": [
+     "seq"
+    ],
+    "expected": "seq"
+   },
+   {
+    "args": [
+     "seq"
+    ],
+    "expected": "seq"
+   },
+   {
+    "args": [
+     "seq"
+    ],
+    "expected": "seq"
+   }
+  ],
+  "specification check": {
+   "seed": 1,
+   "draws": 100,
+   "larger draws": 60
+  }
+ },
+ "stopped at": "specification check",
+ "function": {
+  "code": "def count_alpha_dig_spl(string):\r\n  alphabets=digits = special = 0\r\n  for i in range(len(string)):\r\n    if(string[i].isalpha()):\r\n        alphabets = alphabets + 1\r\n    elif(string[i].isdigit()):\r\n        digits = digits + 1\r\n    else:\r\n        special = special + 1\r\n  return (alphabets,digits,special)   ",
+  "doc": "Write a function to count alphabets,digits and special charactes in a given string."
+ },
+ "seconds": 63.0
+}

@@ -1,0 +1,133 @@
+{
+ "id": 438,
+ "fn": "count_bidirectional",
+ "verified": false,
+ "route": null,
+ "why": "no specification the model wrote holds at your function's answers and pins them down. Every one it wrote from your docstring is false at an answer your function gives (`count_bidirectional([(5, 6), (1, 2), (6, 5), (9, 1), (6, 5), (2, 1)] ) == '3'`): either the model misread the docstring, or the function does not do what it says",
+ "twin": null,
+ "stages": [
+  {
+   "route": "answers",
+   "source": "answer 1",
+   "stage": "examples",
+   "reason": "fails a test (`assert count_bidirectional([(5, 6), (1, 2), (6, 5), (9, 1), (6, 5), (2, 1)] ) == '3'`: it returns 3)"
+  },
+  {
+   "route": "answers",
+   "source": "answer 2",
+   "stage": "examples",
+   "reason": "fails a test (`assert count_bidirectional([(5, 6), (1, 2), (6, 5), (9, 1), (6, 5), (2, 1)] ) == '3'`: it returns 6)"
+  },
+  {
+   "route": "answers",
+   "source": "answer 3",
+   "stage": "examples",
+   "reason": "fails a test (`assert count_bidirectional([(5, 6), (1, 2), (6, 5), (9, 1), (6, 5), (2, 1)] ) == '3'`: it returns 6)"
+  },
+  {
+   "route": "answers",
+   "source": "answer 4",
+   "stage": "examples",
+   "reason": "fails a test (`assert count_bidirectional([(5, 6), (1, 2), (6, 5), (9, 1), (6, 5), (2, 1)] ) == '3'`: it returns 3)"
+  },
+  {
+   "route": "answers",
+   "source": "answer 5",
+   "stage": "examples",
+   "reason": "fails a test (`assert count_bidirectional([(5, 6), (1, 2), (6, 5), (9, 1), (6, 5), (2, 1)] ) == '3'`: it returns 3)"
+  },
+  {
+   "route": "specification",
+   "source": "specification 2",
+   "stage": "parse",
+   "reason": "it does not parse (unexpected character '&' [Id])"
+  },
+  {
+   "route": "specification",
+   "source": "specification 3",
+   "stage": "parse",
+   "reason": "it does not parse (expected '{', found 'first' [Stmt])"
+  },
+  {
+   "route": "specification",
+   "source": "specification 1",
+   "stage": "examples",
+   "reason": "`r == count_bidirectional_spec(pairs)` is false at your function's own answer `count_bidirectional([(5, 6), (1, 2), (6, 5), (9, 1), (6, 5), (2, 1)] ) == '3'`",
+   "at": "count_bidirectional([(5, 6), (1, 2), (6, 5), (9, 1), (6, 5), (2, 1)] ) == '3'",
+   "scores": {
+    "correctness": 0.0,
+    "completeness": 1.0,
+    "tests": 3,
+    "mutants": 42
+   }
+  }
+ ],
+ "refused": [
+  "answer 1: fails a test (`assert count_bidirectional([(5, 6), (1, 2), (6, 5), (9, 1), (6, 5), (2, 1)] ) == '3'`: it returns 3)",
+  "answer 2: fails a test (`assert count_bidirectional([(5, 6), (1, 2), (6, 5), (9, 1), (6, 5), (2, 1)] ) == '3'`: it returns 6)",
+  "answer 3: fails a test (`assert count_bidirectional([(5, 6), (1, 2), (6, 5), (9, 1), (6, 5), (2, 1)] ) == '3'`: it returns 6)",
+  "answer 4: fails a test (`assert count_bidirectional([(5, 6), (1, 2), (6, 5), (9, 1), (6, 5), (2, 1)] ) == '3'`: it returns 3)",
+  "answer 5: fails a test (`assert count_bidirectional([(5, 6), (1, 2), (6, 5), (9, 1), (6, 5), (2, 1)] ) == '3'`: it returns 3)",
+  "specification 2: it does not parse (unexpected character '&' [Id])",
+  "specification 3: it does not parse (expected '{', found 'first' [Stmt])",
+  "specification 1: `r == count_bidirectional_spec(pairs)` is false at your function's own answer `count_bidirectional([(5, 6), (1, 2), (6, 5), (9, 1), (6, 5), (2, 1)] ) == '3'`"
+ ],
+ "specifications": [
+  {
+   "source": "specification 1",
+   "verdict": "dropped",
+   "scores": {
+    "correctness": 0.0,
+    "completeness": 1.0,
+    "tests": 3,
+    "mutants": 42
+   },
+   "spec": "t 1\ntask f(pairs: seq<seq>) returns (r: int)\n  ensures r == count_bidirectional_spec(pairs)\nspec fun count_bidirectional_spec(pairs: seq<seq>): int\n  decreases len(pairs)\n= if len(pairs) == 0 then 0 else count_bidirectional_spec(pairs[1..len(pairs)]) + count_pairs_with_first(pairs[1..len(pairs)], pairs[0])\nspec fun count_pairs_with_first(rest: seq<seq>, first: seq): int\n  decreases len(rest)\n= if len(rest) == 0 then 0 else (if rest[0][0] == first[1] and rest[0][1] == first[0] then 1 else 0) + count_pairs_with_first(rest[1..len(rest)], first)\n{\n}\n"
+  }
+ ],
+ "candidates": [],
+ "asked": {
+  "answers": 5,
+  "specifications": 3,
+  "bodies": 0
+ },
+ "inputs": {
+  "examples": [
+   "assert count_bidirectional([(5, 6), (1, 2), (6, 5), (9, 1), (6, 5), (2, 1)] ) == '3'",
+   "assert count_bidirectional([(5, 6), (1, 3), (6, 5), (9, 1), (6, 5), (2, 1)] ) == '2'",
+   "assert count_bidirectional([(5, 6), (1, 2), (6, 5), (9, 2), (6, 5), (2, 1)] ) == '4'"
+  ],
+  "taken from the function": false,
+  "kinds": [
+   {
+    "args": [
+     "seq-of-seq"
+    ],
+    "expected": "int"
+   },
+   {
+    "args": [
+     "seq-of-seq"
+    ],
+    "expected": "int"
+   },
+   {
+    "args": [
+     "seq-of-seq"
+    ],
+    "expected": "int"
+   }
+  ],
+  "specification check": {
+   "seed": 1,
+   "draws": 100,
+   "larger draws": 60
+  }
+ },
+ "stopped at": "examples",
+ "function": {
+  "code": "def count_bidirectional(test_list):\r\n  res = 0\r\n  for idx in range(0, len(test_list)):\r\n    for iidx in range(idx + 1, len(test_list)):\r\n      if test_list[iidx][0] == test_list[idx][1] and test_list[idx][1] == test_list[iidx][0]:\r\n        res += 1\r\n  return (str(res)) ",
+  "doc": "Write a function to count bidirectional tuple pairs."
+ },
+ "seconds": 39.1
+}

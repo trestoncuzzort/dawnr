@@ -1,0 +1,381 @@
+{
+ "id": 551,
+ "fn": "extract_column",
+ "verified": true,
+ "route": "specification",
+ "why": null,
+ "twin": {
+  "program": "t 1\ntask extract_column(list1: seq<seq>, n: int) returns (r: seq)\n  requires n >= 0\n  requires forall i in [0, len(list1)) . n < len(list1[i])\n  ensures len(r) == len(list1)\n  ensures forall i in [0, len(list1)) . r[i] == list1[i][n]\n{\n  r := [];\n  var i: int := 0;\n  while i < len(list1)\n    invariant 0 <= i\n    invariant i <= len(list1)\n    invariant len(r) == i\n    invariant forall j in [0, i) . r[j] == list1[j][n]\n    decreases len(list1) - i\n  {\n    r := r + [list1[i][n]];\n    i := i + 1;\n  }\n}\n",
+  "proved by": 1,
+  "provers": [
+   "dafny"
+  ],
+  "undecided": [
+   "framac",
+   "fstar",
+   "lean",
+   "rocq",
+   "spark",
+   "verus"
+  ],
+  "cells": {
+   "dafny": "verified / refuted",
+   "verus": "\u2014",
+   "spark": "\u2014",
+   "framac": "\u2014",
+   "lean": "\u2014",
+   "rocq": "\u2014",
+   "fstar": "\u2014"
+  },
+  "specification": [
+   "requires n >= 0",
+   "requires forall i in [0, len(list1)) . n < len(list1[i])",
+   "ensures len(r) == len(list1)",
+   "ensures forall i in [0, len(list1)) . r[i] == list1[i][n]"
+  ],
+  "behind the specification": {
+   "tests passed": 3,
+   "agrees with the Python on": 49,
+   "drawn inputs outside its requires": 0,
+   "mutated outputs rejected": 1.0
+  },
+  "same as yours on": 50,
+  "python": {
+   "source": "def extract_column(list1, n):\n    \"\"\"The program dawnr proved in `t`, written in Python (checked against `t`, not itself proved).\n\n    requires n >= 0\n    requires forall i in [0, len(list1)) . n < len(list1[i])\n    ensures  len(r) == len(list1)\n    ensures  forall i in [0, len(list1)) . r[i] == list1[i][n]\n\n    Outside its `requires` it raises ValueError: nothing was proved there.\n    \"\"\"\n    if not (_t_ints(list1, 2)):\n        raise TypeError('extract_column: `list1` must be a list of lists of integers; nothing was proved for anything else')\n    if not (_t_ints(n, 0)):\n        raise TypeError('extract_column: `n` must be an integer; nothing was proved for anything else')\n    list1 = _t_tuple(list1)\n    if not _t_requires(list1, n):\n        raise ValueError('extract_column: this input is outside what was proved (requires n >= 0; forall i in [0, len(list1)) . n < len(list1[i]))')\n    _t_result = _t_core(list1, n)\n    return _t_list(_t_result)\n\ndef _t_core(list1, n):\n    r = ()\n    i = 0\n    # invariant: 0 <= i\n    # invariant: i <= len(list1)\n    # invariant: len(r) == i\n    # invariant: forall j in [0, i) . r[j] == list1[j][n]\n    # decreases: len(list1) - i\n    while (i < len(list1)):\n        r = (r + (list1[i][n], ))\n        i = (i + 1)\n    return r\n\ndef _t_requires(list1, n):\n    try:\n        return bool((n >= 0)) and bool(all((n < len(list1[i])) for i in range(0, len(list1))))\n    except (IndexError, ZeroDivisionError):   # a `requires` with no value here admits nothing\n        return False\n\ndef _t_tuple(v):\n    return tuple(_t_tuple(x) for x in v) if isinstance(v, (list, tuple)) else v\n\ndef _t_ints(v, depth):\n    if depth == 0:\n        return isinstance(v, int) and not isinstance(v, bool)\n    return isinstance(v, (list, tuple)) and all(_t_ints(x, depth - 1) for x in v)\n\ndef _t_list(v):\n    return [_t_list(x) for x in v] if isinstance(v, tuple) else v\n",
+   "function": "extract_column",
+   "inputs": 50,
+   "refused": 50
+  }
+ },
+ "stages": [
+  {
+   "route": "answers",
+   "source": "answer 1",
+   "stage": "prover",
+   "reason": "refuted by dafny",
+   "cells": {
+    "dafny": "refuted / refuted",
+    "verus": "\u2014",
+    "spark": "\u2014",
+    "framac": "\u2014",
+    "lean": "\u2014",
+    "rocq": "\u2014",
+    "fstar": "\u2014"
+   }
+  },
+  {
+   "route": "answers",
+   "source": "answer 2",
+   "stage": "same as the function",
+   "reason": "it does not answer as your function does (`extract_column(*[[[]], 0]) == [0]` is the program's answer, not yours)",
+   "inputs": 203,
+   "first": "assert extract_column(*[[[]], 0]) == [0]"
+  },
+  {
+   "route": "answers",
+   "source": "answer 3",
+   "stage": "prover",
+   "reason": "refuted by dafny",
+   "cells": {
+    "dafny": "refuted / refuted",
+    "verus": "\u2014",
+    "spark": "\u2014",
+    "framac": "\u2014",
+    "lean": "\u2014",
+    "rocq": "\u2014",
+    "fstar": "\u2014"
+   }
+  },
+  {
+   "route": "answers",
+   "source": "answer 4",
+   "stage": "prover",
+   "reason": "refuted by dafny",
+   "cells": {
+    "dafny": "refuted / refuted",
+    "verus": "\u2014",
+    "spark": "\u2014",
+    "framac": "\u2014",
+    "lean": "\u2014",
+    "rocq": "\u2014",
+    "fstar": "\u2014"
+   }
+  },
+  {
+   "route": "answers",
+   "source": "answer 5",
+   "stage": "same as the function",
+   "reason": "it does not answer as your function does (`extract_column(*[[[]], 0]) == []` is the program's answer, not yours)",
+   "inputs": 203,
+   "first": "assert extract_column(*[[[]], 0]) == []"
+  },
+  {
+   "route": "specification",
+   "source": "specification 2",
+   "stage": "specification check",
+   "reason": "`len(r) == len(list1); forall i in [0, len(list1)) . r[i] == list1[i][n]`: the requires excludes most drawn inputs",
+   "passes": false,
+   "why": "the requires excludes most drawn inputs",
+   "agreement": {
+    "status": "agrees",
+    "draws": 20,
+    "outside_requires": 29,
+    "completeness": 1.0,
+    "mutants_rejected": 109,
+    "mutants_accepted": 0
+   }
+  }
+ ],
+ "refused": [
+  "answer 1: refuted by dafny",
+  "answer 2: it does not answer as your function does (`extract_column(*[[[]], 0]) == [0]` is the program's answer, not yours)",
+  "answer 3: refuted by dafny",
+  "answer 4: refuted by dafny",
+  "answer 5: it does not answer as your function does (`extract_column(*[[[]], 0]) == []` is the program's answer, not yours)",
+  "specification 2: `len(r) == len(list1); forall i in [0, len(list1)) . r[i] == list1[i][n]`: the requires excludes most drawn inputs"
+ ],
+ "specifications": [
+  {
+   "source": "specification 1",
+   "verdict": "kept",
+   "scores": {
+    "correctness": 1.0,
+    "completeness": 1.0,
+    "tests": 3,
+    "mutants": 21
+   },
+   "spec": "t 1\ntask f(list1: seq<seq>, n: int) returns (r: seq)\n  requires n >= 0\n  requires forall i in [0, len(list1)) . n < len(list1[i])\n  ensures len(r) == len(list1)\n  ensures forall i in [0, len(list1)) . r[i] == list1[i][n]\n{\n}\n",
+   "function": {
+    "passes": true,
+    "why": "passes",
+    "agreement": {
+     "status": "agrees",
+     "draws": 49,
+     "completeness": 1.0,
+     "mutants_rejected": 138,
+     "mutants_accepted": 0
+    },
+    "larger": {
+     "status": "agrees",
+     "draws": 6,
+     "completeness": 1.0,
+     "mutants_rejected": 6,
+     "mutants_accepted": 0,
+     "requires_caps_size": false
+    }
+   }
+  },
+  {
+   "source": "specification 2",
+   "verdict": "kept",
+   "scores": {
+    "correctness": 1.0,
+    "completeness": 1.0,
+    "tests": 3,
+    "mutants": 21
+   },
+   "spec": "t 1\ntask f(list1: seq<seq>, n: int) returns (r: seq)\n  requires len(list1) > 0\n  requires n >= 0\n  requires forall i in [0, len(list1)) . n < len(list1[i])\n  ensures len(r) == len(list1)\n  ensures forall i in [0, len(list1)) . r[i] == list1[i][n]\n{\n}\n",
+   "function": {
+    "passes": false,
+    "why": "the requires excludes most drawn inputs",
+    "agreement": {
+     "status": "agrees",
+     "draws": 20,
+     "outside_requires": 29,
+     "completeness": 1.0,
+     "mutants_rejected": 109,
+     "mutants_accepted": 0
+    }
+   }
+  },
+  {
+   "source": "specification 3",
+   "verdict": "kept",
+   "scores": {
+    "correctness": 1.0,
+    "completeness": 1.0,
+    "tests": 3,
+    "mutants": 21
+   },
+   "spec": "t 1\ntask f(m: seq<seq>, n: int) returns (r: seq)\n  requires n >= 0\n  requires forall i in [0, len(m)) . n < len(m[i])\n  ensures len(r) == len(m)\n  ensures forall i in [0, len(r)) . r[i] == m[i][n]\n{\n}\n",
+   "function": {
+    "passes": true,
+    "why": "passes",
+    "agreement": {
+     "status": "agrees",
+     "draws": 49,
+     "completeness": 1.0,
+     "mutants_rejected": 138,
+     "mutants_accepted": 0
+    },
+    "larger": {
+     "status": "agrees",
+     "draws": 6,
+     "completeness": 1.0,
+     "mutants_rejected": 6,
+     "mutants_accepted": 0,
+     "requires_caps_size": false
+    }
+   }
+  }
+ ],
+ "candidates": [
+  {
+   "source": "answer 1",
+   "function": {
+    "passes": true,
+    "why": "passes",
+    "agreement": {
+     "status": "agrees",
+     "draws": 49,
+     "completeness": 1.0,
+     "mutants_rejected": 138,
+     "mutants_accepted": 0
+    },
+    "larger": {
+     "status": "agrees",
+     "draws": 6,
+     "completeness": 1.0,
+     "mutants_rejected": 6,
+     "mutants_accepted": 0,
+     "requires_caps_size": false
+    }
+   }
+  },
+  {
+   "source": "answer 2",
+   "function": {
+    "passes": true,
+    "why": "passes",
+    "agreement": {
+     "status": "agrees",
+     "draws": 49,
+     "completeness": 1.0,
+     "mutants_rejected": 138,
+     "mutants_accepted": 0
+    },
+    "larger": {
+     "status": "agrees",
+     "draws": 6,
+     "completeness": 1.0,
+     "mutants_rejected": 6,
+     "mutants_accepted": 0,
+     "requires_caps_size": false
+    }
+   }
+  },
+  {
+   "source": "answer 3",
+   "function": {
+    "passes": true,
+    "why": "passes",
+    "agreement": {
+     "status": "agrees",
+     "draws": 49,
+     "completeness": 1.0,
+     "mutants_rejected": 138,
+     "mutants_accepted": 0
+    },
+    "larger": {
+     "status": "agrees",
+     "draws": 6,
+     "completeness": 1.0,
+     "mutants_rejected": 6,
+     "mutants_accepted": 0,
+     "requires_caps_size": false
+    }
+   }
+  },
+  {
+   "source": "answer 4",
+   "function": {
+    "passes": true,
+    "why": "passes",
+    "agreement": {
+     "status": "agrees",
+     "draws": 49,
+     "completeness": 1.0,
+     "mutants_rejected": 138,
+     "mutants_accepted": 0
+    },
+    "larger": {
+     "status": "agrees",
+     "draws": 6,
+     "completeness": 1.0,
+     "mutants_rejected": 6,
+     "mutants_accepted": 0,
+     "requires_caps_size": false
+    }
+   }
+  },
+  {
+   "source": "answer 5",
+   "function": {
+    "passes": true,
+    "why": "passes",
+    "agreement": {
+     "status": "agrees",
+     "draws": 49,
+     "completeness": 1.0,
+     "mutants_rejected": 138,
+     "mutants_accepted": 0
+    },
+    "larger": {
+     "status": "agrees",
+     "draws": 6,
+     "completeness": 1.0,
+     "mutants_rejected": 6,
+     "mutants_accepted": 0,
+     "requires_caps_size": false
+    }
+   }
+  }
+ ],
+ "asked": {
+  "answers": 5,
+  "specifications": 3,
+  "bodies": 1
+ },
+ "inputs": {
+  "examples": [
+   "assert extract_column([[1, 2, 3], [2, 4, 5], [1, 1, 1]],0)==[1, 2, 1]",
+   "assert extract_column([[1, 2, 3], [-2, 4, -5], [1, -1, 1]],2)==[3, -5, 1]",
+   "assert extract_column([[1, 3], [5, 7], [1, 3], [13, 15, 17], [5, 7], [9, 11]],0)==[1, 5, 1, 13, 5, 9]"
+  ],
+  "taken from the function": false,
+  "kinds": [
+   {
+    "args": [
+     "seq-of-seq",
+     "int"
+    ],
+    "expected": "seq"
+   },
+   {
+    "args": [
+     "seq-of-seq",
+     "int"
+    ],
+    "expected": "seq"
+   },
+   {
+    "args": [
+     "seq-of-seq",
+     "int"
+    ],
+    "expected": "seq"
+   }
+  ],
+  "specification check": {
+   "seed": 1,
+   "draws": 100,
+   "larger draws": 60
+  }
+ },
+ "stopped at": null,
+ "function": {
+  "code": "def extract_column(list1, n):\r\n   result = [i.pop(n) for i in list1]\r\n   return result ",
+  "doc": "Write a function to extract a specified column from a given nested list."
+ },
+ "seconds": 50.0
+}

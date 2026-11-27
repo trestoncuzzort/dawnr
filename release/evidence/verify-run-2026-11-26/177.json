@@ -1,0 +1,203 @@
+{
+ "id": 177,
+ "fn": "answer",
+ "verified": false,
+ "route": null,
+ "why": "no specification the model wrote holds at your function's answers and pins them down",
+ "twin": null,
+ "stages": [
+  {
+   "route": "answers",
+   "source": "answer 1",
+   "stage": "examples",
+   "reason": "fails a test (`assert answer(3,8) == (3,6)`: it returns [1, 3])"
+  },
+  {
+   "route": "answers",
+   "source": "answer 2",
+   "stage": "examples",
+   "reason": "fails a test (`assert answer(3,8) == (3,6)`: it returns [1, 3])"
+  },
+  {
+   "route": "answers",
+   "source": "answer 3",
+   "stage": "examples",
+   "reason": "fails a test (`assert answer(3,8) == (3,6)`: it returns [1, 3])"
+  },
+  {
+   "route": "answers",
+   "source": "answer 4",
+   "stage": "parse",
+   "reason": "does not parse (expected 'decreases', found '{' [Stmt])"
+  },
+  {
+   "route": "answers",
+   "source": "answer 5",
+   "stage": "examples",
+   "reason": "fails a test (`assert answer(3,8) == (3,6)`: it returns [1, 3])"
+  },
+  {
+   "route": "specification",
+   "source": "specification 3",
+   "stage": "parse",
+   "reason": "it does not parse (expected 'else', found 'spec' [Expr])"
+  },
+  {
+   "route": "specification",
+   "source": "specification 1",
+   "stage": "examples",
+   "reason": "`len(r) == 2; r[0] >= 1; r[1] >= 1; r[0] != r[1]; r[0] <= r[1]; r[0] * r[1] >= L; r[0] * r[1] <= R` is false at your function's own answer `answer(3,8) == (3,6)`",
+   "at": "answer(3,8) == (3,6)",
+   "scores": {
+    "correctness": 0.3333333333333333,
+    "completeness": 0.95,
+    "tests": 3,
+    "mutants": 20
+   }
+  },
+  {
+   "route": "specification",
+   "source": "specification 2",
+   "stage": "specification check",
+   "reason": "`len(r) == 2 or len(r) == 1; len(r) == 2 ==> r[0] >= 1 and r[1] >= 1 and r[0] != r[1]; len(r) == 2 ==> lcm(r[0], r[1]) >= L and lcm(r[0], r[1]) <= R; len(r) == 1 ==> r[0] == -1; len(r) == 2 or len(r) == 1 and r[0] == -1; len(r) == 2 ==> (forall a in [1, L) . forall b in [1, L) . a != b ==> lcm(a, b) < L)`: weak specification",
+   "passes": false,
+   "why": "weak specification",
+   "agreement": {
+    "status": "agrees",
+    "draws": 47,
+    "outside_requires": 25,
+    "completeness": 0.85,
+    "mutants_rejected": 266,
+    "mutants_accepted": 47,
+    "skipped": {
+     "reference result has no t value": 28
+    },
+    "weak_witness": {
+     "args": [
+      3,
+      10
+     ],
+     "reference_said": [
+      3,
+      6
+     ],
+     "also_accepts": [
+      6,
+      3
+     ]
+    }
+   }
+  }
+ ],
+ "refused": [
+  "answer 1: fails a test (`assert answer(3,8) == (3,6)`: it returns [1, 3])",
+  "answer 2: fails a test (`assert answer(3,8) == (3,6)`: it returns [1, 3])",
+  "answer 3: fails a test (`assert answer(3,8) == (3,6)`: it returns [1, 3])",
+  "answer 4: does not parse (expected 'decreases', found '{' [Stmt])",
+  "answer 5: fails a test (`assert answer(3,8) == (3,6)`: it returns [1, 3])",
+  "specification 3: it does not parse (expected 'else', found 'spec' [Expr])",
+  "specification 1: `len(r) == 2; r[0] >= 1; r[1] >= 1; r[0] != r[1]; r[0] <= r[1]; r[0] * r[1] >= L; r[0] * r[1] <= R` is false at your function's own answer `answer(3,8) == (3,6)`",
+  "specification 2: `len(r) == 2 or len(r) == 1; len(r) == 2 ==> r[0] >= 1 and r[1] >= 1 and r[0] != r[1]; len(r) == 2 ==> lcm(r[0], r[1]) >= L and lcm(r[0], r[1]) <= R; len(r) == 1 ==> r[0] == -1; len(r) == 2 or len(r) == 1 and r[0] == -1; len(r) == 2 ==> (forall a in [1, L) . forall b in [1, L) . a != b ==> lcm(a, b) < L)`: weak specification"
+ ],
+ "specifications": [
+  {
+   "source": "specification 1",
+   "verdict": "dropped",
+   "scores": {
+    "correctness": 0.3333333333333333,
+    "completeness": 0.95,
+    "tests": 3,
+    "mutants": 20
+   },
+   "spec": "t 1\ntask f(L: int, R: int) returns (r: seq)\n  requires L >= 1\n  requires R >= L\n  ensures len(r) == 2\n  ensures r[0] >= 1\n  ensures r[1] >= 1\n  ensures r[0] != r[1]\n  ensures r[0] <= r[1]\n  ensures r[0] * r[1] >= L\n  ensures r[0] * r[1] <= R\n{\n}\n"
+  },
+  {
+   "source": "specification 2",
+   "verdict": "kept",
+   "scores": {
+    "correctness": 1.0,
+    "completeness": 0.85,
+    "tests": 3,
+    "mutants": 20
+   },
+   "spec": "t 1\ntask f(L: int, R: int) returns (r: seq)\n  requires L >= 1\n  requires R >= L\n  ensures len(r) == 2 or len(r) == 1\n  ensures len(r) == 2 ==> r[0] >= 1 and r[1] >= 1 and r[0] != r[1]\n  ensures len(r) == 2 ==> lcm(r[0], r[1]) >= L and lcm(r[0], r[1]) <= R\n  ensures len(r) == 1 ==> r[0] == -1\n  ensures len(r) == 2 or len(r) == 1 and r[0] == -1\n  ensures len(r) == 2 ==> (forall a in [1, L) . forall b in [1, L) . a != b ==> lcm(a, b) < L)\nspec fun lcm(a: int, b: int): int\n  decreases a * b\n= if a == 0 then 0 else if b == 0 then 0 else if a == b then a else if a > b then lcm(a - b, b) else lcm(a, b - a)\n{\n}\n",
+   "function": {
+    "passes": false,
+    "why": "weak specification",
+    "agreement": {
+     "status": "agrees",
+     "draws": 47,
+     "outside_requires": 25,
+     "completeness": 0.85,
+     "mutants_rejected": 266,
+     "mutants_accepted": 47,
+     "skipped": {
+      "reference result has no t value": 28
+     },
+     "weak_witness": {
+      "args": [
+       3,
+       10
+      ],
+      "reference_said": [
+       3,
+       6
+      ],
+      "also_accepts": [
+       6,
+       3
+      ]
+     }
+    }
+   }
+  }
+ ],
+ "candidates": [],
+ "asked": {
+  "answers": 5,
+  "specifications": 3,
+  "bodies": 0
+ },
+ "inputs": {
+  "examples": [
+   "assert answer(3,8) == (3,6)",
+   "assert answer(2,6) == (2,4)",
+   "assert answer(1,3) == (1,2)"
+  ],
+  "taken from the function": false,
+  "kinds": [
+   {
+    "args": [
+     "int",
+     "int"
+    ],
+    "expected": "seq"
+   },
+   {
+    "args": [
+     "int",
+     "int"
+    ],
+    "expected": "seq"
+   },
+   {
+    "args": [
+     "int",
+     "int"
+    ],
+    "expected": "seq"
+   }
+  ],
+  "specification check": {
+   "seed": 1,
+   "draws": 100,
+   "larger draws": 60
+  }
+ },
+ "stopped at": "specification check",
+ "function": {
+  "code": "def answer(L,R): \r\n    if (2 * L <= R): \r\n        return (L ,2*L)\r\n    else: \r\n        return (-1) ",
+  "doc": "Write a python function to find two distinct numbers such that their lcm lies within the given range."
+ },
+ "seconds": 60.0
+}

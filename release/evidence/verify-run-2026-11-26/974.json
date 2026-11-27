@@ -1,0 +1,165 @@
+{
+ "id": 974,
+ "fn": "min_sum_path",
+ "verified": false,
+ "route": null,
+ "why": "no specification the model wrote holds at your function's answers and pins them down",
+ "twin": null,
+ "stages": [
+  {
+   "route": "answers",
+   "source": "answer 1",
+   "stage": "well formed",
+   "reason": "not well formed (dp[...] := writes dp, not an array parameter named in modifies)"
+  },
+  {
+   "route": "answers",
+   "source": "answer 2",
+   "stage": "parse",
+   "reason": "does not parse (expected '{', found 'next' [Stmt])"
+  },
+  {
+   "route": "answers",
+   "source": "answer 3",
+   "stage": "parse",
+   "reason": "does not parse (expected 'id', found 't' [SpecFun])"
+  },
+  {
+   "route": "answers",
+   "source": "answer 4",
+   "stage": "parse",
+   "reason": "does not parse (expected 'id', found 't' [SpecFun])"
+  },
+  {
+   "route": "answers",
+   "source": "answer 5",
+   "stage": "parse",
+   "reason": "does not parse ('if' does not start an expression [Expr])"
+  },
+  {
+   "route": "specification",
+   "source": "specification 3",
+   "stage": "parse",
+   "reason": "it does not parse (expected 'task', found 'spec' [Task])"
+  },
+  {
+   "route": "specification",
+   "source": "specification 1",
+   "stage": "examples",
+   "reason": "`r == min_path(triangle)` cannot be judged on your examples (TypeError: object of type 'int' has no len())",
+   "scores": {
+    "unscorable": "TypeError: object of type 'int' has no len()"
+   }
+  },
+  {
+   "route": "specification",
+   "source": "specification 2",
+   "stage": "specification check",
+   "reason": "`r == min_path(triangle, 0, 0)`: too few draws inside the requires",
+   "passes": false,
+   "why": "too few draws inside the requires",
+   "agreement": {
+    "status": "agrees",
+    "draws": 6,
+    "outside_requires": 11,
+    "completeness": 1.0,
+    "mutants_rejected": 49,
+    "mutants_accepted": 0,
+    "skipped": {
+     "reference result has no t value": 6
+    }
+   }
+  }
+ ],
+ "refused": [
+  "answer 1: not well formed (dp[...] := writes dp, not an array parameter named in modifies)",
+  "answer 2: does not parse (expected '{', found 'next' [Stmt])",
+  "answer 3: does not parse (expected 'id', found 't' [SpecFun])",
+  "answer 4: does not parse (expected 'id', found 't' [SpecFun])",
+  "answer 5: does not parse ('if' does not start an expression [Expr])",
+  "specification 3: it does not parse (expected 'task', found 'spec' [Task])",
+  "specification 1: `r == min_path(triangle)` cannot be judged on your examples (TypeError: object of type 'int' has no len())",
+  "specification 2: `r == min_path(triangle, 0, 0)`: too few draws inside the requires"
+ ],
+ "specifications": [
+  {
+   "source": "specification 1",
+   "verdict": "unscorable",
+   "scores": {
+    "unscorable": "TypeError: object of type 'int' has no len()"
+   },
+   "spec": "t 1\ngate quantifiers\ntask f(triangle: seq<seq>) returns (r: int)\n  requires len(triangle) > 0\n  requires forall i in [0, len(triangle)) . len(triangle[i]) == i + 1\n  ensures r == min_path(triangle)\nspec fun min_path(triangle: seq<seq>): int\n  decreases len(triangle)\n= if len(triangle) == 1 then triangle[0][0] else triangle[0][0] + min(min_path(sub_triangle(triangle, 0)), min_path(sub_triangle(triangle, 1)))\nspec fun sub_triangle(triangle: seq<seq>, offset: int): seq<seq>\n  decreases len(triangle)\n= if len(triangle) == 1 then [] else [triangle[1][offset]] + sub_triangle(triangle[1..len(triangle)], offset)\nspec fun min(a: int, b: int): int\n= if a <= b then a else b\n{\n}\n"
+  },
+  {
+   "source": "specification 2",
+   "verdict": "kept",
+   "scores": {
+    "correctness": 1.0,
+    "completeness": 1.0,
+    "tests": 3,
+    "mutants": 41
+   },
+   "spec": "t 1\ngate loops\ntask f(triangle: seq<seq>) returns (r: int)\n  requires len(triangle) > 0\n  requires forall i in [0, len(triangle)) . len(triangle[i]) == i + 1\n  ensures r == min_path(triangle, 0, 0)\nspec fun min_path(triangle: seq<seq>, row: int, col: int): int\n  decreases len(triangle) - row\n= if row == len(triangle) - 1 then triangle[row][col] else triangle[row][col] + min(min_path(triangle, row + 1, col), min_path(triangle, row + 1, col + 1))\nspec fun min(a: int, b: int): int\n= if a < b then a else b\n{\n}\n",
+   "function": {
+    "passes": false,
+    "why": "too few draws inside the requires",
+    "agreement": {
+     "status": "agrees",
+     "draws": 6,
+     "outside_requires": 11,
+     "completeness": 1.0,
+     "mutants_rejected": 49,
+     "mutants_accepted": 0,
+     "skipped": {
+      "reference result has no t value": 6
+     }
+    }
+   }
+  }
+ ],
+ "candidates": [],
+ "asked": {
+  "answers": 5,
+  "specifications": 3,
+  "bodies": 0
+ },
+ "inputs": {
+  "examples": [
+   "assert min_sum_path([[ 2 ], [3, 9 ], [1, 6, 7 ]]) == 6",
+   "assert min_sum_path([[ 2 ], [3, 7 ], [8, 5, 6 ]]) == 10 ",
+   "assert min_sum_path([[ 3 ], [6, 4 ], [5, 2, 7 ]]) == 9"
+  ],
+  "taken from the function": false,
+  "kinds": [
+   {
+    "args": [
+     "seq-of-seq"
+    ],
+    "expected": "int"
+   },
+   {
+    "args": [
+     "seq-of-seq"
+    ],
+    "expected": "int"
+   },
+   {
+    "args": [
+     "seq-of-seq"
+    ],
+    "expected": "int"
+   }
+  ],
+  "specification check": {
+   "seed": 1,
+   "draws": 100,
+   "larger draws": 60
+  }
+ },
+ "stopped at": "specification check",
+ "function": {
+  "code": "def min_sum_path(A): \r\n\tmemo = [None] * len(A) \r\n\tn = len(A) - 1\r\n\tfor i in range(len(A[n])): \r\n\t\tmemo[i] = A[n][i] \r\n\tfor i in range(len(A) - 2, -1,-1): \r\n\t\tfor j in range( len(A[i])): \r\n\t\t\tmemo[j] = A[i][j] + min(memo[j], \r\n\t\t\t\t\t\t\t\t\tmemo[j + 1]) \r\n\treturn memo[0]",
+  "doc": "Write a function to find the minimum total path sum in the given triangle."
+ },
+ "seconds": 48.3
+}

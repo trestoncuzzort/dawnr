@@ -357,6 +357,10 @@ case $cmd in
     # locallm/dawnr_cli.py over the agent and the harness (DAWNR-AGENT.md). It works in the caller's folder, so
     # nothing here changes directory; only the base model runs
     [ "$cmd" = assistant ] || [ $# -ge 1 ] || { echo 'usage: dawnr do "TASK" [--read-only] [--root DIR] [--online] [--yes]' >&2; exit 2; }
+    # Check DAWNR_MAX_ROUNDS and DAWNR_MAX_STEPS with the assistant's own rule (dawnr_cli.settings_refused) before any
+    # model is started or stopped. A bad value is reported and nothing is loaded. This runs from locallm/ so that `-c`
+    # cannot import a module of the same name from the person's folder.
+    (cd "$DAWNR_REPO/locallm" && "$DAWNR_PYTHON" -c 'import sys, dawnr_cli; sys.exit(2 if dawnr_cli.settings_refused() else 0)') || exit 2
     # The model stays loaded after the assistant leaves, so the next task starts at once, and unloads itself after
     # a quarter of an hour unused (DAWNR_IDLE seconds; `dawnr serve stop` unloads it now)
     if healthy "$BP" && [ "$(cat "$RUN/base.ctx" 2>/dev/null || echo 4096)" -lt "$BASE_CTX" ]; then

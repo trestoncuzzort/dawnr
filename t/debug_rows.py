@@ -98,6 +98,8 @@ def spec_message(entry: dict, task: dict, result: dict) -> str | None:
                         f"specification also accepts {_shaped(w.get('also_accepts'), w.get('reference_said'))!r}.")
             else:
                 return None
+        elif result.get("status") == "agrees" and spec_check.no_wrong_answer_judged(result):
+            said = SPEC_WEAK + "No wrong answer could be judged against it, so nothing shows that it rules any out."
         else:
             return None
     except Exception:                                           # noqa: BLE001  (a witness that does not render says nothing)

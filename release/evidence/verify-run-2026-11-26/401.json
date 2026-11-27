@@ -1,0 +1,287 @@
+{
+ "id": 401,
+ "fn": "add_nested_tuples",
+ "verified": false,
+ "route": null,
+ "why": "no specification the model wrote holds at your function's answers and pins them down",
+ "twin": null,
+ "stages": [
+  {
+   "route": "answers",
+   "source": "answer 2",
+   "stage": "parse",
+   "reason": "does not parse (expected ':=', found '=' [Stmt])"
+  },
+  {
+   "route": "answers",
+   "source": "answer 3",
+   "stage": "examples",
+   "reason": "fails a test (`assert add_nested_tuples(((1, 3), (4, 5), (2, 9), (1, 10)), ((6, 7), (3, 9), (1, 1), (7, 3`: undefined)"
+  },
+  {
+   "route": "answers",
+   "source": "answer 5",
+   "stage": "well formed",
+   "reason": "not well formed (row[...] := writes row, not an array parameter named in modifies)"
+  },
+  {
+   "route": "answers",
+   "source": "answer 1",
+   "stage": "specification check",
+   "reason": "`len(r) == len(a); forall i in [0, len(r)) . len(r[i]) == len(a[i]); forall i in [0, len(r)) . forall j in [0, len(r[i])) . r[i][j] == a[i][j] + b[i][j]`: too few draws inside the requires",
+   "passes": false,
+   "why": "too few draws inside the requires",
+   "agreement": {
+    "status": "agrees",
+    "draws": 9,
+    "outside_requires": 91,
+    "completeness": 1.0,
+    "mutants_rejected": 12,
+    "mutants_accepted": 0
+   }
+  },
+  {
+   "route": "answers",
+   "source": "answer 4",
+   "stage": "specification check",
+   "reason": "`len(r) == len(a); forall i in [0, len(a)) . len(r[i]) == len(a[i]); forall i in [0, len(a)) . forall j in [0, len(a[i])) . r[i][j] == a[i][j] + b[i][j]`: the requires excludes most drawn inputs",
+   "passes": false,
+   "why": "the requires excludes most drawn inputs",
+   "agreement": {
+    "status": "agrees",
+    "draws": 19,
+    "outside_requires": 73,
+    "completeness": 1.0,
+    "mutants_rejected": 42,
+    "mutants_accepted": 0
+   }
+  },
+  {
+   "route": "specification",
+   "source": "specification 1",
+   "stage": "specification check",
+   "reason": "`len(r) == len(a); forall i in [0, len(r)) . len(r[i]) == len(a[i]); forall i in [0, len(r)) . forall j in [0, len(r[i])) . r[i][j] == a[i][j] + b[i][j]`: too few draws inside the requires",
+   "passes": false,
+   "why": "too few draws inside the requires",
+   "agreement": {
+    "status": "agrees",
+    "draws": 9,
+    "outside_requires": 91,
+    "completeness": 1.0,
+    "mutants_rejected": 12,
+    "mutants_accepted": 0
+   }
+  },
+  {
+   "route": "specification",
+   "source": "specification 2",
+   "stage": "specification check",
+   "reason": "`len(r) == len(t1); forall i in [0, len(r)) . len(r[i]) == len(t1[i]); forall i in [0, len(t1)) . forall j in [0, len(t1[i])) . r[i][j] == t1[i][j] + t2[i][j]`: too few draws inside the requires",
+   "passes": false,
+   "why": "too few draws inside the requires",
+   "agreement": {
+    "status": "agrees",
+    "draws": 9,
+    "outside_requires": 91,
+    "completeness": 1.0,
+    "mutants_rejected": 12,
+    "mutants_accepted": 0
+   }
+  },
+  {
+   "route": "specification",
+   "source": "specification 3",
+   "stage": "specification check",
+   "reason": "`len(r) == len(a); forall i in [0, len(a)) . len(a[i]) == len(b[i]) and len(r[i]) == len(a[i]); forall i in [0, len(a)) . forall j in [0, len(a[i])) . r[i][j] == a[i][j] + b[i][j]` is false at your function's own answer `add_nested_tuples([[]], [[2]]) == [[]]`",
+   "at": "add_nested_tuples([[]], [[2]]) == [[]]",
+   "passes": false,
+   "why": "the specification is false at the Python's answer",
+   "agreement": {
+    "status": "disagrees",
+    "args": [
+     [
+      []
+     ],
+     [
+      [
+       2
+      ]
+     ]
+    ],
+    "reference_said": [
+     []
+    ],
+    "ensures": 1
+   }
+  }
+ ],
+ "refused": [
+  "answer 2: does not parse (expected ':=', found '=' [Stmt])",
+  "answer 3: fails a test (`assert add_nested_tuples(((1, 3), (4, 5), (2, 9), (1, 10)), ((6, 7), (3, 9), (1, 1), (7, 3`: undefined)",
+  "answer 5: not well formed (row[...] := writes row, not an array parameter named in modifies)",
+  "answer 1: `len(r) == len(a); forall i in [0, len(r)) . len(r[i]) == len(a[i]); forall i in [0, len(r)) . forall j in [0, len(r[i])) . r[i][j] == a[i][j] + b[i][j]`: too few draws inside the requires",
+  "answer 4: `len(r) == len(a); forall i in [0, len(a)) . len(r[i]) == len(a[i]); forall i in [0, len(a)) . forall j in [0, len(a[i])) . r[i][j] == a[i][j] + b[i][j]`: the requires excludes most drawn inputs",
+  "specification 1: `len(r) == len(a); forall i in [0, len(r)) . len(r[i]) == len(a[i]); forall i in [0, len(r)) . forall j in [0, len(r[i])) . r[i][j] == a[i][j] + b[i][j]`: too few draws inside the requires",
+  "specification 2: `len(r) == len(t1); forall i in [0, len(r)) . len(r[i]) == len(t1[i]); forall i in [0, len(t1)) . forall j in [0, len(t1[i])) . r[i][j] == t1[i][j] + t2[i][j]`: too few draws inside the requires",
+  "specification 3: `len(r) == len(a); forall i in [0, len(a)) . len(a[i]) == len(b[i]) and len(r[i]) == len(a[i]); forall i in [0, len(a)) . forall j in [0, len(a[i])) . r[i][j] == a[i][j] + b[i][j]` is false at your function's own answer `add_nested_tuples([[]], [[2]]) == [[]]`"
+ ],
+ "specifications": [
+  {
+   "source": "specification 1",
+   "verdict": "kept",
+   "scores": {
+    "correctness": 1.0,
+    "completeness": 1.0,
+    "tests": 3,
+    "mutants": 15
+   },
+   "spec": "t 1\ntask f(a: seq<seq>, b: seq<seq>) returns (r: seq<seq>)\n  requires len(a) == len(b)\n  requires forall i in [0, len(a)) . len(a[i]) == len(b[i])\n  ensures len(r) == len(a)\n  ensures forall i in [0, len(r)) . len(r[i]) == len(a[i])\n  ensures forall i in [0, len(r)) . forall j in [0, len(r[i])) . r[i][j] == a[i][j] + b[i][j]\n{\n}\n",
+   "function": {
+    "passes": false,
+    "why": "too few draws inside the requires",
+    "agreement": {
+     "status": "agrees",
+     "draws": 9,
+     "outside_requires": 91,
+     "completeness": 1.0,
+     "mutants_rejected": 12,
+     "mutants_accepted": 0
+    }
+   }
+  },
+  {
+   "source": "specification 2",
+   "verdict": "kept",
+   "scores": {
+    "correctness": 1.0,
+    "completeness": 1.0,
+    "tests": 3,
+    "mutants": 15
+   },
+   "spec": "t 1\ntask f(t1: seq<seq>, t2: seq<seq>) returns (r: seq<seq>)\n  requires len(t1) == len(t2)\n  requires forall i in [0, len(t1)) . len(t1[i]) == len(t2[i])\n  ensures len(r) == len(t1)\n  ensures forall i in [0, len(r)) . len(r[i]) == len(t1[i])\n  ensures forall i in [0, len(t1)) . forall j in [0, len(t1[i])) . r[i][j] == t1[i][j] + t2[i][j]\n{\n}\n",
+   "function": {
+    "passes": false,
+    "why": "too few draws inside the requires",
+    "agreement": {
+     "status": "agrees",
+     "draws": 9,
+     "outside_requires": 91,
+     "completeness": 1.0,
+     "mutants_rejected": 12,
+     "mutants_accepted": 0
+    }
+   }
+  },
+  {
+   "source": "specification 3",
+   "verdict": "kept",
+   "scores": {
+    "correctness": 1.0,
+    "completeness": 1.0,
+    "tests": 3,
+    "mutants": 15
+   },
+   "spec": "t 1\ntask f(a: seq<seq>, b: seq<seq>) returns (r: seq<seq>)\n  requires len(a) == len(b)\n  ensures len(r) == len(a)\n  ensures forall i in [0, len(a)) . len(a[i]) == len(b[i]) and len(r[i]) == len(a[i])\n  ensures forall i in [0, len(a)) . forall j in [0, len(a[i])) . r[i][j] == a[i][j] + b[i][j]\n{\n}\n",
+   "function": {
+    "passes": false,
+    "why": "the specification is false at the Python's answer",
+    "agreement": {
+     "status": "disagrees",
+     "args": [
+      [
+       []
+      ],
+      [
+       [
+        2
+       ]
+      ]
+     ],
+     "reference_said": [
+      []
+     ],
+     "ensures": 1
+    }
+   }
+  }
+ ],
+ "candidates": [
+  {
+   "source": "answer 1",
+   "function": {
+    "passes": false,
+    "why": "too few draws inside the requires",
+    "agreement": {
+     "status": "agrees",
+     "draws": 9,
+     "outside_requires": 91,
+     "completeness": 1.0,
+     "mutants_rejected": 12,
+     "mutants_accepted": 0
+    }
+   }
+  },
+  {
+   "source": "answer 4",
+   "function": {
+    "passes": false,
+    "why": "the requires excludes most drawn inputs",
+    "agreement": {
+     "status": "agrees",
+     "draws": 19,
+     "outside_requires": 73,
+     "completeness": 1.0,
+     "mutants_rejected": 42,
+     "mutants_accepted": 0
+    }
+   }
+  }
+ ],
+ "asked": {
+  "answers": 5,
+  "specifications": 3,
+  "bodies": 0
+ },
+ "inputs": {
+  "examples": [
+   "assert add_nested_tuples(((1, 3), (4, 5), (2, 9), (1, 10)), ((6, 7), (3, 9), (1, 1), (7, 3))) == ((7, 10), (7, 14), (3, 10), (8, 13))",
+   "assert add_nested_tuples(((2, 4), (5, 6), (3, 10), (2, 11)), ((7, 8), (4, 10), (2, 2), (8, 4))) == ((9, 12), (9, 16), (5, 12), (10, 15))",
+   "assert add_nested_tuples(((3, 5), (6, 7), (4, 11), (3, 12)), ((8, 9), (5, 11), (3, 3), (9, 5))) == ((11, 14), (11, 18), (7, 14), (12, 17))"
+  ],
+  "taken from the function": false,
+  "kinds": [
+   {
+    "args": [
+     "seq-of-seq",
+     "seq-of-seq"
+    ],
+    "expected": "seq-of-seq"
+   },
+   {
+    "args": [
+     "seq-of-seq",
+     "seq-of-seq"
+    ],
+    "expected": "seq-of-seq"
+   },
+   {
+    "args": [
+     "seq-of-seq",
+     "seq-of-seq"
+    ],
+    "expected": "seq-of-seq"
+   }
+  ],
+  "specification check": {
+   "seed": 1,
+   "draws": 100,
+   "larger draws": 60
+  }
+ },
+ "stopped at": "specification check",
+ "function": {
+  "code": "def add_nested_tuples(test_tup1, test_tup2):\r\n  res = tuple(tuple(a + b for a, b in zip(tup1, tup2))\r\n   for tup1, tup2 in zip(test_tup1, test_tup2))\r\n  return (res) ",
+  "doc": "Write a function to perform index wise addition of tuple elements in the given two nested tuples."
+ },
+ "seconds": 56.2
+}

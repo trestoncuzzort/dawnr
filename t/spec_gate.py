@@ -50,6 +50,7 @@ import py_sandbox                                               # noqa: E402
 import spec_check                                               # noqa: E402
 import spec_experiment as se                                    # noqa: E402
 import spec_quality                                             # noqa: E402
+import typed_values                                             # noqa: E402
 
 MIN_DRAWS = 10
 MIN_COMPLETENESS = 0.6
@@ -82,6 +83,31 @@ def python_oracle(session: py_sandbox.Session):
     return call
 
 
+def literal_oracle(session: py_sandbox.Session):
+    """`python_oracle` for a question whose values the reader typed (t/typed_values.py): the session holds the
+    function behind `typed_values.wrapper`, the arguments cross as one literal's text and the result comes back as
+    its literal, so a tuple, a set, a dict with int keys and None arrive as themselves. A result with no literal is
+    `typed_values.NO_VALUE`, which no type reads: the draw is skipped, as python_oracle's {} is."""
+    def call(*args):
+        try:
+            return typed_values.decode(session.call(typed_values.encode(list(args))))
+        except py_sandbox.CallTimeout:
+            raise spec_check.Timeout() from None
+        except py_sandbox.Unrepresentable:
+            return typed_values.NO_VALUE
+    return call
+
+
+def _session(code: str, entry: dict) -> tuple[py_sandbox.Session, object]:
+    """The sandboxed function and the oracle that calls it: JSON for the kinds the plain reader reads, literal text
+    for the kinds it typed."""
+    if typed_values.entry_is_typed(entry):
+        session = py_sandbox.Session(code + typed_values.wrapper(entry["fn"]), typed_values.LITERAL_CALL)
+        return session, literal_oracle(session)
+    session = py_sandbox.Session(code, entry["fn"])
+    return session, python_oracle(session)
+
+
 def domain(result: dict) -> float | None:
     """Of the drawn inputs the Python answered with a value t can hold, the share the task's
     `requires` admits."""
@@ -92,12 +118,13 @@ def domain(result: dict) -> float | None:
 def passes(result: dict) -> bool:
     """The rule: agrees on at least MIN_DRAWS draws; the `requires` admits at least MIN_DOMAIN of
     the drawn inputs the Python answers; and of the mutants judged at least MIN_COMPLETENESS are
-    rejected (no mutant judged is not a failure: every mutant was undefined)."""
+    rejected; a result where no mutant could be judged fails too, because nothing then shows that the
+    specification pins the answer down."""
     if result.get("status") != "agrees" or result.get("draws", 0) < MIN_DRAWS:
         return False
     if domain(result) < MIN_DOMAIN:
         return False
-    return spec_check.complete(result, MIN_COMPLETENESS) is not False
+    return spec_check.pins_down(result, MIN_COMPLETENESS)
 
 
 def reason(result: dict) -> str:
@@ -108,6 +135,8 @@ def reason(result: dict) -> str:
             return "too few draws inside the requires"
         if domain(result) < MIN_DOMAIN:
             return "the requires excludes most drawn inputs"
+        if spec_check.no_wrong_answer_judged(result):
+            return "no wrong answer could be judged against the specification"
         return "weak specification"
     if result.get("status") == "disagrees":
         return "the specification is false at the Python's answer"
@@ -133,8 +162,8 @@ def judge(task: dict, entry: dict, code: str | None, seed: int = 1, n: int = DRA
         return dict(out, passes=False, why="no test-passing Python beside it")
     larger = None
     try:
-        with py_sandbox.Session(code, entry["fn"]) as session:
-            oracle = python_oracle(session)
+        session, oracle = _session(code, entry)
+        with session:
             result = spec_check.check_task(task, entry, n, random.Random(seed), oracle=oracle)
             if beyond and passes(result):
                 larger = spec_check.larger_inputs(task, entry, seed, beyond, oracle)

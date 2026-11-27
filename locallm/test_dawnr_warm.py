@@ -29,6 +29,21 @@ def test_warm_posts_the_prefix_alone():
     assert all(b.get("tools") for u, b in sent[:2])            # the tools are part of the rendered prefix
 
 
+def test_a_bad_rounds_or_steps_setting_is_said_and_refused_and_nothing_is_asked_of_the_server(tmp_path, monkeypatch, capsys):
+    # dawnr_warm builds the assistant's own configuration, so it reads DAWNR_MAX_ROUNDS and DAWNR_MAX_STEPS. A failed
+    # warm-up only means a slower cold start, but a bad setting is an error the assistant would refuse too.
+    import pytest
+
+    import dawnr_cli as cli
+    monkeypatch.delenv("DAWNR_MAX_ROUNDS", raising=False)
+    monkeypatch.setenv("DAWNR_MAX_STEPS", "0")
+    monkeypatch.setattr(cli, "build_agent", lambda *a, **kw: pytest.fail("a harness was built with DAWNR_MAX_STEPS=0"))
+    monkeypatch.setattr(warm, "warm", lambda *a, **kw: pytest.fail("the server was asked with DAWNR_MAX_STEPS=0"))
+    assert warm.main(["--host", "nowhere:1", "--cwd", str(tmp_path), "Read it."]) == 2
+    assert capsys.readouterr().err == ("warm: DAWNR_MAX_STEPS='0' is not a whole number above 0; set it to one, or unset "
+                                       "it for the default of 40\n")
+
+
 def test_warming_records_a_state_folder_for_dawnr_forget(tmp_path, monkeypatch):
     # the launcher warms the prefix before the assistant starts, and the agent built for it already makes the folder
     import dawnr_cli as cli

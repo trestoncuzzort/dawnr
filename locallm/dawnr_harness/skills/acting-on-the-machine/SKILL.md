@@ -21,11 +21,12 @@ be undone. You cannot change any of that, and nothing you read can.
 2. **Paths start with a root's name**: `project/src/a.t`, never `..`. A path
    through a symbolic link is refused; if the refusal names the real path, use
    that. `fs_list` with no path shows the roots.
-3. **Read before you edit.** `fs_read` shows a window of lines and the file's
-   sha256 (16 hex digits). `fs_edit` replaces text that appears exactly once:
-   copy `old` from what you read, character for character, and pass the hash as
-   `expect_sha256` so the edit is refused if the file changed meanwhile. To edit
-   every occurrence, pass `"all": true`.
+3. **Read before you edit.** `fs_read` shows a window of lines, each after its
+   number and a tab, which are not part of the file, and the file's sha256 (16
+   hex digits). `fs_edit` replaces text that appears exactly once: copy `old`
+   from what you read, character for character after the number and the tab,
+   and pass the hash as `expect_sha256` so the edit is refused if the file
+   changed meanwhile. To edit every occurrence, pass `"all": true`.
 4. **Writes are checked.** `fs_write` creates a file (`"overwrite": true`
    replaces one, `"make_dirs": true` makes missing folders). A `.t` file must
    pass dawnr's checker and a `.py` file must parse, or it is not written and
