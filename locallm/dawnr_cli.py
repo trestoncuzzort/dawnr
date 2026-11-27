@@ -1002,17 +1002,17 @@ def done(agent, before: int, rounds: list) -> str:
 
 
 # The quoted material in an answer that is in none of what the task read (dawnr_agent/quotes.py), named after the
-# answer for the person to check; found means copied, not right. Written 2026-11-26, when a 27B's review set a
-# condition in a code block as a patch's own text with one of its two clauses gone.
+# answer so that the person can check it. Found means copied, not right: a quote with a clause missing is reported,
+# a faithful copy of wrong text is not.
 QUOTES_UNFOUND = "[Quoted but not found in anything it read: {quotes}]"
 
 
 def unread_quotes(answer: str, rounds, most: int = 5, width: int = 120) -> str:
     """The line that names the answer's quotes found in none of the texts this task's calls returned; "" if none.
     A listing is held as the model got it (listing(): each entry its whole path), not as fs_list wrote it. The
-    closest lines a refused edit's dry run showed the model (Planner.messages) were read too; the call's own
-    arguments are not a source. The texts are in the order the calls ran, with a Changed after each call that ran
-    and may have changed a file, so that windows of a file read on either side of it are not taken for one version
+    closest lines a refused edit's dry run showed the model (Planner.messages) count as read too; the call's own
+    arguments are not a source. The texts are in the order the calls ran. After each call that ran and may have
+    changed a file comes a Changed, so that windows of a file read on either side of it are not taken for one version
     (a window of a file too big to hash has no sha256 to say so):
       - an edit or a write names its file;
       - an undo, a shell command or a run command may have changed any file and does not say which, so its Changed

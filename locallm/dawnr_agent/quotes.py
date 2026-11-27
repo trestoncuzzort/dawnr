@@ -1,40 +1,47 @@
-"""dawnr_agent/quotes.py: the quotes in an answer that are in nothing the session read (2026-11-26).
+"""dawnr_agent/quotes.py: find the quotes in an answer that are in nothing the session read.
 
-An answer can quote a file from memory instead of from what was read, and still set the quote in a code block or
-a blockquote, where it looks like the file's own text: a condition with a clause gone, two lines run into one, an
-error message in other words. The case this was written for is in test_dawnr_quotes.py: a patch tests
-`hit.mFraction` and `HasContactInCurrentStep` over two lines, and the answer's code block had an `if` on
-`HasContactInCurrentStep` alone. This takes the quoted material in a final answer (Markdown) and looks for each
-piece in the texts the session read (its tool results: fs_read windows, fs_search hits, patches); what is in none
-of them is returned, for the person to be told.
+An answer can quote a file from memory instead of from what was read, and still set the quote in a code block or a
+blockquote, where it looks like the file's own text: a condition with a clause missing, two lines run into one, an
+error message in other words. This module takes the quoted material in a final answer (Markdown), looks for each piece
+in the texts the session read (its tool results: fs_read windows, fs_search hits, patches) and returns what is in none
+of them, so that the person can be told. test_dawnr_quotes.py has the motivating case: a patch tests `hit.mFraction`
+and `HasContactInCurrentStep` over two lines, and the answer's code block showed an `if` on `HasContactInCurrentStep`
+alone.
 
-Quoted material is every line of a fenced code block (``` or ~~~, with a language or without), every blockquote
-line without its ">", and every passage of six words or more in double quotes, straight or curly (U+201C, U+201D),
-on a line of prose. A line of a code block that is a diff (its language is diff, patch or udiff, or whatever its
-tag, a line of it starts with a hunk header `@@ -a,b +c,d @@`) is compared as what it quotes: without its "-", "+"
-or " ", a hunk header by its heading, a line that names the files not at all; it is reported as the answer has it. Whitespace does not count on either side: each run of it is one space, and there is none at
-the ends. A quote is found when it is inside one line of a source, the line as it was read. A blockquote line or a
-passage in quotes can run across the source's line breaks, so it is also found when it is inside the source's
-whole text, its lines joined by spaces, each line first taken without a program's line prefix (fs_read's and cat -n's
-number and tab, grep -n's `N:` and `path:N:`: only where every line of a run has one and the numbers count up, and a
-run is cut where a number is not the one after the last) and then without a patch's one-character "+", "-" or " ": a quote of a patch's lines without their markers is found, and a
-patch is joined once more as each of its two texts, without its "-" lines and without its "+" lines. The lines of
-one file are joined the same way wherever the tools showed them, in two fs_read windows, as two fs_search hits or
-as one of each: each line without what the tool put on or around it (a hit's file name and number, a window's
-header and hints, a document's page marks), and only lines the file has one after the other, in one version of it
-(two windows whose sha256 differ, or between which an edit of the file ran (Changed, among the sources, in the
-order of the calls), are not joined). A blockquote line or a passage is also found without Markdown's inline
-formatting on either side (a backslash before punctuation, a code span's backticks, the emphasis CommonMark pairs: a
-lone * or _ is the text's own), which a reader does not see; a code line keeps every character. A quote with an
-ellipsis (..., the character, either in brackets) that is not found as written is found when its pieces are in one
-source in order, each piece one that has something to check. Never reported: a
-quote with nothing in it to check (no letter or digit, as in punctuation, brackets or an ellipsis, or fewer than
-four characters that are not spaces), a fence inside a blockquote, a passage of fewer than six words.
+What counts as a quote:
+  - every line of a fenced code block (``` or ~~~, with a language or without);
+  - every blockquote line, without its ">";
+  - every passage of six words or more in double quotes, straight or curly (U+201C, U+201D), on a line of prose.
 
-This is the test locallm/rag_quote.py makes of a quote (word for word in a document, whitespace folded), made of
-free Markdown instead of a quoting syntax. Found means copied, not right: a line copied exactly from the old side
-of a patch is found as surely as one from the new. Text in, text out (None for a text is no text: no quotes,
-nothing read); standard library only.
+When a quote counts as found. Whitespace never counts: on both sides each run of it is one space, with none at the ends.
+  - A quote is found when it is inside one line of a source, as that line was read.
+  - A blockquote line or a quoted passage can run across the source's line breaks, so it is also found inside the
+    source's whole text: its lines joined by spaces, each line first taken without a program's line prefix and then
+    without a patch's one-character "+", "-" or " ". A quote of a patch's lines without their markers is found this
+    way. A patch is joined once more as each of its two texts, without its "-" lines and without its "+" lines.
+  - A line prefix is fs_read's or cat -n's number and tab, grep -n's `N:` or `path:N:`. It is taken off only where
+    every line of a run has one and the numbers count up; a run is cut where a number is not the one after the last.
+  - The lines of one file are joined the same way wherever the tools showed them: in two fs_read windows, as two
+    fs_search hits, or as one of each. Each line is taken without what the tool put on or around it (a hit's file name
+    and number, a window's header and hints, a document's page marks), and only lines the file has one after the other,
+    in one version of it, are joined: two windows whose sha256 differ, or between which an edit of the file ran (a
+    Changed among the sources, in the order of the calls), are not.
+  - A blockquote line or a passage is also found without Markdown's inline formatting on either side: a backslash
+    before punctuation, a code span's backticks, and the emphasis CommonMark pairs (a lone * or _ is the text's own).
+    A reader does not see these. A code line keeps every character.
+  - A quote with an ellipsis ("...", the character, either in brackets) that is not found as written is found when
+    its pieces are in one source in order, each piece being one that has something to check.
+  - A code block that is a diff (its language is diff, patch or udiff, or a line of it starts with a hunk header
+    `@@ -a,b +c,d @@`, whatever its tag) is compared as what it quotes: each line without its "-", "+" or " ", a hunk
+    header by its heading, a line that names the files not at all. A line is reported as the answer has it.
+
+Never reported: a quote with nothing in it to check (no letter or digit, as in punctuation, brackets or an ellipsis,
+or fewer than four characters that are not spaces), a fence inside a blockquote, a passage of fewer than six words.
+
+This is the test locallm/rag_quote.py makes of a quote (word for word in a document, whitespace folded), made of free
+Markdown instead of a quoting syntax. Found means copied, not right: a line copied exactly from the old side of a
+patch is found as surely as one from the new. Text in, text out (None for a text is no text: no quotes, nothing
+read); standard library only.
 """
 from __future__ import annotations
 
@@ -47,15 +54,15 @@ MARKERS = re.compile(r"\s*(?:>\s?)+")                # a blockquote line's ">", 
 NUMBER = re.compile(r" *(\d{1,15})\t")                   # fs_read's line number, right-aligned, and its tab
 QUOTED = re.compile(r'"([^"]*)"|\u201c([^\u201c\u201d]*)\u201d')
 WORDS = 6                                           # a passage in quotes of fewer words is a phrase
-# Compared, not shown (2026-11-26: five of the six quotes a 27B's three reviews had reported were copied, and differed
-# from what was read only in these): a comment's marker at the start of a line, where a comment runs on; a Markdown
-# link, which a reader quotes by its text; quote marks of every style and escaped ones, as one.
+# Folded when comparing, never shown: a comment's marker at the start of a line (where a comment runs on), a Markdown
+# link (a reader quotes it by its text) and quote marks of every style, escaped ones included, which count as one.
+# A copy that differs from its source only in these is still a copy.
 COMMENT = re.compile(r"\s*(?:/\*+|\*+/?|//+|#+|--|;+)\s?")
-# what was read is untrusted text, up to 64,000 characters a reply: a link's text holds no bracket and its address
-# no parenthesis but pairs of them to three levels deep (CommonMark 6.3: an address holds balanced pairs, and an
-# implementation should support three levels), so each character is looked at from one place only: the two ways to
-# go on, a character that is no parenthesis and a pair of them, start with different characters (a file of brackets
-# took 4 seconds a read when either could run on to the next one; 2026-11-26)
+# What was read is untrusted text, up to 64,000 characters a reply, so LINK must never backtrack. A link's text
+# holds no bracket and its address no parenthesis except balanced pairs, three levels deep (CommonMark 6.3: an
+# address holds balanced pairs, and an implementation should support three levels). Each character is then matched
+# from one place only: the two ways to go on, a character that is no parenthesis and a pair of them, start with
+# different characters. If either could run on into the other, a file of brackets would take seconds per read.
 _PAIRS = r"\([^()\n]*\)"
 for _level in range(2):
     _PAIRS = r"\((?:[^()\n]|" + _PAIRS + r")*\)"
@@ -97,10 +104,12 @@ ELLIPSIS = re.compile(r"\[\s*(?:\.{3,}|\u2026)\s*\]|\.{3,}|\u2026")
 
 
 class Changed(NamedTuple):
-    """Among the sources, in the order the task made its calls: a change that ran to this file (an edit or a write
-    of `path`), or to any file (path None: an undo, which names a change, not a file). Windows of a file read on
-    either side of it are windows of two versions of the file, and are not joined by their line numbers: a window
-    whose header has no sha256 (a file too big to hash) says nothing of its version but when it was read."""
+    """A marker among the sources, in the order the task made its calls, that a change ran.
+    `path` is the file an edit or a write changed, or None for an undo, a shell command or a run command, which may
+    have changed any file and does not say which. Windows of a file read on either side of a marker that names it
+    are windows of two versions, so their line numbers do not join them. A window whose header has no sha256 (a
+    file too big to hash) says nothing of its version except when it was read, so this marker is what parts it.
+    """
     path: str | None
 
 
@@ -173,8 +182,9 @@ def _without(cache: dict[bool, list], read: list, emphasis: bool) -> list:
 
 
 def _unmarked(text: str, emphasis: bool = True) -> str:
-    """The text a reader sees: no backslash before punctuation, no backticks, and (emphasis) none of the emphasis
-    that pairs (_paired). Without the last, a quote of text that has a code span's asterisks as its own is found."""
+    """The text a reader sees: no backslash before punctuation, no backticks and, with `emphasis`, none of the
+    emphasis that pairs (_paired). With emphasis=False every * and _ stays, so a quote of text whose asterisks are
+    its own is still found."""
     return _plain(ESCAPED.sub(r"\1", _paired(text) if emphasis else text).replace("`", ""))
 
 

@@ -20,8 +20,8 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 from dawnr_agent.quotes import Changed, unfound_quotes  # noqa: E402
 
-# The real case: a patch excerpt as the session read it, and the line an answer showed in a code block as the
-# patch's own. The patch tests hit.mFraction and the contact on two lines; the answer's `if` has the contact alone.
+# A patch excerpt as the session read it, and the line an answer showed in a code block as the patch's own. The
+# patch tests hit.mFraction and the contact on two lines; the answer's `if` has the contact alone.
 PATCH = ("+\t\t\tif (hit.mFraction < 0.0f || hit.mFraction > 1.0f\n"
          "+\t\t\t\t|| mContactManager.HasContactInCurrentStep(inBody.GetID(), hit.mSubShapeID1, sensor->GetID(), hit.mSubShapeID2))\n"
          "+\t\t\t\tcontinue;\n")
@@ -186,9 +186,9 @@ class ResultTest(unittest.TestCase):
 
 
 class LiveReviewTest(unittest.TestCase):
-    """Quotes a 27B wrote in three reviews of one task (2026-11-26), every one copied from what it read and every one
-    reported before: a comment that runs over two lines, a sentence set in quotes inside a blockquote, a sentence whose
-    source has Markdown links, and a sentence whose quotes inside it are another style, with the period inside."""
+    """Faithful copies of the kinds a check can wrongly report: a comment that runs over two lines, a sentence set in
+    quotes inside a blockquote, a sentence whose source has Markdown links, and a sentence whose inner quotes are
+    another style, with the period inside."""
 
     def test_a_comment_quoted_across_two_lines_is_found_without_the_comment_markers(self):
         patch = ("here/golden.patch: lines 256-257 of 500, 27580 bytes, sha256 94438ada9f84\n"
@@ -235,8 +235,8 @@ class LiveReviewTest(unittest.TestCase):
 
 # One file's lines as the tools show them (dawnr_agent/files.py): fs_search's hits, each after the file's name and
 # its number; two fs_read windows, each after its header and with its line numbers, the first with the hint where
-# to go on; the same two windows as fs_read gave them before reads were numbered; a document's text with its pages
-# marked; and an edit's window of the lines it left.
+# to go on; the same two windows without line numbers; a document's text with its pages marked; and an edit's
+# window of the lines it left.
 CACHE = ["# Cache", "", "The cache is cleared only when the person", "runs clean, and never on its own.", "",
          "## Rebuilding", "", "", "A stale cache is rebuilt in the background."]
 BOTH = "> The cache is cleared only when the person runs clean, and never on its own.\n"
@@ -299,8 +299,9 @@ class ReadFormatTest(unittest.TestCase):
                          ["The cache is cleared only when the person runs clean, and never on its own."])
 
     def test_windows_of_the_file_before_and_after_an_edit_are_not_joined(self):
-        # Lines 1-3 read, the first line taken out, lines 4-5 read: the file's line 4 is now what was line 5. Line 3
-        # then line 5 of the old file is in neither file; the two windows have two sha256s, a hit has none.
+        # Lines 1-3 are read, the first line is removed, then lines 4-5 are read: the file's line 4 is now what was
+        # line 5. Line 3 followed by line 5 of the old file is in neither version; the two windows have different
+        # sha256s, and a hit has none.
         old = CACHE[:3] + ["(a line between)"] + CACHE[3:]
         new = old[1:]
         reads = [window("here/docs/cache.md", old, 1, 3, sha="aaaaaaaaaaaa"),
@@ -342,8 +343,8 @@ class ReadFormatTest(unittest.TestCase):
         self.assertEqual(unfound_quotes(BOTH, [pdf]), [])
 
     def test_a_passage_from_an_edit_window_is_found(self):
-        # A guard, found before the change above too: an edit's window has its header before the lines and its
-        # hint after them, and nothing on them or between them.
+        # An edit's window has its header before the lines and its hint after them, and nothing on them or between
+        # them.
         edited = "lines 2-5 of 9 are now:\n\nThe cache is cleared only when the person\nruns clean, or on a schedule.\n"
         self.assertEqual(unfound_quotes("> The cache is cleared only when the person runs clean, or on a schedule.\n",
                                         [edited]), [])
@@ -423,7 +424,7 @@ class DiffTest(unittest.TestCase):
                          ["@@ -a,b +c,d @@", "- return None"])
 
 
-# The start of two lines of instruction.md as a 27B read it (2026-11-26): Markdown, with emphasis and code spans.
+# The start of two lines of instruction.md: Markdown, with emphasis and code spans.
 INSTRUCTION = window("here/instruction.md", [
     "**Task description.** A fast dynamic body using `EMotionQuality::LinearCast` can pass through a static sensor in "
     "a single update without notifying the contact listener. Report every static sensor the body really touches on its "
@@ -558,9 +559,9 @@ class NoTextTest(unittest.TestCase):
 
 
 class CraftedTextTest(unittest.TestCase):
-    """What was read is the session's untrusted text, up to the 64,000 characters a reply holds: no pattern the
-    check runs over it takes time that grows with the square of a line's length. A file of brackets took 4 seconds
-    a read for the Markdown link alone (2026-11-26), a first line of brackets and parentheses most of one."""
+    """What was read is the session's untrusted text, up to the 64,000 characters a reply holds, so no pattern the
+    check runs over it may take time that grows with the square of a line's length. A file of brackets made the
+    Markdown link pattern alone take seconds per read, and so did a first line of brackets and parentheses."""
 
     QUOTE = '"the cache is cleared only when the person runs clean"'
     N = 64_000

@@ -893,8 +893,8 @@ PATCH_READ = ("+\t\t\tif (hit.mFraction < 0.0f || hit.mFraction > 1.0f\n"
 
 
 def test_a_quote_in_the_answer_that_is_in_nothing_it_read_is_named_after_the_answer(tmp_path):
-    # The case this was written for (2026-11-26): a 27B's review set a condition in a code block as the patch's own
-    # text, with one of its two clauses gone and the other's `||` turned into an `if`.
+    # The model's code block shows a condition as the patch's own text, with one of its two clauses gone and the
+    # other's `||` turned into an `if`.
     answer = ("It skips a hit already admitted this step:\n```\n"
               "if (mContactManager.HasContactInCurrentStep(inBody.GetID(), hit.mSubShapeID1, sensor->GetID(), hit.mSubShapeID2))\n"
               "    continue;\n```")
@@ -941,8 +941,8 @@ def test_a_line_quoted_from_the_closest_lines_a_refused_edit_showed_counts_as_re
 
 
 def test_windows_of_a_file_too_big_to_hash_are_not_joined_across_an_edit_that_ran_between_them():
-    # No sha256 in either header, so only the order of the calls says the file changed between the two reads: line
-    # 3 of the old file and line 5 of the old file (now line 4) are two lines of no version of it.
+    # Neither header has a sha256, so only the order of the calls says the file changed between the two reads: line
+    # 3 of the old file and line 5 of the old file (now line 4) are two lines no version of it has side by side.
     from types import SimpleNamespace as NS
     from dawnr_agent.plan import Step
 
@@ -976,9 +976,9 @@ def test_windows_of_a_file_too_big_to_hash_are_not_joined_across_an_edit_that_ra
 
 def test_a_faithful_quote_of_a_documents_text_is_found_where_the_reader_cut_its_lines(tmp_path):
     # files.py cuts a document's text at str.splitlines (a vertical tab, a form feed, a carriage return, U+0085,
-    # U+2028 and others end a line there) and shows the cuts as line feeds; the checker cuts what was shown at line
-    # feeds only. The two agree on what the model was shown, so a quote of the lines as shown, and a passage over
-    # them, are found; none of the separators is in what the model saw, so none is in what it quotes.
+    # U+2028 and others end a line there) and shows each cut as a line feed; the checker cuts the shown text at line
+    # feeds only. The two agree on what the model was shown, so a quote of the lines as shown, or a passage over
+    # them, is found. None of the separators is in what the model saw, so none is in what it quotes.
     pages = [(1, "The cache is cleared only when the person\x0cruns clean,\rand never on its own.\r\n"
                  "A stale cache is\x85rebuilt in the background.\x0b\x1cDone."), (2, "Next page, same as before.")]
     answer = ("The first lines:\n```\nThe cache is cleared\nonly when the person\nruns clean,\n```\n"
