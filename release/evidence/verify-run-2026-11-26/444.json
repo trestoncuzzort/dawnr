@@ -1,0 +1,136 @@
+{
+ "id": 444,
+ "fn": "trim_tuple",
+ "verified": false,
+ "route": null,
+ "why": "no specification the model wrote holds at your function's answers and pins them down. Every one it wrote from your docstring is false at an answer your function gives (`trim_tuple([(5, 3, 2, 1, 4), (3, 4, 9, 2, 1),(9, 1, 2, 3, 5), (4, 8, 2, 1, 7)], 2) == '[(2,), (9,), (2,), (2,)]'`): either the model misread the docstring, or the function does not do what it says",
+ "twin": null,
+ "stages": [
+  {
+   "route": "answers",
+   "source": "answer 1",
+   "stage": "well formed",
+   "reason": "not well formed (len of a non-seq, non-map)"
+  },
+  {
+   "route": "answers",
+   "source": "answer 2",
+   "stage": "parse",
+   "reason": "does not parse (expected 'id', found 't' [Stmt])"
+  },
+  {
+   "route": "answers",
+   "source": "answer 3",
+   "stage": "parse",
+   "reason": "does not parse (expected 'id', found 't' [Stmt])"
+  },
+  {
+   "route": "answers",
+   "source": "answer 4",
+   "stage": "parse",
+   "reason": "does not parse (expected 'id', found 't' [Stmt])"
+  },
+  {
+   "route": "answers",
+   "source": "answer 5",
+   "stage": "parse",
+   "reason": "does not parse (expected ')', found 'orig' [Expr])"
+  },
+  {
+   "route": "specification",
+   "source": "specification 2",
+   "stage": "parse",
+   "reason": "it does not parse (expected ']', found ':' [Expr])"
+  },
+  {
+   "route": "specification",
+   "source": "specification 3",
+   "stage": "parse",
+   "reason": "it does not parse (expected 'id', found 't' [Expr])"
+  },
+  {
+   "route": "specification",
+   "source": "specification 1",
+   "stage": "examples",
+   "reason": "`len(r) == len(test_list); forall i in [0, len(r)) . len(r[i]) == len(test_list[i]) - 2 * K; forall i in [0, len(r)) . forall j in [0, len(r[i])) . r[i][j] == test_list[i][K + j]` is false at your function's own answer `trim_tuple([(5, 3, 2, 1, 4), (3, 4, 9, 2, 1),(9, 1, 2, 3, 5), (4, 8, 2, 1, 7)], 2) == '[(2,), (9,), (2,), (2,)]'`",
+   "at": "trim_tuple([(5, 3, 2, 1, 4), (3, 4, 9, 2, 1),(9, 1, 2, 3, 5), (4, 8, 2, 1, 7)], 2) == '[(2,), (9,), (2,), (2,)]'",
+   "scores": {
+    "correctness": 0.0,
+    "completeness": 1.0,
+    "tests": 3,
+    "mutants": 24
+   }
+  }
+ ],
+ "refused": [
+  "answer 1: not well formed (len of a non-seq, non-map)",
+  "answer 2: does not parse (expected 'id', found 't' [Stmt])",
+  "answer 3: does not parse (expected 'id', found 't' [Stmt])",
+  "answer 4: does not parse (expected 'id', found 't' [Stmt])",
+  "answer 5: does not parse (expected ')', found 'orig' [Expr])",
+  "specification 2: it does not parse (expected ']', found ':' [Expr])",
+  "specification 3: it does not parse (expected 'id', found 't' [Expr])",
+  "specification 1: `len(r) == len(test_list); forall i in [0, len(r)) . len(r[i]) == len(test_list[i]) - 2 * K; forall i in [0, len(r)) . forall j in [0, len(r[i])) . r[i][j] == test_list[i][K + j]` is false at your function's own answer `trim_tuple([(5, 3, 2, 1, 4), (3, 4, 9, 2, 1),(9, 1, 2, 3, 5), (4, 8, 2, 1, 7)], 2) == '[(2,), (9,), (2,), (2,)]'`"
+ ],
+ "specifications": [
+  {
+   "source": "specification 1",
+   "verdict": "dropped",
+   "scores": {
+    "correctness": 0.0,
+    "completeness": 1.0,
+    "tests": 3,
+    "mutants": 24
+   },
+   "spec": "t 1\ntask f(test_list: seq<seq>, K: int) returns (r: seq)\n  requires K >= 0\n  requires forall i in [0, len(test_list)) . len(test_list[i]) >= 2 * K\n  ensures len(r) == len(test_list)\n  ensures forall i in [0, len(r)) . len(r[i]) == len(test_list[i]) - 2 * K\n  ensures forall i in [0, len(r)) . forall j in [0, len(r[i])) . r[i][j] == test_list[i][K + j]\n{\n}\n"
+  }
+ ],
+ "candidates": [],
+ "asked": {
+  "answers": 5,
+  "specifications": 3,
+  "bodies": 0
+ },
+ "inputs": {
+  "examples": [
+   "assert trim_tuple([(5, 3, 2, 1, 4), (3, 4, 9, 2, 1),(9, 1, 2, 3, 5), (4, 8, 2, 1, 7)], 2) == '[(2,), (9,), (2,), (2,)]'",
+   "assert trim_tuple([(5, 3, 2, 1, 4), (3, 4, 9, 2, 1), (9, 1, 2, 3, 5), (4, 8, 2, 1, 7)], 1) == '[(3, 2, 1), (4, 9, 2), (1, 2, 3), (8, 2, 1)]'",
+   "assert trim_tuple([(7, 8, 4, 9), (11, 8, 12, 4),(4, 1, 7, 8), (3, 6, 9, 7)], 1) == '[(8, 4), (8, 12), (1, 7), (6, 9)]'"
+  ],
+  "taken from the function": false,
+  "kinds": [
+   {
+    "args": [
+     "seq-of-seq",
+     "int"
+    ],
+    "expected": "seq"
+   },
+   {
+    "args": [
+     "seq-of-seq",
+     "int"
+    ],
+    "expected": "seq"
+   },
+   {
+    "args": [
+     "seq-of-seq",
+     "int"
+    ],
+    "expected": "seq"
+   }
+  ],
+  "specification check": {
+   "seed": 1,
+   "draws": 100,
+   "larger draws": 60
+  }
+ },
+ "stopped at": "examples",
+ "function": {
+  "code": "def trim_tuple(test_list, K):\r\n  res = []\r\n  for ele in test_list:\r\n    N = len(ele)\r\n    res.append(tuple(list(ele)[K: N - K]))\r\n  return (str(res)) ",
+  "doc": "Write a function to trim each tuple by k in the given tuple list."
+ },
+ "seconds": 46.1
+}

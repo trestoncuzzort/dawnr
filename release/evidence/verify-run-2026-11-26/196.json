@@ -1,0 +1,2737 @@
+{
+ "id": 196,
+ "fn": "remove_tuples",
+ "verified": false,
+ "route": null,
+ "why": "no specification the model wrote holds at your function's answers and pins them down",
+ "twin": null,
+ "stages": [
+  {
+   "route": "answers",
+   "source": "answer 1",
+   "stage": "specification check",
+   "reason": "`len(r) <= len(tuples); forall i in [0, len(r)) . len(r[i]) != k; forall i in [0, len(tuples)) . len(tuples[i]) != k ==> (exists j in [0, len(r)) . r[j] == tuples[i])`: the specification says too little about inputs larger than the examples",
+   "passes": false,
+   "why": "the specification says too little about inputs larger than the examples",
+   "agreement": {
+    "status": "agrees",
+    "draws": 100,
+    "completeness": 0.756,
+    "mutants_rejected": 183,
+    "mutants_accepted": 59,
+    "weak_witness": {
+     "args": [
+      [
+       [
+        3,
+        2,
+        -1
+       ],
+       [],
+       [
+        -4,
+        2,
+        2
+       ]
+      ],
+      2
+     ],
+     "reference_said": [
+      [
+       3,
+       2,
+       -1
+      ],
+      [],
+      [
+       -4,
+       2,
+       2
+      ]
+     ],
+     "also_accepts": [
+      [
+       -4,
+       2,
+       2
+      ],
+      [],
+      [
+       3,
+       2,
+       -1
+      ]
+     ]
+    }
+   },
+   "larger": {
+    "status": "agrees",
+    "draws": 60,
+    "completeness": 0.486,
+    "mutants_rejected": 123,
+    "mutants_accepted": 130,
+    "weak_witness": {
+     "args": [
+      [
+       [],
+       [
+        2,
+        -3
+       ],
+       [
+        4
+       ],
+       [
+        0,
+        1
+       ],
+       [],
+       [
+        1,
+        -2
+       ],
+       [
+        4,
+        0,
+        -1
+       ],
+       [
+        -2,
+        3,
+        2
+       ],
+       [
+        3,
+        -2,
+        -4
+       ],
+       [
+        1,
+        -3
+       ],
+       [],
+       [
+        -4,
+        1
+       ],
+       [
+        3
+       ],
+       [
+        -2,
+        -2,
+        1
+       ],
+       [
+        -3,
+        4,
+        4
+       ],
+       [],
+       [],
+       [],
+       []
+      ],
+      13
+     ],
+     "reference_said": [
+      [],
+      [
+       2,
+       -3
+      ],
+      [
+       4
+      ],
+      [
+       0,
+       1
+      ],
+      [],
+      [
+       1,
+       -2
+      ],
+      [
+       4,
+       0,
+       -1
+      ],
+      [
+       -2,
+       3,
+       2
+      ],
+      [
+       3,
+       -2,
+       -4
+      ],
+      [
+       1,
+       -3
+      ],
+      [],
+      [
+       -4,
+       1
+      ],
+      [
+       3
+      ],
+      [
+       -2,
+       -2,
+       1
+      ],
+      [
+       -3,
+       4,
+       4
+      ],
+      [],
+      [],
+      [],
+      []
+     ],
+     "also_accepts": [
+      [],
+      [
+       2,
+       -3
+      ],
+      [
+       4
+      ],
+      [
+       0,
+       1
+      ],
+      [],
+      [
+       1,
+       -2
+      ],
+      [
+       4,
+       0,
+       -1
+      ],
+      [
+       -2,
+       3,
+       2
+      ],
+      [
+       3,
+       -2,
+       -4
+      ],
+      [
+       1,
+       -3
+      ],
+      [],
+      [
+       -4,
+       1
+      ],
+      [
+       3
+      ],
+      [
+       -2,
+       -2,
+       1
+      ],
+      [
+       -3,
+       4,
+       4
+      ],
+      [],
+      [],
+      []
+     ]
+    },
+    "requires_caps_size": false
+   }
+  },
+  {
+   "route": "answers",
+   "source": "answer 2",
+   "stage": "specification check",
+   "reason": "`len(r) <= len(tuples); forall i in [0, len(r)) . len(r[i]) != k; forall i in [0, len(tuples)) . len(tuples[i]) == k ==> (forall j in [0, len(r)) . r[j] != tuples[i]); forall i in [0, len(tuples)) . len(tuples[i]) != k ==> (exists j in [0, len(r)) . r[j] == tuples[i])`: the specification says too little about inputs larger than the examples",
+   "passes": false,
+   "why": "the specification says too little about inputs larger than the examples",
+   "agreement": {
+    "status": "agrees",
+    "draws": 100,
+    "completeness": 0.756,
+    "mutants_rejected": 183,
+    "mutants_accepted": 59,
+    "weak_witness": {
+     "args": [
+      [
+       [
+        3,
+        2,
+        -1
+       ],
+       [],
+       [
+        -4,
+        2,
+        2
+       ]
+      ],
+      2
+     ],
+     "reference_said": [
+      [
+       3,
+       2,
+       -1
+      ],
+      [],
+      [
+       -4,
+       2,
+       2
+      ]
+     ],
+     "also_accepts": [
+      [
+       -4,
+       2,
+       2
+      ],
+      [],
+      [
+       3,
+       2,
+       -1
+      ]
+     ]
+    }
+   },
+   "larger": {
+    "status": "agrees",
+    "draws": 60,
+    "completeness": 0.486,
+    "mutants_rejected": 123,
+    "mutants_accepted": 130,
+    "weak_witness": {
+     "args": [
+      [
+       [],
+       [
+        2,
+        -3
+       ],
+       [
+        4
+       ],
+       [
+        0,
+        1
+       ],
+       [],
+       [
+        1,
+        -2
+       ],
+       [
+        4,
+        0,
+        -1
+       ],
+       [
+        -2,
+        3,
+        2
+       ],
+       [
+        3,
+        -2,
+        -4
+       ],
+       [
+        1,
+        -3
+       ],
+       [],
+       [
+        -4,
+        1
+       ],
+       [
+        3
+       ],
+       [
+        -2,
+        -2,
+        1
+       ],
+       [
+        -3,
+        4,
+        4
+       ],
+       [],
+       [],
+       [],
+       []
+      ],
+      13
+     ],
+     "reference_said": [
+      [],
+      [
+       2,
+       -3
+      ],
+      [
+       4
+      ],
+      [
+       0,
+       1
+      ],
+      [],
+      [
+       1,
+       -2
+      ],
+      [
+       4,
+       0,
+       -1
+      ],
+      [
+       -2,
+       3,
+       2
+      ],
+      [
+       3,
+       -2,
+       -4
+      ],
+      [
+       1,
+       -3
+      ],
+      [],
+      [
+       -4,
+       1
+      ],
+      [
+       3
+      ],
+      [
+       -2,
+       -2,
+       1
+      ],
+      [
+       -3,
+       4,
+       4
+      ],
+      [],
+      [],
+      [],
+      []
+     ],
+     "also_accepts": [
+      [],
+      [
+       2,
+       -3
+      ],
+      [
+       4
+      ],
+      [
+       0,
+       1
+      ],
+      [],
+      [
+       1,
+       -2
+      ],
+      [
+       4,
+       0,
+       -1
+      ],
+      [
+       -2,
+       3,
+       2
+      ],
+      [
+       3,
+       -2,
+       -4
+      ],
+      [
+       1,
+       -3
+      ],
+      [],
+      [
+       -4,
+       1
+      ],
+      [
+       3
+      ],
+      [
+       -2,
+       -2,
+       1
+      ],
+      [
+       -3,
+       4,
+       4
+      ],
+      [],
+      [],
+      []
+     ]
+    },
+    "requires_caps_size": false
+   }
+  },
+  {
+   "route": "answers",
+   "source": "answer 3",
+   "stage": "specification check",
+   "reason": "`len(r) <= len(tuples); forall i in [0, len(r)) . len(r[i]) != k; forall i in [0, len(tuples)) . len(tuples[i]) == k ==> (forall j in [0, len(r)) . r[j] != tuples[i]); forall i in [0, len(tuples)) . len(tuples[i]) != k ==> (exists j in [0, len(r)) . r[j] == tuples[i])`: the specification says too little about inputs larger than the examples",
+   "passes": false,
+   "why": "the specification says too little about inputs larger than the examples",
+   "agreement": {
+    "status": "agrees",
+    "draws": 100,
+    "completeness": 0.756,
+    "mutants_rejected": 183,
+    "mutants_accepted": 59,
+    "weak_witness": {
+     "args": [
+      [
+       [
+        3,
+        2,
+        -1
+       ],
+       [],
+       [
+        -4,
+        2,
+        2
+       ]
+      ],
+      2
+     ],
+     "reference_said": [
+      [
+       3,
+       2,
+       -1
+      ],
+      [],
+      [
+       -4,
+       2,
+       2
+      ]
+     ],
+     "also_accepts": [
+      [
+       -4,
+       2,
+       2
+      ],
+      [],
+      [
+       3,
+       2,
+       -1
+      ]
+     ]
+    }
+   },
+   "larger": {
+    "status": "agrees",
+    "draws": 60,
+    "completeness": 0.486,
+    "mutants_rejected": 123,
+    "mutants_accepted": 130,
+    "weak_witness": {
+     "args": [
+      [
+       [],
+       [
+        2,
+        -3
+       ],
+       [
+        4
+       ],
+       [
+        0,
+        1
+       ],
+       [],
+       [
+        1,
+        -2
+       ],
+       [
+        4,
+        0,
+        -1
+       ],
+       [
+        -2,
+        3,
+        2
+       ],
+       [
+        3,
+        -2,
+        -4
+       ],
+       [
+        1,
+        -3
+       ],
+       [],
+       [
+        -4,
+        1
+       ],
+       [
+        3
+       ],
+       [
+        -2,
+        -2,
+        1
+       ],
+       [
+        -3,
+        4,
+        4
+       ],
+       [],
+       [],
+       [],
+       []
+      ],
+      13
+     ],
+     "reference_said": [
+      [],
+      [
+       2,
+       -3
+      ],
+      [
+       4
+      ],
+      [
+       0,
+       1
+      ],
+      [],
+      [
+       1,
+       -2
+      ],
+      [
+       4,
+       0,
+       -1
+      ],
+      [
+       -2,
+       3,
+       2
+      ],
+      [
+       3,
+       -2,
+       -4
+      ],
+      [
+       1,
+       -3
+      ],
+      [],
+      [
+       -4,
+       1
+      ],
+      [
+       3
+      ],
+      [
+       -2,
+       -2,
+       1
+      ],
+      [
+       -3,
+       4,
+       4
+      ],
+      [],
+      [],
+      [],
+      []
+     ],
+     "also_accepts": [
+      [],
+      [
+       2,
+       -3
+      ],
+      [
+       4
+      ],
+      [
+       0,
+       1
+      ],
+      [],
+      [
+       1,
+       -2
+      ],
+      [
+       4,
+       0,
+       -1
+      ],
+      [
+       -2,
+       3,
+       2
+      ],
+      [
+       3,
+       -2,
+       -4
+      ],
+      [
+       1,
+       -3
+      ],
+      [],
+      [
+       -4,
+       1
+      ],
+      [
+       3
+      ],
+      [
+       -2,
+       -2,
+       1
+      ],
+      [
+       -3,
+       4,
+       4
+      ],
+      [],
+      [],
+      []
+     ]
+    },
+    "requires_caps_size": false
+   }
+  },
+  {
+   "route": "answers",
+   "source": "answer 4",
+   "stage": "specification check",
+   "reason": "`len(r) <= len(tuples); forall i in [0, len(r)) . len(r[i]) != k; forall i in [0, len(tuples)) . len(tuples[i]) != k ==> (exists j in [0, len(r)) . r[j] == tuples[i]); forall i in [0, len(r)) . exists j in [0, len(tuples)) . r[i] == tuples[j]`: the specification says too little about inputs larger than the examples",
+   "passes": false,
+   "why": "the specification says too little about inputs larger than the examples",
+   "agreement": {
+    "status": "agrees",
+    "draws": 100,
+    "completeness": 0.777,
+    "mutants_rejected": 188,
+    "mutants_accepted": 54,
+    "weak_witness": {
+     "args": [
+      [
+       [
+        3,
+        2,
+        -1
+       ],
+       [],
+       [
+        -4,
+        2,
+        2
+       ]
+      ],
+      2
+     ],
+     "reference_said": [
+      [
+       3,
+       2,
+       -1
+      ],
+      [],
+      [
+       -4,
+       2,
+       2
+      ]
+     ],
+     "also_accepts": [
+      [
+       -4,
+       2,
+       2
+      ],
+      [],
+      [
+       3,
+       2,
+       -1
+      ]
+     ]
+    }
+   },
+   "larger": {
+    "status": "agrees",
+    "draws": 60,
+    "completeness": 0.486,
+    "mutants_rejected": 123,
+    "mutants_accepted": 130,
+    "weak_witness": {
+     "args": [
+      [
+       [],
+       [
+        2,
+        -3
+       ],
+       [
+        4
+       ],
+       [
+        0,
+        1
+       ],
+       [],
+       [
+        1,
+        -2
+       ],
+       [
+        4,
+        0,
+        -1
+       ],
+       [
+        -2,
+        3,
+        2
+       ],
+       [
+        3,
+        -2,
+        -4
+       ],
+       [
+        1,
+        -3
+       ],
+       [],
+       [
+        -4,
+        1
+       ],
+       [
+        3
+       ],
+       [
+        -2,
+        -2,
+        1
+       ],
+       [
+        -3,
+        4,
+        4
+       ],
+       [],
+       [],
+       [],
+       []
+      ],
+      13
+     ],
+     "reference_said": [
+      [],
+      [
+       2,
+       -3
+      ],
+      [
+       4
+      ],
+      [
+       0,
+       1
+      ],
+      [],
+      [
+       1,
+       -2
+      ],
+      [
+       4,
+       0,
+       -1
+      ],
+      [
+       -2,
+       3,
+       2
+      ],
+      [
+       3,
+       -2,
+       -4
+      ],
+      [
+       1,
+       -3
+      ],
+      [],
+      [
+       -4,
+       1
+      ],
+      [
+       3
+      ],
+      [
+       -2,
+       -2,
+       1
+      ],
+      [
+       -3,
+       4,
+       4
+      ],
+      [],
+      [],
+      [],
+      []
+     ],
+     "also_accepts": [
+      [],
+      [
+       2,
+       -3
+      ],
+      [
+       4
+      ],
+      [
+       0,
+       1
+      ],
+      [],
+      [
+       1,
+       -2
+      ],
+      [
+       4,
+       0,
+       -1
+      ],
+      [
+       -2,
+       3,
+       2
+      ],
+      [
+       3,
+       -2,
+       -4
+      ],
+      [
+       1,
+       -3
+      ],
+      [],
+      [
+       -4,
+       1
+      ],
+      [
+       3
+      ],
+      [
+       -2,
+       -2,
+       1
+      ],
+      [
+       -3,
+       4,
+       4
+      ],
+      [],
+      [],
+      []
+     ]
+    },
+    "requires_caps_size": false
+   }
+  },
+  {
+   "route": "answers",
+   "source": "answer 5",
+   "stage": "specification check",
+   "reason": "`len(r) <= len(tuples); forall i in [0, len(r)) . r[i] != [] or k != 0; forall i in [0, len(r)) . len(r[i]) != k; forall i in [0, len(r)) . exists j in [0, len(tuples)) . tuples[j] == r[i]`: weak specification",
+   "passes": false,
+   "why": "weak specification",
+   "agreement": {
+    "status": "agrees",
+    "draws": 100,
+    "completeness": 0.368,
+    "mutants_rejected": 89,
+    "mutants_accepted": 153,
+    "weak_witness": {
+     "args": [
+      [
+       [
+        3,
+        2,
+        -1
+       ],
+       [],
+       [
+        -4,
+        2,
+        2
+       ]
+      ],
+      2
+     ],
+     "reference_said": [
+      [
+       3,
+       2,
+       -1
+      ],
+      [],
+      [
+       -4,
+       2,
+       2
+      ]
+     ],
+     "also_accepts": [
+      [
+       3,
+       2,
+       -1
+      ],
+      []
+     ]
+    }
+   }
+  },
+  {
+   "route": "specification",
+   "source": "specification 2",
+   "stage": "examples",
+   "reason": "`len(r) <= len(test_list); forall i in [0, len(r)) . len(r[i]) != k; forall i in [0, len(test_list)) . len(test_list[i]) != k ==> (exists j in [0, len(r)) . r[j] == test_list[i])` says too little: it accepts 54% of the wrong results tried on your examples",
+   "scores": {
+    "correctness": 1.0,
+    "completeness": 0.46153846153846156,
+    "tests": 3,
+    "mutants": 13
+   }
+  },
+  {
+   "route": "specification",
+   "source": "specification 3",
+   "stage": "examples",
+   "reason": "`len(r) <= len(s); forall i in [0, len(r)) . len(r[i]) != k; forall i in [0, len(s)) . len(s[i]) != k ==> (exists j in [0, len(r)) . r[j] == s[i]); forall i in [0, len(s)) . len(s[i]) == k ==> (forall j in [0, len(r)) . r[j] != s[i])` says too little: it accepts 54% of the wrong results tried on your examples",
+   "scores": {
+    "correctness": 1.0,
+    "completeness": 0.46153846153846156,
+    "tests": 3,
+    "mutants": 13
+   }
+  },
+  {
+   "route": "specification",
+   "source": "specification 1",
+   "stage": "specification check",
+   "reason": "`len(r) <= len(test_list); forall i in [0, len(r)) . len(r[i]) != K; forall i in [0, len(test_list)) . len(test_list[i]) != K ==> (exists j in [0, len(r)) . r[j] == test_list[i]); forall i in [0, len(r)) . exists j in [0, len(test_list)) . r[i] == test_list[j]`: the specification says too little about inputs larger than the examples",
+   "passes": false,
+   "why": "the specification says too little about inputs larger than the examples",
+   "agreement": {
+    "status": "agrees",
+    "draws": 100,
+    "completeness": 0.777,
+    "mutants_rejected": 188,
+    "mutants_accepted": 54,
+    "weak_witness": {
+     "args": [
+      [
+       [
+        3,
+        2,
+        -1
+       ],
+       [],
+       [
+        -4,
+        2,
+        2
+       ]
+      ],
+      2
+     ],
+     "reference_said": [
+      [
+       3,
+       2,
+       -1
+      ],
+      [],
+      [
+       -4,
+       2,
+       2
+      ]
+     ],
+     "also_accepts": [
+      [
+       -4,
+       2,
+       2
+      ],
+      [],
+      [
+       3,
+       2,
+       -1
+      ]
+     ]
+    }
+   },
+   "larger": {
+    "status": "agrees",
+    "draws": 60,
+    "completeness": 0.486,
+    "mutants_rejected": 123,
+    "mutants_accepted": 130,
+    "weak_witness": {
+     "args": [
+      [
+       [],
+       [
+        2,
+        -3
+       ],
+       [
+        4
+       ],
+       [
+        0,
+        1
+       ],
+       [],
+       [
+        1,
+        -2
+       ],
+       [
+        4,
+        0,
+        -1
+       ],
+       [
+        -2,
+        3,
+        2
+       ],
+       [
+        3,
+        -2,
+        -4
+       ],
+       [
+        1,
+        -3
+       ],
+       [],
+       [
+        -4,
+        1
+       ],
+       [
+        3
+       ],
+       [
+        -2,
+        -2,
+        1
+       ],
+       [
+        -3,
+        4,
+        4
+       ],
+       [],
+       [],
+       [],
+       []
+      ],
+      13
+     ],
+     "reference_said": [
+      [],
+      [
+       2,
+       -3
+      ],
+      [
+       4
+      ],
+      [
+       0,
+       1
+      ],
+      [],
+      [
+       1,
+       -2
+      ],
+      [
+       4,
+       0,
+       -1
+      ],
+      [
+       -2,
+       3,
+       2
+      ],
+      [
+       3,
+       -2,
+       -4
+      ],
+      [
+       1,
+       -3
+      ],
+      [],
+      [
+       -4,
+       1
+      ],
+      [
+       3
+      ],
+      [
+       -2,
+       -2,
+       1
+      ],
+      [
+       -3,
+       4,
+       4
+      ],
+      [],
+      [],
+      [],
+      []
+     ],
+     "also_accepts": [
+      [],
+      [
+       2,
+       -3
+      ],
+      [
+       4
+      ],
+      [
+       0,
+       1
+      ],
+      [],
+      [
+       1,
+       -2
+      ],
+      [
+       4,
+       0,
+       -1
+      ],
+      [
+       -2,
+       3,
+       2
+      ],
+      [
+       3,
+       -2,
+       -4
+      ],
+      [
+       1,
+       -3
+      ],
+      [],
+      [
+       -4,
+       1
+      ],
+      [
+       3
+      ],
+      [
+       -2,
+       -2,
+       1
+      ],
+      [
+       -3,
+       4,
+       4
+      ],
+      [],
+      [],
+      []
+     ]
+    },
+    "requires_caps_size": false
+   }
+  }
+ ],
+ "refused": [
+  "answer 1: `len(r) <= len(tuples); forall i in [0, len(r)) . len(r[i]) != k; forall i in [0, len(tuples)) . len(tuples[i]) != k ==> (exists j in [0, len(r)) . r[j] == tuples[i])`: the specification says too little about inputs larger than the examples",
+  "answer 2: `len(r) <= len(tuples); forall i in [0, len(r)) . len(r[i]) != k; forall i in [0, len(tuples)) . len(tuples[i]) == k ==> (forall j in [0, len(r)) . r[j] != tuples[i]); forall i in [0, len(tuples)) . len(tuples[i]) != k ==> (exists j in [0, len(r)) . r[j] == tuples[i])`: the specification says too little about inputs larger than the examples",
+  "answer 3: `len(r) <= len(tuples); forall i in [0, len(r)) . len(r[i]) != k; forall i in [0, len(tuples)) . len(tuples[i]) == k ==> (forall j in [0, len(r)) . r[j] != tuples[i]); forall i in [0, len(tuples)) . len(tuples[i]) != k ==> (exists j in [0, len(r)) . r[j] == tuples[i])`: the specification says too little about inputs larger than the examples",
+  "answer 4: `len(r) <= len(tuples); forall i in [0, len(r)) . len(r[i]) != k; forall i in [0, len(tuples)) . len(tuples[i]) != k ==> (exists j in [0, len(r)) . r[j] == tuples[i]); forall i in [0, len(r)) . exists j in [0, len(tuples)) . r[i] == tuples[j]`: the specification says too little about inputs larger than the examples",
+  "answer 5: `len(r) <= len(tuples); forall i in [0, len(r)) . r[i] != [] or k != 0; forall i in [0, len(r)) . len(r[i]) != k; forall i in [0, len(r)) . exists j in [0, len(tuples)) . tuples[j] == r[i]`: weak specification",
+  "specification 2: `len(r) <= len(test_list); forall i in [0, len(r)) . len(r[i]) != k; forall i in [0, len(test_list)) . len(test_list[i]) != k ==> (exists j in [0, len(r)) . r[j] == test_list[i])` says too little: it accepts 54% of the wrong results tried on your examples",
+  "specification 3: `len(r) <= len(s); forall i in [0, len(r)) . len(r[i]) != k; forall i in [0, len(s)) . len(s[i]) != k ==> (exists j in [0, len(r)) . r[j] == s[i]); forall i in [0, len(s)) . len(s[i]) == k ==> (forall j in [0, len(r)) . r[j] != s[i])` says too little: it accepts 54% of the wrong results tried on your examples",
+  "specification 1: `len(r) <= len(test_list); forall i in [0, len(r)) . len(r[i]) != K; forall i in [0, len(test_list)) . len(test_list[i]) != K ==> (exists j in [0, len(r)) . r[j] == test_list[i]); forall i in [0, len(r)) . exists j in [0, len(test_list)) . r[i] == test_list[j]`: the specification says too little about inputs larger than the examples"
+ ],
+ "specifications": [
+  {
+   "source": "specification 1",
+   "verdict": "kept",
+   "scores": {
+    "correctness": 1.0,
+    "completeness": 0.6923076923076923,
+    "tests": 3,
+    "mutants": 13
+   },
+   "spec": "t 1\ntask f(test_list: seq<seq>, K: int) returns (r: seq<seq>)\n  ensures len(r) <= len(test_list)\n  ensures forall i in [0, len(r)) . len(r[i]) != K\n  ensures forall i in [0, len(test_list)) . len(test_list[i]) != K ==> (exists j in [0, len(r)) . r[j] == test_list[i])\n  ensures forall i in [0, len(r)) . exists j in [0, len(test_list)) . r[i] == test_list[j]\n{\n}\n",
+   "function": {
+    "passes": false,
+    "why": "the specification says too little about inputs larger than the examples",
+    "agreement": {
+     "status": "agrees",
+     "draws": 100,
+     "completeness": 0.777,
+     "mutants_rejected": 188,
+     "mutants_accepted": 54,
+     "weak_witness": {
+      "args": [
+       [
+        [
+         3,
+         2,
+         -1
+        ],
+        [],
+        [
+         -4,
+         2,
+         2
+        ]
+       ],
+       2
+      ],
+      "reference_said": [
+       [
+        3,
+        2,
+        -1
+       ],
+       [],
+       [
+        -4,
+        2,
+        2
+       ]
+      ],
+      "also_accepts": [
+       [
+        -4,
+        2,
+        2
+       ],
+       [],
+       [
+        3,
+        2,
+        -1
+       ]
+      ]
+     }
+    },
+    "larger": {
+     "status": "agrees",
+     "draws": 60,
+     "completeness": 0.486,
+     "mutants_rejected": 123,
+     "mutants_accepted": 130,
+     "weak_witness": {
+      "args": [
+       [
+        [],
+        [
+         2,
+         -3
+        ],
+        [
+         4
+        ],
+        [
+         0,
+         1
+        ],
+        [],
+        [
+         1,
+         -2
+        ],
+        [
+         4,
+         0,
+         -1
+        ],
+        [
+         -2,
+         3,
+         2
+        ],
+        [
+         3,
+         -2,
+         -4
+        ],
+        [
+         1,
+         -3
+        ],
+        [],
+        [
+         -4,
+         1
+        ],
+        [
+         3
+        ],
+        [
+         -2,
+         -2,
+         1
+        ],
+        [
+         -3,
+         4,
+         4
+        ],
+        [],
+        [],
+        [],
+        []
+       ],
+       13
+      ],
+      "reference_said": [
+       [],
+       [
+        2,
+        -3
+       ],
+       [
+        4
+       ],
+       [
+        0,
+        1
+       ],
+       [],
+       [
+        1,
+        -2
+       ],
+       [
+        4,
+        0,
+        -1
+       ],
+       [
+        -2,
+        3,
+        2
+       ],
+       [
+        3,
+        -2,
+        -4
+       ],
+       [
+        1,
+        -3
+       ],
+       [],
+       [
+        -4,
+        1
+       ],
+       [
+        3
+       ],
+       [
+        -2,
+        -2,
+        1
+       ],
+       [
+        -3,
+        4,
+        4
+       ],
+       [],
+       [],
+       [],
+       []
+      ],
+      "also_accepts": [
+       [],
+       [
+        2,
+        -3
+       ],
+       [
+        4
+       ],
+       [
+        0,
+        1
+       ],
+       [],
+       [
+        1,
+        -2
+       ],
+       [
+        4,
+        0,
+        -1
+       ],
+       [
+        -2,
+        3,
+        2
+       ],
+       [
+        3,
+        -2,
+        -4
+       ],
+       [
+        1,
+        -3
+       ],
+       [],
+       [
+        -4,
+        1
+       ],
+       [
+        3
+       ],
+       [
+        -2,
+        -2,
+        1
+       ],
+       [
+        -3,
+        4,
+        4
+       ],
+       [],
+       [],
+       []
+      ]
+     },
+     "requires_caps_size": false
+    }
+   }
+  },
+  {
+   "source": "specification 2",
+   "verdict": "dropped",
+   "scores": {
+    "correctness": 1.0,
+    "completeness": 0.46153846153846156,
+    "tests": 3,
+    "mutants": 13
+   },
+   "spec": "t 1\ntask f(test_list: seq<seq>, k: int) returns (r: seq<seq>)\n  ensures len(r) <= len(test_list)\n  ensures forall i in [0, len(r)) . len(r[i]) != k\n  ensures forall i in [0, len(test_list)) . len(test_list[i]) != k ==> (exists j in [0, len(r)) . r[j] == test_list[i])\n{\n}\n"
+  },
+  {
+   "source": "specification 3",
+   "verdict": "dropped",
+   "scores": {
+    "correctness": 1.0,
+    "completeness": 0.46153846153846156,
+    "tests": 3,
+    "mutants": 13
+   },
+   "spec": "t 1\ntask f(s: seq<seq>, k: int) returns (r: seq<seq>)\n  ensures len(r) <= len(s)\n  ensures forall i in [0, len(r)) . len(r[i]) != k\n  ensures forall i in [0, len(s)) . len(s[i]) != k ==> (exists j in [0, len(r)) . r[j] == s[i])\n  ensures forall i in [0, len(s)) . len(s[i]) == k ==> (forall j in [0, len(r)) . r[j] != s[i])\n{\n}\n"
+  }
+ ],
+ "candidates": [
+  {
+   "source": "answer 1",
+   "function": {
+    "passes": false,
+    "why": "the specification says too little about inputs larger than the examples",
+    "agreement": {
+     "status": "agrees",
+     "draws": 100,
+     "completeness": 0.756,
+     "mutants_rejected": 183,
+     "mutants_accepted": 59,
+     "weak_witness": {
+      "args": [
+       [
+        [
+         3,
+         2,
+         -1
+        ],
+        [],
+        [
+         -4,
+         2,
+         2
+        ]
+       ],
+       2
+      ],
+      "reference_said": [
+       [
+        3,
+        2,
+        -1
+       ],
+       [],
+       [
+        -4,
+        2,
+        2
+       ]
+      ],
+      "also_accepts": [
+       [
+        -4,
+        2,
+        2
+       ],
+       [],
+       [
+        3,
+        2,
+        -1
+       ]
+      ]
+     }
+    },
+    "larger": {
+     "status": "agrees",
+     "draws": 60,
+     "completeness": 0.486,
+     "mutants_rejected": 123,
+     "mutants_accepted": 130,
+     "weak_witness": {
+      "args": [
+       [
+        [],
+        [
+         2,
+         -3
+        ],
+        [
+         4
+        ],
+        [
+         0,
+         1
+        ],
+        [],
+        [
+         1,
+         -2
+        ],
+        [
+         4,
+         0,
+         -1
+        ],
+        [
+         -2,
+         3,
+         2
+        ],
+        [
+         3,
+         -2,
+         -4
+        ],
+        [
+         1,
+         -3
+        ],
+        [],
+        [
+         -4,
+         1
+        ],
+        [
+         3
+        ],
+        [
+         -2,
+         -2,
+         1
+        ],
+        [
+         -3,
+         4,
+         4
+        ],
+        [],
+        [],
+        [],
+        []
+       ],
+       13
+      ],
+      "reference_said": [
+       [],
+       [
+        2,
+        -3
+       ],
+       [
+        4
+       ],
+       [
+        0,
+        1
+       ],
+       [],
+       [
+        1,
+        -2
+       ],
+       [
+        4,
+        0,
+        -1
+       ],
+       [
+        -2,
+        3,
+        2
+       ],
+       [
+        3,
+        -2,
+        -4
+       ],
+       [
+        1,
+        -3
+       ],
+       [],
+       [
+        -4,
+        1
+       ],
+       [
+        3
+       ],
+       [
+        -2,
+        -2,
+        1
+       ],
+       [
+        -3,
+        4,
+        4
+       ],
+       [],
+       [],
+       [],
+       []
+      ],
+      "also_accepts": [
+       [],
+       [
+        2,
+        -3
+       ],
+       [
+        4
+       ],
+       [
+        0,
+        1
+       ],
+       [],
+       [
+        1,
+        -2
+       ],
+       [
+        4,
+        0,
+        -1
+       ],
+       [
+        -2,
+        3,
+        2
+       ],
+       [
+        3,
+        -2,
+        -4
+       ],
+       [
+        1,
+        -3
+       ],
+       [],
+       [
+        -4,
+        1
+       ],
+       [
+        3
+       ],
+       [
+        -2,
+        -2,
+        1
+       ],
+       [
+        -3,
+        4,
+        4
+       ],
+       [],
+       [],
+       []
+      ]
+     },
+     "requires_caps_size": false
+    }
+   }
+  },
+  {
+   "source": "answer 2",
+   "function": {
+    "passes": false,
+    "why": "the specification says too little about inputs larger than the examples",
+    "agreement": {
+     "status": "agrees",
+     "draws": 100,
+     "completeness": 0.756,
+     "mutants_rejected": 183,
+     "mutants_accepted": 59,
+     "weak_witness": {
+      "args": [
+       [
+        [
+         3,
+         2,
+         -1
+        ],
+        [],
+        [
+         -4,
+         2,
+         2
+        ]
+       ],
+       2
+      ],
+      "reference_said": [
+       [
+        3,
+        2,
+        -1
+       ],
+       [],
+       [
+        -4,
+        2,
+        2
+       ]
+      ],
+      "also_accepts": [
+       [
+        -4,
+        2,
+        2
+       ],
+       [],
+       [
+        3,
+        2,
+        -1
+       ]
+      ]
+     }
+    },
+    "larger": {
+     "status": "agrees",
+     "draws": 60,
+     "completeness": 0.486,
+     "mutants_rejected": 123,
+     "mutants_accepted": 130,
+     "weak_witness": {
+      "args": [
+       [
+        [],
+        [
+         2,
+         -3
+        ],
+        [
+         4
+        ],
+        [
+         0,
+         1
+        ],
+        [],
+        [
+         1,
+         -2
+        ],
+        [
+         4,
+         0,
+         -1
+        ],
+        [
+         -2,
+         3,
+         2
+        ],
+        [
+         3,
+         -2,
+         -4
+        ],
+        [
+         1,
+         -3
+        ],
+        [],
+        [
+         -4,
+         1
+        ],
+        [
+         3
+        ],
+        [
+         -2,
+         -2,
+         1
+        ],
+        [
+         -3,
+         4,
+         4
+        ],
+        [],
+        [],
+        [],
+        []
+       ],
+       13
+      ],
+      "reference_said": [
+       [],
+       [
+        2,
+        -3
+       ],
+       [
+        4
+       ],
+       [
+        0,
+        1
+       ],
+       [],
+       [
+        1,
+        -2
+       ],
+       [
+        4,
+        0,
+        -1
+       ],
+       [
+        -2,
+        3,
+        2
+       ],
+       [
+        3,
+        -2,
+        -4
+       ],
+       [
+        1,
+        -3
+       ],
+       [],
+       [
+        -4,
+        1
+       ],
+       [
+        3
+       ],
+       [
+        -2,
+        -2,
+        1
+       ],
+       [
+        -3,
+        4,
+        4
+       ],
+       [],
+       [],
+       [],
+       []
+      ],
+      "also_accepts": [
+       [],
+       [
+        2,
+        -3
+       ],
+       [
+        4
+       ],
+       [
+        0,
+        1
+       ],
+       [],
+       [
+        1,
+        -2
+       ],
+       [
+        4,
+        0,
+        -1
+       ],
+       [
+        -2,
+        3,
+        2
+       ],
+       [
+        3,
+        -2,
+        -4
+       ],
+       [
+        1,
+        -3
+       ],
+       [],
+       [
+        -4,
+        1
+       ],
+       [
+        3
+       ],
+       [
+        -2,
+        -2,
+        1
+       ],
+       [
+        -3,
+        4,
+        4
+       ],
+       [],
+       [],
+       []
+      ]
+     },
+     "requires_caps_size": false
+    }
+   }
+  },
+  {
+   "source": "answer 3",
+   "function": {
+    "passes": false,
+    "why": "the specification says too little about inputs larger than the examples",
+    "agreement": {
+     "status": "agrees",
+     "draws": 100,
+     "completeness": 0.756,
+     "mutants_rejected": 183,
+     "mutants_accepted": 59,
+     "weak_witness": {
+      "args": [
+       [
+        [
+         3,
+         2,
+         -1
+        ],
+        [],
+        [
+         -4,
+         2,
+         2
+        ]
+       ],
+       2
+      ],
+      "reference_said": [
+       [
+        3,
+        2,
+        -1
+       ],
+       [],
+       [
+        -4,
+        2,
+        2
+       ]
+      ],
+      "also_accepts": [
+       [
+        -4,
+        2,
+        2
+       ],
+       [],
+       [
+        3,
+        2,
+        -1
+       ]
+      ]
+     }
+    },
+    "larger": {
+     "status": "agrees",
+     "draws": 60,
+     "completeness": 0.486,
+     "mutants_rejected": 123,
+     "mutants_accepted": 130,
+     "weak_witness": {
+      "args": [
+       [
+        [],
+        [
+         2,
+         -3
+        ],
+        [
+         4
+        ],
+        [
+         0,
+         1
+        ],
+        [],
+        [
+         1,
+         -2
+        ],
+        [
+         4,
+         0,
+         -1
+        ],
+        [
+         -2,
+         3,
+         2
+        ],
+        [
+         3,
+         -2,
+         -4
+        ],
+        [
+         1,
+         -3
+        ],
+        [],
+        [
+         -4,
+         1
+        ],
+        [
+         3
+        ],
+        [
+         -2,
+         -2,
+         1
+        ],
+        [
+         -3,
+         4,
+         4
+        ],
+        [],
+        [],
+        [],
+        []
+       ],
+       13
+      ],
+      "reference_said": [
+       [],
+       [
+        2,
+        -3
+       ],
+       [
+        4
+       ],
+       [
+        0,
+        1
+       ],
+       [],
+       [
+        1,
+        -2
+       ],
+       [
+        4,
+        0,
+        -1
+       ],
+       [
+        -2,
+        3,
+        2
+       ],
+       [
+        3,
+        -2,
+        -4
+       ],
+       [
+        1,
+        -3
+       ],
+       [],
+       [
+        -4,
+        1
+       ],
+       [
+        3
+       ],
+       [
+        -2,
+        -2,
+        1
+       ],
+       [
+        -3,
+        4,
+        4
+       ],
+       [],
+       [],
+       [],
+       []
+      ],
+      "also_accepts": [
+       [],
+       [
+        2,
+        -3
+       ],
+       [
+        4
+       ],
+       [
+        0,
+        1
+       ],
+       [],
+       [
+        1,
+        -2
+       ],
+       [
+        4,
+        0,
+        -1
+       ],
+       [
+        -2,
+        3,
+        2
+       ],
+       [
+        3,
+        -2,
+        -4
+       ],
+       [
+        1,
+        -3
+       ],
+       [],
+       [
+        -4,
+        1
+       ],
+       [
+        3
+       ],
+       [
+        -2,
+        -2,
+        1
+       ],
+       [
+        -3,
+        4,
+        4
+       ],
+       [],
+       [],
+       []
+      ]
+     },
+     "requires_caps_size": false
+    }
+   }
+  },
+  {
+   "source": "answer 4",
+   "function": {
+    "passes": false,
+    "why": "the specification says too little about inputs larger than the examples",
+    "agreement": {
+     "status": "agrees",
+     "draws": 100,
+     "completeness": 0.777,
+     "mutants_rejected": 188,
+     "mutants_accepted": 54,
+     "weak_witness": {
+      "args": [
+       [
+        [
+         3,
+         2,
+         -1
+        ],
+        [],
+        [
+         -4,
+         2,
+         2
+        ]
+       ],
+       2
+      ],
+      "reference_said": [
+       [
+        3,
+        2,
+        -1
+       ],
+       [],
+       [
+        -4,
+        2,
+        2
+       ]
+      ],
+      "also_accepts": [
+       [
+        -4,
+        2,
+        2
+       ],
+       [],
+       [
+        3,
+        2,
+        -1
+       ]
+      ]
+     }
+    },
+    "larger": {
+     "status": "agrees",
+     "draws": 60,
+     "completeness": 0.486,
+     "mutants_rejected": 123,
+     "mutants_accepted": 130,
+     "weak_witness": {
+      "args": [
+       [
+        [],
+        [
+         2,
+         -3
+        ],
+        [
+         4
+        ],
+        [
+         0,
+         1
+        ],
+        [],
+        [
+         1,
+         -2
+        ],
+        [
+         4,
+         0,
+         -1
+        ],
+        [
+         -2,
+         3,
+         2
+        ],
+        [
+         3,
+         -2,
+         -4
+        ],
+        [
+         1,
+         -3
+        ],
+        [],
+        [
+         -4,
+         1
+        ],
+        [
+         3
+        ],
+        [
+         -2,
+         -2,
+         1
+        ],
+        [
+         -3,
+         4,
+         4
+        ],
+        [],
+        [],
+        [],
+        []
+       ],
+       13
+      ],
+      "reference_said": [
+       [],
+       [
+        2,
+        -3
+       ],
+       [
+        4
+       ],
+       [
+        0,
+        1
+       ],
+       [],
+       [
+        1,
+        -2
+       ],
+       [
+        4,
+        0,
+        -1
+       ],
+       [
+        -2,
+        3,
+        2
+       ],
+       [
+        3,
+        -2,
+        -4
+       ],
+       [
+        1,
+        -3
+       ],
+       [],
+       [
+        -4,
+        1
+       ],
+       [
+        3
+       ],
+       [
+        -2,
+        -2,
+        1
+       ],
+       [
+        -3,
+        4,
+        4
+       ],
+       [],
+       [],
+       [],
+       []
+      ],
+      "also_accepts": [
+       [],
+       [
+        2,
+        -3
+       ],
+       [
+        4
+       ],
+       [
+        0,
+        1
+       ],
+       [],
+       [
+        1,
+        -2
+       ],
+       [
+        4,
+        0,
+        -1
+       ],
+       [
+        -2,
+        3,
+        2
+       ],
+       [
+        3,
+        -2,
+        -4
+       ],
+       [
+        1,
+        -3
+       ],
+       [],
+       [
+        -4,
+        1
+       ],
+       [
+        3
+       ],
+       [
+        -2,
+        -2,
+        1
+       ],
+       [
+        -3,
+        4,
+        4
+       ],
+       [],
+       [],
+       []
+      ]
+     },
+     "requires_caps_size": false
+    }
+   }
+  },
+  {
+   "source": "answer 5",
+   "function": {
+    "passes": false,
+    "why": "weak specification",
+    "agreement": {
+     "status": "agrees",
+     "draws": 100,
+     "completeness": 0.368,
+     "mutants_rejected": 89,
+     "mutants_accepted": 153,
+     "weak_witness": {
+      "args": [
+       [
+        [
+         3,
+         2,
+         -1
+        ],
+        [],
+        [
+         -4,
+         2,
+         2
+        ]
+       ],
+       2
+      ],
+      "reference_said": [
+       [
+        3,
+        2,
+        -1
+       ],
+       [],
+       [
+        -4,
+        2,
+        2
+       ]
+      ],
+      "also_accepts": [
+       [
+        3,
+        2,
+        -1
+       ],
+       []
+      ]
+     }
+    }
+   }
+  }
+ ],
+ "asked": {
+  "answers": 5,
+  "specifications": 3,
+  "bodies": 0
+ },
+ "inputs": {
+  "examples": [
+   "assert remove_tuples([(4, 5), (4, ), (8, 6, 7), (1, ), (3, 4, 6, 7)] , 1) == [(4, 5), (8, 6, 7), (3, 4, 6, 7)]",
+   "assert remove_tuples([(4, 5), (4,5), (6, 7), (1, 2, 3), (3, 4, 6, 7)] ,2) == [(1, 2, 3), (3, 4, 6, 7)]",
+   "assert remove_tuples([(1, 4, 4), (4, 3), (8, 6, 7), (1, ), (3, 6, 7)] , 3) == [(4, 3), (1,)]"
+  ],
+  "taken from the function": false,
+  "kinds": [
+   {
+    "args": [
+     "seq-of-seq",
+     "int"
+    ],
+    "expected": "seq-of-seq"
+   },
+   {
+    "args": [
+     "seq-of-seq",
+     "int"
+    ],
+    "expected": "seq-of-seq"
+   },
+   {
+    "args": [
+     "seq-of-seq",
+     "int"
+    ],
+    "expected": "seq-of-seq"
+   }
+  ],
+  "specification check": {
+   "seed": 1,
+   "draws": 100,
+   "larger draws": 60
+  }
+ },
+ "stopped at": "specification check",
+ "function": {
+  "code": "def remove_tuples(test_list, K):\r\n  res = [ele for ele in test_list if len(ele) != K]\r\n  return (res) ",
+  "doc": "Write a function to remove all the tuples with length k."
+ },
+ "seconds": 62.5
+}

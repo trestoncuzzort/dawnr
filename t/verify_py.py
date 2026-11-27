@@ -310,6 +310,33 @@ def entry_for(function: dict, tests: list[str]) -> tuple[dict, bool]:
     return entry, drawn
 
 
+# The stages a function can stop at, in the order it goes through them. A refusal line names its attempt (`answer 2`,
+# `specification 1, body 3`) and why. Each refusal is also kept as a record of its route, its stage and what it was
+# tried on, so that a panel run can say afterwards which function stopped where (t/verify_panel.py).
+STAGES = ("entry", "reply", "parse", "well formed", "examples", "other", "specification check", "same as the function",
+          "prover", "error")
+_GATE_STAGE = (("no reply from the model", "reply"), ("no task block", "reply"), ("does not parse", "parse"),
+               ("not well formed", "well formed"), ("specification changed", "well formed"), ("fails a test", "examples"))
+
+
+def _gate_stage(reason: str) -> str:
+    """The stage a cheap gate's refusal reason names (t/answer.py `candidates`, t/spec_first.py `accept`). A reason that
+    is not listed is "other", never a guess."""
+    return next((stage for start, stage in _GATE_STAGE if reason.startswith(start)), "other")
+
+
+def _refuse(out: dict, route: str, source: str, stage: str, reason: str, **detail) -> None:
+    """Keep one refusal twice: as its line in `refused`, and as a record with its details in `stages`."""
+    out["refused"].append(f"{source}: {reason}")
+    out["stages"].append({"route": route, "source": source, "stage": stage, "reason": reason, **detail})
+
+
+def _held(v: dict) -> dict:
+    """What spec_gate.judge found when it held a specification against the function, for the record."""
+    return {"passes": v.get("passes"), "why": v.get("why"), "agreement": v.get("agreement"),
+            **({"larger": v["larger"]} if "larger" in v else {})}
+
+
 def _ensures(spec: dict) -> str:
     """A specification's `ensures` clauses on one line, for a refusal a person can read."""
     return "`" + "; ".join(surface.pexpr(e) for e in spec.get("ensures", [])) + "`"
@@ -351,7 +378,29 @@ def _shown(text: str, task: dict, row: dict, proved: int, stage: dict, same: dic
             "same as yours on": same["inputs"], "python": gate.python_of(task, entry)}
 
 
+def _reached(error: Exception, out: dict, before: dict | None = None) -> None:
+    """Keep on `error`, as `reached`, the refusals and stages a route had gone through when `error` stopped it.
+
+    `before` holds the same for the route that ran first, when this is the second; those come first. Whoever catches
+    the error can then still say how far the function got (see t/verify_panel.py)."""
+    first = before or {}
+    error.reached = {"refused": list(first.get("refused", [])) + list(out["refused"]),
+                     "stages": list(first.get("stages", [])) + list(out["stages"])}
+
+
 def by_answers(entry: dict, function: dict, student, answers: int = 5, max_new: int = 1024, prover=gate.prove, jobs: int = 2) -> dict:
+    """Run the whole-answers route (`_by_answers`). An error it raises carries the refusals and stages reached so far
+    (`_reached`)."""
+    out = {"fn": entry["fn"], "tests": entry["rec"]["test_list"], "refused": [], "stages": [], "candidates": [], "shown": None,
+           "answers asked": 0}
+    try:
+        return _by_answers(out, entry, function, student, answers, max_new, prover, jobs)
+    except Exception as error:
+        _reached(error, out)
+        raise
+
+
+def _by_answers(out: dict, entry: dict, function: dict, student, answers: int, max_new: int, prover, jobs: int) -> dict:
     """`dawnr ask`'s route with the person's function standing where the independently written Python stands: the
     model is asked for whole answers (a program with its specification) from the docstring and the examples,
     without being shown the function; an answer's specification must hold at the function's answers and pin them
@@ -363,30 +412,37 @@ def by_answers(entry: dict, function: dict, student, answers: int = 5, max_new: 
     replies = [student([question], 0.0, 0, "q", max_new)[0][0]]
     for seed in range(1, answers):
         replies.append(student([question], TEMPERATURE, seed, "q", max_new)[0][0])
-    kept, refused = gate.candidates(replies, entry)
-    out = {"fn": fn, "tests": tests, "refused": refused, "shown": None, "answers asked": len(replies)}
+    out["answers asked"] = len(replies)
+    kept, lines = gate.candidates(replies, entry)
+    for line in lines:
+        source, reason = line.split(": ", 1)
+        _refuse(out, "answers", source, _gate_stage(reason), reason)
     for c in kept:
         label = f"answer {c['n']}"
         v = spec_gate.judge(c["task"], entry, code)
+        out["candidates"].append({"source": label, "function": _held(v)})
         if not v["passes"]:
             a = v.get("agreement") or {}
             if a.get("status") == "disagrees" and a.get("args") is not None:
                 call = f"{fn}({', '.join(json.dumps(x) for x in a['args'])}) == {json.dumps(a.get('reference_said'))}"
-                refused.append(f"{label}: {_ensures(c['task'])} is false at your function's own answer `{call}`")
+                _refuse(out, "answers", label, "specification check",
+                        f"{_ensures(c['task'])} is false at your function's own answer `{call}`", at=call, **_held(v))
             else:
-                refused.append(f"{label}: {_ensures(c['task'])}: {v['why']}")
+                _refuse(out, "answers", label, "specification check", f"{_ensures(c['task'])}: {v['why']}", **_held(v))
             continue
         same = to_python.check(c["task"], code, fn, tests, outside=0)
         if not same.get("agrees"):
             where = f" (`{same['first'][7:]}` is the program's answer, not yours)" if same.get("first") else ""
-            refused.append(f"{label}: it does not answer as your function does{where}")
+            _refuse(out, "answers", label, "same as the function", f"it does not answer as your function does{where}",
+                    inputs=same.get("inputs"), first=same.get("first"))
             continue
         named = se.rename_task(copy.deepcopy(c["task"]), f"answer_{c['n']}__{fn}")
         row = prover([named], jobs).get(named["name"])
         _level, proved = score_levels.answer_level("pass", row, None)
         if not proved:
             refuting = [k for k, cell in (row or {}).items() if str(cell).split(" / ")[0] == "refuted"]
-            refused.append(f"{label}: " + (f"refuted by {', '.join(refuting)}" if refuting else "no prover proved it"))
+            _refuse(out, "answers", label, "prover", f"refuted by {', '.join(refuting)}" if refuting else "no prover proved it",
+                    cells=dict(row or {}))
             continue
         out["shown"] = _shown(c["text"], c["task"], row, proved, v, same, entry)
         return out
@@ -401,51 +457,81 @@ def verify(entry: dict, function: dict, student, specs: int = 3, answers: int = 
     first = by_answers(entry, function, student, whole, max_new, prover, jobs) if whole else None
     if first and first["shown"]:
         return dict(first, route="answers")
-    second = by_specification(entry, function, student, specs, answers, max_new, prover, jobs)
+    try:
+        second = by_specification(entry, function, student, specs, answers, max_new, prover, jobs)
+    except Exception as error:
+        if first:                                               # the first route's refusals come first
+            error.reached = {"refused": first["refused"] + error.reached["refused"],
+                             "stages": first["stages"] + error.reached["stages"]}
+        raise
     if first:
         second["refused"] = first["refused"] + second["refused"]
+        second["stages"] = first["stages"] + second["stages"]
+        second["candidates"] = first["candidates"]
         second["answers asked"] = first["answers asked"]
     return dict(second, **({"route": "specification"} if second["shown"] else {}))
 
 
 def by_specification(entry: dict, function: dict, student, specs: int = 3, answers: int = 3, max_new: int = 1024,
                      prover=gate.prove, jobs: int = 2) -> dict:
+    """Run the specification-first route (`_by_specification`). An error it raises carries the refusals and stages
+    reached so far (`_reached`)."""
+    out = {"fn": entry["fn"], "tests": entry["rec"]["test_list"], "refused": [], "stages": [], "specifications": [], "shown": None,
+           "specifications asked": specs, "bodies asked": 0}
+    try:
+        return _by_specification(out, entry, function, student, specs, answers, max_new, prover, jobs)
+    except Exception as error:
+        _reached(error, out)
+        raise
+
+
+def _by_specification(out: dict, entry: dict, function: dict, student, specs: int, answers: int, max_new: int, prover, jobs: int) -> dict:
     """SAFE's two stages with the function shown (arXiv:2410.15756): specifications written from the function and
     its docstring, each held against the function, then bodies for a supported one, each proved.
     {"shown": {...} | None, "refused": [...], "why"?}."""
     fn, code, shown_code = entry["fn"], function["code"], function["shown"]
     tests = entry["rec"]["test_list"]
-    out = {"fn": fn, "tests": tests, "refused": [], "shown": None, "specifications asked": specs, "bodies asked": 0}
     written = []
     for attempt in range(specs):
         reply = student([spec_first_rows.spec_question(entry, shown_code)], 0.0 if attempt == 0 else TEMPERATURE,
                         100 + attempt, "q", max_new)[0][0]
         block = se.find_block(reply or "")
         if block is None:
-            out["refused"].append(f"specification {attempt + 1}: no t task in the reply")
+            _refuse(out, "specification", f"specification {attempt + 1}", "reply", "no t task in the reply")
             continue
         try:
             written.append((f"specification {attempt + 1}", surface.parse(block)))
         except Exception as error:                              # noqa: BLE001 -- the parser's message is the reason
-            out["refused"].append(f"specification {attempt + 1}: it does not parse ({str(error).split(': ', 1)[-1][:90]})")
+            _refuse(out, "specification", f"specification {attempt + 1}", "parse",
+                    f"it does not parse ({str(error).split(': ', 1)[-1][:90]})")
     record: list = []
     kept, _counts = spec_first.kept_specifications(written, entry, specs, record)
     tasks, false_at = dict(written), []
+    scored = {r["source"] for r in record}
+    # every specification written, with its verdict; one that does not survive its own printing is "not scored"
+    out["specifications"] = ([{"source": r["source"], "verdict": r["verdict"], "scores": r["scores"], "spec": r["spec"]}
+                              for r in record] + [{"source": s, "verdict": "not scored"} for s, _t in written if s not in scored])
     for r in record:
         if r["verdict"] in ("dropped", "unscorable"):
             said, example = _ensures(tasks[r["source"]]), _false_at(tasks[r["source"]], entry)
             if "unscorable" in r["scores"]:
-                out["refused"].append(f"{r['source']}: {said} cannot be judged on your examples ({r['scores']['unscorable']})")
+                _refuse(out, "specification", r["source"], "examples",
+                        f"{said} cannot be judged on your examples ({r['scores']['unscorable']})", scores=r["scores"])
             elif example:
                 false_at.append(example)
-                out["refused"].append(f"{r['source']}: {said} is false at your function's own answer `{example}`")
+                _refuse(out, "specification", r["source"], "examples", f"{said} is false at your function's own answer `{example}`",
+                        at=example, scores=r["scores"])
             else:
                 c = r["scores"].get("completeness")
-                out["refused"].append(f"{r['source']}: {said} says too little"
-                                      + (f": it accepts {100 * (1 - c):.0f}% of the wrong results tried on your examples" if c is not None else ""))
+                _refuse(out, "specification", r["source"], "examples", f"{said} says too little"
+                        + (f": it accepts {100 * (1 - c):.0f}% of the wrong results tried on your examples" if c is not None else ""),
+                        scores=r["scores"])
     supported = []
     for k in kept:                                              # the function itself decides what a specification is worth
         v = spec_gate.judge(k["task"], entry, code)
+        for judged in out["specifications"]:
+            if judged["source"] == k["source"] and judged["verdict"] == "kept":
+                judged["function"] = _held(v)
         if v["passes"]:
             supported.append({"label": k["source"], "spec": k["task"], "stage": v})
             continue
@@ -453,9 +539,10 @@ def by_specification(entry: dict, function: dict, student, specs: int = 3, answe
         if a.get("status") == "disagrees" and a.get("args") is not None:
             call = f"{fn}({', '.join(json.dumps(x) for x in a['args'])}) == {json.dumps(a.get('reference_said'))}"
             false_at.append(call)
-            out["refused"].append(f"{k['source']}: {_ensures(k['task'])} is false at your function's own answer `{call}`")
+            _refuse(out, "specification", k["source"], "specification check",
+                    f"{_ensures(k['task'])} is false at your function's own answer `{call}`", at=call, **_held(v))
         else:
-            out["refused"].append(f"{k['source']}: {_ensures(k['task'])}: {v['why']}")
+            _refuse(out, "specification", k["source"], "specification check", f"{_ensures(k['task'])}: {v['why']}", **_held(v))
     if not supported:
         why = "no specification the model wrote holds at your function's answers and pins them down"
         if false_at and function.get("doc") and len(false_at) == len([x for x in out["refused"] if "is false at your function's own answer" in x]) == len(written):
@@ -472,7 +559,7 @@ def by_specification(entry: dict, function: dict, student, specs: int = 3, answe
             label = f"{s['label']}, body {attempt + 1}"
             text, why = spec_first.accept(reply or "", s["spec"], entry)
             if text is None:
-                out["refused"].append(f"{label}: {why}")
+                _refuse(out, "specification", label, _gate_stage(why), why)
                 continue
             if text in seen:
                 continue
@@ -481,14 +568,16 @@ def by_specification(entry: dict, function: dict, student, specs: int = 3, answe
             same = to_python.check(task, code, fn, tests, outside=0)
             if not same.get("agrees"):
                 where = f" (`{same['first'][7:]}` is the proved program's answer, not yours)" if same.get("first") else ""
-                out["refused"].append(f"{label}: it does not answer as your function does{where}")
+                _refuse(out, "specification", label, "same as the function", f"it does not answer as your function does{where}",
+                        inputs=same.get("inputs"), first=same.get("first"))
                 continue
             named = se.rename_task(copy.deepcopy(task), f"answer_{out['bodies asked']}__{fn}")
             row = prover([named], jobs).get(named["name"])
             _level, proved = score_levels.answer_level("pass", row, None)
             if not proved:
                 refuting = [k for k, cell in (row or {}).items() if str(cell).split(" / ")[0] == "refuted"]
-                out["refused"].append(f"{label}: " + (f"refuted by {', '.join(refuting)}" if refuting else "no prover proved it"))
+                _refuse(out, "specification", label, "prover", f"refuted by {', '.join(refuting)}" if refuting else "no prover proved it",
+                        cells=dict(row or {}))
                 continue
             out["shown"] = _shown(text, task, row, proved, s["stage"], same, entry)
             return out

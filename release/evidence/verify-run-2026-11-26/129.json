@@ -1,0 +1,114 @@
+{
+ "id": 129,
+ "fn": "magic_square_test",
+ "verified": false,
+ "route": null,
+ "why": "no specification the model wrote holds at your function's answers and pins them down",
+ "twin": null,
+ "stages": [
+  {
+   "route": "answers",
+   "source": "answer 1",
+   "stage": "parse",
+   "reason": "does not parse (expected 'eof', found 'spec' [Task])"
+  },
+  {
+   "route": "answers",
+   "source": "answer 2",
+   "stage": "parse",
+   "reason": "does not parse (expected 'decreases', found '{' [Stmt])"
+  },
+  {
+   "route": "answers",
+   "source": "answer 3",
+   "stage": "parse",
+   "reason": "does not parse (expected 'eof', found 'spec' [Task])"
+  },
+  {
+   "route": "answers",
+   "source": "answer 4",
+   "stage": "well formed",
+   "reason": "not well formed (call of unknown fun is_magic)"
+  },
+  {
+   "route": "answers",
+   "source": "answer 5",
+   "stage": "parse",
+   "reason": "does not parse (expected '{', found 'n' [Stmt])"
+  },
+  {
+   "route": "specification",
+   "source": "specification 1",
+   "stage": "parse",
+   "reason": "it does not parse (expected '{', found 'n' [Stmt])"
+  },
+  {
+   "route": "specification",
+   "source": "specification 2",
+   "stage": "parse",
+   "reason": "it does not parse (unexpected character '&' [Id])"
+  },
+  {
+   "route": "specification",
+   "source": "specification 3",
+   "stage": "parse",
+   "reason": "it does not parse (expected 'task', found 'gate' [Task])"
+  }
+ ],
+ "refused": [
+  "answer 1: does not parse (expected 'eof', found 'spec' [Task])",
+  "answer 2: does not parse (expected 'decreases', found '{' [Stmt])",
+  "answer 3: does not parse (expected 'eof', found 'spec' [Task])",
+  "answer 4: not well formed (call of unknown fun is_magic)",
+  "answer 5: does not parse (expected '{', found 'n' [Stmt])",
+  "specification 1: it does not parse (expected '{', found 'n' [Stmt])",
+  "specification 2: it does not parse (unexpected character '&' [Id])",
+  "specification 3: it does not parse (expected 'task', found 'gate' [Task])"
+ ],
+ "specifications": [],
+ "candidates": [],
+ "asked": {
+  "answers": 5,
+  "specifications": 3,
+  "bodies": 0
+ },
+ "inputs": {
+  "examples": [
+   "assert magic_square_test([[7, 12, 1, 14], [2, 13, 8, 11], [16, 3, 10, 5], [9, 6, 15, 4]])==True",
+   "assert magic_square_test([[2, 7, 6], [9, 5, 1], [4, 3, 8]])==True",
+   "assert magic_square_test([[2, 7, 6], [9, 5, 1], [4, 3, 7]])==False"
+  ],
+  "taken from the function": false,
+  "kinds": [
+   {
+    "args": [
+     "seq-of-seq"
+    ],
+    "expected": "bool"
+   },
+   {
+    "args": [
+     "seq-of-seq"
+    ],
+    "expected": "bool"
+   },
+   {
+    "args": [
+     "seq-of-seq"
+    ],
+    "expected": "bool"
+   }
+  ],
+  "specification check": {
+   "seed": 1,
+   "draws": 100,
+   "larger draws": 60
+  }
+ },
+ "stopped at": "well formed",
+ "function": {
+  "code": "def magic_square_test(my_matrix):\r\n    iSize = len(my_matrix[0])\r\n    sum_list = []\r\n    sum_list.extend([sum (lines) for lines in my_matrix])   \r\n    for col in range(iSize):\r\n        sum_list.append(sum(row[col] for row in my_matrix))\r\n    result1 = 0\r\n    for i in range(0,iSize):\r\n        result1 +=my_matrix[i][i]\r\n    sum_list.append(result1)      \r\n    result2 = 0\r\n    for i in range(iSize-1,-1,-1):\r\n        result2 +=my_matrix[i][i]\r\n    sum_list.append(result2)\r\n    if len(set(sum_list))>1:\r\n        return False\r\n    return True",
+  "doc": "Write a function to calculate magic square."
+ },
+ "seconds": 125.8
+}

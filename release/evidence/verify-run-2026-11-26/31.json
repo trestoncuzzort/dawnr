@@ -1,0 +1,154 @@
+{
+ "id": 31,
+ "fn": "func",
+ "verified": false,
+ "route": null,
+ "why": "no specification the model wrote holds at your function's answers and pins them down. Every one it wrote from your docstring is false at an answer your function gives (`func([[1, 2, 6], [1, 3, 4, 5, 7, 8], [1, 3, 5, 6, 8, 9], [2, 5, 7, 11], [1, 4, 7, 8, 12]],3)==[5, 7, 1]`): either the model misread the docstring, or the function does not do what it says",
+ "twin": null,
+ "stages": [
+  {
+   "route": "answers",
+   "source": "answer 1",
+   "stage": "well formed",
+   "reason": "not well formed (call of unknown fun contains)"
+  },
+  {
+   "route": "answers",
+   "source": "answer 2",
+   "stage": "well formed",
+   "reason": "not well formed (counts[...] := writes counts, not an array parameter named in modifies)"
+  },
+  {
+   "route": "answers",
+   "source": "answer 3",
+   "stage": "well formed",
+   "reason": "not well formed (counts[...] := writes counts, not an array parameter named in modifies)"
+  },
+  {
+   "route": "answers",
+   "source": "answer 4",
+   "stage": "well formed",
+   "reason": "not well formed (counts[...] := writes counts, not an array parameter named in modifies)"
+  },
+  {
+   "route": "answers",
+   "source": "answer 5",
+   "stage": "well formed",
+   "reason": "not well formed (call of unknown fun contains)"
+  },
+  {
+   "route": "specification",
+   "source": "specification 3",
+   "stage": "parse",
+   "reason": "it does not parse (expected 'task', found 'gate' [Task])"
+  },
+  {
+   "route": "specification",
+   "source": "specification 1",
+   "stage": "examples",
+   "reason": "`len(r) == k; forall i in [0, len(r)) . exists j in [0, len(nums)) . exists m in [0, len(nums[j])) . nums[j][m] == r[i]; forall i in [0, len(r)) . forall j in [0, len(r)) . i != j ==> r[i] != r[j]; forall x in [0, 100) . (exists i in [0, len(r)) . r[i] == x) ==> (forall y in [0, 100) . (forall i in [0, len(r)) . r[i] != y) ==> count(nums, x) >= count(nums, y))` is false at your function's own answer `func([[1, 2, 6], [1, 3, 4, 5, 7, 8], [1, 3, 5, 6, 8, 9], [2, 5, 7, 11], [1, 4, 7, 8, 12]],3)==[5, 7, 1]`",
+   "at": "func([[1, 2, 6], [1, 3, 4, 5, 7, 8], [1, 3, 5, 6, 8, 9], [2, 5, 7, 11], [1, 4, 7, 8, 12]],3)==[5, 7, 1]",
+   "scores": {
+    "correctness": 0.0,
+    "completeness": 1.0,
+    "tests": 3,
+    "mutants": 20
+   }
+  },
+  {
+   "route": "specification",
+   "source": "specification 2",
+   "stage": "examples",
+   "reason": "`len(r) == k; forall i in [0, len(r)) . forall j in [0, len(r)) . i != j ==> r[i] != r[j]; forall i in [0, len(r)) . forall j in [0, len(nums)) . exists m in [0, len(nums[j])) . nums[j][m] == r[i]; forall x in [0, 20) . not (exists i in [0, len(r)) . r[i] == x) ==> (forall y in [0, len(r)) . count(nums, r[y]) >= count(nums, x))` is false at your function's own answer `func([[1, 2, 6], [1, 3, 4, 5, 7, 8], [1, 3, 5, 6, 8, 9], [2, 5, 7, 11], [1, 4, 7, 8, 12]],3)==[5, 7, 1]`",
+   "at": "func([[1, 2, 6], [1, 3, 4, 5, 7, 8], [1, 3, 5, 6, 8, 9], [2, 5, 7, 11], [1, 4, 7, 8, 12]],3)==[5, 7, 1]",
+   "scores": {
+    "correctness": 0.0,
+    "completeness": 1.0,
+    "tests": 3,
+    "mutants": 20
+   }
+  }
+ ],
+ "refused": [
+  "answer 1: not well formed (call of unknown fun contains)",
+  "answer 2: not well formed (counts[...] := writes counts, not an array parameter named in modifies)",
+  "answer 3: not well formed (counts[...] := writes counts, not an array parameter named in modifies)",
+  "answer 4: not well formed (counts[...] := writes counts, not an array parameter named in modifies)",
+  "answer 5: not well formed (call of unknown fun contains)",
+  "specification 3: it does not parse (expected 'task', found 'gate' [Task])",
+  "specification 1: `len(r) == k; forall i in [0, len(r)) . exists j in [0, len(nums)) . exists m in [0, len(nums[j])) . nums[j][m] == r[i]; forall i in [0, len(r)) . forall j in [0, len(r)) . i != j ==> r[i] != r[j]; forall x in [0, 100) . (exists i in [0, len(r)) . r[i] == x) ==> (forall y in [0, 100) . (forall i in [0, len(r)) . r[i] != y) ==> count(nums, x) >= count(nums, y))` is false at your function's own answer `func([[1, 2, 6], [1, 3, 4, 5, 7, 8], [1, 3, 5, 6, 8, 9], [2, 5, 7, 11], [1, 4, 7, 8, 12]],3)==[5, 7, 1]`",
+  "specification 2: `len(r) == k; forall i in [0, len(r)) . forall j in [0, len(r)) . i != j ==> r[i] != r[j]; forall i in [0, len(r)) . forall j in [0, len(nums)) . exists m in [0, len(nums[j])) . nums[j][m] == r[i]; forall x in [0, 20) . not (exists i in [0, len(r)) . r[i] == x) ==> (forall y in [0, len(r)) . count(nums, r[y]) >= count(nums, x))` is false at your function's own answer `func([[1, 2, 6], [1, 3, 4, 5, 7, 8], [1, 3, 5, 6, 8, 9], [2, 5, 7, 11], [1, 4, 7, 8, 12]],3)==[5, 7, 1]`"
+ ],
+ "specifications": [
+  {
+   "source": "specification 1",
+   "verdict": "dropped",
+   "scores": {
+    "correctness": 0.0,
+    "completeness": 1.0,
+    "tests": 3,
+    "mutants": 20
+   },
+   "spec": "t 1\ngate quantifiers\ntask f(nums: seq<seq>, k: int) returns (r: seq)\n  requires k >= 0\n  requires k <= 100\n  requires forall i in [0, len(nums)) . len(nums[i]) >= 0\n  ensures len(r) == k\n  ensures forall i in [0, len(r)) . exists j in [0, len(nums)) . exists m in [0, len(nums[j])) . nums[j][m] == r[i]\n  ensures forall i in [0, len(r)) . forall j in [0, len(r)) . i != j ==> r[i] != r[j]\n  ensures forall x in [0, 100) . (exists i in [0, len(r)) . r[i] == x) ==> (forall y in [0, 100) . (forall i in [0, len(r)) . r[i] != y) ==> count(nums, x) >= count(nums, y))\nspec fun count(nums: seq<seq>, x: int): int\n  decreases len(nums)\n= if len(nums) == 0 then 0 else (if contains(nums[0], x) then 1 else 0) + count(nums[1..len(nums)], x)\nspec fun contains(row: seq, x: int): bool\n  decreases len(row)\n= if len(row) == 0 then false else row[0] == x or contains(row[1..len(row)], x)\n{\n}\n"
+  },
+  {
+   "source": "specification 2",
+   "verdict": "dropped",
+   "scores": {
+    "correctness": 0.0,
+    "completeness": 1.0,
+    "tests": 3,
+    "mutants": 20
+   },
+   "spec": "t 1\ngate quantifiers\ntask f(nums: seq<seq>, k: int) returns (r: seq)\n  requires k >= 0\n  requires k <= len(nums)\n  ensures len(r) == k\n  ensures forall i in [0, len(r)) . forall j in [0, len(r)) . i != j ==> r[i] != r[j]\n  ensures forall i in [0, len(r)) . forall j in [0, len(nums)) . exists m in [0, len(nums[j])) . nums[j][m] == r[i]\n  ensures forall x in [0, 20) . not (exists i in [0, len(r)) . r[i] == x) ==> (forall y in [0, len(r)) . count(nums, r[y]) >= count(nums, x))\nspec fun count(nums: seq<seq>, x: int): int\n  decreases len(nums)\n= if len(nums) == 0 then 0 else if exists i in [0, len(nums[0])) . nums[0][i] == x then 1 + count(nums[1..len(nums)], x) else count(nums[1..len(nums)], x)\n{\n}\n"
+  }
+ ],
+ "candidates": [],
+ "asked": {
+  "answers": 5,
+  "specifications": 3,
+  "bodies": 0
+ },
+ "inputs": {
+  "examples": [
+   "assert func([[1, 2, 6], [1, 3, 4, 5, 7, 8], [1, 3, 5, 6, 8, 9], [2, 5, 7, 11], [1, 4, 7, 8, 12]],3)==[5, 7, 1]",
+   "assert func([[1, 2, 6], [1, 3, 4, 5, 7, 8], [1, 3, 5, 6, 8, 9], [2, 5, 7, 11], [1, 4, 7, 8, 12]],1)==[1]",
+   "assert func([[1, 2, 6], [1, 3, 4, 5, 7, 8], [1, 3, 5, 6, 8, 9], [2, 5, 7, 11], [1, 4, 7, 8, 12]],5)==[6, 5, 7, 8, 1]"
+  ],
+  "taken from the function": false,
+  "kinds": [
+   {
+    "args": [
+     "seq-of-seq",
+     "int"
+    ],
+    "expected": "seq"
+   },
+   {
+    "args": [
+     "seq-of-seq",
+     "int"
+    ],
+    "expected": "seq"
+   },
+   {
+    "args": [
+     "seq-of-seq",
+     "int"
+    ],
+    "expected": "seq"
+   }
+  ],
+  "specification check": {
+   "seed": 1,
+   "draws": 100,
+   "larger draws": 60
+  }
+ },
+ "stopped at": "examples",
+ "function": {
+  "code": "def func(nums, k):\r\n    import collections\r\n    d = collections.defaultdict(int)\r\n    for row in nums:\r\n        for i in row:\r\n            d[i] += 1\r\n    temp = []\r\n    import heapq\r\n    for key, v in d.items():\r\n        if len(temp) < k:\r\n            temp.append((v, key))\r\n            if len(temp) == k:\r\n                heapq.heapify(temp)\r\n        else:\r\n            if v > temp[0][0]:\r\n                heapq.heappop(temp)\r\n                heapq.heappush(temp, (v, key))\r\n    result = []\r\n    while temp:\r\n        v, key = heapq.heappop(temp)\r\n        result.append(key)\r\n    return result",
+  "doc": "Write a function to find the top k integers that occur most frequently from given lists of sorted and distinct integers using heap queue algorithm."
+ },
+ "seconds": 109.5
+}

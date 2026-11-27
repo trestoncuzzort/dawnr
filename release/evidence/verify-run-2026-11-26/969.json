@@ -1,0 +1,114 @@
+{
+ "id": 969,
+ "fn": "join_tuples",
+ "verified": false,
+ "route": null,
+ "why": "no specification the model wrote holds at your function's answers and pins them down",
+ "twin": null,
+ "stages": [
+  {
+   "route": "answers",
+   "source": "answer 1",
+   "stage": "well formed",
+   "reason": "not well formed (ctor of unknown datatype 'group')"
+  },
+  {
+   "route": "answers",
+   "source": "answer 2",
+   "stage": "examples",
+   "reason": "fails a test (`assert join_tuples([(5, 6), (5, 7), (6, 8), (6, 10), (7, 13)] ) == [(5, 6, 7), (6, 8, 10),`: it returns [[5, 6, 7]])"
+  },
+  {
+   "route": "answers",
+   "source": "answer 3",
+   "stage": "parse",
+   "reason": "does not parse (expected 'decreases', found '{' [Stmt])"
+  },
+  {
+   "route": "answers",
+   "source": "answer 4",
+   "stage": "examples",
+   "reason": "fails a test (`assert join_tuples([(5, 6), (5, 7), (6, 8), (6, 10), (7, 13)] ) == [(5, 6, 7), (6, 8, 10),`: it returns [[5, 6, 7]])"
+  },
+  {
+   "route": "answers",
+   "source": "answer 5",
+   "stage": "well formed",
+   "reason": "not well formed (result[...] := writes result, not an array parameter named in modifies)"
+  },
+  {
+   "route": "specification",
+   "source": "specification 1",
+   "stage": "parse",
+   "reason": "it does not parse (expected 'in', found 'end of input' [Expr])"
+  },
+  {
+   "route": "specification",
+   "source": "specification 2",
+   "stage": "parse",
+   "reason": "it does not parse (expected '.', found '[' [Expr])"
+  },
+  {
+   "route": "specification",
+   "source": "specification 3",
+   "stage": "parse",
+   "reason": "it does not parse (expected ')', found ']' [Expr])"
+  }
+ ],
+ "refused": [
+  "answer 1: not well formed (ctor of unknown datatype 'group')",
+  "answer 2: fails a test (`assert join_tuples([(5, 6), (5, 7), (6, 8), (6, 10), (7, 13)] ) == [(5, 6, 7), (6, 8, 10),`: it returns [[5, 6, 7]])",
+  "answer 3: does not parse (expected 'decreases', found '{' [Stmt])",
+  "answer 4: fails a test (`assert join_tuples([(5, 6), (5, 7), (6, 8), (6, 10), (7, 13)] ) == [(5, 6, 7), (6, 8, 10),`: it returns [[5, 6, 7]])",
+  "answer 5: not well formed (result[...] := writes result, not an array parameter named in modifies)",
+  "specification 1: it does not parse (expected 'in', found 'end of input' [Expr])",
+  "specification 2: it does not parse (expected '.', found '[' [Expr])",
+  "specification 3: it does not parse (expected ')', found ']' [Expr])"
+ ],
+ "specifications": [],
+ "candidates": [],
+ "asked": {
+  "answers": 5,
+  "specifications": 3,
+  "bodies": 0
+ },
+ "inputs": {
+  "examples": [
+   "assert join_tuples([(5, 6), (5, 7), (6, 8), (6, 10), (7, 13)] ) == [(5, 6, 7), (6, 8, 10), (7, 13)]",
+   "assert join_tuples([(6, 7), (6, 8), (7, 9), (7, 11), (8, 14)] ) == [(6, 7, 8), (7, 9, 11), (8, 14)]",
+   "assert join_tuples([(7, 8), (7, 9), (8, 10), (8, 12), (9, 15)] ) == [(7, 8, 9), (8, 10, 12), (9, 15)]"
+  ],
+  "taken from the function": false,
+  "kinds": [
+   {
+    "args": [
+     "seq-of-seq"
+    ],
+    "expected": "seq-of-seq"
+   },
+   {
+    "args": [
+     "seq-of-seq"
+    ],
+    "expected": "seq-of-seq"
+   },
+   {
+    "args": [
+     "seq-of-seq"
+    ],
+    "expected": "seq-of-seq"
+   }
+  ],
+  "specification check": {
+   "seed": 1,
+   "draws": 100,
+   "larger draws": 60
+  }
+ },
+ "stopped at": "examples",
+ "function": {
+  "code": "def join_tuples(test_list):\r\n  res = []\r\n  for sub in test_list:\r\n    if res and res[-1][0] == sub[0]:\r\n      res[-1].extend(sub[1:])\r\n    else:\r\n      res.append([ele for ele in sub])\r\n  res = list(map(tuple, res))\r\n  return (res) ",
+  "doc": "Write a function to join the tuples if they have similar initial elements."
+ },
+ "seconds": 150.3
+}

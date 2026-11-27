@@ -1,0 +1,136 @@
+{
+ "id": 75,
+ "fn": "find_tuples",
+ "verified": false,
+ "route": null,
+ "why": "no specification the model wrote holds at your function's answers and pins them down. Every one it wrote from your docstring is false at an answer your function gives (`find_tuples([(6, 24, 12), (7, 9, 6), (12, 18, 21)], 6) == '[(6, 24, 12)]'`): either the model misread the docstring, or the function does not do what it says",
+ "twin": null,
+ "stages": [
+  {
+   "route": "answers",
+   "source": "answer 1",
+   "stage": "well formed",
+   "reason": "not well formed (== wants two values of one type, found 'int' and 'seq')"
+  },
+  {
+   "route": "answers",
+   "source": "answer 2",
+   "stage": "parse",
+   "reason": "does not parse (expected 'id', found 't' [Stmt])"
+  },
+  {
+   "route": "answers",
+   "source": "answer 3",
+   "stage": "well formed",
+   "reason": "not well formed (== wants two values of one type, found 'int' and 'seq')"
+  },
+  {
+   "route": "answers",
+   "source": "answer 4",
+   "stage": "parse",
+   "reason": "does not parse (expected 'eof', found 'spec' [Task])"
+  },
+  {
+   "route": "answers",
+   "source": "answer 5",
+   "stage": "parse",
+   "reason": "does not parse (expected ')', found ']' [Expr])"
+  },
+  {
+   "route": "specification",
+   "source": "specification 2",
+   "stage": "parse",
+   "reason": "it does not parse (expected ')', found ']' [Expr])"
+  },
+  {
+   "route": "specification",
+   "source": "specification 3",
+   "stage": "parse",
+   "reason": "it does not parse (expected 'task', found 'spec' [Task])"
+  },
+  {
+   "route": "specification",
+   "source": "specification 1",
+   "stage": "examples",
+   "reason": "`len(r) <= len(test_list); forall i in [0, len(r)) . forall j in [0, len(test_list[i])) . test_list[i][j] % K == 0; forall i in [0, len(test_list)) . (forall j in [0, len(test_list[i])) . test_list[i][j] % K == 0) ==> (exists k in [0, len(r)) . r[k] == test_list[i]); forall i in [0, len(r)) . forall j in [0, len(r)) . i != j ==> r[i] != r[j]` is false at your function's own answer `find_tuples([(6, 24, 12), (7, 9, 6), (12, 18, 21)], 6) == '[(6, 24, 12)]'`",
+   "at": "find_tuples([(6, 24, 12), (7, 9, 6), (12, 18, 21)], 6) == '[(6, 24, 12)]'",
+   "scores": {
+    "correctness": 0.0,
+    "completeness": 1.0,
+    "tests": 3,
+    "mutants": 24
+   }
+  }
+ ],
+ "refused": [
+  "answer 1: not well formed (== wants two values of one type, found 'int' and 'seq')",
+  "answer 2: does not parse (expected 'id', found 't' [Stmt])",
+  "answer 3: not well formed (== wants two values of one type, found 'int' and 'seq')",
+  "answer 4: does not parse (expected 'eof', found 'spec' [Task])",
+  "answer 5: does not parse (expected ')', found ']' [Expr])",
+  "specification 2: it does not parse (expected ')', found ']' [Expr])",
+  "specification 3: it does not parse (expected 'task', found 'spec' [Task])",
+  "specification 1: `len(r) <= len(test_list); forall i in [0, len(r)) . forall j in [0, len(test_list[i])) . test_list[i][j] % K == 0; forall i in [0, len(test_list)) . (forall j in [0, len(test_list[i])) . test_list[i][j] % K == 0) ==> (exists k in [0, len(r)) . r[k] == test_list[i]); forall i in [0, len(r)) . forall j in [0, len(r)) . i != j ==> r[i] != r[j]` is false at your function's own answer `find_tuples([(6, 24, 12), (7, 9, 6), (12, 18, 21)], 6) == '[(6, 24, 12)]'`"
+ ],
+ "specifications": [
+  {
+   "source": "specification 1",
+   "verdict": "dropped",
+   "scores": {
+    "correctness": 0.0,
+    "completeness": 1.0,
+    "tests": 3,
+    "mutants": 24
+   },
+   "spec": "t 1\ngate quantifiers\ntask f(test_list: seq<seq>, K: int) returns (r: seq)\n  requires K > 0\n  ensures len(r) <= len(test_list)\n  ensures forall i in [0, len(r)) . forall j in [0, len(test_list[i])) . test_list[i][j] % K == 0\n  ensures forall i in [0, len(test_list)) . (forall j in [0, len(test_list[i])) . test_list[i][j] % K == 0) ==> (exists k in [0, len(r)) . r[k] == test_list[i])\n  ensures forall i in [0, len(r)) . forall j in [0, len(r)) . i != j ==> r[i] != r[j]\n{\n}\n"
+  }
+ ],
+ "candidates": [],
+ "asked": {
+  "answers": 5,
+  "specifications": 3,
+  "bodies": 0
+ },
+ "inputs": {
+  "examples": [
+   "assert find_tuples([(6, 24, 12), (7, 9, 6), (12, 18, 21)], 6) == '[(6, 24, 12)]'",
+   "assert find_tuples([(5, 25, 30), (4, 2, 3), (7, 8, 9)], 5) == '[(5, 25, 30)]'",
+   "assert find_tuples([(7, 9, 16), (8, 16, 4), (19, 17, 18)], 4) == '[(8, 16, 4)]'"
+  ],
+  "taken from the function": false,
+  "kinds": [
+   {
+    "args": [
+     "seq-of-seq",
+     "int"
+    ],
+    "expected": "seq"
+   },
+   {
+    "args": [
+     "seq-of-seq",
+     "int"
+    ],
+    "expected": "seq"
+   },
+   {
+    "args": [
+     "seq-of-seq",
+     "int"
+    ],
+    "expected": "seq"
+   }
+  ],
+  "specification check": {
+   "seed": 1,
+   "draws": 100,
+   "larger draws": 60
+  }
+ },
+ "stopped at": "examples",
+ "function": {
+  "code": "def find_tuples(test_list, K):\r\n  res = [sub for sub in test_list if all(ele % K == 0 for ele in sub)]\r\n  return (str(res)) ",
+  "doc": "Write a function to find tuples which have all elements divisible by k from the given list of tuples."
+ },
+ "seconds": 66.2
+}

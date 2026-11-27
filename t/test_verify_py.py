@@ -239,6 +239,31 @@ def test_verify_falls_back_to_writing_the_specification_first_and_says_which_rou
     assert "answers asked" not in verify_py.verify(entry, function(), student(SPEC, BODY), specs=1, answers=1, whole=0, prover=proving)
 
 
+@needs_sandbox
+def test_each_refusal_is_kept_with_its_route_its_stage_and_what_it_was_tried_on():
+    entry, _ = verify_py.entry_for(function(), ["assert double(3) == 6", "assert double(0) == 0"])
+    wrong = t("r == 2 * n + 1", "  r := 2 * n + 1;\n")
+    model = student(wrong, "no t here", WRONG_SPEC, SPEC, ODD_ONE_OUT, BODY)
+    r = verify_py.verify(entry, function(), model, specs=3, answers=2, whole=1,
+                         prover=prover(lambda task: dict(ALL, dafny="refuted / refuted")))
+    assert r["shown"] is None and len(r["stages"]) == len(r["refused"]) == 5
+    # one structured entry per refusal line, in the same order and with the same text
+    assert [f"{s['source']}: {s['reason']}" for s in r["stages"]] == r["refused"]
+    assert [(s["route"], s["source"], s["stage"]) for s in r["stages"]] == [
+        ("answers", "answer 1", "examples"),
+        ("specification", "specification 1", "reply"),
+        ("specification", "specification 2", "examples"),
+        ("specification", "specification 3, body 1", "same as the function"),
+        ("specification", "specification 3, body 2", "prover")]
+    assert r["stages"][2]["at"] == "double(3) == 6"
+    assert r["stages"][3]["inputs"] >= 10 and r["stages"][3]["first"].startswith("assert double(*[7]) == 0")
+    assert r["stages"][4]["cells"]["dafny"] == "refuted / refuted"
+    # the specification that passed, and what holding it against the function's own answers found
+    judged = r["specifications"]
+    assert [(x["source"], x["verdict"]) for x in judged] == [("specification 2", "dropped"), ("specification 3", "kept")]
+    assert judged[1]["function"]["passes"] and judged[1]["function"]["agreement"]["draws"] >= 10
+
+
 def test_an_annotation_is_read_by_its_structure_in_any_spelling():
     src = ("from typing import *\nT = TypeVar('T')\n"
            "def f(a: tuple, b: Tuple[int, ...], c: List[Tuple[int, int]], d: list, e: typing.List[int], g: dict, h: List[List[T]],\n"

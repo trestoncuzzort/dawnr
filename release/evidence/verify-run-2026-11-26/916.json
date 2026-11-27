@@ -1,0 +1,534 @@
+{
+ "id": 916,
+ "fn": "find_triplet_array",
+ "verified": false,
+ "route": null,
+ "why": "no specification the model wrote holds at your function's answers and pins them down",
+ "twin": null,
+ "stages": [
+  {
+   "route": "answers",
+   "source": "answer 4",
+   "stage": "examples",
+   "reason": "fails a test (`assert find_triplet_array([1, 4, 45, 6, 10, 8], 6, 22) == (4, 10, 8)`: requires-excluded)"
+  },
+  {
+   "route": "answers",
+   "source": "answer 5",
+   "stage": "well formed",
+   "reason": "not well formed (unbound var i)"
+  },
+  {
+   "route": "answers",
+   "source": "answer 1",
+   "stage": "specification check",
+   "reason": "`len(r) == 0 or len(r) == 3 and r[0] + r[1] + r[2] == target; len(r) == 0 ==> (forall i in [0, n) . forall j in [i + 1, n) . forall k in [j + 1, n) . arr[i] + arr[j] + arr[k] != target); len(r) == 3 ==> (exists i in [0, n) . exists j in [i + 1, n) . exists k in [j + 1, n) . arr[i] == r[0] and arr[j] == r[1] and arr[k] == r[2])`: too few draws inside the requires",
+   "passes": false,
+   "why": "too few draws inside the requires",
+   "agreement": {
+    "status": "agrees",
+    "draws": 2,
+    "outside_requires": 3,
+    "completeness": 0.938,
+    "mutants_rejected": 15,
+    "mutants_accepted": 1,
+    "skipped": {
+     "reference result has no t value": 43
+    },
+    "weak_witness": {
+     "args": [
+      [
+       8,
+       3,
+       5,
+       3,
+       10,
+       3,
+       12
+      ],
+      7,
+      18
+     ],
+     "reference_said": [
+      3,
+      5,
+      10
+     ],
+     "also_accepts": [
+      5,
+      3,
+      10
+     ]
+    }
+   }
+  },
+  {
+   "route": "answers",
+   "source": "answer 2",
+   "stage": "specification check",
+   "reason": "`len(r) == 0 or r[0] + r[1] + r[2] == target; len(r) == 0 ==> (forall i in [0, n) . forall j in [i + 1, n) . forall k in [j + 1, n) . s[i] + s[j] + s[k] != target)`: too few draws inside the requires",
+   "passes": false,
+   "why": "too few draws inside the requires",
+   "agreement": {
+    "status": "agrees",
+    "draws": 4,
+    "outside_requires": 1,
+    "completeness": 0.625,
+    "mutants_rejected": 20,
+    "mutants_accepted": 12,
+    "skipped": {
+     "reference result has no t value": 43
+    },
+    "weak_witness": {
+     "args": [
+      [
+       8,
+       3,
+       5,
+       3,
+       10,
+       3,
+       12
+      ],
+      7,
+      18
+     ],
+     "reference_said": [
+      3,
+      5,
+      10
+     ],
+     "also_accepts": [
+      10,
+      5,
+      3
+     ]
+    }
+   }
+  },
+  {
+   "route": "answers",
+   "source": "answer 3",
+   "stage": "specification check",
+   "reason": "`len(r) == 0 or len(r) == 3; len(r) == 3 ==> r[0] + r[1] + r[2] == target; len(r) == 3 ==> (forall i in [0, n) . arr[i] == r[0] or arr[i] == r[1] or arr[i] == r[2])` is false at your function's own answer `find_triplet_array([8, 3, 5, 3, 10, 3, 12], 7, 18) == [3, 5, 10]`",
+   "at": "find_triplet_array([8, 3, 5, 3, 10, 3, 12], 7, 18) == [3, 5, 10]",
+   "passes": false,
+   "why": "the specification is false at the Python's answer",
+   "agreement": {
+    "status": "disagrees",
+    "args": [
+     [
+      8,
+      3,
+      5,
+      3,
+      10,
+      3,
+      12
+     ],
+     7,
+     18
+    ],
+    "reference_said": [
+     3,
+     5,
+     10
+    ],
+    "ensures": 2
+   }
+  },
+  {
+   "route": "specification",
+   "source": "specification 3",
+   "stage": "examples",
+   "reason": "`len(r) == 3; r[0] + r[1] + r[2] == sum; r[0] != r[1]; r[0] != r[2]; r[1] != r[2]; forall k in [0, arr_size) . k < arr_size ==> A[k] == r[0] or A[k] == r[1] or A[k] == r[2]` is false at your function's own answer `find_triplet_array([1, 4, 45, 6, 10, 8], 6, 22) == (4, 10, 8)`",
+   "at": "find_triplet_array([1, 4, 45, 6, 10, 8], 6, 22) == (4, 10, 8)",
+   "scores": {
+    "correctness": 0.0,
+    "completeness": 1.0,
+    "tests": 3,
+    "mutants": 23
+   }
+  },
+  {
+   "route": "specification",
+   "source": "specification 1",
+   "stage": "specification check",
+   "reason": "`len(r) == 3; r[0] + r[1] + r[2] == sum; exists i in [0, arr_size) . exists j in [i + 1, arr_size) . exists k in [j + 1, arr_size) . A[i] == r[0] and A[j] == r[1] and A[k] == r[2]`: too few draws inside the requires",
+   "passes": false,
+   "why": "too few draws inside the requires",
+   "agreement": {
+    "status": "agrees",
+    "draws": 2,
+    "outside_requires": 3,
+    "completeness": 0.938,
+    "mutants_rejected": 15,
+    "mutants_accepted": 1,
+    "skipped": {
+     "reference result has no t value": 43
+    },
+    "weak_witness": {
+     "args": [
+      [
+       8,
+       3,
+       5,
+       3,
+       10,
+       3,
+       12
+      ],
+      7,
+      18
+     ],
+     "reference_said": [
+      3,
+      5,
+      10
+     ],
+     "also_accepts": [
+      5,
+      3,
+      10
+     ]
+    }
+   }
+  },
+  {
+   "route": "specification",
+   "source": "specification 2",
+   "stage": "specification check",
+   "reason": "`len(r) == 3; r[0] + r[1] + r[2] == target; exists i in [0, arr_size - 2) . exists j in [i + 1, arr_size - 1) . exists k in [j + 1, arr_size) . A[i] == r[0] and A[j] == r[1] and A[k] == r[2]`: too few draws inside the requires",
+   "passes": false,
+   "why": "too few draws inside the requires",
+   "agreement": {
+    "status": "agrees",
+    "draws": 4,
+    "outside_requires": 1,
+    "completeness": 0.969,
+    "mutants_rejected": 31,
+    "mutants_accepted": 1,
+    "skipped": {
+     "reference result has no t value": 43
+    },
+    "weak_witness": {
+     "args": [
+      [
+       8,
+       3,
+       5,
+       3,
+       10,
+       3,
+       12
+      ],
+      7,
+      18
+     ],
+     "reference_said": [
+      3,
+      5,
+      10
+     ],
+     "also_accepts": [
+      5,
+      3,
+      10
+     ]
+    }
+   }
+  }
+ ],
+ "refused": [
+  "answer 4: fails a test (`assert find_triplet_array([1, 4, 45, 6, 10, 8], 6, 22) == (4, 10, 8)`: requires-excluded)",
+  "answer 5: not well formed (unbound var i)",
+  "answer 1: `len(r) == 0 or len(r) == 3 and r[0] + r[1] + r[2] == target; len(r) == 0 ==> (forall i in [0, n) . forall j in [i + 1, n) . forall k in [j + 1, n) . arr[i] + arr[j] + arr[k] != target); len(r) == 3 ==> (exists i in [0, n) . exists j in [i + 1, n) . exists k in [j + 1, n) . arr[i] == r[0] and arr[j] == r[1] and arr[k] == r[2])`: too few draws inside the requires",
+  "answer 2: `len(r) == 0 or r[0] + r[1] + r[2] == target; len(r) == 0 ==> (forall i in [0, n) . forall j in [i + 1, n) . forall k in [j + 1, n) . s[i] + s[j] + s[k] != target)`: too few draws inside the requires",
+  "answer 3: `len(r) == 0 or len(r) == 3; len(r) == 3 ==> r[0] + r[1] + r[2] == target; len(r) == 3 ==> (forall i in [0, n) . arr[i] == r[0] or arr[i] == r[1] or arr[i] == r[2])` is false at your function's own answer `find_triplet_array([8, 3, 5, 3, 10, 3, 12], 7, 18) == [3, 5, 10]`",
+  "specification 3: `len(r) == 3; r[0] + r[1] + r[2] == sum; r[0] != r[1]; r[0] != r[2]; r[1] != r[2]; forall k in [0, arr_size) . k < arr_size ==> A[k] == r[0] or A[k] == r[1] or A[k] == r[2]` is false at your function's own answer `find_triplet_array([1, 4, 45, 6, 10, 8], 6, 22) == (4, 10, 8)`",
+  "specification 1: `len(r) == 3; r[0] + r[1] + r[2] == sum; exists i in [0, arr_size) . exists j in [i + 1, arr_size) . exists k in [j + 1, arr_size) . A[i] == r[0] and A[j] == r[1] and A[k] == r[2]`: too few draws inside the requires",
+  "specification 2: `len(r) == 3; r[0] + r[1] + r[2] == target; exists i in [0, arr_size - 2) . exists j in [i + 1, arr_size - 1) . exists k in [j + 1, arr_size) . A[i] == r[0] and A[j] == r[1] and A[k] == r[2]`: too few draws inside the requires"
+ ],
+ "specifications": [
+  {
+   "source": "specification 1",
+   "verdict": "kept",
+   "scores": {
+    "correctness": 1.0,
+    "completeness": 1.0,
+    "tests": 3,
+    "mutants": 23
+   },
+   "spec": "t 1\ntask f(A: seq, arr_size: int, sum: int) returns (r: seq)\n  requires arr_size == len(A)\n  requires arr_size >= 3\n  ensures len(r) == 3\n  ensures r[0] + r[1] + r[2] == sum\n  ensures exists i in [0, arr_size) . exists j in [i + 1, arr_size) . exists k in [j + 1, arr_size) . A[i] == r[0] and A[j] == r[1] and A[k] == r[2]\n{\n}\n",
+   "function": {
+    "passes": false,
+    "why": "too few draws inside the requires",
+    "agreement": {
+     "status": "agrees",
+     "draws": 2,
+     "outside_requires": 3,
+     "completeness": 0.938,
+     "mutants_rejected": 15,
+     "mutants_accepted": 1,
+     "skipped": {
+      "reference result has no t value": 43
+     },
+     "weak_witness": {
+      "args": [
+       [
+        8,
+        3,
+        5,
+        3,
+        10,
+        3,
+        12
+       ],
+       7,
+       18
+      ],
+      "reference_said": [
+       3,
+       5,
+       10
+      ],
+      "also_accepts": [
+       5,
+       3,
+       10
+      ]
+     }
+    }
+   }
+  },
+  {
+   "source": "specification 2",
+   "verdict": "kept",
+   "scores": {
+    "correctness": 1.0,
+    "completeness": 1.0,
+    "tests": 3,
+    "mutants": 23
+   },
+   "spec": "t 1\ntask f(A: seq, arr_size: int, target: int) returns (r: seq)\n  requires arr_size >= 3\n  requires len(A) >= arr_size\n  ensures len(r) == 3\n  ensures r[0] + r[1] + r[2] == target\n  ensures exists i in [0, arr_size - 2) . exists j in [i + 1, arr_size - 1) . exists k in [j + 1, arr_size) . A[i] == r[0] and A[j] == r[1] and A[k] == r[2]\n{\n}\n",
+   "function": {
+    "passes": false,
+    "why": "too few draws inside the requires",
+    "agreement": {
+     "status": "agrees",
+     "draws": 4,
+     "outside_requires": 1,
+     "completeness": 0.969,
+     "mutants_rejected": 31,
+     "mutants_accepted": 1,
+     "skipped": {
+      "reference result has no t value": 43
+     },
+     "weak_witness": {
+      "args": [
+       [
+        8,
+        3,
+        5,
+        3,
+        10,
+        3,
+        12
+       ],
+       7,
+       18
+      ],
+      "reference_said": [
+       3,
+       5,
+       10
+      ],
+      "also_accepts": [
+       5,
+       3,
+       10
+      ]
+     }
+    }
+   }
+  },
+  {
+   "source": "specification 3",
+   "verdict": "dropped",
+   "scores": {
+    "correctness": 0.0,
+    "completeness": 1.0,
+    "tests": 3,
+    "mutants": 23
+   },
+   "spec": "t 1\ntask f(A: seq, arr_size: int, sum: int) returns (r: seq)\n  requires arr_size == len(A)\n  requires arr_size >= 3\n  ensures len(r) == 3\n  ensures r[0] + r[1] + r[2] == sum\n  ensures r[0] != r[1]\n  ensures r[0] != r[2]\n  ensures r[1] != r[2]\n  ensures forall k in [0, arr_size) . k < arr_size ==> A[k] == r[0] or A[k] == r[1] or A[k] == r[2]\n{\n}\n"
+  }
+ ],
+ "candidates": [
+  {
+   "source": "answer 1",
+   "function": {
+    "passes": false,
+    "why": "too few draws inside the requires",
+    "agreement": {
+     "status": "agrees",
+     "draws": 2,
+     "outside_requires": 3,
+     "completeness": 0.938,
+     "mutants_rejected": 15,
+     "mutants_accepted": 1,
+     "skipped": {
+      "reference result has no t value": 43
+     },
+     "weak_witness": {
+      "args": [
+       [
+        8,
+        3,
+        5,
+        3,
+        10,
+        3,
+        12
+       ],
+       7,
+       18
+      ],
+      "reference_said": [
+       3,
+       5,
+       10
+      ],
+      "also_accepts": [
+       5,
+       3,
+       10
+      ]
+     }
+    }
+   }
+  },
+  {
+   "source": "answer 2",
+   "function": {
+    "passes": false,
+    "why": "too few draws inside the requires",
+    "agreement": {
+     "status": "agrees",
+     "draws": 4,
+     "outside_requires": 1,
+     "completeness": 0.625,
+     "mutants_rejected": 20,
+     "mutants_accepted": 12,
+     "skipped": {
+      "reference result has no t value": 43
+     },
+     "weak_witness": {
+      "args": [
+       [
+        8,
+        3,
+        5,
+        3,
+        10,
+        3,
+        12
+       ],
+       7,
+       18
+      ],
+      "reference_said": [
+       3,
+       5,
+       10
+      ],
+      "also_accepts": [
+       10,
+       5,
+       3
+      ]
+     }
+    }
+   }
+  },
+  {
+   "source": "answer 3",
+   "function": {
+    "passes": false,
+    "why": "the specification is false at the Python's answer",
+    "agreement": {
+     "status": "disagrees",
+     "args": [
+      [
+       8,
+       3,
+       5,
+       3,
+       10,
+       3,
+       12
+      ],
+      7,
+      18
+     ],
+     "reference_said": [
+      3,
+      5,
+      10
+     ],
+     "ensures": 2
+    }
+   }
+  }
+ ],
+ "asked": {
+  "answers": 5,
+  "specifications": 3,
+  "bodies": 0
+ },
+ "inputs": {
+  "examples": [
+   "assert find_triplet_array([1, 4, 45, 6, 10, 8], 6, 22) == (4, 10, 8)",
+   "assert find_triplet_array([12, 3, 5, 2, 6, 9], 6, 24) == (12, 3, 9)",
+   "assert find_triplet_array([1, 2, 3, 4, 5], 5, 9) == (1, 3, 5)"
+  ],
+  "taken from the function": false,
+  "kinds": [
+   {
+    "args": [
+     "seq",
+     "int",
+     "int"
+    ],
+    "expected": "seq"
+   },
+   {
+    "args": [
+     "seq",
+     "int",
+     "int"
+    ],
+    "expected": "seq"
+   },
+   {
+    "args": [
+     "seq",
+     "int",
+     "int"
+    ],
+    "expected": "seq"
+   }
+  ],
+  "specification check": {
+   "seed": 1,
+   "draws": 100,
+   "larger draws": 60
+  }
+ },
+ "stopped at": "specification check",
+ "function": {
+  "code": "def find_triplet_array(A, arr_size, sum): \r\n\tfor i in range( 0, arr_size-2): \r\n\t\tfor j in range(i + 1, arr_size-1): \r\n\t\t\tfor k in range(j + 1, arr_size): \r\n\t\t\t\tif A[i] + A[j] + A[k] == sum: \r\n\t\t\t\t\treturn  A[i],A[j],A[k] \r\n\t\t\t\t\treturn True\r\n\treturn False",
+  "doc": "Write a function to find if there is a triplet in the array whose sum is equal to a given value."
+ },
+ "seconds": 91.0
+}

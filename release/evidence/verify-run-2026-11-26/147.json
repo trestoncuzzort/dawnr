@@ -1,0 +1,132 @@
+{
+ "id": 147,
+ "fn": "max_path_sum",
+ "verified": false,
+ "route": null,
+ "why": "no specification the model wrote holds at your function's answers and pins them down",
+ "twin": null,
+ "stages": [
+  {
+   "route": "answers",
+   "source": "answer 1",
+   "stage": "examples",
+   "reason": "fails a test (`assert max_path_sum([[1, 0, 0], [4, 8, 0], [1, 5, 3]], 2, 2) == 14`: it returns 9)"
+  },
+  {
+   "route": "answers",
+   "source": "answer 2",
+   "stage": "well formed",
+   "reason": "not well formed (self-recursive body without a task decreases)"
+  },
+  {
+   "route": "answers",
+   "source": "answer 3",
+   "stage": "examples",
+   "reason": "fails a test (`assert max_path_sum([[1, 0, 0], [4, 8, 0], [1, 5, 3]], 2, 2) == 14`: requires-excluded)"
+  },
+  {
+   "route": "answers",
+   "source": "answer 4",
+   "stage": "parse",
+   "reason": "does not parse (expected '{', found 'a' [Stmt])"
+  },
+  {
+   "route": "answers",
+   "source": "answer 5",
+   "stage": "parse",
+   "reason": "does not parse (expected 'decreases', found 'tri' [Stmt])"
+  },
+  {
+   "route": "specification",
+   "source": "specification 2",
+   "stage": "parse",
+   "reason": "it does not parse (expected 'id', found 't' [SpecFun])"
+  },
+  {
+   "route": "specification",
+   "source": "specification 3",
+   "stage": "parse",
+   "reason": "it does not parse (expected 'task', found 'spec' [Task])"
+  },
+  {
+   "route": "specification",
+   "source": "specification 1",
+   "stage": "examples",
+   "reason": "`r == max_path(tri, m, n)` cannot be judged on your examples (no test inside the requires)",
+   "scores": {
+    "unscorable": "no test inside the requires"
+   }
+  }
+ ],
+ "refused": [
+  "answer 1: fails a test (`assert max_path_sum([[1, 0, 0], [4, 8, 0], [1, 5, 3]], 2, 2) == 14`: it returns 9)",
+  "answer 2: not well formed (self-recursive body without a task decreases)",
+  "answer 3: fails a test (`assert max_path_sum([[1, 0, 0], [4, 8, 0], [1, 5, 3]], 2, 2) == 14`: requires-excluded)",
+  "answer 4: does not parse (expected '{', found 'a' [Stmt])",
+  "answer 5: does not parse (expected 'decreases', found 'tri' [Stmt])",
+  "specification 2: it does not parse (expected 'id', found 't' [SpecFun])",
+  "specification 3: it does not parse (expected 'task', found 'spec' [Task])",
+  "specification 1: `r == max_path(tri, m, n)` cannot be judged on your examples (no test inside the requires)"
+ ],
+ "specifications": [
+  {
+   "source": "specification 1",
+   "verdict": "unscorable",
+   "scores": {
+    "unscorable": "no test inside the requires"
+   },
+   "spec": "t 1\ngate loops\ntask f(tri: seq<seq>, m: int, n: int) returns (r: int)\n  requires m >= 1\n  requires n >= 1\n  requires m == n\n  requires forall i in [0, m) . len(tri[i]) == n\n  requires forall i in [0, m) . forall j in [0, i + 1) . tri[i][j] >= 0\n  requires forall i in [0, m) . forall j in [i + 1, n) . tri[i][j] == 0\n  ensures r == max_path(tri, m, n)\nspec fun max_path(tri: seq<seq>, m: int, n: int): int\n  decreases m\n= if m == 1 then tri[0][0] else if tri[1][0] > tri[1][1] then tri[0][0] + max_path(tri[1..m], m - 1, n) else tri[0][0] + max_path(tri[1..m], m - 1, n)\n{\n}\n"
+  }
+ ],
+ "candidates": [],
+ "asked": {
+  "answers": 5,
+  "specifications": 3,
+  "bodies": 0
+ },
+ "inputs": {
+  "examples": [
+   "assert max_path_sum([[1, 0, 0], [4, 8, 0], [1, 5, 3]], 2, 2) == 14",
+   "assert max_path_sum([[13, 0, 0], [7, 4, 0], [2, 4, 6]], 2, 2) == 24 ",
+   "assert max_path_sum([[2, 0, 0], [11, 18, 0], [21, 25, 33]], 2, 2) == 53"
+  ],
+  "taken from the function": false,
+  "kinds": [
+   {
+    "args": [
+     "seq-of-seq",
+     "int",
+     "int"
+    ],
+    "expected": "int"
+   },
+   {
+    "args": [
+     "seq-of-seq",
+     "int",
+     "int"
+    ],
+    "expected": "int"
+   },
+   {
+    "args": [
+     "seq-of-seq",
+     "int",
+     "int"
+    ],
+    "expected": "int"
+   }
+  ],
+  "specification check": {
+   "seed": 1,
+   "draws": 100,
+   "larger draws": 60
+  }
+ },
+ "stopped at": "examples",
+ "function": {
+  "code": "def max_path_sum(tri, m, n): \r\n\tfor i in range(m-1, -1, -1): \r\n\t\tfor j in range(i+1): \r\n\t\t\tif (tri[i+1][j] > tri[i+1][j+1]): \r\n\t\t\t\ttri[i][j] += tri[i+1][j] \r\n\t\t\telse: \r\n\t\t\t\ttri[i][j] += tri[i+1][j+1] \r\n\treturn tri[0][0]",
+  "doc": "Write a function to find the maximum total path sum in the given triangle."
+ },
+ "seconds": 55.0
+}
