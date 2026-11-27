@@ -64,6 +64,115 @@ def test_only_function_definitions_read_as_functions():
     assert not scaffold.is_function_head("struct node") and not scaffold.is_function_head("int x[] = (int[])") and not scaffold.is_function_head("typedef int (f)(void)")
 
 
+ENUM = "enum { FIRST = 1, SECOND };\nint pick(int a)\n{\n\treturn a ? SECOND : 0;\n}\n"
+
+
+def test_a_bare_type_with_an_initializer_is_a_type_and_not_a_global(tmp_path):
+    unit = scaffold.analyse(ENUM)
+    assert unit["globals"] == {} and unit["others"] == [0]
+    assert "refused" not in scaffold.draft(unit, "pick", tmp_path / "case", "x.c")
+    assert "enum { FIRST = 1, SECOND };" in cases.load(tmp_path / "case")["prelude"]
+
+
+def test_a_table_of_an_unnamed_struct_type_is_still_a_global_by_its_name():
+    unit = scaffold.analyse("static const struct { int key; int value; } table[] = { {1, 2} };\nint pick(void)\n{\n\treturn table[0].key;\n}\n")
+    assert set(unit["globals"]) == {"table"} and unit["others"] == []
+
+
+@pytest.mark.parametrize("item, names", [
+    ("struct ops { int (*f)(int); } ops = { helper };", {"ops"}),
+    ("union U { int i; float f; } u = { 1 };", {"u"}),
+    ("struct S { int x; } one = {1}, two = {2};", {"one", "two"}),
+    ("int first = 1, second = 2;", {"first", "second"}),
+    ("enum { FIRST = 1, SECOND } mode = SECOND;", {"mode", "FIRST", "SECOND"}),  # its enumerators are names too
+    ("static enum { OFF = 0, ON } state = OFF;", {"state", "OFF", "ON"}),
+    ("static int (*table[])(int) = { helper };", {"table"}),
+    ("void (*const hook)(void) = 0;", {"hook"}),
+    ("__typeof__(*p) x = 1;", {"x"}),  # the parentheses are not a declarator's
+    ("int x[sizeof(int (*)(int))] = {0};", {"x"}),
+    ("int counter __attribute__((aligned(8))) = 0;", {"counter"}),  # an attribute with parentheses inside
+    ('int *cursor __attribute__((section(".data"))) = &limit;', {"cursor"}),
+])
+def test_an_initialized_global_is_known_by_every_name_it_declares(item, names):
+    unit = scaffold.analyse(item + "\n")
+    assert set(unit["globals"]) == names and unit["others"] == []
+
+
+@pytest.mark.parametrize("item", ["enum { FIRST = 1, SECOND } mode;", "struct S { int x; } s;", "typedef enum { A = 1, B } E;"])
+def test_a_type_that_declares_nothing_initialized_stays_with_the_types(item):
+    unit = scaffold.analyse(item + "\n")
+    assert unit["globals"] == {} and unit["others"] == [0]
+
+
+def test_a_tag_defined_with_an_initialized_global_is_known_by_the_tag():
+    unit = scaffold.analyse("struct S { int x; } s = {1};\nstatic struct { int y; } t = {2};\n")
+    assert unit["tags"] == {"S": 0} and set(unit["globals"]) == {"s", "t"}
+
+
+HELPER = "static int helper(int a)\n{\n\treturn a;\n}\n"
+OPS = HELPER + "struct ops { int (*f)(int); } ops = { helper };\n"
+
+
+def draft_compiles(tmp_path, text, target):
+    """Whether the draft of target compiles, with gcc -fsyntax-only, and its prelude."""
+    root = tmp_path / "case"
+    assert "refused" not in scaffold.draft(scaffold.analyse(text), target, root, "x.c")
+    case = cases.load(root)
+    unit, _, _ = cases.build_unit(case, "original", root)
+    (tmp_path / "syntax.c").write_text("#define __CPROVER_assert(c, name) ((void)(c))\n#define __CPROVER_assume(c) ((void)(c))\n" + unit)
+    done = cases.native.run_process(["gcc", "-fsyntax-only", "-w", "syntax.c"], tmp_path, 60)
+    return done["exit"] == 0, done["stderr"], case["prelude"]
+
+
+@needs_gcc
+@pytest.mark.parametrize("text, body", [
+    (OPS, "return ops.f(a);"),                                                           # through the global's name
+    (OPS, "return a + (int)sizeof(struct ops);"),                                        # through its tag
+    ("static struct S { int x; } s = {1};\n", "return a + (int)sizeof(struct S);"),
+    ("struct S { int x; } one = {1}, two = {2};\n", "return a + two.x;"),                  # through a later declarator
+    ("int first = 1, second = 2;\n", "return a + second;"),
+    ("enum { FIRST = 1, SECOND } mode = SECOND;\n", "return a ? (int)mode : 0;"),
+    ("enum { FIRST = 1, SECOND } mode = SECOND;\n", "return a ? SECOND : 0;"),            # through an enumerator
+    ("static enum { OFF = 0, ON } state = OFF;\n", "return a ? ON : 0;"),
+    ("enum { FIRST = 1, SECOND } mode;\n", "return a ? SECOND : 0;"),
+    (HELPER + "static int (*table[])(int) = { helper };\n", "return table[0](a);"),  # a table of function pointers
+    ('const char *s = "a,b", *t = "c";\n', "return a + t[0];"),  # a comma in a literal is not a declarator's
+    ("struct S { int x; } s = {1};\ntypedef struct S T;\n", "T v = {a};\n\treturn v.x;"),  # a tag through a typedef
+    # through a kept type
+    ("enum { N = 4 } mode = N;\nstruct box { int a[N]; };\n", "struct box b;\n\tb.a[0] = a;\n\treturn b.a[0];"),
+    ("struct S { int x; } s = {1};\nstruct box { struct S inner; };\n", "struct box b;\n\tb.inner.x = a;\n\treturn b.inner.x;"),
+    # An attribute holding a quoted argument in its own parentheses. visibility("default") compiles for ELF and Mach-O
+    # alike, where section(".data") is refused on macOS ("mach-o section specifier requires a segment and section").
+    ('static int limit = 5;\nint *cursor __attribute__((visibility("default"))) = &limit;\n', "return a + *cursor;"),
+])
+def test_a_draft_keeps_an_item_its_function_reaches_by_any_name_the_item_declares(tmp_path, text, body):
+    compiled, errors, _ = draft_compiles(tmp_path, text + f"int pick(int a)\n{{\n\t{body}\n}}\n", "pick")
+    assert compiled, errors
+
+
+@needs_gcc
+@pytest.mark.parametrize("table", ["struct ops { int (*f)(int); } ops = { helper };\n", "static int (*table[])(int) = { helper };\n",
+                                   "static int (*hook)(int) __attribute__((aligned(8))) = helper;\n",
+                                   # a pointer needs no definition
+                                   "struct ops { int (*f)(int); } ops = { helper };\nstruct conn { struct ops *o; };\n"])
+def test_a_draft_leaves_out_a_table_its_function_does_not_reach_and_what_the_table_names(tmp_path, table):
+    compiled, errors, prelude = draft_compiles(tmp_path, HELPER + table + "int other(int a)\n{\n\treturn a + 1;\n}\n", "other")
+    assert compiled, errors
+    assert "helper" not in prelude
+
+
+@real
+def test_a_draft_that_calls_through_an_initialized_table_goes_through_the_gate(tmp_path):
+    assert "refused" not in scaffold.draft(scaffold.analyse(OPS + "int pick(int a)\n{\n\treturn ops.f(a);\n}\n"), "pick", tmp_path / "case", "x.c")
+    assert cases.check(tmp_path / "case", "original", tmp_path / "gate", cbmc=CBMC)["verdict"] == "complete"
+
+
+@real
+def test_a_draft_that_names_a_later_enumerator_goes_through_the_gate(tmp_path):
+    assert "refused" not in scaffold.draft(scaffold.analyse(ENUM), "pick", tmp_path / "case", "x.c")
+    assert cases.check(tmp_path / "case", "original", tmp_path / "gate", cbmc=CBMC)["verdict"] == "complete"
+
+
 def test_a_draft_holds_what_the_target_reaches_and_nothing_else(tmp_path):
     unit = scaffold.analyse(UNIT)
     result = scaffold.draft(unit, "top", tmp_path / "case", "x.c")

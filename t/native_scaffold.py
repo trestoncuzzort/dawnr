@@ -30,7 +30,7 @@ import native_sample as sampler
 CHAR_TYPES = {"char", "signed char", "unsigned char"}
 BUILTIN_WORDS = {"char", "short", "int", "long", "signed", "unsigned", "float", "double", "_Bool", "__int128"}
 QUALIFIERS = re.compile(r"\b(?:const|volatile|restrict|__restrict|__restrict__|__const|register|__extension__|_Nonnull|_Nullable)\b")
-ATTRIBUTE = re.compile(r"__attribute__\s*\(\(.*?\)\)|__asm__\s*\(.*?\)|__asm\s*\(.*?\)|__declspec\s*\(.*?\)", re.S)
+ATTRIBUTE = re.compile(r"\b(?:__attribute__|__asm__|__asm|__declspec)\s*\(")
 LENGTH_NAME = re.compile(r"(?:^|_)(?:len|length|size|sz|n|nbytes|bytes|count|cnt|num|cap|capacity|max|limit|bufsize|buflen)(?:$|_)|(?:len|size|count)$", re.I)
 # The rest of a length's name once the name of its pointer is taken off: `dst_size` is the size of `dst`, and `buflen` the length of `buf`.
 OWNED_LENGTH = re.compile(r"_?(?:len|length|size|sz|n|nbytes|bytes|count|cnt|cap|capacity|max|limit)", re.I)
@@ -101,7 +101,22 @@ def split_items(text: str) -> list[str]:
 
 
 def clean_head(head: str) -> str:
-    return ATTRIBUTE.sub(" ", head).strip()
+    """The text without attributes, asm labels and declspecs, each taken out through its own closing parenthesis:
+    `__attribute__((aligned(8)))` holds parentheses of its own, and a match up to the first `))` left a `)` behind."""
+    while start := ATTRIBUTE.search(head):
+        depth, index = 0, start.end() - 1
+        while index < len(head):
+            if head[index] in "\"'":
+                quote, index = head[index], index + 1
+                while index < len(head) and head[index] != quote:
+                    index += 2 if head[index] == "\\" else 1
+            else:
+                depth += {"(": 1, ")": -1}.get(head[index], 0)
+                if depth == 0:
+                    break
+            index += 1
+        head = head[:start.start()] + " " + head[index + 1:]
+    return head.strip()
 
 
 def is_function_head(head: str) -> bool:
@@ -335,11 +350,66 @@ def plan_inputs(parameters: str, types: Types, max_length: int) -> dict:
             "unused": [] if inputs else ["dawnr_unused"], "unsized_strings": unsized_strings, "single_elements": single_elements}
 
 
+def type_body(head: str) -> tuple[str, str | None, int, int] | None:
+    """(enum, struct or union; its tag; where its body opens; where it closes) when a declaration defines a type with
+    a body, else None.
+
+    The body opens at the first brace outside parentheses, before any `=`: a brace after the `=` is an initializer's."""
+    depth = 0
+    for index, char in enumerate(head):
+        depth += {"(": 1, ")": -1}.get(char, 0)
+        if char == "=" or (char == "{" and depth == 0):
+            break
+    else:
+        return None
+    match = re.search(r"\b(enum|struct|union)\b(?:\s+([A-Za-z_][A-Za-z0-9_]*))?\s*$", head[:index])
+    if char != "{" or not match:
+        return None
+    braces = 0
+    for close in range(index, len(head)):
+        braces += {"{": 1, "}": -1}.get(head[close], 0)
+        if braces == 0:
+            return match.group(1), match.group(2), index, close
+    return None
+
+
+def declared_name(declarator: str) -> str | None:
+    """The identifier a declarator declares, with any specifiers before it.
+
+    The forms handled are `x`, `*const x`, `x[4]`, `(*x[2])(int)` and `x = 1`. In `( declarator )` the name is inside
+    the parentheses after its pointers (C11 6.7.6, port70.net/~nsz/c/c11/n1570.html)."""
+    left = split_top(declarator, "=")[0]
+    # The parentheses of typeof, sizeof and alignment belong to an operand, not to a declarator:
+    # `__typeof__(*p) x` declares x.
+    while operand := re.search(r"\b(?:__typeof__|__typeof|typeof|sizeof|_Alignof|_Alignas|__alignof__|alignof)\s*\(", left):
+        depth, end = 0, operand.end() - 1
+        for end in range(operand.end() - 1, len(left)):
+            depth += {"(": 1, ")": -1}.get(left[end], 0)
+            if depth == 0:
+                break
+        left = left[:operand.start()] + " " + left[end + 1:]
+    inner = re.search(r"\(\s*(?:\*\s*(?:(?:const|volatile|restrict|__restrict)\b\s*)*)+([A-Za-z_][A-Za-z0-9_]*)", left)
+    if inner:
+        return inner.group(1)
+    match = re.search(r"([A-Za-z_][A-Za-z0-9_]*)\s*(?:\[[^\]]*\]\s*)*$", left.strip())
+    return match.group(1) if match else None
+
+
+TAG_USE = re.compile(r"\b(?:enum|struct|union)\s+([A-Za-z_][A-Za-z0-9_]*)")
+HELD_TAG = re.compile(r"\b(?:enum|struct|union)\s+([A-Za-z_][A-Za-z0-9_]*)\b(?!\s*\*)")
+LITERAL = re.compile(r"\"(?:\\.|[^\"\\])*\"|'(?:\\.|[^'\\])*'")
+
+
 def analyse(text: str, types_from: str | None = None) -> dict:
-    """The items of a translation unit, and the functions, globals and types it defines."""
+    """The items of a translation unit, and the functions, globals and types it defines.
+
+    A declaration that initializes something is a global, known by every ordinary name it declares: each declarator,
+    and the enumerators of an enum it defines. A struct, union or enum tag it defines is known by the tag (C11 6.2.3:
+    tags are their own name space). A draft keeps such a global when its function reaches one of those names, and
+    follows what its initializer names. Any other type is kept in every draft."""
     items = split_items(text)
     types = Types(split_items(types_from) if types_from is not None else items)
-    functions, globals_, others = {}, {}, []
+    functions, globals_, tags, typedefs, constants, others = {}, {}, {}, {}, {}, []
     for index, item in enumerate(items):
         if item.startswith("#"):
             others.append(index)
@@ -351,23 +421,53 @@ def analyse(text: str, types_from: str | None = None) -> dict:
                 functions[parts[1]] = index
             continue
         head = clean_head(item.rstrip(";"))
-        if not head.startswith(("typedef", "extern", "__extension__ typedef")) and "=" in head:
-            match = re.search(r"([A-Za-z_][A-Za-z0-9_]*)\s*(?:\[[^\]]*\]\s*)*=", head)
-            if match:
-                globals_[match.group(1)] = index
+        # Literals emptied, so that a comma, brace or = inside one is not read as the declaration's.
+        shape = LITERAL.sub('""', head)
+        body = type_body(shape)
+        # `enum { A = 1, B };` holds an = and initializes nothing: only what follows the body declares objects.
+        declarators = shape[body[3] + 1:] if body else shape
+        if head.startswith(("typedef", "__extension__ typedef")):
+            # Kept in every draft, and also known by its name, so that a draft follows the tag it names, as in
+            # `typedef struct S T;`.
+            for name in filter(None, (declared_name(part) for part in split_top(declarators))):
+                typedefs[name] = index
+        if not head.startswith(("typedef", "extern", "__extension__ typedef")) and "=" in declarators:
+            names = [declared_name(part) for part in split_top(declarators)]
+            if body and body[0] == "enum":
+                enumerators = (re.match(r"\s*([A-Za-z_][A-Za-z0-9_]*)", part) for part in split_top(shape[body[2] + 1:body[3]]))
+                found = [match.group(1) for match in enumerators if match]
+                constants.update(dict.fromkeys(found, index))
+                names += found
+            if body and body[1]:
+                tags[body[1]] = index
+            for name in filter(None, names):
+                globals_[name] = index
+            if any(names):
                 continue
+        if body:
+            others.append(index)
+            continue
         tentative = re.fullmatch(r"(?:static\s+)?[A-Za-z_][\w\s\*]*?\b([A-Za-z_][A-Za-z0-9_]*)\s*(?:\[[^\]]*\]\s*)*", head)
         if tentative and not head.startswith(("typedef", "extern", "struct", "union", "enum")) and "(" not in head:
             globals_[tentative.group(1)] = index
             continue
         others.append(index)
-    return {"items": items, "functions": functions, "globals": globals_, "others": others, "types": types}
+    # What an item kept in every draft cannot do without, from those globals: an enumerator it names, `int a[N];`, and
+    # a type it holds by value, `struct box { struct S inner; };`. A pointer, `struct S *p`, needs no definition.
+    required = set()
+    for index in others:
+        required |= {constants[word] for word in IDENTIFIER.findall(items[index]) if word in constants}
+        if type_body(LITERAL.sub('""', clean_head(items[index].rstrip(";")))):
+            required |= {tags[tag] for tag in HELD_TAG.findall(items[index]) if tag in tags}
+    return {"items": items, "functions": functions, "globals": globals_, "tags": tags, "typedefs": typedefs, "required": sorted(required),
+            "others": others, "types": types}
 
 
 def closure(unit: dict, target: str) -> set[int]:
-    """The items the target reaches: functions and globals by name, through what those use in turn."""
-    items, reached, queue = unit["items"], set(), [unit["functions"][target]]
-    named = {**unit["functions"], **unit["globals"]}
+    """The items the target reaches: functions, globals and typedefs by name, and tags after enum, struct or union,
+    through what those use in turn. It starts from the target and from what the items kept in every draft require."""
+    items, reached, queue = unit["items"], set(), [unit["functions"][target], *unit.get("required", [])]
+    named, tags = {**unit["functions"], **unit["globals"], **unit.get("typedefs", {})}, unit.get("tags", {})
     while queue:
         index = queue.pop()
         if index in reached:
@@ -376,6 +476,9 @@ def closure(unit: dict, target: str) -> set[int]:
         for word in set(IDENTIFIER.findall(items[index])):
             if word in named and named[word] not in reached:
                 queue.append(named[word])
+        for tag in set(TAG_USE.findall(items[index])):
+            if tag in tags and tags[tag] not in reached:
+                queue.append(tags[tag])
     return reached
 
 

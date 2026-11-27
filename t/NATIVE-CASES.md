@@ -28,6 +28,7 @@ that writes `case.json` from the files beside it. See `native_fixtures/` for exa
 | `unwind`, `unwindset`, `under_unwind` | the global bound (default 4), per-loop bounds, and the bound of the short control (default 1) |
 | `checks` | optional CBMC checks, from the list in `OPTIONAL_CHECKS` |
 | `models` | tested C library models to link: `string`, `stdlib`, and one of `ctype` and `ctype_strict`. See below |
+| `object_bits` | optional: CBMC's `--object-bits`, the bits of a pointer that number its object, from 1 to 31 on `ILP32` and to 63 on `LP64`. CBMC's default is 8, so 256 addressed objects. Every CBMC command of the case gets it |
 | `allowed_stops` | stops this case means to allow. See below |
 | `input_domain`, `limitations` | what is covered and what is not, in words. They go in every receipt |
 
@@ -174,8 +175,16 @@ Measured on CBMC 6.11.0 with the gate's check list, each as one statement in a h
 
 ## What costs time if you learn it by trial
 
-- A definition is one whole item. A function range ends at its closing brace. Helpers from other
-  files go in the prelude unchanged, naming the file and lines, and are listed in `limitations`.
+- A definition is one whole item. A function range ends at its closing brace, and a declaration at its one semicolon
+  outside braces. Helpers from other files go in the prelude unchanged, naming the file and lines, and are listed in
+  `limitations`.
+  - A function range holds only the function's declarator (with old-style parameter declarations after it) and its
+    body. `int counter;` before it is refused.
+  - A preprocessor directive outside the function's braces is refused unless it is a conditional one: a `#define` or
+    `#include` before the function, or between its declarator and its body, is refused. Directives inside the body
+    are its own text.
+- More than 256 addressed objects, such as allocations in a long loop, stop CBMC with "too many
+  addressed objects". Set `object_bits`: 10 gives 1024.
 - `__CPROVER_assume` stands on its own line, in the harness only, and is counted. None in the
   prelude. Line directives are refused, because one could hide an assumption from the count.
 - `ILP32`: if the machine has no 32-bit C library headers, include nothing and write
@@ -183,6 +192,16 @@ Measured on CBMC 6.11.0 with the gate's check list, each as one statement in a h
 - `malloc`, `free`, `memcpy`, `memset`, `strlen` and `memcmp` are modelled by CBMC, and the assumptions
   inside its own models are recorded apart from yours (`library_assumption_goals`). For the rest, see
   the next section before writing a stand-in.
+- Two more kinds of coverage goal are CBMC's and not yours. The receipt lists them apart, out of the count of your
+  assumptions and out of the vacuity test. Any other goal counts as yours, so one the gate cannot place still ends
+  in `tool_error`.
+  - `function_pointer_assumption_goals`: at a call through a function pointer, CBMC ends the branch where the
+    pointer holds none of its possible targets with `ASSUME false`, beside a property "dereferenced function
+    pointer must be one of [...]" (or "must be f" when f is the only one). That branch must not be taken; if it
+    can be, the property fails.
+  - `coverage_goals_that_are_not_assumptions`: when CBMC expands `memcpy` in place, its preconditions ("memcpy
+    source region readable" and so on) are coverage goals too. A goal is listed here only when it is neither side
+    of an assumption and is also one of the inventoried properties, which the checking stage decides.
 - Write checks over an array as one statement per index rather than a loop, so that the harness
   adds no loop of its own to the model.
 - Recursion and large switch statements: give each call a concrete selector, otherwise CBMC
