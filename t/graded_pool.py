@@ -53,8 +53,8 @@ MIN_AGREEING_DRAWS = 10
 # inputs (`completeness`: the share of mutated outputs the ensures rejects) and only reported it.
 # On 2026-10-01, 40 of the pool's 693 rows sat below 0.6 (an `ensures` true of the right answer
 # and of most wrong ones, e.g. "every character of r is alphanumeric" for a function that removes
-# the others). A row is trained on only at this completeness or above; a verdict that tried no
-# mutant is let through, as before.
+# the others). A row is trained on only at this completeness or above; a verdict that judged no
+# mutant is refused: with no wrong answer judged, nothing shows that the specification pins the answer down.
 MIN_COMPLETENESS = 0.6
 
 
@@ -92,6 +92,8 @@ def rejection(sample: dict, results: dict, pool_name: str, min_kernels: int) -> 
         return "spec-agrees-on-too-few-draws"
     if spec_check.complete(result, MIN_COMPLETENESS) is False:     # either mutant family (spec_check.complete)
         return "spec-too-weak"
+    if spec_check.no_wrong_answer_judged(result):                  # nothing shows it pins the answer down
+        return "spec-no-wrong-answer-judged"
     if type(result.get("task_id")) is not int or result["task_id"] != sample["task_id"]:
         return "spec-problem-mismatch"
     if result.get("pool") != pool_name:

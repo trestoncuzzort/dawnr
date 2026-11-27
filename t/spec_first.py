@@ -476,7 +476,7 @@ def reference_keeps(r: dict) -> bool:
     if r.get("status") != "agrees" or r.get("draws", 0) < MIN_REFERENCE_DRAWS:
         return False
     import spec_check
-    return spec_check.complete(r, MIN_REFERENCE_COMPLETENESS) is not False
+    return spec_check.pins_down(r, MIN_REFERENCE_COMPLETENESS)
 
 
 def main(argv: list[str] | None = None) -> int:
