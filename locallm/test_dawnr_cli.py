@@ -939,6 +939,128 @@ def test_any_other_refusal_is_not_retried(tmp_path):
         planner._send("http://nowhere:1/v1/chat/completions", {"messages": [{"role": "user", "content": "x"}]})
 
 
+PATCH_READ = ("+\t\t\tif (hit.mFraction < 0.0f || hit.mFraction > 1.0f\n"
+              "+\t\t\t\t|| mContactManager.HasContactInCurrentStep(inBody.GetID(), hit.mSubShapeID1, sensor->GetID(), hit.mSubShapeID2))\n"
+              "+\t\t\t\tcontinue;\n")
+
+
+def test_a_quote_in_the_answer_that_is_in_nothing_it_read_is_named_after_the_answer(tmp_path):
+    # The model's code block shows a condition as the patch's own text, with one of its two clauses gone and the
+    # other's `||` turned into an `if`.
+    answer = ("It skips a hit already admitted this step:\n```\n"
+              "if (mContactManager.HasContactInCurrentStep(inBody.GetID(), hit.mSubShapeID1, sensor->GetID(), hit.mSubShapeID2))\n"
+              "    continue;\n```")
+    model = Model(turn(("fs_read", {"path": "here/patch.diff"})), turn(text=answer))
+    work, harness, agent, planner, meter, said, asked, _ask = session(tmp_path, model)
+    (work / "patch.diff").write_text(PATCH_READ)
+    with harness:
+        got = cli.run_task(agent, planner, meter, "What does the patch skip?", [], said.append)
+    assert got == answer                                        # the answer itself is handed back as it was written
+    note = said[said.index(answer) + 1]
+    assert note.startswith("[Quoted but not found in anything it read: ")
+    assert "if (mContactManager.HasContactInCurrentStep(" in note and "continue;" not in note
+    assert said[-2] == "[Nothing was changed.]"
+
+
+def test_an_answer_whose_quotes_are_all_in_what_it_read_has_no_note(tmp_path):
+    answer = ("It skips a hit already admitted this step:\n```\n"
+              "|| mContactManager.HasContactInCurrentStep(inBody.GetID(), hit.mSubShapeID1, sensor->GetID(), hit.mSubShapeID2))\n"
+              "    continue;\n```")
+    model = Model(turn(("fs_read", {"path": "here/patch.diff"})), turn(text=answer))
+    work, harness, agent, planner, meter, said, asked, _ask = session(tmp_path, model)
+    (work / "patch.diff").write_text(PATCH_READ)
+    with harness:
+        got = cli.run_task(agent, planner, meter, "What does the patch skip?", [], said.append)
+    assert got == answer and said[-3] == answer and said[-2] == "[Nothing was changed.]"
+    assert not any(line.startswith("[Quoted but not found") for line in said)
+
+
+def test_a_line_quoted_from_the_closest_lines_a_refused_edit_showed_counts_as_read():
+    # A dry run that refuses an edit shows the model the file's closest lines ("Nothing ran. ..." with quoted=True,
+    # Planner.messages), and nothing else of the file need have been read: a line quoted from them was read. The
+    # call's own arguments are not a source: the text the model asked to replace is no quote of the file.
+    from types import SimpleNamespace as NS
+    from dawnr_agent.files import Preview, _closest
+    from dawnr_agent.plan import Step
+    text = "def clear(cache):\n    if cache.owner_ran_clean and not cache.pinned:\n        cache.drop()\n"
+    guess = "    if cache.owner_ran_clean and cache.pinned:"
+    quoted = _closest(text, guess + "\n")
+    assert quoted.startswith("lines 1-3 of 3:\n") and "and not cache.pinned" in quoted
+    step = Step("fs_edit", {"path": "here/cache.py", "old": guess, "new": "    if cache.owner_ran_clean:"})
+    rounds = [NS(outcome=None, dry=NS(views=[NS(step=step, preview=Preview(error="the text is not in the file", quoted=quoted))]))]
+    assert cli.unread_quotes("It clears it only then:\n```python\n    if cache.owner_ran_clean and not cache.pinned:\n```", rounds) == ""
+    assert "if cache.owner_ran_clean and cache.pinned:" in cli.unread_quotes(f"It clears it then:\n```python\n{guess}\n```", rounds)
+
+
+def test_windows_of_a_file_too_big_to_hash_are_not_joined_across_an_edit_that_ran_between_them():
+    # Neither header has a sha256, so only the order of the calls says the file changed between the two reads: line
+    # 3 of the old file and line 5 of the old file (now line 4) are two lines no version of it has side by side.
+    from types import SimpleNamespace as NS
+    from dawnr_agent.plan import Step
+
+    def read(start, last, lines):
+        body = "\n".join(f"{n}\t{line}" for n, line in enumerate(lines[start - 1:last], start))
+        return NS(step=Step("fs_read", {"path": "here/cache.md"}), status="ran",
+                  result=NS(spans=lambda: [(True, f"here/cache.md: lines {start}-{last} of {len(lines)}, 9000000 bytes\n{body}")]))
+
+    old = ["# Cache", "The cache is cleared only when the person", "(a line between)", "runs clean, and never on its own."]
+    new = old[:2] + old[3:]
+    edit = NS(step=Step("fs_edit", {"path": "here/cache.md", "old": "(a line between)\n", "new": ""}), status="ran",
+              result=NS(spans=lambda: [(False, "edited")]))
+    quote = "> The cache is cleared only when the person runs clean, and never on its own.\n"
+    other = [read(1, 2, old), read(3, 3, new)]
+    assert cli.unread_quotes(quote, [NS(outcome=NS(outcomes=other))]) == ""             # no edit between: one text
+    rounds = [NS(outcome=NS(outcomes=[read(1, 2, old)])), NS(outcome=NS(outcomes=[edit])),
+              NS(outcome=NS(outcomes=[read(3, 3, new)]))]
+    assert cli.unread_quotes(quote, rounds).startswith("[Quoted but not found in anything it read: ")
+    failed = NS(step=edit.step, status="failed", result=edit.result)               # an edit that did not run changes nothing
+    rounds[1] = NS(outcome=NS(outcomes=[failed]))
+    assert cli.unread_quotes(quote, rounds) == ""
+    # A command that ran may have changed any file (`sed -i`, `git checkout`, a build) and does not say which, so it
+    # parts the windows read before it from those read after it, as an undo does; one that did not run changes nothing.
+    for tool, args in (("sh", {"command": "sed -i '3d' cache.md"}), ("run_command", {"argv": ["git", "checkout", "cache.md"]})):
+        ran = NS(step=Step(tool, args), status="ran", result=NS(spans=lambda: [(True, "")]))
+        rounds[1] = NS(outcome=NS(outcomes=[ran]))
+        assert cli.unread_quotes(quote, rounds).startswith("[Quoted but not found in anything it read: "), tool
+        rounds[1] = NS(outcome=NS(outcomes=[NS(step=ran.step, status="refused", result=ran.result)]))
+        assert cli.unread_quotes(quote, rounds) == "", tool
+
+
+def test_a_faithful_quote_of_a_documents_text_is_found_where_the_reader_cut_its_lines(tmp_path):
+    # files.py cuts a document's text at str.splitlines (a vertical tab, a form feed, a carriage return, U+0085,
+    # U+2028 and others end a line there) and shows each cut as a line feed; the checker cuts the shown text at line
+    # feeds only. The two agree on what the model was shown, so a quote of the lines as shown, or a passage over
+    # them, is found. None of the separators is in what the model saw, so none is in what it quotes.
+    pages = [(1, "The cache is cleared only when the person\x0cruns clean,\rand never on its own.\r\n"
+                 "A stale cache is\x85rebuilt in the background.\x0b\x1cDone."), (2, "Next page, same as before.")]
+    answer = ("The first lines:\n```\nThe cache is cleared\nonly when the person\nruns clean,\n```\n"
+              "> The cache is cleared only when the person runs clean, and never on its own.\n\n"
+              "It says \"A stale cache is rebuilt in the background. Done.\" and \"Done. [page 2] Next page, same as before.\"")
+    model = Model(turn(("fs_read", {"path": "here/memo.pdf"})), turn(text=answer))
+    work, harness, agent, planner, meter, said, asked, _ask = session(tmp_path, model)
+    (work / "memo.pdf").write_bytes(b"%PDF-1.4\n")
+    agent.files.document_reader = (lambda copy: (pages, "pdf, 2 pages"), str(tmp_path / "scratch"))
+    with harness:
+        cli.run_task(agent, planner, meter, "What does the memo say?", [], said.append)
+    shown = model.bodies[1]["messages"][-1]["content"]
+    assert "lines 1-" in shown and " " not in shown and "\x0c" not in shown and "\x85" not in shown
+    assert not any(line.startswith("[Quoted but not found") for line in said), said
+
+
+def test_a_listing_is_held_as_the_model_got_it_as_whole_paths(tmp_path):
+    # fs_list says "f notes.md (4 bytes)" and "d sub/"; the model is handed "here/notes.md  (4 bytes)" and
+    # "here/sub/  (a folder)" (listing), and an answer that names the files as it got them quotes nothing unread
+    answer = "The folder holds:\n```\nhere/notes.md\nhere/sub/\nhere/other.md\n```"
+    model = Model(turn(("fs_list", {"path": "here"})), turn(text=answer))
+    work, harness, agent, planner, meter, said, asked, _ask = session(tmp_path, model)
+    (work / "notes.md").write_text("one\n")
+    (work / "sub").mkdir()
+    with harness:
+        cli.run_task(agent, planner, meter, "What is in the folder?", [], said.append)
+    assert "here/notes.md  (4 bytes)" in model.bodies[1]["messages"][-1]["content"]
+    assert said[said.index(answer) + 1] == "[Quoted but not found in anything it read: “here/other.md”]"
+
+
 CONTROLS = re.compile("[\x00-\x08\x0b-\x1f\x7f-\x9f\u061c\u200e\u200f\u2028-\u202e\u2066-\u2069]")
 
 

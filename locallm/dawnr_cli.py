@@ -67,6 +67,7 @@ from dawnr_agent.shell import LIVE  # noqa: E402
 from dawnr_agent.system import FILE_READERS, facts, git_kind, look, under_windows  # noqa: E402
 from dawnr_agent.files import as_compared  # noqa: E402
 from dawnr_harness.tools import visible  # noqa: E402
+from dawnr_agent.quotes import Changed, unfound_quotes  # noqa: E402
 
 MAX_TOKENS = 1500              # one turn of the model: a plan, or an answer; a file it writes has to fit in it
 HISTORY = 3                    # earlier tasks of the session handed back, each cut short
@@ -1065,6 +1066,42 @@ def done(agent, before: int, rounds: list) -> str:
     return said + (" The last plan did not run in full, whatever is said above." if unrun else "")
 
 
+# The quoted material in an answer that is in none of what the task read (dawnr_agent/quotes.py), named after the
+# answer so that the person can check it. Found means copied, not right: a quote with a clause missing is reported,
+# a faithful copy of wrong text is not.
+QUOTES_UNFOUND = "[Quoted but not found in anything it read: {quotes}]"
+
+
+def unread_quotes(answer: str, rounds, most: int = 5, width: int = 120) -> str:
+    """The line that names the answer's quotes found in none of the texts this task's calls returned; "" if none.
+    A listing is held as the model got it (listing(): each entry its whole path), not as fs_list wrote it. The
+    closest lines a refused edit's dry run showed the model (Planner.messages) count as read too; the call's own
+    arguments are not a source. The texts are in the order the calls ran. After each call that ran and may have
+    changed a file comes a Changed, so that windows of a file read on either side of it are not taken for one version
+    (a window of a file too big to hash has no sha256 to say so):
+      - an edit or a write names its file;
+      - an undo, a shell command or a run command may have changed any file and does not say which, so its Changed
+        names none."""
+    texts: list = []
+    for r in rounds:
+        for o in (r.outcome.outcomes if r.outcome is not None else []):
+            if o.result is not None:
+                texts += [listing(text, str(o.step.arguments.get("path") or "").rstrip("/")) if o.step.tool == "fs_list"
+                          else text for _untrusted, text in o.result.spans()]
+            if o.status == "ran" and o.step.tool in ("fs_write", "fs_edit"):
+                texts.append(Changed(str(o.step.arguments.get("path") or "") or None))
+            elif o.status == "ran" and o.step.tool in ("fs_undo", "sh", "run_command"):
+                texts.append(Changed(None))         # may have changed any file, and does not say which
+    texts += [v.preview.quoted for r in rounds for v in (r.dry.views if getattr(r, "dry", None) is not None else [])
+              if v.preview.quoted]
+    unfound = unfound_quotes(answer, texts)
+    if not unfound:
+        return ""
+    shown = ["\u201c" + (q if len(q) <= width else q[:width - 1] + "\u2026") + "\u201d" for q in unfound[:most]]
+    more = f"; and {len(unfound) - most} more" if len(unfound) > most else ""
+    return QUOTES_UNFOUND.format(quotes="; ".join(shown) + more)
+
+
 def run_task(agent, planner, meter: Meter, task: str, history: list, say=show) -> str:
     """One task through the loop; what was answered (or why it stopped) is said and returned."""
     meter.reset()
@@ -1084,6 +1121,10 @@ def run_task(agent, planner, meter: Meter, task: str, history: list, say=show) -
         told = planner.account(result, STOPPED[result.stop])
         answer = f"{told}\n(It stopped there: {STOPPED[result.stop]}.)" if told else answer
     say(answer)
+    if result.stop == "done" and result.answer:
+        unread = unread_quotes(answer, result.rounds)
+        if unread:                                              # said, not kept: the history keeps the answer alone
+            say(unread)
     say(f"[{done(agent, before, result.rounds)}]")
     say(f"[{meter.line()}]")
     history.append((task, answer))
