@@ -247,7 +247,7 @@ def test_each_refusal_is_kept_with_its_route_its_stage_and_what_it_was_tried_on(
     r = verify_py.verify(entry, function(), model, specs=3, answers=2, whole=1,
                          prover=prover(lambda task: dict(ALL, dafny="refuted / refuted")))
     assert r["shown"] is None and len(r["stages"]) == len(r["refused"]) == 5
-    # one structured entry a refusal line, in the same order, saying the same thing
+    # one structured entry per refusal line, in the same order and with the same text
     assert [f"{s['source']}: {s['reason']}" for s in r["stages"]] == r["refused"]
     assert [(s["route"], s["source"], s["stage"]) for s in r["stages"]] == [
         ("answers", "answer 1", "examples"),
@@ -258,7 +258,7 @@ def test_each_refusal_is_kept_with_its_route_its_stage_and_what_it_was_tried_on(
     assert r["stages"][2]["at"] == "double(3) == 6"
     assert r["stages"][3]["inputs"] >= 10 and r["stages"][3]["first"].startswith("assert double(*[7]) == 0")
     assert r["stages"][4]["cells"]["dafny"] == "refuted / refuted"
-    # the specification that passed, and what it was held to on the function's own answers
+    # the specification that passed, and what holding it against the function's own answers found
     judged = r["specifications"]
     assert [(x["source"], x["verdict"]) for x in judged] == [("specification 2", "dropped"), ("specification 3", "kept")]
     assert judged[1]["function"]["passes"] and judged[1]["function"]["agreement"]["draws"] >= 10

@@ -395,10 +395,9 @@ def _compared(task: dict, code: str, fn: str, tests: list[str], entry: dict) -> 
     return to_python.check(task, code, fn, tests, outside=0)
 
 
-# Where an attempt stopped, in the order a function goes through them. A refusal line names its attempt (`answer 2`,
-# `specification 1, body 3`) and why, and each line is also kept as a record of its route, its stage and what it was
-# tried on, so that a panel run can say afterwards which function stopped where: the two panel runs of 2026-10-05
-# kept only their totals (t/PREDICT-2026-10-05-verify-python.md).
+# The stages a function can stop at, in the order it goes through them. A refusal line names its attempt (`answer 2`,
+# `specification 1, body 3`) and why. Each refusal is also kept as a record of its route, its stage and what it was
+# tried on, so that a panel run can say afterwards which function stopped where (t/verify_panel.py).
 STAGES = ("entry", "reply", "parse", "well formed", "examples", "other", "specification check", "same as the function",
           "prover", "error")
 _GATE_STAGE = (("no reply from the model", "reply"), ("no task block", "reply"), ("does not parse", "parse"),
@@ -406,13 +405,13 @@ _GATE_STAGE = (("no reply from the model", "reply"), ("no task block", "reply"),
 
 
 def _gate_stage(reason: str) -> str:
-    """The stage a cheap gate's reason names (t/answer.py candidates, t/spec_first.py accept); "other" for a reason
-    this does not know, rather than a guess."""
+    """The stage a cheap gate's refusal reason names (t/answer.py `candidates`, t/spec_first.py `accept`). A reason that
+    is not listed is "other", never a guess."""
     return next((stage for start, stage in _GATE_STAGE if reason.startswith(start)), "other")
 
 
 def _refuse(out: dict, route: str, source: str, stage: str, reason: str, **detail) -> None:
-    """One refusal: its line as `refused` has always written it, and the same refusal as a record."""
+    """Keep one refusal twice: as its line in `refused`, and as a record with its details in `stages`."""
     out["refused"].append(f"{source}: {reason}")
     out["stages"].append({"route": route, "source": source, "stage": stage, "reason": reason, **detail})
 
@@ -465,16 +464,18 @@ def _shown(text: str, task: dict, row: dict, proved: int, stage: dict, same: dic
 
 
 def _reached(error: Exception, out: dict, before: dict | None = None) -> None:
-    """What a route had refused and the stages it had passed when `error` stopped it, kept on the error as `reached`
-    (the refusals and stages of the route before it first, when this is the second), so that whoever catches the
-    error can still say how far the function got (t/verify_panel.py)."""
+    """Keep on `error`, as `reached`, the refusals and stages a route had gone through when `error` stopped it.
+
+    `before` holds the same for the route that ran first, when this is the second; those come first. Whoever catches
+    the error can then still say how far the function got (see t/verify_panel.py)."""
     first = before or {}
     error.reached = {"refused": list(first.get("refused", [])) + list(out["refused"]),
                      "stages": list(first.get("stages", [])) + list(out["stages"])}
 
 
 def by_answers(entry: dict, function: dict, student, answers: int = 5, max_new: int = 1024, prover=gate.prove, jobs: int = 2) -> dict:
-    """The route below, with what it had reached kept on any error it raises (`_reached`)."""
+    """Run the whole-answers route (`_by_answers`). An error it raises carries the refusals and stages reached so far
+    (`_reached`)."""
     out = {"fn": entry["fn"], "tests": entry["rec"]["test_list"], "refused": [], "stages": [], "candidates": [], "shown": None,
            "answers asked": 0}
     try:
@@ -545,7 +546,7 @@ def verify(entry: dict, function: dict, student, specs: int = 3, answers: int = 
     try:
         second = by_specification(entry, function, student, specs, answers, max_new, prover, jobs)
     except Exception as error:
-        if first:                                               # what the first route refused came before what stopped this one
+        if first:                                               # the first route's refusals come first
             error.reached = {"refused": first["refused"] + error.reached["refused"],
                              "stages": first["stages"] + error.reached["stages"]}
         raise
@@ -559,7 +560,8 @@ def verify(entry: dict, function: dict, student, specs: int = 3, answers: int = 
 
 def by_specification(entry: dict, function: dict, student, specs: int = 3, answers: int = 3, max_new: int = 1024,
                      prover=gate.prove, jobs: int = 2) -> dict:
-    """The route below, with what it had reached kept on any error it raises (`_reached`)."""
+    """Run the specification-first route (`_by_specification`). An error it raises carries the refusals and stages
+    reached so far (`_reached`)."""
     out = {"fn": entry["fn"], "tests": entry["rec"]["test_list"], "refused": [], "stages": [], "specifications": [], "shown": None,
            "specifications asked": specs, "bodies asked": 0}
     try:
@@ -592,7 +594,7 @@ def _by_specification(out: dict, entry: dict, function: dict, student, specs: in
     kept, _counts = spec_first.kept_specifications(written, entry, specs, record)
     tasks, false_at = dict(written), []
     scored = {r["source"] for r in record}
-    # every specification written and what became of it; one that does not survive its own printing is not scored
+    # every specification written, with its verdict; one that does not survive its own printing is "not scored"
     out["specifications"] = ([{"source": r["source"], "verdict": r["verdict"], "scores": r["scores"], "spec": r["spec"]}
                               for r in record] + [{"source": s, "verdict": "not scored"} for s, _t in written if s not in scored])
     for r in record:

@@ -1,18 +1,16 @@
 #!/usr/bin/env python3
-"""t/verify_panel.py -- `dawnr verify` on a panel of functions, one record per function in a run folder (2026-11-26).
+"""t/verify_panel.py -- run `dawnr verify` on a panel of functions and keep one record per function in a run folder.
 
     python3 t/verify_panel.py --student HOST:PORT --run DIR [--student-name NAME] [--reference] [--max-new 1024]
         [--whole 5] [--specs 3] [--answers 3] [--jobs 2] [--kernels dafny] [--ids 106,206]
 
-Why. The two panel runs of 2026-10-05 (V1 and V4 of t/PREDICT-2026-10-05-verify-python.md) left their totals and
-nothing else: 9 of 111 proved, and of the 102 refused, 88 for want of a specification that held at the function's
-own answers and 14 for want of a proved body. Which function stopped where, and why, could not be read afterwards,
-so whether a refusal was the model's specification, the proof, or `t` itself was never counted. This is the panel
-driver those runs did not commit, written so that a run leaves what it found.
+Why it exists. A panel run that keeps only its totals (how many functions were proved, how many refused and for
+which reason) cannot say which function stopped where, or whether a refusal came from the model's specification, the
+proof, or `t` itself. This driver writes a record per function so that a run leaves what it found.
 
-The panel is the one those runs used: the wider 111 (`heldout_audit.wider_clean()`, pool v7's additions), each
-problem's reference solution as the Python file, its words as the docstring and its tests as the examples. Every
-function is asked exactly as `dawnr verify FILE.py --test ...` asks it (t/verify_py.py `entry_for` and `verify`).
+The panel is the wider 111 (`heldout_audit.wider_clean()`, pool v7's additions): each problem's reference solution is
+the Python file, its words are the docstring and its tests are the examples. Every function is asked exactly as
+`dawnr verify FILE.py --test ...` asks it (t/verify_py.py `entry_for` and `verify`).
 
 The run folder holds `run.json` (what was asked, of which model, at which commit, and the totals when the run
 ends) and one `ID.json` per function:
@@ -33,8 +31,8 @@ ends) and one `ID.json` per function:
   stopped at               the furthest stage any attempt reached (verify_py.STAGES), for a refused function
 
 A run taken up again keeps the records it has and asks only for the functions that have none. A function whose
-check raised (the provers did not finish, the sandbox failed) is a record too: the stages and refusals verify had
-reached before it raised, then the error as a stage of its own (`error`), and the run goes on.
+check raised (the provers did not finish, the sandbox failed) gets a record too: the stages and refusals `verify` had
+reached before it raised, then the error as a stage of its own (`error`). The run goes on.
 """
 from __future__ import annotations
 
@@ -61,7 +59,7 @@ MANIFEST = "run.json"
 
 
 def problems(ids: set[int] | None = None) -> list[dict]:
-    """The wider 111, as the runs of 2026-10-05 asked them: {"id", "fn", "code", "text", "tests"}, in id order."""
+    """The wider 111 as {"id", "fn", "code", "text", "tests"} dicts, in id order."""
     pool = se.wider_pool()
     out = []
     for tid in sorted(heldout_audit.wider_clean()):
@@ -121,8 +119,8 @@ def record(problem: dict, function: dict | None, entry: dict | None, drawn: bool
 
 
 def _write(path: Path, value: dict) -> None:
-    """Written whole, as spec_experiment writes a raw record (a run stopped mid-write leaves no half record to be
-    taken for one); a value JSON has no word for is written as its text."""
+    """Write `value` as JSON the way spec_experiment writes a raw record: the whole file at once, so a run stopped
+    mid-write leaves no half-written record. A value JSON cannot represent is written as its text."""
     se.write_record(path, json.loads(json.dumps(value, default=str)))
 
 
@@ -149,7 +147,7 @@ def one(problem: dict, student, prover, settings: dict) -> dict:
     except verify_py.Refused as refused:
         return record(problem, function, entry, drawn, None, entry_refused=str(refused), seconds=time.monotonic() - start)
     except Exception as error:                                  # noqa: BLE001 -- recorded, and the run goes on
-        # what verify had refused and the stages it had passed before it raised (verify_py `_reached`) stay in the record
+        # keep the refusals and stages verify had reached before it raised (verify_py `_reached`)
         reached = getattr(error, "reached", None) or {}
         return record(problem, function, entry, drawn, {"stages": reached.get("stages", []), "refused": reached.get("refused", [])},
                       error=f"{type(error).__name__}: {error}"[:300], seconds=time.monotonic() - start)
@@ -170,8 +168,8 @@ def _now() -> str:
 
 def run(problems_: list[dict], run_dir: Path, student, prover=gate.prove, settings: dict | None = None,
         about: dict | None = None, say=lambda line: None, commit: str | None = None) -> dict:
-    """Every problem's record in `run_dir` (made if absent), `run.json` beside them; the totals. `commit` names the
-    code the run is at when it does not run from a checkout git can read."""
+    """Write every problem's record to `run_dir` (created if absent), with `run.json` beside them, and return the
+    totals. `commit` names the code the run is at, for when it does not run from a git checkout."""
     run_dir = Path(run_dir)
     run_dir.mkdir(parents=True, exist_ok=True)
     settings = dict(settings or {})
