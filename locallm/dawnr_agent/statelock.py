@@ -14,8 +14,8 @@ process at a time:
            blocking mode, LK_LOCK, gives up after ten tries a second apart and cannot be given a longer wait, so
            the non-blocking mode is tried again here, on both systems, until WAIT seconds have passed.
 
-The lock file is opened without following a link where the system has O_NOFOLLOW, and what was opened is then
-compared with what the name holds now, so that a link (or a junction, or another file swapped in) at that name is
+The lock file is looked at for a link before it is opened, opened without following a link where the system has
+O_NOFOLLOW, and what was opened is then compared with what the name holds now, so that a link (or a junction, or another file swapped in) at that name is
 refused and never followed. It is created owner-only, holds nothing and is never written. The state folder stays
 outside the model's roots like the files in it (paths.py), and `dawnr forget` knows the name (bin/dawnr).
 """
@@ -47,13 +47,31 @@ class StateLockRefused(OSError):
     """The name `.lock` holds something other than an ordinary file of its own."""
 
 
+def _is_link(named: os.stat_result) -> bool:
+    return stat.S_ISLNK(named.st_mode) or bool(getattr(named, "st_file_attributes", 0) & REPARSE_POINT)
+
+
+def _refuse(path: Path) -> StateLockRefused:
+    return StateLockRefused(errno.EPERM, f"{path} is a link or not an ordinary file of its own; not used as a lock")
+
+
+def _refuse_a_link(path: Path) -> None:
+    """Before opening: where there is no O_NOFOLLOW (Windows), opening with O_CREAT through a link to nothing would
+    create the file the link points at, so a link is looked for first, with no link followed."""
+    try:
+        named = os.lstat(path)
+    except FileNotFoundError:
+        return
+    if _is_link(named):
+        raise _refuse(path)
+
+
 def _refuse_unless_ordinary(fd: int, path: Path) -> None:
     opened = os.fstat(fd)
     named = os.lstat(path)
-    if (not stat.S_ISREG(opened.st_mode) or opened.st_nlink != 1 or stat.S_ISLNK(named.st_mode)
-            or getattr(named, "st_file_attributes", 0) & REPARSE_POINT
+    if (not stat.S_ISREG(opened.st_mode) or opened.st_nlink != 1 or _is_link(named)
             or (named.st_dev, named.st_ino) != (opened.st_dev, opened.st_ino)):
-        raise StateLockRefused(errno.EPERM, f"{path} is a link or not an ordinary file of its own; not used as a lock")
+        raise _refuse(path)
 
 
 def _try(fd: int) -> bool:
@@ -90,6 +108,7 @@ def state_lock(state_dir, wait: float | None = None):
     path = folder / LOCK_NAME
     flags = (os.O_RDWR | os.O_CREAT | getattr(os, "O_NOFOLLOW", 0) | getattr(os, "O_CLOEXEC", 0)
              | getattr(os, "O_NONBLOCK", 0) | getattr(os, "O_BINARY", 0))
+    _refuse_a_link(path)
     fd = os.open(path, flags, 0o600)
     try:
         _refuse_unless_ordinary(fd, path)

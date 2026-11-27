@@ -47,6 +47,35 @@ def test_a_command_that_changes_nothing_is_a_read_and_runs_unasked(tmp_path):
     assert r.trust == "untrusted" and agent.ops.journal.entries() == [] and os.listdir(tmp_path / "state" / "sh") == []
 
 
+def test_two_sessions_running_one_command_in_the_same_millisecond_each_get_a_scratch_folder_of_their_own(tmp_path, monkeypatch):
+    # Two sessions share a state folder, so the folder a run works in is named so that no other run can have it: the
+    # same command in the same millisecond would otherwise be the same name (the second run's makedirs failed over an
+    # overlay, and over a copy both runs filled one folder)
+    import sys
+    import time as real_time
+    work, harness, agent, asked = agent_in(tmp_path, **{"a.txt": "one\n"})
+    shell_mod = sys.modules[type(agent.shell).__module__]          # the module the agent itself uses
+    frozen = type("Clock", (), {name: getattr(real_time, name) for name in dir(real_time) if not name.startswith("__")})
+    frozen.time = staticmethod(lambda: 1234.567)
+    monkeypatch.setattr(shell_mod, "time", frozen)
+    command = {"command": "echo more >> a.txt"}
+    with harness:
+        first = agent.shell.run(command)
+        agent.shell.runs.clear()                     # the other session's shell holds none of this one's runs
+        second = agent.shell.run(command)
+        try:
+            assert first.id == second.id             # the same command: the same run id, which the folder's name starts with
+            assert first.scratch != second.scratch
+            assert Path(first.scratch).name.startswith(first.id + "-1234567-")
+            assert Path(first.scratch).is_dir() and Path(second.scratch).is_dir()
+            assert sorted(os.listdir(tmp_path / "state" / "sh")) == sorted([Path(first.scratch).name, Path(second.scratch).name])
+            assert [c.kind for c in first.changes] == [c.kind for c in second.changes] and first.changes
+        finally:
+            shell_mod._force_remove(first.scratch)
+            shell_mod._force_remove(second.scratch)
+    assert os.listdir(tmp_path / "state" / "sh") == []
+
+
 def test_what_a_command_changed_is_the_reason_it_is_asked_for_and_no_means_the_folder_is_as_it_was(tmp_path):
     work, harness, agent, asked = agent_in(tmp_path, approve=False, **{"a.txt": "one\n", "b.txt": "two\n"})
     with harness:

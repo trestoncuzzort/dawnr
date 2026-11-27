@@ -43,6 +43,7 @@ import shutil
 import stat
 import threading
 import time
+import uuid
 from dataclasses import dataclass, field
 from pathlib import Path
 
@@ -323,6 +324,21 @@ class ShellTools:
             except OSError:
                 pass
 
+    def _new_scratch(self, key: str) -> Path:
+        """A new folder for one run, owner-only, that no other run has: sessions share the state folder, and a name
+        made of the run's key and the millisecond alone is the same for the same command started in the same
+        millisecond. The random part makes a clash unlikely and mkdir, which fails over a folder that exists, makes
+        it impossible for two runs to be given one. The name begins with the key and nothing reads it apart: a run
+        is removed by the path it keeps (Run.scratch)."""
+        self.scratch.mkdir(parents=True, exist_ok=True, mode=0o700)
+        while True:
+            path = self.scratch / f"{key}-{int(time.time() * 1000)}-{uuid.uuid4().hex[:8]}"
+            try:
+                path.mkdir(mode=0o700)
+            except FileExistsError:
+                continue
+            return path
+
     def _layers(self, scratch: Path) -> dict:
         layers = {}
         for i, r in enumerate(self.roots):
@@ -558,7 +574,7 @@ class ShellTools:
             if kept is not None and not kept.applied:
                 return kept
             cwd, shown = self._cwd(args.get("cwd"))
-            scratch = self.scratch / f"{key}-{int(time.time() * 1000)}"
+            scratch = self._new_scratch(key)
             layers = self._layers(scratch)
             shell = shutil.which("bash", path=self.env["PATH"]) or "/bin/sh"
             got = run_argv(self._argv([shell, "-c", command], cwd, layers), cwd=self.roots[0].path, env=self.env,
