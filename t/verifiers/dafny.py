@@ -238,6 +238,10 @@ import unicodedata
 from pathlib import Path
 
 from . import Outcome, Result, safe_text, sha256_file, run_tree
+try:
+    from .. import check_scratch
+except ImportError:
+    import check_scratch
 from .discover import find, missing
 
 DAFNY = find("T_DAFNY", ["dafny"], [".local/dafny/dafny"])
@@ -633,140 +637,147 @@ def verify(path: Path, budget: int = DEFAULT_RLIMIT) -> Result:
     # NFKC folds homoglyph spellings; the hash above binds the raw bytes.
     src = unicodedata.normalize("NFKC", data.decode("utf-8", errors="replace"))
     banned = sorted({m.group(0) for m in BANNED_RE.finditer(src)})
-    fd2, src_copy = tempfile.mkstemp(prefix="t_src_", suffix=".dfy")
-    with os.fdopen(fd2, "wb") as f:
-        f.write(data)                       # the kernel reads this private copy, never the editable path
-    kernel_path = Path(src_copy)
-    cert_present = _CERT.search(src) is not None
-    # The resolver's own print of the program, the declaration evidence
-    # for the certificate door (module docstring); a temp file because
-    # --rprint writes nowhere else.
-    fd, rp_name = tempfile.mkstemp(prefix="t_rprint_", suffix=".dfy")
-    os.close(fd)
-    rprint: str | None = None
-    t0 = time.monotonic()
+    # The private copy and the --rprint file live in a folder of their own in dawnr's scratch parent. It holds the
+    # checked program, so it is removed when the check ends, whether with a verdict, a timeout or an exception. A check
+    # killed by SIGKILL cannot remove it; the next check's sweep does (check_scratch).
+    scratch = check_scratch.TemporaryDirectory(prefix="t_dafny")
+    src_copy = os.path.join(scratch.name, "t_src.dfy")
     try:
-        p = run_tree(
-            [DAFNY, "verify", *_solver_args(), "--resource-limit", str(budget),
-             "--warn-contradictory-assumptions",
-             "--rprint", rp_name, "--log-format", "text", str(kernel_path)],
-            capture_output=True, text=True, timeout=WALL_S)
+        with open(src_copy, "xb") as f:
+            f.write(data)                       # the kernel reads this private copy, never the editable path
+        kernel_path = Path(src_copy)
+        cert_present = _CERT.search(src) is not None
+        # The resolver's own print of the program, the declaration evidence
+        # for the certificate door (module docstring); a temp file because
+        # --rprint writes nowhere else.
+        rp_name = os.path.join(scratch.name, "t_rprint.dfy")
+        Path(rp_name).touch()
+        rprint: str | None = None
+        t0 = time.monotonic()
         try:
-            rprint = Path(rp_name).read_text(encoding="utf-8",
-                                             errors="replace")
-        except OSError:
-            rprint = None
-    except subprocess.TimeoutExpired:
-        return Result("dafny", version(), src_hash, Outcome.TIMEOUT,
-                      wall_ms=int((time.monotonic() - t0) * 1000),
-                      budget=f"rlimit={budget}", error="wall backstop fired")
-    finally:
-        try:
-            os.unlink(rp_name)
-        except OSError:
-            pass
-    wall = int((time.monotonic() - t0) * 1000)
-    out = p.stdout + p.stderr
-    diag = out.split("\nResults for ", 1)[0]   # the diagnostics, not the log
-    vac = [l for l in out.splitlines() if "contradictory assumption" in l.lower()]
-    fin = FINISH_RE.search(out)
-    n_verified = int(fin.group(1)) if fin else -1
-    n_errors = int(fin.group(2)) if fin else -1
-    oor = "out of resource" in diag.lower()
-    err = ""
-    cert: dict = {"present": cert_present}
-    if banned:
-        # A banned construct can admit or skip an obligation, so nothing
-        # dafny says about this file is evidence, whatever the exit code.
-        outcome = Outcome.VACUOUS
-    elif p.returncode == 2:
-        # Exit 2 is parse/resolution failure AND any warning, because this
-        # adapter deliberately runs without --allow-warnings so that the
-        # contradictory-assumptions warning can carry the vacuity signal.
-        # Those are not the same event. When the run still printed its own
-        # tally with an obligation discharged and no error, dafny COMPILED
-        # AND VERIFIED the file and then failed it for a warning, so calling
-        # it MALFORMED reports a prover's caution as a broken lowering, the
-        # same class of misreport as selling incompleteness as refutation.
-        # Measured 2026-09-04: the metamorphic sweep rewrote s[j] to
-        # s[(j + 0)] in an invariant, dafny lost the quantifier trigger it
-        # had been inferring, warned, and exited 2 on "2 verified, 0 errors".
-        # Vacuity still wins when it fires; otherwise this is UNPROVED, not
-        # VERIFIED, because a proof the prover calls brittle is not one this
-        # project counts.
-        if fin is not None and n_verified >= 1 and n_errors == 0:
-            outcome = Outcome.VACUOUS if vac else Outcome.UNPROVED
-            if not vac:
-                err = "verified but warned, not counted: " + diag[-200:]
-        else:
+            p = run_tree(
+                [DAFNY, "verify", *_solver_args(), "--resource-limit", str(budget),
+                 "--warn-contradictory-assumptions",
+                 "--rprint", rp_name, "--log-format", "text", str(kernel_path)],
+                capture_output=True, text=True, timeout=WALL_S)
+            try:
+                rprint = Path(rp_name).read_text(encoding="utf-8",
+                                                 errors="replace")
+            except OSError:
+                rprint = None
+        except subprocess.TimeoutExpired:
+            return Result("dafny", version(), src_hash, Outcome.TIMEOUT,
+                          wall_ms=int((time.monotonic() - t0) * 1000),
+                          budget=f"rlimit={budget}", error="wall backstop fired")
+        finally:
+            try:
+                os.unlink(rp_name)
+            except OSError:
+                pass
+        wall = int((time.monotonic() - t0) * 1000)
+        out = p.stdout + p.stderr
+        diag = out.split("\nResults for ", 1)[0]   # the diagnostics, not the log
+        vac = [l for l in out.splitlines() if "contradictory assumption" in l.lower()]
+        fin = FINISH_RE.search(out)
+        n_verified = int(fin.group(1)) if fin else -1
+        n_errors = int(fin.group(2)) if fin else -1
+        oor = "out of resource" in diag.lower()
+        err = ""
+        cert: dict = {"present": cert_present}
+        if banned:
+            # A banned construct can admit or skip an obligation, so nothing
+            # dafny says about this file is evidence, whatever the exit code.
+            outcome = Outcome.VACUOUS
+        elif p.returncode == 2:
+            # Exit 2 is parse/resolution failure AND any warning, because this
+            # adapter deliberately runs without --allow-warnings so that the
+            # contradictory-assumptions warning can carry the vacuity signal.
+            # Those are not the same event. When the run still printed its own
+            # tally with an obligation discharged and no error, dafny COMPILED
+            # AND VERIFIED the file and then failed it for a warning, so calling
+            # it MALFORMED reports a prover's caution as a broken lowering, the
+            # same class of misreport as selling incompleteness as refutation.
+            # Measured 2026-09-04: the metamorphic sweep rewrote s[j] to
+            # s[(j + 0)] in an invariant, dafny lost the quantifier trigger it
+            # had been inferring, warned, and exited 2 on "2 verified, 0 errors".
+            # Vacuity still wins when it fires; otherwise this is UNPROVED, not
+            # VERIFIED, because a proof the prover calls brittle is not one this
+            # project counts.
+            if fin is not None and n_verified >= 1 and n_errors == 0:
+                outcome = Outcome.VACUOUS if vac else Outcome.UNPROVED
+                if not vac:
+                    err = "verified but warned, not counted: " + diag[-200:]
+            else:
+                outcome = Outcome.MALFORMED
+        elif (cert_present and p.returncode == 0 and not oor and fin is not None
+              and n_errors == 0 and n_verified >= 1):
+            # THE COHERENCE GATE (2026-09-07, fstar's rule adopted). The main
+            # run discharged every obligation in the file, the twin's own
+            # included. A certificate claims the twin's theorem is false at the
+            # witness; a file that also verifies is incoherent, and the claim
+            # is evidence of nothing. Until this gate the branch below minted
+            # REFUTED here from the lemma alone. Measured on the 159 lifted
+            # tasks (ROADMAP 12.5): four cells read REFUTED on a twin dafny
+            # proves, slow_max (an exit witness on a loop the method assigns
+            # after) and downWhileGreater plus two mult tasks (a dropped bound
+            # invariant dafny's own inference recovers, which _Admissible's
+            # havoc rule does not model).
+            #
+            # Exit 0 and no "out of resource" are part of the test, not
+            # decoration: dafny's tally does not count a starved method as an
+            # error, so "1 verified, 0 errors, 1 out of resource" (measured on
+            # three lifted square twins the same day: the lemma verified, the
+            # method did not) read as a verified file to a gate on the counts
+            # alone and demoted three honest refutations to MALFORMED.
             outcome = Outcome.MALFORMED
-    elif (cert_present and p.returncode == 0 and not oor and fin is not None
-          and n_errors == 0 and n_verified >= 1):
-        # THE COHERENCE GATE (2026-09-07, fstar's rule adopted). The main
-        # run discharged every obligation in the file, the twin's own
-        # included. A certificate claims the twin's theorem is false at the
-        # witness; a file that also verifies is incoherent, and the claim
-        # is evidence of nothing. Until this gate the branch below minted
-        # REFUTED here from the lemma alone. Measured on the 159 lifted
-        # tasks (ROADMAP 12.5): four cells read REFUTED on a twin dafny
-        # proves, slow_max (an exit witness on a loop the method assigns
-        # after) and downWhileGreater plus two mult tasks (a dropped bound
-        # invariant dafny's own inference recovers, which _Admissible's
-        # havoc rule does not model).
-        #
-        # Exit 0 and no "out of resource" are part of the test, not
-        # decoration: dafny's tally does not count a starved method as an
-        # error, so "1 verified, 0 errors, 1 out of resource" (measured on
-        # three lifted square twins the same day: the lemma verified, the
-        # method did not) read as a verified file to a gate on the counts
-        # alone and demoted three honest refutations to MALFORMED.
-        outcome = Outcome.MALFORMED
-        err = ("certificate present on a file that verified: the kernel "
-               "proved the twin, so the witness refutes nothing")
-        cert["coherence"] = "file verified"
-    elif cert_present:
-        # Certificate discipline (module docstring): never VERIFIED; the
-        # kernel's acceptance of the one declared lemma, in its own isolated
-        # run, is the only thing that mints REFUTED.
-        accepted, cert = _check_certificate(kernel_path, budget, banned, out,
-                                            max(n_errors, 0), rprint)
-        if accepted:
-            outcome = Outcome.REFUTED
-        elif p.returncode == 4 and oor:
-            outcome = Outcome.TIMEOUT
-        elif p.returncode in (0, 4):
-            outcome = Outcome.UNPROVED
+            err = ("certificate present on a file that verified: the kernel "
+                   "proved the twin, so the witness refutes nothing")
+            cert["coherence"] = "file verified"
+        elif cert_present:
+            # Certificate discipline (module docstring): never VERIFIED; the
+            # kernel's acceptance of the one declared lemma, in its own isolated
+            # run, is the only thing that mints REFUTED.
+            accepted, cert = _check_certificate(kernel_path, budget, banned, out,
+                                                max(n_errors, 0), rprint)
+            if accepted:
+                outcome = Outcome.REFUTED
+            elif p.returncode == 4 and oor:
+                outcome = Outcome.TIMEOUT
+            elif p.returncode in (0, 4):
+                outcome = Outcome.UNPROVED
+            else:
+                outcome = Outcome.TOOL_ERROR
+                err = diag[-400:]
+        elif p.returncode == 0:
+            if fin is None:
+                # exit 0 without the verifier's own tally is not evidence.
+                outcome = Outcome.TOOL_ERROR
+                err = "exit 0 but no 'N verified, M errors' line: " + diag[-300:]
+            elif n_verified < 1 or n_errors != 0:
+                # "0 verified, 0 errors" at exit 0: measured for empty and
+                # comments-only files. Nothing was proved.
+                outcome = Outcome.MALFORMED
+            elif vac:
+                outcome = Outcome.VACUOUS
+            else:
+                outcome = Outcome.VERIFIED
+        elif p.returncode == 4:
+            # Could-not-prove. Z3 resource exhaustion also surfaces here with
+            # "out of resource" in the text, a budget verdict; everything else
+            # is the solver stopping without a countermodel, and no countermodel
+            # is ever printed (module docstring), so never REFUTED.
+            outcome = Outcome.TIMEOUT if oor else Outcome.UNPROVED
         else:
             outcome = Outcome.TOOL_ERROR
             err = diag[-400:]
-    elif p.returncode == 0:
-        if fin is None:
-            # exit 0 without the verifier's own tally is not evidence.
-            outcome = Outcome.TOOL_ERROR
-            err = "exit 0 but no 'N verified, M errors' line: " + diag[-300:]
-        elif n_verified < 1 or n_errors != 0:
-            # "0 verified, 0 errors" at exit 0: measured for empty and
-            # comments-only files. Nothing was proved.
-            outcome = Outcome.MALFORMED
-        elif vac:
-            outcome = Outcome.VACUOUS
-        else:
-            outcome = Outcome.VERIFIED
-    elif p.returncode == 4:
-        # Could-not-prove. Z3 resource exhaustion also surfaces here with
-        # "out of resource" in the text, a budget verdict; everything else
-        # is the solver stopping without a countermodel, and no countermodel
-        # is ever printed (module docstring), so never REFUTED.
-        outcome = Outcome.TIMEOUT if oor else Outcome.UNPROVED
-    else:
-        outcome = Outcome.TOOL_ERROR
-        err = diag[-400:]
-    return Result("dafny", version(), src_hash, outcome,
-                  ok=outcome == Outcome.VERIFIED, exit_code=p.returncode,
-                  wall_ms=wall, budget=f"rlimit={budget}",
-                  error=err,
-                  extras={"vacuity_warnings": vac[:5],
-                          "banned_tokens": banned[:8],
-                          "verified_count": n_verified,
-                          "error_count": n_errors,
-                          "certificate": cert})
+        return Result("dafny", version(), src_hash, outcome,
+                      ok=outcome == Outcome.VERIFIED, exit_code=p.returncode,
+                      wall_ms=wall, budget=f"rlimit={budget}",
+                      error=err,
+                      extras={"vacuity_warnings": vac[:5],
+                              "banned_tokens": banned[:8],
+                              "verified_count": n_verified,
+                              "error_count": n_errors,
+                              "certificate": cert})
+    finally:
+        scratch.cleanup()

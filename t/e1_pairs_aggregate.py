@@ -19,6 +19,10 @@ Modes:
     python3 -I e1_pairs_aggregate.py <checkpoint.jsonl> [out.json]            # v1 UNVALIDATED
     python3 -I e1_pairs_aggregate.py control
 """
+try:                                    # private scratch folders for the copies a check makes (check_scratch)
+    from . import check_scratch
+except ImportError:
+    import check_scratch
 import json
 import os
 import sys
@@ -359,6 +363,13 @@ def control():
 
 
 def pipeline_control():
+    import tempfile
+    # the scratch folder of the self-check is removed when it ends, on a pass, a fail or an exception
+    with check_scratch.TemporaryDirectory(prefix="e1_pairs_aggregate-") as folder:
+        return _pipeline_control(pathlib.Path(folder))
+
+
+def _pipeline_control(d):
     """Real-CLI pipeline: gate2 cmd_manifest -> cmd_run (stub grade) -> aggregate_v2, then the round-4 tampers.
     Binds to the frozen source index + re-hashed bytes + validated config chain, and keeps typed reasons."""
     import tempfile
@@ -370,7 +381,7 @@ def pipeline_control():
     def ok(name, cond):
         checks.append((name, bool(cond))); print(f"  {name}: [{'ok' if cond else 'FAIL'}]")
 
-    d = pathlib.Path(tempfile.mkdtemp()); pdir = d / "twins" / "pairs"; pdir.mkdir(parents=True)
+    pdir = d / "twins" / "pairs"; pdir.mkdir(parents=True)
     g2.PAIRS = pdir
 
     def mk(task, br, bt, w):

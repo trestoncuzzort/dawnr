@@ -31,7 +31,7 @@ Nothing, by default. The three exceptions are each something you choose:
 | the folders given with `--state` | `DAWNR_HOME/state-folders`, one path a line, written when the assistant starts with `--state` and `DAWNR_HOME` is set, as the `dawnr` command sets it | so that `dawnr forget` can find a folder it does not know by name | `dawnr forget` |
 | the page's and the API's jobs: the text and files you gave, what the model wrote, the certificate | `DAWNR_HOME/jobs`; the newest 200 finished jobs are kept and the oldest erased first; `DELETE /v1/jobs/ID` erases one now | so that the page can show the result and you can replay it | `dawnr forget`, or `DELETE` |
 | the page's session token | your browser's session storage for that tab; gone when the tab closes | so that the page can talk to the API | closing the tab |
-| copies of a program being checked, which the provers and the sandbox are handed | the system's temporary folder (`$TMPDIR`, else `/tmp`), each removed when its check ends, except: a check that is killed leaves its folder; the Dafny adapter leaves the copy it hands Dafny (`t_src_*.dfy`: `t/verifiers/dafny.py` never removes it); replaying an observation certificate leaves its folder (`obs-*`: `t/obs_certificate.py` never removes it) | so that a prover reads a private copy, not a file that can change while it reads | deleting them; not `dawnr forget`, which cannot tell them from the same files of another run of the provers |
+| copies of a program being checked, which the provers and the sandbox are handed | a folder of its own, `dawnr-checks-<uid>`, in the system's temporary folder (`$TMPDIR`, else `/tmp`), mode 0700, each copy removed when its check ends, whether the check succeeds, fails or raises; a check that is killed (SIGKILL) cannot clean up, so its copy stays until the next check that runs from dawnr starts and removes it (it removes only a folder in that parent whose owner process is gone, and never follows a link or touches anything outside it) | so that a prover reads a private copy, not a file that can change while it reads | deleting them; not `dawnr forget`, which cannot tell them from the same files of another run of the provers |
 
 The page sets no cookies and stores nothing else in the browser. The API server writes no request log. The files you
 point the assistant at are read in place; the only copies kept are the journal's undo record, the plan log's texts of 200
@@ -81,7 +81,7 @@ named and left whole,
 as `kept PATH: it does not look like a dawnr state folder`: a folder you also keep your own files in keeps the
 journal too, so erase those names in it yourself. `dawnr forget --all` also erases the models and everything
 `install.sh` fetched, with what an install that stopped part way left; run `install.sh` again to use dawnr after
-that. Neither erases the `dawnr` command, the copies left in the temporary folder, or the window's records; each is
+that. Neither erases the `dawnr` command, the copies a killed check leaves, or the window's records; each is
 listed above with what erases it. The project holds
 nothing about you that could be erased on request: there is no account or record on the project's side. If you
 believe otherwise, write through the route in [SECURITY.md](SECURITY.md).
