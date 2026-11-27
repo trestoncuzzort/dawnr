@@ -28,6 +28,7 @@ import tempfile
 import textwrap
 import threading
 import time
+import types
 import unittest
 from pathlib import Path
 from unittest import mock
@@ -1837,6 +1838,252 @@ class Processes(unittest.TestCase):
         if sys.platform.startswith("linux"):
             self.assertTrue(me["own"])
             self.assertIn("python", (me["cmd"] or me["name"]).lower())
+
+
+# ------------------------------------------- two sessions, one state folder --
+
+# Two terminals in one folder without --state share the default state folder. These tests run real processes
+# against it: a plan appended by one session while another cuts the plan log must never be lost, and a write to
+# the state folder's files waits while the state lock (dawnr_agent/statelock.py) is held.
+
+PLAN_WRITER = r'''
+import sys, threading, time, types
+sys.path.insert(0, sys.argv[1])
+from pathlib import Path
+from dawnr_agent import config
+state, who, rounds, keep, start = Path(sys.argv[2]), sys.argv[3], int(sys.argv[4]), int(sys.argv[5]), float(sys.argv[6])
+config.PLAN_LOG_KEEP = keep
+messages = []
+me = types.SimpleNamespace(plans=[], audit_path=state / "plans.jsonl", _lock=threading.Lock(),
+                           harness=types.SimpleNamespace(messages=messages))
+while time.time() < start:
+    pass
+for n in range(rounds):
+    step = types.SimpleNamespace(tool="fs_read", arguments={"who": who, "n": n})
+    dry = types.SimpleNamespace(digest="d", views=[types.SimpleNamespace(step=step)])
+    out = types.SimpleNamespace(approved=True, steps_run=1, stopped="")
+    config.Agent.record_plan(me, dry, out, None)
+print("\n".join(messages), file=sys.stderr)
+sys.exit(1 if messages else 0)
+'''
+
+JOURNAL_WRITER = r'''
+import sys, time
+sys.path.insert(0, sys.argv[1])
+from dawnr_agent.journal import Journal
+j = Journal(sys.argv[2])
+who, rounds, start = sys.argv[3], int(sys.argv[4]), float(sys.argv[5])
+while time.time() < start:
+    pass
+for n in range(rounds):
+    digest = j.keep(f"{who} {n % 7} {'x' * 4000}".encode())       # seven bodies each, over and over: the same hash twice
+    j.record(who=who, n=n, backup=digest)
+'''
+
+LOCK_HOLDER = r'''
+import sys
+sys.path.insert(0, sys.argv[1])
+from dawnr_agent import statelock
+with statelock.state_lock(sys.argv[2]):
+    print("held", flush=True)
+    sys.stdin.readline()
+'''
+
+
+class StateFolderShared(Env):
+    def _run_together(self, script, state, *more, count=2):
+        start = time.time() + 1.5
+        procs = [subprocess.Popen([sys.executable, "-c", script, str(HERE), str(state), who, *map(str, more), str(start)],
+                                  stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True) for who in "ab"[:count]]
+        for p in procs:
+            out, err = p.communicate(timeout=300)
+            self.assertEqual(p.returncode, 0, out + err)
+
+    def _held_by_another_process(self, state):
+        holder = subprocess.Popen([sys.executable, "-c", LOCK_HOLDER, str(HERE), str(state)], stdin=subprocess.PIPE,
+                                  stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+        self.addCleanup(holder.communicate, "\n")
+        self.assertEqual(holder.stdout.readline().strip(), "held", "the lock holder did not start")
+        return holder
+
+    def test_plans_appended_by_two_sessions_while_the_log_is_cut_are_never_lost(self):
+        # each plan is appended and then the log is cut to its newest `keep` (every plan does both); the cut reads the
+        # log, writes the shortened copy and swaps it in, and a plan appended by the other session in between was in
+        # the old file only. The newest `keep` lines must be the last `keep` written, nothing missing from them.
+        # The log starts full, so that every plan's cut really rewrites it; `keep` is most of what is written, so that
+        # a plan lost from the middle of the run is still in the window the final log shows, not trimmed away unseen.
+        keep, rounds = 150, 100
+        seed = "".join(json.dumps({"calls": [{"tool": "fs_read", "arguments": {"who": "seed", "n": n}}]}) + "\n"
+                       for n in range(keep))
+        for attempt in range(3):
+            state = self.base / f"shared-{attempt}"
+            state.mkdir()
+            (state / "plans.jsonl").write_text(seed)
+            self._run_together(PLAN_WRITER, state, rounds, keep)
+            rows = [json.loads(line)["calls"][0]["arguments"] for line in (state / "plans.jsonl").read_text().splitlines()]
+            self.assertEqual(len(rows), keep, rows)
+            for who in "ab":
+                got = [r["n"] for r in rows if r["who"] == who]
+                self.assertEqual(got, list(range(rounds - len(got), rounds)), f"{who} lost plans in round {attempt}; the log's last rows: {rows[-5:]}")
+            self.assertEqual([p.name for p in state.iterdir() if p.name.startswith(".plans")], [])
+
+    def test_two_sessions_keeping_and_recording_leave_every_row_and_every_backup_whole(self):
+        # the journal's keep writes a new file for each hash and record appends a line: neither rewrites a file the
+        # other session writes, so this holds with or without the lock; it is here so that the lock never breaks it
+        from dawnr_agent.journal import Journal
+        state, rounds = self.base / "shared-journal", 80
+        self._run_together(JOURNAL_WRITER, state, rounds)
+        j = Journal(state)
+        rows = j.entries()
+        self.assertEqual(sorted((r["who"], r["n"]) for r in rows), sorted((w, n) for w in "ab" for n in range(rounds)))
+        for r in rows:
+            self.assertEqual(len(j.backup(r["backup"])), len(f"{r['who']} 0 {'x' * 4000}"))
+        self.assertEqual([p.name for p in j.backups.iterdir() if p.name.endswith(".tmp")], [])
+
+    def test_the_state_lock_is_held_by_one_process_at_a_time_and_free_again_when_it_lets_go(self):
+        from dawnr_agent import statelock
+        holder = self._held_by_another_process(self.state)
+        with mock.patch.object(statelock, "WAIT", 0.3):
+            with self.assertRaises(OSError):
+                with statelock.state_lock(self.state):
+                    self.fail("got the lock while another process held it")
+        holder.stdin.write("\n")
+        holder.stdin.flush()
+        holder.wait(timeout=30)
+        with statelock.state_lock(self.state):
+            pass
+
+    def test_the_state_lock_is_let_go_when_what_runs_under_it_raises(self):
+        from dawnr_agent import statelock
+        with self.assertRaises(ZeroDivisionError):
+            with statelock.state_lock(self.state):
+                1 / 0
+        with mock.patch.object(statelock, "WAIT", 0.3):
+            with statelock.state_lock(self.state):                  # at once: not after the wait
+                pass
+        holder = self._held_by_another_process(self.state)         # and a process of its own can take it
+        holder.stdin.write("\n")
+        holder.stdin.flush()
+        holder.wait(timeout=30)
+
+    def test_a_link_planted_at_the_lock_files_name_is_refused_and_not_followed(self):
+        from dawnr_agent import statelock
+        self.state.mkdir(parents=True)
+        victim = self.base / "victim.txt"
+        victim.write_text("the person's own file\n")
+        lock = self.state / statelock.LOCK_NAME
+        try:
+            lock.symlink_to(victim)
+        except (OSError, NotImplementedError) as e:
+            self.skipTest(f"no links here: {e}")
+        with self.assertRaises(OSError):
+            with statelock.state_lock(self.state):
+                self.fail("followed the link")
+        self.assertEqual(victim.read_text(), "the person's own file\n")
+        lock.unlink()
+        lock.symlink_to(self.base / "not-there-yet")                # a link to nothing: not created through it either
+        with self.assertRaises(OSError):
+            with statelock.state_lock(self.state):
+                self.fail("followed the link")
+        self.assertFalse((self.base / "not-there-yet").exists())
+
+    def test_a_folder_or_a_second_name_for_another_file_at_the_lock_files_name_is_refused(self):
+        from dawnr_agent import statelock
+        folder, other = self.base / "s1", self.base / "s2"
+        (folder / statelock.LOCK_NAME).mkdir(parents=True)
+        other.mkdir()
+        (self.base / "theirs.txt").write_text("theirs\n")
+        try:
+            os.link(self.base / "theirs.txt", other / statelock.LOCK_NAME)
+        except (OSError, NotImplementedError) as e:
+            self.skipTest(f"no hard links here: {e}")
+        for where in (folder, other):
+            with self.assertRaises(OSError):
+                with statelock.state_lock(where):
+                    self.fail("took a lock on something that is not the lock file")
+        self.assertEqual((self.base / "theirs.txt").read_text(), "theirs\n")
+
+    def test_the_plan_log_is_neither_appended_to_nor_cut_while_the_lock_is_held(self):
+        from dawnr_agent import statelock
+        h, a = self.build()
+        self._plans_logged(h, 1)
+        log = self.state / "plans.jsonl"
+        before = log.read_bytes()
+        holder = self._held_by_another_process(self.state)
+        with mock.patch.object(statelock, "WAIT", 0.3):
+            self._plans_logged(h, 1, first=2)
+            self.assertTrue(any("plan log not written" in m for m in h.messages), h.messages)
+            self.assertEqual(log.read_bytes(), before)
+            with self.assertRaises(OSError):
+                config_mod._rotate(log, 1)
+        self.assertEqual(log.read_bytes(), before)
+        holder.stdin.write("\n")
+        holder.stdin.flush()
+        holder.wait(timeout=30)
+        config_mod._rotate(log, 1)
+        self.assertEqual(len(log.read_bytes().splitlines()), 1)
+
+    def _plans_logged(self, h, count, first=1):
+        for n in range(first, first + count):
+            h.call("plan", {"steps": [{"tool": "fs_read", "arguments": {"path": "project/readme.txt", "start": n}}]},
+                   session=h.session())
+
+    def test_the_journal_keeps_and_records_only_while_the_lock_is_free(self):
+        from dawnr_agent import statelock
+        from dawnr_agent.journal import Journal
+        j = Journal(self.state)
+        j.ensure()
+        j.record(action="first")
+        holder = self._held_by_another_process(self.state)
+        with mock.patch.object(statelock, "WAIT", 0.3):
+            with self.assertRaises(OSError):
+                j.keep(b"bytes that are not in the journal yet")
+            with self.assertRaises(OSError):
+                j.record(action="second")
+        self.assertEqual([r["action"] for r in j.entries()], ["first"])
+        self.assertEqual([p.name for p in j.backups.iterdir()], [])
+        holder.stdin.write("\n")
+        holder.stdin.flush()
+        holder.wait(timeout=30)
+        digest = j.keep(b"bytes that are not in the journal yet")
+        self.assertEqual(j.backup(digest), b"bytes that are not in the journal yet")
+
+    def test_the_sandbox_markers_are_made_while_the_lock_is_free_and_only_once(self):
+        # a folder or file hidden from a command is bound over by these files, and a session starting beside another
+        # must not truncate and rewrite them while that one's sandbox reads them
+        from dawnr_agent import statelock
+        from dawnr_agent.shell import ShellTools
+        me = types.SimpleNamespace(markers=self.state / "sh-hidden")
+        holder = self._held_by_another_process(self.state)
+        with mock.patch.object(statelock, "WAIT", 0.3):
+            with self.assertRaises(OSError):
+                ShellTools._markers(me)
+        self.assertFalse(me.markers.exists())
+        holder.stdin.write("\n")
+        holder.stdin.flush()
+        holder.wait(timeout=30)
+        folder, file = ShellTools._markers(me)
+        seen = [os.stat(p).st_ino for p in (me.markers / "gitattributes", file)]
+        holder = self._held_by_another_process(self.state)          # made already: nothing is written, so nothing waits
+        with mock.patch.object(statelock, "WAIT", 0.3):
+            self.assertEqual(ShellTools._markers(me), (folder, file))
+        self.assertEqual([os.stat(p).st_ino for p in (me.markers / "gitattributes", file)], seen)
+
+    def test_the_lock_file_is_the_state_folders_own_and_the_model_can_neither_read_nor_write_it(self):
+        from dawnr_agent import statelock
+        h, a = self.build(roots=[{"name": "project", "path": str(self.proj), "mode": "write"}],
+                          state=str(self.proj / "agent-state"))
+        self._plans_logged(h, 2)
+        lock = self.proj / "agent-state" / statelock.LOCK_NAME
+        self.assertTrue(lock.is_file(), sorted(p.name for p in lock.parent.iterdir()))
+        self.assertEqual(lock.read_bytes(), b"")                    # the lock holds nothing to read or leak
+        before = lock.stat()
+        shown = f"project/agent-state/{statelock.LOCK_NAME}"
+        for name, args in (("fs_write", {"path": shown, "content": "x", "overwrite": True}),
+                           ("fs_edit", {"path": shown, "old": "a", "new": "x"}),
+                           ("fs_read", {"path": shown})):
+            self.assertTrue(h.call(name, args).is_error, name)
+        self.assertEqual((lock.stat().st_ino, lock.stat().st_size), (before.st_ino, 0))
 
 
 if __name__ == "__main__":

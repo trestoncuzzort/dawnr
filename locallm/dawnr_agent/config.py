@@ -43,6 +43,7 @@ from .files import FileOps, FileTools, Limits, Preview
 from .journal import Journal, sha256
 from .loop import Budget
 from .paths import DEFAULT_PROTECT, DEFAULT_SECRETS, Space
+from .statelock import state_lock
 
 AGENT_KEYS = {"roots", "protect", "secrets", "commands", "command_path", "env", "sandbox", "processes",
               "check_writes", "state", "limits", "budget", "dry_run", "shell", "system", "sysinfo"}
@@ -74,23 +75,26 @@ PLAN_LOG_KEEP = 200        # plans the plan log keeps; the oldest go first (the 
 def _rotate(path: Path, keep: int) -> None:
     """Cut the log at `path` to its newest `keep` lines (one line is one plan), the oldest first out, in the order
     they were written. The shortened log is written whole beside the old one and put in its place in one step
-    (os.replace), so that whatever stops this midway leaves the old file or the new one, never half of either."""
-    lines = [line for line in path.read_bytes().split(b"\n") if line.strip()]
-    if len(lines) <= keep:
-        return
-    tmp = path.with_name(f".{path.name}.{uuid.uuid4().hex[:8]}.tmp")
-    try:
-        with open(tmp, "wb") as f:
-            f.write(b"\n".join(lines[-keep:]) + b"\n")
-            f.flush()
-            os.fsync(f.fileno())
-        os.replace(tmp, path)
-    except BaseException:
+    (os.replace), so that whatever stops this midway leaves the old file or the new one, never half of either.
+    The whole cut is made under the state lock (statelock.py): another session's plan appended between the read and
+    the swap would be in the old file only, and the swap would drop it."""
+    with state_lock(path.parent):
+        lines = [line for line in path.read_bytes().split(b"\n") if line.strip()]
+        if len(lines) <= keep:
+            return
+        tmp = path.with_name(f".{path.name}.{uuid.uuid4().hex[:8]}.tmp")
         try:
-            tmp.unlink()                                   # the half-written copy; the log itself is untouched
-        except OSError:
-            pass
-        raise
+            with open(tmp, "wb") as f:
+                f.write(b"\n".join(lines[-keep:]) + b"\n")
+                f.flush()
+                os.fsync(f.fileno())
+            os.replace(tmp, path)
+        except BaseException:
+            try:
+                tmp.unlink()                               # the half-written copy; the log itself is untouched
+            except OSError:
+                pass
+            raise
 
 
 def _logged(value):
@@ -165,9 +169,9 @@ class Agent:
             self.plans.append(row)
             if self.audit_path is not None:
                 try:
-                    self.audit_path.parent.mkdir(parents=True, exist_ok=True)
-                    with open(self.audit_path, "a", encoding="utf-8") as f:
-                        f.write(json.dumps(row, ensure_ascii=True) + "\n")
+                    with state_lock(self.audit_path.parent):        # not while another session cuts the log
+                        with open(self.audit_path, "a", encoding="utf-8") as f:
+                            f.write(json.dumps(row, ensure_ascii=True) + "\n")
                 except (OSError, ValueError) as e:
                     self.harness.messages.append(f"agent plan log not written: {e}")
                 else:

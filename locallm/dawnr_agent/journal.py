@@ -23,6 +23,8 @@ import time
 import uuid
 from pathlib import Path
 
+from .statelock import state_lock
+
 
 def sha256(data: bytes) -> str:
     return hashlib.sha256(data).hexdigest()
@@ -48,12 +50,18 @@ class Journal:
         final = self.backups / digest
         if final.exists():
             return digest
-        tmp = self.backups / f".{digest}.{uuid.uuid4().hex[:8]}.tmp"
-        with open(tmp, "wb") as f:
-            f.write(data)
-            f.flush()
-            os.fsync(f.fileno())
-        os.replace(tmp, final)
+        # Under the state lock, and looked at again under it: a backup that exists is whole (it was put in place in
+        # one step), and is never swapped for another copy of itself while another session may be reading it
+        # (Windows refuses to replace a file that is open).
+        with state_lock(self.dir):
+            if final.exists():
+                return digest
+            tmp = self.backups / f".{digest}.{uuid.uuid4().hex[:8]}.tmp"
+            with open(tmp, "wb") as f:
+                f.write(data)
+                f.flush()
+                os.fsync(f.fileno())
+            os.replace(tmp, final)
         return digest
 
     def backup(self, digest: str) -> bytes:
@@ -71,8 +79,9 @@ class Journal:
         self.ensure()
         change = "c-" + uuid.uuid4().hex[:10]
         row = {"id": change, "time": round(time.time(), 3), **entry}
-        with open(self.path, "a", encoding="utf-8") as f:
-            f.write(json.dumps(row, ensure_ascii=True, sort_keys=True) + "\n")
+        with state_lock(self.dir):
+            with open(self.path, "a", encoding="utf-8") as f:
+                f.write(json.dumps(row, ensure_ascii=True, sort_keys=True) + "\n")
         return change
 
     def entries(self) -> list[dict]:

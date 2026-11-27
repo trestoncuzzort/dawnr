@@ -289,3 +289,28 @@ def test_forget_erases_a_state_folder_holding_the_copy_a_cut_of_the_plan_log_lef
     assert not os.path.lexists(left)
     assert f'kept {odd}: it does not look like a dawnr state folder' in got.stdout.splitlines(), got.stdout
     assert snapshot(odd) == before
+
+
+def test_forget_erases_a_state_folder_holding_the_lock_file_and_keeps_one_where_that_name_is_something_else(tmp_path):
+    # every write to the plan log and the journal is made under a lock on `.lock` in the state folder
+    # (locallm/dawnr_agent/statelock.py): an empty file of dawnr's own, so a folder holding it is still dawnr's
+    _home, data, env, _default = forget_place(tmp_path)
+    locked, linked, folder = tmp_path / 'locked', tmp_path / 'linked', tmp_path / 'folder'
+    for state in (locked, linked, folder):
+        journal_a_change(state)
+    (locked / '.lock').write_bytes(b'')                                       # as the journal's writes leave it
+    for state in (linked, folder):
+        (state / '.lock').unlink(missing_ok=True)                             # this test's own folders: swap it
+    (tmp_path / 'theirs.txt').write_text('my own file\n')
+    (linked / '.lock').symlink_to(tmp_path / 'theirs.txt')                    # a link at that name: not dawnr's file
+    (folder / '.lock').mkdir()                                                # a folder at that name: not dawnr's file
+    (data / 'state-folders').write_text(f'{locked}\n{linked}\n{folder}\n')
+    before = {str(top): snapshot(top) for top in (linked, folder)}
+    got = forget(env)
+    assert got.returncode == 0, got.stderr
+    assert f'erased {locked}' in got.stdout.splitlines(), got.stdout
+    assert not os.path.lexists(locked)
+    for kept in (linked, folder):
+        assert f'kept {kept}: it does not look like a dawnr state folder' in got.stdout.splitlines(), got.stdout
+    assert {str(top): snapshot(top) for top in (linked, folder)} == before
+    assert (tmp_path / 'theirs.txt').read_text() == 'my own file\n'

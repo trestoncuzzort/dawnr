@@ -52,6 +52,7 @@ from .system import SECRET
 from .files import FileOps, Preview
 from .journal import sha256
 from .paths import DEFAULT_SECRETS, PathRefused, Space, Target
+from .statelock import state_lock
 from dawnr_harness.tools import CallContext, Tool, ToolResult
 
 MAX_COMMAND = 4000             # characters of one shell line
@@ -246,10 +247,17 @@ class ShellTools:
     def _markers(self) -> tuple[str, str]:
         folder, file = self.markers / "folder", self.markers / "file"
         if not file.is_file():
-            folder.mkdir(parents=True, exist_ok=True)
-            (folder / "hidden-by-dawnr").write_text(HIDDEN_FOLDER)
-            (self.markers / "gitattributes").write_text(GIT_ATTRIBUTES)
-            file.write_text(HIDDEN_FILE)
+            # Under the state lock, and looked at again under it: another session's sandbox binds these files over
+            # the hidden places, so they are never truncated and rewritten while it reads them. `file` is put in
+            # place last and whole (written beside and swapped in), so that its being there means all three are.
+            with state_lock(self.markers.parent):
+                if not file.is_file():
+                    folder.mkdir(parents=True, exist_ok=True)
+                    (folder / "hidden-by-dawnr").write_text(HIDDEN_FOLDER)
+                    (self.markers / "gitattributes").write_text(GIT_ATTRIBUTES)
+                    part = file.with_name(file.name + ".part")
+                    part.write_text(HIDDEN_FILE)
+                    os.replace(part, file)
         return str(folder), str(file)
 
     def _argv(self, command: list, cwd: str, layers: dict) -> list:

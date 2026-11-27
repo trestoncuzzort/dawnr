@@ -272,7 +272,8 @@ abspath() { case $1 in /*) printf '%s' "$1";; *) printf '%s/%s' "$PWD" "$1";; es
 # physical path (no link at its end or above it), not / or the home folder or DAWNR_HOME, holding at least one entry
 # and every entry one of the names the agent writes into a state folder, of its kind and not a link: the journal
 # (journal.jsonl, backups/: locallm/dawnr_agent/journal.py), the plan log (plans.jsonl: dawnr_agent/config.py; and
-# .plans.jsonl.XXXXXXXX.tmp, the copy a cut of it leaves if the computer stops midway), the
+# .plans.jsonl.XXXXXXXX.tmp, the copy a cut of it leaves if the computer stops midway), the lock file (.lock, empty:
+# locallm/dawnr_agent/statelock.py), the
 # sandbox's scratch (sh/, sh-hidden/: dawnr_agent/shell.py) and the document reader's (doc/: locallm/dawnr_cli.py)
 state_folder() {
   local d=$1 e
@@ -287,7 +288,7 @@ state_folder() {
     found=0
     for e in "$d"/*; do
       case ${e##*/} in
-        journal.jsonl|plans.jsonl|.plans.jsonl.????????.tmp) [ -f "$e" ] && [ ! -L "$e" ] || exit 1;;
+        journal.jsonl|plans.jsonl|.lock|.plans.jsonl.????????.tmp) [ -f "$e" ] && [ ! -L "$e" ] || exit 1;;
         backups|doc|sh|sh-hidden) [ -d "$e" ] && [ ! -L "$e" ] || exit 1;;
         *) exit 1;;
       esac
