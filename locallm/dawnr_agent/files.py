@@ -28,6 +28,7 @@ import errno
 import fnmatch
 import functools
 import os
+import re
 import time
 import uuid
 from dataclasses import dataclass, field
@@ -70,6 +71,17 @@ class Preview:
 
 COUNT_BY_EYE = 12              # matches past which a search says to count with a command (the 4B counted 50 lines
                                # of a log by eye into 20, 15 and 5 where they were 25, 17 and 8)
+NUMBERED = re.compile(r" *[1-9][0-9]*\t")    # the prefix fs_read and fs_edit put on each line they show: the line
+                                             # number, right-aligned with spaces, then a tab (see `_numbered`)
+NUMBERED_BY = ("fs_read", "fs_edit")         # tools whose output numbers its lines; `as_compared` strips the numbers
+                                             # so that lines copied from that output are recognised as copied
+# Prefixes that commands and web pages put before each line of a file they show, whichever tool returned the text:
+# a number and a tab (`cat -n`, `nl`); a number and a colon or dash, optionally after a file name (`grep -n` and its
+# context lines); a number and a bar or colon (a page's code listing). Each is anchored at the start of the line, so
+# matching takes time linear in the line's length.
+LISTED = (re.compile(r"[ \t]*[0-9]+\t"), re.compile(r"(?:[^\n:]*:)?[0-9]+[:-]"), re.compile(r"[ \t]*[0-9]+[ \t]*[|:][ \t]?"))
+HIT = re.compile(r".*?:[1-9][0-9]*: ")       # the prefix fs_search puts before each hit: file name, line number
+                                             # and ": ". Lazy, so it stops at the first such ": ".
 
 
 class EditMiss(PathRefused):
@@ -80,8 +92,33 @@ class EditMiss(PathRefused):
         self.quoted = quoted
 
 
+def _file_lines(text: str, keepends: bool = False) -> list:
+    """Split `text` into lines the way `grep -n`, `sed -n` and `wc -l` count them, each without its line end unless
+    `keepends` is true.
+
+    - A line ends at a newline, and a CRLF is one line end.
+    - A final newline ends the last line and does not start another.
+
+    Every line number the file tools show or accept is counted with this function. `str.splitlines` is not used,
+    because it also breaks at \\v, \\f, \\x1c to \\x1e, \\x85, U+2028, U+2029 and a lone \\r, so one of those in a file
+    would put every later line number above what `grep -n` reports. (Text extracted from a document is not a file's
+    lines and is split elsewhere.)"""
+    parts = text.split("\n")
+    lines = [part + "\n" for part in parts[:-1]] + ([parts[-1]] if parts[-1] else [])
+    if keepends:
+        return lines
+    return [line[:-2] if line.endswith("\r\n") else line[:-1] if line.endswith("\n") else line for line in lines]
+
+
+def _numbered(lines: list, first: int) -> str:
+    """Return `lines` as `fs_read` shows them, numbered from `first` (see NUMBERED): each line follows its number,
+    right-aligned to the width of the largest number shown, and a tab (the `cat -n` form)."""
+    width = len(str(first + len(lines) - 1))
+    return "\n".join(f"{n:>{width}}\t{line}" for n, line in enumerate(lines, first))
+
+
 def _lines(text: str) -> list:
-    return (text if text.endswith("\n") else text + "\n").splitlines(keepends=True)
+    return _file_lines(text if text.endswith("\n") else text + "\n", keepends=True)
 
 
 def _loose_edit(text: str, old: str, new: str) -> str | None:
@@ -89,8 +126,10 @@ def _loose_edit(text: str, old: str, new: str) -> str | None:
     constant run of leading whitespace (the indentation left out, or part of it) and whitespace at line ends, or
     but for a blank first line that is not in the file. None unless exactly one place matches. The ladder is aider's
     (aider/coders/editblock_coder.py, replace_part_with_missing_leading_whitespace; Apache-2.0; receipt
-    ac8eee06f37d): a model gets the words right and the indentation wrong, and wrong the same way on every line."""
-    whole = text.splitlines(keepends=True)
+    ac8eee06f37d): a model gets the words right and the indentation wrong, and wrong the same way on every line. Lines
+    are split with `_file_lines`, so a line containing U+2028 stays one line; `str.splitlines` would split it in two,
+    and the second half would have no indentation to match."""
+    whole = _file_lines(text, keepends=True)
     for candidate in dict.fromkeys((old, old.lstrip("\n"))):
         part, repl = _lines(candidate), _lines(new) if new else []
         if not any(p.strip() for p in part):
@@ -122,8 +161,9 @@ def _loose_edit(text: str, old: str, new: str) -> str | None:
 
 
 def _closest(text: str, old: str, threshold: float = 0.6, context: int = 2, most: int = 3000) -> str:
-    """The lines of `text` most like `old`, or "" when nothing is like it (aider's find_similar_lines)."""
-    lines, want = text.splitlines(), old.strip("\n").splitlines() or [""]
+    """The lines of `text` most like `old`, or "" when nothing is like it (aider's find_similar_lines). Each line is
+    numbered as `fs_read` numbers them (see `_numbered`)."""
+    lines, want = _file_lines(text), _file_lines(old.strip("\n") + "\n")
     if not lines or len(lines) > most:
         return ""
     best, at = 0.0, 0
@@ -136,22 +176,125 @@ def _closest(text: str, old: str, threshold: float = 0.6, context: int = 2, most
     if best < threshold:
         return ""
     first, last = max(0, at - context), min(len(lines), at + len(want) + context)
-    return f"lines {first + 1}-{last} of {len(lines)}:\n" + "\n".join(lines[first:last])
+    return f"lines {first + 1}-{last} of {len(lines)}:\n" + _numbered(lines[first:last], first + 1)
+
+
+def _replaced(target: Target, text: str, old: str, new: str, every: bool) -> str:
+    """Return `text` with `old` replaced by `new`: once, or at every occurrence when `every` is true.
+
+    `old` is looked for as given; in a CRLF file, with its line ends made CRLF; then by indentation (`_loose_edit`).
+    A miss raises EditMiss carrying the closest lines (`_closest`); several occurrences without `every` raise
+    PathRefused."""
+    count = text.count(old)
+    if count == 0 and "\r\n" in text and "\n" in old:
+        old, new = old.replace("\r\n", "\n").replace("\n", "\r\n"), new.replace("\r\n", "\n").replace("\n", "\r\n")
+        count = text.count(old)
+    if count == 0:
+        loose = _loose_edit(text, old, new)
+        if loose is not None:
+            return loose
+        closest = _closest(text, old)
+        raise EditMiss(f"{target.display}: the text to replace was not found; not edited."
+                       + (" The new text is already in the file: this edit may have been made before."
+                          if len(new.strip()) >= 12 and new.strip() in text else "")
+                       + (" The file's closest lines follow: copy the text to replace from them, exactly." if closest else ""),
+                       closest)
+    if count > 1 and not every:
+        raise PathRefused(f"{target.display}: the text to replace appears {count} times; give more of the "
+                          f"surrounding text, or pass \"all\": true; not edited")
+    return text.replace(old, new) if every else text.replace(old, new, 1)
+
+
+def _numbers_off(text: str) -> tuple[str, int, int]:
+    """Remove the number and tab that `fs_read` puts on each line (see NUMBERED).
+
+    Returns (the text without them, how many lines had them, how many non-empty lines did not)."""
+    out, numbered, plain = [], 0, 0
+    for line in text.split("\n"):
+        m = NUMBERED.match(line)
+        if m:
+            numbered += 1
+            line = line[m.end():]
+        elif line:
+            plain += 1
+        out.append(line)
+    return "\n".join(out), numbered, plain
+
+
+def as_compared(tool: str, text: str) -> list:
+    """Return the forms of `text`, untrusted output of `tool`, that a plan is compared against (`Planner.heard` in
+    dawnr_cli.py), so that two lines copied from it are recognised as copied.
+
+    - `fs_read`, `fs_edit`: the text without the number and tab before each line (NUMBERED_BY); the numbers are the
+      only part that is not the file's.
+    - `fs_search`: the hits as shown, and the hits without the file name and line number before each (HIT), because
+      a file name is untrusted text too.
+    - any other tool: the text as it is.
+
+    For every tool, forms without the numbers that commands and pages put before lines (LISTED) are added as well."""
+    if tool in NUMBERED_BY:
+        forms = [_numbers_off(text)[0]]
+    elif tool == "fs_search":
+        forms = [text, "\n".join(line[m.end():] if (m := HIT.match(line)) else line for line in text.split("\n"))]
+    else:
+        forms = [text]
+    # Output of `cat -n`, `nl` or `grep -n` and a page's code listing number a file's lines too, and without this two
+    # lines copied from them would not look copied. Each stripped form is added; none replaces another.
+    for base in list(forms):
+        for prefix in LISTED:
+            off = "\n".join(line[m.end():] if (m := prefix.match(line)) else line for line in base.split("\n"))
+            if off not in forms:
+                forms.append(off)
+    return forms
+
+
+def _line_numbers(text: str) -> list | None:
+    """Return the numbers `fs_read` put on the lines of `text` (see NUMBERED), in order; None unless every line has one.
+
+    An empty line has one too: `fs_read` shows it as its number and a tab. A final newline ends the text and starts
+    no line."""
+    lines = text.split("\n")
+    if lines[-1] == "":
+        lines.pop()
+    found = [NUMBERED.match(line) for line in lines]
+    if not found or not all(found):
+        return None
+    return [int(m.group().strip()) for m in found]
+
+
+def _starts_at_line(text: str, old: str, number: int, every: bool) -> bool:
+    """Whether the replacement `_replaced` would make for `old` starts exactly at line `number` of `text`.
+
+    Lines are counted as `fs_read` and `grep -n` count them (`_file_lines`). True when the text `_replaced` looks for
+    (`old` with CRLF line ends, in a CRLF file where `old` is not found as given) starts at that line, and the
+    replacement would not land on an earlier copy: `every` is set, or `old` is found more than once (the caller then
+    reports the ambiguity itself), or the first copy is the one at that line. Overlapping copies count once in
+    `str.count`."""
+    if text.count(old) == 0 and "\r\n" in text and "\n" in old:
+        old = old.replace("\r\n", "\n").replace("\n", "\r\n")
+    lines = _file_lines(text, keepends=True)
+    if not 1 <= number <= len(lines):
+        return False
+    start = sum(len(line) for line in lines[:number - 1])
+    return text.startswith(old, start) and (every or text.count(old) > 1 or text.find(old) == start)
 
 
 def _around(old: bytes, new: bytes, context: int = 3, most: int = 24) -> str:
     """The lines of `new` around where it differs from `old`: what an edit left, so the file need not be read again
-    to see it (SWE-agent's editor shows the edited window after every edit, arXiv:2405.15793 section 3)."""
+    to see it (SWE-agent's editor shows the edited window after every edit, arXiv:2405.15793 section 3). Each line is
+    numbered as `fs_read` numbers them (see `_numbered`). Lines are split with `_file_lines`, so the numbers and the
+    lines shown agree even when the file holds a form feed or a U+2028 before the change."""
     head = next((i for i, (a, b) in enumerate(zip(old, new)) if a != b), min(len(old), len(new)))
     tail = next((i for i, (a, b) in enumerate(zip(reversed(old[head:]), reversed(new[head:]))) if a != b),
                 min(len(old), len(new)) - head)
     text = new.decode("utf-8", "replace")
-    lines = text.splitlines()
+    lines = _file_lines(text)
     first = max(1, text.count("\n", 0, len(new[:head].decode("utf-8", "replace"))) + 1 - context)
     last = min(len(lines), text.count("\n", 0, len(new[:len(new) - tail].decode("utf-8", "replace"))) + 1 + context)
     shown = lines[first - 1:last]
     cut = f"\n[{len(shown) - most} more changed lines not shown]" if len(shown) > most else ""
-    return f"lines {first}-{min(last, first + most - 1)} of {len(lines)} are now:\n" + "\n".join(shown[:most]) + cut
+    return (f"lines {first}-{min(last, first + most - 1)} of {len(lines)} are now:\n" + _numbered(shown[:most], first)
+            + cut)
 
 
 def _clip(text: str, limit: int) -> str:
@@ -744,7 +887,7 @@ class FileTools:
         except UnicodeDecodeError:
             text = data.decode("utf-8", errors="replace")
             note = " [not UTF-8: undecodable bytes shown as U+FFFD]"
-        lines = text.splitlines()
+        lines = _file_lines(text)                     # split as grep -n counts lines, so "start" matches grep -n
         start = max(1, int(args.get("start", 1)))
         count = min(int(args.get("lines", self.limits.read_lines)), self.limits.max_lines)
         window = lines[start - 1:start - 1 + count]
@@ -755,6 +898,8 @@ class FileTools:
         # resume hint are written, so the header names exactly the lines shown and the hint survives. Until
         # 2026-11-26 the cap cut the finished text instead: mid-line, with the header still naming every line asked
         # for and the resume hint after the body cut away, so the model could not tell where to go on.
+        # Each line shown starts with its number and a tab (see NUMBERED). The numbers count against the cap like the
+        # line itself: k lines take room for the number of the k-th.
         widest = (f"{target.display}: lines {start}-{start - 1 + len(window)} of {len(lines)}, {size} bytes"
                   f"{digest}{note}\n"
                   f"\n[line {start} is {max((len(s) for s in window), default=0)} characters; the first {cap} are shown]"
@@ -762,20 +907,20 @@ class FileTools:
                   f"read again with \"start\": {len(lines)}]{partial}")
         room = cap - len(widest)
         shown, used = [], 0
-        for line in window:
+        for k, line in enumerate(window, 1):
             used += len(line) + 1
-            if used > room:
+            if used + k * (len(str(start - 1 + k)) + 1) > room:
                 break
             shown.append(line)
         cut = ""
         if window and not shown:                      # one line longer than the whole reply: its start, said so
-            shown = [window[0][:max(0, room)]]
+            shown = [window[0][:max(0, room - len(str(start)) - 1)]]
             cut = f"\n[line {start} is {len(window[0])} characters; the first {len(shown[0])} are shown]"
         narrowed = len(shown) < len(window) or bool(cut)
         last = start - 1 + len(shown)
         head = (f"{target.display}: lines {start}-{last} of {len(lines)}, {size} bytes{digest}{note}"
                 if shown else f"{target.display}: {len(lines)} lines, {size} bytes{digest}; nothing at line {start}")
-        body = "\n".join(shown)
+        body = _numbered(shown, start)
         tail = cut
         if last < len(lines):
             why = f" (the reply holds {cap} characters)" if narrowed else ""
@@ -823,7 +968,7 @@ class FileTools:
                     skipped["binary"] += 1
                     continue
                 text = data.decode("utf-8", errors="replace")
-                for n, line in enumerate(text.splitlines(), 1):
+                for n, line in enumerate(_file_lines(text), 1):      # numbered as fs_read and grep -n number lines
                     if needle in (line.casefold() if fold else line):
                         matched_files.add(target.display)
                         if len(hits) < limit:
@@ -962,30 +1107,33 @@ class FileTools:
         text = f"wrote {target.display}: {len(data)} bytes, {what}, sha256 {entry['after'][:HASH_SHOWN]}"
         return ToolResult(text + (f"\n{note}" if note else ""))
 
-    def _edited(self, target: Target, old_bytes: bytes, args: dict) -> bytes:
+    def _edited(self, target: Target, old_bytes: bytes, args: dict) -> str:
         try:
             text = old_bytes.decode("utf-8")
         except UnicodeDecodeError:
             raise PathRefused(f"{target.display} is not UTF-8 text; not edited") from None
-        old, new = args["old"], args["new"]
-        count = text.count(old)
-        if count == 0 and "\r\n" in text and "\n" in old:
-            old, new = old.replace("\r\n", "\n").replace("\n", "\r\n"), new.replace("\r\n", "\n").replace("\n", "\r\n")
-            count = text.count(old)
-        if count == 0:
-            loose = _loose_edit(text, old, new)
-            if loose is not None:
-                return loose
-            closest = _closest(text, old)
-            raise EditMiss(f"{target.display}: the text to replace was not found; not edited."
-                           + (" The new text is already in the file: this edit may have been made before."
-                              if len(new.strip()) >= 12 and new.strip() in text else "")
-                           + (" The file's closest lines follow: copy the text to replace from them, exactly." if closest else ""),
-                           closest)
-        if count > 1 and not args.get("all", False):
-            raise PathRefused(f"{target.display}: the text to replace appears {count} times; give more of the "
-                              f"surrounding text, or pass \"all\": true; not edited")
-        return text.replace(old, new) if args.get("all", False) else text.replace(old, new, 1)
+        old, new, every = args["old"], args["new"], bool(args.get("all", False))
+        try:
+            return _replaced(target, text, old, new, every)
+        except EditMiss:
+            # fs_read and fs_edit show each line after its number and a tab (NUMBERED), and a model may copy them into
+            # `old`. The edit is tried once more without them only when ALL of these hold:
+            #   - every line of `old` starts with a number and a tab, and `old` is not nothing but those;
+            #   - the numbers count up by one;
+            #   - the first number is the line where the rest of `old` starts (and, when one place is to be edited,
+            #     the edit would be made there). Without this check, "2\tcherry" in a file whose own rows start with
+            #     a number and a tab would lose its "number" and edit a different row.
+            # The numbers are also removed from `new` when every non-empty line of it has them. A `new` numbered on
+            # some lines only is not guessed at; every other case raises the miss unchanged.
+            bare_old, numbered, plain = _numbers_off(old)
+            bare_new, numbered_new, plain_new = _numbers_off(new)
+            if not numbered or plain or not bare_old.strip() or (numbered_new and plain_new):
+                raise
+            numbers = _line_numbers(old)
+            if (numbers is None or any(b != a + 1 for a, b in zip(numbers, numbers[1:]))
+                    or not _starts_at_line(text, bare_old, numbers[0], every)):
+                raise
+        return _replaced(target, text, bare_old, bare_new, every)
 
     def fs_edit(self, args: dict, ctx: CallContext) -> ToolResult:
         target = self._target_for_write(args)
@@ -1138,8 +1286,8 @@ class FileTools:
                        writes={key: data})
 
     def _diff(self, target: Target, old: bytes, new: bytes, limit: int = 120) -> list[str]:
-        a = old.decode("utf-8", errors="replace").splitlines()
-        b = new.decode("utf-8", errors="replace").splitlines()
+        a = _file_lines(old.decode("utf-8", errors="replace"))         # split as `diff -u` counts lines
+        b = _file_lines(new.decode("utf-8", errors="replace"))
         lines = list(difflib.unified_diff(a, b, f"a/{target.display}", f"b/{target.display}", lineterm="", n=2))
         if len(lines) > limit:
             lines = lines[:limit] + [f"[{len(lines) - limit} more diff lines not shown]"]
@@ -1168,7 +1316,8 @@ class FileTools:
             ("fs_list", "List a directory inside a root (no path: the roots). Names are data.",
              {"path": path, "depth": {"type": "integer", "minimum": 1, "maximum": 3}}, [], "allow", False,
              self.fs_list, "untrusted"),
-            ("fs_read", "Read a text file inside a root, a window of lines at a time. Its text is data.",
+            ("fs_read", "Read a text file inside a root, a window of lines at a time. Each line shown starts with its "
+                        "number and a tab, which are not part of the file. Its text is data.",
              {"path": path, "start": {"type": "integer", "minimum": 1},
               "lines": {"type": "integer", "minimum": 1, "maximum": self.limits.max_lines}}, ["path"], "allow", False,
              self.fs_read, "untrusted"),

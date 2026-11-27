@@ -18,6 +18,7 @@ no backend unless one is configured. Standard library only; local processes
 and a local HTTP server, no network.
 """
 import http.server
+import io
 import json
 import os
 import socket
@@ -1102,6 +1103,31 @@ class Configuration(unittest.TestCase):
             self.assertEqual(rows[0]["tool"], "echo")
             self.assertEqual(h.audit_path, real_path)          # a tool argument named "audit_path" changed nothing
             self.assertFalse(evil_path.exists())
+
+
+class ShownToThePerson(unittest.TestCase):
+    """Text a person reads on a terminal, and is asked about, says what is there: a control character in it (an
+    escape sequence, a carriage return, a C1 control, a mark that turns text right to left) is shown as its escape,
+    never handed to the terminal to act on; a tab and a line break stay what they are, and letters of any script do."""
+
+    def test_control_characters_are_shown_as_escapes(self):
+        from dawnr_harness.tools import visible
+        self.assertEqual(visible("red \x1b[31mX\x1b[0m"), "red \\x1b[31mX\\x1b[0m")
+        self.assertEqual(visible("shown\rhidden"), "shown\\rhidden")
+        self.assertEqual(visible("a\x00b\x07c\x7fd\x9be"), "a\\x00b\\x07c\\x7fd\\x9be")
+        self.assertEqual(visible("abc \u202edcba\u202c \u2066x\u2069 \u200f \u061c"),
+                         "abc \\u202edcba\\u202c \\u2066x\\u2069 \\u200f \\u061c")
+        self.assertEqual(visible("one\u2028two\u2029"), "one\\u2028two\\u2029")
+        self.assertEqual(visible("a\tb\nc d \u00e9\u4e2d\U0001f600"), "a\tb\nc d \u00e9\u4e2d\U0001f600")
+
+    def test_the_terminal_approver_shows_a_calls_arguments_as_they_are(self):
+        from dawnr_harness.__main__ import terminal_approver
+        err = io.StringIO()
+        with mock.patch("sys.stderr", err), mock.patch("builtins.input", return_value="n"):
+            self.assertFalse(terminal_approver("sh", {"command": "echo ok\u202e\x9b2J"}, "it runs \x1b[8mhidden"))
+        self.assertNotRegex(err.getvalue(), "[\x00-\x08\x0b-\x1f\x7f-\x9f\u202a-\u202e\u2066-\u2069]")
+        self.assertIn("\\u202e", err.getvalue())
+        self.assertIn("\\x1b[8mhidden", err.getvalue())
 
 
 if __name__ == "__main__":

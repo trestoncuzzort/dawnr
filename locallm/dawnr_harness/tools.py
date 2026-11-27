@@ -120,6 +120,23 @@ def one_line(text: str, limit: int) -> str:
     return text if len(text) <= limit else text[:limit - 3] + "..."
 
 
+# UNSHOWN matches characters that must not reach a terminal as themselves, because the terminal would act on them;
+# `visible` writes each as an escape:
+#   - C0 controls other than tab and line feed, DEL, and C1 controls (ECMA-48): an escape sequence can move the cursor,
+#     recolour or hide text, and a carriage return writes over the line;
+#   - Unicode marks that set the direction of text or end a line (UAX #9; Trojan Source, CVE-2021-42574).
+# Letters of every script are left alone. A backslash is not doubled, so a file's own text "\x1b" reads the same as
+# the escape `visible` writes, and neither is acted on.
+UNSHOWN = re.compile("[\x00-\x08\x0b-\x1f\x7f-\x9f\u061c\u200e\u200f\u2028-\u202e\u2066-\u2069]")
+
+
+def visible(text: str) -> str:
+    """Return `text` as a terminal should show it to a person: each character matching UNSHOWN becomes its escape
+    (\\r for a carriage return, otherwise \\xNN or \\uNNNN); everything else is unchanged."""
+    return UNSHOWN.sub(lambda m: "\\r" if m.group() == "\r" else
+                       f"\\x{ord(m.group()):02x}" if ord(m.group()) < 0x100 else f"\\u{ord(m.group()):04x}", str(text))
+
+
 class Registry:
     """Tools by name. Only code the operator runs adds to it; nothing a tool returns does."""
 

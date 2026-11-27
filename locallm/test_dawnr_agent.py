@@ -683,6 +683,7 @@ class FileTools(Env):
         # 500 lines of 100 characters with the newline: a 2000-line window is 50,000 characters, past the reply's
         # 20,000-character cap. Until 2026-11-26 the cap cut the finished text mid-line: the header still named
         # lines 1-500 and the resume hint after the body was cut away, so the model could not tell where to go on.
+        # Each line shown carries its number and a tab (four characters here), and they count against the cap too.
         (self.proj / "wide.txt").write_text("".join(f"{i:04d} " + "x" * 94 + "\n" for i in range(1, 501)))
         h, _ = self.build()
         r = h.call("fs_read", {"path": "project/wide.txt", "lines": 2000})
@@ -692,12 +693,18 @@ class FileTools(Env):
         self.assertIsNotNone(m, r.text[:300])
         last = int(m.group(1))
         self.assertLess(last, 500)
-        self.assertIn(f"\n{last:04d} " + "x" * 94 + "\n", r.text)      # the last line named is shown whole
-        self.assertNotIn(f"\n{last + 1:04d} ", r.text)                  # and the next one not at all
+        self.assertIn(f"\n{last}\t{last:04d} " + "x" * 94 + "\n", r.text)  # the last line named is shown whole
+        self.assertNotIn(f"\t{last + 1:04d} ", r.text)                      # and the next one not at all
+        self.assertNotIn(f"\n{last + 1}\t", r.text)
         self.assertIn(f'"start": {last + 1}', r.text)
+        parts = r.text.split("\n")                                          # the header names exactly the lines shown:
+        width = len(str(last))                                              # each whole, after its number and a tab
+        self.assertEqual(parts[1:-1], [f"{i:>{width}}\t{i:04d} " + "x" * 94 for i in range(1, last + 1)])
+        self.assertEqual(parts[-1], f'[lines {last + 1}-500 not shown (the reply holds 20000 characters); '
+                                    f'read again with "start": {last + 1}]')
         r = h.call("fs_read", {"path": "project/wide.txt", "start": last + 1, "lines": 2000})
         self.assertIn(f"lines {last + 1}-", r.text)
-        self.assertIn(f"\n{last + 1:04d} ", r.text)
+        self.assertRegex(r.text, rf"\n *{last + 1}\t{last + 1:04d} ")
 
     def test_one_line_longer_than_the_reply_cap_says_it_was_cut(self):
         (self.proj / "one.txt").write_text("y" * 30_000 + "\nnext\n")
@@ -707,6 +714,78 @@ class FileTools(Env):
         self.assertIn("lines 1-1 of 2", r.text)
         self.assertIn("line 1 is 30000 characters", r.text)
         self.assertIn('"start": 2', r.text)
+        # its number and a tab, then as much of the line as fits, counted without them
+        m = re.search(r"\n1\t(y+)\n\[line 1 is 30000 characters; the first (\d+) are shown\]\n", r.text)
+        self.assertIsNotNone(m, r.text[:300])
+        self.assertEqual(len(m.group(1)), int(m.group(2)))
+        self.assertNotIn("next", r.text)
+
+    def test_each_line_read_starts_with_its_number_and_a_tab_right_aligned_to_the_widest_shown(self):
+        # Each line shown starts with its number, right-aligned to the widest number shown (the `cat -n` form), and a
+        # tab, so a model can cite a line without counting to it. The header and the resume hint are unchanged.
+        text = "".join(("" if i == 99 else f"line {i}") + "\n" for i in range(1, 121))
+        (self.proj / "n.txt").write_text(text)
+        h, _ = self.build()
+        r = h.call("fs_read", {"path": "project/n.txt", "start": 95, "lines": 10})
+        data = text.encode()
+        self.assertEqual(r.text, f"project/n.txt: lines 95-104 of 120, {len(data)} bytes, sha256 {sha256(data)[:16]}\n"
+                         + "\n".join(f"{i:>3}\t" + ("" if i == 99 else f"line {i}") for i in range(95, 105))
+                         + '\n[lines 105-120 not shown; read again with "start": 105]')
+        r = h.call("fs_read", {"path": "project/n.txt", "start": 3, "lines": 4})        # one digit: nothing to pad
+        self.assertIn("\n3\tline 3\n4\tline 4\n5\tline 5\n6\tline 6\n[lines 7-120 not shown", r.text)
+        (self.proj / "crlf.txt").write_bytes(b"one\r\ntwo\r\n")
+        r = h.call("fs_read", {"path": "project/crlf.txt"})
+        self.assertTrue(r.text.endswith(" bytes, sha256 " + sha256(b"one\r\ntwo\r\n")[:16] + "\n1\tone\n2\ttwo"), r.text)
+
+    def test_the_read_tool_says_each_line_starts_with_its_number_which_is_not_in_the_file(self):
+        h, _ = self.build()
+        said = h.registry.get("fs_read").description
+        self.assertIn("starts with its number and a tab", said)
+        self.assertIn("not part of the file", said)
+
+    def test_a_line_number_is_the_one_grep_n_gives_where_a_file_holds_other_line_breaks(self):
+        # str.splitlines also ends a line at \v, \f, \x1c-\x1e, \x85, U+2028, U+2029 and a lone \r; grep -n, sed -n and
+        # wc -l do not. On this file grep -n puts TARGET on line 9, so every file tool must number it 9 as well:
+        # fs_read and its "start", fs_search, the closest lines of a missed edit, an edit's window, numbers copied
+        # from grep -n, and the line numbers in a dry run's diff (@@ -7,5 +7,5 @@).
+        lines = ["one", "\x0c", "alpha\x0bbeta", "gamma\x1cdelta\x1d\x1eend", "eps\x85ilon", "zeta\u2028eta\u2029theta",
+                 "lone\rcr", "crlf", "TARGET = 1", "nine", "last"]
+        data = ("\n".join(lines[:7]) + "\ncrlf\r\n" + "\n".join(lines[8:]) + "\n").encode()
+        (self.proj / "f.txt").write_bytes(data)
+        h, a = self.build(permissions={"fs_edit": "allow"})
+        r = h.call("fs_read", {"path": "project/f.txt"})
+        self.assertEqual(r.text, f"project/f.txt: lines 1-11 of 11, {len(data)} bytes, sha256 {sha256(data)[:16]}\n"
+                         + "\n".join(f"{n:>2}\t{line}" for n, line in enumerate(lines, 1)))
+        r = h.call("fs_read", {"path": "project/f.txt", "start": 9, "lines": 1})
+        self.assertEqual(r.text.split("\n")[1:], ["9\tTARGET = 1", '[lines 10-11 not shown; read again with "start": 10]'])
+        self.assertIn("\nproject/f.txt:9: TARGET = 1", h.call("fs_search", {"query": "TARGET"}).text)
+        self.assertIn("\nproject/f.txt:3: alpha\x0bbeta", h.call("fs_search", {"query": "beta"}).text)
+        r = h.call("fs_edit", {"path": "project/f.txt", "old": "TARGET = 3", "new": "TARGET = 4"})
+        self.assertTrue(r.is_error, r.text)
+        self.assertEqual(r.untrusted_notes[-1], "lines 7-11 of 11:\n" + "\n".join(f"{n:>2}\t{lines[n - 1]}" for n in range(7, 12)))
+        r = h.call("fs_edit", {"path": "project/f.txt", "old": lines[5] + "\n" + lines[6] + "x", "new": "x"})  # two lines
+        self.assertEqual(r.untrusted_notes[-1], "lines 4-9 of 11:\n" + "\n".join(f"{n}\t{lines[n - 1]}" for n in range(4, 10)))
+        r = h.call("fs_edit", {"path": "project/f.txt", "old": " 9\tTARGET = 1\n10\tnine", "new": " 9\tTARGET = 2\n10\tnine"})
+        self.assertFalse(r.is_error, r.text)
+        self.assertEqual((self.proj / "f.txt").read_bytes(), data.replace(b"TARGET = 1", b"TARGET = 2"))
+        lines[8] = "TARGET = 2"
+        self.assertEqual(r.untrusted_notes[-1],
+                         "lines 6-11 of 11 are now:\n" + "\n".join(f"{n:>2}\t{lines[n - 1]}" for n in range(6, 12)))
+        dry = preview_plan(a, h, Plan.from_json({"steps": [{"tool": "fs_edit", "arguments": {
+            "path": "project/f.txt", "old": "TARGET = 2", "new": "TARGET = 3"}}]}), h.session())
+        self.assertEqual([d for v in dry.views for d in v.preview.detail if d.startswith("@@")], ["@@ -7,5 +7,5 @@"])
+
+    def test_an_edit_whose_indentation_is_left_out_matches_a_line_with_a_line_separator_in_it(self):
+        # The indentation ladder (_loose_edit) matches whole lines. A line holding a U+2028 (which JSON lets a string
+        # hold as it is) must stay one line: split in two, one half would have no indentation, and an edit with the
+        # indentation left out would be refused.
+        before = '{\n    "a": {\n        "text": "one\u2028two",\n        "n": 1\n    }\n}\n'
+        (self.proj / "a.json").write_bytes(before.encode())
+        h, _ = self.build(permissions={"fs_edit": "allow"})
+        r = h.call("fs_edit", {"path": "project/a.json", "old": '"text": "one\u2028two",\n"n": 1',
+                               "new": '"text": "one\u2028two",\n"n": 2'})
+        self.assertFalse(r.is_error, r.text)
+        self.assertEqual((self.proj / "a.json").read_bytes().decode(), before.replace('"n": 1', '"n": 2'))
 
     def test_search_is_literal_bounded_and_skips_links_secrets_and_binaries(self):
         (self.proj / "src" / "b.t").write_text("(a+)+$ double\n")
@@ -725,14 +804,14 @@ class FileTools(Env):
 
     def test_an_edit_says_what_it_left_and_one_that_misses_is_matched_by_indentation_or_shown_the_closest_lines(self):
         """The edit window is SWE-agent's (arXiv:2405.15793); the ladder and the closest lines are aider's
-        (aider/coders/editblock_coder.py; receipt ac8eee06f37d)."""
+        (aider/coders/editblock_coder.py; receipt ac8eee06f37d). Both number each line as a read does."""
         code = "class A:\n    def f(self):\n        if x:\n            return 1\n        return 2\n\n    def g(self):\n        return 3\n"
         (self.proj / "a.py").write_text(code)
         h, a = self.build(permissions={"fs_edit": "allow"})
         s = h.session()
         r = h.call("fs_edit", {"path": "project/a.py", "old": "return 3", "new": "return 4"}, session=s)
         self.assertFalse(r.is_error, r.text)
-        self.assertEqual(r.untrusted_notes[-1], "lines 5-8 of 8 are now:\n        return 2\n\n    def g(self):\n        return 4")
+        self.assertEqual(r.untrusted_notes[-1], "lines 5-8 of 8 are now:\n5\t        return 2\n6\t\n7\t    def g(self):\n8\t        return 4")
         self.assertTrue(s.tainted)                                 # the file's own lines came back with it
         # the words right and the indentation left out, the same way on every line: matched, and put back
         r = h.call("fs_edit", {"path": "project/a.py", "old": "def f(self):\n    if x:\n        return 1",
@@ -748,7 +827,7 @@ class FileTools(Env):
         r = h.call("fs_edit", {"path": "project/a.py", "old": "    def g(self):\n        return 3", "new": "    def g(self):\n        return 4"}, session=fresh)
         self.assertTrue(r.is_error and fresh.tainted)
         self.assertIn("was not found; not edited. The new text is already in the file", r.text)
-        self.assertEqual(r.untrusted_notes[-1], "lines 5-8 of 8:\n        return 2\n\n    def g(self):\n        return 4")
+        self.assertEqual(r.untrusted_notes[-1], "lines 5-8 of 8:\n5\t        return 2\n6\t\n7\t    def g(self):\n8\t        return 4")
         self.assertNotIn("def g", r.text)
         r = h.call("fs_edit", {"path": "project/a.py", "old": "nothing like this anywhere", "new": "x"})
         self.assertTrue(r.is_error and not r.untrusted_notes and r.text.endswith("was not found; not edited."))
@@ -757,7 +836,7 @@ class FileTools(Env):
         dry = preview_plan(a, h, Plan.from_json({"steps": [{"tool": "fs_edit", "arguments": {"path": "project/a.py", "old": "def g(self):\n    return 33", "new": "y"}}]}), planned)
         self.assertTrue(dry.refused and planned.tainted)
         self.assertNotIn("def g(self):\n", dry.render(for_person=False))
-        self.assertIn("           def g(self):\n               return 4", dry.render(for_person=False, quoted=True))
+        self.assertIn("       7\t    def g(self):\n       8\t        return 4", dry.render(for_person=False, quoted=True))
 
     def test_a_long_search_result_says_to_count_with_a_command_where_one_can_run(self):
         (self.proj / "access.log").write_text("".join(f"{i} FAILED login user={'ab'[i % 2]}\n" for i in range(30)))
@@ -801,6 +880,138 @@ class FileTools(Env):
         self.assertEqual((self.proj / "crlf.txt").read_bytes(), b"1\r\n2\r\n")
         backup = a.ops.journal.entries()[0]["backup"]
         self.assertEqual(a.ops.journal.backup(backup), b"alpha\nbeta\nalpha\n")
+
+    def test_an_edit_whose_lines_carry_the_numbers_a_read_shows_is_made_without_them(self):
+        # A read shows each line after its number and a tab, and a model may copy them into the text to replace. The
+        # edit is retried without them when that text is not in the file, every line of it starts with them, they count
+        # up by one, and the first names the line where the rest of the text starts. The numbers are also taken off the
+        # new text when every non-empty line of it has them.
+        code = ('import sys\n\n\ndef total(items):\n    """The sum of the prices."""\n    count = 0\n'
+                '    for item in items:\n        count += item.price\n    return count\n\n\n'
+                'if __name__ == "__main__":\n    print(total(sys.argv[1:]))\n')
+        (self.proj / "t.py").write_text(code)
+        h, a = self.build(permissions={"fs_edit": "allow"})
+        r = h.call("fs_edit", {"path": "project/t.py", "old": " 6\t    count = 0\n 7\t    for item in items:",
+                               "new": "    count = 0.0\n    for item in items:"})
+        self.assertFalse(r.is_error, r.text)
+        code = code.replace("    count = 0\n", "    count = 0.0\n")
+        self.assertEqual((self.proj / "t.py").read_text(), code)
+        # numbered in both texts, with the number and tab of an empty line among them
+        both = {"old": " 9\t    return count\n10\t\n11\t\n12\tif __name__", "new": " 9\t    return round(count, 2)\n10\t\n11\t\n12\tif __name__"}
+        r = h.call("fs_edit", {"path": "project/t.py", **both})
+        self.assertFalse(r.is_error, r.text)
+        code = code.replace("    return count\n", "    return round(count, 2)\n")
+        self.assertEqual((self.proj / "t.py").read_text(), code)
+        # The same edit again: its numbers name line 9, where that text no longer is, so it misses, as it would if
+        # numbers were never taken off. `new` is compared as given, numbers included, so no "already in the file" hint.
+        r = h.call("fs_edit", {"path": "project/t.py", **both})
+        self.assertTrue(r.is_error)
+        self.assertTrue(r.text.startswith("project/t.py: the text to replace was not found; not edited."), r.text)
+        self.assertNotIn("already in the file", r.text)
+        self.assertEqual((self.proj / "t.py").read_text(), code)
+        # copied from a read just as it was shown
+        shown = h.call("fs_read", {"path": "project/t.py", "start": 4, "lines": 2}).text.split("\n")[1:3]
+        self.assertEqual(shown, ["4\tdef total(items):", '5\t    """The sum of the prices."""'])
+        r = h.call("fs_edit", {"path": "project/t.py", "old": "\n".join(shown),
+                               "new": 'def total(items):\n    """The sum of the prices, as a float."""'})
+        self.assertFalse(r.is_error, r.text)
+        code = code.replace("The sum of the prices.", "The sum of the prices, as a float.")
+        self.assertEqual((self.proj / "t.py").read_text(), code)
+        # a plan's dry run shows the edit as it will be made, and running it makes that edit
+        plan = Plan.from_json({"steps": [{"tool": "fs_edit", "arguments": {
+            "path": "project/t.py", "old": "13\t    print(total(sys.argv[1:]))",
+            "new": "13\t    print(total(sys.argv[1:]), file=sys.stderr)"}}]})
+        dry = preview_plan(a, h, plan, h.session())
+        self.assertFalse(dry.refused, dry.render(for_person=True))
+        self.assertIn("\n       +    print(total(sys.argv[1:]), file=sys.stderr)\n", dry.render(for_person=True))
+        self.assertEqual(execute(h, dry, approved=True, session=h.session()).stopped, "done")
+        code = code.replace("print(total(sys.argv[1:]))", "print(total(sys.argv[1:]), file=sys.stderr)")
+        self.assertEqual((self.proj / "t.py").read_text(), code)
+
+    def test_an_edit_with_numbers_of_another_shape_or_on_some_lines_only_misses_as_it_did(self):
+        # Only the number and tab that a read puts on every line are removed from an edit's texts; anything else is
+        # looked for as given and misses.
+        code = "alpha = 1\nbeta = 2\n"
+        (self.proj / "g.txt").write_text(code)
+        (self.proj / "rows.tsv").write_text("1\tbanana\n2\tbanana\n")
+        h, _ = self.build(permissions={"fs_edit": "allow"})
+        for old, new in [("1\talpha = 1\nbeta = 2", "alpha = 10\nbeta = 20"),       # a line without its number
+                         ("1: alpha = 1", "alpha = 10"), ("1 alpha = 1", "alpha = 10"),  # not the shape a read shows
+                         ("01\talpha = 1", "alpha = 10"), ("0\talpha = 1", "alpha = 10"),
+                         ("1\talpha = 1\n2\tbeta = 2", "1\talpha = 10\nbeta = 20"),   # the new text numbered on some lines
+                         ("1\t\n2\t", "x")]:                                           # nothing but numbers
+            r = h.call("fs_edit", {"path": "project/g.txt", "old": old, "new": new, "all": True})
+            self.assertTrue(r.is_error, (old, r.text))
+            self.assertIn("was not found; not edited.", r.text)
+        self.assertEqual((self.proj / "g.txt").read_text(), code)
+        # a file whose own lines start with a number and a tab: a text found as it is given is replaced as given
+        r = h.call("fs_edit", {"path": "project/rows.tsv", "old": "2\tbanana", "new": "2\tbanana\n3\tcherry"})
+        self.assertFalse(r.is_error, r.text)
+        self.assertEqual((self.proj / "rows.tsv").read_text(), "1\tbanana\n2\tbanana\n3\tcherry\n")
+
+    def test_an_edit_whose_numbers_do_not_say_where_its_text_is_misses_as_if_none_were_taken_off(self):
+        # In a file whose own rows start with a number and a tab, "2\tcherry" looks like a line copied from a read. It
+        # is no line of the file, and without its "number" it is the text of the row with id 3, so removing the number
+        # would edit a different row than the one named. The numbers removed must be on every line, count up by one,
+        # and name the line where the rest of the text starts; an edit of one place must also be made at that line.
+        # Otherwise the edit misses.
+        h, _ = self.build(permissions={"fs_edit": "allow"})
+        rows = "id\tfruit\n1\tapple\n2\tbanana\n\n3\tcherry\n"                    # lines 1-5, line 4 empty
+        for name, before, old, new, every in [
+                ("rows.tsv", rows, "2\tcherry", "2\tfig", False),                     # line 2 is not where it is
+                ("rows.tsv", rows, "2\tcherry", "2\tfig", True),                      # nor with "all"
+                ("rows.tsv", rows, "2\t1\tapple\n4\t2\tbanana", "2\t1\tapple\n4\t2\tfig", False),  # numbers skip one
+                ("rows.tsv", rows, "3\t2\tbanana\n\n4\t3\tcherry", "3\t2\tfig\n\n4\t3\tcherry", False),  # one has none
+                ("same.txt", "x\nx\nx\n", "2\tx\n3\tx", "2\ty\n3\ty", False)]:     # the one place found is line 1
+            with self.subTest(old=old, all=every):
+                (self.proj / name).write_text(before)
+                r = h.call("fs_edit", {"path": f"project/{name}", "old": old, "new": new, "all": every})
+                self.assertTrue(r.is_error, (r.text, (self.proj / name).read_text()))
+                self.assertTrue(r.text.startswith(f"project/{name}: the text to replace was not found; not edited."),
+                                r.text)
+                self.assertEqual((self.proj / name).read_text(), before)
+        # numbers that do say where the text is: the edit is made there, an empty line's number and tab among them,
+        # and in a file with CRLF line ends too
+        (self.proj / "rows.tsv").write_text(rows)
+        r = h.call("fs_edit", {"path": "project/rows.tsv", "old": "3\t2\tbanana\n4\t\n5\t3\tcherry",
+                               "new": "3\t2\tbanana\n4\t\n5\t3\tcherries"})
+        self.assertFalse(r.is_error, r.text)
+        self.assertEqual((self.proj / "rows.tsv").read_text(), rows.replace("3\tcherry", "3\tcherries"))
+        (self.proj / "crlf.tsv").write_bytes(b"1\tapple\r\n2\tbanana\r\n")
+        r = h.call("fs_edit", {"path": "project/crlf.tsv", "old": "1\t1\tapple\n2\t2\tbanana",
+                               "new": "1\t1\tapple\n2\t2\tfig"})
+        self.assertFalse(r.is_error, r.text)
+        self.assertEqual((self.proj / "crlf.tsv").read_bytes(), b"1\tapple\r\n2\tfig\r\n")
+
+    def test_lines_copied_with_their_numbers_from_an_edits_window_or_closest_lines_are_edited_as_a_reads_are(self):
+        # An edit's window and a missed edit's closest lines number each line as a read does, right-aligned to the
+        # widest number. Lines copied from them with their numbers are edited by the same retry as a read's: the
+        # numbers are removed only where they name the line the rest of the text starts at.
+        code = "".join(f"value_{i} = {i}\n" for i in range(1, 15))
+        (self.proj / "v.py").write_text(code)
+        h, _ = self.build(permissions={"fs_edit": "allow"})
+        r = h.call("fs_edit", {"path": "project/v.py", "old": "value_9 = 9\n", "new": "value_9 = 90\n"})
+        self.assertFalse(r.is_error, r.text)
+        window = r.untrusted_notes[-1].split("\n")
+        self.assertEqual(window, ["lines 6-12 of 14 are now:"]
+                         + [f"{n:>2}\tvalue_{n} = {90 if n == 9 else n}" for n in range(6, 13)])
+        r = h.call("fs_edit", {"path": "project/v.py", "old": "\n".join(window[4:6]),          # lines 9 and 10
+                               "new": " 9\tvalue_9 = 9\n10\tvalue_10 = 10"})
+        self.assertFalse(r.is_error, r.text)
+        self.assertEqual((self.proj / "v.py").read_text(), code)
+        r = h.call("fs_edit", {"path": "project/v.py", "old": "value_12 = 120", "new": "x"})
+        self.assertTrue(r.is_error)
+        closest = r.untrusted_notes[-1].split("\n")
+        self.assertEqual(closest, ["lines 10-14 of 14:"] + [f"{n}\tvalue_{n} = {n}" for n in range(10, 15)])
+        r = h.call("fs_edit", {"path": "project/v.py", "old": closest[3], "new": "12\tvalue_12 = 120"})
+        self.assertFalse(r.is_error, r.text)
+        code = code.replace("value_12 = 12\n", "value_12 = 120\n")
+        self.assertEqual((self.proj / "v.py").read_text(), code)
+        # a number that is not the line its text is on: it misses
+        r = h.call("fs_edit", {"path": "project/v.py", "old": "7\tvalue_6 = 6", "new": "7\tvalue_6 = 60"})
+        self.assertTrue(r.is_error)
+        self.assertTrue(r.text.startswith("project/v.py: the text to replace was not found; not edited."), r.text)
+        self.assertEqual((self.proj / "v.py").read_text(), code)
 
     def test_checker_gate_on_t_and_python_writes(self):
         h, _ = self.build(permissions={"fs_write": "allow", "fs_edit": "allow"})

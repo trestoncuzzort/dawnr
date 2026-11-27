@@ -99,16 +99,23 @@ rights; kernel bugs; a person who approves a plan whose dry run showed the harm.
 | tool | default | output | consequential | what it does |
 |---|---|---|---|---|
 | `fs_list` | allow | untrusted | no | a directory inside a root (no path: the roots), up to three levels; links, secrets and special files named, not followed |
-| `fs_read` | allow | untrusted | no | a window of lines of a text file (100 by default), with its size and hash |
-| `fs_search` | allow | untrusted | no | lines containing a literal text (no regular expressions, so no catastrophic backtracking), bounded by files, results and seconds |
+| `fs_read` | allow | untrusted | no | a window of lines of a text file (100 by default), with its size and hash; each line shown starts with its number and a tab, which are not part of the file |
+| `fs_search` | allow | untrusted | no | lines containing a literal text (no regular expressions, so no catastrophic backtracking), each after its file's name and its line number, bounded by files, results and seconds |
 | `fs_write` | ask | trusted | yes | create a file (`overwrite` to replace; `make_dirs`; `expect_sha256`) |
-| `fs_edit` | ask | trusted, then the file's lines around the change as untrusted text | yes | replace an exact text that appears once (or `all`); a text that misses is matched where it differs only by one constant indentation, else refused with the file's closest lines |
+| `fs_edit` | ask | trusted, then the file's lines around the change as untrusted text, numbered as `fs_read` numbers them | yes | replace an exact text that appears once (or `all`); a text that misses is matched where it differs only by one constant indentation, else refused with the file's closest lines, numbered the same way; a text copied with those numbers is tried again without them where they name the line it starts at |
 | `fs_undo` | ask | trusted | yes | revert one journaled change if the file is still as it left it |
 | `run_command` | deny | untrusted | yes | one argv matching an operator rule, under bubblewrap |
 | `ps_list` | allow | untrusted | no | processes: id, parent, name; command lines of your own |
 | `sh` | allow, asked when it changed something | untrusted | by what it changed | any shell line, run over an overlay of the roots in the sandbox (`"shell": true`; below) |
 | `sysinfo` | allow | untrusted | no | one read-only line about the live machine, run for real (`"sysinfo": true`; below) |
 | `plan` | allow | trusted summary, each step's output with its own trust | no (its steps are) | a plan from the model: dry run, approval, steps |
+
+The file tools count lines as `grep -n`, `sed -n` and `wc -l` do, in what they show
+(`fs_read`'s numbers and its `start`, `fs_search`'s, `fs_edit`'s lines and the
+line its numbers name, a dry run's diff): a line ends at a newline, and a CRLF is
+one line end. Python's `str.splitlines` is not used, because it also ends a line
+at a form feed, a vertical tab, `\x1c` to `\x1e`, `\x85`, U+2028, U+2029 and a
+lone carriage return, which would put a file's line numbers ahead of `grep -n`'s.
 
 The file tools exist only when the operator configures roots, and write tools
 only act in roots marked `"mode": "write"`. A write runs without asking only when

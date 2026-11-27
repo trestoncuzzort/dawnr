@@ -33,7 +33,7 @@ import json
 import threading
 from dataclasses import dataclass, field
 
-from dawnr_harness.tools import CallContext, Session, Tool, ToolResult, validate
+from dawnr_harness.tools import CallContext, Session, Tool, ToolResult, validate, visible
 
 from .files import Preview
 
@@ -150,7 +150,9 @@ class DryRun:
         else:
             lines.append("nothing has run yet; approving runs exactly these steps in order, stopping at the first "
                          "that fails")
-        return "\n".join(lines)
+        # The copy shown to a person has control characters from file text escaped (see `visible`); the model's copy
+        # is unchanged.
+        return visible("\n".join(lines)) if for_person else "\n".join(lines)
 
 
 def preview_plan(agent, harness, plan: Plan, session: Session | None = None, context: str = "") -> DryRun:
