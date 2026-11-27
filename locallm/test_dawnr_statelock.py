@@ -1,8 +1,11 @@
-"""dawnr_agent/statelock.py: the lock two dawnr sessions take turns on before they append to or rewrite the state
-folder's shared files. Standard library only, so that it runs in the standard-library job on Windows (the msvcrt
-branch of the lock) as well as on Linux and macOS (the fcntl branch). The module is loaded from its file, not through
-the dawnr_agent package, which imports more than the lock needs. What cannot apply on a platform is skipped, and
-says why."""
+"""test_dawnr_statelock.py: tests for dawnr_agent/statelock.py, the lock two dawnr sessions take turns on before they
+append to or rewrite the state folder's shared files.
+
+The tests use only the standard library, so they run in the standard-library CI job on Windows (the msvcrt branch of
+the lock) as well as on Linux and macOS (the fcntl branch). The module is loaded from its file, not through the
+dawnr_agent package, because the package imports more than the lock needs. A test that cannot apply on a platform
+is skipped with the reason.
+"""
 import errno
 import importlib.util
 import os
@@ -27,7 +30,8 @@ def load():
 
 statelock = load()
 
-# a process that takes the lock, says so, and lets go when its input has a line (or after `hold` seconds)
+# A child process that takes the lock and prints "held". It releases the lock when it reads a line on stdin, or
+# after the number of seconds given as a third argument, and then prints "released" with the time.
 HOLDER = r'''
 import importlib.util, sys, time
 spec = importlib.util.spec_from_file_location("statelock_under_test", sys.argv[1])
@@ -50,7 +54,7 @@ class StateLock(unittest.TestCase):
         self.state = self.base / "state"
 
     def tearDown(self):
-        # everything is under this test's own folder: its files and folders are taken apart here
+        # everything is under this test's own temporary folder, so only that folder's contents are removed here
         for at, dirs, files in os.walk(self.base, topdown=False):
             for name in files:
                 try:
@@ -94,8 +98,8 @@ class StateLock(unittest.TestCase):
 
     def test_the_lock_is_taken_and_let_go_and_the_file_it_leaves_is_empty(self):
         with statelock.state_lock(self.state):
-            self.assertTrue((self.state / statelock.LOCK_NAME).is_file())     # the state folder is made if it is not there
-        with statelock.state_lock(self.state):                                # and the same process can take it again
+            self.assertTrue((self.state / statelock.LOCK_NAME).is_file())     # the state folder is created if missing
+        with statelock.state_lock(self.state):                                # the same process can take it again
             pass
         self.assertEqual((self.state / statelock.LOCK_NAME).read_bytes(), b"")
         self.assertEqual([p.name for p in self.state.iterdir()], [statelock.LOCK_NAME])
@@ -118,7 +122,7 @@ class StateLock(unittest.TestCase):
             pass
 
     def test_a_second_holder_waits_for_the_first_and_then_gets_it(self):
-        holder = self._holder(1.5)                      # lets go after a second and a half of its own accord
+        holder = self._holder(1.5)                      # releases the lock by itself after 1.5 seconds
         started = time.time()
         with statelock.state_lock(self.state, wait=60):
             got = time.time()
@@ -137,16 +141,16 @@ class StateLock(unittest.TestCase):
                 ran.append(1)
         self.assertGreaterEqual(time.monotonic() - started, 0.35)
         self.assertEqual(ran, [])
-        self.assertTrue(issubclass(TimeoutError, OSError))      # what the plan log and the journal already catch
+        self.assertTrue(issubclass(TimeoutError, OSError))      # so OSError handlers catch it
         self._let_go(holder)
 
     def test_the_lock_is_let_go_when_what_runs_under_it_raises(self):
         with self.assertRaises(ZeroDivisionError):
             with statelock.state_lock(self.state):
                 1 / 0
-        with statelock.state_lock(self.state, wait=0.3):                      # at once, in this process
+        with statelock.state_lock(self.state, wait=0.3):                      # acquired at once in this process
             pass
-        holder = self._holder()                                               # and in another
+        holder = self._holder()                                               # and in another process
         self._let_go(holder)
 
     def test_a_link_planted_at_the_lock_files_name_is_refused_and_not_followed(self):
@@ -163,7 +167,7 @@ class StateLock(unittest.TestCase):
                 self.fail("followed the link")
         self.assertEqual(victim.read_text(), "somebody's own file\n")
         os.unlink(lock)
-        lock.symlink_to(self.base / "not-there-yet")                          # a link to nothing: nothing made through it
+        lock.symlink_to(self.base / "not-there-yet")                          # a link to a missing file: none is made
         with self.assertRaises(OSError):
             with statelock.state_lock(self.state):
                 self.fail("followed the link")

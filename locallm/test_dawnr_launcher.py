@@ -272,15 +272,15 @@ def test_forget_keeps_a_recorded_folder_that_is_not_a_dawnr_state_folder(tmp_pat
 
 
 def test_forget_erases_a_state_folder_holding_the_copy_a_cut_of_the_plan_log_left_when_it_was_stopped(tmp_path):
-    # the plan log is cut by writing the shortened copy beside it (.plans.jsonl.XXXXXXXX.tmp, dawnr_agent/config.py)
-    # and putting it in place; a computer that stopped between the two leaves the copy, which is dawnr's own file
+    # Trimming the plan log writes the shortened copy beside it (.plans.jsonl.XXXXXXXX.tmp, dawnr_agent/config.py)
+    # and then swaps it in. If the computer stops between the two, the copy stays; it is dawnr's own file.
     _home, data, env, _default = forget_place(tmp_path)
     left, odd = tmp_path / 'left', tmp_path / 'odd'
     for state in (left, odd):
         journal_a_change(state)
         (state / 'plans.jsonl').write_text('{}\n')
     (left / '.plans.jsonl.0a1b2c3d.tmp').write_text('{}\n')
-    (odd / '.plans.jsonl.notes.tmp').write_text('my own file\n')              # the same kind of name, not the agent's
+    (odd / '.plans.jsonl.notes.tmp').write_text('my own file\n')              # a similar name that is not the agent's
     (data / 'state-folders').write_text(f'{left}\n{odd}\n')
     before = snapshot(odd)
     got = forget(env)
@@ -292,18 +292,18 @@ def test_forget_erases_a_state_folder_holding_the_copy_a_cut_of_the_plan_log_lef
 
 
 def test_forget_erases_a_state_folder_holding_the_lock_file_and_keeps_one_where_that_name_is_something_else(tmp_path):
-    # every write to the plan log and the journal is made under a lock on `.lock` in the state folder
-    # (locallm/dawnr_agent/statelock.py): an empty file of dawnr's own, so a folder holding it is still dawnr's
+    # Every write to the plan log and the journal holds a lock on `.lock` in the state folder
+    # (locallm/dawnr_agent/statelock.py). It is an empty file of dawnr's own, so a folder holding it is still dawnr's.
     _home, data, env, _default = forget_place(tmp_path)
     locked, linked, folder = tmp_path / 'locked', tmp_path / 'linked', tmp_path / 'folder'
     for state in (locked, linked, folder):
         journal_a_change(state)
-    (locked / '.lock').write_bytes(b'')                                       # as the journal's writes leave it
+    (locked / '.lock').write_bytes(b'')                                       # empty, as the journal's writes leave it
     for state in (linked, folder):
-        (state / '.lock').unlink(missing_ok=True)                             # this test's own folders: swap it
+        (state / '.lock').unlink(missing_ok=True)                             # remove the real one, then replace it
     (tmp_path / 'theirs.txt').write_text('my own file\n')
-    (linked / '.lock').symlink_to(tmp_path / 'theirs.txt')                    # a link at that name: not dawnr's file
-    (folder / '.lock').mkdir()                                                # a folder at that name: not dawnr's file
+    (linked / '.lock').symlink_to(tmp_path / 'theirs.txt')                    # a link there is not dawnr's file
+    (folder / '.lock').mkdir()                                                # a folder there is not dawnr's file
     (data / 'state-folders').write_text(f'{locked}\n{linked}\n{folder}\n')
     before = {str(top): snapshot(top) for top in (linked, folder)}
     got = forget(env)

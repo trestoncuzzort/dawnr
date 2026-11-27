@@ -67,17 +67,19 @@ def default_state_dir() -> Path:
     return Path(os.environ.get("XDG_STATE_HOME") or Path.home() / ".local" / "state") / "dawnr-agent"
 
 
-LOGGED_TEXT = 200          # characters of a text argument the plan log keeps; a longer one only by length and sha256
+LOGGED_TEXT = 200          # longest text argument the plan log stores as is; a longer one is stored as length + sha256
 
-PLAN_LOG_KEEP = 200        # plans the plan log keeps; the oldest go first (the API keeps its newest 200 finished jobs, t/serve_api.py KEEP)
+PLAN_LOG_KEEP = 200        # plans kept, newest first; the API keeps as many jobs (t/serve_api.py)
 
 
 def _rotate(path: Path, keep: int) -> None:
-    """Cut the log at `path` to its newest `keep` lines (one line is one plan), the oldest first out, in the order
-    they were written. The shortened log is written whole beside the old one and put in its place in one step
-    (os.replace), so that whatever stops this midway leaves the old file or the new one, never half of either.
-    The whole cut is made under the state lock (statelock.py): another session's plan appended between the read and
-    the swap would be in the old file only, and the swap would drop it."""
+    """_rotate: trim the log at `path` to its newest `keep` lines (one line is one plan), dropping the oldest first.
+
+    - The shortened log is written to a temporary file beside the old one, then swapped in with os.replace, so a crash
+      leaves either the old file or the new one, never half of each.
+    - The whole trim runs under the state lock (statelock.py). Without it, a plan another session appends between
+      the read and the swap would exist only in the old file, and the swap would lose it.
+    """
     with state_lock(path.parent):
         lines = [line for line in path.read_bytes().split(b"\n") if line.strip()]
         if len(lines) <= keep:
@@ -91,16 +93,19 @@ def _rotate(path: Path, keep: int) -> None:
             os.replace(tmp, path)
         except BaseException:
             try:
-                tmp.unlink()                               # the half-written copy; the log itself is untouched
+                tmp.unlink()                               # remove the partial copy; the log itself is untouched
             except OSError:
                 pass
             raise
 
 
 def _logged(value):
-    """An argument as the plan log (plans.jsonl) keeps it: a text longer than LOGGED_TEXT characters (a file's
-    contents, an edit's texts, a long command) as {"chars": its length, "sha256": of its UTF-8}, in a list or an
-    object too; anything else as it is."""
+    """_logged: return a tool argument in the form the plan log (plans.jsonl) stores.
+
+    A text longer than LOGGED_TEXT characters (a file's contents, an edit's texts, a long command) becomes
+    {"chars": its length, "sha256": hash of its UTF-8}. This applies inside lists and objects too. Anything else is
+    returned unchanged.
+    """
     if isinstance(value, str) and len(value) > LOGGED_TEXT:
         return {"chars": len(value), "sha256": sha256(value.encode("utf-8", "surrogatepass"))}
     if isinstance(value, dict):
@@ -159,8 +164,8 @@ class Agent:
         return Preview(summary=f"calls {name} (not simulated)")
 
     def record_plan(self, dry, outcome, session) -> None:
-        # "calls": each step's tool and the arguments it was pinned to (what the digest covers), so that a run that
-        # went wrong can be followed afterwards; until 2026-11-26 the row held only how many steps there were.
+        # "calls" lists each step's tool and the arguments it was pinned to (the same ones the plan digest covers),
+        # so a run that went wrong can be traced step by step afterwards.
         row = {"time": round(time.time(), 3), "session": session.id if session else "", "plan": dry.digest,
                "steps": len(dry.views), "approved": outcome.approved, "ran": outcome.steps_run,
                "stopped": outcome.stopped,
@@ -169,7 +174,7 @@ class Agent:
             self.plans.append(row)
             if self.audit_path is not None:
                 try:
-                    with state_lock(self.audit_path.parent):        # not while another session cuts the log
+                    with state_lock(self.audit_path.parent):        # wait while another session trims the log
                         with open(self.audit_path, "a", encoding="utf-8") as f:
                             f.write(json.dumps(row, ensure_ascii=True) + "\n")
                 except (OSError, ValueError) as e:

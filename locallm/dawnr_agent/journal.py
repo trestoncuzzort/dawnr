@@ -50,9 +50,10 @@ class Journal:
         final = self.backups / digest
         if final.exists():
             return digest
-        # Under the state lock, and looked at again under it: a backup that exists is whole (it was put in place in
-        # one step), and is never swapped for another copy of itself while another session may be reading it
-        # (Windows refuses to replace a file that is open).
+        # Take the state lock, then check again whether the backup exists:
+        # - an existing backup is whole, because it was moved into place in one step;
+        # - it must not be replaced by another copy of itself while another session may be reading it, since
+        #   Windows refuses to replace a file that is open.
         with state_lock(self.dir):
             if final.exists():
                 return digest

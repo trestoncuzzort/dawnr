@@ -248,9 +248,9 @@ class ShellTools:
     def _markers(self) -> tuple[str, str]:
         folder, file = self.markers / "folder", self.markers / "file"
         if not file.is_file():
-            # Under the state lock, and looked at again under it: another session's sandbox binds these files over
-            # the hidden places, so they are never truncated and rewritten while it reads them. `file` is put in
-            # place last and whole (written beside and swapped in), so that its being there means all three are.
+            # Take the state lock, then check again whether `file` exists. Another session's sandbox binds these
+            # files over the hidden places, so they must not be truncated and rewritten while it reads them.
+            # `file` is written last, to a `.part` copy that is then swapped in, so if `file` exists all three do.
             with state_lock(self.markers.parent):
                 if not file.is_file():
                     folder.mkdir(parents=True, exist_ok=True)
@@ -325,11 +325,14 @@ class ShellTools:
                 pass
 
     def _new_scratch(self, key: str) -> Path:
-        """A new folder for one run, owner-only, that no other run has: sessions share the state folder, and a name
-        made of the run's key and the millisecond alone is the same for the same command started in the same
-        millisecond. The random part makes a clash unlikely and mkdir, which fails over a folder that exists, makes
-        it impossible for two runs to be given one. The name begins with the key and nothing reads it apart: a run
-        is removed by the path it keeps (Run.scratch)."""
+        """_new_scratch: create an owner-only scratch folder for one run, one that no other run holds.
+
+        Sessions share the state folder, and two sessions starting the same command in the same millisecond would
+        get the same name if it were only the run's key plus the time. So the name adds a random part, which makes
+        a clash unlikely, and mkdir fails on an existing folder, which makes a shared folder impossible: the loop
+        tries a new name until mkdir succeeds. The name starts with the key but nothing parses it; a run is cleaned
+        up by the path it stores (Run.scratch).
+        """
         self.scratch.mkdir(parents=True, exist_ok=True, mode=0o700)
         while True:
             path = self.scratch / f"{key}-{int(time.time() * 1000)}-{uuid.uuid4().hex[:8]}"

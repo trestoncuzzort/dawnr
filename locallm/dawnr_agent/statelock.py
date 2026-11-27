@@ -1,23 +1,29 @@
 """statelock.py: one lock for the files two dawnr sessions share.
 
-Every session started without --state uses the same state folder, so two terminals write the same plan log
-(plans.jsonl) and journal at once. A file one session cuts down (it reads the newest lines, writes a copy and swaps
-it in) loses a line the other appended meanwhile, so every append to those files and every rewrite of them, and
-the first writing of the sandbox's marker files, is made while holding this lock, and a rewrite never runs
-beside another process's append or rewrite. The lock is on the file `.lock` in the state folder, held by one
-process at a time:
+Every session started without --state uses the same state folder, so two terminals can write the plan log
+(plans.jsonl) and the journal at the same time. A session that trims a file reads the newest lines, writes a copy
+and swaps it in, so a line the other session appended in between is lost. To prevent that, this lock is held:
+
+- for every append to those files;
+- for every rewrite of them;
+- for the first writing of the sandbox's marker files.
+
+A rewrite therefore never overlaps another process's append or rewrite. The lock is on the file `.lock` in the state
+folder and one process holds it at a time:
 
   POSIX    fcntl.flock(fd, LOCK_EX | LOCK_NB): an advisory lock on the open file, dropped when the process ends or
            the descriptor is closed (https://docs.python.org/3/library/fcntl.html#fcntl.flock)
-  Windows  msvcrt.locking(fd, LK_NBLCK, 1): one byte at the start of the file, "may continue beyond the end of the
-           file", so the file stays empty (https://docs.python.org/3/library/msvcrt.html#msvcrt.locking). The
-           blocking mode, LK_LOCK, gives up after ten tries a second apart and cannot be given a longer wait, so
-           the non-blocking mode is tried again here, on both systems, until WAIT seconds have passed.
+  Windows  msvcrt.locking(fd, LK_NBLCK, 1): locks one byte at the start of the file, which "may continue beyond the
+           end of the file", so the file stays empty
+           (https://docs.python.org/3/library/msvcrt.html#msvcrt.locking). The blocking mode, LK_LOCK, gives up
+           after ten tries a second apart and cannot wait longer, so on both systems the non-blocking mode is
+           retried until WAIT seconds have passed.
 
-The lock file is looked at for a link before it is opened, opened without following a link where the system has
-O_NOFOLLOW, and what was opened is then compared with what the name holds now, so that a link (or a junction, or another file swapped in) at that name is
-refused and never followed. It is created owner-only, holds nothing and is never written. The state folder stays
-outside the model's roots like the files in it (paths.py), and `dawnr forget` knows the name (bin/dawnr).
+The lock file is never followed through a link. Before opening it, the code checks the name for a link. It opens
+with O_NOFOLLOW where the system has it. Then it compares the opened file with what the name holds now. A link, a
+junction, or another file swapped in at that name is refused. The file is created owner-only, holds nothing and is
+never written. The state folder stays outside the model's roots like the files in it (paths.py), and `dawnr forget`
+knows the name (bin/dawnr).
 """
 from __future__ import annotations
 
@@ -38,13 +44,13 @@ except ImportError:                                            # POSIX
     msvcrt = None
 
 LOCK_NAME = ".lock"
-WAIT = 30.0                    # seconds to wait for another process's turn; a write holds the lock for milliseconds
+WAIT = 30.0                    # seconds to wait for the lock; a write holds it only for milliseconds
 POLL = 0.005
 REPARSE_POINT = 0x400          # FILE_ATTRIBUTE_REPARSE_POINT: a Windows link, junction or mount point
 
 
 class StateLockRefused(OSError):
-    """The name `.lock` holds something other than an ordinary file of its own."""
+    """StateLockRefused: the name `.lock` holds something other than an ordinary file of its own."""
 
 
 def _is_link(named: os.stat_result) -> bool:
@@ -56,8 +62,11 @@ def _refuse(path: Path) -> StateLockRefused:
 
 
 def _refuse_a_link(path: Path) -> None:
-    """Before opening: where there is no O_NOFOLLOW (Windows), opening with O_CREAT through a link to nothing would
-    create the file the link points at, so a link is looked for first, with no link followed."""
+    """_refuse_a_link: refuse a link at `path` before the file is opened, without following it.
+
+    Where there is no O_NOFOLLOW (Windows), opening with O_CREAT through a link to nothing would create the file the
+    link points at.
+    """
     try:
         named = os.lstat(path)
     except FileNotFoundError:
@@ -83,7 +92,7 @@ def _try(fd: int) -> bool:
             msvcrt.locking(fd, msvcrt.LK_NBLCK, 1)
         return True
     except OSError as e:
-        if e.errno in (errno.EACCES, errno.EAGAIN, errno.EDEADLK):     # held by another process
+        if e.errno in (errno.EACCES, errno.EAGAIN, errno.EDEADLK):     # another process holds the lock
             return False
         raise
 
@@ -96,13 +105,16 @@ def _release(fd: int) -> None:
             os.lseek(fd, 0, os.SEEK_SET)
             msvcrt.locking(fd, msvcrt.LK_UNLCK, 1)
     except OSError:
-        pass                                                   # closing the descriptor lets go of it anyway
+        pass                                                   # closing the descriptor releases the lock anyway
 
 
 @contextmanager
 def state_lock(state_dir, wait: float | None = None):
-    """Hold the state folder's lock for the block. Raises OSError when the lock file is not an ordinary file of its
-    own (StateLockRefused) or another process keeps the lock past the wait (TimeoutError); the block is not run."""
+    """state_lock: hold the state folder's lock for the duration of the `with` block.
+
+    Raises OSError, and does not run the block, when the lock file is not an ordinary file of its own
+    (StateLockRefused) or when another process keeps the lock past the wait (TimeoutError).
+    """
     folder = Path(state_dir)
     folder.mkdir(parents=True, exist_ok=True)
     path = folder / LOCK_NAME

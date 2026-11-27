@@ -1368,18 +1368,18 @@ class Plans(Env):
         self.assertEqual(tools_run[:3], ["fs_read", "fs_write", "plan"])
 
     def test_the_plan_log_keeps_what_each_call_asked_for_a_long_text_by_its_length_and_sha256_only(self):
-        # Until 2026-11-26 a row of plans.jsonl said how many steps a plan had and how far it ran, and not what any
-        # step was asked to do, so a run that went wrong could not be followed afterwards.
+        # Each row of plans.jsonl records every step's tool and arguments, so a run that went wrong can be traced.
+        # A text over 200 characters is stored only as its length and sha256; exactly 200 is stored in full.
         h, a = self.build(permissions={"fs_write": "allow", "fs_edit": "allow"})
         s = h.session()
-        long, edge = "é" * 201, "e" * 200            # over 200 characters: its length and sha256 only
+        long, edge = "é" * 201, "e" * 200            # 201 characters: length and sha256 only; 200: kept as is
         steps = [{"tool": "fs_write", "arguments": {"path": "project/long.txt", "content": long}},
                  {"tool": "fs_edit", "arguments": {"path": "project/readme.txt", "old": "world", "new": edge}},
                  {"tool": "fs_read", "arguments": {"path": "project/readme.txt", "start": 2}}]
         digest = preview_plan(a, h, Plan.from_json({"steps": steps}), s).digest
         r = h.call("plan", {"steps": steps}, session=s)
         self.assertFalse(r.is_error, r.text)
-        # a text inside a list the same way; a plan refused before it ran is kept too
+        # a long text inside a list is reduced the same way; a plan refused before it ran is logged too
         h.call("plan", {"steps": [{"tool": "run_command", "arguments": {"argv": ["echo", "z" * 300]}}]}, session=s)
         log = (self.state / "plans.jsonl").read_text()
         rows = [json.loads(line) for line in log.splitlines()]
@@ -1401,10 +1401,10 @@ class Plans(Env):
         self.assertTrue(second["stopped"].startswith("step 1 would be refused"), second["stopped"])
         self.assertNotIn(json.dumps(long)[1:-1], log)
         self.assertNotIn("z" * 201, log)
-        self.assertEqual(a.plans, rows)                    # what the agent keeps in memory is the same
+        self.assertEqual(a.plans, rows)                    # the agent's in-memory plans match the log
 
     def _plans(self, h, s, count, first=1):
-        for n in range(first, first + count):                # a plan of its own each (the same one twice is refused), in a conversation of its own (four plans end one)
+        for n in range(first, first + count):                # a distinct plan, in a new session
             r = h.call("plan", {"steps": [{"tool": "fs_read", "arguments": {"path": "project/readme.txt", "start": n}}]}, session=h.session())
             self.assertFalse(r.is_error, r.text)
 
@@ -1413,27 +1413,26 @@ class Plans(Env):
                 for line in (self.state / "plans.jsonl").read_text().splitlines()]
 
     def test_the_plan_log_keeps_the_newest_plans_only_the_oldest_go_first_and_the_order_stays(self):
-        # Until 2026-11-26 plans.jsonl held every plan ever made, with the short texts of the person's files and
-        # commands in full, and was never cut; the API's jobs keep the newest 200 finished (t/serve_api.py KEEP).
+        # The plan log keeps only the newest PLAN_LOG_KEEP plans, drops the oldest first and keeps the written order.
         with mock.patch.object(config_mod, "PLAN_LOG_KEEP", 5, create=True):
             h, a = self.build()
             s = h.session()
             self._plans(h, s, 4)
             self.assertEqual(self._log_starts(), [1, 2, 3, 4])            # under the cap: nothing is cut
             self._plans(h, s, 1, first=5)
-            self.assertEqual(self._log_starts(), [1, 2, 3, 4, 5])         # at the cap: still all
+            self.assertEqual(self._log_starts(), [1, 2, 3, 4, 5])         # at the cap: all kept
             self._plans(h, s, 1, first=6)
-            self.assertEqual(self._log_starts(), [2, 3, 4, 5, 6])         # one over: the oldest goes, the newest is there
+            self.assertEqual(self._log_starts(), [2, 3, 4, 5, 6])         # one over: the oldest goes, the newest stays
             self._plans(h, s, 7, first=7)
-            self.assertEqual(self._log_starts(), [9, 10, 11, 12, 13])     # the cap holds and the order is the order written
+            self.assertEqual(self._log_starts(), [9, 10, 11, 12, 13])     # the cap holds and the written order is kept
         text = (self.state / "plans.jsonl").read_text()
         self.assertTrue(text.endswith("\n") and "\n\n" not in text)
         self.assertEqual([p.name for p in self.state.iterdir() if p.name.startswith(".plans")], [])   # no copy left beside it
-        self.assertEqual(len(a.plans), 13)                                # the agent's own memory of this session is not the log
-        self.assertEqual(config_mod.PLAN_LOG_KEEP, 200)                   # as many as the API keeps of its finished jobs
+        self.assertEqual(len(a.plans), 13)                                # only the log is trimmed, not the memory list
+        self.assertEqual(config_mod.PLAN_LOG_KEEP, 200)                   # the real default
 
     def test_a_plan_log_already_over_the_cap_is_cut_to_it_at_the_next_plan(self):
-        # a log from before the cap (or from a longer cap) has more than it may: the next plan cuts it, newest kept
+        # a log already over the cap (written under a larger one) is trimmed at the next plan, newest kept
         h, a = self.build()
         self.state.mkdir(parents=True, exist_ok=True)
         old = [json.dumps({"time": n, "calls": [{"tool": "fs_read", "arguments": {"path": "project/readme.txt", "start": n}}]})
@@ -1444,8 +1443,8 @@ class Plans(Env):
         self.assertEqual(self._log_starts(), [-3, -2, -1, 77])
 
     def test_the_plan_log_put_in_place_by_a_cut_is_still_the_models_to_neither_write_nor_read(self):
-        # the cut replaces the file, and the replacement is a new file (a new identity): the state folder's own
-        # protection must still cover it (its folder is protected, and hidden, by identity)
+        # The trim replaces plans.jsonl with a new file (a new inode). The state folder is protected and hidden from
+        # the model by file identity, so that protection must still cover the new file.
         with mock.patch.object(config_mod, "PLAN_LOG_KEEP", 2, create=True):
             h, a = self.build(roots=[{"name": "project", "path": str(self.proj), "mode": "write"}], state=str(self.proj / "agent-state"))
             self._plans(h, h.session(), 4)
@@ -1463,18 +1462,18 @@ class Plans(Env):
             self._plans(h, s, 3)
             log = self.state / "plans.jsonl"
             whole = log.read_bytes()
-            # stopped while the copy is being written: the log is not touched, and the half copy is gone
+            # fsync fails while the copy is written: the log is untouched and the partial copy is removed
             def stop(fd):
                 raise OSError("disk went away")
             with mock.patch.object(config_mod.os, "fsync", stop):
                 self._plans(h, s, 1, first=4)
             after_append = log.read_bytes()
-            self.assertTrue(after_append.startswith(whole))                 # the 4th plan was appended to the whole old file
+            self.assertTrue(after_append.startswith(whole))                 # the 4th plan went onto the old file
             self.assertEqual(len(after_append.splitlines()), 4)
             self.assertTrue(all(json.loads(line) for line in after_append.splitlines()))
             self.assertEqual([p.name for p in self.state.iterdir() if p.name.startswith(".plans")], [])
             self.assertTrue(any("not shortened" in m and "disk went away" in m for m in h.messages))
-            # stopped just before the copy takes the log's place: the old file, whole
+            # the swap fails just before the copy would replace the log: the old file stays intact
             def stop_replace(src, dst):
                 raise OSError("stopped before the swap")
             with mock.patch.object(config_mod.os, "replace", stop_replace):
@@ -1482,10 +1481,10 @@ class Plans(Env):
             self.assertEqual(len(log.read_bytes().splitlines()), 5)
             self.assertTrue(all(json.loads(line) for line in log.read_bytes().splitlines()))
             self.assertEqual([p.name for p in self.state.iterdir() if p.name.startswith(".plans")], [])
-            # the next plan, nothing stopping it: the new file, whole, the newest three
+            # the next plan, with nothing failing: the log is replaced whole by its newest three lines
             self._plans(h, s, 1, first=6)
             self.assertEqual(self._log_starts(), [4, 5, 6])
-            # the cut itself, stopped at the last moment, from outside: a copy written whole is the only other file
+            # call _rotate directly with the swap failing: the error is raised and the log is unchanged
             before = log.read_bytes()
             with mock.patch.object(config_mod.os, "replace", stop_replace):
                 with self.assertRaises(OSError):
@@ -1842,9 +1841,9 @@ class Processes(unittest.TestCase):
 
 # ------------------------------------------- two sessions, one state folder --
 
-# Two terminals in one folder without --state share the default state folder. These tests run real processes
-# against it: a plan appended by one session while another cuts the plan log must never be lost, and a write to
-# the state folder's files waits while the state lock (dawnr_agent/statelock.py) is held.
+# Two terminals started without --state share the default state folder. These tests run real processes against it:
+# - a plan one session appends while another trims the plan log must never be lost;
+# - a write to the state folder's files waits while the state lock (dawnr_agent/statelock.py) is held.
 
 PLAN_WRITER = r'''
 import sys, threading, time, types
@@ -1907,11 +1906,11 @@ class StateFolderShared(Env):
         return holder
 
     def test_plans_appended_by_two_sessions_while_the_log_is_cut_are_never_lost(self):
-        # each plan is appended and then the log is cut to its newest `keep` (every plan does both); the cut reads the
-        # log, writes the shortened copy and swaps it in, and a plan appended by the other session in between was in
-        # the old file only. The newest `keep` lines must be the last `keep` written, nothing missing from them.
-        # The log starts full, so that every plan's cut really rewrites it; `keep` is most of what is written, so that
-        # a plan lost from the middle of the run is still in the window the final log shows, not trimmed away unseen.
+        # Every plan is appended and then the log is trimmed to its newest `keep` lines. A trim reads the log, writes
+        # a shortened copy and swaps it in, so without the lock a plan the other session appended in between would be
+        # in the old file only and be lost. The final log must hold the last `keep` plans written, none missing.
+        # - The log starts full, so every plan's trim really rewrites it.
+        # - `keep` is most of what is written, so a plan lost mid-run still falls inside the final window and shows.
         keep, rounds = 150, 100
         seed = "".join(json.dumps({"calls": [{"tool": "fs_read", "arguments": {"who": "seed", "n": n}}]}) + "\n"
                        for n in range(keep))
@@ -1928,8 +1927,8 @@ class StateFolderShared(Env):
             self.assertEqual([p.name for p in state.iterdir() if p.name.startswith(".plans")], [])
 
     def test_two_sessions_keeping_and_recording_leave_every_row_and_every_backup_whole(self):
-        # the journal's keep writes a new file for each hash and record appends a line: neither rewrites a file the
-        # other session writes, so this holds with or without the lock; it is here so that the lock never breaks it
+        # Journal.keep writes a new file per hash and Journal.record appends a line; neither rewrites a file the other
+        # session writes, so this holds with or without the lock. The test guards against the lock breaking it.
         from dawnr_agent.journal import Journal
         state, rounds = self.base / "shared-journal", 80
         self._run_together(JOURNAL_WRITER, state, rounds)
@@ -1959,9 +1958,9 @@ class StateFolderShared(Env):
             with statelock.state_lock(self.state):
                 1 / 0
         with mock.patch.object(statelock, "WAIT", 0.3):
-            with statelock.state_lock(self.state):                  # at once: not after the wait
+            with statelock.state_lock(self.state):                  # acquired at once, not after the wait
                 pass
-        holder = self._held_by_another_process(self.state)         # and a process of its own can take it
+        holder = self._held_by_another_process(self.state)         # another process can also take it
         holder.stdin.write("\n")
         holder.stdin.flush()
         holder.wait(timeout=30)
@@ -1981,7 +1980,7 @@ class StateFolderShared(Env):
                 self.fail("followed the link")
         self.assertEqual(victim.read_text(), "the person's own file\n")
         lock.unlink()
-        lock.symlink_to(self.base / "not-there-yet")                # a link to nothing: not created through it either
+        lock.symlink_to(self.base / "not-there-yet")                # a link to a missing file: nothing is made
         with self.assertRaises(OSError):
             with statelock.state_lock(self.state):
                 self.fail("followed the link")
@@ -2049,8 +2048,8 @@ class StateFolderShared(Env):
         self.assertEqual(j.backup(digest), b"bytes that are not in the journal yet")
 
     def test_the_sandbox_markers_are_made_while_the_lock_is_free_and_only_once(self):
-        # a folder or file hidden from a command is bound over by these files, and a session starting beside another
-        # must not truncate and rewrite them while that one's sandbox reads them
+        # The sandbox binds these marker files over a folder or file hidden from a command, so a session starting
+        # beside another must not truncate and rewrite them while that one's sandbox reads them.
         from dawnr_agent import statelock
         from dawnr_agent.shell import ShellTools
         me = types.SimpleNamespace(markers=self.state / "sh-hidden")
@@ -2064,7 +2063,7 @@ class StateFolderShared(Env):
         holder.wait(timeout=30)
         folder, file = ShellTools._markers(me)
         seen = [os.stat(p).st_ino for p in (me.markers / "gitattributes", file)]
-        holder = self._held_by_another_process(self.state)          # made already: nothing is written, so nothing waits
+        holder = self._held_by_another_process(self.state)          # markers exist: no write, no wait
         with mock.patch.object(statelock, "WAIT", 0.3):
             self.assertEqual(ShellTools._markers(me), (folder, file))
         self.assertEqual([os.stat(p).st_ino for p in (me.markers / "gitattributes", file)], seen)
@@ -2076,7 +2075,7 @@ class StateFolderShared(Env):
         self._plans_logged(h, 2)
         lock = self.proj / "agent-state" / statelock.LOCK_NAME
         self.assertTrue(lock.is_file(), sorted(p.name for p in lock.parent.iterdir()))
-        self.assertEqual(lock.read_bytes(), b"")                    # the lock holds nothing to read or leak
+        self.assertEqual(lock.read_bytes(), b"")                    # the lock file is empty: nothing to read or leak
         before = lock.stat()
         shown = f"project/agent-state/{statelock.LOCK_NAME}"
         for name, args in (("fs_write", {"path": shown, "content": "x", "overwrite": True}),

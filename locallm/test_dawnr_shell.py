@@ -48,23 +48,23 @@ def test_a_command_that_changes_nothing_is_a_read_and_runs_unasked(tmp_path):
 
 
 def test_two_sessions_running_one_command_in_the_same_millisecond_each_get_a_scratch_folder_of_their_own(tmp_path, monkeypatch):
-    # Two sessions share a state folder, so the folder a run works in is named so that no other run can have it: the
-    # same command in the same millisecond would otherwise be the same name (the second run's makedirs failed over an
-    # overlay, and over a copy both runs filled one folder)
+    # Two sessions share a state folder, so each run's scratch folder is named so that no other run can get it.
+    # The same command started in the same millisecond would otherwise get the same name, and then the second run's
+    # mkdir would fail (overlay) or both runs would fill one folder (copy).
     import sys
     import time as real_time
     work, harness, agent, asked = agent_in(tmp_path, **{"a.txt": "one\n"})
-    shell_mod = sys.modules[type(agent.shell).__module__]          # the module the agent itself uses
+    shell_mod = sys.modules[type(agent.shell).__module__]          # the module the agent itself imported
     frozen = type("Clock", (), {name: getattr(real_time, name) for name in dir(real_time) if not name.startswith("__")})
     frozen.time = staticmethod(lambda: 1234.567)
     monkeypatch.setattr(shell_mod, "time", frozen)
     command = {"command": "echo more >> a.txt"}
     with harness:
         first = agent.shell.run(command)
-        agent.shell.runs.clear()                     # the other session's shell holds none of this one's runs
+        agent.shell.runs.clear()                     # a second session's shell has none of this session's runs
         second = agent.shell.run(command)
         try:
-            assert first.id == second.id             # the same command: the same run id, which the folder's name starts with
+            assert first.id == second.id             # same command, same run id (the folder name starts with it)
             assert first.scratch != second.scratch
             assert Path(first.scratch).name.startswith(first.id + "-1234567-")
             assert Path(first.scratch).is_dir() and Path(second.scratch).is_dir()
