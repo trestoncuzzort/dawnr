@@ -531,6 +531,57 @@ def test_without_a_task_and_without_a_terminal_it_refuses_to_start(tmp_path, mon
     assert "no task was given" in capsys.readouterr().err
 
 
+def test_the_rounds_and_the_steps_of_a_task_are_settings_and_unset_they_are_what_they_were(tmp_path, monkeypatch):
+    monkeypatch.delenv("DAWNR_MAX_ROUNDS", raising=False)
+    monkeypatch.delenv("DAWNR_MAX_STEPS", raising=False)
+    assert cli.default_config(tmp_path)["agent"]["budget"] == {"max_steps": 40, "max_rounds": 18, "max_failures": 2}
+    monkeypatch.setenv("DAWNR_MAX_ROUNDS", "3")
+    monkeypatch.setenv("DAWNR_MAX_STEPS", " 2 ")
+    assert cli.default_config(tmp_path)["agent"]["budget"] == {"max_steps": 2, "max_rounds": 3, "max_failures": 2}
+    # 3 rounds: two to search, then the last round, which has no tools and must answer
+    model = Model(turn(("fs_search", {"query": "phone"})), turn(("fs_search", {"query": "tel"})), turn(text="It is not in the files."))
+    (tmp_path / "rounds").mkdir()
+    work, harness, agent, planner, meter, said, asked, _ask = session(tmp_path / "rounds", model)
+    with harness:
+        assert cli.run_task(agent, planner, meter, "What is the phone number?", [], said.append) == "It is not in the files."
+    assert ["tools" in body for body in model.bodies] == [True, True, False]
+    assert model.bodies[-1]["messages"][-1] == {"role": "user", "content": cli.LAST_ROUND}
+    # 2 steps: a plan of three calls is cut after the second
+    reads = [("fs_read", {"path": f"here/{name}.txt"}) for name in "abc"]
+    model = Model(turn(*reads), turn(text="I read two of the three."))
+    (tmp_path / "steps").mkdir()
+    work, harness, agent, planner, meter, said, asked, _ask = session(tmp_path / "steps", model)
+    for name in "abc":
+        (work / f"{name}.txt").write_text(name + "\n")
+    with harness:
+        answer = cli.run_task(agent, planner, meter, "Read a, b and c.", [], said.append)
+    assert answer == "I read two of the three.\n(It stopped there: it used all its steps.)"
+    assert [line.split("[")[-1] for line in said[:3]] == ["ran]", "ran]", "not run: budget]"]
+    # a set but empty value counts as unset
+    monkeypatch.setenv("DAWNR_MAX_ROUNDS", "")
+    monkeypatch.setenv("DAWNR_MAX_STEPS", "  ")
+    assert cli.default_config(tmp_path)["agent"]["budget"] == {"max_steps": 40, "max_rounds": 18, "max_failures": 2}
+
+
+def test_a_rounds_or_steps_setting_that_is_not_a_whole_number_above_zero_is_refused_and_nothing_starts(tmp_path, monkeypatch, capsys):
+    monkeypatch.delenv("DAWNR_MAX_STEPS", raising=False)
+    for bad in ("0", "-3", "abc", "2.5", "1e3", "+5", "4O", "000"):
+        monkeypatch.setenv("DAWNR_MAX_ROUNDS", bad)
+        with pytest.raises(ValueError, match="DAWNR_MAX_ROUNDS"):
+            cli.default_config(tmp_path)
+    monkeypatch.delenv("DAWNR_MAX_ROUNDS")
+    monkeypatch.setenv("DAWNR_MAX_STEPS", "0")
+    with pytest.raises(ValueError, match="DAWNR_MAX_STEPS"):
+        cli.default_config(tmp_path)
+    # the front door names the bad setting and says why; it starts no harness and no model
+    started = []
+    monkeypatch.setattr(cli, "build_agent", lambda *a, **kw: started.append(a) or pytest.fail("started with DAWNR_MAX_STEPS=0"))
+    assert cli.main(["--host", "nowhere:1", "--cwd", str(tmp_path), "Read it."]) == 2
+    err = capsys.readouterr().err
+    assert err == "dawnr: DAWNR_MAX_STEPS='0' is not a whole number above 0; set it to one, or unset it for the default of 40\n"
+    assert not started
+
+
 def test_the_line_for_a_common_job_is_given_for_the_desktop_and_programs_the_machine_has():
     from dawnr_agent.recipes import RECIPES, recipes
     gnome = "This computer: Ubuntu 26.04.1 LTS, packages with apt, services with systemd, desktop ubuntu GNOME on wayland."

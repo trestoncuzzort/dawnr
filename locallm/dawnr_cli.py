@@ -149,6 +149,48 @@ LAST_ROUND = "Answer now from what you have read. If what was asked is not in th
 CALL_MARKS = ("<tool_call>", "<function=")     # a call in the model family's own format, written out as text
 NOTHING_MORE = ("Nothing more can be read or run now: a call written out as text does not run. Answer from what you have "
                 "already read, and say plainly what you could not check.")
+# The loop's budget for one task. Fixing one bug takes about three rounds (edit, run the test, read the result), so a
+# task with several bugs needs many. DAWNR_MAX_ROUNDS and DAWNR_MAX_STEPS raise the rounds and the steps for a longer
+# task, such as a review that reads many files.
+BUDGET = {"max_steps": 40, "max_rounds": 18, "max_failures": 2}
+BUDGET_SETTINGS = (("max_rounds", "DAWNR_MAX_ROUNDS"), ("max_steps", "DAWNR_MAX_STEPS"))
+
+
+class SettingError(ValueError):
+    """A setting in the environment that dawnr will not guess at: it is reported and nothing starts."""
+
+
+def loop_budget() -> dict:
+    """Return the loop's budget, with DAWNR_MAX_ROUNDS and DAWNR_MAX_STEPS applied where they are set.
+
+    Each must be a whole number above 0. Any other value raises SettingError instead of falling back to the default, so
+    a mistyped setting cannot quietly give a task fewer rounds than the person asked for. A set but empty value counts
+    as unset."""
+    out = dict(BUDGET)
+    for key, name in BUDGET_SETTINGS:
+        raw = os.environ.get(name, "")
+        if not raw.strip():
+            continue
+        if not re.fullmatch(r"[0-9]+", raw.strip()) or int(raw.strip()) < 1:
+            raise SettingError(f"{name}={raw!r} is not a whole number above 0; set it to one, or unset it for the "
+                               f"default of {BUDGET[key]}")
+        out[key] = int(raw.strip())
+    return out
+
+
+def settings_refused(prog: str = "dawnr") -> bool:
+    """Check the settings dawnr reads from the environment. If one is bad, print why and return True.
+
+    Every program that reads the settings calls this before it starts anything: the launcher (bin/dawnr), this front
+    door, dawnr_warm.py, and the measuring scripts (dawnr_tasks.py, dawnr_teach.py, dawnr_factory.py --check,
+    judge_twins.py), which read them through default_config. The message goes to stderr as `prog: ...`, and the caller
+    then exits 2."""
+    try:
+        loop_budget()
+    except SettingError as error:
+        print(f"{prog}: {error}", file=sys.stderr)
+        return True
+    return False
 
 
 def default_config(cwd: Path, *, read_only: bool = False, roots: tuple = (), online: bool = False,
@@ -164,8 +206,7 @@ def default_config(cwd: Path, *, read_only: bool = False, roots: tuple = (), onl
             name += "-2"
         names.add(name)
         listed.append({"name": name, "path": str(path)})
-    # a bug fixed is three rounds (edit, run the test, read what it says): twelve rounds ran out on the third bug
-    agent = {"roots": listed, "sandbox": "bwrap", "budget": {"max_steps": 40, "max_rounds": 18, "max_failures": 2}}
+    agent = {"roots": listed, "sandbox": "bwrap", "budget": loop_budget()}
     if state is not None:
         agent["state"] = str(state)
     # Left out of what the model is offered, each some hundreds of tokens read on every first call: `t` (proving is
@@ -1122,6 +1163,8 @@ def main(argv=None) -> int:
     task = " ".join(a.task).strip()
     if not task and not sys.stdin.isatty():
         ap.error("no task was given and this is not a terminal")
+    if settings_refused():                                      # a bad setting is reported and nothing starts
+        return 2
     if a.state is not None:                                     # before the agent makes the folder
         remember_state(a.state)
     config = default_config(a.cwd, read_only=a.read_only, roots=tuple(a.root), online=a.online, state=a.state)
