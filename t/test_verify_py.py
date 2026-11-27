@@ -270,10 +270,13 @@ def test_an_annotation_is_read_by_its_structure_in_any_spelling():
            "      i: 'list[str]', j: Optional[int], k: Sequence[Tuple[str, int]], m: tuple[int], n: float, o: list[Any], q: int | None,\n"
            "      r: list[tuple[int, ...]], u: set[int], v: T, w: Thing):\n    return 0\n")
     f = function(src)
-    assert f["kinds"] == ["tuple[int, ...]", "tuple[int, ...]", "list[tuple[int, int]]", "list[int]", "list[int]", None, "list[list[int]]",
-                          "list[str]", "int", "list[tuple[str, int]]", "tuple[int, ...]", None, "list[int]", "int",
-                          "list[tuple[int, ...]]", None, "int", None]
-    assert verify_py.unread(f) == "`g: dict` is not an annotation this reads"
+    # a dict and a set are read too (their values cross into the sandbox as literal text); a float is not
+    assert f["kinds"] == ["tuple[int, ...]", "tuple[int, ...]", "list[tuple[int, int]]", "list[int]", "list[int]", "dict[int, int]",
+                          "list[list[int]]", "list[str]", "int", "list[tuple[str, int]]", "tuple[int, ...]", None, "list[int]", "int",
+                          "list[tuple[int, ...]]", "set[int]", "int", None]
+    assert verify_py.unread(f) == "`n: float` is not an annotation this reads"
+    assert function("def f(a: Dict[str, List[int]], b: FrozenSet[Tuple[int, int]], c: dict[list[int], int]):\n    return 0\n"
+                    )["kinds"] == ["dict[str, list[int]]", "set[tuple[int, int]]", None]   # a list is no key
     assert verify_py.unread(function("def f(a, b: int):\n    return 0\n")) == "`a` has no annotation"
     assert verify_py.unread(function("def f(a: int):\n    return 0\n")) is None
 

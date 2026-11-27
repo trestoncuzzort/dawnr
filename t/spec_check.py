@@ -43,6 +43,7 @@ import interp                                                   # noqa: E402
 import loop_filter                                             # noqa: E402
 import spec_experiment as se                                    # noqa: E402
 import surface                                                 # noqa: E402
+import typed_values                                             # noqa: E402
 
 KERNELS = ["dafny", "verus", "spark", "framac", "lean", "rocq", "fstar"]
 
@@ -192,7 +193,12 @@ def draw(kind: str, rnd: random.Random, like=None, strings: bool = False):
     mbpp_733's reference is a binary search, so it answers -1 on an unsorted array although the element is
     there; the problem never says its inputs are sorted. An example argument from the problem's own assertions
     carries those unstated preconditions, so a draw copies its shape: a sorted example stays sorted, an example
-    of characters stays characters, a positive example stays positive."""
+    of characters stays characters, a positive example stays positive.
+
+    A kind the reader typed (t/typed_values.py) is drawn in the example's shape. None is then a value it may draw
+    (an option's), so a draw that fails there is `typed_values.NO_VALUE`, not None."""
+    if typed_values.is_typed(kind):
+        return typed_values.draw(typed_values.type_of_kind(kind), like, rnd)
     if kind == "int":
         if isinstance(like, int) and not isinstance(like, bool):
             lo, hi = (0, max(2, abs(like) * 2)) if like >= 0 else (-max(2, abs(like) * 2), 0)
@@ -244,6 +250,8 @@ def draw_beyond(kind: str, rnd: random.Random, like=None, strings: bool = False,
     larger (`beyond_drawer`)."""
     if kind == "bool" or rnd.random() >= share:
         return draw(kind, rnd, like, strings)
+    if typed_values.is_typed(kind):
+        return typed_values.draw(typed_values.type_of_kind(kind), like, rnd, larger=True)
     far = rnd.random() < FAR
     if kind == "int":
         if isinstance(like, int) and not isinstance(like, bool):
@@ -409,14 +417,24 @@ def string_positions(entry: dict) -> list[int]:
     return []
 
 
-def bound_inputs(params: list, args: list, positions: list[int]) -> dict:
+def bound_inputs(params: list, args: list, positions: list[int], typed: list[int] | tuple = (),
+                 datatypes: dict | None = None) -> dict:
     """The drawn arguments as interpreter values under the task's parameters. A character drawn
     for a string position is a one-character string where the task declares a string: the
     problem's first assertion passed a one-character literal, the kinds therefore say `int`, and
     a task that (rightly) declares `seq` used to be handed an integer and the check ended with
-    "interpreter refused" (spec_experiment.mark_characters has the test-harness half, 2026-10-01)."""
+    "interpreter refused" (spec_experiment.mark_characters has the test-harness half).
+
+    `typed`: positions whose kind the reader typed (t/typed_values.py); the drawn value there is read at the
+    declared type, and raises TypeError when it does not read, as for any value with no t form."""
     env = {}
     for i, (p, a) in enumerate(zip(params, args)):
+        if i in typed:
+            try:
+                env[p["name"]] = typed_values.read_at(a, p.get("type"), datatypes)
+            except typed_values.Unreadable as why:
+                raise TypeError(str(why)) from None
+            continue
         if i in positions and p.get("type") == "seq" and isinstance(a, int) and not isinstance(a, bool):
             env[p["name"]] = (a,)
         else:
@@ -441,7 +459,7 @@ def nested_string_positions(entry: dict) -> list[int]:
     return []
 
 
-def python_arguments(args: list, positions: list[int], nested: list[int] | tuple = ()) -> list:
+def python_arguments(args: list, positions: list[int], nested: list[int] | tuple = (), typed: list[int] | tuple = ()) -> list:
     """The drawn arguments as the reference's own assertions pass them (2026-09-30, receipt
     ad806d032e1a): a str where the assertion passed a str literal, joined from the code points,
     a one-character str for a character argument, a list elsewhere. Before this the reference was
@@ -451,6 +469,9 @@ def python_arguments(args: list, positions: list[int], nested: list[int] | tuple
     (arXiv:2305.01210); this is the same rule for the reference call."""
     out = []
     for i, a in enumerate(args):
+        if i in typed:
+            out.append(a)                   # drawn in the example's own Python shape (t/typed_values.py): as it is
+            continue
         if i in nested and isinstance(a, (list, tuple)):
             # 2026-10-01: a list of strings stays a list of strings (EvalPlus's typed mutation keeps
             # types element by element, evalplus/gen/type_mut.py). Until now the rows went over as
@@ -518,6 +539,17 @@ def mutations(value):
             seen.add(key)
             unique.append(candidate)
     return unique
+
+
+def wrong_answers(value, datatypes: dict | None = None, ty=None) -> list:
+    """`mutations` of a right answer, plus wrong answers of the same type for a value of a compound type the reader
+    typed (a pair, a tuple, a set, a map, a datatype value, a seq of them: t/typed_values.py), which `mutations` has
+    none of. `ty`, the declared type of a result whose kind the reader typed, also gives an empty value wrong
+    answers; without them no mutant would be judged and a specification that says nothing would pass. Every value
+    `mutations` handles keeps its `mutations` result."""
+    if ty is not None or typed_values.compound(value):
+        return typed_values.mutations(value, datatypes, ty=ty)
+    return mutations(value)
 
 
 def with_reference_plus(pool: dict, path) -> tuple[dict, int]:
@@ -711,6 +743,14 @@ def fits_type(v, ty) -> bool:
     return True
 
 
+def _example_value(kind, v, ty, task: dict, result: bool = False):
+    """One of a problem's own values at a declared type: a typed kind's literal read there (t/typed_values.py),
+    any other kind unchanged."""
+    if typed_values.is_typed(kind):
+        return typed_values.read_at(v, ty, typed_values.datatypes_of(task))
+    return to_t(v, ty) if result else as_param(to_t(v, ty), ty)
+
+
 def check_points(task: dict, entry: dict) -> dict:
     """Does the specification hold at the problem's OWN examples?
 
@@ -741,10 +781,11 @@ def check_points(task: dict, entry: dict) -> dict:
             # point it does not fit, which is a verdict about nothing.
             continue                       # arity differs; check_task reports that separately
         try:
-            env = {p["name"]: as_param(to_t(v, p.get("type")), p.get("type"))
-                   for p, (_k, v) in zip(task["params"], point["args"])}
-            env[name] = to_t(point["expected"][1], task["returns"][0].get("type"))
-        except (TypeError, KeyError, IndexError, ValueError):
+            env = {p["name"]: _example_value(k, v, p.get("type"), task)
+                   for p, (k, v) in zip(task["params"], point["args"])}
+            env[name] = _example_value(point["expected"][0], point["expected"][1], task["returns"][0].get("type"), task,
+                                       result=True)
+        except (TypeError, KeyError, IndexError, ValueError, typed_values.Unreadable):
             continue                       # a point this task cannot even be asked about
         if len(env) != len(task["params"]) + 1:
             continue                       # duplicate parameter names collapsed the env
@@ -809,6 +850,11 @@ def check_task(task: dict, entry: dict, n: int, rnd: random.Random, oracle=None,
              if [k for k, _v in p.get("args", [])] == kinds]
     positions = string_positions(entry)
     nested = nested_string_positions(entry)
+    # Positions the reader typed (t/typed_values.py) are drawn in their examples' shapes and read at the declared
+    # types; the result too, when its kind is typed.
+    typed = [i for i, k in enumerate(kinds) if typed_values.is_typed(k)]
+    typed_result = typed_values.is_typed(entry["points"][0]["expected"][0])
+    dts = typed_values.datatypes_of(task)
     funs = interp.funs_of(task, task["body"])
     agreed = 0
     # 2026-10-01 (t/PREDICT-2026-10-01-spec-check-coverage.md): one draw the reference could not
@@ -866,11 +912,11 @@ def check_task(task: dict, entry: dict, n: int, rnd: random.Random, oracle=None,
             break
         examples = seeds[0] if len(seeds) == 1 else rnd.choice(seeds)
         args = [draw_one(k, rnd, ex, strings=i in nested) for i, (k, ex) in enumerate(zip(kinds, examples))]
-        if any(a is None for a in args):
+        if any(a is None for i, a in enumerate(args) if i not in typed) or any(a is typed_values.NO_VALUE for a in args):
             return {"status": f"cannot draw {kinds}"}
         try:
             with deadline(5):
-                out = fn(*python_arguments(copy.deepcopy(args), positions, nested))   # a mutating reference keeps its hands off the draw
+                out = fn(*python_arguments(copy.deepcopy(args), positions, nested, typed))   # a deep copy shields the draw from a mutating reference
         except Timeout:
             skipped["reference did not finish"] += 1
             continue
@@ -881,7 +927,7 @@ def check_task(task: dict, entry: dict, n: int, rnd: random.Random, oracle=None,
             # deliberately do not reach here: not finishing is a different
             # failure from not being defined.
             try:
-                env_in = bound_inputs(task["params"], args, positions)
+                env_in = bound_inputs(task["params"], args, positions, typed, dts)
             except TypeError:
                 continue                     # no t value for the input: cannot ask
             st_in = interp.St()
@@ -900,12 +946,15 @@ def check_task(task: dict, entry: dict, n: int, rnd: random.Random, oracle=None,
             continue
         reference_ran += 1
         try:
-            env = bound_inputs(task["params"], args, positions)
-            env[task["returns"][0]["name"]] = to_t(out, task["returns"][0].get("type"))
-        except TypeError:
+            env = bound_inputs(task["params"], args, positions, typed, dts)
+            if typed_result:
+                env[task["returns"][0]["name"]] = typed_values.read_at(out, task["returns"][0].get("type"), dts)
+            else:
+                env[task["returns"][0]["name"]] = to_t(out, task["returns"][0].get("type"))
+        except (TypeError, typed_values.Unreadable):
             skipped["reference result has no t value"] += 1
             continue
-        if not fits_type(env[task["returns"][0]["name"]], task["returns"][0].get("type")):
+        if not typed_result and not fits_type(env[task["returns"][0]["name"]], task["returns"][0].get("type")):
             skipped["reference result has no t value"] += 1     # a seq where the task declares an int, and so on
             continue
         st = interp.St()
@@ -926,7 +975,8 @@ def check_task(task: dict, entry: dict, n: int, rnd: random.Random, oracle=None,
         # The ensures is true of the right answer. Is it also true of a wrong
         # one? Nothing else in this project asks, and a specification that
         # cannot tell them apart is what the proven-but-wrong column is made of.
-        for wrong in mutations(env[task["returns"][0]["name"]]):
+        for wrong in wrong_answers(env[task["returns"][0]["name"]], dts,
+                                   task["returns"][0].get("type") if typed_result else None):
             probe = dict(env)
             probe[task["returns"][0]["name"]] = wrong
             st2 = interp.St()

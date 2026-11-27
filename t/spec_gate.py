@@ -50,6 +50,7 @@ import py_sandbox                                               # noqa: E402
 import spec_check                                               # noqa: E402
 import spec_experiment as se                                    # noqa: E402
 import spec_quality                                             # noqa: E402
+import typed_values                                             # noqa: E402
 
 MIN_DRAWS = 10
 MIN_COMPLETENESS = 0.6
@@ -80,6 +81,31 @@ def python_oracle(session: py_sandbox.Session):
         except py_sandbox.Unrepresentable:
             return {}                                           # to_t raises TypeError: "no t value"
     return call
+
+
+def literal_oracle(session: py_sandbox.Session):
+    """`python_oracle` for a question whose values the reader typed (t/typed_values.py): the session holds the
+    function behind `typed_values.wrapper`, the arguments cross as one literal's text and the result comes back as
+    its literal, so a tuple, a set, a dict with int keys and None arrive as themselves. A result with no literal is
+    `typed_values.NO_VALUE`, which no type reads: the draw is skipped, as python_oracle's {} is."""
+    def call(*args):
+        try:
+            return typed_values.decode(session.call(typed_values.encode(list(args))))
+        except py_sandbox.CallTimeout:
+            raise spec_check.Timeout() from None
+        except py_sandbox.Unrepresentable:
+            return typed_values.NO_VALUE
+    return call
+
+
+def _session(code: str, entry: dict) -> tuple[py_sandbox.Session, object]:
+    """The sandboxed function and the oracle that calls it: JSON for the kinds the plain reader reads, literal text
+    for the kinds it typed."""
+    if typed_values.entry_is_typed(entry):
+        session = py_sandbox.Session(code + typed_values.wrapper(entry["fn"]), typed_values.LITERAL_CALL)
+        return session, literal_oracle(session)
+    session = py_sandbox.Session(code, entry["fn"])
+    return session, python_oracle(session)
 
 
 def domain(result: dict) -> float | None:
@@ -136,8 +162,8 @@ def judge(task: dict, entry: dict, code: str | None, seed: int = 1, n: int = DRA
         return dict(out, passes=False, why="no test-passing Python beside it")
     larger = None
     try:
-        with py_sandbox.Session(code, entry["fn"]) as session:
-            oracle = python_oracle(session)
+        session, oracle = _session(code, entry)
+        with session:
             result = spec_check.check_task(task, entry, n, random.Random(seed), oracle=oracle)
             if beyond and passes(result):
                 larger = spec_check.larger_inputs(task, entry, seed, beyond, oracle)
