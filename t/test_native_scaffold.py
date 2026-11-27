@@ -84,13 +84,13 @@ def test_a_table_of_an_unnamed_struct_type_is_still_a_global_by_its_name():
     ("union U { int i; float f; } u = { 1 };", {"u"}),
     ("struct S { int x; } one = {1}, two = {2};", {"one", "two"}),
     ("int first = 1, second = 2;", {"first", "second"}),
-    ("enum { FIRST = 1, SECOND } mode = SECOND;", {"mode", "FIRST", "SECOND"}),       # its enumerators are ordinary names too
+    ("enum { FIRST = 1, SECOND } mode = SECOND;", {"mode", "FIRST", "SECOND"}),  # its enumerators are names too
     ("static enum { OFF = 0, ON } state = OFF;", {"state", "OFF", "ON"}),
     ("static int (*table[])(int) = { helper };", {"table"}),
     ("void (*const hook)(void) = 0;", {"hook"}),
-    ("__typeof__(*p) x = 1;", {"x"}),                                                   # parentheses that are no declarator's
+    ("__typeof__(*p) x = 1;", {"x"}),  # the parentheses are not a declarator's
     ("int x[sizeof(int (*)(int))] = {0};", {"x"}),
-    ("int counter __attribute__((aligned(8))) = 0;", {"counter"}),                       # an attribute with parentheses inside
+    ("int counter __attribute__((aligned(8))) = 0;", {"counter"}),  # an attribute with parentheses inside
     ('int *cursor __attribute__((section(".data"))) = &limit;', {"cursor"}),
 ])
 def test_an_initialized_global_is_known_by_every_name_it_declares(item, names):
@@ -135,13 +135,14 @@ def draft_compiles(tmp_path, text, target):
     ("enum { FIRST = 1, SECOND } mode = SECOND;\n", "return a ? SECOND : 0;"),            # through an enumerator
     ("static enum { OFF = 0, ON } state = OFF;\n", "return a ? ON : 0;"),
     ("enum { FIRST = 1, SECOND } mode;\n", "return a ? SECOND : 0;"),
-    (HELPER + "static int (*table[])(int) = { helper };\n", "return table[0](a);"),        # a table of function pointers
-    ('const char *s = "a,b", *t = "c";\n', "return a + t[0];"),                          # a comma in a literal is not a declarator's
+    (HELPER + "static int (*table[])(int) = { helper };\n", "return table[0](a);"),  # a table of function pointers
+    ('const char *s = "a,b", *t = "c";\n', "return a + t[0];"),  # a comma in a literal is not a declarator's
     ("struct S { int x; } s = {1};\ntypedef struct S T;\n", "T v = {a};\n\treturn v.x;"),  # a tag through a typedef
-    ("enum { N = 4 } mode = N;\nstruct box { int a[N]; };\n", "struct box b;\n\tb.a[0] = a;\n\treturn b.a[0];"),  # through a kept type
+    # through a kept type
+    ("enum { N = 4 } mode = N;\nstruct box { int a[N]; };\n", "struct box b;\n\tb.a[0] = a;\n\treturn b.a[0];"),
     ("struct S { int x; } s = {1};\nstruct box { struct S inner; };\n", "struct box b;\n\tb.inner.x = a;\n\treturn b.inner.x;"),
-    # an attribute holding a quoted argument in its own parentheses; visibility("default") compiles for ELF and
-    # Mach-O alike, where section(".data") is refused on macOS ("mach-o section specifier requires a segment and section")
+    # An attribute holding a quoted argument in its own parentheses. visibility("default") compiles for ELF and Mach-O
+    # alike, where section(".data") is refused on macOS ("mach-o section specifier requires a segment and section").
     ('static int limit = 5;\nint *cursor __attribute__((visibility("default"))) = &limit;\n', "return a + *cursor;"),
 ])
 def test_a_draft_keeps_an_item_its_function_reaches_by_any_name_the_item_declares(tmp_path, text, body):
@@ -152,7 +153,8 @@ def test_a_draft_keeps_an_item_its_function_reaches_by_any_name_the_item_declare
 @needs_gcc
 @pytest.mark.parametrize("table", ["struct ops { int (*f)(int); } ops = { helper };\n", "static int (*table[])(int) = { helper };\n",
                                    "static int (*hook)(int) __attribute__((aligned(8))) = helper;\n",
-                                   "struct ops { int (*f)(int); } ops = { helper };\nstruct conn { struct ops *o; };\n"])  # a pointer needs no definition
+                                   # a pointer needs no definition
+                                   "struct ops { int (*f)(int); } ops = { helper };\nstruct conn { struct ops *o; };\n"])
 def test_a_draft_leaves_out_a_table_its_function_does_not_reach_and_what_the_table_names(tmp_path, table):
     compiled, errors, prelude = draft_compiles(tmp_path, HELPER + table + "int other(int a)\n{\n\treturn a + 1;\n}\n", "other")
     assert compiled, errors

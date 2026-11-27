@@ -235,8 +235,8 @@ def test_a_goal_outside_the_library_is_counted_as_the_harness_s_own():
 
 
 def pointer_call(inventory, coverage, checking, description, function="cr_free", line="7054", goals=True):
-    """A call through a function pointer as CBMC 6.11.0 reports it: a property at the call, and an ASSUME false at the same
-    place that ends the branch where the pointer is none of the targets (as measured on cases over quickjs-ng and memcached)."""
+    """A call through a function pointer as CBMC 6.11.0 reports it: a property at the call, and an ASSUME false at the
+    same place that ends the branch where the pointer is none of the targets."""
     where = {"file": "unit.c", "function": function, "line": line}
     name = f"{function}.pointer_dereference.1"
     if description:
@@ -283,8 +283,8 @@ def test_the_harness_s_own_assumption_on_the_line_of_a_call_through_a_pointer_st
 
 
 def inlined_preconditions(inventory, coverage, checking, inventoried=True):
-    """memcpy expanded at its call site: CBMC 6.11.0 lists its preconditions among the coverage goals, located in the unit
-    and not in a library file, and they are properties of the other two stages too (as measured on a case over DynBuf)."""
+    """memcpy expanded at its call site: CBMC 6.11.0 lists its preconditions among the coverage goals, located in the
+    unit and not in a library file, and they are properties of the other two stages too."""
     where = {"file": "unit.c", "function": "put_u32", "line": "23"}
     for index, description in enumerate(("memcpy src/dst overlap", "memcpy source region readable", "memcpy destination region writeable"), 1):
         name = f"put_u32.precondition_instance.{index}"

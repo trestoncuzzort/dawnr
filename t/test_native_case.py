@@ -409,7 +409,8 @@ def test_a_case_may_set_the_object_bits_of_cbmc(tmp_path):
     assert cases.load(write_case(tmp_path / "case", object_bits=12))["object_bits"] == 12
 
 
-# CBMC 6.11.0 takes 1 to one less than the pointer width: "object-bits must be positive and less than the pointer width (32)".
+# CBMC 6.11.0 takes 1 up to one less than the pointer width:
+# "object-bits must be positive and less than the pointer width (32)".
 @pytest.mark.parametrize("machine, bits", [("LP64", 1), ("LP64", 63), ("ILP32", 1), ("ILP32", 31)])
 def test_object_bits_cbmc_takes_are_taken(tmp_path, machine, bits):
     assert cases.load(write_case(tmp_path / "case", machine=machine, object_bits=bits))["object_bits"] == bits
@@ -1000,8 +1001,9 @@ def test_a_complete_verdict_gets_a_checked_proof(tmp_path):
 
 
 def export_and_solve(tmp_path, root, variant, unwind=None, tools=None):
-    """The formula of a variant, and what the solver says about it, written to a kept directory. The command is the gate's:
-    the same model options and linked models, so that what is exported is what check() certifies."""
+    """The formula of a variant, and what the solver says about it, written to a kept directory.
+    The command is the gate's, with the same model options and linked models, so that what is exported is what
+    check() certifies."""
     cbmc, solver, checker = tools or (CBMC, CADICAL, LRAT_CHECK)
     out = tmp_path / f"{root.name}-{variant}-{unwind}"
     case = cases.load(root)
@@ -1286,7 +1288,8 @@ def test_the_object_bits_of_a_case_reach_every_cbmc_stage(tmp_path):
 
 
 def logging_cbmc(path):
-    """A stand-in cbmc that adds each command it is given to calls.txt where it runs, and writes a formula when asked for one."""
+    """A stand-in cbmc that adds each command it is given to calls.txt where it runs, and writes a formula when asked
+    for one."""
     return tool(path, '[ "$1" = "--version" ] && { echo "6.11.0 (cbmc-6.11.0)"; exit 0; }\necho "$*" >> calls.txt\n'
                       'while [ $# -gt 1 ]; do [ "$1" = "--outfile" ] && printf "p cnf 2 3\\n1 0\\n" > "$2"; shift; done\necho "[]"\n')
 
@@ -1295,7 +1298,8 @@ RUNS = ["the gate", "the bounds search", "the fixture check's model size", "the 
 
 
 def commands_of(tmp_path, run, **fields):
-    """The commands a stand-in cbmc gets from one run over a case: the gate's stages, the bounds search, or one of the fixture check's own."""
+    """The commands a stand-in cbmc gets from one run over a case: the gate's stages, the bounds search, or one of the
+    fixture check's own."""
     cbmc = logging_cbmc(tmp_path / "fake-cbmc")
     _, solver, checker = fake_tools(tmp_path / "tools")
     root, out = write_case(tmp_path / "case", **fields), tmp_path / "out"
@@ -1332,7 +1336,8 @@ FLAT_FIELDS = dict(prelude="#include <stdlib.h>\n", assertions=["fill.counted"],
 
 @real
 def test_past_256_addressed_objects_the_bounds_search_and_the_model_size_take_the_object_bits_too(tmp_path):
-    """300 allocations and no loop: the search has nothing to raise, and stops on the object limit unless the case raises it."""
+    """300 allocations and no loop: the search has nothing to raise, and stops on the object limit unless the case
+    raises it."""
     default = custom_case(tmp_path / "default", FLAT, FLAT, ["fill"], **FLAT_FIELDS)
     assert cases.find_bounds(default, tmp_path / "default-bounds", cbmc=CBMC)["reason"] == "stopped: exit 6"
     assert fixture_check.model_size(default, tmp_path / "default-size", CBMC, 2, {}, 120, 4096, "minisat2")["exit"] == 6

@@ -351,7 +351,8 @@ def plan_inputs(parameters: str, types: Types, max_length: int) -> dict:
 
 
 def type_body(head: str) -> tuple[str, str | None, int, int] | None:
-    """(enum, struct or union; its tag; where its body opens; where it closes) when a declaration defines a type with a body.
+    """(enum, struct or union; its tag; where its body opens; where it closes) when a declaration defines a type with
+    a body, else None.
 
     The body opens at the first brace outside parentheses, before any `=`: a brace after the `=` is an initializer's."""
     depth = 0
@@ -373,11 +374,13 @@ def type_body(head: str) -> tuple[str, str | None, int, int] | None:
 
 
 def declared_name(declarator: str) -> str | None:
-    """The identifier a declarator declares, with any specifiers before it: `x`, `*const x`, `x[4]`, `(*x[2])(int)`, `x = 1`.
+    """The identifier a declarator declares, with any specifiers before it.
 
-    In `( declarator )` the name is inside the parentheses after its pointers (C11 6.7.6, port70.net/~nsz/c/c11/n1570.html)."""
+    The forms handled are `x`, `*const x`, `x[4]`, `(*x[2])(int)` and `x = 1`. In `( declarator )` the name is inside
+    the parentheses after its pointers (C11 6.7.6, port70.net/~nsz/c/c11/n1570.html)."""
     left = split_top(declarator, "=")[0]
-    # The parentheses of typeof, sizeof and alignment are an operand's, not a declarator's: `__typeof__(*p) x` declares x.
+    # The parentheses of typeof, sizeof and alignment belong to an operand, not to a declarator:
+    # `__typeof__(*p) x` declares x.
     while operand := re.search(r"\b(?:__typeof__|__typeof|typeof|sizeof|_Alignof|_Alignas|__alignof__|alignof)\s*\(", left):
         depth, end = 0, operand.end() - 1
         for end in range(operand.end() - 1, len(left)):
@@ -400,10 +403,10 @@ LITERAL = re.compile(r"\"(?:\\.|[^\"\\])*\"|'(?:\\.|[^'\\])*'")
 def analyse(text: str, types_from: str | None = None) -> dict:
     """The items of a translation unit, and the functions, globals and types it defines.
 
-    A declaration that initializes something is a global, known by every ordinary name it declares: each declarator, and the
-    enumerators of an enum it defines; a struct, union or enum tag it defines is known by the tag (C11 6.2.3: tags are their own
-    name space). A draft keeps it when its function reaches one of those, and follows what its initializer names. Any other type
-    is kept in every draft."""
+    A declaration that initializes something is a global, known by every ordinary name it declares: each declarator,
+    and the enumerators of an enum it defines. A struct, union or enum tag it defines is known by the tag (C11 6.2.3:
+    tags are their own name space). A draft keeps such a global when its function reaches one of those names, and
+    follows what its initializer names. Any other type is kept in every draft."""
     items = split_items(text)
     types = Types(split_items(types_from) if types_from is not None else items)
     functions, globals_, tags, typedefs, constants, others = {}, {}, {}, {}, {}, []
@@ -424,7 +427,8 @@ def analyse(text: str, types_from: str | None = None) -> dict:
         # `enum { A = 1, B };` holds an = and initializes nothing: only what follows the body declares objects.
         declarators = shape[body[3] + 1:] if body else shape
         if head.startswith(("typedef", "__extension__ typedef")):
-            # Kept in every draft, and known by its name as well, so that a draft follows the tag it names: `typedef struct S T;`.
+            # Kept in every draft, and also known by its name, so that a draft follows the tag it names, as in
+            # `typedef struct S T;`.
             for name in filter(None, (declared_name(part) for part in split_top(declarators))):
                 typedefs[name] = index
         if not head.startswith(("typedef", "extern", "__extension__ typedef")) and "=" in declarators:
@@ -460,8 +464,8 @@ def analyse(text: str, types_from: str | None = None) -> dict:
 
 
 def closure(unit: dict, target: str) -> set[int]:
-    """The items the target reaches: functions, globals and typedefs by name, and tags after enum, struct or union, through what those use in turn.
-    It starts from the target and from what the items kept in every draft require."""
+    """The items the target reaches: functions, globals and typedefs by name, and tags after enum, struct or union,
+    through what those use in turn. It starts from the target and from what the items kept in every draft require."""
     items, reached, queue = unit["items"], set(), [unit["functions"][target], *unit.get("required", [])]
     named, tags = {**unit["functions"], **unit["globals"], **unit.get("typedefs", {})}, unit.get("tags", {})
     while queue:

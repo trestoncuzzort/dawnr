@@ -175,11 +175,14 @@ Measured on CBMC 6.11.0 with the gate's check list, each as one statement in a h
 
 ## What costs time if you learn it by trial
 
-- A definition is one whole item. A function range ends at its closing brace, and a declaration at
-  its one semicolon outside braces. Nothing but the one function's declarator (with old-style parameter
-  declarations after it) and body may stand in a function range: `int counter;` before it is refused, and so is a preprocessor directive other than a conditional one outside the function's braces (a `#define` or `#include`
-  before it or between its declarator and its body); directives inside the body are its own text. Helpers from other files go in the prelude unchanged, naming the
-  file and lines, and are listed in `limitations`.
+- A definition is one whole item. A function range ends at its closing brace, and a declaration at its one semicolon
+  outside braces. Helpers from other files go in the prelude unchanged, naming the file and lines, and are listed in
+  `limitations`.
+  - A function range holds only the function's declarator (with old-style parameter declarations after it) and its
+    body. `int counter;` before it is refused.
+  - A preprocessor directive outside the function's braces is refused unless it is a conditional one: a `#define` or
+    `#include` before the function, or between its declarator and its body, is refused. Directives inside the body
+    are its own text.
 - More than 256 addressed objects, such as allocations in a long loop, stop CBMC with "too many
   addressed objects". Set `object_bits`: 10 gives 1024.
 - `__CPROVER_assume` stands on its own line, in the harness only, and is counted. None in the
@@ -189,16 +192,16 @@ Measured on CBMC 6.11.0 with the gate's check list, each as one statement in a h
 - `malloc`, `free`, `memcpy`, `memset`, `strlen` and `memcmp` are modelled by CBMC, and the assumptions
   inside its own models are recorded apart from yours (`library_assumption_goals`). For the rest, see
   the next section before writing a stand-in.
-- Two more kinds of coverage goal are CBMC's and not yours, and are listed apart in the receipt, out of
-  the count of your assumptions and out of the vacuity test. `function_pointer_assumption_goals`: at a
-  call through a function pointer, CBMC ends the branch where the pointer holds none of its possible
-  targets with `ASSUME false`, beside a property "dereferenced function pointer must be one of [...]",
-  or "must be f" when f is the only one. That branch must not be taken, and if it can be, the property
-  fails. `coverage_goals_that_are_not_assumptions`: when CBMC expands `memcpy` in place, its
-  preconditions ("memcpy source region readable" and so on) are coverage goals too; a goal is listed
-  here only when it is neither side of an assumption and is also one of the inventoried properties,
-  which the checking stage decides. Any other goal counts as yours, so one the gate cannot place
-  still ends in `tool_error`.
+- Two more kinds of coverage goal are CBMC's and not yours. The receipt lists them apart, out of the count of your
+  assumptions and out of the vacuity test. Any other goal counts as yours, so one the gate cannot place still ends
+  in `tool_error`.
+  - `function_pointer_assumption_goals`: at a call through a function pointer, CBMC ends the branch where the
+    pointer holds none of its possible targets with `ASSUME false`, beside a property "dereferenced function
+    pointer must be one of [...]" (or "must be f" when f is the only one). That branch must not be taken; if it
+    can be, the property fails.
+  - `coverage_goals_that_are_not_assumptions`: when CBMC expands `memcpy` in place, its preconditions ("memcpy
+    source region readable" and so on) are coverage goals too. A goal is listed here only when it is neither side
+    of an assumption and is also one of the inventoried properties, which the checking stage decides.
 - Write checks over an array as one statement per index rather than a loop, so that the harness
   adds no loop of its own to the model.
 - Recursion and large switch statements: give each call a concrete selector, otherwise CBMC

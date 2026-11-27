@@ -212,9 +212,9 @@ def interpret(inventory: dict, coverage: dict, checking: dict, scope: dict) -> d
     try:
         listed, covered, checked = document(inventory), document(coverage), document(checking)
         props, every_goal, results = rows(listed, "properties"), rows(covered, "goals"), rows(checked, "result")
-        # CBMC ends the no-such-target branch of a call through a function pointer with ASSUME false, after a
-        # property "dereferenced function pointer must be one of [...]" at the same place, or "must be f" when f is the only
-        # possible target. That assumption is the tool's and not the harness's, and it has to be unreachable, so it is listed
+        # CBMC ends the no-such-target branch of a call through a function pointer with ASSUME false, after a property
+        # "dereferenced function pointer must be one of [...]" at the same place ("must be f" when f is the only
+        # target). That assumption is the tool's, not the harness's, and it has to be unreachable, so it is listed
         # apart and kept out of the count.
         pointer_calls = {(prop.get("sourceLocation", {}).get("function"), prop.get("sourceLocation", {}).get("line")) for prop in props
                          if str(prop.get("description", "")).startswith("dereferenced function pointer must be")}
@@ -222,9 +222,9 @@ def interpret(inventory: dict, coverage: dict, checking: dict, scope: dict) -> d
             location = goal.get("sourceLocation", {})
             return location.get("function") != "harness" and (location.get("function"), location.get("line")) in pointer_calls
         through_pointer = [goal for goal in every_goal if not library_goal(goal) and pointer_goal(goal)]
-        # The coverage stage also lists the preconditions of an inlined library call (memcpy) at the call site in
-        # the unit. They are properties, checked in the checking stage, and not assumptions, so they are listed apart as well.
-        # Only a goal that is an inventoried property is taken for one; any other goal still counts as the harness's own.
+        # The coverage stage also lists the preconditions of an inlined library call (memcpy) at the call site in the
+        # unit. They are properties checked in the checking stage, not assumptions, so they are listed apart as well.
+        # Only a goal that is an inventoried property counts as one; any other goal is still the harness's own.
         inventoried = {prop.get("name") for prop in props}
         def assumption_goal(goal: dict) -> bool:
             return goal.get("goal") not in inventoried or str(goal.get("description", "")).startswith(("assert(false) before assume(", "assert(false) after assume("))
