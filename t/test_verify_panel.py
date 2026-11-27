@@ -1,7 +1,6 @@
 """t/verify_panel.py: a `dawnr verify` panel run leaves one record per function in the run folder it is given: the
 stages each specification and body stopped at and why, the proved twin when there is one, and the inputs the function
-was held to. Until 2026-11-26 the two panel runs of 2026-10-05 left only their totals (88 and 14 of 102 refused,
-t/PREDICT-2026-10-05-verify-python.md), so which function stopped where could not be read afterwards."""
+was held to. Totals alone cannot say which function stopped where; these records can."""
 import json
 import sys
 from pathlib import Path
@@ -95,13 +94,13 @@ def test_a_run_taken_up_again_keeps_the_records_it_has_and_an_error_is_a_record_
         raise answer.ProverTimeout("the provers did not finish")
     again = student(TRIPLE)
     summary = verify_panel.run(PROBLEMS[:2], run, again, prover=timing_out, settings={"whole": 1, "specs": 1, "answers": 1})
-    assert (run / "7.json").read_bytes() == before and len(again.asked) == 1     # 7 was not asked again
+    assert (run / "7.json").read_bytes() == before and len(again.asked) == 1     # 7 is not asked again
     failed = json.loads((run / "8.json").read_text())
     assert not failed["verified"] and failed["error"] == "ProverTimeout: the provers did not finish"
     assert failed["stages"][-1] == {"route": None, "source": "the run", "stage": "error",
                                     "reason": "ProverTimeout: the provers did not finish"}
     assert summary["errors"] == 1 and summary["functions"] == 2 and summary["verified"] == 1
-    # the run keeps when it was first started, and says when it was taken up again
+    # the manifest keeps the first start time and lists each time the run was taken up again
     manifest = json.loads((run / "run.json").read_text())
     assert manifest["started"] == first["started"] and len(manifest["taken up again"]) == 1
 
@@ -113,9 +112,9 @@ def _timing_out(tasks, jobs):
 
 @needs_sandbox
 def test_an_error_after_some_stages_keeps_those_stages_and_ends_with_the_error_as_a_stage_of_its_own(tmp_path):
-    # Until 2026-11-26 the record of a function whose check raised carried the error alone, and the attempts verify
-    # had refused before it raised were lost (r was None). Here answer 1 is refused for want of a task block, then
-    # answer 2 is held, answers as the function does, and the provers do not finish.
+    # A function whose check raised keeps the refusals verify had made before it raised; the error alone would lose
+    # them. Here answer 1 is refused for want of a task block, answer 2 is held and answers as the function does, and
+    # then the provers do not finish.
     run = tmp_path / "verify-run"
     model = student("no task block here", TRIPLE)
     verify_panel.run(PROBLEMS[1:2], run, model, prover=_timing_out, settings={"whole": 2, "specs": 1, "answers": 1})
@@ -131,7 +130,7 @@ def test_an_error_after_some_stages_keeps_those_stages_and_ends_with_the_error_a
 @needs_sandbox
 def test_an_error_in_the_second_route_keeps_what_the_first_route_refused_before_it(tmp_path):
     run = tmp_path / "verify-run"
-    model = student("no task block here", TRIPLE, TRIPLE)                 # answer 1 refused; a specification, then its body
+    model = student("no task block here", TRIPLE, TRIPLE)                 # answer 1 is refused; a specification follows
     verify_panel.run(PROBLEMS[1:2], run, model, prover=_timing_out, settings={"whole": 1, "specs": 1, "answers": 1})
     got = json.loads((run / "8.json").read_text())
     assert got["error"] == "ProverTimeout: the provers did not finish"
