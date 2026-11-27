@@ -567,10 +567,24 @@ class CraftedTextTest(unittest.TestCase):
     N = 64_000
 
     def assertQuick(self, sources):
+        """The check of `sources` takes time that grows with their length, not with its square.
+
+        Under 0.5 s passes at once. A slower machine (a CI runner can be several times slower) is held to the growth
+        instead: the whole is timed against a quarter of each source. Work that grows with the length takes about 4
+        times as long for the whole, work that grows with its square about 16 times, so more than 8 fails."""
         import time
-        started = time.perf_counter()
-        unfound_quotes(self.QUOTE, sources)
-        self.assertLess(time.perf_counter() - started, 0.5)
+
+        def took(texts, runs):
+            best = float("inf")
+            for _ in range(runs):
+                started = time.perf_counter()
+                unfound_quotes(self.QUOTE, texts)
+                best = min(best, time.perf_counter() - started)
+            return best
+        if took(sources, 1) < 0.5:
+            return
+        whole, quarter = took(sources, 3), took([s[:len(s) // 4] for s in sources], 3)
+        self.assertLess(whole, 8 * max(quarter, 0.01), f"{whole:.3f} s for the whole, {quarter:.3f} s for a quarter")
 
     def test_a_text_of_link_brackets_is_checked_at_once(self):
         for text in ("[" * (self.N // 2) + "](" * (self.N // 4), "[](" * (self.N // 3), "[[](" * (self.N // 4)):
