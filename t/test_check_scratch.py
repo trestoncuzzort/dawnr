@@ -163,6 +163,20 @@ def test_a_stale_folder_is_removed_on_a_python_whose_rmtree_has_no_dir_fd(tmp, m
     assert not gone.exists() and alive.exists()
 
 
+def test_a_reused_pid_is_told_apart_where_there_is_no_proc(tmp, tmp_path, monkeypatch):
+    # macOS and the BSDs have no /proc; the start time comes from `ps` there, so a folder whose recorded PID now
+    # belongs to another process is still removed, and this process's own value is read once.
+    import check_scratch as cs
+    monkeypatch.setattr(cs, "_PROC", str(tmp_path / "no-proc"))
+    monkeypatch.setattr(cs, "_OWN_START", {})
+    own = cs.start_time(os.getpid())
+    assert own.isdigit() and cs.start_time(os.getpid()) == own and cs._OWN_START == {os.getpid(): own}
+    assert cs.start_time(_dead_pid()) == "x"
+    reused = _mk(tmp, f"t-db-p{os.getpid()}-s1-{'9' * 16}")                   # a live pid, another start time
+    kept = _mk(tmp, f"t-db-p{os.getpid()}-s{own}-{'8' * 16}")                 # this process's own folder
+    assert cs.sweep() == [reused.name] and kept.exists()
+
+
 def test_a_reused_pid_is_not_taken_for_the_owner(tmp):
     import check_scratch as cs
     reused = _mk(tmp, f"t-db-p{os.getpid()}-s1-{'c' * 16}")                   # a live pid, another start time

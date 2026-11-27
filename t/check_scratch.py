@@ -10,8 +10,8 @@ Layout:
   descriptor: a link, a non-folder, a folder owned by another user, or one that group or others can write to is refused
   (ScratchRefused), and nothing is made in it.
 - Each check's folder is made directly inside the parent, mode 0700, named `<prefix>-p<pid>-s<start>-<16 hex>`. The
-  owner's PID and process start time (Linux: field 22 of /proc/<pid>/stat; `x` where the platform gives none) are in
-  the name, so they exist the instant the folder does.
+  owner's PID and process start time (`start_time`: /proc on Linux, `ps` on macOS and the BSDs, `x` where neither
+  answers) are in the name, so they exist the instant the folder does.
 - The creator opens its folder and takes an exclusive flock on that descriptor for as long as the check runs. A lock
   lives in the open file description, so the kernel drops it when the process dies, SIGKILL included.
 
@@ -33,13 +33,16 @@ removes and skips what is locked. pytest's numbered temp folders (`_pytest/pathl
 than whether its owner is alive, which is why this module uses flock plus PID and start time."""
 from __future__ import annotations
 
+import calendar
 import inspect
 import os
 import re
 import secrets
 import shutil
 import stat
+import subprocess
 import tempfile
+import time
 import weakref
 
 try:
@@ -84,13 +87,39 @@ def _open_parent() -> int:
     return fd
 
 
+_PROC = "/proc"                                       # where Linux describes each process; absent on macOS and the BSDs
+_OWN_START: dict = {}                                 # this process's start time read through `ps`, once per PID
+
+
 def start_time(pid: int) -> str:
-    """The process start time in clock ticks since boot as digits, or `x` when this platform does not give it."""
+    """The process start time as digits, or `x` when this machine cannot say.
+
+    - Linux: field 22 of /proc/<pid>/stat, in clock ticks since boot.
+    - macOS and the BSDs, which have no /proc: `ps -o lstart= -p <pid>`, read in the C locale and UTC, as seconds since
+      the epoch (`_ps_start`). This process's own value is read once and kept, so each new scratch folder does not
+      start `ps`.
+    The value only tells a process from a later one that got the same PID, and a folder's recorded value is always
+    compared with one read the same way on the same machine."""
     try:
-        with open(f"/proc/{pid}/stat", "rb") as f:
+        with open(f"{_PROC}/{pid}/stat", "rb") as f:
             data = f.read().decode("utf-8", "replace")
         return str(int(data.rsplit(")", 1)[1].split()[19]))
     except (OSError, ValueError, IndexError):
+        pass
+    if pid != os.getpid():
+        return _ps_start(pid)
+    if pid not in _OWN_START:
+        _OWN_START[pid] = _ps_start(pid)
+    return _OWN_START[pid]
+
+
+def _ps_start(pid: int) -> str:
+    """The start time `ps` gives for `pid`, as seconds since the epoch; `x` when there is no such process or no `ps`."""
+    try:
+        out = subprocess.run(["ps", "-o", "lstart=", "-p", str(pid)], capture_output=True, text=True, timeout=5,
+                             env=dict(os.environ, LC_ALL="C", LANG="C", TZ="UTC")).stdout
+        return str(calendar.timegm(time.strptime(" ".join(out.split()), "%a %b %d %H:%M:%S %Y")))
+    except (OSError, ValueError, subprocess.SubprocessError):
         return "x"
 
 
