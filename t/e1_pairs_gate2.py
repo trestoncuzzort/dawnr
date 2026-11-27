@@ -28,7 +28,7 @@ the authoritative aggregator, so one row can never be counted two ways. Integrit
     python3 -I e1_pairs_gate2.py run      <out-dir> [--jobs 8] [--flake 3] [--limit N]
     python3 -I e1_pairs_gate2.py control
 """
-try:                                    # a scratch folder in dawnr's own parent, swept after a killed check
+try:                                    # private scratch folders for the copies a check makes (check_scratch)
     from . import check_scratch
 except ImportError:
     import check_scratch

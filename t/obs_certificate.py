@@ -19,7 +19,7 @@ engine change; certificate.check() dispatches `kind == "paired-observation"` her
     python3 -I obs_certificate.py check <cert.json>                             # replay (no model)
     python3 -I obs_certificate.py --self-test
 """
-try:                                    # a scratch folder in dawnr's own parent, swept after a killed check
+try:                                    # private scratch folders for the copies a check makes (check_scratch)
     from . import check_scratch
 except ImportError:
     import check_scratch

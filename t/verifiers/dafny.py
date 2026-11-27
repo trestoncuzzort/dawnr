@@ -637,9 +637,9 @@ def verify(path: Path, budget: int = DEFAULT_RLIMIT) -> Result:
     # NFKC folds homoglyph spellings; the hash above binds the raw bytes.
     src = unicodedata.normalize("NFKC", data.decode("utf-8", errors="replace"))
     banned = sorted({m.group(0) for m in BANNED_RE.finditer(src)})
-    # The private copy and the --rprint file live in a folder of their own in dawnr scratch parent, removed when the
-    # check ends, on a verdict, a timeout or an exception: it holds the checked program. A check killed by SIGKILL
-    # cannot remove it; the next check sweep does (check_scratch).
+    # The private copy and the --rprint file live in a folder of their own in dawnr's scratch parent. It holds the
+    # checked program, so it is removed when the check ends, whether with a verdict, a timeout or an exception. A check
+    # killed by SIGKILL cannot remove it; the next check's sweep does (check_scratch).
     scratch = check_scratch.TemporaryDirectory(prefix="t_dafny")
     src_copy = os.path.join(scratch.name, "t_src.dfy")
     try:

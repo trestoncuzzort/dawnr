@@ -22,7 +22,7 @@ A certificate therefore binds what was actually retained and replays only what i
     python3 -I db_certificate.py check <cert.json>
     python3 -I db_certificate.py --self-test
 """
-try:                                    # a scratch folder in dawnr's own parent, swept after a killed check
+try:                                    # private scratch folders for the copies a check makes (check_scratch)
     from . import check_scratch
 except ImportError:
     import check_scratch

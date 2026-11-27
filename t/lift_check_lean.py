@@ -26,7 +26,7 @@ nothing is written per task. `#print axioms` on both theorems must show no `sorr
 """
 from __future__ import annotations
 
-try:                                    # a scratch folder in dawnr's own parent, swept after a killed check
+try:                                    # private scratch folders for the copies a check makes (check_scratch)
     from . import check_scratch
 except ImportError:
     import check_scratch

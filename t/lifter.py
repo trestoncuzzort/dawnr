@@ -38,7 +38,7 @@ file, it records the exception in that file's record."
 
 from __future__ import annotations
 
-try:                                    # a scratch folder in dawnr's own parent, swept after a killed check
+try:                                    # private scratch folders for the copies a check makes (check_scratch)
     from . import check_scratch
 except ImportError:
     import check_scratch
@@ -154,10 +154,11 @@ def _stage_call(stage: str, token: str, line: int, fn, *args, **kwargs):
 
 @contextlib.contextmanager
 def _scratch_dfy(out_dir: Optional[Path], stem: str, method_name: str):
-    """The path `lift_check.check` writes its checker, differential and callee files beside. Under `out_dir` they
-    are outputs and stay. With no `out_dir` they are private copies of the program being checked, so they live in a
-    folder of their own that is removed when the check ends, on a result, a refusal or an exception; a folder a
-    killed check leaves is removed by the next check (`check_scratch.sweep`)."""
+    """Yield the path `lift_check.check` writes its checker file to; its differential and callee files go beside it.
+
+    Under `out_dir` they are outputs and stay. With no `out_dir` they are private copies of the program being checked,
+    so they go in a folder of their own that is removed when the check ends, whether it returns a result, refuses or
+    raises. A folder left by a killed check is removed by the next check (`check_scratch.sweep`)."""
     if out_dir is not None:
         yield _scratch_dfy_path(out_dir, stem, method_name)
         return

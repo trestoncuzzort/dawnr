@@ -18,7 +18,7 @@ cell of the frozen keyset:
     python3 -I e1_batch_cert.py mint-run <v2-run-dir> <pairs-dir> <cert-dir>
     python3 -I e1_batch_cert.py control
 """
-try:                                    # a scratch folder in dawnr's own parent, swept after a killed check
+try:                                    # private scratch folders for the copies a check makes (check_scratch)
     from . import check_scratch
 except ImportError:
     import check_scratch

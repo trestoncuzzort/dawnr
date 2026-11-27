@@ -11,7 +11,7 @@ config_id match the current run; a changed spec or a different solver forces a r
 reuses a stale cell. Per cell keeps state AND raw detail; typed errors are not timeouts; a result is written
 for every planned cell; output is checkpointed incrementally. Resource guards (A8): T_SPARK_JOBS=1.
 """
-try:                                    # a scratch folder in dawnr's own parent, swept after a killed check
+try:                                    # private scratch folders for the copies a check makes (check_scratch)
     from . import check_scratch
 except ImportError:
     import check_scratch

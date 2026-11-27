@@ -1,8 +1,8 @@
 """A check killed with SIGKILL leaves its private copy in the temporary folder; the next check removes it, and only it.
 
 Each kill test runs a real check in a child process, SIGKILLs it, then runs a second check in another child and looks
-at the temporary folder (the parent process never imports the code under test for those, so the red on the old bytes
-is the leftover itself). The safety tests plant what a sweep must not remove: a live owner's folder, a folder held by
+at the temporary folder. The test process never imports the code under test for those, so a leftover can only come
+from the killed child. The safety tests plant what a sweep must not remove: a live owner's folder, a folder held by
 a live lock, a link to a folder with files, a name off the pattern, a folder outside the scratch parent."""
 import os
 import signal

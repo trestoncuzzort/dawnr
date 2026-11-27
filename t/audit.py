@@ -33,7 +33,7 @@ finding independent of loop invariants. Bounded domain only: a difference outsid
 """
 from __future__ import annotations
 
-try:                                    # a scratch folder in dawnr's own parent, swept after a killed check
+try:                                    # private scratch folders for the copies a check makes (check_scratch)
     from . import check_scratch
 except ImportError:
     import check_scratch
@@ -179,7 +179,7 @@ def audit_file(path: str, kernel: str | None = None, seconds: int = TASK_SECONDS
     res["file"] = path
     survivors = res.get("survivors", [])
     if kernel and res["status"] == "ok":
-        # a folder the caller gave is the caller's; one made here holds private copies and goes when the audit ends
+        # a folder the caller gives is theirs and stays; one made here holds private copies and is removed at the end
         with (contextlib.nullcontext(out_dir) if out_dir else check_scratch.TemporaryDirectory(prefix="t-audit-")) as work_dir:
             work = Path(work_dir)
             work.mkdir(parents=True, exist_ok=True)

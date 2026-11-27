@@ -30,8 +30,9 @@ def watch(tmp_path, monkeypatch):
 
 
 def left(folder):
-    """What a check left: the names in the temporary folder, and the names inside dawnr own scratch parent there (the
-    parent itself is dawnr, made once and kept, and a sweep of a killed check removes its folders: t/test_check_scratch.py)."""
+    """What a check left: the names in the temporary folder, plus the names inside dawnr's own scratch parent there.
+    The parent itself is made once and kept, so it is not counted; a killed check's folders are removed by a sweep
+    (t/test_check_scratch.py)."""
     names = []
     for p in folder.iterdir():
         if p.name.startswith("dawnr-checks-") and p.is_dir() and not p.is_symlink():
@@ -106,7 +107,7 @@ def test_dafny_adapter_with_the_real_dafny_leaves_none_of_its_copies(watch, tmp_
     src.write_text("method M() ensures true {}\n", encoding="utf-8")
     result = d.verify(src)
     assert result.ok
-    # dafny's own runtime may make its own folder; the adapter's copies are t_src_* and t_rprint_*
+    # dafny's own runtime may make its own folder; the adapter's copies are in its `t_dafny-...` scratch folder
     assert [n for n in left(watch) if n.startswith("t_")] == []
 
 

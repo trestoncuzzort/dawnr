@@ -1,32 +1,36 @@
-"""Private copies a check makes live in one folder owned by this user in the temporary folder, and a killed check's
-copy is removed by the next check.
+"""check_scratch.py -- private scratch folders for the copies a check makes, and a sweep of those a kill leaves.
 
-Why: a check removes its copy when it ends (a `with` block or a `finally`), but SIGKILL runs neither, so the copy of the
-program being checked stayed in the temporary folder (PRIVACY.md, the row on copies of a program being checked).
+Why it exists: a check removes its copy of the program when it ends (a `with` block or a `finally`), but SIGKILL runs
+neither, so a killed check would leave its copy in the temporary folder (see PRIVACY.md, the row on copies of a program
+being checked). The next check removes it.
 
-Layout. `<temporary folder>/dawnr-checks-<uid>/` is the parent. It is created mode 0700 with mkdir (which fails if the
-name exists, so a planted name is never adopted), then opened with O_NOFOLLOW | O_DIRECTORY and checked on the open
-descriptor: a link, a non-folder, a folder owned by another user, or one that group or others can write is refused
-(ScratchRefused) and nothing is made in it. Each check's folder is made directly inside it, mode 0700, named
-`<prefix>-p<pid>-s<start>-<16 hex>`: the owner's PID and the process start time (Linux: field 22 of /proc/<pid>/stat;
-`x` where the platform gives none) are in the name, so they exist the instant the folder does. The creator opens the
-folder and takes an exclusive flock on that descriptor and holds it as long as the check runs. A lock lives in the open
-file description, so the kernel drops it when the process dies, SIGKILL included.
+Layout:
+- `<temporary folder>/dawnr-checks-<uid>/` is the parent. It is created mode 0700 with mkdir, which fails if the name
+  exists, so a planted name is never adopted. It is then opened with O_NOFOLLOW | O_DIRECTORY and checked on the open
+  descriptor: a link, a non-folder, a folder owned by another user, or one that group or others can write to is refused
+  (ScratchRefused), and nothing is made in it.
+- Each check's folder is made directly inside the parent, mode 0700, named `<prefix>-p<pid>-s<start>-<16 hex>`. The
+  owner's PID and process start time (Linux: field 22 of /proc/<pid>/stat; `x` where the platform gives none) are in
+  the name, so they exist the instant the folder does.
+- The creator opens its folder and takes an exclusive flock on that descriptor for as long as the check runs. A lock
+  lives in the open file description, so the kernel drops it when the process dies, SIGKILL included.
 
-Sweep (run at the start of every scratch folder made here). A folder in the parent is removed only if ALL hold: it is
-a real folder (lstat, not a link) directly inside the parent, its name matches the pattern above exactly, its lock can
-be taken without waiting (no live holder, also none in a child that inherited the descriptor), and its recorded PID
-is dead or now has a different start time. A link, a file, a name off the pattern, a folder a live process holds or
-whose owner is alive, a folder owned by another user, and anything the sweep cannot decide, are left. The removal is
-shutil.rmtree through the parent's descriptor (`dir_fd`, Python 3.11 and later) or, on Python 3.10, by the folder's
-full path inside this user's own 0700 parent (`_rmtree_in`); the sweep does nothing where
-rmtree.avoids_symlink_attacks is false, so it never follows a link, and nothing outside the parent is ever touched.
+Sweep (runs at the start of every scratch folder made here). A folder in the parent is removed only if ALL hold:
+- it is a real folder (lstat, not a link) directly inside the parent;
+- its name matches the pattern above exactly;
+- its lock can be taken without waiting: no live holder, including a child that inherited the descriptor;
+- its recorded PID is dead, or is alive with a different start time.
+Everything else is left alone: links, files, names off the pattern, folders a live process holds or whose owner is
+alive, folders owned by another user, and anything the sweep cannot decide.
 
-Prior art read: systemd tmpfiles.d(5) (age cleanup takes an exclusive BSD lock on what it removes and skips what is
-locked; "Does not follow symlinks"); pytest's _pytest/pathlib.py (numbered temp folders, a `.lock` file holding the PID,
-refuses symlinks; it trusts lock age, not liveness, which is why this one uses flock plus PID and start time); Python's
-shutil docs (the rmtree symlink-attack note and rmtree.avoids_symlink_attacks); flock(2) (duplicates made by fork share
-the lock)."""
+The removal is shutil.rmtree through the parent's descriptor (`dir_fd`, Python 3.11 and later) or, on Python 3.10, by
+the folder's full path inside this user's own 0700 parent (`_rmtree_in`). The sweep does nothing where
+shutil.rmtree.avoids_symlink_attacks is false, so it never follows a link and never touches anything outside the
+parent.
+
+Two outside designs explain the choices. systemd's tmpfiles.d(5) age cleanup also takes an exclusive lock on what it
+removes and skips what is locked. pytest's numbered temp folders (`_pytest/pathlib.py`) trust a lock file's age rather
+than whether its owner is alive, which is why this module uses flock plus PID and start time."""
 from __future__ import annotations
 
 import inspect

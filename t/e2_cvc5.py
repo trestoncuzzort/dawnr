@@ -5,7 +5,7 @@ kernel whose adapter cleanly swaps solver (gnatprove --prover=cvc5, bundled); ve
 Dafny-under-cvc5 core-dumps (honest refusals, recorded). Body-only adjudication, exactly as E1's direct-body
 matrix, under T_SPARK_PROVER=cvc5. This restores the withdrawn independence claim with a real cvc5 number.
 """
-try:                                    # a scratch folder in dawnr's own parent, swept after a killed check
+try:                                    # private scratch folders for the copies a check makes (check_scratch)
     from . import check_scratch
 except ImportError:
     import check_scratch
