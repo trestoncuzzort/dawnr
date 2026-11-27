@@ -12,6 +12,17 @@ from locallm.install_runtime import check_manifest, configure, manifest_entries
 ROOT = Path(__file__).resolve().parents[1]
 
 
+def test_every_launcher_is_executable_in_the_repository():
+    # install.sh links `dawnr` to bin/dawnr and the person runs it by name, so a checkout where bin/dawnr lost its
+    # executable bit cannot start dawnr at all. An edit made from Windows can drop the bit, and every other test here
+    # runs the launcher through `bash`, so only this one notices.
+    out = subprocess.run(["git", "-C", str(ROOT), "ls-files", "-s", "--", "bin"], capture_output=True, text=True)
+    if out.returncode != 0 or not out.stdout.strip():
+        pytest.skip("not a git checkout")
+    modes = {line.split("\t", 1)[1]: line.split()[0] for line in out.stdout.splitlines()}
+    assert modes and all(mode == "100755" for mode in modes.values()), modes
+
+
 @pytest.mark.parametrize('args', [[], ['--help'], ['help'], ['help', 'ask'],
                                    ['do', '--help'], ['ask', 'example', '--help'],
                                    ['serve', '--help']])
