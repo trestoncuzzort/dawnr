@@ -5,6 +5,10 @@ kernel whose adapter cleanly swaps solver (gnatprove --prover=cvc5, bundled); ve
 Dafny-under-cvc5 core-dumps (honest refusals, recorded). Body-only adjudication, exactly as E1's direct-body
 matrix, under T_SPARK_PROVER=cvc5. This restores the withdrawn independence claim with a real cvc5 number.
 """
+try:                                    # private scratch folders for the copies a check makes (check_scratch)
+    from . import check_scratch
+except ImportError:
+    import check_scratch
 import sys
 sys.path.insert(0, ".")
 import json
@@ -37,8 +41,8 @@ def _cell_cvc5(arg):
         task = tasks_io.load_task(path)
         body = task["body"] if which == "REAL" else json.loads(body_json)
         _lmod, suffix = audit.tlib._LOWER_MOD["spark"]
-        work = pathlib.Path(tempfile.mkdtemp(prefix="e2-cvc5-"))
-        v = audit._kernel_verdict(task, body, "spark", work / f"c.{suffix}")
+        with check_scratch.TemporaryDirectory(prefix="e2-cvc5-") as work:    # the lowered body is a private copy
+            v = audit._kernel_verdict(task, body, "spark", pathlib.Path(work) / f"c.{suffix}")
         rec["cvc5_state"], _ = norm(v)
     except Exception as e:  # noqa: BLE001
         rec["cvc5_state"] = "unverifiable:worker-error"

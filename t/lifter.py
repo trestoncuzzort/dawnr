@@ -38,12 +38,16 @@ file, it records the exception in that file's record."
 
 from __future__ import annotations
 
+try:                                    # private scratch folders for the copies a check makes (check_scratch)
+    from . import check_scratch
+except ImportError:
+    import check_scratch
 import argparse
+import contextlib
 import hashlib
 import json
 import os
 import sys
-import tempfile
 import time
 import traceback
 from concurrent.futures import ProcessPoolExecutor, as_completed
@@ -148,18 +152,29 @@ def _stage_call(stage: str, token: str, line: int, fn, *args, **kwargs):
         return None, Refusal(reason="error", token=f"{type(e).__name__}: {e}", line=line, stage=stage)
 
 
-def _scratch_dfy_path(out_dir: Optional[Path], stem: str, method_name: str) -> Path:
+@contextlib.contextmanager
+def _scratch_dfy(out_dir: Optional[Path], stem: str, method_name: str):
+    """Yield the path `lift_check.check` writes its checker file to; its differential and callee files go beside it.
+
+    Under `out_dir` they are outputs and stay. With no `out_dir` they are private copies of the program being checked,
+    so they go in a folder of their own that is removed when the check ends, whether it returns a result, refuses or
+    raises. A folder left by a killed check is removed by the next check (`check_scratch.sweep`)."""
     if out_dir is not None:
-        # Created here, not by _write_outcome: the check stage writes its
-        # .check.dfy into this directory BEFORE any outcome is written, so a
-        # fresh --out made every early file raise FileNotFoundError inside
-        # lift_check and get filed as `refused:error`. A lift that a missing
-        # directory turned into a refusal is a corrupted row, not a slow one.
-        out_dir.mkdir(parents=True, exist_ok=True)
-        return out_dir / f"{stem}.{method_name}.check.dfy"
-    fd, name = tempfile.mkstemp(suffix=".dfy", prefix=f"{stem}.{method_name}.")
-    os.close(fd)
-    return Path(name)
+        yield _scratch_dfy_path(out_dir, stem, method_name)
+        return
+    with check_scratch.TemporaryDirectory(prefix="lifter-") as folder:
+        yield Path(folder) / f"{stem}.{method_name}.dfy"
+
+
+def _scratch_dfy_path(out_dir: Path, stem: str, method_name: str) -> Path:
+    """The checker file's path under `out_dir` (only `_scratch_dfy` calls this, and only with an `out_dir`)."""
+    # Created here, not by _write_outcome: the check stage writes its
+    # .check.dfy into this directory BEFORE any outcome is written, so a
+    # fresh --out made every early file raise FileNotFoundError inside
+    # lift_check and get filed as `refused:error`. A lift that a missing
+    # directory turned into a refusal is a corrupted row, not a slow one.
+    out_dir.mkdir(parents=True, exist_ok=True)
+    return out_dir / f"{stem}.{method_name}.check.dfy"
 
 
 # ---------------------------------------------------------------------------
@@ -553,12 +568,11 @@ def lift_file(dfy_path: Path, out_dir: Optional[Path] = None,
                 method=method_name, task=task, record=record, checked=False))
             continue
 
-        scratch = _scratch_dfy_path(Path(out_dir) if out_dir is not None else None,
-                                     stem, method_name or "_")
-        check_output, err = _stage_call(
-            "check", "lift_check.check", method_line,
-            lift_check.check, task, method, plan.closure, record, scratch, timeout_s,
-            callees=getattr(rewrite_result, "callees", ()))
+        with _scratch_dfy(Path(out_dir) if out_dir is not None else None, stem, method_name or "_") as scratch:
+            check_output, err = _stage_call(
+                "check", "lift_check.check", method_line,
+                lift_check.check, task, method, plan.closure, record, scratch, timeout_s,
+                callees=getattr(rewrite_result, "callees", ()))
         if err is not None:
             outcome.methods.append(MethodOutcome(
                 method=method_name, task=task, record=record, refusal=err))

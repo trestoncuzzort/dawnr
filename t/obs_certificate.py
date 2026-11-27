@@ -19,6 +19,10 @@ engine change; certificate.check() dispatches `kind == "paired-observation"` her
     python3 -I obs_certificate.py check <cert.json>                             # replay (no model)
     python3 -I obs_certificate.py --self-test
 """
+try:                                    # private scratch folders for the copies a check makes (check_scratch)
+    from . import check_scratch
+except ImportError:
+    import check_scratch
 import hashlib
 import json
 import os
@@ -115,18 +119,20 @@ def _lower_and_run(real_t, twin_t, witness, kernel, flake, spark_jobs=DEFAULT_SP
         raise RuntimeError(f"kernel {kernel} not available on this machine")
     lower, suffix = pm[kernel]
     import tempfile
-    work = pathlib.Path(tempfile.mkdtemp(prefix="obs-"))
-    rp = work / f"real.{suffix}"; tp = work / f"twin.{suffix}"
-    real_src = lower(clean, clean["body"]); twin_src = lower(clean, twin_task.get("body"), witness=witness)
-    rp.write_bytes(real_src.encode("utf-8")); tp.write_bytes(twin_src.encode("utf-8"))
-    rh = hashlib.sha256(real_src.encode("utf-8")).hexdigest(); th = hashlib.sha256(twin_src.encode("utf-8")).hexdigest()
-    if verify_override is not None:
-        ro, ra = verify_override(str(rp)); to, ta = verify_override(str(tp))
-        return ro, to, ra, ta, rh, th, None, None               # stub replay: no full Result to bind
-    import importlib
-    backend = importlib.import_module(f"verifiers.{kernel}")
-    (r_real, a1), (r_twin, a2) = verifiers.cell_pair(backend.verify, rp, tp, flake)
-    return r_real.outcome, r_twin.outcome, bool(a1), bool(a2), rh, th, _result_fields(r_real), _result_fields(r_twin)
+    # the lowered programs are private copies: the folder goes when the replay ends, whatever its outcome
+    with check_scratch.TemporaryDirectory(prefix="obs-") as work_folder:
+        work = pathlib.Path(work_folder)
+        rp = work / f"real.{suffix}"; tp = work / f"twin.{suffix}"
+        real_src = lower(clean, clean["body"]); twin_src = lower(clean, twin_task.get("body"), witness=witness)
+        rp.write_bytes(real_src.encode("utf-8")); tp.write_bytes(twin_src.encode("utf-8"))
+        rh = hashlib.sha256(real_src.encode("utf-8")).hexdigest(); th = hashlib.sha256(twin_src.encode("utf-8")).hexdigest()
+        if verify_override is not None:
+            ro, ra = verify_override(str(rp)); to, ta = verify_override(str(tp))
+            return ro, to, ra, ta, rh, th, None, None               # stub replay: no full Result to bind
+        import importlib
+        backend = importlib.import_module(f"verifiers.{kernel}")
+        (r_real, a1), (r_twin, a2) = verifiers.cell_pair(backend.verify, rp, tp, flake)
+        return r_real.outcome, r_twin.outcome, bool(a1), bool(a2), rh, th, _result_fields(r_real), _result_fields(r_twin)
 
 
 def mint(pair_path, kernel, out_path, flake=3, spark_jobs=DEFAULT_SPARK_JOBS, verify_override=None):
@@ -450,8 +456,14 @@ def check(cert, spec=None, kernels=None, jobs=2, verify_override=None):
 
 def self_test():
     import tempfile
+    # the scratch folder of the self-check is removed when it ends, on a pass, a fail or an exception
+    with check_scratch.TemporaryDirectory(prefix="obs_certificate-") as folder:
+        return _self_test(pathlib.Path(folder))
+
+
+def _self_test(d):
+    import tempfile
     import verifiers
-    d = pathlib.Path(tempfile.mkdtemp())
     real_t = "t 1\ntask q(n: int) returns (r: bool)\n  requires n >= 0\n  ensures r == (n >= 0)\n{ r := true; }"
     twin_t = "t 1\ntask q(n: int) returns (r: bool)\n  requires n >= 0\n  ensures r == (n >= 0)\n{ r := false; }"
     w = {"_kind": "value", "_ens": True, "n": 0}

@@ -11,6 +11,10 @@ config_id match the current run; a changed spec or a different solver forces a r
 reuses a stale cell. Per cell keeps state AND raw detail; typed errors are not timeouts; a result is written
 for every planned cell; output is checkpointed incrementally. Resource guards (A8): T_SPARK_JOBS=1.
 """
+try:                                    # private scratch folders for the copies a check makes (check_scratch)
+    from . import check_scratch
+except ImportError:
+    import check_scratch
 import json, os, sys, hashlib, pathlib, tempfile, signal, time, subprocess
 
 os.environ.setdefault("T_LEAN_BIN", os.path.expanduser("~/.local/lean/bin/lean"))
@@ -127,14 +131,14 @@ def _cell(arg):
             rec.update(state="refused:source-changed", raw=f"exp {exp_src[:8]} got {got_src[:8]}")
             return rec
         body = task["body"] if which == "REAL" else json.loads(body_json)
-        work = pathlib.Path(tempfile.mkdtemp(prefix="t-fa-"))
         _lmod, suffix = audit.tlib._LOWER_MOD[kernel]
-        old = signal.signal(signal.SIGALRM, lambda *_: (_ for _ in ()).throw(_TO()))
-        signal.alarm(max(90, audit.TASK_SECONDS))
-        try:
-            v = audit._kernel_verdict(task, body, kernel, work / f"c.{suffix}")
-        finally:
-            signal.alarm(0); signal.signal(signal.SIGALRM, old)
+        with check_scratch.TemporaryDirectory(prefix="t-fa-") as work:       # the lowered body is a private copy
+            old = signal.signal(signal.SIGALRM, lambda *_: (_ for _ in ()).throw(_TO()))
+            signal.alarm(max(90, audit.TASK_SECONDS))
+            try:
+                v = audit._kernel_verdict(task, body, kernel, pathlib.Path(work) / f"c.{suffix}")
+            finally:
+                signal.alarm(0); signal.signal(signal.SIGALRM, old)
         st, raw = norm(v)
         rec.update(state=st, raw=raw)
     except _TO:
