@@ -43,6 +43,7 @@ import shutil
 import stat
 import threading
 import time
+import uuid
 from dataclasses import dataclass, field
 from pathlib import Path
 
@@ -52,6 +53,7 @@ from .system import SECRET
 from .files import FileOps, Preview
 from .journal import sha256
 from .paths import DEFAULT_SECRETS, PathRefused, Space, Target
+from .statelock import state_lock
 from dawnr_harness.tools import CallContext, Tool, ToolResult
 
 MAX_COMMAND = 4000             # characters of one shell line
@@ -246,10 +248,17 @@ class ShellTools:
     def _markers(self) -> tuple[str, str]:
         folder, file = self.markers / "folder", self.markers / "file"
         if not file.is_file():
-            folder.mkdir(parents=True, exist_ok=True)
-            (folder / "hidden-by-dawnr").write_text(HIDDEN_FOLDER)
-            (self.markers / "gitattributes").write_text(GIT_ATTRIBUTES)
-            file.write_text(HIDDEN_FILE)
+            # Take the state lock, then check again whether `file` exists. Another session's sandbox binds these
+            # files over the hidden places, so they must not be truncated and rewritten while it reads them.
+            # `file` is written last, to a `.part` copy that is then swapped in, so if `file` exists all three do.
+            with state_lock(self.markers.parent):
+                if not file.is_file():
+                    folder.mkdir(parents=True, exist_ok=True)
+                    (folder / "hidden-by-dawnr").write_text(HIDDEN_FOLDER)
+                    (self.markers / "gitattributes").write_text(GIT_ATTRIBUTES)
+                    part = file.with_name(file.name + ".part")
+                    part.write_text(HIDDEN_FILE)
+                    os.replace(part, file)
         return str(folder), str(file)
 
     def _argv(self, command: list, cwd: str, layers: dict) -> list:
@@ -314,6 +323,24 @@ class ShellTools:
                 shutil.copystat(at, target)
             except OSError:
                 pass
+
+    def _new_scratch(self, key: str) -> Path:
+        """_new_scratch: create an owner-only scratch folder for one run, one that no other run holds.
+
+        Sessions share the state folder, and two sessions starting the same command in the same millisecond would
+        get the same name if it were only the run's key plus the time. So the name adds a random part, which makes
+        a clash unlikely, and mkdir fails on an existing folder, which makes a shared folder impossible: the loop
+        tries a new name until mkdir succeeds. The name starts with the key but nothing parses it; a run is cleaned
+        up by the path it stores (Run.scratch).
+        """
+        self.scratch.mkdir(parents=True, exist_ok=True, mode=0o700)
+        while True:
+            path = self.scratch / f"{key}-{int(time.time() * 1000)}-{uuid.uuid4().hex[:8]}"
+            try:
+                path.mkdir(mode=0o700)
+            except FileExistsError:
+                continue
+            return path
 
     def _layers(self, scratch: Path) -> dict:
         layers = {}
@@ -550,7 +577,7 @@ class ShellTools:
             if kept is not None and not kept.applied:
                 return kept
             cwd, shown = self._cwd(args.get("cwd"))
-            scratch = self.scratch / f"{key}-{int(time.time() * 1000)}"
+            scratch = self._new_scratch(key)
             layers = self._layers(scratch)
             shell = shutil.which("bash", path=self.env["PATH"]) or "/bin/sh"
             got = run_argv(self._argv([shell, "-c", command], cwd, layers), cwd=self.roots[0].path, env=self.env,
